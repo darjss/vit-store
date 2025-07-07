@@ -1,0 +1,408 @@
+import { adminProcedure, router } from "@/lib/trpc";
+import { z } from "zod";
+import { addPurchaseSchema } from "@/lib/zod/schema";
+import { ProductsTable, PurchasesTable } from "@/db/schema";
+import { and, eq, like, sql, desc, asc, lt } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { PRODUCT_PER_PAGE } from "@/lib/constants";
+
+export const purchase = router({
+	addPurchase: adminProcedure
+		.input(addPurchaseSchema)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db.transaction(async (tx) => {
+					for (const product of input.products) {
+						await tx.insert(PurchasesTable).values({
+							productId: product.productId,
+							quantityPurchased: product.quantity,
+							unitCost: product.unitCost,
+						});
+
+						const currentProduct = await tx.query.ProductsTable.findFirst({
+							where: eq(ProductsTable.id, product.productId),
+							columns: { stock: true },
+						});
+
+						const newStock = (currentProduct?.stock || 0) + product.quantity;
+
+						await tx
+							.update(ProductsTable)
+							.set({ stock: newStock })
+							.where(eq(ProductsTable.id, product.productId));
+					}
+				});
+
+				return { message: "Purchase added successfully" };
+			} catch (e) {
+				console.error("Error adding purchase:", e);
+				if (e instanceof Error) {
+					return { message: "Adding purchase failed", error: e.message };
+				}
+				return { message: "Adding purchase failed", error: "Unknown error" };
+			}
+		}),
+
+	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
+		try {
+			const result = await ctx.db.query.PurchasesTable.findMany({
+				with: {
+					product: {
+						columns: {
+							name: true,
+							id: true,
+							price: true,
+						},
+					},
+				},
+				orderBy: desc(PurchasesTable.createdAt),
+			});
+
+			return result;
+		} catch (e) {
+			if (e instanceof Error) {
+				return { message: "Fetching purchases failed", error: e.message };
+			}
+			console.error("error", e);
+			return { message: "Fetching purchases failed", error: "Unknown error" };
+		}
+	}),
+
+	getPurchaseById: adminProcedure
+		.input(z.object({ id: z.number() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				const result = await ctx.db.query.PurchasesTable.findFirst({
+					where: eq(PurchasesTable.id, input.id),
+					with: {
+						product: {
+							columns: {
+								name: true,
+								id: true,
+								price: true,
+							},
+						},
+					},
+				});
+
+				return result;
+			} catch (e) {
+				if (e instanceof Error) {
+					return { message: "Fetching purchase failed", error: e.message };
+				}
+				console.error("error", e);
+				return { message: "Fetching purchase failed", error: "Unknown error" };
+			}
+		}),
+
+	getPaginatedPurchases: adminProcedure
+		.input(
+			z.object({
+				page: z.number().default(1),
+				pageSize: z.number().default(PRODUCT_PER_PAGE),
+				productId: z.number().optional(),
+				sortField: z.string().optional(),
+				sortDirection: z.enum(["asc", "desc"]).default("desc"),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				console.log(
+					"Fetching paginated purchases with page:",
+					input.page,
+					"pageSize:",
+					input.pageSize,
+					"productId:",
+					input.productId,
+					"sortField:",
+					input.sortField,
+					"sortDirection:",
+					input.sortDirection,
+				);
+
+				const conditions: (SQL<unknown> | undefined)[] = [];
+
+				// Add filters
+				if (input.productId !== undefined) {
+					conditions.push(eq(PurchasesTable.productId, input.productId));
+				}
+
+				// Define order by clauses
+				const orderByClauses: SQL<unknown>[] = [];
+				const primarySortColumn =
+					input.sortField === "quantity"
+						? PurchasesTable.quantityPurchased
+						: input.sortField === "cost"
+							? PurchasesTable.unitCost
+							: PurchasesTable.createdAt;
+
+				const primaryOrderBy =
+					input.sortDirection === "asc"
+						? asc(primarySortColumn)
+						: desc(primarySortColumn);
+
+				orderByClauses.push(primaryOrderBy);
+				orderByClauses.push(asc(PurchasesTable.id));
+
+				const finalConditions = conditions.filter(
+					(c): c is SQL<unknown> => c !== undefined,
+				);
+
+				// Calculate offset
+				const offset = (input.page - 1) * input.pageSize;
+
+				const purchases = await ctx.db.query.PurchasesTable.findMany({
+					limit: input.pageSize,
+					offset: offset,
+					orderBy: orderByClauses,
+					where:
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					with: {
+						product: {
+							columns: {
+								name: true,
+								id: true,
+								price: true,
+							},
+						},
+					},
+				});
+
+				// Get total count for pagination info
+				const totalCountResult = await ctx.db
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(PurchasesTable)
+					.where(
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					)
+					.get();
+
+				const totalCount = totalCountResult?.count ?? 0;
+				const totalPages = Math.ceil(totalCount / input.pageSize);
+
+				return {
+					purchases,
+					pagination: {
+						currentPage: input.page,
+						totalPages,
+						totalCount,
+						hasNextPage: input.page < totalPages,
+						hasPreviousPage: input.page > 1,
+					},
+				};
+			} catch (e) {
+				console.log("Error fetching paginated purchases:", e);
+				if (e instanceof Error) {
+					return {
+						purchases: [],
+						pagination: {
+							currentPage: input.page,
+							totalPages: 0,
+							totalCount: 0,
+							hasNextPage: false,
+							hasPreviousPage: false,
+						},
+						message: "Fetching purchases failed",
+						error: e.message,
+					};
+				}
+				return {
+					purchases: [],
+					pagination: {
+						currentPage: input.page,
+						totalPages: 0,
+						totalCount: 0,
+						hasNextPage: false,
+						hasPreviousPage: false,
+					},
+					message: "Fetching purchases failed",
+					error: "Unknown error",
+				};
+			}
+		}),
+
+	searchPurchaseByProductName: adminProcedure
+		.input(z.object({ query: z.string() }))
+		.query(async ({ ctx, input }) => {
+			if (!input.query) {
+				return [];
+			}
+
+			try {
+				const joinedResults = await ctx.db
+					.select({
+						purchase: PurchasesTable,
+						product: {
+							id: ProductsTable.id,
+							name: ProductsTable.name,
+							price: ProductsTable.price,
+						},
+					})
+					.from(PurchasesTable)
+					.innerJoin(
+						ProductsTable,
+						eq(PurchasesTable.productId, ProductsTable.id),
+					)
+					.where(like(ProductsTable.name, `%${input.query}%`))
+					.orderBy(desc(PurchasesTable.createdAt))
+					.limit(50);
+
+				// Map results to the expected structure
+				const mappedResults = joinedResults.map((item) => ({
+					...item.purchase,
+					product: item.product,
+				}));
+
+				return mappedResults;
+			} catch (e) {
+				console.error("Error searching purchases:", e);
+				const error = e instanceof Error ? e.message : "Unknown error";
+				return { message: "Searching purchases failed", error };
+			}
+		}),
+
+	updatePurchase: adminProcedure
+		.input(
+			z.object({
+				id: z.number(),
+				data: addPurchaseSchema,
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db.transaction(async (tx) => {
+					const originalPurchases = await tx.query.PurchasesTable.findMany({
+						where: eq(PurchasesTable.id, input.id),
+					});
+
+					if (originalPurchases.length === 0) {
+						throw new Error("Purchase not found");
+					}
+
+					await tx
+						.delete(PurchasesTable)
+						.where(eq(PurchasesTable.id, input.id));
+
+					for (const originalPurchase of originalPurchases) {
+						const product = await tx.query.ProductsTable.findFirst({
+							where: eq(ProductsTable.id, originalPurchase.productId),
+							columns: { stock: true },
+						});
+
+						const newStock =
+							(product?.stock || 0) - originalPurchase.quantityPurchased;
+
+						await tx
+							.update(ProductsTable)
+							.set({ stock: newStock })
+							.where(eq(ProductsTable.id, originalPurchase.productId));
+					}
+
+					for (const product of input.data.products) {
+						await tx.insert(PurchasesTable).values({
+							id: input.id,
+							productId: product.productId,
+							quantityPurchased: product.quantity,
+							unitCost: product.unitCost,
+						});
+
+						const currentProduct = await tx.query.ProductsTable.findFirst({
+							where: eq(ProductsTable.id, product.productId),
+							columns: { stock: true },
+						});
+
+						const newStock = (currentProduct?.stock || 0) + product.quantity;
+
+						await tx
+							.update(ProductsTable)
+							.set({ stock: newStock })
+							.where(eq(ProductsTable.id, product.productId));
+					}
+				});
+
+				return { message: "Purchase updated successfully" };
+			} catch (e) {
+				console.error("Error updating purchase:", e);
+				if (e instanceof Error) {
+					return { message: "Updating purchase failed", error: e.message };
+				}
+				return { message: "Updating purchase failed", error: "Unknown error" };
+			}
+		}),
+
+	deletePurchase: adminProcedure
+		.input(z.object({ id: z.number() }))
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db.transaction(async (tx) => {
+					const purchase = await tx.query.PurchasesTable.findFirst({
+						where: eq(PurchasesTable.id, input.id),
+					});
+
+					if (!purchase) {
+						throw new Error("Purchase not found");
+					}
+
+					await tx
+						.delete(PurchasesTable)
+						.where(eq(PurchasesTable.id, input.id));
+
+					const product = await tx.query.ProductsTable.findFirst({
+						where: eq(ProductsTable.id, purchase.productId),
+						columns: { stock: true },
+					});
+
+					const newStock = (product?.stock || 0) - purchase.quantityPurchased;
+
+					await tx
+						.update(ProductsTable)
+						.set({ stock: newStock })
+						.where(eq(ProductsTable.id, purchase.productId));
+				});
+
+				return { message: "Purchase deleted successfully" };
+			} catch (e) {
+				console.error("Error deleting purchase:", e);
+				if (e instanceof Error) {
+					return { message: "Deleting purchase failed", error: e.message };
+				}
+				return { message: "Deleting purchase failed", error: "Unknown error" };
+			}
+		}),
+
+	getAverageCostOfProduct: adminProcedure
+		.input(
+			z.object({
+				productId: z.number(),
+				createdAt: z.date(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				const purchases = await ctx.db
+					.select()
+					.from(PurchasesTable)
+					.where(
+						and(
+							eq(PurchasesTable.productId, input.productId),
+							lt(PurchasesTable.createdAt, input.createdAt),
+						),
+					);
+
+				const sum = purchases.reduce(
+					(acc, purchase) =>
+						acc + purchase.unitCost * purchase.quantityPurchased,
+					0,
+				);
+				const totalProduct = purchases.reduce(
+					(acc, purchase) => acc + purchase.quantityPurchased,
+					0,
+				);
+
+				return totalProduct > 0 ? sum / totalProduct : 0;
+			} catch (e) {
+				console.error("Error calculating average cost:", e);
+				return 0;
+			}
+		}),
+});

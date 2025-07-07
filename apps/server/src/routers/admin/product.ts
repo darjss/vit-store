@@ -1,1 +1,515 @@
- 
+import { adminProcedure, router } from "@/lib/trpc";
+import { z } from "zod";
+import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
+import { ProductsTable, ProductImagesTable, BrandsTable } from "@/db/schema";
+import { and, eq, like, sql, desc, asc } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import { PRODUCT_PER_PAGE } from "@/lib/constants";
+
+export const product = router({
+	searchProductByName: adminProcedure
+		.input(z.object({ searchTerm: z.string() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				const products = await ctx.db.query.ProductsTable.findMany({
+					where: like(ProductsTable.name, `%${input.searchTerm}%`),
+					limit: 3,
+					with: {
+						images: true,
+					},
+				});
+				return products;
+			} catch (e) {
+				console.log("Error searching products:", e);
+				return [];
+			}
+		}),
+
+	searchProductByNameForOrder: adminProcedure
+		.input(z.object({ searchTerm: z.string() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				const products = await ctx.db.query.ProductsTable.findMany({
+					where: like(ProductsTable.name, `%${input.searchTerm}%`),
+					limit: 3,
+					columns: {
+						id: true,
+						name: true,
+						price: true,
+						stock: true,
+					},
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: eq(ProductImagesTable.isPrimary, true),
+						},
+					},
+				});
+				return products;
+			} catch (e) {
+				console.log("Error searching products for order:", e);
+				return [];
+			}
+		}),
+
+	addProduct: adminProcedure
+		.input(addProductSchema)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				// Remove the last empty image if present
+				const images = input.images.filter((image) => image.url.trim() !== "");
+
+		
+				images.forEach((image) => {
+					const parsed = z.string().url().safeParse(image.url);
+					if (!parsed.success) {
+						throw new Error(`Invalid image URL: ${image.url}`);
+					}
+					return parsed.data;
+				});
+
+				// Get brand name
+				const brand = await ctx.db.query.BrandsTable.findFirst({
+					where: eq(BrandsTable.id, input.brandId),
+				});
+
+				if (!brand) {
+					return { message: "Operation failed", error: "Brand not found" };
+				}
+
+				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
+				const slug = productName.replace(/\s+/g, "-").toLowerCase();
+
+				const [productResult] = await ctx.db
+					.insert(ProductsTable)
+					.values({
+						name: productName,
+						slug: slug,
+						description: input.description,
+						discount: 0,
+						amount: input.amount,
+						potency: input.potency,
+						stock: input.stock,
+						price: input.price,
+						dailyIntake: input.dailyIntake,
+						categoryId: input.categoryId,
+						brandId: input.brandId,
+						status: "active",
+					})
+					.returning();
+
+				if (!productResult) {
+					return {
+						message: "Operation failed",
+						error: "Failed to create product",
+					};
+				}
+
+				const productId = productResult.id;
+				console.log(`Product added with id: ${productId}`);
+
+				// Add images
+				const imagePromises = images.map((image, index) =>
+					ctx.db.insert(ProductImagesTable).values({
+						productId: productId,
+						url: image.url,
+						isPrimary: index === 0,
+					}),
+				);
+
+				await Promise.all(imagePromises);
+				console.log("Images added successfully");
+
+				return { message: "Product added successfully" };
+			} catch (e) {
+				console.log("Error adding product:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	getProductBenchmark: adminProcedure.query(async ({ ctx }) => {
+		try {
+			const startTime = performance.now();
+			await ctx.db.query.ProductsTable.findMany({
+				with: {
+					images: true,
+				},
+			});
+			return performance.now() - startTime;
+		} catch (e) {
+			console.log("Error in benchmark:", e);
+			return 0;
+		}
+	}),
+
+	getProductById: adminProcedure
+		.input(z.object({ id: z.number() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				console.log("Fetching product with id", input.id);
+				const product = await ctx.db.query.ProductsTable.findFirst({
+					where: eq(ProductsTable.id, input.id),
+					with: {
+						images: {
+							columns: {
+								id: true,
+								url: true,
+								isPrimary: true,
+							},
+						},
+					},
+				});
+
+				if (!product) {
+					return { message: "Operation failed", error: "Product not found" };
+				}
+
+				console.log(product);
+				return product;
+			} catch (e) {
+				console.log("Error fetching product:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	updateProduct: adminProcedure
+		.input(updateProductSchema)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				console.log("updating product");
+				if (!input.id) {
+					return { message: "Operation Failed", error: "Product id not found" };
+				}
+
+				const { images, ...productData } = input;
+				const filteredImages = images.filter(
+					(image) => image.url.trim() !== "",
+				);
+
+				// Validate image URLs
+				for (const image of filteredImages) {
+					const parsed = z.string().url().safeParse(image.url);
+					if (!parsed.success) {
+						return {
+							message: "image url validation error",
+							error: parsed.error,
+						};
+					}
+				}
+
+				const brand = await ctx.db.query.BrandsTable.findFirst({
+					where: eq(BrandsTable.id, input.brandId),
+				});
+
+				if (!brand) {
+					return { message: "Operation failed", error: "Brand not found" };
+				}
+
+				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
+				const slug = productName.replace(/\s+/g, "-").toLowerCase();
+
+				await ctx.db
+					.update(ProductsTable)
+					.set({ ...productData, name: productName, slug: slug })
+					.where(eq(ProductsTable.id, input.id));
+
+				
+				const existingImages = await ctx.db
+					.select({
+						id: ProductImagesTable.id,
+						url: ProductImagesTable.url,
+					})
+					.from(ProductImagesTable)
+					.where(eq(ProductImagesTable.productId, input.id));
+
+				let isDiff = false;
+				if (filteredImages.length !== existingImages.length) {
+					isDiff = true;
+				} else {
+					const sortedNewImages = filteredImages.toSorted((a, b) =>
+						a.url.localeCompare(b.url),
+					);
+					const sortedExistingImages = existingImages.toSorted((a, b) =>
+						a.url.localeCompare(b.url),
+					);
+					for (let i = 0; i < filteredImages.length; i++) {
+						if (sortedNewImages[i]?.url !== sortedExistingImages[i]?.url) {
+							isDiff = true;
+							break;
+						}
+					}
+				}
+
+				if (isDiff) {
+					// Delete existing images
+					const deletePromises = existingImages.map((image) =>
+						ctx.db
+							.delete(ProductImagesTable)
+							.where(eq(ProductImagesTable.id, image.id)),
+					);
+					await Promise.allSettled(deletePromises);
+
+					// Insert new images
+					const insertPromises = filteredImages.map((image, index) =>
+						ctx.db.insert(ProductImagesTable).values({
+							productId: input.id,
+							url: image.url,
+							isPrimary: index === 0,
+						}),
+					);
+					await Promise.allSettled(insertPromises);
+				}
+
+				return { message: "Product updated successfully" };
+			} catch (e) {
+				console.log("Error updating product:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	updateStock: adminProcedure
+		.input(
+			z.object({
+				productId: z.number(),
+				numberToUpdate: z.number(),
+				type: z.enum(["add", "minus"]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db
+					.update(ProductsTable)
+					.set({
+						stock: sql`${ProductsTable.stock} ${input.type === "add" ? "+" : "-"} ${input.numberToUpdate}`,
+					})
+					.where(eq(ProductsTable.id, input.productId));
+
+				return { message: "Stock updated successfully" };
+			} catch (e) {
+				console.log("Error updating stock:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	deleteProduct: adminProcedure
+		.input(z.object({ id: z.number() }))
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db
+					.delete(ProductsTable)
+					.where(eq(ProductsTable.id, input.id));
+
+				return { message: "Product deleted successfully" };
+			} catch (e) {
+				console.log("Error deleting product:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	getAllProducts: adminProcedure.query(async ({ ctx }) => {
+		try {
+			console.log("fetching products");
+			const products = await ctx.db.query.ProductsTable.findMany({
+				with: {
+					images: {
+						columns: {
+							id: true,
+							url: true,
+							isPrimary: true,
+						},
+					},
+				},
+			});
+			return products;
+		} catch (e) {
+			console.log("Error fetching all products:", e);
+			if (e instanceof Error) {
+				return { message: "Operation failed", error: e.message };
+			}
+			return { message: "Operation failed", error: "Unknown error" };
+		}
+	}),
+
+	getPaginatedProducts: adminProcedure
+		.input(
+			z.object({
+				page: z.number().default(1),
+				pageSize: z.number().default(PRODUCT_PER_PAGE),
+				brandId: z.number().optional(),
+				categoryId: z.number().optional(),
+				sortField: z.string().optional(),
+				sortDirection: z.enum(["asc", "desc"]).default("asc"),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				console.log(
+					"Fetching paginated products with page:",
+					input.page,
+					"pageSize:",
+					input.pageSize,
+					"brandId:",
+					input.brandId,
+					"categoryId:",
+					input.categoryId,
+					"sortField:",
+					input.sortField,
+					"sortDirection:",
+					input.sortDirection,
+				);
+
+				const conditions: (SQL<unknown> | undefined)[] = [];
+
+				// Add filters
+				if (input.brandId !== undefined && input.brandId !== 0) {
+					conditions.push(eq(ProductsTable.brandId, input.brandId));
+				}
+				if (input.categoryId !== undefined && input.categoryId !== 0) {
+					conditions.push(eq(ProductsTable.categoryId, input.categoryId));
+				}
+
+				const orderByClauses: SQL<unknown>[] = [];
+				const primarySortColumn =
+					input.sortField === "price"
+						? ProductsTable.price
+						: input.sortField === "stock"
+							? ProductsTable.stock
+							: ProductsTable.createdAt;
+
+				const primaryOrderBy =
+					input.sortDirection === "asc"
+						? asc(primarySortColumn)
+						: desc(primarySortColumn);
+
+				orderByClauses.push(primaryOrderBy);
+				orderByClauses.push(asc(ProductsTable.id));
+
+				const finalConditions = conditions.filter(
+					(c): c is SQL<unknown> => c !== undefined,
+				);
+
+				// Calculate offset
+				const offset = (input.page - 1) * input.pageSize;
+
+				const products = await ctx.db.query.ProductsTable.findMany({
+					limit: input.pageSize,
+					offset: offset,
+					orderBy: orderByClauses,
+					where:
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					with: {
+						images: true,
+					},
+				});
+
+				// Get total count for pagination info
+				const totalCountResult = await ctx.db
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(ProductsTable)
+					.where(
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					)
+					.get();
+
+				const totalCount = totalCountResult?.count ?? 0;
+				const totalPages = Math.ceil(totalCount / input.pageSize);
+
+				return {
+					products,
+					pagination: {
+						currentPage: input.page,
+						totalPages,
+						totalCount,
+						hasNextPage: input.page < totalPages,
+						hasPreviousPage: input.page > 1,
+					},
+				};
+			} catch (e) {
+				console.log("Error fetching paginated products:", e);
+				if (e instanceof Error) {
+					return {
+						products: [],
+						pagination: {
+							currentPage: input.page,
+							totalPages: 0,
+							totalCount: 0,
+							hasNextPage: false,
+							hasPreviousPage: false,
+						},
+						message: "Fetching products failed",
+						error: e.message,
+					};
+				}
+				return {
+					products: [],
+					pagination: {
+						currentPage: input.page,
+						totalPages: 0,
+						totalCount: 0,
+						hasNextPage: false,
+						hasPreviousPage: false,
+					},
+					message: "Fetching products failed",
+					error: "Unknown error",
+				};
+			}
+		}),
+
+	setProductStock: adminProcedure
+		.input(
+			z.object({
+				id: z.number(),
+				newStock: z.number(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await ctx.db
+					.update(ProductsTable)
+					.set({ stock: input.newStock })
+					.where(eq(ProductsTable.id, input.id));
+
+				return { message: "Stock set successfully" };
+			} catch (e) {
+				console.log("Error setting product stock:", e);
+				if (e instanceof Error) {
+					return { message: "Operation failed", error: e.message };
+				}
+				return { message: "Operation failed", error: "Unknown error" };
+			}
+		}),
+
+	getAllProductValue: adminProcedure.query(async ({ ctx }) => {
+		try {
+			const result = await ctx.db
+				.select({ stock: ProductsTable.stock, price: ProductsTable.price })
+				.from(ProductsTable);
+
+			const total = result.reduce(
+				(acc, product) => acc + product.price * product.stock,
+				0,
+			);
+			return total;
+		} catch (e) {
+			console.log("Error calculating product value:", e);
+			return 0;
+		}
+	}),
+});

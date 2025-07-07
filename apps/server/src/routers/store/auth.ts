@@ -7,7 +7,7 @@ import {
 	createSession,
 	setSessionTokenCookie,
 	invalidateSession,
-} from "@/lib/session";
+} from "@/lib/session/store";
 import { TRPCError } from "@trpc/server";
 import type { Context } from "@/lib/context";
 import { CustomersTable } from "@/db/schema";
