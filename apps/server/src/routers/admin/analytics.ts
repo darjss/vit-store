@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { timeRangeSchema } from "@/lib/zod/schema";
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { getDaysFromTimeRange } from "@/lib/utils";
 import { gte, sql, and, eq, count, lt, or, desc } from "drizzle-orm";
 import { z } from "zod";
@@ -38,7 +39,11 @@ export const analytics = router({
 				return orders[0]?.avg || 0;
 			} catch (error) {
 				console.error("Error in getAverageOrderValue:", error);
-				return 0;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch average order value",
+					cause: error,
+				});
 			}
 		}),
 
@@ -69,7 +74,11 @@ export const analytics = router({
 				return revenue - cost - discount;
 			} catch (error) {
 				console.error("Error in getTotalProfit:", error);
-				return 0;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch total profit",
+					cause: error,
+				});
 			}
 		}),
 
@@ -102,7 +111,11 @@ export const analytics = router({
 					.groupBy(CategoriesTable.name, BrandsTable.name);
 			} catch (error) {
 				console.error("Error in getSalesByCategory:", error);
-				return [];
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch sales by category",
+					cause: error,
+				});
 			}
 		}),
 
@@ -154,12 +167,11 @@ export const analytics = router({
 			};
 		} catch (error) {
 			console.error("Error in getCustomerLifetimeValue:", error);
-			return {
-				averageLifetimeValue: 0,
-				totalCustomers: 0,
-				maxLifetimeValue: 0,
-				minLifetimeValue: 0,
-			};
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch customer lifetime value",
+				cause: error,
+			});
 		}
 	}),
 
@@ -195,7 +207,11 @@ export const analytics = router({
 				return repeatCustomers[0]?.count || 0;
 			} catch (error) {
 				console.error("Error in getRepeatCustomersCount:", error);
-				return 0;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch repeat customers count",
+					cause: error,
+				});
 			}
 		}),
 
@@ -215,7 +231,11 @@ export const analytics = router({
 				.from(ProductsTable);
 		} catch (error) {
 			console.error("Error in getInventoryStatus:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch inventory status",
+				cause: error,
+			});
 		}
 	}),
 
@@ -250,7 +270,11 @@ export const analytics = router({
 				};
 			} catch (error) {
 				console.error("Error in getFailedPayments:", error);
-				return { count: 0, total: 0 };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch failed payments",
+					cause: error,
+				});
 			}
 		}),
 
@@ -281,7 +305,11 @@ export const analytics = router({
 				.orderBy(ProductsTable.stock);
 		} catch (error) {
 			console.error("Error in getLowInventoryProducts:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch low inventory products",
+				cause: error,
+			});
 		}
 	}),
 
@@ -315,7 +343,11 @@ export const analytics = router({
 					.limit(5);
 			} catch (error) {
 				console.error("Error in getTopBrandsBySales:", error);
-				return [];
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch top brands by sales",
+					cause: error,
+				});
 			}
 		}),
 
@@ -329,7 +361,11 @@ export const analytics = router({
 			return result[0]?.total || 0;
 		} catch (error) {
 			console.error("Error in getCurrentProductsValue:", error);
-			return 0;
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch current products value",
+				cause: error,
+			});
 		}
 	}),
 
@@ -608,7 +644,11 @@ export const analytics = router({
 				};
 			} catch (error) {
 				console.error("Error in getAnalyticsData:", error);
-				throw new Error("Failed to fetch analytics data");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch analytics data",
+					cause: error,
+				});
 			}
 		}),
 });

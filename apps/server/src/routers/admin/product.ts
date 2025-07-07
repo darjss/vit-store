@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
 import { ProductsTable, ProductImagesTable, BrandsTable } from "@/db/schema";
@@ -19,9 +20,13 @@ export const product = router({
 					},
 				});
 				return products;
-			} catch (e) {
-				console.log("Error searching products:", e);
-				return [];
+			} catch (error) {
+				console.error("Error searching products:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
 			}
 		}),
 
@@ -48,9 +53,13 @@ export const product = router({
 					},
 				});
 				return products;
-			} catch (e) {
-				console.log("Error searching products for order:", e);
-				return [];
+			} catch (error) {
+				console.error("Error searching products for order:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products for order",
+					cause: error,
+				});
 			}
 		}),
 
@@ -61,14 +70,16 @@ export const product = router({
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
 
-		
-				images.forEach((image) => {
+				// Validate image URLs
+				for (const image of images) {
 					const parsed = z.string().url().safeParse(image.url);
 					if (!parsed.success) {
-						throw new Error(`Invalid image URL: ${image.url}`);
+						throw new TRPCError({
+							code: "BAD_REQUEST",
+							message: `Invalid image URL: ${image.url}`,
+						});
 					}
-					return parsed.data;
-				});
+				}
 
 				// Get brand name
 				const brand = await ctx.db.query.BrandsTable.findFirst({
@@ -76,7 +87,10 @@ export const product = router({
 				});
 
 				if (!brand) {
-					return { message: "Operation failed", error: "Brand not found" };
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Brand not found",
+					});
 				}
 
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
@@ -101,10 +115,10 @@ export const product = router({
 					.returning();
 
 				if (!productResult) {
-					return {
-						message: "Operation failed",
-						error: "Failed to create product",
-					};
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to create product",
+					});
 				}
 
 				const productId = productResult.id;
@@ -123,12 +137,16 @@ export const product = router({
 				console.log("Images added successfully");
 
 				return { message: "Product added successfully" };
-			} catch (e) {
-				console.log("Error adding product:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error adding product:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add product",
+					cause: error,
+				});
 			}
 		}),
 
@@ -141,9 +159,13 @@ export const product = router({
 				},
 			});
 			return performance.now() - startTime;
-		} catch (e) {
-			console.log("Error in benchmark:", e);
-			return 0;
+		} catch (error) {
+			console.error("Error in benchmark:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to run benchmark",
+				cause: error,
+			});
 		}
 	}),
 
@@ -166,17 +188,24 @@ export const product = router({
 				});
 
 				if (!product) {
-					return { message: "Operation failed", error: "Product not found" };
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Product not found",
+					});
 				}
 
 				console.log(product);
 				return product;
-			} catch (e) {
-				console.log("Error fetching product:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error fetching product:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch product",
+					cause: error,
+				});
 			}
 		}),
 
@@ -186,7 +215,10 @@ export const product = router({
 			try {
 				console.log("updating product");
 				if (!input.id) {
-					return { message: "Operation Failed", error: "Product id not found" };
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Product ID is required",
+					});
 				}
 
 				const { images, ...productData } = input;
@@ -198,10 +230,10 @@ export const product = router({
 				for (const image of filteredImages) {
 					const parsed = z.string().url().safeParse(image.url);
 					if (!parsed.success) {
-						return {
-							message: "image url validation error",
-							error: parsed.error,
-						};
+						throw new TRPCError({
+							code: "BAD_REQUEST",
+							message: "Invalid image URL",
+						});
 					}
 				}
 
@@ -210,7 +242,10 @@ export const product = router({
 				});
 
 				if (!brand) {
-					return { message: "Operation failed", error: "Brand not found" };
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Brand not found",
+					});
 				}
 
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
@@ -221,7 +256,6 @@ export const product = router({
 					.set({ ...productData, name: productName, slug: slug })
 					.where(eq(ProductsTable.id, input.id));
 
-				
 				const existingImages = await ctx.db
 					.select({
 						id: ProductImagesTable.id,
@@ -269,12 +303,16 @@ export const product = router({
 				}
 
 				return { message: "Product updated successfully" };
-			} catch (e) {
-				console.log("Error updating product:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error updating product:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update product",
+					cause: error,
+				});
 			}
 		}),
 
@@ -288,6 +326,18 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				// Check if product exists
+				const product = await ctx.db.query.ProductsTable.findFirst({
+					where: eq(ProductsTable.id, input.productId),
+				});
+
+				if (!product) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Product not found",
+					});
+				}
+
 				await ctx.db
 					.update(ProductsTable)
 					.set({
@@ -296,12 +346,16 @@ export const product = router({
 					.where(eq(ProductsTable.id, input.productId));
 
 				return { message: "Stock updated successfully" };
-			} catch (e) {
-				console.log("Error updating stock:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error updating stock:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update stock",
+					cause: error,
+				});
 			}
 		}),
 
@@ -309,17 +363,33 @@ export const product = router({
 		.input(z.object({ id: z.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
+				// Check if product exists
+				const product = await ctx.db.query.ProductsTable.findFirst({
+					where: eq(ProductsTable.id, input.id),
+				});
+
+				if (!product) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Product not found",
+					});
+				}
+
 				await ctx.db
 					.delete(ProductsTable)
 					.where(eq(ProductsTable.id, input.id));
 
 				return { message: "Product deleted successfully" };
-			} catch (e) {
-				console.log("Error deleting product:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error deleting product:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete product",
+					cause: error,
+				});
 			}
 		}),
 
@@ -338,12 +408,13 @@ export const product = router({
 				},
 			});
 			return products;
-		} catch (e) {
-			console.log("Error fetching all products:", e);
-			if (e instanceof Error) {
-				return { message: "Operation failed", error: e.message };
-			}
-			return { message: "Operation failed", error: "Unknown error" };
+		} catch (error) {
+			console.error("Error fetching all products:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch products",
+				cause: error,
+			});
 		}
 	}),
 
@@ -441,34 +512,13 @@ export const product = router({
 						hasPreviousPage: input.page > 1,
 					},
 				};
-			} catch (e) {
-				console.log("Error fetching paginated products:", e);
-				if (e instanceof Error) {
-					return {
-						products: [],
-						pagination: {
-							currentPage: input.page,
-							totalPages: 0,
-							totalCount: 0,
-							hasNextPage: false,
-							hasPreviousPage: false,
-						},
-						message: "Fetching products failed",
-						error: e.message,
-					};
-				}
-				return {
-					products: [],
-					pagination: {
-						currentPage: input.page,
-						totalPages: 0,
-						totalCount: 0,
-						hasNextPage: false,
-						hasPreviousPage: false,
-					},
-					message: "Fetching products failed",
-					error: "Unknown error",
-				};
+			} catch (error) {
+				console.error("Error fetching paginated products:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch paginated products",
+					cause: error,
+				});
 			}
 		}),
 
@@ -481,18 +531,34 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				// Check if product exists
+				const product = await ctx.db.query.ProductsTable.findFirst({
+					where: eq(ProductsTable.id, input.id),
+				});
+
+				if (!product) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Product not found",
+					});
+				}
+
 				await ctx.db
 					.update(ProductsTable)
 					.set({ stock: input.newStock })
 					.where(eq(ProductsTable.id, input.id));
 
 				return { message: "Stock set successfully" };
-			} catch (e) {
-				console.log("Error setting product stock:", e);
-				if (e instanceof Error) {
-					return { message: "Operation failed", error: e.message };
+			} catch (error) {
+				console.error("Error setting product stock:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-				return { message: "Operation failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to set product stock",
+					cause: error,
+				});
 			}
 		}),
 
@@ -507,9 +573,13 @@ export const product = router({
 				0,
 			);
 			return total;
-		} catch (e) {
-			console.log("Error calculating product value:", e);
-			return 0;
+		} catch (error) {
+			console.error("Error calculating product value:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to calculate product value",
+				cause: error,
+			});
 		}
 	}),
 });

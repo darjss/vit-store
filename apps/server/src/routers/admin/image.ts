@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { ProductImagesTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -18,7 +19,11 @@ export const image = router({
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -58,9 +63,11 @@ export const image = router({
 						response.statusText,
 						errorText,
 					);
-					throw new Error(
-						`Image upload failed: ${response.status} ${response.statusText} ${errorText}`,
-					);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: `Image upload failed: ${response.status} ${response.statusText} ${errorText}`,
+						cause: errorText,
+					});
 				}
 
 				const uploadedImages = (await response.json()) as {
@@ -82,7 +89,11 @@ export const image = router({
 				return { message: "Successfully uploaded images" };
 			} catch (error) {
 				console.error("Error in uploadImagesFromUrl:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -153,7 +164,11 @@ export const image = router({
 				return { message: "Successfully updated images" };
 			} catch (error) {
 				console.error("Error updating images:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -181,7 +196,11 @@ export const image = router({
 				return images;
 			} catch (error) {
 				console.error("Error getting images by product ID:", error);
-				return [];
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -201,7 +220,11 @@ export const image = router({
 				return { message: "Successfully deleted image" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -231,7 +254,11 @@ export const image = router({
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Operation failed",
+					cause: error,
+				});
 			}
 		}),
 
@@ -251,7 +278,11 @@ export const image = router({
 			return images;
 		} catch (error) {
 			console.error("Error getting all images:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Operation failed",
+				cause: error,
+			});
 		}
 	}),
 });

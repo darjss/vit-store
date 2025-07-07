@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { addPurchaseSchema } from "@/lib/zod/schema";
 import { ProductsTable, PurchasesTable } from "@/db/schema";
@@ -36,10 +37,11 @@ export const purchase = router({
 				return { message: "Purchase added successfully" };
 			} catch (e) {
 				console.error("Error adding purchase:", e);
-				if (e instanceof Error) {
-					return { message: "Adding purchase failed", error: e.message };
-				}
-				return { message: "Adding purchase failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Adding purchase failed",
+					cause: e,
+				});
 			}
 		}),
 
@@ -60,11 +62,12 @@ export const purchase = router({
 
 			return result;
 		} catch (e) {
-			if (e instanceof Error) {
-				return { message: "Fetching purchases failed", error: e.message };
-			}
 			console.error("error", e);
-			return { message: "Fetching purchases failed", error: "Unknown error" };
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Fetching purchases failed",
+				cause: e,
+			});
 		}
 	}),
 
@@ -87,11 +90,12 @@ export const purchase = router({
 
 				return result;
 			} catch (e) {
-				if (e instanceof Error) {
-					return { message: "Fetching purchase failed", error: e.message };
-				}
 				console.error("error", e);
-				return { message: "Fetching purchase failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Fetching purchase failed",
+					cause: e,
+				});
 			}
 		}),
 
@@ -192,32 +196,11 @@ export const purchase = router({
 				};
 			} catch (e) {
 				console.log("Error fetching paginated purchases:", e);
-				if (e instanceof Error) {
-					return {
-						purchases: [],
-						pagination: {
-							currentPage: input.page,
-							totalPages: 0,
-							totalCount: 0,
-							hasNextPage: false,
-							hasPreviousPage: false,
-						},
-						message: "Fetching purchases failed",
-						error: e.message,
-					};
-				}
-				return {
-					purchases: [],
-					pagination: {
-						currentPage: input.page,
-						totalPages: 0,
-						totalCount: 0,
-						hasNextPage: false,
-						hasPreviousPage: false,
-					},
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
 					message: "Fetching purchases failed",
-					error: "Unknown error",
-				};
+					cause: e,
+				});
 			}
 		}),
 
@@ -257,7 +240,11 @@ export const purchase = router({
 			} catch (e) {
 				console.error("Error searching purchases:", e);
 				const error = e instanceof Error ? e.message : "Unknown error";
-				return { message: "Searching purchases failed", error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Searching purchases failed",
+					cause: e,
+				});
 			}
 		}),
 
@@ -276,7 +263,10 @@ export const purchase = router({
 					});
 
 					if (originalPurchases.length === 0) {
-						throw new Error("Purchase not found");
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Purchase not found",
+						});
 					}
 
 					await tx
@@ -323,10 +313,11 @@ export const purchase = router({
 				return { message: "Purchase updated successfully" };
 			} catch (e) {
 				console.error("Error updating purchase:", e);
-				if (e instanceof Error) {
-					return { message: "Updating purchase failed", error: e.message };
-				}
-				return { message: "Updating purchase failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Updating purchase failed",
+					cause: e,
+				});
 			}
 		}),
 
@@ -340,7 +331,10 @@ export const purchase = router({
 					});
 
 					if (!purchase) {
-						throw new Error("Purchase not found");
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Purchase not found",
+						});
 					}
 
 					await tx
@@ -363,10 +357,11 @@ export const purchase = router({
 				return { message: "Purchase deleted successfully" };
 			} catch (e) {
 				console.error("Error deleting purchase:", e);
-				if (e instanceof Error) {
-					return { message: "Deleting purchase failed", error: e.message };
-				}
-				return { message: "Deleting purchase failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Deleting purchase failed",
+					cause: e,
+				});
 			}
 		}),
 

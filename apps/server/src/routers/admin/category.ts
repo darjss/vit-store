@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { CategoriesTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -18,7 +19,11 @@ export const category = router({
 			return categories;
 		} catch (error) {
 			console.error("Error fetching categories:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Error fetching categories",
+				cause: error,
+			});
 		}
 	}),
 
@@ -36,7 +41,11 @@ export const category = router({
 				return { message: "Successfully added category" };
 			} catch (error) {
 				console.error("Error adding category:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Error adding category",
+					cause: error,
+				});
 			}
 		}),
 
@@ -57,7 +66,11 @@ export const category = router({
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				console.error("Error updating category:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Error updating category",
+					cause: error,
+				});
 			}
 		}),
 
@@ -74,7 +87,11 @@ export const category = router({
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				console.error("Error deleting category:", error);
-				return { message: "Operation failed", error: error };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Error deleting category",
+					cause: error,
+				});
 			}
 		}),
 
@@ -98,10 +115,21 @@ export const category = router({
 					.where(eq(CategoriesTable.id, id))
 					.limit(1);
 
-				return category[0] || null;
+				if (!category[0]) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Category not found",
+					});
+				}
+
+				return category[0];
 			} catch (error) {
 				console.error("Error fetching category by ID:", error);
-				return null;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Error fetching category by ID",
+					cause: error,
+				});
 			}
 		}),
 });

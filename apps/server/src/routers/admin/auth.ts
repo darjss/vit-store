@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { UserSelectType } from "@/db/schema";
 import { UsersTable } from "@/db/schema";
@@ -51,7 +52,11 @@ export const auth = router({
 				return { success: true };
 			} catch (error) {
 				console.error("Error inserting session:", error);
-				throw new Error("Failed to insert session");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to insert session",
+					cause: error,
+				});
 			}
 		}),
 
@@ -85,7 +90,11 @@ export const auth = router({
 				};
 			} catch (error) {
 				console.error("Error getting session:", error);
-				return { session: null, user: null };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get session",
+					cause: error,
+				});
 			}
 		}),
 
@@ -109,7 +118,11 @@ export const auth = router({
 			};
 		} catch (error) {
 			console.error("Error in KV benchmark:", error);
-			return { set: 0, get: 0 };
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to run KV benchmark",
+				cause: error,
+			});
 		}
 	}),
 
@@ -126,7 +139,11 @@ export const auth = router({
 				return { success: true };
 			} catch (error) {
 				console.error("Error deleting session:", error);
-				throw new Error("Failed to delete session");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete session",
+					cause: error,
+				});
 			}
 		}),
 
@@ -158,7 +175,11 @@ export const auth = router({
 				return { success: true };
 			} catch (error) {
 				console.error("Error updating session:", error);
-				throw new Error("Failed to update session");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update session",
+					cause: error,
+				});
 			}
 		}),
 
@@ -190,13 +211,17 @@ export const auth = router({
 					});
 
 				if (!user) {
-					throw new Error("User not found");
+					throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 				}
 
 				return user;
 			} catch (error) {
 				console.error("Error creating user:", error);
-				throw new Error("Failed to create user");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create user",
+					cause: error,
+				});
 			}
 		}),
 
@@ -221,7 +246,11 @@ export const auth = router({
 				return result[0].user as UserSelectType;
 			} catch (error) {
 				console.error("Error getting user from Google ID:", error);
-				return null;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get user from Google ID",
+					cause: error,
+				});
 			}
 		}),
 });

@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { PaymentsTable } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -26,7 +27,11 @@ export const payment = router({
 				return result[0];
 			} catch (error) {
 				console.error("Error creating payment:", error);
-				throw new Error("Failed to create payment");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create payment",
+					cause: error,
+				});
 			}
 		}),
 
@@ -46,7 +51,11 @@ export const payment = router({
 			return result;
 		} catch (error) {
 			console.error("Error getting payments:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to get payments",
+				cause: error,
+			});
 		}
 	}),
 
@@ -67,7 +76,11 @@ export const payment = router({
 			return result;
 		} catch (error) {
 			console.error("Error getting pending payments:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to get pending payments",
+				cause: error,
+			});
 		}
 	}),
 });

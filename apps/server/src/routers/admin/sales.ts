@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { timeRangeSchema } from "@/lib/zod/schema";
 import { SalesTable, ProductsTable, ProductImagesTable } from "@/db/schema";
@@ -23,9 +24,13 @@ export const sales = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				return await getAnalyticsForHome(ctx, input.timeRange);
-			} catch (e) {
-				console.log("Error getting analytics for home:", e);
-				return { sum: 0, salesCount: 0, profit: 0 };
+			} catch (error) {
+				console.error("Error getting analytics for home:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch analytics",
+					cause: error,
+				});
 			}
 		}),
 
@@ -43,18 +48,26 @@ export const sales = router({
 					input.timeRange,
 					input.productCount,
 				);
-			} catch (e) {
-				console.log("Error getting most sold products:", e);
-				return [];
+			} catch (error) {
+				console.error("Error getting most sold products:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch top products",
+					cause: error,
+				});
 			}
 		}),
 
 	weeklyOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
 			return await getOrderCountForWeek(ctx);
-		} catch (e) {
-			console.log("Error getting order count for week:", e);
-			return [];
+		} catch (error) {
+			console.error("Error getting order count for week:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch weekly orders",
+				cause: error,
+			});
 		}
 	}),
 
@@ -67,9 +80,13 @@ export const sales = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				return await getAverageOrderValue(ctx, input.timeRange);
-			} catch (e) {
-				console.log("Error getting average order value:", e);
-				return 0;
+			} catch (error) {
+				console.error("Error getting average order value:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch average order value",
+					cause: error,
+				});
 			}
 		}),
 
@@ -82,18 +99,26 @@ export const sales = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				return await getOrderCount(ctx, input.timeRange);
-			} catch (e) {
-				console.log("Error getting order count:", e);
-				return { count: 0 };
+			} catch (error) {
+				console.error("Error getting order count:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch order count",
+					cause: error,
+				});
 			}
 		}),
 
 	pendingOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
 			return await getPendingOrders(ctx);
-		} catch (e) {
-			console.log("Error getting pending orders:", e);
-			return [];
+		} catch (error) {
+			console.error("Error getting pending orders:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch pending orders",
+				cause: error,
+			});
 		}
 	}),
 
@@ -145,24 +170,11 @@ export const sales = router({
 			return dashboardData;
 		} catch (error) {
 			console.error("Error fetching dashboard homepage data:", error);
-			// Return a default structure on error to prevent breaking the page
-			const errorData = {
-				salesData: {
-					daily: { sum: 0, salesCount: 0, profit: 0 },
-					weekly: { sum: 0, salesCount: 0, profit: 0 },
-					monthly: { sum: 0, salesCount: 0, profit: 0 },
-				},
-				mostSoldProducts: { daily: [], weekly: [], monthly: [] },
-				orderCounts: {
-					daily: { count: 0 },
-					weekly: { count: 0 },
-					monthly: { count: 0 },
-				},
-				pendingOrders: [],
-				lastFetched: new Date().toISOString(),
-				error: "Failed to fetch data",
-			};
-			return errorData;
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch dashboard data",
+				cause: error,
+			});
 		}
 	}),
 });

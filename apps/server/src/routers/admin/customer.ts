@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { CustomersTable } from "@/db/schema";
 import { eq, getTableColumns, gte, sql } from "drizzle-orm";
@@ -22,7 +23,11 @@ export const customer = router({
 				return result;
 			} catch (error) {
 				console.error("Error adding customer:", error);
-				throw new Error("Failed to add customer");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add customer",
+					cause: error,
+				});
 			}
 		}),
 
@@ -41,10 +46,20 @@ export const customer = router({
 					.where(eq(CustomersTable.phone, input.phone))
 					.limit(1);
 				console.log("RESULT", result);
+				if (result.length === 0) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Customer not found",
+					});
+				}
 				return result[0] || null;
 			} catch (error) {
 				console.error("Error getting customer by phone:", error);
-				return null;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get customer by phone",
+					cause: error,
+				});
 			}
 		}),
 
@@ -58,7 +73,11 @@ export const customer = router({
 			return result[0]?.count || 0;
 		} catch (error) {
 			console.error("Error getting customer count:", error);
-			return 0;
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to get customer count",
+				cause: error,
+			});
 		}
 	}),
 
@@ -84,7 +103,11 @@ export const customer = router({
 				return result?.count ?? 0;
 			} catch (error) {
 				console.error("Error getting new customers count:", error);
-				return 0;
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get new customers count",
+					cause: error,
+				});
 			}
 		}),
 
@@ -97,7 +120,11 @@ export const customer = router({
 			return customers;
 		} catch (error) {
 			console.error("Error getting all customers:", error);
-			return [];
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to get all customers",
+				cause: error,
+			});
 		}
 	}),
 
@@ -117,10 +144,20 @@ export const customer = router({
 					.where(eq(CustomersTable.phone, phone))
 					.returning({ phone: CustomersTable.phone });
 
+				if (result.length === 0) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Customer not found",
+					});
+				}
 				return result[0] || null;
 			} catch (error) {
 				console.error("Error updating customer:", error);
-				throw new Error("Failed to update customer");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update customer",
+					cause: error,
+				});
 			}
 		}),
 
@@ -140,7 +177,11 @@ export const customer = router({
 				return { message: "Successfully deleted customer" };
 			} catch (error) {
 				console.error("Error deleting customer:", error);
-				throw new Error("Failed to delete customer");
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete customer",
+					cause: error,
+				});
 			}
 		}),
 });

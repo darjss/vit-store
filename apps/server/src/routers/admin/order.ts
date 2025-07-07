@@ -1,4 +1,5 @@
 import { adminProcedure, router } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
 	addOrderSchema,
@@ -58,9 +59,7 @@ export const order = router({
 							deliveryProvider: input.deliveryProvider,
 						})
 						.returning({ orderId: OrdersTable.id });
-					if (order?.orderId === undefined) {
-						return;
-					}
+					
 					const orderId = order?.orderId;
 
 					for (const product of input.products) {
@@ -109,7 +108,11 @@ export const order = router({
 						console.log("Payment created:", paymentResult);
 					} catch (error) {
 						console.error("Error creating payment:", error);
-						throw error;
+						throw new TRPCError({
+							code: "INTERNAL_SERVER_ERROR",
+							message: "Failed to create payment",
+							cause: error,
+						});
 					}
 					console.log("transaction done");
 				});
@@ -118,10 +121,17 @@ export const order = router({
 				return { message: "Order added successfully" };
 			} catch (e) {
 				if (e instanceof Error) {
-					return { message: "Adding order failed", error: e.message };
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to add order",
+						cause: e,
+					});
 				}
-				console.log("error", e);
-				return { message: "Adding order failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -157,7 +167,10 @@ export const order = router({
 						})
 						.returning({ orderId: OrdersTable.id });
 					if (order?.orderId === undefined) {
-						return;
+						throw new TRPCError({
+							code: "INTERNAL_SERVER_ERROR",
+							message: "Failed to create order",
+						});
 					}
 					const orderId = order?.orderId;
 
@@ -207,7 +220,11 @@ export const order = router({
 						console.log("Payment created:", paymentResult);
 					} catch (error) {
 						console.error("Error creating payment:", error);
-						throw error;
+						throw new TRPCError({
+							code: "INTERNAL_SERVER_ERROR",
+							message: "Failed to create payment",
+							cause: error,
+						});
 					}
 					console.log("transaction done");
 				});
@@ -216,10 +233,17 @@ export const order = router({
 				return { message: "Order added successfully" };
 			} catch (e) {
 				if (e instanceof Error) {
-					return { message: "Adding order failed", error: e.message };
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to add order",
+						cause: e,
+					});
 				}
-				console.log("error", e);
-				return { message: "Adding order failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -339,7 +363,7 @@ export const order = router({
 					const paymentUpdatePromise = tx
 						.update(PaymentsTable)
 						.set({ status: input.paymentStatus })
-						.where(eq(PaymentsTable.orderId, input.id!));
+						.where(eq(PaymentsTable.orderId, input.id));
 
 					await Promise.allSettled([
 						...orderDetailsPromise,
@@ -350,11 +374,11 @@ export const order = router({
 
 				return { message: "Order updated successfully" };
 			} catch (e) {
-				console.log(e);
-				if (e instanceof Error) {
-					return { message: "Updating order failed", error: e.message };
-				}
-				return { message: "Updating order failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -384,11 +408,11 @@ export const order = router({
 
 				return { message: "Order deleted successfully" };
 			} catch (e) {
-				console.log(e);
-				if (e instanceof Error) {
-					return { message: "Deleting order failed", error: e.message };
-				}
-				return { message: "Deleting order failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -437,8 +461,11 @@ export const order = router({
 
 				return shapeOrderResults(orders);
 			} catch (e) {
-				console.log(e);
-				return [];
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -536,10 +563,17 @@ export const order = router({
 				return shapeOrderResult(result);
 			} catch (e) {
 				if (e instanceof Error) {
-					return { message: "Fetching order failed", error: e.message };
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to fetch order",
+						cause: e,
+					});
 				}
-				console.log("error", e);
-				return { message: "Fetching order failed", error: "Unknown error" };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch order",
+					cause: e,
+				});
 			}
 		}),
 
@@ -579,7 +613,7 @@ export const order = router({
 					conditions.push(eq(OrdersTable.status, input.orderStatus));
 				}
 
-				let orderByClauses: SQL<unknown>[] = [];
+				const orderByClauses: SQL<unknown>[] = [];
 				const primarySortColumn =
 					input.sortField === "total"
 						? OrdersTable.total
@@ -663,33 +697,18 @@ export const order = router({
 					},
 				};
 			} catch (e) {
-				console.log("Error fetching paginated orders:", e);
 				if (e instanceof Error) {
-					return {
-						orders: [],
-						pagination: {
-							currentPage: input.page,
-							totalPages: 0,
-							totalCount: 0,
-							hasNextPage: false,
-							hasPreviousPage: false,
-						},
-						message: "Fetching orders failed",
-						error: e.message,
-					};
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to fetch paginated orders",
+						cause: e,
+					});
 				}
-				return {
-					orders: [],
-					pagination: {
-						currentPage: input.page,
-						totalPages: 0,
-						totalCount: 0,
-						hasNextPage: false,
-						hasPreviousPage: false,
-					},
-					message: "Fetching orders failed",
-					error: "Unknown error",
-				};
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch paginated orders",
+					cause: e,
+				});
 			}
 		}),
 
@@ -726,16 +745,12 @@ export const order = router({
 					message: `Order status updated successfully to ${input.status}`,
 				};
 			} catch (e) {
-				console.log(e);
-				if (e instanceof Error) {
-					console.error(e);
-					return { message: "Updating order status failed", error: e.message };
-				}
 				console.error(e);
-				return {
-					message: "Updating order status failed",
-					error: "Unknown error",
-				};
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update order status",
+					cause: e,
+				});
 			}
 		}),
 });
