@@ -1,0 +1,37 @@
+{
+  "name": "vit2-server",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "CORS_ORIGIN": "http://localhost:3000"
+  }
+  // For sensitive data, use:
+  // wrangler secret put SECRET_NAME
+  // Don't add secrets to "vars" - they're visible in the dashboard!
+
+  ,
+  // To set up D1 database:
+  // 1. Run: wrangler login
+  // 2. Run: wrangler d1 create your-database-name
+  // 3. Copy the output and paste below
+  // Then run migrations:
+  // bun db:generate
+  // To apply migrations locally, run:
+  // wrangler d1 migrations apply YOUR_DB_NAME --local
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vit-store",
+      "database_id": "57500509-2ad4-4752-86a4-ee18b98b6904",
+      "preview_database_id": "local-test-db",
+      "migrations_dir": "./src/db/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "vitStoreKV",
+      "id": "e1684712998047ea8dff2fd7e2bc875e"
+    }
+  ],
+}
