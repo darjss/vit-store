@@ -6,7 +6,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { toast } from "sonner";
-import type { AppRouter } from "../../server/src/routers";
+import type { AdminRouter } from "../../server/src/routers/admin/index";
 import { TRPCProvider } from "./utils/trpc";
 
 export const queryClient = new QueryClient({
@@ -25,10 +25,10 @@ export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60 * 1000 } },
 });
 
-const trpcClient = createTRPCClient<AppRouter>({
+  const trpcClient = createTRPCClient<AdminRouter>({
   links: [
     httpBatchLink({
-      url: `${import.meta.env.VITE_SERVER_URL}/trpc`,
+      url: "http://localhost:3001/trpc/admin",
     }),
   ],
 });

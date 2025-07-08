@@ -59,10 +59,8 @@ export const auth = router({
 		}),
 
 	me: adminProcedure.query(async ({ ctx }) => {
-		// The adminProcedure middleware already validates the session
-		// ctx.session is guaranteed to exist here
 		const session = ctx.session as Session<UserSelectType>;
-
+		console.log("session", session);
 		return {
 			user: session.user,
 			sessionId: session.id,

@@ -48,6 +48,8 @@ app.use(
 );
 
 app.get("/admin/login/google", (c) => {
+	console.log("google login");
+	console.log("google callback url", env.GOOGLE_CALLBACK_URL);
 	const state = generateState();
 	const codeVerifier = generateCodeVerifier();
 	const url = google.createAuthorizationURL(state, codeVerifier, [
@@ -111,32 +113,36 @@ app.get("/admin/login/google/callback", async (c) => {
 	};
 	const googleUserId = claims.sub;
 	const username = claims.name;
-
+	console.log("googleUserId", googleUserId);
+	console.log("username", username);
 	const ctx = await createContext({ context: c });
 	const existingUser = await getUserFromGoogleId(googleUserId, ctx);
 	console.log(existingUser);
 	if (existingUser !== null && existingUser.isApproved === true) {
+		console.log("existingUser is approved", existingUser);
 		const session = await createAdminSession(existingUser, ctx);
 		console.log("created session with cookie ", session);
 		setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
-		return c.redirect("/");
+		return c.redirect(`${env.DASH_URL}/`);
 	}
 
 	if (googleUserId === "118271302696111351988") {
+		console.log("creating user");
 		const user = await createUser(googleUserId, username, true, ctx);
 		const session = await createAdminSession(user, ctx);
 
 		setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
-		return c.redirect("/");
+		return c.redirect(`${env.DASH_URL}/`);
 	}
 
 	if (existingUser === null || existingUser.isApproved === false) {
-		return c.redirect("/login");
+		console.log("redirecting to login");
+		return c.redirect(`${env.DASH_URL}/login`);
 	}
 
 	await createUser(googleUserId, username, false, ctx);
 
-	return c.redirect("/login");
+		return c.redirect(`${env.DASH_URL}/login`);
 });
 
 app.get("/", (c) => {

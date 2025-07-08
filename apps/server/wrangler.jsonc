@@ -31,7 +31,8 @@
   "kv_namespaces": [
     {
       "binding": "vitStoreKV",
-      "id": "e1684712998047ea8dff2fd7e2bc875e"
+      "id": "e1684712998047ea8dff2fd7e2bc875e",
+      "preview_id": "e1684712998047ea8dff2fd7e2bc875e"
     }
-  ],
+  ]
 }
