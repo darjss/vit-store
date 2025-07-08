@@ -16,13 +16,15 @@ import type { QueryClient } from "@tanstack/react-query";
 import Loader from "@/components/loader";
 
 import type { TRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import type { AppRouter } from "../../../server/src/routers";
+import type { AdminRouter } from "../../../server/src/routers/admin";
 export interface RouterAppContext {
-  trpc: TRPCOptionsProxy<AppRouter>;
+  trpc: TRPCOptionsProxy<AdminRouter>;
   queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
+
+
   head: () => ({
     meta: [
       {
@@ -51,7 +53,7 @@ function RootDocument() {
   const isFetching = useRouterState({ select: (s) => s.isLoading });
 
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="">
       <head>
         <HeadContent />
       </head>

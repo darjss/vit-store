@@ -5,6 +5,8 @@ import {
 	SalesTable,
 	OrdersTable,
 	ProductImagesTable,
+    UsersTable,
+    type UserSelectType,
 } from "@/db/schema";
 import type { Context } from "@/lib/context";
 import type {
@@ -294,3 +296,40 @@ export const getPendingOrders = async (ctx: Context) => {
 		return [];
 	}
 };
+export const createUser = async (
+    googleId: string,
+    username: string,
+    isApproved: boolean,
+    ctx: Context,
+  ) => {
+    const [user] = await ctx.db
+      .insert(UsersTable)
+      .values({
+        googleId,
+        username,
+        isApproved,
+      })
+      .returning({
+        id: UsersTable.id,
+        username: UsersTable.username,
+        googleId: UsersTable.googleId,
+        isApproved: UsersTable.isApproved,
+        createdAt: UsersTable.createdAt,
+        updatedAt: UsersTable.updatedAt,
+      });
+    if (user === null || user === undefined) {
+      throw new Error("User not found");
+    }
+    return user;
+  };
+  
+  export const getUserFromGoogleId = async (googleId: string, ctx: Context) => {
+    const result = await ctx.db
+      .select({ user: UsersTable })
+      .from(UsersTable)
+      .where(eq(UsersTable.googleId, googleId));
+    if (result.length < 1 || result[0] === undefined) {
+      return null;
+    }
+    return result[0].user as UserSelectType;
+  }

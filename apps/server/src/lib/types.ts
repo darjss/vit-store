@@ -1,17 +1,12 @@
-import type { CustomerSelectType } from "@/db/schema";
+import type { CustomerSelectType, UserSelectType } from "@/db/schema";
 import type {
-  deliveryProvider,
+	deliveryProvider,
 	paymentProvider,
 	paymentStatus,
 	orderStatus,
 } from "./constants";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
-export interface Session {
-	id: string;
-	user: CustomerSelectType;
-	expiresAt: Date;
-}
 export interface SessionConfig {
 	kvSessionPrefix: string;
 	kvUserSessionPrefix: string;
@@ -20,6 +15,7 @@ export interface SessionConfig {
 	sessionDurationMs: number;
 	renewalThresholdMs: number;
 }
+
 export type OrderStatusType = (typeof orderStatus)[number];
 export type PaymentProviderType = (typeof paymentProvider)[number];
 export type PaymentStatusType = (typeof paymentStatus)[number];
@@ -33,8 +29,6 @@ export interface AddSalesType {
 	createdAt?: Date;
 }
 
-
 export type TransactionType = Parameters<
 	Parameters<DrizzleD1Database<typeof import("@/db/schema")>["transaction"]>[0]
 >[0];
-

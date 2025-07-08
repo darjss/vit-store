@@ -6,8 +6,17 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { storeRouter } from "./routers/store";
+import { generateState, generateCodeVerifier, decodeIdToken } from "arctic";
+import type { OAuth2Tokens } from "arctic";
+import { google } from "./lib/oauth";
+import { getCookie, setCookie } from "hono/cookie";
+import {
+	createAdminSession,
+	setAdminSessionTokenCookie,
+} from "./lib/session/admin";
+import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
 app.use(logger());
 app.use(
@@ -37,6 +46,98 @@ app.use(
 		},
 	}),
 );
+
+app.get("/admin/login/google", (c) => {
+	const state = generateState();
+	const codeVerifier = generateCodeVerifier();
+	const url = google.createAuthorizationURL(state, codeVerifier, [
+		"openid",
+		"profile",
+	]);
+	setCookie(c, "google_oauth_state", state, {
+		path: "/",
+		httpOnly: true,
+		secure: process.env.NODE_ENV === "production",
+		maxAge: 60 * 10,
+		sameSite: "lax",
+	});
+	setCookie(c, "google_code_verifier", codeVerifier, {
+		path: "/",
+		httpOnly: true,
+		secure: process.env.NODE_ENV === "production",
+		maxAge: 60 * 10,
+		sameSite: "lax",
+	});
+	return c.redirect(url);
+});
+
+app.get("/admin/login/google/callback", async (c) => {
+	const code = c.req.query("code");
+	const state = c.req.query("state");
+	const storedState = getCookie(c, "google_oauth_state");
+	const codeVerifier = getCookie(c, "google_code_verifier");
+	if (
+		code === null ||
+		state === null ||
+		storedState === null ||
+		codeVerifier === null ||
+		code === undefined ||
+		state === undefined ||
+		storedState === undefined ||
+		codeVerifier === undefined
+	) {
+		return new Response(null, {
+			status: 400,
+		});
+	}
+	if (state !== storedState) {
+		return new Response(null, {
+			status: 400,
+		});
+	}
+
+	let tokens: OAuth2Tokens;
+	try {
+		tokens = await google.validateAuthorizationCode(code, codeVerifier);
+	} catch (e) {
+		console.error(e);
+		return new Response(null, {
+			status: 400,
+		});
+	}
+	const claims = decodeIdToken(tokens.idToken()) as {
+		sub: string;
+		name: string;
+	};
+	const googleUserId = claims.sub;
+	const username = claims.name;
+
+	const ctx = await createContext({ context: c });
+	const existingUser = await getUserFromGoogleId(googleUserId, ctx);
+	console.log(existingUser);
+	if (existingUser !== null && existingUser.isApproved === true) {
+		const session = await createAdminSession(existingUser, ctx);
+		console.log("created session with cookie ", session);
+		setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+		return c.redirect("/");
+	}
+
+	if (googleUserId === "118271302696111351988") {
+		const user = await createUser(googleUserId, username, true, ctx);
+		const session = await createAdminSession(user, ctx);
+
+		setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+		return c.redirect("/");
+	}
+
+	if (existingUser === null || existingUser.isApproved === false) {
+		return c.redirect("/login");
+	}
+
+	await createUser(googleUserId, username, false, ctx);
+
+	return c.redirect("/login");
+});
 
 app.get("/", (c) => {
 	return c.text("OK");

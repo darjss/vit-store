@@ -4,18 +4,16 @@ import {
 	encodeBase32LowerCaseNoPadding,
 } from "@oslojs/encoding";
 
-import type { Session } from "../types";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import type { CustomerSelectType } from "@/db/schema";
+import type { CustomerSelectType, UserSelectType } from "@/db/schema";
 import type { Context } from "../context";
+import type { SessionConfig } from "../types";
 
-export interface SessionConfig {
-	kvSessionPrefix: string; // e.g., "store_session" or "admin_session"
-	kvUserSessionPrefix: string; // e.g., "store_user_sessions" or "admin_user_sessions"
-	cookieName: string; // e.g., "store_session" or "admin_session"
-	domainEnvVar: string; // e.g., "STORE_DOMAIN" or "ADMIN_DOMAIN"
-	sessionDurationMs: number; // e.g., 7 days or 1 day
-	renewalThresholdMs: number; // e.g., 30 minutes
+// Generic Session interface
+export interface Session<TUser = CustomerSelectType | UserSelectType> {
+	id: string;
+	user: TUser;
+	expiresAt: Date;
 }
 
 export function generateSessionToken(): string {
@@ -24,7 +22,10 @@ export function generateSessionToken(): string {
 	return encodeBase32LowerCaseNoPadding(bytes);
 }
 
-export function createSessionManager(config: SessionConfig) {
+// Generic session manager that works with any user type
+export function createSessionManager<
+	TUser extends CustomerSelectType | UserSelectType,
+>(config: SessionConfig) {
 	const {
 		kvSessionPrefix,
 		kvUserSessionPrefix,
@@ -34,19 +35,34 @@ export function createSessionManager(config: SessionConfig) {
 		renewalThresholdMs,
 	} = config;
 
+	// Helper function to get user identifier
+	function getUserIdentifier(user: TUser): string {
+		// Use phone for customers, id for users, or fallback to a common identifier
+		if ("phone" in user && user.phone) {
+			return user.phone.toString();
+		}
+		if ("id" in user && user.id) {
+			return user.id.toString();
+		}
+		// Fallback - this shouldn't happen but provides safety
+		throw new Error("Unable to determine user identifier");
+	}
+
 	async function createSession(
-		user: CustomerSelectType,
+		user: TUser,
 		ctx: Context,
-	): Promise<{ session: Session; token: string }> {
+	): Promise<{ session: Session<TUser>; token: string }> {
 		const token = generateSessionToken();
 		const sessionId = encodeHexLowerCase(
 			sha256(new TextEncoder().encode(token)),
 		);
-		const session: Session = {
+		const session: Session<TUser> = {
 			id: sessionId,
 			user,
 			expiresAt: new Date(Date.now() + sessionDurationMs),
 		};
+
+		const userIdentifier = getUserIdentifier(user);
 
 		await ctx.kv.put(
 			`${kvSessionPrefix}:${session.id}`,
@@ -59,7 +75,7 @@ export function createSessionManager(config: SessionConfig) {
 				expirationTtl: Math.floor(session.expiresAt.getTime() / 1000),
 			},
 		);
-		await ctx.kv.put(`${kvUserSessionPrefix}:${user.phone}`, sessionId);
+		await ctx.kv.put(`${kvUserSessionPrefix}:${userIdentifier}`, sessionId);
 
 		return { session, token };
 	}
@@ -67,7 +83,7 @@ export function createSessionManager(config: SessionConfig) {
 	async function validateSessionToken(
 		token: string,
 		ctx: Context,
-	): Promise<Session | null> {
+	): Promise<Session<TUser> | null> {
 		const sessionId = encodeHexLowerCase(
 			sha256(new TextEncoder().encode(token)),
 		);
@@ -79,11 +95,11 @@ export function createSessionManager(config: SessionConfig) {
 
 		const result = JSON.parse(rawSession) as {
 			id: string;
-			user: CustomerSelectType;
+			user: TUser;
 			expires_at: number;
 		};
 
-		const session: Session = {
+		const session: Session<TUser> = {
 			id: result.id,
 			user: result.user,
 			expiresAt: new Date(result.expires_at * 1000),
@@ -130,7 +146,9 @@ export function createSessionManager(config: SessionConfig) {
 	}
 
 	async function invalidateSession(ctx: Context): Promise<void> {
-		await ctx.kv.delete(`${kvSessionPrefix}:${ctx.session?.id}`);
+		if (ctx.session?.id) {
+			await ctx.kv.delete(`${kvSessionPrefix}:${ctx.session.id}`);
+		}
 		deleteSessionTokenCookie(ctx);
 	}
 
@@ -164,7 +182,7 @@ export function createSessionManager(config: SessionConfig) {
 		});
 	}
 
-	const auth = async (ctx: Context): Promise<Session | null> => {
+	const auth = async (ctx: Context): Promise<Session<TUser> | null> => {
 		const token = getCookie(ctx.c, cookieName);
 		console.log(`checking auth with ${cookieName}:`, token);
 
@@ -184,3 +202,10 @@ export function createSessionManager(config: SessionConfig) {
 		auth,
 	};
 }
+
+// Pre-configured session managers for convenience
+export const createCustomerSessionManager = (config: SessionConfig) =>
+	createSessionManager<CustomerSelectType>(config);
+
+export const createUserSessionManager = (config: SessionConfig) =>
+	createSessionManager<UserSelectType>(config);
