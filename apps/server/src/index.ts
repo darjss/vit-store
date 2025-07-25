@@ -1,20 +1,20 @@
 import { env } from "cloudflare:workers";
 import { trpcServer } from "@hono/trpc-server";
-import { createContext } from "./lib/context";
-import { adminRouter } from "./routers/admin";
+import type { OAuth2Tokens } from "arctic";
+import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { storeRouter } from "./routers/store";
-import { generateState, generateCodeVerifier, decodeIdToken } from "arctic";
-import type { OAuth2Tokens } from "arctic";
+import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
-import { getCookie, setCookie } from "hono/cookie";
 import {
 	createAdminSession,
 	setAdminSessionTokenCookie,
 } from "./lib/session/admin";
+import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
+import { storeRouter } from "./routers/store";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
@@ -30,6 +30,7 @@ app.use(
 app.use(
 	"/trpc/admin/*",
 	trpcServer({
+		endpoint: "/trpc/admin",
 		router: adminRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
@@ -40,6 +41,7 @@ app.use(
 app.use(
 	"/trpc/store/*",
 	trpcServer({
+		endpoint: "/trpc/store",
 		router: storeRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
@@ -142,7 +144,7 @@ app.get("/admin/login/google/callback", async (c) => {
 
 	await createUser(googleUserId, username, false, ctx);
 
-		return c.redirect(`${env.DASH_URL}/login`);
+	return c.redirect(`${env.DASH_URL}/login`);
 });
 
 app.get("/", (c) => {
