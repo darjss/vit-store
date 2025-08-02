@@ -5,4 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [tsconfigPaths(), tailwindcss(), tanstackStart({})],
+  server:{
+    host:true,
+    port:3000,
+    allowedHosts:[
+      "admin.vitstore.dev"
+    ]
+  }
 });

@@ -5,67 +5,17 @@ import type { UserSelectType } from "@/db/schema";
 import { UsersTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
-	createAdminSession,
-	invalidateAdminSession,
-	setAdminSessionTokenCookie,
+	adminAuth,
+	invalidateAdminSession
 } from "@/lib/session/admin";
 import type { Session } from "@/lib/session";
 
 export const auth = router({
-	login: publicProcedure
-		.input(
-			z.object({
-				email: z.string().email(),
-				password: z.string().min(1),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const { email, password } = input;
+	
+	me: publicProcedure.query(async ({ ctx }) => {
+		const session=await adminAuth(ctx);
 
-			// TODO: Implement proper authentication logic here
-			// For now, this is a placeholder - you'll need to add:
-			// 1. Password verification
-			// 2. User lookup by email
-			// 3. Rate limiting
-			// 4. Proper error handling
-
-			// Example user lookup (replace with your actual logic)
-			const users = await ctx.db
-				.select()
-				.from(UsersTable)
-				.where(eq(UsersTable.username, email)); // Assuming email is stored in username field
-
-			const user = users[0];
-
-			if (!user || !user.isApproved) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "Invalid credentials or user not approved",
-				});
-			}
-
-			// Create session using the new session manager
-			const { session, token } = await createAdminSession(user, ctx);
-			setAdminSessionTokenCookie(ctx, token, session.expiresAt);
-
-			return {
-				success: true,
-				user: {
-					id: user.id,
-					username: user.username,
-					isApproved: user.isApproved,
-				},
-			};
-		}),
-
-	me: adminProcedure.query(async ({ ctx }) => {
-		const session = ctx.session as Session<UserSelectType>;
-		console.log("session", session);
-		return {
-			user: session.user,
-			sessionId: session.id,
-			expiresAt: session.expiresAt,
-		};
+		return session
 	}),
 
 	logout: adminProcedure.mutation(async ({ ctx }) => {

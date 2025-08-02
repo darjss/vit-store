@@ -1,0 +1,14 @@
+https://vitstore.dev {
+    reverse_proxy localhost:4321
+    tls internal
+}
+
+https://api.vitstore.dev {
+    reverse_proxy localhost:3001
+    tls internal
+}
+
+https://admin.vitstore.dev {
+    reverse_proxy localhost:3000
+    tls internal
+}

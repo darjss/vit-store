@@ -14,12 +14,12 @@ import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import Header from "../components/header";
 import appCss from "../index.css?url";
+import type { RouterAppContext } from "../router";
 
-export interface RouterAppContext {
-	queryClient: QueryClient;
-}
+
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
+	
 	head: () => ({
 		meta: [
 			{
@@ -40,7 +40,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 			},
 		],
 	}),
-
+	
 	component: RootDocument,
 });
 

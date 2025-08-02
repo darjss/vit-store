@@ -1,16 +1,18 @@
 {
   "name": "vit2-server",
   "main": "src/index.ts",
-  "compatibility_date": "2025-06-15",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-07-30",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
   "vars": {
-    "CORS_ORIGIN": "http://localhost:3000"
-  }
+    "CORS_ORIGIN": "https://admin.vitstore.local"
+  },
   // For sensitive data, use:
   // wrangler secret put SECRET_NAME
   // Don't add secrets to "vars" - they're visible in the dashboard!
 
-  ,
   // To set up D1 database:
   // 1. Run: wrangler login
   // 2. Run: wrangler d1 create your-database-name

@@ -2,23 +2,48 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import type { Context } from "./context";
 import { auth } from "./session/store";
 import { adminAuth } from "./session/admin";
-export const t = initTRPC.context<Context>().create();
+import superjson from "superjson"
+import { ZodError } from "zod";
+
+export const t = initTRPC.context<Context>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        zodError:
+          error.cause instanceof ZodError ? error.cause.flatten() : null,
+      },
+    };
+  },
+});
+;
 
 export const router = t.router;
 
 const customerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
-	const session = await auth(ctx);
-	if (!session) {
-		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-	}
-	return next({ ctx: { ...ctx, session } });
+  const session = await auth(ctx);
+  if (!session) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+  }
+  return next({ ctx: { ...ctx, session } });
 });
 const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
-	const session = await adminAuth(ctx);
-	if (!session) {
-		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
-	}
-	return next({ ctx: { ...ctx, session } });
+  console.log("adminAuthMiddleware: checking auth");
+  console.log(
+    "adminAuthMiddleware: cookies available:",
+    Object.keys(ctx.c.req.header("cookie") ? {} : {})
+  );
+  const session = await adminAuth(ctx);
+  console.log(
+    "adminAuthMiddleware: session result:",
+    session ? "found" : "null"
+  );
+  if (!session) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+  }
+  return next({ ctx: { ...ctx, session } });
 });
 export const publicProcedure = t.procedure;
 export const customerProcedure = t.procedure.use(customerAuthMiddleware);
