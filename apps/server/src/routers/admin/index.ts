@@ -1,12 +1,12 @@
 import { publicProcedure, router } from "@/lib/trpc";
-import { order } from "./order";
-import { product } from "./product";
-import { purchase } from "./purchase";
 import { analytics } from "./analytics";
 import { auth } from "./auth";
 import { category } from "./category";
 import { customer } from "./customer";
 import { image } from "./image";
+import { order } from "./order";
+import { product } from "./product";
+import { purchase } from "./purchase";
 import { sales } from "./sales";
 
 export const adminRouter = router({

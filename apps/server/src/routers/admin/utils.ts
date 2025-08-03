@@ -1,12 +1,13 @@
+import { and, between, desc, eq, gte, lt, sql } from "drizzle-orm";
 import {
+	OrdersTable,
 	PaymentsTable,
+	ProductImagesTable,
 	ProductsTable,
 	PurchasesTable,
 	SalesTable,
-	OrdersTable,
-	ProductImagesTable,
-    UsersTable,
-    type UserSelectType,
+	type UserSelectType,
+	UsersTable,
 } from "@/db/schema";
 import type { Context } from "@/lib/context";
 import type {
@@ -15,7 +16,6 @@ import type {
 	PaymentStatusType,
 	TransactionType,
 } from "@/lib/types";
-import { and, lt, eq, sql, gte, between, desc } from "drizzle-orm";
 import {
 	getDaysFromTimeRange,
 	getStartAndEndofDayAgo,
@@ -297,39 +297,39 @@ export const getPendingOrders = async (ctx: Context) => {
 	}
 };
 export const createUser = async (
-    googleId: string,
-    username: string,
-    isApproved: boolean,
-    ctx: Context,
-  ) => {
-    const [user] = await ctx.db
-      .insert(UsersTable)
-      .values({
-        googleId,
-        username,
-        isApproved,
-      })
-      .returning({
-        id: UsersTable.id,
-        username: UsersTable.username,
-        googleId: UsersTable.googleId,
-        isApproved: UsersTable.isApproved,
-        createdAt: UsersTable.createdAt,
-        updatedAt: UsersTable.updatedAt,
-      });
-    if (user === null || user === undefined) {
-      throw new Error("User not found");
-    }
-    return user;
-  };
-  
-  export const getUserFromGoogleId = async (googleId: string, ctx: Context) => {
-    const result = await ctx.db
-      .select({ user: UsersTable })
-      .from(UsersTable)
-      .where(eq(UsersTable.googleId, googleId));
-    if (result.length < 1 || result[0] === undefined) {
-      return null;
-    }
-    return result[0].user as UserSelectType;
-  }
+	googleId: string,
+	username: string,
+	isApproved: boolean,
+	ctx: Context,
+) => {
+	const [user] = await ctx.db
+		.insert(UsersTable)
+		.values({
+			googleId,
+			username,
+			isApproved,
+		})
+		.returning({
+			id: UsersTable.id,
+			username: UsersTable.username,
+			googleId: UsersTable.googleId,
+			isApproved: UsersTable.isApproved,
+			createdAt: UsersTable.createdAt,
+			updatedAt: UsersTable.updatedAt,
+		});
+	if (user === null || user === undefined) {
+		throw new Error("User not found");
+	}
+	return user;
+};
+
+export const getUserFromGoogleId = async (googleId: string, ctx: Context) => {
+	const result = await ctx.db
+		.select({ user: UsersTable })
+		.from(UsersTable)
+		.where(eq(UsersTable.googleId, googleId));
+	if (result.length < 1 || result[0] === undefined) {
+		return null;
+	}
+	return result[0].user as UserSelectType;
+};

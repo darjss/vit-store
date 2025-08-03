@@ -9,8 +9,8 @@ import { logger } from "hono/logger";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import {
-  createAdminSession,
-  setAdminSessionTokenCookie,
+	createAdminSession,
+	setAdminSessionTokenCookie,
 } from "./lib/session/admin";
 import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
@@ -20,165 +20,165 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
 app.use(logger());
 app.use(
-  "/*",
-  cors({
-    origin: env.CORS_ORIGIN || "",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    credentials:true,
-  })
+	"/*",
+	cors({
+		origin: env.CORS_ORIGIN || "",
+		allowMethods: ["GET", "POST", "OPTIONS"],
+		credentials: true,
+	}),
 );
 
 app.use(
-  "/trpc/admin/*",
-  trpcServer({
-    endpoint: "/trpc/admin",
-    router: adminRouter,
-    createContext: (_opts, context) => {
-      return createContext({ context });
-    },
-  })
+	"/trpc/admin/*",
+	trpcServer({
+		endpoint: "/trpc/admin",
+		router: adminRouter,
+		createContext: (_opts, context) => {
+			return createContext({ context });
+		},
+	}),
 );
 
 app.use(
-  "/trpc/store/*",
-  trpcServer({
-    endpoint: "/trpc/store",
-    router: storeRouter,
-    createContext: (_opts, context) => {
-      return createContext({ context });
-    },
-  })
+	"/trpc/store/*",
+	trpcServer({
+		endpoint: "/trpc/store",
+		router: storeRouter,
+		createContext: (_opts, context) => {
+			return createContext({ context });
+		},
+	}),
 );
 
 app.get("/admin/login/google", (c) => {
-  console.log("google login", process.env.GOOGLE_CLEINT_ID);
-  console.log("google callback url", process.env.GOOGLE_CALLBACK_URL);
-  const state = generateState();
-  const codeVerifier = generateCodeVerifier();
-  const url = google.createAuthorizationURL(state, codeVerifier, [
-    "openid",
-    "profile",
-  ]);
-  setCookie(c, "google_oauth_state", state, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    maxAge: 60 * 10,
-    sameSite: "lax",
-  });
-  setCookie(c, "google_code_verifier", codeVerifier, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    maxAge: 60 * 10,
-    sameSite: "lax",
-  });
-  return c.redirect(url);
+	console.log("google login", process.env.GOOGLE_CLEINT_ID);
+	console.log("google callback url", process.env.GOOGLE_CALLBACK_URL);
+	const state = generateState();
+	const codeVerifier = generateCodeVerifier();
+	const url = google.createAuthorizationURL(state, codeVerifier, [
+		"openid",
+		"profile",
+	]);
+	setCookie(c, "google_oauth_state", state, {
+		path: "/",
+		httpOnly: true,
+		secure: true,
+		maxAge: 60 * 10,
+		sameSite: "lax",
+	});
+	setCookie(c, "google_code_verifier", codeVerifier, {
+		path: "/",
+		httpOnly: true,
+		secure: true,
+		maxAge: 60 * 10,
+		sameSite: "lax",
+	});
+	return c.redirect(url);
 });
 
 app.get("/admin/login/google/callback", async (c) => {
-  try {
-    const code = c.req.query("code");
-    const state = c.req.query("state");
-    const storedState = getCookie(c, "google_oauth_state");
-    const codeVerifier = getCookie(c, "google_code_verifier");
-    if (
-      code === null ||
-      state === null ||
-      storedState === null ||
-      codeVerifier === null ||
-      code === undefined ||
-      state === undefined ||
-      storedState === undefined ||
-      codeVerifier === undefined
-    ) {
-      console.error(
-        "code state undefined code:",
-        code,
-        "state",
-        state,
-        "storedState",
-        storedState,
-        "codeVerifier",
-        codeVerifier
-      );
-      return new Response(null, {
-        status: 400,
-      });
-    }
-    if (state !== storedState) {
-      console.error(
-        "state not matched",
-        code,
-        state,
-        storedState,
-        codeVerifier
-      );
+	try {
+		const code = c.req.query("code");
+		const state = c.req.query("state");
+		const storedState = getCookie(c, "google_oauth_state");
+		const codeVerifier = getCookie(c, "google_code_verifier");
+		if (
+			code === null ||
+			state === null ||
+			storedState === null ||
+			codeVerifier === null ||
+			code === undefined ||
+			state === undefined ||
+			storedState === undefined ||
+			codeVerifier === undefined
+		) {
+			console.error(
+				"code state undefined code:",
+				code,
+				"state",
+				state,
+				"storedState",
+				storedState,
+				"codeVerifier",
+				codeVerifier,
+			);
+			return new Response(null, {
+				status: 400,
+			});
+		}
+		if (state !== storedState) {
+			console.error(
+				"state not matched",
+				code,
+				state,
+				storedState,
+				codeVerifier,
+			);
 
-      return new Response(null, {
-        status: 400,
-      });
-    }
+			return new Response(null, {
+				status: 400,
+			});
+		}
 
-    let tokens: OAuth2Tokens;
-    try {
-      tokens = await google.validateAuthorizationCode(code, codeVerifier);
-    } catch (e) {
-      console.error(e);
-      return new Response(null, {
-        status: 400,
-      });
-    }
-    const claims = decodeIdToken(tokens.idToken()) as {
-      sub: string;
-      name: string;
-    };
-    const googleUserId = claims.sub;
-    const username = claims.name;
-    console.log("googleUserId", googleUserId);
-    console.log("username", username);
-    const ctx = await createContext({ context: c });
-    const existingUser = await getUserFromGoogleId(googleUserId, ctx);
-    console.log(existingUser);
-    if (existingUser !== null && existingUser.isApproved === true) {
-      console.log("existingUser is approved", existingUser);
-      const session = await createAdminSession(existingUser, ctx);
-      console.log("created session with cookie ", session);
-      setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
-      return c.redirect(`${process.env.DASH_URL}/`);
-    }
+		let tokens: OAuth2Tokens;
+		try {
+			tokens = await google.validateAuthorizationCode(code, codeVerifier);
+		} catch (e) {
+			console.error(e);
+			return new Response(null, {
+				status: 400,
+			});
+		}
+		const claims = decodeIdToken(tokens.idToken()) as {
+			sub: string;
+			name: string;
+		};
+		const googleUserId = claims.sub;
+		const username = claims.name;
+		console.log("googleUserId", googleUserId);
+		console.log("username", username);
+		const ctx = await createContext({ context: c });
+		const existingUser = await getUserFromGoogleId(googleUserId, ctx);
+		console.log(existingUser);
+		if (existingUser !== null && existingUser.isApproved === true) {
+			console.log("existingUser is approved", existingUser);
+			const session = await createAdminSession(existingUser, ctx);
+			console.log("created session with cookie ", session);
+			setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+			return c.redirect(`${process.env.DASH_URL}/`);
+		}
 
-    if (googleUserId === "118271302696111351988") {
-      console.log("creating user");
-      const user = await createUser(googleUserId, username, true, ctx);
-      const session = await createAdminSession(user, ctx);
+		if (googleUserId === "118271302696111351988") {
+			console.log("creating user");
+			const user = await createUser(googleUserId, username, true, ctx);
+			const session = await createAdminSession(user, ctx);
 
-      setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
-      return c.redirect(`${process.env.DASH_URL}/`);
-    }
+			setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+			return c.redirect(`${process.env.DASH_URL}/`);
+		}
 
-    if (existingUser === null || existingUser.isApproved === false) {
-      console.log("redirecting to login");
-      return c.redirect(`${process.env.DASH_URL}/login`);
-    }
+		if (existingUser === null || existingUser.isApproved === false) {
+			console.log("redirecting to login");
+			return c.redirect(`${process.env.DASH_URL}/login`);
+		}
 
-    await createUser(googleUserId, username, false, ctx);
+		await createUser(googleUserId, username, false, ctx);
 
-    return c.redirect(`${process.env.DASH_URL}/login`);
-  } catch (e) {
-    console.error(e);
-  }
+		return c.redirect(`${process.env.DASH_URL}/login`);
+	} catch (e) {
+		console.error(e);
+	}
 });
 
 app.get("/test", async (c) => {
-  const cookie = getCookie(c, "admin_session");
-  console.log("test cookie", getCookie(c, "test"));
-  console.log("admin_Session cookie", cookie);
-  return c.json({ status: "OK", cookie: cookie });
+	const cookie = getCookie(c, "admin_session");
+	console.log("test cookie", getCookie(c, "test"));
+	console.log("admin_Session cookie", cookie);
+	return c.json({ status: "OK", cookie: cookie });
 });
 
 app.get("/", (c) => {
-  return c.text("OK");
+	return c.text("OK");
 });
 
 export default app;

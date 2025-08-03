@@ -1,21 +1,21 @@
+import { TRPCError } from "@trpc/server";
+import { and, count, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { z } from "zod";
 import {
-	OrdersTable,
-	SalesTable,
-	ProductsTable,
-	CustomersTable,
-	PaymentsTable,
-	OrderDetailsTable,
 	BrandsTable,
 	CategoriesTable,
+	CustomersTable,
+	OrderDetailsTable,
+	OrdersTable,
+	PaymentsTable,
 	ProductImagesTable,
+	ProductsTable,
 	PurchasesTable,
+	SalesTable,
 } from "@/db/schema";
-import { timeRangeSchema } from "@/lib/zod/schema";
 import { adminProcedure, router } from "@/lib/trpc";
-import { TRPCError } from "@trpc/server";
 import { getDaysFromTimeRange } from "@/lib/utils";
-import { gte, sql, and, eq, count, lt, or, desc } from "drizzle-orm";
-import { z } from "zod";
+import { timeRangeSchema } from "@/lib/zod/schema";
 
 export const analytics = router({
 	getAverageOrderValue: adminProcedure

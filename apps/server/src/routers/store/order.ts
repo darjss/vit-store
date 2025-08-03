@@ -1,13 +1,13 @@
-import { router, publicProcedure } from "@/lib/trpc";
-import {
-	OrdersTable,
-	CustomersTable,
-	PaymentsTable,
-	OrderDetailsTable,
-} from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { orderSchema } from "@/lib/zod/schema";
+import {
+	CustomersTable,
+	OrderDetailsTable,
+	OrdersTable,
+	PaymentsTable,
+} from "@/db/schema";
+import { publicProcedure, router } from "@/lib/trpc";
 import { generateOrderNumber } from "@/lib/utils";
+import { orderSchema } from "@/lib/zod/schema";
 
 export const order = router({
 	createOrder: publicProcedure

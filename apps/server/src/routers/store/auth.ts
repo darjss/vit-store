@@ -1,17 +1,15 @@
-import { z } from "zod";
-
-import { router, publicProcedure, customerProcedure } from "@/lib/trpc";
+import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
-
+import { z } from "zod";
+import { CustomersTable } from "@/db/schema";
+import type { Context } from "@/lib/context";
 import {
 	createSession,
-	setSessionTokenCookie,
 	invalidateSession,
+	setSessionTokenCookie,
 } from "@/lib/session/store";
-import { TRPCError } from "@trpc/server";
-import type { Context } from "@/lib/context";
-import { CustomersTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { customerProcedure, publicProcedure, router } from "@/lib/trpc";
 
 export const auth = router({
 	sendOtp: publicProcedure

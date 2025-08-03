@@ -1,8 +1,8 @@
-import { adminProcedure, router } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { ProductImagesTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { adminProcedure, router } from "@/lib/trpc";
 
 export const image = router({
 	addImage: adminProcedure

@@ -1,11 +1,7 @@
-import { adminProcedure, router } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
+import type { SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, like, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import {
-	addOrderSchema,
-	timeRangeSchema,
-	updateOrderSchema,
-} from "@/lib/zod/schema";
 import {
 	CustomersTable,
 	OrderDetailsTable,
@@ -13,19 +9,27 @@ import {
 	PaymentsTable,
 	ProductImagesTable,
 } from "@/db/schema";
-import { generateOrderNumber, shapeOrderResult } from "@/lib/utils";
+import { PRODUCT_PER_PAGE } from "@/lib/constants";
+import { adminProcedure, router } from "@/lib/trpc";
+import {
+	generateOrderNumber,
+	getDaysFromTimeRange,
+	shapeOrderResult,
+	shapeOrderResults,
+} from "@/lib/utils";
+import {
+	addOrderSchema,
+	timeRangeSchema,
+	updateOrderSchema,
+} from "@/lib/zod/schema";
 import {
 	addSale,
 	createPayment,
 	getAverageCostOfProduct,
-	updateStock,
 	getOrderCount,
 	getPendingOrders,
+	updateStock,
 } from "./utils";
-import { and, eq, like, sql, desc, asc, or, gte, gt, lt } from "drizzle-orm";
-import type { SQL } from "drizzle-orm";
-import { getDaysFromTimeRange, shapeOrderResults } from "@/lib/utils";
-import { PRODUCT_PER_PAGE } from "@/lib/constants";
 
 export const order = router({
 	addOrder: adminProcedure
@@ -59,7 +63,7 @@ export const order = router({
 							deliveryProvider: input.deliveryProvider,
 						})
 						.returning({ orderId: OrdersTable.id });
-					
+
 					const orderId = order?.orderId;
 
 					for (const product of input.products) {

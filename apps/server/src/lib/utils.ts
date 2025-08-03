@@ -1,11 +1,11 @@
 import { customAlphabet } from "nanoid";
-import type { timeRangeType } from "./zod/schema";
 import type {
+	OrderDeliveryProviderType,
 	OrderStatusType,
 	PaymentProviderType,
 	PaymentStatusType,
-	OrderDeliveryProviderType,
 } from "./types";
+import type { timeRangeType } from "./zod/schema";
 
 export const generateOrderNumber = () => {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

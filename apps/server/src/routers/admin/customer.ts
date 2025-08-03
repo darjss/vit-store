@@ -1,10 +1,10 @@
-import { adminProcedure, router } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
+import { eq, getTableColumns, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { CustomersTable } from "@/db/schema";
-import { eq, getTableColumns, gte, sql } from "drizzle-orm";
-import { timeRangeSchema } from "@/lib/zod/schema";
+import { adminProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
+import { timeRangeSchema } from "@/lib/zod/schema";
 
 export const customer = router({
 	addUser: adminProcedure

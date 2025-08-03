@@ -5,13 +5,8 @@ const Loader = () => {
 		<div className="fixed inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm transition-all duration-500">
 			<div className="relative flex flex-col items-center">
 				<div className="relative">
-					{/* Outer ring with slower rotation */}
 					<div className="h-24 w-24 animate-[spin_3s_linear_infinite] rounded-full border-2 border-border/20" />
-
-					{/* Middle ring with medium rotation */}
 					<div className="absolute inset-1 h-22 w-22 animate-[spin_2s_linear_infinite_reverse] rounded-full border-2 border-main/30" />
-
-					{/* Inner active ring */}
 					<div className="absolute inset-2 h-20 w-20 animate-[spin_1.5s_linear_infinite] rounded-full border-main border-t-3 border-r-3 shadow-lg" />
 
 					{/* Pulsing center core */}

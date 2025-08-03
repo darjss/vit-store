@@ -1,21 +1,17 @@
-import { adminProcedure, publicProcedure, router } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { UserSelectType } from "@/db/schema";
 import { UsersTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import {
-	adminAuth,
-	invalidateAdminSession
-} from "@/lib/session/admin";
 import type { Session } from "@/lib/session";
+import { adminAuth, invalidateAdminSession } from "@/lib/session/admin";
+import { adminProcedure, publicProcedure, router } from "@/lib/trpc";
 
 export const auth = router({
-	
 	me: publicProcedure.query(async ({ ctx }) => {
-		const session=await adminAuth(ctx);
+		const session = await adminAuth(ctx);
 
-		return session
+		return session;
 	}),
 
 	logout: adminProcedure.mutation(async ({ ctx }) => {

@@ -1,11 +1,11 @@
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { CustomerSelectType, UserSelectType } from "@/db/schema";
 import type {
 	deliveryProvider,
+	orderStatus,
 	paymentProvider,
 	paymentStatus,
-	orderStatus,
 } from "./constants";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
 
 export interface SessionConfig {
 	kvSessionPrefix: string;

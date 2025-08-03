@@ -1,11 +1,11 @@
-import { adminProcedure, router } from "@/lib/trpc";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
-import { ProductsTable, ProductImagesTable, BrandsTable } from "@/db/schema";
-import { and, eq, like, sql, desc, asc } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { and, asc, desc, eq, like, sql } from "drizzle-orm";
+import { z } from "zod";
+import { BrandsTable, ProductImagesTable, ProductsTable } from "@/db/schema";
 import { PRODUCT_PER_PAGE } from "@/lib/constants";
+import { adminProcedure, router } from "@/lib/trpc";
+import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
 
 export const product = router({
 	searchProductByName: adminProcedure
