@@ -48,10 +48,9 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-
       <SidebarProvider>
         <SidebarInset>
-          <div className="grid grid-rows-[auto_1fr] h-svh">
+          <div className="grid grid-rows-[auto_1fr] h-svh bg-background" >
             {isFetching ? <Loader /> : <Outlet />}
           </div>
           <Toaster richColors />

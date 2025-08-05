@@ -12,11 +12,18 @@ export const Route = createFileRoute("/_dash")({
       trpc.auth.me.queryOptions()
     );
 
-    console.log("session", session);
+    console.log("session", session,"typeof", typeof session);
     if (!session) {
+      console.log("no session")
       throw redirect({
         to: "/login",
       });
+    }
+    if(session){
+      console.log("there is session")
+      throw redirect({
+        to: "/orders"
+      })
     }
     return { session };
   },

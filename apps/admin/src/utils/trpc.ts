@@ -29,6 +29,11 @@ export const trpcClient = createTRPCClient<AdminRouter>({
         return fetch(url, {
           ...options,
           credentials: "include",
+          // Add CORS headers to allow cross-origin requests
+          headers: {
+            ...options?.headers,
+            "Origin": window.location.origin,
+          },
         });
       },
     }),
