@@ -14,7 +14,8 @@
   ],
   "addons": [
     "turborepo",
-    "biome"
+    "biome",
+    "oxlint"
   ],
   "examples": [],
   "auth": false,
