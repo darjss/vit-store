@@ -1,31 +1,34 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { getWebRequest } from "@tanstack/react-start/server";
 import Header from "@/components/header/index";
-import { useTRPC } from "@/utils/trpc";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/_dash")({
-	component: RouteComponent,
-	beforeLoad: async ({ context }) => {
-		const request = getWebRequest();
-		const { trpc } = context.createTRPC(request.headers);
-		const session = await context.queryClient.fetchQuery(
-			trpc.auth.me.queryOptions(),
-		);
-		console.log("session",session)
-		if (!session) {
-			throw redirect({
-				to: "/login",
-			});
-		}
-	},
+  component: RouteComponent,
+  beforeLoad: async ({ context }) => {
+    const request = getWebRequest();
+    const { trpc } = context.createTRPC(request.headers);
+    const session = await context.queryClient.fetchQuery(
+      trpc.auth.me.queryOptions()
+    );
+
+    console.log("session", session);
+    if (!session) {
+      throw redirect({
+        to: "/login",
+      });
+    }
+    return { session };
+  },
 });
 
 function RouteComponent() {
-	return (
-		<>
-			<Header />
-			<Outlet />
-		</>
-	);
+  return (
+    <SidebarProvider>
+      <SidebarInset>
+        <Header />
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }

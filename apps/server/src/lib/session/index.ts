@@ -11,7 +11,7 @@ import type { SessionConfig } from "../types";
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	id: string;
-	user: TUser;
+	user: TUser;	
 	expiresAt: Date;
 }
 

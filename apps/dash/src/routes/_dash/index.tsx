@@ -1,22 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import Loader from "@/components/loader";
 import { useTRPC } from "@/utils/trpc";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_dash/")({
-	component: HomeComponent,
+  component: HomeComponent,
 });
 
 function HomeComponent() {
-	const trpc = useTRPC();
-	const result = useQuery(trpc.healthCheck.queryOptions());
-	console.log(result.data);
-	const { data: session } = useQuery(trpc.auth.me.queryOptions());
-	// console.log(result.data, session);
+  const trpc = useTRPC();
+  const { data: session } = useSuspenseQuery(trpc.auth.me.queryOptions());
+  console.log("session", session);
 
-	return (
-		<div>
-			<Loader />
-		</div>
-	);
+  return (
+    <div>
+      <p>1</p>
+      <Button onClick={() => {
+        console.log("click");
+      }}>
+        click
+      </Button>
+      {/* <Loader /> */}
+    </div>
+  );
 }

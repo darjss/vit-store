@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { Search, UserRound } from "lucide-react";
-import { Suspense } from "react";
 import {
 	Popover,
 	PopoverContent,
@@ -34,13 +33,12 @@ const Header = () => {
 					</Link>
 				</div>
 
-				{/* Desktop Search bar */}
 				<div className="hidden w-96 md:block">
 					<SearchBar />
 				</div>
 
 				<div className="flex items-center gap-2">
-					{/* Mobile Search Popover */}
+					
 					<Popover>
 						<PopoverTrigger asChild className="md:hidden">
 							<Button
@@ -63,6 +61,7 @@ const Header = () => {
 							</div>
 						</PopoverTrigger>
 						<PopoverContent className="w-56">
+							<p>fpwrjiet</p>
 							<UserData />
 						</PopoverContent>
 					</Popover>
