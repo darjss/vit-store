@@ -12,7 +12,6 @@ import {
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
 import type { Session } from "../lib/types";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 export interface RouterAppContext {
   trpc: typeof trpc;
   queryClient: QueryClient;
@@ -48,14 +47,10 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <SidebarProvider>
-        <SidebarInset>
           <div className="grid grid-rows-[auto_1fr] h-svh bg-background" >
             {isFetching ? <Loader /> : <Outlet />}
           </div>
           <Toaster richColors />
-        </SidebarInset>
-      </SidebarProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
     </>

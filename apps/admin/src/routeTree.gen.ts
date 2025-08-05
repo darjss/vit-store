@@ -13,6 +13,13 @@ import { Route as TodosRouteImport } from './routes/todos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashRouteRouteImport } from './routes/_dash/route'
 import { Route as DashIndexRouteImport } from './routes/_dash/index'
+import { Route as DashSandboxRouteImport } from './routes/_dash/sandbox'
+import { Route as DashPurchasesRouteImport } from './routes/_dash/purchases'
+import { Route as DashProductsRouteImport } from './routes/_dash/products'
+import { Route as DashOrdersRouteImport } from './routes/_dash/orders'
+import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
+import { Route as DashBrandsRouteImport } from './routes/_dash/brands'
+import { Route as DashAnalyticsRouteImport } from './routes/_dash/analytics'
 
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
@@ -33,15 +40,64 @@ const DashIndexRoute = DashIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashRouteRoute,
 } as any)
+const DashSandboxRoute = DashSandboxRouteImport.update({
+  id: '/sandbox',
+  path: '/sandbox',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashPurchasesRoute = DashPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashProductsRoute = DashProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashOrdersRoute = DashOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashCategoriesRoute = DashCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashBrandsRoute = DashBrandsRouteImport.update({
+  id: '/brands',
+  path: '/brands',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashAnalyticsRoute = DashAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => DashRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/analytics': typeof DashAnalyticsRoute
+  '/brands': typeof DashBrandsRoute
+  '/categories': typeof DashCategoriesRoute
+  '/orders': typeof DashOrdersRoute
+  '/products': typeof DashProductsRoute
+  '/purchases': typeof DashPurchasesRoute
+  '/sandbox': typeof DashSandboxRoute
   '/': typeof DashIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/analytics': typeof DashAnalyticsRoute
+  '/brands': typeof DashBrandsRoute
+  '/categories': typeof DashCategoriesRoute
+  '/orders': typeof DashOrdersRoute
+  '/products': typeof DashProductsRoute
+  '/purchases': typeof DashPurchasesRoute
+  '/sandbox': typeof DashSandboxRoute
   '/': typeof DashIndexRoute
 }
 export interface FileRoutesById {
@@ -49,14 +105,53 @@ export interface FileRoutesById {
   '/_dash': typeof DashRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/_dash/analytics': typeof DashAnalyticsRoute
+  '/_dash/brands': typeof DashBrandsRoute
+  '/_dash/categories': typeof DashCategoriesRoute
+  '/_dash/orders': typeof DashOrdersRoute
+  '/_dash/products': typeof DashProductsRoute
+  '/_dash/purchases': typeof DashPurchasesRoute
+  '/_dash/sandbox': typeof DashSandboxRoute
   '/_dash/': typeof DashIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/login' | '/todos' | '/'
+  fullPaths:
+    | '/login'
+    | '/todos'
+    | '/analytics'
+    | '/brands'
+    | '/categories'
+    | '/orders'
+    | '/products'
+    | '/purchases'
+    | '/sandbox'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/todos' | '/'
-  id: '__root__' | '/_dash' | '/login' | '/todos' | '/_dash/'
+  to:
+    | '/login'
+    | '/todos'
+    | '/analytics'
+    | '/brands'
+    | '/categories'
+    | '/orders'
+    | '/products'
+    | '/purchases'
+    | '/sandbox'
+    | '/'
+  id:
+    | '__root__'
+    | '/_dash'
+    | '/login'
+    | '/todos'
+    | '/_dash/analytics'
+    | '/_dash/brands'
+    | '/_dash/categories'
+    | '/_dash/orders'
+    | '/_dash/products'
+    | '/_dash/purchases'
+    | '/_dash/sandbox'
+    | '/_dash/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,14 +190,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
+    '/_dash/sandbox': {
+      id: '/_dash/sandbox'
+      path: '/sandbox'
+      fullPath: '/sandbox'
+      preLoaderRoute: typeof DashSandboxRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/purchases': {
+      id: '/_dash/purchases'
+      path: '/purchases'
+      fullPath: '/purchases'
+      preLoaderRoute: typeof DashPurchasesRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/products': {
+      id: '/_dash/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof DashProductsRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/orders': {
+      id: '/_dash/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof DashOrdersRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/categories': {
+      id: '/_dash/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof DashCategoriesRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/brands': {
+      id: '/_dash/brands'
+      path: '/brands'
+      fullPath: '/brands'
+      preLoaderRoute: typeof DashBrandsRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/analytics': {
+      id: '/_dash/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof DashAnalyticsRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
   }
 }
 
 interface DashRouteRouteChildren {
+  DashAnalyticsRoute: typeof DashAnalyticsRoute
+  DashBrandsRoute: typeof DashBrandsRoute
+  DashCategoriesRoute: typeof DashCategoriesRoute
+  DashOrdersRoute: typeof DashOrdersRoute
+  DashProductsRoute: typeof DashProductsRoute
+  DashPurchasesRoute: typeof DashPurchasesRoute
+  DashSandboxRoute: typeof DashSandboxRoute
   DashIndexRoute: typeof DashIndexRoute
 }
 
 const DashRouteRouteChildren: DashRouteRouteChildren = {
+  DashAnalyticsRoute: DashAnalyticsRoute,
+  DashBrandsRoute: DashBrandsRoute,
+  DashCategoriesRoute: DashCategoriesRoute,
+  DashOrdersRoute: DashOrdersRoute,
+  DashProductsRoute: DashProductsRoute,
+  DashPurchasesRoute: DashPurchasesRoute,
+  DashSandboxRoute: DashSandboxRoute,
   DashIndexRoute: DashIndexRoute,
 }
 
