@@ -13,6 +13,8 @@
   --ring: oklch(0% 0 0);
   --overlay: oklch(0% 0 0 / 0.8);
   --shadow: 4px 4px 0px 0px var(--border);
+  --destructive: oklch(76.5% 0.176 25.32);
+  --destructive-foreground: oklch(100% 0 0);
   --chart-1: #facc00;
   --chart-2: #7a83ff;
   --chart-3: #ff4d50;
@@ -30,6 +32,8 @@
   --border: oklch(0% 0 0);
   --ring: oklch(100% 0 0);
   --shadow: 4px 4px 0px 0px var(--border);
+  --destructive: oklch(65.69% 0.1551 22.39);
+  --destructive-foreground: oklch(100% 0 0);
   --chart-1: #e0b700;
   --chart-2: #7a83ff;
   --chart-3: #ff6669;
@@ -47,6 +51,8 @@
   --color-border: var(--border);
   --color-overlay: var(--overlay);
   --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -76,4 +82,3 @@
     @apply font-heading;
   }
 }
-

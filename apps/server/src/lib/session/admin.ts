@@ -5,8 +5,8 @@ export const adminSessionManager = createUserSessionManager({
 	kvUserSessionPrefix: "admin_user_sessions",
 	cookieName: "admin_session",
 	domainEnvVar: process.env.DOMAIN,
-	sessionDurationMs: 1000 * 60 * 60 * 8, // 8 hours
-	renewalThresholdMs: 1000 * 60 * 15, // 	15 minutes
+	sessionDurationMs: 1000 * 60 * 60 * 24, 
+	renewalThresholdMs: 1000 * 60 * 1, 
 });
 
 export const {

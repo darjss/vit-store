@@ -20,6 +20,7 @@ import { Route as DashOrdersRouteImport } from './routes/_dash/orders'
 import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
 import { Route as DashBrandsRouteImport } from './routes/_dash/brands'
 import { Route as DashAnalyticsRouteImport } from './routes/_dash/analytics'
+import { Route as DashBrandsAddRouteImport } from './routes/_dash/brands.add'
 
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
@@ -75,30 +76,37 @@ const DashAnalyticsRoute = DashAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => DashRouteRoute,
 } as any)
+const DashBrandsAddRoute = DashBrandsAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => DashBrandsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/analytics': typeof DashAnalyticsRoute
-  '/brands': typeof DashBrandsRoute
+  '/brands': typeof DashBrandsRouteWithChildren
   '/categories': typeof DashCategoriesRoute
   '/orders': typeof DashOrdersRoute
   '/products': typeof DashProductsRoute
   '/purchases': typeof DashPurchasesRoute
   '/sandbox': typeof DashSandboxRoute
   '/': typeof DashIndexRoute
+  '/brands/add': typeof DashBrandsAddRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/analytics': typeof DashAnalyticsRoute
-  '/brands': typeof DashBrandsRoute
+  '/brands': typeof DashBrandsRouteWithChildren
   '/categories': typeof DashCategoriesRoute
   '/orders': typeof DashOrdersRoute
   '/products': typeof DashProductsRoute
   '/purchases': typeof DashPurchasesRoute
   '/sandbox': typeof DashSandboxRoute
   '/': typeof DashIndexRoute
+  '/brands/add': typeof DashBrandsAddRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,13 +114,14 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/_dash/analytics': typeof DashAnalyticsRoute
-  '/_dash/brands': typeof DashBrandsRoute
+  '/_dash/brands': typeof DashBrandsRouteWithChildren
   '/_dash/categories': typeof DashCategoriesRoute
   '/_dash/orders': typeof DashOrdersRoute
   '/_dash/products': typeof DashProductsRoute
   '/_dash/purchases': typeof DashPurchasesRoute
   '/_dash/sandbox': typeof DashSandboxRoute
   '/_dash/': typeof DashIndexRoute
+  '/_dash/brands/add': typeof DashBrandsAddRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/sandbox'
     | '/'
+    | '/brands/add'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/sandbox'
     | '/'
+    | '/brands/add'
   id:
     | '__root__'
     | '/_dash'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/_dash/purchases'
     | '/_dash/sandbox'
     | '/_dash/'
+    | '/_dash/brands/add'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -239,12 +251,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashAnalyticsRouteImport
       parentRoute: typeof DashRouteRoute
     }
+    '/_dash/brands/add': {
+      id: '/_dash/brands/add'
+      path: '/add'
+      fullPath: '/brands/add'
+      preLoaderRoute: typeof DashBrandsAddRouteImport
+      parentRoute: typeof DashBrandsRoute
+    }
   }
 }
 
+interface DashBrandsRouteChildren {
+  DashBrandsAddRoute: typeof DashBrandsAddRoute
+}
+
+const DashBrandsRouteChildren: DashBrandsRouteChildren = {
+  DashBrandsAddRoute: DashBrandsAddRoute,
+}
+
+const DashBrandsRouteWithChildren = DashBrandsRoute._addFileChildren(
+  DashBrandsRouteChildren,
+)
+
 interface DashRouteRouteChildren {
   DashAnalyticsRoute: typeof DashAnalyticsRoute
-  DashBrandsRoute: typeof DashBrandsRoute
+  DashBrandsRoute: typeof DashBrandsRouteWithChildren
   DashCategoriesRoute: typeof DashCategoriesRoute
   DashOrdersRoute: typeof DashOrdersRoute
   DashProductsRoute: typeof DashProductsRoute
@@ -255,7 +286,7 @@ interface DashRouteRouteChildren {
 
 const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashAnalyticsRoute: DashAnalyticsRoute,
-  DashBrandsRoute: DashBrandsRoute,
+  DashBrandsRoute: DashBrandsRouteWithChildren,
   DashCategoriesRoute: DashCategoriesRoute,
   DashOrdersRoute: DashOrdersRoute,
   DashProductsRoute: DashProductsRoute,

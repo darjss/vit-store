@@ -5,6 +5,7 @@ import { useNavigate, useRouteContext } from "@tanstack/react-router";
 const UserData = () => {
   const { session, queryClient, trpc } = useRouteContext({ from: "/_dash" });
   const navigate = useNavigate();
+
   const logout = useMutation({
     ...trpc.auth.logout.mutationOptions(),
     onSuccess: () => {
@@ -12,16 +13,24 @@ const UserData = () => {
       navigate({ to: "/login" });
     },
   });
+
   return (
-    <div className="space-y-4 p-2">
-      <div className="font-medium text-gray-900">{session?.user.username}</div>
+    <div className="space-y-3 p-2">
+      <div className="truncate text-sm text-gray-600 dark:text-gray-300">
+        Нэвтэрсэн хэрэглэгч
+      </div>
+      <div className="truncate font-medium text-foreground">
+        {session?.user.username}
+      </div>
       <Button
         onClick={() => logout.mutate()}
-        className="w-full rounded bg-red-50 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100"
+        className="w-full"
+        variant="destructive"
       >
-        {logout.isPending ? "Logging out..." : "Logout"}
+        {logout.isPending ? "Гарах..." : "Гарах"}
       </Button>
     </div>
   );
 };
+
 export default UserData;

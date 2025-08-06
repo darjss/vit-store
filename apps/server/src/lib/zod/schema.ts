@@ -28,7 +28,7 @@ export const orderSchema = z.object({
 });
 
 export const imageSchema = z.object({
-	url: z.string(),
+	url: z.url(),
 	id: z.number().int().positive().finite().optional(),
 });
 

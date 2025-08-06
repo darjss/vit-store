@@ -1,11 +1,12 @@
 import {
-    Home,
-    ShoppingCart,
-    Package,
-    BarChart2,
-    Tags,
-    FolderTree,
-    Users, CreditCard
+  Home,
+  ShoppingCart,
+  Package,
+  BarChart2,
+  Tags,
+  FolderTree,
+  Users,
+  CreditCard,
 } from "lucide-react";
 
 export const status = ["active", "draft", "out_of_stock"] as const;
@@ -28,42 +29,42 @@ export const PRODUCT_PER_PAGE = 5;
 
 export const sideNavItems = [
   {
-    title: "Home",
+    title: "Нүүр",
     url: "/",
     icon: Home,
   },
   {
-    title: "Orders",
+    title: "Захиалгууд",
     url: "/orders",
     icon: ShoppingCart,
   },
   {
-    title: "Products",
+    title: "Бүтээгдэхүүнүүд",
     url: "/products",
     icon: Package,
   },
   {
-    title: "Analytics",
+    title: "Аналитик",
     url: "/analytics",
     icon: BarChart2,
   },
   {
-    title: "Purchases",
+    title: "Худалдан авалт",
     url: "/purchases",
     icon: CreditCard,
   },
   {
-    title: "Brands",
+    title: "Брэндүүд",
     url: "/brands",
     icon: Tags,
   },
   {
-    title: "Categories",
+    title: "Ангиллууд",
     url: "/categories",
     icon: FolderTree,
   },
   {
-    title: "Users",
+    title: "Хэрэглэгчид",
     url: "/users",
     icon: Users,
   },

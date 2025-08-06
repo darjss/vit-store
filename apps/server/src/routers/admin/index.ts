@@ -8,6 +8,7 @@ import { order } from "./order";
 import { product } from "./product";
 import { purchase } from "./purchase";
 import { sales } from "./sales";
+import { brands } from "./brands";
 
 export const adminRouter = router({
 	healthCheck: publicProcedure.query(() => {
@@ -15,6 +16,7 @@ export const adminRouter = router({
 	}),
 	analytics,
 	auth,
+	brands,
 	category,
 	customer,
 	image,
