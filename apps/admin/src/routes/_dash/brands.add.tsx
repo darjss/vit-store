@@ -5,5 +5,5 @@ export const Route = createFileRoute('/_dash/brands/add')({
 })
 
 function RouteComponent() {
-  return <div>Hello "/_dash/brands/add"!</div>
+  return <div>add brand </div>
 }
