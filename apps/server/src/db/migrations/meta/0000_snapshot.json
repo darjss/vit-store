@@ -1,1119 +1,1264 @@
 {
-	"version": "6",
-	"dialect": "sqlite",
-	"id": "75e32ab9-9cca-4f40-9bf2-040eecfd5c99",
-	"prevId": "00000000-0000-0000-0000-000000000000",
-	"tables": {
-		"ecom_vit_brand": {
-			"name": "ecom_vit_brand",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"name": {
-					"name": "name",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"logo_url": {
-					"name": "logo_url",
-					"type": "text(512)",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"ecom_vit_brand_name_unique": {
-					"name": "ecom_vit_brand_name_unique",
-					"columns": ["name"],
-					"isUnique": true
-				},
-				"brand_name_idx": {
-					"name": "brand_name_idx",
-					"columns": ["name"],
-					"isUnique": false
-				},
-				"brand_created_at_idx": {
-					"name": "brand_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_cart_item": {
-			"name": "ecom_vit_cart_item",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"cart_id": {
-					"name": "cart_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"product_variant_id": {
-					"name": "product_variant_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"quantity": {
-					"name": "quantity",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"cart_item_cart_idx": {
-					"name": "cart_item_cart_idx",
-					"columns": ["cart_id"],
-					"isUnique": false
-				},
-				"cart_item_product_idx": {
-					"name": "cart_item_product_idx",
-					"columns": ["product_variant_id"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_cart_item_cart_id_ecom_vit_cart_id_fk": {
-					"name": "ecom_vit_cart_item_cart_id_ecom_vit_cart_id_fk",
-					"tableFrom": "ecom_vit_cart_item",
-					"tableTo": "ecom_vit_cart",
-					"columnsFrom": ["cart_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				},
-				"ecom_vit_cart_item_product_variant_id_ecom_vit_product_id_fk": {
-					"name": "ecom_vit_cart_item_product_variant_id_ecom_vit_product_id_fk",
-					"tableFrom": "ecom_vit_cart_item",
-					"tableTo": "ecom_vit_product",
-					"columnsFrom": ["product_variant_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_cart": {
-			"name": "ecom_vit_cart",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"customer_id": {
-					"name": "customer_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"cart_customer_idx": {
-					"name": "cart_customer_idx",
-					"columns": ["customer_id"],
-					"isUnique": false
-				},
-				"cart_created_at_idx": {
-					"name": "cart_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_cart_customer_id_ecom_vit_customer_phone_fk": {
-					"name": "ecom_vit_cart_customer_id_ecom_vit_customer_phone_fk",
-					"tableFrom": "ecom_vit_cart",
-					"tableTo": "ecom_vit_customer",
-					"columnsFrom": ["customer_id"],
-					"columnsTo": ["phone"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_category": {
-			"name": "ecom_vit_category",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"name": {
-					"name": "name",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"ecom_vit_category_name_unique": {
-					"name": "ecom_vit_category_name_unique",
-					"columns": ["name"],
-					"isUnique": true
-				},
-				"category_name_idx": {
-					"name": "category_name_idx",
-					"columns": ["name"],
-					"isUnique": false
-				},
-				"category_created_at_idx": {
-					"name": "category_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_customer": {
-			"name": "ecom_vit_customer",
-			"columns": {
-				"phone": {
-					"name": "phone",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"address": {
-					"name": "address",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"ecom_vit_customer_phone_unique": {
-					"name": "ecom_vit_customer_phone_unique",
-					"columns": ["phone"],
-					"isUnique": true
-				},
-				"phone_idx": {
-					"name": "phone_idx",
-					"columns": ["phone"],
-					"isUnique": false
-				},
-				"customer_created_at_idx": {
-					"name": "customer_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_order_detail": {
-			"name": "ecom_vit_order_detail",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"order_id": {
-					"name": "order_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"product_id": {
-					"name": "product_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"quantity": {
-					"name": "quantity",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"detail_order_idx": {
-					"name": "detail_order_idx",
-					"columns": ["order_id"],
-					"isUnique": false
-				},
-				"detail_product_idx": {
-					"name": "detail_product_idx",
-					"columns": ["product_id"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_order_detail_order_id_ecom_vit_order_id_fk": {
-					"name": "ecom_vit_order_detail_order_id_ecom_vit_order_id_fk",
-					"tableFrom": "ecom_vit_order_detail",
-					"tableTo": "ecom_vit_order",
-					"columnsFrom": ["order_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				},
-				"ecom_vit_order_detail_product_id_ecom_vit_product_id_fk": {
-					"name": "ecom_vit_order_detail_product_id_ecom_vit_product_id_fk",
-					"tableFrom": "ecom_vit_order_detail",
-					"tableTo": "ecom_vit_product",
-					"columnsFrom": ["product_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_order": {
-			"name": "ecom_vit_order",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"order_number": {
-					"name": "order_number",
-					"type": "text(8)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"customer_phone": {
-					"name": "customer_phone",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"status": {
-					"name": "status",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"address": {
-					"name": "address",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"delivery_provider": {
-					"name": "delivery_provider",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"total": {
-					"name": "total",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"notes": {
-					"name": "notes",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"order_id_idx": {
-					"name": "order_id_idx",
-					"columns": ["id"],
-					"isUnique": false
-				},
-				"order_customer_idx": {
-					"name": "order_customer_idx",
-					"columns": ["customer_phone"],
-					"isUnique": false
-				},
-				"order_number_idx": {
-					"name": "order_number_idx",
-					"columns": ["order_number"],
-					"isUnique": false
-				},
-				"order_status_idx": {
-					"name": "order_status_idx",
-					"columns": ["status"],
-					"isUnique": false
-				},
-				"order_created_at_idx": {
-					"name": "order_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_order_customer_phone_ecom_vit_customer_phone_fk": {
-					"name": "ecom_vit_order_customer_phone_ecom_vit_customer_phone_fk",
-					"tableFrom": "ecom_vit_order",
-					"tableTo": "ecom_vit_customer",
-					"columnsFrom": ["customer_phone"],
-					"columnsTo": ["phone"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_payment": {
-			"name": "ecom_vit_payment",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"order_id": {
-					"name": "order_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"provider": {
-					"name": "provider",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"status": {
-					"name": "status",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"payment_order_idx": {
-					"name": "payment_order_idx",
-					"columns": ["order_id"],
-					"isUnique": false
-				},
-				"payment_status_idx": {
-					"name": "payment_status_idx",
-					"columns": ["status"],
-					"isUnique": false
-				},
-				"payment_created_at_idx": {
-					"name": "payment_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_payment_order_id_ecom_vit_order_id_fk": {
-					"name": "ecom_vit_payment_order_id_ecom_vit_order_id_fk",
-					"tableFrom": "ecom_vit_payment",
-					"tableTo": "ecom_vit_order",
-					"columnsFrom": ["order_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_product_image": {
-			"name": "ecom_vit_product_image",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"product_id": {
-					"name": "product_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"url": {
-					"name": "url",
-					"type": "text(512)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"is_primary": {
-					"name": "is_primary",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "0"
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				}
-			},
-			"indexes": {
-				"image_product_idx": {
-					"name": "image_product_idx",
-					"columns": ["product_id"],
-					"isUnique": false
-				},
-				"image_product_primary_idx": {
-					"name": "image_product_primary_idx",
-					"columns": ["product_id", "is_primary"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_product_image_product_id_ecom_vit_product_id_fk": {
-					"name": "ecom_vit_product_image_product_id_ecom_vit_product_id_fk",
-					"tableFrom": "ecom_vit_product_image",
-					"tableTo": "ecom_vit_product",
-					"columnsFrom": ["product_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_product": {
-			"name": "ecom_vit_product",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"name": {
-					"name": "name",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"slug": {
-					"name": "slug",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"description": {
-					"name": "description",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"status": {
-					"name": "status",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "'draft'"
-				},
-				"discount": {
-					"name": "discount",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": 0
-				},
-				"amount": {
-					"name": "amount",
-					"type": "text(15)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"potency": {
-					"name": "potency",
-					"type": "text(10)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"stock": {
-					"name": "stock",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": 0
-				},
-				"price": {
-					"name": "price",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"daily_intake": {
-					"name": "daily_intake",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": 0
-				},
-				"category_id": {
-					"name": "category_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"brand_id": {
-					"name": "brand_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"ecom_vit_product_slug_unique": {
-					"name": "ecom_vit_product_slug_unique",
-					"columns": ["slug"],
-					"isUnique": true
-				},
-				"product_id_idx": {
-					"name": "product_id_idx",
-					"columns": ["id"],
-					"isUnique": false
-				},
-				"product_name_idx": {
-					"name": "product_name_idx",
-					"columns": ["name"],
-					"isUnique": false
-				},
-				"product_status_idx": {
-					"name": "product_status_idx",
-					"columns": ["status"],
-					"isUnique": false
-				},
-				"product_category_idx": {
-					"name": "product_category_idx",
-					"columns": ["category_id"],
-					"isUnique": false
-				},
-				"product_brand_idx": {
-					"name": "product_brand_idx",
-					"columns": ["brand_id"],
-					"isUnique": false
-				},
-				"product_stock_idx": {
-					"name": "product_stock_idx",
-					"columns": ["stock"],
-					"isUnique": false
-				},
-				"product_price_idx": {
-					"name": "product_price_idx",
-					"columns": ["price"],
-					"isUnique": false
-				},
-				"product_created_at_idx": {
-					"name": "product_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_product_category_id_ecom_vit_category_id_fk": {
-					"name": "ecom_vit_product_category_id_ecom_vit_category_id_fk",
-					"tableFrom": "ecom_vit_product",
-					"tableTo": "ecom_vit_category",
-					"columnsFrom": ["category_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				},
-				"ecom_vit_product_brand_id_ecom_vit_brand_id_fk": {
-					"name": "ecom_vit_product_brand_id_ecom_vit_brand_id_fk",
-					"tableFrom": "ecom_vit_product",
-					"tableTo": "ecom_vit_brand",
-					"columnsFrom": ["brand_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_purchase": {
-			"name": "ecom_vit_purchase",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"product_id": {
-					"name": "product_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"quantity_purchased": {
-					"name": "quantity_purchased",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"unit_cost": {
-					"name": "unit_cost",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"purchase_id_idx": {
-					"name": "purchase_id_idx",
-					"columns": ["id"],
-					"isUnique": false
-				},
-				"purchase_product_idx": {
-					"name": "purchase_product_idx",
-					"columns": ["product_id"],
-					"isUnique": false
-				},
-				"purchase_created_idx": {
-					"name": "purchase_created_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				},
-				"purchase_product_created_idx": {
-					"name": "purchase_product_created_idx",
-					"columns": ["product_id", "created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_purchase_product_id_ecom_vit_product_id_fk": {
-					"name": "ecom_vit_purchase_product_id_ecom_vit_product_id_fk",
-					"tableFrom": "ecom_vit_purchase",
-					"tableTo": "ecom_vit_product",
-					"columnsFrom": ["product_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_sales": {
-			"name": "ecom_vit_sales",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"product_id": {
-					"name": "product_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"order_id": {
-					"name": "order_id",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"quantity_sold": {
-					"name": "quantity_sold",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"product_cost": {
-					"name": "product_cost",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"selling_price": {
-					"name": "selling_price",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"discount_applied": {
-					"name": "discount_applied",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false,
-					"default": 0
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"sales_product_idx": {
-					"name": "sales_product_idx",
-					"columns": ["product_id"],
-					"isUnique": false
-				},
-				"sales_created_at_idx": {
-					"name": "sales_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				},
-				"sales_product_created_idx": {
-					"name": "sales_product_created_idx",
-					"columns": ["product_id", "created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {
-				"ecom_vit_sales_product_id_ecom_vit_product_id_fk": {
-					"name": "ecom_vit_sales_product_id_ecom_vit_product_id_fk",
-					"tableFrom": "ecom_vit_sales",
-					"tableTo": "ecom_vit_product",
-					"columnsFrom": ["product_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				},
-				"ecom_vit_sales_order_id_ecom_vit_order_id_fk": {
-					"name": "ecom_vit_sales_order_id_ecom_vit_order_id_fk",
-					"tableFrom": "ecom_vit_sales",
-					"tableTo": "ecom_vit_order",
-					"columnsFrom": ["order_id"],
-					"columnsTo": ["id"],
-					"onDelete": "no action",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		},
-		"ecom_vit_user": {
-			"name": "ecom_vit_user",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "integer",
-					"primaryKey": true,
-					"notNull": true,
-					"autoincrement": true
-				},
-				"username": {
-					"name": "username",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false
-				},
-				"google_id": {
-					"name": "google_id",
-					"type": "text(256)",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				},
-				"is_approved": {
-					"name": "is_approved",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": false
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"autoincrement": false,
-					"default": "(unixepoch())"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false,
-					"autoincrement": false
-				}
-			},
-			"indexes": {
-				"ecom_vit_user_google_id_unique": {
-					"name": "ecom_vit_user_google_id_unique",
-					"columns": ["google_id"],
-					"isUnique": true
-				},
-				"username_idx": {
-					"name": "username_idx",
-					"columns": ["username"],
-					"isUnique": false
-				},
-				"google_id_idx": {
-					"name": "google_id_idx",
-					"columns": ["google_id"],
-					"isUnique": false
-				},
-				"user_created_at_idx": {
-					"name": "user_created_at_idx",
-					"columns": ["created_at"],
-					"isUnique": false
-				}
-			},
-			"foreignKeys": {},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"checkConstraints": {}
-		}
-	},
-	"views": {},
-	"enums": {},
-	"_meta": {
-		"schemas": {},
-		"tables": {},
-		"columns": {}
-	},
-	"internal": {
-		"indexes": {}
-	}
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "38c47da6-ea14-446c-b26e-314634bdf0ef",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "ecom_vit_brand": {
+      "name": "ecom_vit_brand",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text(512)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ecom_vit_brand_name_unique": {
+          "name": "ecom_vit_brand_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        },
+        "brand_name_idx": {
+          "name": "brand_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "brand_created_at_idx": {
+          "name": "brand_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_cart_item": {
+      "name": "ecom_vit_cart_item",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "cart_id": {
+          "name": "cart_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "product_variant_id": {
+          "name": "product_variant_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cart_item_cart_idx": {
+          "name": "cart_item_cart_idx",
+          "columns": [
+            "cart_id"
+          ],
+          "isUnique": false
+        },
+        "cart_item_product_idx": {
+          "name": "cart_item_product_idx",
+          "columns": [
+            "product_variant_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_cart_item_cart_id_ecom_vit_cart_id_fk": {
+          "name": "ecom_vit_cart_item_cart_id_ecom_vit_cart_id_fk",
+          "tableFrom": "ecom_vit_cart_item",
+          "tableTo": "ecom_vit_cart",
+          "columnsFrom": [
+            "cart_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ecom_vit_cart_item_product_variant_id_ecom_vit_product_id_fk": {
+          "name": "ecom_vit_cart_item_product_variant_id_ecom_vit_product_id_fk",
+          "tableFrom": "ecom_vit_cart_item",
+          "tableTo": "ecom_vit_product",
+          "columnsFrom": [
+            "product_variant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_cart": {
+      "name": "ecom_vit_cart",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "cart_customer_idx": {
+          "name": "cart_customer_idx",
+          "columns": [
+            "customer_id"
+          ],
+          "isUnique": false
+        },
+        "cart_created_at_idx": {
+          "name": "cart_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_cart_customer_id_ecom_vit_customer_phone_fk": {
+          "name": "ecom_vit_cart_customer_id_ecom_vit_customer_phone_fk",
+          "tableFrom": "ecom_vit_cart",
+          "tableTo": "ecom_vit_customer",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "phone"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_category": {
+      "name": "ecom_vit_category",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ecom_vit_category_name_unique": {
+          "name": "ecom_vit_category_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        },
+        "category_name_idx": {
+          "name": "category_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "category_created_at_idx": {
+          "name": "category_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_customer": {
+      "name": "ecom_vit_customer",
+      "columns": {
+        "phone": {
+          "name": "phone",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ecom_vit_customer_phone_unique": {
+          "name": "ecom_vit_customer_phone_unique",
+          "columns": [
+            "phone"
+          ],
+          "isUnique": true
+        },
+        "phone_idx": {
+          "name": "phone_idx",
+          "columns": [
+            "phone"
+          ],
+          "isUnique": false
+        },
+        "customer_created_at_idx": {
+          "name": "customer_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_order_detail": {
+      "name": "ecom_vit_order_detail",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "detail_order_idx": {
+          "name": "detail_order_idx",
+          "columns": [
+            "order_id"
+          ],
+          "isUnique": false
+        },
+        "detail_product_idx": {
+          "name": "detail_product_idx",
+          "columns": [
+            "product_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_order_detail_order_id_ecom_vit_order_id_fk": {
+          "name": "ecom_vit_order_detail_order_id_ecom_vit_order_id_fk",
+          "tableFrom": "ecom_vit_order_detail",
+          "tableTo": "ecom_vit_order",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ecom_vit_order_detail_product_id_ecom_vit_product_id_fk": {
+          "name": "ecom_vit_order_detail_product_id_ecom_vit_product_id_fk",
+          "tableFrom": "ecom_vit_order_detail",
+          "tableTo": "ecom_vit_product",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_order": {
+      "name": "ecom_vit_order",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "order_number": {
+          "name": "order_number",
+          "type": "text(8)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "customer_phone": {
+          "name": "customer_phone",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "delivery_provider": {
+          "name": "delivery_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "total": {
+          "name": "total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "order_id_idx": {
+          "name": "order_id_idx",
+          "columns": [
+            "id"
+          ],
+          "isUnique": false
+        },
+        "order_customer_idx": {
+          "name": "order_customer_idx",
+          "columns": [
+            "customer_phone"
+          ],
+          "isUnique": false
+        },
+        "order_number_idx": {
+          "name": "order_number_idx",
+          "columns": [
+            "order_number"
+          ],
+          "isUnique": false
+        },
+        "order_status_idx": {
+          "name": "order_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "order_created_at_idx": {
+          "name": "order_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_order_customer_phone_ecom_vit_customer_phone_fk": {
+          "name": "ecom_vit_order_customer_phone_ecom_vit_customer_phone_fk",
+          "tableFrom": "ecom_vit_order",
+          "tableTo": "ecom_vit_customer",
+          "columnsFrom": [
+            "customer_phone"
+          ],
+          "columnsTo": [
+            "phone"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_payment": {
+      "name": "ecom_vit_payment",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "payment_order_idx": {
+          "name": "payment_order_idx",
+          "columns": [
+            "order_id"
+          ],
+          "isUnique": false
+        },
+        "payment_status_idx": {
+          "name": "payment_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "payment_created_at_idx": {
+          "name": "payment_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_payment_order_id_ecom_vit_order_id_fk": {
+          "name": "ecom_vit_payment_order_id_ecom_vit_order_id_fk",
+          "tableFrom": "ecom_vit_payment",
+          "tableTo": "ecom_vit_order",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_product_image": {
+      "name": "ecom_vit_product_image",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text(512)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "0"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "image_product_idx": {
+          "name": "image_product_idx",
+          "columns": [
+            "product_id"
+          ],
+          "isUnique": false
+        },
+        "image_product_primary_idx": {
+          "name": "image_product_primary_idx",
+          "columns": [
+            "product_id",
+            "is_primary"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_product_image_product_id_ecom_vit_product_id_fk": {
+          "name": "ecom_vit_product_image_product_id_ecom_vit_product_id_fk",
+          "tableFrom": "ecom_vit_product_image",
+          "tableTo": "ecom_vit_product",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_product": {
+      "name": "ecom_vit_product",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "discount": {
+          "name": "discount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "amount": {
+          "name": "amount",
+          "type": "text(15)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "potency": {
+          "name": "potency",
+          "type": "text(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stock": {
+          "name": "stock",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "daily_intake": {
+          "name": "daily_intake",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "category_id": {
+          "name": "category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ecom_vit_product_slug_unique": {
+          "name": "ecom_vit_product_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "product_id_idx": {
+          "name": "product_id_idx",
+          "columns": [
+            "id"
+          ],
+          "isUnique": false
+        },
+        "product_name_idx": {
+          "name": "product_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "product_status_idx": {
+          "name": "product_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "product_category_idx": {
+          "name": "product_category_idx",
+          "columns": [
+            "category_id"
+          ],
+          "isUnique": false
+        },
+        "product_brand_idx": {
+          "name": "product_brand_idx",
+          "columns": [
+            "brand_id"
+          ],
+          "isUnique": false
+        },
+        "product_stock_idx": {
+          "name": "product_stock_idx",
+          "columns": [
+            "stock"
+          ],
+          "isUnique": false
+        },
+        "product_price_idx": {
+          "name": "product_price_idx",
+          "columns": [
+            "price"
+          ],
+          "isUnique": false
+        },
+        "product_created_at_idx": {
+          "name": "product_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_product_category_id_ecom_vit_category_id_fk": {
+          "name": "ecom_vit_product_category_id_ecom_vit_category_id_fk",
+          "tableFrom": "ecom_vit_product",
+          "tableTo": "ecom_vit_category",
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ecom_vit_product_brand_id_ecom_vit_brand_id_fk": {
+          "name": "ecom_vit_product_brand_id_ecom_vit_brand_id_fk",
+          "tableFrom": "ecom_vit_product",
+          "tableTo": "ecom_vit_brand",
+          "columnsFrom": [
+            "brand_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_purchase": {
+      "name": "ecom_vit_purchase",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity_purchased": {
+          "name": "quantity_purchased",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unit_cost": {
+          "name": "unit_cost",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "purchase_id_idx": {
+          "name": "purchase_id_idx",
+          "columns": [
+            "id"
+          ],
+          "isUnique": false
+        },
+        "purchase_product_idx": {
+          "name": "purchase_product_idx",
+          "columns": [
+            "product_id"
+          ],
+          "isUnique": false
+        },
+        "purchase_created_idx": {
+          "name": "purchase_created_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "purchase_product_created_idx": {
+          "name": "purchase_product_created_idx",
+          "columns": [
+            "product_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_purchase_product_id_ecom_vit_product_id_fk": {
+          "name": "ecom_vit_purchase_product_id_ecom_vit_product_id_fk",
+          "tableFrom": "ecom_vit_purchase",
+          "tableTo": "ecom_vit_product",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_sales": {
+      "name": "ecom_vit_sales",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantity_sold": {
+          "name": "quantity_sold",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "product_cost": {
+          "name": "product_cost",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selling_price": {
+          "name": "selling_price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "discount_applied": {
+          "name": "discount_applied",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "sales_product_idx": {
+          "name": "sales_product_idx",
+          "columns": [
+            "product_id"
+          ],
+          "isUnique": false
+        },
+        "sales_created_at_idx": {
+          "name": "sales_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "sales_product_created_idx": {
+          "name": "sales_product_created_idx",
+          "columns": [
+            "product_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ecom_vit_sales_product_id_ecom_vit_product_id_fk": {
+          "name": "ecom_vit_sales_product_id_ecom_vit_product_id_fk",
+          "tableFrom": "ecom_vit_sales",
+          "tableTo": "ecom_vit_product",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ecom_vit_sales_order_id_ecom_vit_order_id_fk": {
+          "name": "ecom_vit_sales_order_id_ecom_vit_order_id_fk",
+          "tableFrom": "ecom_vit_sales",
+          "tableTo": "ecom_vit_order",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ecom_vit_user": {
+      "name": "ecom_vit_user",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "google_id": {
+          "name": "google_id",
+          "type": "text(256)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_approved": {
+          "name": "is_approved",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ecom_vit_user_google_id_unique": {
+          "name": "ecom_vit_user_google_id_unique",
+          "columns": [
+            "google_id"
+          ],
+          "isUnique": true
+        },
+        "username_idx": {
+          "name": "username_idx",
+          "columns": [
+            "username"
+          ],
+          "isUnique": false
+        },
+        "google_id_idx": {
+          "name": "google_id_idx",
+          "columns": [
+            "google_id"
+          ],
+          "isUnique": false
+        },
+        "user_created_at_idx": {
+          "name": "user_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
 }

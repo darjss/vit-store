@@ -14,7 +14,8 @@
 		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
 		"db:studio": "drizzle-kit studio",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply vit-store"
+		"db:migrate": "wrangler d1 migrations apply vit-store --remote",
+		"db:migrate:drizzle":"drizzle-kit migrate"
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",
