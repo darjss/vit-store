@@ -1,9 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/_dash/analytics')({
-  component: RouteComponent,
-})
+export const Route = createFileRoute("/_dash/analytics")({
+	component: RouteComponent,
+});
 
 function RouteComponent() {
-  return <div>Hello "/_dash/analytics"!</div>
+	return <div>Hello "/_dash/analytics"!</div>;
 }

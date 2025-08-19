@@ -1,9 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { GoogleIcon } from "@/components/icons";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/login")({
 	component: RouteComponent,
+	beforeLoad: async ({ context: ctx }) => {
+		const session = await ctx.queryClient.ensureQueryData({
+			...ctx.trpc.auth.me.queryOptions(),
+			staleTime: 1000 * 60 * 15,
+		});
+		if (session) {
+			throw redirect({ to: "/" });
+		}
+		return { session };
+	},
 });
 
 function RouteComponent() {

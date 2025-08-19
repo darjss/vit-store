@@ -1,22 +1,22 @@
 import {
-  Home,
-  ShoppingCart,
-  Package,
-  BarChart2,
-  Tags,
-  FolderTree,
-  Users,
-  CreditCard,
+	Home,
+	ShoppingCart,
+	Package,
+	BarChart2,
+	Tags,
+	FolderTree,
+	Users,
+	CreditCard,
 } from "lucide-react";
 
 export const status = ["active", "draft", "out_of_stock"] as const;
 
 export const orderStatus = [
-  "pending",
-  "shipped",
-  "delivered",
-  "cancelled",
-  "refunded",
+	"pending",
+	"shipped",
+	"delivered",
+	"cancelled",
+	"refunded",
 ] as const;
 
 export const paymentProvider = ["qpay", "transfer", "cash"] as const;
@@ -28,44 +28,44 @@ export const paymentStatus = ["pending", "success", "failed"] as const;
 export const PRODUCT_PER_PAGE = 5;
 
 export const sideNavItems = [
-  {
-    title: "Нүүр",
-    url: "/",
-    icon: Home,
-  },
-  {
-    title: "Захиалгууд",
-    url: "/orders",
-    icon: ShoppingCart,
-  },
-  {
-    title: "Бүтээгдэхүүнүүд",
-    url: "/products",
-    icon: Package,
-  },
-  {
-    title: "Аналитик",
-    url: "/analytics",
-    icon: BarChart2,
-  },
-  {
-    title: "Худалдан авалт",
-    url: "/purchases",
-    icon: CreditCard,
-  },
-  {
-    title: "Брэндүүд",
-    url: "/brands",
-    icon: Tags,
-  },
-  {
-    title: "Ангиллууд",
-    url: "/categories",
-    icon: FolderTree,
-  },
-  {
-    title: "Хэрэглэгчид",
-    url: "/users",
-    icon: Users,
-  },
+	{
+		title: "Нүүр",
+		url: "/",
+		icon: Home,
+	},
+	{
+		title: "Захиалгууд",
+		url: "/orders",
+		icon: ShoppingCart,
+	},
+	{
+		title: "Бүтээгдэхүүнүүд",
+		url: "/products",
+		icon: Package,
+	},
+	{
+		title: "Аналитик",
+		url: "/analytics",
+		icon: BarChart2,
+	},
+	{
+		title: "Худалдан авалт",
+		url: "/purchases",
+		icon: CreditCard,
+	},
+	{
+		title: "Брэндүүд",
+		url: "/brands",
+		icon: Tags,
+	},
+	{
+		title: "Ангиллууд",
+		url: "/categories",
+		icon: FolderTree,
+	},
+	{
+		title: "Хэрэглэгчид",
+		url: "/users",
+		icon: Users,
+	},
 ];
