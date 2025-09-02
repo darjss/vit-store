@@ -197,6 +197,7 @@ app.post("/upload", async (c) => {
 				contentType: image.type,
 			},
 		});
+		console.log("Uploaded successfully", key);
 
 		return c.json({
 			message: "Uploaded successfully",
