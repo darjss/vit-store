@@ -27,6 +27,9 @@
 			"migrations_dir": "./src/db/migrations"
 		}
 	],
+	"observability": {
+		"enabled": true
+	},
 	"kv_namespaces": [
 		{
 			"binding": "vitStoreKV",
@@ -37,7 +40,7 @@
 	"r2_buckets": [
 		{
 			"binding": "r2Bucket",
-			"bucket_name": "vit-store",
+			"bucket_name": "vit-store"
 			// "preview_bucket_name": "vit-store-preview"
 		}
 	]
