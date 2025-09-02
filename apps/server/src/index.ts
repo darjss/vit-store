@@ -208,6 +208,7 @@ app.post("/upload", async (c) => {
 	}
 });
 app.get("/", (c) => {
+	console.log("OK cors origin", env.CORS_ORIGIN);
 	return c.text("OK");
 });
 
