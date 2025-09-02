@@ -6,6 +6,6 @@ export const Route = createFileRoute("/_dash/")({
 
 function HomeComponent() {
 	return (
-		<div>Home</div>
+		<div>Home dashboard admin</div>
 	)
 }
