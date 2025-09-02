@@ -56,7 +56,7 @@ export const UploadButton = ({
 				},
 				{
 					onSuccess: (data) => {
-						console.log(data)
+						console.log("image uploaded successfully", data)
 						append?.({ url: data });
 						setValue?.("imageUrl", data);
 					},
