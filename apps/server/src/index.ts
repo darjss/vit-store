@@ -170,13 +170,43 @@ app.get("/admin/login/google/callback", async (c) => {
 	}
 });
 
-app.get("/test", async (c) => {
-	const cookie = getCookie(c, "admin_session");
-	console.log("test cookie", getCookie(c, "test"));
-	console.log("admin_Session cookie", cookie);
-	return c.json({ status: "OK", cookie: cookie });
-});
+app.post("/upload", async (c) => {
+	try {
+		const formData = await c.req.formData();
+		const image = formData.get("image") as File;
+		const key = formData.get("key") as string;
+		if (!key) {
+			console.error("Key is required");
+			return c.json({ message: "Key is required" }, 400);
+		}
+		if (!image) {
+			console.error("Image is required");
+			return c.json({ message: "Image is required" }, 400);
+		}
+		if (!image.type.startsWith("image/")) {
+			console.error("Invalid image type");
+			return c.json({ message: "Invalid image type" }, 400);
+		}
+		if (image.size > 10 * 1024 * 1024) {
+			console.error("Image size is too large");
+			return c.json({ message: "Image size is too large" }, 400);
+		}
 
+		await c.env.r2Bucket.put(key, image, {
+			httpMetadata: {
+				contentType: image.type,
+			},
+		});
+
+		return c.json({
+			message: "Uploaded successfully",
+			url: `https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev/${key}`,
+		});
+	} catch (e) {
+		console.error(e);
+		return c.json({ status: "ERROR", message: "Failed to upload image" }, 500);
+	}
+});
 app.get("/", (c) => {
 	return c.text("OK");
 });

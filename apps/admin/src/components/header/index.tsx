@@ -1,18 +1,16 @@
 import { Search, UserRound } from "lucide-react";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import SearchBar from "./search-bar";
 import UserData from "./user-data";
-import { Link, useMatches } from "@tanstack/react-router";
 import BreadCrumbs from "./breadcrumb";
 
 const Header = () => {
-	console.log("header rendered");
 	return (
 		<header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">

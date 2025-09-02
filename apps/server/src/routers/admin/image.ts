@@ -1,288 +1,78 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { octetInputParser } from '@trpc/server/http';
+import { nanoid } from "nanoid";
 import { z } from "zod";
-import { ProductImagesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
 
 export const image = router({
-	addImage: adminProcedure
+	upload: adminProcedure
 		.input(
 			z.object({
-				productId: z.number(),
-				url: z.string().url("Invalid URL format"),
-				isPrimary: z.boolean().default(false),
+
+				image: octetInputParser, // Temporarily change this to see what we're getting
+				productId: z.number().optional(),
+				brandId: z.number().optional(),
+				category: z.enum(["product", "brand"]),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				await ctx.db.insert(ProductImagesTable).values(input);
-				return { message: "Successfully added image" };
-			} catch (error) {
-				console.error("Error adding image:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
-				});
-			}
-		}),
-
-	uploadImagesFromUrl: adminProcedure
-		.input(
-			z.object({
-				images: z.array(
-					z.object({
-						productId: z.number(),
-						url: z.string().url("Invalid URL format"),
-						isPrimary: z.boolean().default(false),
-					}),
-				),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const imageUrls = input.images.map((image) => ({ url: image.url }));
-
-				const response = await fetch(
-					process.env.BACKEND_URL + "/upload/image/urls",
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify(imageUrls),
-					},
-				);
-
-				console.log(response.body);
-				if (!response.ok) {
-					const errorText = await response.text();
-					console.error(
-						"Image upload failed:",
-						response.status,
-						response.statusText,
-						errorText,
-					);
+				const { image, productId, brandId, category } = input;
+				console.log("image upload started");
+				console.log("typeof image:", typeof image);
+				console.log("image constructor:", image?.constructor?.name);
+				console.log("image instanceof File:", image instanceof File);
+				console.log("image keys:", Object.keys(image || {}));
+				console.log("image.type", image?.type);3
+				console.log("image upload started");
+				console.log("image.type", image.type);
+				if (!image.type.startsWith("image/")) {
+					console.error("Invalid image type", image.type);
 					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: `Image upload failed: ${response.status} ${response.statusText} ${errorText}`,
-						cause: errorText,
+						code: "BAD_REQUEST",
+						message: "Invalid image type",
 					});
 				}
-
-				const uploadedImages = (await response.json()) as {
-					images: { url: string }[];
-					status: string;
-					time: number;
-				};
-
-				const addImagePromises = uploadedImages.images.map(
-					(uploadedImage, index) => {
-						return ctx.db.insert(ProductImagesTable).values({
-							...input.images[index],
-							url: uploadedImage.url,
-						});
+				if (image.size > 10 * 1024 * 1024) {
+					console.error("Image size is too large", image.size);
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Image size is too large",
+					});
+				}
+				const id = productId || brandId;
+				const key = `${category}/${id}/${nanoid()}.${image.type.split("/")[1]}`;
+				await ctx.r2.put(key, image, {
+					httpMetadata: {
+						contentType: image.type,
 					},
-				);
-
-				await Promise.all(addImagePromises);
-				return { message: "Successfully uploaded images" };
-			} catch (error) {
-				console.error("Error in uploadImagesFromUrl:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
 				});
-			}
-		}),
-
-	updateImage: adminProcedure
-		.input(
-			z.object({
-				newImages: z.array(
-					z.object({
-						url: z.string().url("Invalid URL format"),
-					}),
-				),
-				productId: z.number(),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const { newImages, productId } = input;
-
-				const existingImages = await ctx.db
-					.select({
-						id: ProductImagesTable.id,
-						url: ProductImagesTable.url,
-					})
-					.from(ProductImagesTable)
-					.where(eq(ProductImagesTable.productId, productId));
-
-				console.log("existing", existingImages);
-				console.log("updated", newImages);
-
-				let isDiff = false;
-				if (newImages.length !== existingImages.length) {
-					isDiff = true;
-				} else {
-					const sortedNewImages = newImages.toSorted((a, b) =>
-						a.url.localeCompare(b.url),
-					);
-					const sortedExistingImages = existingImages.toSorted((a, b) =>
-						a.url.localeCompare(b.url),
-					);
-					for (let i = 0; i < newImages.length; i++) {
-						if (sortedNewImages[i]?.url !== sortedExistingImages[i]?.url) {
-							isDiff = true;
-							break;
-						}
-					}
+				const url = `https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev/${key}`;
+				return url;
+			} catch (error) {
+				console.error("Error uploading image:", error);
+				if (error instanceof TRPCError) {
+					throw error;
 				}
-
-				if (isDiff) {
-					// Delete existing images
-					const deletePromises = existingImages.map((image) =>
-						ctx.db
-							.delete(ProductImagesTable)
-							.where(eq(ProductImagesTable.id, image.id)),
-					);
-					await Promise.allSettled(deletePromises);
-
-					// Insert new images
-					const insertPromises = newImages.map((image, index) =>
-						ctx.db.insert(ProductImagesTable).values({
-							productId: productId,
-							url: image.url,
-							isPrimary: index === 0,
-						}),
-					);
-					await Promise.allSettled(insertPromises);
-				}
-
-				return { message: "Successfully updated images" };
-			} catch (error) {
-				console.error("Error updating images:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
+					message: "Failed to upload image",
 				});
 			}
 		}),
-
-	getImagesByProductId: adminProcedure
-		.input(
-			z.object({
-				productId: z.number(),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			try {
-				const { productId } = input;
-				const images = await ctx.db
-					.select({
-						id: ProductImagesTable.id,
-						productId: ProductImagesTable.productId,
-						url: ProductImagesTable.url,
-						isPrimary: ProductImagesTable.isPrimary,
-						createdAt: ProductImagesTable.createdAt,
-					})
-					.from(ProductImagesTable)
-					.where(eq(ProductImagesTable.productId, productId))
-					.orderBy(ProductImagesTable.isPrimary);
-
-				return images;
-			} catch (error) {
-				console.error("Error getting images by product ID:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
-				});
-			}
-		}),
-
-	deleteImage: adminProcedure
-		.input(
-			z.object({
-				id: z.number(),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const { id } = input;
-				await ctx.db
-					.delete(ProductImagesTable)
-					.where(eq(ProductImagesTable.id, id));
-
-				return { message: "Successfully deleted image" };
-			} catch (error) {
-				console.error("Error deleting image:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
-				});
-			}
-		}),
-
-	setPrimaryImage: adminProcedure
-		.input(
-			z.object({
-				productId: z.number(),
-				imageId: z.number(),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const { productId, imageId } = input;
-
-				// First, set all images for this product as non-primary
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: false })
-					.where(eq(ProductImagesTable.productId, productId));
-
-				// Then, set the specified image as primary
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: true })
-					.where(eq(ProductImagesTable.id, imageId));
-
-				return { message: "Successfully set primary image" };
-			} catch (error) {
-				console.error("Error setting primary image:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Operation failed",
-					cause: error,
-				});
-			}
-		}),
-
-	getAllImages: adminProcedure.query(async ({ ctx }) => {
-		try {
-			const images = await ctx.db
-				.select({
-					id: ProductImagesTable.id,
-					productId: ProductImagesTable.productId,
-					url: ProductImagesTable.url,
-					isPrimary: ProductImagesTable.isPrimary,
-					createdAt: ProductImagesTable.createdAt,
-				})
-				.from(ProductImagesTable)
-				.orderBy(ProductImagesTable.createdAt);
-
-			return images;
-		} catch (error) {
-			console.error("Error getting all images:", error);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Operation failed",
-				cause: error,
-			});
-		}
-	}),
+		getSignedUrl: adminProcedure.
+						input(z.object({
+							fileName: z.string(),
+							productId: z.number().optional(),
+							brandId: z.number().optional(),
+							category: z.enum(["product", "brand"]),
+						}))
+						.query(async ({ input, ctx }) => {
+							const { productId, brandId, category } = input;
+							const id = productId || brandId;
+							const extension = input.fileName.split(".").pop();
+							const key = `${category}/${id}/${nanoid()}.${extension}`;
+				
+							return key;
+						})
 });

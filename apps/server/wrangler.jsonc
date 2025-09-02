@@ -33,5 +33,12 @@
 			"id": "e1684712998047ea8dff2fd7e2bc875e",
 			"preview_id": "e1684712998047ea8dff2fd7e2bc875e"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "r2Bucket",
+			"bucket_name": "vit-store",
+			// "preview_bucket_name": "vit-store-preview"
+		}
 	]
 }

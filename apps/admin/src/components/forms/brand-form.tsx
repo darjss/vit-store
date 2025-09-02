@@ -1,12 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Image } from "@unpic/react";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import {
 	addBrandSchema,
 	type addBrandType,
 } from "../../../../server/src/lib/zod/schema";
+import { ImagePlaceholderIcon } from "../icons";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
 import {
@@ -18,7 +21,7 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { Image } from "@unpic/react";
+import { UploadButton } from "../upload-button";
 
 const BrandForm = ({
 	brand,
@@ -31,9 +34,10 @@ const BrandForm = ({
 		resolver: zodResolver(addBrandSchema),
 		defaultValues: {
 			name: brand?.name || "",
-			logoUrl: brand?.logoUrl || "",
+			imageUrl: brand?.imageUrl || "",
 		},
 	});
+
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
 		...trpc.brands.addBrand.mutationOptions(),
@@ -51,6 +55,9 @@ const BrandForm = ({
 		console.log("submitting values", values);
 		mutation.mutate(values);
 	};
+
+	const currentImageUrl = form.watch("imageUrl");
+
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
@@ -60,7 +67,7 @@ const BrandForm = ({
 							<h3 className="mb-4 font-bold font-heading text-base sm:text-lg">
 								Brand Details
 							</h3>
-							<div className="grid gap-4 sm:grid-cols-2">
+							<div className="space-y-4">
 								<FormField
 									control={form.control}
 									name="name"
@@ -83,35 +90,47 @@ const BrandForm = ({
 
 								<FormField
 									control={form.control}
-									name="logoUrl"
+									name="imageUrl"
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel className="text-sm sm:text-base">
-												Logo URL
+												Logo Image
 											</FormLabel>
 											<FormControl>
-												<Input
-													placeholder="Enter logo URL"
-													{...field}
-													value={field.value || ""}
-													className="h-10"
-												/>
+												<div className="space-y-3">
+													{currentImageUrl ? (
+														<div className="flex justify-center">
+															<Image
+																src={currentImageUrl}
+																alt={form.watch("name") || "Brand logo"}
+																width={100}
+																height={100}
+																layout="constrained"
+																className="h-24 w-24 rounded-base border object-contain p-2"
+															/>
+														</div>
+													) : (
+														<div className="flex justify-center">
+															<div className="flex h-24 w-24 items-center justify-center rounded-base border-2 border-border border-dashed bg-secondary-background">
+																<div className="text-center">
+																	<ImagePlaceholderIcon className="mx-auto h-8 w-8 text-foreground/60" />
+																	<p className="mt-1 text-foreground/60 text-xs">
+																		Upload Logo
+																	</p>
+																</div>
+															</div>
+														</div>
+													)}
+													<div className="flex justify-center">
+														<UploadButton setValue={form.setValue} />
+													</div>
+												</div>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
 							</div>
-							{brand?.logoUrl && (
-								<Image
-									src={form.watch("logoUrl") || ""}
-									alt={form.watch("name") || ""}
-									width={100}
-									height={100}
-									layout="constrained"
-									className="h-full w-full object-contain p-4"
-								/>
-							)}
 						</CardContent>
 					</Card>
 

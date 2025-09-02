@@ -29,16 +29,7 @@ const customerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	return next({ ctx: { ...ctx, session } });
 });
 const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
-	console.log("adminAuthMiddleware: checking auth");
-	console.log(
-		"adminAuthMiddleware: cookies available:",
-		Object.keys(ctx.c.req.header("cookie") ? {} : {}),
-	);
 	const session = await adminAuth(ctx);
-	console.log(
-		"adminAuthMiddleware: session result:",
-		session ? "found" : "null",
-	);
 	if (!session) {
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}

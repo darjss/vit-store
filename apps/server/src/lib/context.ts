@@ -12,12 +12,14 @@ export async function createContext({ context }: CreateContextOptions) {
 	try {
 		const db = drizzle(context.env.DB, { schema });
 		const kv = context.env.vitStoreKV;
+		const r2=context.env.r2Bucket;
 		console.log("context created");
 		return {
 			c: context,
 			session: null as Session<CustomerSelectType | UserSelectType> | null,
 			db,
 			kv,
+			r2,
 		};
 	} catch (error) {
 		console.error(error);
