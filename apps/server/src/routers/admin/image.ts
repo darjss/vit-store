@@ -9,7 +9,7 @@ export const image = router({
 		.input(
 			z.object({
 
-				image: octetInputParser, // Temporarily change this to see what we're getting
+				image: z.instanceof(File),
 				productId: z.number().optional(),
 				brandId: z.number().optional(),
 				category: z.enum(["product", "brand"]),
