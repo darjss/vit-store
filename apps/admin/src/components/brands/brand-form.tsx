@@ -1,16 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { addBrandSchema, type addBrandType } from "@server/lib/zod/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
-import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { X } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
-import {
-	addBrandSchema,
-	type addBrandType,
-} from "../../../../server/src/lib/zod/schema";
 import { ImagePlaceholderIcon } from "../icons";
 import SubmitButton from "../submit-button";
+import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import {
 	Form,
@@ -34,7 +32,7 @@ const BrandForm = ({
 		resolver: zodResolver(addBrandSchema),
 		defaultValues: {
 			name: brand?.name || "",
-			imageUrl: brand?.imageUrl || "",
+			logoUrl: brand?.logoUrl || "",
 		},
 	});
 
@@ -48,7 +46,7 @@ const BrandForm = ({
 		},
 		onError: (error) => {
 			console.error("error", error);
-			toast.error("Failed to update brand");
+			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
 		},
 	});
 	const onSubmit = async (values: addBrandType) => {
@@ -56,7 +54,7 @@ const BrandForm = ({
 		mutation.mutate(values);
 	};
 
-	const currentImageUrl = form.watch("imageUrl");
+	const currentImageUrl = brand ? brand.logoUrl : form.watch("logoUrl");
 
 	return (
 		<Form {...form}>
@@ -64,8 +62,8 @@ const BrandForm = ({
 				<div className="space-y-4 sm:space-y-6">
 					<Card className="overflow-hidden shadow-shadow">
 						<CardContent className="p-4 sm:p-6">
-							<h3 className="mb-4 font-bold font-heading text-base sm:text-lg">
-								Brand Details
+							<h3 className="mb-4 font-bold text-base sm:text-lg">
+								Брэндийн мэдээлэл
 							</h3>
 							<div className="space-y-4">
 								<FormField
@@ -74,11 +72,11 @@ const BrandForm = ({
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel className="text-sm sm:text-base">
-												Brand Name
+												Брэндийн нэр
 											</FormLabel>
 											<FormControl>
 												<Input
-													placeholder="Enter brand name"
+													placeholder="Брэндийн нэр оруулах"
 													{...field}
 													className="h-10"
 												/>
@@ -90,24 +88,40 @@ const BrandForm = ({
 
 								<FormField
 									control={form.control}
-									name="imageUrl"
-									render={({ field }) => (
+									name="logoUrl"
+									render={() => (
 										<FormItem>
 											<FormLabel className="text-sm sm:text-base">
-												Logo Image
+												Лого зураг
 											</FormLabel>
 											<FormControl>
 												<div className="space-y-3">
 													{currentImageUrl ? (
 														<div className="flex justify-center">
-															<Image
-																src={currentImageUrl}
-																alt={form.watch("name") || "Brand logo"}
-																width={100}
-																height={100}
-																layout="constrained"
-																className="h-24 w-24 rounded-base border object-contain p-2"
-															/>
+															<div className="relative">
+																<Button
+																	type="button"
+																	size={"icon"}
+																	variant="destructive"
+																	onClick={() =>
+																		form.setValue(
+																			"logoUrl",
+																			"https://www.placeholder.com/logo.png",
+																		)
+																	}
+																	className="absolute top-0 right-0 p-0"
+																>
+																	<X />
+																</Button>
+																<Image
+																	src={currentImageUrl}
+																	alt={form.watch("name") || "Брэндийн лого"}
+																	width={100}
+																	height={100}
+																	layout="constrained"
+																	className="h-24 w-24 rounded-base border object-contain p-2"
+																/>
+															</div>
 														</div>
 													) : (
 														<div className="flex justify-center">
@@ -115,14 +129,17 @@ const BrandForm = ({
 																<div className="text-center">
 																	<ImagePlaceholderIcon className="mx-auto h-8 w-8 text-foreground/60" />
 																	<p className="mt-1 text-foreground/60 text-xs">
-																		Upload Logo
+																		Лого байршуулах
 																	</p>
 																</div>
 															</div>
 														</div>
 													)}
 													<div className="flex justify-center">
-														<UploadButton setValue={form.setValue} />
+														<UploadButton
+															setValue={form.setValue}
+															category="brand"
+														/>
 													</div>
 												</div>
 											</FormControl>
@@ -139,7 +156,7 @@ const BrandForm = ({
 							isPending={form.formState.isSubmitting}
 							className="h-10 w-full rounded-base px-4 font-heading text-sm transition-transform hover:translate-x-boxShadowX hover:translate-y-boxShadowY"
 						>
-							{brand ? "Update Brand" : "Add Brand"}
+							{brand ? "Брэнд шинэчлэх" : "Брэнд нэмэх"}
 						</SubmitButton>
 					</div>
 				</div>

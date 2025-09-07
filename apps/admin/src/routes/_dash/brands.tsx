@@ -2,8 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import BrandCard from "@/components/forms/brand-card";
-import BrandForm from "@/components/forms/brand-form";
+import BrandCard from "@/components/brands/brand-card";
+import BrandForm from "@/components/brands/brand-form";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -32,21 +32,20 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-4">
-			{/* Add Brand Button */}
 			<div className="flex justify-end">
 				<Dialog open={isOpen} onOpenChange={setIsOpen}>
 					<DialogTrigger asChild>
 						<Button className="gap-2">
 							<Plus className="h-4 w-4" />
-							<span className="hidden sm:inline">Add Brand</span>
-							<span className="sm:hidden">Add</span>
+							<span className="hidden sm:inline">Брэнд нэмэх</span>
+							<span className="sm:hidden">Нэмэх</span>
 						</Button>
 					</DialogTrigger>
 					<DialogContent>
 						<DialogHeader>
-							<DialogTitle>Add Brand</DialogTitle>
+							<DialogTitle>Брэнд нэмэх</DialogTitle>
 							<DialogDescription>
-								Create a new brand for your catalog.
+								Каталогт шинэ брэнд үүсгэх.
 							</DialogDescription>
 						</DialogHeader>
 						<div className="pt-2">
@@ -56,12 +55,11 @@ function RouteComponent() {
 				</Dialog>
 			</div>
 
-			{/* Brands Grid */}
 			{brands.length === 0 ? (
 				<div className="flex flex-col items-center justify-center py-12 text-center">
-					<p className="text-muted-foreground text-sm">No brands found</p>
+					<p className="text-muted-foreground text-sm">Брэнд олдсонгүй</p>
 					<p className="mt-1 text-muted-foreground text-xs">
-						Add your first brand to get started
+						Эхлэхийн тулд анхны брэндээ нэмнэ үү
 					</p>
 				</div>
 			) : (

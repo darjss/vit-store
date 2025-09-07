@@ -1,10 +1,9 @@
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import AppSidebar from "@/components/app-sidebar";
 import Header from "@/components/header/index";
 import MobileNavbar from "@/components/header/mobile-nav-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_dash")({
 	component: RouteComponent,
@@ -23,12 +22,12 @@ export const Route = createFileRoute("/_dash")({
 function RouteComponent() {
 	const isMobile = useIsMobile();
 	return (
-		<div className="h-screen w-screen overflow-hidden bg-background">
+		<div className="h-screen w-screen overflow-hidden">
 			<SidebarProvider>
 				<AppSidebar />
 				<SidebarInset>
 					<Header />
-					<div className="flex-1 overflow-auto p-4">
+					<div className="flex-1 overflow-auto bg-secondary-background p-4">
 						<Outlet />
 					</div>
 					{isMobile && <MobileNavbar />}

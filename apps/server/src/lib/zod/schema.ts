@@ -122,7 +122,7 @@ export const addBrandSchema = z.object({
 			message: "Brand name is too short",
 		})
 		.max(256),
-	imageUrl: z.url()
+	logoUrl: z.url(),
 });
 
 export const addCategorySchema = z.object({

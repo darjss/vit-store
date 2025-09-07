@@ -47,7 +47,7 @@ function RootComponent() {
 	return (
 		<>
 			<HeadContent />
-			<div className="grid h-svh grid-rows-[auto_1fr] bg-background">
+			<div className="grid h-svh grid-rows-[auto_1fr]">
 				{isFetching ? <Loader /> : <Outlet />}
 			</div>
 			<Toaster richColors />

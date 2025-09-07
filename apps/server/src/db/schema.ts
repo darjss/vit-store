@@ -57,7 +57,7 @@ export const BrandsTable = createTable(
 	{
 		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
 		name: text("name", { length: 256 }).notNull().unique(),
-		logoUrl: text("logo_url", { length: 512 }),
+		logoUrl: text("logo_url", { length: 512 }).notNull(),
 		createdAt: int("created_at", { mode: "timestamp" })
 			.default(sql`(unixepoch())`)
 			.notNull(),

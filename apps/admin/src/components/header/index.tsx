@@ -1,23 +1,23 @@
 import { Search, UserRound } from "lucide-react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
+import BreadCrumbs from "./breadcrumb";
 import SearchBar from "./search-bar";
 import UserData from "./user-data";
-import BreadCrumbs from "./breadcrumb";
 
 const Header = () => {
 	return (
-		<header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+		<header className="sticky top-0 z-40 w-full border-border border-b-4 bg-secondary-background shadow-shadow">
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<SidebarTrigger
 						aria-label="Open sidebar"
-						className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+						className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-none border-2 border-border bg-secondary-background text-gray-600 shadow-shadow transition-transform hover:text-gray-800 active:translate-x-0 active:translate-y-0 dark:text-gray-300 dark:hover:text-gray-100"
 					/>
 
 					<div className="select-none">
@@ -38,14 +38,14 @@ const Header = () => {
 								aria-label="Search"
 								variant="neutral"
 								size="icon"
-								className="rounded-full"
+								className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-none border-2 border-border bg-secondary-background shadow-shadow transition-transform active:translate-x-0 active:translate-y-0"
 							>
 								<Search className="h-5 w-5" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent
 							align="end"
-							className="w-screen max-w-sm p-3 sm:p-4"
+							className="w-screen max-w-sm rounded-none border-2 border-border bg-secondary-background p-3 shadow-shadow sm:p-4"
 							sideOffset={8}
 						>
 							<h4 className="mb-3 font-medium text-base">Search</h4>
@@ -57,12 +57,16 @@ const Header = () => {
 						<PopoverTrigger asChild>
 							<Button
 								aria-label="Open user menu"
-								className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-secondary-background transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+								className="hover:-translate-x-0.5 hover:-translate-y-0.5 flex h-10 w-10 items-center justify-center rounded-none border-2 border-border bg-secondary-background shadow-shadow transition-transform active:translate-x-0 active:translate-y-0"
 							>
 								<UserRound className="h-5 w-5 text-gray-700 dark:text-gray-200" />
 							</Button>
 						</PopoverTrigger>
-						<PopoverContent align="end" className="w-64 p-2" sideOffset={8}>
+						<PopoverContent
+							align="end"
+							className="w-64 rounded-none border-2 border-border bg-secondary-background p-2 shadow-shadow"
+							sideOffset={8}
+						>
 							<UserData />
 						</PopoverContent>
 					</Popover>

@@ -49,3 +49,22 @@ export const generateDefaultValues = (schema: ZodSchema) => {
 	// console.log("default",defaultValues)
 	return defaultValues;
 };
+
+export const getStatusColor = (status: string) => {
+	switch (status) {
+		case "ACTIVE":
+			return "bg-green-100 text-green-800 border-green-300";
+		case "OUT_OF_STOCK":
+			return "bg-red-100 text-red-800 border-red-300";
+		case "DISCONTINUED":
+			return "bg-gray-100 text-gray-800 border-gray-300";
+		default:
+			return "bg-blue-100 text-blue-800 border-blue-300";
+	}
+};
+
+export const getStockColor = (stock: number) => {
+	if (stock > 10) return "text-green-600";
+	if (stock > 0) return "text-amber-600";
+	return "text-red-600";
+};
