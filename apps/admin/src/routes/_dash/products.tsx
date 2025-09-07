@@ -1,4 +1,4 @@
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	ArrowUpDown,
@@ -57,7 +57,7 @@ function RouteComponent() {
 	const [brandFilter] = useState(0);
 	const [sortField] = useState("");
 	const [hasActiveFilters] = useState(false);
-
+	const queryClient = useQueryClient();
 	const [
 		{ data: productsData, isPending },
 		{ data: categories },
@@ -147,7 +147,10 @@ function RouteComponent() {
 										</DialogHeader>
 										<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
 											<ProductForm
-												onSuccess={() => setIsAddProductDialogOpen(false)}
+												onSuccess={() => {
+													setIsAddProductDialogOpen(false);
+													queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
+												}}
 											/>
 										</div>
 									</DialogContent>
