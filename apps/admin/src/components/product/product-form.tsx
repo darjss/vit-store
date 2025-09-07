@@ -8,7 +8,6 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { status } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
-import { ImagePlaceholderIcon } from "../icons";
 import SubmitButton from "../submit-button";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
@@ -310,24 +309,34 @@ const ProductForm = ({
                     <Card className="shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
                         <CardContent className="space-y-4 p-6">
                             <h3 className="mb-4 font-semibold text-xl">Product Images</h3>
-                            {currentImageUrl.length > 0 &&
-                                currentImageUrl.map((image, i) => (
-                                    <div key={image.id}>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => handleRemove(i)}
+                            {currentImageUrl.length > 0 && (
+                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                                    {currentImageUrl.map((image, i) => (
+                                        <div
+                                            key={image.id}
+                                            className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
                                         >
-                                            <X />
-                                        </Button>
-                                        <Image
-                                            src={image.url}
-                                            alt={`product image ${i}`}
-                                            width={100}
-                                            height={100}
-                                        />
-                                    </div>
-                                ))}
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                onClick={() => handleRemove(i)}
+                                                className="absolute top-2 right-2 z-10 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100"
+                                                aria-label="Remove image"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                            <Image
+                                                src={image.url}
+                                                alt={`product image ${i + 1}`}
+                                                width={400}
+                                                height={400}
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <UploadButton append={append} category="product" />
                         </CardContent>
                     </Card>

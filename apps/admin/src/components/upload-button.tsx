@@ -1,3 +1,4 @@
+// Start of Selection
 import { useMutation } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useRef } from "react";
@@ -48,26 +49,23 @@ export const UploadButton = ({
 		if (!files || files.length === 0) {
 			throw new Error("Select a file");
 		}
-		if (files && files.length > 0) {
-			const image = files[0];
-			const response = upload(
+		// Allow multiple files
+		Array.from(files).forEach((file) => {
+			upload(
+				{ image: file, category },
 				{
-					image: files[0],
-					category: category,
-				},
-				{
-					onSuccess: (data) => {
-						console.log("image uploaded successfully", data)
-						append?.({ url: data });
-						setValue?.("imageUrl", data);
+					onSuccess: (url) => {
+						console.log("image uploaded successfully", url);
+						append?.({ url });
+						// If you still need a single imageUrl, the last one wins
+						setValue?.("imageUrl", url);
 					},
 					onError: (error) => {
 						console.error(error);
 					},
 				},
 			);
-			return response;
-		}
+		});
 	};
 	return (
 		<div>
@@ -85,10 +83,11 @@ export const UploadButton = ({
 					ref={fileRef}
 					onChange={handleFileChange}
 					accept="image/*"
+					multiple // enable multiple selection
 				/>
 				<UploadIcon className="h-4 w-4" />
-				Upload Picture
+				Upload Pictures
 			</SubmitButton>
 		</div>
 	);
-};
+}
