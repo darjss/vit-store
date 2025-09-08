@@ -18,6 +18,7 @@
 	// bun db:generate
 	// To apply migrations locally, run:
 	// wrangler d1 migrations apply YOUR_DB_NAME --local
+	"placement": { "mode": "smart" },
 	"d1_databases": [
 		{
 			"binding": "DB",

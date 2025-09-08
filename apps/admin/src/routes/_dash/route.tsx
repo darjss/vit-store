@@ -23,16 +23,33 @@ function RouteComponent() {
 	const isMobile = useIsMobile();
 	return (
 		<div className="h-screen w-screen overflow-hidden">
-			<SidebarProvider>
-				<AppSidebar />
-				<SidebarInset>
-					<Header />
-					<div className="flex-1 overflow-auto bg-secondary-background p-4">
+			<div className="relative min-h-screen w-full bg-white">
+				<div
+					className="absolute inset-0 z-0"
+					style={{
+						background: "white",
+						backgroundImage: `
+                linear-gradient(to right, rgba(71,85,105,0.15) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(71,85,105,0.15) 1px, transparent 1px),
+                radial-gradient(circle at center, #FFF991 0%, transparent 70%)
+            `,
+						backgroundSize: "40px 40px, 40px 40px, 100% 100%",
+						opacity: 0.6,
+						mixBlendMode: "multiply",
+					}}
+				/>
+
+				<SidebarProvider>
+					<AppSidebar />
+					<SidebarInset>
+						<Header />
+
 						<Outlet />
-					</div>
-					{isMobile && <MobileNavbar />}
-				</SidebarInset>
-			</SidebarProvider>
-		</div>
+
+						{isMobile && <MobileNavbar />}
+					</SidebarInset>
+				</SidebarProvider>
+			</div>
+		</div >
 	);
 }

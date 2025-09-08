@@ -12,7 +12,7 @@ import UserData from "./user-data";
 
 const Header = () => {
 	return (
-		<header className="sticky top-0 z-40 w-full border-border border-b-4 bg-secondary-background shadow-shadow">
+		<header className="sticky top-0 z-40 w-full border-border border-b-4 bg-transparent shadow-shadow">
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<SidebarTrigger
