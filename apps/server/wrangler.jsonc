@@ -44,5 +44,18 @@
 			"bucket_name": "vit-store"
 			// "preview_bucket_name": "vit-store-preview"
 		}
-	]
+	],
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "RATE_LIMITER",
+				"type": "ratelimit",
+				"namespace_id": "1001",
+				"simple": {
+					"limit": 3,
+					"period": 60
+				}
+			}
+		]
+	}
 }

@@ -15,10 +15,17 @@ import {
 import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
 import { storeRouter } from "./routers/store";
+import { rateLimit } from "./lib/rate-limit";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
 app.use(logger());
+const rateLimitMiddleware = rateLimit({
+	rateLimiter: (c) => c.env.RATE_LIMITER,
+	getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
+});
+
+app.use("/*", rateLimitMiddleware);
 app.use(
 	"/*",
 	cors({
