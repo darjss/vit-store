@@ -1,6 +1,6 @@
 const Loader = () => {
 	return (
-		<div className="fixed inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm transition-all duration-500">
+		<div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm transition-all duration-500">
 			<div className="relative flex flex-col items-center">
 				<div className="relative">
 					<div className="h-24 w-24 animate-[spin_3s_linear_infinite] rounded-full border-2 border-border/20" />

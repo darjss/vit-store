@@ -1,29 +1,26 @@
-"use client";
 
-import { useTheme } from "next-themes";
-import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { Toaster as Sonner } from "sonner";
+
+type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-	const { theme = "system" } = useTheme();
-
 	return (
 		<Sonner
-			theme={theme as ToasterProps["theme"]}
-			style={{ fontFamily: "inherit", overflowWrap: "anywhere" }}
 			toastOptions={{
-				unstyled: true,
 				classNames: {
 					toast:
-						"bg-background text-foreground border-border border-2 font-heading shadow-shadow rounded-base text-[13px] flex items-center gap-2.5 p-4 w-[356px] [&:has(button)]:justify-between",
-					description: "font-base",
+						"h-auto w-full p-4 bg-background border group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border flex items-center relative",
+					description:
+						"group-[.toast]:text-muted-foreground ml-2 text-sm font-sans",
 					actionButton:
-						"font-base border-2 text-[12px] h-6 px-2 bg-main text-main-foreground border-border rounded-base shrink-0",
+						"group-[.toast]:bg-primary group-[.toast]:text-primary-foreground py-1 px-2 bg-background border-border shadow border-2 ml-auto h-fit min-w-fit",
 					cancelButton:
-						"font-base border-2 text-[12px] h-6 px-2 bg-secondary-background text-foreground border-border rounded-base shrink-0",
-					error: "bg-black text-white",
-					loading:
-						"[&[data-sonner-toast]_[data-icon]]:flex [&[data-sonner-toast]_[data-icon]]:size-4 [&[data-sonner-toast]_[data-icon]]:relative [&[data-sonner-toast]_[data-icon]]:justify-start [&[data-sonner-toast]_[data-icon]]:items-center [&[data-sonner-toast]_[data-icon]]:flex-shrink-0",
+						"group-[.toast]:bg-muted group-[.toast]:text-foreground py-1 px-2 text-sm bg-background border-border shadow border-2 ml-auto h-fit min-w-fit",
+					title: "ml-2 font-sans",
+					closeButton:
+						"absolute bg-background -top-1 -left-1 rounded-full p-0.5",
 				},
+				unstyled: true,
 			}}
 			{...props}
 		/>

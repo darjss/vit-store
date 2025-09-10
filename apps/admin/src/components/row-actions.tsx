@@ -3,21 +3,21 @@ import { Edit2, MoreVertical, Trash2 } from "lucide-react";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import SubmitButton from "@/components/submit-button";
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 interface RowActionProps {
@@ -41,7 +41,7 @@ const RowAction = ({
 				<Button
 					variant="neutral"
 					size="icon"
-					className="h-8 w-8 rounded-base border border-border bg-background shadow-none transition-colors duration-200 hover:border-foreground hover:bg-main/10 data-[state=open]:border-foreground data-[state=open]:bg-main/10"
+					className="h-8 w-8 rounded-base border border-border bg-main shadow-none transition-colors duration-200 hover:border-foreground hover:bg-main/10 data-[state=open]:border-foreground data-[state=open]:bg-main/10"
 				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Open menu</span>

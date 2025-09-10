@@ -7,6 +7,7 @@
 		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"dev": "wrangler dev --port=3001",
+		"dev:remote": "wrangler dev --remote --port=3001",
 		"start": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",

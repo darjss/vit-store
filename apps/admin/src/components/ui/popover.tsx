@@ -1,41 +1,44 @@
+
 import * as PopoverPrimitive from "@radix-ui/react-popover";
-
-import type * as React from "react";
-
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
-function Popover({
-	...props
-}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
-}
+const popoverContentVariants = cva(
+	"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-[--radix-popover-content-transform-origin] border-2 bg-background p-4 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+);
 
-function PopoverTrigger({
-	...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-	return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
-}
+const Popover = PopoverPrimitive.Root;
 
-function PopoverContent({
-	className,
-	align = "center",
-	sideOffset = 4,
-	...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
-	return (
-		<PopoverPrimitive.Portal>
-			<PopoverPrimitive.Content
-				data-slot="popover-content"
-				align={align}
-				sideOffset={sideOffset}
-				className={cn(
-					"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-base border-2 border-border bg-main p-4 text-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+const PopoverTrigger = PopoverPrimitive.Trigger;
+
+const PopoverAnchor = PopoverPrimitive.Anchor;
+
+const PopoverContent = React.forwardRef<
+	React.ElementRef<typeof PopoverPrimitive.Content>,
+	React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> &
+	VariantProps<typeof popoverContentVariants>
+>(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
+	<PopoverPrimitive.Portal>
+		<PopoverPrimitive.Content
+			ref={ref}
+			align={align}
+			sideOffset={sideOffset}
+			className={cn(
+				popoverContentVariants({
 					className,
-				)}
-				{...props}
-			/>
-		</PopoverPrimitive.Portal>
-	);
-}
+				}),
+			)}
+			{...props}
+		/>
+	</PopoverPrimitive.Portal>
+));
+PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
-export { Popover, PopoverTrigger, PopoverContent };
+const PopoverObject = Object.assign(Popover, {
+	Trigger: PopoverTrigger,
+	Content: PopoverContent,
+	Anchor: PopoverAnchor,
+});
+
+export { PopoverObject as Popover };

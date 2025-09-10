@@ -1,58 +1,66 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-
-import type * as React from "react";
-
+import React, { type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-base font-base text-sm ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+	"flex cursor-pointer items-center font-head font-medium outline-hidden transition-all duration-200",
 	{
 		variants: {
 			variant: {
 				default:
-					"border-2 border-border bg-main text-main-foreground shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
+					"border-2 border-black bg-primary text-black shadow-md transition hover:translate-y-1 hover:bg-primary-hover hover:shadow-none",
+				secondary:
+					"border-2 border-black bg-secondary text-secondary-foreground shadow-md shadow-primary transition hover:translate-y-1 hover:shadow-none",
+				outline:
+					"border-2 bg-transparent shadow-md transition hover:translate-y-1 hover:shadow-none",
+				link: "bg-transparent hover:underline",
 				destructive:
-					"border-2 border-border bg-destructive text-destructive-foreground shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-				noShadow: "border-2 border-border bg-main text-main-foreground",
-				neutral:
-					"border-2 border-border bg-secondary-background text-foreground shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none",
-				reverse:
-					"border-2 border-border bg-main text-main-foreground hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-shadow",
+					"border-2 border-destructive bg-destructive text-destructive-foreground shadow-md transition hover:translate-y-1 hover:bg-destructive-hover hover:shadow-none",
 			},
 			size: {
-				default: "h-10 px-4 py-2",
-				sm: "h-9 px-3",
-				lg: "h-11 px-8",
-				icon: "size-10",
+				sm: "px-3 py-1 text-sm shadow hover:shadow-none",
+				md: "px-4 py-1.5 text-base",
+				lg: "px-8 py-3 text-lg",
+				icon: "p-2",
 			},
 		},
 		defaultVariants: {
+			size: "md",
 			variant: "default",
-			size: "default",
 		},
 	},
 );
 
-function Button({
-	className,
-	variant,
-	size,
-	asChild = false,
-	...props
-}: React.ComponentProps<"button"> &
-	VariantProps<typeof buttonVariants> & {
-		asChild?: boolean;
-	}) {
-	const Comp = asChild ? Slot : "button";
-
-	return (
-		<Comp
-			data-slot="button"
-			className={cn(buttonVariants({ variant, size, className }))}
-			{...props}
-		/>
-	);
+export interface IButtonProps
+	extends ButtonHTMLAttributes<HTMLButtonElement>,
+	VariantProps<typeof buttonVariants> {
+	asChild?: boolean;
 }
 
-export { Button, buttonVariants };
+export const Button = React.forwardRef<HTMLButtonElement, IButtonProps>(
+	(
+		{
+			children,
+			size = "md",
+			className = "",
+			variant = "default",
+			asChild = false,
+			...props
+		}: IButtonProps,
+		forwardedRef,
+	) => {
+		const Comp = asChild ? Slot : "button";
+		return (
+			<Comp
+				ref={forwardedRef}
+				className={cn(buttonVariants({ variant, size }), className)}
+				{...props}
+			>
+				{children}
+			</Comp>
+		);
+	},
+);
+
+Button.displayName = "Button";

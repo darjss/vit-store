@@ -1,47 +1,75 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
+/* styles.css */
+/* @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"); */
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+	--font-head: "Archivo Black", sans-serif;
+	--font-sans: "Space Grotesk", sans-serif;
+	--shadow-xs: 1px 1px 0 0 var(--border);
+	--shadow-sm: 2px 2px 0 0 var(--border);
+	--shadow: 3px 3px 0 0 var(--border);
+	--shadow-md: 4px 4px 0 0 var(--border);
+	--shadow-lg: 6px 6px 0 0 var(--border);
+	--shadow-xl: 10px 10px 0 1px var(--border);
+	--shadow-2xl: 16px 16px 0 1px var(--border);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-primary-hover: var(--primary-hover);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+}
+
 :root {
-	--background: oklch(96.79% 0.0654 102.26);
-	--secondary-background: oklch(100% 0 0);
-	--foreground: oklch(0% 0 0);
-	--main-foreground: oklch(0% 0 0);
-	--main: oklch(86.03% 0.176 92.36);
-	--border: oklch(0% 0 0);
-	--ring: oklch(0% 0 0);
-	--overlay: oklch(0% 0 0 / 0.8);
-	--shadow: 4px 4px 0px 0px var(--border);
-	--destructive: oklch(60% 0.22 27);
-	--destructive-foreground: oklch(100% 0 0);
-	--chart-1: #facc00;
-	--chart-2: #7a83ff;
-	--chart-3: #ff4d50;
-	--chart-4: #00d696;
-	--chart-5: #0099ff;
-	--chart-active-dot: #000;
+	--background: #fff;
+	--foreground: #000;
+	--card: #fff;
+	--card-foreground: #000;
+	--primary: #ffdb33;
+	--primary-hover: #ffcc00;
+	--primary-foreground: #000;
+	--secondary: #000;
+	--secondary-foreground: #fff;
+	--muted: #aeaeae;
+	--muted-foreground: #5a5a5a;
+	--accent: #fae583;
+	--accent-foreground: #000;
+	--destructive: #e63946;
+	--destructive-foreground: #fff;
+	--border: #000;
 }
 
 .dark {
-	--background: oklch(29.28% 0.0373 94.38);
-	--secondary-background: oklch(23.93% 0 0);
-	--foreground: oklch(92.49% 0 0);
-	--main-foreground: oklch(0% 0 0);
-	--main: oklch(79.36% 0.1624 92.49);
-	--border: oklch(0% 0 0);
-	--ring: oklch(100% 0 0);
-	--shadow: 4px 4px 0px 0px var(--border);
-	--destructive: oklch(65.69% 0.1551 22.39);
-	--destructive-foreground: oklch(100% 0 0);
-	--chart-1: #e0b700;
-	--chart-2: #7a83ff;
-	--chart-3: #ff6669;
-	--chart-4: #00bd84;
-	--chart-5: #008ae5;
-	--chart-active-dot: #fff;
+	--background: #1a1a1a;
+	--foreground: #f5f5f5;
+	--card: #242424;
+	--card-foreground: #f5f5f5;
+	--primary: #ffdb33;
+	--primary-hover: #ffcc00;
+	--primary-foreground: #000;
+	--secondary: #3a3a3a;
+	--secondary-foreground: #f5f5f5;
+	--muted: #3f3f46;
+	--muted-foreground: #a0a0a0;
+	--accent: #fae583;
+	--accent-foreground: #000;
+	--destructive: #e63946;
+	--destructive-foreground: #fff;
+	--border: #3a3a3a;
 }
-
 @theme inline {
 	--color-main: var(--main);
 	--color-background: var(--background);
