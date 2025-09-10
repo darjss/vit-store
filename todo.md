@@ -59,16 +59,16 @@
 
 ## brands page
 
-- [ ] - add brand component/form
-- [ ] - edit brand form
-- [ ] - list brands with filter/pagination
+- [x] - add brand component/form
+- [x] - edit brand form
+- [x] - list brands with filter/pagination
 - [ ] - search brand functionality
 - [ ] - brand status management
 
 ## categories page
 
-- [ ] - add category component/form
-- [ ] - edit category form
+- [x] - add category component/form
+- [x] - edit category form
 - [ ] - list categories with filter/pagination
 - [ ] - search category functionality
 - [ ] - category hierarchy management

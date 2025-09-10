@@ -8,6 +8,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
+import { rateLimit } from "./lib/rate-limit";
 import {
 	createAdminSession,
 	setAdminSessionTokenCookie,
@@ -15,7 +16,6 @@ import {
 import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
 import { storeRouter } from "./routers/store";
-import { rateLimit } from "./lib/rate-limit";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
