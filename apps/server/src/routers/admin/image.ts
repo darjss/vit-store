@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { octetInputParser } from '@trpc/server/http';
+import { octetInputParser } from "@trpc/server/http";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -8,7 +8,6 @@ export const image = router({
 	upload: adminProcedure
 		.input(
 			z.object({
-
 				image: z.instanceof(File),
 				productId: z.number().optional(),
 				brandId: z.number().optional(),
@@ -23,7 +22,8 @@ export const image = router({
 				console.log("image constructor:", image?.constructor?.name);
 				console.log("image instanceof File:", image instanceof File);
 				console.log("image keys:", Object.keys(image || {}));
-				console.log("image.type", image?.type);3
+				console.log("image.type", image?.type);
+				3;
 				console.log("image upload started");
 				console.log("image.type", image.type);
 				if (!image.type.startsWith("image/")) {
@@ -60,19 +60,21 @@ export const image = router({
 				});
 			}
 		}),
-		getSignedUrl: adminProcedure.
-						input(z.object({
-							fileName: z.string(),
-							productId: z.number().optional(),
-							brandId: z.number().optional(),
-							category: z.enum(["product", "brand"]),
-						}))
-						.query(async ({ input, ctx }) => {
-							const { productId, brandId, category } = input;
-							const id = productId || brandId;
-							const extension = input.fileName.split(".").pop();
-							const key = `${category}/${id}/${nanoid()}.${extension}`;
-				
-							return key;
-						})
+	getSignedUrl: adminProcedure
+		.input(
+			z.object({
+				fileName: z.string(),
+				productId: z.number().optional(),
+				brandId: z.number().optional(),
+				category: z.enum(["product", "brand"]),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			const { productId, brandId, category } = input;
+			const id = productId || brandId;
+			const extension = input.fileName.split(".").pop();
+			const key = `${category}/${id}/${nanoid()}.${extension}`;
+
+			return key;
+		}),
 });

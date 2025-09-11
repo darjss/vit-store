@@ -49,12 +49,12 @@ const AppSidebar = () => {
 														"hover:bg-primary hover:text-primary-foreground",
 														isActive
 															? [
-																"bg-primary text-primary-foreground",
-																"shadow-[var(--shadow-shadow)]",
-																"font-heading",
-																"pl-4",
-																"outline-border",
-															].join(" ")
+																	"bg-primary text-primary-foreground",
+																	"shadow-[var(--shadow-shadow)]",
+																	"font-heading",
+																	"pl-4",
+																	"outline-border",
+																].join(" ")
 															: "text-foreground",
 													)}
 												>

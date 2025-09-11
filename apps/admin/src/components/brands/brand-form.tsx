@@ -59,91 +59,84 @@ const BrandForm = ({
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
-				<div className="grid grid-cols-1 gap-5">
+				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
-						<CardContent className="space-y-5 p-5 sm:p-6">
-							<h3 className="font-semibold text-base sm:text-lg">
-								Брэндийн мэдээлэл
-							</h3>
-							<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-								<FormField
-									control={form.control}
-									name="name"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel className="text-sm sm:text-base">
-												Брэндийн нэр
-											</FormLabel>
-											<FormControl>
-												<Input placeholder="Брэндийн нэр оруулах" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
+						<CardContent className="space-y-6 p-6">
+							<h3 className="font-semibold text-xl">Брэндийн мэдээлэл</h3>
+							<FormField
+								control={form.control}
+								name="name"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Брэндийн нэр</FormLabel>
+										<FormControl>
+											<Input placeholder="Брэндийн нэр оруулах" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 
-								<FormField
-									control={form.control}
-									name="logoUrl"
-									render={() => (
-										<FormItem>
-											<FormLabel className="text-sm sm:text-base">
-												Лого зураг
-											</FormLabel>
-											<FormControl>
-												<div className="flex flex-col items-center space-y-3 sm:items-start">
-													{currentImageUrl ? (
-														<div className="relative">
-															<Button
-																type="button"
-																size="icon"
-																variant="destructive"
-																onClick={() => form.setValue("logoUrl", "")}
-																className="absolute top-1 right-1"
-															>
-																<X className="h-4 w-4" />
-															</Button>
-															<Image
-																src={currentImageUrl}
-																alt={form.watch("name") || "Брэндийн лого"}
-																width={128}
-																height={128}
-																className="h-32 w-32 rounded-base border bg-background object-contain p-2"
-															/>
+							<FormField
+								control={form.control}
+								name="logoUrl"
+								render={() => (
+									<FormItem>
+										<FormLabel>Лого зураг</FormLabel>
+										<FormControl>
+											<div className="flex flex-col items-center space-y-4">
+												{currentImageUrl ? (
+													<div className="group relative">
+														<Button
+															type="button"
+															size="icon"
+															variant="destructive"
+															onClick={() =>
+																form.setValue(
+																	"logoUrl",
+																	"https://www.placeholder.com/logo.png",
+																)
+															}
+															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+														>
+															<X className="h-3 w-3" />
+														</Button>
+														<Image
+															src={currentImageUrl}
+															alt={form.watch("name") || "Брэндийн лого"}
+															width={120}
+															height={120}
+															layout="constrained"
+															className="h-28 w-28 rounded-lg border-2 border-border bg-background object-contain p-3 shadow-sm"
+														/>
+													</div>
+												) : (
+													<div className="flex h-28 w-28 items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
+														<div className="text-center">
+															<ImagePlaceholderIcon className="mx-auto h-10 w-10 text-muted-foreground" />
+															<p className="mt-2 text-muted-foreground text-xs">
+																Лого байршуулах
+															</p>
 														</div>
-													) : (
-														<div className="flex h-32 w-32 items-center justify-center rounded-base border-2 border-border border-dashed bg-background">
-															<div className="text-center">
-																<ImagePlaceholderIcon className="mx-auto h-8 w-8 text-foreground/60" />
-																<p className="mt-1 text-foreground/60 text-xs">
-																	Лого байршуулах
-																</p>
-															</div>
-														</div>
-													)}
-													<UploadButton
-														setValue={form.setValue}
-														category="brand"
-														targetName="logoUrl"
-														label="Upload Pictures"
-														variant="outline"
-														size="sm"
-													/>
-												</div>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
+													</div>
+												)}
+												<UploadButton
+													setValue={form.setValue}
+													category="brand"
+												/>
+											</div>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 						</CardContent>
 					</Card>
 
-					<div className="mt-1 flex justify-end">
+					<div className="flex justify-end">
 						<SubmitButton
 							isPending={form.formState.isSubmitting}
-							className="w-full sm:w-auto"
-							size="md"
+							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{brand ? "Брэнд шинэчлэх" : "Брэнд нэмэх"}
 						</SubmitButton>

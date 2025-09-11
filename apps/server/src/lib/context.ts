@@ -12,7 +12,7 @@ export async function createContext({ context }: CreateContextOptions) {
 	try {
 		const db = drizzle(context.env.DB, { schema });
 		const kv = context.env.vitStoreKV;
-		const r2=context.env.r2Bucket;
+		const r2 = context.env.r2Bucket;
 		console.log("context created");
 		return {
 			c: context,

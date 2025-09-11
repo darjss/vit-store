@@ -1,4 +1,3 @@
-
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -29,7 +28,7 @@ const TooltipTrigger = TooltipPrimitive.Trigger;
 const TooltipContent = React.forwardRef<
 	React.ElementRef<typeof TooltipPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> &
-	VariantProps<typeof tooltipContentVariants>
+		VariantProps<typeof tooltipContentVariants>
 >(({ className, sideOffset = 4, variant, ...props }, ref) => (
 	<TooltipPrimitive.Portal>
 		<TooltipPrimitive.Content
@@ -47,4 +46,4 @@ const TooltipContent = React.forwardRef<
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

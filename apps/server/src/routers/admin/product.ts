@@ -476,7 +476,6 @@ export const product = router({
 					(c): c is SQL<unknown> => c !== undefined,
 				);
 
-
 				const offset = (input.page - 1) * input.pageSize;
 
 				const products = await ctx.db.query.ProductsTable.findMany({
@@ -490,7 +489,6 @@ export const product = router({
 					},
 				});
 
-				
 				const totalCountResult = await ctx.db
 					.select({ count: sql<number>`COUNT(*)` })
 					.from(ProductsTable)

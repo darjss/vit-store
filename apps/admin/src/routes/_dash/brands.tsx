@@ -46,7 +46,7 @@ function RouteComponent() {
 							<DialogTitle>Брэнд нэмэх</DialogTitle>
 							<DialogDescription>Каталогт шинэ брэнд үүсгэх.</DialogDescription>
 						</DialogHeader>
-						<div className="max-h-[80vh] overflow-y-auto p-5 sm:p-6">
+						<div className="max-h-[80vh] overflow-y-auto p-6">
 							<BrandForm onSuccess={() => setIsOpen(false)} />
 						</div>
 					</DialogContent>

@@ -24,7 +24,7 @@ const badgeVariants = cva("rounded font-semibold", {
 
 interface ButtonProps
 	extends HTMLAttributes<HTMLSpanElement>,
-	VariantProps<typeof badgeVariants> { }
+		VariantProps<typeof badgeVariants> {}
 
 export function Badge({
 	children,

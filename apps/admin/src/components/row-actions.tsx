@@ -38,10 +38,7 @@ const RowAction = ({
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant="default"
-					size="icon"
-				>
+				<Button variant="default" size="icon">
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Open menu</span>
 				</Button>

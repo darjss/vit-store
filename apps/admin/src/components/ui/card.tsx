@@ -39,10 +39,4 @@ const CardContent = ({ className, ...props }: ICardProps) => {
 	return <div className={cn("p-4", className)} {...props} />;
 };
 
-export {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-	CardContent
-}
+export { Card, CardHeader, CardTitle, CardDescription, CardContent };
