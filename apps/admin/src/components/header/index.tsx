@@ -17,7 +17,7 @@ const Header = () => {
 				<div className="flex items-center gap-2 sm:gap-3">
 					<SidebarTrigger
 						aria-label="Open sidebar"
-						className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-none border-2 border-border bg-secondary-background text-gray-600 shadow-shadow transition-transform hover:text-gray-800 active:translate-x-0 active:translate-y-0 dark:text-gray-300 dark:hover:text-gray-100"
+						className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground/70 shadow-shadow ring-offset-background transition-transform hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 					/>
 
 					<div className="select-none">
@@ -36,16 +36,16 @@ const Header = () => {
 						<PopoverTrigger asChild className="md:hidden">
 							<Button
 								aria-label="Search"
-								variant="neutral"
+								variant="secondary"
 								size="icon"
-								className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-none border-2 border-border bg-secondary-background shadow-shadow transition-transform active:translate-x-0 active:translate-y-0"
+								className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 							>
-								<Search className="h-5 w-5" />
+								<Search className="h-6 w-6" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent
 							align="end"
-							className="w-screen max-w-sm rounded-none border-2 border-border bg-secondary-background p-3 shadow-shadow sm:p-4"
+							className="w-screen max-w-sm rounded-base border-2 border-border bg-background p-3 text-foreground shadow-shadow sm:p-4"
 							sideOffset={8}
 						>
 							<h4 className="mb-3 font-medium text-base">Search</h4>
@@ -57,14 +57,14 @@ const Header = () => {
 						<PopoverTrigger asChild>
 							<Button
 								aria-label="Open user menu"
-								className="hover:-translate-x-0.5 hover:-translate-y-0.5 flex h-10 w-10 items-center justify-center rounded-none border-2 border-border bg-secondary-background shadow-shadow transition-transform active:translate-x-0 active:translate-y-0"
+								className="hover:-translate-x-0.5 hover:-translate-y-0.5 flex h-12 w-12 items-center justify-center rounded-base border-2 border-border bg-background shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 							>
-								<UserRound className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+								<UserRound className="h-7 w-7 text-foreground" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent
 							align="end"
-							className="w-64 rounded-none border-2 border-border bg-secondary-background p-2 shadow-shadow"
+							className="w-64 rounded-base border-2 border-border bg-background p-2 text-foreground shadow-shadow"
 							sideOffset={8}
 						>
 							<UserData />

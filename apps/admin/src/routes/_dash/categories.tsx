@@ -41,12 +41,14 @@ function RouteComponent() {
 							<span className="sm:hidden">Нэмэх</span>
 						</Button>
 					</DialogTrigger>
-					<DialogContent>
-						<DialogHeader>
+					<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-md">
+						<DialogHeader className="border-b px-6 pt-6 pb-4">
 							<DialogTitle>Ангилал нэмэх</DialogTitle>
-							<DialogDescription>Каталогт шинэ ангилал үүсгэх.</DialogDescription>
+							<DialogDescription>
+								Каталогт шинэ ангилал үүсгэх.
+							</DialogDescription>
 						</DialogHeader>
-						<div className="pt-2">
+						<div className="max-h-[80vh] overflow-y-auto p-6">
 							<CategoryForm onSuccess={() => setIsOpen(false)} />
 						</div>
 					</DialogContent>

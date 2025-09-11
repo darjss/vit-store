@@ -1,7 +1,7 @@
+import { Search, X } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Search, X } from "lucide-react";
 
 type Props = {
 	autoFocus?: boolean;
@@ -33,7 +33,7 @@ const SearchBar = ({
 
 	return (
 		<div className="group relative flex items-center">
-			<div className="pointer-events-none absolute left-3 text-gray-500 group-focus-within:text-gray-700 dark:text-gray-400 dark:group-focus-within:text-gray-200">
+			<div className="pointer-events-none absolute left-3 text-foreground/60 group-focus-within:text-foreground">
 				<Search className="h-4 w-4" />
 			</div>
 
@@ -53,7 +53,7 @@ const SearchBar = ({
 			<div className="absolute right-1 flex items-center gap-1">
 				<button
 					aria-label="Clear search"
-					className="hidden h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black group-has-[input:not(:placeholder-shown)]:flex dark:hover:bg-gray-800"
+					className="hidden h-8 w-8 items-center justify-center rounded-base text-foreground/60 ring-offset-background hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 group-has-[input:not(:placeholder-shown)]:flex"
 					onClick={clearInput}
 					type="button"
 				>
@@ -61,7 +61,7 @@ const SearchBar = ({
 				</button>
 
 				<Button
-					variant="noShadow"
+					variant="secondary"
 					size="sm"
 					className="h-8"
 					onClick={handleSubmit}

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
 	Sidebar,
 	SidebarContent,
@@ -8,7 +9,6 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { sideNavItems } from "@/lib/constants";
-import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 const AppSidebar = () => {
@@ -37,7 +37,7 @@ const AppSidebar = () => {
 													className={cn(
 														"-translate-y-1/2 absolute top-1/2 left-0 h-6 w-1 rounded-full transition-all",
 														isActive
-															? "bg-main opacity-100"
+															? "bg-primary opacity-100"
 															: "bg-transparent opacity-0",
 													)}
 												/>
@@ -46,15 +46,15 @@ const AppSidebar = () => {
 													className={cn(
 														"rounded-base px-3 py-2",
 														"transition-colors duration-150",
-														"hover:bg-main hover:text-main-foreground",
+														"hover:bg-primary hover:text-primary-foreground",
 														isActive
 															? [
-																	"bg-main text-main-foreground",
-																	"shadow-[var(--shadow-shadow)]",
-																	"font-heading",
-																	"pl-4",
-																	"outline-border",
-																].join(" ")
+																"bg-primary text-primary-foreground",
+																"shadow-[var(--shadow-shadow)]",
+																"font-heading",
+																"pl-4",
+																"outline-border",
+															].join(" ")
 															: "text-foreground",
 													)}
 												>
@@ -62,7 +62,7 @@ const AppSidebar = () => {
 														className={cn(
 															"size-5 transition-colors",
 															isActive
-																? "text-main-foreground"
+																? "text-primary-foreground"
 																: "text-foreground",
 														)}
 													/>
@@ -70,7 +70,7 @@ const AppSidebar = () => {
 														className={cn(
 															"truncate text-sm md:text-base",
 															isActive
-																? "text-main-foreground"
+																? "text-primary-foreground"
 																: "text-foreground",
 														)}
 													>

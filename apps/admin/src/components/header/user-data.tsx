@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "../ui/button";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
+import { Button } from "../ui/button";
 
 const UserData = () => {
 	const { session, queryClient, trpc } = useRouteContext({ from: "/_dash" });
@@ -16,7 +16,7 @@ const UserData = () => {
 
 	return (
 		<div className="space-y-3 p-2">
-			<div className="truncate text-gray-600 text-sm dark:text-gray-300">
+			<div className="truncate text-foreground/70 text-sm">
 				Нэвтэрсэн хэрэглэгч
 			</div>
 			<div className="truncate font-medium text-foreground">

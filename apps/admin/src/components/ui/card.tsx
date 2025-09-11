@@ -39,11 +39,10 @@ const CardContent = ({ className, ...props }: ICardProps) => {
 	return <div className={cn("p-4", className)} {...props} />;
 };
 
-const CardComponent = Object.assign(Card, {
-	Header: CardHeader,
-	Title: CardTitle,
-	Description: CardDescription,
-	Content: CardContent,
-});
-
-export { CardComponent as Card };
+export {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+	CardContent
+}

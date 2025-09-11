@@ -59,13 +59,13 @@ const BrandForm = ({
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
-				<div className="space-y-4 sm:space-y-6">
-					<Card className="overflow-hidden shadow-shadow">
-						<CardContent className="p-4 sm:p-6">
-							<h3 className="mb-4 font-bold text-base sm:text-lg">
+				<div className="grid grid-cols-1 gap-5">
+					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
+						<CardContent className="space-y-5 p-5 sm:p-6">
+							<h3 className="font-semibold text-base sm:text-lg">
 								Брэндийн мэдээлэл
 							</h3>
-							<div className="space-y-4">
+							<div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 								<FormField
 									control={form.control}
 									name="name"
@@ -75,11 +75,7 @@ const BrandForm = ({
 												Брэндийн нэр
 											</FormLabel>
 											<FormControl>
-												<Input
-													placeholder="Брэндийн нэр оруулах"
-													{...field}
-													className="h-10"
-												/>
+												<Input placeholder="Брэндийн нэр оруулах" {...field} />
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -95,52 +91,44 @@ const BrandForm = ({
 												Лого зураг
 											</FormLabel>
 											<FormControl>
-												<div className="space-y-3">
+												<div className="flex flex-col items-center space-y-3 sm:items-start">
 													{currentImageUrl ? (
-														<div className="flex justify-center">
-															<div className="relative">
-																<Button
-																	type="button"
-																	size={"icon"}
-																	variant="destructive"
-																	onClick={() =>
-																		form.setValue(
-																			"logoUrl",
-																			"https://www.placeholder.com/logo.png",
-																		)
-																	}
-																	className="absolute top-0 right-0 p-0"
-																>
-																	<X />
-																</Button>
-																<Image
-																	src={currentImageUrl}
-																	alt={form.watch("name") || "Брэндийн лого"}
-																	width={100}
-																	height={100}
-																	layout="constrained"
-																	className="h-24 w-24 rounded-base border object-contain p-2"
-																/>
-															</div>
+														<div className="relative">
+															<Button
+																type="button"
+																size="icon"
+																variant="destructive"
+																onClick={() => form.setValue("logoUrl", "")}
+																className="absolute top-1 right-1"
+															>
+																<X className="h-4 w-4" />
+															</Button>
+															<Image
+																src={currentImageUrl}
+																alt={form.watch("name") || "Брэндийн лого"}
+																width={128}
+																height={128}
+																className="h-32 w-32 rounded-base border bg-background object-contain p-2"
+															/>
 														</div>
 													) : (
-														<div className="flex justify-center">
-															<div className="flex h-24 w-24 items-center justify-center rounded-base border-2 border-border border-dashed bg-secondary-background">
-																<div className="text-center">
-																	<ImagePlaceholderIcon className="mx-auto h-8 w-8 text-foreground/60" />
-																	<p className="mt-1 text-foreground/60 text-xs">
-																		Лого байршуулах
-																	</p>
-																</div>
+														<div className="flex h-32 w-32 items-center justify-center rounded-base border-2 border-border border-dashed bg-background">
+															<div className="text-center">
+																<ImagePlaceholderIcon className="mx-auto h-8 w-8 text-foreground/60" />
+																<p className="mt-1 text-foreground/60 text-xs">
+																	Лого байршуулах
+																</p>
 															</div>
 														</div>
 													)}
-													<div className="flex justify-center">
-														<UploadButton
-															setValue={form.setValue}
-															category="brand"
-														/>
-													</div>
+													<UploadButton
+														setValue={form.setValue}
+														category="brand"
+														targetName="logoUrl"
+														label="Upload Pictures"
+														variant="outline"
+														size="sm"
+													/>
 												</div>
 											</FormControl>
 											<FormMessage />
@@ -151,10 +139,11 @@ const BrandForm = ({
 						</CardContent>
 					</Card>
 
-					<div className="sticky bottom-0 bg-background py-3 sm:py-4">
+					<div className="mt-1 flex justify-end">
 						<SubmitButton
 							isPending={form.formState.isSubmitting}
-							className="h-10 w-full rounded-base px-4 font-heading text-sm transition-transform hover:translate-x-boxShadowX hover:translate-y-boxShadowY"
+							className="w-full sm:w-auto"
+							size="md"
 						>
 							{brand ? "Брэнд шинэчлэх" : "Брэнд нэмэх"}
 						</SubmitButton>

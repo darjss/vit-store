@@ -93,15 +93,4 @@ const SelectItem = ({
 const SelectLabel = SelectPrimitive.Label;
 const SelectSeparator = SelectPrimitive.Separator;
 
-const SelectObj = Object.assign(Select, {
-	Trigger: SelectTrigger,
-	Value: SelectValue,
-	Icon: SelectIcon,
-	Content: SelectContent,
-	Group: SelectGroup,
-	Item: SelectItem,
-	Label: SelectLabel,
-	Separator: SelectSeparator,
-});
-
-export { SelectObj as Select };
+export { Select, SelectTrigger, SelectValue, SelectIcon, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator }

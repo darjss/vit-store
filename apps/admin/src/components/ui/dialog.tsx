@@ -48,7 +48,7 @@ const DialogBackdrop = React.forwardRef<HTMLDivElement, IDialogBackgroupProps>(
 DialogBackdrop.displayName = "DialogBackdrop";
 
 const dialogVariants = cva(
-	`fixed left-[50%] top-[50%] z-50 grid rounded overflow-hidden w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border-2 bg-background shadow-lg duration-200 
+	`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded border-2 bg-background shadow-lg duration-200 
   data-[state=open]:animate-in 
   data-[state=open]:fade-in-0 
   data-[state=open]:zoom-in-95 
@@ -163,7 +163,7 @@ const DialogFooter = ({
 };
 
 const dialogHeaderVariants = cva(
-	"flex min-h-12 items-center justify-between border-b-2 px-4",
+	"flex min-h-12 items-start justify-between gap-2 border-b-2 px-0 py-3",
 	{
 		variants: {
 			variant: {
@@ -184,10 +184,16 @@ const dialogHeaderVariants = cva(
 const DialogHeaderDefaultLayout = ({ children }: { children: ReactNode }) => {
 	return (
 		<>
-			{children}
-			<DialogTrigger title="Close pop-up" className="cursor-pointer" asChild>
-				<X />
-			</DialogTrigger>
+			<div className="flex flex-col gap-1 leading-tight">{children}</div>
+			<ReactDialog.Close asChild>
+				<button
+					type="button"
+					aria-label="Close dialog"
+					className="-m-1 rounded p-1 focus-visible:outline-none focus-visible:ring-2"
+				>
+					<X className="h-5 w-5" />
+				</button>
+			</ReactDialog.Close>
 		</>
 	);
 };
@@ -219,12 +225,14 @@ const DialogHeader = ({
 	);
 };
 
-const DialogComponent = Object.assign(Dialog, {
-	Trigger: DialogTrigger,
-	Header: DialogHeader,
-	Content: DialogContent,
-	Description: DialogDescription,
-	Footer: DialogFooter,
-});
+const DialogTitle = ReactDialog.Title;
 
-export { DialogComponent as Dialog };
+export {
+	Dialog,
+	DialogTrigger,
+	DialogHeader,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogTitle,
+};

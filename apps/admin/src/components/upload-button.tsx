@@ -32,10 +32,18 @@ export const UploadButton = ({
 	append,
 	setValue,
 	category,
+	targetName = "imageUrl",
+	label = "Upload Pictures",
+	size = "md",
+	variant = "default",
 }: {
 	append?: UseFieldArrayAppend<any, "images">;
 	setValue?: UseFormSetValue<any>;
 	category: string;
+	targetName?: string;
+	label?: string;
+	size?: "sm" | "md" | "lg" | "icon";
+	variant?: "default" | "outline" | "link" | "destructive" | null | undefined;
 }) => {
 	const fileRef = useRef<HTMLInputElement>(null);
 	const { mutate: upload, isPending } = useMutation({
@@ -58,7 +66,7 @@ export const UploadButton = ({
 						console.log("image uploaded successfully", url);
 						append?.({ url });
 						// If you still need a single imageUrl, the last one wins
-						setValue?.("imageUrl", url);
+						setValue?.(targetName, url);
 					},
 					onError: (error) => {
 						console.error(error);
@@ -75,7 +83,9 @@ export const UploadButton = ({
 				onClick={() => {
 					fileRef.current?.click();
 				}}
-				className="flex items-center gap-2"
+				className="flex w-full items-center gap-2 sm:w-auto"
+				size={size}
+				variant={variant}
 			>
 				<Input
 					type="file"
@@ -86,7 +96,7 @@ export const UploadButton = ({
 					multiple // enable multiple selection
 				/>
 				<UploadIcon className="h-4 w-4" />
-				Upload Pictures
+				{label}
 			</SubmitButton>
 		</div>
 	);

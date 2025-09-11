@@ -40,7 +40,7 @@ const CategoryCard = (category: CategorySelectType) => {
             <Card className="group relative overflow-hidden border-2 border-border bg-background shadow-shadow transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
                 <CardContent className="p-3">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-base border-2 border-border bg-secondary-background font-heading text-foreground/60 text-xs uppercase">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-base border-2 border-border bg-secondary font-heading text-foreground/60 text-xs uppercase">
                             {category.name[0]}
                         </div>
                         <div className="min-w-0">

@@ -1,5 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { IButtonProps } from "./ui/button";
 import { Button } from "./ui/button";
 
 interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -7,14 +8,8 @@ interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 	children: ReactNode;
 	className?: string;
 	spinnerSize?: number;
-	variant?:
-		| "default"
-		| "destructive"
-		| "neutral"
-		| "noShadow"
-		| "reverse"
-		| null
-		| undefined;
+	variant?: IButtonProps["variant"];
+	size?: IButtonProps["size"];
 }
 
 const SubmitButton = ({
@@ -23,6 +18,7 @@ const SubmitButton = ({
 	className,
 	spinnerSize = 20,
 	variant = "default",
+	size = "md",
 	...props
 }: SubmitButtonProps) => {
 	return (
@@ -30,6 +26,7 @@ const SubmitButton = ({
 			type="submit"
 			className={`flex gap-2 ${className}`}
 			variant={variant}
+			size={size}
 			disabled={isPending}
 			{...props}
 		>

@@ -18,14 +18,15 @@ const BreadCrumbs = () => {
 					<BreadcrumbItem>
 						<Link
 							to="/"
-							className="flex items-center gap-1 font-heading text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground"
+							className="flex items-center gap-2 font-bold text-lg text-foreground transition-colors duration-200 hover:text-primary"
 						>
-							<Home className="h-4 w-4" />
+							<Home className="h-5 w-5" />
+							<span className="hidden sm:inline">Нүүр</span>
 						</Link>
 					</BreadcrumbItem>
 
 					{breadcrumb_routes.length > 0 && (
-						<BreadcrumbSeparator className="text-muted-foreground" />
+						<BreadcrumbSeparator className="text-foreground font-bold text-lg" />
 					)}
 
 					{breadcrumb_routes.map((crumb, index) => {
@@ -38,7 +39,7 @@ const BreadCrumbs = () => {
 						if (isLast) {
 							return (
 								<BreadcrumbItem key={crumb.path}>
-									<BreadcrumbPage className="font-heading text-foreground text-sm">
+									<BreadcrumbPage className="font-bold text-lg text-foreground">
 										{formattedName}
 									</BreadcrumbPage>
 								</BreadcrumbItem>
@@ -50,12 +51,12 @@ const BreadCrumbs = () => {
 								<BreadcrumbItem>
 									<Link
 										to={crumb.path}
-										className="font-heading text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground"
+										className="font-bold text-lg text-muted-foreground transition-colors duration-200 hover:text-foreground"
 									>
 										{formattedName}
 									</Link>
 								</BreadcrumbItem>
-								<BreadcrumbSeparator className="text-muted-foreground" />
+								<BreadcrumbSeparator className="text-foreground font-bold text-lg" />
 							</div>
 						);
 					})}

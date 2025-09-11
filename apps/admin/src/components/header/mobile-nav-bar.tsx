@@ -1,5 +1,5 @@
-import { sideNavItems } from "@/lib/constants";
 import { Link } from "@tanstack/react-router";
+import { sideNavItems } from "@/lib/constants";
 import { cn } from "@/lib/utils"; // optional: className merge helper if you have one
 
 const MobileNavbar = () => {
@@ -14,15 +14,14 @@ const MobileNavbar = () => {
 							<Link
 								to={nav.url}
 								activeProps={{
-									className:
-										"text-foreground bg-main/60 shadow-[var(--shadow)] ring-1 ring-ring",
+									className: "bg-primary text-primary-foreground shadow-shadow",
 								}}
 								className={cn(
-									"group block rounded-[var(--radius-base)]",
+									"group block rounded-base",
 									"px-3 py-2",
 									"transition-colors duration-200",
 									"text-foreground/70 hover:text-foreground",
-									"hover:bg-main/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+									"ring-offset-background hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 								)}
 							>
 								<div className="flex flex-col items-center gap-1">

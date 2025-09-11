@@ -39,9 +39,8 @@ const RowAction = ({
 		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
-					variant="neutral"
+					variant="default"
 					size="icon"
-					className="h-8 w-8 rounded-base border border-border bg-main shadow-none transition-colors duration-200 hover:border-foreground hover:bg-main/10 data-[state=open]:border-foreground data-[state=open]:bg-main/10"
 				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Open menu</span>
@@ -52,7 +51,7 @@ const RowAction = ({
 				className="w-32 border-2 border-border shadow-shadow"
 			>
 				<DropdownMenuItem
-					className="cursor-pointer gap-2 py-2 hover:bg-main/10 focus:bg-main/10"
+					className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
 					onSelect={(e) => {
 						e.preventDefault();
 						setIsEditDialogOpen(true);
@@ -92,7 +91,7 @@ const RowAction = ({
 						</AlertDialogHeader>
 						<AlertDialogFooter className="mt-6 flex gap-3">
 							<AlertDialogCancel asChild>
-								<Button variant="neutral" className="flex-1">
+								<Button variant="destructive" className="flex-1">
 									Cancel
 								</Button>
 							</AlertDialogCancel>

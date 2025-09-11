@@ -35,10 +35,4 @@ const PopoverContent = React.forwardRef<
 ));
 PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
-const PopoverObject = Object.assign(Popover, {
-	Trigger: PopoverTrigger,
-	Content: PopoverContent,
-	Anchor: PopoverAnchor,
-});
-
-export { PopoverObject as Popover };
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor }

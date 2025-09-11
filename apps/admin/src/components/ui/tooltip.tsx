@@ -47,10 +47,4 @@ const TooltipContent = React.forwardRef<
 ));
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-const TooltipObject = Object.assign(Tooltip, {
-	Trigger: TooltipTrigger,
-	Content: TooltipContent,
-	Provider: TooltipProvider,
-});
-
-export { TooltipObject as Tooltip };
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
