@@ -1,12 +1,12 @@
 import {
-	Home,
-	ShoppingCart,
-	Package,
 	BarChart2,
-	Tags,
-	FolderTree,
-	Users,
 	CreditCard,
+	FolderTree,
+	Home,
+	Package,
+	ShoppingCart,
+	Tags,
+	Users,
 } from "lucide-react";
 
 export const status = ["active", "draft", "out_of_stock"] as const;
@@ -25,7 +25,7 @@ export const deliveryProvider = ["tu-delivery", "self", "avidaa"] as const;
 
 export const paymentStatus = ["pending", "success", "failed"] as const;
 
-export const PRODUCT_PER_PAGE = 5;
+export const PRODUCT_PER_PAGE = 10;
 
 export const sideNavItems = [
 	{
@@ -65,7 +65,7 @@ export const sideNavItems = [
 	},
 	{
 		title: "Хэрэглэгчид",
-		url: "/users",
+		url: "/customers",
 		icon: Users,
 	},
 ];

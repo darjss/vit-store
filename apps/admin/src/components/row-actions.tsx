@@ -45,7 +45,7 @@ const RowAction = ({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="w-32 border-2 border-border shadow-shadow"
+				className="w-32 border-2 border-border bg-background shadow-shadow"
 			>
 				<DropdownMenuItem
 					className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
@@ -76,7 +76,7 @@ const RowAction = ({
 							<span>Delete</span>
 						</DropdownMenuItem>
 					</AlertDialogTrigger>
-					<AlertDialogContent className="border-2 border-border shadow-shadow">
+					<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
 						<AlertDialogHeader>
 							<AlertDialogTitle className="font-heading text-lg">
 								Confirm Delete

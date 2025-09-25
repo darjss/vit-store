@@ -1,7 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addProductSchema, type addProductType } from "@server/lib/zod/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLoaderData } from "@tanstack/react-router";
+import {
+	useMutation,
+	useQueryClient,
+	useSuspenseQueries,
+} from "@tanstack/react-query";
 import { Image } from "@unpic/react";
 import { X } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -37,7 +40,12 @@ const ProductForm = ({
 	product?: addProductType;
 	onSuccess: () => void;
 }) => {
-	const { categories, brands } = useLoaderData({ from: "/_dash/products" });
+	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
+		queries: [
+			trpc.category.getAllCategories.queryOptions(),
+			trpc.brands.getAllBrands.queryOptions(),
+		],
+	});
 	const form = useForm({
 		resolver: zodResolver(addProductSchema),
 		defaultValues: {
@@ -92,7 +100,7 @@ const ProductForm = ({
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-					<Card className="overflow-auto shadow-md transition-shadow duration-300 hover:shadow-lg">
+					<Card className="overflow-auto bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
 							<h3 className="mb-4 font-semibold text-xl">Product Details</h3>
 							<FormField
@@ -213,7 +221,7 @@ const ProductForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
+					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
 							<h3 className="mb-4 font-semibold text-xl">Pricing & Stock</h3>
 							<FormField
@@ -306,7 +314,7 @@ const ProductForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
+					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
 						<CardContent className="space-y-4 p-6">
 							<h3 className="mb-4 font-semibold text-xl">Product Images</h3>
 							{currentImageUrl.length > 0 && (

@@ -1,5 +1,10 @@
-import { useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQueries } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useSearch,
+} from "@tanstack/react-router";
 import {
 	ArrowUpDown,
 	Loader2,
@@ -9,17 +14,9 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
 import ProductCard from "@/components/product/product-card";
-import ProductForm from "@/components/product/product-form";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -28,9 +25,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/_dash/products")({
+export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
 	loader: async ({ context: ctx }) => {
 		const [products, categories, brands] = await Promise.all([
@@ -44,29 +42,55 @@ export const Route = createFileRoute("/_dash/products")({
 				ctx.trpc.brands.getAllBrands.queryOptions(),
 			),
 		]);
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 		console.log("products", products);
 		console.log("categories", categories);
 		console.log("brands", brands);
 		return { products, categories, brands };
 	},
+	validateSearch: z.object({
+		page: z.number().default(1),
+		pageSize: z.number().default(PRODUCT_PER_PAGE),
+		brandId: z.number().optional(),
+		categoryId: z.number().optional(),
+		sortField: z.string().optional(),
+		sortDirection: z.enum(["asc", "desc"]).default("asc"),
+		searchTerm: z.string().optional(),
+	}),
 });
 
 function RouteComponent() {
 	const [inputValue, setInputValue] = useState("");
-	const [searchTerm] = useState("");
-	const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
-	const [categoryFilter] = useState(0);
-	const [brandFilter] = useState(0);
-	const [sortField] = useState("");
-	const [hasActiveFilters] = useState(false);
-	const queryClient = useQueryClient();
+	const {
+		page,
+		pageSize,
+		brandId,
+		categoryId,
+		sortField,
+		sortDirection,
+		searchTerm,
+	} = useSearch({ from: "/_dash/products/" });
+	const hasActiveFilters =
+		brandId !== undefined ||
+		categoryId !== undefined ||
+		sortField !== undefined ||
+		sortDirection !== undefined ||
+		searchTerm !== undefined;
+	const navigate = useNavigate({ from: Route.fullPath });
 	const [
 		{ data: productsData, isPending },
 		{ data: categories },
 		{ data: brands },
 	] = useSuspenseQueries({
 		queries: [
-			trpc.product.getPaginatedProducts.queryOptions({}),
+			trpc.product.getPaginatedProducts.queryOptions({
+				page,
+				pageSize,
+				brandId,
+				categoryId,
+				sortField,
+				sortDirection,
+			}),
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
 		],
@@ -80,14 +104,39 @@ function RouteComponent() {
 	const handleClearSearch = () => {
 		console.log("clear search");
 	};
-	const handleFilterChange = (field: string, value: number) => {
+	const handleFilterChange = (
+		field: "brandId" | "categoryId",
+		value: number | undefined,
+	) => {
 		console.log("filter change", field, value);
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				[field]: value ?? undefined,
+			}),
+		});
 	};
 	const handleResetFilters = () => {
 		console.log("reset filters");
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				brandId: undefined,
+				categoryId: undefined,
+			}),
+		});
 	};
 	const handleSort = (field: string) => {
 		console.log("sort", field);
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				sortField: field,
+			}),
+		});
 	};
 	return (
 		<div className="space-y-3">
@@ -127,13 +176,13 @@ function RouteComponent() {
 				</Button>
 			</div>
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex flex-row gap-2 lg:flex-wrap">
+				<div className="flex w-full flex-row gap-2 lg:flex-wrap">
 					<Select
-						value={categoryFilter === 0 ? "all" : categoryFilter.toString()}
+						value={categoryId === undefined ? "all" : categoryId.toString()}
 						onValueChange={(value) =>
 							handleFilterChange(
-								"category",
-								value === "all" ? 0 : Number.parseInt(value),
+								"categoryId",
+								value === "all" ? undefined : Number.parseInt(value),
 							)
 						}
 						disabled={isPending}
@@ -151,11 +200,11 @@ function RouteComponent() {
 						</SelectContent>
 					</Select>
 					<Select
-						value={brandFilter === 0 ? "all" : brandFilter.toString()}
+						value={brandId === undefined ? "all" : brandId.toString()}
 						onValueChange={(value) =>
 							handleFilterChange(
-								"brand",
-								value === "all" ? 0 : Number.parseInt(value),
+								"brandId",
+								value === "all" ? undefined : Number.parseInt(value),
 							)
 						}
 						disabled={isPending}
@@ -173,7 +222,7 @@ function RouteComponent() {
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="flex flex-row gap-2 lg:flex-wrap">
+				<div className="flex flex-row gap-2">
 					{(hasActiveFilters || sortField !== "") && (
 						<Button
 							variant="outline"
@@ -219,40 +268,18 @@ function RouteComponent() {
 							className={`ml-1 h-4 w-4 ${sortField === "createdAt" ? "opacity-100" : "opacity-50"}`}
 						/>
 					</Button>
-					<Button
-						onClick={() => setIsAddProductDialogOpen(true)}
-						className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90"
-						disabled={isPending}
-					>
-						<PlusCircle className="h-5 w-5" />
-						<span className="hidden sm:inline">Add Product</span>
-						<span className="sm:hidden">Add</span>
-					</Button>
+					<Link to="/products/add" disabled={isPending}>
+						<Button
+							className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90"
+						>
+							<PlusCircle className="h-5 w-5" />
+							<span className="hidden sm:inline">Add Product</span>
+							<span className="sm:hidden">Add</span>
+						</Button>
+					</Link>
 				</div>
 			</div>
-			<Dialog
-				open={isAddProductDialogOpen}
-				onOpenChange={setIsAddProductDialogOpen}
-			>
-				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[900px]">
-					<DialogHeader className="border-b px-6 pt-6 pb-4">
-						<DialogTitle>Add Product</DialogTitle>
-						<DialogDescription>
-							Create a new product for your catalog.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
-						<ProductForm
-							onSuccess={() => {
-								setIsAddProductDialogOpen(false);
-								queryClient.invalidateQueries(
-									trpc.product.getAllProducts.queryOptions(),
-								);
-							}}
-						/>
-					</div>
-				</DialogContent>
-			</Dialog>
+
 			<div className="space-y-4">
 				{isPending && (
 					<div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">

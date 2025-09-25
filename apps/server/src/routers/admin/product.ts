@@ -448,7 +448,6 @@ export const product = router({
 
 				const conditions: (SQL<unknown> | undefined)[] = [];
 
-				// Add filters
 				if (input.brandId !== undefined && input.brandId !== 0) {
 					conditions.push(eq(ProductsTable.brandId, input.brandId));
 				}

@@ -10,7 +10,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
 	return (
 		<nav
 			data-slot="pagination"
-			role="navigation"
+			// role="navigation"
 			aria-label="pagination"
 			className={cn("mx-auto flex w-full justify-center", className)}
 			{...props}
@@ -44,7 +44,7 @@ function PaginationLink({
 	...props
 }: React.ComponentProps<"a"> & {
 	isActive?: boolean;
-	size?: "default" | "sm" | "lg" | "icon";
+	size?: "sm" | "md" | "lg" | "icon";
 }) {
 	return (
 		<a
@@ -52,7 +52,7 @@ function PaginationLink({
 			aria-current={isActive ? "page" : undefined}
 			className={cn(
 				buttonVariants({
-					variant: "noShadow",
+					variant: "secondary",
 					size,
 				}),
 				className,
@@ -71,7 +71,7 @@ function PaginationPrevious({
 		<PaginationLink
 			data-slot="pagination-previous"
 			aria-label="Go to previous page"
-			size="default"
+			size="md"
 			className={cn("gap-1 pl-2.5", className)}
 			{...props}
 		>
@@ -89,7 +89,7 @@ function PaginationNext({
 		<PaginationLink
 			data-slot="pagination-next"
 			aria-label="Go to next page"
-			size="default"
+			size="md"
 			className={cn("gap-1 pr-2.5", className)}
 			{...props}
 		>

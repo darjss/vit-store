@@ -16,6 +16,7 @@ import {
 import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
 import { storeRouter } from "./routers/store";
+import seedDatabase from "./lib/seed";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
@@ -218,6 +219,18 @@ app.post("/upload", async (c) => {
 app.get("/", (c) => {
 	console.log("OK cors origin", env.CORS_ORIGIN);
 	return c.text("OK");
+});
+
+app.post("/admin/seed", async (c) => {
+	try {
+		const ctx = await createContext({ context: c });
+		const reset = c.req.query("reset") === "1" || c.req.query("reset") === "true";
+		const result = await seedDatabase(ctx.db, { reset, rngSeed: 1337 });
+		return c.json(result);
+	} catch (e) {
+		console.error(e);
+		return c.json({ message: "Seed failed" }, 500);
+	}
 });
 
 export default app;
