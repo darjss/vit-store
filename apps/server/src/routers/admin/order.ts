@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import type { SQL } from "drizzle-orm";
-import { and, asc, desc, eq, gt, gte, like, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	CustomersTable,
@@ -13,8 +13,6 @@ import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
 import {
 	generateOrderNumber,
-	getDaysFromTimeRange,
-	shapeOrderResult,
 	shapeOrderResults,
 } from "@/lib/utils";
 import {
@@ -33,93 +31,87 @@ import {
 
 export const order = router({
 	addOrder: adminProcedure
-		.input(addOrderSchema)
+	.input(addOrderSchema)
 		.mutation(async ({ ctx, input }) => {
 			console.log("addOrder called with", input);
 			try {
-				const orderTotal = input.products.reduce(
-					(acc, currentProduct) =>
-						acc + currentProduct.price * currentProduct.quantity,
-					0,
-				);
+			const orderTotal = input.products.reduce(
+				(acc, currentProduct) =>
+					acc + currentProduct.price * currentProduct.quantity,
+				0,
+			);
 
-				await ctx.db.transaction(async (tx) => {
-					if (input.isNewCustomer) {
-						await tx.insert(CustomersTable).values({
-							phone: input.customerPhone,
-							address: input.address,
-						});
-					}
-
-					const [order] = await tx
-						.insert(OrdersTable)
-						.values({
-							orderNumber: generateOrderNumber(),
-							customerPhone: input.customerPhone,
-							status: input.status,
-							notes: input.notes,
-							total: orderTotal,
-							address: input.address,
-							deliveryProvider: input.deliveryProvider,
-						})
-						.returning({ orderId: OrdersTable.id });
-
-					const orderId = order?.orderId;
-
-					for (const product of input.products) {
-						await tx.insert(OrderDetailsTable).values({
-							orderId: orderId,
-							productId: product.productId,
-							quantity: product.quantity,
-						});
-
-						if (input.paymentStatus === "success") {
-							const productCost = await getAverageCostOfProduct(
-								product.productId,
-								new Date(),
-								ctx,
-								tx,
-							);
-							await addSale(
-								{
-									productCost: productCost,
-									quantitySold: product.quantity,
-									orderId: order.orderId,
-									sellingPrice: product.price,
-									productId: product.productId,
-								},
-								ctx,
-								tx,
-							);
-							await updateStock(
-								product.productId,
-								product.quantity,
-								"minus",
-								ctx,
-								tx,
-							);
-						}
-					}
-
-					try {
-						const paymentResult = await createPayment(
-							orderId,
-							ctx,
-							input.paymentStatus,
-							"transfer",
-							tx,
-						);
-						console.log("Payment created:", paymentResult);
-					} catch (error) {
-						console.error("Error creating payment:", error);
-						throw new TRPCError({
-							code: "INTERNAL_SERVER_ERROR",
-							message: "Failed to create payment",
-							cause: error,
-						});
-					}
-					console.log("transaction done");
+			if (input.isNewCustomer) {
+				await ctx.db.insert(CustomersTable).values({
+					phone: Number(input.customerPhone),
+					address: input.address,
 				});
+			}
+			const orderNumber = generateOrderNumber();
+			const [order] = await ctx.db
+				.insert(OrdersTable)
+				.values({
+					orderNumber: orderNumber,
+					customerPhone: Number(input.customerPhone),
+					status: input.status,
+					notes: input.notes,
+					total: orderTotal,
+					address: input.address,
+					deliveryProvider: input.deliveryProvider,
+				})
+				.returning({ orderId: OrdersTable.id });
+
+			const orderId = order?.orderId;
+
+			for (const product of input.products) {
+				await ctx.db.insert(OrderDetailsTable).values({
+					orderId: orderId,
+					productId: product.productId,
+					quantity: product.quantity,
+				});
+
+				if (input.paymentStatus === "success") {
+					const productCost = await getAverageCostOfProduct(
+						product.productId,
+						new Date(),
+						ctx,
+					);
+					await addSale(
+						{
+							productCost: productCost,
+							quantitySold: product.quantity,
+							orderId: order.orderId,
+							sellingPrice: product.price,
+							productId: product.productId,
+						},
+						ctx,
+					);
+					await updateStock(
+						product.productId,
+						product.quantity,
+						"minus",
+						ctx,
+					);
+				}
+			}
+
+			try {
+				const paymentResult = await createPayment(
+					orderId,
+					ctx,
+					input.paymentStatus,
+					"transfer",
+				);
+				console.log("Payment created:", paymentResult);
+			} catch (error) {
+				console.error("Error creating payment:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create payment",
+					cause: error,
+				});
+			}
+			console.log("transaction done");
 
 				console.log("added order");
 				return { message: "Order added successfully" };
@@ -139,117 +131,6 @@ export const order = router({
 			}
 		}),
 
-	seedOrder: adminProcedure
-		.input(addOrderSchema)
-		.mutation(async ({ ctx, input }) => {
-			console.log("addOrder called with", input);
-			try {
-				const orderTotal = input.products.reduce(
-					(acc, currentProduct) =>
-						acc + currentProduct.price * currentProduct.quantity,
-					0,
-				);
-
-				await ctx.db.transaction(async (tx) => {
-					if (input.isNewCustomer) {
-						await tx.insert(CustomersTable).values({
-							phone: input.customerPhone,
-							address: input.address,
-						});
-					}
-
-					const [order] = await tx
-						.insert(OrdersTable)
-						.values({
-							orderNumber: generateOrderNumber(),
-							customerPhone: input.customerPhone,
-							status: input.status,
-							notes: input.notes,
-							total: orderTotal,
-							address: input.address,
-							deliveryProvider: input.deliveryProvider,
-						})
-						.returning({ orderId: OrdersTable.id });
-					if (order?.orderId === undefined) {
-						throw new TRPCError({
-							code: "INTERNAL_SERVER_ERROR",
-							message: "Failed to create order",
-						});
-					}
-					const orderId = order?.orderId;
-
-					for (const product of input.products) {
-						await tx.insert(OrderDetailsTable).values({
-							orderId: orderId,
-							productId: product.productId,
-							quantity: product.quantity,
-						});
-
-						if (input.paymentStatus === "success") {
-							const productCost = await getAverageCostOfProduct(
-								product.productId,
-								new Date(),
-								ctx,
-								tx,
-							);
-							await addSale(
-								{
-									productCost: productCost,
-									quantitySold: product.quantity,
-									orderId: order.orderId,
-									sellingPrice: product.price,
-									productId: product.productId,
-								},
-								ctx,
-								tx,
-							);
-							await updateStock(
-								product.productId,
-								product.quantity,
-								"minus",
-								ctx,
-								tx,
-							);
-						}
-					}
-
-					try {
-						const paymentResult = await createPayment(
-							orderId,
-							ctx,
-							input.paymentStatus,
-							"transfer",
-							tx,
-						);
-						console.log("Payment created:", paymentResult);
-					} catch (error) {
-						console.error("Error creating payment:", error);
-						throw new TRPCError({
-							code: "INTERNAL_SERVER_ERROR",
-							message: "Failed to create payment",
-							cause: error,
-						});
-					}
-					console.log("transaction done");
-				});
-
-				console.log("added order");
-				return { message: "Order added successfully" };
-			} catch (e) {
-				if (e instanceof Error) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to add order",
-						cause: e,
-					});
-				}
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to add order",
-					cause: e,
-				});
-			}
-		}),
 
 	updateOrder: adminProcedure
 		.input(updateOrderSchema)
@@ -257,124 +138,118 @@ export const order = router({
 			try {
 				console.log("updating order");
 
-				const orderTotal = input.products.reduce(
-					(acc, currentProduct) =>
-						acc + currentProduct.price * currentProduct.quantity,
-					0,
-				);
+			const orderTotal = input.products.reduce(
+				(acc, currentProduct) =>
+					acc + currentProduct.price * currentProduct.quantity,
+				0,
+			);
 
-				await ctx.db.transaction(async (tx) => {
-					if (input.isNewCustomer) {
-						const userExists = await tx
-							.select()
-							.from(CustomersTable)
-							.where(eq(CustomersTable.phone, input.customerPhone))
-							.execute();
+			if (input.isNewCustomer) {
+				const userExists = await ctx.db
+					.select()
+					.from(CustomersTable)
+					.where(eq(CustomersTable.phone, Number(input.customerPhone)))
+					.execute();
 
-						if (userExists.length === 0) {
-							await tx.insert(CustomersTable).values({
-								phone: input.customerPhone,
-								address: input.address,
-							});
-						} else {
-							await tx
-								.update(CustomersTable)
-								.set({ address: input.address })
-								.where(eq(CustomersTable.phone, input.customerPhone));
-						}
-					}
-
-					await tx
-						.update(OrdersTable)
-						.set({
-							customerPhone: input.customerPhone,
-							status: input.status,
-							notes: input.notes,
-							total: orderTotal,
-						})
-						.where(eq(OrdersTable.id, input.id));
-
-					const currentOrderDetails = await tx
-						.select()
-						.from(OrderDetailsTable)
-						.where(eq(OrderDetailsTable.orderId, input.id))
-						.execute();
-
-					await tx
-						.delete(OrderDetailsTable)
-						.where(eq(OrderDetailsTable.orderId, input.id));
-
-					const orderDetailsPromise = input.products.map(async (product) => {
-						await tx.insert(OrderDetailsTable).values({
-							orderId: input.id,
-							productId: product.productId,
-							quantity: product.quantity,
-						});
-
-						const existingDetail = currentOrderDetails.find(
-							(detail) => detail.productId === product.productId,
-						);
-						if (input.paymentStatus === "success") {
-							const productCost = await getAverageCostOfProduct(
-								product.productId,
-								new Date(),
-								ctx,
-								tx,
-							);
-							await addSale(
-								{
-									productCost: productCost,
-									quantitySold: product.quantity,
-									orderId: input.id,
-									sellingPrice: product.price,
-									productId: product.productId,
-								},
-								ctx,
-								tx,
-							);
-						}
-						if (existingDetail) {
-							const quantityDiff = product.quantity - existingDetail.quantity;
-							if (quantityDiff !== 0) {
-								await updateStock(
-									product.productId,
-									Math.abs(quantityDiff),
-									quantityDiff > 0 ? "minus" : "add",
-									ctx,
-									tx,
-								);
-							}
-						} else {
-							await updateStock(
-								product.productId,
-								product.quantity,
-								"minus",
-								ctx,
-								tx,
-							);
-						}
+				if (userExists.length === 0) {
+					await ctx.db.insert(CustomersTable).values({
+						phone: Number(input.customerPhone),
+						address: input.address,
 					});
+				} else {
+					await ctx.db
+						.update(CustomersTable)
+						.set({ address: input.address })
+						.where(eq(CustomersTable.phone, Number(input.customerPhone)));
+				}
+			}
 
-					const removedProducts = currentOrderDetails.filter(
-						(detail) =>
-							!input.products.some((p) => p.productId === detail.productId),
-					);
+			await ctx.db
+				.update(OrdersTable)
+				.set({
+					customerPhone: Number(input.customerPhone),
+					status: input.status,
+					notes: input.notes,
+					total: orderTotal,
+				})
+				.where(eq(OrdersTable.id, input.id));
 
-					const restoreStockPromises = removedProducts.map((detail) =>
-						updateStock(detail.productId, detail.quantity, "add", ctx, tx),
-					);
+			const currentOrderDetails = await ctx.db
+				.select()
+				.from(OrderDetailsTable)
+				.where(eq(OrderDetailsTable.orderId, input.id))
+				.execute();
 
-					const paymentUpdatePromise = tx
-						.update(PaymentsTable)
-						.set({ status: input.paymentStatus })
-						.where(eq(PaymentsTable.orderId, input.id));
+			await ctx.db
+				.delete(OrderDetailsTable)
+				.where(eq(OrderDetailsTable.orderId, input.id));
 
-					await Promise.allSettled([
-						...orderDetailsPromise,
-						...restoreStockPromises,
-						paymentUpdatePromise,
-					]);
+			const orderDetailsPromise = input.products.map(async (product) => {
+				await ctx.db.insert(OrderDetailsTable).values({
+					orderId: input.id,
+					productId: product.productId,
+					quantity: product.quantity,
 				});
+
+				const existingDetail = currentOrderDetails.find(
+					(detail) => detail.productId === product.productId,
+				);
+				if (input.paymentStatus === "success") {
+					const productCost = await getAverageCostOfProduct(
+						product.productId,
+						new Date(),
+						ctx,
+					);
+					await addSale(
+						{
+							productCost: productCost,
+							quantitySold: product.quantity,
+							orderId: input.id,
+							sellingPrice: product.price,
+							productId: product.productId,
+						},
+						ctx,
+					);
+				}
+				if (existingDetail) {
+					const quantityDiff = product.quantity - existingDetail.quantity;
+					if (quantityDiff !== 0) {
+						await updateStock(
+							product.productId,
+							Math.abs(quantityDiff),
+							quantityDiff > 0 ? "minus" : "add",
+							ctx,
+						);
+					}
+				} else {
+					await updateStock(
+						product.productId,
+						product.quantity,
+						"minus",
+						ctx,
+					);
+				}
+			});
+
+			const removedProducts = currentOrderDetails.filter(
+				(detail) =>
+					!input.products.some((p) => p.productId === detail.productId),
+			);
+
+			const restoreStockPromises = removedProducts.map((detail) =>
+				updateStock(detail.productId, detail.quantity, "add", ctx),
+			);
+
+			const paymentUpdatePromise = ctx.db
+				.update(PaymentsTable)
+				.set({ status: input.paymentStatus })
+				.where(eq(PaymentsTable.orderId, input.id));
+
+			await Promise.allSettled([
+				...orderDetailsPromise,
+				...restoreStockPromises,
+				paymentUpdatePromise,
+			]);
 
 				return { message: "Order updated successfully" };
 			} catch (e) {
@@ -390,25 +265,23 @@ export const order = router({
 		.input(z.object({ id: z.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await ctx.db.transaction(async (tx) => {
-					const orderDetails = await tx
-						.select()
-						.from(OrderDetailsTable)
-						.where(eq(OrderDetailsTable.orderId, input.id))
-						.execute();
+				const orderDetails = await ctx.db
+					.select()
+					.from(OrderDetailsTable)
+					.where(eq(OrderDetailsTable.orderId, input.id))
+					.execute();
 
-					const restoreStockPromises = orderDetails.map((detail) =>
-						updateStock(detail.productId, detail.quantity, "add", ctx, tx),
-					);
+				const restoreStockPromises = orderDetails.map((detail) =>
+					updateStock(detail.productId, detail.quantity, "add", ctx),
+				);
 
-					await tx
-						.delete(OrderDetailsTable)
-						.where(eq(OrderDetailsTable.orderId, input.id));
+				await ctx.db
+					.delete(OrderDetailsTable)
+					.where(eq(OrderDetailsTable.orderId, input.id));
 
-					await tx.delete(OrdersTable).where(eq(OrdersTable.id, input.id));
+				await ctx.db.delete(OrdersTable).where(eq(OrdersTable.id, input.id));
 
-					await Promise.allSettled(restoreStockPromises);
-				});
+				await Promise.allSettled(restoreStockPromises);
 
 				return { message: "Order deleted successfully" };
 			} catch (e) {
@@ -422,7 +295,7 @@ export const order = router({
 
 	searchOrder: adminProcedure
 		.input(z.object({ searchTerm: z.string() }))
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const orders = await ctx.db.query.OrdersTable.findMany({
 					where: or(
@@ -519,10 +392,18 @@ export const order = router({
 			return orders;
 		} catch (e) {
 			if (e instanceof Error) {
-				return { message: "Fetching orders failed", error: e.message };
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch orders",
+					cause: e,
+				});
 			}
 			console.log("error", e);
-			return { message: "Fetching orders failed", error: "Unknown error" };
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch orders",
+				cause: e,
+			});
 		}
 	}),
 
@@ -564,7 +445,13 @@ export const order = router({
 						},
 					},
 				});
-				return shapeOrderResult(result);
+				if (result === undefined) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Order not found",
+					});
+				}
+				return result;
 			} catch (e) {
 				if (e instanceof Error) {
 					throw new TRPCError({
@@ -688,10 +575,10 @@ export const order = router({
 				const totalCount = totalCountResult?.count ?? 0;
 				const totalPages = Math.ceil(totalCount / input.pageSize);
 
-				const shapedOrders = shapeOrderResults(filteredOrders);
+				// const shapedOrders = shapeOrderResults(filteredOrders);
 
 				return {
-					orders: shapedOrders,
+					orders: filteredOrders,
 					pagination: {
 						currentPage: input.page,
 						totalPages,

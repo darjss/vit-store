@@ -1,8 +1,6 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-// @ts-expect-error drizzle-seed types don't include D1 yet
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - drizzle-seed types don't include D1 yet, but runtime works
+
 import { seed as drizzleSeed, reset as drizzleReset } from "drizzle-seed";
 import type * as schema from "@/db/schema";
 import {

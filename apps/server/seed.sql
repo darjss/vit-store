@@ -1,5 +1,5 @@
 PRAGMA foreign_keys = OFF;
-BEGIN TRANSACTION;
+
 
 -- Purge existing data in FK-safe order
 DELETE FROM ecom_vit_order_detail;
@@ -643,7 +643,6 @@ VALUES (10,35,1,84000,120000,0,(SELECT created_at FROM ecom_vit_order WHERE id=3
 UPDATE ecom_vit_product SET stock = stock - 1 WHERE id = 23;
 UPDATE ecom_vit_product SET stock = stock - 1 WHERE id = 10;
 
-PRAGMA foreign_keys = ON;
 COMMIT;
 
 
