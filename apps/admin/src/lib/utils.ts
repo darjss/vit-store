@@ -68,3 +68,63 @@ export const getStockColor = (stock: number) => {
 	if (stock > 0) return "text-amber-600";
 	return "text-red-600";
 };
+export const getPaymentStatusColor = (status: string) => {
+	switch (status) {
+	  case "success":
+		return "border-emerald-200 bg-emerald-50 text-emerald-800";
+	  case "pending":
+		return "border-amber-200 bg-amber-50 text-amber-800";
+	  case "failed":
+		return "border-rose-200 bg-rose-50 text-rose-800";
+	  default:
+		return "border-slate-200 bg-slate-50 text-slate-800";
+	}
+  };
+  
+  export const getPaymentProviderIcon = (provider: string) => {
+	switch (provider.toLowerCase()) {
+	  case "qpay":
+		return "📱";
+	  case "cash":
+		return "💵";
+	  case "transfer":
+		return "🏦";
+	  default:
+		return "💳";
+	}
+  };
+  export function formatCurrency(amount: number): string {
+	return amount + "₮";
+  }
+
+// Order status styles for badges and left-border colors
+export const getOrderStatusStyles = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "delivered":
+      return {
+        badge: "border-emerald-200 bg-emerald-50 text-emerald-800",
+        border: "border-l-emerald-500",
+      };
+    case "shipped":
+      return {
+        badge: "border-sky-200 bg-sky-50 text-sky-800",
+        border: "border-l-sky-500",
+      };
+    case "pending":
+      return {
+        badge: "border-amber-200 bg-amber-50 text-amber-800",
+        border: "border-l-amber-500",
+      };
+    case "cancelled":
+    case "canceled":
+      return {
+        badge: "border-rose-200 bg-rose-50 text-rose-800",
+        border: "border-l-rose-500",
+      };
+    default:
+      return {
+        badge: "border-slate-200 bg-slate-50 text-slate-800",
+        border: "border-l-slate-500",
+      };
+  }
+};

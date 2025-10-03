@@ -10,7 +10,7 @@
   "backend": "hono",
   "runtime": "workers",
   "frontend": [
-    "tanstack-start"
+    "tanstack-router"
   ],
   "addons": [
     "turborepo",
@@ -22,5 +22,6 @@
   "packageManager": "bun",
   "dbSetup": "d1",
   "api": "trpc",
-  "webDeploy": "workers"
+  "webDeploy": "alchemy",
+  "serverDeploy": "alchemy"
 }

@@ -15,7 +15,7 @@ export default defineConfig({
 	vite: {
 		server: {
 			host: true,
-			port: 4321,
+			port: 4325,
 			allowedHosts: ["vitstore.dev"],
 		},
 	},

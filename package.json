@@ -1,31 +1,32 @@
 {
-	"name": "vit2",
-	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
-	"scripts": {
-		"format": "biome format --write .",
-		"check": "oxlint",
+  "name": "vit2",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "format": "biome format --write .",
+    "check": "oxlint",
 		"dev": "turbo dev",
-		"build": "turbo build",
-		"check-types": "turbo check-types",
-		"dev:native": "turbo -F native dev",
-		"dev:web": "turbo -F web dev",
-		"dev:server": "turbo -F server dev",
-		"db:push": "turbo -F server db:push",
-		"db:studio": "turbo -F server db:studio",
-		"db:generate": "turbo -F server db:generate",
-		"db:migrate": "turbo -F server db:migrate"
-	},
-	"dependencies": {
-		"@faker-js/faker": "^10.0.0"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.1.3",
-		"oxlint": "^1.8.0",
-		"turbo": "^2.5.5"
-	},
-	"packageManager": "bun@1.2.19"
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F server dev",
+    "db:push": "turbo -F server db:push",
+    "db:studio": "turbo -F server db:studio",
+    "db:generate": "turbo -F server db:generate",
+    "db:migrate": "turbo -F server db:migrate"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.1.3",
+    "oxlint": "^1.8.0",
+    "turbo": "^2.5.5",
+    "dotenv": "^17.2.1"
+  },
+  "packageManager": "bun@1.2.19"
 }

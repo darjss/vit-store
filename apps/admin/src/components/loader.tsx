@@ -1,15 +1,12 @@
 const Loader = () => {
 	return (
-		<div className="fixed inset-0 flex items-center justify-center backdrop-blur-md transition-all duration-500">
+		<div className="fixed inset-0 flex items-center justify-center bg-transparent backdrop-blur-md transition-all duration-500">
 			<div className="relative flex flex-col items-center">
 				<div className="relative">
-					{/* Outer spinning ring */}
 					<div className="h-28 w-28 animate-[spin_4s_linear_infinite] rounded-full border-4 border-primary/20" />
 
-					{/* Middle spinning ring */}
 					<div className="absolute inset-2 h-24 w-24 animate-[spin_3s_linear_infinite_reverse] rounded-full border-3 border-primary/40" />
 
-					{/* Inner spinning ring with gradient border */}
 					<div className="absolute inset-4 h-20 w-20 animate-[spin_2s_linear_infinite] rounded-full border-2 border-primary border-t-primary/60 border-r-primary/60 shadow-md" />
 
 					{/* Central pulsing core */}

@@ -1,0 +1,30 @@
+{
+  "kind": "os::Exec",
+  "id": "db-generate",
+  "fqn": "vit-store/darjs/db-generate",
+  "seq": 0,
+  "data": {},
+  "status": "updated",
+  "output": {
+    "Symbol(alchemy::ResourceKind)": "os::Exec",
+    "Symbol(alchemy::ResourceID)": "db-generate",
+    "Symbol(alchemy::ResourceFQN)": "vit-store/darjs/db-generate",
+    "Symbol(alchemy::ResourceScope)": {
+      "@scope": null
+    },
+    "Symbol(alchemy::ResourceSeq)": 0,
+    "id": "db-generate",
+    "command": "bun run db:generate",
+    "cwd": "apps/server",
+    "inheritStdio": true,
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": "",
+    "executedAt": 1759458711106,
+    "completed": true
+  },
+  "props": {
+    "cwd": "apps/server",
+    "command": "bun run db:generate"
+  }
+}
