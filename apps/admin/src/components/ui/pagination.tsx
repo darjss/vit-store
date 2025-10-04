@@ -56,7 +56,8 @@ function PaginationLink({
 					size,
 				}),
 				className,
-				isActive && "bg-black text-white",
+				isActive &&
+					"bg-primary text-primary-foreground border-primary shadow-md shadow-black transform scale-110 hover:bg-primary hover:text-primary-foreground",
 			)}
 			{...props}
 		/>

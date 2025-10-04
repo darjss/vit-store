@@ -1,4 +1,4 @@
-{
+  {
 	"plugins": ["unicorn", "typescript", "oxc"],
 	"categories": {},
 	"rules": {

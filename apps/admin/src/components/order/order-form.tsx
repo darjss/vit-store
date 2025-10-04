@@ -2,8 +2,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { addOrderSchema, type addOrderType } from "@server/lib/zod/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { orderStatus, paymentStatus } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
@@ -27,6 +27,7 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import SelectProductForm from "./select-product-form";
+import { is } from "zod/v4/locales";
 
 const OrderForm = ({
 	order,
@@ -50,6 +51,7 @@ const OrderForm = ({
 	});
 
 	const phone = form.watch("customerPhone");
+	const isValidPhone = phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$");
 
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
@@ -65,17 +67,20 @@ const OrderForm = ({
 		},
 	});
 
-	const { data: customerInfo, isLoading: isSearchByLoading } = useQuery({
+	const { data: customerInfo, isLoading: isSearchByLoading, isSuccess } = useQuery({
 		...trpc.customer.getCustomerByPhone.queryOptions({
 			phone: Number(phone),
+			
 		}),
-		enabled: !!(phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$")),
+
+		enabled: !!isValidPhone,
 	});
 
 	const handlePhoneChange = useCallback(
-		async (phone: number, form: UseFormReturn<any>) => {
+		async ( form: UseFormReturn<any>) => {
 			const result = customerInfo;
-			if (result) {
+			console.log("result", result);
+			if (result && isSuccess) {
 				form.setValue("isNewCustomer", false);
 				form.setValue("address", result?.address, {
 					shouldValidate: true,
@@ -86,7 +91,7 @@ const OrderForm = ({
 				form.setValue("isNewCustomer", true);
 			}
 		},
-		[customerInfo],
+		[customerInfo,isSuccess],
 	);
 
 	const onSubmit = async (values: addOrderType) => {
@@ -95,16 +100,16 @@ const OrderForm = ({
 	};
 
 	useEffect(() => {
-		if (phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$")) {
-			handlePhoneChange(Number.parseInt(phone), form);
+		if (isValidPhone) {
+			handlePhoneChange( form);
 		}
-	}, [phone, handlePhoneChange, form]);
+	}, [isValidPhone, handlePhoneChange, form]);
 
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
 				<div className="grid grid-cols-1 gap-6">
-					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
+					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
 							<h3 className="font-semibold text-xl">Харилцагчийн мэдээлэл</h3>
 							<FormField
@@ -149,7 +154,7 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
+					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
 							<h3 className="font-semibold text-xl">Захиалгын дэлгэрэнгүй</h3>
 							<FormField
@@ -229,7 +234,7 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="overflow-visible shadow-md transition-shadow duration-300 hover:shadow-lg">
+					<Card className="overflow-visible bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
 							<h3 className="font-semibold text-xl">Бүтээгдэхүүн</h3>
 							<SelectProductForm form={form} />

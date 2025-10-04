@@ -223,7 +223,7 @@ const ProductForm = ({
 
 					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Үнэ ба нөөц</h3>
+							<h3 className="mb-4 font-semibold text-xl">Үнэ ба үлдэгдэл</h3>
 							<FormField
 								control={form.control}
 								name="price"
@@ -250,11 +250,11 @@ const ProductForm = ({
 								name="stock"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Бүтээгдэхүүний нөөц</FormLabel>
+										<FormLabel>Бүтээгдэхүүний үлдэгдэл</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
-												placeholder="Нөөцийн тоо оруулах"
+												placeholder="үлдэгдэлийн тоо оруулах"
 												{...field}
 												onChange={(e) =>
 													field.onChange(Number.parseInt(e.target.value, 10))

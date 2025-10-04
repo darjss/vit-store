@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
+import { DataPagination } from "@/components/data-pagination";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -42,7 +43,6 @@ export const Route = createFileRoute("/_dash/products/")({
 				ctx.trpc.brands.getAllBrands.queryOptions(),
 			),
 		])
-		await new Promise((resolve) => setTimeout(resolve, 1000));
 		console.log("products", products);
 		console.log("categories", categories);
 		console.log("brands", brands);
@@ -60,7 +60,6 @@ export const Route = createFileRoute("/_dash/products/")({
 });
 
 function RouteComponent() {
-	const [inputValue, setInputValue] = useState("");
 	const {
 		page,
 		pageSize,
@@ -70,6 +69,7 @@ function RouteComponent() {
 		sortDirection,
 		searchTerm,
 	} = useSearch({ from: "/_dash/products/" });
+	const [inputValue, setInputValue] = useState(searchTerm || "");
 	const hasActiveFilters =
 		brandId !== undefined ||
 		categoryId !== undefined ||
@@ -90,16 +90,24 @@ function RouteComponent() {
 				categoryId,
 				sortField,
 				sortDirection,
+				searchTerm,
 			}),
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
 		],
 	})
 	const products = productsData.products;
+	const pagination = productsData.pagination;
 	console.log("products rendered ", products);
 
 	const handleSearch = () => {
-		console.log("search");
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				searchTerm: inputValue,
+			}),
+		})
 	}
 	const handleClearSearch = () => {
 		console.log("clear search");
@@ -138,6 +146,18 @@ function RouteComponent() {
 			}),
 		})
 	}
+	
+	const handlePageChange = (page: number) => {
+		console.log("page change", page);
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				page: page,
+			}),
+		})
+	}
+	
 	return (
 		<div className="space-y-3">
 			<div className="relative">
@@ -241,7 +261,7 @@ function RouteComponent() {
 						onClick={() => handleSort("stock")}
 						disabled={isPending}
 					>
-						Нөөц
+						үлдэгдэл
 						<ArrowUpDown
 							className={`ml-1 h-4 w-4 ${sortField === "stock" ? "opacity-100" : "opacity-50"}`}
 						/>
@@ -306,6 +326,14 @@ function RouteComponent() {
 						))}
 					</div>
 				)}
+			</div>
+			<div>
+			<DataPagination
+			currentPage={pagination.currentPage}
+			totalItems={pagination.totalCount}
+			itemsPerPage={PRODUCT_PER_PAGE}
+			onPageChange={handlePageChange}
+			/>
 			</div>
 		</div>
 	)

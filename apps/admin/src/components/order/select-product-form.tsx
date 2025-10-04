@@ -131,7 +131,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 													{formatCurrency(product.price)}
 												</p>
 												<Badge variant="default" className="text-xs">
-													Нөөц: {product.stock}
+													үлдэгдэл: {product.stock}
 												</Badge>
 											</div>
 										</div>
@@ -194,7 +194,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 													</p>
 													<span className="text-muted-foreground">•</span>
 													<Badge variant="outline" className="text-xs">
-														Нөөцөд: {product.stock}
+														үлдэгдэл: {product.stock}
 													</Badge>
 												</div>
 											</div>

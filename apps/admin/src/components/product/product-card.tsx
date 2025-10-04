@@ -121,7 +121,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								>
 									<Package className="mr-1 h-4 w-4" />
 									<span className="font-bold text-sm">{product.stock}</span>
-									<span className="ml-1 text-xs">нөөцөд</span>
+									<span className="ml-1 text-xs">үлдэгдэл</span>
 								</div>
 							</div>
 
@@ -157,7 +157,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 										className="h-8 border-2 border-border px-3 text-sm"
 									>
 										<Edit className="mr-1 h-4 w-4" />
-										Нөөц засах
+										үлдэгдэл засах
 									</Button>
 								)}
 
