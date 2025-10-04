@@ -15,7 +15,7 @@ function RouteComponent() {
     <div className="space-y-4">
       <OrderForm
         onSuccess={() => {
-          toast.success("Order added successfully");
+          toast.success("Захиалга амжилттай нэмэгдлээ");
           queryClient.invalidateQueries(
             trpc.order.getPaginatedOrders.queryOptions({}),
           );

@@ -87,10 +87,10 @@ import {
                 size={"icon"}
                 className="h-7 w-7"
                 variant={"default"}
-                onClick={async () => {
-                  await navigator.clipboard.writeText(order.address);
-                  toast("Address Copied");
-                }}
+              onClick={async () => {
+                await navigator.clipboard.writeText(order.address);
+                toast("Хаяг хуулагдлаа");
+              }}
               >
                 {" "}
                 <Copy className="h-4 w-4" />
@@ -105,7 +105,7 @@ import {
                 <div className="mb-2 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-medium text-muted-foreground">
-                      Products
+                      Бүтээгдэхүүн
                     </h4>
                     <span className="rounded-full bg-muted/20 px-1.5 py-0.5 text-xs">
                       {order.orderDetails.length}
@@ -153,7 +153,7 @@ import {
                     onClick={() => {console.log("shipped")}}
                   >
                     <CheckCircle className="h-3 w-3" />
-                    <span>Mark Shipped</span>
+                    <span>Илгээсэн</span>
                   </Button>
                   <Button
                     variant="default"
@@ -163,7 +163,7 @@ import {
                     onClick={() => {console.log("delivered")}}
                   >
                     <CheckCircle className="h-3 w-3" />
-                    <span>Mark Delivered</span>
+                    <span>Хүргэсэн</span>
                   </Button>
   
                   <RowActions

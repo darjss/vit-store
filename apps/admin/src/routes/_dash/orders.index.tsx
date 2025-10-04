@@ -139,7 +139,7 @@ function RouteComponent() {
 		  <div className="relative flex-1">
 			<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 			<Input
-			  placeholder="Search Order# or Customer..."
+			  placeholder="Захиалгын дугаар эсвэл харилцагч хайх..."
 			  value={inputValue}
 			  onChange={(e) => setInputValue(e.target.value)}
 			  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -175,7 +175,7 @@ function RouteComponent() {
 			<Link to="/orders/add">
 			  <PlusCircle className="h-3.5 w-3.5" />
 			  <span className="whitespace-nowrap">
-				Add Order
+				Захиалга нэмэх
 			  </span>
 			</Link>
 		  </Button>
@@ -192,7 +192,7 @@ function RouteComponent() {
 				<SelectValue placeholder="All Statuses" />
 			  </SelectTrigger>
 			  <SelectContent>
-				<SelectItem value="all">All Statuses</SelectItem>
+				<SelectItem value="all">Бүх төлөв</SelectItem>
 				{orderStatusConstants.map((status) => (
 				  <SelectItem key={status} value={status}>
 					{status.charAt(0).toUpperCase() + status.slice(1)}
@@ -210,7 +210,7 @@ function RouteComponent() {
 				<SelectValue placeholder="All Payments" />
 			  </SelectTrigger>
 			  <SelectContent>
-				<SelectItem value="all">All Payments</SelectItem>
+				<SelectItem value="all">Бүх төлбөр</SelectItem>
 				{paymentStatusConstants.map((status) => (
 				  <SelectItem key={status} value={status}>
 					{status.charAt(0).toUpperCase() + status.slice(1)}
@@ -229,7 +229,7 @@ function RouteComponent() {
 				className="h-9 px-3 text-xs"
 			  >
 				<RotateCcw className="mr-1 h-3 w-3" />
-				Reset
+				Шинэчлэх
 			  </Button>
 			)}
 			<Button
@@ -238,7 +238,7 @@ function RouteComponent() {
 			  onClick={() => handleSort("total")}
 			  className="h-9 px-3"
 			>
-			  Total
+			  Нийт
 			  <ArrowUpDown
 				className={`ml-1 h-4 w-4 ${
 				  sortField === "total" ? "opacity-100" : "opacity-50"
@@ -251,7 +251,7 @@ function RouteComponent() {
 			  onClick={() => handleSort("createdAt")}
 			  className="h-9 px-3"
 			>
-			  Date
+			  Огноо
 			  <ArrowUpDown
 				className={`ml-1 h-4 w-4 ${
 				  sortField === "createdAt" ? "opacity-100" : "opacity-50"

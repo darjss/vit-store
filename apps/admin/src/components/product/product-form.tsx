@@ -102,15 +102,15 @@ const ProductForm = ({
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
 					<Card className="overflow-auto bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Product Details</h3>
+							<h3 className="mb-4 font-semibold text-xl">Бүтээгдэхүүний дэлгэрэнгүй</h3>
 							<FormField
 								control={form.control}
 								name="name"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Name</FormLabel>
+										<FormLabel>Бүтээгдэхүүний нэр</FormLabel>
 										<FormControl>
-											<Input placeholder="Enter product name" {...field} />
+											<Input placeholder="Бүтээгдэхүүний нэр оруулах" {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -121,10 +121,10 @@ const ProductForm = ({
 								name="description"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Description</FormLabel>
+										<FormLabel>Бүтээгдэхүүний тайлбар</FormLabel>
 										<FormControl>
 											<Textarea
-												placeholder="Enter product description"
+												placeholder="Бүтээгдэхүүний тайлбар оруулах"
 												{...field}
 												className="h-20 resize-none"
 											/>
@@ -138,11 +138,11 @@ const ProductForm = ({
 								name="brandId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Brand</FormLabel>
+										<FormLabel>Брэнд</FormLabel>
 										<Select onValueChange={field.onChange}>
 											<FormControl>
 												<SelectTrigger>
-													<SelectValue placeholder="Select brand" />
+													<SelectValue placeholder="Брэнд сонгох" />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
@@ -155,7 +155,7 @@ const ProductForm = ({
 															{brand.name}
 														</SelectItem>
 													))}
-												{brands.length === 0 && <div>No brands</div>}
+												{brands.length === 0 && <div>Брэнд байхгүй</div>}
 											</SelectContent>
 										</Select>
 										<FormMessage />
@@ -167,11 +167,11 @@ const ProductForm = ({
 								name="categoryId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Category</FormLabel>
+										<FormLabel>Ангилал</FormLabel>
 										<Select onValueChange={field.onChange}>
 											<FormControl>
 												<SelectTrigger>
-													<SelectValue placeholder="Select category" />
+													<SelectValue placeholder="Ангилал сонгох" />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
@@ -184,7 +184,7 @@ const ProductForm = ({
 															{category.name}
 														</SelectItem>
 													))}
-												{categories.length === 0 && <div>No categories</div>}
+												{categories.length === 0 && <div>Ангилал байхгүй</div>}
 											</SelectContent>
 										</Select>
 										<FormMessage />
@@ -196,7 +196,7 @@ const ProductForm = ({
 								name="status"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Status</FormLabel>
+										<FormLabel>Төлөв</FormLabel>
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={field.value || status[0]}
@@ -223,18 +223,18 @@ const ProductForm = ({
 
 					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Pricing & Stock</h3>
+							<h3 className="mb-4 font-semibold text-xl">Үнэ ба нөөц</h3>
 							<FormField
 								control={form.control}
 								name="price"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Price</FormLabel>
+										<FormLabel>Бүтээгдэхүүний үнэ</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
 												step={0.01}
-												placeholder="Enter price"
+												placeholder="Үнэ оруулах"
 												{...field}
 												onChange={(e) =>
 													field.onChange(Number.parseFloat(e.target.value))
@@ -250,11 +250,11 @@ const ProductForm = ({
 								name="stock"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Stock</FormLabel>
+										<FormLabel>Бүтээгдэхүүний нөөц</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
-												placeholder="Enter stock quantity"
+												placeholder="Нөөцийн тоо оруулах"
 												{...field}
 												onChange={(e) =>
 													field.onChange(Number.parseInt(e.target.value, 10))
@@ -270,9 +270,9 @@ const ProductForm = ({
 								name="potency"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Potency</FormLabel>
+										<FormLabel>Бүтээгдэхүүний хүч</FormLabel>
 										<FormControl>
-											<Input placeholder="e.g., 100mg" {...field} />
+											<Input placeholder="Жишээ нь: 100mg" {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -283,9 +283,9 @@ const ProductForm = ({
 								name="amount"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Product Amount</FormLabel>
+										<FormLabel>Бүтээгдэхүүний хэмжээ</FormLabel>
 										<FormControl>
-											<Input placeholder="e.g., 30 capsules" {...field} />
+											<Input placeholder="Жишээ нь: 30 капсул" {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -296,11 +296,11 @@ const ProductForm = ({
 								name="dailyIntake"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Daily Intake</FormLabel>
+										<FormLabel>Өдөрт хэрэглэх хэмжээ</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
-												placeholder="Enter daily intake"
+												placeholder="Өдөрт хэрэглэх хэмжээ оруулах"
 												{...field}
 												onChange={(e) =>
 													field.onChange(Number.parseInt(e.target.value, 10))
@@ -316,7 +316,7 @@ const ProductForm = ({
 
 					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Product Images</h3>
+							<h3 className="mb-4 font-semibold text-xl">Бүтээгдэхүүний зураг</h3>
 							{currentImageUrl.length > 0 && (
 								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
 									{currentImageUrl.map((image, i) => (
@@ -354,7 +354,7 @@ const ProductForm = ({
 							isPending={form.formState.isSubmitting}
 							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
-							Add Product
+							Бүтээгдэхүүн нэмэх
 						</SubmitButton>
 					</div>
 				</div>

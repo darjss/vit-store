@@ -13,14 +13,14 @@ import { Route as TodosRouteImport } from './routes/todos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashRouteRouteImport } from './routes/_dash/route'
 import { Route as DashIndexRouteImport } from './routes/_dash/index'
+import { Route as ProductsAddRouteImport } from './routes/products.add'
 import { Route as DashPurchasesRouteImport } from './routes/_dash/purchases'
 import { Route as DashCustomersRouteImport } from './routes/_dash/customers'
 import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
 import { Route as DashBrandsRouteImport } from './routes/_dash/brands'
 import { Route as DashAnalyticsRouteImport } from './routes/_dash/analytics'
-import { Route as DashProductsIndexRouteImport } from './routes/_dash/products/index'
+import { Route as DashProductsIndexRouteImport } from './routes/_dash/products.index'
 import { Route as DashOrdersIndexRouteImport } from './routes/_dash/orders.index'
-import { Route as DashProductsAddRouteImport } from './routes/_dash/products/add'
 import { Route as DashOrdersAddRouteImport } from './routes/_dash/orders.add'
 
 const TodosRoute = TodosRouteImport.update({
@@ -41,6 +41,11 @@ const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashRouteRoute,
+} as any)
+const ProductsAddRoute = ProductsAddRouteImport.update({
+  id: '/products/add',
+  path: '/products/add',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashPurchasesRoute = DashPurchasesRouteImport.update({
   id: '/purchases',
@@ -77,11 +82,6 @@ const DashOrdersIndexRoute = DashOrdersIndexRouteImport.update({
   path: '/orders/',
   getParentRoute: () => DashRouteRoute,
 } as any)
-const DashProductsAddRoute = DashProductsAddRouteImport.update({
-  id: '/products/add',
-  path: '/products/add',
-  getParentRoute: () => DashRouteRoute,
-} as any)
 const DashOrdersAddRoute = DashOrdersAddRouteImport.update({
   id: '/orders/add',
   path: '/orders/add',
@@ -96,9 +96,9 @@ export interface FileRoutesByFullPath {
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
   '/purchases': typeof DashPurchasesRoute
+  '/products/add': typeof ProductsAddRoute
   '/': typeof DashIndexRoute
   '/orders/add': typeof DashOrdersAddRoute
-  '/products/add': typeof DashProductsAddRoute
   '/orders': typeof DashOrdersIndexRoute
   '/products': typeof DashProductsIndexRoute
 }
@@ -110,9 +110,9 @@ export interface FileRoutesByTo {
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
   '/purchases': typeof DashPurchasesRoute
+  '/products/add': typeof ProductsAddRoute
   '/': typeof DashIndexRoute
   '/orders/add': typeof DashOrdersAddRoute
-  '/products/add': typeof DashProductsAddRoute
   '/orders': typeof DashOrdersIndexRoute
   '/products': typeof DashProductsIndexRoute
 }
@@ -126,9 +126,9 @@ export interface FileRoutesById {
   '/_dash/categories': typeof DashCategoriesRoute
   '/_dash/customers': typeof DashCustomersRoute
   '/_dash/purchases': typeof DashPurchasesRoute
+  '/products/add': typeof ProductsAddRoute
   '/_dash/': typeof DashIndexRoute
   '/_dash/orders/add': typeof DashOrdersAddRoute
-  '/_dash/products/add': typeof DashProductsAddRoute
   '/_dash/orders/': typeof DashOrdersIndexRoute
   '/_dash/products/': typeof DashProductsIndexRoute
 }
@@ -142,9 +142,9 @@ export interface FileRouteTypes {
     | '/categories'
     | '/customers'
     | '/purchases'
+    | '/products/add'
     | '/'
     | '/orders/add'
-    | '/products/add'
     | '/orders'
     | '/products'
   fileRoutesByTo: FileRoutesByTo
@@ -156,9 +156,9 @@ export interface FileRouteTypes {
     | '/categories'
     | '/customers'
     | '/purchases'
+    | '/products/add'
     | '/'
     | '/orders/add'
-    | '/products/add'
     | '/orders'
     | '/products'
   id:
@@ -171,9 +171,9 @@ export interface FileRouteTypes {
     | '/_dash/categories'
     | '/_dash/customers'
     | '/_dash/purchases'
+    | '/products/add'
     | '/_dash/'
     | '/_dash/orders/add'
-    | '/_dash/products/add'
     | '/_dash/orders/'
     | '/_dash/products/'
   fileRoutesById: FileRoutesById
@@ -182,6 +182,7 @@ export interface RootRouteChildren {
   DashRouteRoute: typeof DashRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   TodosRoute: typeof TodosRoute
+  ProductsAddRoute: typeof ProductsAddRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -213,6 +214,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof DashIndexRouteImport
       parentRoute: typeof DashRouteRoute
+    }
+    '/products/add': {
+      id: '/products/add'
+      path: '/products/add'
+      fullPath: '/products/add'
+      preLoaderRoute: typeof ProductsAddRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_dash/purchases': {
       id: '/_dash/purchases'
@@ -263,13 +271,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashOrdersIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
-    '/_dash/products/add': {
-      id: '/_dash/products/add'
-      path: '/products/add'
-      fullPath: '/products/add'
-      preLoaderRoute: typeof DashProductsAddRouteImport
-      parentRoute: typeof DashRouteRoute
-    }
     '/_dash/orders/add': {
       id: '/_dash/orders/add'
       path: '/orders/add'
@@ -288,7 +289,6 @@ interface DashRouteRouteChildren {
   DashPurchasesRoute: typeof DashPurchasesRoute
   DashIndexRoute: typeof DashIndexRoute
   DashOrdersAddRoute: typeof DashOrdersAddRoute
-  DashProductsAddRoute: typeof DashProductsAddRoute
   DashOrdersIndexRoute: typeof DashOrdersIndexRoute
   DashProductsIndexRoute: typeof DashProductsIndexRoute
 }
@@ -301,7 +301,6 @@ const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashPurchasesRoute: DashPurchasesRoute,
   DashIndexRoute: DashIndexRoute,
   DashOrdersAddRoute: DashOrdersAddRoute,
-  DashProductsAddRoute: DashProductsAddRoute,
   DashOrdersIndexRoute: DashOrdersIndexRoute,
   DashProductsIndexRoute: DashProductsIndexRoute,
 }
@@ -314,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashRouteRoute: DashRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   TodosRoute: TodosRoute,
+  ProductsAddRoute: ProductsAddRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -92,7 +92,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 				<div className="relative">
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
-						placeholder="Search products by name..."
+						placeholder="Бүтээгдэхүүнийг нэрээр хайх..."
 						className="pl-10"
 						value={inputValue}
 						onChange={handleSearchChange}
@@ -101,7 +101,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 				{isFetching && (
 					<div className="mt-2 flex items-center text-sm text-muted-foreground">
 						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-						Searching...
+						Хайж байна...
 					</div>
 				)}
 				{data !== undefined && data?.length > 0 && inputValue && (
@@ -131,7 +131,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 													{formatCurrency(product.price)}
 												</p>
 												<Badge variant="default" className="text-xs">
-													Stock: {product.stock}
+													Нөөц: {product.stock}
 												</Badge>
 											</div>
 										</div>
@@ -144,7 +144,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 				{data?.length === 0 && inputValue && !isFetching && (
 					<Card className="absolute left-0 right-0 z-[100] mt-2 w-full shadow-lg">
 						<CardContent className="p-4 text-center text-muted-foreground text-sm">
-							No products found matching "{inputValue}"
+							"{inputValue}" олдсонгүй
 						</CardContent>
 					</Card>
 				)}
@@ -156,11 +156,11 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 					<div className="flex items-center justify-between">
 						<h3 className="flex items-center gap-2 font-semibold text-base">
 							<ShoppingCart className="h-5 w-5" />
-							Selected Products
-							<Badge variant="default">{getTotalItems()} items</Badge>
+							Сонгосон бүтээгдэхүүн
+							<Badge variant="default">{getTotalItems()} ширхэг</Badge>
 						</h3>
 						<p className="font-bold text-xl text-foreground">
-							Total: {formatCurrency(getTotalPrice())}
+							Нийт: {formatCurrency(getTotalPrice())}
 						</p>
 					</div>
 
@@ -190,11 +190,11 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 												</p>
 												<div className="mt-1 flex items-center gap-2">
 													<p className="text-muted-foreground text-sm">
-														{formatCurrency(product.price)} each
+														{formatCurrency(product.price)} ш/нэг
 													</p>
 													<span className="text-muted-foreground">•</span>
 													<Badge variant="outline" className="text-xs">
-														In stock: {product.stock}
+														Нөөцөд: {product.stock}
 													</Badge>
 												</div>
 											</div>
@@ -258,10 +258,10 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 					<CardContent className="flex flex-col items-center justify-center py-12">
 						<ShoppingCart className="mb-4 h-12 w-12 text-muted-foreground" />
 						<p className="text-center font-medium text-muted-foreground">
-							No products selected
+							Бүтээгдэхүүн сонгогдоогүй
 						</p>
 						<p className="text-center text-muted-foreground text-sm">
-							Search and add products to the order
+							Бүтээгдэхүүн хайж захиалгад нэмнэ үү
 						</p>
 					</CardContent>
 				</Card>

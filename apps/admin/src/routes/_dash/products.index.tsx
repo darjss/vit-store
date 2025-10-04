@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_dash/products/")({
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.brands.getAllBrands.queryOptions(),
 			),
-		]);
+		])
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 		console.log("products", products);
 		console.log("categories", categories);
@@ -94,16 +94,16 @@ function RouteComponent() {
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
 		],
-	});
+	})
 	const products = productsData.products;
 	console.log("products rendered ", products);
 
 	const handleSearch = () => {
 		console.log("search");
-	};
+	}
 	const handleClearSearch = () => {
 		console.log("clear search");
-	};
+	}
 	const handleFilterChange = (
 		field: "brandId" | "categoryId",
 		value: number | undefined,
@@ -115,8 +115,8 @@ function RouteComponent() {
 				...prev,
 				[field]: value ?? undefined,
 			}),
-		});
-	};
+		})
+	}
 	const handleResetFilters = () => {
 		console.log("reset filters");
 		navigate({
@@ -126,8 +126,8 @@ function RouteComponent() {
 				brandId: undefined,
 				categoryId: undefined,
 			}),
-		});
-	};
+		})
+	}
 	const handleSort = (field: string) => {
 		console.log("sort", field);
 		navigate({
@@ -136,14 +136,14 @@ function RouteComponent() {
 				...prev,
 				sortField: field,
 			}),
-		});
-	};
+		})
+	}
 	return (
 		<div className="space-y-3">
 			<div className="relative">
 				<Search className="-translate-y-1/2 absolute top-1/2 left-4 h-6 w-6 text-muted-foreground" />
 				<Input
-					placeholder="Search products..."
+					placeholder="Бүтээгдэхүүн хайх..."
 					value={inputValue}
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -191,7 +191,7 @@ function RouteComponent() {
 							<SelectValue placeholder="All Categories" />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Categories</SelectItem>
+							<SelectItem value="all">Бүх ангилал</SelectItem>
 							{categories.map((category) => (
 								<SelectItem key={category.id} value={category.id.toString()}>
 									{category.name}
@@ -213,7 +213,7 @@ function RouteComponent() {
 							<SelectValue placeholder="All Brands" />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Brands</SelectItem>
+							<SelectItem value="all">Бүх брэнд</SelectItem>
 							{brands.map((brand) => (
 								<SelectItem key={brand.id} value={brand.id.toString()}>
 									{brand.name}
@@ -232,7 +232,7 @@ function RouteComponent() {
 							disabled={isPending}
 						>
 							<RotateCcw className="mr-1 h-4 w-4" />
-							Reset
+							Шинэчлэх
 						</Button>
 					)}
 					<Button
@@ -241,7 +241,7 @@ function RouteComponent() {
 						onClick={() => handleSort("stock")}
 						disabled={isPending}
 					>
-						Stock
+						Нөөц
 						<ArrowUpDown
 							className={`ml-1 h-4 w-4 ${sortField === "stock" ? "opacity-100" : "opacity-50"}`}
 						/>
@@ -252,7 +252,7 @@ function RouteComponent() {
 						onClick={() => handleSort("price")}
 						disabled={isPending}
 					>
-						Price
+						Үнэ
 						<ArrowUpDown
 							className={`ml-1 h-4 w-4 ${sortField === "price" ? "opacity-100" : "opacity-50"}`}
 						/>
@@ -263,7 +263,7 @@ function RouteComponent() {
 						onClick={() => handleSort("createdAt")}
 						disabled={isPending}
 					>
-						Date
+						Огноо
 						<ArrowUpDown
 							className={`ml-1 h-4 w-4 ${sortField === "createdAt" ? "opacity-100" : "opacity-50"}`}
 						/>
@@ -273,8 +273,8 @@ function RouteComponent() {
 							className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90"
 						>
 							<PlusCircle className="h-5 w-5" />
-							<span className="hidden sm:inline">Add Product</span>
-							<span className="sm:hidden">Add</span>
+							<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
+							<span className="sm:hidden">Нэмэх</span>
 						</Button>
 					</Link>
 				</div>
@@ -284,14 +284,14 @@ function RouteComponent() {
 				{isPending && (
 					<div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
 						<Loader2 className="h-4 w-4 animate-spin" />
-						<span>Loading products…</span>
+						<span>Бүтээгдэхүүн ачааллаж байна...</span>
 					</div>
 				)}
 				{!isPending && products.length === 0 && (
 					<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
 						{searchTerm
-							? `No products found matching "${searchTerm}"`
-							: "No products found. Try adjusting filters."}
+							? `"${searchTerm}" олдсонгүй`
+							: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
 					</div>
 				)}
 				{!isPending && products.length > 0 && (
@@ -308,5 +308,5 @@ function RouteComponent() {
 				)}
 			</div>
 		</div>
-	);
+	)
 }

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import ProductForm from "@/components/product/product-form";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/_dash/products/add")({
+export const Route = createFileRoute("/products/add")({
   component: RouteComponent,
 });
 
@@ -15,7 +15,7 @@ function RouteComponent() {
     <div className="space-y-4">
       <ProductForm
         onSuccess={() => {
-          toast.success("Product added successfully");
+          toast.success("Бүтээгдэхүүн амжилттай нэмэгдлээ");
           queryClient.invalidateQueries(
             trpc.product.getPaginatedProducts.queryOptions({}),
           );

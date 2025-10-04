@@ -58,9 +58,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			>
 				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[900px]">
 					<DialogHeader className="border-b px-6 pt-6 pb-4">
-						<DialogTitle>Edit Product</DialogTitle>
+						<DialogTitle>Бүтээгдэхүүн засах</DialogTitle>
 						<DialogDescription>
-							Edit the product details.
+							Бүтээгдэхүүний дэлгэрэнгүйг засах.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
@@ -121,7 +121,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								>
 									<Package className="mr-1 h-4 w-4" />
 									<span className="font-bold text-sm">{product.stock}</span>
-									<span className="ml-1 text-xs">in stock</span>
+									<span className="ml-1 text-xs">нөөцөд</span>
 								</div>
 							</div>
 
@@ -146,7 +146,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 											size="sm"
 											className="h-8 border-2 border-border px-3 text-sm"
 										>
-											Save
+											Хадгалах
 										</Button>
 									</div>
 								) : (
@@ -157,7 +157,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 										className="h-8 border-2 border-border px-3 text-sm"
 									>
 										<Edit className="mr-1 h-4 w-4" />
-										Edit Stock
+										Нөөц засах
 									</Button>
 								)}
 

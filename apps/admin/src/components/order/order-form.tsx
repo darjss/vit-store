@@ -106,16 +106,16 @@ const OrderForm = ({
 				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Customer Details</h3>
+							<h3 className="font-semibold text-xl">Харилцагчийн мэдээлэл</h3>
 							<FormField
 								control={form.control}
 								name="customerPhone"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Phone Number</FormLabel>
+										<FormLabel>Утасны дугаар</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="Enter phone number"
+												placeholder="Утасны дугаар оруулах"
 												{...field}
 												inputMode="tel"
 											/>
@@ -129,14 +129,14 @@ const OrderForm = ({
 								name="address"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Delivery Address</FormLabel>
+										<FormLabel>Хүргэлтийн хаяг</FormLabel>
 										<FormControl>
 											<Textarea
 												disabled={isSearchByLoading}
 												placeholder={
 													isSearchByLoading
-														? "Searching for delivery address..."
-														: "Enter delivery address"
+														? "Хүргэлтийн хаяг хайж байна..."
+														: "Хүргэлтийн хаяг оруулах"
 												}
 												{...field}
 												className="h-20 resize-none"
@@ -151,16 +151,16 @@ const OrderForm = ({
 
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Order Details</h3>
+							<h3 className="font-semibold text-xl">Захиалгын дэлгэрэнгүй</h3>
 							<FormField
 								control={form.control}
 								name="notes"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Special Instructions</FormLabel>
+										<FormLabel>Тусгай заавар</FormLabel>
 										<FormControl>
 											<Textarea
-												placeholder="Any special instructions or notes"
+												placeholder="Тусгай заавар эсвэл тэмдэглэл"
 												{...field}
 												className="h-20 resize-none"
 											/>
@@ -176,14 +176,14 @@ const OrderForm = ({
 									name="status"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Order Status</FormLabel>
+											<FormLabel>Захиалгын төлөв</FormLabel>
 											<Select
 												onValueChange={field.onChange}
 												defaultValue={field.value || "pending"}
 											>
 												<FormControl>
 													<SelectTrigger>
-														<SelectValue placeholder="Select status" />
+														<SelectValue placeholder="Төлөв сонгох" />
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
@@ -203,14 +203,14 @@ const OrderForm = ({
 									name="paymentStatus"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Payment Status</FormLabel>
+											<FormLabel>Төлбөрийн төлөв</FormLabel>
 											<Select
 												onValueChange={field.onChange}
 												defaultValue={field.value || "pending"}
 											>
 												<FormControl>
 													<SelectTrigger>
-														<SelectValue placeholder="Select payment status" />
+														<SelectValue placeholder="Төлбөрийн төлөв сонгох" />
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
@@ -231,7 +231,7 @@ const OrderForm = ({
 
 					<Card className="overflow-visible shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Products</h3>
+							<h3 className="font-semibold text-xl">Бүтээгдэхүүн</h3>
 							<SelectProductForm form={form} />
 						</CardContent>
 					</Card>
@@ -241,7 +241,7 @@ const OrderForm = ({
 							isPending={form.formState.isSubmitting}
 							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
-							{order ? "Update Order" : "Complete Order"}
+							{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}
 						</SubmitButton>
 					</div>
 				</div>
