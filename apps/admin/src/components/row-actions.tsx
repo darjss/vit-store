@@ -36,9 +36,15 @@ const RowAction = ({
 	const [isDeleteAlertOpen, setIsDelteAlertOpen] = useState(false);
 
 	return (
-		<DropdownMenu modal={false}>
+		<DropdownMenu modal={false} data-no-nav>
 			<DropdownMenuTrigger asChild>
-				<Button variant="default" size="icon">
+				<Button
+					variant="default"
+					size="icon"
+					onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
+				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Open menu</span>
 				</Button>
@@ -46,10 +52,20 @@ const RowAction = ({
 			<DropdownMenuContent
 				align="end"
 				className="w-32 border-2 border-border bg-background shadow-shadow"
+				data-no-nav
+				onClick={(e) => e.stopPropagation()}
+				onMouseDown={(e) => e.stopPropagation()}
+				onPointerDown={(e) => e.stopPropagation()}
 			>
 				<DropdownMenuItem
 					className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
 					onSelect={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						setIsEditDialogOpen(true);
+					}}
+					onClick={(e) => {
+						e.stopPropagation();
 						e.preventDefault();
 						setIsEditDialogOpen(true);
 					}}
@@ -63,11 +79,13 @@ const RowAction = ({
 				<AlertDialog
 					open={isDeleteAlertOpen}
 					onOpenChange={setIsDelteAlertOpen}
+					data-no-nav 
 				>
 					<AlertDialogTrigger asChild>
 						<DropdownMenuItem
 							className="cursor-pointer gap-2 py-2 text-destructive hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
 							onSelect={(e) => {
+								e.stopPropagation();
 								e.preventDefault();
 								setIsDelteAlertOpen(true);
 							}}

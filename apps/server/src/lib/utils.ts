@@ -117,20 +117,12 @@ export interface ShapedOrder {
 	paymentProvider: PaymentProviderType;
 }
 
-export interface OrderError {
-	message: string;
-	error: string;
-}
+
 
 export const shapeOrderResult = (
-	result: OrderResult | undefined,
-): ShapedOrder | OrderError => {
-	if (result === undefined) {
-		return {
-			message: "Adding order failed",
-			error: "No order found",
-		};
-	}
+	result: OrderResult ,
+)  => {
+
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 	if (result.payments[0] === undefined) {
 		throw new Error("No payment info found");
@@ -138,7 +130,7 @@ export const shapeOrderResult = (
 	return {
 		id: result.id,
 		orderNumber: result.orderNumber,
-		customerPhone: result.customerPhone,
+		customerPhone: result.customerPhone+"",
 		status: result.status,
 		total: result.total,
 		notes: result.notes,
@@ -158,23 +150,23 @@ export const shapeOrderResult = (
 	};
 };
 export const shapeOrderResults = (
-	results: OrderResult[] | undefined,
-): ShapedOrder[] => {
-	if (results === undefined) {
-		return [];
-	}
+	results: OrderResult[],
+) => {
+	
 
 	return results?.map((result) => {
+
 		result.payments.sort(
 			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 		);
 		if (result.payments[0] === undefined) {
+      console.log("No payment info found");
 			throw new Error("No payment info found");
 		}
 		return {
 			id: result.id,
 			orderNumber: result.orderNumber,
-			customerPhone: result.customerPhone,
+			customerPhone: result.customerPhone+"",
 			status: result.status,
 			total: result.total,
 			notes: result.notes,

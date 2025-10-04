@@ -1,11 +1,11 @@
-import { useMutation, useSuspenseQueries } from "@tanstack/react-query";
+import { useMutation, useSuspenseQueries,useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { ArrowUpDown, PlusCircle, RotateCcw, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, PlusCircle, RotateCcw, Search, X } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { DataPagination } from "@/components/data-pagination";
@@ -60,12 +60,12 @@ function RouteComponent() {
 		orderStatus !== undefined ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
-		sortDirection !== undefined ||
+		sortDirection !== undefined ||	
 		searchTerm !== undefined;
 	const navigate = useNavigate({ from: Route.fullPath });
-	const [{ data: ordersData, isPending: _isPending }] = useSuspenseQueries({
-		queries: [
-			trpc.order.getPaginatedOrders.queryOptions({
+	const { data: ordersData, isPending: _isPending } = useSuspenseQuery({
+		
+			...trpc.order.getPaginatedOrders.queryOptions({
 				page,
 				paymentStatus,
 				pageSize,
@@ -73,8 +73,8 @@ function RouteComponent() {
 				sortDirection,
 				orderStatus,
 				searchTerm,
-			}),
-		],
+		}),
+		
 	});
 	const mutation = useMutation({
 		...trpc.order.searchOrder.mutationOptions(),
@@ -132,11 +132,15 @@ function RouteComponent() {
 	};
 	const handleSort = (field: string) => {
 		console.log("sort", field);
+		// If clicking the same field, toggle direction
+		// If clicking a different field, reset to ascending
+		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/orders",
 			search: (prev) => ({
 				...prev,
 				sortField: field,
+				sortDirection: newDirection,
 			}),
 		});
 	};
@@ -252,30 +256,34 @@ function RouteComponent() {
 								</Button>
 							)}
 							<Button
-								variant="default"
+								variant={sortField === "total" ? "default" : "outline"}
 								size="sm"
 								onClick={() => handleSort("total")}
 								className="h-9 px-3"
 							>
 								Нийт
-								<ArrowUpDown
-									className={`ml-1 h-4 w-4 ${
-										sortField === "total" ? "opacity-100" : "opacity-50"
-									}`}
-								/>
+								{sortField === "total" && (
+									sortDirection === "asc" ? (
+										<ChevronUp className="ml-1 h-4 w-4" />
+									) : (
+										<ChevronDown className="ml-1 h-4 w-4" />
+									)
+								)}
 							</Button>
 							<Button
-								variant="default"
+								variant={sortField === "createdAt" ? "default" : "outline"}
 								size="sm"
 								onClick={() => handleSort("createdAt")}
 								className="h-9 px-3"
 							>
 								Огноо
-								<ArrowUpDown
-									className={`ml-1 h-4 w-4 ${
-										sortField === "createdAt" ? "opacity-100" : "opacity-50"
-									}`}
-								/>
+								{sortField === "createdAt" && (
+									sortDirection === "asc" ? (
+										<ChevronUp className="ml-1 h-4 w-4" />
+									) : (
+										<ChevronDown className="ml-1 h-4 w-4" />
+									)
+								)}
 							</Button>
 						</div>
 					</div>

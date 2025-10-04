@@ -12,6 +12,8 @@ import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import "../index.css";
 import type { Session } from "../lib/types";
+import AppError from "@/components/errors/app-error";
+import NotFound from "@/components/errors/not-found";
 export interface RouterAppContext {
 	trpc: typeof trpc;
 	queryClient: QueryClient;
@@ -20,6 +22,8 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
+  	errorComponent: ({ error }) => <AppError error={error} />,
+  	notFoundComponent: NotFound,
 	head: () => ({
 		meta: [
 			{

@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
-import { generateOrderNumber, shapeOrderResults } from "@/lib/utils";
+import { generateOrderNumber, shapeOrderResult, shapeOrderResults } from "@/lib/utils";
 import {
   addOrderSchema,
   timeRangeSchema,
@@ -448,7 +448,7 @@ export const order = router({
             message: "Order not found",
           });
         }
-        return result;
+        return shapeOrderResult(result);
       } catch (e) {
         if (e instanceof Error) {
           throw new TRPCError({
@@ -573,6 +573,7 @@ export const order = router({
           );
         }
 
+
         const totalCountResult = await ctx.db
           .select({ count: sql<number>`COUNT(*)` })
           .from(OrdersTable)
@@ -585,7 +586,7 @@ export const order = router({
         const totalPages = Math.ceil(totalCount / input.pageSize);
 
         return {
-          orders: filteredOrders,
+          orders: shapeOrderResults(filteredOrders),
           pagination: {
             currentPage: input.page,
             totalPages,

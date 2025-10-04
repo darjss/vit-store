@@ -6,7 +6,8 @@ import {
 	useSearch,
 } from "@tanstack/react-router";
 import {
-	ArrowUpDown,
+	ChevronDown,
+	ChevronUp,
 	Loader2,
 	PlusCircle,
 	RotateCcw,
@@ -138,11 +139,15 @@ function RouteComponent() {
 	}
 	const handleSort = (field: string) => {
 		console.log("sort", field);
+		// If clicking the same field, toggle direction
+		// If clicking a different field, reset to ascending
+		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/products",
 			search: (prev) => ({
 				...prev,
 				sortField: field,
+				sortDirection: newDirection,
 			}),
 		})
 	}
@@ -257,36 +262,51 @@ function RouteComponent() {
 					)}
 					<Button
 						size="sm"
-						className={`h-10 rounded-base border-2 border-border px-3 ${sortField === "stock" ? "bg-muted" : "bg-background"}`}
+						variant={sortField === "stock" ? "default" : "outline"}
+						className="h-10 rounded-base border-2 border-border px-3"
 						onClick={() => handleSort("stock")}
 						disabled={isPending}
 					>
 						үлдэгдэл
-						<ArrowUpDown
-							className={`ml-1 h-4 w-4 ${sortField === "stock" ? "opacity-100" : "opacity-50"}`}
-						/>
+						{sortField === "stock" && (
+							sortDirection === "asc" ? (
+								<ChevronUp className="ml-1 h-4 w-4" />
+							) : (
+								<ChevronDown className="ml-1 h-4 w-4" />
+							)
+						)}
 					</Button>
 					<Button
 						size="sm"
-						className={`h-10 rounded-base border-2 border-border px-3 ${sortField === "price" ? "bg-muted" : "bg-background"}`}
+						variant={sortField === "price" ? "default" : "outline"}
+						className="h-10 rounded-base border-2 border-border px-3"
 						onClick={() => handleSort("price")}
 						disabled={isPending}
 					>
 						Үнэ
-						<ArrowUpDown
-							className={`ml-1 h-4 w-4 ${sortField === "price" ? "opacity-100" : "opacity-50"}`}
-						/>
+						{sortField === "price" && (
+							sortDirection === "asc" ? (
+								<ChevronUp className="ml-1 h-4 w-4" />
+							) : (
+								<ChevronDown className="ml-1 h-4 w-4" />
+							)
+						)}
 					</Button>
 					<Button
 						size="sm"
-						className={`h-10 rounded-base border-2 border-border px-3 ${sortField === "createdAt" ? "bg-muted" : "bg-background"}`}
+						variant={sortField === "createdAt" ? "default" : "outline"}
+						className="h-10 rounded-base border-2 border-border px-3"
 						onClick={() => handleSort("createdAt")}
 						disabled={isPending}
 					>
 						Огноо
-						<ArrowUpDown
-							className={`ml-1 h-4 w-4 ${sortField === "createdAt" ? "opacity-100" : "opacity-50"}`}
-						/>
+						{sortField === "createdAt" && (
+							sortDirection === "asc" ? (
+								<ChevronUp className="ml-1 h-4 w-4" />
+							) : (
+								<ChevronDown className="ml-1 h-4 w-4" />
+							)
+						)}
 					</Button>
 					<Link to="/products/add" disabled={isPending}>
 						<Button

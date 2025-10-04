@@ -65,7 +65,9 @@ export function DataPagination({
 	const showStartEllipsis = totalPages > 1 && pageNumbers[0] > 1;
 	const showEndEllipsis =
 		totalPages > 1 && (pageNumbers[pageNumbers.length - 1] ?? 0) < totalPages;
-
+	if (totalPages === 1) {
+		return null;
+	}
 	return (
 		<div className={`space-y-4 ${className}`}>
 			{showTotalCount && (
