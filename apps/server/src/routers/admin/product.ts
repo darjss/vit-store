@@ -80,8 +80,6 @@ export const product = router({
 						});
 					}
 				}
-
-				// Get brand name
 				const brand = await ctx.db.query.BrandsTable.findFirst({
 					where: eq(BrandsTable.id, input.brandId),
 				});
@@ -363,7 +361,6 @@ export const product = router({
 		.input(z.object({ id: z.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				// Check if product exists
 				const product = await ctx.db.query.ProductsTable.findFirst({
 					where: eq(ProductsTable.id, input.id),
 				});
@@ -427,6 +424,7 @@ export const product = router({
 				categoryId: z.number().optional(),
 				sortField: z.string().optional(),
 				sortDirection: z.enum(["asc", "desc"]).default("asc"),
+				searchTerm: z.string().optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -444,6 +442,8 @@ export const product = router({
 					input.sortField,
 					"sortDirection:",
 					input.sortDirection,
+					"searchTerm:",
+					input.searchTerm,
 				);
 
 				const conditions: (SQL<unknown> | undefined)[] = [];
@@ -454,7 +454,9 @@ export const product = router({
 				if (input.categoryId !== undefined && input.categoryId !== 0) {
 					conditions.push(eq(ProductsTable.categoryId, input.categoryId));
 				}
-
+				if(input.searchTerm!==undefined){
+				conditions.push(like(ProductsTable.name, `%${input.searchTerm}%`));
+				}
 				const orderByClauses: SQL<unknown>[] = [];
 				const primarySortColumn =
 					input.sortField === "price"
