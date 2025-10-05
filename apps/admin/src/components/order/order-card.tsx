@@ -24,15 +24,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import OrderForm from "./order-form";
 import { trpc } from "@/utils/trpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import type { OrderStatusType } from "@server/lib/types";
 
 const OrderCard = ({ order }: { order: OrderType }) => {
   const statusStyles = getOrderStatusStyles(order.status);
+  const navigate = useNavigate();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
-  // const updateOrder = useMutation({
-  //   ...trpc.order.updateOrder.mutationOptions(),
-  // });
+  const updateOrder = useMutation({
+    ...trpc.order.updateOrderStatus.mutationOptions(),
+    onSuccess:()=>{
+      queryClient.invalidateQueries({...trpc.order.getPaginatedOrders.queryKey})
+      toast.success("захиалга амжилттай засагдлаа")
+    }
+  });
   const {mutate:deleteOrder,isPending: isDeletePending}=useMutation({
     ...trpc.order.deleteOrder.mutationOptions(),
     onSuccess:()=>{
@@ -45,28 +51,34 @@ const OrderCard = ({ order }: { order: OrderType }) => {
      deleteOrder({id});
   };
 
-  const handleLinkClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-no-nav]")) {
-      e.preventDefault();
-    }
+
+  const handleUpdateOrder = (status: OrderStatusType) => {
+    updateOrder.mutate({id: order.id, status});
+    
   };
   return (
     <>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent data-no-nav>
           <DialogHeader>
             <DialogTitle>Захиалга засах</DialogTitle>
           </DialogHeader>
           <OrderForm order={{...order, isNewCustomer: false}} onSuccess={() => setIsEditDialogOpen(false)} />
         </DialogContent>
       </Dialog>
-    <Link to={`/orders/$id`}
-      params={{ id: order.id }}
-      onClickCapture={handleLinkClick}
-    >
     <Card
       className={`border-l-4 transition-shadow duration-200 hover:shadow-md ${statusStyles.border} h-64 sm:h-72 md:h-80`}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
+        navigate({ to: "/orders/$id", params: { id: order.id } });
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !(e.target as HTMLElement).closest("[data-no-nav]")) {
+          navigate({ to: "/orders/$id", params: { id: order.id } });
+        }
+      }}
     >
       <CardContent className="p-0 h-full flex flex-col">
         <div className="flex items-center justify-between gap-2 border-b bg-muted/5 p-3">
@@ -189,9 +201,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
                       variant="default"
                       size="sm"
                       className="h-7 gap-1 px-2 text-xs"
-                      onClick={() => {
-                        console.log("shipped");
-                      }}
+                      onClick={() => handleUpdateOrder("shipped")}
                     >
                       <Truck className="h-3 w-3" />
                       <span>Илгээсэн</span>
@@ -204,9 +214,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
                   variant="default"
                   size="sm"
                   className="h-7 gap-1 px-2 text-xs"
-                  onClick={() => {
-                    console.log("delivered");
-                  }}
+                  onClick={() => handleUpdateOrder("delivered")}
                   >
                   <CheckCircle className="h-3 w-3" />
                   <span>Хүргэсэн</span>
@@ -226,7 +234,6 @@ const OrderCard = ({ order }: { order: OrderType }) => {
         </div>
       </CardContent>
     </Card>
-    </Link>
     </>
   );
 };

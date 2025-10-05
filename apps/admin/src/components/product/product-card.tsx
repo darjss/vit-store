@@ -16,9 +16,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../ui/dialog";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import ProductForm from "./product-form";
-import { Link } from "@tanstack/react-router";
-
+import { useNavigate } from "@tanstack/react-router";
 interface ProductCardProps {
 	product: ProductType;
 	brands: BrandsType;
@@ -26,10 +36,11 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
-	const [isEditing, setIsEditing] = useState(false);
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
 	const [stockValue, setStockValue] = useState(product.stock);
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const { mutate: setProductStock } = useMutation({
 		...trpc.product.setProductStock.mutationOptions(),
 		onSuccess: () => {
@@ -54,17 +65,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const brand = brands.find((b) => b.id === product.brandId);
 	const category = categories.find((c) => c.id === product.categoryId);
 
-	const handleSave = (e: React.MouseEvent<HTMLButtonElement>) => {
-		e.stopPropagation();
+	const handleSaveStock = () => {
 		setProductStock({ id: product.id, newStock: stockValue });
-		setIsEditing(false);
-	};
-
-	const handleLinkClick = (e: React.MouseEvent) => {
-		const target = e.target as HTMLElement;
-		if (target.closest("[data-no-nav]")) {
-			e.preventDefault();
-		}
+		setIsStockDialogOpen(false);
 	};
 
 	return (
@@ -90,12 +93,20 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					</div>
 				</DialogContent>
 			</Dialog>
-			<Link
-				to={`/products/$id`}
-				params={{ id: product.id }}
-				onClickCapture={handleLinkClick}
-			>
-				<Card className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none">
+				<Card
+					className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
+					onClick={(e) => {
+						if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
+						navigate({ to: "/products/$id", params: { id: product.id } });
+					}}
+					role="button"
+					tabIndex={0}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" && !(e.target as HTMLElement).closest("[data-no-nav]")) {
+							navigate({ to: "/products/$id", params: { id: product.id } });
+						}
+					}}
+				>
 					<CardContent className="p-0">
 						<div className="flex flex-row">
 							<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
@@ -145,43 +156,52 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 									data-no-nav
 									className="mt-2 flex flex-wrap items-center justify-between gap-2"
 								>
-									{isEditing ? (
-										<div className="flex items-center gap-2">
-											<Input
-												className="h-8 w-20 border-2 border-border text-center text-sm"
-												value={stockValue}
-												type="number"
-												min="0"
-												onChange={(e) => {
-													const value =
-														e.target.value === ""
-															? 0
-															: Number.parseInt(e.target.value);
-													setStockValue(Math.max(0, value));
-												}}
-											/>
+									<AlertDialog
+										open={isStockDialogOpen}
+										onOpenChange={setIsStockDialogOpen}
+									>
+										<AlertDialogTrigger asChild>
 											<Button
-												onClick={handleSave}
+												variant="secondary"
 												size="sm"
+												onClick={(e) => e.stopPropagation()}
 												className="h-8 border-2 border-border px-3 text-sm"
 											>
-												Хадгалах
+												<Edit className="mr-1 h-4 w-4" />
+												үлдэгдэл засах
 											</Button>
-										</div>
-									) : (
-										<Button
-											variant="secondary"
-											size="sm"
-											onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-												e.stopPropagation();
-												setIsEditing(true);
-											}}
-											className="h-8 border-2 border-border px-3 text-sm"
-										>
-											<Edit className="mr-1 h-4 w-4" />
-											үлдэгдэл засах
-										</Button>
-									)}
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
+												<AlertDialogDescription>
+													"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог
+													оруулна уу.
+												</AlertDialogDescription>
+											</AlertDialogHeader>
+											<div className="py-4">
+												<Input
+													className="w-full border-2 border-border text-center"
+													value={stockValue}
+													type="number"
+													min="0"
+													onChange={(e) => {
+														const value =
+															e.target.value === ""
+																? 0
+																: Number.parseInt(e.target.value);
+														setStockValue(Math.max(0, value));
+													}}
+												/>
+											</div>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Цуцлах</AlertDialogCancel>
+												<AlertDialogAction onClick={handleSaveStock}>
+													Хадгалах
+												</AlertDialogAction>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
 
 									<RowActions
 										id={product.id}
@@ -194,7 +214,6 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 						</div>
 					</CardContent>
 				</Card>
-			</Link>
 		</>
 	);
 };

@@ -34,15 +34,15 @@
 }
 
 :root {
-	--background: #fff;
+	--background: #f8fbf8;
 	--foreground: #000;
-	--card: #fff;
+	--card: #f8fbf8;
 	--card-foreground: #000;
 	--primary: #ffdb33;
 	--primary-hover: #ffcc00;
 	--primary-foreground: #000;
 	--secondary: #000;
-	--secondary-foreground: #fff;
+	--secondary-foreground: #f8fbf8;
 	--muted: #aeaeae;
 	--muted-foreground: #5a5a5a;
 	--accent: #fae583;
@@ -50,6 +50,11 @@
 	--destructive: #e63946;
 	--destructive-foreground: #fff;
 	--border: #000;
+	/* Added to support sidebar/skeleton backgrounds */
+	--secondary-background: #fffffc;
+	/* Added to support sheet/dialog overlay color */
+	--overlay: rgba(0, 0, 0, 0.8);
+	--bg-sidebar: #fffffc;
 }
 
 .dark {
@@ -69,6 +74,10 @@
 	--destructive: #e63946;
 	--destructive-foreground: #fff;
 	--border: #3a3a3a;
+	/* Added to support sidebar/skeleton backgrounds */
+	--secondary-background: #242424;
+	/* Added to support sheet/dialog overlay color */
+	--overlay: rgba(0, 0, 0, 0.8);
 }
 @theme inline {
 	--color-main: var(--main);
