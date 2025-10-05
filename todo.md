@@ -7,10 +7,10 @@
 - [ ] - daily, weekly, monthly order count cards with growth percentages
 - [ ] - sales chart showing revenue trends over time
 - [ ] - recent orders list with status and customer info
-- [ ] - low stock alerts for products
 - [ ] - top selling products of the day/week
 - [ ] - quick stats dashboard (total customers, total products, total orders)
-- [ ] - revenue comparison with previous periods
+- [ ] - revenue c- [ ] - low stock alerts for products
+omparison with previous periods
 - [ ] - order status distribution pie chart
 - [ ] - web analytics visited counts for daily and weekly and monthly 
 - [ ] - abondened cart count 
