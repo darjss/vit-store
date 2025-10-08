@@ -14,6 +14,9 @@ import type { AdminRouter } from "../../../server/src/routers/admin";
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error) => {
+			// if(error.message.includes("Unauthorized")){
+			// 	navigate
+			// }
 			toast.error(error.message, {
 				action: {
 					label: "retry",

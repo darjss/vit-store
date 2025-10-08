@@ -25,7 +25,9 @@ export default function NotFound() {
 					<MapPinX className="h-8 w-8" />
 				</div>
 				<Text as="h1">404 - Хуудас олдсонгүй</Text>
-				<Text className="text-muted-foreground">Та зөв хаяг оруулсан эсэхээ шалгана уу.</Text>
+				<Text className="text-muted-foreground">
+					Та зөв хаяг оруулсан эсэхээ шалгана уу.
+				</Text>
 				<div className="flex items-center justify-center gap-2">
 					<Link to="/">
 						<Button>
@@ -38,5 +40,3 @@ export default function NotFound() {
 		</div>
 	);
 }
-
-

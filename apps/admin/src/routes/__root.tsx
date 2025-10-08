@@ -22,8 +22,8 @@ export interface RouterAppContext {
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
-  	errorComponent: ({ error }) => <AppError error={error} />,
-  	notFoundComponent: NotFound,
+	errorComponent: ({ error }) => <AppError error={error} />,
+	notFoundComponent: NotFound,
 	head: () => ({
 		meta: [
 			{

@@ -111,7 +111,8 @@ export const ProductsTable = createTable(
 		brandId: int("brand_id", { mode: "number" })
 			.references(() => BrandsTable.id)
 			.notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
+			// tags: text("tags", { mode: "json" }).$type<string[]>().notNull().default([]),		
+			createdAt: int("created_at", { mode: "timestamp" })
 			.default(sql`(unixepoch())`)
 			.notNull(),
 		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
@@ -349,8 +350,16 @@ export const orderDetailsRelations = relations(
 	}),
 );
 
-export const productsRelations = relations(ProductsTable, ({ many }) => ({
+export const productsRelations = relations(ProductsTable, ({ many, one }) => ({
 	images: many(ProductImagesTable),
+	category: one(CategoriesTable, {
+		fields: [ProductsTable.categoryId],
+		references: [CategoriesTable.id],
+	}),
+	brand: one(BrandsTable, {
+		fields: [ProductsTable.brandId],
+		references: [BrandsTable.id],
+	}),
 }));
 
 export const productImagesRelations = relations(

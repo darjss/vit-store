@@ -3,7 +3,7 @@ import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "@/db/schema";
-import { PRODUCT_PER_PAGE } from "@/lib/constants";
+import { PRODUCT_PER_PAGE, productFields } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
 import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
 
@@ -180,6 +180,16 @@ export const product = router({
 								id: true,
 								url: true,
 								isPrimary: true,
+							},
+						},
+						category: {
+							columns: {
+								name: true,
+							},
+						},
+						brand: {
+							columns: {
+								name: true,
 							},
 						},
 					},
@@ -454,8 +464,8 @@ export const product = router({
 				if (input.categoryId !== undefined && input.categoryId !== 0) {
 					conditions.push(eq(ProductsTable.categoryId, input.categoryId));
 				}
-				if(input.searchTerm!==undefined){
-				conditions.push(like(ProductsTable.name, `%${input.searchTerm}%`));
+				if (input.searchTerm !== undefined) {
+					conditions.push(like(ProductsTable.name, `%${input.searchTerm}%`));
 				}
 				const orderByClauses: SQL<unknown>[] = [];
 				const primarySortColumn =
@@ -581,4 +591,31 @@ export const product = router({
 			});
 		}
 	}),
+	updateProductField: adminProcedure
+		.input(
+			z.object({
+				id: z.number(),
+				field: z.enum(productFields),
+				stringValue: z.string().optional(),
+				numberValue: z.number().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				const value = input.stringValue ?? input.numberValue;
+
+				await ctx.db
+					.update(ProductsTable)
+					.set({ [input.field]: value })
+					.where(eq(ProductsTable.id, input.id));
+				return { message: "Product field updated successfully" };
+			} catch (error) {
+				console.error("Error updating product field:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update product field",
+					cause: error,
+				});
+			}
+		}),
 });

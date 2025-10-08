@@ -102,7 +102,9 @@ const ProductForm = ({
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
 					<Card className="overflow-auto bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Бүтээгдэхүүний дэлгэрэнгүй</h3>
+							<h3 className="mb-4 font-semibold text-xl">
+								Бүтээгдэхүүний дэлгэрэнгүй
+							</h3>
 							<FormField
 								control={form.control}
 								name="name"
@@ -110,7 +112,10 @@ const ProductForm = ({
 									<FormItem>
 										<FormLabel>Бүтээгдэхүүний нэр</FormLabel>
 										<FormControl>
-											<Input placeholder="Бүтээгдэхүүний нэр оруулах" {...field} />
+											<Input
+												placeholder="Бүтээгдэхүүний нэр оруулах"
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -316,7 +321,9 @@ const ProductForm = ({
 
 					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
 						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">Бүтээгдэхүүний зураг</h3>
+							<h3 className="mb-4 font-semibold text-xl">
+								Бүтээгдэхүүний зураг
+							</h3>
 							{currentImageUrl.length > 0 && (
 								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
 									{currentImageUrl.map((image, i) => (

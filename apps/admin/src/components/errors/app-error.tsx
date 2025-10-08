@@ -1,5 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { TriangleAlert, Home, RotateCcw, ArrowLeft, ChevronDown } from "lucide-react";
+import {
+	TriangleAlert,
+	Home,
+	RotateCcw,
+	ArrowLeft,
+	ChevronDown,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -21,10 +27,15 @@ export default function AppError({ error }: AppErrorProps) {
 	const [open, setOpen] = useState(false);
 	const { message, stack, raw } = useMemo(() => {
 		if (error instanceof Error) {
-			return { message: error.message, stack: error.stack || "", raw: String(error) };
+			return {
+				message: error.message,
+				stack: error.stack || "",
+				raw: String(error),
+			};
 		}
 		try {
-			const asString = typeof error === "string" ? error : JSON.stringify(error, null, 2);
+			const asString =
+				typeof error === "string" ? error : JSON.stringify(error, null, 2);
 			return { message: asString, stack: "", raw: asString };
 		} catch {
 			return { message: "Тодорхойгүй алдаа.", stack: "", raw: String(error) };
@@ -54,14 +65,18 @@ export default function AppError({ error }: AppErrorProps) {
 					</div>
 					<div className="space-y-1">
 						<Text as="h2">Алдаа гарлаа</Text>
-						<Text className="text-muted-foreground">Та хөгжүүлэгчидтэй холбогдоно уу.</Text>
+						<Text className="text-muted-foreground">
+							Та хөгжүүлэгчидтэй холбогдоно уу.
+						</Text>
 					</div>
 				</div>
 
 				<Alert status="error" className="rounded-base">
 					<Alert.Title>Алдааны мэдээлэл</Alert.Title>
 					<Alert.Description>
-						<Text className="break-words">{message || "Тодорхойгүй алдаа."}</Text>
+						<Text className="break-words">
+							{message || "Тодорхойгүй алдаа."}
+						</Text>
 					</Alert.Description>
 				</Alert>
 
@@ -100,7 +115,9 @@ export default function AppError({ error }: AppErrorProps) {
 								{stack && (
 									<div className="rounded-base border-2 border-border">
 										<ScrollArea className="h-60 w-full">
-											<pre className="whitespace-pre-wrap p-3 font-mono text-xs">{stack}</pre>
+											<pre className="whitespace-pre-wrap p-3 font-mono text-xs">
+												{stack}
+											</pre>
 										</ScrollArea>
 									</div>
 								)}
@@ -112,5 +129,3 @@ export default function AppError({ error }: AppErrorProps) {
 		</div>
 	);
 }
-
-

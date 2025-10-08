@@ -51,7 +51,8 @@ const OrderForm = ({
 	});
 
 	const phone = form.watch("customerPhone");
-	const isValidPhone = phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$");
+	const isValidPhone =
+		phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$");
 
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
@@ -67,17 +68,20 @@ const OrderForm = ({
 		},
 	});
 
-	const { data: customerInfo, isLoading: isSearchByLoading, isSuccess } = useQuery({
+	const {
+		data: customerInfo,
+		isLoading: isSearchByLoading,
+		isSuccess,
+	} = useQuery({
 		...trpc.customer.getCustomerByPhone.queryOptions({
 			phone: Number(phone),
-			
 		}),
 
 		enabled: !!isValidPhone,
 	});
 
 	const handlePhoneChange = useCallback(
-		async ( form: UseFormReturn<any>) => {
+		async (form: UseFormReturn<any>) => {
 			const result = customerInfo;
 			console.log("result", result);
 			if (result && isSuccess) {
@@ -91,7 +95,7 @@ const OrderForm = ({
 				form.setValue("isNewCustomer", true);
 			}
 		},
-		[customerInfo,isSuccess],
+		[customerInfo, isSuccess],
 	);
 
 	const onSubmit = async (values: addOrderType) => {
@@ -101,7 +105,7 @@ const OrderForm = ({
 
 	useEffect(() => {
 		if (isValidPhone) {
-			handlePhoneChange( form);
+			handlePhoneChange(form);
 		}
 	}, [isValidPhone, handlePhoneChange, form]);
 

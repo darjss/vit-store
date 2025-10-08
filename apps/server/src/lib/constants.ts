@@ -15,3 +15,21 @@ export const deliveryProvider = ["tu-delivery", "self", "avidaa"] as const;
 export const paymentStatus = ["pending", "success", "failed"] as const;
 
 export const PRODUCT_PER_PAGE = 5;
+
+export const productFields = [
+	"id",
+	"name",
+	"slug",
+	"description",
+	"status",
+	"discount",
+	"amount",
+	"potency",
+	"stock",
+	"price",
+	"dailyIntake",
+	"categoryId",
+	"brandId",
+	"createdAt",
+	"updatedAt",
+] as const;

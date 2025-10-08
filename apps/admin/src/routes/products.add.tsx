@@ -5,23 +5,23 @@ import ProductForm from "@/components/product/product-form";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/products/add")({
-  component: RouteComponent,
+	component: RouteComponent,
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  return (
-    <div className="space-y-4">
-      <ProductForm
-        onSuccess={() => {
-          toast.success("Бүтээгдэхүүн амжилттай нэмэгдлээ");
-          queryClient.invalidateQueries(
-            trpc.product.getPaginatedProducts.queryOptions({}),
-          );
-          navigate({ to: "/products" });
-        }}
-      />
-    </div>
-  );
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+	return (
+		<div className="space-y-4">
+			<ProductForm
+				onSuccess={() => {
+					toast.success("Бүтээгдэхүүн амжилттай нэмэгдлээ");
+					queryClient.invalidateQueries(
+						trpc.product.getPaginatedProducts.queryOptions({}),
+					);
+					navigate({ to: "/products" });
+				}}
+			/>
+		</div>
+	);
 }

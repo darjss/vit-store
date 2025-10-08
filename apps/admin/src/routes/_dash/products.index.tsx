@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_dash/products/")({
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.brands.getAllBrands.queryOptions(),
 			),
-		])
+		]);
 		console.log("products", products);
 		console.log("categories", categories);
 		console.log("brands", brands);
@@ -96,7 +96,7 @@ function RouteComponent() {
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
 		],
-	})
+	});
 	const products = productsData.products;
 	const pagination = productsData.pagination;
 	console.log("products rendered ", products);
@@ -108,11 +108,11 @@ function RouteComponent() {
 				...prev,
 				searchTerm: inputValue,
 			}),
-		})
-	}
+		});
+	};
 	const handleClearSearch = () => {
 		console.log("clear search");
-	}
+	};
 	const handleFilterChange = (
 		field: "brandId" | "categoryId",
 		value: number | undefined,
@@ -124,8 +124,8 @@ function RouteComponent() {
 				...prev,
 				[field]: value ?? undefined,
 			}),
-		})
-	}
+		});
+	};
 	const handleResetFilters = () => {
 		console.log("reset filters");
 		navigate({
@@ -135,13 +135,14 @@ function RouteComponent() {
 				brandId: undefined,
 				categoryId: undefined,
 			}),
-		})
-	}
+		});
+	};
 	const handleSort = (field: string) => {
 		console.log("sort", field);
 		// If clicking the same field, toggle direction
 		// If clicking a different field, reset to ascending
-		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
+		const newDirection =
+			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/products",
 			search: (prev) => ({
@@ -149,9 +150,9 @@ function RouteComponent() {
 				sortField: field,
 				sortDirection: newDirection,
 			}),
-		})
-	}
-	
+		});
+	};
+
 	const handlePageChange = (page: number) => {
 		console.log("page change", page);
 		navigate({
@@ -160,9 +161,9 @@ function RouteComponent() {
 				...prev,
 				page: page,
 			}),
-		})
-	}
-	
+		});
+	};
+
 	return (
 		<div className="space-y-3">
 			<div className="relative">
@@ -268,13 +269,12 @@ function RouteComponent() {
 						disabled={isPending}
 					>
 						үлдэгдэл
-						{sortField === "stock" && (
-							sortDirection === "asc" ? (
+						{sortField === "stock" &&
+							(sortDirection === "asc" ? (
 								<ChevronUp className="ml-1 h-4 w-4" />
 							) : (
 								<ChevronDown className="ml-1 h-4 w-4" />
-							)
-						)}
+							))}
 					</Button>
 					<Button
 						size="sm"
@@ -284,13 +284,12 @@ function RouteComponent() {
 						disabled={isPending}
 					>
 						Үнэ
-						{sortField === "price" && (
-							sortDirection === "asc" ? (
+						{sortField === "price" &&
+							(sortDirection === "asc" ? (
 								<ChevronUp className="ml-1 h-4 w-4" />
 							) : (
 								<ChevronDown className="ml-1 h-4 w-4" />
-							)
-						)}
+							))}
 					</Button>
 					<Button
 						size="sm"
@@ -300,18 +299,15 @@ function RouteComponent() {
 						disabled={isPending}
 					>
 						Огноо
-						{sortField === "createdAt" && (
-							sortDirection === "asc" ? (
+						{sortField === "createdAt" &&
+							(sortDirection === "asc" ? (
 								<ChevronUp className="ml-1 h-4 w-4" />
 							) : (
 								<ChevronDown className="ml-1 h-4 w-4" />
-							)
-						)}
+							))}
 					</Button>
 					<Link to="/products/add" disabled={isPending}>
-						<Button
-							className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90"
-						>
+						<Button className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90">
 							<PlusCircle className="h-5 w-5" />
 							<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
 							<span className="sm:hidden">Нэмэх</span>
@@ -348,13 +344,13 @@ function RouteComponent() {
 				)}
 			</div>
 			<div>
-			<DataPagination
-			currentPage={pagination.currentPage}
-			totalItems={pagination.totalCount}
-			itemsPerPage={PRODUCT_PER_PAGE}
-			onPageChange={handlePageChange}
-			/>
+				<DataPagination
+					currentPage={pagination.currentPage}
+					totalItems={pagination.totalCount}
+					itemsPerPage={PRODUCT_PER_PAGE}
+					onPageChange={handlePageChange}
+				/>
 			</div>
 		</div>
-	)
+	);
 }

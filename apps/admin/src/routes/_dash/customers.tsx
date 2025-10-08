@@ -40,7 +40,9 @@ export const Route = createFileRoute("/_dash/customers")({
 });
 
 function RouteComponent() {
-	const { page, pageSize, searchTerm } = useSearch({ from: "/_dash/customers" });
+	const { page, pageSize, searchTerm } = useSearch({
+		from: "/_dash/customers",
+	});
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
 
@@ -48,7 +50,7 @@ function RouteComponent() {
 		trpc.customer.getAllCustomers.queryOptions(),
 	);
 
-// removed per-card delete in favor of CustomerCard internal handler
+	// removed per-card delete in favor of CustomerCard internal handler
 
 	const filtered = useMemo(() => {
 		if (!searchTerm) return customers;
@@ -56,9 +58,7 @@ function RouteComponent() {
 		return customers.filter((c) => {
 			const phone = String(c.phone);
 			const address = c.address ?? "";
-			return (
-				phone.includes(term) || address.toLowerCase().includes(term)
-			);
+			return phone.includes(term) || address.toLowerCase().includes(term);
 		});
 	}, [customers, searchTerm]);
 

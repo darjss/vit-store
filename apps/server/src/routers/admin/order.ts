@@ -653,4 +653,25 @@ export const order = router({
         });
       }
     }),
+    getRecentOrdersByProductId: adminProcedure.input(
+      z.object({
+        productId:z.number()
+      }
+      )
+    ).mutation(async ({ctx, input})=>{
+        try{
+          const {productId}=input
+          const order= await ctx.db.query.OrdersTable.findMany(
+            
+          )
+
+        } catch (e) {
+        console.error(e);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update order status",
+          cause: e,
+        });
+      }
+    })
 });

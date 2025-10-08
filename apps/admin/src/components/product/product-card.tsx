@@ -93,127 +93,130 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					</div>
 				</DialogContent>
 			</Dialog>
-				<Card
-					className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
-					onClick={(e) => {
-						if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
+			<Card
+				className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
+				onClick={(e) => {
+					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
+					navigate({ to: "/products/$id", params: { id: product.id } });
+				}}
+				role="button"
+				tabIndex={0}
+				onKeyDown={(e) => {
+					if (
+						e.key === "Enter" &&
+						!(e.target as HTMLElement).closest("[data-no-nav]")
+					) {
 						navigate({ to: "/products/$id", params: { id: product.id } });
-					}}
-					role="button"
-					tabIndex={0}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" && !(e.target as HTMLElement).closest("[data-no-nav]")) {
-							navigate({ to: "/products/$id", params: { id: product.id } });
-						}
-					}}
-				>
-					<CardContent className="p-0">
-						<div className="flex flex-row">
-							<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
-								<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
-									<img
-										src={primaryImage || "/placeholder.jpg"}
-										alt={product.name}
-										className="h-full w-full object-contain"
-										loading="lazy"
-									/>
-								</div>
-							</div>
-
-							<div className="flex flex-1 flex-col p-3">
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0 flex-1">
-										<h3 className="font-bold text-base break-words">
-											{product.name}
-										</h3>
-										<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-											{brand?.name && <span>{brand.name}</span>}
-											{brand?.name && category?.name && <span>•</span>}
-											{category?.name && <span>{category.name}</span>}
-										</div>
-									</div>
-									<Badge
-										className={`${getStatusColor(product.status)} whitespace-nowrap border-2 border-border px-2 py-1 font-bold text-xs`}
-									>
-										{product.status.replace("_", " ")}
-									</Badge>
-								</div>
-
-								<div className="mt-1 flex items-center gap-3">
-									<div className="font-bold text-lg">
-										${product.price.toFixed(2)}
-									</div>
-									<div
-										className={`flex items-center ${getStockColor(product.stock)}`}
-									>
-										<Package className="mr-1 h-4 w-4" />
-										<span className="font-bold text-sm">{product.stock}</span>
-										<span className="ml-1 text-xs">үлдэгдэл</span>
-									</div>
-								</div>
-
-								<div
-									data-no-nav
-									className="mt-2 flex flex-wrap items-center justify-between gap-2"
-								>
-									<AlertDialog
-										open={isStockDialogOpen}
-										onOpenChange={setIsStockDialogOpen}
-									>
-										<AlertDialogTrigger asChild>
-											<Button
-												variant="secondary"
-												size="sm"
-												onClick={(e) => e.stopPropagation()}
-												className="h-8 border-2 border-border px-3 text-sm"
-											>
-												<Edit className="mr-1 h-4 w-4" />
-												үлдэгдэл засах
-											</Button>
-										</AlertDialogTrigger>
-										<AlertDialogContent>
-											<AlertDialogHeader>
-												<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
-												<AlertDialogDescription>
-													"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог
-													оруулна уу.
-												</AlertDialogDescription>
-											</AlertDialogHeader>
-											<div className="py-4">
-												<Input
-													className="w-full border-2 border-border text-center"
-													value={stockValue}
-													type="number"
-													min="0"
-													onChange={(e) => {
-														const value =
-															e.target.value === ""
-																? 0
-																: Number.parseInt(e.target.value);
-														setStockValue(Math.max(0, value));
-													}}
-												/>
-											</div>
-											<AlertDialogFooter>
-												<AlertDialogCancel>Цуцлах</AlertDialogCancel>
-												<AlertDialogAction onClick={handleSaveStock}>
-													Хадгалах
-												</AlertDialogAction>
-											</AlertDialogFooter>
-										</AlertDialogContent>
-									</AlertDialog>
-
-									<RowActions
-										id={product.id}
-										setIsEditDialogOpen={setIsEditDialogOpen}
-										deleteMutation={deleteHelper}
-										isDeletePending={isDeletePending}
-									/>
-								</div>
+					}
+				}}
+			>
+				<CardContent className="p-0">
+					<div className="flex flex-row">
+						<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
+							<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
+								<img
+									src={primaryImage || "/placeholder.jpg"}
+									alt={product.name}
+									className="h-full w-full object-contain"
+									loading="lazy"
+								/>
 							</div>
 						</div>
-					</CardContent>
-				</Card>
+
+						<div className="flex flex-1 flex-col p-3">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<h3 className="font-bold text-base break-words">
+										{product.name}
+									</h3>
+									<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+										{brand?.name && <span>{brand.name}</span>}
+										{brand?.name && category?.name && <span>•</span>}
+										{category?.name && <span>{category.name}</span>}
+									</div>
+								</div>
+								<Badge
+									className={`${getStatusColor(product.status)} whitespace-nowrap border-2 border-border px-2 py-1 font-bold text-xs`}
+								>
+									{product.status.replace("_", " ")}
+								</Badge>
+							</div>
+
+							<div className="mt-1 flex items-center gap-3">
+								<div className="font-bold text-lg">
+									${product.price.toFixed(2)}
+								</div>
+								<div
+									className={`flex items-center ${getStockColor(product.stock)}`}
+								>
+									<Package className="mr-1 h-4 w-4" />
+									<span className="font-bold text-sm">{product.stock}</span>
+									<span className="ml-1 text-xs">үлдэгдэл</span>
+								</div>
+							</div>
+
+							<div
+								data-no-nav
+								className="mt-2 flex flex-wrap items-center justify-between gap-2"
+							>
+								<AlertDialog
+									open={isStockDialogOpen}
+									onOpenChange={setIsStockDialogOpen}
+								>
+									<AlertDialogTrigger asChild>
+										<Button
+											variant="secondary"
+											size="sm"
+											onClick={(e) => e.stopPropagation()}
+											className="h-8 border-2 border-border px-3 text-sm"
+										>
+											<Edit className="mr-1 h-4 w-4" />
+											үлдэгдэл засах
+										</Button>
+									</AlertDialogTrigger>
+									<AlertDialogContent>
+										<AlertDialogHeader>
+											<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
+											<AlertDialogDescription>
+												"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог оруулна
+												уу.
+											</AlertDialogDescription>
+										</AlertDialogHeader>
+										<div className="py-4">
+											<Input
+												className="w-full border-2 border-border text-center"
+												value={stockValue}
+												type="number"
+												min="0"
+												onChange={(e) => {
+													const value =
+														e.target.value === ""
+															? 0
+															: Number.parseInt(e.target.value);
+													setStockValue(Math.max(0, value));
+												}}
+											/>
+										</div>
+										<AlertDialogFooter>
+											<AlertDialogCancel>Цуцлах</AlertDialogCancel>
+											<AlertDialogAction onClick={handleSaveStock}>
+												Хадгалах
+											</AlertDialogAction>
+										</AlertDialogFooter>
+									</AlertDialogContent>
+								</AlertDialog>
+
+								<RowActions
+									id={product.id}
+									setIsEditDialogOpen={setIsEditDialogOpen}
+									deleteMutation={deleteHelper}
+									isDeletePending={isDeletePending}
+								/>
+							</div>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 		</>
 	);
 };

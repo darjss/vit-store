@@ -41,9 +41,15 @@ const RowAction = ({
 				<Button
 					variant="default"
 					size="icon"
-					onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
+					onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
+						e.stopPropagation()
+					}
+					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) =>
+						e.stopPropagation()
+					}
+					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) =>
+						e.stopPropagation()
+					}
 				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Open menu</span>
@@ -79,7 +85,7 @@ const RowAction = ({
 				<AlertDialog
 					open={isDeleteAlertOpen}
 					onOpenChange={setIsDelteAlertOpen}
-					data-no-nav 
+					data-no-nav
 				>
 					<AlertDialogTrigger asChild>
 						<DropdownMenuItem

@@ -1,11 +1,22 @@
-import { useMutation, useSuspenseQueries,useSuspenseQuery } from "@tanstack/react-query";
+import {
+	useMutation,
+	useSuspenseQueries,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { ChevronDown, ChevronUp, PlusCircle, RotateCcw, Search, X } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronUp,
+	PlusCircle,
+	RotateCcw,
+	Search,
+	X,
+} from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { DataPagination } from "@/components/data-pagination";
@@ -60,21 +71,19 @@ function RouteComponent() {
 		orderStatus !== undefined ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
-		sortDirection !== undefined ||	
+		sortDirection !== undefined ||
 		searchTerm !== undefined;
 	const navigate = useNavigate({ from: Route.fullPath });
 	const { data: ordersData, isPending: _isPending } = useSuspenseQuery({
-		
-			...trpc.order.getPaginatedOrders.queryOptions({
-				page,
-				paymentStatus,
-				pageSize,
-				sortField,
-				sortDirection,
-				orderStatus,
-				searchTerm,
+		...trpc.order.getPaginatedOrders.queryOptions({
+			page,
+			paymentStatus,
+			pageSize,
+			sortField,
+			sortDirection,
+			orderStatus,
+			searchTerm,
 		}),
-		
 	});
 	const mutation = useMutation({
 		...trpc.order.searchOrder.mutationOptions(),
@@ -134,7 +143,8 @@ function RouteComponent() {
 		console.log("sort", field);
 		// If clicking the same field, toggle direction
 		// If clicking a different field, reset to ascending
-		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
+		const newDirection =
+			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/orders",
 			search: (prev) => ({
@@ -152,9 +162,9 @@ function RouteComponent() {
 				...prev,
 				page: page,
 			}),
-		})
-	}
-	
+		});
+	};
+
 	return (
 		<Card className="w-full bg-transparent">
 			<CardContent className="space-y-6 p-2 sm:p-6">
@@ -262,13 +272,12 @@ function RouteComponent() {
 								className="h-9 px-3"
 							>
 								Нийт
-								{sortField === "total" && (
-									sortDirection === "asc" ? (
+								{sortField === "total" &&
+									(sortDirection === "asc" ? (
 										<ChevronUp className="ml-1 h-4 w-4" />
 									) : (
 										<ChevronDown className="ml-1 h-4 w-4" />
-									)
-								)}
+									))}
 							</Button>
 							<Button
 								variant={sortField === "createdAt" ? "default" : "outline"}
@@ -277,13 +286,12 @@ function RouteComponent() {
 								className="h-9 px-3"
 							>
 								Огноо
-								{sortField === "createdAt" && (
-									sortDirection === "asc" ? (
+								{sortField === "createdAt" &&
+									(sortDirection === "asc" ? (
 										<ChevronUp className="ml-1 h-4 w-4" />
 									) : (
 										<ChevronDown className="ml-1 h-4 w-4" />
-									)
-								)}
+									))}
 							</Button>
 						</div>
 					</div>
