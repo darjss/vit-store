@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ProductImagesTable, ProductsTable } from "@/db/schema";
 import { publicProcedure, router } from "@/lib/trpc";
@@ -13,13 +13,19 @@ export const product = router({
 			},
 			orderBy: sql`RANDOM()`,
 			limit: 10,
-			where: eq(ProductsTable.status, "active"),
+			where: and(
+				eq(ProductsTable.status, "active"),
+				isNull(ProductsTable.deletedAt),
+			),
 			with: {
 				images: {
 					columns: {
 						url: true,
 					},
-					where: eq(ProductImagesTable.isPrimary, true),
+					where: and(
+						eq(ProductImagesTable.isPrimary, true),
+						isNull(ProductImagesTable.deletedAt),
+					),
 				},
 			},
 		});
@@ -36,6 +42,7 @@ export const product = router({
 				id: true,
 				slug: true,
 			},
+			where: isNull(ProductsTable.deletedAt),
 		});
 	}),
 	getProductById: publicProcedure
@@ -59,7 +66,10 @@ export const product = router({
 					categoryId: true,
 					brandId: true,
 				},
-				where: eq(ProductsTable.id, input.id),
+				where: and(
+					eq(ProductsTable.id, input.id),
+					isNull(ProductsTable.deletedAt),
+				),
 				with: {
 					images: {
 						columns: {
@@ -91,13 +101,19 @@ export const product = router({
 					name: true,
 					price: true,
 				},
-				where: inArray(ProductsTable.id, input.ids),
+				where: and(
+					inArray(ProductsTable.id, input.ids),
+					isNull(ProductsTable.deletedAt),
+				),
 				with: {
 					images: {
 						columns: {
 							url: true,
 						},
-						where: eq(ProductImagesTable.isPrimary, true),
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
 					},
 				},
 			});

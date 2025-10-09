@@ -36,6 +36,7 @@ import { LineChart } from "@/components/ui/line-chart";
 import { UploadButton } from "@/components/upload-button";
 import { formatCurrency, getStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+import { z } from "zod";
 
 export const Route = createFileRoute("/_dash/products/$id")({
 	component: RouteComponent,
@@ -45,11 +46,13 @@ export const Route = createFileRoute("/_dash/products/$id")({
 		);
 		return { product };
 	},
+	params: z.object({
+		id: z.coerce.number(),
+	}),
 });
 
 function RouteComponent() {
-	const { id } = Route.useParams();
-	const productId = Number(id);
+	const { id : productId} = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const { data: product } = useSuspenseQuery({

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { BrandsTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -8,7 +8,10 @@ import { addBrandSchema } from "@/lib/zod/schema";
 export const brands = router({
 	getAllBrands: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const brands = await ctx.db.select().from(BrandsTable);
+			const brands = await ctx.db
+				.select()
+				.from(BrandsTable)
+				.where(isNull(BrandsTable.deletedAt));
 			console.log("brands", brands);
 			return brands;
 		} catch (error) {
@@ -55,7 +58,7 @@ export const brands = router({
 						name: input.name,
 						logoUrl: input.imageUrl,
 					})
-					.where(eq(BrandsTable.id, id));
+					.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)));
 			} catch (err) {
 				console.error("Error adding products:", err);
 				throw new TRPCError({
@@ -69,7 +72,12 @@ export const brands = router({
 		.input(z.object({ id: z.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await ctx.db.delete(BrandsTable).where(eq(BrandsTable.id, input.id));
+				await ctx.db
+					.update(BrandsTable)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(eq(BrandsTable.id, input.id), isNull(BrandsTable.deletedAt)),
+					);
 			} catch (err) {
 				console.error("Error deleting brand:", err);
 				throw new TRPCError({

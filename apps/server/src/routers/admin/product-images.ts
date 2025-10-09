@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { ProductImagesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -118,7 +118,12 @@ export const productImages = router({
 						url: ProductImagesTable.url,
 					})
 					.from(ProductImagesTable)
-					.where(eq(ProductImagesTable.productId, productId));
+					.where(
+						and(
+							eq(ProductImagesTable.productId, productId),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					);
 
 				console.log("existing", existingImages);
 				console.log("updated", newImages);
@@ -145,8 +150,14 @@ export const productImages = router({
 					// Delete existing images
 					const deletePromises = existingImages.map((image) =>
 						ctx.db
-							.delete(ProductImagesTable)
-							.where(eq(ProductImagesTable.id, image.id)),
+							.update(ProductImagesTable)
+							.set({ deletedAt: new Date() })
+							.where(
+								and(
+									eq(ProductImagesTable.id, image.id),
+									isNull(ProductImagesTable.deletedAt),
+								),
+							),
 					);
 					await Promise.allSettled(deletePromises);
 
@@ -191,6 +202,7 @@ export const productImages = router({
 					})
 					.from(ProductImagesTable)
 					.where(eq(ProductImagesTable.productId, productId))
+					.where(isNull(ProductImagesTable.deletedAt))
 					.orderBy(ProductImagesTable.isPrimary);
 
 				return images;
@@ -214,8 +226,14 @@ export const productImages = router({
 			try {
 				const { id } = input;
 				await ctx.db
-					.delete(ProductImagesTable)
-					.where(eq(ProductImagesTable.id, id));
+					.update(ProductImagesTable)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(
+							eq(ProductImagesTable.id, id),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					);
 
 				return { message: "Successfully deleted image" };
 			} catch (error) {
@@ -242,7 +260,12 @@ export const productImages = router({
 				await ctx.db
 					.update(ProductImagesTable)
 					.set({ isPrimary: false })
-					.where(eq(ProductImagesTable.productId, productId));
+					.where(
+						and(
+							eq(ProductImagesTable.productId, productId),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					);
 
 				await ctx.db
 					.update(ProductImagesTable)

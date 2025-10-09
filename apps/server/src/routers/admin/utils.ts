@@ -1,4 +1,4 @@
-import { and, between, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, between, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import {
 	OrdersTable,
 	PaymentsTable,
@@ -117,7 +117,12 @@ export const getAnalyticsForHome = async (
 				salesCount: sql<number>`COUNT(*)`,
 			})
 			.from(SalesTable)
-			.where(gte(SalesTable.createdAt, getDaysFromTimeRange(timeRange)))
+			.where(
+				and(
+					gte(SalesTable.createdAt, getDaysFromTimeRange(timeRange)),
+					isNull(SalesTable.deletedAt),
+				),
+			)
 			.get();
 
 		const sum = result?.sum ?? 0;
@@ -164,6 +169,8 @@ export const getMostSoldProducts = async (
 			and(
 				gte(SalesTable.createdAt, getDaysFromTimeRange(timeRange)),
 				eq(ProductImagesTable.isPrimary, true),
+				isNull(SalesTable.deletedAt),
+				isNull(ProductImagesTable.deletedAt),
 			),
 		)
 		.groupBy(SalesTable.productId)
@@ -183,7 +190,12 @@ export const getOrderCountForWeek = async (ctx: Context) => {
 					orderCount: sql<number>`COUNT(*)`,
 				})
 				.from(OrdersTable)
-				.where(between(OrdersTable.createdAt, startDate, endDate))
+				.where(
+					and(
+						between(OrdersTable.createdAt, startDate, endDate),
+						isNull(OrdersTable.deletedAt),
+					),
+				)
 				.get();
 			orderPromises.push(dayOrderPromise);
 			const daySalesPromise = ctx.db
@@ -191,7 +203,12 @@ export const getOrderCountForWeek = async (ctx: Context) => {
 					salesCount: sql<number>`COUNT(*)`,
 				})
 				.from(SalesTable)
-				.where(between(SalesTable.createdAt, startDate, endDate))
+				.where(
+					and(
+						between(SalesTable.createdAt, startDate, endDate),
+						isNull(SalesTable.deletedAt),
+					),
+				)
 				.get();
 			salesPromises.push(daySalesPromise);
 		}
@@ -221,7 +238,10 @@ export const getAverageOrderValue = async (
 			total: true,
 			createdAt: true,
 		},
-		where: gte(OrdersTable.createdAt, getDaysFromTimeRange(timerange)),
+		where: and(
+			gte(OrdersTable.createdAt, getDaysFromTimeRange(timerange)),
+			isNull(OrdersTable.deletedAt),
+		),
 	});
 
 	const total = order.reduce((acc, order) => {
@@ -241,7 +261,12 @@ export const getOrderCount = async (
 				count: sql<number>`COUNT(*)`,
 			})
 			.from(OrdersTable)
-			.where(gte(OrdersTable.createdAt, getDaysFromTimeRange(timeRange)))
+			.where(
+				and(
+					gte(OrdersTable.createdAt, getDaysFromTimeRange(timeRange)),
+					isNull(OrdersTable.deletedAt),
+				),
+			)
 			.get();
 
 		const count = result?.count ?? 0;
@@ -256,7 +281,10 @@ export const getOrderCount = async (
 export const getPendingOrders = async (ctx: Context) => {
 	try {
 		const result = await ctx.db.query.OrdersTable.findMany({
-			where: eq(OrdersTable.status, "pending"),
+			where: and(
+				eq(OrdersTable.status, "pending"),
+				isNull(OrdersTable.deletedAt),
+			),
 			orderBy: desc(OrdersTable.createdAt),
 			with: {
 				orderDetails: {
@@ -275,7 +303,10 @@ export const getPendingOrders = async (ctx: Context) => {
 									columns: {
 										url: true,
 									},
-									where: eq(ProductImagesTable.isPrimary, true),
+									where: and(
+										eq(ProductImagesTable.isPrimary, true),
+										isNull(ProductImagesTable.deletedAt),
+									),
 								},
 							},
 						},
@@ -287,6 +318,7 @@ export const getPendingOrders = async (ctx: Context) => {
 						status: true,
 						createdAt: true,
 					},
+					where: isNull(PaymentsTable.deletedAt),
 				},
 			},
 		});

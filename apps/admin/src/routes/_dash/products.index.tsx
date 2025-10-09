@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -16,7 +17,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
+import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";
+import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,7 +31,6 @@ import {
 } from "@/components/ui/select";
 import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
-import { DataPagination } from "@/components/data-pagination";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -60,7 +62,7 @@ export const Route = createFileRoute("/_dash/products/")({
 	}),
 });
 
-function RouteComponent() {
+function ProductsContent() {
 	const {
 		page,
 		pageSize,
@@ -132,6 +134,10 @@ function RouteComponent() {
 			to: "/products",
 			search: (prev) => ({
 				...prev,
+				sortField: undefined,
+				sortDirection: "asc",
+				searchTerm: undefined,
+				page: 1,
 				brandId: undefined,
 				categoryId: undefined,
 			}),
@@ -201,54 +207,56 @@ function RouteComponent() {
 					)}
 				</Button>
 			</div>
+			{/* Filters */}
+			<div className="flex w-full flex-row gap-2">
+				<Select
+					value={categoryId === undefined ? "all" : categoryId.toString()}
+					onValueChange={(value) =>
+						handleFilterChange(
+							"categoryId",
+							value === "all" ? undefined : Number.parseInt(value),
+						)
+					}
+					disabled={isPending}
+				>
+					<SelectTrigger className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]">
+						<SelectValue placeholder="All Categories" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Бүх ангилал</SelectItem>
+						{categories.map((category) => (
+							<SelectItem key={category.id} value={category.id.toString()}>
+								{category.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Select
+					value={brandId === undefined ? "all" : brandId.toString()}
+					onValueChange={(value) =>
+						handleFilterChange(
+							"brandId",
+							value === "all" ? undefined : Number.parseInt(value),
+						)
+					}
+					disabled={isPending}
+				>
+					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]">
+						<SelectValue placeholder="All Brands" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="all">Бүх брэнд</SelectItem>
+						{brands.map((brand) => (
+							<SelectItem key={brand.id} value={brand.id.toString()}>
+								{brand.name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex w-full flex-row gap-2 lg:flex-wrap">
-					<Select
-						value={categoryId === undefined ? "all" : categoryId.toString()}
-						onValueChange={(value) =>
-							handleFilterChange(
-								"categoryId",
-								value === "all" ? undefined : Number.parseInt(value),
-							)
-						}
-						disabled={isPending}
-					>
-						<SelectTrigger className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]">
-							<SelectValue placeholder="All Categories" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Бүх ангилал</SelectItem>
-							{categories.map((category) => (
-								<SelectItem key={category.id} value={category.id.toString()}>
-									{category.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<Select
-						value={brandId === undefined ? "all" : brandId.toString()}
-						onValueChange={(value) =>
-							handleFilterChange(
-								"brandId",
-								value === "all" ? undefined : Number.parseInt(value),
-							)
-						}
-						disabled={isPending}
-					>
-						<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]">
-							<SelectValue placeholder="All Brands" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Бүх брэнд</SelectItem>
-							{brands.map((brand) => (
-								<SelectItem key={brand.id} value={brand.id.toString()}>
-									{brand.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="flex flex-row gap-2">
+				<div className="flex flex-wrap gap-2">
 					{(hasActiveFilters || sortField !== "") && (
 						<Button
 							variant="outline"
@@ -258,7 +266,6 @@ function RouteComponent() {
 							disabled={isPending}
 						>
 							<RotateCcw className="mr-1 h-4 w-4" />
-							Шинэчлэх
 						</Button>
 					)}
 					<Button
@@ -306,21 +313,62 @@ function RouteComponent() {
 								<ChevronDown className="ml-1 h-4 w-4" />
 							))}
 					</Button>
-					<Link to="/products/add" disabled={isPending}>
-						<Button className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90">
-							<PlusCircle className="h-5 w-5" />
-							<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
-							<span className="sm:hidden">Нэмэх</span>
-						</Button>
-					</Link>
 				</div>
+
+				<Link to="/products/add" disabled={isPending}>
+					<Button className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90">
+						<PlusCircle className="h-5 w-5" />
+						<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
+						<span className="sm:hidden">Нэмэх</span>
+					</Button>
+				</Link>
 			</div>
 
 			<div className="space-y-4">
 				{isPending && (
-					<div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-						<Loader2 className="h-4 w-4 animate-spin" />
-						<span>Бүтээгдэхүүн ачааллаж байна...</span>
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, index) => (
+							<div
+								key={index}
+								className="overflow-hidden rounded-base border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
+							>
+								<div className="flex flex-row">
+									<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
+										<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
+											<div className="h-full w-full animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+										</div>
+									</div>
+									<div className="flex flex-1 flex-col p-3">
+										<div className="flex items-start justify-between gap-3">
+											<div className="min-w-0 flex-1 space-y-2">
+												<div className="h-5 w-3/4 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												<div className="flex items-center gap-2">
+													<div className="h-4 w-16 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+													<div className="h-4 w-1 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+													<div className="h-4 w-20 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												</div>
+											</div>
+											<div className="h-6 w-20 animate-pulse rounded-full border-2 border-border bg-secondary-background" />
+										</div>
+										<div className="mt-1 flex items-center gap-3">
+											<div className="h-6 w-16 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+											<div className="flex items-center gap-1">
+												<div className="h-4 w-4 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												<div className="h-4 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												<div className="h-3 w-12 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+											</div>
+										</div>
+										<div className="mt-2 flex items-center justify-between gap-2">
+											<div className="flex gap-2">
+												<div className="h-8 w-24 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												<div className="h-8 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+												<div className="h-8 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						))}
 					</div>
 				)}
 				{!isPending && products.length === 0 && (
@@ -352,5 +400,13 @@ function RouteComponent() {
 				/>
 			</div>
 		</div>
+	);
+}
+
+function RouteComponent() {
+	return (
+		<Suspense fallback={<ProductsPageSkeleton />}>
+			<ProductsContent />
+		</Suspense>
 	);
 }

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Edit, Package } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +11,6 @@ import { getStatusColor, getStockColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "../ui/dialog";
-import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -27,8 +21,15 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "../ui/alert-dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "../ui/dialog";
 import ProductForm from "./product-form";
-import { useNavigate } from "@tanstack/react-router";
+
 interface ProductCardProps {
 	product: ProductType;
 	brands: BrandsType;
@@ -99,7 +100,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
 					navigate({ to: "/products/$id", params: { id: product.id } });
 				}}
-				role="button"
+				
 				tabIndex={0}
 				onKeyDown={(e) => {
 					if (
@@ -126,7 +127,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 						<div className="flex flex-1 flex-col p-3">
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0 flex-1">
-									<h3 className="font-bold text-base break-words">
+									<h3 className="break-words font-bold text-base">
 										{product.name}
 									</h3>
 									<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">

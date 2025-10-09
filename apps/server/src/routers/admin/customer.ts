@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq, getTableColumns, gte, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, gte, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { CustomersTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -43,7 +43,12 @@ export const customer = router({
 				const result = await ctx.db
 					.select(getTableColumns(CustomersTable))
 					.from(CustomersTable)
-					.where(eq(CustomersTable.phone, input.phone))
+					.where(
+						and(
+							eq(CustomersTable.phone, input.phone),
+							isNull(CustomersTable.deletedAt),
+						),
+					)
 					.limit(1);
 				console.log("RESULT", result);
 				if (result.length === 0) {
@@ -69,7 +74,8 @@ export const customer = router({
 				.select({
 					count: sql<number>`COUNT(*)`,
 				})
-				.from(CustomersTable);
+				.from(CustomersTable)
+				.where(isNull(CustomersTable.deletedAt));
 			return result[0]?.count || 0;
 		} catch (error) {
 			console.error("Error getting customer count:", error);
@@ -116,6 +122,7 @@ export const customer = router({
 			const customers = await ctx.db
 				.select(getTableColumns(CustomersTable))
 				.from(CustomersTable)
+				.where(isNull(CustomersTable.deletedAt))
 				.orderBy(CustomersTable.createdAt);
 			return customers;
 		} catch (error) {
@@ -141,7 +148,12 @@ export const customer = router({
 				const result = await ctx.db
 					.update(CustomersTable)
 					.set({ address })
-					.where(eq(CustomersTable.phone, phone))
+					.where(
+						and(
+							eq(CustomersTable.phone, phone),
+							isNull(CustomersTable.deletedAt),
+						),
+					)
 					.returning({ phone: CustomersTable.phone });
 
 				if (result.length === 0) {
@@ -171,8 +183,14 @@ export const customer = router({
 			try {
 				const { phone } = input;
 				await ctx.db
-					.delete(CustomersTable)
-					.where(eq(CustomersTable.phone, phone));
+					.update(CustomersTable)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(
+							eq(CustomersTable.phone, phone),
+							isNull(CustomersTable.deletedAt),
+						),
+					);
 
 				return { message: "Successfully deleted customer" };
 			} catch (error) {

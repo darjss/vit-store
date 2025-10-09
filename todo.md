@@ -11,7 +11,6 @@
 - [ ] - quick stats dashboard (total customers, total products, total orders)
 - [ ] - revenue c- [ ] - low stock alerts for products
 omparison with previous periods
-- [ ] - order status distribution pie chart
 - [ ] - web analytics visited counts for daily and weekly and monthly 
 - [ ] - abondened cart count 
 
@@ -23,13 +22,11 @@ omparison with previous periods
 - [ ] - most purchasing users list with order counts and total spent
 - [ ] - customer lifetime value analysis
 - [ ] - product performance metrics (views, conversions, returns)
-- [ ] - sales funnel analysis
 - [ ] - seasonal sales patterns and forecasting
 - [ ] - average order value trends
 - [ ] - peak sales hours and days analysis
 - [ ] - customer retention and churn analysis
 - [ ] - product category performance comparison
-- [ ] - return and refund rate analysis
 
 ## orders page
 

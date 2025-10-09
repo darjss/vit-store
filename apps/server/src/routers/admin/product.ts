@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import type { SQL } from "drizzle-orm";
-import { and, asc, desc, eq, like, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "@/db/schema";
 import { PRODUCT_PER_PAGE, productFields } from "@/lib/constants";
@@ -13,10 +13,13 @@ export const product = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const products = await ctx.db.query.ProductsTable.findMany({
-					where: like(ProductsTable.name, `%${input.searchTerm}%`),
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						like(ProductsTable.name, `%${input.searchTerm}%`),
+					),
 					limit: 3,
 					with: {
-						images: true,
+						images: { where: isNull(ProductImagesTable.deletedAt) },
 					},
 				});
 				return products;
@@ -35,7 +38,10 @@ export const product = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const products = await ctx.db.query.ProductsTable.findMany({
-					where: like(ProductsTable.name, `%${input.searchTerm}%`),
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						like(ProductsTable.name, `%${input.searchTerm}%`),
+					),
 					limit: 3,
 					columns: {
 						id: true,
@@ -45,10 +51,11 @@ export const product = router({
 					},
 					with: {
 						images: {
-							columns: {
-								url: true,
-							},
-							where: eq(ProductImagesTable.isPrimary, true),
+							columns: { url: true },
+							where: and(
+								eq(ProductImagesTable.isPrimary, true),
+								isNull(ProductImagesTable.deletedAt),
+							),
 						},
 					},
 				});
@@ -69,7 +76,6 @@ export const product = router({
 			try {
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
-
 				// Validate image URLs
 				for (const image of images) {
 					const parsed = z.string().url().safeParse(image.url);
@@ -83,22 +89,19 @@ export const product = router({
 				const brand = await ctx.db.query.BrandsTable.findFirst({
 					where: eq(BrandsTable.id, input.brandId),
 				});
-
 				if (!brand) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Brand not found",
 					});
 				}
-
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
 				const slug = productName.replace(/\s+/g, "-").toLowerCase();
-
 				const [productResult] = await ctx.db
 					.insert(ProductsTable)
 					.values({
 						name: productName,
-						slug: slug,
+						slug,
 						description: input.description,
 						discount: 0,
 						amount: input.amount,
@@ -111,35 +114,23 @@ export const product = router({
 						status: "active",
 					})
 					.returning();
-
 				if (!productResult) {
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to create product",
 					});
 				}
-
 				const productId = productResult.id;
-				console.log(`Product added with id: ${productId}`);
-
-				// Add images
 				const imagePromises = images.map((image, index) =>
-					ctx.db.insert(ProductImagesTable).values({
-						productId: productId,
-						url: image.url,
-						isPrimary: index === 0,
-					}),
+					ctx.db
+						.insert(ProductImagesTable)
+						.values({ productId, url: image.url, isPrimary: index === 0 }),
 				);
-
 				await Promise.all(imagePromises);
-				console.log("Images added successfully");
-
 				return { message: "Product added successfully" };
 			} catch (error) {
 				console.error("Error adding product:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add product",
@@ -152,9 +143,7 @@ export const product = router({
 		try {
 			const startTime = performance.now();
 			await ctx.db.query.ProductsTable.findMany({
-				with: {
-					images: true,
-				},
+				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
 			});
 			return performance.now() - startTime;
 		} catch (error) {
@@ -171,44 +160,29 @@ export const product = router({
 		.input(z.object({ id: z.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				console.log("Fetching product with id", input.id);
 				const product = await ctx.db.query.ProductsTable.findFirst({
-					where: eq(ProductsTable.id, input.id),
+					where: and(
+						eq(ProductsTable.id, input.id),
+						isNull(ProductsTable.deletedAt),
+					),
 					with: {
 						images: {
-							columns: {
-								id: true,
-								url: true,
-								isPrimary: true,
-							},
+							columns: { id: true, url: true, isPrimary: true },
+							where: isNull(ProductImagesTable.deletedAt),
 						},
-						category: {
-							columns: {
-								name: true,
-							},
-						},
-						brand: {
-							columns: {
-								name: true,
-							},
-						},
+						category: { columns: { name: true } },
+						brand: { columns: { name: true } },
 					},
 				});
-
-				if (!product) {
+				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				}
-
-				console.log(product);
 				return product;
 			} catch (error) {
 				console.error("Error fetching product:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch product",
@@ -221,57 +195,51 @@ export const product = router({
 		.input(updateProductSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				console.log("updating product");
-				if (!input.id) {
+				if (!input.id)
 					throw new TRPCError({
 						code: "BAD_REQUEST",
 						message: "Product ID is required",
 					});
-				}
-
 				const { images, ...productData } = input;
 				const filteredImages = images.filter(
 					(image) => image.url.trim() !== "",
 				);
-
-				// Validate image URLs
 				for (const image of filteredImages) {
 					const parsed = z.string().url().safeParse(image.url);
-					if (!parsed.success) {
+					if (!parsed.success)
 						throw new TRPCError({
 							code: "BAD_REQUEST",
 							message: "Invalid image URL",
 						});
-					}
 				}
-
 				const brand = await ctx.db.query.BrandsTable.findFirst({
 					where: eq(BrandsTable.id, input.brandId),
 				});
-
-				if (!brand) {
+				if (!brand)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Brand not found",
 					});
-				}
-
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
 				const slug = productName.replace(/\s+/g, "-").toLowerCase();
-
 				await ctx.db
 					.update(ProductsTable)
-					.set({ ...productData, name: productName, slug: slug })
-					.where(eq(ProductsTable.id, input.id));
-
+					.set({ ...productData, name: productName, slug })
+					.where(
+						and(
+							eq(ProductsTable.id, input.id),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 				const existingImages = await ctx.db
-					.select({
-						id: ProductImagesTable.id,
-						url: ProductImagesTable.url,
-					})
+					.select({ id: ProductImagesTable.id, url: ProductImagesTable.url })
 					.from(ProductImagesTable)
-					.where(eq(ProductImagesTable.productId, input.id));
-
+					.where(
+						and(
+							eq(ProductImagesTable.productId, input.id),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					);
 				let isDiff = false;
 				if (filteredImages.length !== existingImages.length) {
 					isDiff = true;
@@ -289,33 +257,34 @@ export const product = router({
 						}
 					}
 				}
-
 				if (isDiff) {
-					// Delete existing images
 					const deletePromises = existingImages.map((image) =>
 						ctx.db
-							.delete(ProductImagesTable)
-							.where(eq(ProductImagesTable.id, image.id)),
+							.update(ProductImagesTable)
+							.set({ deletedAt: new Date() })
+							.where(
+								and(
+									eq(ProductImagesTable.id, image.id),
+									isNull(ProductImagesTable.deletedAt),
+								),
+							),
 					);
 					await Promise.allSettled(deletePromises);
-
-					// Insert new images
 					const insertPromises = filteredImages.map((image, index) =>
-						ctx.db.insert(ProductImagesTable).values({
-							productId: input.id,
-							url: image.url,
-							isPrimary: index === 0,
-						}),
+						ctx.db
+							.insert(ProductImagesTable)
+							.values({
+								productId: input.id,
+								url: image.url,
+								isPrimary: index === 0,
+							}),
 					);
 					await Promise.allSettled(insertPromises);
 				}
-
 				return { message: "Product updated successfully" };
 			} catch (error) {
 				console.error("Error updating product:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update product",
@@ -334,31 +303,32 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				// Check if product exists
 				const product = await ctx.db.query.ProductsTable.findFirst({
-					where: eq(ProductsTable.id, input.productId),
+					where: and(
+						eq(ProductsTable.id, input.productId),
+						isNull(ProductsTable.deletedAt),
+					),
 				});
-
-				if (!product) {
+				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				}
-
 				await ctx.db
 					.update(ProductsTable)
 					.set({
 						stock: sql`${ProductsTable.stock} ${input.type === "add" ? "+" : "-"} ${input.numberToUpdate}`,
 					})
-					.where(eq(ProductsTable.id, input.productId));
-
+					.where(
+						and(
+							eq(ProductsTable.id, input.productId),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 				return { message: "Stock updated successfully" };
 			} catch (error) {
 				console.error("Error updating stock:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update stock",
@@ -372,26 +342,29 @@ export const product = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await ctx.db.query.ProductsTable.findFirst({
-					where: eq(ProductsTable.id, input.id),
+					where: and(
+						eq(ProductsTable.id, input.id),
+						isNull(ProductsTable.deletedAt),
+					),
 				});
-
-				if (!product) {
+				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				}
-
 				await ctx.db
-					.delete(ProductsTable)
-					.where(eq(ProductsTable.id, input.id));
-
+					.update(ProductsTable)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(
+							eq(ProductsTable.id, input.id),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 				return { message: "Product deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting product:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete product",
@@ -402,15 +375,12 @@ export const product = router({
 
 	getAllProducts: adminProcedure.query(async ({ ctx }) => {
 		try {
-			console.log("fetching products");
 			const products = await ctx.db.query.ProductsTable.findMany({
+				where: isNull(ProductsTable.deletedAt),
 				with: {
 					images: {
-						columns: {
-							id: true,
-							url: true,
-							isPrimary: true,
-						},
+						columns: { id: true, url: true, isPrimary: true },
+						where: isNull(ProductImagesTable.deletedAt),
 					},
 				},
 			});
@@ -439,34 +409,13 @@ export const product = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				console.log(
-					"Fetching paginated products with page:",
-					input.page,
-					"pageSize:",
-					input.pageSize,
-					"brandId:",
-					input.brandId,
-					"categoryId:",
-					input.categoryId,
-					"sortField:",
-					input.sortField,
-					"sortDirection:",
-					input.sortDirection,
-					"searchTerm:",
-					input.searchTerm,
-				);
-
 				const conditions: (SQL<unknown> | undefined)[] = [];
-
-				if (input.brandId !== undefined && input.brandId !== 0) {
+				if (input.brandId !== undefined && input.brandId !== 0)
 					conditions.push(eq(ProductsTable.brandId, input.brandId));
-				}
-				if (input.categoryId !== undefined && input.categoryId !== 0) {
+				if (input.categoryId !== undefined && input.categoryId !== 0)
 					conditions.push(eq(ProductsTable.categoryId, input.categoryId));
-				}
-				if (input.searchTerm !== undefined) {
+				if (input.searchTerm !== undefined)
 					conditions.push(like(ProductsTable.name, `%${input.searchTerm}%`));
-				}
 				const orderByClauses: SQL<unknown>[] = [];
 				const primarySortColumn =
 					input.sortField === "price"
@@ -474,43 +423,38 @@ export const product = router({
 						: input.sortField === "stock"
 							? ProductsTable.stock
 							: ProductsTable.createdAt;
-
 				const primaryOrderBy =
 					input.sortDirection === "asc"
 						? asc(primarySortColumn)
 						: desc(primarySortColumn);
-
 				orderByClauses.push(primaryOrderBy);
 				orderByClauses.push(asc(ProductsTable.id));
-
 				const finalConditions = conditions.filter(
 					(c): c is SQL<unknown> => c !== undefined,
 				);
-
 				const offset = (input.page - 1) * input.pageSize;
-
 				const products = await ctx.db.query.ProductsTable.findMany({
 					limit: input.pageSize,
 					offset: offset,
 					orderBy: orderByClauses,
-					where:
+					where: and(
+						isNull(ProductsTable.deletedAt),
 						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					with: {
-						images: true,
-					},
+					),
+					with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
 				});
-
 				const totalCountResult = await ctx.db
 					.select({ count: sql<number>`COUNT(*)` })
 					.from(ProductsTable)
 					.where(
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+						and(
+							isNull(ProductsTable.deletedAt),
+							finalConditions.length > 0 ? and(...finalConditions) : undefined,
+						),
 					)
 					.get();
-
 				const totalCount = totalCountResult?.count ?? 0;
 				const totalPages = Math.ceil(totalCount / input.pageSize);
-
 				return {
 					products,
 					pagination: {
@@ -532,37 +476,33 @@ export const product = router({
 		}),
 
 	setProductStock: adminProcedure
-		.input(
-			z.object({
-				id: z.number(),
-				newStock: z.number(),
-			}),
-		)
+		.input(z.object({ id: z.number(), newStock: z.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				// Check if product exists
 				const product = await ctx.db.query.ProductsTable.findFirst({
-					where: eq(ProductsTable.id, input.id),
+					where: and(
+						eq(ProductsTable.id, input.id),
+						isNull(ProductsTable.deletedAt),
+					),
 				});
-
-				if (!product) {
+				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				}
-
 				await ctx.db
 					.update(ProductsTable)
 					.set({ stock: input.newStock })
-					.where(eq(ProductsTable.id, input.id));
-
+					.where(
+						and(
+							eq(ProductsTable.id, input.id),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 				return { message: "Stock set successfully" };
 			} catch (error) {
 				console.error("Error setting product stock:", error);
-				if (error instanceof TRPCError) {
-					throw error;
-				}
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to set product stock",
@@ -575,13 +515,12 @@ export const product = router({
 		try {
 			const result = await ctx.db
 				.select({ stock: ProductsTable.stock, price: ProductsTable.price })
-				.from(ProductsTable);
-
-			const total = result.reduce(
+				.from(ProductsTable)
+				.where(isNull(ProductsTable.deletedAt));
+			return result.reduce(
 				(acc, product) => acc + product.price * product.stock,
 				0,
 			);
-			return total;
 		} catch (error) {
 			console.error("Error calculating product value:", error);
 			throw new TRPCError({
@@ -603,11 +542,15 @@ export const product = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const value = input.stringValue ?? input.numberValue;
-
 				await ctx.db
 					.update(ProductsTable)
 					.set({ [input.field]: value })
-					.where(eq(ProductsTable.id, input.id));
+					.where(
+						and(
+							eq(ProductsTable.id, input.id),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 				return { message: "Product field updated successfully" };
 			} catch (error) {
 				console.error("Error updating product field:", error);

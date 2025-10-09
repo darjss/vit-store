@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { CategoriesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -15,7 +15,8 @@ export const category = router({
 					createdAt: CategoriesTable.createdAt,
 					updatedAt: CategoriesTable.updatedAt,
 				})
-				.from(CategoriesTable);
+				.from(CategoriesTable)
+				.where(isNull(CategoriesTable.deletedAt));
 			return categories;
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -62,7 +63,9 @@ export const category = router({
 				await ctx.db
 					.update(CategoriesTable)
 					.set({ name })
-					.where(eq(CategoriesTable.id, id));
+					.where(
+						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
+					);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				console.error("Error updating category:", error);
@@ -83,7 +86,12 @@ export const category = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
-				await ctx.db.delete(CategoriesTable).where(eq(CategoriesTable.id, id));
+				await ctx.db
+					.update(CategoriesTable)
+					.set({ deletedAt: new Date() })
+					.where(
+						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
+					);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				console.error("Error deleting category:", error);
@@ -112,7 +120,9 @@ export const category = router({
 						updatedAt: CategoriesTable.updatedAt,
 					})
 					.from(CategoriesTable)
-					.where(eq(CategoriesTable.id, id))
+					.where(
+						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
+					)
 					.limit(1);
 
 				if (!category[0]) {
