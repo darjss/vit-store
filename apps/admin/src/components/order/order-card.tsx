@@ -12,14 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { OrderType } from "@/lib/types";
 import RowActions from "@/components/row-actions";
+import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import {
-	getPaymentProviderIcon,
-	getPaymentStatusColor,
-	getOrderStatusStyles,
-} from "@/lib/utils";
+import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import {
 	Dialog,
 	DialogContent,
@@ -33,7 +30,6 @@ import { useNavigate } from "@tanstack/react-router";
 import type { OrderStatusType } from "@server/lib/types";
 
 const OrderCard = ({ order }: { order: OrderType }) => {
-	const statusStyles = getOrderStatusStyles(order.status);
 	const navigate = useNavigate();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const queryClient = useQueryClient();
@@ -77,10 +73,10 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 				</DialogContent>
 			</Dialog>
 			<Card
-				className={`border-l-4 transition-shadow duration-200 hover:shadow-md ${statusStyles.border} h-64 sm:h-72 md:h-80`}
+				className={`border-l-4 transition-shadow duration-200 hover:shadow-md border-l-gray-400 h-64 sm:h-72 md:h-80`}
 				onClick={(e) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
-					navigate({ to: "/orders/$id", params: { id: order.id } });
+					navigate({ to: "/orders/$id", params: { id: order.id.toString() } });
 				}}
 				role="button"
 				tabIndex={0}
@@ -89,7 +85,10 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 						e.key === "Enter" &&
 						!(e.target as HTMLElement).closest("[data-no-nav]")
 					) {
-						navigate({ to: "/orders/$id", params: { id: order.id } });
+						navigate({
+							to: "/orders/$id",
+							params: { id: order.id.toString() },
+						});
 					}
 				}}
 			>
@@ -115,11 +114,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 						</div>
 
 						<div className="flex flex-col items-end gap-1">
-							<Badge
-								className={`${statusStyles.badge} px-2 py-0.5 text-xs shadow-sm`}
-							>
-								{order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-							</Badge>
+							<OrderStatusBadge status={order.status} />
 
 							{order.paymentStatus && order.status && order.paymentProvider && (
 								<Badge

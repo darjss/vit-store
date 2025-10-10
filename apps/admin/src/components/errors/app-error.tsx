@@ -43,7 +43,7 @@ export default function AppError({ error }: AppErrorProps) {
 	}, [error]);
 
 	return (
-		<div className="relative grid min-h-[70vh] place-items-center p-6">
+		<div className="relative grid min-h-screen place-items-center p-6">
 			<div
 				className="absolute inset-0 z-0"
 				style={{

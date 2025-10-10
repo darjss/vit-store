@@ -23,6 +23,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { EditableField } from "@/components/editable-field";
 import OrderForm from "@/components/order/order-form";
+import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import RowAction from "@/components/row-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,6 @@ import {
 import { orderStatus } from "@/lib/constants";
 import {
 	formatCurrency,
-	getOrderStatusStyles,
 	getPaymentProviderIcon,
 	getPaymentStatusColor,
 } from "@/lib/utils";
@@ -183,18 +183,7 @@ function RouteComponent() {
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
-							<EditableField
-								label=""
-								type="select"
-								value={order.status}
-								options={orderStatus.map((status) => ({
-									value: status,
-									label: status.charAt(0).toUpperCase() + status.slice(1),
-								}))}
-								className={`rounded-full border px-3 py-1 font-medium text-sm ${getOrderStatusStyles(order.status).badge}`}
-								isLoading={isUpdateStatusPending}
-								onSave={(next) => handleStatusChange(next)}
-							/>
+							<OrderStatusBadge status={order.status} />
 							<RowAction
 								id={orderId}
 								setIsEditDialogOpen={setIsEditDialogOpen}

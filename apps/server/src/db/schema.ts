@@ -223,7 +223,14 @@ export const OrderDetailsTable = createTable(
 			.references(() => ProductsTable.id)
 			.notNull(),
 		quantity: int("quantity", { mode: "number" }).notNull(),
+		createdAt: int("created_at", { mode: "timestamp" })
+			.default(sql`(unixepoch())`)
+			.notNull(),
+		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
+			() => new Date(),
+		),
 		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		
 	},
 	(table) => [
 		index("detail_order_idx").on(table.orderId),

@@ -21,6 +21,7 @@ import {
 	getStartAndEndofDayAgo,
 	shapeOrderResults,
 } from "@/lib/utils";
+import type { timeRangeType } from "@/lib/zod/schema";
 
 export const addSale = async (
 	sale: AddSalesType,
@@ -252,8 +253,8 @@ export const getAverageOrderValue = async (
 };
 
 export const getOrderCount = async (
+ 	timeRange: timeRangeType,
 	ctx: Context,
-	timeRange: "daily" | "weekly" | "monthly",
 ) => {
 	try {
 		const result = await ctx.db
@@ -348,6 +349,7 @@ export const createUser = async (
 			isApproved: UsersTable.isApproved,
 			createdAt: UsersTable.createdAt,
 			updatedAt: UsersTable.updatedAt,
+			deletedAt: UsersTable.deletedAt,
 		});
 	if (user === null || user === undefined) {
 		throw new Error("User not found");
@@ -359,9 +361,26 @@ export const getUserFromGoogleId = async (googleId: string, ctx: Context) => {
 	const result = await ctx.db
 		.select({ user: UsersTable })
 		.from(UsersTable)
-		.where(eq(UsersTable.googleId, googleId));
+		.where(
+			and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)),
+		);
 	if (result.length < 1 || result[0] === undefined) {
 		return null;
 	}
 	return result[0].user as UserSelectType;
+};
+export const getRevenue = async (timeRange: timeRangeType, ctx: Context) => {
+	try {
+		const startDate = getDaysFromTimeRange(timeRange);
+
+		const result = await ctx.db
+			.select({
+				revenue: sql<number>`SUM(${SalesTable.sellingPrice}*${SalesTable.quantitySold})`,
+			})
+			.from(SalesTable)
+			.where(gte(SalesTable.createdAt, startDate));
+		return result
+	} catch (e) {
+		console.error(e);
+	}
 };

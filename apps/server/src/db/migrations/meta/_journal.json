@@ -22,6 +22,13 @@
       "when": 1759979337007,
       "tag": "0002_clear_cammi",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1760011036338,
+      "tag": "0003_far_firebrand",
+      "breakpoints": true
     }
   ]
 }

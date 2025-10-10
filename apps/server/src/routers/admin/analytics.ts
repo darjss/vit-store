@@ -16,6 +16,7 @@ import {
 import { adminProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
 import { timeRangeSchema } from "@/lib/zod/schema";
+import { getOrderCount, getPendingOrders, getRevenue } from "./utils";
 
 export const analytics = router({
 	getAverageOrderValue: adminProcedure
@@ -651,4 +652,21 @@ export const analytics = router({
 				});
 			}
 		}),
+  getHomePageData: adminProcedure.input(
+    z.object({
+      timeRange:timeRangeSchema
+    })
+
+  ).query(async ({ ctx, input }) => {
+			try {
+			  const timeRange=input.timeRange
+				const pendingOrders = await getPendingOrders(ctx);
+				const revenue=await getRevenue(timeRange, ctx)
+				const orderCount= await getOrderCount(timeRange,ctx)
+				
+				
+			} catch (e) {
+				console.error(e);
+			}
+		})
 });
