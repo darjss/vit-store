@@ -20,7 +20,7 @@
 		"check:fix": "biome check --write ."
 	},
 	"dependencies": {
-		"@hookform/resolvers": "^5.1.1",
+		"@hookform/resolvers": "5.0.0",
 		"@radix-ui/react-slot": "^1.2.3",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-form": "^1.12.3",

@@ -9,6 +9,7 @@ import { logger } from "hono/logger";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
+import seedDatabase from "./lib/seed";
 import {
 	createAdminSession,
 	setAdminSessionTokenCookie,
@@ -16,7 +17,6 @@ import {
 import { adminRouter } from "./routers/admin";
 import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
 import { storeRouter } from "./routers/store";
-import seedDatabase from "./lib/seed";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
@@ -145,23 +145,23 @@ app.get("/admin/login/google/callback", async (c) => {
 		const username = claims.name;
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
-		const ctx = await createContext({ context: c });
-		const existingUser = await getUserFromGoogleId(googleUserId, ctx);
+		// const ctx = await createContext({ context: c });
+		const existingUser = await getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
 		if (existingUser !== null && existingUser.isApproved === true) {
 			console.log("existingUser is approved", existingUser);
-			const session = await createAdminSession(existingUser, ctx);
+			const session = await createAdminSession(existingUser);
 			console.log("created session with cookie ", session);
-			setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
 		}
 
 		if (googleUserId === "118271302696111351988") {
 			console.log("creating user");
-			const user = await createUser(googleUserId, username, true, ctx);
-			const session = await createAdminSession(user, ctx);
+			const user = await createUser(googleUserId, username, true);
+			const session = await createAdminSession(user);
 
-			setAdminSessionTokenCookie(ctx, session.token, session.session.expiresAt);
+			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
 		}
 
@@ -170,7 +170,7 @@ app.get("/admin/login/google/callback", async (c) => {
 			return c.redirect(`${process.env.DASH_URL}/login`);
 		}
 
-		await createUser(googleUserId, username, false, ctx);
+		await createUser(googleUserId, username, false);
 
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {
@@ -224,7 +224,8 @@ app.get("/", (c) => {
 app.post("/admin/seed", async (c) => {
 	try {
 		const ctx = await createContext({ context: c });
-		const reset = c.req.query("reset") === "1" || c.req.query("reset") === "true";
+		const reset =
+			c.req.query("reset") === "1" || c.req.query("reset") === "true";
 		const result = await seedDatabase(ctx.db, { reset, rngSeed: 1337 });
 		return c.json(result);
 	} catch (e) {

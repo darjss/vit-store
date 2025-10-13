@@ -1,9 +1,9 @@
-import { AlertDialogAction } from "@radix-ui/react-alert-dialog";
 import { Edit2, MoreVertical, Trash2 } from "lucide-react";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import SubmitButton from "@/components/submit-button";
 import {
 	AlertDialog,
+	AlertDialogAction,
 	AlertDialogCancel,
 	AlertDialogContent,
 	AlertDialogFooter,
@@ -119,9 +119,9 @@ const RowAction = ({
 							<AlertDialogAction asChild>
 								<SubmitButton
 									variant="destructive"
-									isPending={isDeletePending}
-									onClick={() => deleteMutation(id)}
 									className="flex-1"
+									onClick={() => deleteMutation(id)}
+									isPending={isDeletePending}
 								>
 									Delete
 								</SubmitButton>

@@ -23,8 +23,8 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const analytics= await getAnalyticsForHome(ctx, input.timeRange);
-        return analytics;
+				const analytics = await getAnalyticsForHome(ctx, input.timeRange);
+				return analytics;
 			} catch (error) {
 				console.error("Error getting analytics for home:", error);
 				throw new TRPCError({
@@ -99,7 +99,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getOrderCount(ctx, input.timeRange);
+				return await getOrderCount(input.timeRange, ctx);
 			} catch (error) {
 				console.error("Error getting order count:", error);
 				throw new TRPCError({
@@ -143,9 +143,9 @@ export const sales = router({
 				getMostSoldProducts(ctx, "daily"),
 				getMostSoldProducts(ctx, "weekly"),
 				getMostSoldProducts(ctx, "monthly"),
-				getOrderCount(ctx, "daily"),
-				getOrderCount(ctx, "weekly"),
-				getOrderCount(ctx, "monthly"),
+				getOrderCount("daily", ctx),
+				getOrderCount("weekly", ctx),
+				getOrderCount("monthly", ctx),
 				getPendingOrders(ctx),
 			]);
 

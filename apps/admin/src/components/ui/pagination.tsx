@@ -4,8 +4,6 @@ import type * as React from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 
-
-
 import { cn } from "@/lib/utils";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
@@ -59,7 +57,7 @@ function PaginationLink({
 				}),
 				className,
 				isActive &&
-					"bg-primary text-primary-foreground border-primary shadow-md shadow-black transform scale-110 hover:bg-primary hover:text-primary-foreground",
+					"scale-110 transform border-primary bg-primary text-primary-foreground shadow-black shadow-md hover:bg-primary hover:text-primary-foreground",
 			)}
 			{...props}
 		/>

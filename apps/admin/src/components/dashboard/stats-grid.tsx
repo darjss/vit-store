@@ -1,3 +1,5 @@
+import type { timeRangeType } from "@server/lib/zod/schema";
+import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	Activity,
 	BarChart3,
@@ -9,10 +11,8 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatCard } from "./stat-card";
-import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
 import { trpc } from "@/utils/trpc";
-import type { timeRangeType } from "@server/lib/zod/schema";
+import { StatCard } from "./stat-card";
 
 const mockData = {
 	dailyRevenue: 2450000,
@@ -27,15 +27,12 @@ const mockData = {
 };
 
 export function StatsGrid() {
-  const { data}=useSuspenseQueries([
-			{
-				...trpc.sales.analytics.queryOptions({ timeRange: "daily" }),
-			},
-			{
-			
-			}
-			
-		])
+	// const { data } = useSuspenseQueries([
+	// 	{
+	// 		...trpc.sales.analytics.queryOptions({ timeRange: "daily" }),
+	// 	},
+	// 	{},
+	// ]);
 	const todayStats = [
 		{
 			title: "Өдрийн орлого",

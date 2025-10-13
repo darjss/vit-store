@@ -1,7 +1,7 @@
-import * as ReactDialog from "@radix-ui/react-dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
+import { Dialog as ReactDialog } from "radix-ui";
+import { VisuallyHidden } from "radix-ui";
 import React, { type HTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +11,9 @@ const DialogTrigger = ReactDialog.Trigger;
 const overlayVariants = cva(
 	` fixed bg-black/80 font-head
     data-[state=open]:fade-in-0
-    data-[state=open]:animate-in 
-    data-[state=closed]:animate-out 
-    data-[state=closed]:fade-out-0 
+    data-[state=open]:animate-in
+    data-[state=closed]:animate-out
+    data-[state=closed]:fade-out-0
   `,
 	{
 		variants: {
@@ -48,12 +48,12 @@ const DialogBackdrop = React.forwardRef<HTMLDivElement, IDialogBackgroupProps>(
 DialogBackdrop.displayName = "DialogBackdrop";
 
 const dialogVariants = cva(
-	`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded border-2 bg-background shadow-lg duration-200 
-  data-[state=open]:animate-in 
-  data-[state=open]:fade-in-0 
-  data-[state=open]:zoom-in-95 
-  data-[state=closed]:animate-out 
-  data-[state=closed]:fade-out-0 
+	`fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded border-2 bg-background shadow-lg duration-200
+  data-[state=open]:animate-in
+  data-[state=open]:fade-in-0
+  data-[state=open]:zoom-in-95
+  data-[state=closed]:animate-out
+  data-[state=closed]:fade-out-0
   data-[state=closed]:zoom-out-95`,
 	{
 		variants: {

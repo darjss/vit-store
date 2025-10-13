@@ -6,6 +6,11 @@ import type {
 	paymentProvider,
 	paymentStatus,
 } from "./constants";
+import type { Context } from "hono";
+
+export type HonoContextType=Context<{
+    Bindings: CloudflareBindings;
+}, any, any>
 
 export interface SessionConfig {
 	kvSessionPrefix: string;

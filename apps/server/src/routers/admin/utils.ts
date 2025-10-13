@@ -22,6 +22,7 @@ import {
 	shapeOrderResults,
 } from "@/lib/utils";
 import type { timeRangeType } from "@/lib/zod/schema";
+import { db } from "@/lib/db";
 
 export const addSale = async (
 	sale: AddSalesType,
@@ -335,9 +336,8 @@ export const createUser = async (
 	googleId: string,
 	username: string,
 	isApproved: boolean,
-	ctx: Context,
 ) => {
-	const [user] = await ctx.db
+	const [user] = await db
 		.insert(UsersTable)
 		.values({
 			googleId,
@@ -359,8 +359,8 @@ export const createUser = async (
 	return user;
 };
 
-export const getUserFromGoogleId = async (googleId: string, ctx: Context) => {
-	const result = await ctx.db
+export const getUserFromGoogleId = async (googleId: string) => {
+	const result = await db
 		.select({ user: UsersTable })
 		.from(UsersTable)
 		.where(

@@ -1,3 +1,4 @@
+import type { timeRangeType } from "@server/lib/zod/schema";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import { useState } from "react";
@@ -9,7 +10,6 @@ import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { TopSellingProducts } from "@/components/dashboard/top-selling-products";
 import { Button } from "@/components/ui/button";
 import { mockData } from "@/lib/mock-data";
-import type { timeRangeType } from "@server/lib/zod/schema";
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
@@ -43,7 +43,7 @@ function HomeComponent() {
 				</div>
 			</div>
 
-			<StatsGrid selectedPeriod={selectedPeriod}  />
+			<StatsGrid />
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<SalesChart selectedPeriod={selectedPeriod} />
@@ -51,7 +51,7 @@ function HomeComponent() {
 			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <TopSellingProducts timeRange={selectedPeriod} />
+				<TopSellingProducts timeRange={selectedPeriod} />
 				<div className="flex flex-col gap-2">
 					<QuickStats />
 					<LowStockAlerts />

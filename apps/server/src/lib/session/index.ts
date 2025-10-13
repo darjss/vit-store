@@ -7,7 +7,8 @@ import {
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { CustomerSelectType, UserSelectType } from "@/db/schema";
 import type { Context } from "../context";
-import type { SessionConfig } from "../types";
+import type { HonoContextType, SessionConfig } from "../types";
+import { kv } from "../db";
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	id: string;
@@ -45,7 +46,6 @@ export function createSessionManager<
 
 	async function createSession(
 		user: TUser,
-		ctx: Context,
 	): Promise<{ session: Session<TUser>; token: string }> {
 		const token = generateSessionToken();
 		const sessionId = encodeHexLowerCase(
@@ -59,7 +59,7 @@ export function createSessionManager<
 
 		const userIdentifier = getUserIdentifier(user);
 
-		await ctx.kv.put(
+		await kv.put(
 			`${kvSessionPrefix}:${session.id}`,
 			JSON.stringify({
 				id: session.id,
@@ -70,7 +70,7 @@ export function createSessionManager<
 				expirationTtl: Math.floor(session.expiresAt.getTime() / 1000),
 			},
 		);
-		await ctx.kv.put(`${kvUserSessionPrefix}:${userIdentifier}`, sessionId);
+		await kv.put(`${kvUserSessionPrefix}:${userIdentifier}`, sessionId);
 
 		return { session, token };
 	}
@@ -148,12 +148,12 @@ export function createSessionManager<
 	}
 
 	function setSessionTokenCookie(
-		ctx: Context,
+		c:HonoContextType ,
 		token: string,
 		expiresAt: Date,
 	): void {
 		console.log(process.env.DOMAIN);
-		setCookie(ctx.c, cookieName, token, {
+		setCookie(c, cookieName, token, {
 			httpOnly: true,
 			sameSite: "None",
 			secure: true,
