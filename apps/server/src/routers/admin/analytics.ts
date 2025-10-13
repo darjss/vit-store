@@ -13,13 +13,13 @@ import {
 	PurchasesTable,
 	SalesTable,
 } from "@/db/schema";
-import { adminProcedure, router } from "@/lib/trpc";
+import { adminCachedProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
 import { timeRangeSchema } from "@/lib/zod/schema";
 import { getOrderCount, getPendingOrders, getRevenue } from "./utils";
 
 export const analytics = router({
-	getAverageOrderValue: adminProcedure
+	getAverageOrderValue: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -48,7 +48,7 @@ export const analytics = router({
 			}
 		}),
 
-	getTotalProfit: adminProcedure
+	getTotalProfit: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -83,7 +83,7 @@ export const analytics = router({
 			}
 		}),
 
-	getSalesByCategory: adminProcedure
+	getSalesByCategory: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -120,7 +120,7 @@ export const analytics = router({
 			}
 		}),
 
-	getCustomerLifetimeValue: adminProcedure.query(async ({ ctx }) => {
+	getCustomerLifetimeValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await ctx.db
 				.select({
@@ -176,7 +176,7 @@ export const analytics = router({
 		}
 	}),
 
-	getRepeatCustomersCount: adminProcedure
+	getRepeatCustomersCount: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -187,7 +187,6 @@ export const analytics = router({
 				const { timeRange } = input;
 				const startDate = getDaysFromTimeRange(timeRange);
 
-				// More efficient query using window functions
 				const repeatCustomers = await ctx.db
 					.select({
 						count: sql<number>`COUNT(DISTINCT customer_phone)`,
@@ -216,14 +215,14 @@ export const analytics = router({
 			}
 		}),
 
-	getInventoryStatus: adminProcedure.query(async ({ ctx }) => {
+	getInventoryStatus: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await ctx.db
 				.select({
 					productId: ProductsTable.id,
 					name: ProductsTable.name,
 					stock: ProductsTable.stock,
-					status: sql<string>`CASE 
+					status: sql<string>`CASE
 						WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 						WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 						ELSE 'In Stock'
@@ -240,7 +239,7 @@ export const analytics = router({
 		}
 	}),
 
-	getFailedPayments: adminProcedure
+	getFailedPayments: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -279,7 +278,7 @@ export const analytics = router({
 			}
 		}),
 
-	getLowInventoryProducts: adminProcedure.query(async ({ ctx }) => {
+	getLowInventoryProducts: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await ctx.db
 				.select({
@@ -288,7 +287,7 @@ export const analytics = router({
 					stock: ProductsTable.stock,
 					price: ProductsTable.price,
 					imageUrl: ProductImagesTable.url,
-					status: sql<string>`CASE 
+					status: sql<string>`CASE
 						WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 						WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 						ELSE 'In Stock'
@@ -314,7 +313,7 @@ export const analytics = router({
 		}
 	}),
 
-	getTopBrandsBySales: adminProcedure
+	getTopBrandsBySales: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -352,7 +351,7 @@ export const analytics = router({
 			}
 		}),
 
-	getCurrentProductsValue: adminProcedure.query(async ({ ctx }) => {
+	getCurrentProductsValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await ctx.db
 				.select({
@@ -370,7 +369,7 @@ export const analytics = router({
 		}
 	}),
 
-	getAnalyticsData: adminProcedure
+	getAnalyticsData: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -520,7 +519,7 @@ export const analytics = router({
 							productId: ProductsTable.id,
 							name: ProductsTable.name,
 							stock: ProductsTable.stock,
-							status: sql<string>`CASE 
+							status: sql<string>`CASE
 								WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 								WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 								ELSE 'In Stock'
@@ -557,7 +556,7 @@ export const analytics = router({
 							stock: ProductsTable.stock,
 							price: ProductsTable.price,
 							imageUrl: ProductImagesTable.url,
-							status: sql<string>`CASE 
+							status: sql<string>`CASE
 								WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 								WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 								ELSE 'In Stock'
@@ -652,21 +651,20 @@ export const analytics = router({
 				});
 			}
 		}),
-  getHomePageData: adminProcedure.input(
-    z.object({
-      timeRange:timeRangeSchema
-    })
-
-  ).query(async ({ ctx, input }) => {
+	getHomePageData: adminCachedProcedure
+		.input(
+			z.object({
+				timeRange: timeRangeSchema,
+			}),
+		)
+		.query(async ({ ctx, input }) => {
 			try {
-			  const timeRange=input.timeRange
+				const timeRange = input.timeRange;
 				const pendingOrders = await getPendingOrders(ctx);
-				const revenue=await getRevenue(timeRange, ctx)
-				const orderCount= await getOrderCount(timeRange,ctx)
-				
-				
+				const revenue = await getRevenue(timeRange, ctx);
+				const orderCount = await getOrderCount(timeRange, ctx);
 			} catch (e) {
 				console.error(e);
 			}
-		})
+		}),
 });

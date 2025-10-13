@@ -113,7 +113,7 @@ export const getAnalyticsForHome = async (
 	try {
 		const result = await ctx.db
 			.select({
-				sum: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
+				revenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 				cost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
 				salesCount: sql<number>`COUNT(*)`,
 			})
@@ -126,37 +126,39 @@ export const getAnalyticsForHome = async (
 			)
 			.get();
 
-		const sum = result?.sum ?? 0;
+		const revenue = result?.revenue ?? 0;
 		const cost = result?.cost ?? 0;
-		const profit = sum - cost;
+		const profit = revenue - cost;
 		const salesCount = result?.salesCount ?? 0;
 
 		console.log(
 			"salesCount",
 			salesCount,
-			"sum",
-			sum,
+			"revenue",
+			revenue,
 			"cost",
 			cost,
 			"profit",
 			profit,
 		);
-		return { sum, salesCount, profit };
+		return { revenue, salesCount, profit };
 	} catch (e) {
 		console.log(e);
-		return { sum: 0, salesCount: 0, profit: 0 };
+		return { revenue: 0, salesCount: 0, profit: 0 };
 	}
 };
 
 export const getMostSoldProducts = async (
 	ctx: Context,
-	timeRange: "daily" | "weekly" | "monthly" = "daily",
+	timeRange: timeRangeType,
 	productCount = 5,
 ) => {
 	const result = await ctx.db
 		.select({
 			productId: SalesTable.productId,
 			totalSold: sql<number>`SUM(${SalesTable.quantitySold})`,
+			
+      revenue: sql<number>`${SalesTable.quantitySold}*${SalesTable.sellingPrice}`,
 			name: ProductsTable.name,
 			imageUrl: ProductImagesTable.url,
 		})

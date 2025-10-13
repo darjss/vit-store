@@ -43,7 +43,7 @@ function HomeComponent() {
 				</div>
 			</div>
 
-			<StatsGrid />
+			<StatsGrid selectedPeriod={selectedPeriod}  />
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<SalesChart selectedPeriod={selectedPeriod} />
@@ -51,7 +51,7 @@ function HomeComponent() {
 			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<TopSellingProducts />
+        <TopSellingProducts timeRange={selectedPeriod} />
 				<div className="flex flex-col gap-2">
 					<QuickStats />
 					<LowStockAlerts />

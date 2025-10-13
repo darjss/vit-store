@@ -1,9 +1,17 @@
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockData } from "@/lib/mock-data";
+import { trpc } from "@/utils/trpc";
+import type { timeRangeType } from "@server/lib/zod/schema";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
-export function TopSellingProducts() {
+export function TopSellingProducts({timeRange}:{timeRange: timeRangeType}) {
+  const { data:products}=useSuspenseQuery({
+    ...trpc.sales.topProducts.queryOptions({timeRange, productCount:10})
+  })
+
 	return (
+	
 		<Card className="border-2 border-border shadow-shadow">
 			<CardHeader className="border-border border-b-2 bg-secondary-background">
 				<CardTitle className="flex items-center gap-3 font-heading text-xl">
@@ -12,6 +20,10 @@ export function TopSellingProducts() {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="max-h-96 space-y-3 overflow-y-auto p-4">
+			{products.length===0 && (<div>
+			No products
+			</div>)
+			}
 				{mockData.topProducts.map((product, index) => (
 					<div
 						key={product.name}
@@ -28,7 +40,7 @@ export function TopSellingProducts() {
 											{product.name}
 										</div>
 										<div className="text-muted-foreground text-sm">
-											{product.sold} ширхэг зарагдсан
+											{product.totalSold} ширхэг зарагдсан
 										</div>
 									</div>
 								</div>

@@ -5,9 +5,9 @@ const ProductsPageSkeleton = () => {
 		<div className="space-y-3">
 			{/* Search Bar */}
 			<div className="relative">
-				<Skeleton className="absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 rounded-base border-2 border-border" />
+				<Skeleton className="-translate-y-1/2 absolute top-1/2 left-4 h-6 w-6 rounded-base border-2 border-border" />
 				<Skeleton className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow" />
-				<Skeleton className="absolute right-1 top-1/2 h-10 w-12 -translate-y-1/2 rounded-base border-2 border-border" />
+				<Skeleton className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border" />
 			</div>
 
 			{/* Filters */}

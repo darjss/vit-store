@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ProductImagesTable, ProductsTable, SalesTable } from "@/db/schema";
-import { adminProcedure, router } from "@/lib/trpc";
+import { adminCachedProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
 import { timeRangeSchema } from "@/lib/zod/schema";
 import {
@@ -15,7 +15,7 @@ import {
 } from "./utils";
 
 export const sales = router({
-	analytics: adminProcedure
+	analytics: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -23,7 +23,8 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getAnalyticsForHome(ctx, input.timeRange);
+				const analytics= await getAnalyticsForHome(ctx, input.timeRange);
+        return analytics;
 			} catch (error) {
 				console.error("Error getting analytics for home:", error);
 				throw new TRPCError({
@@ -34,7 +35,7 @@ export const sales = router({
 			}
 		}),
 
-	topProducts: adminProcedure
+	topProducts: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -58,7 +59,7 @@ export const sales = router({
 			}
 		}),
 
-	weeklyOrders: adminProcedure.query(async ({ ctx }) => {
+	weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await getOrderCountForWeek(ctx);
 		} catch (error) {
@@ -71,7 +72,7 @@ export const sales = router({
 		}
 	}),
 
-	avgOrderValue: adminProcedure
+	avgOrderValue: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -90,7 +91,7 @@ export const sales = router({
 			}
 		}),
 
-	orderCount: adminProcedure
+	orderCount: adminCachedProcedure
 		.input(
 			z.object({
 				timeRange: timeRangeSchema,
@@ -109,7 +110,7 @@ export const sales = router({
 			}
 		}),
 
-	pendingOrders: adminProcedure.query(async ({ ctx }) => {
+	pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await getPendingOrders(ctx);
 		} catch (error) {
@@ -122,7 +123,7 @@ export const sales = router({
 		}
 	}),
 
-	dashboard: adminProcedure.query(async ({ ctx }) => {
+	dashboard: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			const [
 				salesDaily,

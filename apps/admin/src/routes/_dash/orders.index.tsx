@@ -141,8 +141,6 @@ function RouteComponent() {
 	};
 	const handleSort = (field: string) => {
 		console.log("sort", field);
-		// If clicking the same field, toggle direction
-		// If clicking a different field, reset to ascending
 		const newDirection =
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
@@ -202,7 +200,7 @@ function RouteComponent() {
 						</div>
 						<Button
 							size="sm"
-							className="h-9 gap-1"
+							className="h-9 w-fit gap-1"
 							asChild
 							disabled={mutation.isPending}
 						>

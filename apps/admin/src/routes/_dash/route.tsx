@@ -8,10 +8,17 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export const Route = createFileRoute("/_dash")({
 	component: RouteComponent,
 	beforeLoad: async ({ context: ctx }) => {
-		const session = await ctx.queryClient.ensureQueryData({
-			...ctx.trpc.auth.me.queryOptions(),
-			staleTime: 1000 * 60 * 15,
-		});
+		let session = ctx.queryClient.getQueryData(
+			ctx.trpc.auth.me.queryOptions().queryKey,
+		);
+
+		if (!session) {
+			session = await ctx.queryClient.fetchQuery({
+				...ctx.trpc.auth.me.queryOptions(),
+				staleTime: 1000 * 60 * 15,
+			});
+		}
+
 		if (!session) {
 			throw redirect({ to: "/login" });
 		}

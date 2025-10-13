@@ -1,15 +1,18 @@
-import { StatCard } from "./stat-card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {Card, CardContent} from "@/components/ui/card"
 import {
-	DollarSign,
-	ShoppingCart,
-	Eye,
-	BarChart3,
-	Package,
-	TrendingUp,
 	Activity,
+	BarChart3,
+	DollarSign,
+	Eye,
+	Package,
+	ShoppingCart,
+	TrendingUp,
 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatCard } from "./stat-card";
+import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
+import type { timeRangeType } from "@server/lib/zod/schema";
 
 const mockData = {
 	dailyRevenue: 2450000,
@@ -24,6 +27,15 @@ const mockData = {
 };
 
 export function StatsGrid() {
+  const { data}=useSuspenseQueries([
+			{
+				...trpc.sales.analytics.queryOptions({ timeRange: "daily" }),
+			},
+			{
+			
+			}
+			
+		])
 	const todayStats = [
 		{
 			title: "Өдрийн орлого",
@@ -106,71 +118,70 @@ export function StatsGrid() {
 	];
 
 	return (
-	<Card className="border-2 border-border shadow-shadow">
-		<CardContent className="p-4">
-		<Tabs defaultValue="today" className="space-y-4">
-			<TabsList className="grid w-full grid-cols-3 border-2 border-border bg-card">
-				<TabsTrigger value="today" className="font-bold">
-					Өнөөдөр
-				</TabsTrigger>
-				<TabsTrigger value="week" className="font-bold">
-					7 хоног
-				</TabsTrigger>
-				<TabsTrigger value="month" className="font-bold">
-					Сар
-				</TabsTrigger>
-			</TabsList>
+		<Card className="w-full border-2 border-border shadow-shadow">
+			<CardContent className="p-4">
+				<Tabs defaultValue="today" className="space-y-4">
+					<TabsList className="grid w-full grid-cols-3 border-2 border-border bg-card">
+						<TabsTrigger value="today" className="font-bold">
+							Өнөөдөр
+						</TabsTrigger>
+						<TabsTrigger value="week" className="font-bold">
+							7 хоног
+						</TabsTrigger>
+						<TabsTrigger value="month" className="font-bold">
+							Сар
+						</TabsTrigger>
+					</TabsList>
 
-			<TabsContent value="today" className="space-y-4">
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{todayStats.map((stat, index) => (
-						<StatCard
-							key={index}
-							title={stat.title}
-							value={stat.value}
-							change={stat.change}
-							changeType={stat.changeType}
-							icon={stat.icon}
-							period={stat.period}
-						/>
-					))}
-				</div>
-			</TabsContent>
+					<TabsContent value="today" className="space-y-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							{todayStats.map((stat, index) => (
+								<StatCard
+									key={index}
+									title={stat.title}
+									value={stat.value}
+									change={stat.change}
+									changeType={stat.changeType}
+									icon={stat.icon}
+									period={stat.period}
+								/>
+							))}
+						</div>
+					</TabsContent>
 
-			<TabsContent value="week" className="space-y-4">
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{weekStats.map((stat, index) => (
-						<StatCard
-							key={index}
-							title={stat.title}
-							value={stat.value}
-							change={stat.change}
-							changeType={stat.changeType}
-							icon={stat.icon}
-							period={stat.period}
-						/>
-					))}
-				</div>
-			</TabsContent>
+					<TabsContent value="week" className="space-y-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							{weekStats.map((stat, index) => (
+								<StatCard
+									key={index}
+									title={stat.title}
+									value={stat.value}
+									change={stat.change}
+									changeType={stat.changeType}
+									icon={stat.icon}
+									period={stat.period}
+								/>
+							))}
+						</div>
+					</TabsContent>
 
-			<TabsContent value="month" className="space-y-4">
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{monthStats.map((stat, index) => (
-						<StatCard
-							key={index}
-							title={stat.title}
-							value={stat.value}
-							change={stat.change}
-							changeType={stat.changeType}
-							icon={stat.icon}
-							period={stat.period}
-						/>
-					))}
-				</div>
-			</TabsContent>
-		</Tabs>
-		</CardContent>
-			</Card>
-
+					<TabsContent value="month" className="space-y-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							{monthStats.map((stat, index) => (
+								<StatCard
+									key={index}
+									title={stat.title}
+									value={stat.value}
+									change={stat.change}
+									changeType={stat.changeType}
+									icon={stat.icon}
+									period={stat.period}
+								/>
+							))}
+						</div>
+					</TabsContent>
+				</Tabs>
+			</CardContent>
+		</Card>
 	);
 }

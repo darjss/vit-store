@@ -49,6 +49,15 @@ export const calculateExpiration = (timerange: timeRangeType) => {
 	}
 };
 
+export const getTtlForTimeRange = (timeRange?: timeRangeType) => {
+  switch (timeRange) {
+    case "daily": return 60*60;   
+    case "weekly": return 60*60*24;  
+    case "monthly": return 60*60*24*7; 
+    default: return 300;          
+  }
+};
+
 export const getDaysFromTimeRange = (timerange: timeRangeType) => {
 	let startDate: Date;
 	switch (timerange) {

@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashRouteRouteImport } from './routes/_dash/route'
 import { Route as DashIndexRouteImport } from './routes/_dash/index'
 import { Route as ProductsAddRouteImport } from './routes/products.add'
+import { Route as DashSandboxRouteImport } from './routes/_dash/sandbox'
 import { Route as DashPurchasesRouteImport } from './routes/_dash/purchases'
 import { Route as DashCustomersRouteImport } from './routes/_dash/customers'
 import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
@@ -48,6 +49,11 @@ const ProductsAddRoute = ProductsAddRouteImport.update({
   id: '/products/add',
   path: '/products/add',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashSandboxRoute = DashSandboxRouteImport.update({
+  id: '/sandbox',
+  path: '/sandbox',
+  getParentRoute: () => DashRouteRoute,
 } as any)
 const DashPurchasesRoute = DashPurchasesRouteImport.update({
   id: '/purchases',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
   '/purchases': typeof DashPurchasesRoute
+  '/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
   '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
   '/purchases': typeof DashPurchasesRoute
+  '/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
   '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_dash/categories': typeof DashCategoriesRoute
   '/_dash/customers': typeof DashCustomersRoute
   '/_dash/purchases': typeof DashPurchasesRoute
+  '/_dash/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
   '/_dash/': typeof DashIndexRoute
   '/_dash/orders/$id': typeof DashOrdersIdRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/customers'
     | '/purchases'
+    | '/sandbox'
     | '/products/add'
     | '/'
     | '/orders/$id'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/customers'
     | '/purchases'
+    | '/sandbox'
     | '/products/add'
     | '/'
     | '/orders/$id'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/_dash/categories'
     | '/_dash/customers'
     | '/_dash/purchases'
+    | '/_dash/sandbox'
     | '/products/add'
     | '/_dash/'
     | '/_dash/orders/$id'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/products/add'
       preLoaderRoute: typeof ProductsAddRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dash/sandbox': {
+      id: '/_dash/sandbox'
+      path: '/sandbox'
+      fullPath: '/sandbox'
+      preLoaderRoute: typeof DashSandboxRouteImport
+      parentRoute: typeof DashRouteRoute
     }
     '/_dash/purchases': {
       id: '/_dash/purchases'
@@ -325,6 +344,7 @@ interface DashRouteRouteChildren {
   DashCategoriesRoute: typeof DashCategoriesRoute
   DashCustomersRoute: typeof DashCustomersRoute
   DashPurchasesRoute: typeof DashPurchasesRoute
+  DashSandboxRoute: typeof DashSandboxRoute
   DashIndexRoute: typeof DashIndexRoute
   DashOrdersIdRoute: typeof DashOrdersIdRoute
   DashOrdersAddRoute: typeof DashOrdersAddRoute
@@ -339,6 +359,7 @@ const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashCategoriesRoute: DashCategoriesRoute,
   DashCustomersRoute: DashCustomersRoute,
   DashPurchasesRoute: DashPurchasesRoute,
+  DashSandboxRoute: DashSandboxRoute,
   DashIndexRoute: DashIndexRoute,
   DashOrdersIdRoute: DashOrdersIdRoute,
   DashOrdersAddRoute: DashOrdersAddRoute,
