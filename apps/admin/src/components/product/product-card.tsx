@@ -100,7 +100,6 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
 					navigate({ to: "/products/$id", params: { id: product.id } });
 				}}
-				
 				tabIndex={0}
 				onKeyDown={(e) => {
 					if (

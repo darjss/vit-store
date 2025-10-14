@@ -1,33 +1,33 @@
+import type { OrderStatusType } from "@server/lib/types";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import {
-	Package,
-	Phone,
 	Calendar,
+	CheckCircle,
+	Copy,
 	DollarSign,
 	MapPin,
-	CheckCircle,
+	Package,
+	Phone,
 	Truck,
-	Copy,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import type { OrderType } from "@/lib/types";
-import RowActions from "@/components/row-actions";
-import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
+import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
+import RowActions from "@/components/row-actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import OrderForm from "./order-form";
+import type { OrderType } from "@/lib/types";
+import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import type { OrderStatusType } from "@server/lib/types";
+import OrderForm from "./order-form";
 
 const OrderCard = ({ order }: { order: OrderType }) => {
 	const navigate = useNavigate();
@@ -73,12 +73,13 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 				</DialogContent>
 			</Dialog>
 			<Card
-				className={`border-l-4 transition-shadow duration-200 hover:shadow-md border-l-gray-400 h-64 sm:h-72 md:h-80`}
+				className={
+					"h-64 border-l-4 border-l-gray-400 transition-shadow duration-200 hover:shadow-md sm:h-72 md:h-80"
+				}
 				onClick={(e) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
 					navigate({ to: "/orders/$id", params: { id: order.id.toString() } });
 				}}
-				role="button"
 				tabIndex={0}
 				onKeyDown={(e) => {
 					if (
@@ -92,16 +93,16 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 					}
 				}}
 			>
-				<CardContent className="p-0 h-full flex flex-col">
+				<CardContent className="flex h-full flex-col p-0">
 					<div className="flex items-center justify-between gap-2 border-b bg-muted/5 p-3">
 						<div className="flex flex-col gap-1">
 							<div className="flex items-center gap-2">
 								<Phone className="h-4 w-4 text-primary" />
-								<h3 className="text-base font-semibold">
+								<h3 className="font-semibold text-base">
 									{order.customerPhone}
 								</h3>
 							</div>
-							<div className="flex items-center gap-2 text-xs text-muted-foreground">
+							<div className="flex items-center gap-2 text-muted-foreground text-xs">
 								<div className="flex items-center gap-1">
 									<Package className="h-3 w-3" />
 									<span className="font-medium">#{order.orderNumber}</span>
@@ -138,7 +139,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 					<div className="border-b bg-muted/5 px-3 py-2">
 						<div className="flex items-center gap-1">
 							<MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-							<span className="text-sm font-semibold">
+							<span className="font-semibold text-sm">
 								{order.address || "No address provided"}
 							</span>
 							<Button
@@ -156,19 +157,19 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 						</div>
 					</div>
 
-					<div className="p-3 flex-1 overflow-y-auto">
+					<div className="flex-1 overflow-y-auto p-3">
 						<div className="flex h-full flex-col sm:gap-4">
-							<div className="w-full flex-1 flex flex-col overflow-hidden">
-								<div className="mb-2 flex items-center justify-between shrink-0">
+							<div className="flex w-full flex-1 flex-col overflow-hidden">
+								<div className="mb-2 flex shrink-0 items-center justify-between">
 									<div className="flex items-center gap-2">
-										<h4 className="text-xs font-medium text-muted-foreground">
+										<h4 className="font-medium text-muted-foreground text-xs">
 											Бүтээгдэхүүн
 										</h4>
 										<span className="rounded-full bg-muted/20 px-1.5 py-0.5 text-xs">
 											{order.products?.length}
 										</span>
 									</div>
-									<span className="flex items-center gap-1 text-sm font-bold text-primary">
+									<span className="flex items-center gap-1 font-bold text-primary text-sm">
 										<DollarSign className="h-3.5 w-3.5" />₮
 										{order.total.toFixed(2)}
 									</span>
@@ -180,7 +181,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 											key={order.orderNumber + detail.productId + index}
 											className="flex items-center gap-1.5 rounded border bg-card p-1.5 text-xs"
 										>
-											<div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded bg-muted/10">
+											<div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted/10 sm:h-12 sm:w-12">
 												<img
 													src={detail.imageUrl || "/placeholder.jpg"}
 													alt={detail.name}
@@ -189,10 +190,10 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 												/>
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate text-xs font-medium">
+												<p className="truncate font-medium text-xs">
 													{detail.name}
 												</p>
-												<span className="text-xs text-muted-foreground">
+												<span className="text-muted-foreground text-xs">
 													x{detail.quantity}
 												</span>
 											</div>
@@ -201,7 +202,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 								</div>
 
 								<div
-									className="flex items-center justify-between gap-2 border-t pt-1 shrink-0"
+									className="flex shrink-0 items-center justify-between gap-2 border-t pt-1"
 									data-no-nav
 								>
 									{order.status === "pending" && (
@@ -226,7 +227,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 											<span>Хүргэсэн</span>
 										</Button>
 									)}
-									<div></div>
+									<div />
 									<RowActions
 										id={order.id}
 										setIsEditDialogOpen={setIsEditDialogOpen}

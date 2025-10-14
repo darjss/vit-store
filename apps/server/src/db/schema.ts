@@ -230,7 +230,6 @@ export const OrderDetailsTable = createTable(
 			() => new Date(),
 		),
 		deletedAt: int("deleted_at", { mode: "timestamp" }),
-		
 	},
 	(table) => [
 		index("detail_order_idx").on(table.orderId),

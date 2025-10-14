@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import { middlewareMarker } from "@trpc/server/unstable-core-do-not-import";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import type { Context } from "./context";
@@ -6,7 +7,6 @@ import { adminAuth } from "./session/admin";
 import { auth } from "./session/store";
 import { getTtlForTimeRange } from "./utils";
 import type { timeRangeType } from "./zod/schema";
-import { middlewareMarker } from "@trpc/server/unstable-core-do-not-import";
 
 export const t = initTRPC.context<Context>().create({
 	transformer: superjson,
@@ -53,10 +53,13 @@ const createCacheKey = async (
 		cacheableInput && typeof cacheableInput === "object"
 			? Object.keys(cacheableInput as Record<string, unknown>)
 					.sort()
-					.reduce((result, key) => {
-						result[key] = (cacheableInput as Record<string, unknown>)[key];
-						return result;
-					}, {} as Record<string, unknown>)
+					.reduce(
+						(result, key) => {
+							result[key] = (cacheableInput as Record<string, unknown>)[key];
+							return result;
+						},
+						{} as Record<string, unknown>,
+					)
 			: cacheableInput,
 	)}`;
 

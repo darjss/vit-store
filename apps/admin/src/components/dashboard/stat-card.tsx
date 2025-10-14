@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, type LucideProps } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface StatCardProps {
@@ -6,7 +6,9 @@ interface StatCardProps {
 	value: string | number;
 	change?: number;
 	changeType?: "increase" | "decrease";
-	icon: any;
+	icon: React.ForwardRefExoticComponent<
+		Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+	>;
 	period?: string;
 }
 

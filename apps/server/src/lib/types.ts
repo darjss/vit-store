@@ -1,16 +1,19 @@
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import type { CustomerSelectType, UserSelectType } from "@/db/schema";
+import type { Context } from "hono";
 import type {
 	deliveryProvider,
 	orderStatus,
 	paymentProvider,
 	paymentStatus,
 } from "./constants";
-import type { Context } from "hono";
 
-export type HonoContextType=Context<{
-    Bindings: CloudflareBindings;
-}, any, any>
+export type HonoContextType = Context<
+	{
+		Bindings: CloudflareBindings;
+	},
+	any,
+	any
+>;
 
 export interface SessionConfig {
 	kvSessionPrefix: string;

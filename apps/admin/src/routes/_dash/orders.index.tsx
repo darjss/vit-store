@@ -1,8 +1,4 @@
-import {
-	useMutation,
-	useSuspenseQueries,
-	useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,

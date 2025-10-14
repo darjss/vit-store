@@ -14,9 +14,9 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-			const { productId, url } = input;
+				const { productId, url } = input;
 				const image = await ctx.db.insert(ProductImagesTable).values({
-				productId,
+					productId,
 					url,
 				});
 				return image;
@@ -37,10 +37,10 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-			const { id } = input;
-			await ctx.db
-				.delete(ProductImagesTable)
-						.where(eq(ProductImagesTable.id, id));
+				const { id } = input;
+				await ctx.db
+					.delete(ProductImagesTable)
+					.where(eq(ProductImagesTable.id, id));
 				return { message: "Image deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting image:", error);

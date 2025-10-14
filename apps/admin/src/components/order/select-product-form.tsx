@@ -1,9 +1,9 @@
-import { useCallback, useState } from "react";
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import { Loader2, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
-import { type ProductSearchForOrderType } from "@/lib/types";
+import { useCallback, useState } from "react";
+import { type UseFormReturn, useFieldArray } from "react-hook-form";
+import type { ProductSearchForOrderType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { Badge } from "../ui/badge";
@@ -90,7 +90,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 			{/* Search Section */}
 			<div className="relative">
 				<div className="relative">
-					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
 					<Input
 						placeholder="Бүтээгдэхүүнийг нэрээр хайх..."
 						className="pl-10"
@@ -99,13 +99,13 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 					/>
 				</div>
 				{isFetching && (
-					<div className="mt-2 flex items-center text-sm text-muted-foreground">
+					<div className="mt-2 flex items-center text-muted-foreground text-sm">
 						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 						Хайж байна...
 					</div>
 				)}
 				{data !== undefined && data?.length > 0 && inputValue && (
-					<Card className="absolute left-0 right-0 z-[100] mt-2 w-full shadow-lg">
+					<Card className="absolute right-0 left-0 z-[100] mt-2 w-full shadow-lg">
 						<ScrollArea className="max-h-[300px]">
 							<div className="p-1">
 								{data.map((product) => (
@@ -122,7 +122,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 												className="h-full w-full object-cover"
 											/>
 										</div>
-										<div className="flex-1 min-w-0">
+										<div className="min-w-0 flex-1">
 											<p className="truncate font-medium text-sm">
 												{product.name}
 											</p>
@@ -142,7 +142,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 					</Card>
 				)}
 				{data?.length === 0 && inputValue && !isFetching && (
-					<Card className="absolute left-0 right-0 z-[100] mt-2 w-full shadow-lg">
+					<Card className="absolute right-0 left-0 z-[100] mt-2 w-full shadow-lg">
 						<CardContent className="p-4 text-center text-muted-foreground text-sm">
 							"{inputValue}" олдсонгүй
 						</CardContent>
@@ -159,7 +159,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 							Сонгосон бүтээгдэхүүн
 							<Badge variant="default">{getTotalItems()} ширхэг</Badge>
 						</h3>
-						<p className="font-bold text-xl text-foreground">
+						<p className="font-bold text-foreground text-xl">
 							Нийт: {formatCurrency(getTotalPrice())}
 						</p>
 					</div>
@@ -184,7 +184,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 												/>
 											</div>
 
-											<div className="flex-1 min-w-0">
+											<div className="min-w-0 flex-1">
 												<p className="truncate font-medium text-sm">
 													{product.name}
 												</p>

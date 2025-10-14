@@ -28,5 +28,3 @@ export function useEditableField<T>({
 
 	return { isEditing, tempValue, setTempValue, start, cancel, save } as const;
 }
-
-

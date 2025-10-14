@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import React from "react";
 import {
 	CartesianGrid,
@@ -9,6 +8,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import { cn } from "@/lib/utils";
 
 interface LineChartProps extends React.HTMLAttributes<HTMLDivElement> {
 	data: Record<string, any>[];
@@ -61,13 +61,13 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
 							dataKey={index}
 							axisLine={false}
 							tickLine={false}
-							className="text-xs fill-muted-foreground"
+							className="fill-muted-foreground text-xs"
 						/>
 
 						<YAxis
 							axisLine={false}
 							tickLine={false}
-							className="text-xs fill-muted-foreground"
+							className="fill-muted-foreground text-xs"
 							tickFormatter={valueFormatter}
 						/>
 
@@ -86,7 +86,7 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
 										>
 											<div className="grid grid-cols-2 gap-2">
 												<div className="flex flex-col">
-													<span className="text-[0.70rem] uppercase text-muted-foreground">
+													<span className="text-[0.70rem] text-muted-foreground uppercase">
 														{index}
 													</span>
 													<span className="font-bold text-muted-foreground">
@@ -95,7 +95,7 @@ const LineChart = React.forwardRef<HTMLDivElement, LineChartProps>(
 												</div>
 												{payload.map((entry, index) => (
 													<div key={index} className="flex flex-col">
-														<span className="text-[0.70rem] uppercase text-muted-foreground">
+														<span className="text-[0.70rem] text-muted-foreground uppercase">
 															{entry.dataKey}
 														</span>
 														<span

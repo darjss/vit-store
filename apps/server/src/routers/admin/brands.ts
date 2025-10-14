@@ -29,7 +29,7 @@ export const brands = router({
 			try {
 				await ctx.db.insert(BrandsTable).values({
 					name: input.name,
-					logoUrl: input.imageUrl,
+					logoUrl: input.logoUrl,
 				});
 				return { message: "Successfully updated category" };
 			} catch (err) {
@@ -56,7 +56,7 @@ export const brands = router({
 					.update(BrandsTable)
 					.set({
 						name: input.name,
-						logoUrl: input.imageUrl,
+						logoUrl: input.logoUrl,
 					})
 					.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)));
 			} catch (err) {

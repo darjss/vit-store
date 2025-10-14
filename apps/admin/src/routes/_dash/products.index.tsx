@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -15,7 +14,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { z } from "zod";
 import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";

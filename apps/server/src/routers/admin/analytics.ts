@@ -1,16 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	BrandsTable,
 	CategoriesTable,
-	CustomersTable,
-	OrderDetailsTable,
 	OrdersTable,
 	PaymentsTable,
 	ProductImagesTable,
 	ProductsTable,
-	PurchasesTable,
 	SalesTable,
 } from "@/db/schema";
 import { adminCachedProcedure, router } from "@/lib/trpc";
@@ -660,9 +657,9 @@ export const analytics = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const timeRange = input.timeRange;
-				const pendingOrders = await getPendingOrders(ctx);
-				const revenue = await getRevenue(timeRange, ctx);
-				const orderCount = await getOrderCount(timeRange, ctx);
+				const _pendingOrders = await getPendingOrders(ctx);
+				const _revenue = await getRevenue(timeRange, ctx);
+				const _orderCount = await getOrderCount(timeRange, ctx);
 			} catch (e) {
 				console.error(e);
 			}

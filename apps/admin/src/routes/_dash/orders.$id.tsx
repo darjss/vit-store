@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { EditableField } from "@/components/editable-field";
 import OrderForm from "@/components/order/order-form";
-import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import RowAction from "@/components/row-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { orderStatus } from "@/lib/constants";
 import {
 	formatCurrency,
 	getPaymentProviderIcon,

@@ -79,7 +79,8 @@ export const updateProductSchema = addProductSchema.extend({
 
 export const addOrderSchema = z.object({
 	id: z.number().int().positive().finite().optional(),
-	customerPhone: z.string()
+	customerPhone: z
+		.string()
 		.min(8, { message: "Number must be at least 8 digits" })
 		.max(8, { message: "Number must be at most 8 digits" })
 		.regex(/^[6-9]\d{7}$/, { message: "Number must be a valid phone number" }),

@@ -51,7 +51,6 @@ export const Route = createFileRoute("/_dash/products/$id")({
 		id: z.coerce.number(),
 	}),
 	pendingComponent: ProductDetailSkeleton,
-	
 });
 
 function RouteComponent() {
@@ -519,41 +518,39 @@ function RouteComponent() {
 								<Suspense fallback={<ProductDetailSkeleton />}>
 									<div className="space-y-2 sm:space-y-3">
 										{orders.map((order) => {
-										return (
-											<div
-												key={order.orderNumber}
-												className="rounded-lg border-l-4 border-l-green-500 bg-muted/10 p-2 sm:p-3"
-											>
-												<div className="mb-1 flex items-center justify-between">
-													<div className="flex items-center gap-1">
-														<Phone className="h-3 w-3 text-primary" />
-														<span className="font-medium text-xs sm:text-sm">
-															{order.customerPhone}
+											return (
+												<div
+													key={order.orderNumber}
+													className="rounded-lg border-l-4 border-l-green-500 bg-muted/10 p-2 sm:p-3"
+												>
+													<div className="mb-1 flex items-center justify-between">
+														<div className="flex items-center gap-1">
+															<Phone className="h-3 w-3 text-primary" />
+															<span className="font-medium text-xs sm:text-sm">
+																{order.customerPhone}
+															</span>
+														</div>
+														<Badge className="bg-green-100 text-green-800 text-xs">
+															{order.status}
+														</Badge>
+													</div>
+													<div className="flex items-center gap-2 text-muted-foreground text-xs">
+														<Calendar className="h-3 w-3" />
+														<span>{formatDateToText(order.createdAt)}</span>
+														<span>•</span>
+														<span>{order.orderNumber}</span>
+													</div>
+													<div className="mt-1 flex items-center justify-between">
+														<span className="text-xs">Тоо: 1</span>
+														<span className="font-semibold text-primary text-xs sm:text-sm">
+															{formatCurrency(order.total)}
 														</span>
 													</div>
-													<Badge className="bg-green-100 text-green-800 text-xs">
-														{order.status}
-													</Badge>
 												</div>
-												<div className="flex items-center gap-2 text-muted-foreground text-xs">
-													<Calendar className="h-3 w-3" />
-													<span>{formatDateToText(order.createdAt)}</span>
-													<span>•</span>
-													<span>{order.orderNumber}</span>
-												</div>
-												<div className="mt-1 flex items-center justify-between">
-													<span className="text-xs">Тоо: 1</span>
-													<span className="font-semibold text-primary text-xs sm:text-sm">
-														{formatCurrency(order.total)}
-													</span>
-												</div>
-											</div>
-										);
-									})}
-							
-								</div>
+											);
+										})}
+									</div>
 								</Suspense>
-
 
 								<div className="mt-3 border-t pt-3">
 									<Button

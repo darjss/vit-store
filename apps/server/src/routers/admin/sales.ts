@@ -1,9 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { ProductImagesTable, ProductsTable, SalesTable } from "@/db/schema";
 import { adminCachedProcedure, router } from "@/lib/trpc";
-import { getDaysFromTimeRange } from "@/lib/utils";
 import { timeRangeSchema } from "@/lib/zod/schema";
 import {
 	getAnalyticsForHome,

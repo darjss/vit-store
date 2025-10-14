@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
 	ZodArray,
@@ -7,8 +7,8 @@ import {
 	ZodNumber,
 	ZodObject,
 	ZodOptional,
-	ZodString,
 	type ZodSchema,
+	ZodString,
 	type ZodTypeAny,
 } from "zod";
 
@@ -94,7 +94,7 @@ export const getPaymentProviderIcon = (provider: string) => {
 	}
 };
 export function formatCurrency(amount: number): string {
-	return amount + "₮";
+	return `${amount}₮`;
 }
 
 // Order status styles for badges and left-border colors

@@ -708,7 +708,7 @@ export const order = router({
 	getOrderCount: adminProcedure
 		.input(z.object({ timeRange: timeRangeSchema }))
 		.query(async ({ ctx, input }) => {
-			return await getOrderCount( input.timeRange,ctx);
+			return await getOrderCount(input.timeRange, ctx);
 		}),
 
 	getPendingOrders: adminProcedure.query(async ({ ctx }) => {

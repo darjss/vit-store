@@ -248,14 +248,12 @@ export const purchase = router({
 							);
 					}
 					for (const product of input.data.products) {
-						await tx
-							.insert(PurchasesTable)
-							.values({
-								id: input.id,
-								productId: product.productId,
-								quantityPurchased: product.quantity,
-								unitCost: product.unitCost,
-							});
+						await tx.insert(PurchasesTable).values({
+							id: input.id,
+							productId: product.productId,
+							quantityPurchased: product.quantity,
+							unitCost: product.unitCost,
+						});
 						const currentProduct = await tx.query.ProductsTable.findFirst({
 							where: and(
 								eq(ProductsTable.id, product.productId),

@@ -11,9 +11,9 @@ import Loader from "@/components/loader";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import "../index.css";
-import type { Session } from "../lib/types";
 import AppError from "@/components/errors/app-error";
 import NotFound from "@/components/errors/not-found";
+import type { Session } from "../lib/types";
 export interface RouterAppContext {
 	trpc: typeof trpc;
 	queryClient: QueryClient;

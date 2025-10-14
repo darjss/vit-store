@@ -4,17 +4,13 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { Loader2, Search, X, Plus } from "lucide-react";
+import { Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-//
-import { Input } from "@/components/ui/input";
-import { PRODUCT_PER_PAGE } from "@/lib/constants";
-import { trpc } from "@/utils/trpc";
-import { DataPagination } from "@/components/data-pagination";
-import CustomerForm from "@/components/customers/customer-form";
 import CustomerCard from "@/components/customers/customer-card";
+import CustomerForm from "@/components/customers/customer-form";
+import { DataPagination } from "@/components/data-pagination";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -23,6 +19,10 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+//
+import { Input } from "@/components/ui/input";
+import { PRODUCT_PER_PAGE } from "@/lib/constants";
+import { trpc } from "@/utils/trpc";
 //
 
 export const Route = createFileRoute("/_dash/customers")({

@@ -10,6 +10,7 @@ import {
 	UsersTable,
 } from "@/db/schema";
 import type { Context } from "@/lib/context";
+import { db } from "@/lib/db";
 import type {
 	AddSalesType,
 	PaymentProviderType,
@@ -22,7 +23,6 @@ import {
 	shapeOrderResults,
 } from "@/lib/utils";
 import type { timeRangeType } from "@/lib/zod/schema";
-import { db } from "@/lib/db";
 
 export const addSale = async (
 	sale: AddSalesType,
@@ -69,7 +69,7 @@ export const updateStock = async (
 	tx?: TransactionType,
 ) => {
 	try {
-		const result = await (tx ?? ctx.db)
+		const _result = await (tx ?? ctx.db)
 			.update(ProductsTable)
 			.set({
 				stock: sql`${ProductsTable.stock} ${type === "add" ? "+" : "-"} ${numberToUpdate}`,
@@ -158,8 +158,8 @@ export const getMostSoldProducts = async (
 		.select({
 			productId: SalesTable.productId,
 			totalSold: sql<number>`SUM(${SalesTable.quantitySold})`,
-			
-      revenue: sql<number>`${SalesTable.quantitySold}*${SalesTable.sellingPrice}`,
+
+			revenue: sql<number>`${SalesTable.quantitySold}*${SalesTable.sellingPrice}`,
 			name: ProductsTable.name,
 			imageUrl: ProductImagesTable.url,
 		})
@@ -224,7 +224,7 @@ export const getOrderCountForWeek = async (ctx: Context) => {
 			return {
 				orderCount: orderResult?.orderCount ?? 0,
 				salesCount: salesResult?.salesCount ?? 0,
-				date: date.getMonth() + 1 + "/" + date.getDate(),
+				date: `${date.getMonth() + 1}/${date.getDate()}`,
 			};
 		});
 	} catch (e) {
@@ -255,10 +255,7 @@ export const getAverageOrderValue = async (
 	return total / order.length;
 };
 
-export const getOrderCount = async (
- 	timeRange: timeRangeType,
-	ctx: Context,
-) => {
+export const getOrderCount = async (timeRange: timeRangeType, ctx: Context) => {
 	try {
 		const result = await ctx.db
 			.select({
@@ -381,7 +378,7 @@ export const getRevenue = async (timeRange: timeRangeType, ctx: Context) => {
 			})
 			.from(SalesTable)
 			.where(gte(SalesTable.createdAt, startDate));
-		return result
+		return result;
 	} catch (e) {
 		console.error(e);
 	}

@@ -1,15 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import {
-	TriangleAlert,
-	Home,
-	RotateCcw,
 	ArrowLeft,
 	ChevronDown,
+	Home,
+	RotateCcw,
+	TriangleAlert,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -18,6 +17,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Text } from "@/components/ui/text";
 
 interface AppErrorProps {
 	error: unknown;

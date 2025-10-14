@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_dash/")({
 });
 
 function HomeComponent() {
-	const [selectedPeriod, setSelectedPeriod] = useState<timeRangeType>("daily");
+	const [selectedPeriod, _setSelectedPeriod] = useState<timeRangeType>("daily");
 
 	return (
 		<div className="space-y-6 p-2 sm:p-6">

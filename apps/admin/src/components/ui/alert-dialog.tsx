@@ -1,4 +1,4 @@
-import {AlertDialog as AlertDialogPrimitive} from "radix-ui";
+import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 
 import type * as React from "react";
 

@@ -1,17 +1,17 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, MapPin, Phone } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
+import { useState } from "react";
 import RowAction from "@/components/row-actions";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import CustomerForm from "./customer-form";
+import { Text } from "@/components/ui/text";
 import { trpc } from "@/utils/trpc";
+import CustomerForm from "./customer-form";
 
 type Customer = {
 	phone: number;
@@ -71,8 +71,8 @@ const CustomerCard = ({ customer }: { customer: Customer }) => {
 					</div>
 
 					<div className="mt-2 flex items-start gap-2">
-						<MapPin className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
-						<Text className="text-sm font-medium leading-snug">
+						<MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+						<Text className="font-medium text-sm leading-snug">
 							{customer.address || "Хаяг байхгүй"}
 						</Text>
 					</div>

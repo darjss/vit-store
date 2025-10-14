@@ -7,8 +7,8 @@ import {
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { CustomerSelectType, UserSelectType } from "@/db/schema";
 import type { Context } from "../context";
-import type { HonoContextType, SessionConfig } from "../types";
 import { kv } from "../db";
+import type { HonoContextType, SessionConfig } from "../types";
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	id: string;
@@ -148,7 +148,7 @@ export function createSessionManager<
 	}
 
 	function setSessionTokenCookie(
-		c:HonoContextType ,
+		c: HonoContextType,
 		token: string,
 		expiresAt: Date,
 	): void {

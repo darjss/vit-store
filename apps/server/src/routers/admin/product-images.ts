@@ -44,7 +44,7 @@ export const productImages = router({
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
 				const response = await fetch(
-					process.env.BACKEND_URL + "/upload/image/urls",
+					`${process.env.BACKEND_URL}/upload/image/urls`,
 					{
 						method: "POST",
 						headers: {
@@ -201,8 +201,7 @@ export const productImages = router({
 						createdAt: ProductImagesTable.createdAt,
 					})
 					.from(ProductImagesTable)
-					.where(eq(ProductImagesTable.productId, productId))
-					.where(isNull(ProductImagesTable.deletedAt))
+					.where(and(eq(ProductImagesTable.productId, productId),isNull(ProductImagesTable.deletedAt)))
 					.orderBy(ProductImagesTable.isPrimary);
 
 				return images;

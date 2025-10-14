@@ -107,12 +107,12 @@ export const auth = router({
 				}
 
 				// Create session
-				const { session, token } = await createSession(user, ctx);
+				const { session, token } = await createSession(user);
 
 				// Always set cookie since we assume server can set it
 				console.log("Setting session cookie for user:", user.phone);
 
-				setSessionTokenCookie(ctx, token, session.expiresAt);
+				setSessionTokenCookie(ctx.c, token, session.expiresAt);
 				console.log("Session cookie set via resHeaders");
 
 				return {

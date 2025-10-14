@@ -271,13 +271,11 @@ export const product = router({
 					);
 					await Promise.allSettled(deletePromises);
 					const insertPromises = filteredImages.map((image, index) =>
-						ctx.db
-							.insert(ProductImagesTable)
-							.values({
-								productId: input.id,
-								url: image.url,
-								isPrimary: index === 0,
-							}),
+						ctx.db.insert(ProductImagesTable).values({
+							productId: input.id,
+							url: image.url,
+							isPrimary: index === 0,
+						}),
 					);
 					await Promise.allSettled(insertPromises);
 				}

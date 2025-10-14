@@ -50,12 +50,16 @@ export const calculateExpiration = (timerange: timeRangeType) => {
 };
 
 export const getTtlForTimeRange = (timeRange?: timeRangeType) => {
-  switch (timeRange) {
-    case "daily": return 60*60;   
-    case "weekly": return 60*60*24;  
-    case "monthly": return 60*60*24*7; 
-    default: return 300;          
-  }
+	switch (timeRange) {
+		case "daily":
+			return 60 * 60;
+		case "weekly":
+			return 60 * 60 * 24;
+		case "monthly":
+			return 60 * 60 * 24 * 7;
+		default:
+			return 300;
+	}
 };
 
 export const getDaysFromTimeRange = (timerange: timeRangeType) => {
@@ -126,12 +130,7 @@ export interface ShapedOrder {
 	paymentProvider: PaymentProviderType;
 }
 
-
-
-export const shapeOrderResult = (
-	result: OrderResult ,
-)  => {
-
+export const shapeOrderResult = (result: OrderResult) => {
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 	if (result.payments[0] === undefined) {
 		throw new Error("No payment info found");
@@ -139,7 +138,7 @@ export const shapeOrderResult = (
 	return {
 		id: result.id,
 		orderNumber: result.orderNumber,
-		customerPhone: result.customerPhone+"",
+		customerPhone: `${result.customerPhone}`,
 		status: result.status,
 		total: result.total,
 		notes: result.notes,
@@ -158,24 +157,19 @@ export const shapeOrderResult = (
 		paymentProvider: result.payments[0]?.provider,
 	};
 };
-export const shapeOrderResults = (
-	results: OrderResult[],
-) => {
-	
-
+export const shapeOrderResults = (results: OrderResult[]) => {
 	return results?.map((result) => {
-
 		result.payments.sort(
 			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 		);
 		if (result.payments[0] === undefined) {
-      console.log("No payment info found");
+			console.log("No payment info found");
 			throw new Error("No payment info found");
 		}
 		return {
 			id: result.id,
 			orderNumber: result.orderNumber,
-			customerPhone: result.customerPhone+"",
+			customerPhone: `${result.customerPhone}`,
 			status: result.status,
 			total: result.total,
 			notes: result.notes,

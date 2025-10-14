@@ -14,7 +14,7 @@ export const mockData = {
 	dailyVisits: 1247,
 	weeklyVisits: 8234,
 	monthlyVisits: 32847,
-	totalInventoryValue:1100000,
+	totalInventoryValue: 1100000,
 	revenueData: [
 		{ date: "01/01", revenue: 4200000 },
 		{ date: "01/02", revenue: 3800000 },

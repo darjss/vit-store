@@ -1,3 +1,4 @@
+import type { timeRangeType } from "@server/lib/zod/schema";
 import { BarChart3 } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import {
 	ChartTooltipContent,
 } from "@/components/ui/chart";
 import { getRevenueData } from "@/lib/utils";
-import type { timeRangeType } from "@server/lib/zod/schema";
 
 interface SalesChartProps {
 	selectedPeriod: timeRangeType;

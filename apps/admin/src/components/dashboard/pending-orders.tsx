@@ -3,7 +3,6 @@ import { Image } from "@unpic/react";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/utils/trpc";
-import { OrderStatusBadge } from "./order-status-badge";
 
 export function PendingOrders() {
 	const { data: orders } = useSuspenseQuery(

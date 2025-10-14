@@ -1,7 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
-import { Dialog as ReactDialog } from "radix-ui";
-import { VisuallyHidden } from "radix-ui";
+import { Dialog as ReactDialog, VisuallyHidden } from "radix-ui";
 import React, { type HTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
