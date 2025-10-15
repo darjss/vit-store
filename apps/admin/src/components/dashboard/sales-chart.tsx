@@ -1,19 +1,21 @@
-import type { timeRangeType } from "@server/lib/zod/schema";
+import { useSearch } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
+	Bar,
+	BarChart,
+	CartesianGrid,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRevenueData } from "@/lib/utils";
 
-interface SalesChartProps {
-	selectedPeriod: timeRangeType;
-}
+export function SalesChart() {
+	const { timeRange } = useSearch({ from: "/_dash/" });
+	const data = getRevenueData(timeRange);
 
-export function SalesChart({ selectedPeriod }: SalesChartProps) {
 	return (
 		<Card className="border-2 border-border shadow-shadow">
 			<CardHeader className="border-border border-b-2 bg-secondary-background">
@@ -23,29 +25,52 @@ export function SalesChart({ selectedPeriod }: SalesChartProps) {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="p-4">
-				<ChartContainer
-					config={{
-						revenue: {
-							label: "Орлого",
-							color: "hsl(var(--chart-1))",
-						},
-					}}
-					className="h-[300px]"
-				>
+				<div className="h-[300px] w-full">
 					<ResponsiveContainer width="100%" height="100%">
-						<LineChart data={getRevenueData(selectedPeriod)}>
-							<XAxis dataKey="date" />
-							<YAxis />
-							<ChartTooltip content={<ChartTooltipContent />} />
-							<Line
-								type="monotone"
-								dataKey="revenue"
-								stroke="hsl(var(--chart-1))"
-								strokeWidth={3}
+						<BarChart
+							data={data}
+							margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+						>
+							<CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+							<XAxis
+								dataKey="date"
+								tick={{ fontSize: 12 }}
+								tickLine={false}
+								axisLine={false}
 							/>
-						</LineChart>
+							<YAxis
+								tick={{ fontSize: 12 }}
+								tickLine={false}
+								axisLine={false}
+							/>
+							<Tooltip
+								content={({ active, payload, label }) => {
+									if (!active || !payload?.length) return null;
+
+									return (
+										<div className="rounded-lg border border-border bg-background p-3 shadow-lg">
+											<p className="mb-2 font-medium text-sm">{label}</p>
+											<p className="text-sm">
+												<span className="text-muted-foreground">Орлого: </span>
+												<span className="font-semibold">
+													{new Intl.NumberFormat("mn-MN", {
+														style: "currency",
+														currency: "MNT",
+													}).format(payload[0].value as number)}
+												</span>
+											</p>
+										</div>
+									);
+								}}
+							/>
+							<Bar
+								dataKey="revenue"
+								fill="hsl(var(--chart-1))"
+								radius={[8, 8, 0, 0]}
+							/>
+						</BarChart>
 					</ResponsiveContainer>
-				</ChartContainer>
+				</div>
 			</CardContent>
 		</Card>
 	);

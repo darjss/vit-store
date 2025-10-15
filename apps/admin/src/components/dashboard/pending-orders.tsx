@@ -2,8 +2,9 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
 import { Clock, MapPin, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-
+3
 export function PendingOrders() {
 	const { data: orders } = useSuspenseQuery(
 		trpc.order.getPendingOrders.queryOptions(),
@@ -22,31 +23,35 @@ export function PendingOrders() {
 					{orders.map((order) => (
 						<div
 							key={order.id}
-							className="group rounded-lg border-2 border-border bg-card p-3 shadow-md transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-lg sm:p-4"
+							className="group rounded-lg border-2 border-border bg-card p-4 shadow-md transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-lg sm:p-6"
 						>
-							<div className="flex flex-col gap-3">
-								<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-									<div className="flex flex-col gap-2 text-sm">
-										<div className="flex items-start gap-2">
+							<div className="flex flex-col gap-4">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+									<div className="flex flex-col gap-3 text-sm">
+										<div className="flex items-start gap-3">
 											<MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
 											<span className="font-medium text-foreground leading-tight">
 												{order.address}
 											</span>
 										</div>
-										<div className="flex items-center gap-2">
+										<div className="flex items-center gap-3">
 											<Phone className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
 											<span className="text-foreground">
 												{order.customerPhone}
+											</span>
+											<Clock className="ml-4 h-3.5 w-3.5 text-muted-foreground" />
+											<span className="text-muted-foreground text-xs">
+												{formatDateToText(order.createdAt)}
 											</span>
 										</div>
 									</div>
 								</div>
 
-								<div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-									{order.products?.slice(0, 4).map((product, index) => (
+								<div className="flex flex-wrap items-center gap-3">
+									{order.products?.map((product, index) => (
 										<div
 											key={product.productId || index}
-											className="flex flex-col items-center gap-1.5 rounded-md border-2 border-border bg-background p-2 shadow-sm transition-shadow hover:shadow-md sm:flex-row"
+											className="flex items-center gap-2 rounded-md border-2 border-border bg-background p-2 shadow-sm transition-shadow hover:shadow-md"
 										>
 											{product.imageUrl ? (
 												<Image
@@ -71,20 +76,8 @@ export function PendingOrders() {
 											</span>
 										</div>
 									)}
-								</div>
-
-								<div className="flex flex-col gap-2 border-border border-t-2 pt-3 sm:flex-row sm:items-center sm:justify-between">
-									<div className="flex items-center gap-2">
-										<Clock className="h-3.5 w-3.5 text-muted-foreground" />
-										<span className="text-muted-foreground text-xs">
-											{new Date(order.createdAt).toLocaleTimeString([], {
-												hour: "2-digit",
-												minute: "2-digit",
-											})}
-										</span>
-									</div>
-									<div className="inline-flex w-fit items-center rounded-md border-2 border-border bg-primary px-3 py-1.5 shadow-sm">
-										<span className="font-bold font-heading text-lg text-primary-foreground">
+									<div className="ml-auto inline-flex items-center rounded-md border-2 border-border bg-primary px-3 py-1.5 shadow-sm">
+										<span className="font-bold font-heading text-primary-foreground text-sm">
 											₮{order.total.toLocaleString()}
 										</span>
 									</div>

@@ -154,18 +154,18 @@ export function formatDateToText(d: Date, now = new Date()): string {
 		return `өчигдөр ${time}`;
 	}
 
-	const daysText = `${dayDiff} хоногийн өмнө`;
+	// const daysText = `${dayDiff} хоногийн өмнө`;
 
-	if (dayDiff <= 2) {
-		return `${daysText} ${time}`;
-	}
+	// if (dayDiff <= 2) {
+	// 	return `${daysText} ${time}`;
+	// }
 
 	const yyyy = d.getFullYear();
 	const mmth = pad(d.getMonth() + 1);
 	const dd = pad(d.getDate());
 	const datePart = `${yyyy}-${mmth}-${dd}`;
 
-	return `${daysText} — ${datePart} ${time}`;
+	return `${datePart} ${time}`;
 }
 
 export const getRevenueData = (

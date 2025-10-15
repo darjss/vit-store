@@ -12,25 +12,30 @@ import {
 } from "./utils";
 
 export const sales = router({
-	analytics: adminCachedProcedure
-		.input(
-			z.object({
-				timeRange: timeRangeSchema,
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			try {
-				const analytics = await getAnalyticsForHome(ctx, input.timeRange);
-				return analytics;
-			} catch (error) {
-				console.error("Error getting analytics for home:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to fetch analytics",
-					cause: error,
-				});
-			}
-		}),
+	analytics: adminCachedProcedure.query(async ({ ctx }) => {
+		try {
+			const analyticsDaily = getAnalyticsForHome(ctx, "daily");
+			const analyticsWeekly = getAnalyticsForHome(ctx, "weekly");
+			const analyticsMonthly = getAnalyticsForHome(ctx, "monthly");
+			const analytics = await Promise.all([
+				analyticsDaily,
+				analyticsWeekly,
+				analyticsMonthly,
+			]);
+			return {
+				daily: analytics[0],
+				weekly: analytics[1],
+				monthly: analytics[2],
+			};
+		} catch (error) {
+			console.error("Error getting analytics for home:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch analytics",
+				cause: error,
+			});
+		}
+	}),
 
 	topProducts: adminCachedProcedure
 		.input(

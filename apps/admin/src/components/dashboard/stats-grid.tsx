@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
 	Activity,
 	BarChart3,
@@ -9,7 +10,9 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { trpc } from "@/utils/trpc";
 import { StatCard } from "./stat-card";
+import { formatCurrency } from "@/lib/utils";
 
 const mockData = {
 	dailyRevenue: 2450000,
@@ -24,10 +27,11 @@ const mockData = {
 };
 
 export function StatsGrid() {
+	const { data: stats } = useSuspenseQuery(trpc.sales.analytics.queryOptions());
 	const todayStats = [
 		{
 			title: "Өдрийн орлого",
-			value: `₮${mockData.dailyRevenue.toLocaleString()}`,
+			value: formatCurrency(stats.daily.revenue),
 			change: 12.5,
 			changeType: "increase" as const,
 			icon: DollarSign,
@@ -35,7 +39,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "Өдрийн захиалга",
-			value: mockData.dailyOrders,
+			value: formatCurrency(stats.daily.salesCount),
 			change: 15.3,
 			changeType: "increase" as const,
 			icon: ShoppingCart,
@@ -43,7 +47,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "Өдрийн зочин",
-			value: mockData.dailyVisits.toLocaleString(),
+			value: formatCurrency(stats.daily.profit),
 			change: 8.7,
 			changeType: "increase" as const,
 			icon: Eye,
@@ -54,7 +58,7 @@ export function StatsGrid() {
 	const weekStats = [
 		{
 			title: "7 хоногийн орлого",
-			value: `₮${mockData.weeklyRevenue.toLocaleString()}`,
+			value: formatCurrency(stats.weekly.revenue),
 			change: 8.2,
 			changeType: "increase" as const,
 			icon: BarChart3,
@@ -62,7 +66,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "7 хоногийн захиалга",
-			value: mockData.weeklyOrders,
+			value: formatCurrency(stats.weekly.salesCount),
 			change: 6.7,
 			changeType: "increase" as const,
 			icon: Package,
@@ -70,7 +74,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "7 хоногийн зочин",
-			value: mockData.weeklyVisits.toLocaleString(),
+			value: formatCurrency(stats.weekly.profit),
 			change: 12.3,
 			changeType: "increase" as const,
 			icon: Eye,
@@ -81,7 +85,7 @@ export function StatsGrid() {
 	const monthStats = [
 		{
 			title: "Сарын орлого",
-			value: `₮${mockData.monthlyRevenue.toLocaleString()}`,
+			value: formatCurrency(stats.monthly.revenue),
 			change: -3.1,
 			changeType: "decrease" as const,
 			icon: TrendingUp,
@@ -89,7 +93,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "Сарын захиалга",
-			value: mockData.monthlyOrders,
+      value: formatCurrency(stats.monthly.salesCount),
 			change: 2.1,
 			changeType: "increase" as const,
 			icon: Activity,
@@ -97,7 +101,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "Сарын зочин",
-			value: mockData.monthlyVisits.toLocaleString(),
+			value: formatCurrency(stats.monthly.profit),
 			change: 5.4,
 			changeType: "increase" as const,
 			icon: Eye,
