@@ -129,9 +129,7 @@ export const ProductsTable = createTable(
 		ingredients: text("ingredients", { mode: "json" }).$type<string[] | null>(),
 		seoTitle: text("seo_title", { length: 256 }),
 		seoDescription: text("seo_description", { length: 512 }),
-		minStock: int("min_stock", { mode: "number" }).default(0).notNull(),
 		weightGrams: int("weight_grams", { mode: "number" }).default(0).notNull(),
-		originCountry: text("origin_country", { length: 3 }),
 		createdAt: int("created_at", { mode: "timestamp" })
 			.default(sql`(unixepoch())`)
 			.notNull(),

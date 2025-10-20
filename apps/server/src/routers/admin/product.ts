@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
+import { addProductSchema, updateProductSchema } from "@vit-store/shared";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "@/db/schema";
 import { PRODUCT_PER_PAGE, productFields } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
-import { addProductSchema, updateProductSchema } from "@vit-store/shared";
 
 export const product = router({
 	searchProductByName: adminProcedure
@@ -122,13 +122,11 @@ export const product = router({
 				}
 				const productId = productResult.id;
 				const imagePromises = images.map((image, index) =>
-					ctx.db
-						.insert(ProductImagesTable)
-						.values({
-							productId: productId,
-							url: image.url,
-							isPrimary: index === 0,
-						}),
+					ctx.db.insert(ProductImagesTable).values({
+						productId: productId,
+						url: image.url,
+						isPrimary: index === 0,
+					}),
 				);
 				await Promise.all(imagePromises);
 				return { message: "Product added successfully" };
@@ -401,7 +399,10 @@ export const product = router({
 		.input(
 			v.object({
 				page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+				pageSize: v.optional(
+					v.pipe(v.number(), v.integer(), v.minValue(1)),
+					PRODUCT_PER_PAGE,
+				),
 				brandId: v.optional(v.number()),
 				categoryId: v.optional(v.number()),
 				sortField: v.optional(v.string()),
