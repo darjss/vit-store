@@ -1,4 +1,9 @@
 ---
+import BenefitsSection from "@/components/BenefitsSection.astro";
+import CategoryGrid from "@/components/CategoryGrid.astro";
+import CTASection from "@/components/CTASection.astro";
+import Hero from "@/components/Hero.astro";
+import ProductSection from "@/components/ProductSection.astro";
 import Layout from "@/layouts/Layout.astro";
 
 const featuredProducts = [
@@ -8,8 +13,7 @@ const featuredProducts = [
 		badge: "Онцлох",
 		price: 45.99,
 		originalPrice: null,
-		rating: 4.9,
-		reviews: 2341,
+		specs: ["60 servings", "Non-GMO", "Third-party tested"],
 		brand: "Nordic Naturals",
 		color: "#FFE066",
 		inStock: true,
@@ -20,8 +24,7 @@ const featuredProducts = [
 		badge: "Онцлох",
 		price: 38.99,
 		originalPrice: null,
-		rating: 4.8,
-		reviews: 1876,
+		specs: ["90 capsules", "Gluten-free", "GMP Certified"],
 		brand: "Thorne",
 		color: "#FFF991",
 		inStock: true,
@@ -32,8 +35,7 @@ const featuredProducts = [
 		badge: "Онцлох",
 		price: 52.99,
 		originalPrice: null,
-		rating: 4.9,
-		reviews: 3421,
+		specs: ["30 servings", "Vegan", "Organic"],
 		brand: "Garden of Life",
 		color: "#FFD84D",
 		inStock: true,
@@ -44,8 +46,7 @@ const featuredProducts = [
 		badge: "Онцлох",
 		price: 42.99,
 		originalPrice: null,
-		rating: 4.7,
-		reviews: 1523,
+		specs: ["60 caps", "Shelf-stable", "Third-party tested"],
 		brand: "Renew Life",
 		color: "#FFEE88",
 		inStock: true,
@@ -59,8 +60,7 @@ const recentProducts = [
 		badge: "Шинэ",
 		price: 35.99,
 		originalPrice: null,
-		rating: 4.8,
-		reviews: 892,
+		specs: ["20 servings", "Grass-fed", "Paleo-friendly"],
 		brand: "Vital Proteins",
 		color: "#FFB5E8",
 		inStock: true,
@@ -71,8 +71,7 @@ const recentProducts = [
 		badge: "Шинэ",
 		price: 24.99,
 		originalPrice: null,
-		rating: 4.9,
-		reviews: 1234,
+		specs: ["120 tablets", "Non-GMO", "Highly absorbable"],
 		brand: "NOW Foods",
 		color: "#B4F8C8",
 		inStock: true,
@@ -83,8 +82,7 @@ const recentProducts = [
 		badge: "Шинэ",
 		price: 28.99,
 		originalPrice: null,
-		rating: 4.7,
-		reviews: 756,
+		specs: ["60 capsules", "With BioPerine", "Vegan"],
 		brand: "Nature Made",
 		color: "#FFC6A5",
 		inStock: true,
@@ -95,8 +93,7 @@ const recentProducts = [
 		badge: "Шинэ",
 		price: 26.99,
 		originalPrice: null,
-		rating: 4.8,
-		reviews: 1089,
+		specs: ["60 servings", "KSM-66®", "Third-party tested"],
 		brand: "KSM-66",
 		color: "#FFABAB",
 		inStock: true,
@@ -110,8 +107,7 @@ const discountProducts = [
 		badge: "-30%",
 		price: 13.99,
 		originalPrice: 19.99,
-		rating: 4.7,
-		reviews: 2156,
+		specs: ["100 tablets", "Non-GMO", "Immune support"],
 		brand: "Solgar",
 		color: "#FFF5BA",
 		inStock: true,
@@ -122,8 +118,7 @@ const discountProducts = [
 		badge: "-25%",
 		price: 14.99,
 		originalPrice: 19.99,
-		rating: 4.6,
-		reviews: 983,
+		specs: ["60 capsules", "Gluten-free", "High absorption"],
 		brand: "Thorne",
 		color: "#E7FFAC",
 		inStock: true,
@@ -134,8 +129,7 @@ const discountProducts = [
 		badge: "-20%",
 		price: 23.99,
 		originalPrice: 29.99,
-		rating: 4.8,
-		reviews: 1567,
+		specs: ["120 caps", "Vegan", "Third-party tested"],
 		brand: "Jarrow Formulas",
 		color: "#CAFFBF",
 		inStock: true,
@@ -146,8 +140,7 @@ const discountProducts = [
 		badge: "-35%",
 		price: 25.99,
 		originalPrice: 39.99,
-		rating: 4.9,
-		reviews: 1823,
+		specs: ["60 softgels", "Non-GMO", "GMP Certified"],
 		brand: "Doctor's Best",
 		color: "#A0C4FF",
 		inStock: true,
@@ -192,234 +185,42 @@ const benefits = [
 ---
 
 <Layout>
-	<!-- Hero Section -->
-	<section class="relative overflow-hidden border-b-4 border-border py-12 md:py-20">
-		<div class="container mx-auto px-4">
-			<div class="max-w-3xl relative z-20">
-				<h1 class="text-5xl md:text-7xl font-black uppercase mb-6 tracking-tight">
-					Америкийн чанартай витаминууд 
-				</h1>
-				<p class="text-xl md:text-2xl mb-8">
-					АНУ-ын итгэмжлэгдсэн брендуудаас шууд импортолсон, таны эрүүл мэндэд зориулсан өндөр чанарын бүтээгдэхүүн.
-				</p>
-				<div class="flex flex-wrap gap-4 relative z-30">
-					<a href="/products" class="inline-block px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg uppercase tracking-wider rounded-none border-4 border-border shadow-[8px_8px_0_0_#000] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:scale-[0.98]">
-						Дэлгүүр үзэх
-					</a>
-				</div>
-			</div>
-		</div>
+	<Hero />
 
-		<!-- Brand Logo Animations - Right Side Only -->
-		<div class="absolute inset-0 w-full h-full -z-5 overflow-hidden pointer-events-none">
-			<!-- Top Right -->
-			<img src="/logo1.png" alt="Brand Logo" class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-70 animate-float-1 top-[10%] right-[8%] rotate-[10deg] z-10" />
-			<img src="/logo4.png" alt="Brand Logo" class="hidden md:block absolute w-20 md:w-28 lg:w-32 opacity-65 animate-float-2 top-[5%] right-[25%] -rotate-[12deg] z-10" />
-			
-			<!-- Middle Right -->
-			<img src="/logo8.png" alt="Brand Logo" class="hidden sm:block absolute w-24 md:w-32 lg:w-36 opacity-75 animate-float-3 top-[35%] right-[5%] -rotate-[5deg] z-10 filter drop-shadow-lg" />
-			<img src="/logo7.png" alt="Brand Logo" class="hidden lg:block absolute w-20 md:w-24 lg:w-28 opacity-70 animate-float-1 top-[40%] right-[30%] rotate-[5deg] z-10" />
-			
-			<!-- Bottom Right -->
-			<img src="/logo2.png" alt="Brand Logo" class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-70 animate-float-2 bottom-[15%] right-[15%] -rotate-[5deg] z-10" />
-			<img src="/logo3.png" alt="Brand Logo" class="hidden sm:block absolute w-20 md:w-28 lg:w-32 opacity-65 animate-float-3 bottom-[8%] right-[35%] rotate-[8deg] z-10" />
-			
-			<!-- Mobile - Just 2 logos on right -->
-			<img src="/logo1.png" alt="Brand Logo" class="block sm:hidden absolute w-20 opacity-60 animate-float-1 top-[20%] right-[5%] rotate-[10deg] z-10" />
-			<img src="/logo2.png" alt="Brand Logo" class="block sm:hidden absolute w-20 opacity-60 animate-float-2 bottom-[20%] right-[8%] -rotate-[5deg] z-10" />
-		</div>
+	<ProductSection 
+		title="Онцлох бүтээгдэхүүн"
+		subtitle="Манай шилдэг сонголтууд"
+		products={featuredProducts}
+		filterLink="filter=featured"
+		badgeStyle="featured"
+	/>
 
-		<div class="absolute -right-20 bottom-0 w-80 h-80 bg-accent/30 rounded-full blur-3xl -z-10"></div>
-		<div class="absolute -top-40 -left-40 w-96 h-96 bg-primary/20 rounded-full blur-3xl -z-10"></div>
-	</section>
+	<ProductSection 
+		title="Шинэ ирсэн бүтээгдэхүүн"
+		subtitle="Саяхан нэмэгдсэн"
+		products={recentProducts}
+		filterLink="filter=recent"
+		badgeStyle="new"
+		bgClass="bg-muted/30"
+	/>
 
-	<!-- Featured Products -->
-	<section id="featured" class="relative py-12">
-		<div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-8 flex items-end justify-between">
-				<div>
-					<h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2">Онцлох бүтээгдэхүүн</h2>
-					<p class="text-base text-black/70">Манай шилдэг сонголтууд</p>
-				</div>
-				<a href="/products?filter=featured" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 border-2 border-black font-bold uppercase text-sm hover:bg-primary transition-colors">
-					Бүгдийг харах →
-				</a>
-			</div>
-			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-				{featuredProducts.map((p) => (
-					<a href={`/product/${p.id}`} class="group relative block rounded-sm border-4 border-black bg-white shadow-[8px_8px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[4px] hover:translate-y-[4px] transition-all focus:outline-none focus:ring-4 focus:ring-black/40" aria-label={`${p.name} by ${p.brand}`}>
-						<div class="relative aspect-[4/3] overflow-hidden border-b-4 border-black" style={`background:${p.color}`}>
-							<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]"></div>
-							<div class="absolute left-3 top-3 rounded-sm border-2 border-black bg-secondary text-secondary-foreground px-3 py-1.5 text-xs font-black uppercase shadow-[3px_3px_0_0_#000]">
-								⭐ {p.badge}
-							</div>
-							<div class="absolute bottom-3 right-3 rounded-full border-2 border-black bg-white px-3 py-1 text-[10px] font-black uppercase shadow-[3px_3px_0_0_#000]">{p.brand}</div>
-						</div>
-						<div class="p-5">
-							<h3 class="mb-2 text-lg font-black leading-snug group-hover:underline">{p.name}</h3>
-							<div class="mb-3 flex items-center gap-2">
-								<div class="flex items-center">
-									<span class="text-yellow-500">★</span>
-									<span class="ml-1 text-sm font-bold">{p.rating.toFixed(1)}</span>
-								</div>
-								<span class="text-xs text-black/50">({p.reviews} үнэлгээ)</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<div class="text-2xl font-black">€{p.price.toFixed(2)}</div>
-								{p.inStock && (
-									<div class="rounded-sm border-2 border-black bg-primary px-2 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000]">Бэлэн</div>
-								)}
-							</div>
-						</div>
-					</a>
-				))}
-			</div>
-		</div>
-	</section>
+	<ProductSection 
+		title="Хөнгөлөлттэй бүтээгдэхүүн"
+		subtitle="Тусгай үнийн саналууд"
+		products={discountProducts}
+		filterLink="filter=discount"
+		badgeStyle="discount"
+		disclaimer="Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу."
+	/>
 
-	<!-- Recent Products -->
-	<section id="recent" class="relative py-12 bg-muted/30">
-		<div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-8 flex items-end justify-between">
-				<div>
-					<h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2">Шинэ ирсэн бүтээгдэхүүн</h2>
-					<p class="text-base text-black/70">Саяхан нэмэгдсэн</p>
-				</div>
-				<a href="/products?filter=recent" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 border-2 border-black font-bold uppercase text-sm hover:bg-primary transition-colors">
-					Бүгдийг харах →
-				</a>
-			</div>
-			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-				{recentProducts.map((p) => (
-					<a href={`/product/${p.id}`} class="group relative block rounded-sm border-4 border-black bg-white shadow-[8px_8px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[4px] hover:translate-y-[4px] transition-all focus:outline-none focus:ring-4 focus:ring-black/40" aria-label={`${p.name} by ${p.brand}`}>
-						<div class="relative aspect-[4/3] overflow-hidden border-b-4 border-black" style={`background:${p.color}`}>
-							<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]"></div>
-							<div class="absolute left-3 top-3 rounded-sm border-2 border-black bg-accent text-accent-foreground px-3 py-1.5 text-xs font-black uppercase shadow-[3px_3px_0_0_#000]">
-								✨ {p.badge}
-							</div>
-							<div class="absolute bottom-3 right-3 rounded-full border-2 border-black bg-white px-3 py-1 text-[10px] font-black uppercase shadow-[3px_3px_0_0_#000]">{p.brand}</div>
-						</div>
-						<div class="p-5">
-							<h3 class="mb-2 text-lg font-black leading-snug group-hover:underline">{p.name}</h3>
-							<div class="mb-3 flex items-center gap-2">
-								<div class="flex items-center">
-									<span class="text-yellow-500">★</span>
-									<span class="ml-1 text-sm font-bold">{p.rating.toFixed(1)}</span>
-								</div>
-								<span class="text-xs text-black/50">({p.reviews} үнэлгээ)</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<div class="text-2xl font-black">€{p.price.toFixed(2)}</div>
-								{p.inStock && (
-									<div class="rounded-sm border-2 border-black bg-primary px-2 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000]">Бэлэн</div>
-								)}
-							</div>
-						</div>
-					</a>
-				))}
-			</div>
-		</div>
-	</section>
+	<CategoryGrid categories={categories} />
 
-	<!-- Discount Products -->
-	<section id="discount" class="relative py-12">
-		<div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-8 flex items-end justify-between">
-				<div>
-					<h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2">Хөнгөлөлттэй бүтээгдэхүүн</h2>
-					<p class="text-base text-black/70">Тусгай үнийн саналууд</p>
-				</div>
-				<a href="/products?filter=discount" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 border-2 border-black font-bold uppercase text-sm hover:bg-destructive/90 hover:text-destructive-foreground transition-colors">
-					Бүгдийг харах →
-				</a>
-			</div>
-			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-				{discountProducts.map((p) => (
-					<a href={`/product/${p.id}`} class="group relative block rounded-sm border-4 border-black bg-white shadow-[8px_8px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[4px] hover:translate-y-[4px] transition-all focus:outline-none focus:ring-4 focus:ring-black/40" aria-label={`${p.name} by ${p.brand}`}>
-						<div class="relative aspect-[4/3] overflow-hidden border-b-4 border-black" style={`background:${p.color}`}>
-							<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]"></div>
-							<div class="absolute left-3 top-3 rounded-sm border-2 border-black bg-destructive text-destructive-foreground px-3 py-1.5 text-xs font-black uppercase shadow-[3px_3px_0_0_#000]">
-								🔥 {p.badge}
-							</div>
-							<div class="absolute bottom-3 right-3 rounded-full border-2 border-black bg-white px-3 py-1 text-[10px] font-black uppercase shadow-[3px_3px_0_0_#000]">{p.brand}</div>
-						</div>
-						<div class="p-5">
-							<h3 class="mb-2 text-lg font-black leading-snug group-hover:underline">{p.name}</h3>
-							<div class="mb-3 flex items-center gap-2">
-								<div class="flex items-center">
-									<span class="text-yellow-500">★</span>
-									<span class="ml-1 text-sm font-bold">{p.rating.toFixed(1)}</span>
-								</div>
-								<span class="text-xs text-black/50">({p.reviews} үнэлгээ)</span>
-							</div>
-							<div class="flex items-center justify-between">
-								<div class="flex items-center gap-2">
-									{p.originalPrice && (
-										<div class="text-lg font-bold text-black/40 line-through">€{p.originalPrice.toFixed(2)}</div>
-									)}
-									<div class="text-2xl font-black text-destructive">€{p.price.toFixed(2)}</div>
-								</div>
-								{p.inStock && (
-									<div class="rounded-sm border-2 border-black bg-primary px-2 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000]">Бэлэн</div>
-								)}
-							</div>
-						</div>
-					</a>
-				))}
-			</div>
-			<p class="mt-6 text-xs font-semibold text-black/60 text-center">Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу.</p>
-		</div>
-	</section>
+	<BenefitsSection benefits={benefits} />
 
-	<!-- Category Grid -->
-	<section class="container mx-auto px-4 py-16">
-		<div class="mb-12 text-center">
-			<h2 class="text-4xl md:text-5xl font-black mb-4">Ангилал</h2>
-			<p class="text-lg font-semibold text-black/70">Өөрт хэрэгтэй бүтээгдэхүүнээ олоорой</p>
-		</div>
-		<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-			{categories.map((c, i) => (
-				<div class={`${c.color} border-4 border-black p-8 hover:shadow-[8px_8px_0_0_#000] transition-transform hover:-translate-y-1`}>
-					<div class="bg-white border-4 border-black w-16 h-16 flex items-center justify-center mb-4">
-						<span class="text-xl font-black">{i + 1}</span>
-					</div>
-					<h3 class="font-black text-xl mb-2">{c.title}</h3>
-					<p class="text-sm font-bold">{c.description}</p>
-				</div>
-			))}
-		</div>
-	</section>
-
-	<!-- Benefits Section -->
-	<section class="container mx-auto px-4 py-16">
-		<div class="bg-white border-4 border-black p-8 md:p-12 shadow-[8px_8px_0_0_#000]">
-			<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-				{benefits.map((b) => (
-					<div class="text-center">
-						<div class="bg-primary border-4 border-black w-16 h-16 flex items-center justify-center mx-auto mb-4">
-							<span class="text-lg font-black">✓</span>
-						</div>
-						<h3 class="font-black text-lg mb-2">{b.title}</h3>
-						<p class="text-sm font-bold text-black/70">{b.description}</p>
-					</div>
-				))}
-			</div>
-		</div>
-	</section>
-
-	<!-- CTA -->
-	<section class="py-16 md:py-20">
-		<div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-			<div class="border-4 border-black p-8 md:p-12 bg-primary/20 shadow-[8px_8px_0_0_#000] relative overflow-hidden">
-				<div class="max-w-2xl relative z-10">
-					<h2 class="text-3xl md:text-4xl font-black uppercase mb-6 tracking-tight">Чанартай витамин, нэмэлт тэжээл</h2>
-					<p class="text-lg mb-8">АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлээр эрүүл мэндээ дэмжээрэй.</p>
-					<a href="/products" class="inline-block px-8 py-4 bg-primary hover:bg-primary/90 text-black font-bold text-lg uppercase tracking-wider border-4 border-black shadow-[6px_6px_0_0_#000] transition-transform hover:translate-x-[var(--boxShadowX,0)] hover:translate-y-[var(--boxShadowY,0)] hover:shadow-none">
-						Бүх бүтээгдэхүүн
-					</a>
-				</div>
-				<div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/40 rounded-full blur-3xl"></div>
-			</div>
-		</div>
-	</section>
+	<CTASection 
+		title="Чанартай витамин, нэмэлт тэжээл"
+		description="АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлээр эрүүл мэндээ дэмжээрэй."
+		buttonText="Бүх бүтээгдэхүүн"
+		buttonLink="/products"
+	/>
 </Layout>
