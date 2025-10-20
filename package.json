@@ -11,8 +11,9 @@
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"dev": "turbo dev",
-		"build": "turbo build",
+		"dev": "alchemy dev",
+		"build": "alchemy build",
+		"deploy": "alchemy deploy",
 		"check-types": "turbo check-types",
 		"dev:native": "turbo -F native dev",
 		"dev:web": "turbo -F web dev",
@@ -31,7 +32,8 @@
 		"oxlint": "^1.8.0",
 		"turbo": "^2.5.5",
 		"dotenv": "^17.2.1",
-		"typescript": "^5.0.0"
+		"typescript": "^5.0.0",
+		"alchemy": "latest"
 	},
 	"packageManager": "bun@1.2.19"
 }

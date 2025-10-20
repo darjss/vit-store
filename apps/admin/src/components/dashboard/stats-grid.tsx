@@ -1,4 +1,6 @@
+import type { timeRangeType } from "@server/lib/zod/schema";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
 	Activity,
 	BarChart3,
@@ -10,24 +12,14 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { StatCard } from "./stat-card";
-import { formatCurrency } from "@/lib/utils";
-
-const mockData = {
-	dailyRevenue: 2450000,
-	weeklyRevenue: 17200000,
-	monthlyRevenue: 68500000,
-	dailyOrders: 45,
-	weeklyOrders: 312,
-	monthlyOrders: 1248,
-	dailyVisits: 1247,
-	weeklyVisits: 8234,
-	monthlyVisits: 32847,
-};
 
 export function StatsGrid() {
 	const { data: stats } = useSuspenseQuery(trpc.sales.analytics.queryOptions());
+	const { timeRange } = useSearch({ from: "/_dash/" });
+	const navigate = useNavigate();
 	const todayStats = [
 		{
 			title: "Өдрийн орлого",
@@ -93,7 +85,7 @@ export function StatsGrid() {
 		},
 		{
 			title: "Сарын захиалга",
-      value: formatCurrency(stats.monthly.salesCount),
+			value: formatCurrency(stats.monthly.salesCount),
 			change: 2.1,
 			changeType: "increase" as const,
 			icon: Activity,
@@ -112,20 +104,32 @@ export function StatsGrid() {
 	return (
 		<Card className="w-full border-2 border-border shadow-shadow">
 			<CardContent className="p-4">
-				<Tabs defaultValue="today" className="space-y-4">
+				<Tabs
+					defaultValue={timeRange}
+					className="space-y-4"
+					onValueChange={(value) => {
+						navigate({
+							to: "/",
+							search: (prev) => ({
+								...prev,
+								timeRange: value as timeRangeType,
+							}),
+						});
+					}}
+				>
 					<TabsList className="grid w-full grid-cols-3 border-2 border-border bg-card">
-						<TabsTrigger value="today" className="font-bold">
+						<TabsTrigger value="daily" className="font-bold">
 							Өнөөдөр
 						</TabsTrigger>
-						<TabsTrigger value="week" className="font-bold">
+						<TabsTrigger value="weekly" className="font-bold">
 							7 хоног
 						</TabsTrigger>
-						<TabsTrigger value="month" className="font-bold">
+						<TabsTrigger value="monthly" className="font-bold">
 							Сар
 						</TabsTrigger>
 					</TabsList>
 
-					<TabsContent value="today" className="space-y-4">
+					<TabsContent value="daily" className="space-y-4">
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							{todayStats.map((stat, index) => (
 								<StatCard
@@ -141,7 +145,7 @@ export function StatsGrid() {
 						</div>
 					</TabsContent>
 
-					<TabsContent value="week" className="space-y-4">
+					<TabsContent value="weekly" className="space-y-4">
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							{weekStats.map((stat, index) => (
 								<StatCard
@@ -157,7 +161,7 @@ export function StatsGrid() {
 						</div>
 					</TabsContent>
 
-					<TabsContent value="month" className="space-y-4">
+					<TabsContent value="monthly" className="space-y-4">
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 							{monthStats.map((stat, index) => (
 								<StatCard

@@ -21,7 +21,7 @@ export function TopSellingProducts() {
 			</CardHeader>
 			<CardContent className="max-h-96 space-y-3 overflow-y-auto p-4">
 				{products.length === 0 && <div>No products</div>}
-				{mockData.topProducts.map((product, index) => (
+				{products.map((product, index) => (
 					<div
 						key={product.name}
 						className="border-2 border-border bg-card shadow-sm transition-shadow hover:shadow-md"

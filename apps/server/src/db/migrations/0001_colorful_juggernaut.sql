@@ -1,2 +1,0 @@
--- Migration intentionally left blank to avoid FK conflicts when altering brand table.
--- The necessary indexes are already present or handled by later migrations.

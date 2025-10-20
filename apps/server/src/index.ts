@@ -3,13 +3,12 @@ import { trpcServer } from "@hono/trpc-server";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
-import seedDatabase from "./lib/seed";
 import {
 	createAdminSession,
 	setAdminSessionTokenCookie,
@@ -22,7 +21,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
 app.use(logger());
 const rateLimitMiddleware = rateLimit({
-	rateLimiter: (c) => c.env.RATE_LIMITER,
+	rateLimiter: () => env.RATE_LIMITER,
 	getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
 });
 
@@ -30,7 +29,9 @@ app.use("/*", rateLimitMiddleware);
 app.use(
 	"/*",
 	cors({
-		origin: env.CORS_ORIGIN || "",
+		origin: env.CORS_ORIGIN
+			? env.CORS_ORIGIN.split(",")
+			: ["http://localhost:5173", "https://admin.vitstore.dev"],
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
 	}),
@@ -59,27 +60,22 @@ app.use(
 );
 
 app.get("/admin/login/google", (c) => {
-	console.log("google login", process.env.GOOGLE_CLEINT_ID);
+	console.log("google login", env.GOOGLE_CLIENT_ID);
 	console.log("google callback url", process.env.GOOGLE_CALLBACK_URL);
 	const state = generateState();
 	const codeVerifier = generateCodeVerifier();
+	console.log("generated state and code verifier", state, codeVerifier);
 	const url = google.createAuthorizationURL(state, codeVerifier, [
 		"openid",
 		"profile",
 	]);
-	setCookie(c, "google_oauth_state", state, {
+	console.log("setting google_oauth_temp cookie", { state, codeVerifier });
+	setCookie(c, "google_oauth_temp", JSON.stringify({ state, codeVerifier }), {
 		path: "/",
 		httpOnly: true,
 		secure: true,
 		maxAge: 60 * 10,
-		sameSite: "lax",
-	});
-	setCookie(c, "google_code_verifier", codeVerifier, {
-		path: "/",
-		httpOnly: true,
-		secure: true,
-		maxAge: 60 * 10,
-		sameSite: "lax",
+		sameSite: "none",
 	});
 	return c.redirect(url);
 });
@@ -88,8 +84,31 @@ app.get("/admin/login/google/callback", async (c) => {
 	try {
 		const code = c.req.query("code");
 		const state = c.req.query("state");
-		const storedState = getCookie(c, "google_oauth_state");
-		const codeVerifier = getCookie(c, "google_code_verifier");
+		console.log("All cookies:", c.req.header("cookie"));
+
+		let storedState: string | undefined;
+		let codeVerifier: string | undefined;
+
+		const combined = getCookie(c, "google_oauth_temp");
+		if (combined) {
+			try {
+				const parsed = JSON.parse(combined) as {
+					state?: string;
+					codeVerifier?: string;
+				};
+				storedState = parsed.state;
+				codeVerifier = parsed.codeVerifier;
+			} catch (e) {
+				console.error("Failed to parse google_oauth_temp cookie", e);
+			}
+		}
+
+		if (!storedState || !codeVerifier) {
+			// Fallback to legacy split cookies if combined cookie is missing
+			storedState = getCookie(c, "google_oauth_state");
+			codeVerifier = getCookie(c, "google_code_verifier");
+		}
+
 		if (
 			code === null ||
 			state === null ||
@@ -137,6 +156,25 @@ app.get("/admin/login/google/callback", async (c) => {
 				status: 400,
 			});
 		}
+
+		deleteCookie(c, "google_oauth_temp", {
+			path: "/",
+			sameSite: "none",
+			secure: true,
+		});
+		deleteCookie(c, "google_oauth_state", {
+			path: "/",
+			sameSite: "none",
+			secure: true,
+			domain: ".vitstore.dev",
+		});
+		deleteCookie(c, "google_code_verifier", {
+			path: "/",
+			sameSite: "none",
+			secure: true,
+			domain: ".vitstore.dev",
+		});
+
 		const claims = decodeIdToken(tokens.idToken()) as {
 			sub: string;
 			name: string;
@@ -175,6 +213,9 @@ app.get("/admin/login/google/callback", async (c) => {
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {
 		console.error(e);
+		return c.json({
+			error: e,
+		});
 	}
 });
 
@@ -219,19 +260,6 @@ app.post("/upload", async (c) => {
 app.get("/", (c) => {
 	console.log("OK cors origin", env.CORS_ORIGIN);
 	return c.text("OK");
-});
-
-app.post("/admin/seed", async (c) => {
-	try {
-		const ctx = await createContext({ context: c });
-		const reset =
-			c.req.query("reset") === "1" || c.req.query("reset") === "true";
-		const result = await seedDatabase(ctx.db, { reset, rngSeed: 1337 });
-		return c.json(result);
-	} catch (e) {
-		console.error(e);
-		return c.json({ message: "Seed failed" }, 500);
-	}
 });
 
 export default app;

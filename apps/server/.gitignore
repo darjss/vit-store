@@ -43,6 +43,7 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+.alchemy
 *.pem
 
 # local db

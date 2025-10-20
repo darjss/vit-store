@@ -1,2 +1,14 @@
 node_modules
 .turbo
+.alchemy
+.dev.vars*
+.prod.vars*
+.wrangler
+.vercel
+.next
+.output
+.react-router
+.tanstack
+.nitro
+.vscode
+.idea

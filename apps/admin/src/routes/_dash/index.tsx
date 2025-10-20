@@ -1,7 +1,7 @@
 import { timeRangeSchema, type timeRangeType } from "@server/lib/zod/schema";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ShoppingCart } from "lucide-react";
-import { useState } from "react";
+import z from "zod";
 import { LowStockAlerts } from "@/components/dashboard/low-stock-alerts";
 import { PendingOrders } from "@/components/dashboard/pending-orders";
 import { QuickStats } from "@/components/dashboard/quick-stats";
@@ -10,12 +10,11 @@ import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { TopSellingProducts } from "@/components/dashboard/top-selling-products";
 import { Button } from "@/components/ui/button";
 import { mockData } from "@/lib/mock-data";
-import z from "zod";
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
 	validateSearch: z.object({
-		timeRange: timeRangeSchema,
+		timeRange: timeRangeSchema.default("daily"),
 	}),
 });
 
@@ -53,12 +52,12 @@ function HomeComponent() {
 			<StatsGrid />
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<SalesChart  />
+				<SalesChart />
 				<PendingOrders />
 			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<TopSellingProducts  />
+				<TopSellingProducts />
 				<div className="flex flex-col gap-2">
 					<QuickStats />
 					<LowStockAlerts />
