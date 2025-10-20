@@ -3,13 +3,8 @@
 	"main": "src/index.ts",
 	"type": "module",
 	"scripts": {
-		"build": "wrangler deploy --dry-run",
 		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
-		"dev": "wrangler dev --port=3006",
-		"dev:remote": "wrangler dev --remote --port=3006",
-		"start": "wrangler dev",
-		"deploy": "wrangler deploy",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"db:push": "drizzle-kit push",
 		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
@@ -38,7 +33,6 @@
 		"drizzle-kit": "^0.31.4",
 		"tsc-alias": "^1.8.16",
 		"typescript": "^5.9.2",
-		"wrangler": "^4.40.3",
 		"@types/node": "^22.13.11",
 		"dotenv": "^17.2.1",
 		"@cloudflare/workers-types": "^4.20250822.0"

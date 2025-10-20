@@ -2,10 +2,10 @@
 import type { Config } from "drizzle-kit";
 
 export default {
-	schema: "./src/db/schema.ts", // Or wherever your schema is
+	schema: "./src/db/schema.ts",
 	out: "./drizzle/local",
 	dialect: "sqlite",
 	dbCredentials: {
-		url: "file:./.wrangler/state/v3/d1/miniflare-D1DatabaseObject/f26dd3b4af2b86035a68fbb491403d4b54d63dee4c1e42d18d4ad58dc6978866.sqlite", // Local path
+		url: "file:../../.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject/4fea589dffe569f8ba071ec87ac0160124823fb6b357717ae164e87fbe3b243a.sqlite",
 	},
 } satisfies Config;
