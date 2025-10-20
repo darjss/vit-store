@@ -1,16 +1,16 @@
 import {
-	ShoppingCart,
-	TrendingDown,
 	AlertTriangle,
 	CheckCircle,
+	ShoppingCart,
+	TrendingDown,
 } from "lucide-react";
 import {
-	PieChart,
-	Pie,
 	Cell,
+	Legend,
+	Pie,
+	PieChart,
 	ResponsiveContainer,
 	Tooltip,
-	Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockData } from "@/lib/mock-data";
@@ -44,8 +44,8 @@ export function OrderAnalytics() {
 										(s) => s.status === "pending",
 									)?.count || 0}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
-									<span className="text-yellow-600 text-xs">
+								<div className="mt-1 flex items-center gap-1">
+									<span className="text-xs text-yellow-600">
 										{
 											mockData.orderStatusBreakdown.find(
 												(s) => s.status === "pending",
@@ -70,7 +70,7 @@ export function OrderAnalytics() {
 										(s) => s.status === "delivered",
 									)?.count || 0}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<span className="text-green-600 text-xs">
 										{
 											mockData.orderStatusBreakdown.find(
@@ -96,7 +96,7 @@ export function OrderAnalytics() {
 										(s) => s.status === "cancelled",
 									)?.count || 0}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<span className="text-red-600 text-xs">
 										{
 											mockData.orderStatusBreakdown.find(
@@ -123,7 +123,7 @@ export function OrderAnalytics() {
 										0,
 									)}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<span className="text-blue-600 text-xs">Өнөөдөр</span>
 								</div>
 							</div>
@@ -197,7 +197,7 @@ export function OrderAnalytics() {
 				<CardContent className="p-4">
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						<div className="border-2 border-border bg-card p-4">
-							<h4 className="text-muted-foreground text-sm mb-1">
+							<h4 className="mb-1 text-muted-foreground text-sm">
 								Нийт орхигдсон сагс
 							</h4>
 							<p className="font-bold font-heading text-2xl">
@@ -205,13 +205,13 @@ export function OrderAnalytics() {
 							</p>
 						</div>
 						<div className="border-2 border-border bg-card p-4">
-							<h4 className="text-muted-foreground text-sm mb-1">Орхих хувь</h4>
+							<h4 className="mb-1 text-muted-foreground text-sm">Орхих хувь</h4>
 							<p className="font-bold font-heading text-2xl">
 								{mockData.abandonedCartAnalytics.abandonmentRate}%
 							</p>
 						</div>
 						<div className="border-2 border-border bg-card p-4">
-							<h4 className="text-muted-foreground text-sm mb-1">
+							<h4 className="mb-1 text-muted-foreground text-sm">
 								Алдсан орлого
 							</h4>
 							<p className="font-bold font-heading text-lg">
@@ -219,10 +219,10 @@ export function OrderAnalytics() {
 							</p>
 						</div>
 						<div className="border-2 border-border bg-card p-4">
-							<h4 className="text-muted-foreground text-sm mb-1">
+							<h4 className="mb-1 text-muted-foreground text-sm">
 								Сэргээсэн орлого
 							</h4>
-							<p className="font-bold font-heading text-lg text-green-600">
+							<p className="font-bold font-heading text-green-600 text-lg">
 								{formatCurrency(
 									mockData.abandonedCartAnalytics.recoveredRevenue,
 								)}

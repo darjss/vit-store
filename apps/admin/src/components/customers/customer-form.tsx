@@ -1,8 +1,8 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import * as v from "valibot";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -17,20 +17,22 @@ import {
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 
-const addCustomerSchema = z.object({
-	phone: z
-		.string()
-		.min(8, { message: "Дугаар 8 оронтой байх ёстой" })
-		.max(8, { message: "Дугаар 8 оронтой байх ёстой" })
-		.regex(/^[6-9]\d{7}$/),
-	address: z
-		.string()
-		.min(5, { message: "Хаяг хэт богино байна" })
-		.optional()
-		.or(z.literal("")),
+const addCustomerSchema = v.object({
+	phone: v.pipe(
+		v.string("Дугаар заавал оруулах"),
+		v.minLength(8, "Дугаар 8 оронтой байх ёстой"),
+		v.maxLength(8, "Дугаар 8 оронтой байх ёстой"),
+		v.regex(/^[6-9]\d{7}$/, "Зөв дугаар оруулна уу"),
+	),
+	address: v.optional(
+		v.pipe(
+			v.string("Хаяг заавал оруулах"),
+			v.minLength(5, "Хаяг хэт богино байна"),
+		),
+	),
 });
 
-export type AddCustomerFormValues = z.infer<typeof addCustomerSchema>;
+export type AddCustomerFormValues = v.InferOutput<typeof addCustomerSchema>;
 
 type CustomerFormProps = {
 	onSuccess: () => void;
@@ -39,7 +41,7 @@ type CustomerFormProps = {
 
 const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 	const form = useForm<AddCustomerFormValues>({
-		resolver: zodResolver(addCustomerSchema),
+		resolver: valibotResolver(addCustomerSchema),
 		defaultValues: {
 			phone: customer ? String(customer.phone) : "",
 			address: customer?.address ?? "",

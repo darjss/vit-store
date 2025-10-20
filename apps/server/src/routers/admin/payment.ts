@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { PaymentsTable } from "@/db/schema";
 import { paymentProvider, paymentStatus } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
@@ -8,10 +8,10 @@ import { adminProcedure, router } from "@/lib/trpc";
 export const payment = router({
 	createPayment: adminProcedure
 		.input(
-			z.object({
-				orderId: z.number(),
-				status: z.enum(paymentStatus).default("pending"),
-				provider: z.enum(paymentProvider).default("transfer"),
+			v.object({
+				orderId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				status: v.picklist(paymentStatus),
+				provider: v.picklist(paymentProvider),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

@@ -1,15 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { ProductImagesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
 
 export const image = router({
 	addImage: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
-				url: z.string().url(),
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				url: v.pipe(v.string(), v.url()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -31,8 +31,8 @@ export const image = router({
 		}),
 	deleteImage: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -53,9 +53,9 @@ export const image = router({
 		}),
 	setPrimaryImage: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
-				imageId: z.number(),
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

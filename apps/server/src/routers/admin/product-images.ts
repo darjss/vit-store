@@ -1,16 +1,16 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, isNull } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { ProductImagesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
 
 export const productImages = router({
 	addImage: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
-				url: z.url("Invalid URL format"),
-				isPrimary: z.boolean().default(false),
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				url: v.pipe(v.string(), v.url()),
+				isPrimary: v.boolean(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -29,12 +29,12 @@ export const productImages = router({
 
 	uploadImagesFromUrl: adminProcedure
 		.input(
-			z.object({
-				images: z.array(
-					z.object({
-						productId: z.number(),
-						url: z.string().url("Invalid URL format"),
-						isPrimary: z.boolean().default(false),
+			v.object({
+				images: v.array(
+					v.object({
+						productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+						url: v.pipe(v.string(), v.url()),
+						isPrimary: v.boolean(),
 					}),
 				),
 			}),
@@ -99,13 +99,13 @@ export const productImages = router({
 
 	updateImage: adminProcedure
 		.input(
-			z.object({
-				newImages: z.array(
-					z.object({
-						url: z.string().url("Invalid URL format"),
+			v.object({
+				newImages: v.array(
+					v.object({
+						url: v.pipe(v.string(), v.url()),
 					}),
 				),
-				productId: z.number(),
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -185,8 +185,8 @@ export const productImages = router({
 
 	getImagesByProductId: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -201,7 +201,12 @@ export const productImages = router({
 						createdAt: ProductImagesTable.createdAt,
 					})
 					.from(ProductImagesTable)
-					.where(and(eq(ProductImagesTable.productId, productId),isNull(ProductImagesTable.deletedAt)))
+					.where(
+						and(
+							eq(ProductImagesTable.productId, productId),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					)
 					.orderBy(ProductImagesTable.isPrimary);
 
 				return images;
@@ -217,8 +222,8 @@ export const productImages = router({
 
 	deleteImage: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -247,9 +252,9 @@ export const productImages = router({
 
 	setPrimaryImage: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
-				imageId: z.number(),
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

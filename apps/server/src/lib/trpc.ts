@@ -1,12 +1,11 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { middlewareMarker } from "@trpc/server/unstable-core-do-not-import";
+import type { timeRangeType } from "@vit-store/shared";
 import superjson from "superjson";
-import { ZodError } from "zod";
+import * as v from "valibot";
 import type { Context } from "./context";
 import { adminAuth } from "./session/admin";
 import { auth } from "./session/store";
 import { getTtlForTimeRange } from "./utils";
-import type { timeRangeType } from "./zod/schema";
 
 export const t = initTRPC.context<Context>().create({
 	transformer: superjson,
@@ -15,8 +14,8 @@ export const t = initTRPC.context<Context>().create({
 			...shape,
 			data: {
 				...shape.data,
-				zodError:
-					error.cause instanceof ZodError ? error.cause.flatten() : null,
+				valibotError:
+					error.cause instanceof v.ValiError ? error.cause.issues : null,
 			},
 		};
 	},
@@ -39,27 +38,20 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	return next({ ctx: { ...ctx, session } });
 });
 
-const createCacheKey = async (
-	path: string,
-	input: unknown,
-): Promise<string> => {
-	let cacheableInput: unknown = input;
-	if (input && typeof input === "object") {
-		const obj = input as Record<string, unknown>;
-		cacheableInput = { timeRange: obj.timeRange, ttl: obj.ttl };
-	}
+const createCacheKey = async (path: string, input: any): Promise<string> => {
+	const cacheableInput =
+		input && typeof input === "object"
+			? { timeRange: input.timeRange, ttl: input.ttl }
+			: input;
 
 	const keyString = `${path}:${JSON.stringify(
 		cacheableInput && typeof cacheableInput === "object"
-			? Object.keys(cacheableInput as Record<string, unknown>)
+			? Object.keys(cacheableInput)
 					.sort()
-					.reduce(
-						(result, key) => {
-							result[key] = (cacheableInput as Record<string, unknown>)[key];
-							return result;
-						},
-						{} as Record<string, unknown>,
-					)
+					.reduce((result, key) => {
+						result[key] = cacheableInput[key];
+						return result;
+					}, {} as any)
 			: cacheableInput,
 	)}`;
 
@@ -79,15 +71,14 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	console.log("cache middleware", cacheKey);
 
 	const cached = await ctx.kv.get(cacheKey);
-	console.log("cache middleware", cached);
+	console.log("path", path, "input", input, "cache middleware", cached);
 	if (cached) {
 		console.log("cache middleware returning cached");
-		const data = JSON.parse(cached);
-		return { marker: middlewareMarker, ok: true, data } as const;
+		return JSON.parse(cached);
 	}
 
 	const result = await next();
-	console.log("cache middleware result", result);
+	console.log("path", path, "input", input, "cache middleware result", result);
 	if (result && typeof result === "object" && "data" in result) {
 		let ttl: number;
 

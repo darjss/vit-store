@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, lt, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { ProductsTable, PurchasesTable } from "@/db/schema";
 import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
-import { addPurchaseSchema } from "@/lib/zod/schema";
+import { addPurchaseSchema } from "@vit-store/shared/schema";
 
 export const purchase = router({
 	addPurchase: adminProcedure
@@ -74,7 +74,7 @@ export const purchase = router({
 	}),
 
 	getPurchaseById: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.query(async ({ ctx, input }) => {
 			try {
 				const result = await ctx.db.query.PurchasesTable.findFirst({
@@ -97,12 +97,12 @@ export const purchase = router({
 
 	getPaginatedPurchases: adminProcedure
 		.input(
-			z.object({
-				page: z.number().default(1),
-				pageSize: z.number().default(PRODUCT_PER_PAGE),
-				productId: z.number().optional(),
-				sortField: z.string().optional(),
-				sortDirection: z.enum(["asc", "desc"]).default("desc"),
+			v.object({
+				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				pageSize: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				productId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				sortField: v.optional(v.string()),
+				sortDirection: v.picklist(["asc", "desc"]),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -167,7 +167,7 @@ export const purchase = router({
 		}),
 
 	searchPurchaseByProductName: adminProcedure
-		.input(z.object({ query: z.string() }))
+		.input(v.object({ query: v.string() }))
 		.query(async ({ ctx, input }) => {
 			if (!input.query) return [];
 			try {
@@ -203,7 +203,12 @@ export const purchase = router({
 		}),
 
 	updatePurchase: adminProcedure
-		.input(z.object({ id: z.number(), data: addPurchaseSchema }))
+		.input(
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				data: addPurchaseSchema,
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db.transaction(async (tx) => {
@@ -285,7 +290,7 @@ export const purchase = router({
 		}),
 
 	deletePurchase: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db.transaction(async (tx) => {
@@ -339,7 +344,12 @@ export const purchase = router({
 		}),
 
 	getAverageCostOfProduct: adminProcedure
-		.input(z.object({ productId: z.number(), createdAt: z.date() }))
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				createdAt: v.date(),
+			}),
+		)
 		.query(async ({ ctx, input }) => {
 			try {
 				const purchases = await ctx.db

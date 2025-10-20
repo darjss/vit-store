@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import type { UserSelectType } from "@/db/schema";
 import { UsersTable } from "@/db/schema";
 import { adminAuth, invalidateAdminSession } from "@/lib/session/admin";
@@ -20,10 +20,10 @@ export const auth = router({
 
 	createUser: adminProcedure
 		.input(
-			z.object({
-				googleId: z.string(),
-				username: z.string(),
-				isApproved: z.boolean().default(false),
+			v.object({
+				googleId: v.string(),
+				username: v.string(),
+				isApproved: v.boolean(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -62,8 +62,8 @@ export const auth = router({
 
 	getUserFromGoogleId: adminProcedure
 		.input(
-			z.object({
-				googleId: z.string(),
+			v.object({
+				googleId: v.string(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

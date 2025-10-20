@@ -1,11 +1,11 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { addOrderSchema, type addOrderType } from "@server/lib/zod/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addOrderSchema, type addOrderType } from "@vit-store/shared";
 import { useCallback, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { orderStatus, paymentStatus } from "@/lib/constants";
+import { orderStatus, paymentStatus } from "@vit-store/shared/constants";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -36,7 +36,7 @@ const OrderForm = ({
 	onSuccess: () => void;
 }) => {
 	const form = useForm({
-		resolver: zodResolver(addOrderSchema),
+		resolver: valibotResolver(addOrderSchema),
 		defaultValues: {
 			customerPhone: order?.customerPhone || "",
 			address: order?.address || "",

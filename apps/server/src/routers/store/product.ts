@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { ProductImagesTable, ProductsTable } from "@/db/schema";
 import { publicProcedure, router } from "@/lib/trpc";
 
@@ -47,8 +47,8 @@ export const product = router({
 	}),
 	getProductById: publicProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.query(async ({ input, ctx }) => {
@@ -90,8 +90,8 @@ export const product = router({
 		}),
 	getProductsByIds: publicProcedure
 		.input(
-			z.object({
-				ids: z.array(z.number()),
+			v.object({
+				ids: v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
 		.query(async ({ input, ctx }) => {
@@ -125,7 +125,7 @@ export const product = router({
 			}));
 		}),
 	//     getProductStock: publicProcedure
-	//         .input(z.object({
-	//             id: z.number(),
+	//         .input(v.object({
+	//             id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 	//         }))
 });

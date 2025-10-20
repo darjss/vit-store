@@ -1,15 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "@/db/schema";
 import { PRODUCT_PER_PAGE, productFields } from "@/lib/constants";
 import { adminProcedure, router } from "@/lib/trpc";
-import { addProductSchema, updateProductSchema } from "@/lib/zod/schema";
+import { addProductSchema, updateProductSchema } from "@vit-store/shared";
 
 export const product = router({
 	searchProductByName: adminProcedure
-		.input(z.object({ searchTerm: z.string() }))
+		.input(v.object({ searchTerm: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
 				const products = await ctx.db.query.ProductsTable.findMany({
@@ -34,7 +34,7 @@ export const product = router({
 		}),
 
 	searchProductByNameForOrder: adminProcedure
-		.input(z.object({ searchTerm: z.string() }))
+		.input(v.object({ searchTerm: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
 				const products = await ctx.db.query.ProductsTable.findMany({
@@ -78,8 +78,8 @@ export const product = router({
 				const images = input.images.filter((image) => image.url.trim() !== "");
 				// Validate image URLs
 				for (const image of images) {
-					const parsed = z.string().url().safeParse(image.url);
-					if (!parsed.success) {
+					const result = v.safeParse(v.pipe(v.string(), v.url()), image.url);
+					if (!result.success) {
 						throw new TRPCError({
 							code: "BAD_REQUEST",
 							message: `Invalid image URL: ${image.url}`,
@@ -124,7 +124,11 @@ export const product = router({
 				const imagePromises = images.map((image, index) =>
 					ctx.db
 						.insert(ProductImagesTable)
-						.values({ productId, url: image.url, isPrimary: index === 0 }),
+						.values({
+							productId: productId,
+							url: image.url,
+							isPrimary: index === 0,
+						}),
 				);
 				await Promise.all(imagePromises);
 				return { message: "Product added successfully" };
@@ -157,7 +161,7 @@ export const product = router({
 	}),
 
 	getProductById: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
 				const product = await ctx.db.query.ProductsTable.findFirst({
@@ -205,8 +209,8 @@ export const product = router({
 					(image) => image.url.trim() !== "",
 				);
 				for (const image of filteredImages) {
-					const parsed = z.string().url().safeParse(image.url);
-					if (!parsed.success)
+					const result = v.safeParse(v.pipe(v.string(), v.url()), image.url);
+					if (!result.success)
 						throw new TRPCError({
 							code: "BAD_REQUEST",
 							message: "Invalid image URL",
@@ -293,10 +297,10 @@ export const product = router({
 
 	updateStock: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
-				numberToUpdate: z.number(),
-				type: z.enum(["add", "minus"]),
+			v.object({
+				productId: v.number(),
+				numberToUpdate: v.number(),
+				type: v.picklist(["add", "minus"]),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -336,7 +340,7 @@ export const product = router({
 		}),
 
 	deleteProduct: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await ctx.db.query.ProductsTable.findFirst({
@@ -395,14 +399,14 @@ export const product = router({
 
 	getPaginatedProducts: adminProcedure
 		.input(
-			z.object({
-				page: z.number().default(1),
-				pageSize: z.number().default(PRODUCT_PER_PAGE),
-				brandId: z.number().optional(),
-				categoryId: z.number().optional(),
-				sortField: z.string().optional(),
-				sortDirection: z.enum(["asc", "desc"]).default("asc"),
-				searchTerm: z.string().optional(),
+			v.object({
+				page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+				brandId: v.optional(v.number()),
+				categoryId: v.optional(v.number()),
+				sortField: v.optional(v.string()),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				searchTerm: v.optional(v.string()),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -474,7 +478,7 @@ export const product = router({
 		}),
 
 	setProductStock: adminProcedure
-		.input(z.object({ id: z.number(), newStock: z.number() }))
+		.input(v.object({ id: v.number(), newStock: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await ctx.db.query.ProductsTable.findFirst({
@@ -530,11 +534,11 @@ export const product = router({
 	}),
 	updateProductField: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
-				field: z.enum(productFields),
-				stringValue: z.string().optional(),
-				numberValue: z.number().optional(),
+			v.object({
+				id: v.number(),
+				field: v.picklist(productFields),
+				stringValue: v.optional(v.string()),
+				numberValue: v.optional(v.number()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

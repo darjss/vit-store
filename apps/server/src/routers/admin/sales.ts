@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
+import * as v from "valibot";
 import { adminCachedProcedure, router } from "@/lib/trpc";
-import { timeRangeSchema } from "@/lib/zod/schema";
+import { timeRangeSchema } from "@vit-store/shared/schema";
 import {
 	getAnalyticsForHome,
 	getAverageOrderValue,
@@ -39,9 +39,9 @@ export const sales = router({
 
 	topProducts: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
-				productCount: z.number().default(5),
+				productCount: v.number(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -76,7 +76,7 @@ export const sales = router({
 
 	avgOrderValue: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -95,7 +95,7 @@ export const sales = router({
 
 	orderCount: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)

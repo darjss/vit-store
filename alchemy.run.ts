@@ -1,45 +1,54 @@
 import alchemy from "alchemy";
 import {
-	Vite,
 	Astro,
-	Worker,
 	D1Database,
 	KVNamespace,
 	R2Bucket,
 	RateLimit,
+	Vite,
+	Worker,
 } from "alchemy/cloudflare";
-import { config } from "dotenv";
 import { Exec } from "alchemy/os";
-
-config({ path: "./.env" });
-config({ path: "./apps/server/.env" });
-config({ path: "./apps/admin/.env" });
+import { config } from "dotenv";
 
 const app = await alchemy("vit-store");
+const stage = app.stage;
+config({ path: `./.env.${stage}` });
+config({ path: `./apps/server/.env.${stage}` });
+config({ path: `./apps/admin/.env.${stage}` });
 
-
-
+console.log(
+	"stage",
+	stage,
+	"cors origin",
+	process.env.CORS_ORIGIN,
+	"server url",
+	process.env.VITE_SERVER_URL,
+);
 await Exec("db-gen", {
 	cwd: "apps/server",
 	command: "bun run db:generate",
 });
 
 const db = await D1Database("db", {
-	name: "vit-store-db",
+	name: `${app.name}-db`,
 	migrationsDir: "apps/server/src/db/migrations",
 	primaryLocationHint: "apac",
 	migrationsTable: "drizzle_migrations",
 });
 
-
+// await Exec("db-seed", {
+// 	cwd: "apps/server",
+// 	command: "bun run db:seed",
+// });
 // KV Namespace setup
-const kv = await KVNamespace("vitStoreKV", {
-	title: "vitKV",
+const kv = await KVNamespace("kv", {
+	title: `${app.name}-kv`,
 });
 
 // R2 Bucket setup
-const r2 = await R2Bucket("r2Bucket", {
-	name: "vit-store-bucket",
+const r2 = await R2Bucket("r2", {
+	name: `${app.name}-bucket`,
 });
 
 const rateLimit = RateLimit({
@@ -50,12 +59,12 @@ const rateLimit = RateLimit({
 	},
 });
 
-export const server = await Worker("server", {
+export const server = await Worker("api", {
 	cwd: "apps/server",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
 	bindings: {
-        RATE_LIMITER: rateLimit,
+		RATE_LIMITER: rateLimit,
 		DB: db,
 		vitStoreKV: kv,
 		r2Bucket: r2,
@@ -71,7 +80,7 @@ export const server = await Worker("server", {
 	},
 });
 
-export const admin = await Vite("admin", {
+export const admin = await Vite("dash", {
 	cwd: "apps/admin",
 	assets: "dist",
 	bindings: {
@@ -82,11 +91,11 @@ export const admin = await Vite("admin", {
 	},
 });
 
-export const store = await Astro("vit-storefront",{
-    cwd: "apps/store",
-    dev: {
-        command: "bun run dev",
-    },
+export const store = await Astro("front", {
+	cwd: "apps/store",
+	dev: {
+		command: "bun run dev",
+	},
 });
 
 console.log(`Server -> ${server.url}`);
