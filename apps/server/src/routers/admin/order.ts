@@ -1,7 +1,12 @@
 import { TRPCError } from "@trpc/server";
+import {
+	addOrderSchema,
+	timeRangeSchema,
+	updateOrderSchema,
+} from "@vit-store/shared";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, ilike, isNull, like, or, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import {
 	CustomersTable,
 	OrderDetailsTable,
@@ -17,11 +22,6 @@ import {
 	shapeOrderResult,
 	shapeOrderResults,
 } from "@/lib/utils";
-import {
-	addOrderSchema,
-	timeRangeSchema,
-	updateOrderSchema,
-} from "@/lib/zod/schema";
 import {
 	addSale,
 	createPayment,
@@ -264,7 +264,7 @@ export const order = router({
 		}),
 
 	deleteOrder: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				console.log("deleting order", input.id);
@@ -319,7 +319,7 @@ export const order = router({
 		}),
 
 	restoreOrder: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				// Deduct stock again based on soft-deleted details
@@ -366,7 +366,7 @@ export const order = router({
 		}),
 
 	searchOrder: adminProcedure
-		.input(z.object({ searchTerm: z.string() }))
+		.input(v.object({ searchTerm: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const orders = await ctx.db.query.OrdersTable.findMany({
@@ -492,7 +492,7 @@ export const order = router({
 	}),
 
 	getOrderById: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
 				const result = await ctx.db.query.OrdersTable.findFirst({
@@ -561,16 +561,22 @@ export const order = router({
 
 	getPaginatedOrders: adminProcedure
 		.input(
-			z.object({
-				page: z.number().default(1),
-				pageSize: z.number().default(PRODUCT_PER_PAGE),
-				paymentStatus: z.enum(["pending", "success", "failed"]).optional(),
-				orderStatus: z
-					.enum(["pending", "shipped", "delivered", "cancelled", "refunded"])
-					.optional(),
-				sortField: z.string().optional(),
-				sortDirection: z.enum(["asc", "desc"]).default("asc"),
-				searchTerm: z.string().optional(),
+			v.object({
+				page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+				paymentStatus: v.optional(v.picklist(["pending", "success", "failed"])),
+				orderStatus: v.optional(
+					v.picklist([
+						"pending",
+						"shipped",
+						"delivered",
+						"cancelled",
+						"refunded",
+					]),
+				),
+				sortField: v.optional(v.string()),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				searchTerm: v.optional(v.string()),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -706,7 +712,7 @@ export const order = router({
 		}),
 
 	getOrderCount: adminProcedure
-		.input(z.object({ timeRange: timeRangeSchema }))
+		.input(v.object({ timeRange: timeRangeSchema }))
 		.query(async ({ ctx, input }) => {
 			return await getOrderCount(input.timeRange, ctx);
 		}),
@@ -717,9 +723,9 @@ export const order = router({
 
 	updateOrderStatus: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
-				status: z.enum([
+			v.object({
+				id: v.number(),
+				status: v.picklist([
 					"pending",
 					"shipped",
 					"delivered",
@@ -750,8 +756,8 @@ export const order = router({
 		}),
 	getRecentOrdersByProductId: adminProcedure
 		.input(
-			z.object({
-				productId: z.number(),
+			v.object({
+				productId: v.number(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

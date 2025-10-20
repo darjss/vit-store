@@ -1,7 +1,7 @@
-import { timeRangeSchema, type timeRangeType } from "@server/lib/zod/schema";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { timeRangeSchema, type timeRangeType } from "@vit-store/shared";
 import { ArrowRight, ShoppingCart } from "lucide-react";
-import z from "zod";
+import * as v from "valibot";
 import { LowStockAlerts } from "@/components/dashboard/low-stock-alerts";
 import { PendingOrders } from "@/components/dashboard/pending-orders";
 import { QuickStats } from "@/components/dashboard/quick-stats";
@@ -13,8 +13,8 @@ import { mockData } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
-	validateSearch: z.object({
-		timeRange: timeRangeSchema.default("daily"),
+	validateSearch: v.object({
+		timeRange: v.optional(timeRangeSchema, "daily"),
 	}),
 });
 
@@ -33,8 +33,13 @@ function HomeComponent() {
 					</div>
 					<Link
 						to="/orders"
-						params={{
+						search={{
 							orderStatus: "pending",
+							sortField: "createdAt",
+							sortDirection: "desc",
+							searchTerm: "",
+							page: 1,
+							pageSize: 10,
 						}}
 					>
 						<Button

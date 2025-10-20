@@ -1,5 +1,5 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { addProductSchema, type addProductType } from "@server/lib/zod/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { addProductSchema, type addProductType } from "@vit-store/shared";
 import {
 	useMutation,
 	useQueryClient,
@@ -9,7 +9,7 @@ import { Image } from "@unpic/react";
 import { X } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { status } from "@/lib/constants";
+import { status } from "@vit-store/shared/constants";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Button } from "../ui/button";
@@ -47,7 +47,7 @@ const ProductForm = ({
 		],
 	});
 	const form = useForm({
-		resolver: zodResolver(addProductSchema),
+		resolver: valibotResolver(addProductSchema),
 		defaultValues: {
 			name: product?.name || "",
 			description: product?.description || "",

@@ -1,3 +1,4 @@
+import type { timeRangeType } from "@vit-store/shared/schema";
 import { and, between, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import {
 	OrdersTable,
@@ -22,7 +23,6 @@ import {
 	getStartAndEndofDayAgo,
 	shapeOrderResults,
 } from "@/lib/utils";
-import type { timeRangeType } from "@/lib/zod/schema";
 
 export const addSale = async (
 	sale: AddSalesType,
@@ -154,6 +154,7 @@ export const getMostSoldProducts = async (
 	timeRange: timeRangeType,
 	productCount = 5,
 ) => {
+	try {
 	const result = await ctx.db
 		.select({
 			productId: SalesTable.productId,
@@ -178,15 +179,20 @@ export const getMostSoldProducts = async (
 			),
 		)
 		.groupBy(SalesTable.productId)
-		.orderBy(sql`SUM(${SalesTable.quantitySold}) DESC`)
-		.limit(productCount);
-	return result;
+			.orderBy(sql`SUM(${SalesTable.quantitySold}) DESC`)
+			.limit(productCount);
+		return result;
+	} catch (e) {
+		console.log(e);
+		console.error("Error getting most sold products:", e);
+		throw e;
+	}
 };
 
 export const getOrderCountForWeek = async (ctx: Context) => {
 	try {
-		const orderPromises = [];
-		const salesPromises = [];
+		const orderPromises: Promise<{ orderCount: number } | undefined>[] = [];
+		const salesPromises: Promise<{ salesCount: number } | undefined>[] = [];
 		for (let i = 0; i < 7; i++) {
 			const { startDate, endDate } = getStartAndEndofDayAgo(i);
 			const dayOrderPromise = ctx.db

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { BrandsTable } from "@/db/schema";
 import { publicProcedure, router } from "@/lib/trpc";
 
@@ -15,8 +15,8 @@ export const brand = router({
 	}),
 	getBrandById: publicProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.query(async ({ input, ctx }) => {

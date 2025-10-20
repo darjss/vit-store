@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
+import { addBrandSchema, type addBrandType } from "@vit-store/shared";
 import { and, eq, isNull } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { BrandsTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
-import { addBrandSchema } from "@/lib/zod/schema";
 
 export const brands = router({
 	getAllBrands: adminProcedure.query(async ({ ctx }) => {
@@ -27,9 +27,10 @@ export const brands = router({
 		.input(addBrandSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const { name, logoUrl } = input;
 				await ctx.db.insert(BrandsTable).values({
-					name: input.name,
-					logoUrl: input.logoUrl,
+					name,
+					logoUrl,
 				});
 				return { message: "Successfully updated category" };
 			} catch (err) {
@@ -52,11 +53,12 @@ export const brands = router({
 						message: "Failed to add products",
 					});
 				}
+				const { name, logoUrl } = input;
 				await ctx.db
 					.update(BrandsTable)
 					.set({
-						name: input.name,
-						logoUrl: input.logoUrl,
+						name,
+						logoUrl,
 					})
 					.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)));
 			} catch (err) {
@@ -69,7 +71,7 @@ export const brands = router({
 			}
 		}),
 	deleteBrand: adminProcedure
-		.input(z.object({ id: z.number() }))
+		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db

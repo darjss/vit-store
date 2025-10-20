@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
-import { z } from "zod";
+import * as v from "valibot";
 import { CustomersTable } from "@/db/schema";
 import type { Context } from "@/lib/context";
 import {
@@ -14,8 +14,8 @@ import { customerProcedure, publicProcedure, router } from "@/lib/trpc";
 export const auth = router({
 	sendOtp: publicProcedure
 		.input(
-			z.object({
-				phone: z.string(),
+			v.object({
+				phone: v.string(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {
@@ -62,9 +62,9 @@ export const auth = router({
 		}),
 	login: publicProcedure
 		.input(
-			z.object({
-				phone: z.string(),
-				otp: z.string(),
+			v.object({
+				phone: v.string(),
+				otp: v.string(),
 			}),
 		)
 		.mutation(async ({ input, ctx }) => {

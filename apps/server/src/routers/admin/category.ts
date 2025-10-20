@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, isNull } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { CategoriesTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
 
@@ -30,8 +30,8 @@ export const category = router({
 
 	addCategory: adminProcedure
 		.input(
-			z.object({
-				name: z.string().min(1, "Category name is required"),
+			v.object({
+				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -52,9 +52,9 @@ export const category = router({
 
 	updateCategory: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
-				name: z.string().min(1, "Category name is required"),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -79,8 +79,8 @@ export const category = router({
 
 	deleteCategory: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -105,8 +105,8 @@ export const category = router({
 
 	getCategoryById: adminProcedure
 		.input(
-			z.object({
-				id: z.number(),
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

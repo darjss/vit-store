@@ -20,7 +20,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { Suspense, useState } from "react";
-import { z } from "zod";
+import * as v from "valibot";
 import { EditableField } from "@/components/editable-field";
 import ProductDetailSkeleton from "@/components/product/product-detail-skeleton";
 import ProductForm from "@/components/product/product-form";
@@ -47,8 +47,12 @@ export const Route = createFileRoute("/_dash/products/$id")({
 		);
 		return { product };
 	},
-	params: z.object({
-		id: z.coerce.number(),
+	params: v.object({
+		id: v.pipe(
+			v.string(),
+			v.transform(Number),
+			v.pipe(v.number(), v.integer(), v.minValue(1)),
+		),
 	}),
 	pendingComponent: ProductDetailSkeleton,
 });

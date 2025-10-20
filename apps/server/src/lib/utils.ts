@@ -1,3 +1,4 @@
+import type { timeRangeType } from "@vit-store/shared/schema";
 import { customAlphabet } from "nanoid";
 import type {
 	OrderDeliveryProviderType,
@@ -5,7 +6,6 @@ import type {
 	PaymentProviderType,
 	PaymentStatusType,
 } from "./types";
-import type { timeRangeType } from "./zod/schema";
 
 export const generateOrderNumber = () => {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
+import { timeRangeSchema } from "@vit-store/shared/schema";
 import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import {
 	BrandsTable,
 	CategoriesTable,
@@ -12,13 +13,12 @@ import {
 } from "@/db/schema";
 import { adminCachedProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
-import { timeRangeSchema } from "@/lib/zod/schema";
 import { getOrderCount, getPendingOrders, getRevenue } from "./utils";
 
 export const analytics = router({
 	getAverageOrderValue: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -47,7 +47,7 @@ export const analytics = router({
 
 	getTotalProfit: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -82,7 +82,7 @@ export const analytics = router({
 
 	getSalesByCategory: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -175,7 +175,7 @@ export const analytics = router({
 
 	getRepeatCustomersCount: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -238,7 +238,7 @@ export const analytics = router({
 
 	getFailedPayments: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -301,6 +301,7 @@ export const analytics = router({
 				.where(or(eq(ProductsTable.stock, 0), lt(ProductsTable.stock, 10)))
 				.orderBy(ProductsTable.stock);
 		} catch (error) {
+			console.log(error);
 			console.error("Error in getLowInventoryProducts:", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
@@ -312,7 +313,7 @@ export const analytics = router({
 
 	getTopBrandsBySales: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -368,7 +369,7 @@ export const analytics = router({
 
 	getAnalyticsData: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -603,7 +604,7 @@ export const analytics = router({
 						.then((result) => result[0]?.total || 0)
 						.catch(() => 0),
 				]);
-
+		
 				return {
 					// Key metrics
 					averageOrderValue,
@@ -650,7 +651,7 @@ export const analytics = router({
 		}),
 	getHomePageData: adminCachedProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)

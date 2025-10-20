@@ -1,4 +1,4 @@
-import { TrendingUp, DollarSign, Percent } from "lucide-react";
+import { DollarSign, Percent, TrendingUp } from "lucide-react";
 import {
 	Line,
 	LineChart,
@@ -29,7 +29,7 @@ export function RevenueAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{formatCurrency(mockData.dailyRevenue)}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+12.5%</span>
 								</div>
@@ -47,7 +47,7 @@ export function RevenueAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.profitMargin.daily}%
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+2.3%</span>
 								</div>
@@ -67,7 +67,7 @@ export function RevenueAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{formatCurrency(mockData.averageOrderValue.daily)}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+5.2%</span>
 								</div>
@@ -87,7 +87,7 @@ export function RevenueAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{formatCurrency(mockData.weeklyRevenue)}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+8.2%</span>
 								</div>

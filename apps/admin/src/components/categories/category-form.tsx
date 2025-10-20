@@ -1,8 +1,5 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-	addCategorySchema,
-	type addCategoryType,
-} from "@server/lib/zod/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { addCategorySchema, type addCategoryType } from "@vit-store/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -27,7 +24,7 @@ const CategoryForm = ({
 	onSuccess: () => void;
 }) => {
 	const form = useForm({
-		resolver: zodResolver(addCategorySchema),
+		resolver: valibotResolver(addCategorySchema),
 		defaultValues: {
 			id: category?.id,
 			name: category?.name || "",

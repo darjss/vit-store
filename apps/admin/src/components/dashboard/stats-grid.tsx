@@ -1,4 +1,4 @@
-import type { timeRangeType } from "@server/lib/zod/schema";
+import type { timeRangeType } from "@vit-store/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {

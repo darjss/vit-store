@@ -1,7 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { addBrandSchema, type addBrandType } from "@server/lib/zod/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
+import { addBrandSchema, type addBrandType } from "@vit-store/shared";
 import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ const BrandForm = ({
 	onSuccess: () => void;
 }) => {
 	const form = useForm({
-		resolver: zodResolver(addBrandSchema),
+		resolver: valibotResolver(addBrandSchema),
 		defaultValues: {
 			name: brand?.name || "",
 			logoUrl: brand?.logoUrl || "",

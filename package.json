@@ -1,39 +1,54 @@
 {
-	"name": "vit2",
+	"name": "vit-store",
 	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
+	"type": "module",
+	"workspaces": {
+		"packages": [
+			"apps/*",
+			"packages/*"
+		],
+		"catalog": {
+			"hono": "^4.8.12",
+			"@trpc/server": "^11.4.3",
+			"@trpc/client": "^11.4.3",
+			"dotenv": "^17.2.1",
+			"valibot": "^1.1.0",
+			"typescript": "^5.9.2",
+			"tsdown": "^0.15.5",
+			"drizzle-orm": "^0.44.4",
+			"drizzle-kit": "^0.31.4"
+		}
+	},
 	"scripts": {
 		"format": "biome format --write .",
 		"check": "oxlint",
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"dev": "alchemy dev",
-		"build": "alchemy build",
-		"deploy": "alchemy deploy",
+		"dev": "alchemy dev --stage dev",
+		"build": "turbo build",
 		"check-types": "turbo check-types",
 		"dev:native": "turbo -F native dev",
 		"dev:web": "turbo -F web dev",
 		"dev:server": "turbo -F server dev",
-		"db:push": "turbo -F server db:push",
+		"db:push": "turbo -F @vit-store/db db:push",
+		"db:generate": "turbo -F @vit-store/db db:generate",
 		"db:studio": "turbo -F server db:studio",
 		"db:studio:local": "turbo -F server db:studio:local",
-		"db:generate": "turbo -F server db:generate",
-		"db:migrate": "turbo -F server db:migrate"
+		"db:migrate": "turbo -F server db:migrate",
+		"deploy": "alchemy deploy --stage prod"
 	},
 	"dependencies": {
-		"@faker-js/faker": "^10.0.0"
+		"dotenv": "^17.2.3"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.1.3",
 		"oxlint": "^1.8.0",
 		"turbo": "^2.5.5",
-		"dotenv": "^17.2.1",
-		"typescript": "^5.0.0",
-		"alchemy": "latest"
+		"tsdown": "catalog:",
+		"alchemy": "latest",
+		"@types/node": "^22.13.11",
+		"@cloudflare/workers-types": "^4.20250822.0"
 	},
-	"packageManager": "bun@1.2.19"
+	"packageManager": "bun@1.3.0"
 }

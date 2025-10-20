@@ -1,17 +1,22 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, getTableColumns, gte, isNull, sql } from "drizzle-orm";
-import { z } from "zod";
+import * as v from "valibot";
 import { CustomersTable } from "@/db/schema";
 import { adminProcedure, router } from "@/lib/trpc";
 import { getDaysFromTimeRange } from "@/lib/utils";
-import { timeRangeSchema } from "@/lib/zod/schema";
+import { timeRangeSchema } from "@vit-store/shared/schema";
 
 export const customer = router({
 	addUser: adminProcedure
 		.input(
-			z.object({
-				phone: z.number(),
-				address: z.string().optional(),
+			v.object({
+				phone: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(60000000),
+					v.maxValue(99999999),
+				),
+				address: v.optional(v.string()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -33,8 +38,13 @@ export const customer = router({
 
 	getCustomerByPhone: adminProcedure
 		.input(
-			z.object({
-				phone: z.number(),
+			v.object({
+				phone: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(60000000),
+					v.maxValue(99999999),
+				),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -89,7 +99,7 @@ export const customer = router({
 
 	getNewCustomersCount: adminProcedure
 		.input(
-			z.object({
+			v.object({
 				timeRange: timeRangeSchema,
 			}),
 		)
@@ -137,9 +147,14 @@ export const customer = router({
 
 	updateCustomer: adminProcedure
 		.input(
-			z.object({
-				phone: z.number(),
-				address: z.string().optional(),
+			v.object({
+				phone: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(60000000),
+					v.maxValue(99999999),
+				),
+				address: v.optional(v.string()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -175,8 +190,13 @@ export const customer = router({
 
 	deleteCustomer: adminProcedure
 		.input(
-			z.object({
-				phone: z.number(),
+			v.object({
+				phone: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(60000000),
+					v.maxValue(99999999),
+				),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

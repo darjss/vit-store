@@ -6,6 +6,11 @@ import {
 	useSearch,
 } from "@tanstack/react-router";
 import {
+	orderStatus as orderStatusConstants,
+	PRODUCT_PER_PAGE,
+	paymentStatus as paymentStatusConstants,
+} from "@vit-store/shared/constants";
+import {
 	ChevronDown,
 	ChevronUp,
 	PlusCircle,
@@ -14,7 +19,7 @@ import {
 	X,
 } from "lucide-react";
 import { useState } from "react";
-import { z } from "zod";
+import * as v from "valibot";
 import { DataPagination } from "@/components/data-pagination";
 import OrderCard from "@/components/order/order-card";
 import SubmitButton from "@/components/submit-button";
@@ -28,10 +33,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	orderStatus as orderStatusConstants,
-	paymentStatus as paymentStatusConstants,
-} from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/orders/")({
@@ -41,14 +42,17 @@ export const Route = createFileRoute("/_dash/orders/")({
 			ctx.trpc.order.getPaginatedOrders.queryOptions({}),
 		);
 	},
-	validateSearch: z.object({
-		page: z.number().default(1),
-		pageSize: z.number().default(10),
-		searchTerm: z.string().optional(),
-		sortField: z.string().optional(),
-		sortDirection: z.enum(["asc", "desc"]).default("asc"),
-		orderStatus: z.enum(orderStatusConstants).optional(),
-		paymentStatus: z.enum(paymentStatusConstants).optional(),
+	validateSearch: v.object({
+		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+		pageSize: v.optional(
+			v.pipe(v.number(), v.integer(), v.minValue(1)),
+			PRODUCT_PER_PAGE,
+		),
+		searchTerm: v.optional(v.string()),
+		sortField: v.optional(v.string()),
+		sortDirection: v.optional(v.picklist(["asc", "desc"])),
+		orderStatus: v.optional(v.picklist(orderStatusConstants)),
+		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
 	}),
 });
 

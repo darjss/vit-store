@@ -5,6 +5,7 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
+import { PRODUCT_PER_PAGE } from "@vit-store/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -15,7 +16,7 @@ import {
 	X,
 } from "lucide-react";
 import { Suspense, useState } from "react";
-import { z } from "zod";
+import * as v from "valibot";
 import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
@@ -28,7 +29,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { PRODUCT_PER_PAGE } from "@/lib/constants";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/products/")({
@@ -36,7 +36,9 @@ export const Route = createFileRoute("/_dash/products/")({
 	loader: async ({ context: ctx }) => {
 		const [products, categories, brands] = await Promise.all([
 			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getPaginatedProducts.queryOptions({}),
+				ctx.trpc.product.getPaginatedProducts.queryOptions({
+					
+				}),
 			),
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.category.getAllCategories.queryOptions(),
@@ -50,14 +52,14 @@ export const Route = createFileRoute("/_dash/products/")({
 		console.log("brands", brands);
 		return { products, categories, brands };
 	},
-	validateSearch: z.object({
-		page: z.number().default(1),
-		pageSize: z.number().default(PRODUCT_PER_PAGE),
-		brandId: z.number().optional(),
-		categoryId: z.number().optional(),
-		sortField: z.string().optional(),
-		sortDirection: z.enum(["asc", "desc"]).default("asc"),
-		searchTerm: z.string().optional(),
+	validateSearch: v.object({
+		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		sortField: v.optional(v.string()),
+		sortDirection: v.optional(v.picklist(["asc", "desc"])),
+		searchTerm: v.optional(v.string()),
 	}),
 });
 

@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { z } from "zod";
+import * as v from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
 import { DataPagination } from "@/components/data-pagination";
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 //
 import { Input } from "@/components/ui/input";
-import { PRODUCT_PER_PAGE } from "@/lib/constants";
+import { PRODUCT_PER_PAGE } from "@vit-store/shared/constants";
 import { trpc } from "@/utils/trpc";
 //
 
@@ -32,10 +32,10 @@ export const Route = createFileRoute("/_dash/customers")({
 			ctx.trpc.customer.getAllCustomers.queryOptions(),
 		);
 	},
-	validateSearch: z.object({
-		page: z.number().default(1),
-		pageSize: z.number().default(PRODUCT_PER_PAGE),
-		searchTerm: z.string().optional(),
+	validateSearch: v.object({
+		page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+		pageSize: v.pipe(v.number(), v.integer(), v.minValue(1)),
+		searchTerm: v.optional(v.string()),
 	}),
 });
 

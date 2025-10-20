@@ -70,7 +70,7 @@ export function ProductPerformance() {
 								key={product.name}
 								className="border-2 border-border bg-card p-4"
 							>
-								<div className="flex items-center justify-between mb-3">
+								<div className="mb-3 flex items-center justify-between">
 									<h4 className="font-bold font-heading">{product.name}</h4>
 									<div className="flex items-center gap-4 text-sm">
 										<div className="flex items-center gap-1">
