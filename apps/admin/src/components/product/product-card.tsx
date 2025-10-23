@@ -83,7 +83,11 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					</DialogHeader>
 					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
 						<ProductForm
-							product={product}
+							product={{
+								...product,
+								brandId: String(product.brandId),
+								categoryId: String(product.categoryId),
+							}}
 							onSuccess={() => {
 								setIsEditDialogOpen(false);
 								queryClient.invalidateQueries(
@@ -98,7 +102,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 				className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
 				onClick={(e) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
-					navigate({ to: "/products/$id", params: { id: product.id } });
+					navigate({ to: "/products/$id", params: { id: String(product.id) } });
 				}}
 				tabIndex={0}
 				onKeyDown={(e) => {
@@ -106,7 +110,10 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 						e.key === "Enter" &&
 						!(e.target as HTMLElement).closest("[data-no-nav]")
 					) {
-						navigate({ to: "/products/$id", params: { id: product.id } });
+						navigate({
+							to: "/products/$id",
+							params: { id: String(product.id) },
+						});
 					}
 				}}
 			>

@@ -1,7 +1,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
-import { addBrandSchema, type addBrandType } from "@vit-store/shared";
+import { addBrandSchema, type addBrandType } from "@vit/shared";
 import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -123,6 +123,7 @@ const BrandForm = ({
 												<UploadButton
 													setValue={form.setValue}
 													category="brand"
+													onSuccess={(url) => form.setValue("logoUrl", url)}
 												/>
 											</div>
 										</FormControl>

@@ -1,5 +1,13 @@
 import { env } from "cloudflare:workers";
 import { trpcServer } from "@hono/trpc-server";
+import {
+	adminRouter,
+	createAdminSession,
+	createUser,
+	getUserFromGoogleId,
+	setAdminSessionTokenCookie,
+	storeRouter,
+} from "@vit/api";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -9,13 +17,6 @@ import { logger } from "hono/logger";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
-import {
-	createAdminSession,
-	setAdminSessionTokenCookie,
-} from "./lib/session/admin";
-import { adminRouter } from "./routers/admin";
-import { createUser, getUserFromGoogleId } from "./routers/admin/utils";
-import { storeRouter } from "./routers/store";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 console.log("cors origin", env.CORS_ORIGIN);
@@ -183,12 +184,11 @@ app.get("/admin/login/google/callback", async (c) => {
 		const username = claims.name;
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
-		// const ctx = await createContext({ context: c });
 		const existingUser = await getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
 		if (existingUser !== null && existingUser.isApproved === true) {
 			console.log("existingUser is approved", existingUser);
-			const session = await createAdminSession(existingUser);
+			const session = await createAdminSession(existingUser, env.vitStoreKV);
 			console.log("created session with cookie ", session);
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
@@ -197,7 +197,7 @@ app.get("/admin/login/google/callback", async (c) => {
 		if (googleUserId === "118271302696111351988") {
 			console.log("creating user");
 			const user = await createUser(googleUserId, username, true);
-			const session = await createAdminSession(user);
+			const session = await createAdminSession(user, env.vitStoreKV);
 
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);

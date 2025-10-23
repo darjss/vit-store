@@ -1,16 +1,18 @@
-import { drizzle } from "drizzle-orm/d1";
-import type { Context as HonoContext } from "hono";
-import type { CustomerSelectType, UserSelectType } from "@/db/schema";
-import * as schema from "@/db/schema";
-import type { Session } from "./session";
+import type {
+	Context as ApiContext,
+	CreateContextOptions,
+	CustomerSelectType,
+	Session,
+	UserSelectType,
+} from "@vit/api";
+import { db } from "@vit/api/db";
 
-export type CreateContextOptions = {
-	context: HonoContext<{ Bindings: CloudflareBindings }>;
-};
+export type { CreateContextOptions } from "@vit/api";
 
-export async function createContext({ context }: CreateContextOptions) {
+export async function createContext({
+	context,
+}: CreateContextOptions): Promise<ApiContext> {
 	try {
-		const db = drizzle(context.env.DB, { schema });
 		const kv = context.env.vitStoreKV;
 		const r2 = context.env.r2Bucket;
 		console.log("context created");

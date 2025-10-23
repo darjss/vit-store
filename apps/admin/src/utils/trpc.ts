@@ -7,9 +7,9 @@ import {
 	splitLink,
 } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
+import type { AdminRouter } from "@vit/api";
 import { toast } from "sonner";
 import superjson from "superjson";
-import type { AdminRouter } from "../../../server/src/routers/admin";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({

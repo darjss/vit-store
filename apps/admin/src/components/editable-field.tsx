@@ -74,7 +74,7 @@ export function EditableField<T>({
 					{type === "textarea" ? (
 						<Textarea
 							value={String(tempValue ?? "")}
-							onChange={(e) =>
+							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
 								setTempValue(
 									parse
 										? parse(e.target.value)

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { timeRangeSchema, type timeRangeType } from "@vit-store/shared";
+import { timeRangeSchema, type timeRangeType } from "@vit/shared";
 import { ArrowRight, ShoppingCart } from "lucide-react";
 import * as v from "valibot";
 import { LowStockAlerts } from "@/components/dashboard/low-stock-alerts";

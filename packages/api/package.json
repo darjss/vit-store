@@ -1,0 +1,43 @@
+{
+	"name": "@vit/api",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./src/index.ts"
+		},
+		"./db": {
+			"types": "./dist/db/index.d.ts",
+			"default": "./src/db/index.ts"
+		},
+		"./db/schema": {
+			"types": "./dist/db/schema.d.ts",
+			"default": "./src/db/schema.ts"
+		},
+		"./*": {
+			"types": "./dist/*.d.ts",
+			"default": "./src/*.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:"
+	},
+	"dependencies": {
+		"@oslojs/crypto": "^1.0.1",
+		"@oslojs/encoding": "^1.1.0",
+		"nanoid": "^5.1.5",
+		"superjson": "^2.2.2",
+		"@vit/shared": "workspace:*"
+	},
+	"peerDependencies": {
+		"typescript": "^5",
+		"drizzle-orm": "catalog:",
+		"@trpc/server": "catalog:",
+		"@trpc/client": "catalog:",
+		"hono": "catalog:",
+		"valibot": "catalog:"
+	}
+}

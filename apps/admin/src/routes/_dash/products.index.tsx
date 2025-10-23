@@ -5,7 +5,7 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { PRODUCT_PER_PAGE } from "@vit-store/shared/constants";
+import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,

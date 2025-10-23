@@ -1,0 +1,155 @@
+---
+import BenefitsSection from "@/components/home/BenefitsSection.astro";
+import CategoryGrid from "@/components/home/CategoryGrid.astro";
+import CTASection from "@/components/home/CTASection.astro";
+import Hero from "@/components/home/Hero.astro";
+import ProductSection from "@/components/home/ProductSection.astro";
+import Layout from "@/layouts/Layout.astro";
+
+// import { api } from "@/lib/trpc";
+
+console.log("🔴 PUBLIC_API_URL`", import.meta.env.PUBLIC_API_URL);
+
+// const products = await api.product.getProductsForHome.query();
+// const { featuredProducts, newProducts, discountedProducts } = products;
+const featuredProducts = [
+    {
+        id: 1,
+        name: "Vitamin D3 2000 IU",
+        price: 12900,
+        image: "https://picsum.photos/400/300?random=1",
+        brand: "VitStore",
+        discount: 15,
+    },
+    {
+        id: 2,
+        name: "Omega-3 Fish Oil",
+        price: 18900,
+        image: "https://picsum.photos/400/300?random=2",
+        brand: "Nordic Naturals",
+    },
+    {
+        id: 3,
+        name: "Multivitamin Complex",
+        price: 15900,
+        image: "https://picsum.photos/400/300?random=3",
+        brand: "VitStore",
+        discount: 10,
+    },
+    {
+        id: 4,
+        name: "Magnesium Glycinate",
+        price: 13900,
+        image: "https://picsum.photos/400/300?random=4",
+        brand: "NOW Foods",
+    },
+];
+
+const newProducts = [
+    {
+        id: 5,
+        name: "Probiotic 50B",
+        price: 21900,
+        image: "https://picsum.photos/400/300?random=5",
+        brand: "Garden of Life",
+    },
+    {
+        id: 6,
+        name: "Vitamin C 1000mg",
+        price: 9900,
+        image: "https://picsum.photos/400/300?random=6",
+        brand: "VitStore",
+    },
+    {
+        id: 7,
+        name: "Zinc Picolinate",
+        price: 11900,
+        image: "https://picsum.photos/400/300?random=7",
+        brand: "Thorne",
+    },
+    {
+        id: 8,
+        name: "B-Complex Plus",
+        price: 14900,
+        image: "https://picsum.photos/400/300?random=8",
+        brand: "VitStore",
+        discount: 5,
+    },
+];
+
+const discountedProducts = [
+    {
+        id: 9,
+        name: "CoQ10 100mg",
+        price: 24900,
+        image: "https://picsum.photos/400/300?random=9",
+        brand: "VitStore",
+        discount: 20,
+    },
+    {
+        id: 10,
+        name: "Turmeric Curcumin",
+        price: 17900,
+        image: "https://picsum.photos/400/300?random=10",
+        brand: "VitStore",
+        discount: 25,
+    },
+    {
+        id: 11,
+        name: "Ashwagandha 500mg",
+        price: 16900,
+        image: "https://picsum.photos/400/300?random=11",
+        brand: "VitStore",
+        discount: 15,
+    },
+    {
+        id: 12,
+        name: "Collagen Peptides",
+        price: 22900,
+        image: "https://picsum.photos/400/300?random=12",
+        brand: "Vital Proteins",
+        discount: 10,
+    },
+];
+---
+
+<Layout>
+    <Hero />
+
+    <ProductSection
+        title="Онцлох бүтээгдэхүүн"
+        subtitle="Манай шилдэг сонголтууд"
+        products={featuredProducts}
+        filterLink="filter=featured"
+        badgeStyle="featured"
+    />
+
+    <ProductSection
+        title="Шинэ ирсэн бүтээгдэхүүн"
+        subtitle="Саяхан нэмэгдсэн"
+        products={newProducts}
+        filterLink="filter=recent"
+        badgeStyle="new"
+        bgClass="bg-muted/30"
+    />
+
+    <ProductSection
+        title="Хөнгөлөлттэй бүтээгдэхүүн"
+        subtitle="Тусгай үнийн саналууд"
+        products={discountedProducts}
+        filterLink="filter=discount"
+        badgeStyle="discount"
+        disclaimer="Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу."
+    />
+
+    <CategoryGrid />
+
+    <BenefitsSection />
+
+    <CTASection
+        title="Чанартай витамин, нэмэлт тэжээл"
+        description="АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлээр эрүүл мэндээ дэмжээрэй."
+        buttonText="Бүх бүтээгдэхүүн"
+        buttonLink="/products"
+    />
+</Layout>

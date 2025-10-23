@@ -1,0 +1,70 @@
+---
+import ProductCard from "./ProductCard.astro";
+import type { ProductForHome } from "@/lib/types";
+
+interface Props {
+    title: string;
+    subtitle: string;
+    products: ProductForHome[];
+    filterLink?: string;
+    badgeStyle?: "featured" | "new" | "discount";
+    bgClass?: string;
+    disclaimer?: string;
+}
+
+const {
+    title,
+    subtitle,
+    products,
+    filterLink,
+    badgeStyle = "featured",
+    bgClass = "",
+    disclaimer,
+} = Astro.props;
+
+const badgeEmoji = {
+    featured: "⭐",
+    new: "✨",
+    discount: "🔥",
+};
+---
+
+<section id={filterLink?.split("=")[1]} class={`relative py-12 ${bgClass}`}>
+    <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-8 flex items-end justify-between">
+            <div>
+                <h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2">
+                    {badgeEmoji[badgeStyle]}
+                    {title}
+                </h2>
+                <p class="text-base text-black/70">{subtitle}</p>
+            </div>
+            {
+                filterLink && (
+                    <a
+                        href={`/products?filter=${filterLink.split("=")[1]}`}
+                        class="hidden sm:inline-flex items-center gap-2 px-4 py-2 border-2 border-black font-bold uppercase text-sm hover:bg-primary transition-colors"
+                    >
+                        Бүгдийг харах →
+                    </a>
+                )
+            }
+        </div>
+        <div
+            class="grid grid-cols-1 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+            {
+                products.map((product) => (
+                    <ProductCard product={product} badgeStyle={badgeStyle} />
+                ))
+            }
+        </div>
+        {
+            disclaimer && (
+                <p class="mt-6 text-xs font-semibold text-black/60 text-center">
+                    {disclaimer}
+                </p>
+            )
+        }
+    </div>
+</section>

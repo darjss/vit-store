@@ -1,13 +1,4 @@
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import type { Context } from "hono";
-
-export type HonoContextType = Context<
-	{
-		Bindings: CloudflareBindings;
-	},
-	any,
-	any
->;
 
 export interface SessionConfig {
 	kvSessionPrefix: string;
@@ -18,10 +9,19 @@ export interface SessionConfig {
 	renewalThresholdMs: number;
 }
 
-export type OrderStatusType = "pending" | "shipped" | "delivered" | "cancelled" | "refunded";
+export type OrderStatusType =
+	| "pending"
+	| "shipped"
+	| "delivered"
+	| "cancelled"
+	| "refunded";
 export type PaymentProviderType = "qpay" | "transfer" | "cash";
 export type PaymentStatusType = "pending" | "success" | "failed";
-export type OrderDeliveryProviderType = "tu-delivery" | "self" | "avidaa";
+export type OrderDeliveryProviderType =
+	| "tu-delivery"
+	| "self"
+	| "avidaa"
+	| "pick-up";
 
 export interface AddSalesType {
 	productCost: number;
@@ -46,7 +46,12 @@ export const orderStatus = [
 	"refunded",
 ] as const;
 export const paymentProvider = ["qpay", "transfer", "cash"] as const;
-export const deliveryProvider = ["tu-delivery", "self", "avidaa"] as const;
+export const deliveryProvider = [
+	"tu-delivery",
+	"self",
+	"avidaa",
+	"pick-up",
+] as const;
 export const paymentStatus = ["pending", "success", "failed"] as const;
 export const PRODUCT_PER_PAGE = 5;
 export const productFields = [

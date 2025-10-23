@@ -14,7 +14,6 @@
 		},
 		"outDir": "./dist",
 		"types": ["./worker-configuration", "node"],
-		"preserveSymlinks": true,
 		"composite": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx"

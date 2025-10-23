@@ -1,5 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { addCategorySchema, type addCategoryType } from "@vit-store/shared";
+import { addCategorySchema, type addCategoryType } from "@vit/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";

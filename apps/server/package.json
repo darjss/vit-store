@@ -2,11 +2,25 @@
 	"name": "server",
 	"main": "src/index.ts",
 	"type": "module",
+	"exports": {
+		".": {
+			"bun": "./src/index.ts",
+			"import": "./lib/src/index.js"
+		},
+		"./alchemy": {
+			"bun": "./alchemy.run.ts",
+			"import": "./lib/alchemy.run.js",
+			"types": "./alchemy.run.ts"
+		}
+	},
 	"scripts": {
 		"build": "tsdown",
-		"check-types": "tsc -b",
+		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+		"dev": "alchemy dev --app server --stage dev ",
+		"deploy": "alchemy deploy --app server --stage prod",
+		"destroy": "alchemy destroy --app server",
 		"db:push": "drizzle-kit push",
 		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
 		"db:studio": "drizzle-kit studio",
@@ -30,9 +44,11 @@
 		"nanoid": "^5.1.5",
 		"superjson": "^2.2.2",
 		"valibot": "catalog:",
-		"@vit-store/shared": "workspace:*"
+		"@vit/shared": "workspace:*",
+		"@vit/api": "workspace:*"
 	},
 	"devDependencies": {
+		"alchemy": "0.75.1",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"tsdown": "catalog:",

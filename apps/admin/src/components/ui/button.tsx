@@ -15,6 +15,7 @@ export const buttonVariants = cva(
 				outline:
 					"border-2 bg-transparent shadow-md transition hover:translate-y-1 hover:shadow-none",
 				link: "bg-transparent hover:underline",
+				ghost: "bg-transparent hover:bg-muted/50",
 				destructive:
 					"border-2 border-destructive bg-destructive text-destructive-foreground shadow-md transition hover:translate-y-1 hover:bg-destructive-hover hover:shadow-none",
 			},
