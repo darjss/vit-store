@@ -1,0 +1,160 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+	--color-background: oklch(0.99 0 0);
+	--color-foreground: oklch(0.15 0 0);
+	--color-card: oklch(1 0 0);
+	--color-card-foreground: oklch(0.15 0 0);
+	--color-popover: oklch(1 0 0);
+	--color-popover-foreground: oklch(0.15 0 0);
+	--color-primary: oklch(0.92 0.15 95);
+	--color-primary-foreground: oklch(0.15 0 0);
+	--color-secondary: oklch(0.15 0 0);
+	--color-secondary-foreground: oklch(0.99 0 0);
+	--color-muted: oklch(0.95 0.05 95);
+	--color-muted-foreground: oklch(0.45 0 0);
+	--color-accent: oklch(0.92 0.15 95);
+	--color-accent-foreground: oklch(0.15 0 0);
+	--color-destructive: oklch(0.577 0.245 27.325);
+	--color-destructive-foreground: oklch(0.99 0 0);
+	--color-border: oklch(0.15 0 0);
+	--color-input: oklch(0.922 0 0);
+	--color-ring: oklch(0.92 0.15 95);
+	--color-chart-1: oklch(0.92 0.15 95);
+	--color-chart-2: oklch(0.75 0.12 85);
+	--color-chart-3: oklch(0.65 0.18 105);
+	--color-chart-4: oklch(0.85 0.1 90);
+	--color-chart-5: oklch(0.55 0.15 100);
+	--color-sidebar: oklch(0.99 0 0);
+	--color-sidebar-foreground: oklch(0.15 0 0);
+	--color-sidebar-primary: oklch(0.92 0.15 95);
+	--color-sidebar-primary-foreground: oklch(0.15 0 0);
+	--color-sidebar-accent: oklch(0.95 0.05 95);
+	--color-sidebar-accent-foreground: oklch(0.15 0 0);
+	--color-sidebar-border: oklch(0.15 0 0);
+	--color-sidebar-ring: oklch(0.92 0.15 95);
+
+	--font-sans: "Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif;
+	--font-mono: "Geist Mono", "Geist Mono Fallback";
+
+	--radius: 0rem;
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+
+	@keyframes float {
+		0%,
+		100% {
+			transform: translateY(0px) rotate(0deg);
+		}
+		50% {
+			transform: translateY(-10px) rotate(2deg);
+		}
+	}
+
+	@keyframes wiggle {
+		0%,
+		100% {
+			transform: rotate(-2deg);
+		}
+		50% {
+			transform: rotate(2deg);
+		}
+	}
+
+	.animate-float {
+		animation: float 3s ease-in-out infinite;
+	}
+
+	.animate-float-delayed {
+		animation: float 3.5s ease-in-out infinite;
+	}
+
+	.animate-float-slow {
+		animation: float 4s ease-in-out infinite;
+	}
+
+	.animate-wiggle {
+		animation: wiggle 2s ease-in-out infinite;
+	}
+
+	@keyframes float-1 {
+		0%,
+		100% {
+			transform: translateY(0px) translateX(0px) rotate(var(--tw-rotate));
+		}
+		25% {
+			transform: translateY(-15px) translateX(5px)
+				rotate(calc(var(--tw-rotate) + 3deg));
+		}
+		50% {
+			transform: translateY(-8px) translateX(-8px) rotate(var(--tw-rotate));
+		}
+		75% {
+			transform: translateY(-20px) translateX(3px)
+				rotate(calc(var(--tw-rotate) - 2deg));
+		}
+	}
+
+	@keyframes float-2 {
+		0%,
+		100% {
+			transform: translateY(0px) translateX(0px) rotate(var(--tw-rotate));
+		}
+		30% {
+			transform: translateY(-12px) translateX(-6px)
+				rotate(calc(var(--tw-rotate) - 3deg));
+		}
+		60% {
+			transform: translateY(-18px) translateX(4px)
+				rotate(calc(var(--tw-rotate) + 2deg));
+		}
+		80% {
+			transform: translateY(-5px) translateX(-3px) rotate(var(--tw-rotate));
+		}
+	}
+
+	@keyframes float-3 {
+		0%,
+		100% {
+			transform: translateY(0px) translateX(0px) rotate(var(--tw-rotate));
+		}
+		20% {
+			transform: translateY(-10px) translateX(8px)
+				rotate(calc(var(--tw-rotate) + 4deg));
+		}
+		50% {
+			transform: translateY(-22px) translateX(-5px)
+				rotate(calc(var(--tw-rotate) - 3deg));
+		}
+		70% {
+			transform: translateY(-6px) translateX(6px)
+				rotate(calc(var(--tw-rotate) + 2deg));
+		}
+	}
+
+	.animate-float-1 {
+		animation: float-1 6s ease-in-out infinite;
+	}
+
+	.animate-float-2 {
+		animation: float-2 7s ease-in-out infinite;
+	}
+
+	.animate-float-3 {
+		animation: float-3 8s ease-in-out infinite;
+	}
+}

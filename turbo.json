@@ -17,6 +17,20 @@
 			"cache": false,
 			"persistent": true
 		},
+		"deploy": {
+			"dependsOn": ["^deploy"],
+			"cache": false
+		},
+		"server#destroy": {
+			"dependsOn": ["admin#destroy", "store#destroy"],
+			"cache": false
+		},
+		"admin#destroy": {
+			"cache": false
+		},
+		"store#destroy": {
+			"cache": false
+		},
 		"db:push": {
 			"cache": false,
 			"persistent": true

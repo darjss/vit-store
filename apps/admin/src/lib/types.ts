@@ -1,6 +1,5 @@
-import type { AdminRouter } from "@server/routers/admin";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
-import type { UserSelectType } from "../../../server/src/db/schema";
+import type { AdminRouter, UserSelectType } from "@vit/api";
 
 export type RouterOutputs = inferRouterOutputs<AdminRouter>;
 export type RouterInputs = inferRouterInputs<AdminRouter>;

@@ -4,7 +4,7 @@ import { Image } from "@unpic/react";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/utils/trpc";
-import type { BrandSelectType } from "../../../../server/src/db/schema";
+import type { BrandSelectType } from "@vit/api/db/schema";
 import RowAction from "../row-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import BrandForm from "./brand-form";

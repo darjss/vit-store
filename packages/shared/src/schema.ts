@@ -84,7 +84,7 @@ export const addOrderSchema = v.object({
 		"refunded",
 	]),
 	paymentStatus: v.picklist(["pending", "success", "failed"]),
-	deliveryProvider: v.picklist(["tu-delivery", "self", "avidaa"]),
+	deliveryProvider: v.picklist(["tu-delivery", "self", "avidaa", "pick-up"]),
 	isNewCustomer: v.boolean(),
 	products: v.array(productSchema),
 });
@@ -118,6 +118,7 @@ export const timeRangeSchema = v.picklist(["daily", "weekly", "monthly"]);
 export type addBrandType = v.InferOutput<typeof addBrandSchema>;
 export type addCategoryType = v.InferOutput<typeof addCategorySchema>;
 export type addProductType = v.InferOutput<typeof addProductSchema>;
+export type addProductInputType = v.InferInput<typeof addProductSchema>;
 export type addImageType = addProductType["images"];
 export type addOrderType = v.InferOutput<typeof addOrderSchema>;
 export type addOrderProductType = v.InferOutput<typeof productSchema>;

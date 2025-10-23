@@ -9,7 +9,7 @@ import {
 	orderStatus as orderStatusConstants,
 	PRODUCT_PER_PAGE,
 	paymentStatus as paymentStatusConstants,
-} from "@vit-store/shared/constants";
+} from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,

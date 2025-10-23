@@ -1,0 +1,94 @@
+---
+import { formatCurrency } from "@vit-store/shared/utils";
+import { productColors } from "@/lib/constant";
+import type { ProductForHome } from "@/lib/types";
+import AddToCartButton from "../cart/add-to-cart-button";
+
+interface Props {
+    product: ProductForHome;
+    badgeStyle?: "featured" | "new" | "discount";
+}
+
+const { product: p } = Astro.props;
+
+const randomColor =
+    productColors[Math.floor(Math.random() * productColors.length)];
+---
+
+<div
+    class="group relative block rounded-sm border-3 sm:border-4 border-black bg-white shadow-[4px_4px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] sm:hover:translate-x-[4px] hover:translate-y-[2px] sm:hover:translate-y-[4px] transition-all"
+    aria-label={`${p.name} by ${p.brand}`}
+>
+    <a
+        href={`/product/${p.id}`}
+        class="focus:outline-none focus:ring-2 focus:ring-black/40"
+    >
+        <div
+            class="relative aspect-[4/3] overflow-hidden border-b-3 sm:border-b-4 border-black"
+            style={`background:${randomColor}`}
+        >
+            <div
+                class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]"
+            >
+            </div>
+            {
+                p.image && (
+                    <img
+                        src={p.image}
+                        alt={p.name}
+                        class="absolute inset-0 w-full h-full object-contain p-4 sm:p-6"
+                        loading="lazy"
+                    />
+                )
+            }
+            <div
+                class="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 rounded-full border-2 border-black bg-white px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
+            >
+                {p.brand}
+            </div>
+        </div>
+        <div class="p-3 sm:p-5 pb-16 sm:pb-5">
+            <h3
+                class="mb-1.5 sm:mb-2 text-sm sm:text-lg font-black leading-tight sm:leading-snug group-hover:underline line-clamp-2"
+            >
+                {p.name}
+            </h3>
+
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1 sm:gap-2">
+                    {
+                        p.discount && (
+                            <div class="text-xs sm:text-lg font-bold text-black/40 line-through">
+                                €
+                                {formatCurrency(
+                                    p.price * (1 - p.discount / 100),
+                                )}
+                                `
+                            </div>
+                        )
+                    }
+                    <div
+                        class:list={[
+                            "font-black",
+                            p.discount
+                                ? "text-lg sm:text-2xl text-destructive"
+                                : "text-lg sm:text-2xl",
+                        ]}
+                    >
+                        €{p.price.toFixed(2)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a>
+    <AddToCartButton
+        client:load
+        cartItem={{
+            productId: p.id,
+            quantity: 1,
+            name: p.name,
+            price: p.price,
+            image: p.image,
+        }}
+    />
+</div>

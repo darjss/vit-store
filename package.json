@@ -25,9 +25,12 @@
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"dev": "alchemy dev --stage dev",
+		"dev": "turbo dev",
+		"dev:alchemy": "alchemy dev --stage dev",
 		"build": "turbo build",
 		"check-types": "turbo check-types",
+		"deploy": "turbo deploy",
+		"destroy": "turbo destroy",
 		"dev:native": "turbo -F native dev",
 		"dev:web": "turbo -F web dev",
 		"dev:server": "turbo -F server dev",
@@ -35,8 +38,7 @@
 		"db:generate": "turbo -F @vit-store/db db:generate",
 		"db:studio": "turbo -F server db:studio",
 		"db:studio:local": "turbo -F server db:studio:local",
-		"db:migrate": "turbo -F server db:migrate",
-		"deploy": "alchemy deploy --stage prod"
+		"db:migrate": "turbo -F server db:migrate"
 	},
 	"dependencies": {
 		"dotenv": "^17.2.3"

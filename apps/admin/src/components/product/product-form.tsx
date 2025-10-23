@@ -1,15 +1,19 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { addProductSchema, type addProductType } from "@vit-store/shared";
 import {
 	useMutation,
 	useQueryClient,
 	useSuspenseQueries,
 } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
+import {
+	addProductSchema,
+	type addProductType,
+	type addProductInputType,
+} from "@vit/shared";
+import { status } from "@vit/shared/constants";
 import { X } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { status } from "@vit-store/shared/constants";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Button } from "../ui/button";
@@ -37,7 +41,7 @@ const ProductForm = ({
 	product,
 	onSuccess,
 }: {
-	product?: addProductType;
+	product?: addProductInputType;
 	onSuccess: () => void;
 }) => {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
@@ -52,8 +56,8 @@ const ProductForm = ({
 			name: product?.name || "",
 			description: product?.description || "",
 			dailyIntake: product?.dailyIntake || 0,
-			brandId: product?.brandId || 0,
-			categoryId: product?.categoryId || 0,
+			brandId: product?.brandId || "",
+			categoryId: product?.categoryId || "",
 			amount: product?.amount || "",
 			potency: product?.potency || "",
 			status: product?.status || "active",

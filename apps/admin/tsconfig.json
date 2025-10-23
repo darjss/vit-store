@@ -13,7 +13,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
-			"@server/*": ["../server/src/*"]
+			"@server/*": ["../server/src/*"],
+			"server/alchemy": ["../server/alchemy.run.ts"]
 		}
 	},
 	"references": [

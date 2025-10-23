@@ -1,6 +1,6 @@
-import type { OrderStatusType } from "@server/lib/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import type { OrderStatusType } from "@vit/shared";
 import {
 	Calendar,
 	CheckCircle,

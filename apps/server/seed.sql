@@ -45,67 +45,67 @@ VALUES
 INSERT INTO ecom_vit_product (
   id, name, slug, description, status, discount, amount, potency, stock, price, 
   daily_intake, category_id, brand_id, tags, is_featured, ingredients, 
-  seo_title, seo_description, min_stock, weight_grams, origin_country, created_at
+  seo_title, seo_description, weight_grams, created_at
 ) VALUES
   (1,  'Vitamin C 500mg', 'vitamin-c-500mg', 'High potency Vitamin C with rose hips', 'active', 0, '100 tablets', '500 mg', 200, 25000, 2, 1, 1, 
    '["immune", "antioxidant", "cold"]', 1, '["Vitamin C", "Rose Hips", "Bioflavonoids"]', 
-   'Vitamin C 500mg - Immune Support', 'High potency Vitamin C supplement with immune support benefits', 50, 100, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+   'Vitamin C 500mg - Immune Support', 'High potency Vitamin C supplement with immune support benefits', 100, (strftime('%s','now') - (abs(random()) % 2592000))),
    
   (2,  'Vitamin D3 2000 IU', 'vitamin-d3-2000-iu', 'Vitamin D3 support for bone health', 'active', 0, '120 softgels', '2000 IU', 150, 30000, 1, 1, 2, 
    '["bone", "immune", "sunshine"]', 1, '["Vitamin D3", "Olive Oil"]', 
-   'Vitamin D3 2000 IU - Bone Health', 'Essential Vitamin D3 for calcium absorption and bone health', 30, 120, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+   'Vitamin D3 2000 IU - Bone Health', 'Essential Vitamin D3 for calcium absorption and bone health', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
    
   (3,  'Magnesium Glycinate 120 Tablets', 'magnesium-glycinate-120-tablets', 'Magnesium for relaxation and sleep', 'active', 0, '120 tablets', '200 mg', 180, 55000, 2, 2, 3, 
    '["relaxation", "sleep", "muscle"]', 0, '["Magnesium Glycinate", "Cellulose"]', 
-   'Magnesium Glycinate - Calm Support', 'Highly bioavailable magnesium for relaxation and better sleep', 40, 120, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+   'Magnesium Glycinate - Calm Support', 'Highly bioavailable magnesium for relaxation and better sleep', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
    
   (4,  'Probiotic Complex 30 Billion', 'probiotic-complex-30-billion', '30B CFU probiotic with multiple strains', 'active', 0, '60 capsules', '30 Billion', 120, 90000, 1, 4, 4, 
    '["digestive", "gut", "immunity"]', 1, '["Lactobacillus", "Bifidobacterium", "Prebiotics"]', 
-   'Probiotic 30 Billion - Gut Health', 'Multi-strain probiotic for digestive and immune health', 20, 60, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+   'Probiotic 30 Billion - Gut Health', 'Multi-strain probiotic for digestive and immune health', 60, (strftime('%s','now') - (abs(random()) % 2592000))),
    
 (5,  'Ashwagandha 1000mg', 'ashwagandha-1000mg', 'Stress support Ashwagandha extract', 'active', 0, '120 capsules', '1000 mg', 220, 65000, 2, 3, 5, 
     '["stress", "adaptogen", "energy"]', 0, '["Ashwagandha Root Extract", "Black Pepper"]', 
-    'Ashwagandha 1000mg - Stress Relief', 'Adaptogenic herb for stress management and energy', 35, 120, 'IND', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Ashwagandha 1000mg - Stress Relief', 'Adaptogenic herb for stress management and energy', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (6,  'Zinc Picolinate 30mg', 'zinc-picolinate-30mg', 'High absorption zinc for immune support', 'active', 0, '100 capsules', '30 mg', 160, 18000, 1, 2, 1, 
     '["immune", "mineral", "recovery"]', 0, '["Zinc Picolinate", "Rice Flour"]', 
-    'Zinc Picolinate 30mg - Immune Support', 'Essential mineral for immune function and cellular health', 40, 100, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Zinc Picolinate 30mg - Immune Support', 'Essential mineral for immune function and cellular health', 100, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (7,  'Omega-3 Fish Oil 1000mg', 'omega-3-fish-oil-1000mg', 'EPA/DHA omega-3 fatty acids', 'active', 0, '180 softgels', '1000 mg', 140, 45000, 2, 1, 2, 
     '["heart", "brain", "inflammation"]', 1, '["Fish Oil", "EPA", "DHA", "Vitamin E"]', 
-    'Omega-3 Fish Oil - Heart & Brain Health', 'Molecularly distilled fish oil for cardiovascular and cognitive support', 30, 180, 'NOR', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Omega-3 Fish Oil - Heart & Brain Health', 'Molecularly distilled fish oil for cardiovascular and cognitive support', 180, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (8,  'Turmeric Curcumin 500mg', 'turmeric-curcumin-500mg', 'Anti-inflammatory turmeric with black pepper', 'active', 0, '120 capsules', '500 mg', 190, 35000, 2, 3, 3, 
     '["anti-inflammatory", "joint", "antioxidant"]', 0, '["Turmeric Root Extract", "Black Pepper Extract"]', 
-    'Turmeric Curcumin 500mg - Joint Support', 'Standardized turmeric extract for joint comfort and antioxidant protection', 35, 120, 'IND', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Turmeric Curcumin 500mg - Joint Support', 'Standardized turmeric extract for joint comfort and antioxidant protection', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (9,  'B-Complex 100', 'b-complex-100', 'Complete B-vitamin complex', 'active', 0, '100 tablets', '100 mg', 170, 28000, 1, 1, 4, 
     '["energy", "stress", "nervous"]', 0, '["B1", "B2", "B3", "B5", "B6", "B12", "Folic Acid", "Biotin"]', 
-    'B-Complex 100 - Energy & Stress', 'High-potency B-vitamin formula for energy metabolism and stress management', 40, 100, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'B-Complex 100 - Energy & Stress', 'High-potency B-vitamin formula for energy metabolism and stress management', 100, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (10, 'CoQ10 200mg', 'coq10-200mg', 'Ubiquinol CoQ10 for heart health', 'active', 0, '60 softgels', '200 mg', 130, 85000, 1, 4, 5, 
     '["heart", "energy", "antioxidant"]', 1, '["CoQ10", "Ubiquinol", "Olive Oil"]', 
-    'CoQ10 200mg - Cellular Energy', 'Bioavailable CoQ10 for cardiovascular health and cellular energy production', 25, 60, 'JPN', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'CoQ10 200mg - Cellular Energy', 'Bioavailable CoQ10 for cardiovascular health and cellular energy production', 60, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (11, 'Vitamin K2 MK-7 100mcg', 'vitamin-k2-mk7-100mcg', 'Vitamin K2 for bone and heart health', 'active', 0, '120 capsules', '100 mcg', 150, 32000, 1, 2, 1, 
     '["bone", "heart", "calcium"]', 0, '["Vitamin K2 MK-7", "MCT Oil"]', 
-    'Vitamin K2 MK-7 - Bone & Heart', 'Bioactive vitamin K2 for calcium metabolism and cardiovascular health', 30, 120, 'NLD', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Vitamin K2 MK-7 - Bone & Heart', 'Bioactive vitamin K2 for calcium metabolism and cardiovascular health', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (12, 'Multivitamin for Men', 'multivitamin-men', 'Complete daily multivitamin for men', 'active', 0, '90 tablets', '1 tablet', 200, 42000, 1, 1, 2, 
     '["daily", "men", "comprehensive"]', 1, '["Vitamin A", "C", "D", "E", "B-Complex", "Minerals"]', 
-    'Multivitamin for Men - Daily Wellness', 'Comprehensive multivitamin formula optimized for men''s health needs', 45, 90, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Multivitamin for Men - Daily Wellness', 'Comprehensive multivitamin formula optimized for men''s health needs', 90, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (13, 'Iron Ferrous Sulfate 65mg', 'iron-ferrous-sulfate-65mg', 'Iron supplement for energy and blood health', 'active', 0, '120 tablets', '65 mg', 180, 15000, 1, 2, 3, 
     '["energy", "blood", "anemia"]', 0, '["Ferrous Sulfate", "Vitamin C"]', 
-    'Iron 65mg - Energy & Blood Health', 'Essential iron for red blood cell production and energy metabolism', 50, 120, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Iron 65mg - Energy & Blood Health', 'Essential iron for red blood cell production and energy metabolism', 120, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (14, 'Calcium Citrate 600mg', 'calcium-citrate-600mg', 'Highly absorbable calcium with vitamin D', 'active', 0, '180 tablets', '600 mg', 160, 22000, 2, 2, 4, 
     '["bone", "calcium", "teeth"]', 0, '["Calcium Citrate", "Vitamin D3", "Magnesium"]', 
-    'Calcium Citrate 600mg - Bone Health', 'Bioavailable calcium with vitamin D for optimal bone density', 40, 180, 'USA', (strftime('%s','now') - (abs(random()) % 2592000))),
+    'Calcium Citrate 600mg - Bone Health', 'Bioavailable calcium with vitamin D for optimal bone density', 180, (strftime('%s','now') - (abs(random()) % 2592000))),
     
    (15, 'Digestive Enzymes', 'digestive-enzymes', 'Multi-enzyme blend for digestion', 'active', 0, '90 capsules', '1 capsule', 140, 38000, 1, 4, 5, 
     '["digestion", "enzymes", "bloating"]', 0, '["Protease", "Amylase", "Lipase", "Lactase", "Cellulase"]', 
-    'Digestive Enzymes - Gut Health', 'Broad-spectrum enzyme blend for optimal nutrient absorption and digestive comfort', 30, 90, 'USA', (strftime('%s','now') - (abs(random()) % 2592000)));
+    'Digestive Enzymes - Gut Health', 'Broad-spectrum enzyme blend for optimal nutrient absorption and digestive comfort', 90, (strftime('%s','now') - (abs(random()) % 2592000)));
 
 -- Seed Product Images (depends on Products)
 INSERT INTO ecom_vit_product_image (product_id, url, is_primary, created_at)

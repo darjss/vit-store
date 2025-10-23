@@ -1,5 +1,5 @@
 {
-	"name": "@vit-store/shared",
+	"name": "@vit/shared",
 	"type": "module",
 	"exports": {
 		".": {

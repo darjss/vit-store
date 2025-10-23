@@ -4,6 +4,7 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
+import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import * as v from "valibot";
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 //
 import { Input } from "@/components/ui/input";
-import { PRODUCT_PER_PAGE } from "@vit-store/shared/constants";
 import { trpc } from "@/utils/trpc";
 //
 
@@ -109,7 +109,17 @@ function RouteComponent() {
 							<DialogDescription>Шинэ хэрэглэгч бүртгэх.</DialogDescription>
 						</DialogHeader>
 						<div className="max-h-[80vh] overflow-y-auto p-6">
-							<CustomerForm onSuccess={() => navigate({ to: "/customers" })} />
+							<CustomerForm
+								onSuccess={() =>
+									navigate({
+										to: "/customers",
+										search: {
+											page: 1,
+											pageSize: 10,
+										},
+									})
+								}
+							/>
 						</div>
 					</DialogContent>
 				</Dialog>

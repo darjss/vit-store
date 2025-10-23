@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TodosRouteImport } from './routes/todos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashRouteRouteImport } from './routes/_dash/route'
 import { Route as DashIndexRouteImport } from './routes/_dash/index'
@@ -26,11 +25,6 @@ import { Route as DashProductsIdRouteImport } from './routes/_dash/products.$id'
 import { Route as DashOrdersAddRouteImport } from './routes/_dash/orders.add'
 import { Route as DashOrdersIdRouteImport } from './routes/_dash/orders.$id'
 
-const TodosRoute = TodosRouteImport.update({
-  id: '/todos',
-  path: '/todos',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -108,7 +102,6 @@ const DashOrdersIdRoute = DashOrdersIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
-  '/todos': typeof TodosRoute
   '/analytics': typeof DashAnalyticsRoute
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
@@ -125,7 +118,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/todos': typeof TodosRoute
   '/analytics': typeof DashAnalyticsRoute
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
@@ -144,7 +136,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_dash': typeof DashRouteRouteWithChildren
   '/login': typeof LoginRoute
-  '/todos': typeof TodosRoute
   '/_dash/analytics': typeof DashAnalyticsRoute
   '/_dash/brands': typeof DashBrandsRoute
   '/_dash/categories': typeof DashCategoriesRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/login'
-    | '/todos'
     | '/analytics'
     | '/brands'
     | '/categories'
@@ -180,7 +170,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/todos'
     | '/analytics'
     | '/brands'
     | '/categories'
@@ -198,7 +187,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_dash'
     | '/login'
-    | '/todos'
     | '/_dash/analytics'
     | '/_dash/brands'
     | '/_dash/categories'
@@ -217,19 +205,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   DashRouteRoute: typeof DashRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
-  TodosRoute: typeof TodosRoute
   ProductsAddRoute: typeof ProductsAddRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/todos': {
-      id: '/todos'
-      path: '/todos'
-      fullPath: '/todos'
-      preLoaderRoute: typeof TodosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -375,7 +355,6 @@ const DashRouteRouteWithChildren = DashRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   DashRouteRoute: DashRouteRouteWithChildren,
   LoginRoute: LoginRoute,
-  TodosRoute: TodosRoute,
   ProductsAddRoute: ProductsAddRoute,
 }
 export const routeTree = rootRouteImport
