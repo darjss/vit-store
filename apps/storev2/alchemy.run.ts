@@ -5,7 +5,7 @@ import { config } from "dotenv";
 const app = await alchemy("storev2");
 const stage = app.stage;
 config({ path: `.env.${stage}` });
-export const storev2 = await Astro("website",{
+export const storev2 = await Astro("front",{
   bindings: {
   },
   dev:{

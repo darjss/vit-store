@@ -1,4 +1,4 @@
-import { computed, effect, signal } from "@preact/signals";
+import { createEffect, createSignal, createMemo, onMount } from "solid-js";
 
 export interface CartItems {
 	productId: number;
@@ -8,87 +8,111 @@ export interface CartItems {
 	image: string;
 }
 
-const getInitialCart = (): CartItems[] => {
-	try {
-		const stored = localStorage.getItem("cartItems");
-		return stored ? JSON.parse(stored) : [];
-	} catch {
-		return [];
-	}
-};
 
-const cart = signal<CartItems[]>(getInitialCart());
+
+// const getInitialCart = (): CartItems[] => {
+// 	  if (typeof window === 'undefined') return [];
+//   try {
+//     const stored = localStorage.getItem("cart-items");
+//     console.log("stored", stored);
+//     return stored ? JSON.parse(stored) : [];
+//   } catch {
+//     return [];
+//   }
+// };
 
 const useCart = () => {
-	// Targeted effect - only write when cart actually changes
-	let previousCart = JSON.stringify(cart.value);
-	effect(() => {
-		const currentCart = JSON.stringify(cart.value);
-		if (currentCart !== previousCart) {
-			try {
-				localStorage.setItem("cartItems", currentCart);
-				previousCart = currentCart;
-			} catch (error) {
-				console.error("Failed to save cart to localStorage:", error);
-			}
+	  const [cart, setCart] = createSignal<CartItems[]>([]);
+	  const [mounted, setMounted] = createSignal(false);
+	    onMount(() => {
+    try {
+      const stored = localStorage.getItem("cart-items");
+      if (stored) {
+        setCart(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error("Failed to load cart", error);
+    } finally {
+      setMounted(true);
+    }
+  });
+	  createEffect(() => {
+		if (typeof window !== 'undefined') {
+			console.log("cart changed", cart());
+			localStorage.setItem("cart-items", JSON.stringify(cart()));
 		}
-	});
-
+  });
+  console.log("cart", cart(), "length", cart().length);
 	const addToCart = (product: CartItems) => {
-		const existingItem = cart.value.find(
+		console.log("adding product", product);
+		const existingItem = cart().find(
 			(item) => item.productId === product.productId,
 		);
 
 		if (existingItem) {
-			// Update existing item quantity
-			cart.value = cart.value.map((item) =>
-				item.productId === product.productId
-					? { ...item, quantity: Math.max(1, item.quantity + product.quantity) }
-					: item,
+			setCart((prev) =>
+				prev.map((item) =>
+					item.productId === product.productId
+						? {
+								...item,
+								quantity: Math.max(1, item.quantity + product.quantity),
+							}
+						: item,
+				),
 			);
 		} else {
-			cart.value = [
-				...cart.value,
+			setCart((prev) => [
+				...prev,
 				{ ...product, quantity: Math.max(1, product.quantity) },
-			];
+			]);
 		}
 	};
 
 	const removeFromCart = (productId: number, quantity?: number) => {
 		if (quantity) {
-			cart.value = cart.value.map((item) =>
-				item.productId === productId
-					? { ...item, quantity: Math.max(0, item.quantity - quantity) }
-					: item,
+			setCart((prev) =>
+				prev.map((item) =>
+					item.productId === productId
+						? { ...item, quantity: Math.max(0, item.quantity - quantity) }
+						: item,
+				),
 			);
 		} else {
-			cart.value = cart.value.filter((item) => item.productId !== productId);
+			setCart((prev) => prev.filter((item) => item.productId !== productId));
 		}
 	};
 	const increaseQuantity = (productId: number) => {
-		cart.value = cart.value.map((item) =>
-			item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item,
+		setCart((prev) =>
+			prev.map((item) =>
+				item.productId === productId
+					? { ...item, quantity: item.quantity + 1 }
+					: item,
+			),
 		);
 	};
 	const decreaseQuantity = (productId: number) => {
-		cart.value = cart.value.map((item) =>
-			item.productId === productId ? { ...item, quantity: item.quantity - 1 } : item,
+		setCart((prev) =>
+			prev.map((item) =>
+				item.productId === productId
+					? { ...item, quantity: Math.max(0, item.quantity - 1) }
+					: item,
+			),
 		);
 	};
 	const clearCart = () => {
-		cart.value = [];
+		setCart([]);
 	};
 
-	const cartTotal = computed(() =>
-		cart.value.reduce((acc, item) => acc + item.price * item.quantity, 0),
-	);
+	const cartTotal = createMemo(() => 
+  cart().reduce((acc, item) => acc + item.price * item.quantity, 0)
+);
 
-	const cartCount = computed(() =>
-		cart.value.reduce((acc, item) => acc + item.quantity, 0),
-	);
-
+const cartCount = createMemo(() =>
+  cart().reduce((acc, item) => acc + item.quantity, 0)
+);
 	return {
 		cart,
+		mounted,
 		addToCart,
 		removeFromCart,
 		clearCart,

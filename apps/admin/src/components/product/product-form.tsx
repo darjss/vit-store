@@ -5,11 +5,7 @@ import {
 	useSuspenseQueries,
 } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
-import {
-	addProductSchema,
-	type addProductType,
-	type addProductInputType,
-} from "@vit/shared";
+import { addProductSchema, type addProductType } from "@vit/shared";
 import { status } from "@vit/shared/constants";
 import { X } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -41,7 +37,7 @@ const ProductForm = ({
 	product,
 	onSuccess,
 }: {
-	product?: addProductInputType;
+	product?: addProductType;
 	onSuccess: () => void;
 }) => {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
@@ -50,14 +46,14 @@ const ProductForm = ({
 			trpc.brands.getAllBrands.queryOptions(),
 		],
 	});
-	const form = useForm({
+	const form = useForm<addProductType>({
 		resolver: valibotResolver(addProductSchema),
 		defaultValues: {
 			name: product?.name || "",
 			description: product?.description || "",
 			dailyIntake: product?.dailyIntake || 0,
-			brandId: product?.brandId || "",
-			categoryId: product?.categoryId || "",
+			brandId: product?.brandId || 0,
+			categoryId: product?.categoryId || 0,
 			amount: product?.amount || "",
 			potency: product?.potency || "",
 			status: product?.status || "active",
@@ -148,7 +144,10 @@ const ProductForm = ({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Брэнд</FormLabel>
-										<Select onValueChange={field.onChange}>
+										<Select
+											onValueChange={(value) => field.onChange(Number(value))}
+											defaultValue={field.value?.toString()}
+										>
 											<FormControl>
 												<SelectTrigger>
 													<SelectValue placeholder="Брэнд сонгох" />
@@ -177,7 +176,10 @@ const ProductForm = ({
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Ангилал</FormLabel>
-										<Select onValueChange={field.onChange}>
+										<Select
+											onValueChange={(value) => field.onChange(Number(value))}
+											defaultValue={field.value?.toString()}
+										>
 											<FormControl>
 												<SelectTrigger>
 													<SelectValue placeholder="Ангилал сонгох" />

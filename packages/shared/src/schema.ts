@@ -41,17 +41,9 @@ export const addProductSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
 	description: v.pipe(v.string(), v.minLength(5)),
-	dailyIntake: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
-	brandId: v.pipe(
-		v.string(),
-		v.transform(Number),
-		v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
-	),
-	categoryId: v.pipe(
-		v.string(),
-		v.transform(Number),
-		v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
-	),
+	dailyIntake: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	brandId: v.pipe(v.string(), v.transform(Number.parseInt), v.minValue(1)),
+	categoryId: v.pipe(v.string(), v.transform(Number.parseInt), v.minValue(1)),
 	amount: v.pipe(v.string(), v.minLength(3)),
 	potency: v.pipe(v.string(), v.minLength(2)),
 	status: v.picklist(["active", "draft", "out_of_stock"] as const),
@@ -118,7 +110,6 @@ export const timeRangeSchema = v.picklist(["daily", "weekly", "monthly"]);
 export type addBrandType = v.InferOutput<typeof addBrandSchema>;
 export type addCategoryType = v.InferOutput<typeof addCategorySchema>;
 export type addProductType = v.InferOutput<typeof addProductSchema>;
-export type addProductInputType = v.InferInput<typeof addProductSchema>;
 export type addImageType = addProductType["images"];
 export type addOrderType = v.InferOutput<typeof addOrderSchema>;
 export type addOrderProductType = v.InferOutput<typeof productSchema>;

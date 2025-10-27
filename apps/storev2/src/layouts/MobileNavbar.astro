@@ -1,142 +1,166 @@
 ---
+import CartCount from "@/components/cart/cart-count";
+
 // Mobile bottom navigation bar for storefront
 ---
 
-<nav class="md:hidden sticky inset-x-0 bottom-0 z-50 border-t-4 border-black bg-white">
-	<div class="mx-auto max-w-screen-sm">
-		<ul class="grid grid-cols-4 gap-1 px-3 py-2">
-			<li>
-				<a
-					href="/"
-					class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label="Нүүр"
-				>
-					<div class="flex flex-col items-center gap-1">
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="transition-transform duration-200 group-hover:scale-110"
-							aria-hidden="true"
-						>
-							<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-							<polyline points="9 22 9 12 15 12 15 22"/>
-						</svg>
-						<p class="font-bold text-[11px] leading-none">Нүүр</p>
-					</div>
-				</a>
-			</li>
+<nav
+    class="md:hidden sticky inset-x-0 bottom-0 z-50 border-t-4 border-black bg-white"
+>
+    <div class="mx-auto max-w-screen-sm">
+        <ul class="grid grid-cols-4 gap-1 px-3 py-2">
+            <li>
+                <a
+                    href="/"
+                    class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Нүүр"
+                >
+                    <div class="flex flex-col items-center gap-1">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="transition-transform duration-200 group-hover:scale-110"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                            ></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <p class="font-bold text-[11px] leading-none">Нүүр</p>
+                    </div>
+                </a>
+            </li>
 
-			<li>
-				<a
-					href="/products"
-					class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label="Бүтээгдэхүүн"
-				>
-					<div class="flex flex-col items-center gap-1">
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="transition-transform duration-200 group-hover:scale-110"
-							aria-hidden="true"
-						>
-							<rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
-							<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-						</svg>
-						<p class="font-bold text-[11px] leading-none">Бүтээгдэхүүн</p>
-					</div>
-				</a>
-			</li>
+            <li>
+                <a
+                    href="/products"
+                    class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Бүтээгдэхүүн"
+                >
+                    <div class="flex flex-col items-center gap-1">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="transition-transform duration-200 group-hover:scale-110"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="2"
+                                y="7"
+                                width="20"
+                                height="15"
+                                rx="2"
+                                ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
+                            ></path>
+                        </svg>
+                        <p class="font-bold text-[11px] leading-none">
+                            Бүтээгдэхүүн
+                        </p>
+                    </div>
+                </a>
+            </li>
 
-			<li>
-				<a
-					href="/cart"
-					class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label="Сагс"
-				>
-					<div class="flex flex-col items-center gap-1">
-						<div class="relative">
-							<svg
-								width="20"
-								height="20"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								class="transition-transform duration-200 group-hover:scale-110"
-								aria-hidden="true"
-							>
-								<circle cx="9" cy="21" r="1"/>
-								<circle cx="20" cy="21" r="1"/>
-								<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-							</svg>
-							<span class="absolute -top-2 -right-2 bg-secondary text-secondary-foreground w-4 h-4 rounded-full text-[9px] flex items-center justify-center border-2 border-black font-black">0</span>
-						</div>
-						<p class="font-bold text-[11px] leading-none">Сагс</p>
-					</div>
-				</a>
-			</li>
+            <li>
+                <a
+                    href="/cart"
+                    class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Сагс"
+                >
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="relative">
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="transition-transform duration-200 group-hover:scale-110"
+                                aria-hidden="true"
+                            >
+                                <circle cx="9" cy="21" r="1"></circle>
+                                <circle cx="20" cy="21" r="1"></circle>
+                                <path
+                                    d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
+                                ></path>
+                            </svg>
+                            <span
+                                class="absolute -top-2 -right-2 bg-secondary text-secondary-foreground w-4 h-4 rounded-full text-[9px] flex items-center justify-center border-2 border-black font-black"
+                            >
+                                <CartCount client:load />
+                            </span>
+                        </div>
+                        <p class="font-bold text-[11px] leading-none">Сагс</p>
+                    </div>
+                </a>
+            </li>
 
-			<li>
-				<a
-					href="#"
-					class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label="Цэс"
-				>
-					<div class="flex flex-col items-center gap-1">
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="transition-transform duration-200 group-hover:scale-110"
-							aria-hidden="true"
-						>
-							<line x1="3" y1="12" x2="21" y2="12"/>
-							<line x1="3" y1="6" x2="21" y2="6"/>
-							<line x1="3" y1="18" x2="21" y2="18"/>
-						</svg>
-						<p class="font-bold text-[11px] leading-none">Цэс</p>
-					</div>
-				</a>
-			</li>
-		</ul>
-	</div>
+            <li>
+                <a
+                    href="#"
+                    class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Цэс"
+                >
+                    <div class="flex flex-col items-center gap-1">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="transition-transform duration-200 group-hover:scale-110"
+                            aria-hidden="true"
+                        >
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                        <p class="font-bold text-[11px] leading-none">Цэс</p>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
 </nav>
 
 <script>
-	// Add active state to current page
-	const currentPath = window.location.pathname;
-	const links = document.querySelectorAll('nav[class*="bottom-0"] a');
-	
-	links.forEach((link) => {
-		const href = link.getAttribute('href');
-		if (href) {
-			if (
-				(href === '/' && currentPath === '/') ||
-				(href !== '/' && currentPath.startsWith(href))
-			) {
-				link.classList.add('bg-primary', 'text-primary-foreground', 'shadow-[2px_2px_0_0_#000]');
-				link.classList.remove('text-foreground/70');
-			}
-		}
-	});
-</script>
+    // Add active state to current page
+    const currentPath = window.location.pathname;
+    const links = document.querySelectorAll('nav[class*="bottom-0"] a');
 
+    links.forEach((link) => {
+        const href = link.getAttribute("href");
+        if (href) {
+            if (
+                (href === "/" && currentPath === "/") ||
+                (href !== "/" && currentPath.startsWith(href))
+            ) {
+                link.classList.add(
+                    "bg-primary",
+                    "text-primary-foreground",
+                    "shadow-[2px_2px_0_0_#000]",
+                );
+                link.classList.remove("text-foreground/70");
+            }
+        }
+    });
+</script>

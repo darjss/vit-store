@@ -61,6 +61,14 @@
 			}
 		}
 	},
+	"css":{
+      "tailwindDirectives": true
+	},
+	  "html": {
+
+    "experimentalFullSupportEnabled": true
+
+  },
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
