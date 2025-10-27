@@ -17,18 +17,18 @@ config({ path: path.join(import.meta.dirname, `.env.${stage}`) });
 console.log("stage", stage, "cors origin", process.env.CORS_ORIGIN);
 
 const db = await D1Database("db", {
-	name: "vit-store-db",
+	name: "vit-store-db"+stage,
 	migrationsDir: path.join(import.meta.dirname, "src/db/migrations"),
 	primaryLocationHint: "apac",
 	migrationsTable: "drizzle_migrations",
 });
 
 const kv = await KVNamespace("kv", {
-	title: "vit-store-kv",
+	title: "vit-store-kv"+stage,
 });
 
 const r2 = await R2Bucket("r2", {
-	name: "vit-store-bucket",
+	name: "vit-store-bucket"+stage,
 });
 
 const rateLimit = RateLimit({

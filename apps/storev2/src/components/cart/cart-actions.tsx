@@ -7,62 +7,84 @@ const CartActions = ({
 	quantity: number;
 	productId: number;
 }) => {
-	const { increaseQuantity, decreaseQuantity } = useCart();
+	const { increaseQuantity, decreaseQuantity, removeFromCart } = useCart();
 	return (
-		<div className="mb-3 flex items-center border-4 border-border bg-background p-2">
-			<span className="mr-auto font-[var(--heading-font-weight)] text-sm sm:text-base">
-				ТОО
-			</span>
-			<button
-				type="button"
-				className="flex h-10 w-10 items-center justify-center border-4 border-border bg-background p-2 transition-colors hover:bg-secondary/50"
-				data-product-id={productId}
-				data-action="decrease"
-				onClick={() => decreaseQuantity(productId)}
-				aria-label="Decrease quantity"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					aria-hidden="true"
+		<div class="flex items-center gap-3">
+			<div class="inline-flex items-center border-4 border-border bg-background shadow-[4px_4px_0_0_#000]">
+				<button
+					type="button"
+					class="flex h-10 w-10 items-center justify-center bg-background transition-all hover:bg-primary/20 active:bg-primary/30"
+					data-product-id={productId}
+					data-action="decrease"
+					onClick={() => decreaseQuantity(productId)}
+					aria-label="Decrease quantity"
 				>
-					<title>Decrease quantity</title>
-					<path d="M5 12h14" />
-				</svg>
-			</button>
-			<div className="mx-2 border-accent border-b-4 px-4 font-[var(--heading-font-weight)] text-lg">
-				{quantity}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="3"
+						strokeLinecap="square"
+						strokeLinejoin="miter"
+						aria-hidden="true"
+					>
+						<title>Decrease quantity</title>
+						<path d="M5 12h14" />
+					</svg>
+				</button>
+				<div class="flex h-10 min-w-[2.5rem] items-center justify-center border-border border-x-4 bg-background px-3 font-bold text-base">
+					{quantity}
+				</div>
+				<button
+					type="button"
+					class="flex h-10 w-10 items-center justify-center bg-background transition-all hover:bg-primary/20 active:bg-primary/30"
+					data-product-id={productId}
+					data-action="increase"
+					onClick={() => increaseQuantity(productId)}
+					aria-label="Increase quantity"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="3"
+						strokeLinecap="square"
+						strokeLinejoin="miter"
+						aria-hidden="true"
+					>
+						<title>Increase quantity</title>
+						<path d="M5 12h14" />
+						<path d="M12 5v14" />
+					</svg>
+				</button>
 			</div>
 			<button
 				type="button"
-				className="flex h-10 w-10 items-center justify-center border-4 border-border bg-background p-2 transition-colors hover:bg-secondary/50"
-				data-product-id={productId}
-				data-action="increase"
-				onClick={() => increaseQuantity(productId)}
-				aria-label="Increase quantity"
+				class="flex h-10 w-10 items-center justify-center border-4 border-border bg-destructive shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-destructive/90 hover:shadow-[2px_2px_0_0_#000] active:scale-95"
+				onClick={() => removeFromCart(productId)}
+				aria-label="Remove item"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
+					width="18"
+					height="18"
 					viewBox="0 0 24 24"
 					fill="none"
 					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
+					strokeWidth="3"
+					strokeLinecap="square"
+					strokeLinejoin="miter"
 					aria-hidden="true"
 				>
-					<title>Increase quantity</title>
-					<path d="M5 12h14" />
-					<path d="M12 5v14" />
+					<title>Remove item</title>
+					<path d="M18 6L6 18" />
+					<path d="M6 6l12 12" />
 				</svg>
 			</button>
 		</div>

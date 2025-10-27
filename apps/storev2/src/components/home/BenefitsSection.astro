@@ -1,31 +1,49 @@
 ---
 const benefits = [
-	{ title: "Үнэгүй хүргэлт", description: "€30-аас дээш захиалгад" },
-	{
-		title: "Шинжилгээнд тулгуурласан",
-		description: "Баталгаажсан найрлагатай бүтээгдэхүүн",
+	{ 
+		icon: "🚚",
+		title: "Үнэгүй хүргэлт", 
+		description: "€30-аас дээш захиалгад",
+		extra: "2-3 хоногт хүргэнэ",
+		color: "bg-blue-200"
 	},
-	{ title: "Баталгаат чанар", description: "Олон улсын стандартад нийцсэн" },
 	{
-		title: "Туслах үйлчилгээ",
-		description: "Холбоо барих: support@vitstore.mn",
+		icon: "🔬",
+		title: "Шинжилгээнд тулгуурласан",
+		description: "GMP, FDA стандарт",
+		extra: "Лабораторид шалгагдсан",
+		color: "bg-purple-200"
+	},
+	{ 
+		icon: "✅",
+		title: "Баталгаат чанар", 
+		description: "100% жинхэнэ бүтээгдэхүүн",
+		extra: "Албан ёсны импортлогч",
+		color: "bg-green-200"
 	},
 ];
 ---
 
 <section class="container mx-auto px-4 py-12 md:py-16">
-	<div class="bg-white border-3 md:border-4 border-black p-6 md:p-8 lg:p-12 shadow-[4px_4px_0_0_#000] md:shadow-[8px_8px_0_0_#000]">
-		<div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-			{benefits.map((b) => (
-				<div class="text-center">
-					<div class="bg-primary border-3 md:border-4 border-black w-12 h-12 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4">
-						<span class="text-base md:text-lg font-black">✓</span>
-					</div>
-					<h3 class="font-black text-sm md:text-lg mb-1 md:mb-2">{b.title}</h3>
-					<p class="text-xs md:text-sm font-bold text-black/70 leading-tight">{b.description}</p>
+	<div class="mb-8 md:mb-12 text-center">
+		<h2 class="text-3xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-4">
+			Яагаад VitStore сонгох вэ?
+		</h2>
+		<p class="text-base md:text-lg font-semibold text-black/70">
+			Таны итгэл, эрүүл мэнд бидний тэргүүн зорилго
+		</p>
+	</div>
+	<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+		{benefits.map((b) => (
+			<div class={`${b.color} border-3 md:border-4 border-black p-6 md:p-8 hover:shadow-[6px_6px_0_0_#000] md:hover:shadow-[10px_10px_0_0_#000] transition-all hover:-translate-y-1`}>
+				<div class="bg-white border-3 md:border-4 border-black w-16 h-16 md:w-20 md:h-20 flex items-center justify-center mx-auto mb-4 md:mb-6">
+					<span class="text-3xl md:text-4xl">{b.icon}</span>
 				</div>
-			))}
-		</div>
+				<h3 class="font-black text-lg md:text-2xl mb-2 md:mb-3 text-center">{b.title}</h3>
+				<p class="text-sm md:text-base font-bold text-black/90 leading-snug mb-1 text-center">{b.description}</p>
+				<p class="text-xs md:text-sm font-semibold text-black/70 leading-snug text-center">{b.extra}</p>
+			</div>
+		))}
 	</div>
 </section>
 
