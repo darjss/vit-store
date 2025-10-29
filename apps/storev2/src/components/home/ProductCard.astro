@@ -1,4 +1,5 @@
 ---
+
 import { formatCurrency } from "@vit/shared/utils";
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
@@ -20,7 +21,7 @@ const randomColor =
     aria-label={`${p.name} by ${p.brand}`}
 >
     <a
-        href={`/product/${p.id}`}
+        href={`/products/${p.id}`}
         class="focus:outline-none focus:ring-2 focus:ring-black/40"
     >
         <div

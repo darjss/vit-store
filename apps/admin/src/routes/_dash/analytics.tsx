@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
-import { RevenueAnalytics } from "@/components/analytics/revenue-analytics";
-import { ProductPerformance } from "@/components/analytics/product-performance";
 import { CustomerAnalytics } from "@/components/analytics/customer-analytics";
-import { TimeBasedAnalytics } from "@/components/analytics/time-based-analytics";
 import { OrderAnalytics } from "@/components/analytics/order-analytics";
+import { ProductPerformance } from "@/components/analytics/product-performance";
+import { RevenueAnalytics } from "@/components/analytics/revenue-analytics";
+import { TimeBasedAnalytics } from "@/components/analytics/time-based-analytics";
 import { WebAnalytics } from "@/components/analytics/web-analytics";
 
 export const Route = createFileRoute("/_dash/analytics")({

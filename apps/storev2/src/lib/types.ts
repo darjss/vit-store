@@ -5,6 +5,7 @@ export interface CartItems {
 	price: number;
 	image: string;
 }
+
 export interface ProductForHome {
 	id: number;
 	name: string;

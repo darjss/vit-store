@@ -1,4 +1,4 @@
-import { Eye, TrendingUp, MousePointer, Target } from "lucide-react";
+import { Eye, MousePointer, Target, TrendingUp } from "lucide-react";
 import {
 	Bar,
 	BarChart,
@@ -60,7 +60,7 @@ export function WebAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.dailyVisits.toLocaleString()}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+8.7%</span>
 								</div>
@@ -80,7 +80,7 @@ export function WebAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.weeklyVisits.toLocaleString()}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+12.3%</span>
 								</div>
@@ -98,7 +98,7 @@ export function WebAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.monthlyVisits.toLocaleString()}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+5.4%</span>
 								</div>
@@ -116,7 +116,7 @@ export function WebAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.conversionMetrics.visitorToOrderRate}%
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+0.8%</span>
 								</div>
@@ -211,7 +211,7 @@ export function WebAnalytics() {
 							>
 								<div className="flex items-center justify-between">
 									<div>
-										<h4 className="font-bold font-heading text-base mb-1">
+										<h4 className="mb-1 font-bold font-heading text-base">
 											{item.metric}
 										</h4>
 										<p className="text-muted-foreground text-sm">
@@ -222,7 +222,7 @@ export function WebAnalytics() {
 										<p className="font-bold font-heading text-2xl">
 											{item.rate}%
 										</p>
-										<div className="flex items-center gap-1 mt-1">
+										<div className="mt-1 flex items-center gap-1">
 											<TrendingUp className="h-3 w-3 text-green-600" />
 											<span className="text-green-600 text-xs">
 												+{(Math.random() * 2) | 0}.{(Math.random() * 9) | 0}%
@@ -231,11 +231,11 @@ export function WebAnalytics() {
 									</div>
 								</div>
 								<div className="mt-3">
-									<div className="w-full bg-muted rounded-full h-2">
+									<div className="h-2 w-full rounded-full bg-muted">
 										<div
-											className="bg-chart-1 h-2 rounded-full"
+											className="h-2 rounded-full bg-chart-1"
 											style={{ width: `${Math.min(item.rate * 10, 100)}%` }}
-										></div>
+										/>
 									</div>
 								</div>
 							</div>

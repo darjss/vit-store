@@ -1,4 +1,4 @@
-import useCart from "@/hooks/use-cart";
+import { cart } from "@/store/cart";
 
 const CartActions = ({
 	quantity,
@@ -7,7 +7,6 @@ const CartActions = ({
 	quantity: number;
 	productId: number;
 }) => {
-	const { increaseQuantity, decreaseQuantity, removeFromCart } = useCart();
 	return (
 		<div class="flex items-center gap-3">
 			<div class="inline-flex items-center border-4 border-border bg-background shadow-[4px_4px_0_0_#000]">
@@ -16,7 +15,7 @@ const CartActions = ({
 					class="flex h-10 w-10 items-center justify-center bg-background transition-all hover:bg-primary/20 active:bg-primary/30"
 					data-product-id={productId}
 					data-action="decrease"
-					onClick={() => decreaseQuantity(productId)}
+					onClick={() => cart.updateQuantity(productId, -1)}
 					aria-label="Decrease quantity"
 				>
 					<svg
@@ -43,7 +42,7 @@ const CartActions = ({
 					class="flex h-10 w-10 items-center justify-center bg-background transition-all hover:bg-primary/20 active:bg-primary/30"
 					data-product-id={productId}
 					data-action="increase"
-					onClick={() => increaseQuantity(productId)}
+					onClick={() => cart.updateQuantity(productId, 1)}
 					aria-label="Increase quantity"
 				>
 					<svg
@@ -67,7 +66,7 @@ const CartActions = ({
 			<button
 				type="button"
 				class="flex h-10 w-10 items-center justify-center border-4 border-border bg-destructive shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-destructive/90 hover:shadow-[2px_2px_0_0_#000] active:scale-95"
-				onClick={() => removeFromCart(productId)}
+				onClick={() => cart.remove(productId)}
 				aria-label="Remove item"
 			>
 				<svg

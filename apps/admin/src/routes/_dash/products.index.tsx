@@ -36,9 +36,7 @@ export const Route = createFileRoute("/_dash/products/")({
 	loader: async ({ context: ctx }) => {
 		const [products, categories, brands] = await Promise.all([
 			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getPaginatedProducts.queryOptions({
-					
-				}),
+				ctx.trpc.product.getPaginatedProducts.queryOptions({}),
 			),
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.category.getAllCategories.queryOptions(),
@@ -54,7 +52,10 @@ export const Route = createFileRoute("/_dash/products/")({
 	},
 	validateSearch: v.object({
 		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+		pageSize: v.optional(
+			v.pipe(v.number(), v.integer(), v.minValue(1)),
+			PRODUCT_PER_PAGE,
+		),
 		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 		sortField: v.optional(v.string()),

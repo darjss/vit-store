@@ -28,7 +28,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "wrangler d1 migrations apply vit-store --remote",
 		"db:migrate:drizzle": "drizzle-kit migrate",
-		"db:seed": "wrangler d1 execute vit-store-db --file ./src/db/seed.sql --local --yes"
+		"db:seed": " sqlite3 /home/darjs/dev/vit-store/.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject/4fea589dffe569f8ba071ec87ac0160124823fb6b357717ae164e87fbe3b243a.sqlite < seed.sql"
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",

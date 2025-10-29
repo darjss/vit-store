@@ -4,7 +4,8 @@ import { Clock, MapPin, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-3
+
+3;
 export function PendingOrders() {
 	const { data: orders } = useSuspenseQuery(
 		trpc.order.getPendingOrders.queryOptions(),

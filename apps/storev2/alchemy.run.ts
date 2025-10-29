@@ -5,12 +5,11 @@ import { config } from "dotenv";
 const app = await alchemy("storev2");
 const stage = app.stage;
 config({ path: `.env.${stage}` });
-export const storev2 = await Astro("front",{
-  bindings: {
-  },
-  dev:{
-    command: "bun run dev:astro",
-  }
+export const storev2 = await Astro("front", {
+	bindings: {},
+	dev: {
+		command: "bun run dev:astro",
+	},
 });
 
 console.log({

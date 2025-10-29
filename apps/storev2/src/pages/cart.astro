@@ -1,10 +1,11 @@
 ---
+
 import CartList from "../components/cart/cart-list";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
     <div class="container mx-auto px-4 py-8">
-        <CartList client:only/>
+        <CartList client:load/>
     </div>
 </Layout>

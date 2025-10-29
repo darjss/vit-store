@@ -1,4 +1,3 @@
-	import path from "node:path";
 import alchemy from "alchemy";
 import {
 	D1Database,
@@ -7,28 +6,32 @@ import {
 	RateLimit,
 	Worker,
 } from "alchemy/cloudflare";
+import { Exec } from "alchemy/os";
 import { config } from "dotenv";
 
 const app = await alchemy("server");
 const stage = app.stage;
-config({ path: path.join(import.meta.dirname, "..", "..", `.env.${stage}`) });
-config({ path: path.join(import.meta.dirname, `.env.${stage}`) });
+config({ path: `.env.${stage}` });
 
 console.log("stage", stage, "cors origin", process.env.CORS_ORIGIN);
 
+await Exec("db-generate", {
+	command: "bun run db:generate",
+});
+
 const db = await D1Database("db", {
-	name: "vit-store-db"+stage,
-	migrationsDir: path.join(import.meta.dirname, "src/db/migrations"),
+	name: "vit-store-db" + stage,
+	migrationsDir: "../../packages/api/src/db/migrations",
 	primaryLocationHint: "apac",
 	migrationsTable: "drizzle_migrations",
 });
 
 const kv = await KVNamespace("kv", {
-	title: "vit-store-kv"+stage,
+	title: "vit-store-kv" + stage,
 });
 
 const r2 = await R2Bucket("r2", {
-	name: "vit-store-bucket"+stage,
+	name: "vit-store-bucket" + stage,
 });
 
 const rateLimit = RateLimit({
@@ -40,7 +43,7 @@ const rateLimit = RateLimit({
 });
 
 export const server = await Worker("api", {
-	entrypoint: path.join(import.meta.dirname, "src/index.ts"),
+	entrypoint: "src/index.ts",
 	compatibility: "node",
 	bindings: {
 		RATE_LIMITER: rateLimit,

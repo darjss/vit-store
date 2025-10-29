@@ -1,11 +1,17 @@
-import { Show } from "solid-js";
-import useCart from "@/hooks/use-cart";
+import { Show, createSignal, onMount} from "solid-js";
+import { cart } from "@/store/cart";
 
 const CartCount = () => {
-	const { cartCount, mounted } = useCart();
+	const [isMounted, setIsMounted] = createSignal(false)
+	onMount(() => setIsMounted(true))
 	return (
-		<Show when={mounted()} fallback={<span class="opacity-0">0</span>}>
-			<p class="font-bold text-xs">{cartCount()}</p>
+		<Show when={isMounted() && cart.count !== 0} fallback={<div class="opacity-0"></div>}>
+			                        <span
+                            class="absolute -top-1 -right-1 bg-secondary text-secondary-foreground w-5 h-5 rounded-full text-xs flex items-center justify-center border-[3px] border-black font-bold"
+                        >
+			<p class="font-bold text-xs">{cart.count}</p>
+			                        </span>
+
 		</Show>
 	);
 };

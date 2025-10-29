@@ -1,6 +1,6 @@
-import type { timeRangeType } from "@vit/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { timeRangeType } from "@vit/shared";
 import {
 	Activity,
 	BarChart3,

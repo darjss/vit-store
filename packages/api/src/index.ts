@@ -1,3 +1,4 @@
+export { db as database } from "./db";
 export type {
 	BrandInsertType,
 	BrandSelectType,
@@ -27,10 +28,9 @@ export type {
 	UserSelectType,
 } from "./db/schema";
 export * as db from "./db/schema";
-export { db as database } from "./db";
 
 export type { Context, CreateContextOptions } from "./lib/context";
-
+export * from "./lib/queries";
 export type { Session } from "./lib/session";
 export { createSessionManager, generateSessionToken } from "./lib/session";
 export {
@@ -57,7 +57,5 @@ export {
 	router,
 } from "./lib/trpc";
 export * from "./lib/types";
-
 export * from "./lib/utils";
-export * from "./lib/queries";
 export * from "./routers";

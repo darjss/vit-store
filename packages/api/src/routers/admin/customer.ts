@@ -1,10 +1,10 @@
 import { TRPCError } from "@trpc/server";
+import { timeRangeSchema } from "@vit/shared/schema";
 import { and, eq, getTableColumns, gte, isNull, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { CustomersTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 import { getDaysFromTimeRange } from "../../lib/utils";
-import { timeRangeSchema } from "@vit/shared/schema";
 
 export const customer = router({
 	addUser: adminProcedure

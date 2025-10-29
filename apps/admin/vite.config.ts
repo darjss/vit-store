@@ -6,14 +6,9 @@ import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-	plugins: [
-		tailwindcss(),
-		tanstackRouter({}),
-		react(),
-		tsconfigPaths(),
-	],
+	plugins: [tailwindcss(), tanstackRouter({}), react(), tsconfigPaths()],
 	resolve: {
-		conditions: ['style', 'default', 'import', 'module', 'browser', 'node'],
+		conditions: ["style", "default", "import", "module", "browser", "node"],
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 			"@server": path.resolve(__dirname, "../server/src"),

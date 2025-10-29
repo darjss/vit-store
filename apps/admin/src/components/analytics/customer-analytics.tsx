@@ -1,11 +1,11 @@
-import { Users, TrendingUp, TrendingDown, UserCheck } from "lucide-react";
+import { TrendingDown, TrendingUp, UserCheck, Users } from "lucide-react";
 import {
-	PieChart,
-	Pie,
 	Cell,
+	Legend,
+	Pie,
+	PieChart,
 	ResponsiveContainer,
 	Tooltip,
-	Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockData } from "@/lib/mock-data";
@@ -39,7 +39,7 @@ export function CustomerAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.totalCustomers.toLocaleString()}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+8.5%</span>
 								</div>
@@ -59,7 +59,7 @@ export function CustomerAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.customerRetention.returningCustomers}
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+12.3%</span>
 								</div>
@@ -77,7 +77,7 @@ export function CustomerAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.customerRetention.retentionRate}%
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingUp className="h-3 w-3 text-green-600" />
 									<span className="text-green-600 text-xs">+2.1%</span>
 								</div>
@@ -95,7 +95,7 @@ export function CustomerAnalytics() {
 								<p className="font-bold font-heading text-2xl">
 									{mockData.customerRetention.churnRate}%
 								</p>
-								<div className="flex items-center gap-1 mt-1">
+								<div className="mt-1 flex items-center gap-1">
 									<TrendingDown className="h-3 w-3 text-red-600" />
 									<span className="text-red-600 text-xs">-1.8%</span>
 								</div>
