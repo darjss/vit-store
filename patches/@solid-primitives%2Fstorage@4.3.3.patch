@@ -1,0 +1,96 @@
+diff --git a/README.md b/README.md
+index b912f9c67d0e873e85c8bfad1ae89e26b9332726..0c3bea0890235b1a6b526f389010de29e5d89ceb 100644
+--- a/README.md
++++ b/README.md
+@@ -39,6 +39,8 @@ type PersistedOptions<Type, StorageOptions> = {
+   deserialize?: (value: string) => Type(value),
+   // sync API (see below)
+   sync?: PersistenceSyncAPI
++  // isHydrated from @solid-primitives/lifecycle
++  deferInit?: boolean
+ };
+ ```
+ 
+@@ -47,8 +49,8 @@ type PersistedOptions<Type, StorageOptions> = {
+ - initial values of signals or stores are not persisted, so they can be safely changed
+ - values persisted in asynchronous storage APIs will not overwrite already changed signals or stores
+ - setting a persisted signal to undefined or null will remove the item from the storage
+-- to use `makePersisted` with other state management APIs, you need some adapter that will project your API to either
+-  the output of `createSignal` or `createStore`
++- to use `makePersisted` with other state management APIs, you need some adapter that will project your API to either the output of `createSignal` or `createStore`
++- if you experience hydration mismatch issues, set `deferInit` to true to delay the initialization from storage until the parent component is hydrated - this way, client and server will use the same initial data and avoid hydration conflicts
+ 
+ ### Using `makePersisted` with resources
+ 
+@@ -65,7 +67,7 @@ result is discarded not to overwrite more current data.
+ 
+ ### Using `makePersisted` with Suspense
+ 
+-In case you are using an asynchronous storage and want the initialisation mesh into Suspense instead of mixing it with Show, we provide the output of the initialisation as third part of the returned tuple:
++In case you are using an asynchronous storage and want the initialization mesh into Suspense instead of mixing it with Show, we provide the output of the initialization as third part of the returned tuple:
+ 
+ ```ts
+ const [state, setState, init] = makePersisted(createStore({}), {
+diff --git a/dist/persisted.d.ts b/dist/persisted.d.ts
+index ff1679843ff4371c236eb3fe50f572baba41792c..0db3f8581b28e17993ca1c199b6a20f5079a108d 100644
+--- a/dist/persisted.d.ts
++++ b/dist/persisted.d.ts
+@@ -51,6 +51,7 @@ export type PersistenceOptions<T, O extends Record<string, any> | undefined> = {
+     serialize?: (data: T) => string;
+     deserialize?: (data: string) => T;
+     sync?: PersistenceSyncAPI;
++    deferInit?: boolean;
+ } & (undefined extends O ? {
+     storage?: SyncStorage | AsyncStorage;
+ } : {
+@@ -59,7 +60,7 @@ export type PersistenceOptions<T, O extends Record<string, any> | undefined> = {
+ });
+ export type SignalInput = Signal<any> | [Store<any>, SetStoreFunction<any>];
+ export type SignalType<S extends SignalInput> = S extends Signal<infer T> ? T : S extends [Store<infer T>, SetStoreFunction<infer T>] ? T : never;
+-export type PersistedState<S extends SignalInput> = S extends Signal<infer T> ? [get: Accessor<T>, set: Setter<T>, init: Promise<string> | string | null] : S extends [Store<infer T>, SetStoreFunction<infer T>] ? [get: Store<T>, set: SetStoreFunction<T>, init: Promise<string> | string | null] : never;
++export type PersistedState<S extends SignalInput> = S extends Signal<infer T> ? [get: Accessor<T>, set: Setter<T>, init: Promise<string | null> | string | null] : S extends [Store<infer T>, SetStoreFunction<infer T>] ? [get: Store<T>, set: SetStoreFunction<T>, init: Promise<string | null> | string | null] : never;
+ /**
+  * Persists a signal, store or similar API
+  *  ```ts
+diff --git a/dist/persisted.js b/dist/persisted.js
+index 87557e6c0ffd8ef952e79eb4f97519bc0dd5ef86..627ebc9b2432c9385d2f834fd2e47c88d6b43a74 100644
+--- a/dist/persisted.js
++++ b/dist/persisted.js
+@@ -1,4 +1,4 @@
+-import { createUniqueId, untrack } from "solid-js";
++import { onMount, createUniqueId, untrack } from "solid-js";
+ import { isServer, isDev } from "solid-js/web";
+ import { reconcile } from "solid-js/store";
+ export function makePersisted(signal, options = {}) {
+@@ -10,7 +10,6 @@ export function makePersisted(signal, options = {}) {
+     const storageOptions = options.storageOptions;
+     const serialize = options.serialize || JSON.stringify.bind(JSON);
+     const deserialize = options.deserialize || JSON.parse.bind(JSON);
+-    const init = storage.getItem(name, storageOptions);
+     const set = typeof signal[0] === "function"
+         ? (data) => {
+             try {
+@@ -35,10 +34,19 @@ export function makePersisted(signal, options = {}) {
+             }
+         };
+     let unchanged = true;
+-    if (init instanceof Promise)
+-        init.then(data => unchanged && data && set(data));
+-    else if (init)
+-        set(init);
++    let init = null;
++    const initialize = () => {
++        init = storage.getItem(name, storageOptions);
++        if (init instanceof Promise)
++            init.then(data => unchanged && data && set(data));
++        else if (init)
++            set(init);
++    };
++    if (options.deferInit) {
++        onMount(initialize);
++    } else {
++        initialize();
++    }
+     if (typeof options.sync?.[0] === "function") {
+         const get = typeof signal[0] === "function" ? signal[0] : () => signal[0];
+         options.sync[0]((data) => {
