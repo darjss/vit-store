@@ -1,4 +1,3 @@
-
 export const getStatusColor = (status: string) => {
 	switch (status) {
 		case "ACTIVE":
@@ -116,5 +115,3 @@ export function formatDateToText(d: Date, now = new Date()): string {
 
 	return `${datePart} ${time}`;
 }
-
-

@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { db } from "../db";
 import type { UserSelectType } from "../db/schema";
 import { UsersTable } from "../db/schema";
-import { db } from "../db";
 
 export const createUser = async (
 	googleId: string,

@@ -1,20 +1,20 @@
 {
-  "version": "7",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "6",
-      "when": 1760770021425,
-      "tag": "0000_striped_diamondback",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1760949032282,
-      "tag": "0001_left_omega_red",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "sqlite",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "6",
+			"when": 1760770021425,
+			"tag": "0000_striped_diamondback",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1760949032282,
+			"tag": "0001_left_omega_red",
+			"breakpoints": true
+		}
+	]
 }

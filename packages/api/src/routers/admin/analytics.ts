@@ -604,7 +604,7 @@ export const analytics = router({
 						.then((result) => result[0]?.total || 0)
 						.catch(() => 0),
 				]);
-		
+
 				return {
 					// Key metrics
 					averageOrderValue,

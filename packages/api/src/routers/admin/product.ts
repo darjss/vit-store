@@ -3,7 +3,11 @@ import { addProductSchema, updateProductSchema } from "@vit/shared";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, sql } from "drizzle-orm";
 import * as v from "valibot";
-import { BrandsTable, ProductImagesTable, ProductsTable } from "../../db/schema";
+import {
+	BrandsTable,
+	ProductImagesTable,
+	ProductsTable,
+} from "../../db/schema";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
 

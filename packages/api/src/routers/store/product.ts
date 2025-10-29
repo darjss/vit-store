@@ -1,130 +1,140 @@
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { ProductImagesTable, ProductsTable } from "../../db/schema";
 import { publicProcedure, router } from "../../lib/trpc";
 
 export const product = router({
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
-		const featuredProductsPromise = ctx.db.query.ProductsTable.findMany({
-			columns: {
-				id: true,
-				name: true,
-				price: true,
-			},
-			orderBy: sql`RANDOM()`,
-			limit: 4,
-			where: and(
-				eq(ProductsTable.isFeatured, true),
-				eq(ProductsTable.status, "active"),
-				isNull(ProductsTable.deletedAt),
-			),
-			with: {
-				images: {
-					columns: {
-						url: true,
-					},
-					where: and(
-						eq(ProductImagesTable.isPrimary, true),
-						isNull(ProductImagesTable.deletedAt),
-					),
+		try {
+			const featuredProductsPromise = ctx.db.query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					price: true,
 				},
-				brand: {
-					columns: {
-						name: true,
+				orderBy: asc(ProductsTable.updatedAt),
+				limit: 4,
+				where: and(
+					eq(ProductsTable.isFeatured, true),
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
 					},
-				},
-			},
-		});
-		const newProductsPromise = ctx.db.query.ProductsTable.findMany({
-			columns: {
-				id: true,
-				name: true,
-				price: true,
-			},
-			orderBy: desc(ProductsTable.updatedAt),
-			limit: 4,
-			where: and(
-				eq(ProductsTable.status, "active"),
-				isNull(ProductsTable.deletedAt),
-			),
-			with: {
-				images: {
-					columns: {
-						url: true,
-					},
-					where: and(
-						eq(ProductImagesTable.isPrimary, true),
-						isNull(ProductImagesTable.deletedAt),
-					),
-				},
-				brand: {
-					columns: {
-						name: true,
+					brand: {
+						columns: {
+							name: true,
+						},
 					},
 				},
-			},
-		});
-		const discountedProductsPromise = ctx.db.query.ProductsTable.findMany({
-			columns: {
-				id: true,
-				name: true,
-				price: true,
-				discount: true,
-			},
-			orderBy: desc(ProductsTable.updatedAt),
-			limit: 4,
-			where: and(
-				gt(ProductsTable.discount, 0),
-				eq(ProductsTable.status, "active"),
-				isNull(ProductsTable.deletedAt),
-			),
-			with: {
-				images: {
-					columns: {
-						url: true,
-					},
-					where: and(
-						eq(ProductImagesTable.isPrimary, true),
-						isNull(ProductImagesTable.deletedAt),
-					),
+			});
+			const newProductsPromise = ctx.db.query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					price: true,
 				},
-				brand: {
-					columns: {
-						name: true,
+				orderBy: desc(ProductsTable.updatedAt),
+				limit: 4,
+				where: and(
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
 					},
 				},
-			},
-		});
-		const [featuredProducts, newProducts, discountedProducts] =
-			await Promise.all([
-				featuredProductsPromise,
-				newProductsPromise,
-				discountedProductsPromise,
-			]);
-		return {
-			featuredProducts: featuredProducts.map((product) => ({
-				id: product.id,
-				name: product.name,
-				price: product.price,
-				image: product.images[0]?.url,
-				brand: product.brand.name,
-			})),
-			newProducts: newProducts.map((product) => ({
-				id: product.id,
-				name: product.name,
-				price: product.price,
-				image: product.images[0]?.url,
-				brand: product.brand.name,
-			})),
-			discountedProducts: discountedProducts.map((product) => ({
-				id: product.id,
-				name: product.name,
-				price: product.price,
-				image: product.images[0]?.url,
-				brand: product.brand.name,
-				discount: product.discount,
-			})),
-		};
+			});
+			const discountedProductsPromise = ctx.db.query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					price: true,
+					discount: true,
+				},
+				orderBy: desc(ProductsTable.updatedAt),
+				limit: 4,
+				where: and(
+					gt(ProductsTable.discount, 0),
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+				},
+			});
+			const [featuredProducts, newProducts, discountedProducts] =
+				await Promise.all([
+					featuredProductsPromise,
+					newProductsPromise,
+					discountedProductsPromise,
+				]);
+			return {
+				featuredProducts: featuredProducts.map((product) => ({
+					id: product.id,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+				})),
+				newProducts: newProducts.map((product) => ({
+					id: product.id,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+				})),
+				discountedProducts: discountedProducts.map((product) => ({
+					id: product.id,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+					discount: product.discount,
+				})),
+			};
+		} catch (error) {
+			console.error("Error getting products for home:", error);
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Error getting products for home",
+				cause: error,
+			});
+		}
 	}),
 	getAllProducts: publicProcedure.query(async ({ ctx }) => {
 		return await ctx.db.query.ProductsTable.findMany({
