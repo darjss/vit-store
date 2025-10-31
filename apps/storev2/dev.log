@@ -1,0 +1,5325 @@
+18:24:31 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+18:24:31 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+18:24:31 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+18:24:31 [types] Generated 0ms
+18:24:31 [content] Syncing content
+18:24:31 [content] Synced content
+
+ astro  v5.14.6 ready in 2020 ms
+
+┃ Local    http://localhost:4325/
+┃ Network  use --host to expose
+
+18:24:31 watching for file changes...
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+18:25:04 [200] / 462ms
+18:25:17 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+18:25:18 [200] /products/vitamin-c-500mg-1 45ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+20:13:18 [200] /products/vitamin-c-500mg-1 85ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+20:13:27 [200] /cart 9ms
+20:14:23 [watch] /src/components/product/recommended-products.tsx, /src/styles/global.css
+20:14:23 [watch] src/components/product/recommended-products.tsx
+20:14:52 [watch] /src/pages/products/[slug].astro?astro&type=style&index=0&lang.css
+20:14:52 [watch] src/pages/products/[slug].astro
+20:14:55 [watch] src/pages/products/[slug].astro
+20:14:55 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+20:14:55 [200] /products/vitamin-c-500mg-1 71ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+20:15:11 [watch] src/components/product/product-details.astro
+20:15:11 [watch] src/components/product/product-details.astro
+products undefined
+products undefined
+20:15:11 [200] /products/vitamin-c-500mg-1 45ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+20:15:51 [watch] /src/components/product/product-add-to-cart.tsx, /src/styles/global.css
+20:15:51 [watch] src/components/product/product-add-to-cart.tsx
+20:15:53 [watch] /src/components/product/product-add-to-cart.tsx, /src/styles/global.css
+20:15:53 [watch] src/components/product/product-add-to-cart.tsx
+20:15:55 [watch] /src/components/product/product-add-to-cart.tsx, /src/styles/global.css
+20:15:55 [watch] src/components/product/product-add-to-cart.tsx
+20:16:14 [watch] /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+20:16:14 [watch] src/store/cart.tsx
+20:16:31 [200] /cart 38ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+20:16:41 [200] / 84ms
+20:16:41 [404] /logo8.png 3ms
+20:16:42 [404] /logo8.png 2ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+20:16:56 [200] / 48ms
+20:16:56 [404] /logo8.png 2ms
+22:32:47 [404] /logo8.png 1ms
+22:35:06 [200] /products 11ms
+22:35:08 [200] /cart 7ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:35:12 [200] / 53ms
+22:35:12 [404] /logo8.png 2ms
+22:35:13 [404] /logo8.png 1ms
+products undefined
+products undefined
+22:36:31 [200] /products/vitamin-c-500mg-1 54ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+22:37:10 [watch] src/components/home/ProductCard.astro
+22:37:10 [watch] src/components/home/ProductCard.astro
+products undefined
+products undefined
+22:37:10 [200] /products/vitamin-c-500mg-1 81ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+22:37:22 [watch] /src/components/cart/add-to-cart-button.tsx, /src/styles/global.css
+22:37:22 [watch] src/components/cart/add-to-cart-button.tsx
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:37:48 [200] / 76ms
+22:37:48 [404] /logo8.png 2ms
+22:37:48 [404] /logo8.png 1ms
+products undefined
+products undefined
+22:37:55 [200] /products/omega-3-fish-oil-1000mg-7 39ms
+products [
+  {
+    id: 1,
+    slug: 'vitamin-c-500mg',
+    name: 'Vitamin C 500mg',
+    price: 25000,
+    image: 'https://picsum.photos/600/400?random=p1-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 12,
+    slug: 'multivitamin-men',
+    name: 'Multivitamin for Men',
+    price: 42000,
+    image: 'https://picsum.photos/600/400?random=p12-1',
+    brand: "Nature's Best",
+    discount: 0
+  }
+]
+22:37:58 [404] /logo8.png 1ms
+22:38:21 [200] /products 7ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:38:24 [200] / 44ms
+22:38:24 [404] /logo8.png 2ms
+22:38:24 [404] /logo8.png 1ms
+products undefined
+products undefined
+22:40:50 [200] /products/probiotic-complex-30-billion-4 64ms
+products [
+  {
+    id: 10,
+    slug: 'coq10-200mg',
+    name: 'CoQ10 200mg',
+    price: 85000,
+    image: 'https://picsum.photos/600/400?random=p10-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 15,
+    slug: 'digestive-enzymes',
+    name: 'Digestive Enzymes',
+    price: 38000,
+    image: 'https://picsum.photos/600/400?random=p15-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 9,
+    slug: 'b-complex-100',
+    name: 'B-Complex 100',
+    price: 28000,
+    image: 'https://picsum.photos/600/400?random=p9-1',
+    brand: 'NutraCost',
+    discount: 0
+  },
+  {
+    id: 14,
+    slug: 'calcium-citrate-600mg',
+    name: 'Calcium Citrate 600mg',
+    price: 22000,
+    image: 'https://picsum.photos/600/400?random=p14-1',
+    brand: 'NutraCost',
+    discount: 0
+  }
+]
+22:43:20 [200] /products 7ms
+22:43:23 [200] /products 6ms
+22:44:35 [watch] src/components/home/ProductCard.astro
+22:44:35 [watch] src/components/home/ProductCard.astro
+products undefined
+products undefined
+22:44:35 [200] /products/probiotic-complex-30-billion-4 75ms
+products [
+  {
+    id: 10,
+    slug: 'coq10-200mg',
+    name: 'CoQ10 200mg',
+    price: 85000,
+    image: 'https://picsum.photos/600/400?random=p10-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 15,
+    slug: 'digestive-enzymes',
+    name: 'Digestive Enzymes',
+    price: 38000,
+    image: 'https://picsum.photos/600/400?random=p15-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 9,
+    slug: 'b-complex-100',
+    name: 'B-Complex 100',
+    price: 28000,
+    image: 'https://picsum.photos/600/400?random=p9-1',
+    brand: 'NutraCost',
+    discount: 0
+  },
+  {
+    id: 14,
+    slug: 'calcium-citrate-600mg',
+    name: 'Calcium Citrate 600mg',
+    price: 22000,
+    image: 'https://picsum.photos/600/400?random=p14-1',
+    brand: 'NutraCost',
+    discount: 0
+  }
+]
+22:44:56 [watch] /src/components/cart/add-to-cart-button.tsx, /src/styles/global.css
+22:44:56 [watch] src/components/cart/add-to-cart-button.tsx
+22:45:08 [watch] src/components/home/ProductSection.astro
+22:45:08 [watch] src/components/home/ProductSection.astro
+products undefined
+products undefined
+22:45:08 [200] /products/probiotic-complex-30-billion-4 42ms
+products [
+  {
+    id: 10,
+    slug: 'coq10-200mg',
+    name: 'CoQ10 200mg',
+    price: 85000,
+    image: 'https://picsum.photos/600/400?random=p10-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 15,
+    slug: 'digestive-enzymes',
+    name: 'Digestive Enzymes',
+    price: 38000,
+    image: 'https://picsum.photos/600/400?random=p15-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 9,
+    slug: 'b-complex-100',
+    name: 'B-Complex 100',
+    price: 28000,
+    image: 'https://picsum.photos/600/400?random=p9-1',
+    brand: 'NutraCost',
+    discount: 0
+  },
+  {
+    id: 14,
+    slug: 'calcium-citrate-600mg',
+    name: 'Calcium Citrate 600mg',
+    price: 22000,
+    image: 'https://picsum.photos/600/400?random=p14-1',
+    brand: 'NutraCost',
+    discount: 0
+  }
+]
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:45:28 [200] / 37ms
+22:45:29 [404] /logo8.png 2ms
+22:45:29 [404] /logo8.png 1ms
+22:47:42 [watch] src/components/home/ProductCard.astro
+22:47:42 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:47:43 [200] / 82ms
+22:47:43 [404] /logo8.png 2ms
+22:47:43 [404] /logo8.png 1ms
+products undefined
+products undefined
+22:47:52 [200] /products/vitamin-d3-2000-iu-2 36ms
+products [
+  {
+    id: 1,
+    slug: 'vitamin-c-500mg',
+    name: 'Vitamin C 500mg',
+    price: 25000,
+    image: 'https://picsum.photos/600/400?random=p1-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 12,
+    slug: 'multivitamin-men',
+    name: 'Multivitamin for Men',
+    price: 42000,
+    image: 'https://picsum.photos/600/400?random=p12-1',
+    brand: "Nature's Best",
+    discount: 0
+  }
+]
+22:49:55 [watch] src/components/home/ProductCard.astro
+22:49:55 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:49:56 [200] / 81ms
+22:49:56 [404] /logo8.png 1ms
+22:49:56 [404] /logo8.png 1ms
+22:51:50 [watch] src/components/home/ProductCard.astro
+22:51:50 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:51:51 [200] / 56ms
+22:51:51 [404] /logo8.png 1ms
+22:51:52 [404] /logo8.png 1ms
+22:52:10 [watch] src/components/home/ProductCard.astro
+22:52:10 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:52:10 [200] / 78ms
+22:52:11 [404] /logo8.png 2ms
+22:52:11 [404] /logo8.png 1ms
+22:52:19 [watch] src/components/home/ProductCard.astro
+22:52:19 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:52:19 [200] / 90ms
+22:52:20 [404] /logo8.png 1ms
+22:52:20 [404] /logo8.png 1ms
+22:55:21 [watch] src/components/home/ProductCard.astro
+22:55:21 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:55:21 [200] / 55ms
+22:55:21 [404] /logo8.png 1ms
+22:55:21 [watch] src/components/home/ProductCard.astro
+22:55:21 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+22:55:21 [200] / 91ms
+22:55:22 [404] /logo8.png 1ms
+22:55:22 [404] /logo8.png 1ms
+23:08:27 [watch] /src/components/product/product-image-carousel.tsx, /src/styles/global.css
+23:08:27 [watch] src/components/product/product-image-carousel.tsx
+23:08:35 [watch] /src/components/product/product-image-carousel.tsx, /src/styles/global.css
+23:08:35 [watch] src/components/product/product-image-carousel.tsx
+23:08:50 [watch] /src/components/product/product-image-carousel.tsx, /src/styles/global.css
+23:08:50 [watch] src/components/product/product-image-carousel.tsx
+23:09:01 [watch] /src/components/product/recommended-products.tsx, /src/styles/global.css
+23:09:01 [watch] src/components/product/recommended-products.tsx
+23:09:01 [watch] /src/components/product/recommended-products.tsx, /src/styles/global.css
+23:09:01 [watch] src/components/product/recommended-products.tsx
+23:09:16 [watch] /src/components/product/recommended-products.tsx, /src/styles/global.css
+23:09:16 [watch] src/components/product/recommended-products.tsx
+23:09:28 [watch] /src/components/cart/cart-list.tsx, /src/styles/global.css
+23:09:28 [watch] src/components/cart/cart-list.tsx
+23:09:40 [watch] /src/components/cart/cart-list.tsx, /src/styles/global.css
+23:09:40 [watch] src/components/cart/cart-list.tsx
+23:09:52 [watch] /src/components/cart/cart-list.tsx, /src/styles/global.css
+23:09:52 [watch] src/components/cart/cart-list.tsx
+23:10:35 [watch] src/components/home/ProductCard.astro
+23:10:35 [watch] src/components/home/ProductCard.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:10:35 [200] / 81ms
+23:10:35 [404] /logo8.png 1ms
+23:10:36 [404] /logo8.png 1ms
+23:10:38 [watch] src/components/home/ProductCard.astro
+23:10:38 [watch] src/components/home/ProductCard.astro
+(node:218356) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:10:39 [200] / 56ms
+23:10:39 [404] /logo8.png 1ms
+23:10:39 [403] /_image 7ms
+23:10:39 [403] /_image 1ms
+23:10:39 [403] /_image 1ms
+23:10:39 [403] /_image 1ms
+23:10:39 [403] /_image 1ms
+23:10:40 [404] /logo8.png 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:40 [403] /_image 1ms
+23:10:41 [403] /_image 1ms
+23:10:44 [watch] src/components/home/Hero.astro
+23:10:44 [watch] src/components/home/Hero.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:10:44 [200] / 57ms
+23:10:44 [404] /logo8.png 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [404] /logo8.png 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:45 [403] /_image 1ms
+23:10:56 [watch] src/components/home/Hero.astro
+23:10:56 [watch] src/components/home/Hero.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:10:56 [200] / 58ms
+23:10:56 [500] /_image 27ms
+23:10:56 [500] /_image 28ms
+23:10:56 [500] /_image 25ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:57 [500] /_image 14ms
+23:10:57 [500] /_image 11ms
+23:10:57 [500] /_image 10ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:57 [403] /_image 1ms
+23:10:58 [403] /_image 1ms
+23:10:58 [403] /_image 1ms
+23:10:58 [403] /_image 1ms
+23:10:58 [403] /_image 1ms
+23:10:58 [403] /_image 1ms
+23:11:02 [watch] src/components/home/Hero.astro
+23:11:02 [watch] src/components/home/Hero.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:11:03 [200] / 49ms
+23:11:03 [500] /_image 13ms
+23:11:03 [500] /_image 17ms
+23:11:03 [500] /_image 21ms
+23:11:03 [500] /_image 24ms
+23:11:03 [500] /_image 21ms
+23:11:04 [500] /_image 15ms
+23:11:04 [403] /_image 1ms
+23:11:04 [403] /_image 1ms
+23:11:04 [403] /_image 1ms
+23:11:04 [403] /_image 1ms
+23:11:04 [403] /_image 1ms
+23:11:04 [500] /_image 8ms
+23:11:04 [500] /_image 11ms
+23:11:04 [500] /_image 10ms
+23:11:04 [500] /_image 9ms
+23:11:04 [500] /_image 9ms
+23:11:04 [500] /_image 10ms
+23:11:04 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:05 [403] /_image 1ms
+23:11:07 [watch] src/components/home/Hero.astro
+23:11:07 [watch] src/components/home/Hero.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:11:07 [200] / 54ms
+23:11:07 [500] /_image 17ms
+23:11:07 [500] /_image 17ms
+23:11:07 [500] /_image 23ms
+23:11:07 [500] /_image 19ms
+23:11:08 [500] /_image 21ms
+23:11:08 [500] /_image 13ms
+23:11:08 [500] /_image 18ms
+23:11:08 [500] /_image 19ms
+23:11:08 [403] /_image 1ms
+23:11:08 [500] /_image 17ms
+23:11:08 [403] /_image 0ms
+23:11:08 [403] /_image 1ms
+23:11:08 [403] /_image 1ms
+23:11:08 [403] /_image 1ms
+23:11:08 [500] /_image 11ms
+23:11:08 [500] /_image 9ms
+23:11:08 [500] /_image 9ms
+23:11:08 [500] /_image 11ms
+23:11:08 [500] /_image 8ms
+23:11:08 [500] /_image 11ms
+23:11:08 [500] /_image 8ms
+23:11:09 [500] /_image 11ms
+23:11:09 [500] /_image 7ms
+23:11:09 [403] /_image 0ms
+23:11:09 [403] /_image 1ms
+23:11:09 [403] /_image 0ms
+23:11:09 [403] /_image 1ms
+23:11:09 [403] /_image 0ms
+23:11:09 [403] /_image 1ms
+23:11:09 [403] /_image 1ms
+23:11:09 [403] /_image 1ms
+products undefined
+products undefined
+23:14:59 [200] /products/vitamin-c-500mg-1 34ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:15:03 [500] /_image 9ms
+23:15:03 [500] /_image 8ms
+23:15:03 [500] /_image 12ms
+23:15:03 [500] /_image 12ms
+23:15:03 [500] /_image 7ms
+23:15:03 [500] /_image 11ms
+23:15:03 [500] /_image 12ms
+23:15:03 [500] /_image 14ms
+23:15:03 [500] /_image 11ms
+23:15:03 [403] /_image 1ms
+23:15:03 [403] /_image 0ms
+23:15:03 [403] /_image 1ms
+23:15:03 [403] /_image 0ms
+23:15:03 [403] /_image 0ms
+23:15:03 [403] /_image 0ms
+23:15:03 [403] /_image 0ms
+23:15:03 [403] /_image 1ms
+products undefined
+products undefined
+23:15:03 [200] /products/vitamin-c-500mg-1 20ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:15:08 [500] /_image 14ms
+23:15:08 [500] /_image 14ms
+23:15:08 [500] /_image 12ms
+23:15:08 [500] /_image 12ms
+23:15:08 [500] /_image 12ms
+23:15:08 [500] /_image 10ms
+23:15:08 [500] /_image 9ms
+23:15:08 [500] /_image 9ms
+23:15:08 [500] /_image 13ms
+23:15:08 [403] /_image 0ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 1ms
+23:15:08 [403] /_image 0ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:15:09 [200] / 52ms
+23:15:09 [500] /_image 60ms
+23:15:09 [500] /_image 44ms
+23:15:09 [500] /_image 55ms
+23:15:09 [500] /_image 67ms
+23:15:09 [500] /_image 55ms
+23:15:09 [500] /_image 59ms
+23:15:09 [403] /_image 1ms
+23:15:09 [403] /_image 1ms
+23:15:09 [403] /_image 1ms
+23:15:09 [500] /_image 45ms
+23:15:09 [500] /_image 53ms
+23:15:09 [500] /_image 38ms
+23:15:09 [403] /_image 1ms
+23:15:09 [403] /_image 1ms
+23:15:10 [500] /_image 11ms
+23:15:10 [500] /_image 10ms
+23:15:10 [500] /_image 11ms
+23:15:10 [500] /_image 14ms
+23:15:10 [500] /_image 10ms
+23:15:10 [500] /_image 10ms
+23:15:10 [500] /_image 12ms
+23:15:10 [500] /_image 12ms
+23:15:10 [500] /_image 12ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 0ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 1ms
+23:15:10 [403] /_image 1ms
+23:16:16 Configuration file updated. Restarting...
+23:16:16 [watch] astro.config.mjs
+23:16:16 [watch] astro.config.mjs
+23:16:16 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:16:16 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:16:16 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:16:16 [200] / 188ms
+23:16:16 [ERROR] The server is being restarted or closed. Request is outdated
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/home/darjs/dev/vit-store/node_modules/.bun/vite@6.4.1+454ac5dda039c4ae/node_modules/vite/dist/node/chunks/dep-D4NMHUTW.js:42055:15
+    [...] See full stack trace in the browser, or rerun with --verbose.
+23:16:17 [vite] Re-optimizing dependencies because vite config has changed
+23:16:17 [content] Syncing content
+23:16:17 [content] Astro config changed
+23:16:17 [content] Clearing content store
+23:16:17 [content] Synced content
+23:16:17 [types] Generated 722ms
+23:16:18 [vite] Re-optimizing dependencies because vite config has changed
+23:16:18 Configuration file updated. Restarting...
+23:16:18 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:16:18 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:16:18 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:16:19 [vite] Re-optimizing dependencies because vite config has changed
+23:16:19 [content] Syncing content
+23:16:19 [content] Synced content
+23:16:19 [types] Generated 642ms
+23:16:19 [vite] Re-optimizing dependencies because vite config has changed
+23:16:24 Configuration file updated. Restarting...
+23:16:24 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:16:24 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:16:24 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:16:26 [vite] Re-optimizing dependencies because lockfile has changed
+23:16:26 [content] Syncing content
+23:16:26 [content] Synced content
+23:16:26 [types] Generated 701ms
+23:16:26 [vite] Re-optimizing dependencies because vite config has changed
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:16:35 [200] / 324ms
+23:16:35 [500] /_image 89ms
+23:16:35 [500] /_image 95ms
+23:16:35 [500] /_image 101ms
+23:16:35 [500] /_image 107ms
+23:16:35 [500] /_image 116ms
+23:16:35 [500] /_image 130ms
+23:16:35 [403] /_image 1ms
+23:16:35 [403] /_image 1ms
+23:16:35 [500] /_image 122ms
+23:16:35 [500] /_image 133ms
+23:16:35 [500] /_image 123ms
+23:16:35 [403] /_image 1ms
+23:16:35 [403] /_image 1ms
+23:16:35 [403] /_image 1ms
+23:16:36 [500] /_image 19ms
+23:16:36 [500] /_image 21ms
+23:16:36 [500] /_image 9ms
+23:16:36 [500] /_image 8ms
+23:16:36 [500] /_image 8ms
+23:16:36 [500] /_image 10ms
+23:16:36 [500] /_image 10ms
+23:16:36 [500] /_image 8ms
+23:16:36 [500] /_image 9ms
+23:16:36 [403] /_image 1ms
+23:16:36 [403] /_image 0ms
+23:16:36 [403] /_image 1ms
+23:16:36 [403] /_image 1ms
+23:16:36 [403] /_image 0ms
+23:16:36 [403] /_image 0ms
+23:16:36 [403] /_image 0ms
+23:16:36 [403] /_image 1ms
+23:20:07 [watch] src/components/home/Hero.astro
+23:20:07 [watch] src/components/home/Hero.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:20:07 [200] / 82ms
+23:20:08 [500] /_image 24ms
+23:20:08 [500] /_image 20ms
+23:20:08 [500] /_image 19ms
+23:20:08 [500] /_image 14ms
+23:20:08 [500] /_image 20ms
+23:20:08 [500] /_image 18ms
+23:20:08 [500] /_image 18ms
+23:20:08 [500] /_image 18ms
+23:20:08 [500] /_image 10ms
+23:20:08 [403] /_image 1ms
+23:20:08 [403] /_image 1ms
+23:20:08 [403] /_image 1ms
+23:20:08 [403] /_image 0ms
+23:20:08 [403] /_image 1ms
+23:20:08 [500] /_image 18ms
+23:20:08 [500] /_image 11ms
+23:20:08 [500] /_image 9ms
+23:20:08 [500] /_image 9ms
+23:20:09 [500] /_image 16ms
+23:20:09 [500] /_image 11ms
+23:20:09 [500] /_image 9ms
+23:20:09 [500] /_image 11ms
+23:20:09 [500] /_image 10ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:09 [403] /_image 1ms
+23:20:20 Configuration file updated. Restarting...
+23:20:20 [watch] astro.config.mjs
+23:20:20 [watch] astro.config.mjs
+23:20:20 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:20:20 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:20:20 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:20:22 [content] Syncing content
+23:20:22 [content] Synced content
+23:20:22 [types] Generated 841ms
+23:20:22 [vite] Re-optimizing dependencies because vite config has changed
+23:20:22 [vite] Port 4325 is in use, trying another one...
+23:20:22 Configuration file updated. Restarting...
+23:20:22 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:20:22 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:20:22 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:20:24 [vite] Re-optimizing dependencies because vite config has changed
+23:20:24 [content] Syncing content
+23:20:24 [content] Synced content
+23:20:24 [types] Generated 701ms
+23:20:24 [vite] Re-optimizing dependencies because vite config has changed
+23:22:17 Configuration file updated. Restarting...
+23:22:17 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:22:17 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:22:17 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:22:19 [content] Syncing content
+23:22:19 [content] Synced content
+23:22:19 [types] Generated 1.01s
+23:22:19 [vite] Re-optimizing dependencies because vite config has changed
+23:22:19 [vite] Port 4325 is in use, trying another one...
+23:22:19 Configuration file updated. Restarting...
+23:22:19 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:22:19 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:22:19 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:22:21 [content] Syncing content
+23:22:21 [content] Synced content
+23:22:21 [types] Generated 750ms
+23:22:21 [vite] Port 4325 is in use, trying another one...
+23:23:26 Configuration file updated. Restarting...
+23:23:26 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:23:26 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:23:26 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:23:27 [vite] Re-optimizing dependencies because vite config has changed
+23:23:27 [content] Syncing content
+23:23:27 [content] Synced content
+23:23:27 [types] Generated 651ms
+23:23:27 [vite] Re-optimizing dependencies because vite config has changed
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:23:29 [200] / 225ms
+23:23:29 [200] /_image 135ms
+23:23:29 [200] /_image 137ms
+23:23:29 [200] /_image 138ms
+23:25:55 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:25:55 [200] /products/vitamin-d3-2000-iu-2 49ms
+products [
+  {
+    id: 1,
+    slug: 'vitamin-c-500mg',
+    name: 'Vitamin C 500mg',
+    price: 25000,
+    image: 'https://picsum.photos/600/400?random=p1-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 12,
+    slug: 'multivitamin-men',
+    name: 'Multivitamin for Men',
+    price: 42000,
+    image: 'https://picsum.photos/600/400?random=p12-1',
+    brand: "Nature's Best",
+    discount: 0
+  }
+]
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:26:58 [200] / 61ms
+products undefined
+products undefined
+23:27:02 [200] /products/vitamin-c-500mg-1 37ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:29:25 Configuration file updated. Restarting...
+23:29:25 [watch] package.json
+23:29:25 [watch] package.json
+23:29:25 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:29:25 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:29:25 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:29:27 [vite] Re-optimizing dependencies because lockfile has changed
+23:29:27 [content] Syncing content
+23:29:27 [content] Synced content
+23:29:27 [types] Generated 741ms
+23:29:27 [vite] Re-optimizing dependencies because vite config has changed
+23:29:28 Configuration file updated. Restarting...
+23:29:28 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+23:29:28 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+23:29:28 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+23:29:30 [vite] Re-optimizing dependencies because vite config has changed
+23:29:30 [content] Syncing content
+23:29:30 [content] Synced content
+23:29:30 [types] Generated 936ms
+23:29:30 [vite] Re-optimizing dependencies because vite config has changed
+23:30:04 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+products undefined
+products undefined
+23:30:06 [200] /products/vitamin-c-500mg-1 372ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:30:48 [watch] /src/styles/starwind.css, /src/styles/global.css
+products undefined
+products undefined
+23:30:48 [200] /products/vitamin-c-500mg-1 55ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:31:24 [watch] starwind.config.json
+23:31:24 [watch] starwind.config.json
+products undefined
+products undefined
+23:31:24 [200] /products/vitamin-c-500mg-1 74ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:35:36 [watch] src/components/product/breadcrumb.astro
+23:35:36 [watch] src/components/product/breadcrumb.astro
+products undefined
+products undefined
+23:35:36 [200] /products/vitamin-c-500mg-1 85ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:36:30 [watch] src/components/product/product-info.astro
+23:36:30 [watch] src/components/product/product-info.astro
+products undefined
+products undefined
+23:36:32 [200] /products/vitamin-c-500mg-1 127ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:37:43 [watch] src/components/product/product-details.astro
+23:37:43 [watch] src/components/product/product-details.astro
+products undefined
+products undefined
+23:37:44 [200] /products/vitamin-c-500mg-1 88ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:38:23 [watch] src/pages/products/[slug].astro
+23:38:23 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:38:23 [200] /products/vitamin-c-500mg-1 63ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:39:17 [watch] src/components/product/product-details.astro
+23:39:17 [watch] src/components/product/product-details.astro
+products undefined
+products undefined
+23:39:17 [200] /products/vitamin-c-500mg-1 73ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:24 [watch] src/components/starwind/tabs/Tabs.astro
+23:45:24 [watch] src/components/starwind/tabs/Tabs.astro
+products undefined
+products undefined
+23:45:24 [200] /products/vitamin-c-500mg-1 50ms
+23:45:24 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:25 [200] /products/vitamin-c-500mg-1 875ms
+23:45:25 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:25 [200] /products/vitamin-c-500mg-1 39ms
+23:45:25 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:26 [200] /products/vitamin-c-500mg-1 25ms
+23:45:26 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:26 [200] /products/vitamin-c-500mg-1 33ms
+23:45:26 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:27 [200] /products/vitamin-c-500mg-1 25ms
+23:45:27 [ERROR] string is not defined
+  Stack trace:
+    at /home/darjs/dev/vit-store/apps/storev2/src/components/starwind/tabs/Tabs.astro:33:33
+    [...] See full stack trace in the browser, or rerun with --verbose.
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:27 [watch] src/components/starwind/tabs/Tabs.astro
+23:45:27 [watch] src/components/starwind/tabs/Tabs.astro
+products undefined
+products undefined
+23:45:27 [200] /products/vitamin-c-500mg-1 44ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+products undefined
+products undefined
+23:45:27 [200] /products/vitamin-c-500mg-1 31ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:38 [watch] src/pages/products/[slug].astro
+23:45:38 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:45:38 [200] /products/vitamin-c-500mg-1 65ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:41 [watch] src/pages/products/[slug].astro
+23:45:42 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:45:42 [200] /products/vitamin-c-500mg-1 49ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:51 [watch] src/pages/products/[slug].astro
+23:45:51 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:45:51 [200] /products/vitamin-c-500mg-1 51ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:45:54 [watch] src/pages/products/[slug].astro
+23:45:54 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:45:54 [200] /products/vitamin-c-500mg-1 54ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:46:04 [watch] src/pages/products/[slug].astro
+23:46:04 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:46:04 [200] /products/vitamin-c-500mg-1 46ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:46:05 [watch] src/pages/products/[slug].astro
+23:46:05 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:46:05 [200] /products/vitamin-c-500mg-1 63ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:46:27 [watch] src/pages/products/[slug].astro
+23:46:27 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:46:27 [200] /products/vitamin-c-500mg-1 77ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:46:31 [watch] src/pages/products/[slug].astro
+23:46:31 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:46:31 [200] /products/vitamin-c-500mg-1 55ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:46:37 [watch] src/pages/products/[slug].astro
+23:46:37 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:46:37 [200] /products/vitamin-c-500mg-1 57ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:50:39 [watch] src/components/product/product-info.astro
+23:50:39 [watch] src/components/product/product-info.astro
+products undefined
+products undefined
+23:50:40 [200] /products/vitamin-c-500mg-1 185ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:51:18 [watch] /src/components/product/product-add-to-cart.tsx, /src/styles/starwind.css, /src/styles/global.css
+23:51:18 [watch] src/components/product/product-add-to-cart.tsx
+23:51:44 [watch] src/components/product/product-info.astro
+23:51:44 [watch] src/components/product/product-info.astro
+products undefined
+products undefined
+23:51:44 [200] /products/vitamin-c-500mg-1 79ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:51:46 [200] /cart 6ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:51:51 [200] / 41ms
+23:52:29 [watch] src/components/product/product-details.astro
+23:52:29 [watch] src/components/product/product-details.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:52:29 [200] / 167ms
+23:52:54 [watch] src/components/product/product-details.astro
+23:52:54 [watch] src/components/product/product-details.astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:52:54 [200] / 76ms
+products undefined
+products undefined
+23:53:16 [200] /products/probiotic-complex-30-billion-4 42ms
+products [
+  {
+    id: 10,
+    slug: 'coq10-200mg',
+    name: 'CoQ10 200mg',
+    price: 85000,
+    image: 'https://picsum.photos/600/400?random=p10-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 15,
+    slug: 'digestive-enzymes',
+    name: 'Digestive Enzymes',
+    price: 38000,
+    image: 'https://picsum.photos/600/400?random=p15-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 9,
+    slug: 'b-complex-100',
+    name: 'B-Complex 100',
+    price: 28000,
+    image: 'https://picsum.photos/600/400?random=p9-1',
+    brand: 'NutraCost',
+    discount: 0
+  },
+  {
+    id: 14,
+    slug: 'calcium-citrate-600mg',
+    name: 'Calcium Citrate 600mg',
+    price: 22000,
+    image: 'https://picsum.photos/600/400?random=p14-1',
+    brand: 'NutraCost',
+    discount: 0
+  }
+]
+23:53:45 [watch] /src/components/product/recommended-products.tsx, /src/styles/starwind.css, /src/styles/global.css
+23:53:45 [watch] src/components/product/recommended-products.tsx
+23:53:53 [watch] /src/components/product/recommended-products.tsx, /src/styles/starwind.css, /src/styles/global.css
+23:53:53 [watch] src/components/product/recommended-products.tsx
+23:56:43 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:56:43 [watch] src/store/cart.tsx
+23:56:43 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: Missing initializer in const declaration. (28:15)
+
+  26 | // };
+  27 |
+> 28 | const cartconst [cartStore, setCart] = makePersisted(
+     |                ^
+  29 | 	createStore<{ items: CartItems[] }>({
+  30 | 		items: [],
+  31 | 	}),
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:28:15
+  26 |  // };
+  27 |  
+  28 |  const cartconst [cartStore, setCart] = makePersisted(
+     |                 ^
+  29 |  	createStore<{ items: CartItems[] }>({
+  30 |  		items: [],
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13400:16)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseModuleItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12753:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:36)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseProgram (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12634:10)
+      at TypeScriptParserMixin.parseTopLevel (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12624:25)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14501:10)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10149:18)
+      at parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14535:38)
+      at parser (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:261:32)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:189:28
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:113:33
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:287:14)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+23:56:43 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:56:43 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:43 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:56:43 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:43 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:56:43 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:56:43 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:56:43 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:49 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:56:49 [watch] src/store/cart.tsx
+23:56:49 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: Missing initializer in const declaration. (28:10)
+
+  26 | // };
+  27 |
+> 28 | const cart const [cartStore, setCart] = makePersisted(
+     |           ^
+  29 | 	createStore<{ items: CartItems[] }>({
+  30 | 		items: [],
+  31 | 	}),
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:28:10
+  26 |  // };
+  27 |  
+  28 |  const cart const [cartStore, setCart] = makePersisted(
+     |            ^
+  29 |  	createStore<{ items: CartItems[] }>({
+  30 |  		items: [],
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13400:16)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseModuleItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12753:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:36)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseProgram (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12634:10)
+      at TypeScriptParserMixin.parseTopLevel (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12624:25)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14501:10)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10149:18)
+      at parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14535:38)
+      at parser (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:261:32)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:189:28
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:113:33
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:287:14)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+23:56:49 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:56:49 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:49 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:56:49 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:49 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:56:49 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:56:49 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:56:49 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:55 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:56:55 [watch] src/store/cart.tsx
+23:56:55 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: Identifier 'cart' has already been declared. (47:13)
+
+  45 | );
+  46 |
+> 47 | export const cart = {
+     |              ^
+  48 | 	get items() {
+  49 | 		return cartStore.items;
+  50 | 	},
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:47:13
+  45 |  );
+  46 |  
+  47 |  export const cart = {
+     |               ^
+  48 |  	get items() {
+  49 |  		return cartStore.items;
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptScopeHandler.checkRedeclarationInScope (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:1647:19)
+      at TypeScriptScopeHandler.declareName (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:1613:12)
+      at TypeScriptScopeHandler.declareName (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:4913:11)
+      at TypeScriptParserMixin.declareNameFromIdentifier (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:7594:16)
+      at TypeScriptParserMixin.checkIdentifier (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:7590:12)
+      at TypeScriptParserMixin.checkLVal (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:7529:12)
+      at TypeScriptParserMixin.parseVarId (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13421:10)
+      at TypeScriptParserMixin.parseVarId (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9772:11)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13392:12)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12756:17)
+      at TypeScriptParserMixin.parseExportDeclaration (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13943:17)
+      at TypeScriptParserMixin.parseExportDeclaration (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9657:85)
+      at TypeScriptParserMixin.maybeParseExportDeclaration (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13902:31)
+      at TypeScriptParserMixin.parseExport (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13821:29)
+      at TypeScriptParserMixin.parseExport (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9475:20)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12887:27)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseModuleItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12753:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:36)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseProgram (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12634:10)
+      at TypeScriptParserMixin.parseTopLevel (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12624:25)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14501:10)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10149:18)
+      at parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14535:38)
+      at parser (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:261:32)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:189:28
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:113:33
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:287:14)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+23:56:55 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:56:55 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:55 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:56:55 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:55 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:56:55 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:56:56 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:56:56 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:57 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:56:57 [watch] src/store/cart.tsx
+23:56:57 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: 'import' and 'export' may only appear at the top level. (47:0)
+
+  45 | );
+  46 |
+> 47 | export const cart = {
+     | ^
+  48 | 	get items() {
+  49 | 		return cartStore.items;
+  50 | 	},
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:47:0
+  45 |  );
+  46 |  
+  47 |  export const cart = {
+     |  ^
+  48 |  	get items() {
+  49 |  		return cartStore.items;
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12880:18)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11695:12)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12503:17)
+      at TypeScriptParserMixin.parseExprListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12185:18)
+      at TypeScriptParserMixin.parseCallExpressionArguments (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11256:22)
+      at TypeScriptParserMixin.parseCoverCallAndAsyncArrowHead (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11190:29)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11124:19)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9358:18)
+      at TypeScriptParserMixin.parseSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11098:19)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11089:17)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12431:16)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13393:91)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+23:56:57 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:56:57 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:57 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:56:57 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:56:57 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:56:57 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:56:57 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:56:57 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:01 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:01 [watch] src/store/cart.tsx
+23:57:02 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: 'import' and 'export' may only appear at the top level. (47:1)
+
+  45 | );
+  46 |
+> 47 | 	export const cart = {
+     | 	^
+  48 | 	get items() {
+  49 | 		return cartStore.items;
+  50 | 	},
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:47:1
+  45 |  );
+  46 |  
+  47 |  	export const cart = {
+     |   ^
+  48 |  	get items() {
+  49 |  		return cartStore.items;
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12880:18)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11695:12)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12503:17)
+      at TypeScriptParserMixin.parseExprListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12185:18)
+      at TypeScriptParserMixin.parseCallExpressionArguments (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11256:22)
+      at TypeScriptParserMixin.parseCoverCallAndAsyncArrowHead (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11190:29)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11124:19)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9358:18)
+      at TypeScriptParserMixin.parseSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11098:19)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11089:17)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12431:16)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13393:91)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+23:57:02 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:57:02 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:02 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:57:02 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:02 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:57:02 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:57:02 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:57:02 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:05 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:05 [watch] src/store/cart.tsx
+23:57:05 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: 'import' and 'export' may only appear at the top level. (47:1)
+
+  45 | );
+  46 |
+> 47 | 	export const cart = {
+     | 	^
+  48 | 	get items() {
+  49 | 		return cartStore.items;
+  50 | 	},
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:47:1
+  45 |  );
+  46 |  
+  47 |  	export const cart = {
+     |   ^
+  48 |  	get items() {
+  49 |  		return cartStore.items;
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12880:18)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseStatementListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12756:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:61)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseBlock (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13306:10)
+      at TypeScriptParserMixin.parseFunctionBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12110:24)
+      at TypeScriptParserMixin.parseArrowExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12085:10)
+      at TypeScriptParserMixin.parseParenAndDistinguishExpression (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11695:12)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11335:23)
+      at TypeScriptParserMixin.parseExprAtom (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:4797:20)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11085:23)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12436:12)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12503:17)
+      at TypeScriptParserMixin.parseExprListItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12185:18)
+      at TypeScriptParserMixin.parseCallExpressionArguments (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11256:22)
+      at TypeScriptParserMixin.parseCoverCallAndAsyncArrowHead (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11190:29)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11124:19)
+      at TypeScriptParserMixin.parseSubscript (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9358:18)
+      at TypeScriptParserMixin.parseSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11098:19)
+      at TypeScriptParserMixin.parseExprSubscripts (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11089:17)
+      at TypeScriptParserMixin.parseUpdate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11070:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:11050:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9857:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10903:61)
+      at TypeScriptParserMixin.parseExprOps (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10908:23)
+      at TypeScriptParserMixin.parseMaybeConditional (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10885:23)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10835:21)
+      at TypeScriptParserMixin.parseMaybeAssign (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9806:20)
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:39
+      at TypeScriptParserMixin.allowInAnd (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12431:16)
+      at TypeScriptParserMixin.parseMaybeAssignAllowIn (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10804:17)
+      at TypeScriptParserMixin.parseVar (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13393:91)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13239:10)
+      at TypeScriptParserMixin.parseVarStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9498:31)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12860:23)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+23:57:05 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:57:05 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:05 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:57:05 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:05 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:57:05 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:57:05 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:57:05 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:11 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:11 [watch] src/store/cart.tsx
+23:57:11 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:57:11 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:11 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:57:11 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:11 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:57:11 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:57:11 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:57:11 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:16 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:16 [watch] src/store/cart.tsx
+23:57:16 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:57:16 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:16 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:57:16 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:16 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:57:16 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:57:16 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:57:16 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:22 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:22 [watch] src/store/cart.tsx
+23:57:22 [ERROR] [vite] Internal server error: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx: Missing semicolon. (28:6)
+
+  26 | // };
+  27 |
+> 28 | econst cart=createRoot(() => {const [cartStore, setCart] = makePersisted(
+     |       ^
+  29 | 	createStore<{ items: CartItems[] }>({
+  30 | 		items: [],
+  31 | 	}),
+  Plugin: solid
+  File: /home/darjs/dev/vit-store/apps/storev2/src/store/cart.tsx:28:6
+  26 |  // };
+  27 |  
+  28 |  econst cart=createRoot(() => {const [cartStore, setCart] = makePersisted(
+     |        ^
+  29 |  	createStore<{ items: CartItems[] }>({
+  30 |  		items: [],
+      at constructor (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:367:19)
+      at TypeScriptParserMixin.raise (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6630:19)
+      at TypeScriptParserMixin.semicolon (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:6926:10)
+      at TypeScriptParserMixin.parseExpressionStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13294:10)
+      at TypeScriptParserMixin.parseExpressionStatement (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9616:26)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12908:19)
+      at TypeScriptParserMixin.parseStatementContent (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:9532:18)
+      at TypeScriptParserMixin.parseStatementLike (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12776:17)
+      at TypeScriptParserMixin.parseModuleItem (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12753:17)
+      at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13325:36)
+      at TypeScriptParserMixin.parseBlockBody (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:13318:10)
+      at TypeScriptParserMixin.parseProgram (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12634:10)
+      at TypeScriptParserMixin.parseTopLevel (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:12624:25)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14501:10)
+      at TypeScriptParserMixin.parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:10149:18)
+      at parse (/home/darjs/dev/vit-store/node_modules/.bun/@babel+parser@7.28.4/node_modules/@babel/parser/lib/index.js:14535:38)
+      at parser (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:261:32)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:189:28
+      at /home/darjs/dev/vit-store/node_modules/.bun/@babel+core@7.28.4+687afd9727bac282/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:113:33
+      at step (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:287:14)
+      at /home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/darjs/dev/vit-store/node_modules/.bun/gensync@1.0.0-beta.2/node_modules/gensync/index.js:223:11)
+23:57:22 [vite] hmr invalidate /src/components/cart/cart-count.tsx
+23:57:22 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:22 [vite] hmr invalidate /src/components/product/product-add-to-cart.tsx
+23:57:22 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:22 [vite] hmr invalidate /src/components/cart/add-to-cart-button.tsx
+23:57:22 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/product/recommended-products.tsx
+23:57:22 [vite] hmr invalidate /src/components/product/recommended-products.tsx
+23:57:22 [watch] /src/styles/starwind.css, /src/styles/global.css
+23:57:23 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:23 [watch] src/store/cart.tsx
+23:57:24 [watch] /src/styles/starwind.css, /src/styles/global.css, /src/components/cart/cart-count.tsx, /src/components/product/product-add-to-cart.tsx, /src/components/cart/add-to-cart-button.tsx, /src/components/cart/cart-list.tsx, /src/components/cart/cart-actions.tsx
+23:57:24 [watch] src/store/cart.tsx
+products undefined
+products undefined
+23:57:29 [200] /products/probiotic-complex-30-billion-4 93ms
+products [
+  {
+    id: 10,
+    slug: 'coq10-200mg',
+    name: 'CoQ10 200mg',
+    price: 85000,
+    image: 'https://picsum.photos/600/400?random=p10-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 15,
+    slug: 'digestive-enzymes',
+    name: 'Digestive Enzymes',
+    price: 38000,
+    image: 'https://picsum.photos/600/400?random=p15-1',
+    brand: "Doctor's Best",
+    discount: 0
+  },
+  {
+    id: 9,
+    slug: 'b-complex-100',
+    name: 'B-Complex 100',
+    price: 28000,
+    image: 'https://picsum.photos/600/400?random=p9-1',
+    brand: 'NutraCost',
+    discount: 0
+  },
+  {
+    id: 14,
+    slug: 'calcium-citrate-600mg',
+    name: 'Calcium Citrate 600mg',
+    price: 22000,
+    image: 'https://picsum.photos/600/400?random=p14-1',
+    brand: 'NutraCost',
+    discount: 0
+  }
+]
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:57:34 [200] / 47ms
+23:57:36 [200] /products 7ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+23:57:38 [200] / 39ms
+products undefined
+products undefined
+23:57:40 [200] /products/vitamin-c-500mg-1 42ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+23:58:22 [watch] /src/components/product/recommended-products.tsx, /src/styles/starwind.css, /src/styles/global.css
+23:58:22 [watch] src/components/product/recommended-products.tsx
+23:58:23 [watch] /src/components/product/recommended-products.tsx, /src/styles/starwind.css, /src/styles/global.css
+23:58:23 [watch] src/components/product/recommended-products.tsx
+23:58:31 [watch] src/pages/products/[slug].astro
+23:58:31 [WARN] [router] getStaticPaths() ignored in dynamic page /src/pages/products/[slug].astro. Add `export const prerender = true;` to prerender the page as static HTML during the build process.
+products undefined
+products undefined
+23:58:31 [200] /products/vitamin-c-500mg-1 103ms
+products [
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 7,
+    slug: 'omega-3-fish-oil-1000mg',
+    name: 'Omega-3 Fish Oil 1000mg',
+    price: 45000,
+    image: 'https://picsum.photos/600/400?random=p7-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 6,
+    slug: 'zinc-picolinate-30mg',
+    name: 'Zinc Picolinate 30mg',
+    price: 18000,
+    image: 'https://picsum.photos/600/400?random=p6-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 11,
+    slug: 'vitamin-k2-mk7-100mcg',
+    name: 'Vitamin K2 MK-7 100mcg',
+    price: 32000,
+    image: 'https://picsum.photos/600/400?random=p11-1',
+    brand: 'NOW Foods',
+    discount: 0
+  }
+]
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:00:05 [200] / 50ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:00:16 [200] / 51ms
+products undefined
+products undefined
+00:00:20 [200] /products/omega-3-fish-oil-1000mg-7 46ms
+products [
+  {
+    id: 1,
+    slug: 'vitamin-c-500mg',
+    name: 'Vitamin C 500mg',
+    price: 25000,
+    image: 'https://picsum.photos/600/400?random=p1-1',
+    brand: 'NOW Foods',
+    discount: 0
+  },
+  {
+    id: 2,
+    slug: 'vitamin-d3-2000-iu',
+    name: 'Vitamin D3 2000 IU',
+    price: 30000,
+    image: 'https://picsum.photos/600/400?random=p2-1',
+    brand: "Nature's Best",
+    discount: 0
+  },
+  {
+    id: 12,
+    slug: 'multivitamin-men',
+    name: 'Multivitamin for Men',
+    price: 42000,
+    image: 'https://picsum.photos/600/400?random=p12-1',
+    brand: "Nature's Best",
+    discount: 0
+  }
+]

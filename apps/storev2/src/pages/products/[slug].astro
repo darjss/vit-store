@@ -1,11 +1,140 @@
 ---
-export const prerender = false; 
+export const prerender = false;   
 import Layout from "@/layouts/Layout.astro";
-const slug=Astro.params.slug;
+import { api } from "@/lib/trpc";
+import Breadcrumb from "@/components/product/breadcrumb.astro";
+import ProductImageCarousel from "@/components/product/product-image-carousel";
+import ProductInfo from "@/components/product/product-info.astro";
+import ProductDetails from "@/components/product/product-details.astro";
+import RecommendedProducts from "@/components/product/recommended-products";
+
+export async function getStaticPaths() {
+	const allProduct = await api.product.getAllProducts.query();
+	return allProduct.map((product) => ({
+		params: {
+			slug: product.slug + "-" + product.id,
+		},
+	}));
+}
+
+const { slug } = Astro.params;
+const productId = Number(slug.split("-")[slug.split("-").length - 1]);
+
+if (isNaN(productId)) {
+	console.error("Invalid product ID");
+	return Astro.redirect("/404");
+}
+
+const product = await api.product.getProductById.query({ id: productId });
+
+if (!product) {
+	console.error("Product not found");
+	return Astro.redirect("/404");
+}
+
+const breadcrumbItems = [
+	{
+		label: "Бүтээгдэхүүн",
+		href: "/products",
+	},
+	{
+		label: product.category.name,
+		href: `/products?category=${product.categoryId}`,
+	},
+	{
+		label: product.name,
+		href: "",
+	},
+];
+
+const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "";
 ---
 
 <Layout>
-    <div>
-        <h1>Products slug: {slug}</h1>
-    </div>
+	<div class="relative min-h-screen">
+		<div
+			class="absolute inset-0 opacity-40"
+			style="background:#ffffff;background-image:radial-gradient(circle at 2px 2px, rgba(0,0,0,0.25) 1.5px, transparent 0);background-size:30px 30px;"
+		>
+		</div>
+		<div
+			class="absolute inset-0 opacity-50"
+			style="background-image:radial-gradient(ellipse at 30% 20%, #FFF991 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, #FFB6C1 0%, transparent 50%);"
+		>
+		</div>
+
+		<div
+			class="relative z-10 mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8"
+		>
+			<Breadcrumb items={breadcrumbItems} />
+
+			<div
+				class="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12 mb-8 sm:mb-12"
+			>
+				<div class="w-full">
+					<ProductImageCarousel
+						client:load
+						images={product.images}
+						productName={product.name}
+					/>
+				</div>
+
+			<div class="w-full">
+				<ProductInfo
+					product={{
+						id: product.id,
+						name: product.name,
+						price: product.price,
+						discount: product.discount,
+						brand: product.brand,
+						category: product.category,
+						status: product.status,
+						amount: product.amount,
+						potency: product.potency,
+					}}
+					primaryImage={primaryImage}
+				/>
+			</div>
+			</div>
+
+		<div class="mb-8 sm:mb-12">
+			<ProductDetails
+				product={{
+					description: product.description,
+					ingredients: product.ingredients,
+					dailyIntake: product.dailyIntake,
+					weightGrams: product.weightGrams,
+					amount: product.amount,
+					potency: product.potency,
+				}}
+			/>
+		</div>
+
+		<div class="border-t-3 sm:border-t-4 border-black pt-6 sm:pt-10 pb-4 sm:pb-8">
+			<RecommendedProducts
+				client:load
+				currentProductId={product.id}
+				categoryId={product.categoryId}
+				brandId={product.brandId}
+			/>
+		</div>
+		</div>
+	</div>
 </Layout>
+
+<style>
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.animate-slide-up {
+		animation: slideUp 0.6s ease-out forwards;
+	}
+</style>

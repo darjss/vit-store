@@ -5,13 +5,12 @@ import { Button } from "../ui/button";
 const AddToCartButton = ({ cartItem }: { cartItem: CartItems }) => {
 	return (
 		<Button
-			class="absolute right-3 bottom-3 flex items-center gap-1 rounded-sm border-2 border-black bg-primary px-2 py-1.5 font-black text-[10px] uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary/90 hover:shadow-[1px_1px_0_0_#000] active:scale-95 sm:right-5 sm:bottom-5 sm:px-3 sm:py-2 sm:text-xs"
+			class="w-full flex items-center justify-center gap-2 rounded-sm border-3 sm:border-4 border-black bg-primary px-6 py-3 font-black text-sm sm:text-base uppercase tracking-tight shadow-[4px_4px_0_0_#000] sm:shadow-[5px_5px_0_0_#000] transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[3px_3px_0_0_#000] active:scale-[0.98] touch-manipulation"
 			type={"button"}
 			onClick={() => cart.add(cartItem)}
 		>
-			<span>🛒</span>
-			<span class="hidden sm:inline">Add to Cart</span>
-			<span class="sm:hidden">Add</span>
+			<span class="text-lg sm:text-xl">🛒</span>
+			<span>Add to Cart</span>
 		</Button>
 	);
 };

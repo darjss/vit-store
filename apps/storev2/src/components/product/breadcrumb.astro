@@ -1,0 +1,72 @@
+---
+interface BreadcrumbItem {
+	label: string;
+	href: string;
+}
+
+interface Props {
+	items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props;
+// Get only category for mobile display
+const categoryItem = items.length > 1 ? items[0] : null;
+---
+
+<nav aria-label="Навигацийн зам" class="mb-4 sm:mb-6">
+	{/* Mobile breadcrumb - Simplified */}
+	<div class="flex sm:hidden items-center gap-2 text-xs">
+		<a
+			href="/"
+			class="inline-flex items-center rounded-sm border-2 border-black bg-white px-2 py-1 hover:bg-primary transition-colors shadow-[2px_2px_0_0_#000] active:shadow-[1px_1px_0_0_#000] active:translate-x-[1px] active:translate-y-[1px]"
+		>
+			🏠
+		</a>
+		<span class="text-base font-black" aria-hidden="true">→</span>
+		{categoryItem && (
+			<>
+				<a
+					href={categoryItem.href}
+					class="inline-flex items-center rounded-sm border-2 border-black bg-white px-2 py-1 hover:bg-primary transition-colors shadow-[2px_2px_0_0_#000] active:shadow-[1px_1px_0_0_#000] active:translate-x-[1px] active:translate-y-[1px] font-bold truncate max-w-[120px]"
+				>
+					{categoryItem.label}
+				</a>
+			</>
+		)}
+	</div>
+
+	{/* Desktop breadcrumb - Full path */}
+	<ol class="hidden sm:flex items-center gap-2 text-sm font-bold">
+		<li>
+			<a
+				href="/"
+				class="inline-flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 hover:bg-primary transition-colors shadow-[2px_2px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px]"
+			>
+				🏠 Нүүр
+			</a>
+		</li>
+		{
+			items.map((item, index) => (
+				<>
+					<li class="text-lg font-black" aria-hidden="true">
+						→
+					</li>
+					<li>
+						{index === items.length - 1 ? (
+							<span class="inline-flex items-center gap-1.5 rounded-sm border-2 border-black bg-primary px-3 py-1.5 shadow-[2px_2px_0_0_#000] font-black truncate max-w-[200px]">
+								{item.label}
+							</span>
+						) : (
+							<a
+								href={item.href}
+								class="inline-flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-3 py-1.5 hover:bg-primary transition-colors shadow-[2px_2px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px]"
+							>
+								{item.label}
+							</a>
+						)}
+					</li>
+				</>
+			))
+		}
+	</ol>
+</nav>

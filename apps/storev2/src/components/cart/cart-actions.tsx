@@ -25,9 +25,9 @@ const CartActions = ({
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
-						strokeWidth="3"
-						strokeLinecap="square"
-						strokeLinejoin="miter"
+						stroke-width="3"
+						stroke-linecap="square"
+						stroke-linejoin="miter"
 						aria-hidden="true"
 					>
 						<title>Decrease quantity</title>
@@ -52,9 +52,9 @@ const CartActions = ({
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
-						strokeWidth="3"
-						strokeLinecap="square"
-						strokeLinejoin="miter"
+						stroke-width="3"
+						stroke-linecap="square"
+						stroke-linejoin="miter"
 						aria-hidden="true"
 					>
 						<title>Increase quantity</title>
@@ -76,9 +76,9 @@ const CartActions = ({
 					viewBox="0 0 24 24"
 					fill="none"
 					stroke="currentColor"
-					strokeWidth="3"
-					strokeLinecap="square"
-					strokeLinejoin="miter"
+					stroke-width="3"
+					stroke-linecap="square"
+					stroke-linejoin="miter"
 					aria-hidden="true"
 				>
 					<title>Remove item</title>
