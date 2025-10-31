@@ -25,7 +25,7 @@ const CART_LOCAL_STORAGE_KEY = "cart-items";
 // 	}
 // };
 
-const [cartStore, setCart] = makePersisted(
+export const cart=createRoot(() => {const [cartStore, setCart] = makePersisted(
 	createStore<{ items: CartItems[] }>({
 		items: [],
 	}),
@@ -44,12 +44,13 @@ const count = createMemo(() =>
 	cartStore.items.reduce((acc, item) => acc + item.quantity, 0),
 );
 
-export const cart = {
+	return {
 	get items() {
 		return cartStore.items;
 	},
 
 	add: (product: CartItems) => {
+		console.log("product", product);
 		const index = cartStore.items.findIndex(
 			(item) => item.productId === product.productId,
 		);
@@ -83,3 +84,4 @@ export const cart = {
 		return count();
 	},
 };
+});

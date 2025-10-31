@@ -1,4 +1,5 @@
 import { For, Show, createSignal, onMount } from "solid-js";
+import { Image } from "@unpic/solid";
 import { deliveryFee } from "@/lib/constant";
 import { cart } from "@/store/cart";
 import CartActions from "./cart-actions";
@@ -15,9 +16,9 @@ const EmptyCart = () => {
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="square"
-						strokeLinejoin="miter"
+						stroke-width="2"
+						stroke-linecap="square"
+						stroke-linejoin="miter"
 					>
 						<path d="M9 2L7 6" />
 						<path d="M17 2l2 4" />
@@ -75,9 +76,13 @@ const CartList = () => {
 									<div class="flex w-1/2 items-center gap-5">
 										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-[4px_4px_0_0_#000]">
 											<a href={`/product/${item.productId}`}>
-												<img
+												<Image
 													src={item.image}
 													alt={`${item.name} `}
+													width={96}
+													height={96}
+													aspectRatio={1}
+													layout="fixed"
 													class="h-full w-full object-cover object-center transition-transform hover:scale-110"
 												/>
 											</a>
@@ -112,9 +117,13 @@ const CartList = () => {
 									<div class="mb-4 flex gap-4">
 										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-[4px_4px_0_0_#000]">
 											<a href={`/product/${item.productId}`}>
-												<img
+												<Image
 													src={item.image}
 													alt={`${item.name}`}
+													width={96}
+													height={96}
+													aspectRatio={1}
+													layout="fixed"
 													class="h-full w-full object-cover object-center"
 												/>
 											</a>

@@ -186,13 +186,13 @@ const CarouselPrevious: Component<CarouselButtonProps> = (rawProps) => {
   const props = mergeProps<CarouselButtonProps[]>({ variant: "outline", size: "icon" }, rawProps)
   const [local, others] = splitProps(props, ["class", "variant", "size"])
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
- 
+
   return (
     <Button
       variant={local.variant}
       size={local.size}
       class={cn(
-        "absolute size-8 touch-manipulation rounded-full",
+        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-black bg-white hover:bg-black hover:text-white active:bg-black active:text-white shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black disabled:hover:shadow-[3px_3px_0_0_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0",
         orientation === "horizontal"
           ? "-left-12 top-1/2 -translate-y-1/2"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -207,10 +207,10 @@ const CarouselPrevious: Component<CarouselButtonProps> = (rawProps) => {
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="2"
+        stroke-width="2.5"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="size-4"
+        class="size-5 sm:size-6 font-black"
       >
         <path d="M5 12l14 0" />
         <path d="M5 12l6 6" />
@@ -225,13 +225,13 @@ const CarouselNext: Component<CarouselButtonProps> = (rawProps) => {
   const props = mergeProps<CarouselButtonProps[]>({ variant: "outline", size: "icon" }, rawProps)
   const [local, others] = splitProps(props, ["class", "variant", "size"])
   const { orientation, scrollNext, canScrollNext } = useCarousel()
- 
+
   return (
     <Button
       variant={local.variant}
       size={local.size}
       class={cn(
-        "absolute size-8 touch-manipulation rounded-full",
+        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-black bg-white hover:bg-black hover:text-white active:bg-black active:text-white shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black disabled:hover:shadow-[3px_3px_0_0_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0",
         orientation === "horizontal"
           ? "-right-12 top-1/2 -translate-y-1/2"
           : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -246,10 +246,10 @@ const CarouselNext: Component<CarouselButtonProps> = (rawProps) => {
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="2"
+        stroke-width="2.5"
         stroke-linecap="round"
         stroke-linejoin="round"
-        class="size-4"
+        class="size-5 sm:size-6 font-black"
       >
         <path d="M5 12l14 0" />
         <path d="M13 18l6 -6" />

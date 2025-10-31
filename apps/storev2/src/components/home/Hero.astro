@@ -1,5 +1,11 @@
 ---
-
+import { Image } from "astro:assets";
+import logo1 from "/public/logo1.png";
+import logo2 from "/public/logo2.png";
+import logo3 from "/public/logo3.png";
+import logo4 from "/public/logo4.png";
+import logo5 from "/public/logo5.png";
+import logo7 from "/public/logo7.png";
 ---
 
 <section
@@ -84,51 +90,75 @@
     <div
         class="absolute inset-0 w-full h-full overflow-hidden pointer-events-none"
     >
-        <img
-            src="/logo1.png"
+        <Image
+            src={logo1}
             alt="Brand Logo"
             class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-1 top-[10%] right-[8%] rotate-[10deg]"
+            width={144}
+            height={144}
+            loading="eager"
         />
-        <img
-            src="/logo4.png"
+        <Image
+            src={logo4}
             alt="Brand Logo"
             class="hidden md:block absolute w-20 md:w-28 lg:w-32 opacity-35 animate-float-2 top-[5%] right-[25%] -rotate-[12deg]"
+            width={128}
+            height={128}
+            loading="eager"
         />
-        <img
-            src="/logo8.png"
+        <Image
+            src={logo5}
             alt="Brand Logo"
             class="hidden sm:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-3 top-[35%] right-[5%] -rotate-[5deg]"
+            width={144}
+            height={144}
+            loading="eager"
         />
-        <img
-            src="/logo7.png"
+        <Image
+            src={logo7}
             alt="Brand Logo"
             class="hidden lg:block absolute w-20 md:w-24 lg:w-28 opacity-35 animate-float-1 top-[40%] right-[30%] rotate-[5deg]"
+            width={112}
+            height={112}
+            loading="eager"
         />
-        <img
-            src="/logo2.png"
+        <Image
+            src={logo2}
             alt="Brand Logo"
             class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-2 bottom-[15%] right-[15%] -rotate-[5deg]"
+            width={144}
+            height={144}
+            loading="eager"
         />
-        <img
-            src="/logo3.png"
+        <Image
+            src={logo3}
             alt="Brand Logo"
             class="hidden sm:block absolute w-20 md:w-28 lg:w-32 opacity-35 animate-float-3 bottom-[8%] right-[35%] rotate-[8deg]"
+            width={128}
+            height={128}
+            loading="eager"
         />
 
-        <img
-            src="/logo1.png"
+        <Image
+            src={logo1}
             alt="Brand Logo"
             class="block sm:hidden absolute w-20 opacity-25 animate-float-1 top-[15%] right-[5%] rotate-[15deg]"
+            width={80}
+            height={80}
         />
-        <img
-            src="/logo2.png"
+        <Image
+            src={logo2}
             alt="Brand Logo"
             class="block sm:hidden absolute w-24 opacity-20 animate-float-2 top-[45%] right-[8%] -rotate-[8deg]"
+            width={96}
+            height={96}
         />
-        <img
-            src="/logo3.png"
+        <Image
+            src={logo3}
             alt="Brand Logo"
             class="block sm:hidden absolute w-18 opacity-25 animate-float-3 bottom-[10%] right-[10%] rotate-[12deg]"
+            width={72}
+            height={72}
         />
     </div>
 

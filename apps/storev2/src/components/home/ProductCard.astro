@@ -1,5 +1,6 @@
 ---
 
+import { Image } from "astro:assets";
 import { formatCurrency } from "@vit/shared/utils";
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
@@ -17,15 +18,15 @@ const randomColor =
 ---
 
 <div
-    class="group relative block rounded-sm border-3 sm:border-4 border-black bg-white shadow-[4px_4px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] sm:hover:translate-x-[4px] hover:translate-y-[2px] sm:hover:translate-y-[4px] transition-all"
+    class="group relative flex flex-col rounded-sm border-3 sm:border-4 border-black bg-white shadow-[4px_4px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] sm:hover:translate-x-[4px] hover:translate-y-[2px] sm:hover:translate-y-[4px] transition-all duration-200"
     aria-label={`${p.name} by ${p.brand}`}
 >
     <a
-        href={`/products/${p.id}`}
-        class="focus:outline-none focus:ring-2 focus:ring-black/40"
+        href={`/products/${p.slug}-${p.id}`}
+        class="focus:outline-none focus:ring-4 focus:ring-black/40 flex flex-col flex-1"
     >
         <div
-            class="relative aspect-[4/3] overflow-hidden border-b-3 sm:border-b-4 border-black"
+            class="relative aspect-[4/5] sm:aspect-[4/3] overflow-hidden border-b-3 sm:border-b-4 border-black"
             style={`background:${randomColor}`}
         >
             <div
@@ -37,59 +38,60 @@ const randomColor =
                     <img
                         src={p.image}
                         alt={p.name}
-                        class="absolute inset-0 w-full h-full object-contain p-4 sm:p-6"
+                        class="absolute inset-0 w-full h-full object-contain p-3 sm:p-4"
+                        width={400}
+                        height={500}
                         loading="lazy"
                     />
                 )
             }
             <div
-                class="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 rounded-full border-2 border-black bg-white px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
+                class="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 rounded-full border-2 border-black bg-white px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
             >
                 {p.brand}
             </div>
         </div>
-        <div class="p-3 sm:p-5 pb-16 sm:pb-5">
+        <div class="flex flex-col flex-1 p-2 sm:p-3">
             <h3
-                class="mb-1.5 sm:mb-2 text-sm sm:text-lg font-black leading-tight sm:leading-snug group-hover:underline line-clamp-2"
+                class="mb-1.5 sm:mb-2 text-sm sm:text-base font-black leading-tight tracking-tight group-hover:underline line-clamp-2"
             >
                 {p.name}
             </h3>
 
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-1 sm:gap-2">
-                    {
-                        p.discount && (
-                            <div class="text-xs sm:text-lg font-bold text-black/40 line-through">
-                                €
-                                {formatCurrency(
-                                    p.price * (1 - p.discount / 100),
-                                )}
-                                `
-                            </div>
-                        )
-                    }
-                    <div
-                        class:list={[
-                            "font-black",
-                            p.discount
-                                ? "text-lg sm:text-2xl text-destructive"
-                                : "text-lg sm:text-2xl",
-                        ]}
-                    >
-                        €{p.price.toFixed(2)}
-                    </div>
+            <div class="flex items-center gap-1.5 sm:gap-2 mt-auto">
+                {
+                    p.discount && (
+                        <div class="text-xs sm:text-lg font-bold text-black/35 line-through">
+                            €
+                            {formatCurrency(
+                                p.price * (1 - p.discount / 100),
+                            )}
+                        </div>
+                    )
+                }
+                <div
+                    class:list={[
+                        "font-black tracking-tight",
+                        p.discount
+                            ? "text-xl sm:text-3xl text-destructive"
+                            : "text-xl sm:text-3xl",
+                    ]}
+                >
+                    €{p.price.toFixed(2)}
                 </div>
             </div>
         </div>
     </a>
-    <AddToCartButton
-        client:load
-        cartItem={{
-            productId: p.id,
-            quantity: 1,
-            name: p.name,
-            price: p.price,
-            image: p.image,
-        }}
-    />
+    <div class="p-2 pt-0 sm:p-3 sm:pt-0">
+        <AddToCartButton
+            client:load
+            cartItem={{
+                productId: p.id,
+                quantity: 1,
+                name: p.name,
+                price: p.price,
+                image: p.image,
+            }}
+        />
+    </div>
 </div>
