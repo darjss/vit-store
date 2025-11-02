@@ -11,16 +11,15 @@ interface ProductImage {
 interface Props {
 	images: ProductImage[];
 	productName: string;
+	productId: number;
 }
 
 export default function ProductImageCarousel(props: Props) {
-	// Sort images to show primary first
 	const sortedImages = () => {
 		const imgs = [...props.images];
 		return imgs.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
 	};
 
-	// Generate random pastel colors for each image
 	const imageColors = () => {
 		return sortedImages().map(
 			() => productColors[Math.floor(Math.random() * productColors.length)],
@@ -39,12 +38,10 @@ export default function ProductImageCarousel(props: Props) {
 
 	return (
 		<div class="w-full space-y-4">
-			{/* Main Image */}
 			<div
 				class="relative aspect-square w-full overflow-hidden rounded-sm border-4 sm:border-6 border-black shadow-[6px_6px_0_0_#000] sm:shadow-[12px_12px_0_0_#000]"
 				style={{ background: colors[selectedIndex()] }}
 			>
-				{/* Decorative pattern background */}
 				<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]" />
 
 				<Show
@@ -64,15 +61,6 @@ export default function ProductImageCarousel(props: Props) {
 						priority={true}
 						class="relative z-10 h-full w-full object-contain p-8 sm:p-12"
 					/>
-				</Show>
-
-				{/* Bold badge if primary image */}
-				<Show when={images[selectedIndex()]?.isPrimary}>
-					<div class="absolute left-4 top-4 sm:left-6 sm:top-6 z-20">
-						<div class="rounded-sm border-3 border-black bg-primary px-4 py-2 sm:px-6 sm:py-3 font-black text-sm sm:text-lg uppercase shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] rotate-[-4deg]">
-							✨ Онцлох
-						</div>
-					</div>
 				</Show>
 			</div>
 

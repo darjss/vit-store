@@ -3,19 +3,19 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
+			"types": "./src/index.ts",
 			"default": "./src/index.ts"
 		},
 		"./db": {
-			"types": "./dist/db/index.d.ts",
+			"types": "./src/db/index.ts",
 			"default": "./src/db/index.ts"
 		},
 		"./db/schema": {
-			"types": "./dist/db/schema.d.ts",
+			"types": "./src/db/schema.ts",
 			"default": "./src/db/schema.ts"
 		},
 		"./*": {
-			"types": "./dist/*.d.ts",
+			"types": "./src/*.ts",
 			"default": "./src/*.ts"
 		}
 	},

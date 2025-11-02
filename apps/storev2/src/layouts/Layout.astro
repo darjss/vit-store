@@ -5,6 +5,8 @@ import "../styles/starwind.css"
 import Footer from "./Footer.astro";
 import Header from "./Header.astro";
 import MobileNavbar from "./MobileNavbar.astro";
+import QueryDevtools from "@/components/query-devtools";
+import { ClientRouter } from "astro:transitions";
 ---
 
 <!doctype html>
@@ -15,6 +17,7 @@ import MobileNavbar from "./MobileNavbar.astro";
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <meta name="generator" content={Astro.generator} />
         <title>Vitamin Store</title>
+        <ClientRouter />
     </head>
     <body>
         <div class="min-h-screen w-full bg-white relative">
@@ -37,6 +40,8 @@ import MobileNavbar from "./MobileNavbar.astro";
             <Footer />
             <MobileNavbar />
         </div>
+        		{import.meta.env.DEV && <QueryDevtools client:idle />}
+
     </body>
 </html>
 
@@ -48,3 +53,13 @@ import MobileNavbar from "./MobileNavbar.astro";
         height: 100%;
     }
 </style>
+<script>
+    document.addEventListener("astro:page-load", () => {
+        console.log("✅ View transition page load!");
+    });
+
+    document.addEventListener("astro:before-preparation", () => {
+        console.log("🚀 Starting navigation...");
+    });
+</script>
+

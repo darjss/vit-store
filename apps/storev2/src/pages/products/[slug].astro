@@ -23,7 +23,6 @@ if (isNaN(productId)) {
 }
 
 const product = await api.product.getProductById.query({ id: productId });
-console.log("product fetched ", product);
 if (!product) {
 	console.error("Product not found");
 	return Astro.redirect("/404");
@@ -60,11 +59,12 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 			<div
 				class="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 mb-12"
 			>
-				<div class="w-full">
+				<div class="w-full" transition:name={`product-image-${product.id}`} >
 					<ProductImageCarousel
 						client:load
 						images={product.images}
 						productName={product.name}
+						productId={product.id}
 					/>
 				</div>
 

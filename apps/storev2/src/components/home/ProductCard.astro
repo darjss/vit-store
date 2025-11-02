@@ -26,6 +26,7 @@ const randomColor =
         class="focus:outline-none focus:ring-4 focus:ring-black/40 flex flex-col flex-1"
     >
         <div
+            transition:name={`product-image-${p.id}`}
             class="relative aspect-[4/5] sm:aspect-[4/3] overflow-hidden border-b-3 sm:border-b-4 border-black"
             style={`background:${randomColor}`}
         >
@@ -46,6 +47,7 @@ const randomColor =
                 )
             }
             <div
+            transition:name={`product-brand-${p.id}`}
                 class="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 rounded-full border-2 border-black bg-white px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
             >
                 {p.brand}
@@ -53,6 +55,7 @@ const randomColor =
         </div>
         <div class="flex flex-col flex-1 p-2 sm:p-3">
             <h3
+                transition:name={`product-name-${p.id}`}
                 class="mb-1.5 sm:mb-2 text-sm sm:text-base font-black leading-tight tracking-tight group-hover:underline line-clamp-2"
             >
                 {p.name}
@@ -62,7 +65,6 @@ const randomColor =
                 {
                     p.discount && (
                         <div class="text-xs sm:text-lg font-bold text-black/35 line-through">
-                            €
                             {formatCurrency(
                                 p.price * (1 - p.discount / 100),
                             )}
@@ -70,6 +72,7 @@ const randomColor =
                     )
                 }
                 <div
+                transition:name={`product-price-${p.id}`}
                     class:list={[
                         "font-black tracking-tight",
                         p.discount
@@ -77,12 +80,13 @@ const randomColor =
                             : "text-xl sm:text-3xl",
                     ]}
                 >
-                    €{p.price.toFixed(2)}
+                
+                    {formatCurrency(p.price)}
                 </div>
             </div>
         </div>
     </a>
-    <div class="p-2 pt-0 sm:p-3 sm:pt-0">
+    <div class="p-2 pt-0 sm:p-3 sm:pt-0" transition:name=`product-add-to-cart-button-${p.id}`>
         <AddToCartButton
             client:load
             cartItem={{

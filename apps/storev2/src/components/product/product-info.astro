@@ -1,7 +1,6 @@
 ---
 import { formatCurrency } from "@vit/shared/utils";
-import ProductAddToCart from "./product-add-to-cart";
-
+import ProductQuantitySelector from "./product-add-to-cart";
 interface Props {
 	product: {
 		id: number;
@@ -29,20 +28,20 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 <div class="space-y-4 sm:space-y-6">
 	{/* Brand Badge */}
 	<div
+	transition:name={`product-brand-${product.id}`}
 		class="inline-flex items-center gap-2 rounded-sm border-3 border-black bg-white px-3 py-1.5 sm:px-4 sm:py-2 font-black text-xs sm:text-sm uppercase shadow-[3px_3px_0_0_#000]"
 	>
 		<span>🏷️</span>
 		<span>{product.brand.name}</span>
 	</div>
 
-	{/* Product Title */}
 	<h1
+		transition:name={`product-name-${product.id}`}
 		class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tight"
 	>
 		{product.name}
 	</h1>
 
-	{/* Category & Specs Pills */}
 	<div class="flex flex-wrap gap-2">
 		<div
 			class="rounded-sm border-2 border-black bg-muted px-2.5 py-1 text-xs sm:text-sm font-bold"
@@ -80,8 +79,9 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 				<div class="space-y-1">
 					<div class="flex items-baseline gap-3 flex-wrap">
 						{/* Original Price */}
-						<div class="text-lg sm:text-xl font-bold text-black/50 line-through">
+						<div class="text-lg sm:text-xl font-bold text-black/50 line-through" transition:name={`product-price-${product.id}`}>
 							{formatCurrency(product.price)}
+			
 						</div>
 					</div>
 					
@@ -101,34 +101,24 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 				<div class="text-sm font-bold text-black/60 uppercase tracking-wide">
 					Үнэ
 				</div>
-				<div class="text-4xl sm:text-5xl font-black text-black">
+				<div class="text-4xl sm:text-5xl font-black text-black" transition:name={`product-price-${product.id}`}>
 					{formatCurrency(product.price)}
 				</div>
 			</div>
 		)}
 	</div>
 
-	{/* Status Badge */}
-	{
-		product.status === "active" && (
-			<div class="flex items-center gap-2 rounded-sm border-2 border-black bg-green-100 px-3 py-2 shadow-[3px_3px_0_0_#000]">
-				<span class="inline-block size-2.5 sm:size-3 rounded-full border-2 border-black bg-green-500" />
-				<span class="text-xs sm:text-sm font-bold text-green-800">Нөөцтэй ба хүргэлтэнд бэлэн</span>
-			</div>
-		)
-	}
-
-	{/* Interactive Add to Cart - SolidJS */}
-	<ProductAddToCart
-		client:load
-		cartItem={{
-			productId: product.id,
-			quantity: 1,
-			name: product.name,
-			price: product.price,
-			image: primaryImage,
-		}}
-	/>
+	<div transition:name=`product-add-to-cart-button-${product.id}`>
+	<ProductQuantitySelector
+	client:load
+	cartItem={{
+		productId: product.id,
+		quantity: 1,
+		name: product.name,
+		price: product.price,
+		image: primaryImage,
+	}}
+/>
 
 	{/* Trust Signals */}
 	<div class="rounded-sm border-2 border-black bg-white/80 p-3 sm:p-4 shadow-[3px_3px_0_0_#000]">

@@ -7,7 +7,9 @@ import { defineConfig } from "astro/config";
 export default defineConfig({
 	output: "server",
 	adapter: alchemy(),
-
+	prefetch: {
+		strategy: "tap",
+	},
 	vite: {
 		plugins: [tailwindcss()],
 

@@ -7,16 +7,16 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
  
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center border-2 border-black px-3 py-1 text-xs font-black uppercase tracking-wide shadow-[2px_2px_0_0_#000] transition-all hover:shadow-[3px_3px_0_0_#000] hover:translate-x-[-1px] hover:translate-y-[-1px]",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        outline: "text-foreground",
-        success: "border-success-foreground bg-success text-success-foreground",
-        warning: "border-warning-foreground bg-warning text-warning-foreground",
-        error: "border-error-foreground bg-error text-error-foreground"
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-[2px_2px_0_0_#fff] hover:shadow-[3px_3px_0_0_#fff]",
+        outline: "bg-white text-foreground",
+        success: "bg-success text-success-foreground",
+        warning: "bg-warning text-warning-foreground",
+        error: "bg-error text-error-foreground"
       }
     },
     defaultVariants: {
@@ -36,7 +36,6 @@ const Badge: Component<BadgeProps> = (props) => {
     <div
       class={cn(
         badgeVariants({ variant: local.variant }),
-        local.round && "rounded-full",
         local.class
       )}
       {...others}

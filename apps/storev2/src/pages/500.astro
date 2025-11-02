@@ -1,0 +1,194 @@
+---
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout>
+    <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
+        <div class="max-w-2xl w-full">
+            <!-- Main Error Container -->
+            <div
+                class="bg-[oklch(0.92_0.18_15)] border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 md:p-12 relative overflow-hidden"
+            >
+                <!-- Background Pattern -->
+                <div
+                    class="absolute inset-0 opacity-10"
+                    style="background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px);"
+                >
+                </div>
+
+                <!-- Glitch Effect Background -->
+                <div class="absolute top-4 right-4 opacity-30 animate-pulse">
+                    <svg
+                        width="80"
+                        height="80"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        ><path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                        ></path><line x1="12" y1="9" x2="12" y2="13"></line><line
+                            x1="12"
+                            y1="17"
+                            x2="12.01"
+                            y2="17"></line></svg
+                    >
+                </div>
+
+                <!-- Content -->
+                <div class="relative z-10">
+                    <!-- 500 Number -->
+                    <div class="mb-6">
+                        <h1
+                            class="text-8xl md:text-9xl font-black leading-none animate-glitch inline-block"
+                        >
+                            500
+                        </h1>
+                        <div
+                            class="mt-4 h-2 w-32 bg-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]"
+                        >
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <h2 class="text-3xl md:text-4xl font-black mb-4">
+                        Серверийн алдаа!
+                    </h2>
+                    <p class="text-lg md:text-xl font-bold mb-8 max-w-md">
+                        Уучлаарай, ямар нэг зүйл буруу боллоо. Бид энэ
+                        асуудлыг яаралтай засч байна.
+                    </p>
+
+                    <!-- Error Icons -->
+                    <div class="my-8 flex gap-4 flex-wrap">
+                        <div
+                            class="bg-black text-white border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.4)] animate-float-1 inline-block"
+                        >
+                            <svg
+                                width="32"
+                                height="32"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                ><circle cx="12" cy="12" r="10"></circle><line
+                                    x1="15"
+                                    y1="9"
+                                    x2="9"
+                                    y2="15"></line><line
+                                    x1="9"
+                                    y1="9"
+                                    x2="15"
+                                    y2="15"></line></svg
+                            >
+                        </div>
+                        <div
+                            class="bg-white border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-float-2 inline-block"
+                        >
+                            <svg
+                                width="32"
+                                height="32"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                ><path
+                                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                                ></path><line x1="12" y1="9" x2="12" y2="13"
+                                ></line><line x1="12" y1="17" x2="12.01" y2="17"
+                                ></line></svg
+                            >
+                        </div>
+                        <div
+                            class="bg-primary border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-float-3 inline-block font-black text-2xl"
+                        >
+                            !
+                        </div>
+                    </div>
+
+                    <!-- Status Info -->
+                    <div
+                        class="bg-white/60 border-[3px] border-black p-4 mb-6 font-mono text-sm"
+                    >
+                        <div class="font-bold mb-2">⚠️ Алдааны мэдээлэл:</div>
+                        <div class="space-y-1 opacity-70">
+                            <div>→ Статус: Internal Server Error</div>
+                            <div>→ Код: HTTP 500</div>
+                            <div>
+                                → Огноо: {
+                                    new Date().toLocaleString("mn-MN", {
+                                        timeZone: "Asia/Ulaanbaatar",
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-4 mt-8">
+                        <button
+                            type="button"
+                            onclick="location.reload()"
+                            class="bg-black text-white border-[3px] border-black px-8 py-4 font-black text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all"
+                        >
+                            🔄 Дахин оролдох
+                        </button>
+                        <a href="/">
+                            <button
+                                type="button"
+                                class="bg-white border-[3px] border-black px-8 py-4 font-black text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            >
+                                ← Нүүр хуудас руу
+                            </button>
+                        </a>
+                    </div>
+
+                    <!-- Help Text -->
+                    <div class="mt-8 pt-6 border-t-4 border-black/20">
+                        <p class="font-bold text-sm">
+                            💡 <strong>Зөвлөмж:</strong> Хэрэв асуудал үргэлжлэх
+                            бол хэсэг хугацааны дараа дахин оролдоно уу, эсвэл бидэнтэй
+                            холбогдоно уу.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shadow Element -->
+            <div class="mt-2 ml-2 h-full w-full bg-black/10 -z-10"></div>
+        </div>
+    </div>
+</Layout>
+
+<style>
+    @keyframes glitch {
+        0% {
+            transform: translate(0);
+        }
+        20% {
+            transform: translate(-2px, 2px);
+        }
+        40% {
+            transform: translate(-2px, -2px);
+        }
+        60% {
+            transform: translate(2px, 2px);
+        }
+        80% {
+            transform: translate(2px, -2px);
+        }
+        100% {
+            transform: translate(0);
+        }
+    }
+
+    .animate-glitch {
+        animation: glitch 0.3s infinite;
+    }
+
+    @media (prefers-reduced-motion) {
+        .animate-glitch {
+            animation: none;
+        }
+    }
+</style>

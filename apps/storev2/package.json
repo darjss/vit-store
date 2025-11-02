@@ -15,12 +15,16 @@
 	"dependencies": {
 		"@astrojs/check": "^0.9.5",
 		"@astrojs/solid-js": "^5.1.1",
+		"@corvu/otp-field": "^0.1.4",
 		"@kobalte/core": "^0.13.11",
 		"@radix-ui/react-slot": "^1.2.3",
 		"@solid-primitives/storage": "^4.3.3",
 		"@tabler/icons": "^3",
 		"@tailwindcss/forms": "^0.5",
 		"@tailwindcss/vite": "^4",
+		"@tanstack/solid-form": "^1.23.8",
+		"@tanstack/solid-query": "^5.90.8",
+		"@tanstack/solid-query-devtools": "^5.90.4",
 		"@trpc/client": "^11.7.0",
 		"@unpic/astro": "^1.0.1",
 		"@unpic/solid": "^1.0.0",
@@ -39,7 +43,8 @@
 		"tailwind-merge": "^3",
 		"tailwind-variants": "^3",
 		"tailwindcss": "^4",
-		"tw-animate-css": "^1"
+		"tw-animate-css": "^1",
+		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
 		"alchemy": "0.75.1",

@@ -20,6 +20,8 @@
     --color-accent-foreground: oklch(0.15 0 0);
     --color-destructive: oklch(0.577 0.245 27.325);
     --color-destructive-foreground: oklch(0.99 0 0);
+    --color-error: oklch(0.92 0.18 15);
+    --color-error-foreground: oklch(0.15 0 0);
     --color-border: oklch(0.15 0 0);
     --color-input: oklch(0.922 0 0);
     --color-ring: oklch(0.92 0.15 95);
@@ -159,6 +161,22 @@
 
     .animate-float-3 {
         animation: float-3 8s ease-in-out infinite;
+    }
+
+    @keyframes caret-blink {
+        0%,
+        70%,
+        100% {
+            opacity: 1;
+        }
+        20%,
+        50% {
+            opacity: 0;
+        }
+    }
+
+    .animate-caret-blink {
+        animation: caret-blink 1.25s ease-out infinite;
     }
 
     /* Hide scrollbar but keep functionality */
