@@ -1,5 +1,5 @@
 ---
-export const prerender = false;   
+export const prerender = true;
 import Layout from "@/layouts/Layout.astro";
 import { api } from "@/lib/trpc";
 import Breadcrumb from "@/components/product/breadcrumb.astro";
@@ -7,18 +7,15 @@ import ProductImageCarousel from "@/components/product/product-image-carousel";
 import ProductInfo from "@/components/product/product-info.astro";
 import ProductDetails from "@/components/product/product-details.astro";
 import RecommendedProducts from "@/components/product/recommended-products";
-
 export async function getStaticPaths() {
-	const allProduct = await api.product.getAllProducts.query();
-	return allProduct.map((product) => ({
-		params: {
-			slug: product.slug + "-" + product.id,
-		},
+	const products = await api.product.getAllProducts.query();
+	return products.map((product) => ({
+		params: { slug: product.slug + "-" + product.id },
 	}));
 }
-
 const { slug } = Astro.params;
-const productId = Number(slug.split("-")[slug.split("-").length - 1]);
+const slugParts = slug.split("-");
+const productId = Number(slugParts[slugParts.length - 1]);
 
 if (isNaN(productId)) {
 	console.error("Invalid product ID");
@@ -26,7 +23,7 @@ if (isNaN(productId)) {
 }
 
 const product = await api.product.getProductById.query({ id: productId });
-
+console.log("product fetched ", product);
 if (!product) {
 	console.error("Product not found");
 	return Astro.redirect("/404");
@@ -38,7 +35,7 @@ const breadcrumbItems = [
 		href: "/products",
 	},
 	{
-		label: product.category.name,
+		label: product.category?.name || "Category",
 		href: `/products?category=${product.categoryId}`,
 	},
 	{
@@ -47,21 +44,13 @@ const breadcrumbItems = [
 	},
 ];
 
-const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "";
+const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "/placeholder-product.png";
 ---
 
 <Layout>
-	<div class="relative min-h-screen">
-		<div
-			class="absolute inset-0 opacity-40"
-			style="background:#ffffff;background-image:radial-gradient(circle at 2px 2px, rgba(0,0,0,0.25) 1.5px, transparent 0);background-size:30px 30px;"
-		>
-		</div>
-		<div
-			class="absolute inset-0 opacity-50"
-			style="background-image:radial-gradient(ellipse at 30% 20%, #FFF991 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, #FFB6C1 0%, transparent 50%);"
-		>
-		</div>
+	<div class="relative min-h-screen product-page-bg">
+		<div class="bg-pattern"></div>
+		<div class="bg-gradient"></div>
 
 		<div
 			class="relative z-10 mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8"
@@ -69,7 +58,7 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 			<Breadcrumb items={breadcrumbItems} />
 
 			<div
-				class="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12 mb-8 sm:mb-12"
+				class="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 mb-12"
 			>
 				<div class="w-full">
 					<ProductImageCarousel
@@ -81,23 +70,13 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 
 			<div class="w-full">
 				<ProductInfo
-					product={{
-						id: product.id,
-						name: product.name,
-						price: product.price,
-						discount: product.discount,
-						brand: product.brand,
-						category: product.category,
-						status: product.status,
-						amount: product.amount,
-						potency: product.potency,
-					}}
+					product={product}
 					primaryImage={primaryImage}
 				/>
 			</div>
 			</div>
 
-		<div class="mb-8 sm:mb-12">
+		<div class="mb-12">
 			<ProductDetails
 				product={{
 					description: product.description,
@@ -110,7 +89,7 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 			/>
 		</div>
 
-		<div class="border-t-3 sm:border-t-4 border-black pt-6 sm:pt-10 pb-4 sm:pb-8">
+		<div class="border-t-4 border-black pt-10 pb-8">
 			<RecommendedProducts
 				client:load
 				currentProductId={product.id}
@@ -123,18 +102,28 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 </Layout>
 
 <style>
-	@keyframes slideUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+	.product-page-bg {
+		--pattern-opacity: 0.4;
+		--gradient-opacity: 0.5;
+		--color-accent-yellow: #FFF991;
+		--color-accent-pink: #FFB6C1;
 	}
 
-	.animate-slide-up {
-		animation: slideUp 0.6s ease-out forwards;
+	.bg-pattern {
+		position: absolute;
+		inset: 0;
+		opacity: var(--pattern-opacity);
+		background: #ffffff;
+		background-image: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.25) 1.5px, transparent 0);
+		background-size: 30px 30px;
+	}
+
+	.bg-gradient {
+		position: absolute;
+		inset: 0;
+		opacity: var(--gradient-opacity);
+		background-image: 
+			radial-gradient(ellipse at 30% 20%, var(--color-accent-yellow) 0%, transparent 50%),
+			radial-gradient(ellipse at 70% 80%, var(--color-accent-pink) 0%, transparent 50%);
 	}
 </style>

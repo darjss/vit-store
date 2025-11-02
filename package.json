@@ -45,12 +45,13 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3",
-		"oxlint": "^1.8.0",
-		"turbo": "^2.5.5",
-		"tsdown": "catalog:",
-		"alchemy": "^0.75.1",
+		"@cloudflare/workers-types": "^4.20250822.0",
 		"@types/node": "^22.13.11",
-		"@cloudflare/workers-types": "^4.20250822.0"
+		"alchemy": "^0.75.1",
+		"miniflare": "^3",
+		"oxlint": "^1.8.0",
+		"tsdown": "catalog:",
+		"turbo": "^2.5.5"
 	},
 	"packageManager": "bun@1.3.0",
 	"patchedDependencies": {

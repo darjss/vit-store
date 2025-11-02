@@ -25,7 +25,8 @@ const CART_LOCAL_STORAGE_KEY = "cart-items";
 // 	}
 // };
 
-export const cart=createRoot(() => {const [cartStore, setCart] = makePersisted(
+export const cart=createRoot(() => {
+	const [cartStore, setCart] = makePersisted(
 	createStore<{ items: CartItems[] }>({
 		items: [],
 	}),

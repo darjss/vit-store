@@ -10,6 +10,7 @@ export const product = router({
 			const featuredProductsPromise = ctx.db.query.ProductsTable.findMany({
 				columns: {
 					id: true,
+					slug: true,
 					name: true,
 					price: true,
 				},
@@ -42,6 +43,7 @@ export const product = router({
 					id: true,
 					name: true,
 					price: true,
+					slug: true,
 				},
 				orderBy: desc(ProductsTable.updatedAt),
 				limit: 4,
@@ -69,6 +71,7 @@ export const product = router({
 			const discountedProductsPromise = ctx.db.query.ProductsTable.findMany({
 				columns: {
 					id: true,
+					slug: true,
 					name: true,
 					price: true,
 					discount: true,
@@ -106,6 +109,7 @@ export const product = router({
 			return {
 				featuredProducts: featuredProducts.map((product) => ({
 					id: product.id,
+					slug: product.slug,
 					name: product.name,
 					price: product.price,
 					image: product.images[0]?.url,
@@ -113,6 +117,7 @@ export const product = router({
 				})),
 				newProducts: newProducts.map((product) => ({
 					id: product.id,
+					slug: product.slug,
 					name: product.name,
 					price: product.price,
 					image: product.images[0]?.url,
@@ -120,6 +125,7 @@ export const product = router({
 				})),
 				discountedProducts: discountedProducts.map((product) => ({
 					id: product.id,
+					slug: product.slug,
 					name: product.name,
 					price: product.price,
 					image: product.images[0]?.url,
@@ -165,6 +171,10 @@ export const product = router({
 					dailyIntake: true,
 					categoryId: true,
 					brandId: true,
+					ingredients: true,
+					weightGrams: true,
+					seoTitle: true,
+					seoDescription: true,
 				},
 				where: and(
 					eq(ProductsTable.id, input.id),
@@ -175,6 +185,16 @@ export const product = router({
 						columns: {
 							url: true,
 							isPrimary: true,
+						},
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+					category: {
+						columns: {
+							name: true,
 						},
 					},
 				},
@@ -224,8 +244,114 @@ export const product = router({
 				image: product.images[0]?.url,
 			}));
 		}),
-	//     getProductStock: publicProcedure
-	//         .input(v.object({
-	//             id: v.pipe(v.number(), v.integer(), v.minValue(1)),
-	//         }))
+	getRecommendedProducts: publicProcedure
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				categoryId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				brandId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			try {
+				const sameCategoryPromise = ctx.db.query.ProductsTable.findMany({
+					columns: {
+						id: true,
+						slug: true,
+						name: true,
+						price: true,
+						discount: true,
+					},
+					limit: 2,
+					where: and(
+						eq(ProductsTable.categoryId, input.categoryId),
+						eq(ProductsTable.status, "active"),
+						isNull(ProductsTable.deletedAt),
+						// Exclude current product
+						sql`${ProductsTable.id} != ${input.productId}`,
+					),
+					orderBy: desc(ProductsTable.updatedAt),
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: and(
+								eq(ProductImagesTable.isPrimary, true),
+								isNull(ProductImagesTable.deletedAt),
+							),
+						},
+						brand: {
+							columns: {
+								name: true,
+							},
+						},
+					},
+				});
+
+				const sameBrandPromise = ctx.db.query.ProductsTable.findMany({
+					columns: {
+						id: true,
+						slug: true,
+						name: true,
+						price: true,
+						discount: true,
+					},
+					limit: 2,
+					where: and(
+						eq(ProductsTable.brandId, input.brandId),
+						eq(ProductsTable.status, "active"),
+						isNull(ProductsTable.deletedAt),
+						// Exclude current product
+						sql`${ProductsTable.id} != ${input.productId}`,
+					),
+					orderBy: desc(ProductsTable.updatedAt),
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: and(
+								eq(ProductImagesTable.isPrimary, true),
+								isNull(ProductImagesTable.deletedAt),
+							),
+						},
+						brand: {
+							columns: {
+								name: true,
+							},
+						},
+					},
+				});
+
+				const [sameCategory, sameBrand] = await Promise.all([
+					sameCategoryPromise,
+					sameBrandPromise,
+				]);
+
+				const allProducts = [...sameCategory, ...sameBrand];
+				const uniqueProducts = allProducts.filter(
+					(product, index, self) =>
+						index === self.findIndex((p) => p.id === product.id),
+				);
+
+				return uniqueProducts.slice(0, 5).map((product) => ({
+					id: product.id,
+					slug: product.slug,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url || "",
+					brand: product.brand.name,
+					discount: product.discount,
+				}));
+			} catch (error) {
+				console.error("Error getting recommended products:", error);
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error getting recommended products",
+					cause: error,
+				});
+			}
+		}),
+
 });

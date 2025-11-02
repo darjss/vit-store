@@ -60,7 +60,6 @@ export default function ProductImageCarousel(props: Props) {
 						alt={props.productName}
 						width={800}
 						height={800}
-						aspectRatio={1}
 						layout="constrained"
 						priority={true}
 						class="relative z-10 h-full w-full object-contain p-8 sm:p-12"
@@ -99,7 +98,6 @@ export default function ProductImageCarousel(props: Props) {
 									alt={`${props.productName} харагдац ${index() + 1}`}
 									width={96}
 									height={96}
-									aspectRatio={1}
 									layout="constrained"
 									class="relative z-10 h-full w-full object-contain p-2 sm:p-3"
 								/>

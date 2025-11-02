@@ -5323,3 +5323,1172 @@ products [
     discount: 0
   }
 ]
+00:01:38 Configuration file updated. Restarting...
+00:01:38 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+00:01:38 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+00:01:38 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+00:01:41 [content] Syncing content
+00:01:41 [content] Synced content
+00:01:41 [types] Generated 1.26s
+00:01:41 [vite] Re-optimizing dependencies because vite config has changed
+00:01:41 [vite] Port 4325 is in use, trying another one...
+00:05:25 Configuration file updated. Restarting...
+00:05:25 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+00:05:25 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+00:05:25 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+00:05:26 [vite] Re-optimizing dependencies because vite config has changed
+00:05:26 [content] Syncing content
+00:05:26 [content] Synced content
+00:05:26 [types] Generated 691ms
+00:05:26 [vite] Re-optimizing dependencies because vite config has changed
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:05:27 [200] / 286ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:05:52 [200] / 53ms
+00:06:03 Configuration file updated. Restarting...
+00:06:03 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+00:06:03 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+00:06:03 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+00:06:04 [vite] Re-optimizing dependencies because vite config has changed
+00:06:04 [content] Syncing content
+00:06:04 [content] Synced content
+00:06:04 [types] Generated 845ms
+00:06:04 [vite] Re-optimizing dependencies because vite config has changed
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:06:06 [200] / 238ms
+00:06:42 [watch] src/pages/products/[slug].astro
+00:06:42 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:06:42 [200] / 66ms
+00:06:49 [watch] src/pages/products/[slug].astro
+00:06:49 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:06:49 [200] / 71ms
+00:06:58 [watch] src/pages/products/[slug].astro
+00:06:58 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:06:58 [200] / 71ms
+00:07:06 [watch] src/pages/products/[slug].astro
+00:07:06 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:07 [200] / 65ms
+00:07:17 [watch] src/pages/products/[slug].astro
+00:07:17 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:17 [200] / 67ms
+00:07:28 [watch] src/pages/products/[slug].astro
+00:07:28 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:28 [200] / 66ms
+00:07:37 [watch] src/pages/products/[slug].astro
+00:07:37 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:37 [200] / 84ms
+00:07:42 [watch] src/pages/products/[slug].astro
+00:07:42 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:42 [200] / 87ms
+00:07:48 [watch] src/pages/products/[slug].astro
+00:07:48 [watch] src/pages/products/[slug].astro
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:07:48 [200] / 68ms
+00:12:18 Configuration file updated. Restarting...
+00:12:18 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+00:12:18 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+00:12:18 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+00:12:19 [vite] Re-optimizing dependencies because vite config has changed
+00:12:19 [content] Syncing content
+00:12:19 [content] Synced content
+00:12:19 [types] Generated 910ms
+00:12:19 [vite] Re-optimizing dependencies because vite config has changed
+TRPC Backend URL: http://localhost:3006/trpc/store from env: http://localhost:3006
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:27:37 [200] / 420ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:29:49 [200] HEAD / 45ms
+🔴 products {
+  featuredProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    },
+    {
+      id: 7,
+      slug: 'omega-3-fish-oil-1000mg',
+      name: 'Omega-3 Fish Oil 1000mg',
+      price: 45000,
+      image: 'https://picsum.photos/600/400?random=p7-1',
+      brand: "Nature's Best"
+    }
+  ],
+  newProducts: [
+    {
+      id: 1,
+      slug: 'vitamin-c-500mg',
+      name: 'Vitamin C 500mg',
+      price: 25000,
+      image: 'https://picsum.photos/600/400?random=p1-1',
+      brand: 'NOW Foods'
+    },
+    {
+      id: 2,
+      slug: 'vitamin-d3-2000-iu',
+      name: 'Vitamin D3 2000 IU',
+      price: 30000,
+      image: 'https://picsum.photos/600/400?random=p2-1',
+      brand: "Nature's Best"
+    },
+    {
+      id: 3,
+      slug: 'magnesium-glycinate-120-tablets',
+      name: 'Magnesium Glycinate 120 Tablets',
+      price: 55000,
+      image: 'https://picsum.photos/600/400?random=p3-1',
+      brand: 'Microingredients'
+    },
+    {
+      id: 4,
+      slug: 'probiotic-complex-30-billion',
+      name: 'Probiotic Complex 30 Billion',
+      price: 90000,
+      image: 'https://picsum.photos/600/400?random=p4-1',
+      brand: 'NutraCost'
+    }
+  ],
+  discountedProducts: []
+}
+00:31:02 [200] / 65ms
+17:55:34 [404] HEAD /node_modules/.vite/deps/clsx.js 1ms
+17:56:42 Configuration file updated. Restarting...
+17:56:42 [watch] astro.config.mjs
+17:56:42 [watch] astro.config.mjs
+17:56:42 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+17:56:42 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+17:56:42 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+17:56:43 [vite] Re-optimizing dependencies because vite config has changed
+17:56:43 [content] Syncing content
+17:56:43 [content] Astro config changed
+17:56:43 [content] Clearing content store
+17:56:43 [content] Synced content
+17:56:43 [types] Generated 814ms
+17:56:43 [vite] Re-optimizing dependencies because vite config has changed
+17:56:44 Configuration file updated. Restarting...
+17:56:44 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+17:56:44 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+17:56:44 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+17:56:45 [vite] Re-optimizing dependencies because vite config has changed
+17:56:45 [content] Syncing content
+17:56:45 [content] Synced content
+17:56:45 [types] Generated 726ms
+17:56:45 [vite] Re-optimizing dependencies because vite config has changed
+17:57:58 Configuration file updated. Restarting...
+17:57:58 [@astrojs/cloudflare] Enabling sessions with Cloudflare KV with the "SESSION" KV binding.
+17:57:58 [@astrojs/cloudflare] If you see the error "Invalid binding `SESSION`" in your build output, you need to add the binding to your wrangler config file.
+17:57:58 [WARN] [adapter] Cloudflare does not support sharp at runtime. However, you can configure `imageService: "compile"` to optimize images with sharp on prerendered pages during build time.
+17:57:59 [vite] Re-optimizing dependencies because vite config has changed
+17:57:59 [content] Syncing content
+17:57:59 [content] Synced content
+17:57:59 [types] Generated 682ms
+17:57:59 [vite] Re-optimizing dependencies because vite config has changed

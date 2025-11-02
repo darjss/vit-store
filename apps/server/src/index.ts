@@ -105,7 +105,6 @@ app.get("/admin/login/google/callback", async (c) => {
 		}
 
 		if (!storedState || !codeVerifier) {
-			// Fallback to legacy split cookies if combined cookie is missing
 			storedState = getCookie(c, "google_oauth_state");
 			codeVerifier = getCookie(c, "google_code_verifier");
 		}

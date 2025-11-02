@@ -105,7 +105,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 												alt={product.name}
 												width={300}
 												height={300}
-												aspectRatio={1}
 												layout="constrained"
 												class="absolute inset-0 w-full h-full object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300"
 												loading="lazy"

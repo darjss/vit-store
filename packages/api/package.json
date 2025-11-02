@@ -25,19 +25,19 @@
 	"devDependencies": {
 		"tsdown": "catalog:"
 	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
 	"dependencies": {
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"nanoid": "^5.1.5",
 		"superjson": "^2.2.2",
-		"@vit/shared": "workspace:*"
-	},
-	"peerDependencies": {
-		"typescript": "^5",
 		"drizzle-orm": "catalog:",
 		"@trpc/server": "catalog:",
 		"@trpc/client": "catalog:",
 		"hono": "catalog:",
-		"valibot": "catalog:"
+		"valibot": "catalog:",
+		"@vit/shared": "workspace:*"
 	}
 }

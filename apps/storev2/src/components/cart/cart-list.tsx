@@ -81,7 +81,6 @@ const CartList = () => {
 													alt={`${item.name} `}
 													width={96}
 													height={96}
-													aspectRatio={1}
 													layout="fixed"
 													class="h-full w-full object-cover object-center transition-transform hover:scale-110"
 												/>
@@ -122,7 +121,6 @@ const CartList = () => {
 													alt={`${item.name}`}
 													width={96}
 													height={96}
-													aspectRatio={1}
 													layout="fixed"
 													class="h-full w-full object-cover object-center"
 												/>
