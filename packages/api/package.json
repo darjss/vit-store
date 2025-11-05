@@ -31,13 +31,15 @@
 	"dependencies": {
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
+		"@trpc/client": "catalog:",
+		"@trpc/server": "catalog:",
+		"@vit/shared": "workspace:*",
+		"android-sms-gateway": "^3.0.0",
+		"drizzle-orm": "catalog:",
+		"drizzle-valibot": "^0.4.2",
+		"hono": "catalog:",
 		"nanoid": "^5.1.5",
 		"superjson": "^2.2.2",
-		"drizzle-orm": "catalog:",
-		"@trpc/server": "catalog:",
-		"@trpc/client": "catalog:",
-		"hono": "catalog:",
-		"valibot": "catalog:",
-		"@vit/shared": "workspace:*"
+		"valibot": "catalog:"
 	}
 }

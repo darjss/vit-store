@@ -82,14 +82,14 @@ export default function ProductCarousel(props: Props) {
 					<button
 						type="button"
 						onClick={prevSlide}
-						class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 sm:-translate-x-6 z-10 flex size-10 sm:size-12 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[-14px] sm:hover:translate-x-[-22px] hover:translate-y-[-50%] active:scale-95"
+						class="-translate-y-1/2 -translate-x-4 sm:-translate-x-6 absolute top-1/2 left-0 z-10 flex size-10 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[-14px] hover:translate-y-[-50%] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-12 sm:hover:translate-x-[-22px]"
 					>
 						←
 					</button>
 					<button
 						type="button"
 						onClick={nextSlide}
-						class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 sm:translate-x-6 z-10 flex size-10 sm:size-12 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[14px] sm:hover:translate-x-[22px] hover:translate-y-[-50%] active:scale-95"
+						class="-translate-y-1/2 absolute top-1/2 right-0 z-10 flex size-10 translate-x-4 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[14px] hover:translate-y-[-50%] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-12 sm:translate-x-6 sm:hover:translate-x-[22px]"
 					>
 						→
 					</button>
@@ -98,12 +98,12 @@ export default function ProductCarousel(props: Props) {
 
 			{/* Dot Indicators */}
 			{totalSlides() > 1 && (
-				<div class="flex justify-center gap-2 mt-6">
+				<div class="mt-6 flex justify-center gap-2">
 					{Array.from({ length: totalSlides() }).map((_, index) => (
 						<button
 							type="button"
 							onClick={() => goToSlide(index)}
-							class={`size-3 sm:size-4 rounded-full border-2 border-black transition-all ${
+							class={`size-3 rounded-full border-2 border-black transition-all sm:size-4 ${
 								currentIndex() === index
 									? "bg-black shadow-[2px_2px_0_0_#000]"
 									: "bg-white hover:bg-black/20"

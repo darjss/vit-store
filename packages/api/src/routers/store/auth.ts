@@ -107,7 +107,7 @@ export const auth = router({
 				}
 
 				// Create session
-				const { session, token } = await createSession(user);
+				const { session, token } = await createSession(user, ctx.kv);
 
 				// Always set cookie since we assume server can set it
 				console.log("Setting session cookie for user:", user.phone);
@@ -118,7 +118,6 @@ export const auth = router({
 				return {
 					success: true,
 					user: session.user,
-					// Always assume cookie was set successfully
 				};
 			} catch (error) {
 				console.error("Login error:", error);
@@ -138,19 +137,22 @@ export const auth = router({
 			throw error;
 		}
 	}),
+	me: customerProcedure.query(async ({ ctx }) => {
+		return ctx.session.user;
+	}),
 });
 
 export const addCustomerToDB = async (phone: string, ctx: Context) => {
 	try {
 		const user = await ctx.db.query.CustomersTable.findFirst({
-			where: eq(CustomersTable.phone, Number.parseInt(phone)),
+			where: eq(CustomersTable.phone, Number.parseInt(phone, 10)),
 		});
 		console.log("user", user);
 		if (!user) {
 			const newUser = await ctx.db
 				.insert(CustomersTable)
 				.values({
-					phone: Number.parseInt(phone),
+					phone: Number.parseInt(phone, 10),
 					address: "",
 				})
 				.returning();

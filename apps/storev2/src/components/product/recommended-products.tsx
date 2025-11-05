@@ -1,10 +1,9 @@
-import { createResource, For, Show } from "solid-js";
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared/utils";
+import { createResource, For, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
-import AddToCartButton from "../cart/add-to-cart-button";
-import type { ProductForHome } from "@/lib/types";
 import { api } from "@/lib/trpc";
+import type { ProductForHome } from "@/lib/types";
 
 interface RecommendedProductsProps {
 	currentProductId: number;
@@ -56,10 +55,10 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 	return (
 		<section class="w-full py-6 sm:py-12">
 			<div class="mb-6 sm:mb-8">
-				<h2 class="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-1.5 sm:mb-2">
+				<h2 class="mb-1.5 font-black text-2xl tracking-tight sm:mb-2 sm:text-3xl md:text-4xl">
 					💡 Таньд таалагдаж магадгүй
 				</h2>
-				<p class="text-sm sm:text-base text-black/70 font-bold">
+				<p class="font-bold text-black/70 text-sm sm:text-base">
 					Таны сонголтод тулгуурлан санал болгож байна
 				</p>
 			</div>
@@ -70,8 +69,8 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 					<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 						{Array(4)
 							.fill(0)
-							.map((_, i) => (
-								<div class="h-[280px] sm:h-[380px] rounded-sm border-3 sm:border-4 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] animate-pulse" />
+							.map((_, _i) => (
+								<div class="h-[280px] animate-pulse rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] sm:h-[380px] sm:border-4 sm:shadow-[6px_6px_0_0_#000]" />
 							))}
 					</div>
 				}
@@ -90,11 +89,11 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 							return (
 								<a
 									href={`/products/${product.slug}-${product.id}`}
-									class="group relative block rounded-sm border-3 sm:border-4 border-black bg-white shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[3px_3px_0_0_#000] hover:translate-x-[2px] sm:hover:translate-x-[3px] hover:translate-y-[2px] sm:hover:translate-y-[3px] transition-all focus:outline-none focus:ring-2 focus:ring-black/40"
+									class="group relative block rounded-sm border-3 border-black bg-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] focus:outline-none focus:ring-2 focus:ring-black/40 sm:border-4 sm:shadow-[6px_6px_0_0_#000] sm:hover:translate-x-[3px] sm:hover:translate-y-[3px] sm:hover:shadow-[3px_3px_0_0_#000]"
 								>
 									{/* Image Section */}
 									<div
-										class="relative aspect-square overflow-hidden border-b-3 sm:border-b-4 border-black"
+										class="relative aspect-square overflow-hidden border-black border-b-3 sm:border-b-4"
 										style={`background:${randomColor}`}
 									>
 										<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:12px_12px] sm:bg-[size:14px_14px]" />
@@ -106,20 +105,20 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 												width={300}
 												height={300}
 												layout="constrained"
-												class="absolute inset-0 w-full h-full object-contain p-3 sm:p-4 group-hover:scale-105 transition-transform duration-300"
+												class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
 												loading="lazy"
 											/>
 										</Show>
 
 										{/* Discount Badge */}
 										<Show when={hasDiscount}>
-											<div class="absolute top-2 left-2 sm:top-3 sm:left-3 rounded-full border-2 border-black bg-destructive px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-black text-white shadow-[2px_2px_0_0_#000]">
+											<div class="absolute top-2 left-2 rounded-full border-2 border-black bg-destructive px-2 py-0.5 font-black text-[10px] text-white shadow-[2px_2px_0_0_#000] sm:top-3 sm:left-3 sm:px-2.5 sm:py-1 sm:text-xs">
 												-{product.discount}%
 											</div>
 										</Show>
 
 										{/* Brand Badge */}
-										<div class="absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5 rounded-full border-2 border-black bg-white px-2 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase shadow-[2px_2px_0_0_#000]">
+										<div class="absolute right-2 bottom-2 rounded-full border-2 border-black bg-white px-2 py-0.5 font-black text-[9px] uppercase shadow-[2px_2px_0_0_#000] sm:right-2.5 sm:bottom-2.5 sm:px-2.5 sm:py-1 sm:text-[10px]">
 											{product.brand}
 										</div>
 									</div>
@@ -127,22 +126,22 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 									{/* Content Section */}
 									<div class="p-2.5 sm:p-4">
 										{/* Product Name */}
-										<h3 class="mb-2 sm:mb-3 text-xs sm:text-base font-black leading-tight group-hover:underline line-clamp-2 min-h-[32px] sm:min-h-[44px]">
+										<h3 class="mb-2 line-clamp-2 min-h-[32px] font-black text-xs leading-tight group-hover:underline sm:mb-3 sm:min-h-[44px] sm:text-base">
 											{product.name}
 										</h3>
 
 										{/* Price Section */}
 										<div class="flex flex-col gap-1 sm:gap-1.5">
 											<Show when={hasDiscount}>
-												<div class="text-[10px] sm:text-sm font-bold text-black/40 line-through">
+												<div class="font-bold text-[10px] text-black/40 line-through sm:text-sm">
 													{formatCurrency(originalPrice)}
 												</div>
 											</Show>
 											<div
 												class={
 													hasDiscount
-														? "text-base sm:text-xl font-black text-destructive"
-														: "text-base sm:text-xl font-black"
+														? "font-black text-base text-destructive sm:text-xl"
+														: "font-black text-base sm:text-xl"
 												}
 											>
 												{formatCurrency(discountedPrice)}

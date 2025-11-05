@@ -41,6 +41,7 @@
 		"db:migrate": "turbo -F server db:migrate"
 	},
 	"dependencies": {
+		"@corvu/drawer": "^0.2.4",
 		"dotenv": "^17.2.3"
 	},
 	"devDependencies": {

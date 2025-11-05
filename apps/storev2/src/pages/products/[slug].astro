@@ -1,23 +1,31 @@
 ---
-export const prerender = true;
 import Layout from "@/layouts/Layout.astro";
-import { api } from "@/lib/trpc";
 import Breadcrumb from "@/components/product/breadcrumb.astro";
-import ProductImageCarousel from "@/components/product/product-image-carousel";
+import ProductImageCarousel from "@/components/product/product-image-carousel.tsx";
 import ProductInfo from "@/components/product/product-info.astro";
 import ProductDetails from "@/components/product/product-details.astro";
-import RecommendedProducts from "@/components/product/recommended-products";
+import RecommendedProducts from "@/components/product/recommended-products.tsx";
+
+export const prerender = true;
+
+
+
+
+
+
+
+import { api } from "@/lib/trpc";
 export async function getStaticPaths() {
 	const products = await api.product.getAllProducts.query();
 	return products.map((product) => ({
-		params: { slug: product.slug + "-" + product.id },
+		params: { slug: `${product.slug}-${product.id}` },
 	}));
 }
 const { slug } = Astro.params;
 const slugParts = slug.split("-");
 const productId = Number(slugParts[slugParts.length - 1]);
 
-if (isNaN(productId)) {
+if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
 	return Astro.redirect("/404");
 }

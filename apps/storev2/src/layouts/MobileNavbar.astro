@@ -1,11 +1,9 @@
 ---
-
-import CartCount from "@/components/cart/cart-count";
-
+import CartCount from "@/components/cart/cart-count"
 ---
 
 <nav
-    class="md:hidden sticky inset-x-0 bottom-0 z-50 border-t-4 border-black bg-white" transition:persist
+    class="md:hidden fixed inset-x-0 bottom-0 z-50 border-t-4 border-black bg-white h-[73px]" transition:persist transition:name="mobile-navbar"
 >
     <div class="mx-auto max-w-screen-sm">
         <ul class="grid grid-cols-4 gap-1 px-3 py-2">
@@ -143,24 +141,37 @@ import CartCount from "@/components/cart/cart-count";
 </nav>
 
 <script>
-    // Add active state to current page
-    const currentPath = window.location.pathname;
-    const links = document.querySelectorAll('nav[class*="bottom-0"] a');
+    function updateActiveLink() {
+        const currentPath = window.location.pathname;
+        const links = document.querySelectorAll('nav[class*="bottom-0"] a');
 
-    links.forEach((link) => {
-        const href = link.getAttribute("href");
-        if (href) {
-            if (
-                (href === "/" && currentPath === "/") ||
-                (href !== "/" && currentPath.startsWith(href))
-            ) {
-                link.classList.add(
+        links.forEach((link) => {
+            const href = link.getAttribute("href");
+            if (href) {
+                // Remove active classes first
+                link.classList.remove(
                     "bg-primary",
                     "text-primary-foreground",
                     "shadow-[2px_2px_0_0_#000]",
                 );
-                link.classList.remove("text-foreground/70");
+                link.classList.add("text-foreground/70");
+
+                if (
+                    (href === "/" && currentPath === "/") ||
+                    (href !== "/" && currentPath.startsWith(href))
+                ) {
+                    link.classList.add(
+                        "bg-primary",
+                        "text-primary-foreground",
+                        "shadow-[2px_2px_0_0_#000]",
+                    );
+                    link.classList.remove("text-foreground/70");
+                }
             }
-        }
-    });
+        });
+    }
+
+    updateActiveLink();
+
+    document.addEventListener("astro:after-swap", updateActiveLink);
 </script>

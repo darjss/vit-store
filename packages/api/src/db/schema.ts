@@ -370,6 +370,7 @@ export const PurchasesTable = createTable(
 export const ordersRelations = relations(OrdersTable, ({ many }) => ({
 	orderDetails: many(OrderDetailsTable),
 	payments: many(PaymentsTable),
+	sales: many(SalesTable),
 }));
 
 export const paymentsRelations = relations(PaymentsTable, ({ one }) => ({
@@ -417,6 +418,17 @@ export const productImagesRelations = relations(
 export const purchaseRelations = relations(PurchasesTable, ({ one }) => ({
 	product: one(ProductsTable, {
 		fields: [PurchasesTable.productId],
+		references: [ProductsTable.id],
+	}),
+}));
+
+export const salesRelations = relations(SalesTable, ({ one }) => ({
+	order: one(OrdersTable, {
+		fields: [SalesTable.orderId],
+		references: [OrdersTable.id],
+	}),
+	product: one(ProductsTable, {
+		fields: [SalesTable.productId],
 		references: [ProductsTable.id],
 	}),
 }));

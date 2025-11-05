@@ -361,33 +361,34 @@ export const product = router({
 		)
 		.query(async ({ input, ctx }) => {
 			console.log("input.productId", input.productId);
-			if(input.productId===7){
+			if (input.productId === 7) {
 				return {
 					isInStock: false,
-				}
+				};
 			}
 			const product = await ctx.db.query.ProductsTable.findFirst({
 				columns: {
 					status: true,
 					stock: true,
 				},
-				where: and(eq(ProductsTable.id, input.productId), isNull(ProductsTable.deletedAt)),
+				where: and(
+					eq(ProductsTable.id, input.productId),
+					isNull(ProductsTable.deletedAt),
+				),
 			});
-			if(product===null || product===undefined) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Product not found",
-					});
-
+			if (product === null || product === undefined) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Product not found",
+				});
 			}
-			if(product.stock === 0 || product.status === "out_of_stock") {
+			if (product.stock === 0 || product.status === "out_of_stock") {
 				return {
 					isInStock: false,
-				}
+				};
 			}
 			return {
 				isInStock: true,
 			};
 		}),
-		
 });

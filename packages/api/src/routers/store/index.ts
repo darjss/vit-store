@@ -2,6 +2,8 @@ import { publicProcedure, router } from "../../lib/trpc";
 import { auth } from "./auth";
 import { brand } from "./brand";
 import { cart } from "./cart";
+import { customer } from "./customer";
+import { order } from "./order";
 import { payment } from "./payment";
 import { product } from "./product";
 
@@ -11,7 +13,9 @@ export const storeRouter = router({
 	}),
 	auth,
 	brand,
+	customer,
 	payment,
+	order,
 	product,
 	cart,
 });

@@ -199,7 +199,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 													const value =
 														e.target.value === ""
 															? 0
-															: Number.parseInt(e.target.value);
+															: Number.parseInt(e.target.value, 10);
 													setStockValue(Math.max(0, value));
 												}}
 											/>

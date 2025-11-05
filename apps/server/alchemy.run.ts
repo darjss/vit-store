@@ -20,18 +20,18 @@ await Exec("db-generate", {
 });
 
 const db = await D1Database("db", {
-	name: "vit-store-db" + stage,
+	name: `vit-store-db${stage}`,
 	migrationsDir: "../../packages/api/src/db/migrations",
 	primaryLocationHint: "apac",
 	migrationsTable: "drizzle_migrations",
 });
 
 const kv = await KVNamespace("kv", {
-	title: "vit-store-kv" + stage,
+	title: `vit-store-kv${stage}`,
 });
 
 const r2 = await R2Bucket("r2", {
-	name: "vit-store-bucket" + stage,
+	name: `vit-store-bucket${stage}`,
 });
 
 const rateLimit = RateLimit({

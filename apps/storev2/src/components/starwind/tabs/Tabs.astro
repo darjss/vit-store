@@ -1,4 +1,35 @@
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -37,13 +68,12 @@ const { defaultValue, syncKey, class: className, ...rest } = Astro.props;
     private tabs: HTMLElement;
     private triggers: HTMLButtonElement[];
     private contents: HTMLElement[];
-    private currentTabIndex: number = 0;
+    private currentTabIndex = 0;
     private tabsId: string;
     private syncKey?: string;
     private storageKey: string;
     private valueToTriggerMap: Map<string, HTMLButtonElement>;
     private valueToContentMap: Map<string, HTMLElement>;
-    private parentHandler: TabsHandler | null = null;
 
     constructor(tabs: HTMLElement, idx: number, parentHandler: TabsHandler | null = null) {
       this.tabs = tabs;

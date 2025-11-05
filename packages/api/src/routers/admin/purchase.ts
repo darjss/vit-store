@@ -4,7 +4,6 @@ import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, lt, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { ProductsTable, PurchasesTable } from "../../db/schema";
-import { PRODUCT_PER_PAGE } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const purchase = router({

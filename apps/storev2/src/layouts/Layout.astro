@@ -1,12 +1,12 @@
 ---
-
+import ClientRouter from "astro/components/ClientRouter.astro";
 import "../styles/global.css";
-import "../styles/starwind.css"
-import Footer from "./Footer.astro";
 import Header from "./Header.astro";
-import MobileNavbar from "./MobileNavbar.astro";
+import { Toaster } from "@/components/ui/toast";
+import Footer from "./Footer.astro";
 import QueryDevtools from "@/components/query-devtools";
-import { ClientRouter } from "astro:transitions";
+import MobileNavbar from "./MobileNavbar.astro";
+import "../styles/starwind.css"
 ---
 
 <!doctype html>
@@ -20,6 +20,11 @@ import { ClientRouter } from "astro:transitions";
         <ClientRouter />
     </head>
     <body>
+        <!-- Loading indicator for view transitions -->
+        <div id="loading-bar" class="loading-bar">
+            <div class="loading-bar-progress"></div>
+        </div>
+
         <div class="min-h-screen w-full bg-white relative">
             <div
                 class="absolute inset-0"
@@ -33,8 +38,9 @@ import { ClientRouter } from "astro:transitions";
             </div>
 
             <Header />
-            <main class="relative z-10">
+      <main class="relative z-10">
                 <slot />
+                    <Toaster client:idle />
             </main>
 
             <Footer />
@@ -60,6 +66,18 @@ import { ClientRouter } from "astro:transitions";
 
     document.addEventListener("astro:before-preparation", () => {
         console.log("🚀 Starting navigation...");
+        const loadingBar = document.getElementById("loading-bar");
+        if (loadingBar) {
+            loadingBar.classList.add("show");
+        }
+    });
+
+    document.addEventListener("astro:after-preparation", () => {
+        console.log("✨ Navigation prepared!");
+        const loadingBar = document.getElementById("loading-bar");
+        if (loadingBar) {
+            loadingBar.classList.remove("show");
+        }
     });
 </script>
 

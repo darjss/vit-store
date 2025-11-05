@@ -216,7 +216,7 @@ function ProductsContent() {
 					onValueChange={(value) =>
 						handleFilterChange(
 							"categoryId",
-							value === "all" ? undefined : Number.parseInt(value),
+							value === "all" ? undefined : Number.parseInt(value, 10),
 						)
 					}
 					disabled={isPending}
@@ -238,7 +238,7 @@ function ProductsContent() {
 					onValueChange={(value) =>
 						handleFilterChange(
 							"brandId",
-							value === "all" ? undefined : Number.parseInt(value),
+							value === "all" ? undefined : Number.parseInt(value, 10),
 						)
 					}
 					disabled={isPending}

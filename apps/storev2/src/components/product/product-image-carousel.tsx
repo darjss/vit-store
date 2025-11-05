@@ -1,7 +1,7 @@
-import { createSignal, For, Show } from "solid-js";
 import { Image } from "@unpic/solid";
-import { cn } from "@/lib/utils";
+import { createSignal, For, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
+import { cn } from "@/lib/utils";
 
 interface ProductImage {
 	url: string;
@@ -39,7 +39,7 @@ export default function ProductImageCarousel(props: Props) {
 	return (
 		<div class="w-full space-y-4">
 			<div
-				class="relative aspect-square w-full overflow-hidden rounded-sm border-4 sm:border-6 border-black shadow-[6px_6px_0_0_#000] sm:shadow-[12px_12px_0_0_#000]"
+				class="relative aspect-square w-full overflow-hidden rounded-sm border-4 border-black shadow-[6px_6px_0_0_#000] sm:border-6 sm:shadow-[12px_12px_0_0_#000]"
 				style={{ background: colors[selectedIndex()] }}
 			>
 				<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]" />
@@ -66,17 +66,17 @@ export default function ProductImageCarousel(props: Props) {
 
 			{/* Thumbnail Navigation - Centered */}
 			<Show when={hasMultipleImages}>
-				<div class="flex justify-center gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-2">
+				<div class="scrollbar-hide flex justify-center gap-2 overflow-x-auto pb-2 sm:gap-3">
 					<For each={images}>
 						{(image, index) => (
 							<button
 								type="button"
 								onClick={() => handleThumbnailClick(index())}
 								class={cn(
-									"relative shrink-0 aspect-square w-16 sm:w-20 md:w-24 overflow-hidden rounded-sm border-3 border-black transition-all",
+									"relative aspect-square w-16 shrink-0 overflow-hidden rounded-sm border-3 border-black transition-all sm:w-20 md:w-24",
 									selectedIndex() === index()
-										? "shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000] scale-105"
-										: "shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000] opacity-60 hover:opacity-100 hover:scale-105",
+										? "scale-105 shadow-[4px_4px_0_0_#000] sm:shadow-[6px_6px_0_0_#000]"
+										: "opacity-60 shadow-[2px_2px_0_0_#000] hover:scale-105 hover:opacity-100 sm:shadow-[3px_3px_0_0_#000]",
 								)}
 								style={{ background: colors[index()] }}
 							>

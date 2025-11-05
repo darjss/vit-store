@@ -29,7 +29,7 @@ const OTPFieldInput = OtpField.Input
  
 const OTPFieldGroup: Component<ComponentProps<"div">> = (props) => {
   const [local, others] = splitProps(props, ["class"])
-  return <div class={cn("flex items-center", local.class)} {...others} />
+  return <div class={cn("flex items-center gap-2", local.class)} {...others} />
 }
  
 const OTPFieldSlot: Component<ComponentProps<"div"> & { index: number }> = (props) => {
@@ -41,7 +41,7 @@ const OTPFieldSlot: Component<ComponentProps<"div"> & { index: number }> = (prop
   return (
     <div
       class={cn(
-        "group relative flex size-14 items-center justify-center border-3 border-black bg-white text-base font-bold shadow-[3px_3px_0_0_#000] first:border-l last:border-r transition-all",
+        "group relative flex size-14 md:size-16 items-center justify-center border-4 border-black bg-white text-xl md:text-2xl font-black shadow-[6px_6px_0_0_#000] transition-all hover:shadow-[8px_8px_0_0_#000] hover:translate-x-[-2px] hover:translate-y-[-2px]",
         local.class
       )}
       {...others}
@@ -49,13 +49,13 @@ const OTPFieldSlot: Component<ComponentProps<"div"> & { index: number }> = (prop
       <div
         class={cn(
           "absolute inset-0 z-10 transition-all",
-          context.activeSlots().includes(local.index) && "shadow-[inset_0_0_0_3px_oklch(0.92_0.15_95)]"
+          context.activeSlots().includes(local.index) && "bg-primary/20 ring-4 ring-inset ring-primary"
         )}
       />
-      {char()}
+      <span class="relative z-20">{char()}</span>
       <Show when={showFakeCaret()}>
-        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div class="h-4 w-px animate-caret-blink bg-foreground duration-1000" />
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center z-20">
+          <div class="h-7 md:h-8 w-1 animate-caret-blink bg-foreground" />
         </div>
       </Show>
     </div>

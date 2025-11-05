@@ -1,10 +1,10 @@
 ---
-
-import CartCount from "@/components/cart/cart-count";
+import UserProfile from "@/components/auth/user-profile"
+import CartCount from "@/components/cart/cart-count"
 ---
 
 <header
-    class="sticky top-0 z-50 bg-white/75 backdrop-blur-md border-b-4 border-black" transition:persist
+    class="sticky top-0 z-50  bg-white/90  border-b-4 border-black" transition:persist transition:name="header"
 >
     <div class="container mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
@@ -59,6 +59,7 @@ import CartCount from "@/components/cart/cart-count";
                             d="m21 21-4.3-4.3"></path></svg
                     >
                 </button>
+                <UserProfile client:load />
                 <a href="/cart">
                     <button
                         type="button"

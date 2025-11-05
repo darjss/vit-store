@@ -1,1 +1,11 @@
-<div>CHECKOUT</div>
+---
+import Layout from "@/layouts/Layout.astro";
+import CheckoutForm from "@/components/checkout/checkout-form.tsx";
+
+---
+
+<Layout>
+    <div class="container mx-auto px-4 py-8">
+        <CheckoutForm client:only="solidjs"/>
+    </div>
+</Layout>

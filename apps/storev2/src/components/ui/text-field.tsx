@@ -56,7 +56,7 @@ const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       type={local.type}
       class={cn(
-        "flex h-12 w-full border-3 border-black bg-white px-4 py-3 text-sm font-medium shadow-[4px_4px_0_0_#000] transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-[6px_6px_0_0_#000] focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-error data-[invalid]:shadow-[4px_4px_0_0_oklch(0.577_0.245_27.325)]",
+        "flex h-12 md:h-14 w-full border-3 border-black bg-white px-4 md:px-5 py-3 text-base md:text-lg font-bold shadow-[6px_6px_0_0_#000] transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground placeholder:font-medium focus-visible:outline-none focus-visible:shadow-[8px_8px_0_0_#000] focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-error data-[invalid]:shadow-[6px_6px_0_0_oklch(0.577_0.245_27.325)] data-[invalid]:focus-visible:shadow-[8px_8px_0_0_oklch(0.577_0.245_27.325)]",
         local.class
       )}
       {...others}
@@ -83,13 +83,13 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
 }
  
 const labelVariants = cva(
-  "text-sm font-bold uppercase tracking-wide leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "text-sm md:text-base font-black uppercase tracking-wider leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
   {
     variants: {
       variant: {
         label: "data-[invalid]:text-destructive",
-        description: "font-normal normal-case text-muted-foreground text-xs",
-        error: "text-xs text-destructive font-bold"
+        description: "font-normal normal-case text-muted-foreground text-xs md:text-sm",
+        error: "text-xs md:text-sm text-destructive font-black uppercase"
       }
     },
     defaultVariants: {

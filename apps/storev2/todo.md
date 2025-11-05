@@ -14,12 +14,6 @@
 - [ ] Create `/pages/account.astro` - user profile page
 - [ ] Build user info display component (name, phone, email)
 - [ ] Add editable profile form (name, email, address fields)
-- [ ] Create address management component
-  - [ ] List saved addresses
-  - [ ] Add new address form
-  - [ ] Edit existing address
-  - [ ] Delete address with confirmation
-  - [ ] Set default address option
 - [ ] Implement profile update functionality
 - [ ] Add password/phone change feature
 

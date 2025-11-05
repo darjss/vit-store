@@ -1,10 +1,10 @@
 ---
 
-import { Image } from "astro:assets";
-import { formatCurrency } from "@vit/shared/utils";
+
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
-import AddToCartButton from "../cart/add-to-cart-button";
+import AddToCartButton from "../cart/add-to-cart-button.tsx";
+import { formatCurrency } from "@vit/shared/utils";
 
 interface Props {
     product: ProductForHome;

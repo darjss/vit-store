@@ -105,8 +105,31 @@ export const addCategorySchema = v.object({
 });
 
 export const timeRangeSchema = v.picklist(["daily", "weekly", "monthly"]);
+export const phoneSchema = v.pipe(
+	v.string(),
+	v.minLength(8, "Phone number must be 8 digits"),
+	v.maxLength(8, "Phone number must be 8 digits"),
+	v.regex(/^[6-9]\d{7}$/, "Phone number must start with 6-9"),
+);
 
-// Export types
+export const newOrderSchema = v.object({
+	phoneNumber: v.pipe(
+		v.string(),
+		v.minLength(8),
+		v.maxLength(8),
+		v.regex(/^[6-9]\d{7}$/),
+	),
+	address: v.string(),
+	notes: v.optional(v.string()),
+	products: v.array(
+		v.object({
+			productId: v.number(),
+			quantity: v.number(),
+		}),
+	),
+});
+
+export type newOrderType = v.InferOutput<typeof newOrderSchema>;
 export type addBrandType = v.InferOutput<typeof addBrandSchema>;
 export type addCategoryType = v.InferOutput<typeof addCategorySchema>;
 export type addProductType = v.InferOutput<typeof addProductSchema>;

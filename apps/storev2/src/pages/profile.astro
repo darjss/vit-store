@@ -1,0 +1,249 @@
+---
+import Layout from "@/layouts/Layout.astro";
+
+import { createServerClient } from "@/lib/trpc";
+
+// Get cookies from Astro's request context
+const cookieHeader = Astro.request.headers.get("cookie") || "";
+console.log("cookieHeader", cookieHeader);
+const serverApi = createServerClient(cookieHeader);
+
+let user = null;
+let orders = [];
+let error = null;
+
+try {
+	user = await serverApi.auth.me.query();
+	console.log("User:", user);
+	orders = await serverApi.order.getOrdersByCustomerId.query();
+	console.log("Orders:", orders);
+} catch (e) {
+	console.error(e);
+	_error = "Нэвтэрч орно уу";
+}
+
+// Format date helper
+const formatDate = (timestamp: Date) => {
+	return new Date(timestamp).toLocaleDateString("mn-MN", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+};
+
+// Format phone helper
+const formatPhone = (phone: number) => {
+	const phoneStr = phone.toString();
+	return `+976 ${phoneStr.slice(0, 4)} ${phoneStr.slice(4)}`;
+};
+
+// Status badges
+const statusColors = {
+	pending: "bg-primary text-foreground",
+	processing: "bg-chart-2 text-foreground",
+	completed: "bg-chart-4 text-foreground",
+	cancelled: "bg-destructive text-destructive-foreground",
+};
+
+const statusLabels = {
+	pending: "Хүлээгдэж буй",
+	processing: "Боловсруулж байна",
+	completed: "Дууссан",
+	cancelled: "Цуцлагдсан",
+};
+---
+
+<Layout>
+	<div class="container mx-auto px-4 py-8 max-w-6xl">
+		<!-- Error State -->
+		{
+			error ? (
+				<div class="flex items-center justify-center min-h-[400px]">
+					<div class="text-center p-8 border-4 border-border bg-card shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
+						<h2 class="text-2xl font-bold mb-4">{error}</h2>
+						<a
+							href="/login"
+							class="inline-block px-6 py-3 bg-primary text-foreground border-2 border-border font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all"
+						>
+							Нэвтрэх
+						</a>
+					</div>
+				</div>
+			) : (
+				<>
+					<!-- Header -->
+					<div class="mb-8">
+						<h1 class="text-4xl md:text-5xl font-bold mb-2">Миний профайл</h1>
+					</div>
+
+					<!-- User Info Card -->
+					<div class="mb-8 border-4 border-border bg-card shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+						<div class="bg-primary p-6 border-b-4 border-border">
+							<div class="flex items-center gap-4">
+								<div class="w-16 h-16 bg-secondary text-secondary-foreground flex items-center justify-center text-2xl font-bold border-4 border-border">
+									{user?.phone.toString().slice(-2)}
+								</div>
+								<div class="flex-1">
+									<h2 class="text-xl font-bold">
+										{formatPhone(user?.phone)}
+									</h2>
+								</div>
+								<div class="text-right">
+									<div class="text-sm font-bold opacity-70">НИЙТ ЗАХИАЛГА</div>
+									<div class="text-2xl font-bold">{orders.length}</div>
+								</div>
+							</div>
+						</div>
+
+						{user?.address && (
+							<div class="p-6 border-b-4 border-border bg-background">
+								<div class="text-sm font-bold text-muted-foreground mb-2">
+									ХҮРГЭЛТИЙН ХАЯГ
+								</div>
+								<div class="text-lg font-medium">{user.address}</div>
+							</div>
+						)}
+					</div>
+
+					<!-- Orders Section -->
+					<div class="border-4 border-border bg-card shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+						<div class="bg-secondary text-secondary-foreground p-6 border-b-4 border-border">
+							<h2 class="text-2xl font-bold">Захиалгын түүх</h2>
+						</div>
+
+						<div class="p-6">
+							{orders.length === 0 ? (
+								<div class="text-center py-12">
+									<div class="w-20 h-20 mx-auto mb-6 border-4 border-border bg-muted flex items-center justify-center">
+										<svg
+											class="w-10 h-10"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+											/>
+										</svg>
+									</div>
+									<h3 class="text-xl font-bold mb-2">
+										Захиалга олдсонгүй
+									</h3>
+									<p class="text-muted-foreground mb-6">
+										Та одоохондоо ямар ч захиалга хийгээгүй байна
+									</p>
+									<a
+										href="/products"
+										class="inline-block px-6 py-3 bg-primary text-foreground border-2 border-border font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all"
+									>
+										Бүтээгдэхүүн үзэх
+									</a>
+								</div>
+							) : (
+								<div class="space-y-4">
+									{orders.map((order) => (
+										<div class="border-4 border-border shadow-[4px_4px_0_0_rgba(0,0,0,1)] bg-background">
+											{/* Order Header */}
+											<div class="p-4 bg-muted/30 border-b-4 border-border flex flex-wrap items-center justify-between gap-4">
+												<div class="flex items-center gap-4">
+													<div>
+														<div class="text-xs font-bold text-muted-foreground mb-1">
+															ЗАХИАЛГА №
+														</div>
+														<div class="text-lg font-bold">
+															{order.orderNumber}
+														</div>
+													</div>
+													<div class="h-12 w-[2px] bg-border"></div>
+													<div>
+														<div class="text-xs font-bold text-muted-foreground mb-1">
+															ОГНОО
+														</div>
+														<div class="text-sm font-bold">
+															{formatDate(order.createdAt)}
+														</div>
+													</div>
+												</div>
+
+												<div class="flex items-center gap-4">
+													<span
+														class={`px-4 py-2 border-2 border-border font-bold text-sm ${statusColors[order.status]}`}
+													>
+														{statusLabels[order.status]}
+													</span>
+													<div class="text-right">
+														<div class="text-xs font-bold text-muted-foreground mb-1">
+															НИЙТ ДҮН
+														</div>
+														<div class="text-xl font-bold">
+															{order.total.toLocaleString()}₮
+														</div>
+													</div>
+												</div>
+											</div>
+
+											{/* Order Details */}
+											<div class="p-4">
+												{/* Products */}
+												<div class="space-y-2 mb-4">
+													{order.products.map((product) => (
+														<div class="flex items-center gap-4 p-3 border-2 border-border bg-card">
+															{product.imageUrl && (
+																<img
+																	src={product.imageUrl}
+																	alt={product.name}
+																	class="w-14 h-14 object-cover border-2 border-border"
+																/>
+															)}
+															<div class="flex-1 min-w-0">
+																<div class="font-bold truncate">
+																	{product.name}
+																</div>
+																<div class="text-xs text-muted-foreground">
+																	{product.brandName}
+																</div>
+															</div>
+															<div class="text-right flex-shrink-0">
+																<div class="font-bold">
+																	{product.quantity}x
+																</div>
+																<div class="text-xs text-muted-foreground">
+																	{product.sellingPrice.toLocaleString()}₮
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+
+												{/* Address */}
+												<div class="p-3 border-2 border-border bg-muted/20">
+													<div class="text-xs font-bold text-muted-foreground mb-1">
+														ХҮРГЭЛТИЙН ХАЯГ
+													</div>
+													<div class="text-sm font-medium">{order.address}</div>
+												</div>
+
+												{/* Notes */}
+												{order.notes && (
+													<div class="mt-2 p-3 border-2 border-border bg-primary/10">
+														<div class="text-xs font-bold text-muted-foreground mb-1">
+															ТЭМДЭГЛЭЛ
+														</div>
+														<div class="text-sm font-medium">{order.notes}</div>
+													</div>
+												)}
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+					</div>
+				</>
+			)
+		}
+	</div>
+</Layout>

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { addBrandSchema, type addBrandType } from "@vit/shared";
+import { addBrandSchema } from "@vit/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import * as v from "valibot";
 import { BrandsTable } from "../../db/schema";

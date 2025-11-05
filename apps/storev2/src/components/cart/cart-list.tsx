@@ -1,7 +1,8 @@
-import { For, Show, createSignal, onMount } from "solid-js";
 import { Image } from "@unpic/solid";
+import { createSignal, For, onMount, Show } from "solid-js";
 import { deliveryFee } from "@/lib/constant";
 import { cart } from "@/store/cart";
+import Loading from "../loading";
 import CartActions from "./cart-actions";
 
 const EmptyCart = () => {
@@ -46,27 +47,12 @@ const EmptyCart = () => {
 	);
 };
 
-const LoadingCart = () => {
-	return (
-		<div class="flex flex-col items-center justify-center py-16 md:py-24">
-			<div class="max-w-md border-4 border-border bg-card p-8 text-center shadow-[8px_8px_0_0_#000] md:p-12">
-				<div class="mb-6 inline-flex h-24 w-24 items-center justify-center border-4 border-border bg-muted">
-					<div class="h-8 w-8 animate-spin border-4 border-border border-t-primary" />
-				</div>
-				<h2 class="mb-3 font-black text-2xl uppercase md:text-3xl">
-					Уншиж байна...
-				</h2>
-			</div>
-		</div>
-	);
-};
-
 const CartList = () => {
 	const [isMounted, setIsMounted] = createSignal(false);
 	onMount(() => setIsMounted(true));
 
 	return (
-		<Show when={isMounted()} fallback={<LoadingCart />}>
+		<Show when={isMounted()} fallback={<Loading />}>
 			<Show when={cart.items.length !== 0} fallback={<EmptyCart />}>
 				<div class="flex w-full flex-col gap-4">
 					<For each={cart.items}>

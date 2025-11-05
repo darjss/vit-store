@@ -6,10 +6,10 @@ export default defineConfig({
 	dts: true,
 	external: [
 		"@trpc/server",
-		"@trpc/client", 
+		"@trpc/client",
 		"hono",
 		"valibot",
 		"drizzle-orm",
-		"@vit/shared"
+		"@vit/shared",
 	],
 });

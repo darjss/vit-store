@@ -1,11 +1,12 @@
-import { createSignal, Match, Switch, createMemo, Suspense } from "solid-js";
-import { Button } from "@/components/ui/button";
-import { cart } from "@/store/cart";
-import type { CartItems } from "@/lib/types";
 import { useQuery } from "@tanstack/solid-query";
-import { api } from "@/lib/trpc";
+import { createMemo, createSignal, Match, Suspense, Switch } from "solid-js";
+import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
+import { api } from "@/lib/trpc";
+import type { CartItems } from "@/lib/types";
+import { cart } from "@/store/cart";
 import AddToCartButton from "../cart/add-to-cart-button";
+
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
 }
@@ -26,7 +27,7 @@ export default function ProductQuantitySelector(
 	console.log("isInStock", isInStock());
 	const [quantity, setQuantity] = createSignal(1);
 
-	const handleAddToCart = () => {
+	const _handleAddToCart = () => {
 		console.log("props.cartItem", props.cartItem);
 		console.log("quantity", quantity());
 		cart.add({ ...props.cartItem, quantity: quantity() });
@@ -45,17 +46,17 @@ export default function ProductQuantitySelector(
 								<button
 									type="button"
 									onClick={decrement}
-									class="flex size-14 sm:size-16 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl sm:text-3xl shadow-[4px_4px_0_0_#000] transition-all hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] active:scale-95"
+									class="flex size-14 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-16 sm:text-3xl"
 								>
 									−
 								</button>
-								<div class="flex flex-1 items-center justify-center rounded-sm border-3 border-black bg-white px-6 py-4 font-black text-2xl sm:text-3xl shadow-[4px_4px_0_0_#000]">
+								<div class="flex flex-1 items-center justify-center rounded-sm border-3 border-black bg-white px-6 py-4 font-black text-2xl shadow-[4px_4px_0_0_#000] sm:text-3xl">
 									{quantity()}
 								</div>
 								<button
 									type="button"
 									onClick={increment}
-									class="flex size-14 sm:size-16 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl sm:text-3xl shadow-[4px_4px_0_0_#000] transition-all hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] active:scale-95"
+									class="flex size-14 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-16 sm:text-3xl"
 								>
 									+
 								</button>
@@ -70,19 +71,19 @@ export default function ProductQuantitySelector(
 				<Match when={!isInStock()}>
 					<div class="space-y-4">
 						{/* Out of Stock Alert */}
-						<div class="rounded-sm border-4 border-black bg-red-50 p-4 sm:p-6 shadow-[6px_6px_0_0_#000]">
-							<div class="flex items-center gap-3 mb-3">
+						<div class="rounded-sm border-4 border-black bg-red-50 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
+							<div class="mb-3 flex items-center gap-3">
 								<span class="text-2xl">⚠️</span>
 								<h3 class="font-black text-lg sm:text-xl">Дууссан байна</h3>
 							</div>
-							<p class="text-sm sm:text-base font-medium text-gray-700">
+							<p class="font-medium text-gray-700 text-sm sm:text-base">
 								Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
 								товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
 							</p>
 						</div>
 
 						{/* Notify Button */}
-						<Button class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-black text-base sm:text-lg py-6 rounded-sm border-3 border-black shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] transition-all active:scale-95">
+						<Button class="w-full rounded-sm border-3 border-black bg-gradient-to-r from-blue-500 to-blue-600 py-6 font-black text-base text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:from-blue-600 hover:to-blue-700 hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:text-lg">
 							<span class="mr-2">🔔</span>
 							Мэдэгдэл авах
 						</Button>

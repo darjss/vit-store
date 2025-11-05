@@ -16,6 +16,21 @@ export default defineConfig({
 		server: {
 			allowedHosts: ["vitstore.dev"],
 		},
+
+		optimizeDeps: {
+			include: [
+				"@tanstack/solid-query",
+				"@tanstack/solid-query-devtools",
+				"@solid-primitives/storage",
+				"solid-js",
+				"solid-js/web",
+				"solid-js/store",
+			],
+		},
+
+		ssr: {
+			noExternal: ["@solid-primitives/storage"],
+		},
 	},
 
 	integrations: [solidJs()],

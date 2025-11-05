@@ -4,7 +4,6 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import * as v from "valibot";

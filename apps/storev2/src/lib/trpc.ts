@@ -22,7 +22,9 @@ const httpBatchLinkWithHeaderLogging = (
 			const headers: Record<string, string> = {
 				...(options?.headers as Record<string, string>),
 			};
-
+			console.log("headers", headers);
+			console.log("url", url);
+			console.log("options", options);
 			if (typeof window !== "undefined") {
 				headers.Origin = window.location.origin;
 			}
@@ -35,6 +37,17 @@ const httpBatchLinkWithHeaderLogging = (
 
 			return response;
 		},
+	});
+};
+export const createServerClient = (cookies?: string) => {
+	return createTRPCClient<StoreRouter>({
+		links: [
+			httpBatchLink({
+				url: getBackendUrl(),
+				transformer: SuperJSON,
+				headers: cookies ? { cookie: cookies } : {},
+			}),
+		],
 	});
 };
 
