@@ -23,15 +23,9 @@ export default function ProductQuantitySelector(
 		}),
 		() => queryClient,
 	);
+	const [quantity, setQuantity] = createSignal(1);
 	const isInStock = createMemo(() => statusQuery.data?.isInStock);
 	console.log("isInStock", isInStock());
-	const [quantity, setQuantity] = createSignal(1);
-
-	const _handleAddToCart = () => {
-		console.log("props.cartItem", props.cartItem);
-		console.log("quantity", quantity());
-		cart.add({ ...props.cartItem, quantity: quantity() });
-	};
 
 	const increment = () => setQuantity((prev) => prev + 1);
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
@@ -71,19 +65,21 @@ export default function ProductQuantitySelector(
 				<Match when={!isInStock()}>
 					<div class="space-y-4">
 						{/* Out of Stock Alert */}
-						<div class="rounded-sm border-4 border-black bg-red-50 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
+						<div class="animate-float-slow rounded-sm border-4 border-black bg-destructive/10 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
 							<div class="mb-3 flex items-center gap-3">
 								<span class="text-2xl">⚠️</span>
-								<h3 class="font-black text-lg sm:text-xl">Дууссан байна</h3>
+								<h3 class="font-black text-lg text-destructive sm:text-xl">
+									Дууссан байна
+								</h3>
 							</div>
-							<p class="font-medium text-gray-700 text-sm sm:text-base">
+							<p class="font-medium text-muted-foreground text-sm sm:text-base">
 								Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
 								товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
 							</p>
 						</div>
 
 						{/* Notify Button */}
-						<Button class="w-full rounded-sm border-3 border-black bg-gradient-to-r from-blue-500 to-blue-600 py-6 font-black text-base text-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:from-blue-600 hover:to-blue-700 hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:text-lg">
+						<Button class="w-full py-6 text-base sm:text-lg">
 							<span class="mr-2">🔔</span>
 							Мэдэгдэл авах
 						</Button>
