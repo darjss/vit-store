@@ -1,13 +1,29 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
 import CartList from "@/components/cart/cart-list.tsx";
+import Layout from "@/layouts/Layout.astro";
 
 export const prerender = true;
 
 ---
 
 <Layout>
-    <div class="container mx-auto px-4 py-8">
-        <CartList client:load/>
+    <div class="container mx-auto px-4 py-8 min-h-screen">
+        <CartList client:load>
+            <div slot="fallback" class="space-y-6 min-h-[calc(100vh-200px)]">
+                <div class="border-4 border-black p-6 bg-white shadow-[6px_6px_0_0_#000]">
+                    <div class="h-8 bg-black/10 w-48 mb-4 animate-pulse"></div>
+                    <div class="space-y-4">
+                        <div class="flex gap-4 p-4 border-2 border-black">
+                            <div class="w-24 h-24 bg-black/10 animate-pulse"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-6 bg-black/10 w-3/4 animate-pulse"></div>
+                                <div class="h-4 bg-black/10 w-1/2 animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </CartList>
     </div>
 </Layout>

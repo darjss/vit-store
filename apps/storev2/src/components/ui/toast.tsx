@@ -14,11 +14,10 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: "bg-card text-card-foreground",
         destructive:
-          "destructive group bg-destructive text-destructive-foreground shadow-[6px_6px_0_0_oklch(0.577_0.245_27.325)]",
-        success: "success bg-success text-success-foreground shadow-[6px_6px_0_0_#000]",
-        warning: "warning bg-warning text-warning-foreground shadow-[6px_6px_0_0_#000]",
+          "destructive group bg-destructive text-destructive-foreground shadow-[6px_6px_0_0_#000]",
+        success: "success bg-primary text-primary-foreground shadow-[6px_6px_0_0_#000]",
         error: "error bg-error text-error-foreground shadow-[6px_6px_0_0_#000]"
       }
     },
@@ -75,7 +74,7 @@ const ToastClose = <T extends ValidComponent = "button">(
   return (
     <ToastPrimitive.CloseButton
       class={cn(
-        "absolute right-2 top-2 p-1 border-2 border-black bg-white text-black opacity-0 transition-all hover:bg-black hover:text-white focus:opacity-100 focus:outline-none shadow-[2px_2px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] group-hover:opacity-100 group-[.destructive]:text-destructive-foreground group-[.error]:text-error-foreground group-[.success]:text-success-foreground group-[.warning]:text-warning-foreground",
+        "absolute right-2 top-2 p-1 border-2 border-black bg-background text-foreground opacity-0 transition-all hover:bg-foreground hover:text-background focus:opacity-100 focus:outline-none shadow-[2px_2px_0_0_#000] hover:shadow-[1px_1px_0_0_#000] hover:translate-x-[1px] hover:translate-y-[1px] group-hover:opacity-100 group-[.destructive]:bg-destructive-foreground group-[.destructive]:text-destructive group-[.error]:bg-error-foreground group-[.error]:text-error group-[.success]:bg-primary-foreground group-[.success]:text-primary",
         local.class
       )}
       {...others}

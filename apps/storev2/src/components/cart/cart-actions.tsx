@@ -4,7 +4,7 @@ const CartActions = ({
 	quantity,
 	productId,
 }: {
-	quantity: number;
+	quantity: () => number;
 	productId: number;
 }) => {
 	return (
@@ -35,7 +35,7 @@ const CartActions = ({
 					</svg>
 				</button>
 				<div class="flex h-10 min-w-[2.5rem] items-center justify-center border-border border-x-4 bg-background px-3 font-bold text-base">
-					{quantity}
+					{quantity()}
 				</div>
 				<button
 					type="button"

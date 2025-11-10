@@ -17,18 +17,25 @@
 			"cache": false,
 			"persistent": true
 		},
-		"deploy": {
-			"dependsOn": ["^deploy"],
+		"server#deploy": {
+			"cache": false
+		},
+		"admin#deploy": {
+			"dependsOn": ["server#deploy"],
+			"cache": false
+		},
+		"storev2#deploy": {
+			"dependsOn": ["server#deploy"],
 			"cache": false
 		},
 		"server#destroy": {
-			"dependsOn": ["admin#destroy", "store#destroy"],
+			"dependsOn": ["admin#destroy", "storev2#destroy"],
 			"cache": false
 		},
 		"admin#destroy": {
 			"cache": false
 		},
-		"store#destroy": {
+		"storev2#destroy": {
 			"cache": false
 		},
 		"db:push": {

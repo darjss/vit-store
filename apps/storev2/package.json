@@ -5,11 +5,11 @@
 	"scripts": {
 		"astro": "astro",
 		"build": "astro check && astro build",
-		"deploy": "alchemy deploy --stage prod",
+		"deploy": "alchemy deploy --app storev2 --stage prod",
 		"check-types": "tsc --noEmit",
+		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"destroy": "alchemy destroy",
-		"dev": " NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --stage dev",
-		"dev:astro": "astro dev --port 4325",
+		"dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --app storev2 --stage dev",
 		"preview": "astro preview"
 	},
 	"dependencies": {
@@ -47,10 +47,10 @@
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"alchemy": "0.75.1",
-		"@astrojs/cloudflare": "^12.6.0",
-		"miniflare": "^4.20250617.3",
+		"@astrojs/cloudflare": "^12.6.10",
 		"@cloudflare/workers-types": "^4.20250805.0",
+		"alchemy": "catalog:",
+		"miniflare": "^4.20250617.3",
 		"typescript": "^5.9.3"
 	}
 }

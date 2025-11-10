@@ -5,6 +5,7 @@ import * as v from "valibot";
 import { CustomersTable } from "../../db/schema";
 import type { Context } from "../../lib/context";
 import {
+	auth as authCheck,
 	createSession,
 	invalidateSession,
 	setSessionTokenCookie,
@@ -139,6 +140,19 @@ export const auth = router({
 	}),
 	me: customerProcedure.query(async ({ ctx }) => {
 		return ctx.session.user;
+	}),
+	check: publicProcedure.query(async ({ ctx }) => {
+		try {
+			const session = await authCheck(ctx);
+			if(session===null){
+				return null
+			}
+			return session?.user;
+		} catch (e) {
+			console.log(e);
+			console.error(e);
+			return null;
+		}
 	}),
 });
 

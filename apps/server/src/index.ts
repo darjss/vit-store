@@ -260,5 +260,11 @@ app.get("/", (c) => {
 	console.log("OK cors origin", env.CORS_ORIGIN);
 	return c.text("OK");
 });
+app.get("/health-check", (c) => {
+	console.log("server running");
+	return c.json({
+		status: "good",
+	});
+});
 
 export default app;

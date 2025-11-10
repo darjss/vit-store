@@ -1,0 +1,23 @@
+---
+
+import type { HTMLAttributes } from "astro/types";
+import { tv } from "tailwind-variants";
+
+type Props = HTMLAttributes<"div">;
+
+const { class: className, ...rest } = Astro.props;
+
+export const skeleton = tv({
+  base: "bg-muted border-4 border-black shadow-[8px_8px_0_0_#000] overflow-hidden relative before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/80 before:to-transparent",
+});
+---
+
+<div class={skeleton({ class: className })} data-slot="skeleton" {...rest}></div>
+
+<style>
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+</style>

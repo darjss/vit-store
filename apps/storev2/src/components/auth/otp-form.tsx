@@ -103,7 +103,7 @@ const OtpForm = ({
 					onValueChange={(value) => setOtp(value)}
 					maxLength={4}
 				>
-					<OTPFieldInput />
+					<OTPFieldInput autofocus />
 					<OTPFieldGroup>
 						<OTPFieldSlot index={0} />
 						<OTPFieldSlot index={1} />

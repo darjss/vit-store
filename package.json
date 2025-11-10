@@ -16,7 +16,8 @@
 			"typescript": "^5.9.2",
 			"tsdown": "^0.15.5",
 			"drizzle-orm": "^0.44.4",
-			"drizzle-kit": "^0.31.4"
+			"drizzle-kit": "^0.31.4",
+			"alchemy": "0.77.0"
 		}
 	},
 	"scripts": {
@@ -45,10 +46,11 @@
 		"dotenv": "^17.2.3"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3",
+		"@biomejs/biome": "^2.3.4",
 		"@cloudflare/workers-types": "^4.20250822.0",
 		"@types/node": "^22.13.11",
-		"alchemy": "^0.75.1",
+		"typescript": "^5.8.3",
+		"alchemy": "catalog:",
 		"miniflare": "^3",
 		"oxlint": "^1.8.0",
 		"tsdown": "catalog:",

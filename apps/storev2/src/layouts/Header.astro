@@ -1,6 +1,8 @@
 ---
-import UserProfile from "@/components/auth/user-profile"
+
+import UserProfile from "@/components/auth/UserProfile.astro"
 import CartCount from "@/components/cart/cart-count"
+import { Dropdown, DropdownTrigger } from "@/components/starwind/dropdown"
 ---
 
 <header
@@ -59,7 +61,30 @@ import CartCount from "@/components/cart/cart-count"
                             d="m21 21-4.3-4.3"></path></svg
                     >
                 </button>
-                <UserProfile client:load />
+
+                <UserProfile server:defer >
+                    	<div
+                        slot="fallback"
+		aria-label="Профайл"
+		class="flex items-center justify-center border-[3px] border-black bg-white p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+	>
+		<svg
+			class="h-5 w-5"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+			></path>
+		</svg>
+    </div>
+                </UserProfile>
+                
+                
                 <a href="/cart">
                     <button
                         type="button"
@@ -69,7 +94,7 @@ import CartCount from "@/components/cart/cart-count"
                         <svg
                             width="20"
                             height="20"
-                            viewBox="0 0 24 24"
+                        viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
                             stroke-width="2"
@@ -82,7 +107,9 @@ import CartCount from "@/components/cart/cart-count"
                             ></path></svg
                         >
 
-                            <CartCount client:load />
+                            <CartCount client:load>
+                            <div slot="fallback"></div>
+                            </CartCount>
                     </button>
                 </a>
                 <button

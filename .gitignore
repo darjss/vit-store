@@ -12,3 +12,7 @@ node_modules
 .nitro
 .vscode
 .idea
+
+# Environment files
+.env*
+!.env.example

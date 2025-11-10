@@ -30,6 +30,38 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -39,11 +71,12 @@ interface Props extends Omit<HTMLAttributes<"button">, "type" | "id" | "role"> {
 
 export const tabsTrigger = tv({
   base: [
-    "inline-flex grow items-center justify-center gap-2 rounded-sm border border-transparent px-3 py-1.5 font-medium whitespace-nowrap transition-[color,box-shadow]",
-    "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-    "dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:text-muted-foreground",
+    "inline-flex grow items-center justify-center gap-2 border-3 border-black px-4 py-2 font-bold uppercase tracking-wide whitespace-nowrap transition-all text-sm",
+    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-[4px_4px_0_0_#000] data-[state=active]:translate-x-[2px] data-[state=active]:translate-y-[2px]",
+    "data-[state=inactive]:bg-background data-[state=inactive]:shadow-[6px_6px_0_0_#000]",
+    "hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px]",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-    "focus-visible:border-outline focus-visible:ring-outline/50 focus-visible:outline-outline focus-visible:ring-3 focus-visible:outline-1",
+    "focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
     "disabled:pointer-events-none disabled:opacity-50",
   ],
 });

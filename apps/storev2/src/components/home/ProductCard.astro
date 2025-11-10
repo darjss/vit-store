@@ -1,10 +1,13 @@
 ---
 
 
+
+
+
+import { formatCurrency } from "@vit/shared/utils";
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
 import AddToCartButton from "../cart/add-to-cart-button.tsx";
-import { formatCurrency } from "@vit/shared/utils";
 
 interface Props {
     product: ProductForHome;
@@ -96,6 +99,14 @@ const randomColor =
                 price: p.price,
                 image: p.image,
             }}
-        />
+        >
+            <button 
+                slot="fallback"
+                disabled
+                class="w-full border-[3px] border-black bg-primary px-4 py-3 font-black text-sm uppercase shadow-[4px_4px_0_0_#000] opacity-50"
+            >
+                <div class="h-4 bg-black/10 w-32 mx-auto animate-pulse"></div>
+            </button>
+        </AddToCartButton>
     </div>
 </div>

@@ -10,6 +10,14 @@
 		{
 			"name": "tabs",
 			"version": "1.4.0"
+		},
+		{
+			"name": "skeleton",
+			"version": "1.2.0"
+		},
+		{
+			"name": "dropdown",
+			"version": "1.2.0"
 		}
 	]
 }

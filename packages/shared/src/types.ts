@@ -1,5 +1,5 @@
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-
+import  type {CustomerSelectType, UserSelectType} from "../../api/src/db/schema"
 export interface SessionConfig {
 	kvSessionPrefix: string;
 	kvUserSessionPrefix: string;
@@ -71,3 +71,10 @@ export const productFields = [
 	"createdAt",
 	"updatedAt",
 ] as const;
+
+export interface Session<TUser = CustomerSelectType | UserSelectType> {
+	id: string;
+	user: TUser;
+	expiresAt: Date;
+}
+export type { CustomerSelectType, UserSelectType } 

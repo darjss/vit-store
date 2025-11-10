@@ -32,8 +32,42 @@
 
 
 
-import ProductQuantitySelector from "./product-add-to-cart.tsx";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { formatCurrency } from "@vit/shared/utils";
+import ProductQuantitySelector from "./product-add-to-cart.tsx";
 
 interface Props {
 	product: {
@@ -152,7 +186,13 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 		price: product.price,
 		image: primaryImage,
 	}}
-/>
+>
+	<div slot="fallback" class="flex gap-3">
+		<div class="h-14 flex-1 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+		<div class="h-14 w-14 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+		<div class="h-14 w-14 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+	</div>
+</ProductQuantitySelector>
 
 	{/* Trust Signals */}
 	<div class="rounded-sm border-2 border-black bg-white/80 p-3 sm:p-4 shadow-[3px_3px_0_0_#000]">

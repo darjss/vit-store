@@ -20,10 +20,18 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown"
+		"build": "tsdown",
+		"db:push": "drizzle-kit push",
+		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
+		"db:studio": "drizzle-kit studio",
+		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "wrangler d1 migrations apply vit-store --remote",
+		"db:migrate:drizzle": "drizzle-kit migrate"
 	},
 	"devDependencies": {
-		"tsdown": "catalog:"
+		"tsdown": "catalog:",
+		"drizzle-kit": "catalog:"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
@@ -32,6 +40,8 @@
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"@trpc/client": "catalog:",
+		"better-sqlite3": "^12.4.1",
+
 		"@trpc/server": "catalog:",
 		"@vit/shared": "workspace:*",
 		"android-sms-gateway": "^3.0.0",

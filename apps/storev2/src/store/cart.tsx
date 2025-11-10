@@ -45,7 +45,7 @@ export const cart = createRoot(() => {
 	);
 
 	return {
-		get items() {
+		items() {
 			return cartStore.items;
 		},
 

@@ -68,7 +68,7 @@ export default function ProductQuantitySelector(
 						<div class="animate-float-slow rounded-sm border-4 border-black bg-destructive/10 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
 							<div class="mb-3 flex items-center gap-3">
 								<span class="text-2xl">⚠️</span>
-								<h3 class="font-black text-lg text-destructive sm:text-xl">
+								<h3 class="font-black text-destructive text-lg sm:text-xl">
 									Дууссан байна
 								</h3>
 							</div>

@@ -1,0 +1,49 @@
+---
+
+import type { HTMLTag, Polymorphic } from "astro/types";
+import { tv } from "tailwind-variants";
+
+type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
+  /**
+   * Whether the item is inset (has left padding)
+   */
+  inset?: boolean;
+  /**
+   * Whether the item is disabled
+   */
+  disabled?: boolean;
+};
+
+export const dropdownItem = tv({
+  base: [
+    "focus:bg-accent focus:text-accent-foreground hover:bg-accent hover:text-accent-foreground relative flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors outline-none select-none font-medium border-2 border-transparent hover:border-black focus:border-black",
+    "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+    "[&>svg]:size-4 [&>svg]:shrink-0",
+  ],
+  variants: {
+    inset: {
+      true: "pl-8",
+    },
+    disabled: {
+      true: "pointer-events-none opacity-50",
+    },
+  },
+  defaultVariants: {
+    inset: false,
+    disabled: false,
+  },
+});
+
+const { class: className, inset = false, disabled = false, as: Tag = "div", ...rest } = Astro.props;
+---
+
+<Tag
+  class={dropdownItem({ inset, disabled, class: className })}
+  role="menuitem"
+  tabindex={disabled ? "-1" : "0"}
+  data-disabled={disabled ? "true" : undefined}
+  data-slot="dropdown-item"
+  {...rest}
+>
+  <slot />
+</Tag>

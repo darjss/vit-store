@@ -64,7 +64,7 @@
 		"@types/react-dom": "^19.0.4",
 		"@vite-pwa/assets-generator": "^1.0.0",
 		"@vitejs/plugin-react": "^4.3.4",
-		"alchemy": "^0.75.1",
+		"alchemy": "catalog:",
 		"dotenv": "catalog:",
 		"typescript": "^5.8.3",
 		"vite": "^6.2.2",

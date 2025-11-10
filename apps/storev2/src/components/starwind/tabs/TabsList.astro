@@ -30,13 +30,45 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
 type Props = Omit<HTMLAttributes<"div">, "role">;
 
 export const tabsList = tv({
-  base: "bg-muted text-muted-foreground inline-flex w-fit items-center justify-center rounded-md p-1",
+  base: "bg-muted text-muted-foreground inline-flex w-fit items-center justify-center border-4 border-black shadow-[6px_6px_0_0_#000] p-2 gap-2",
 });
 
 const { class: className, ...rest } = Astro.props;

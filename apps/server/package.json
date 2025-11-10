@@ -18,7 +18,7 @@
 		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		"dev": "alchemy dev --app server --stage dev ",
+		"dev": "alchemy dev --app server --stage dev",
 		"deploy": "alchemy deploy --app server --stage prod",
 		"destroy": "alchemy destroy --app server",
 		"db:push": "drizzle-kit push",
@@ -48,7 +48,7 @@
 		"@vit/api": "workspace:*"
 	},
 	"devDependencies": {
-		"alchemy": "0.75.1",
+		"alchemy": "catalog:",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"tsdown": "catalog:",

@@ -1,10 +1,11 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
 import Breadcrumb from "@/components/product/breadcrumb.astro";
+import ProductDetails from "@/components/product/product-details.astro";
 import ProductImageCarousel from "@/components/product/product-image-carousel.tsx";
 import ProductInfo from "@/components/product/product-info.astro";
-import ProductDetails from "@/components/product/product-details.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
+import Layout from "@/layouts/Layout.astro";
 
 export const prerender = true;
 
@@ -73,7 +74,13 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 						images={product.images}
 						productName={product.name}
 						productId={product.id}
-					/>
+					>
+						<div slot="fallback" class="aspect-square border-4 border-black bg-white shadow-[8px_8px_0_0_#000] min-h-[400px]">
+							<div class="w-full h-full bg-black/5 animate-pulse flex items-center justify-center">
+								<div class="w-32 h-32 border-4 border-black/20 rounded-full animate-spin border-t-black"></div>
+							</div>
+						</div>
+					</ProductImageCarousel>
 				</div>
 
 			<div class="w-full">
@@ -103,7 +110,22 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}
-			/>
+			>
+				<div slot="fallback" class="min-h-[300px]">
+					<h2 class="text-2xl sm:text-3xl font-black mb-6">Санал болгох бүтээгдэхүүн</h2>
+					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						{[1, 2, 3, 4].map(() => (
+							<div class="border-3 border-black bg-white shadow-[4px_4px_0_0_#000]">
+								<div class="aspect-[4/3] bg-black/5 border-b-3 border-black animate-pulse"></div>
+								<div class="p-3 space-y-2">
+									<div class="h-4 bg-black/10 w-3/4 animate-pulse"></div>
+									<div class="h-6 bg-black/10 w-1/2 animate-pulse"></div>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			</RecommendedProducts>
 		</div>
 		</div>
 	</div>

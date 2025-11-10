@@ -1,14 +1,26 @@
 import alchemy from "alchemy";
 import { Astro } from "alchemy/cloudflare";
-import { config } from "dotenv";
+import { server } from "server/alchemy";
 
 const app = await alchemy("storev2");
 const stage = app.stage;
-config({ path: `.env.${stage}` });
+console.log("stage", stage, process.env.PUBLIC_API_URL);
 export const storev2 = await Astro("front", {
-	bindings: {},
-	dev: {
-		command: "bun run dev:astro",
+	bindings: {
+		server: server,
+		PUBLIC_API_URL: process.env.PUBLIC_API_URL || "",
+	},
+	domains: stage === "dev" ? ["vitstore.dev"] : undefined,
+	observability: {
+		enabled: false,
+		logs: {
+			enabled: true,
+			persist: true,
+		},
+		traces: {
+			enabled: true,
+			persist: true,
+		},
 	},
 });
 

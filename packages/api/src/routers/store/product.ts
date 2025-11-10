@@ -391,4 +391,21 @@ export const product = router({
 				isInStock: true,
 			};
 		}),
+	getProductBenchmark: publicProcedure.query(async ({ ctx }) => {
+		try {
+			const startTime = performance.now();
+			const product = await ctx.db.query.ProductsTable.findMany({
+				limit: 10,
+				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
+			});
+			return { dbElapsed: performance.now() - startTime, product };
+		} catch (error) {
+			console.error("Error in benchmark:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to run benchmark",
+				cause: error,
+			});
+		}
+	}),
 });

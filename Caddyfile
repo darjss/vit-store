@@ -1,5 +1,5 @@
 https://vitstore.dev {
-    reverse_proxy localhost:4325
+    reverse_proxy localhost:4321
     tls internal
 }
 

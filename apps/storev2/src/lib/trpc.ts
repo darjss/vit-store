@@ -1,67 +1,70 @@
-import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 
 const getBackendUrl = () => {
 	const apiUrlFromEnv = import.meta.env.PUBLIC_API_URL;
-
-	const url = apiUrlFromEnv
+	console.log(apiUrlFromEnv)
+	return apiUrlFromEnv
 		? `${apiUrlFromEnv}/trpc/store`
 		: "http://localhost:3000/trpc/store";
-	console.log("TRPC Backend URL:", url, "from env:", apiUrlFromEnv);
-	return url;
 };
 
-// Custom httpBatchLink that logs response headers
-const httpBatchLinkWithHeaderLogging = (
-	opts: Parameters<typeof httpBatchLink>[0],
+// For worker-to-worker communication via service binding
+export const createServerClient = (
+	cookies?: string,
+	serverBinding?: { fetch: typeof fetch }
 ) => {
-	return httpBatchLink({
-		...opts,
-		fetch: async (url, options) => {
-			const headers: Record<string, string> = {
-				...(options?.headers as Record<string, string>),
-			};
-			console.log("headers", headers);
-			console.log("url", url);
-			console.log("options", options);
-			if (typeof window !== "undefined") {
-				headers.Origin = window.location.origin;
-			}
+	// In development, service bindings might not work properly, so fall back to regular HTTP
+	const url = serverBinding 
+		? "https://internal/trpc/store"  // Internal URL for service binding
+		: getBackendUrl();
 
-			const response = await fetch(url, {
-				...options,
-				credentials: "include",
-				headers,
-			});
-
-			return response;
-		},
-	});
-};
-export const createServerClient = (cookies?: string) => {
 	return createTRPCClient<StoreRouter>({
 		links: [
 			httpBatchLink({
-				url: getBackendUrl(),
+				url,
 				transformer: SuperJSON,
-				headers: cookies ? { cookie: cookies } : {},
+				fetch: async (url, options) => {
+					
+					const fetchFn = serverBinding ? serverBinding!.fetch.bind(serverBinding) : fetch;
+					
+					return fetchFn(url, {
+						...options,
+						credentials: "include",
+						headers: {
+							...(options?.headers as Record<string, string>),
+							...(cookies ? { cookie: cookies } : {}),
+						},
+					});
+				},
 			}),
 		],
 	});
 };
 
+// Client-side tRPC client
 export const api = createTRPCClient<StoreRouter>({
 	links: [
-		loggerLink({
-			enabled: (opts) =>
-				(process.env.NODE_ENV === "development" &&
-					typeof window !== "undefined") ||
-				(opts.direction === "down" && opts.result instanceof Error),
-		}),
-		httpBatchLinkWithHeaderLogging({
+		httpBatchLink({
 			url: getBackendUrl(),
 			transformer: SuperJSON,
+			fetch: async (url, options) => {
+				console.log("fetching", url)
+				const headers: Record<string, string> = {
+					...(options?.headers as Record<string, string>),
+				};
+				
+				if (typeof window !== "undefined") {
+					headers.Origin = window.location.origin;
+				}
+
+				return fetch(url, {
+					...options,
+					credentials: "include",
+					headers,
+				});
+			},
 		}),
 	],
 });

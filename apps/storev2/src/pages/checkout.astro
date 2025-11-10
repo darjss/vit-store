@@ -1,11 +1,41 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
+
+
+
+
+import type { CustomerSelectType } from "@vit/shared";
 import CheckoutForm from "@/components/checkout/checkout-form.tsx";
+import Layout from "@/layouts/Layout.astro";
+import { createServerClient } from "@/lib/trpc";
+
+const cookieHeader = Astro.request.headers.get("cookie") || "";
+
+    const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+    const user = await serverApi.auth.check.query();
+
 
 ---
 
 <Layout>
-    <div class="container mx-auto px-4 py-8">
-        <CheckoutForm client:only="solidjs"/>
+    <div class="container mx-auto px-4 py-8 min-h-screen">
+        <CheckoutForm user={user} client:load>
+            <div slot="fallback" class="max-w-4xl mx-auto min-h-[calc(100vh-200px)]">
+                <div class="border-4 border-black p-6 bg-white shadow-[6px_6px_0_0_#000]">
+                    <div class="h-10 bg-black/10 w-64 mb-6 animate-pulse"></div>
+                    <div class="grid gap-6">
+                        <div class="space-y-4">
+                            <div class="h-6 bg-black/10 w-48 animate-pulse"></div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="h-12 border-3 border-black bg-black/5 animate-pulse"></div>
+                                <div class="h-12 border-3 border-black bg-black/5 animate-pulse"></div>
+                            </div>
+                            <div class="h-12 border-3 border-black bg-black/5 animate-pulse"></div>
+                        </div>
+                        <div class="h-16 bg-primary/20 border-3 border-black shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        </CheckoutForm>
     </div>
 </Layout>

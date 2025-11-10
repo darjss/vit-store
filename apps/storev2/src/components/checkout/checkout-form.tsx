@@ -1,9 +1,14 @@
 import { navigate } from "astro:transitions/client";
-import { useMutation } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
-import type { newOrderType } from "@vit/shared";
+import type {
+	CustomerSelectType,
+	newOrderType,
+	Session,
+	UserSelectType,
+} from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createEffect, For, Show, Suspense } from "solid-js";
 import * as v from "valibot";
 import { deliveryFee } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
@@ -14,9 +19,20 @@ import Loading from "../loading";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
 
-const CheckoutForm = () => {
-	const [isMounted, setIsMounted] = createSignal(false);
-	onMount(() => setIsMounted(true));
+const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
+	// const { data: user, isLoading: isUserLoading } = useQuery(
+	// 	() => ({
+	// 		queryKey: ["user"],
+	// 		queryFn: async () => {
+	// 			const data = await api.auth.me.query();
+	// 			return data;
+	// 		},
+	// 	}),
+	// 	() => queryClient,
+	// );
+	createEffect(() => {
+		console.log("user", user);
+	});
 
 	const mutation = useMutation(
 		() => ({
@@ -39,8 +55,8 @@ const CheckoutForm = () => {
 
 	const form = useAppForm(() => ({
 		defaultValues: {
-			phoneNumber: "",
-			address: "",
+			phoneNumber: user?.phone.toString() || "",
+			address: user?.address || "",
 			notes: "",
 		},
 		validators: {
@@ -51,16 +67,22 @@ const CheckoutForm = () => {
 			}),
 		},
 		onSubmit: async (values) => {
-			const products = cart.items.map((item) => ({
+			console.log("Submmiting ");
+			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,
 			}));
 			mutation.mutate({ ...values.value, products });
 		},
 	}));
-
+	createEffect(() => {
+		if (user) {
+			form.setFieldValue?.("phoneNumber", user.phone?.toString() || "");
+			form.setFieldValue?.("address", user.address || "");
+		}
+	});
 	return (
-		<Show when={isMounted()} fallback={<Loading />}>
+		<Suspense fallback={<Loading />}>
 			<div class="min-h-screen bg-background px-4 py-6">
 				{/* Header */}
 				<div class="mb-6 border-4 border-border bg-primary p-4 shadow-[6px_6px_0_0_#000]">
@@ -77,7 +99,7 @@ const CheckoutForm = () => {
 						</CardHeader>
 						<CardContent>
 							<div class="space-y-3">
-								<For each={cart.items}>
+								<For each={cart.items()}>
 									{(item) => (
 										<div class="flex gap-3 border-4 border-border bg-secondary/5 p-3 shadow-[4px_4px_0_0_#000]">
 											<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-4 border-border bg-card shadow-[2px_2px_0_0_#000]">
@@ -186,7 +208,7 @@ const CheckoutForm = () => {
 					</div>
 				</div>
 			</div>
-		</Show>
+		</Suspense>
 	);
 };
 

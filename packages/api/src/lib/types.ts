@@ -49,3 +49,5 @@ export interface AddSalesType {
 	productId: number;
 	createdAt?: Date;
 }
+
+
