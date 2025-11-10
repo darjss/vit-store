@@ -1,8 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import type { UserSelectType } from "../../db/schema";
-import { UsersTable } from "../../db/schema";
 import { adminAuth, invalidateAdminSession } from "../../lib/session/admin";
 import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
 
@@ -29,27 +27,24 @@ export const auth = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { googleId, username, isApproved } = input;
-				const [user] = await ctx.db
-					.insert(UsersTable)
-					.values({
-						googleId,
-						username,
-						isApproved,
-					})
-					.returning({
-						id: UsersTable.id,
-						username: UsersTable.username,
-						googleId: UsersTable.googleId,
-						isApproved: UsersTable.isApproved,
-						createdAt: UsersTable.createdAt,
-						updatedAt: UsersTable.updatedAt,
-					});
+				const user = await adminQueries.createUser(
+					googleId,
+					username,
+					isApproved,
+				);
 
 				if (!user) {
 					throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 				}
 
-				return user;
+				return {
+					id: user.id,
+					username: user.username,
+					googleId: user.googleId,
+					isApproved: user.isApproved,
+					createdAt: user.createdAt,
+					updatedAt: user.updatedAt,
+				};
 			} catch (error) {
 				console.error("Error creating user:", error);
 				throw new TRPCError({
@@ -69,16 +64,8 @@ export const auth = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const { googleId } = input;
-				const result = await ctx.db
-					.select({ user: UsersTable })
-					.from(UsersTable)
-					.where(eq(UsersTable.googleId, googleId));
-
-				if (result.length < 1 || result[0] === undefined) {
-					return null;
-				}
-
-				return result[0].user as UserSelectType;
+				const result = await adminQueries.getUserFromGoogleId(googleId);
+				return result;
 			} catch (error) {
 				console.error("Error getting user from Google ID:", error);
 				throw new TRPCError({

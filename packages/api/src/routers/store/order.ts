@@ -1,68 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import {
-	OrderDetailsTable,
-	OrdersTable,
-	ProductImagesTable,
-	ProductsTable,
-} from "@vit/api/db/schema";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { adminQueries, storeQueries } from "@vit/api/queries";
 import { newOrderSchema } from "../../../../shared/src";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
-import { generateOrderNumber } from "../../lib/utils";
-import { createPayment } from "../admin/utils";
+import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 
 export const order = router({
 	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {
 		try {
 			const customerPhone = ctx.session.user.phone;
-			const orders = await ctx.db.query.OrdersTable.findMany({
-				where: and(
-					eq(OrdersTable.customerPhone, customerPhone),
-					isNull(OrdersTable.deletedAt),
-				),
-				columns: {
-					address: true,
-					orderNumber: true,
-					status: true,
-					total: true,
-					notes: true,
-					createdAt: true,
-				},
-				with: {
-					sales: {
-						columns: {
-							sellingPrice: true,
-							productId: true,
-						},
-					},
-					orderDetails: {
-						columns: {
-							productId: true,
-							quantity: true,
-						},
-						with: {
-							product: {
-								columns: {
-									name: true,
-								},
-								with: {
-									brand: {
-										columns: {
-											name: true,
-										},
-									},
-									images: {
-										columns: {
-											url: true,
-										},
-										where: eq(ProductImagesTable.isPrimary, true),
-									},
-								},
-							},
-						},
-					},
-				},
-			});
+			const orders = await storeQueries.getOrdersByCustomerPhone(customerPhone);
 			return orders.map((order) => {
 				const { orderDetails, sales, ...orderInfo } = order;
 
@@ -93,19 +39,12 @@ export const order = router({
 	}),
 	addOrder: publicProcedure
 		.input(newOrderSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const products = await ctx.db.query.ProductsTable.findMany({
-					where: inArray(
-						ProductsTable.id,
-						input.products.map((p) => p.productId),
-					),
-					columns: {
-						id: true,
-						name: true,
-						price: true,
-					},
-				});
+				
+				const products = await storeQueries.getProductsByIds(
+					input.products.map((p) => p.productId),
+				);
 				const total = products.reduce((acc, p) => {
 					const quantity = input.products.find(
 						(p2) => p2.productId === p.id,
@@ -115,41 +54,48 @@ export const order = router({
 					}
 					return acc;
 				}, 0);
-				const order = await ctx.db
-					.insert(OrdersTable)
-					.values({
-						orderNumber: generateOrderNumber(),
-						customerPhone: Number(input.phoneNumber),
+				const customer = await storeQueries.getCustomerByPhone(Number(input.phoneNumber));
+				if (!customer) {
+					await storeQueries.createCustomer({
+						phone: Number(input.phoneNumber),
 						address: input.address,
-						notes: input.notes,
-						total: total,
-						status: "pending",
-						deliveryProvider: "tu-delivery",
-					})
-					.returning({ orderId: OrdersTable.id });
-				const orderId = order?.[0]?.orderId;
+					});
+				}
+				await storeQueries.updateCustomerAddress(Number(input.phoneNumber), input.address);
+				const order = await storeQueries.createOrder({
+					orderNumber: generateOrderNumber(),
+					customerPhone: Number(input.phoneNumber),
+					address: input.address,
+					notes: input.notes ?? null,
+					total: total,
+					status: "pending",
+					deliveryProvider: "tu-delivery",
+				});
+				const orderId = order?.orderId;
 				if (!orderId) {
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to create order",
 					});
 				}
-				for (const product of input.products) {
-					await ctx.db.insert(OrderDetailsTable).values({
-						orderId: orderId,
-						productId: product.productId,
-						quantity: product.quantity,
-					});
-				}
-				let paymentId: number | undefined;
+				await storeQueries.createOrderDetails(
+					orderId,
+					input.products.map((p) => ({
+						productId: p.productId,
+						quantity: p.quantity,
+					})),
+				);
+				console.log("order created", orderId);
+				let paymentNumber: string | null = null;
 				try {
-					const paymentResult = await createPayment(
-						orderId,
-						ctx,
-						"pending",
-						"transfer",
-					);
-					paymentId = paymentResult?.[0]?.id;
+					const paymentResult = await adminQueries.createPayment({
+						paymentNumber: generatePaymentNumber(),
+						orderId: orderId,
+						provider: "transfer",
+						status: "pending",
+						amount: total,
+					});
+					paymentNumber = paymentResult?.paymentNumber ?? null;
 				} catch (e) {
 					console.error(e);
 					throw new TRPCError({
@@ -158,7 +104,7 @@ export const order = router({
 						cause: e,
 					});
 				}
-				return { paymentId };
+				return { paymentNumber };
 			} catch (e) {
 				console.error(e);
 			}

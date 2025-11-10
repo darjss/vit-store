@@ -1,12 +1,7 @@
 import { navigate } from "astro:transitions/client";
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
-import type {
-	CustomerSelectType,
-	newOrderType,
-	Session,
-	UserSelectType,
-} from "@vit/shared";
+import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
 import { createEffect, For, Show, Suspense } from "solid-js";
 import * as v from "valibot";
@@ -18,6 +13,7 @@ import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
+import EmptyCart from "@/components/cart/empty-cart";
 
 const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 	// const { data: user, isLoading: isUserLoading } = useQuery(
@@ -30,7 +26,7 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 	// 	}),
 	// 	() => queryClient,
 	// );
-	createEffect(() => {
+	createEffect(() => {		
 		console.log("user", user);
 	});
 
@@ -40,14 +36,24 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onSuccess: async (data) => {
-				const paymentId = data?.paymentId;
+				const paymentNumber = data?.paymentNumber;
 				showToast({
 					title: "Амжилттай",
 					description: "Захиалга амжилттай үүслээ",
 					variant: "success",
 					duration: 5000,
 				});
-				navigate(`/order/${paymentId}`);
+				cart.clearCart();
+				navigate(`/payment/${paymentNumber}`);
+			},
+			onError: (error) => {
+				console.error("Order submission error:", error);
+				showToast({
+					title: "Алдаа",
+					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+					variant: "error",
+					duration: 5000,
+				});
 			},
 		}),
 		() => queryClient,
@@ -62,12 +68,23 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 		validators: {
 			onChange: v.object({
 				phoneNumber: phoneSchema,
-				address: v.pipe(v.string(), v.minLength(15)),
+				address: v.pipe(
+					v.string(),
+					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+				),
+				notes: v.string(),
+			}),
+			onSubmit: v.object({
+				phoneNumber: phoneSchema,
+				address: v.pipe(
+					v.string(),
+					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+				),
 				notes: v.string(),
 			}),
 		},
 		onSubmit: async (values) => {
-			console.log("Submmiting ");
+			console.log("Submitting");
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,
@@ -82,9 +99,9 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 		}
 	});
 	return (
+		<Show when={cart.items().length > 0} fallback={<EmptyCart />}>
 		<Suspense fallback={<Loading />}>
 			<div class="min-h-screen bg-background px-4 py-6">
-				{/* Header */}
 				<div class="mb-6 border-4 border-border bg-primary p-4 shadow-[6px_6px_0_0_#000]">
 					<h1 class="font-black text-xl uppercase tracking-tight">
 						Захиалга баталгаажуулах
@@ -139,7 +156,7 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 								<div class="flex items-center justify-between">
 									<p class="font-bold text-sm uppercase">Дэд дүн</p>
 									<p class="font-black text-base">
-										₮{cart.total.toLocaleString()}
+										₮{cart.total().toLocaleString()}
 									</p>
 								</div>
 								<div class="flex items-center justify-between">
@@ -152,7 +169,7 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 									<div class="flex items-center justify-between">
 										<p class="font-black text-base uppercase">Нийт дүн</p>
 										<p class="font-black text-2xl text-primary">
-											₮{(cart.total + deliveryFee).toLocaleString()}
+											₮{(cart.total() + deliveryFee).toLocaleString()}
 										</p>
 									</div>
 								</div>
@@ -166,7 +183,14 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 							<CardTitle>Хүргэлтийн мэдээлэл</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<form class="space-y-4" onSubmit={form.handleSubmit}>
+							<form
+								class="space-y-4"
+								onSubmit={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									form.handleSubmit();
+								}}
+							>
 								<form.AppField
 									name="phoneNumber"
 									children={(field) => (
@@ -180,7 +204,7 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 								<form.AppField
 									name="address"
 									children={(field) => (
-										<field.FormTextField
+										<field.FormTextArea
 											label="Хаяг"
 											placeholder="Байр, тоот, давхар"
 										/>
@@ -195,20 +219,22 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 										/>
 									)}
 								/>
+								<div class="pb-6">
+									<form.AppForm>
+										<form.SubmitButton>
+											{mutation.isPending
+												? "Уншиж байна..."
+												: "Захиалга үүсгэх"}
+										</form.SubmitButton>
+									</form.AppForm>
+								</div>
 							</form>
 						</CardContent>
 					</Card>
-
-					<div class="pb-6">
-						<form.AppForm>
-							<form.SubmitButton>
-								{mutation.isPending ? "Уншиж байна..." : "Захиалга үүсгэх"}
-							</form.SubmitButton>
-						</form.AppForm>
-					</div>
 				</div>
 			</div>
 		</Suspense>
+		</Show>
 	);
 };
 

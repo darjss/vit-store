@@ -12,7 +12,8 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown"
+		"build": "tsdown",
+		"dev": "echo 'Shared package uses source files directly - no dev build needed'"
 	},
 	"devDependencies": {
 		"tsdown": "catalog:"

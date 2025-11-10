@@ -6,14 +6,14 @@ import { createServerClient } from "@/lib/trpc";
 
 // Get cookies from Astro's request context
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const serverApi = createServerClient(
+	cookieHeader,
+	Astro.locals.runtime.env.server,
+	Astro.redirect, // Pass redirect function - will automatically redirect on unauthorized
+);
 
-	const user = await serverApi.auth.check.query();
-	if(user===undefined){
-		throw Astro.redirect("/login")
-	}
-	
-	const orders = await serverApi.order.getOrdersByCustomerId.query();
+const user = await serverApi.auth.check.query();
+const orders = await serverApi.order.getOrdersByCustomerId.query();
 
 
 // Format date helper

@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { ProductImagesTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const productImages = router({
@@ -13,9 +12,9 @@ export const productImages = router({
 				isPrimary: v.boolean(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				await ctx.db.insert(ProductImagesTable).values(input);
+				await adminQueries.createImage(input);
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
@@ -39,7 +38,7 @@ export const productImages = router({
 				),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
@@ -76,16 +75,12 @@ export const productImages = router({
 					time: number;
 				};
 
-				const addImagePromises = uploadedImages.images.map(
-					(uploadedImage, index) => {
-						return ctx.db.insert(ProductImagesTable).values({
-							...input.images[index],
-							url: uploadedImage.url,
-						});
-					},
-				);
+				const imagesToInsert = uploadedImages.images.map((uploadedImage, index) => ({
+					...input.images[index],
+					url: uploadedImage.url,
+				}));
 
-				await Promise.all(addImagePromises);
+				await adminQueries.createImages(imagesToInsert);
 				return { message: "Successfully uploaded images" };
 			} catch (error) {
 				console.error("Error in uploadImagesFromUrl:", error);
@@ -108,22 +103,11 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const { newImages, productId } = input;
 
-				const existingImages = await ctx.db
-					.select({
-						id: ProductImagesTable.id,
-						url: ProductImagesTable.url,
-					})
-					.from(ProductImagesTable)
-					.where(
-						and(
-							eq(ProductImagesTable.productId, productId),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					);
+				const existingImages = await adminQueries.getImagesByProductId(productId);
 
 				console.log("existing", existingImages);
 				console.log("updated", newImages);
@@ -148,28 +132,15 @@ export const productImages = router({
 
 				if (isDiff) {
 					// Delete existing images
-					const deletePromises = existingImages.map((image) =>
-						ctx.db
-							.update(ProductImagesTable)
-							.set({ deletedAt: new Date() })
-							.where(
-								and(
-									eq(ProductImagesTable.id, image.id),
-									isNull(ProductImagesTable.deletedAt),
-								),
-							),
-					);
-					await Promise.allSettled(deletePromises);
+					await adminQueries.softDeleteImagesByProductId(productId);
 
 					// Insert new images
-					const insertPromises = newImages.map((image, index) =>
-						ctx.db.insert(ProductImagesTable).values({
-							productId: productId,
-							url: image.url,
-							isPrimary: index === 0,
-						}),
-					);
-					await Promise.allSettled(insertPromises);
+					const imagesToInsert = newImages.map((image, index) => ({
+						productId: productId,
+						url: image.url,
+						isPrimary: index === 0,
+					}));
+					await adminQueries.createImages(imagesToInsert);
 				}
 
 				return { message: "Successfully updated images" };
@@ -189,26 +160,10 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
 				const { productId } = input;
-				const images = await ctx.db
-					.select({
-						id: ProductImagesTable.id,
-						productId: ProductImagesTable.productId,
-						url: ProductImagesTable.url,
-						isPrimary: ProductImagesTable.isPrimary,
-						createdAt: ProductImagesTable.createdAt,
-					})
-					.from(ProductImagesTable)
-					.where(
-						and(
-							eq(ProductImagesTable.productId, productId),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					)
-					.orderBy(ProductImagesTable.isPrimary);
-
+				const images = await adminQueries.getImagesByProductId(productId);
 				return images;
 			} catch (error) {
 				console.error("Error getting images by product ID:", error);
@@ -226,19 +181,10 @@ export const productImages = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const { id } = input;
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ deletedAt: new Date() })
-					.where(
-						and(
-							eq(ProductImagesTable.id, id),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					);
-
+				await adminQueries.deleteImage(id);
 				return { message: "Successfully deleted image" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -257,25 +203,10 @@ export const productImages = router({
 				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
 				const { productId, imageId } = input;
-
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: false })
-					.where(
-						and(
-							eq(ProductImagesTable.productId, productId),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					);
-
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: true })
-					.where(eq(ProductImagesTable.id, imageId));
-
+				await adminQueries.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);
@@ -287,19 +218,9 @@ export const productImages = router({
 			}
 		}),
 
-	getAllImages: adminProcedure.query(async ({ ctx }) => {
+	getAllImages: adminProcedure.query(async () => {
 		try {
-			const images = await ctx.db
-				.select({
-					id: ProductImagesTable.id,
-					productId: ProductImagesTable.productId,
-					url: ProductImagesTable.url,
-					isPrimary: ProductImagesTable.isPrimary,
-					createdAt: ProductImagesTable.createdAt,
-				})
-				.from(ProductImagesTable)
-				.orderBy(ProductImagesTable.createdAt);
-
+			const images = await adminQueries.getAllImages();
 			return images;
 		} catch (error) {
 			console.error("Error getting all images:", error);

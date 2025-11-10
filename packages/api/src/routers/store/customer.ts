@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { CustomersTable } from "../../db/schema";
+import { storeQueries } from "@vit/api/queries";
 import { updateCustomerSchema } from "../../db/valibot";
 import { customerProcedure, router } from "../../lib/trpc";
 
@@ -9,13 +8,9 @@ export const customer = router({
 	}),
 	updateAddress: customerProcedure
 		.input(updateCustomerSchema)
-		.mutation(async ({ input, ctx }) => {
+		.mutation(async ({ input }) => {
 			const { address, phone } = input;
-			await ctx.db
-				.update(CustomersTable)
-				.set({
-					address: address,
-				})
-				.where(eq(CustomersTable.phone, phone as number));
+			await storeQueries.updateCustomerAddress(phone as number, address);
 		}),
+	
 });

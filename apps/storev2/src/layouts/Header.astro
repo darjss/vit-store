@@ -108,7 +108,11 @@ import { Dropdown, DropdownTrigger } from "@/components/starwind/dropdown"
                         >
 
                             <CartCount client:load>
-                            <div slot="fallback"></div>
+                            <div slot="fallback">
+                                <span class="-top-1 -right-1 absolute flex h-5 w-5 items-center justify-center rounded-full border-[3px] border-black bg-secondary font-bold text-secondary-foreground text-xs">
+                                    <p class="font-bold text-xs">0</p>
+                                </span>
+                            </div>
                             </CartCount>
                     </button>
                 </a>

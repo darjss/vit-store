@@ -13,6 +13,12 @@ export const generateOrderNumber = () => {
 	return nanoId(10);
 };
 
+export const generatePaymentNumber = () => {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	const nanoId = customAlphabet(alphabet);
+	return nanoId(10);
+};
+
 export const getStartOfDay = () => {
 	const date = new Date();
 	date.setHours(0, 0, 0, 0);

@@ -3,26 +3,69 @@ import { createMemo, createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { CartItems } from "@/lib/types";
 
-const _CART_LOCAL_STORAGE_KEY = "cart-items";
-// const getCartFromLocalStorage = (): CartItems[] => {
-// 	try {
-// 		if (typeof window === "undefined") {
-// 			return [];
-// 		}
-// 		const stored = localStorage.getItem(CART_LOCAL_STORAGE_KEY);
-// 		if (stored) {
-// 			const parsed = JSON.parse(stored) as CartItems[];
-// 			if (!Array.isArray(parsed)) {
-// 				return [];
-// 			}
-// 			return parsed;
-// 		}
-// 		return [];
-// 	} catch (error) {
-// 		console.error("Failed to load cart", error);
-// 		return [];
-// 	}
-// };
+// Safe storage wrapper that handles SSR
+const safeStorage: Storage = {
+	getItem: (key: string) => {
+		if (typeof window === "undefined") {
+			return null;
+		}
+		try {
+			return localStorage.getItem(key);
+		} catch {
+			return null;
+		}
+	},
+	setItem: (key: string, value: string) => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		try {
+			localStorage.setItem(key, value);
+		} catch {
+			// Ignore storage errors
+		}
+	},
+	removeItem: (key: string) => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		try {
+			localStorage.removeItem(key);
+		} catch {
+			// Ignore storage errors
+		}
+	},
+	clear: () => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		try {
+			localStorage.clear();
+		} catch {
+			// Ignore storage errors
+		}
+	},
+	get length() {
+		if (typeof window === "undefined") {
+			return 0;
+		}
+		try {
+			return localStorage.length;
+		} catch {
+			return 0;
+		}
+	},
+	key: (index: number) => {
+		if (typeof window === "undefined") {
+			return null;
+		}
+		try {
+			return localStorage.key(index);
+		} catch {
+			return null;
+		}
+	},
+};
 
 export const cart = createRoot(() => {
 	const [cartStore, setCart] = makePersisted(
@@ -31,8 +74,7 @@ export const cart = createRoot(() => {
 		}),
 		{
 			name: "cart-items",
-			storage: localStorage,
-			deferInit: true,
+			storage: safeStorage,
 		},
 	);
 
@@ -77,11 +119,7 @@ export const cart = createRoot(() => {
 		},
 		clearCart: () => setCart("items", []),
 
-		get total() {
-			return total();
-		},
-		get count() {
-			return count();
-		},
+		total,
+		count,
 	};
 });

@@ -30,7 +30,6 @@ export type {
 export * as db from "./db/schema";
 
 export type { Context, CreateContextOptions } from "./lib/context";
-export * from "./lib/queries";
 export type { Session } from "./lib/session";
 export { createSessionManager, generateSessionToken } from "./lib/session";
 export {

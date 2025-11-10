@@ -1,71 +1,5 @@
 ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Tabs from "@/components/starwind/tabs/Tabs.astro";
 import TabsContent from "@/components/starwind/tabs/TabsContent.astro";
 import TabsList from "@/components/starwind/tabs/TabsList.astro";
@@ -101,13 +35,11 @@ const hasSpecs = !!(
 ---
 
 <div class="w-full space-y-6">
-	{/* Section Heading */}
 	<div class="border-t-4 border-black pt-6">
 		<h2 class="text-2xl sm:text-3xl font-black mb-4">📋 Дэлгэрэнгүй мэдээлэл</h2>
 	</div>
 
 	<Tabs defaultValue="description" class="w-full">
-		{/* Tabs Navigation */}
 		<TabsList class="w-full grid grid-cols-4 gap-2 p-2 bg-muted/50 border-3 border-black rounded-sm shadow-[4px_4px_0_0_#000] mb-6">
 			<TabsTrigger 
 				value="description" 

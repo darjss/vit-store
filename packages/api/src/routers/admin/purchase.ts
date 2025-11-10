@@ -1,9 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { addPurchaseSchema } from "@vit/shared/schema";
-import type { SQL } from "drizzle-orm";
-import { and, asc, desc, eq, isNull, like, lt, sql } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { ProductsTable, PurchasesTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const purchase = router({
@@ -12,38 +10,19 @@ export const purchase = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db.transaction(async (tx) => {
-					for (const product of input.products) {
-						await tx.insert(PurchasesTable).values({
-							productId: product.productId,
-							quantityPurchased: product.quantity,
-							unitCost: product.unitCost,
-						});
-
-						const currentProduct = await tx.query.ProductsTable.findFirst({
-							where: and(
-								eq(ProductsTable.id, product.productId),
-								isNull(ProductsTable.deletedAt),
-							),
-							columns: { stock: true },
-						});
-
-						const newStock = (currentProduct?.stock || 0) + product.quantity;
-
-						await tx
-							.update(ProductsTable)
-							.set({ stock: newStock })
-							.where(
-								and(
-									eq(ProductsTable.id, product.productId),
-									isNull(ProductsTable.deletedAt),
-								),
-							);
-					}
+					await adminQueries.addPurchaseWithStockUpdate(tx, input.products);
 				});
 
 				return { message: "Purchase added successfully" };
 			} catch (e) {
 				console.error("Error adding purchase:", e);
+				if (e instanceof Error && e.message === "Purchase not found") {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: e.message,
+						cause: e,
+					});
+				}
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Adding purchase failed",
@@ -54,13 +33,7 @@ export const purchase = router({
 
 	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await ctx.db.query.PurchasesTable.findMany({
-				where: isNull(PurchasesTable.deletedAt),
-				with: {
-					product: { columns: { name: true, id: true, price: true } },
-				},
-				orderBy: desc(PurchasesTable.createdAt),
-			});
+			const result = await adminQueries.getAllPurchases();
 			return result;
 		} catch (e) {
 			console.error("error", e);
@@ -76,13 +49,7 @@ export const purchase = router({
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await ctx.db.query.PurchasesTable.findFirst({
-					where: and(
-						eq(PurchasesTable.id, input.id),
-						isNull(PurchasesTable.deletedAt),
-					),
-					with: { product: { columns: { name: true, id: true, price: true } } },
-				});
+				const result = await adminQueries.getPurchaseById(input.id);
 				return result;
 			} catch (e) {
 				console.error("error", e);
@@ -106,55 +73,13 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const conditions: (SQL<unknown> | undefined)[] = [
-					isNull(PurchasesTable.deletedAt) as unknown as SQL<unknown>,
-				];
-				if (input.productId !== undefined)
-					conditions.push(eq(PurchasesTable.productId, input.productId));
-				const orderByClauses: SQL<unknown>[] = [];
-				const primarySortColumn =
-					input.sortField === "quantity"
-						? PurchasesTable.quantityPurchased
-						: input.sortField === "cost"
-							? PurchasesTable.unitCost
-							: PurchasesTable.createdAt;
-				const primaryOrderBy =
-					input.sortDirection === "asc"
-						? asc(primarySortColumn)
-						: desc(primarySortColumn);
-				orderByClauses.push(primaryOrderBy);
-				orderByClauses.push(asc(PurchasesTable.id));
-				const finalConditions = conditions.filter(
-					(c): c is SQL<unknown> => c !== undefined,
-				);
-				const offset = (input.page - 1) * input.pageSize;
-				const purchases = await ctx.db.query.PurchasesTable.findMany({
-					limit: input.pageSize,
-					offset: offset,
-					orderBy: orderByClauses,
-					where:
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					with: { product: { columns: { name: true, id: true, price: true } } },
+				return await adminQueries.getPaginatedPurchases({
+					page: input.page,
+					pageSize: input.pageSize,
+					productId: input.productId,
+					sortField: input.sortField,
+					sortDirection: input.sortDirection,
 				});
-				const totalCountResult = await ctx.db
-					.select({ count: sql<number>`COUNT(*)` })
-					.from(PurchasesTable)
-					.where(
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					)
-					.get();
-				const totalCount = totalCountResult?.count ?? 0;
-				const totalPages = Math.ceil(totalCount / input.pageSize);
-				return {
-					purchases,
-					pagination: {
-						currentPage: input.page,
-						totalPages,
-						totalCount,
-						hasNextPage: input.page < totalPages,
-						hasPreviousPage: input.page > 1,
-					},
-				};
 			} catch (e) {
 				console.log("Error fetching paginated purchases:", e);
 				throw new TRPCError({
@@ -170,27 +95,8 @@ export const purchase = router({
 		.query(async ({ ctx, input }) => {
 			if (!input.query) return [];
 			try {
-				const joinedResults = await ctx.db
-					.select({
-						purchase: PurchasesTable,
-						product: {
-							id: ProductsTable.id,
-							name: ProductsTable.name,
-							price: ProductsTable.price,
-						},
-					})
-					.from(PurchasesTable)
-					.innerJoin(
-						ProductsTable,
-						eq(PurchasesTable.productId, ProductsTable.id),
-					)
-					.where(like(ProductsTable.name, `%${input.query}%`))
-					.orderBy(desc(PurchasesTable.createdAt))
-					.limit(50);
-				return joinedResults.map((item) => ({
-					...item.purchase,
-					product: item.product,
-				}));
+				const results = await adminQueries.searchByProductName(input.query);
+				return results;
 			} catch (e) {
 				console.error("Error searching purchases:", e);
 				throw new TRPCError({
@@ -211,75 +117,22 @@ export const purchase = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db.transaction(async (tx) => {
-					const originalPurchases = await tx.query.PurchasesTable.findMany({
-						where: and(
-							eq(PurchasesTable.id, input.id),
-							isNull(PurchasesTable.deletedAt),
-						),
-					});
-					if (originalPurchases.length === 0)
-						throw new TRPCError({
-							code: "NOT_FOUND",
-							message: "Purchase not found",
-						});
-					await tx
-						.update(PurchasesTable)
-						.set({ deletedAt: new Date() })
-						.where(
-							and(
-								eq(PurchasesTable.id, input.id),
-								isNull(PurchasesTable.deletedAt),
-							),
-						);
-					for (const originalPurchase of originalPurchases) {
-						const product = await tx.query.ProductsTable.findFirst({
-							where: and(
-								eq(ProductsTable.id, originalPurchase.productId),
-								isNull(ProductsTable.deletedAt),
-							),
-							columns: { stock: true },
-						});
-						const newStock =
-							(product?.stock || 0) - originalPurchase.quantityPurchased;
-						await tx
-							.update(ProductsTable)
-							.set({ stock: newStock })
-							.where(
-								and(
-									eq(ProductsTable.id, originalPurchase.productId),
-									isNull(ProductsTable.deletedAt),
-								),
-							);
-					}
-					for (const product of input.data.products) {
-						await tx.insert(PurchasesTable).values({
-							id: input.id,
-							productId: product.productId,
-							quantityPurchased: product.quantity,
-							unitCost: product.unitCost,
-						});
-						const currentProduct = await tx.query.ProductsTable.findFirst({
-							where: and(
-								eq(ProductsTable.id, product.productId),
-								isNull(ProductsTable.deletedAt),
-							),
-							columns: { stock: true },
-						});
-						const newStock = (currentProduct?.stock || 0) + product.quantity;
-						await tx
-							.update(ProductsTable)
-							.set({ stock: newStock })
-							.where(
-								and(
-									eq(ProductsTable.id, product.productId),
-									isNull(ProductsTable.deletedAt),
-								),
-							);
-					}
+					await adminQueries.updatePurchaseWithStockAdjustment(
+						tx,
+						input.id,
+						input.data.products,
+					);
 				});
 				return { message: "Purchase updated successfully" };
 			} catch (e) {
 				console.error("Error updating purchase:", e);
+				if (e instanceof Error && e.message === "Purchase not found") {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: e.message,
+						cause: e,
+					});
+				}
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Updating purchase failed",
@@ -293,47 +146,18 @@ export const purchase = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await ctx.db.transaction(async (tx) => {
-					const purchase = await tx.query.PurchasesTable.findFirst({
-						where: and(
-							eq(PurchasesTable.id, input.id),
-							isNull(PurchasesTable.deletedAt),
-						),
-					});
-					if (!purchase)
-						throw new TRPCError({
-							code: "NOT_FOUND",
-							message: "Purchase not found",
-						});
-					await tx
-						.update(PurchasesTable)
-						.set({ deletedAt: new Date() })
-						.where(
-							and(
-								eq(PurchasesTable.id, input.id),
-								isNull(PurchasesTable.deletedAt),
-							),
-						);
-					const product = await tx.query.ProductsTable.findFirst({
-						where: and(
-							eq(ProductsTable.id, purchase.productId),
-							isNull(ProductsTable.deletedAt),
-						),
-						columns: { stock: true },
-					});
-					const newStock = (product?.stock || 0) - purchase.quantityPurchased;
-					await tx
-						.update(ProductsTable)
-						.set({ stock: newStock })
-						.where(
-							and(
-								eq(ProductsTable.id, purchase.productId),
-								isNull(ProductsTable.deletedAt),
-							),
-						);
+					await adminQueries.deletePurchaseWithStockRestore(tx, input.id);
 				});
 				return { message: "Purchase deleted successfully" };
 			} catch (e) {
 				console.error("Error deleting purchase:", e);
+				if (e instanceof Error && e.message === "Purchase not found") {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: e.message,
+						cause: e,
+					});
+				}
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Deleting purchase failed",
@@ -351,25 +175,7 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const purchases = await ctx.db
-					.select()
-					.from(PurchasesTable)
-					.where(
-						and(
-							eq(PurchasesTable.productId, input.productId),
-							lt(PurchasesTable.createdAt, input.createdAt),
-						),
-					);
-				const sum = purchases.reduce(
-					(acc, purchase) =>
-						acc + purchase.unitCost * purchase.quantityPurchased,
-					0,
-				);
-				const totalProduct = purchases.reduce(
-					(acc, purchase) => acc + purchase.quantityPurchased,
-					0,
-				);
-				return totalProduct > 0 ? sum / totalProduct : 0;
+				return await adminQueries.getAverageCostOfProduct(input.productId, input.createdAt);
 			} catch (e) {
 				console.error("Error calculating average cost:", e);
 				return 0;

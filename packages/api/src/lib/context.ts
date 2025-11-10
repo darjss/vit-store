@@ -8,11 +8,11 @@ export type { CustomerSelectType, UserSelectType } from "../db/schema";
 export type { Session } from "./session";
 
 export type CreateContextOptions = {
-	context: HonoContext<{ Bindings: CloudflareBindings }>;
+	context: HonoContext<{ Bindings: Env }>;
 };
 
 export type Context = {
-	c: HonoContext<{ Bindings: CloudflareBindings }>;
+	c: HonoContext<{ Bindings: Env }>;
 	session: Session<CustomerSelectType | UserSelectType> | null;
 	db: DrizzleD1Database<typeof schema>;
 	kv: KVNamespace;

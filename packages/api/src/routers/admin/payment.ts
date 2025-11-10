@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { PaymentsTable } from "../../db/schema";
 import { paymentProvider, paymentStatus } from "../../lib/constants";
+import { generatePaymentNumber } from "../../lib/utils";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const payment = router({
@@ -12,19 +12,19 @@ export const payment = router({
 				orderId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 				status: v.picklist(paymentStatus),
 				provider: v.picklist(paymentProvider),
+				amount: v.pipe(v.number(), v.integer(), v.minValue(0)),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const result = await ctx.db
-					.insert(PaymentsTable)
-					.values({
-						orderId: input.orderId,
-						provider: input.provider,
-						status: input.status,
-					})
-					.returning({ id: PaymentsTable.id });
-				return result[0];
+				const result = await adminQueries.createPayment({
+					paymentNumber: generatePaymentNumber(),
+					orderId: input.orderId,
+					provider: input.provider,
+					status: input.status,
+					amount: input.amount,
+				});
+				return result;
 			} catch (error) {
 				console.error("Error creating payment:", error);
 				throw new TRPCError({
@@ -37,17 +37,7 @@ export const payment = router({
 
 	getPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await ctx.db
-				.select({
-					id: PaymentsTable.id,
-					orderId: PaymentsTable.orderId,
-					provider: PaymentsTable.provider,
-					status: PaymentsTable.status,
-					createdAt: PaymentsTable.createdAt,
-					updatedAt: PaymentsTable.updatedAt,
-				})
-				.from(PaymentsTable)
-				.orderBy(desc(PaymentsTable.createdAt));
+			const result = await adminQueries.getPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting payments:", error);
@@ -61,18 +51,7 @@ export const payment = router({
 
 	getPendingPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await ctx.db
-				.select({
-					id: PaymentsTable.id,
-					orderId: PaymentsTable.orderId,
-					provider: PaymentsTable.provider,
-					status: PaymentsTable.status,
-					createdAt: PaymentsTable.createdAt,
-					updatedAt: PaymentsTable.updatedAt,
-				})
-				.from(PaymentsTable)
-				.where(eq(PaymentsTable.status, "pending"))
-				.orderBy(desc(PaymentsTable.createdAt));
+			const result = await adminQueries.getPendingPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting pending payments:", error);

@@ -252,18 +252,18 @@ VALUES
   (10, 8, 1, (strftime('%s','now') - (abs(random()) % 2592000)));
 
 -- Seed Payments (depends on Orders)
-INSERT INTO ecom_vit_payment (order_id, provider, status, created_at)
+INSERT INTO ecom_vit_payment (payment_number, order_id, provider, status, amount, created_at)
 VALUES
-  (1, 'transfer', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (2, 'qpay', 'pending', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (3, 'cash', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (4, 'transfer', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (5, 'cash', 'failed', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (6, 'qpay', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (7, 'transfer', 'pending', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (8, 'cash', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (9, 'qpay', 'success', (strftime('%s','now') - (abs(random()) % 2592000))),
-  (10, 'transfer', 'pending', (strftime('%s','now') - (abs(random()) % 2592000)));
+  ('A1B2C3D4E5', 1, 'transfer', 'success', 80000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('F6G7H8I9J0', 2, 'qpay', 'pending', 155000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('K1L2M3N4O5', 3, 'cash', 'success', 95000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('P6Q7R8S9T0', 4, 'transfer', 'success', 145000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('U1V2W3X4Y5', 5, 'cash', 'failed', 67000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('Z6A7B8C9D0', 6, 'qpay', 'success', 112000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('E1F2G3H4I5', 7, 'transfer', 'pending', 178000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('J6K7L8M9N0', 8, 'cash', 'success', 93000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('O1P2Q3R4S5', 9, 'qpay', 'success', 234000, (strftime('%s','now') - (abs(random()) % 2592000))),
+  ('T6U7V8W9X0', 10, 'transfer', 'pending', 156000, (strftime('%s','now') - (abs(random()) % 2592000)));
 
 -- Seed Sales (depends on Products, Orders) - Only for successful payments
 INSERT INTO ecom_vit_sales (product_id, order_id, quantity_sold, product_cost, selling_price, discount_applied, created_at)

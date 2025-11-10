@@ -240,6 +240,7 @@ export const PaymentsTable = createTable(
 	"payment",
 	{
 		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+		paymentNumber: text("payment_number", { length: 10 }).default("").notNull(),
 		orderId: int("order_id", { mode: "number" })
 			.references(() => OrdersTable.id)
 			.notNull(),
@@ -247,6 +248,7 @@ export const PaymentsTable = createTable(
 		status: text("status", {
 			enum: paymentStatus,
 		}).notNull(),
+		amount: int("amount", { mode: "number" }).notNull(),
 		createdAt: int("created_at", { mode: "timestamp" })
 			.default(sql`(unixepoch())`)
 			.notNull(),
@@ -257,6 +259,7 @@ export const PaymentsTable = createTable(
 	},
 	(table) => [
 		index("payment_order_idx").on(table.orderId),
+		index("payment_number_idx").on(table.paymentNumber),
 		index("payment_status_idx").on(table.status),
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_deleted_at_idx").on(table.deletedAt),

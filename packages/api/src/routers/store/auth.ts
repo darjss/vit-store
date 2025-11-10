@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
-import { CustomersTable } from "../../db/schema";
+import { storeQueries } from "@vit/api/queries";
 import type { Context } from "../../lib/context";
 import {
 	auth as authCheck,
@@ -97,8 +96,7 @@ export const auth = router({
 					});
 				}
 
-				// Add customer to DB if not exists
-				const user = await addCustomerToDB(input.phone, ctx);
+				const user = await addCustomerToDB(input.phone);
 
 				if (!user) {
 					throw new TRPCError({
@@ -107,11 +105,8 @@ export const auth = router({
 					});
 				}
 
-				// Create session
 				const { session, token } = await createSession(user, ctx.kv);
 
-				// Always set cookie since we assume server can set it
-				console.log("Setting session cookie for user:", user.phone);
 
 				setSessionTokenCookie(ctx.c, token, session.expiresAt);
 				console.log("Session cookie set via resHeaders");
@@ -156,22 +151,17 @@ export const auth = router({
 	}),
 });
 
-export const addCustomerToDB = async (phone: string, ctx: Context) => {
+export const addCustomerToDB = async (phone: string) => {
 	try {
-		const user = await ctx.db.query.CustomersTable.findFirst({
-			where: eq(CustomersTable.phone, Number.parseInt(phone, 10)),
-		});
+		const user = await storeQueries.getCustomerByPhone(Number.parseInt(phone, 10));
 		console.log("user", user);
 		if (!user) {
-			const newUser = await ctx.db
-				.insert(CustomersTable)
-				.values({
-					phone: Number.parseInt(phone, 10),
-					address: "",
-				})
-				.returning();
+			const newUser = await storeQueries.createCustomer({
+				phone: Number.parseInt(phone, 10),
+				address: "",
+			});
 			console.log("newUser", newUser);
-			return newUser[0];
+			return newUser;
 		}
 		return user;
 	} catch (error) {

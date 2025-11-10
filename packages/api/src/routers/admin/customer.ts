@@ -1,8 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { timeRangeSchema } from "@vit/shared/schema";
-import { and, eq, getTableColumns, gte, isNull, sql } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { CustomersTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 import { getDaysFromTimeRange } from "../../lib/utils";
 
@@ -21,10 +20,7 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const result = await ctx.db
-					.insert(CustomersTable)
-					.values(input)
-					.returning({ phone: CustomersTable.phone });
+				const result = await adminQueries.createCustomer(input);
 				return result;
 			} catch (error) {
 				console.error("Error adding customer:", error);
@@ -50,26 +46,18 @@ export const customer = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				console.log("GETTING CUSTOMER BY PHONE");
-				const result = await ctx.db
-					.select(getTableColumns(CustomersTable))
-					.from(CustomersTable)
-					.where(
-						and(
-							eq(CustomersTable.phone, input.phone),
-							isNull(CustomersTable.deletedAt),
-						),
-					)
-					.limit(1);
+				const result = await adminQueries.getCustomerByPhone(input.phone);
 				console.log("RESULT", result);
-				if (result.length === 0) {
+				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Customer not found",
 					});
 				}
-				return result[0] || null;
+				return result;
 			} catch (error) {
 				console.error("Error getting customer by phone:", error);
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to get customer by phone",
@@ -80,13 +68,8 @@ export const customer = router({
 
 	getCustomerCount: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await ctx.db
-				.select({
-					count: sql<number>`COUNT(*)`,
-				})
-				.from(CustomersTable)
-				.where(isNull(CustomersTable.deletedAt));
-			return result[0]?.count || 0;
+			const count = await adminQueries.getCustomerCount();
+			return count;
 		} catch (error) {
 			console.error("Error getting customer count:", error);
 			throw new TRPCError({
@@ -107,16 +90,8 @@ export const customer = router({
 			try {
 				const { timeRange } = input;
 				const startDate = await getDaysFromTimeRange(timeRange);
-
-				const result = await ctx.db
-					.select({
-						count: sql<number>`COUNT(*)`,
-					})
-					.from(CustomersTable)
-					.where(gte(CustomersTable.createdAt, startDate))
-					.get();
-
-				return result?.count ?? 0;
+				const count = await adminQueries.getNewCustomersCount(startDate);
+				return count;
 			} catch (error) {
 				console.error("Error getting new customers count:", error);
 				throw new TRPCError({
@@ -129,11 +104,7 @@ export const customer = router({
 
 	getAllCustomers: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const customers = await ctx.db
-				.select(getTableColumns(CustomersTable))
-				.from(CustomersTable)
-				.where(isNull(CustomersTable.deletedAt))
-				.orderBy(CustomersTable.createdAt);
+			const customers = await adminQueries.getAllCustomers();
 			return customers;
 		} catch (error) {
 			console.error("Error getting all customers:", error);
@@ -160,26 +131,17 @@ export const customer = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { phone, address } = input;
-				const result = await ctx.db
-					.update(CustomersTable)
-					.set({ address })
-					.where(
-						and(
-							eq(CustomersTable.phone, phone),
-							isNull(CustomersTable.deletedAt),
-						),
-					)
-					.returning({ phone: CustomersTable.phone });
-
-				if (result.length === 0) {
+				const result = await adminQueries.updateCustomer(phone, { address });
+				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Customer not found",
 					});
 				}
-				return result[0] || null;
+				return result;
 			} catch (error) {
 				console.error("Error updating customer:", error);
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update customer",
@@ -202,16 +164,7 @@ export const customer = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { phone } = input;
-				await ctx.db
-					.update(CustomersTable)
-					.set({ deletedAt: new Date() })
-					.where(
-						and(
-							eq(CustomersTable.phone, phone),
-							isNull(CustomersTable.deletedAt),
-						),
-					);
-
+				await adminQueries.deleteCustomer(phone);
 				return { message: "Successfully deleted customer" };
 			} catch (error) {
 				console.error("Error deleting customer:", error);

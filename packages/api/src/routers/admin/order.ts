@@ -1,137 +1,107 @@
 import { TRPCError } from "@trpc/server";
+import { adminQueries } from "@vit/api/queries";
 import {
 	addOrderSchema,
 	timeRangeSchema,
 	updateOrderSchema,
 } from "@vit/shared";
-import type { SQL } from "drizzle-orm";
-import { and, asc, desc, eq, ilike, isNull, like, or, sql } from "drizzle-orm";
 import * as v from "valibot";
-import {
-	CustomersTable,
-	OrderDetailsTable,
-	OrdersTable,
-	PaymentsTable,
-	ProductImagesTable,
-	SalesTable,
-} from "../../db/schema";
 import { PRODUCT_PER_PAGE } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
-import {
-	generateOrderNumber,
-	shapeOrderResult,
-	shapeOrderResults,
-} from "../../lib/utils";
-import {
-	addSale,
-	createPayment,
-	getAverageCostOfProduct,
-	getOrderCount,
-	getPendingOrders,
-	updateStock,
-} from "./utils";
+import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 
 export const order = router({
-	addOrder: adminProcedure
-		.input(addOrderSchema)
-		.mutation(async ({ ctx, input }) => {
-			console.log("addOrder called with", input);
-			try {
-				const orderTotal = input.products.reduce(
-					(acc, currentProduct) =>
-						acc + currentProduct.price * currentProduct.quantity,
-					0,
-				);
+	addOrder: adminProcedure.input(addOrderSchema).mutation(async ({ input }) => {
+		console.log("addOrder called with", input);
+		try {
+			const orderTotal = input.products.reduce(
+				(acc, currentProduct) =>
+					acc + currentProduct.price * currentProduct.quantity,
+				0,
+			);
 
-				if (input.isNewCustomer) {
-					await ctx.db.insert(CustomersTable).values({
-						phone: Number(input.customerPhone),
-						address: input.address,
-					});
-				}
-				const orderNumber = generateOrderNumber();
-				const [order] = await ctx.db
-					.insert(OrdersTable)
-					.values({
-						orderNumber: orderNumber,
-						customerPhone: Number(input.customerPhone),
-						status: input.status,
-						notes: input.notes,
-						total: orderTotal,
-						address: input.address,
-						deliveryProvider: input.deliveryProvider,
-					})
-					.returning({ orderId: OrdersTable.id });
+			if (input.isNewCustomer) {
+				await adminQueries.createCustomer({
+					phone: Number(input.customerPhone),
+					address: input.address,
+				});
+			}
+			const orderNumber = generateOrderNumber();
+			const order = await adminQueries.createOrder({
+				orderNumber: orderNumber,
+				customerPhone: Number(input.customerPhone),
+				status: input.status,
+				notes: input.notes ?? null,
+				total: orderTotal,
+				address: input.address,
+				deliveryProvider: input.deliveryProvider,
+			});
 
-				const orderId = order?.orderId;
+			const orderId = order?.orderId;
 
+			const orderDetails = input.products.map((product) => ({
+				productId: product.productId,
+				quantity: product.quantity,
+			}));
+			await adminQueries.createOrderDetails(orderId, orderDetails);
+
+			if (input.paymentStatus === "success") {
 				for (const product of input.products) {
-					await ctx.db.insert(OrderDetailsTable).values({
-						orderId: orderId,
-						productId: product.productId,
-						quantity: product.quantity,
-					});
-
-					if (input.paymentStatus === "success") {
-						const productCost = await getAverageCostOfProduct(
-							product.productId,
-							new Date(),
-							ctx,
-						);
-						await addSale(
-							{
-								productCost: productCost,
-								quantitySold: product.quantity,
-								orderId: order.orderId,
-								sellingPrice: product.price,
-								productId: product.productId,
-							},
-							ctx,
-						);
-						await updateStock(
-							product.productId,
-							product.quantity,
-							"minus",
-							ctx,
-						);
-					}
-				}
-
-				try {
-					const paymentResult = await createPayment(
-						orderId,
-						ctx,
-						input.paymentStatus,
-						"transfer",
+					const productCost = await adminQueries.getAverageCostOfProduct(
+						product.productId,
+						new Date(),
 					);
-					console.log("Payment created:", paymentResult);
-				} catch (error) {
-					console.error("Error creating payment:", error);
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to create payment",
-						cause: error,
+					await adminQueries.addSale({
+						productCost: productCost,
+						quantitySold: product.quantity,
+						orderId: order.orderId,
+						sellingPrice: product.price,
+						productId: product.productId,
 					});
+					await adminQueries.updateStock(
+						product.productId,
+						product.quantity,
+						"minus",
+					);
 				}
-				console.log("transaction done");
+			}
 
-				console.log("added order");
-				return { message: "Order added successfully" };
-			} catch (e) {
-				if (e instanceof Error) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to add order",
-						cause: e,
-					});
-				}
+			try {
+				const paymentResult = await adminQueries.createPayment({
+					paymentNumber: generatePaymentNumber(),
+					orderId: orderId,
+					provider: "transfer",
+					status: input.paymentStatus,
+					amount: orderTotal,
+				});
+				console.log("Payment created:", paymentResult);
+			} catch (error) {
+				console.error("Error creating payment:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create payment",
+					cause: error,
+				});
+			}
+			console.log("transaction done");
+
+			console.log("added order");
+			return { message: "Order added successfully" };
+		} catch (e) {
+			if (e instanceof Error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add order",
 					cause: e,
 				});
 			}
-		}),
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to add order",
+				cause: e,
+			});
+		}
+	}),
 
 	updateOrder: adminProcedure
 		.input(updateOrderSchema)
@@ -146,88 +116,72 @@ export const order = router({
 				);
 
 				if (input.isNewCustomer) {
-					const userExists = await ctx.db
-						.select()
-						.from(CustomersTable)
-						.where(eq(CustomersTable.phone, Number(input.customerPhone)))
-						.execute();
-
-					if (userExists.length === 0) {
-						await ctx.db.insert(CustomersTable).values({
+					const existingCustomer = await adminQueries.getCustomerByPhone(
+						Number(input.customerPhone),
+					);
+					if (!existingCustomer) {
+						await adminQueries.createCustomer({
 							phone: Number(input.customerPhone),
 							address: input.address,
 						});
 					} else {
-						await ctx.db
-							.update(CustomersTable)
-							.set({ address: input.address })
-							.where(eq(CustomersTable.phone, Number(input.customerPhone)));
+						await adminQueries.updateCustomer(Number(input.customerPhone), {
+							address: input.address,
+						});
 					}
 				}
 
-				await ctx.db
-					.update(OrdersTable)
-					.set({
-						customerPhone: Number(input.customerPhone),
-						status: input.status,
-						notes: input.notes,
-						total: orderTotal,
-					})
-					.where(eq(OrdersTable.id, input.id));
+				await adminQueries.updateOrder(input.id, {
+					customerPhone: Number(input.customerPhone),
+					status: input.status,
+					notes: input.notes,
+					total: orderTotal,
+				});
 
-				const currentOrderDetails = await ctx.db
-					.select()
-					.from(OrderDetailsTable)
-					.where(eq(OrderDetailsTable.orderId, input.id))
-					.execute();
+				const currentOrderDetails = await adminQueries.getOrderDetailsByOrderId(
+					input.id,
+				);
 
-				await ctx.db
-					.delete(OrderDetailsTable)
-					.where(eq(OrderDetailsTable.orderId, input.id));
+				await adminQueries.deleteOrderDetails(input.id);
 
 				const orderDetailsPromise = input.products.map(async (product) => {
-					await ctx.db.insert(OrderDetailsTable).values({
-						orderId: input.id,
-						productId: product.productId,
-						quantity: product.quantity,
-					});
+					await adminQueries.createOrderDetails(input.id, [
+						{
+							productId: product.productId,
+							quantity: product.quantity,
+						},
+					]);
 
 					const existingDetail = currentOrderDetails.find(
 						(detail) => detail.productId === product.productId,
 					);
 					if (input.paymentStatus === "success") {
-						const productCost = await getAverageCostOfProduct(
+						const productCost = await adminQueries.getAverageCostOfProduct(
 							product.productId,
 							new Date(),
-							ctx,
 						);
-						await addSale(
-							{
-								productCost: productCost,
-								quantitySold: product.quantity,
-								orderId: input.id,
-								sellingPrice: product.price,
-								productId: product.productId,
-							},
-							ctx,
-						);
+						await adminQueries.addSale({
+							productCost: productCost,
+							quantitySold: product.quantity,
+							orderId: input.id,
+							sellingPrice: product.price,
+							productId: product.productId,
+						});
 					}
 					if (existingDetail) {
 						const quantityDiff = product.quantity - existingDetail.quantity;
 						if (quantityDiff !== 0) {
-							await updateStock(
+							await adminQueries.updateStock(
 								product.productId,
 								Math.abs(quantityDiff),
 								quantityDiff > 0 ? "minus" : "add",
-								ctx,
 							);
 						}
 					} else {
-						await updateStock(
+						await adminQueries.updateStock(
 							product.productId,
 							product.quantity,
 							"minus",
-							ctx,
 						);
 					}
 				});
@@ -238,18 +192,14 @@ export const order = router({
 				);
 
 				const restoreStockPromises = removedProducts.map((detail) =>
-					updateStock(detail.productId, detail.quantity, "add", ctx),
+					adminQueries.updateStock(detail.productId, detail.quantity, "add"),
 				);
 
-				const paymentUpdatePromise = ctx.db
-					.update(PaymentsTable)
-					.set({ status: input.paymentStatus })
-					.where(eq(PaymentsTable.orderId, input.id));
+				await adminQueries.updatePaymentStatus(input.id, input.paymentStatus);
 
 				await Promise.allSettled([
 					...orderDetailsPromise,
 					...restoreStockPromises,
-					paymentUpdatePromise,
 				]);
 
 				return { message: "Order updated successfully" };
@@ -268,42 +218,17 @@ export const order = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				console.log("deleting order", input.id);
-				const orderDetails = await ctx.db
-					.select()
-					.from(OrderDetailsTable)
-					.where(
-						and(
-							eq(OrderDetailsTable.orderId, input.id),
-							isNull(OrderDetailsTable.deletedAt),
-						),
-					)
-					.execute();
-
-				const restoreStockPromises = orderDetails.map((detail) =>
-					updateStock(detail.productId, detail.quantity, "add", ctx),
+				const orderDetails = await adminQueries.getOrderDetailsByOrderId(
+					input.id,
 				);
 
-				const now = new Date();
+				const restoreStockPromises = orderDetails
+					.filter((detail) => !detail.deletedAt)
+					.map((detail) =>
+						adminQueries.updateStock(detail.productId, detail.quantity, "add"),
+					);
 
-				await ctx.db
-					.update(OrderDetailsTable)
-					.set({ deletedAt: now })
-					.where(eq(OrderDetailsTable.orderId, input.id));
-
-				await ctx.db
-					.update(SalesTable)
-					.set({ deletedAt: now })
-					.where(eq(SalesTable.orderId, input.id));
-
-				await ctx.db
-					.update(PaymentsTable)
-					.set({ deletedAt: now })
-					.where(eq(PaymentsTable.orderId, input.id));
-
-				await ctx.db
-					.update(OrdersTable)
-					.set({ deletedAt: now })
-					.where(eq(OrdersTable.id, input.id));
+				await adminQueries.softDeleteOrder(input.id);
 
 				await Promise.allSettled(restoreStockPromises);
 
@@ -323,36 +248,17 @@ export const order = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				// Deduct stock again based on soft-deleted details
-				const details = await ctx.db
-					.select()
-					.from(OrderDetailsTable)
-					.where(eq(OrderDetailsTable.orderId, input.id));
+				const details = await adminQueries.getOrderDetailsByOrderId(input.id);
 
 				const deductPromises = details
 					.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
-					.map((d) => updateStock(d.productId, d.quantity, "minus", ctx));
+					.map((d) =>
+						adminQueries.updateStock(d.productId, d.quantity, "minus"),
+					);
 
 				await Promise.allSettled(deductPromises);
 
-				await ctx.db
-					.update(OrderDetailsTable)
-					.set({ deletedAt: null })
-					.where(eq(OrderDetailsTable.orderId, input.id));
-
-				await ctx.db
-					.update(SalesTable)
-					.set({ deletedAt: null })
-					.where(eq(SalesTable.orderId, input.id));
-
-				await ctx.db
-					.update(PaymentsTable)
-					.set({ deletedAt: null })
-					.where(eq(PaymentsTable.orderId, input.id));
-
-				await ctx.db
-					.update(OrdersTable)
-					.set({ deletedAt: null })
-					.where(eq(OrdersTable.id, input.id));
+				await adminQueries.restoreOrder(input.id);
 
 				return { message: "Order restored successfully" };
 			} catch (e) {
@@ -369,53 +275,8 @@ export const order = router({
 		.input(v.object({ searchTerm: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const orders = await ctx.db.query.OrdersTable.findMany({
-					where: and(
-						isNull(OrdersTable.deletedAt),
-						or(
-							ilike(OrdersTable.orderNumber, `%${input.searchTerm}%`),
-							ilike(OrdersTable.address, `%${input.searchTerm}%`),
-							ilike(OrdersTable.customerPhone, `%${input.searchTerm}%`),
-						),
-					),
-					with: {
-						orderDetails: {
-							columns: {
-								quantity: true,
-							},
-							with: {
-								product: {
-									columns: {
-										name: true,
-										id: true,
-										price: true,
-									},
-									with: {
-										images: {
-											columns: {
-												url: true,
-											},
-											where: and(
-												eq(ProductImagesTable.isPrimary, true),
-												isNull(ProductImagesTable.deletedAt),
-											),
-										},
-									},
-								},
-							},
-						},
-						payments: {
-							columns: {
-								provider: true,
-								status: true,
-								createdAt: true,
-							},
-							where: isNull(PaymentsTable.deletedAt),
-						},
-					},
-				});
-
-				return shapeOrderResults(orders);
+				const orders = await adminQueries.searchOrder(input.searchTerm);
+				return orders;
 			} catch (e) {
 				console.error(e);
 				throw new TRPCError({
@@ -428,51 +289,7 @@ export const order = router({
 
 	getAllOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await ctx.db.query.OrdersTable.findMany({
-				where: isNull(OrdersTable.deletedAt),
-				with: {
-					orderDetails: {
-						columns: {
-							quantity: true,
-						},
-						with: {
-							product: {
-								columns: {
-									name: true,
-									id: true,
-								},
-								with: {
-									images: {
-										columns: {
-											url: true,
-										},
-										where: and(
-											eq(ProductImagesTable.isPrimary, true),
-											isNull(ProductImagesTable.deletedAt),
-										),
-									},
-								},
-							},
-						},
-					},
-				},
-			});
-			const orders = result.map((order) => ({
-				id: order.id,
-				orderNumber: order.orderNumber,
-				customerPhone: order.customerPhone,
-				status: order.status,
-				total: order.total,
-				notes: order.notes,
-				createdAt: order.createdAt,
-				updatedAt: order.updatedAt,
-				products: order.orderDetails.map((orderDetail) => ({
-					quantity: orderDetail.quantity,
-					name: orderDetail.product.name,
-					id: orderDetail.product.id,
-					imageUrl: orderDetail.product.images[0]?.url,
-				})),
-			}));
+			const orders = await adminQueries.getAllOrders();
 			return orders;
 		} catch (e) {
 			if (e instanceof Error) {
@@ -495,54 +312,14 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await ctx.db.query.OrdersTable.findFirst({
-					where: and(
-						eq(OrdersTable.id, input.id),
-						isNull(OrdersTable.deletedAt),
-					),
-					with: {
-						orderDetails: {
-							columns: {
-								quantity: true,
-							},
-							with: {
-								product: {
-									columns: {
-										name: true,
-										id: true,
-										price: true,
-									},
-									with: {
-										images: {
-											columns: {
-												url: true,
-											},
-											where: and(
-												eq(ProductImagesTable.isPrimary, true),
-												isNull(ProductImagesTable.deletedAt),
-											),
-										},
-									},
-								},
-							},
-						},
-						payments: {
-							columns: {
-								provider: true,
-								status: true,
-								createdAt: true,
-							},
-							where: isNull(PaymentsTable.deletedAt),
-						},
-					},
-				});
-				if (result === undefined) {
+				const result = await adminQueries.getOrderById(input.id);
+				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Order not found",
 					});
 				}
-				return shapeOrderResult(result);
+				return result;
 			} catch (e) {
 				if (e instanceof Error) {
 					throw new TRPCError({
@@ -601,102 +378,15 @@ export const order = router({
 			);
 
 			try {
-				const conditions: (SQL<unknown> | undefined)[] = [];
-
-				if (input.orderStatus !== undefined) {
-					conditions.push(eq(OrdersTable.status, input.orderStatus));
-				}
-
-				const orderByClauses: SQL<unknown>[] = [];
-				const primarySortColumn =
-					input.sortField === "total"
-						? OrdersTable.total
-						: OrdersTable.createdAt;
-
-				const primaryOrderBy =
-					input.sortDirection === "asc"
-						? asc(primarySortColumn)
-						: desc(primarySortColumn);
-
-				if (input.searchTerm !== undefined) {
-					conditions.push(
-						or(
-							like(OrdersTable.orderNumber, `%${input.searchTerm}%`),
-							like(OrdersTable.address, `%${input.searchTerm}%`),
-							like(OrdersTable.customerPhone, `%${input.searchTerm}%`),
-						),
-					);
-				}
-
-				orderByClauses.push(primaryOrderBy);
-				orderByClauses.push(asc(OrdersTable.id));
-
-				const finalConditions = conditions.filter(
-					(c): c is SQL<unknown> => c !== undefined,
-				);
-
-				// Calculate offset
-				const offset = (input.page - 1) * input.pageSize;
-
-				const orderResults = await ctx.db.query.OrdersTable.findMany({
-					limit: input.pageSize,
-					offset: offset,
-					orderBy: orderByClauses,
-					where:
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					with: {
-						orderDetails: {
-							columns: { quantity: true },
-							with: {
-								product: {
-									columns: { name: true, id: true, price: true },
-									with: {
-										images: {
-											columns: { url: true },
-											where: eq(ProductImagesTable.isPrimary, true),
-										},
-									},
-								},
-							},
-						},
-						payments: {
-							columns: { provider: true, status: true, createdAt: true },
-							where:
-								input.paymentStatus === undefined
-									? undefined
-									: eq(PaymentsTable.status, input.paymentStatus),
-						},
-					},
+				return await adminQueries.getPaginatedOrders({
+					page: input.page ?? 1,
+					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
+					paymentStatus: input.paymentStatus,
+					orderStatus: input.orderStatus,
+					sortField: input.sortField,
+					sortDirection: input.sortDirection,
+					searchTerm: input.searchTerm,
 				});
-
-				let filteredOrders = orderResults;
-				if (input.paymentStatus !== undefined) {
-					filteredOrders = orderResults.filter((order) =>
-						order.payments.some((p) => p.status === input.paymentStatus),
-					);
-				}
-
-				const totalCountResult = await ctx.db
-					.select({ count: sql<number>`COUNT(*)` })
-					.from(OrdersTable)
-					.where(
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					)
-					.get();
-
-				const totalCount = totalCountResult?.count ?? 0;
-				const totalPages = Math.ceil(totalCount / input.pageSize);
-
-				return {
-					orders: shapeOrderResults(filteredOrders),
-					pagination: {
-						currentPage: input.page,
-						totalPages,
-						totalCount,
-						hasNextPage: input.page < totalPages,
-						hasPreviousPage: input.page > 1,
-					},
-				};
 			} catch (e) {
 				console.error(e);
 				if (e instanceof Error) {
@@ -717,11 +407,11 @@ export const order = router({
 	getOrderCount: adminProcedure
 		.input(v.object({ timeRange: timeRangeSchema }))
 		.query(async ({ ctx, input }) => {
-			return await getOrderCount(input.timeRange, ctx);
+			return await adminQueries.getOrderCount(input.timeRange);
 		}),
 
 	getPendingOrders: adminProcedure.query(async ({ ctx }) => {
-		return await getPendingOrders(ctx);
+		return await adminQueries.getPendingOrders();
 	}),
 
 	updateOrderStatus: adminProcedure
@@ -739,12 +429,7 @@ export const order = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await ctx.db
-					.update(OrdersTable)
-					.set({ status: input.status })
-					.where(
-						and(eq(OrdersTable.id, input.id), isNull(OrdersTable.deletedAt)),
-					);
+				await adminQueries.updateOrderStatus(input.id, input.status);
 				return {
 					message: `Order status updated successfully to ${input.status}`,
 				};
@@ -765,31 +450,15 @@ export const order = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const { productId } = input;
-				const orderDetails = await ctx.db.query.OrderDetailsTable.findMany({
-					where: eq(OrderDetailsTable.productId, productId),
-					with: {
-						order: {
-							columns: {
-								customerPhone: true,
-								status: true,
-								orderNumber: true,
-								total: true,
-								createdAt: true,
-								id: true,
-							},
-						},
-					},
-					limit: 5,
-					orderBy: [asc(OrdersTable.createdAt)],
-				});
-
-				return orderDetails.map((detail) => detail.order);
+				const orders = await adminQueries.getRecentOrdersByProductId(
+					input.productId,
+				);
+				return orders;
 			} catch (e) {
 				console.error(e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to update order status",
+					message: "Failed to fetch recent orders",
 					cause: e,
 				});
 			}

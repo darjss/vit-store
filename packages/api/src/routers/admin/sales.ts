@@ -1,22 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { timeRangeSchema } from "@vit/shared/schema";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminCachedProcedure, router } from "../../lib/trpc";
-import {
-	getAnalyticsForHome,
-	getAverageOrderValue,
-	getMostSoldProducts,
-	getOrderCount,
-	getOrderCountForWeek,
-	getPendingOrders,
-} from "./utils";
 
 export const sales = router({
 	analytics: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const analyticsDaily = getAnalyticsForHome(ctx, "daily");
-			const analyticsWeekly = getAnalyticsForHome(ctx, "weekly");
-			const analyticsMonthly = getAnalyticsForHome(ctx, "monthly");
+			const analyticsDaily = adminQueries.getAnalyticsForHome("daily");
+			const analyticsWeekly = adminQueries.getAnalyticsForHome("weekly");
+			const analyticsMonthly = adminQueries.getAnalyticsForHome("monthly");
 			const analytics = await Promise.all([
 				analyticsDaily,
 				analyticsWeekly,
@@ -46,8 +39,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getMostSoldProducts(
-					ctx,
+				return await adminQueries.getMostSoldProducts(
 					input.timeRange,
 					input.productCount,
 				);
@@ -63,7 +55,7 @@ export const sales = router({
 
 	weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			return await getOrderCountForWeek(ctx);
+			return await adminQueries.getOrderCountForWeek();
 		} catch (error) {
 			console.error("Error getting order count for week:", error);
 			throw new TRPCError({
@@ -82,7 +74,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getAverageOrderValue(ctx, input.timeRange);
+				return await adminQueries.getAverageOrderValue(input.timeRange);
 			} catch (error) {
 				console.error("Error getting average order value:", error);
 				throw new TRPCError({
@@ -101,7 +93,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await getOrderCount(input.timeRange, ctx);
+				return await adminQueries.getOrderCount(input.timeRange);
 			} catch (error) {
 				console.error("Error getting order count:", error);
 				throw new TRPCError({
@@ -114,7 +106,7 @@ export const sales = router({
 
 	pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			return await getPendingOrders(ctx);
+			return await adminQueries.getPendingOrders();
 		} catch (error) {
 			console.error("Error getting pending orders:", error);
 			throw new TRPCError({
@@ -139,16 +131,16 @@ export const sales = router({
 				monthlyOrders,
 				pendingOrders,
 			] = await Promise.all([
-				getAnalyticsForHome(ctx, "daily"),
-				getAnalyticsForHome(ctx, "weekly"),
-				getAnalyticsForHome(ctx, "monthly"),
-				getMostSoldProducts(ctx, "daily"),
-				getMostSoldProducts(ctx, "weekly"),
-				getMostSoldProducts(ctx, "monthly"),
-				getOrderCount("daily", ctx),
-				getOrderCount("weekly", ctx),
-				getOrderCount("monthly", ctx),
-				getPendingOrders(ctx),
+				adminQueries.getAnalyticsForHome("daily"),
+				adminQueries.getAnalyticsForHome("weekly"),
+				adminQueries.getAnalyticsForHome("monthly"),
+				adminQueries.getMostSoldProducts("daily"),
+				adminQueries.getMostSoldProducts("weekly"),
+				adminQueries.getMostSoldProducts("monthly"),
+				adminQueries.getOrderCount("daily"),
+				adminQueries.getOrderCount("weekly"),
+				adminQueries.getOrderCount("monthly"),
+				adminQueries.getPendingOrders(),
 			]);
 
 			const dashboardData = {

@@ -1,20 +1,48 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1760770021425,
-			"tag": "0000_striped_diamondback",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1760949032282,
-			"tag": "0001_left_omega_red",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1760770021425,
+      "tag": "0000_striped_diamondback",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1760949032282,
+      "tag": "0001_left_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1762748535766,
+      "tag": "0002_curious_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1762748584770,
+      "tag": "0003_military_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1762748637830,
+      "tag": "0004_gigantic_rocket_racer",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1762793853101,
+      "tag": "0005_yummy_vampiro",
+      "breakpoints": true
+    }
+  ]
 }

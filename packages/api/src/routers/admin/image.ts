@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { ProductImagesTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const image = router({
@@ -15,11 +14,8 @@ export const image = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { productId, url } = input;
-				const image = await ctx.db.insert(ProductImagesTable).values({
-					productId,
-					url,
-				});
-				return image;
+				await adminQueries.createImage({ productId, url });
+				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
 				throw new TRPCError({
@@ -38,9 +34,7 @@ export const image = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
-				await ctx.db
-					.delete(ProductImagesTable)
-					.where(eq(ProductImagesTable.id, id));
+				await adminQueries.deleteImage(id);
 				return { message: "Image deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -61,14 +55,7 @@ export const image = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { productId, imageId } = input;
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: false })
-					.where(eq(ProductImagesTable.productId, productId));
-				await ctx.db
-					.update(ProductImagesTable)
-					.set({ isPrimary: true })
-					.where(eq(ProductImagesTable.id, imageId));
+				await adminQueries.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);

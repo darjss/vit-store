@@ -1,4 +1,4 @@
 {
     "oxc.enable": true,
-    "typescript.experimental.useTsgo": false
+    "typescript.experimental.useTsgo": true
 }

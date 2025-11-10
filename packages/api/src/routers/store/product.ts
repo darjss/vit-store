@@ -1,110 +1,16 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { storeQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { ProductImagesTable, ProductsTable } from "../../db/schema";
 import { publicProcedure, router } from "../../lib/trpc";
 
 export const product = router({
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
-			const featuredProductsPromise = ctx.db.query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					slug: true,
-					name: true,
-					price: true,
-				},
-				orderBy: asc(ProductsTable.updatedAt),
-				limit: 4,
-				where: and(
-					eq(ProductsTable.isFeatured, true),
-					eq(ProductsTable.status, "active"),
-					isNull(ProductsTable.deletedAt),
-				),
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-				},
-			});
-			const newProductsPromise = ctx.db.query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					name: true,
-					price: true,
-					slug: true,
-				},
-				orderBy: desc(ProductsTable.updatedAt),
-				limit: 4,
-				where: and(
-					eq(ProductsTable.status, "active"),
-					isNull(ProductsTable.deletedAt),
-				),
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-				},
-			});
-			const discountedProductsPromise = ctx.db.query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					slug: true,
-					name: true,
-					price: true,
-					discount: true,
-				},
-				orderBy: desc(ProductsTable.updatedAt),
-				limit: 4,
-				where: and(
-					gt(ProductsTable.discount, 0),
-					eq(ProductsTable.status, "active"),
-					isNull(ProductsTable.deletedAt),
-				),
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-				},
-			});
 			const [featuredProducts, newProducts, discountedProducts] =
 				await Promise.all([
-					featuredProductsPromise,
-					newProductsPromise,
-					discountedProductsPromise,
+					storeQueries.getFeaturedProducts(),
+					storeQueries.getNewProducts(),
+					storeQueries.getDiscountedProducts(),
 				]);
 			return {
 				featuredProducts: featuredProducts.map((product) => ({
@@ -143,13 +49,7 @@ export const product = router({
 		}
 	}),
 	getAllProducts: publicProcedure.query(async ({ ctx }) => {
-		return await ctx.db.query.ProductsTable.findMany({
-			columns: {
-				id: true,
-				slug: true,
-			},
-			where: isNull(ProductsTable.deletedAt),
-		});
+		return await storeQueries.getAllProducts();
 	}),
 	getProductById: publicProcedure
 		.input(
@@ -158,47 +58,7 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const result = await ctx.db.query.ProductsTable.findFirst({
-				columns: {
-					id: true,
-					name: true,
-					price: true,
-					status: true,
-					description: true,
-					discount: true,
-					amount: true,
-					potency: true,
-					dailyIntake: true,
-					categoryId: true,
-					brandId: true,
-					ingredients: true,
-					weightGrams: true,
-					seoTitle: true,
-					seoDescription: true,
-				},
-				where: and(
-					eq(ProductsTable.id, input.id),
-					isNull(ProductsTable.deletedAt),
-				),
-				with: {
-					images: {
-						columns: {
-							url: true,
-							isPrimary: true,
-						},
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-					category: {
-						columns: {
-							name: true,
-						},
-					},
-				},
-			});
+			const result = await storeQueries.getProductById(input.id);
 			if (result === null || result === undefined) {
 				return null;
 			}
@@ -215,28 +75,7 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const result = await ctx.db.query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					name: true,
-					price: true,
-				},
-				where: and(
-					inArray(ProductsTable.id, input.ids),
-					isNull(ProductsTable.deletedAt),
-				),
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-				},
-			});
+			const result = await storeQueries.getProductsByIds(input.ids);
 			return result.map((product) => ({
 				id: product.id,
 				name: product.name,
@@ -254,79 +93,15 @@ export const product = router({
 		)
 		.query(async ({ input, ctx }) => {
 			try {
-				const sameCategoryPromise = ctx.db.query.ProductsTable.findMany({
-					columns: {
-						id: true,
-						slug: true,
-						name: true,
-						price: true,
-						discount: true,
-					},
-					limit: 2,
-					where: and(
-						eq(ProductsTable.categoryId, input.categoryId),
-						eq(ProductsTable.status, "active"),
-						isNull(ProductsTable.deletedAt),
-						// Exclude current product
-						sql`${ProductsTable.id} != ${input.productId}`,
-					),
-					orderBy: desc(ProductsTable.updatedAt),
-					with: {
-						images: {
-							columns: {
-								url: true,
-							},
-							where: and(
-								eq(ProductImagesTable.isPrimary, true),
-								isNull(ProductImagesTable.deletedAt),
-							),
-						},
-						brand: {
-							columns: {
-								name: true,
-							},
-						},
-					},
-				});
-
-				const sameBrandPromise = ctx.db.query.ProductsTable.findMany({
-					columns: {
-						id: true,
-						slug: true,
-						name: true,
-						price: true,
-						discount: true,
-					},
-					limit: 2,
-					where: and(
-						eq(ProductsTable.brandId, input.brandId),
-						eq(ProductsTable.status, "active"),
-						isNull(ProductsTable.deletedAt),
-						// Exclude current product
-						sql`${ProductsTable.id} != ${input.productId}`,
-					),
-					orderBy: desc(ProductsTable.updatedAt),
-					with: {
-						images: {
-							columns: {
-								url: true,
-							},
-							where: and(
-								eq(ProductImagesTable.isPrimary, true),
-								isNull(ProductImagesTable.deletedAt),
-							),
-						},
-						brand: {
-							columns: {
-								name: true,
-							},
-						},
-					},
-				});
-
 				const [sameCategory, sameBrand] = await Promise.all([
-					sameCategoryPromise,
-					sameBrandPromise,
+					storeQueries.getRecommendedProductsByCategory(
+						input.categoryId,
+						input.productId,
+					),
+					storeQueries.getRecommendedProductsByBrand(
+						input.brandId,
+						input.productId,
+					),
 				]);
 
 				const allProducts = [...sameCategory, ...sameBrand];
@@ -366,16 +141,9 @@ export const product = router({
 					isInStock: false,
 				};
 			}
-			const product = await ctx.db.query.ProductsTable.findFirst({
-				columns: {
-					status: true,
-					stock: true,
-				},
-				where: and(
-					eq(ProductsTable.id, input.productId),
-					isNull(ProductsTable.deletedAt),
-				),
-			});
+			const product = await storeQueries.getProductStockStatus(
+				input.productId,
+			);
 			if (product === null || product === undefined) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
@@ -394,10 +162,7 @@ export const product = router({
 	getProductBenchmark: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const startTime = performance.now();
-			const product = await ctx.db.query.ProductsTable.findMany({
-				limit: 10,
-				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
-			});
+			const product = await storeQueries.getProductBenchmark(10);
 			return { dbElapsed: performance.now() - startTime, product };
 		} catch (error) {
 			console.error("Error in benchmark:", error);

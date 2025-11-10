@@ -110,6 +110,7 @@
         "@astrojs/solid-js": "^5.1.1",
         "@corvu/otp-field": "^0.1.4",
         "@kobalte/core": "^0.13.11",
+        "@lucide/astro": "^0.553.0",
         "@radix-ui/react-slot": "^1.2.3",
         "@solid-primitives/storage": "^4.3.3",
         "@tabler/icons": "^3",
@@ -129,6 +130,7 @@
         "embla-carousel-react": "^8.6.0",
         "embla-carousel-solid": "^8.6.0",
         "lucide-react": "^0.546.0",
+        "lucide-solid": "^0.553.0",
         "server": "workspace:*",
         "sharp": "^0.34.4",
         "solid-js": "^1.9.9",
@@ -155,6 +157,7 @@
         "@trpc/client": "catalog:",
         "@trpc/server": "catalog:",
         "@vit/shared": "workspace:*",
+        "@warriorteam/messenger-sdk": "^1.5.3",
         "android-sms-gateway": "^3.0.0",
         "better-sqlite3": "^12.4.1",
         "drizzle-orm": "catalog:",
@@ -686,6 +689,8 @@
     "@kobalte/core": ["@kobalte/core@0.13.11", "", { "dependencies": { "@floating-ui/dom": "^1.5.1", "@internationalized/date": "^3.4.0", "@internationalized/number": "^3.2.1", "@kobalte/utils": "^0.9.1", "@solid-primitives/props": "^3.1.8", "@solid-primitives/resize-observer": "^2.0.26", "solid-presence": "^0.1.8", "solid-prevent-scroll": "^0.1.4" }, "peerDependencies": { "solid-js": "^1.8.15" } }, "sha512-hK7TYpdib/XDb/r/4XDBFaO9O+3ZHz4ZWryV4/3BfES+tSQVgg2IJupDnztKXB0BqbSRy/aWlHKw1SPtNPYCFQ=="],
 
     "@kobalte/utils": ["@kobalte/utils@0.9.1", "", { "dependencies": { "@solid-primitives/event-listener": "^2.2.14", "@solid-primitives/keyed": "^1.2.0", "@solid-primitives/map": "^0.4.7", "@solid-primitives/media": "^2.2.4", "@solid-primitives/props": "^3.1.8", "@solid-primitives/refs": "^1.0.5", "@solid-primitives/utils": "^6.2.1" }, "peerDependencies": { "solid-js": "^1.8.8" } }, "sha512-eeU60A3kprIiBDAfv9gUJX1tXGLuZiKMajUfSQURAF2pk4ZoMYiqIzmrMBvzcxP39xnYttgTyQEVLwiTZnrV4w=="],
+
+    "@lucide/astro": ["@lucide/astro@0.553.0", "", { "peerDependencies": { "astro": "^4 || ^5" } }, "sha512-yiHpOKGBPOy+pmZfkQmZcFAETU8FvkqWdoLCboSZGuZ1zgwFHGxBmr/brmk5PxVFOUnImzsRFGzAX2O2A88hmQ=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.0.7", "", { "dependencies": { "@emnapi/core": "^1.5.0", "@emnapi/runtime": "^1.5.0", "@tybys/wasm-util": "^0.10.1" } }, "sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw=="],
 
@@ -1284,6 +1289,8 @@
     "@vscode/emmet-helper": ["@vscode/emmet-helper@2.11.0", "", { "dependencies": { "emmet": "^2.4.3", "jsonc-parser": "^2.3.0", "vscode-languageserver-textdocument": "^1.0.1", "vscode-languageserver-types": "^3.15.1", "vscode-uri": "^3.0.8" } }, "sha512-QLxjQR3imPZPQltfbWRnHU6JecWTF1QSWhx3GAKQpslx7y3Dp6sIIXhKjiUJ/BR9FX8PVthjr9PD6pNwOJfAzw=="],
 
     "@vscode/l10n": ["@vscode/l10n@0.0.18", "", {}, "sha512-KYSIHVmslkaCDyw013pphY+d7x1qV8IZupYfeIfzNA+nsaWHbn5uPuQRvdRFsa9zFzGeudPuoGoZ1Op4jrJXIQ=="],
+
+    "@warriorteam/messenger-sdk": ["@warriorteam/messenger-sdk@1.5.3", "", {}, "sha512-PsqhVcWw7QEX0qJ2ux3jTMNhvGEtSMqwqG+y5AONd7eEwuSgcJA9RQRDvbq630fLX5JAY5ekxxge6GlYS9hI0A=="],
 
     "acorn": ["acorn@8.14.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA=="],
 
@@ -1976,6 +1983,8 @@
     "lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
 
     "lucide-react": ["lucide-react@0.473.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-KW6u5AKeIjkvrxXZ6WuCu9zHE/gEYSXCay+Gre2ZoInD0Je/e3RBtP4OHpJVJ40nDklSvjVKjgH7VU8/e2dzRw=="],
+
+    "lucide-solid": ["lucide-solid@0.553.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-FAvWslAqD/HmCfcvFpbYAjPFf80F60aBlvn7M7Ea/FzYChqpkUiUkJEvG0K1bYHadf7dnkK0DSI992VT26sQdg=="],
 
     "magic-string": ["magic-string@0.30.19", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-2N21sPY9Ws53PZvsEpVtNuSW+ScYbQdp4b9qUaL+9QkHUrGFKo56Lg9Emg5s9V/qrtNBmiR01sYhUOwu3H+VOw=="],
 

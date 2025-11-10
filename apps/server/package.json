@@ -36,6 +36,8 @@
 		"@oslojs/encoding": "^1.1.0",
 		"@trpc/client": "catalog:",
 		"@trpc/server": "catalog:",
+		"@vit/api": "workspace:*",
+		"@vit/shared": "workspace:*",
 		"arctic": "^3.7.0",
 		"better-sqlite3": "^12.4.1",
 		"drizzle-orm": "catalog:",
@@ -43,9 +45,7 @@
 		"hono": "catalog:",
 		"nanoid": "^5.1.5",
 		"superjson": "^2.2.2",
-		"valibot": "catalog:",
-		"@vit/shared": "workspace:*",
-		"@vit/api": "workspace:*"
+		"valibot": "catalog:"
 	},
 	"devDependencies": {
 		"alchemy": "catalog:",

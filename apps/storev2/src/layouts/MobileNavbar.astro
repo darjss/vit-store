@@ -103,7 +103,7 @@ import CartCount from "@/components/cart/cart-count"
                                 class="absolute -top-2 -right-2 bg-secondary text-secondary-foreground w-4 h-4 rounded-full text-[9px] flex items-center justify-center border-2 border-black font-black"
                             >
                                 <CartCount client:load>
-                                    <span slot="fallback" class="w-2 h-2 bg-muted/20 rounded-full overflow-hidden relative before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/60 before:to-transparent"></span>
+                                    <div slot="fallback"></div>
                                 </CartCount>
                             </span>
                         </div>

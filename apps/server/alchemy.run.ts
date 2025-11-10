@@ -58,6 +58,8 @@ export const server = await Worker("api", {
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
 		GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || "",
 		DOMAIN: process.env.DOMAIN || "",
+		MESSENGER_ACCESS_TOKEN: process.env.MESSENGER_ACCESS_TOKEN || "",
+		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
 	},
 	placement: {
 		mode: "smart",

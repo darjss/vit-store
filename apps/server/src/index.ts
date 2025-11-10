@@ -3,11 +3,16 @@ import { trpcServer } from "@hono/trpc-server";
 import {
 	adminRouter,
 	createAdminSession,
-	createUser,
-	getUserFromGoogleId,
 	setAdminSessionTokenCookie,
 	storeRouter,
 } from "@vit/api";
+import {
+	type GenericWebhookPayload,
+	messenger,
+	messengerWebhookHandler,
+} from "@vit/api/integrations";
+import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
+import { adminQueries } from "@vit/api/queries";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -18,25 +23,27 @@ import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
 
-const app = new Hono<{ Bindings: CloudflareBindings }>();
-console.log("cors origin", env.CORS_ORIGIN);
+const app = new Hono<{ Bindings: Env }>();
+
 app.use(logger());
-const rateLimitMiddleware = rateLimit({
-	rateLimiter: () => env.RATE_LIMITER,
-	getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
+app.use("/*", (c, next) => {
+	const rateLimitMiddleware = rateLimit({
+		rateLimiter: () => c.env.RATE_LIMITER,
+		getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
+	});
+	return rateLimitMiddleware(c, next);
 });
 
-app.use("/*", rateLimitMiddleware);
-app.use(
-	"/*",
-	cors({
-		origin: env.CORS_ORIGIN
-			? env.CORS_ORIGIN.split(",")
+app.use("/*", (c, next) => {
+	const corsMiddleware = cors({
+		origin: c.env.CORS_ORIGIN
+			? c.env.CORS_ORIGIN.split(",")
 			: ["http://localhost:5173", "https://admin.vitstore.dev"],
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
-	}),
-);
+	});
+	return corsMiddleware(c, next);
+});
 
 app.use(
 	"/trpc/admin/*",
@@ -183,7 +190,7 @@ app.get("/admin/login/google/callback", async (c) => {
 		const username = claims.name;
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
-		const existingUser = await getUserFromGoogleId(googleUserId);
+		const existingUser = await adminQueries.getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
 		if (existingUser !== null && existingUser.isApproved === true) {
 			console.log("existingUser is approved", existingUser);
@@ -195,7 +202,7 @@ app.get("/admin/login/google/callback", async (c) => {
 
 		if (googleUserId === "118271302696111351988") {
 			console.log("creating user");
-			const user = await createUser(googleUserId, username, true);
+			const user = await adminQueries.createUser(googleUserId, username, true);
 			const session = await createAdminSession(user, env.vitStoreKV);
 
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
@@ -207,7 +214,7 @@ app.get("/admin/login/google/callback", async (c) => {
 			return c.redirect(`${process.env.DASH_URL}/login`);
 		}
 
-		await createUser(googleUserId, username, false);
+		await adminQueries.createUser(googleUserId, username, false);
 
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {
@@ -221,7 +228,7 @@ app.get("/admin/login/google/callback", async (c) => {
 app.post("/upload", async (c) => {
 	try {
 		const formData = await c.req.formData();
-		const image = formData.get("image") as File;
+		const image = formData.get("image") as unknown as File;
 		const key = formData.get("key") as string;
 		if (!key) {
 			console.error("Key is required");
@@ -267,4 +274,40 @@ app.get("/health-check", (c) => {
 	});
 });
 
+app.post("/messenger/webhook", async (c) => {
+	const payload = (await c.req.json()) as GenericWebhookPayload;
+	console.log("payload", payload);
+await messengerWebhookHandler(payload);
+	return c.text("OK", 200);
+});
+
+app.get("/messenger/webhook", async (c) => {
+	const mode = c.req.query("hub.mode");
+	const verifyToken = c.req.query("hub.verify_token");
+	const challenge = c.req.query("hub.challenge");
+	console.log("verifyToken", verifyToken, "env", env.MESSENGER_VERIFY_TOKEN);
+	if (mode && verifyToken && challenge) {
+		if (mode === "subscribe" && verifyToken === env.MESSENGER_VERIFY_TOKEN) {
+			return c.text(challenge, 200);
+		}
+		return c.text("Invalid verify token", 403);
+	}
+	return c.text("Invalid request", 400);
+});
+
+app.get("/messenger/test", async (c) => {
+	console.log("sending message", process.env.MESSENGER_ACCESS_TOKEN);
+	const result = await messenger.send.message({
+		messaging_type: "RESPONSE",
+		recipient: { id: "25172502442390308" },
+		message: { text: "Hello from Vit Store Messenger SDK!" },
+	});
+	return c.json(result);
+});
+
+app.get("/messenger/test/transfer", async (c) => {
+	console.log("sending message", env.MESSENGER_ACCESS_TOKEN);
+	await sendTransferNotification("1234567890", 10000);
+	return c.json({ message: "Message sent" });
+});
 export default app;

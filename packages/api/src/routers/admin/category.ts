@@ -1,22 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { adminQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { CategoriesTable } from "../../db/schema";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const category = router({
 	getAllCategories: adminProcedure.query(async ({ ctx }) => {
 		try {
 			console.log("fetching categories");
-			const categories = await ctx.db
-				.select({
-					id: CategoriesTable.id,
-					name: CategoriesTable.name,
-					createdAt: CategoriesTable.createdAt,
-					updatedAt: CategoriesTable.updatedAt,
-				})
-				.from(CategoriesTable)
-				.where(isNull(CategoriesTable.deletedAt));
+			const categories = await adminQueries.getAllCategories();
 			return categories;
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -36,9 +27,7 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await ctx.db.insert(CategoriesTable).values({
-					name: input.name,
-				});
+				await adminQueries.createCategory(input.name);
 				return { message: "Successfully added category" };
 			} catch (error) {
 				console.error("Error adding category:", error);
@@ -60,12 +49,7 @@ export const category = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id, name } = input;
-				await ctx.db
-					.update(CategoriesTable)
-					.set({ name })
-					.where(
-						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-					);
+				await adminQueries.updateCategory(id, name);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				console.error("Error updating category:", error);
@@ -86,12 +70,7 @@ export const category = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
-				await ctx.db
-					.update(CategoriesTable)
-					.set({ deletedAt: new Date() })
-					.where(
-						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-					);
+				await adminQueries.deleteCategory(id);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				console.error("Error deleting category:", error);
@@ -112,27 +91,16 @@ export const category = router({
 		.query(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
-				const category = await ctx.db
-					.select({
-						id: CategoriesTable.id,
-						name: CategoriesTable.name,
-						createdAt: CategoriesTable.createdAt,
-						updatedAt: CategoriesTable.updatedAt,
-					})
-					.from(CategoriesTable)
-					.where(
-						and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-					)
-					.limit(1);
+				const category = await adminQueries.getCategoryById(id);
 
-				if (!category[0]) {
+				if (!category) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Category not found",
 					});
 				}
 
-				return category[0];
+				return category;
 			} catch (error) {
 				console.error("Error fetching category by ID:", error);
 				throw new TRPCError({

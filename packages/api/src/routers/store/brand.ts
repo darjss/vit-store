@@ -1,17 +1,10 @@
-import { eq } from "drizzle-orm";
+import { storeQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { BrandsTable } from "../../db/schema";
 import { publicProcedure, router } from "../../lib/trpc";
 
 export const brand = router({
 	getAllBrands: publicProcedure.query(async ({ ctx }) => {
-		return await ctx.db.query.BrandsTable.findMany({
-			columns: {
-				id: true,
-				name: true,
-				logoUrl: true,
-			},
-		});
+		return await storeQueries.getAllBrands();
 	}),
 	getBrandById: publicProcedure
 		.input(
@@ -20,17 +13,6 @@ export const brand = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const result = await ctx.db.query.BrandsTable.findFirst({
-				columns: {
-					id: true,
-					name: true,
-					logoUrl: true,
-				},
-				where: eq(BrandsTable.id, input.id),
-			});
-			if (result === null || result === undefined) {
-				return null;
-			}
-			return result;
+			return await storeQueries.getBrandById(input.id);
 		}),
 });
