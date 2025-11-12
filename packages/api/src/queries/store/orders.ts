@@ -1,5 +1,6 @@
+import type { OrderStatusType } from "@vit/shared/types";
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { db } from "../../db";
+import type { DB } from "../../db";
 import {
 	OrderDetailsTable,
 	OrdersTable,
@@ -7,7 +8,8 @@ import {
 	ProductsTable,
 } from "../../db/schema";
 
-export const storeOrders = {
+export function storeOrders(db: DB) {
+	return {
 	async getOrdersByCustomerPhone(phone: number) {
 		const orders = await db.query.OrdersTable.findMany({
 			where: and(
@@ -78,7 +80,7 @@ export const storeOrders = {
 		address: string;
 		notes: string | null;
 		total: number;
-		status: string;
+		status: OrderStatusType;
 		deliveryProvider: string;
 	}) {
 		const result = await db
@@ -99,5 +101,11 @@ export const storeOrders = {
 		}));
 		await db.insert(OrderDetailsTable).values(values);
 	},
-};
-
+	async getOrderByOrderNumber(orderNumber: string) {
+		const order = await db.query.OrdersTable.findFirst({
+			where: eq(OrdersTable.orderNumber, orderNumber),
+		});
+		return order;
+	},
+	};
+}

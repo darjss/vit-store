@@ -1,27 +1,31 @@
 import { TRPCError } from "@trpc/server";
-import { timeRangeSchema } from "@vit/shared/schema";
 import { adminQueries } from "@vit/api/queries";
+import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
 import { adminCachedProcedure, router } from "../../lib/trpc";
 
 export const sales = router({
 	analytics: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const analyticsDaily = adminQueries.getAnalyticsForHome("daily");
-			const analyticsWeekly = adminQueries.getAnalyticsForHome("weekly");
-			const analyticsMonthly = adminQueries.getAnalyticsForHome("monthly");
+			const q = adminQueries(ctx.db);
+			const analyticsDaily = q.getAnalyticsForHome("daily");
+			const analyticsWeekly = q.getAnalyticsForHome("weekly");
+			const analyticsMonthly = q.getAnalyticsForHome("monthly");
 			const analytics = await Promise.all([
 				analyticsDaily,
 				analyticsWeekly,
 				analyticsMonthly,
 			]);
-			return {
+			const result = {
 				daily: analytics[0],
 				weekly: analytics[1],
 				monthly: analytics[2],
 			};
+			console.log("sales.analytics result:", result);
+			return result;
 		} catch (error) {
 			console.error("Error getting analytics for home:", error);
+			console.error("Error details:", JSON.stringify(error, null, 2));
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch analytics",
@@ -39,12 +43,16 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await adminQueries.getMostSoldProducts(
+				const q = adminQueries(ctx.db);
+				const result = await q.getMostSoldProducts(
 					input.timeRange,
 					input.productCount,
 				);
+				console.log("topProducts result:", result);
+				return result;
 			} catch (error) {
 				console.error("Error getting most sold products:", error);
+				console.error("Error details:", JSON.stringify(error, null, 2));
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch top products",
@@ -55,7 +63,8 @@ export const sales = router({
 
 	weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			return await adminQueries.getOrderCountForWeek();
+			const q = adminQueries(ctx.db);
+			return await q.getOrderCountForWeek();
 		} catch (error) {
 			console.error("Error getting order count for week:", error);
 			throw new TRPCError({
@@ -74,7 +83,8 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await adminQueries.getAverageOrderValue(input.timeRange);
+				const q = adminQueries(ctx.db);
+				return await q.getAverageOrderValue(input.timeRange);
 			} catch (error) {
 				console.error("Error getting average order value:", error);
 				throw new TRPCError({
@@ -93,7 +103,8 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await adminQueries.getOrderCount(input.timeRange);
+				const q = adminQueries(ctx.db);
+				return await q.getOrderCount(input.timeRange);
 			} catch (error) {
 				console.error("Error getting order count:", error);
 				throw new TRPCError({
@@ -106,7 +117,8 @@ export const sales = router({
 
 	pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			return await adminQueries.getPendingOrders();
+			const q = adminQueries(ctx.db);
+			return await q.getPendingOrders();
 		} catch (error) {
 			console.error("Error getting pending orders:", error);
 			throw new TRPCError({
@@ -119,6 +131,7 @@ export const sales = router({
 
 	dashboard: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
+			const q = adminQueries(ctx.db);
 			const [
 				salesDaily,
 				salesWeekly,
@@ -131,16 +144,16 @@ export const sales = router({
 				monthlyOrders,
 				pendingOrders,
 			] = await Promise.all([
-				adminQueries.getAnalyticsForHome("daily"),
-				adminQueries.getAnalyticsForHome("weekly"),
-				adminQueries.getAnalyticsForHome("monthly"),
-				adminQueries.getMostSoldProducts("daily"),
-				adminQueries.getMostSoldProducts("weekly"),
-				adminQueries.getMostSoldProducts("monthly"),
-				adminQueries.getOrderCount("daily"),
-				adminQueries.getOrderCount("weekly"),
-				adminQueries.getOrderCount("monthly"),
-				adminQueries.getPendingOrders(),
+				q.getAnalyticsForHome("daily"),
+				q.getAnalyticsForHome("weekly"),
+				q.getAnalyticsForHome("monthly"),
+				q.getMostSoldProducts("daily", 5),
+				q.getMostSoldProducts("weekly", 5),
+				q.getMostSoldProducts("monthly", 5),
+				q.getOrderCount("daily"),
+				q.getOrderCount("weekly"),
+				q.getOrderCount("monthly"),
+				q.getPendingOrders(),
 			]);
 
 			const dashboardData = {

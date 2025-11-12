@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { storeQueries,adminQueries } from "@vit/api/queries";
+import { storeQueries } from "@vit/api/queries";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 import * as v from "valibot";
 import { paymentProvider } from "../../lib/constants";
@@ -10,7 +10,8 @@ export const payment = router({
 		.input(v.object({ paymentNumber: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const payment = await storeQueries.getPaymentInfoByNumber(
+				const q = storeQueries(ctx.db);
+				const payment = await q.getPaymentInfoByNumber(
 					input.paymentNumber,
 				);
 
@@ -62,7 +63,8 @@ export const payment = router({
 		.input(v.object({ paymentNumber: v.string(), provider: v.optional(v.picklist(paymentProvider)) }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await storeQueries.confirmPayment(input.paymentNumber, input.provider);
+				const q = storeQueries(ctx.db);
+				await q.confirmPayment(input.paymentNumber, input.provider);
 			} catch (e) {
 				console.error(e);
 			}
@@ -71,8 +73,9 @@ export const payment = router({
 		.input(v.object({ paymentNumber: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = storeQueries(ctx.db);
 				console.log("sending transfer notification to messenger", input.paymentNumber);
-				const payment = await storeQueries.getPaymentByNumber(input.paymentNumber);
+				const payment = await q.getPaymentByNumber(input.paymentNumber);
 				if (!payment) {
 					throw new TRPCError({
 						code: "NOT_FOUND",

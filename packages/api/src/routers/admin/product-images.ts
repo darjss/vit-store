@@ -12,9 +12,10 @@ export const productImages = router({
 				isPrimary: v.boolean(),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
-				await adminQueries.createImage(input);
+				const q = adminQueries(ctx.db);
+				await q.createImage(input);
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
@@ -38,8 +39,9 @@ export const productImages = router({
 				),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
 				const response = await fetch(
@@ -80,7 +82,7 @@ export const productImages = router({
 					url: uploadedImage.url,
 				}));
 
-				await adminQueries.createImages(imagesToInsert);
+				await q.createImages(imagesToInsert);
 				return { message: "Successfully uploaded images" };
 			} catch (error) {
 				console.error("Error in uploadImagesFromUrl:", error);
@@ -103,11 +105,12 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { newImages, productId } = input;
 
-				const existingImages = await adminQueries.getImagesByProductId(productId);
+				const existingImages = await q.getImagesByProductId(productId);
 
 				console.log("existing", existingImages);
 				console.log("updated", newImages);
@@ -132,7 +135,7 @@ export const productImages = router({
 
 				if (isDiff) {
 					// Delete existing images
-					await adminQueries.softDeleteImagesByProductId(productId);
+					await q.softDeleteImagesByProductId(productId);
 
 					// Insert new images
 					const imagesToInsert = newImages.map((image, index) => ({
@@ -140,7 +143,7 @@ export const productImages = router({
 						url: image.url,
 						isPrimary: index === 0,
 					}));
-					await adminQueries.createImages(imagesToInsert);
+					await q.createImages(imagesToInsert);
 				}
 
 				return { message: "Successfully updated images" };
@@ -160,10 +163,11 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { productId } = input;
-				const images = await adminQueries.getImagesByProductId(productId);
+				const images = await q.getImagesByProductId(productId);
 				return images;
 			} catch (error) {
 				console.error("Error getting images by product ID:", error);
@@ -181,10 +185,11 @@ export const productImages = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { id } = input;
-				await adminQueries.deleteImage(id);
+				await q.deleteImage(id);
 				return { message: "Successfully deleted image" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -203,10 +208,11 @@ export const productImages = router({
 				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { productId, imageId } = input;
-				await adminQueries.setPrimaryImage(productId, imageId);
+				await q.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);
@@ -218,9 +224,10 @@ export const productImages = router({
 			}
 		}),
 
-	getAllImages: adminProcedure.query(async () => {
+	getAllImages: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const images = await adminQueries.getAllImages();
+			const q = adminQueries(ctx.db);
+			const images = await q.getAllImages();
 			return images;
 		} catch (error) {
 			console.error("Error getting all images:", error);

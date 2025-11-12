@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import BrandCard from "@/components/brands/brand-card";
 import BrandForm from "@/components/brands/brand-form";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/brands")({
 	component: RouteComponent,
-	loader({ context: ctx }) {
-		return ctx.queryClient.ensureQueryData(
+	loader: async ({ context: ctx }) => {
+		await ctx.queryClient.ensureQueryData(
 			ctx.trpc.brands.getAllBrands.queryOptions(),
 		);
 	},
@@ -26,9 +27,6 @@ export const Route = createFileRoute("/_dash/brands")({
 
 function RouteComponent() {
 	const [isOpen, setIsOpen] = useState(false);
-	const { data: brands } = useSuspenseQuery(
-		trpc.brands.getAllBrands.queryOptions(),
-	);
 
 	return (
 		<div className="space-y-4">
@@ -53,20 +51,45 @@ function RouteComponent() {
 				</Dialog>
 			</div>
 
-			{brands.length === 0 ? (
-				<div className="flex flex-col items-center justify-center py-12 text-center">
-					<p className="text-muted-foreground text-sm">Брэнд олдсонгүй</p>
-					<p className="mt-1 text-muted-foreground text-xs">
-						Эхлэхийн тулд анхны брэндээ нэмнэ үү
-					</p>
-				</div>
-			) : (
-				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-					{brands.map((brand) => (
-						<BrandCard key={brand.id} {...brand} />
-					))}
-				</div>
-			)}
+			<Suspense
+				fallback={
+					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+						{Array.from({ length: 12 }).map((_, index) => (
+							<Skeleton
+								key={index}
+								className="aspect-square rounded-base border-2 border-border"
+							/>
+						))}
+					</div>
+				}
+			>
+				<BrandsList />
+			</Suspense>
+		</div>
+	);
+}
+
+function BrandsList() {
+	const { data: brands } = useSuspenseQuery(
+		trpc.brands.getAllBrands.queryOptions(),
+	);
+
+	if (brands.length === 0) {
+		return (
+			<div className="flex flex-col items-center justify-center py-12 text-center">
+				<p className="text-muted-foreground text-sm">Брэнд олдсонгүй</p>
+				<p className="mt-1 text-muted-foreground text-xs">
+					Эхлэхийн тулд анхны брэндээ нэмнэ үү
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+			{brands.map((brand) => (
+				<BrandCard key={brand.id} {...brand} />
+			))}
 		</div>
 	);
 }

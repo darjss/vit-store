@@ -4,7 +4,8 @@ import { publicProcedure, router } from "../../lib/trpc";
 
 export const brand = router({
 	getAllBrands: publicProcedure.query(async ({ ctx }) => {
-		return await storeQueries.getAllBrands();
+		const q = storeQueries(ctx.db);
+		return await q.getAllBrands();
 	}),
 	getBrandById: publicProcedure
 		.input(
@@ -13,6 +14,7 @@ export const brand = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			return await storeQueries.getBrandById(input.id);
+			const q = storeQueries(ctx.db);
+			return await q.getBrandById(input.id);
 		}),
 });

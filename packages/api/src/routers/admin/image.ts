@@ -13,8 +13,9 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { productId, url } = input;
-				await adminQueries.createImage({ productId, url });
+				await q.createImage({ productId, url });
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
@@ -33,8 +34,9 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { id } = input;
-				await adminQueries.deleteImage(id);
+				await q.deleteImage(id);
 				return { message: "Image deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -54,8 +56,9 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { productId, imageId } = input;
-				await adminQueries.setPrimaryImage(productId, imageId);
+				await q.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);

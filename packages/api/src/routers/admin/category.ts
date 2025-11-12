@@ -6,8 +6,9 @@ import { adminProcedure, router } from "../../lib/trpc";
 export const category = router({
 	getAllCategories: adminProcedure.query(async ({ ctx }) => {
 		try {
+			const q = adminQueries(ctx.db);
 			console.log("fetching categories");
-			const categories = await adminQueries.getAllCategories();
+			const categories = await q.getAllCategories();
 			return categories;
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -27,7 +28,8 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await adminQueries.createCategory(input.name);
+				const q = adminQueries(ctx.db);
+				await q.createCategory(input.name);
 				return { message: "Successfully added category" };
 			} catch (error) {
 				console.error("Error adding category:", error);
@@ -48,8 +50,9 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { id, name } = input;
-				await adminQueries.updateCategory(id, name);
+				await q.updateCategory(id, name);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				console.error("Error updating category:", error);
@@ -69,8 +72,9 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { id } = input;
-				await adminQueries.deleteCategory(id);
+				await q.deleteCategory(id);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				console.error("Error deleting category:", error);
@@ -90,8 +94,9 @@ export const category = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { id } = input;
-				const category = await adminQueries.getCategoryById(id);
+				const category = await q.getCategoryById(id);
 
 				if (!category) {
 					throw new TRPCError({

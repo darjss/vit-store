@@ -8,9 +8,10 @@ export const customer = router({
 	}),
 	updateAddress: customerProcedure
 		.input(updateCustomerSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
+			const q = storeQueries(ctx.db);
 			const { address, phone } = input;
-			await storeQueries.updateCustomerAddress(phone as number, address);
+			await q.updateCustomerAddress(phone as number, address);
 		}),
 	
 });

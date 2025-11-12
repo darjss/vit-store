@@ -1,3 +1,4 @@
+import type { DB } from "../db";
 import { adminAnalytics } from "./admin/analytics";
 import { adminBrands } from "./admin/brands";
 import { adminCategories } from "./admin/categories";
@@ -15,29 +16,33 @@ import { storeOrders } from "./store/orders";
 import { storePayments } from "./store/payments";
 import { storeProducts } from "./store/products";
 
-export const adminQueries = {
-	...adminAnalytics,
-	...adminCustomers,
-	...adminProducts,
-	...adminPurchases,
-	...adminPayments,
-	...adminBrands,
-	...adminUsers,
-	...adminSales,
-	...adminOrders,
-	...adminCategories,
-	...adminProductImages,
-} as const;
+export function adminQueries(db: DB) {
+	return {
+		...adminAnalytics(db),
+		...adminCustomers(db),
+		...adminProducts(db),
+		...adminPurchases(db),
+		...adminPayments(db),
+		...adminBrands(db),
+		...adminUsers(db),
+		...adminSales(db),
+		...adminOrders(db),
+		...adminCategories(db),
+		...adminProductImages(db),
+	} as const;
+}
 
-export const storeQueries = {
-	...storeOrders,
-	...storeProducts,
-	...storePayments,
-	...storeBrands,
-	...storeCustomers,
-} as const;
+export function storeQueries(db: DB) {
+	return {
+		...storeOrders(db),
+		...storeProducts(db),
+		...storePayments(db),
+		...storeBrands(db),
+		...storeCustomers(db),
+	} as const;
+}
 
-// Legacy export for backwards compatibility
+// Legacy export for backwards compatibility - deprecated, use factory functions instead
 export const QUERIES = {
 	store: storeQueries,
 	admin: adminQueries,

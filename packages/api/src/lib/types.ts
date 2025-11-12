@@ -1,5 +1,6 @@
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
+import type * as schema from "../db/schema";
 import type {
 	deliveryProvider,
 	orderStatus,
@@ -9,7 +10,7 @@ import type {
 
 export type HonoContextType = Context<
 	{
-		Bindings: CloudflareBindings;
+		Bindings: Env;
 	},
 	any,
 	any
@@ -38,7 +39,9 @@ export interface AddSalesType {
 }
 
 export type TransactionType = Parameters<
-	Parameters<DrizzleD1Database<typeof import("../db/schema")>["transaction"]>[0]
+	Parameters<
+		PostgresJsDatabase<typeof import("../db/schema")>["transaction"]
+	>[0]
 >[0];
 
 export interface AddSalesType {
@@ -49,5 +52,3 @@ export interface AddSalesType {
 	productId: number;
 	createdAt?: Date;
 }
-
-

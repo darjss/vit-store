@@ -1,7 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import type { CategorySelectType } from "@vit/api/db/schema";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import CategoryCard from "@/components/categories/category-card";
 import CategoryForm from "@/components/categories/category-form";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/categories")({
 	component: RouteComponent,
-	loader({ context: ctx }) {
-		return ctx.queryClient.ensureQueryData(
+	loader: async ({ context: ctx }) => {
+		await ctx.queryClient.ensureQueryData(
 			ctx.trpc.category.getAllCategories.queryOptions(),
 		);
 	},
@@ -26,9 +28,6 @@ export const Route = createFileRoute("/_dash/categories")({
 
 function RouteComponent() {
 	const [isOpen, setIsOpen] = useState(false);
-	const { data: categories } = useSuspenseQuery(
-		trpc.category.getAllCategories.queryOptions(),
-	);
 
 	return (
 		<div className="space-y-4">
@@ -55,20 +54,45 @@ function RouteComponent() {
 				</Dialog>
 			</div>
 
-			{categories.length === 0 ? (
-				<div className="flex flex-col items-center justify-center py-12 text-center">
-					<p className="text-muted-foreground text-sm">Ангилал олдсонгүй</p>
-					<p className="mt-1 text-muted-foreground text-xs">
-						Эхлэхийн тулд анхны ангиллаа нэмнэ үү
-					</p>
-				</div>
-			) : (
-				<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-					{categories.map((category) => (
-						<CategoryCard key={category.id} {...category} />
-					))}
-				</div>
-			)}
+			<Suspense
+				fallback={
+					<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+						{Array.from({ length: 12 }).map((_, index) => (
+							<Skeleton
+								key={index}
+								className="aspect-square rounded-base border-2 border-border"
+							/>
+						))}
+					</div>
+				}
+			>
+				<CategoriesList />
+			</Suspense>
+		</div>
+	);
+}
+
+function CategoriesList() {
+	const { data: categories } = useSuspenseQuery(
+		trpc.category.getAllCategories.queryOptions(),
+	);
+
+	if (categories.length === 0) {
+		return (
+			<div className="flex flex-col items-center justify-center py-12 text-center">
+				<p className="text-muted-foreground text-sm">Ангилал олдсонгүй</p>
+				<p className="mt-1 text-muted-foreground text-xs">
+					Эхлэхийн тулд анхны ангиллаа нэмнэ үү
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+			{categories.map((category) => (
+				<CategoryCard key={category.id} {...(category as CategorySelectType)} />
+			))}
 		</div>
 	);
 }

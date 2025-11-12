@@ -5,7 +5,7 @@ import type {
 	Session,
 	UserSelectType,
 } from "@vit/api";
-import { db } from "@vit/api/db";
+import { createDb } from "@vit/api/db";
 
 export type { CreateContextOptions } from "@vit/api";
 
@@ -15,11 +15,13 @@ export async function createContext({
 	try {
 		const kv = context.env.vitStoreKV;
 		const r2 = context.env.r2Bucket;
+		const db = createDb(context.env.DB);
+
 		console.log("context created");
 		return {
 			c: context,
 			session: null as Session<CustomerSelectType | UserSelectType> | null,
-			db,
+			db: db,
 			kv,
 			r2,
 		};

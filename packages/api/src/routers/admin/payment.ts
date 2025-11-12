@@ -17,7 +17,8 @@ export const payment = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.createPayment({
+				const q = adminQueries(ctx.db);
+				const result = await q.createPayment({
 					paymentNumber: generatePaymentNumber(),
 					orderId: input.orderId,
 					provider: input.provider,
@@ -37,7 +38,8 @@ export const payment = router({
 
 	getPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getPayments();
+			const q = adminQueries(ctx.db);
+			const result = await q.getPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting payments:", error);
@@ -51,7 +53,8 @@ export const payment = router({
 
 	getPendingPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getPendingPayments();
+			const q = adminQueries(ctx.db);
+			const result = await q.getPendingPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting pending payments:", error);

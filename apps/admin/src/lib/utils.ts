@@ -49,7 +49,8 @@ export const getPaymentProviderIcon = (provider: string) => {
 	}
 };
 export function formatCurrency(amount: number): string {
-	return `${amount}₮`;
+	const formmated=amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	return `${formmated}₮`;
 }
 
 // Order status styles for badges and left-border colors

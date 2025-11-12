@@ -1,14 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { timeRangeSchema } from "@vit/shared";
 import { BarChart3 } from "lucide-react";
-import { CustomerAnalytics } from "@/components/analytics/customer-analytics";
-import { OrderAnalytics } from "@/components/analytics/order-analytics";
-import { ProductPerformance } from "@/components/analytics/product-performance";
-import { RevenueAnalytics } from "@/components/analytics/revenue-analytics";
-import { TimeBasedAnalytics } from "@/components/analytics/time-based-analytics";
-import { WebAnalytics } from "@/components/analytics/web-analytics";
+import { Suspense } from "react";
+import * as v from "valibot";
+import { CategorySalesChart } from "@/components/analytics/category-sales-chart";
+import { FailedPaymentsCard } from "@/components/analytics/failed-payments-card";
+import { InventorySummary } from "@/components/analytics/inventory-summary";
+import { KpiCards } from "@/components/analytics/kpi-cards";
+import { TimeRangeTabs } from "@/components/analytics/time-range-tabs";
+import { TopBrandsChart } from "@/components/analytics/top-brands-chart";
 
 export const Route = createFileRoute("/_dash/analytics")({
 	component: RouteComponent,
+	validateSearch: v.object({
+		timeRange: v.optional(timeRangeSchema, "monthly"),
+	}),
+	loader: async ({ context: ctx, location }) => {
+		const timeRange =
+			(location.search as { timeRange?: string })?.timeRange || "monthly";
+		await ctx.queryClient.ensureQueryData(
+			ctx.trpc.analytics.getAnalyticsData.queryOptions({
+				timeRange: timeRange as "daily" | "weekly" | "monthly",
+			}),
+		);
+	},
 });
 
 function RouteComponent() {
@@ -19,26 +34,59 @@ function RouteComponent() {
 				<h1 className="font-bold font-heading text-2xl">Нийтлэг аналитик</h1>
 			</div>
 
-			{/* Revenue Analytics Section */}
-			<section>
-				<RevenueAnalytics />
-			</section>
+			{/* Time Range Tabs */}
+			<TimeRangeTabs />
 
-			{/* Product and Customer Analytics Grid */}
+			{/* KPI Cards Grid */}
+			<Suspense
+				fallback={
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<div
+								key={i}
+								className="h-32 animate-pulse rounded-base border-2 border-border"
+							/>
+						))}
+					</div>
+				}
+			>
+				<KpiCards />
+			</Suspense>
+
+			{/* Charts Grid */}
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<ProductPerformance />
-				<CustomerAnalytics />
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<CategorySalesChart />
+				</Suspense>
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<TopBrandsChart />
+				</Suspense>
 			</div>
 
-			{/* Time-Based Analytics */}
-			<section>
-				<TimeBasedAnalytics />
-			</section>
-
-			{/* Order and Web Analytics Grid */}
+			{/* Inventory and Failed Payments Grid */}
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<OrderAnalytics />
-				<WebAnalytics />
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<InventorySummary />
+				</Suspense>
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<FailedPaymentsCard />
+				</Suspense>
 			</div>
 		</div>
 	);

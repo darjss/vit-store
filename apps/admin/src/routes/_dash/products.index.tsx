@@ -1,4 +1,4 @@
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { keepPreviousData, useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -30,13 +30,31 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/utils/trpc";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		const [products, categories, brands] = await Promise.all([
+	loader: async ({ context: ctx, location }) => {
+		const search = location.search as {
+			page?: number;
+			pageSize?: number;
+			brandId?: number;
+			categoryId?: number;
+			sortField?: string;
+			sortDirection?: "asc" | "desc";
+			searchTerm?: string;
+		};
+		await Promise.all([
 			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getPaginatedProducts.queryOptions({}),
+				ctx.trpc.product.getPaginatedProducts.queryOptions({
+					page: search.page ?? 1,
+					pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+					brandId: search.brandId,
+					categoryId: search.categoryId,
+					sortField: search.sortField,
+					sortDirection: search.sortDirection,
+					searchTerm: search.searchTerm,
+				}),
 			),
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.category.getAllCategories.queryOptions(),
@@ -45,10 +63,6 @@ export const Route = createFileRoute("/_dash/products/")({
 				ctx.trpc.brands.getAllBrands.queryOptions(),
 			),
 		]);
-		console.log("products", products);
-		console.log("categories", categories);
-		console.log("brands", brands);
-		return { products, categories, brands };
 	},
 	validateSearch: v.object({
 		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
@@ -64,7 +78,7 @@ export const Route = createFileRoute("/_dash/products/")({
 	}),
 });
 
-function ProductsContent() {
+function RouteComponent() {
 	const {
 		page,
 		pageSize,
@@ -82,28 +96,6 @@ function ProductsContent() {
 		sortDirection !== undefined ||
 		searchTerm !== undefined;
 	const navigate = useNavigate({ from: Route.fullPath });
-	const [
-		{ data: productsData, isPending },
-		{ data: categories },
-		{ data: brands },
-	] = useSuspenseQueries({
-		queries: [
-			trpc.product.getPaginatedProducts.queryOptions({
-				page,
-				pageSize,
-				brandId,
-				categoryId,
-				sortField,
-				sortDirection,
-				searchTerm,
-			}),
-			trpc.category.getAllCategories.queryOptions(),
-			trpc.brands.getAllBrands.queryOptions(),
-		],
-	});
-	const products = productsData.products;
-	const pagination = productsData.pagination;
-	console.log("products rendered ", products);
 
 	const handleSearch = () => {
 		navigate({
@@ -147,8 +139,6 @@ function ProductsContent() {
 	};
 	const handleSort = (field: string) => {
 		console.log("sort", field);
-		// If clicking the same field, toggle direction
-		// If clicking a different field, reset to ascending
 		const newDirection =
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
@@ -157,17 +147,6 @@ function ProductsContent() {
 				...prev,
 				sortField: field,
 				sortDirection: newDirection,
-			}),
-		});
-	};
-
-	const handlePageChange = (page: number) => {
-		console.log("page change", page);
-		navigate({
-			to: "/products",
-			search: (prev) => ({
-				...prev,
-				page: page,
 			}),
 		});
 	};
@@ -182,7 +161,6 @@ function ProductsContent() {
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
-					disabled={isPending}
 				/>
 				{inputValue && (
 					<Button
@@ -190,7 +168,6 @@ function ProductsContent() {
 						variant="secondary"
 						className="-translate-y-1/2 absolute top-1/2 right-14 h-8 w-8 rounded-base border-2 border-border hover:bg-muted"
 						onClick={handleClearSearch}
-						disabled={isPending}
 						aria-label="Clear search"
 					>
 						<X className="h-4 w-4" />
@@ -199,27 +176,85 @@ function ProductsContent() {
 				<Button
 					onClick={handleSearch}
 					className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border shadow-shadow transition-shadow hover:shadow-md"
-					disabled={isPending || !inputValue.trim()}
+					disabled={!inputValue.trim()}
 					aria-label="Search"
 				>
-					{isPending ? (
-						<Loader2 className="h-5 w-5 animate-spin" />
-					) : (
-						<Search className="h-5 w-5" />
-					)}
+					<Search className="h-5 w-5" />
 				</Button>
 			</div>
-			{/* Filters */}
+
+			<Suspense
+				fallback={
+					<div className="flex w-full flex-row gap-2">
+						<Skeleton className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]" />
+						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]" />
+					</div>
+				}
+			>
+				<ProductsFilters
+					brandId={brandId}
+					categoryId={categoryId}
+					onFilterChange={handleFilterChange}
+					hasActiveFilters={hasActiveFilters}
+					sortField={sortField}
+					sortDirection={sortDirection}
+					onSort={handleSort}
+					onResetFilters={handleResetFilters}
+				/>
+			</Suspense>
+
+			<Suspense fallback={<ProductsPageSkeleton />}>
+				<ProductsList
+					page={page}
+					pageSize={pageSize}
+					brandId={brandId}
+					categoryId={categoryId}
+					sortField={sortField}
+					sortDirection={sortDirection}
+					searchTerm={searchTerm}
+				/>
+			</Suspense>
+		</div>
+	);
+}
+
+function ProductsFilters({
+	brandId,
+	categoryId,
+	onFilterChange,
+	hasActiveFilters,
+	sortField,
+	sortDirection,
+	onSort,
+	onResetFilters,
+}: {
+	brandId?: number;
+	categoryId?: number;
+	onFilterChange: (field: "brandId" | "categoryId", value: number | undefined) => void;
+	hasActiveFilters: boolean;
+	sortField?: string;
+	sortDirection?: "asc" | "desc";
+	onSort: (field: string) => void;
+	onResetFilters: () => void;
+}) {
+	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
+		queries: [
+			trpc.category.getAllCategories.queryOptions(),
+			trpc.brands.getAllBrands.queryOptions(),
+		],
+	});
+
+	return (
+		<>
 			<div className="flex w-full flex-row gap-2">
 				<Select
 					value={categoryId === undefined ? "all" : categoryId.toString()}
 					onValueChange={(value) =>
-						handleFilterChange(
+						onFilterChange(
 							"categoryId",
 							value === "all" ? undefined : Number.parseInt(value, 10),
 						)
 					}
-					disabled={isPending}
 				>
 					<SelectTrigger className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]">
 						<SelectValue placeholder="All Categories" />
@@ -236,12 +271,11 @@ function ProductsContent() {
 				<Select
 					value={brandId === undefined ? "all" : brandId.toString()}
 					onValueChange={(value) =>
-						handleFilterChange(
+						onFilterChange(
 							"brandId",
 							value === "all" ? undefined : Number.parseInt(value, 10),
 						)
 					}
-					disabled={isPending}
 				>
 					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]">
 						<SelectValue placeholder="All Brands" />
@@ -264,8 +298,7 @@ function ProductsContent() {
 							variant="outline"
 							size="sm"
 							className="h-10 rounded-base border-2 border-border px-3"
-							onClick={handleResetFilters}
-							disabled={isPending}
+							onClick={onResetFilters}
 						>
 							<RotateCcw className="mr-1 h-4 w-4" />
 						</Button>
@@ -274,8 +307,7 @@ function ProductsContent() {
 						size="sm"
 						variant={sortField === "stock" ? "default" : "outline"}
 						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => handleSort("stock")}
-						disabled={isPending}
+						onClick={() => onSort("stock")}
 					>
 						үлдэгдэл
 						{sortField === "stock" &&
@@ -289,8 +321,7 @@ function ProductsContent() {
 						size="sm"
 						variant={sortField === "price" ? "default" : "outline"}
 						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => handleSort("price")}
-						disabled={isPending}
+						onClick={() => onSort("price")}
 					>
 						Үнэ
 						{sortField === "price" &&
@@ -304,8 +335,7 @@ function ProductsContent() {
 						size="sm"
 						variant={sortField === "createdAt" ? "default" : "outline"}
 						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => handleSort("createdAt")}
-						disabled={isPending}
+						onClick={() => onSort("createdAt")}
 					>
 						Огноо
 						{sortField === "createdAt" &&
@@ -317,7 +347,7 @@ function ProductsContent() {
 					</Button>
 				</div>
 
-				<Link to="/products/add" disabled={isPending}>
+				<Link to="/products/add">
 					<Button className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90">
 						<PlusCircle className="h-5 w-5" />
 						<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
@@ -325,7 +355,86 @@ function ProductsContent() {
 					</Button>
 				</Link>
 			</div>
+		</>
+	);
+}
 
+function ProductsList({
+	page,
+	pageSize,
+	brandId,
+	categoryId,
+	sortField,
+	sortDirection,
+	searchTerm,
+}: {
+	page: number;
+	pageSize: number;
+	brandId?: number;
+	categoryId?: number;
+	sortField?: string;
+	sortDirection?: "asc" | "desc";
+	searchTerm?: string;
+}) {
+	const navigate = useNavigate({ from: Route.fullPath });
+	const [
+		{ data: productsData, isPending },
+		{ data: categories },
+		{ data: brands },
+	] = useSuspenseQueries({
+		queries: [
+			{
+				...trpc.product.getPaginatedProducts.queryOptions({
+					page,
+					pageSize,
+					brandId,
+					categoryId,
+					sortField,
+					sortDirection,
+					searchTerm,
+				}),
+				staleTime: 30_000,
+			},
+			trpc.category.getAllCategories.queryOptions(),
+			trpc.brands.getAllBrands.queryOptions(),
+		],
+	});
+	const products = productsData.products;
+	const pagination = productsData.pagination;
+
+	const handlePageChange = (page: number) => {
+		console.log("page change", page);
+		navigate({
+			to: "/products",
+			search: (prev) => ({
+				...prev,
+				page: page,
+			}),
+		});
+	};
+
+	if (products.length === 0) {
+		return (
+			<>
+				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+					{searchTerm
+						? `"${searchTerm}" олдсонгүй`
+						: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
+				</div>
+				<div>
+					<DataPagination
+						currentPage={pagination.currentPage}
+						totalItems={pagination.totalCount}
+						itemsPerPage={PRODUCT_PER_PAGE}
+						onPageChange={handlePageChange}
+					/>
+				</div>
+			</>
+		);
+	}
+
+	return (
+		<>
 			<div className="space-y-4">
 				{isPending && (
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -373,14 +482,7 @@ function ProductsContent() {
 						))}
 					</div>
 				)}
-				{!isPending && products.length === 0 && (
-					<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
-						{searchTerm
-							? `"${searchTerm}" олдсонгүй`
-							: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
-					</div>
-				)}
-				{!isPending && products.length > 0 && (
+				{!isPending && (
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 						{products.map((product) => (
 							<ProductCard
@@ -401,14 +503,6 @@ function ProductsContent() {
 					onPageChange={handlePageChange}
 				/>
 			</div>
-		</div>
-	);
-}
-
-function RouteComponent() {
-	return (
-		<Suspense fallback={<ProductsPageSkeleton />}>
-			<ProductsContent />
-		</Suspense>
+		</>
 	);
 }

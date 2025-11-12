@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { timeRangeSchema } from "@vit/shared";
 import { ArrowRight, ShoppingCart } from "lucide-react";
+import { Suspense } from "react";
 import * as v from "valibot";
 import { LowStockAlerts } from "@/components/dashboard/low-stock-alerts";
 import { PendingOrders } from "@/components/dashboard/pending-orders";
@@ -16,6 +17,25 @@ export const Route = createFileRoute("/_dash/")({
 	validateSearch: v.object({
 		timeRange: v.optional(timeRangeSchema, "daily"),
 	}),
+	loader: async ({ context: ctx, location }) => {
+		const timeRange =
+			(location.search as { timeRange?: string })?.timeRange || "daily";
+		await Promise.all([
+			ctx.queryClient.ensureQueryData(ctx.trpc.sales.analytics.queryOptions()),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.sales.topProducts.queryOptions({
+					timeRange: timeRange as "daily" | "weekly" | "monthly",
+					productCount: 10,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.order.getPendingOrders.queryOptions(),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getLowInventoryProducts.queryOptions(),
+			),
+		]);
+	},
 });
 
 function HomeComponent() {
@@ -54,18 +74,42 @@ function HomeComponent() {
 				</div>
 			</div>
 
-			<StatsGrid />
+			<Suspense
+				fallback={
+					<div className="h-48 animate-pulse rounded-base border-2 border-border" />
+				}
+			>
+				<StatsGrid />
+			</Suspense>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<SalesChart />
-				<PendingOrders />
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<PendingOrders />
+				</Suspense>
 			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-				<TopSellingProducts />
+				<Suspense
+					fallback={
+						<div className="h-80 animate-pulse rounded-base border-2 border-border" />
+					}
+				>
+					<TopSellingProducts />
+				</Suspense>
 				<div className="flex flex-col gap-2">
 					<QuickStats />
-					<LowStockAlerts />
+					<Suspense
+						fallback={
+							<div className="h-40 animate-pulse rounded-base border-2 border-border" />
+						}
+					>
+						<LowStockAlerts />
+					</Suspense>
 				</div>
 			</div>
 		</div>

@@ -26,12 +26,9 @@ export const auth = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { googleId, username, isApproved } = input;
-				const user = await adminQueries.createUser(
-					googleId,
-					username,
-					isApproved,
-				);
+				const user = await q.createUser(googleId, username, isApproved);
 
 				if (!user) {
 					throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
@@ -63,8 +60,9 @@ export const auth = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { googleId } = input;
-				const result = await adminQueries.getUserFromGoogleId(googleId);
+				const result = await q.getUserFromGoogleId(googleId);
 				return result;
 			} catch (error) {
 				console.error("Error getting user from Google ID:", error);

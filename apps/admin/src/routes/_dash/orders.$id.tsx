@@ -4,6 +4,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Suspense } from "react";
 import {
 	AlertCircle,
 	ArrowLeft,
@@ -43,14 +44,21 @@ import { trpc } from "@/utils/trpc";
 export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
 	loader: async ({ context: ctx, params }) => {
-		const order = await ctx.queryClient.ensureQueryData(
+		await ctx.queryClient.ensureQueryData(
 			ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
 		);
-		return { order };
 	},
 });
 
 function RouteComponent() {
+	return (
+		<Suspense fallback={<div className="p-6">Loading order...</div>}>
+			<OrderDetailContent />
+		</Suspense>
+	);
+}
+
+function OrderDetailContent() {
 	const { id } = Route.useParams();
 	const orderId = Number(id);
 	const navigate = useNavigate();

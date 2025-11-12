@@ -18,7 +18,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import * as v from "valibot";
 import { DataPagination } from "@/components/data-pagination";
 import OrderCard from "@/components/order/order-card";
@@ -33,13 +33,35 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getPaginatedOrders.queryOptions({}),
+	loader: async ({ context: ctx, location }) => {
+		const search = location.search as {
+			page?: number;
+			pageSize?: number;
+			searchTerm?: string;
+			sortField?: string;
+			sortDirection?: "asc" | "desc";
+			orderStatus?: string;
+			paymentStatus?: string;
+		};
+		await ctx.queryClient.ensureQueryData(
+			ctx.trpc.order.getPaginatedOrders.queryOptions({
+				page: search.page ?? 1,
+				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+				searchTerm: search.searchTerm,
+				sortField: search.sortField,
+				sortDirection: search.sortDirection,
+				orderStatus: search.orderStatus as
+					| (typeof orderStatusConstants)[number]
+					| undefined,
+				paymentStatus: search.paymentStatus as
+					| (typeof paymentStatusConstants)[number]
+					| undefined,
+			}),
 		);
 	},
 	validateSearch: v.object({
@@ -74,25 +96,14 @@ function RouteComponent() {
 		sortDirection !== undefined ||
 		searchTerm !== undefined;
 	const navigate = useNavigate({ from: Route.fullPath });
-	const { data: ordersData, isPending: _isPending } = useSuspenseQuery({
-		...trpc.order.getPaginatedOrders.queryOptions({
-			page,
-			paymentStatus,
-			pageSize,
-			sortField,
-			sortDirection,
-			orderStatus,
-			searchTerm,
-		}),
-	});
 	const mutation = useMutation({
 		...trpc.order.searchOrder.mutationOptions(),
 		onSuccess: (data) => {
 			console.log("data", data);
 		},
 	});
-	const orders = ordersData.orders;
-	const pagination = ordersData.pagination;
+	const filtersActive = hasActiveFilters || sortField !== "";
+
 	const handleSearch = () => {
 		navigate({
 			to: "/orders",
@@ -123,7 +134,6 @@ function RouteComponent() {
 			}),
 		});
 	};
-	const filtersActive = hasActiveFilters || sortField !== "";
 	const handleResetFilters = () => {
 		console.log("reset filters");
 		navigate({
@@ -149,16 +159,6 @@ function RouteComponent() {
 				...prev,
 				sortField: field,
 				sortDirection: newDirection,
-			}),
-		});
-	};
-	const handlePageChange = (page: number) => {
-		console.log("page change", page);
-		navigate({
-			to: "/orders",
-			search: (prev) => ({
-				...prev,
-				page: page,
 			}),
 		});
 	};
@@ -295,23 +295,98 @@ function RouteComponent() {
 					</div>
 				</div>
 
-				<div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{orders.map((order) => (
-						<div key={order.orderNumber} className="min-w-0">
-							<OrderCard order={order} />
+				<Suspense
+					fallback={
+						<div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+							{Array.from({ length: 6 }).map((_, index) => (
+								<Skeleton
+									key={index}
+									className="h-48 rounded-lg border-2 border-border"
+								/>
+							))}
 						</div>
-					))}
-				</div>
-
-				<div className="mt-6">
-					<DataPagination
-						currentPage={pagination.currentPage}
-						totalItems={pagination.totalCount}
-						itemsPerPage={10}
-						onPageChange={handlePageChange}
+					}
+				>
+					<OrdersList
+						page={page}
+						pageSize={pageSize}
+						searchTerm={searchTerm}
+						sortField={sortField}
+						sortDirection={sortDirection}
+						orderStatus={orderStatus}
+						paymentStatus={paymentStatus}
 					/>
-				</div>
+				</Suspense>
 			</CardContent>
 		</Card>
+	);
+}
+
+function OrdersList({
+	page,
+	pageSize,
+	searchTerm,
+	sortField,
+	sortDirection,
+	orderStatus,
+	paymentStatus,
+}: {
+	page: number;
+	pageSize: number;
+	searchTerm?: string;
+	sortField?: string;
+	sortDirection?: "asc" | "desc";
+	orderStatus?: string;
+	paymentStatus?: string;
+}) {
+	const navigate = useNavigate({ from: Route.fullPath });
+	const { data: ordersData } = useSuspenseQuery({
+		...trpc.order.getPaginatedOrders.queryOptions({
+			page,
+			paymentStatus: paymentStatus as
+				| (typeof paymentStatusConstants)[number]
+				| undefined,
+			pageSize,
+			sortField,
+			sortDirection,
+			orderStatus: orderStatus as
+				| (typeof orderStatusConstants)[number]
+				| undefined,
+			searchTerm,
+		}),
+	});
+	const orders = ordersData.orders;
+	const pagination = ordersData.pagination;
+
+	const handlePageChange = (page: number) => {
+		console.log("page change", page);
+		navigate({
+			to: "/orders",
+			search: (prev) => ({
+				...prev,
+				page: page,
+			}),
+		});
+	};
+
+	return (
+		<>
+			<div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+				{orders.map((order) => (
+					<div key={order.orderNumber} className="min-w-0">
+						<OrderCard order={order} />
+					</div>
+				))}
+			</div>
+
+			<div className="mt-6">
+				<DataPagination
+					currentPage={pagination.currentPage}
+					totalItems={pagination.totalCount}
+					itemsPerPage={10}
+					onPageChange={handlePageChange}
+				/>
+			</div>
+		</>
 	);
 }

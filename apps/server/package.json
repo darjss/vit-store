@@ -22,13 +22,13 @@
 		"deploy": "alchemy deploy --app server --stage prod",
 		"destroy": "alchemy destroy --app server",
 		"db:push": "drizzle-kit push",
-		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
+		"db:migrate:local": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
 		"db:studio": "drizzle-kit studio",
-		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
+		"db:studio:local": "drizzle-kit studio --config=../../packages/api/drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply vit-store --remote",
-		"db:migrate:drizzle": "drizzle-kit migrate",
-		"db:seed": " sqlite3 /home/darjs/dev/vit-store/.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject/4fea589dffe569f8ba071ec87ac0160124823fb6b357717ae164e87fbe3b243a.sqlite < seed.sql"
+		"db:migrate": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
+		"db:migrate:prod": "drizzle-kit migrate --config=../../packages/api/drizzle.config.ts",
+		"db:seed": "bun run src/lib/seed-postgres.ts"
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",

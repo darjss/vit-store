@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { adminQueries, storeQueries } from "@vit/api/queries";
+import * as v from "valibot";
 import { newOrderSchema } from "../../../../shared/src";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
@@ -7,8 +8,9 @@ import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 export const order = router({
 	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {
 		try {
+			const q = storeQueries(ctx.db);
 			const customerPhone = ctx.session.user.phone;
-			const orders = await storeQueries.getOrdersByCustomerPhone(customerPhone);
+			const orders = await q.getOrdersByCustomerPhone(customerPhone);
 			return orders.map((order) => {
 				const { orderDetails, sales, ...orderInfo } = order;
 
@@ -39,10 +41,11 @@ export const order = router({
 	}),
 	addOrder: publicProcedure
 		.input(newOrderSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				
-				const products = await storeQueries.getProductsByIds(
+				const q = storeQueries(ctx.db);
+				const adminQ = adminQueries(ctx.db);
+				const products = await q.getProductsByIds(
 					input.products.map((p) => p.productId),
 				);
 				const total = products.reduce((acc, p) => {
@@ -54,15 +57,15 @@ export const order = router({
 					}
 					return acc;
 				}, 0);
-				const customer = await storeQueries.getCustomerByPhone(Number(input.phoneNumber));
+				const customer = await q.getCustomerByPhone(Number(input.phoneNumber));
 				if (!customer) {
-					await storeQueries.createCustomer({
+					await q.createCustomer({
 						phone: Number(input.phoneNumber),
 						address: input.address,
 					});
 				}
-				await storeQueries.updateCustomerAddress(Number(input.phoneNumber), input.address);
-				const order = await storeQueries.createOrder({
+				await q.updateCustomerAddress(Number(input.phoneNumber), input.address);
+				const order = await q.createOrder({
 					orderNumber: generateOrderNumber(),
 					customerPhone: Number(input.phoneNumber),
 					address: input.address,
@@ -78,7 +81,7 @@ export const order = router({
 						message: "Failed to create order",
 					});
 				}
-				await storeQueries.createOrderDetails(
+				await q.createOrderDetails(
 					orderId,
 					input.products.map((p) => ({
 						productId: p.productId,
@@ -88,7 +91,7 @@ export const order = router({
 				console.log("order created", orderId);
 				let paymentNumber: string | null = null;
 				try {
-					const paymentResult = await adminQueries.createPayment({
+					const paymentResult = await adminQ.createPayment({
 						paymentNumber: generatePaymentNumber(),
 						orderId: orderId,
 						provider: "transfer",
@@ -105,6 +108,17 @@ export const order = router({
 					});
 				}
 				return { paymentNumber };
+			} catch (e) {
+				console.error(e);
+			}
+		}),
+	getOrderByOrderNumber: customerProcedure
+		.input(v.object({ orderNumber: v.string() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				const q = storeQueries(ctx.db);
+				const order = await q.getOrderByOrderNumber(input.orderNumber);
+				return order;
 			} catch (e) {
 				console.error(e);
 			}

@@ -1,0 +1,21 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createServerClient } from "@/lib/trpc";
+
+const { orderNumber } = Astro.params;
+const cookieHeader = Astro.request.headers.get("cookie") || "";
+const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+if(!orderNumber || orderNumber===undefined){
+    return Astro.redirect("/404");
+}
+const order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber });
+if(!order){
+    return Astro.redirect("/404");
+}
+---
+
+<Layout>
+    <div class="container mx-auto px-4 py-8 min-h-screen">
+        <h1 class="text-2xl font-bold">Order Confirmation</h1>
+    </div>
+</Layout>

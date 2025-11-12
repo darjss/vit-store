@@ -77,7 +77,7 @@ const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
 
 			<!-- Client-Side Results (Interactive) -->
 			<BenchmarkComparison 
-				client:load
+				client:only="solidjs"
 				serverFetchTime={serverFetchTime}
 				serverDbTime={serverData.dbElapsed}
 				productCount={serverData.product.length}

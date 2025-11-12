@@ -9,8 +9,9 @@ export const purchase = router({
 		.input(addPurchaseSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				await ctx.db.transaction(async (tx) => {
-					await adminQueries.addPurchaseWithStockUpdate(tx, input.products);
+					await q.addPurchaseWithStockUpdate(tx, input.products);
 				});
 
 				return { message: "Purchase added successfully" };
@@ -33,7 +34,8 @@ export const purchase = router({
 
 	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getAllPurchases();
+			const q = adminQueries(ctx.db);
+			const result = await q.getAllPurchases();
 			return result;
 		} catch (e) {
 			console.error("error", e);
@@ -49,7 +51,8 @@ export const purchase = router({
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getPurchaseById(input.id);
+				const q = adminQueries(ctx.db);
+				const result = await q.getPurchaseById(input.id);
 				return result;
 			} catch (e) {
 				console.error("error", e);
@@ -73,7 +76,8 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await adminQueries.getPaginatedPurchases({
+				const q = adminQueries(ctx.db);
+				return await q.getPaginatedPurchases({
 					page: input.page,
 					pageSize: input.pageSize,
 					productId: input.productId,
@@ -95,7 +99,8 @@ export const purchase = router({
 		.query(async ({ ctx, input }) => {
 			if (!input.query) return [];
 			try {
-				const results = await adminQueries.searchByProductName(input.query);
+				const q = adminQueries(ctx.db);
+				const results = await q.searchByProductName(input.query);
 				return results;
 			} catch (e) {
 				console.error("Error searching purchases:", e);
@@ -116,8 +121,9 @@ export const purchase = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				await ctx.db.transaction(async (tx) => {
-					await adminQueries.updatePurchaseWithStockAdjustment(
+					await q.updatePurchaseWithStockAdjustment(
 						tx,
 						input.id,
 						input.data.products,
@@ -145,8 +151,9 @@ export const purchase = router({
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				await ctx.db.transaction(async (tx) => {
-					await adminQueries.deletePurchaseWithStockRestore(tx, input.id);
+					await q.deletePurchaseWithStockRestore(tx, input.id);
 				});
 				return { message: "Purchase deleted successfully" };
 			} catch (e) {
@@ -175,7 +182,8 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				return await adminQueries.getAverageCostOfProduct(input.productId, input.createdAt);
+				const q = adminQueries(ctx.db);
+				return await q.getAverageCostOfProduct(input.productId, input.createdAt);
 			} catch (e) {
 				console.error("Error calculating average cost:", e);
 				return 0;

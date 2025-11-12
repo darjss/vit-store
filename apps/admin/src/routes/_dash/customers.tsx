@@ -1,15 +1,16 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
 import { Loader2, Plus, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import * as v from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
 import { DataPagination } from "@/components/data-pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -19,15 +20,13 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-//
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/utils/trpc";
-//
 
 export const Route = createFileRoute("/_dash/customers")({
 	component: RouteComponent,
 	loader: async ({ context: ctx }) => {
-		return ctx.queryClient.ensureQueryData(
+		await ctx.queryClient.ensureQueryData(
 			ctx.trpc.customer.getAllCustomers.queryOptions(),
 		);
 	},
@@ -45,26 +44,6 @@ function RouteComponent() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
 
-	const { data: customers, isFetching } = useSuspenseQuery(
-		trpc.customer.getAllCustomers.queryOptions(),
-	);
-
-	// removed per-card delete in favor of CustomerCard internal handler
-
-	const filtered = useMemo(() => {
-		if (!searchTerm) return customers;
-		const term = searchTerm.toLowerCase().trim();
-		return customers.filter((c) => {
-			const phone = String(c.phone);
-			const address = c.address ?? "";
-			return phone.includes(term) || address.toLowerCase().includes(term);
-		});
-	}, [customers, searchTerm]);
-
-	const totalCount = filtered.length;
-	const startIndex = Math.max(0, (page - 1) * pageSize);
-	const paginated = filtered.slice(startIndex, startIndex + pageSize);
-
 	const handleSearch = () => {
 		navigate({
 			to: "/customers",
@@ -81,13 +60,6 @@ function RouteComponent() {
 		navigate({
 			to: "/customers",
 			search: (prev) => ({ ...prev, page: 1, searchTerm: undefined }),
-		});
-	};
-
-	const handlePageChange = (newPage: number) => {
-		navigate({
-			to: "/customers",
-			search: (prev) => ({ ...prev, page: newPage }),
 		});
 	};
 
@@ -132,7 +104,6 @@ function RouteComponent() {
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
-					disabled={isFetching}
 				/>
 				{inputValue && (
 					<Button
@@ -140,7 +111,6 @@ function RouteComponent() {
 						variant="secondary"
 						className="-translate-y-1/2 absolute top-1/2 right-14 h-8 w-8 rounded-base border-2 border-border hover:bg-muted"
 						onClick={handleClearSearch}
-						disabled={isFetching}
 						aria-label="Clear search"
 					>
 						<X className="h-4 w-4" />
@@ -149,40 +119,94 @@ function RouteComponent() {
 				<Button
 					onClick={handleSearch}
 					className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border shadow-shadow transition-shadow hover:shadow-md"
-					disabled={isFetching || !inputValue.trim()}
+					disabled={!inputValue.trim()}
 					aria-label="Search"
 				>
-					{isFetching ? (
-						<Loader2 className="h-5 w-5 animate-spin" />
-					) : (
-						<Search className="h-5 w-5" />
-					)}
+					<Search className="h-5 w-5" />
 				</Button>
 			</div>
 
-			<div className="space-y-4">
-				{isFetching && (
-					<div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-						<Loader2 className="h-4 w-4 animate-spin" />
-						<span>Хэрэглэгч ачааллаж байна...</span>
-					</div>
-				)}
-
-				{!isFetching && paginated.length === 0 && (
-					<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
-						{searchTerm ? `"${searchTerm}" олдсонгүй` : "Хэрэглэгч олдсонгүй."}
-					</div>
-				)}
-
-				{!isFetching && paginated.length > 0 && (
+			<Suspense
+				fallback={
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-						{paginated.map((c) => (
-							<CustomerCard key={c.phone} customer={c} />
+						{Array.from({ length: 8 }).map((_, index) => (
+							<Skeleton
+								key={index}
+								className="h-32 rounded-base border-2 border-border"
+							/>
 						))}
 					</div>
-				)}
-			</div>
+				}
+			>
+				<CustomersList page={page} pageSize={pageSize} searchTerm={searchTerm} />
+			</Suspense>
+		</div>
+	);
+}
 
+function CustomersList({
+	page,
+	pageSize,
+	searchTerm,
+}: {
+	page: number;
+	pageSize: number;
+	searchTerm?: string;
+}) {
+	const { data: customers, isFetching } = useSuspenseQuery({
+		...trpc.customer.getAllCustomers.queryOptions(),
+		placeholderData: keepPreviousData,
+		staleTime: 30_000,
+	});
+
+	const filtered = useMemo(() => {
+		if (!searchTerm) return customers;
+		const term = searchTerm.toLowerCase().trim();
+		return customers.filter((c) => {
+			const phone = String(c.phone);
+			const address = c.address ?? "";
+			return phone.includes(term) || address.toLowerCase().includes(term);
+		});
+	}, [customers, searchTerm]);
+
+	const totalCount = filtered.length;
+	const startIndex = Math.max(0, (page - 1) * pageSize);
+	const paginated = filtered.slice(startIndex, startIndex + pageSize);
+	const navigate = useNavigate({ from: Route.fullPath });
+
+	const handlePageChange = (newPage: number) => {
+		navigate({
+			to: "/customers",
+			search: (prev) => ({ ...prev, page: newPage }),
+		});
+	};
+
+	if (paginated.length === 0) {
+		return (
+			<>
+				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+					{searchTerm ? `"${searchTerm}" олдсонгүй` : "Хэрэглэгч олдсонгүй."}
+				</div>
+				<div>
+					<DataPagination
+						currentPage={page}
+						totalItems={totalCount}
+						itemsPerPage={pageSize}
+						onPageChange={handlePageChange}
+						isLoading={isFetching}
+					/>
+				</div>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+				{paginated.map((c) => (
+					<CustomerCard key={c.phone} customer={c} />
+				))}
+			</div>
 			<div>
 				<DataPagination
 					currentPage={page}
@@ -192,6 +216,6 @@ function RouteComponent() {
 					isLoading={isFetching}
 				/>
 			</div>
-		</div>
+		</>
 	);
 }

@@ -1,16 +1,19 @@
 import { TRPCError } from "@trpc/server";
 import { storeQueries } from "@vit/api/queries";
+import { isNull } from "drizzle-orm";
 import * as v from "valibot";
+import { ProductImagesTable, ProductsTable } from "../../db/schema";
 import { publicProcedure, router } from "../../lib/trpc";
 
 export const product = router({
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
+			const q = storeQueries(ctx.db);
 			const [featuredProducts, newProducts, discountedProducts] =
 				await Promise.all([
-					storeQueries.getFeaturedProducts(),
-					storeQueries.getNewProducts(),
-					storeQueries.getDiscountedProducts(),
+					q.getFeaturedProducts(),
+					q.getNewProducts(),
+					q.getDiscountedProducts(),
 				]);
 			return {
 				featuredProducts: featuredProducts.map((product) => ({
@@ -49,7 +52,8 @@ export const product = router({
 		}
 	}),
 	getAllProducts: publicProcedure.query(async ({ ctx }) => {
-		return await storeQueries.getAllProducts();
+		const q = storeQueries(ctx.db);
+		return await q.getAllProducts();
 	}),
 	getProductById: publicProcedure
 		.input(
@@ -58,7 +62,8 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const result = await storeQueries.getProductById(input.id);
+			const q = storeQueries(ctx.db);
+			const result = await q.getProductById(input.id);
 			if (result === null || result === undefined) {
 				return null;
 			}
@@ -75,7 +80,8 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const result = await storeQueries.getProductsByIds(input.ids);
+			const q = storeQueries(ctx.db);
+			const result = await q.getProductsByIds(input.ids);
 			return result.map((product) => ({
 				id: product.id,
 				name: product.name,
@@ -93,15 +99,10 @@ export const product = router({
 		)
 		.query(async ({ input, ctx }) => {
 			try {
+				const q = storeQueries(ctx.db);
 				const [sameCategory, sameBrand] = await Promise.all([
-					storeQueries.getRecommendedProductsByCategory(
-						input.categoryId,
-						input.productId,
-					),
-					storeQueries.getRecommendedProductsByBrand(
-						input.brandId,
-						input.productId,
-					),
+					q.getRecommendedProductsByCategory(input.categoryId, input.productId),
+					q.getRecommendedProductsByBrand(input.brandId, input.productId),
 				]);
 
 				const allProducts = [...sameCategory, ...sameBrand];
@@ -141,9 +142,8 @@ export const product = router({
 					isInStock: false,
 				};
 			}
-			const product = await storeQueries.getProductStockStatus(
-				input.productId,
-			);
+			const q = storeQueries(ctx.db);
+			const product = await q.getProductStockStatus(input.productId);
 			if (product === null || product === undefined) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
@@ -162,8 +162,42 @@ export const product = router({
 	getProductBenchmark: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const startTime = performance.now();
-			const product = await storeQueries.getProductBenchmark(10);
-			return { dbElapsed: performance.now() - startTime, product };
+
+			// Query products with images using Drizzle ORM
+			const products = await ctx.db.query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					price: true,
+				},
+				where: isNull(ProductsTable.deletedAt),
+				limit: 5,
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: isNull(ProductImagesTable.deletedAt),
+					},
+				},
+			});
+
+			const dbElapsed = performance.now() - startTime;
+
+			// Transform to match expected format
+			const product = products.map((p) => ({
+				id: p.id,
+				name: p.name,
+				slug: p.slug,
+				price: p.price,
+				images: p.images.map((img) => ({ url: img.url })),
+			}));
+
+			return {
+				dbElapsed,
+				product,
+			};
 		} catch (error) {
 			console.error("Error in benchmark:", error);
 			throw new TRPCError({

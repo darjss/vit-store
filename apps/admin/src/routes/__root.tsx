@@ -7,7 +7,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import Loader from "@/components/loader";
+import { TopProgress } from "@/components/top-progress";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import "../index.css";
@@ -44,15 +44,16 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
-	const isFetching = useRouterState({
+	const isLoading = useRouterState({
 		select: (s) => s.isLoading,
 	});
 
 	return (
 		<>
 			<HeadContent />
+			<TopProgress visible={isLoading} />
 			<div className="grid h-svh grid-rows-[auto_1fr]">
-				{isFetching ? <Loader /> : <Outlet />}
+				<Outlet />
 			</div>
 			<Toaster richColors />
 			<TanStackRouterDevtools position="bottom-left" />

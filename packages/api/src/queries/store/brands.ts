@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db";
+import type { DB } from "../../db";
 import { BrandsTable } from "../../db/schema";
 
-export const storeBrands = {
+export function storeBrands(db: DB) {
+	return {
 	async getAllBrands() {
 		return db.query.BrandsTable.findMany({
 			columns: {
@@ -23,5 +24,6 @@ export const storeBrands = {
 			where: eq(BrandsTable.id, id),
 		});
 	},
-};
+	};
+}
 

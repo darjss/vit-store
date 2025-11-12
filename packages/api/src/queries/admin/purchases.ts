@@ -1,12 +1,13 @@
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, isNull, like, lt, sql } from "drizzle-orm";
-import { db } from "../../db";
+import type { DB } from "../../db";
 import { ProductsTable, PurchasesTable } from "../../db/schema";
 import type { TransactionType } from "../../lib/types";
 
 type Transaction = TransactionType;
 
-export const adminPurchases = {
+export function adminPurchases(db: DB) {
+	return {
 	async getAllPurchases() {
 		return db.query.PurchasesTable.findMany({
 			where: isNull(PurchasesTable.deletedAt),
@@ -19,10 +20,7 @@ export const adminPurchases = {
 
 	async getPurchaseById(id: number) {
 		return db.query.PurchasesTable.findFirst({
-			where: and(
-				eq(PurchasesTable.id, id),
-				isNull(PurchasesTable.deletedAt),
-			),
+			where: and(eq(PurchasesTable.id, id), isNull(PurchasesTable.deletedAt)),
 			with: { product: { columns: { name: true, id: true, price: true } } },
 		});
 	},
@@ -60,18 +58,15 @@ export const adminPurchases = {
 			limit: params.pageSize,
 			offset: offset,
 			orderBy: orderByClauses,
-			where:
-				finalConditions.length > 0 ? and(...finalConditions) : undefined,
+			where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 			with: { product: { columns: { name: true, id: true, price: true } } },
 		});
 		const totalCountResult = await db
 			.select({ count: sql<number>`COUNT(*)` })
 			.from(PurchasesTable)
-			.where(
-				finalConditions.length > 0 ? and(...finalConditions) : undefined,
-			)
-			.get();
-		const totalCount = totalCountResult?.count ?? 0;
+			.where(finalConditions.length > 0 ? and(...finalConditions) : undefined)
+			.limit(1);
+		const totalCount = totalCountResult[0]?.count ?? 0;
 		const totalPages = Math.ceil(totalCount / params.pageSize);
 		return {
 			purchases,
@@ -97,10 +92,7 @@ export const adminPurchases = {
 				},
 			})
 			.from(PurchasesTable)
-			.innerJoin(
-				ProductsTable,
-				eq(PurchasesTable.productId, ProductsTable.id),
-			)
+			.innerJoin(ProductsTable, eq(PurchasesTable.productId, ProductsTable.id))
 			.where(like(ProductsTable.name, `%${query}%`))
 			.orderBy(desc(PurchasesTable.createdAt))
 			.limit(50);
@@ -121,8 +113,7 @@ export const adminPurchases = {
 				),
 			);
 		const sum = purchases.reduce(
-			(acc, purchase) =>
-				acc + purchase.unitCost * purchase.quantityPurchased,
+			(acc, purchase) => acc + purchase.unitCost * purchase.quantityPurchased,
 			0,
 		);
 		const totalProduct = purchases.reduce(
@@ -292,5 +283,5 @@ export const adminPurchases = {
 				),
 			);
 	},
-};
-
+	};
+}

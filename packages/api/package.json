@@ -31,12 +31,14 @@
 		"build": "tsdown",
 		"dev": "echo 'API package uses source files directly - no dev build needed'",
 		"db:push": "drizzle-kit push",
-		"db:migrate:local": "wrangler d1 migrations apply vit-store --local",
+		"db:push:local": "drizzle-kit push --config=./drizzle.local.config.ts",
+		"db:migrate": "drizzle-kit migrate",
+		"db:migrate:local": "drizzle-kit migrate --config=./drizzle.local.config.ts",
 		"db:studio": "drizzle-kit studio",
 		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply vit-store --remote",
-		"db:migrate:drizzle": "drizzle-kit migrate"
+		"db:seed": "bun run src/lib/seed-postgres.ts"
+
 	},
 	"devDependencies": {
 		"tsdown": "catalog:",
@@ -58,6 +60,7 @@
 		"drizzle-valibot": "^0.4.2",
 		"hono": "catalog:",
 		"nanoid": "^5.1.5",
+		"postgres": "^3.4.7",
 		"superjson": "^2.2.2",
 		"valibot": "catalog:"
 	}

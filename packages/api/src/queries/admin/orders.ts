@@ -1,7 +1,20 @@
 import type { timeRangeType } from "@vit/shared/schema";
+import type { OrderStatusType } from "@vit/shared/types";
 import type { SQL } from "drizzle-orm";
-import { and, asc, between, desc, eq, gte, ilike, isNull, like, or, sql } from "drizzle-orm";
-import { db } from "../../db";
+import {
+	and,
+	asc,
+	between,
+	desc,
+	eq,
+	gte,
+	ilike,
+	isNull,
+	like,
+	or,
+	sql,
+} from "drizzle-orm";
+import type { DB } from "../../db";
 import {
 	CustomersTable,
 	OrderDetailsTable,
@@ -10,13 +23,19 @@ import {
 	ProductImagesTable,
 	SalesTable,
 } from "../../db/schema";
-import { getDaysFromTimeRange, getStartAndEndofDayAgo, shapeOrderResult, shapeOrderResults } from "../../lib/utils";
+import {
+	getDaysFromTimeRange,
+	getStartAndEndofDayAgo,
+	shapeOrderResult,
+	shapeOrderResults,
+} from "../../lib/utils";
 
-export const adminOrders = {
+export function adminOrders(db: DB) {
+	return {
 	async getOrderCountForWeek() {
 		try {
-			const orderPromises: Promise<{ orderCount: number } | undefined>[] = [];
-			const salesPromises: Promise<{ salesCount: number } | undefined>[] = [];
+			const orderPromises: Promise<Array<{ orderCount: number }>>[] = [];
+			const salesPromises: Promise<Array<{ salesCount: number }>>[] = [];
 			for (let i = 0; i < 7; i++) {
 				const { startDate, endDate } = getStartAndEndofDayAgo(i);
 				const dayOrderPromise = db
@@ -30,7 +49,7 @@ export const adminOrders = {
 							isNull(OrdersTable.deletedAt),
 						),
 					)
-					.get();
+					.limit(1);
 				orderPromises.push(dayOrderPromise);
 				const daySalesPromise = db
 					.select({
@@ -43,7 +62,7 @@ export const adminOrders = {
 							isNull(SalesTable.deletedAt),
 						),
 					)
-					.get();
+					.limit(1);
 				salesPromises.push(daySalesPromise);
 			}
 			const orderResults = await Promise.all(orderPromises);
@@ -52,8 +71,8 @@ export const adminOrders = {
 				const salesResult = salesResults[i];
 				const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
 				return {
-					orderCount: orderResult?.orderCount ?? 0,
-					salesCount: salesResult?.salesCount ?? 0,
+					orderCount: orderResult[0]?.orderCount ?? 0,
+					salesCount: salesResult[0]?.salesCount ?? 0,
 					date: `${date.getMonth() + 1}/${date.getDate()}`,
 				};
 			});
@@ -95,9 +114,9 @@ export const adminOrders = {
 						isNull(OrdersTable.deletedAt),
 					),
 				)
-				.get();
+				.limit(1);
 
-			const count = result?.count ?? 0;
+			const count = result[0]?.count ?? 0;
 
 			return { count };
 		} catch (e) {
@@ -160,7 +179,7 @@ export const adminOrders = {
 	async createOrder(data: {
 		orderNumber: string;
 		customerPhone: number;
-		status: string;
+		status: OrderStatusType;
 		notes: string | null;
 		total: number;
 		address: string;
@@ -192,7 +211,10 @@ export const adminOrders = {
 				or(
 					ilike(OrdersTable.orderNumber, `%${searchTerm}%`),
 					ilike(OrdersTable.address, `%${searchTerm}%`),
-					ilike(OrdersTable.customerPhone, `%${searchTerm}%`),
+					like(
+						sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
+						`%${searchTerm}%`,
+					),
 				),
 			),
 			with: {
@@ -284,10 +306,7 @@ export const adminOrders = {
 
 	async getOrderById(id: number) {
 		const result = await db.query.OrdersTable.findFirst({
-			where: and(
-				eq(OrdersTable.id, id),
-				isNull(OrdersTable.deletedAt),
-			),
+			where: and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)),
 			with: {
 				orderDetails: {
 					columns: {
@@ -331,7 +350,12 @@ export const adminOrders = {
 		page: number;
 		pageSize: number;
 		paymentStatus?: "pending" | "success" | "failed";
-		orderStatus?: "pending" | "shipped" | "delivered" | "cancelled" | "refunded";
+		orderStatus?:
+			| "pending"
+			| "shipped"
+			| "delivered"
+			| "cancelled"
+			| "refunded";
 		sortField?: string;
 		sortDirection?: "asc" | "desc";
 		searchTerm?: string;
@@ -347,16 +371,17 @@ export const adminOrders = {
 				or(
 					like(OrdersTable.orderNumber, `%${params.searchTerm}%`),
 					like(OrdersTable.address, `%${params.searchTerm}%`),
-					like(OrdersTable.customerPhone, `%${params.searchTerm}%`),
+					like(
+						sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
+						`%${params.searchTerm}%`,
+					),
 				),
 			);
 		}
 
 		const orderByClauses: SQL<unknown>[] = [];
 		const primarySortColumn =
-			params.sortField === "total"
-				? OrdersTable.total
-				: OrdersTable.createdAt;
+			params.sortField === "total" ? OrdersTable.total : OrdersTable.createdAt;
 
 		const primaryOrderBy =
 			params.sortDirection === "asc"
@@ -376,8 +401,7 @@ export const adminOrders = {
 			limit: params.pageSize,
 			offset: offset,
 			orderBy: orderByClauses,
-			where:
-				finalConditions.length > 0 ? and(...finalConditions) : undefined,
+			where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 			with: {
 				orderDetails: {
 					columns: { quantity: true },
@@ -413,12 +437,10 @@ export const adminOrders = {
 		const totalCountResult = await db
 			.select({ count: sql<number>`COUNT(*)` })
 			.from(OrdersTable)
-			.where(
-				finalConditions.length > 0 ? and(...finalConditions) : undefined,
-			)
-			.get();
+			.where(finalConditions.length > 0 ? and(...finalConditions) : undefined)
+			.limit(1);
 
-		const totalCount = totalCountResult?.count ?? 0;
+		const totalCount = totalCountResult[0]?.count ?? 0;
 		const totalPages = Math.ceil(totalCount / params.pageSize);
 
 		return {
@@ -433,25 +455,26 @@ export const adminOrders = {
 		};
 	},
 
-	async updateOrderStatus(id: number, status: "pending" | "shipped" | "delivered" | "cancelled" | "refunded") {
+	async updateOrderStatus(
+		id: number,
+		status: "pending" | "shipped" | "delivered" | "cancelled" | "refunded",
+	) {
 		await db
 			.update(OrdersTable)
 			.set({ status })
-			.where(
-				and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)),
-			);
+			.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 	},
 
-	async updateOrder(id: number, data: {
-		customerPhone?: number;
-		status?: string;
-		notes?: string | null;
-		total?: number;
-	}) {
-		await db
-			.update(OrdersTable)
-			.set(data)
-			.where(eq(OrdersTable.id, id));
+	async updateOrder(
+		id: number,
+		data: {
+			customerPhone?: number;
+			status?: OrderStatusType;
+			notes?: string | null;
+			total?: number;
+		},
+	) {
+		await db.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 	},
 
 	async getOrderDetailsByOrderId(orderId: number) {
@@ -533,5 +556,5 @@ export const adminOrders = {
 
 		return orderDetails.map((detail) => detail.order);
 	},
-};
-
+	};
+}

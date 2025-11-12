@@ -13,7 +13,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getAverageOrderValue(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getAverageOrderValue(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getAverageOrderValue:", error);
@@ -33,7 +34,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getTotalProfit(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getTotalProfit(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getTotalProfit:", error);
@@ -53,7 +55,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getSalesByCategory(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getSalesByCategory(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getSalesByCategory:", error);
@@ -67,7 +70,8 @@ export const analytics = router({
 
 	getCustomerLifetimeValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getCustomerLifetimeValue();
+			const q = adminQueries(ctx.db);
+			const result = await q.getCustomerLifetimeValue();
 			return result;
 		} catch (error) {
 			console.error("Error in getCustomerLifetimeValue:", error);
@@ -87,9 +91,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getRepeatCustomersCount(
-					input.timeRange,
-				);
+				const q = adminQueries(ctx.db);
+				const result = await q.getRepeatCustomersCount(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getRepeatCustomersCount:", error);
@@ -103,7 +106,8 @@ export const analytics = router({
 
 	getInventoryStatus: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getInventoryStatus();
+			const q = adminQueries(ctx.db);
+			const result = await q.getInventoryStatus();
 			return result;
 		} catch (error) {
 			console.error("Error in getInventoryStatus:", error);
@@ -123,7 +127,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getFailedPayments(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getFailedPayments(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getFailedPayments:", error);
@@ -137,11 +142,13 @@ export const analytics = router({
 
 	getLowInventoryProducts: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getLowInventoryProducts();
+			const q = adminQueries(ctx.db);
+			const result = await q.getLowInventoryProducts();
+			console.log("getLowInventoryProducts result:", result);
 			return result;
 		} catch (error) {
-			console.log(error);
 			console.error("Error in getLowInventoryProducts:", error);
+			console.error("Error details:", JSON.stringify(error, null, 2));
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch low inventory products",
@@ -158,7 +165,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getTopBrandsBySales(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getTopBrandsBySales(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getTopBrandsBySales:", error);
@@ -172,7 +180,8 @@ export const analytics = router({
 
 	getCurrentProductsValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const result = await adminQueries.getCurrentProductsValue();
+			const q = adminQueries(ctx.db);
+			const result = await q.getCurrentProductsValue();
 			return result;
 		} catch (error) {
 			console.error("Error in getCurrentProductsValue:", error);
@@ -192,7 +201,8 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getAnalyticsData(input.timeRange);
+				const q = adminQueries(ctx.db);
+				const result = await q.getAnalyticsData(input.timeRange);
 				return result;
 			} catch (error) {
 				console.error("Error in getAnalyticsData:", error);
@@ -209,12 +219,13 @@ export const analytics = router({
 				timeRange: timeRangeSchema,
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const timeRange = input.timeRange;
-				const _pendingOrders = await adminQueries.getPendingOrders();
-				const _revenue = await adminQueries.getRevenue(timeRange);
-				const _orderCount = await adminQueries.getOrderCount(timeRange);
+				const _pendingOrders = await q.getPendingOrders();
+				const _revenue = await q.getRevenue(timeRange);
+				const _orderCount = await q.getOrderCount(timeRange);
 				return {
 					pendingOrders: _pendingOrders,
 					revenue: _revenue,

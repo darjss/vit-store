@@ -1,6 +1,14 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { relations, sql } from "drizzle-orm";
-import { index, int, sqliteTableCreator, text } from "drizzle-orm/sqlite-core";
+import {
+	boolean,
+	index,
+	integer,
+	pgTableCreator,
+	text,
+	timestamp,
+	varchar,
+} from "drizzle-orm/pg-core";
 import {
 	deliveryProvider,
 	orderStatus,
@@ -9,24 +17,18 @@ import {
 	status,
 } from "../lib/constants";
 
-export const createTable = sqliteTableCreator((name) => `ecom_vit_${name}`);
+export const createTable = pgTableCreator((name) => `ecom_vit_${name}`);
 
 export const UsersTable = createTable(
 	"user",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		username: text("username", { length: 256 }).notNull(),
-		googleId: text("google_id", { length: 256 }).unique(),
-		isApproved: int("is_approved", { mode: "boolean" })
-			.default(false)
-			.notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		username: varchar("username", { length: 256 }).notNull(),
+		googleId: varchar("google_id", { length: 256 }).unique(),
+		isApproved: boolean("is_approved").default(false).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("username_idx").on(table.username),
@@ -39,15 +41,11 @@ export const UsersTable = createTable(
 export const CustomersTable = createTable(
 	"customer",
 	{
-		phone: int("phone", { mode: "number" }).notNull().unique().primaryKey(),
-		address: text("address", { length: 256 }),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		phone: integer("phone").notNull().unique().primaryKey(),
+		address: varchar("address", { length: 256 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("phone_idx").on(table.phone),
@@ -59,16 +57,12 @@ export const CustomersTable = createTable(
 export const BrandsTable = createTable(
 	"brand",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		name: text("name", { length: 256 }).notNull().unique(),
-		logoUrl: text("logo_url", { length: 512 }).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		name: varchar("name", { length: 256 }).notNull().unique(),
+		logoUrl: varchar("logo_url", { length: 512 }).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("brand_name_idx").on(table.name),
@@ -80,15 +74,11 @@ export const BrandsTable = createTable(
 export const CategoriesTable = createTable(
 	"category",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		name: text("name", { length: 256 }).notNull().unique(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		name: varchar("name", { length: 256 }).notNull().unique(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("category_name_idx").on(table.name),
@@ -100,43 +90,32 @@ export const CategoriesTable = createTable(
 export const ProductsTable = createTable(
 	"product",
 	{
-		id: int("id", { mode: "number" })
-			.primaryKey({ autoIncrement: true })
-			.notNull(),
-		name: text("name", { length: 256 }).notNull(),
-		slug: text("slug", { length: 256 }).notNull(),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
+		name: varchar("name", { length: 256 }).notNull(),
+		slug: varchar("slug", { length: 256 }).notNull(),
 		description: text("description").notNull(),
 		status: text("status", { enum: status }).default("draft").notNull(),
-		discount: int("discount", { mode: "number" }).default(0).notNull(),
-		amount: text("amount", { length: 15 }).notNull(),
-		potency: text("potency", { length: 10 }).notNull(),
-		stock: int("stock", { mode: "number" }).default(0).notNull(),
-		price: int("price", { mode: "number" }).notNull(),
-		dailyIntake: int("daily_intake", { mode: "number" }).default(0).notNull(),
-		categoryId: int("category_id", { mode: "number" })
+		discount: integer("discount").default(0).notNull(),
+		amount: varchar("amount", { length: 15 }).notNull(),
+		potency: varchar("potency", { length: 10 }).notNull(),
+		stock: integer("stock").default(0).notNull(),
+		price: integer("price").notNull(),
+		dailyIntake: integer("daily_intake").default(0).notNull(),
+		categoryId: integer("category_id")
 			.references(() => CategoriesTable.id)
 			.notNull(),
-		brandId: int("brand_id", { mode: "number" })
+		brandId: integer("brand_id")
 			.references(() => BrandsTable.id)
 			.notNull(),
-		tags: text("tags", { mode: "json" })
-			.$type<string[]>()
-			.notNull()
-			.default(sql`'[]'`),
-		isFeatured: int("is_featured", { mode: "boolean" })
-			.default(sql`0`)
-			.notNull(),
-		ingredients: text("ingredients", { mode: "json" }).$type<string[] | null>(),
-		seoTitle: text("seo_title", { length: 256 }),
-		seoDescription: text("seo_description", { length: 512 }),
-		weightGrams: int("weight_grams", { mode: "number" }).default(0).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		tags: text("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+		isFeatured: boolean("is_featured").default(false).notNull(),
+		ingredients: text("ingredients").$type<string[] | null>(),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		seoDescription: varchar("seo_description", { length: 512 }),
+		weightGrams: integer("weight_grams").default(0).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("product_id_idx").on(table.id),
@@ -155,18 +134,14 @@ export const ProductsTable = createTable(
 export const ProductImagesTable = createTable(
 	"product_image",
 	{
-		id: int("id", { mode: "number" })
-			.primaryKey({ autoIncrement: true })
-			.notNull(),
-		productId: int("product_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
+		productId: integer("product_id")
 			.references(() => ProductsTable.id, { onDelete: "cascade" })
 			.notNull(),
-		url: text("url", { length: 512 }).notNull(),
-		isPrimary: int("is_primary", { mode: "boolean" }).default(sql`0`).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		url: varchar("url", { length: 512 }).notNull(),
+		isPrimary: boolean("is_primary").default(false).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("image_product_idx").on(table.productId),
@@ -178,27 +153,23 @@ export const ProductImagesTable = createTable(
 export const OrdersTable = createTable(
 	"order",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		orderNumber: text("order_number", { length: 8 }).notNull(),
-		customerPhone: int("customer_phone", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		orderNumber: varchar("order_number", { length: 8 }).notNull(),
+		customerPhone: integer("customer_phone")
 			.references(() => CustomersTable.phone)
 			.notNull(),
 		status: text("status", {
 			enum: orderStatus,
 		}).notNull(),
-		address: text("address", { length: 256 }).notNull(),
+		address: varchar("address", { length: 256 }).notNull(),
 		deliveryProvider: text("delivery_provider", {
 			enum: deliveryProvider,
 		}).notNull(),
-		total: int("total", { mode: "number" }).notNull(),
+		total: integer("total").notNull(),
 		notes: text("notes"),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("order_id_idx").on(table.id),
@@ -213,21 +184,17 @@ export const OrdersTable = createTable(
 export const OrderDetailsTable = createTable(
 	"order_detail",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		orderId: int("order_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		orderId: integer("order_id")
 			.references(() => OrdersTable.id, { onDelete: "cascade" })
 			.notNull(),
-		productId: int("product_id", { mode: "number" })
+		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
-		quantity: int("quantity", { mode: "number" }).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		quantity: integer("quantity").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("detail_order_idx").on(table.orderId),
@@ -239,23 +206,21 @@ export const OrderDetailsTable = createTable(
 export const PaymentsTable = createTable(
 	"payment",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		paymentNumber: text("payment_number", { length: 10 }).default("").notNull(),
-		orderId: int("order_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 })
+			.default("")
+			.notNull(),
+		orderId: integer("order_id")
 			.references(() => OrdersTable.id)
 			.notNull(),
 		provider: text("provider", { enum: paymentProvider }).notNull(),
 		status: text("status", {
 			enum: paymentStatus,
 		}).notNull(),
-		amount: int("amount", { mode: "number" }).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		amount: integer("amount").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("payment_order_idx").on(table.orderId),
@@ -269,17 +234,13 @@ export const PaymentsTable = createTable(
 export const CartsTable = createTable(
 	"cart",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		customerId: int("customer_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		customerId: integer("customer_id")
 			.references(() => CustomersTable.phone)
 			.notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("cart_customer_idx").on(table.customerId),
@@ -291,21 +252,17 @@ export const CartsTable = createTable(
 export const CartItemsTable = createTable(
 	"cart_item",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		cartId: int("cart_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		cartId: integer("cart_id")
 			.references(() => CartsTable.id, { onDelete: "cascade" })
 			.notNull(),
-		productId: int("product_variant_id", { mode: "number" })
+		productId: integer("product_variant_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
-		quantity: int("quantity", { mode: "number" }).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		quantity: integer("quantity").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("cart_item_cart_idx").on(table.cartId),
@@ -317,24 +274,20 @@ export const CartItemsTable = createTable(
 export const SalesTable = createTable(
 	"sales",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		productId: int("product_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
-		orderId: int("order_id", { mode: "number" })
+		orderId: integer("order_id")
 			.references(() => OrdersTable.id)
 			.notNull(),
-		quantitySold: int("quantity_sold", { mode: "number" }).notNull(),
-		productCost: int("product_cost", { mode: "number" }).notNull(),
-		sellingPrice: int("selling_price", { mode: "number" }).notNull(),
-		discountApplied: int("discount_applied", { mode: "number" }).default(0),
-		createdAt: int("created_at", { mode: "timestamp" }).default(
-			sql`(unixepoch())`,
-		),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		quantitySold: integer("quantity_sold").notNull(),
+		productCost: integer("product_cost").notNull(),
+		sellingPrice: integer("selling_price").notNull(),
+		discountApplied: integer("discount_applied").default(0),
+		createdAt: timestamp("created_at").defaultNow(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("sales_product_idx").on(table.productId),
@@ -347,19 +300,15 @@ export const SalesTable = createTable(
 export const PurchasesTable = createTable(
 	"purchase",
 	{
-		id: int("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
-		productId: int("product_id", { mode: "number" })
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
-		quantityPurchased: int("quantity_purchased", { mode: "number" }).notNull(),
-		unitCost: int("unit_cost", { mode: "number" }).notNull(),
-		createdAt: int("created_at", { mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: int("updated_at", { mode: "timestamp" }).$onUpdate(
-			() => new Date(),
-		),
-		deletedAt: int("deleted_at", { mode: "timestamp" }),
+		quantityPurchased: integer("quantity_purchased").notNull(),
+		unitCost: integer("unit_cost").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_id_idx").on(table.id),

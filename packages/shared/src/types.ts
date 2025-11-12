@@ -1,4 +1,4 @@
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import  type {CustomerSelectType, UserSelectType} from "../../api/src/db/schema"
 export interface SessionConfig {
 	kvSessionPrefix: string;
@@ -33,7 +33,7 @@ export interface AddSalesType {
 }
 
 export type TransactionType = Parameters<
-	Parameters<DrizzleD1Database<any>["transaction"]>[0]
+	Parameters<PostgresJsDatabase<any>["transaction"]>[0]
 >[0];
 
 // Constants

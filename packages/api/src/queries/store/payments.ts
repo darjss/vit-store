@@ -1,12 +1,13 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../../db";
+import type { DB } from "../../db";
 import {
 	PaymentsTable,
 	ProductImagesTable,
 } from "../../db/schema";
 import { PaymentProviderType, PaymentStatusType } from "../../lib/types";
 
-export const storePayments = {
+export function storePayments(db: DB) {
+	return {
 	async getPaymentInfoByNumber(paymentNumber: string) {
 		return db.query.PaymentsTable.findFirst({
 			where: and(
@@ -56,9 +57,8 @@ export const storePayments = {
 			},
 		});
 	},
-	async confirmPayment(paymentNumber: string, provider?: PaymentProviderType) {
-			await db.update(PaymentsTable).set({ status: "success", provider: provider ?? "transfer" }).where(eq(PaymentsTable.paymentNumber, paymentNumber));
-			
+	async confirmPayment(paymentNumber: string, provider: PaymentProviderType | undefined) {
+		await db.update(PaymentsTable).set({ status: "success", provider: provider ?? "transfer" }).where(eq(PaymentsTable.paymentNumber, paymentNumber));
 	},
 	async getPaymentByNumber(paymentNumber: string) {
 		return db.query.PaymentsTable.findFirst({
@@ -71,5 +71,6 @@ export const storePayments = {
 	async updatePaymentStatus(paymentNumber: string, status: PaymentStatusType) {
 		await db.update(PaymentsTable).set({ status }).where(eq(PaymentsTable.paymentNumber, paymentNumber));
 	},
-};
+	};
+}
 

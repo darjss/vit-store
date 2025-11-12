@@ -1,7 +1,7 @@
 import path from "node:path";
 import alchemy from "alchemy";
 import {
-	D1Database,
+	Hyperdrive,
 	KVNamespace,
 	R2Bucket,
 	RateLimit,
@@ -13,26 +13,13 @@ const app = await alchemy("server");
 const stage = app.stage;
 console.log("cors origin", process.env.CORS_ORIGIN);
 
-await Exec("db-generate", {
-	cwd: path.join(import.meta.dirname, "..", "..", "packages", "api"),
-	command: "bun run db:generate",
-});
-
-const db = await D1Database("db", {
-	name: "vit-store-db",
-	migrationsDir: "../../packages/api/src/db/migrations",
-	primaryLocationHint: "apac",
-	migrationsTable: "drizzle_migrations",
-	adopt: true,
-});
-
 const kv = await KVNamespace("kv", {
 	title: `vit-store-kv-${app.stage}`,
 	adopt: true,
 });
 
 const r2 = await R2Bucket("r2", {
-	name:  `vit-store-bucket-${app.stage}`,
+	name: `vit-store-bucket-${app.stage}`,
 	adopt: true,
 });
 
@@ -44,12 +31,24 @@ const rateLimit = RateLimit({
 	},
 });
 
+const hyperdriveDB = await Hyperdrive("planetscale-db", {
+	origin: {
+		host: process.env.PLANETSCALE_HOST || "",
+		user: process.env.PLANETSCALE_USER || "",
+		password: process.env.PLANETSCALE_PASSWORD || "",
+		database: process.env.PLANETSCALE_DATABASE || "",
+	},
+	dev: {
+		origin: "postgres://postgres:postgres@localhost:5433/vitstore",
+	},
+});
+
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
 	bindings: {
 		RATE_LIMITER: rateLimit,
-		DB: db,
+		DB: hyperdriveDB,
 		vitStoreKV: kv,
 		r2Bucket: r2,
 		CORS_ORIGIN: process.env.CORS_ORIGIN || "",
@@ -61,9 +60,7 @@ export const server = await Worker("api", {
 		MESSENGER_ACCESS_TOKEN: process.env.MESSENGER_ACCESS_TOKEN || "",
 		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
 	},
-	placement: {
-		mode: "smart",
-	},
+
 	observability: {
 		enabled: false,
 		logs: {

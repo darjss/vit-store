@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
 import { storeQueries } from "@vit/api/queries";
+import type { DB } from "../../db";
 import type { Context } from "../../lib/context";
 import {
 	auth as authCheck,
@@ -96,7 +97,7 @@ export const auth = router({
 					});
 				}
 
-				const user = await addCustomerToDB(input.phone);
+				const user = await addCustomerToDB(input.phone, ctx.db);
 
 				if (!user) {
 					throw new TRPCError({
@@ -151,12 +152,13 @@ export const auth = router({
 	}),
 });
 
-export const addCustomerToDB = async (phone: string) => {
+export const addCustomerToDB = async (phone: string, db: DB) => {
 	try {
-		const user = await storeQueries.getCustomerByPhone(Number.parseInt(phone, 10));
+		const q = storeQueries(db);
+		const user = await q.getCustomerByPhone(Number.parseInt(phone, 10));
 		console.log("user", user);
 		if (!user) {
-			const newUser = await storeQueries.createCustomer({
+			const newUser = await q.createCustomer({
 				phone: Number.parseInt(phone, 10),
 				address: "",
 			});

@@ -20,7 +20,8 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.createCustomer(input);
+				const q = adminQueries(ctx.db);
+				const result = await q.createCustomer(input);
 				return result;
 			} catch (error) {
 				console.error("Error adding customer:", error);
@@ -45,8 +46,9 @@ export const customer = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				console.log("GETTING CUSTOMER BY PHONE");
-				const result = await adminQueries.getCustomerByPhone(input.phone);
+				const result = await q.getCustomerByPhone(input.phone);
 				console.log("RESULT", result);
 				if (!result) {
 					throw new TRPCError({
@@ -68,7 +70,8 @@ export const customer = router({
 
 	getCustomerCount: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const count = await adminQueries.getCustomerCount();
+			const q = adminQueries(ctx.db);
+			const count = await q.getCustomerCount();
 			return count;
 		} catch (error) {
 			console.error("Error getting customer count:", error);
@@ -88,9 +91,10 @@ export const customer = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { timeRange } = input;
 				const startDate = await getDaysFromTimeRange(timeRange);
-				const count = await adminQueries.getNewCustomersCount(startDate);
+				const count = await q.getNewCustomersCount(startDate);
 				return count;
 			} catch (error) {
 				console.error("Error getting new customers count:", error);
@@ -104,7 +108,8 @@ export const customer = router({
 
 	getAllCustomers: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const customers = await adminQueries.getAllCustomers();
+			const q = adminQueries(ctx.db);
+			const customers = await q.getAllCustomers();
 			return customers;
 		} catch (error) {
 			console.error("Error getting all customers:", error);
@@ -130,8 +135,9 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { phone, address } = input;
-				const result = await adminQueries.updateCustomer(phone, { address });
+				const result = await q.updateCustomer(phone, { address });
 				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -163,8 +169,9 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { phone } = input;
-				await adminQueries.deleteCustomer(phone);
+				await q.deleteCustomer(phone);
 				return { message: "Successfully deleted customer" };
 			} catch (error) {
 				console.error("Error deleting customer:", error);

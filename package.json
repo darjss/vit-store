@@ -35,11 +35,16 @@
 		"dev:native": "turbo -F native dev",
 		"dev:web": "turbo -F web dev",
 		"dev:server": "turbo -F server dev",
-		"db:push": "turbo -F @vit-store/db db:push",
-		"db:generate": "turbo -F @vit-store/db db:generate",
+		"db:generate": "turbo -F @vit/api db:generate",
+		"db:migrate": "turbo -F server db:migrate",
+		"db:migrate:local": "turbo -F server db:migrate:local",
+		"db:push": "turbo -F @vit/api db:push",
 		"db:studio": "turbo -F server db:studio",
 		"db:studio:local": "turbo -F server db:studio:local",
-		"db:migrate": "turbo -F server db:migrate"
+		"db:seed": "turbo -F server db:seed",
+		"db:docker:up": "docker-compose up -d",
+		"db:docker:down": "docker-compose down",
+		"start:dev": "./start-dev.sh"
 	},
 	"dependencies": {
 		"@corvu/drawer": "^0.2.4",

@@ -7,7 +7,8 @@ import { adminProcedure, router } from "../../lib/trpc";
 export const brands = router({
 	getAllBrands: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const brands = await adminQueries.getAllBrands();
+			const q = adminQueries(ctx.db);
+			const brands = await q.getAllBrands();
 			console.log("brands", brands);
 			return brands;
 		} catch (error) {
@@ -23,8 +24,9 @@ export const brands = router({
 		.input(addBrandSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const { name, logoUrl } = input;
-				await adminQueries.createBrand({ name, logoUrl });
+				await q.createBrand({ name, logoUrl });
 				return { message: "Successfully updated category" };
 			} catch (err) {
 				console.error("Error adding products:", err);
@@ -39,6 +41,7 @@ export const brands = router({
 		.input(addBrandSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				const id = input.id;
 				if (!id) {
 					throw new TRPCError({
@@ -47,7 +50,7 @@ export const brands = router({
 					});
 				}
 				const { name, logoUrl } = input;
-				await adminQueries.updateBrand(id, { name, logoUrl });
+				await q.updateBrand(id, { name, logoUrl });
 			} catch (err) {
 				console.error("Error adding products:", err);
 				throw new TRPCError({
@@ -61,7 +64,8 @@ export const brands = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await adminQueries.deleteBrand(input.id);
+				const q = adminQueries(ctx.db);
+				await q.deleteBrand(input.id);
 			} catch (err) {
 				console.error("Error deleting brand:", err);
 				throw new TRPCError({

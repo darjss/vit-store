@@ -11,9 +11,10 @@ import { adminProcedure, router } from "../../lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 
 export const order = router({
-	addOrder: adminProcedure.input(addOrderSchema).mutation(async ({ input }) => {
+	addOrder: adminProcedure.input(addOrderSchema).mutation(async ({ input, ctx }) => {
 		console.log("addOrder called with", input);
 		try {
+			const q = adminQueries(ctx.db);
 			const orderTotal = input.products.reduce(
 				(acc, currentProduct) =>
 					acc + currentProduct.price * currentProduct.quantity,
@@ -21,21 +22,25 @@ export const order = router({
 			);
 
 			if (input.isNewCustomer) {
-				await adminQueries.createCustomer({
-					phone: Number(input.customerPhone),
-					address: input.address,
-				});
+				await q.createCustomer(
+					{
+						phone: Number(input.customerPhone),
+						address: input.address,
+					},
+				);
 			}
 			const orderNumber = generateOrderNumber();
-			const order = await adminQueries.createOrder({
-				orderNumber: orderNumber,
-				customerPhone: Number(input.customerPhone),
-				status: input.status,
-				notes: input.notes ?? null,
-				total: orderTotal,
-				address: input.address,
-				deliveryProvider: input.deliveryProvider,
-			});
+			const order = await q.createOrder(
+				{
+					orderNumber: orderNumber,
+					customerPhone: Number(input.customerPhone),
+					status: input.status,
+					notes: input.notes ?? null,
+					total: orderTotal,
+					address: input.address,
+					deliveryProvider: input.deliveryProvider,
+				},
+			);
 
 			const orderId = order?.orderId;
 
@@ -43,22 +48,24 @@ export const order = router({
 				productId: product.productId,
 				quantity: product.quantity,
 			}));
-			await adminQueries.createOrderDetails(orderId, orderDetails);
+			await q.createOrderDetails(orderId, orderDetails);
 
 			if (input.paymentStatus === "success") {
 				for (const product of input.products) {
-					const productCost = await adminQueries.getAverageCostOfProduct(
+					const productCost = await q.getAverageCostOfProduct(
 						product.productId,
 						new Date(),
 					);
-					await adminQueries.addSale({
-						productCost: productCost,
-						quantitySold: product.quantity,
-						orderId: order.orderId,
-						sellingPrice: product.price,
-						productId: product.productId,
-					});
-					await adminQueries.updateStock(
+					await q.addSale(
+						{
+							productCost: productCost,
+							quantitySold: product.quantity,
+							orderId: order.orderId,
+							sellingPrice: product.price,
+							productId: product.productId,
+						},
+					);
+					await q.updateStock(
 						product.productId,
 						product.quantity,
 						"minus",
@@ -67,13 +74,15 @@ export const order = router({
 			}
 
 			try {
-				const paymentResult = await adminQueries.createPayment({
-					paymentNumber: generatePaymentNumber(),
-					orderId: orderId,
-					provider: "transfer",
-					status: input.paymentStatus,
-					amount: orderTotal,
-				});
+				const paymentResult = await q.createPayment(
+					{
+						paymentNumber: generatePaymentNumber(),
+						orderId: orderId,
+						provider: "transfer",
+						status: input.paymentStatus,
+						amount: orderTotal,
+					},
+				);
 				console.log("Payment created:", paymentResult);
 			} catch (error) {
 				console.error("Error creating payment:", error);
@@ -107,6 +116,7 @@ export const order = router({
 		.input(updateOrderSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				console.log("updating order");
 
 				const orderTotal = input.products.reduce(
@@ -116,69 +126,82 @@ export const order = router({
 				);
 
 				if (input.isNewCustomer) {
-					const existingCustomer = await adminQueries.getCustomerByPhone(
+					const existingCustomer = await q.getCustomerByPhone(
 						Number(input.customerPhone),
 					);
 					if (!existingCustomer) {
-						await adminQueries.createCustomer({
-							phone: Number(input.customerPhone),
-							address: input.address,
-						});
+						await q.createCustomer(
+							{
+								phone: Number(input.customerPhone),
+								address: input.address,
+							},
+						);
 					} else {
-						await adminQueries.updateCustomer(Number(input.customerPhone), {
-							address: input.address,
-						});
+						await q.updateCustomer(
+							Number(input.customerPhone),
+							{
+								address: input.address,
+							},
+						);
 					}
 				}
 
-				await adminQueries.updateOrder(input.id, {
-					customerPhone: Number(input.customerPhone),
-					status: input.status,
-					notes: input.notes,
-					total: orderTotal,
-				});
+				await q.updateOrder(
+					input.id,
+					{
+						customerPhone: Number(input.customerPhone),
+						status: input.status,
+						notes: input.notes,
+						total: orderTotal,
+					},
+				);
 
-				const currentOrderDetails = await adminQueries.getOrderDetailsByOrderId(
+				const currentOrderDetails = await q.getOrderDetailsByOrderId(
 					input.id,
 				);
 
-				await adminQueries.deleteOrderDetails(input.id);
+				await q.deleteOrderDetails(input.id);
 
 				const orderDetailsPromise = input.products.map(async (product) => {
-					await adminQueries.createOrderDetails(input.id, [
-						{
-							productId: product.productId,
-							quantity: product.quantity,
-						},
-					]);
+					await q.createOrderDetails(
+						input.id,
+						[
+							{
+								productId: product.productId,
+								quantity: product.quantity,
+							},
+						],
+					);
 
 					const existingDetail = currentOrderDetails.find(
 						(detail) => detail.productId === product.productId,
 					);
 					if (input.paymentStatus === "success") {
-						const productCost = await adminQueries.getAverageCostOfProduct(
+						const productCost = await q.getAverageCostOfProduct(
 							product.productId,
 							new Date(),
 						);
-						await adminQueries.addSale({
-							productCost: productCost,
-							quantitySold: product.quantity,
-							orderId: input.id,
-							sellingPrice: product.price,
-							productId: product.productId,
-						});
+						await q.addSale(
+							{
+								productCost: productCost,
+								quantitySold: product.quantity,
+								orderId: input.id,
+								sellingPrice: product.price,
+								productId: product.productId,
+							},
+						);
 					}
 					if (existingDetail) {
 						const quantityDiff = product.quantity - existingDetail.quantity;
 						if (quantityDiff !== 0) {
-							await adminQueries.updateStock(
+							await q.updateStock(
 								product.productId,
 								Math.abs(quantityDiff),
 								quantityDiff > 0 ? "minus" : "add",
 							);
 						}
 					} else {
-						await adminQueries.updateStock(
+						await q.updateStock(
 							product.productId,
 							product.quantity,
 							"minus",
@@ -192,10 +215,17 @@ export const order = router({
 				);
 
 				const restoreStockPromises = removedProducts.map((detail) =>
-					adminQueries.updateStock(detail.productId, detail.quantity, "add"),
+					q.updateStock(
+						detail.productId,
+						detail.quantity,
+						"add",
+					),
 				);
 
-				await adminQueries.updatePaymentStatus(input.id, input.paymentStatus);
+				await q.updatePaymentStatus(
+					input.id,
+					input.paymentStatus,
+				);
 
 				await Promise.allSettled([
 					...orderDetailsPromise,
@@ -217,18 +247,19 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				console.log("deleting order", input.id);
-				const orderDetails = await adminQueries.getOrderDetailsByOrderId(
+				const orderDetails = await q.getOrderDetailsByOrderId(
 					input.id,
 				);
 
 				const restoreStockPromises = orderDetails
 					.filter((detail) => !detail.deletedAt)
 					.map((detail) =>
-						adminQueries.updateStock(detail.productId, detail.quantity, "add"),
+						q.updateStock(detail.productId, detail.quantity, "add"),
 					);
 
-				await adminQueries.softDeleteOrder(input.id);
+				await q.softDeleteOrder(input.id);
 
 				await Promise.allSettled(restoreStockPromises);
 
@@ -247,18 +278,19 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const q = adminQueries(ctx.db);
 				// Deduct stock again based on soft-deleted details
-				const details = await adminQueries.getOrderDetailsByOrderId(input.id);
+				const details = await q.getOrderDetailsByOrderId(input.id);
 
 				const deductPromises = details
 					.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
 					.map((d) =>
-						adminQueries.updateStock(d.productId, d.quantity, "minus"),
+						q.updateStock(d.productId, d.quantity, "minus"),
 					);
 
 				await Promise.allSettled(deductPromises);
 
-				await adminQueries.restoreOrder(input.id);
+				await q.restoreOrder(input.id);
 
 				return { message: "Order restored successfully" };
 			} catch (e) {
@@ -275,7 +307,8 @@ export const order = router({
 		.input(v.object({ searchTerm: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const orders = await adminQueries.searchOrder(input.searchTerm);
+				const q = adminQueries(ctx.db);
+				const orders = await q.searchOrder(input.searchTerm);
 				return orders;
 			} catch (e) {
 				console.error(e);
@@ -289,7 +322,8 @@ export const order = router({
 
 	getAllOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const orders = await adminQueries.getAllOrders();
+			const q = adminQueries(ctx.db);
+			const orders = await q.getAllOrders();
 			return orders;
 		} catch (e) {
 			if (e instanceof Error) {
@@ -312,7 +346,8 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const result = await adminQueries.getOrderById(input.id);
+				const q = adminQueries(ctx.db);
+				const result = await q.getOrderById(input.id);
 				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -378,7 +413,8 @@ export const order = router({
 			);
 
 			try {
-				return await adminQueries.getPaginatedOrders({
+				const q = adminQueries(ctx.db);
+				return await q.getPaginatedOrders({
 					page: input.page ?? 1,
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
 					paymentStatus: input.paymentStatus,
@@ -407,11 +443,13 @@ export const order = router({
 	getOrderCount: adminProcedure
 		.input(v.object({ timeRange: timeRangeSchema }))
 		.query(async ({ ctx, input }) => {
-			return await adminQueries.getOrderCount(input.timeRange);
+			const q = adminQueries(ctx.db);
+			return await q.getOrderCount(input.timeRange);
 		}),
 
 	getPendingOrders: adminProcedure.query(async ({ ctx }) => {
-		return await adminQueries.getPendingOrders();
+		const q = adminQueries(ctx.db);
+		return await q.getPendingOrders();
 	}),
 
 	updateOrderStatus: adminProcedure
@@ -429,7 +467,8 @@ export const order = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				await adminQueries.updateOrderStatus(input.id, input.status);
+				const q = adminQueries(ctx.db);
+				await q.updateOrderStatus(input.id, input.status);
 				return {
 					message: `Order status updated successfully to ${input.status}`,
 				};
@@ -450,7 +489,8 @@ export const order = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const orders = await adminQueries.getRecentOrdersByProductId(
+				const q = adminQueries(ctx.db);
+				const orders = await q.getRecentOrdersByProductId(
 					input.productId,
 				);
 				return orders;

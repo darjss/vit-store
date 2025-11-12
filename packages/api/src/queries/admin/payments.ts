@@ -1,9 +1,10 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "../../db";
-import { PaymentsTable } from "../../db/schema";
 import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
+import { desc, eq } from "drizzle-orm";
+import type { DB } from "../../db";
+import { PaymentsTable } from "../../db/schema";
 
-export const adminPayments = {
+export function adminPayments(db: DB) {
+	return {
 	async createPayment(data: {
 		paymentNumber: string;
 		orderId: number;
@@ -69,4 +70,5 @@ export const adminPayments = {
 			.set({ status })
 			.where(eq(PaymentsTable.orderId, orderId));
 	},
-};
+	};
+}

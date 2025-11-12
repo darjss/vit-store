@@ -74,7 +74,13 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	console.log("path", path, "input", input, "cache middleware", cached);
 	if (cached) {
 		console.log("cache middleware returning cached");
-		return JSON.parse(cached);
+		// Return in the same format as next() returns
+		// Using type assertion because the middleware marker type is branded and can't be created directly
+		return {
+			ok: true as const,
+			data: JSON.parse(cached),
+			marker: "middlewareMarker" as any,
+		};
 	}
 
 	const result = await next();

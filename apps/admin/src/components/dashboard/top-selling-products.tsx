@@ -3,14 +3,16 @@ import { useSearch } from "@tanstack/react-router";
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/utils/trpc";
+import { Suspense } from "react";
 
 export function TopSellingProducts() {
 	const { timeRange } = useSearch({ from: "/_dash/" });
 	const { data: products } = useSuspenseQuery({
 		...trpc.sales.topProducts.queryOptions({ timeRange, productCount: 10 }),
 	});
-
+	console.log("products", products);
 	return (
+		<Suspense fallback={<div>Loading...</div>}>
 		<Card className="border-2 border-border shadow-shadow">
 			<CardHeader className="border-border border-b-2 bg-secondary-background">
 				<CardTitle className="flex items-center gap-3 font-heading text-xl">
@@ -51,5 +53,6 @@ export function TopSellingProducts() {
 				))}
 			</CardContent>
 		</Card>
+		</Suspense>
 	);
 }

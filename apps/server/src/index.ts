@@ -6,13 +6,14 @@ import {
 	setAdminSessionTokenCookie,
 	storeRouter,
 } from "@vit/api";
+import { createDb } from "@vit/api/db";
 import {
 	type GenericWebhookPayload,
 	messenger,
 	messengerWebhookHandler,
 } from "@vit/api/integrations";
 import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
-import { adminQueries } from "@vit/api/queries";
+import { adminQueries, storeQueries } from "@vit/api/queries";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -23,7 +24,12 @@ import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
 
-const app = new Hono<{ Bindings: Env }>();
+type AppType = Hono<{
+	Bindings: Env;
+}>;
+const app: AppType = new Hono<{
+	Bindings: Env;
+}>();
 
 app.use(logger());
 app.use("/*", (c, next) => {
@@ -53,6 +59,16 @@ app.use(
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
+		onError({ path, error }) {
+			console.error("❌ tRPC Admin Error:", {
+				path,
+				code: error.code,
+				message: error.message,
+			});
+			if (error.cause) {
+				console.error("Error cause:", error.cause);
+			}
+		},
 	}),
 );
 
@@ -63,6 +79,16 @@ app.use(
 		router: storeRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
+		},
+		onError({ path, error }) {
+			console.error("❌ tRPC Store Error:", {
+				path,
+				code: error.code,
+				message: error.message,
+			});
+			if (error.cause) {
+				console.error("Error cause:", error.cause);
+			}
 		},
 	}),
 );
@@ -190,11 +216,13 @@ app.get("/admin/login/google/callback", async (c) => {
 		const username = claims.name;
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
-		const existingUser = await adminQueries.getUserFromGoogleId(googleUserId);
+		const db = createDb(c.env.DB);
+		const q = adminQueries(db);
+		const existingUser = await q.getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
 		if (existingUser !== null && existingUser.isApproved === true) {
 			console.log("existingUser is approved", existingUser);
-			const session = await createAdminSession(existingUser, env.vitStoreKV);
+			const session = await createAdminSession(existingUser, c.env.vitStoreKV);
 			console.log("created session with cookie ", session);
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
@@ -202,8 +230,8 @@ app.get("/admin/login/google/callback", async (c) => {
 
 		if (googleUserId === "118271302696111351988") {
 			console.log("creating user");
-			const user = await adminQueries.createUser(googleUserId, username, true);
-			const session = await createAdminSession(user, env.vitStoreKV);
+			const user = await q.createUser(googleUserId, username, true);
+			const session = await createAdminSession(user, c.env.vitStoreKV);
 
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
@@ -214,7 +242,7 @@ app.get("/admin/login/google/callback", async (c) => {
 			return c.redirect(`${process.env.DASH_URL}/login`);
 		}
 
-		await adminQueries.createUser(googleUserId, username, false);
+		await q.createUser(googleUserId, username, false);
 
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {
@@ -277,7 +305,8 @@ app.get("/health-check", (c) => {
 app.post("/messenger/webhook", async (c) => {
 	const payload = (await c.req.json()) as GenericWebhookPayload;
 	console.log("payload", payload);
-await messengerWebhookHandler(payload);
+	const db = createDb(c.env.DB);
+	await messengerWebhookHandler(payload, db);
 	return c.text("OK", 200);
 });
 

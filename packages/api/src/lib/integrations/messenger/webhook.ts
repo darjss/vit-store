@@ -1,10 +1,15 @@
+import type { DB } from "../../../db";
 import { storeQueries } from "@vit/api/queries";
 import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
 
-export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
+export async function messengerWebhookHandler(
+	payload: GenericWebhookPayload,
+	db: DB,
+) {
+	const q = storeQueries(db);
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {
 			const userId = event.sender.id;
@@ -30,7 +35,7 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					console.error("Payment number not found");
 					return;
 				}
-				await storeQueries.updatePaymentStatus(
+				await q.updatePaymentStatus(
 					paymentNumber,
 					"success",
 				);
@@ -40,7 +45,7 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					console.error("Payment number not found");
 					return;
 				}
-				await storeQueries.updatePaymentStatus(
+				await q.updatePaymentStatus(
 					paymentNumber,
 					"failed",
 				);

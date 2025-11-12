@@ -42,10 +42,17 @@ import { trpc } from "@/utils/trpc";
 export const Route = createFileRoute("/_dash/products/$id")({
 	component: RouteComponent,
 	loader: async ({ context: ctx, params }) => {
-		const product = await ctx.queryClient.ensureQueryData(
-			ctx.trpc.product.getProductById.queryOptions({ id: Number(params.id) }),
-		);
-		return { product };
+		const productId = Number(params.id);
+		await Promise.all([
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.product.getProductById.queryOptions({ id: productId }),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.order.getRecentOrdersByProductId.queryOptions({
+					productId: productId,
+				}),
+			),
+		]);
 	},
 	params: v.object({
 		id: v.pipe(
@@ -54,10 +61,17 @@ export const Route = createFileRoute("/_dash/products/$id")({
 			v.pipe(v.number(), v.integer(), v.minValue(1)),
 		),
 	}),
-	pendingComponent: ProductDetailSkeleton,
 });
 
 function RouteComponent() {
+	return (
+		<Suspense fallback={<ProductDetailSkeleton />}>
+			<ProductDetailContent />
+		</Suspense>
+	);
+}
+
+function ProductDetailContent() {
 	const { id: productId } = Route.useParams();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();

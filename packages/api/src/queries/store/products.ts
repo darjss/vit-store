@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
-import { db } from "../../db";
+import type { DB } from "../../db";
 import { ProductImagesTable, ProductsTable } from "../../db/schema";
 
-export const storeProducts = {
+export function storeProducts(db: DB) {
+	return {
 	async getFeaturedProducts() {
 		return db.query.ProductsTable.findMany({
 			columns: {
@@ -265,10 +266,7 @@ export const storeProducts = {
 				status: true,
 				stock: true,
 			},
-			where: and(
-				eq(ProductsTable.id, id),
-				isNull(ProductsTable.deletedAt),
-			),
+			where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
 		});
 	},
 
@@ -278,5 +276,5 @@ export const storeProducts = {
 			with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
 		});
 	},
-};
-
+	};
+}
