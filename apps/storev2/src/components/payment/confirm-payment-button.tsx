@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
+import { navigate } from "astro:transitions/client";
 
 const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
     console.log("paymentNumber", paymentNumber);
@@ -12,13 +13,17 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 			mutationFn: async () => {
 				return await api.payment.sendTransferNotification.mutate({ paymentNumber });
 			},
-			onSuccess: async () => {
+			onSuccess: async (data) => {
+				if(!data) {
+					return;
+				}
 				showToast({
 					title: "Амжилттай",
 					description: "Төлбөр баталгаажуулагдлаа",
 					variant: "success",
-					duration: 5000,
+					duration: 5000,	
 				});
+				navigate(`/order/confirm/${data.orderNumber}`);
 			},
 		}),
 

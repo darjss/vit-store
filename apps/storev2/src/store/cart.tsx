@@ -1,5 +1,5 @@
 import { makePersisted } from "@solid-primitives/storage";
-import { createMemo, createRoot } from "solid-js";
+import { createMemo, createRoot, createSignal, onMount } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { CartItems } from "@/lib/types";
 
@@ -68,6 +68,8 @@ const safeStorage: Storage = {
 };
 
 export const cart = createRoot(() => {
+	const [isHydrated, setIsHydrated] = createSignal(false);
+
 	const [cartStore, setCart] = makePersisted(
 		createStore<{ items: CartItems[] }>({
 			items: [],
@@ -75,8 +77,15 @@ export const cart = createRoot(() => {
 		{
 			name: "cart-items",
 			storage: safeStorage,
+			deferInit: true,
 		},
 	);
+
+	onMount(() => {
+		queueMicrotask(() => {
+			setIsHydrated(true);
+		});
+	});
 
 	const total = createMemo(() =>
 		cartStore.items.reduce((acc, item) => acc + item.price * item.quantity, 0),
@@ -89,6 +98,9 @@ export const cart = createRoot(() => {
 	return {
 		items() {
 			return cartStore.items;
+		},
+		isHydrated() {
+			return isHydrated();
 		},
 
 		add: (product: CartItems) => {

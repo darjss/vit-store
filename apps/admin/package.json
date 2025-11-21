@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "alchemy dev --app admin --stage dev",
-		"deploy": "alchemy deploy --app admin --stage prod",
+		"deploy": "alchemy deploy --app admin --stage prod --env-file ../../.env.prod",
 		"destroy": "alchemy destroy --app admin",
 		"dev:vite": "vite --port=3005",
 		"build": "vite build",

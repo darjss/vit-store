@@ -19,7 +19,7 @@
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"dev": "alchemy dev --app server --stage dev",
-		"deploy": "alchemy deploy --app server --stage prod",
+		"deploy": "alchemy deploy --app server --stage prod --env-file ../../.env.prod",
 		"destroy": "alchemy destroy --app server",
 		"db:push": "drizzle-kit push",
 		"db:migrate:local": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
@@ -44,6 +44,7 @@
 		"drizzle-seed": "^0.3.1",
 		"hono": "catalog:",
 		"nanoid": "^5.1.5",
+		"postgres": "^3.4.7",
 		"superjson": "^2.2.2",
 		"valibot": "catalog:"
 	},

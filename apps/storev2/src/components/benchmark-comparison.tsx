@@ -5,12 +5,16 @@ interface BenchmarkComparisonProps {
 	serverFetchTime: number;
 	serverDbTime: number;
 	productCount: number;
+	kvWriteTime?: number;
+	kvReadTime?: number;
 }
 
 interface BenchmarkResult {
 	dbElapsed: number;
 	productCount: number;
 	fetchTime: number;
+	kvWriteElapsed?: number;
+	kvReadElapsed?: number;
 }
 
 export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
@@ -23,6 +27,8 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			dbElapsed: result.dbElapsed,
 			productCount: result.product.length,
 			fetchTime,
+			kvWriteElapsed: result.kvWriteElapsed,
+			kvReadElapsed: result.kvReadElapsed,
 		};
 	};
 
@@ -53,6 +59,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			{/* Control Panel */}
 			<div class="rounded-lg bg-white p-6 shadow-md">
 				<button
+					type="button"
 					onClick={refetch}
 					disabled={data.loading}
 					class="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-400"
@@ -78,7 +85,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
+						aria-label="Client-side icon"
 					>
+						<title>Client-side icon</title>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
@@ -130,6 +139,15 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 								{data()!.productCount}
 							</p>
 						</div>
+
+						<Show when={data()!.kvReadElapsed !== undefined}>
+							<div class="rounded-lg bg-white p-4">
+								<p class="mb-1 text-gray-600 text-sm">KV Read Time (Client)</p>
+								<p class="font-semibold text-2xl text-purple-600">
+									{formatTime(data()!.kvReadElapsed!)}
+								</p>
+							</div>
+						</Show>
 					</div>
 
 					<div class="mt-4 rounded-lg bg-blue-200 p-3">
@@ -202,6 +220,18 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 									• The main difference is network latency from browser to
 									server
 								</li>
+								<Show
+									when={
+										data()!.kvReadElapsed !== undefined &&
+										props.kvReadTime !== undefined
+									}
+								>
+									<li>
+										• KV read time: {formatTime(data()!.kvReadElapsed!)}{" "}
+										(client) vs {formatTime(props.kvReadTime!)} (server) -
+										typically very fast
+									</li>
+								</Show>
 							</ul>
 						</div>
 					</div>

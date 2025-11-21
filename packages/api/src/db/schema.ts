@@ -4,6 +4,7 @@ import {
 	boolean,
 	index,
 	integer,
+	jsonb,
 	pgTableCreator,
 	text,
 	timestamp,
@@ -41,8 +42,11 @@ export const UsersTable = createTable(
 export const CustomersTable = createTable(
 	"customer",
 	{
-		phone: integer("phone").notNull().unique().primaryKey(),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		phone: integer("phone").notNull().unique(),
 		address: varchar("address", { length: 256 }),
+		facebook_username: varchar("facebook_username", { length: 256 }),
+		instagram_username: varchar("instagram_username", { length: 256 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
@@ -96,8 +100,8 @@ export const ProductsTable = createTable(
 		description: text("description").notNull(),
 		status: text("status", { enum: status }).default("draft").notNull(),
 		discount: integer("discount").default(0).notNull(),
-		amount: varchar("amount", { length: 15 }).notNull(),
-		potency: varchar("potency", { length: 10 }).notNull(),
+		amount: varchar("amount", { length: 256 }).notNull(),
+		potency: varchar("potency", { length: 256 }).notNull(),
 		stock: integer("stock").default(0).notNull(),
 		price: integer("price").notNull(),
 		dailyIntake: integer("daily_intake").default(0).notNull(),
@@ -109,7 +113,10 @@ export const ProductsTable = createTable(
 			.notNull(),
 		tags: text("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
 		isFeatured: boolean("is_featured").default(false).notNull(),
-		ingredients: text("ingredients").$type<string[] | null>(),
+		ingredients: jsonb("ingredients")
+			.$type<string[]>()
+			.default(sql`'[]'::jsonb`)
+			.notNull(),
 		seoTitle: varchar("seo_title", { length: 256 }),
 		seoDescription: varchar("seo_description", { length: 512 }),
 		weightGrams: integer("weight_grams").default(0).notNull(),

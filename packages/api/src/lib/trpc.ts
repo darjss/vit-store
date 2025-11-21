@@ -66,6 +66,72 @@ const createCacheKey = async (path: string, input: any): Promise<string> => {
 	return `cache:${hashHex}`;
 };
 
+const loggingMiddleware = t.middleware(
+	async ({ ctx, next, path, type, input }) => {
+		const startTime = Date.now();
+		const timestamp = new Date().toISOString();
+		const procedureType =
+			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
+
+		// Log request
+		console.log("\n" + "=".repeat(80));
+		console.log(`🔵 [${timestamp}] tRPC ${procedureType}: ${path}`);
+		console.log("─".repeat(80));
+		console.log("📥 INPUT:");
+		console.log(JSON.stringify(input, null, 2));
+		console.log("─".repeat(80));
+
+		try {
+			const result = await next();
+			const duration = Date.now() - startTime;
+
+			// Log success response
+			console.log("📤 OUTPUT:");
+			if (result && typeof result === "object" && "data" in result) {
+				// For large outputs, truncate if needed
+				const outputStr = JSON.stringify(result.data, null, 2);
+				if (outputStr.length > 2000) {
+					console.log(outputStr.substring(0, 2000) + "\n... (truncated)");
+				} else {
+					console.log(outputStr);
+				}
+			} else {
+				console.log(JSON.stringify(result, null, 2));
+			}
+			console.log("─".repeat(80));
+			console.log(`✅ SUCCESS (${duration}ms)`);
+			console.log("=".repeat(80) + "\n");
+
+			return result;
+		} catch (error) {
+			const duration = Date.now() - startTime;
+
+			// Log error response
+			console.log("❌ ERROR:");
+			if (error instanceof TRPCError) {
+				console.log(`   Code: ${error.code}`);
+				console.log(`   Message: ${error.message}`);
+				if (error.cause) {
+					console.log("cause:", error.cause);
+				}
+			} else if (error instanceof Error) {
+				console.log(`   Name: ${error.name}`);
+				console.log(`   Message: ${error.message}`);
+				if (error.stack) {
+					console.log(`   Stack: ${error.stack}`);
+				}
+			} else {
+				console.log(JSON.stringify(error, null, 2));
+			}
+			console.log("─".repeat(80));
+			console.log(`❌ FAILED (${duration}ms)`);
+			console.log("=".repeat(80) + "\n");
+
+			throw error;
+		}
+	},
+);
+
 const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	const cacheKey = await createCacheKey(path, input);
 	console.log("cache middleware", cacheKey);
@@ -109,10 +175,16 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	return result;
 });
 
-export const publicProcedure = t.procedure;
-export const customerProcedure = t.procedure.use(customerAuthMiddleware);
-export const adminProcedure = t.procedure.use(adminAuthMiddleware);
+export const publicProcedure = t.procedure.use(loggingMiddleware);
+export const customerProcedure = t.procedure
+	.use(loggingMiddleware)
+	.use(customerAuthMiddleware);
+export const adminProcedure = t.procedure
+	.use(loggingMiddleware)
+	.use(adminAuthMiddleware);
 
-export const cachedProcedure = t.procedure.use(cacheMiddleware);
+export const cachedProcedure = t.procedure
+.use(loggingMiddleware)
+	.use(cacheMiddleware);
 export const customerCachedProcedure = customerProcedure.use(cacheMiddleware);
 export const adminCachedProcedure = adminProcedure.use(cacheMiddleware);

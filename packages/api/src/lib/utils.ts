@@ -10,7 +10,7 @@ import type {
 export const generateOrderNumber = () => {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	const nanoId = customAlphabet(alphabet);
-	return nanoId(10);
+	return nanoId(8);
 };
 
 export const generatePaymentNumber = () => {

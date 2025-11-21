@@ -1,6 +1,6 @@
 {
-  "id": "c66c7a09-1fd9-4d53-a30a-97b47fea4944",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "46f25966-b5b5-4575-ace9-81fb44a2a319",
+  "prevId": "0d72061d-8444-4de3-93dc-0f5794be173e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1299,7 +1299,7 @@
         },
         "amount": {
           "name": "amount",
-          "type": "varchar(15)",
+          "type": "varchar(256)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1357,9 +1357,10 @@
         },
         "ingredients": {
           "name": "ingredients",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "seo_title": {
           "name": "seo_title",

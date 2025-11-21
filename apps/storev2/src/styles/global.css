@@ -259,3 +259,40 @@
         }
     }
 }
+
+@layer utilities {
+    .shadow-hard {
+        box-shadow: 4px 4px 0px 0px var(--color-border);
+    }
+    .shadow-hard-sm {
+        box-shadow: 2px 2px 0px 0px var(--color-border);
+    }
+    .shadow-hard-lg {
+        box-shadow: 8px 8px 0px 0px var(--color-border);
+    }
+    .shadow-hard-reverse {
+        box-shadow: -4px 4px 0px 0px var(--color-border);
+    }
+    
+    .text-stroke {
+        -webkit-text-stroke: 1px var(--color-foreground);
+    }
+    .text-stroke-2 {
+        -webkit-text-stroke: 2px var(--color-foreground);
+    }
+    .text-stroke-white {
+        -webkit-text-stroke: 2px white;
+    }
+
+    .bg-grid-pattern {
+        background-size: 40px 40px;
+        background-image: linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+                          linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+    }
+    
+    .bg-dots-pattern {
+        background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+}

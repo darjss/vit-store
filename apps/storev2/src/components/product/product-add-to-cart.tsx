@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/solid-query";
-import { createMemo, createSignal, Match, Suspense, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, Match, Suspense, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -29,7 +29,10 @@ export default function ProductQuantitySelector(
 
 	const increment = () => setQuantity((prev) => prev + 1);
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
-
+	console.log("quantity", quantity());
+	createEffect(() => {
+		console.log({ ...props.cartItem, quantity: quantity() }, "cartItem");
+	});
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
 			<Switch>

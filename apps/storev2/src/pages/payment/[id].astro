@@ -157,7 +157,6 @@ if(!payment){
                             </div>
                         </div>
 
-                        <!-- Instructions -->
                         <div class="p-2.5 sm:p-3 border-2 border-border bg-yellow-50">
                             <div class="flex items-start gap-2 sm:gap-2.5">
                                 <span class="text-base sm:text-lg shrink-0">⚠️</span>
@@ -169,7 +168,7 @@ if(!payment){
                             </div>
                         </div>
 
-                        <ConfirmPaymentButton paymentNumber={id as string} client:load/>
+                        <ConfirmPaymentButton paymentNumber={id} client:load/>
                     </div>
                 </div>
             </TabsContent>

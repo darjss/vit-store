@@ -36,8 +36,11 @@ CREATE TABLE "ecom_vit_category" (
 );
 --> statement-breakpoint
 CREATE TABLE "ecom_vit_customer" (
-	"phone" integer PRIMARY KEY NOT NULL,
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "ecom_vit_customer_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"phone" integer NOT NULL,
 	"address" varchar(256),
+	"facebook_username" varchar(256),
+	"instagram_username" varchar(256),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp,
 	"deleted_at" timestamp,
@@ -84,7 +87,7 @@ CREATE TABLE "ecom_vit_product_image" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "ecom_vit_product_image_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"product_id" integer NOT NULL,
 	"url" varchar(512) NOT NULL,
-	"is_primary" integer DEFAULT 0 NOT NULL,
+	"is_primary" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"deleted_at" timestamp
 );
@@ -97,14 +100,14 @@ CREATE TABLE "ecom_vit_product" (
 	"status" text DEFAULT 'draft' NOT NULL,
 	"discount" integer DEFAULT 0 NOT NULL,
 	"amount" varchar(15) NOT NULL,
-	"potency" varchar(10) NOT NULL,
+	"potency" varchar(256) NOT NULL,
 	"stock" integer DEFAULT 0 NOT NULL,
 	"price" integer NOT NULL,
 	"daily_intake" integer DEFAULT 0 NOT NULL,
 	"category_id" integer NOT NULL,
 	"brand_id" integer NOT NULL,
 	"tags" text DEFAULT '[]'::jsonb NOT NULL,
-	"is_featured" integer DEFAULT 0 NOT NULL,
+	"is_featured" boolean DEFAULT false NOT NULL,
 	"ingredients" text,
 	"seo_title" varchar(256),
 	"seo_description" varchar(512),
@@ -141,7 +144,7 @@ CREATE TABLE "ecom_vit_user" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "ecom_vit_user_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"username" varchar(256) NOT NULL,
 	"google_id" varchar(256),
-	"is_approved" integer DEFAULT 0 NOT NULL,
+	"is_approved" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp,
 	"deleted_at" timestamp,

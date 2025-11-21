@@ -1,11 +1,43 @@
 ---
 
 import Layout from "@/layouts/Layout.astro";
-
+import ProductsList from "@/components/product/products-list";
 export const prerender = true;
 
 ---
 
 <Layout>
-    <h1>Products</h1>
+    <ProductsList client:load>
+        <div slot="fallback">
+            <div class="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+                <div class="rounded-2xl border-4 border-black bg-primary/5 px-3 py-4 shadow-[8px_8px_0_0_#000] sm:px-6 sm:py-6 sm:shadow-[10px_10px_0_0_#000]">
+                    <div class="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-6">
+                        <div>
+                            <div class="mb-2 inline-flex items-center gap-2 rounded-sm border-2 border-black bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] shadow-[3px_3px_0_0_#000] sm:text-xs">
+                                <span>🛒</span>
+                                <span>Product catalog</span>
+                            </div>
+                            <h1 class="mb-1.5 font-black text-2xl tracking-tight sm:mb-2 sm:text-4xl">
+                                All Products
+                            </h1>
+                            <p class="text-sm text-black/70 sm:text-base">
+                                Browse our complete collection of products
+                            </p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                        {Array.from({ length: 8 }).map(() => (
+                            <div class="flex flex-col rounded-md border-2 border-black bg-white shadow-[3px_3px_0_0_#000] sm:rounded-lg sm:border-3 sm:shadow-[6px_6px_0_0_#000]">
+                                <div class="aspect-4/5 bg-gray-200 sm:aspect-4/3"></div>
+                                <div class="animate-pulse space-y-2 p-2.5 sm:p-3">
+                                    <div class="h-3.5 w-4/5 rounded bg-gray-200"></div>
+                                    <div class="h-4 w-1/2 rounded bg-gray-200"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ProductsList>
 </Layout>

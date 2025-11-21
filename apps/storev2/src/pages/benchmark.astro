@@ -58,6 +58,20 @@ const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
 					</div>
 
 					<div class="rounded-lg bg-white p-4">
+						<p class="mb-1 text-gray-600 text-sm">KV Write Time</p>
+						<p class="font-semibold text-2xl text-green-600">
+							{formatTime(serverData.kvWriteElapsed)}
+						</p>
+					</div>
+
+					<div class="rounded-lg bg-white p-4">
+						<p class="mb-1 text-gray-600 text-sm">KV Read Time</p>
+						<p class="font-semibold text-2xl text-green-600">
+							{formatTime(serverData.kvReadElapsed)}
+						</p>
+					</div>
+
+					<div class="rounded-lg bg-white p-4">
 						<p class="mb-1 text-gray-600 text-sm">Products Fetched</p>
 						<p class="font-semibold text-2xl text-green-600">
 							{serverData.product.length}
@@ -81,6 +95,8 @@ const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
 				serverFetchTime={serverFetchTime}
 				serverDbTime={serverData.dbElapsed}
 				productCount={serverData.product.length}
+				kvWriteTime={serverData.kvWriteElapsed}
+				kvReadTime={serverData.kvReadElapsed}
 			/>
 		</div>
 	</div>

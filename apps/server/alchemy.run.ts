@@ -2,6 +2,7 @@ import path from "node:path";
 import alchemy from "alchemy";
 import {
 	Hyperdrive,
+	Images,
 	KVNamespace,
 	R2Bucket,
 	RateLimit,
@@ -14,12 +15,15 @@ const stage = app.stage;
 console.log("cors origin", process.env.CORS_ORIGIN);
 
 const kv = await KVNamespace("kv", {
-	title: `vit-store-kv-${app.stage}`,
+	title: `vit-kv-${app.stage}`,
 	adopt: true,
 });
 
 const r2 = await R2Bucket("r2", {
-	name: `vit-store-bucket-${app.stage}`,
+	name: "vit-store-bucket-prod",
+	dev: {
+		remote: true,
+	},
 	adopt: true,
 });
 
@@ -31,13 +35,26 @@ const rateLimit = RateLimit({
 	},
 });
 
-const hyperdriveDB = await Hyperdrive("planetscale-db", {
+const images = Images({
+	dev: {
+		remote: true,
+	},
+});
+console.log(
+	"planetscale credentials",
+	process.env.PLANETSCALE_HOST,
+	process.env.PLANETSCALE_USER,
+	process.env.PLANETSCALE_PASSWORD,
+	process.env.PLANETSCALE_DATABASE,
+);
+const hyperdriveDB = await Hyperdrive("pscale-db", {
 	origin: {
 		host: process.env.PLANETSCALE_HOST || "",
 		user: process.env.PLANETSCALE_USER || "",
 		password: process.env.PLANETSCALE_PASSWORD || "",
 		database: process.env.PLANETSCALE_DATABASE || "",
 	},
+	adopt:true,
 	dev: {
 		origin: "postgres://postgres:postgres@localhost:5433/vitstore",
 	},
@@ -46,11 +63,13 @@ const hyperdriveDB = await Hyperdrive("planetscale-db", {
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
+	adopt:true,
 	bindings: {
 		RATE_LIMITER: rateLimit,
 		DB: hyperdriveDB,
 		vitStoreKV: kv,
 		r2Bucket: r2,
+		images: images,
 		CORS_ORIGIN: process.env.CORS_ORIGIN || "",
 		DASH_URL: process.env.DASH_URL || "",
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
@@ -71,6 +90,9 @@ export const server = await Worker("api", {
 			enabled: true,
 			persist: true,
 		},
+	},
+	placement: {
+		mode: "smart",
 	},
 	dev: {
 		port: 3006,

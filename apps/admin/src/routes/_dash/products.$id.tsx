@@ -20,7 +20,6 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { Suspense, useState } from "react";
-import * as v from "valibot";
 import { EditableField } from "@/components/editable-field";
 import ProductDetailSkeleton from "@/components/product/product-detail-skeleton";
 import ProductForm from "@/components/product/product-form";
@@ -54,13 +53,6 @@ export const Route = createFileRoute("/_dash/products/$id")({
 			),
 		]);
 	},
-	params: v.object({
-		id: v.pipe(
-			v.string(),
-			v.transform(Number),
-			v.pipe(v.number(), v.integer(), v.minValue(1)),
-		),
-	}),
 });
 
 function RouteComponent() {
@@ -72,7 +64,8 @@ function RouteComponent() {
 }
 
 function ProductDetailContent() {
-	const { id: productId } = Route.useParams();
+	const { id } = Route.useParams();
+	const productId = Number(id);
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 

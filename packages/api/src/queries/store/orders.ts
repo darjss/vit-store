@@ -104,6 +104,40 @@ export function storeOrders(db: DB) {
 	async getOrderByOrderNumber(orderNumber: string) {
 		const order = await db.query.OrdersTable.findFirst({
 			where: eq(OrdersTable.orderNumber, orderNumber),
+			with: {
+				payments: {
+					columns: {
+						paymentNumber: true,
+						status: true,
+						provider: true,
+						createdAt: true,
+					},
+					
+				},
+				orderDetails: {
+					with: {
+						product: {
+							columns: {
+								name: true,
+								price: true,
+							},
+							with: {
+								brand: {
+									columns: {
+										name: true,
+									},
+								},
+								images: {
+									columns: {
+										url: true,
+									},
+									where: eq(ProductImagesTable.isPrimary, true),
+								},
+							},
+						},
+					},
+				},
+			},
 		});
 		return order;
 	},

@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "vit-store",
@@ -89,6 +90,7 @@
         "drizzle-seed": "^0.3.1",
         "hono": "catalog:",
         "nanoid": "^5.1.5",
+        "postgres": "^3.4.7",
         "superjson": "^2.2.2",
         "valibot": "catalog:",
       },
@@ -129,8 +131,9 @@
         "clsx": "^2.1.1",
         "embla-carousel-react": "^8.6.0",
         "embla-carousel-solid": "^8.6.0",
+        "lucide-astro": "^0.554.0",
         "lucide-react": "^0.546.0",
-        "lucide-solid": "^0.553.0",
+        "lucide-solid": "^0.554.0",
         "server": "workspace:*",
         "sharp": "^0.34.4",
         "solid-js": "^1.9.9",
@@ -1983,9 +1986,11 @@
 
     "lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
 
+    "lucide-astro": ["lucide-astro@0.554.0", "", { "peerDependencies": { "astro": ">=2.7.1" } }, "sha512-4vXKrbno6v0EKfg1axgCEttW+E5Z7zuJKiLIdqP/mmNTPeaVjCrEuHzuq7XFCahlgp2kKFZFCpgyzkNhBQzFYA=="],
+
     "lucide-react": ["lucide-react@0.473.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-KW6u5AKeIjkvrxXZ6WuCu9zHE/gEYSXCay+Gre2ZoInD0Je/e3RBtP4OHpJVJ40nDklSvjVKjgH7VU8/e2dzRw=="],
 
-    "lucide-solid": ["lucide-solid@0.553.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-FAvWslAqD/HmCfcvFpbYAjPFf80F60aBlvn7M7Ea/FzYChqpkUiUkJEvG0K1bYHadf7dnkK0DSI992VT26sQdg=="],
+    "lucide-solid": ["lucide-solid@0.554.0", "", { "peerDependencies": { "solid-js": "^1.4.7" } }, "sha512-pt0KcZB7N/jVoLKng+kLpGTSoL3x03ByxbDVasMuTLvaZGVtio7rN946zlK9TrMZVwtAHuCvDn11+bEfKnMR3A=="],
 
     "magic-string": ["magic-string@0.30.19", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-2N21sPY9Ws53PZvsEpVtNuSW+ScYbQdp4b9qUaL+9QkHUrGFKo56Lg9Emg5s9V/qrtNBmiR01sYhUOwu3H+VOw=="],
 

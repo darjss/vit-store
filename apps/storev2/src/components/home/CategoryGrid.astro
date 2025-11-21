@@ -1,219 +1,105 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const categories = [
     {
         title: "Өдөр тутмын хэрэгцээ",
         description: "Витамин D, C, B12, Мультивитамин",
-        details: "Ерөнхий эрүүл мэнд, ядаргааны эсрэг",
         icon: "🌞",
         color: "bg-yellow-200",
+        span: "col-span-1 md:col-span-2 row-span-2",
+        textSize: "text-3xl"
     },
     {
         title: "Зүрх судас",
-        description: "Omega-3, CoQ10, Магни",
-        details: "Зүрхний үйл ажиллагаа, даралт хэвийн",
+        description: "Omega-3, CoQ10",
         icon: "❤️",
         color: "bg-red-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
     {
-        title: "Энерги дэмжлэг",
-        description: "B-Complex, Ашваганда, Женьшень",
-        details: "Хөдөлмөрийн чадвар, стресс",
+        title: "Энерги",
+        description: "B-Complex, Ашваганда",
         icon: "⚡",
         color: "bg-orange-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
     {
-        title: "Дархлаа дэмжих",
-        description: "Цайвар, Probiotics, Zn",
-        details: "Вирус, хөвөн жарахлаа эсрэг",
+        title: "Дархлаа",
+        description: "Цайр, Probiotics",
         icon: "🛡️",
         color: "bg-cyan-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
     {
         title: "Ясны эрүүл мэнд",
-        description: "Кальци, Витамин K2, D3",
-        details: "Яс бат бөх, үе мөч уян хатан",
+        description: "Кальци, D3",
         icon: "🦴",
         color: "bg-indigo-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
     {
         title: "Арьс, үс, хумс",
-        description: "Коллаген, Биотин, E",
-        details: "Залуу харагдах, гоо сайхан",
+        description: "Коллаген, Биотин",
         icon: "✨",
         color: "bg-pink-200",
+        span: "col-span-1 md:col-span-2",
+        textSize: "text-2xl"
     },
     {
         title: "Ходоод гэдэс",
-        description: "Probiotics, Enzyme, Шилжмүүд",
-        details: "Хоол боловсруулалт сайжруулах",
+        description: "Probiotics, Enzyme",
         icon: "🌿",
         color: "bg-green-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
     {
-        title: "Тархины үйл ажиллагаа",
-        description: "Omega-3 DHA, Ginkgo, Magnesium",
-        details: "Ой санамж, анхаарал төвлөрөл",
+        title: "Тархи",
+        description: "Omega-3 DHA",
         icon: "🧠",
         color: "bg-purple-200",
+        span: "col-span-1 md:col-span-1",
+        textSize: "text-xl"
     },
 ];
 ---
 
-<section class="container mx-auto px-4 py-12 md:py-16">
-    <div class="mb-8 md:mb-12 text-center">
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-black mb-2 md:mb-4">
-            Эрүүл мэндийн зорилгоор
+<section class="container mx-auto px-4 py-20">
+    <div class="mb-12 flex items-end gap-4">
+        <h2 class="text-5xl md:text-7xl font-black uppercase leading-none">
+            Ангилал
         </h2>
-        <p class="text-base md:text-lg font-semibold text-black/70">
-            Өөрийн зорилгод тохирсон бүтээгдэхүүн сонго
-        </p>
+        <div class="h-4 w-full bg-border mb-2 hidden md:block"></div>
     </div>
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+
+    <div class="grid grid-cols-1 md:grid-cols-4 auto-rows-[180px] gap-4">
         {
             categories.map((c) => (
                 <a
                     href={`/products?category=${encodeURIComponent(c.title)}`}
-                    class={`${c.color} border-3 md:border-4 border-black p-4 md:p-6 hover:shadow-[4px_4px_0_0_#000] md:hover:shadow-[8px_8px_0_0_#000] transition-all hover:-translate-y-1 cursor-pointer block`}
+                    class={`group relative ${c.span} ${c.color} border-2 border-border p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-hard overflow-hidden`}
                 >
-                    <div class="text-3xl md:text-4xl mb-2 md:mb-3">
-                        {c.icon}
+                    <!-- Hover Effect Background -->
+                    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                    
+                    <div class="relative z-10 flex justify-between items-start">
+                        <h3 class={`font-black uppercase leading-tight ${c.textSize}`}>
+                            {c.title}
+                        </h3>
+                        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">{c.icon}</span>
                     </div>
-                    <h3 class="font-black text-sm md:text-lg mb-1 md:mb-2">
-                        {c.title}
-                    </h3>
-                    <p class="text-xs md:text-sm font-bold leading-snug mb-1 md:mb-2">
-                        {c.description}
-                    </p>
-                    <p class="text-xs font-semibold text-black/60 leading-snug">
-                        {c.details}
-                    </p>
+                    
+                    <div class="relative z-10">
+                        <p class="font-bold border-t-2 border-black/20 pt-2 mt-2 text-sm">
+                            {c.description}
+                        </p>
+                    </div>
+
+                    <!-- Decorative Corner -->
+                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-black opacity-10 rounded-tl-xl"></div>
                 </a>
             ))
         }

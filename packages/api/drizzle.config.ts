@@ -13,4 +13,7 @@ export default defineConfig({
 	dbCredentials: {
 		url: `postgres://${process.env.PLANETSCALE_USER}:${process.env.PLANETSCALE_PASSWORD}@${process.env.PLANETSCALE_HOST}/${process.env.PLANETSCALE_DATABASE}?sslmode=require`,
 	},
+	migrations: {
+		schema: "public",
+	},
 });

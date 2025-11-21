@@ -1,0 +1,61 @@
+---
+interface Props {
+  text: string;
+  direction?: "left" | "right";
+  speed?: "slow" | "normal" | "fast";
+  className?: string;
+}
+
+const { text, direction = "left", speed = "normal", className = "" } = Astro.props;
+
+const speedMap = {
+  slow: "40s",
+  normal: "20s",
+  fast: "10s",
+};
+
+const animationDuration = speedMap[speed];
+---
+
+<div class:list={["relative flex overflow-hidden bg-foreground text-background py-3 border-y-2 border-border", className]}>
+  <div class="animate-marquee whitespace-nowrap flex gap-8 items-center">
+    {Array(10).fill(null).map(() => (
+      <span class="text-2xl font-bold uppercase tracking-wider flex items-center gap-8">
+        {text} <span class="text-accent text-xl">✦</span>
+      </span>
+    ))}
+  </div>
+  <div class="absolute top-0 animate-marquee2 whitespace-nowrap flex gap-8 items-center">
+    {Array(10).fill(null).map(() => (
+      <span class="text-2xl font-bold uppercase tracking-wider flex items-center gap-8">
+        {text} <span class="text-accent text-xl">✦</span>
+      </span>
+    ))}
+  </div>
+</div>
+
+<style define:vars={{ duration: animationDuration }}>
+  .animate-marquee {
+    animation: marquee var(--duration) linear infinite;
+  }
+  .animate-marquee2 {
+    animation: marquee2 var(--duration) linear infinite;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes marquee2 {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(0%);
+    }
+  }
+</style>

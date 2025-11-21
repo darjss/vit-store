@@ -8,4 +8,7 @@ export default defineConfig({
 	dbCredentials: {
 		url: "postgres://postgres:postgres@localhost:5433/vitstore",
 	},
+	migrations: {
+		schema: "public",
+	},
 });

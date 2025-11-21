@@ -13,6 +13,7 @@ config({
 console.log("Admin Stage:", stage, process.env.VITE_SERVER_URL);
 export const admin = await Vite("dashboard", {
 	cwd: import.meta.dirname,
+	adopt:true,
 	assets: "dist",
 	bindings: {
 		VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",

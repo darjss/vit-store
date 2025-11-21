@@ -21,7 +21,7 @@ const { product } = Astro.props;
 const hasDescription = !!(
 	product.description && product.description.trim().length > 0
 );
-const hasIngredients = !!(
+const hasIngredients = Boolean(
 	product.ingredients &&
 	Array.isArray(product.ingredients) &&
 	product.ingredients.length > 0
@@ -32,6 +32,7 @@ const hasSpecs = !!(
 	product.amount ||
 	product.potency
 );
+console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredients, product.ingredients?.length, typeof product.ingredients)
 ---
 
 <div class="w-full space-y-6">
@@ -71,7 +72,6 @@ const hasSpecs = !!(
 			</TabsTrigger>
 		</TabsList>
 
-		{/* Description Tab */}
 		<TabsContent value="description">
 			<div class="rounded-sm border-3 border-black bg-white p-5 sm:p-7 shadow-[4px_4px_0_0_#000] min-h-[200px]">
 				{hasDescription ? (
@@ -91,11 +91,9 @@ const hasSpecs = !!(
 			</div>
 		</TabsContent>
 
-		{/* Usage / How to Consume Tab */}
 		<TabsContent value="usage">
 			<div class="rounded-sm border-3 border-black bg-white p-4 sm:p-6 shadow-[4px_4px_0_0_#000]">
 				<div class="space-y-6">
-					{/* Dosage Section */}
 					<div class="space-y-3">
 						<h3 class="text-lg sm:text-xl font-black flex items-center gap-2">
 							<span>💊</span>
@@ -119,7 +117,6 @@ const hasSpecs = !!(
 						</div>
 					</div>
 
-					{/* Best Time Section */}
 					<div class="space-y-3">
 						<h3 class="text-lg sm:text-xl font-black flex items-center gap-2">
 							<span>⏰</span>
@@ -143,7 +140,6 @@ const hasSpecs = !!(
 						</div>
 					</div>
 
-					{/* Important Notes */}
 					<div class="rounded-sm border-2 border-black bg-yellow-100 p-4">
 						<h4 class="font-black text-sm sm:text-base mb-2 flex items-center gap-2">
 							<span>⚠️</span>
@@ -168,14 +164,13 @@ const hasSpecs = !!(
 			</div>
 		</TabsContent>
 
-		{/* Ingredients Tab */}
 		<TabsContent value="ingredients">
 			<div class="rounded-sm border-3 border-black bg-white p-4 sm:p-6 shadow-[4px_4px_0_0_#000] min-h-[200px]">
 				{hasIngredients ? (
 					<div class="space-y-4">
 						<h3 class="text-lg sm:text-xl font-black mb-4">Идэвхтэй найрлага</h3>
 						<ul class="grid gap-2">
-							{product.ingredients!.map((ingredient) => (
+							{product.ingredients?.map((ingredient) => (
 								<li class="flex items-center gap-3 p-3 rounded-sm border-2 border-black bg-muted/30">
 									<span class="text-lg">✓</span>
 									<span class="text-sm sm:text-base font-semibold">{ingredient}</span>
@@ -194,7 +189,6 @@ const hasSpecs = !!(
 			</div>
 		</TabsContent>
 
-		{/* Specifications Tab */}
 		<TabsContent value="specs">
 			<div class="rounded-sm border-3 border-black bg-white p-4 sm:p-6 shadow-[4px_4px_0_0_#000] min-h-[200px]">
 				{hasSpecs ? (

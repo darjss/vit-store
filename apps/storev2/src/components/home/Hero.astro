@@ -1,175 +1,51 @@
 ---
-
-import { Image } from "astro:assets";
-import logo1 from "/public/logo1.png";
-import logo2 from "/public/logo2.png";
-import logo3 from "/public/logo3.png";
-import logo4 from "/public/logo4.png";
-import logo5 from "/public/logo5.png";
-import logo7 from "/public/logo7.png";
-
+import Marquee from "./Marquee.astro";
 ---
 
-<section
-    class="relative overflow-hidden border-b-4 border-border py-12 md:py-20"
->
-    <div class="container mx-auto px-4">
-        <div class="max-w-3xl relative z-20">
-            <h1
-                class="text-5xl md:text-7xl font-black uppercase mb-6 tracking-tight"
-            >
-                Америкийн чанартай витаминууд
-            </h1>
-            <p class="text-xl md:text-2xl mb-8">
-                АНУ-ын итгэмжлэгдсэн брендуудаас шууд импортолсон, таны эрүүл
-                мэндэд зориулсан өндөр чанарын бүтээгдэхүүн.
-            </p>
+<section class="relative w-full overflow-hidden bg-background border-b-2 border-border">
+    <!-- Background Grid -->
+    <div class="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
 
-            <div
-                class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 relative z-30"
-            >
-                <div
-                    class="bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_#000]"
-                >
-                    <div
-                        class="text-3xl md:text-4xl font-black text-primary mb-1"
-                    >
-                        200+
-                    </div>
-                    <div class="text-xs md:text-sm font-bold uppercase">
-                        Бүтээгдэхүүн
-                    </div>
-                </div>
-                <div
-                    class="bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_#000]"
-                >
-                    <div
-                        class="text-3xl md:text-4xl font-black text-primary mb-1"
-                    >
-                        50+
-                    </div>
-                    <div class="text-xs md:text-sm font-bold uppercase">
-                        Дэлхийн брэнд
-                    </div>
-                </div>
-                <div
-                    class="bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_#000]"
-                >
-                    <div
-                        class="text-3xl md:text-4xl font-black text-primary mb-1"
-                    >
-                        10K+
-                    </div>
-                    <div class="text-xs md:text-sm font-bold uppercase">
-                        Сэтгэл ханамжтай
-                    </div>
-                </div>
-                <div
-                    class="bg-white border-4 border-black p-4 shadow-[4px_4px_0_0_#000]"
-                >
-                    <div
-                        class="text-3xl md:text-4xl font-black text-primary mb-1"
-                    >
-                        100%
-                    </div>
-                    <div class="text-xs md:text-sm font-bold uppercase">
-                        Шалгагдсан
-                    </div>
-                </div>
+    <div class="container mx-auto px-4 pt-20 pb-32 relative z-10">
+        <div class="flex flex-col items-center text-center">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-accent border-2 border-border shadow-hard-sm mb-8 rotate-[-2deg] hover:rotate-0 transition-transform duration-300">
+                <span class="w-2 h-2 rounded-full bg-foreground animate-pulse"></span>
+                <span class="font-bold text-sm uppercase tracking-wider">Монголын #1 Витамин Дэлгүүр</span>
             </div>
 
-            <div class="flex flex-wrap gap-4 relative z-30">
-                <a
-                    href="/products"
-                    class="inline-block px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg uppercase tracking-wider rounded-none border-4 border-border shadow-[8px_8px_0_0_#000] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_#000] active:scale-[0.98]"
-                >
-                    Дэлгүүр үзэх
+            <!-- Main Title -->
+            <h1 class="text-7xl md:text-9xl font-black uppercase leading-[0.9] tracking-tighter mb-8 relative">
+                <span class="block relative z-10 text-foreground mix-blend-hard-light">Vitamin</span>
+                <span class="block text-stroke-2 text-transparent relative z-0 -mt-4 md:-mt-8">Store</span>
+                
+                <!-- Floating Elements -->
+                <div class="absolute -top-10 -right-10 md:-right-20 w-24 h-24 md:w-40 md:h-40 bg-primary rounded-full border-4 border-border animate-float-slow -z-10 hidden md:block"></div>
+                <div class="absolute top-1/2 -left-10 md:-left-20 w-16 h-16 md:w-32 md:h-32 bg-secondary text-secondary-foreground flex items-center justify-center border-4 border-border animate-float shadow-hard rotate-12 hidden md:flex">
+                    <span class="text-4xl font-bold">★</span>
+                </div>
+            </h1>
+
+            <p class="text-xl md:text-2xl font-medium max-w-2xl mb-12 leading-relaxed border-l-4 border-primary pl-6 text-left md:text-center md:border-l-0 md:pl-0">
+                Эрүүл мэндээ <span class="bg-primary px-1 border border-border shadow-hard-sm">шинжлэх ухаанч</span> аргаар дэмж. 
+                АНУ-ын шилдэг брэндүүдийн баталгаат бүтээгдэхүүн.
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto">
+                <a href="/products" class="group relative px-8 py-4 bg-foreground text-background font-bold text-xl uppercase tracking-wider hover:-translate-y-1 hover:translate-x-1 transition-transform border-2 border-transparent">
+                    <span class="relative z-10">Бүх бүтээгдэхүүн</span>
+                    <div class="absolute inset-0 bg-primary translate-x-2 translate-y-2 -z-10 border-2 border-border group-hover:translate-x-3 group-hover:translate-y-3 transition-transform"></div>
+                </a>
+                
+                <a href="/about" class="group px-8 py-4 bg-background text-foreground font-bold text-xl uppercase tracking-wider border-2 border-border hover:bg-muted transition-colors shadow-hard hover:shadow-hard-lg hover:-translate-y-1 transition-all">
+                    Бидний тухай
                 </a>
             </div>
         </div>
     </div>
 
-    <div
-        class="absolute inset-0 w-full h-full overflow-hidden pointer-events-none"
-    >
-        <Image
-            src={logo1}
-            alt="Brand Logo"
-            class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-1 top-[10%] right-[8%] rotate-[10deg]"
-            width={144}
-            height={144}
-            loading="eager"
-        />
-        <Image
-            src={logo4}
-            alt="Brand Logo"
-            class="hidden md:block absolute w-20 md:w-28 lg:w-32 opacity-35 animate-float-2 top-[5%] right-[25%] -rotate-[12deg]"
-            width={128}
-            height={128}
-            loading="eager"
-        />
-        <Image
-            src={logo5}
-            alt="Brand Logo"
-            class="hidden sm:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-3 top-[35%] right-[5%] -rotate-[5deg]"
-            width={144}
-            height={144}
-            loading="eager"
-        />
-        <Image
-            src={logo7}
-            alt="Brand Logo"
-            class="hidden lg:block absolute w-20 md:w-24 lg:w-28 opacity-35 animate-float-1 top-[40%] right-[30%] rotate-[5deg]"
-            width={112}
-            height={112}
-            loading="eager"
-        />
-        <Image
-            src={logo2}
-            alt="Brand Logo"
-            class="hidden md:block absolute w-24 md:w-32 lg:w-36 opacity-40 animate-float-2 bottom-[15%] right-[15%] -rotate-[5deg]"
-            width={144}
-            height={144}
-            loading="eager"
-        />
-        <Image
-            src={logo3}
-            alt="Brand Logo"
-            class="hidden sm:block absolute w-20 md:w-28 lg:w-32 opacity-35 animate-float-3 bottom-[8%] right-[35%] rotate-[8deg]"
-            width={128}
-            height={128}
-            loading="eager"
-        />
-
-        <Image
-            src={logo1}
-            alt="Brand Logo"
-            class="block sm:hidden absolute w-20 opacity-25 animate-float-1 top-[15%] right-[5%] rotate-[15deg]"
-            width={80}
-            height={80}
-        />
-        <Image
-            src={logo2}
-            alt="Brand Logo"
-            class="block sm:hidden absolute w-24 opacity-20 animate-float-2 top-[45%] right-[8%] -rotate-[8deg]"
-            width={96}
-            height={96}
-        />
-        <Image
-            src={logo3}
-            alt="Brand Logo"
-            class="block sm:hidden absolute w-18 opacity-25 animate-float-3 bottom-[10%] right-[10%] rotate-[12deg]"
-            width={72}
-            height={72}
-        />
-    </div>
-
-    <div
-        class="absolute -right-20 bottom-0 w-80 h-80 bg-accent/30 rounded-full blur-3xl -z-10"
-    >
-    </div>
-    <div
-        class="absolute -top-40 -left-40 w-96 h-96 bg-primary/20 rounded-full blur-3xl -z-10"
-    >
+    <!-- Bottom Marquee -->
+    <div class="rotate-1 bg-background border-y-2 border-border transform scale-105">
+        <Marquee text="100% ORIGINAL • FAST DELIVERY • PREMIUM QUALITY •" speed="slow" />
     </div>
 </section>

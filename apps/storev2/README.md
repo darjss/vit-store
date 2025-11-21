@@ -45,6 +45,23 @@ All commands are run from the root of the project, from a terminal:
 | `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `bun astro -- --help` | Get help using the Astro CLI                     |
 
+## 🔧 Utilities
+
+### useSearchParam Hook
+
+A SolidJS hook for reading and writing URL search parameters with Astro view transitions support:
+
+```tsx
+import { useSearchParam } from "@/lib/useSearchParam";
+
+const [sort, setSort] = useSearchParam("sort", { defaultValue: "popular" });
+// Read: sort()
+// Write: setSort("price")
+// Remove: setSort(null)
+```
+
+See `src/lib/useSearchParam.ts` for full documentation.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

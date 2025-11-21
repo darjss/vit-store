@@ -1,9 +1,4 @@
 ---
-
-
-
-
-
 import { formatCurrency } from "@vit/shared/utils";
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
@@ -21,92 +16,88 @@ const randomColor =
 ---
 
 <div
-    class="group relative flex flex-col rounded-sm border-3 sm:border-4 border-black bg-white shadow-[4px_4px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] sm:hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[2px] sm:hover:translate-x-[4px] hover:translate-y-[2px] sm:hover:translate-y-[4px] transition-all duration-200"
+    class="group relative flex flex-col bg-card border-2 border-border shadow-hard hover:shadow-hard-lg hover:-translate-y-1 transition-all duration-300"
     aria-label={`${p.name} by ${p.brand}`}
 >
-    <a
-        href={`/products/${p.slug}-${p.id}`}
-        class="focus:outline-none focus:ring-4 focus:ring-black/40 flex flex-col flex-1"
-    >
-        <div
-            transition:name={`product-image-${p.id}`}
-            class="relative aspect-[4/5] sm:aspect-[4/3] overflow-hidden border-b-3 sm:border-b-4 border-black"
-            style={`background:${randomColor}`}
-        >
-            <div
-                class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:14px_14px]"
-            >
+    <!-- Card Header / Image -->
+    <a href={`/products/${p.slug}-${p.id}`} class="relative block border-b-2 border-border overflow-hidden bg-muted/20">
+        <div class="aspect-[4/5] p-6 flex items-center justify-center relative">
+            <!-- Background Pattern -->
+            <div class="absolute inset-0 bg-dots-pattern opacity-30"></div>
+            
+            <!-- Brand Tag -->
+            <div class="absolute top-3 left-3 z-10">
+                <span class="bg-background border-2 border-border px-2 py-1 text-xs font-bold uppercase shadow-hard-sm">
+                    {p.brand}
+                </span>
             </div>
-            {
-                p.image && (
-                    <img
-                        src={p.image}
-                        alt={p.name}
-                        class="absolute inset-0 w-full h-full object-contain p-3 sm:p-4"
-                        width={400}
-                        height={500}
-                        loading="lazy"
-                    />
-                )
-            }
-            <div
-            transition:name={`product-brand-${p.id}`}
-                class="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 rounded-full border-2 border-black bg-white px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-tight shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
-            >
-                {p.brand}
-            </div>
+
+            <!-- Product Image -->
+            <img
+                src={p.image}
+                alt={p.name}
+                class="relative z-10 w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-md"
+                loading="lazy"
+                transition:name={`product-image-${p.id}`}
+            />
         </div>
-        <div class="flex flex-col flex-1 p-2 sm:p-3">
-            <h3
+    </a>
+
+    <!-- Card Body -->
+    <div class="flex flex-col flex-1 p-4 gap-4">
+        <a href={`/products/${p.slug}-${p.id}`} class="block">
+            <h3 
+                class="font-bold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors"
                 transition:name={`product-name-${p.id}`}
-                class="mb-1.5 sm:mb-2 text-sm sm:text-base font-black leading-tight tracking-tight group-hover:underline line-clamp-2"
             >
                 {p.name}
             </h3>
+        </a>
 
-            <div class="flex items-center gap-1.5 sm:gap-2 mt-auto">
-                {
-                    p.discount && (
-                        <div class="text-xs sm:text-lg font-bold text-black/35 line-through">
-                            {formatCurrency(
-                                p.price * (1 - p.discount / 100),
-                            )}
-                        </div>
-                    )
-                }
-                <div
-                transition:name={`product-price-${p.id}`}
-                    class:list={[
-                        "font-black tracking-tight",
-                        p.discount
-                            ? "text-xl sm:text-3xl text-destructive"
-                            : "text-xl sm:text-3xl",
-                    ]}
+        <!-- Stats / Tags (Mocked for visual style) -->
+        <div class="flex gap-2 text-[10px] font-mono uppercase text-muted-foreground">
+            <span class="border border-border px-1 bg-muted/30">Energy</span>
+            <span class="border border-border px-1 bg-muted/30">Focus</span>
+        </div>
+
+        <div class="mt-auto flex items-end justify-between gap-4">
+            <div class="flex flex-col">
+                {p.discount && (
+                    <span class="text-xs text-muted-foreground line-through decoration-2 decoration-destructive">
+                        {formatCurrency(p.price * (1 - p.discount / 100))}
+                    </span>
+                )}
+                <span 
+                    class="text-2xl font-black tracking-tight"
+                    transition:name={`product-price-${p.id}`}
                 >
-                
                     {formatCurrency(p.price)}
-                </div>
+                </span>
             </div>
         </div>
-    </a>
-    <div class="p-2 pt-0 sm:p-3 sm:pt-0" transition:name=`product-add-to-cart-button-${p.id}`>
-        <AddToCartButton
-            client:load
-            cartItem={{
-                productId: p.id,
-                quantity: 1,
-                name: p.name,
-                price: p.price,
-                image: p.image,
-            }}
-        >
-            <button 
-                slot="fallback"
-                disabled
-                class="w-full border-[3px] border-black bg-primary px-4 py-3 font-black text-sm uppercase shadow-[4px_4px_0_0_#000] opacity-50"
+    </div>
+
+    <!-- Detached Action Button -->
+    <div class="p-4 pt-0">
+        <div transition:name={`product-add-to-cart-button-${p.id}`}>
+            <AddToCartButton
+                client:load
+                cartItem={{
+                    productId: p.id,
+                    quantity: 1,
+                    name: p.name,
+                    price: p.price,
+                    image: p.image,
+                }}
             >
-                <div class="h-4 bg-black/10 w-32 mx-auto animate-pulse"></div>
-            </button>
-        </AddToCartButton>
+                <button 
+                    slot="fallback"
+                    disabled
+                    class="w-full bg-primary text-primary-foreground border-2 border-border font-bold py-3 uppercase tracking-wider shadow-hard-sm opacity-50"
+                >
+                    Loading...
+                </button>
+            </AddToCartButton>
+        </div>
     </div>
 </div>

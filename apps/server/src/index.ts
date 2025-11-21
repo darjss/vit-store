@@ -13,13 +13,14 @@ import {
 	messengerWebhookHandler,
 } from "@vit/api/integrations";
 import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
-import { adminQueries, storeQueries } from "@vit/api/queries";
+import { adminQueries } from "@vit/api/queries";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { nanoid } from "nanoid";
 import { createContext } from "./lib/context";
 import { google } from "./lib/oauth";
 import { rateLimit } from "./lib/rate-limit";
@@ -236,13 +237,13 @@ app.get("/admin/login/google/callback", async (c) => {
 			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
 			return c.redirect(`${process.env.DASH_URL}/`);
 		}
+		await q.createUser(googleUserId, username, false);
 
 		if (existingUser === null || existingUser.isApproved === false) {
 			console.log("redirecting to login");
 			return c.redirect(`${process.env.DASH_URL}/login`);
 		}
 
-		await q.createUser(googleUserId, username, false);
 
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {
@@ -257,11 +258,9 @@ app.post("/upload", async (c) => {
 	try {
 		const formData = await c.req.formData();
 		const image = formData.get("image") as unknown as File;
-		const key = formData.get("key") as string;
-		if (!key) {
-			console.error("Key is required");
-			return c.json({ message: "Key is required" }, 400);
-		}
+		const productName = formData.get("productName") as string | null;
+		const isPrimary = formData.get("isPrimary") === "true";
+
 		if (!image) {
 			console.error("Image is required");
 			return c.json({ message: "Image is required" }, 400);
@@ -275,20 +274,167 @@ app.post("/upload", async (c) => {
 			return c.json({ message: "Image size is too large" }, 400);
 		}
 
-		await c.env.r2Bucket.put(key, image, {
+		const generatedId = nanoid();
+
+		// Sanitize productName if provided
+		let keyPrefix = "";
+		if (productName) {
+			const sanitizedProductName = productName
+				.toLowerCase()
+				.replace(/\s+/g, "-")
+				.replace(/[^a-z0-9-]/g, "");
+			keyPrefix = `products/${sanitizedProductName}/`;
+		}
+
+		const carouselKey = `${keyPrefix}${generatedId}.webp`;
+		const thumbnailKey = `${keyPrefix}${generatedId}-thumbnail.webp`;
+
+		// Get image stream for Cloudflare Images API
+		const imageStream = image.stream();
+
+		// Transform image for carousel (800x600, WebP)
+		const carouselImageResult = c.env.images
+			.input(imageStream)
+			.transform({
+				width: 800,
+				height: 600,
+				fit: "contain",
+			})
+			.output({ format: "image/webp" });
+
+		const carouselImage = await carouselImageResult;
+
+		// Convert ImageTransformationResult to Response, then to ArrayBuffer
+		const carouselResponse = carouselImage.response();
+		const carouselArrayBuffer = await carouselResponse.arrayBuffer();
+
+		// Upload carousel version to R2
+		await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
 			httpMetadata: {
-				contentType: image.type,
+				contentType: "image/webp",
 			},
 		});
-		console.log("Uploaded successfully", key);
 
-		return c.json({
+		const carouselUrl = `https://cdn.darjs.dev/${carouselKey}`;
+
+		let thumbnailUrl: string | undefined;
+
+		// If isPrimary, also create thumbnail version
+		if (isPrimary) {
+			// Get image stream again for thumbnail transformation
+			const thumbnailImageStream = image.stream();
+
+			const thumbnailImageResult = c.env.images
+				.input(thumbnailImageStream)
+				.transform({
+					width: 400,
+					height: 300,
+					fit: "contain",
+				})
+				.output({ format: "image/webp" });
+
+			const thumbnailImage = await thumbnailImageResult;
+
+			// Convert ImageTransformationResult to Response, then to ArrayBuffer
+			const thumbnailResponse = thumbnailImage.response();
+			const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
+
+			// Upload thumbnail version to R2
+			await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
+				httpMetadata: {
+					contentType: "image/webp",
+				},
+			});
+
+			thumbnailUrl = `https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev/${thumbnailKey}`;
+		}
+
+		console.log("Uploaded successfully", carouselKey);
+
+		const response: {
+			message: string;
+			url: string;
+			thumbnailUrl?: string;
+			key: string;
+		} = {
 			message: "Uploaded successfully",
-			url: `https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev/${key}`,
-		});
+			url: carouselUrl,
+			key: carouselKey,
+		};
+
+		if (thumbnailUrl) {
+			response.thumbnailUrl = thumbnailUrl;
+		}
+
+		return c.json(response);
 	} catch (e) {
 		console.error(e);
 		return c.json({ status: "ERROR", message: "Failed to upload image" }, 500);
+	}
+});
+app.post("/upload/brands", async (c) => {
+	try {
+		const formData = await c.req.formData();
+		const image = formData.get("image") as unknown as File;
+		const brandName = formData.get("brandName") as string;
+		const isSvg = image.type === "image/svg+xml";
+
+		// Slugify brand name
+		const sanitizedBrandName = brandName
+			.toLowerCase()
+			.replace(/\s+/g, "-")
+			.replace(/[^a-z0-9-]/g, "");
+
+		if (isSvg) {
+			// For SVG files, save directly without transformation
+			const svgArrayBuffer = await image.arrayBuffer();
+			await c.env.r2Bucket.put(
+				`brands/${sanitizedBrandName}.svg`,
+				svgArrayBuffer,
+				{
+					httpMetadata: {
+						contentType: "image/svg+xml",
+					},
+				},
+			);
+			return c.json({
+				url: `https://cdn.darjs.dev/brands/${sanitizedBrandName}.svg`,
+				message: "Brand image uploaded successfully",
+			});
+		}
+
+		// For non-SVG files, apply transformation
+		const imageStream = image.stream();
+		const imageResult = c.env.images
+			.input(imageStream)
+			.transform({
+				width: 800,
+				height: 800,
+				fit: "contain",
+			})
+			.output({ format: "image/webp" });
+		const brandImage = await imageResult;
+		const brandImageResponse = brandImage.response();
+		const brandImageArrayBuffer = await brandImageResponse.arrayBuffer();
+		await c.env.r2Bucket.put(
+			`brands/${sanitizedBrandName}.webp`,
+			brandImageArrayBuffer,
+			{
+				httpMetadata: {
+					contentType: "image/webp",
+				},
+			},
+		);
+		return c.json({
+			url: `https://cdn.darjs.dev/brands/${sanitizedBrandName}.webp`,
+			message: "Brand image uploaded successfully",
+		});
+	} catch (e) {
+		console.error(e);
+		return c.json(
+			{ status: "ERROR", message: "Failed to upload brand image" },
+			500,
+		);
 	}
 });
 app.get("/", (c) => {

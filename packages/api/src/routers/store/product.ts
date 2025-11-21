@@ -71,6 +71,8 @@ export const product = router({
 				url: image.url,
 				isPrimary: image.isPrimary,
 			}));
+			console.log("result.ingredients", result.ingredients, typeof result.ingredients);
+			// result.ingredients = result.ingredients ? JSON.parse() : [];
 			return result;
 		}),
 	getProductsByIds: publicProcedure
@@ -161,9 +163,10 @@ export const product = router({
 		}),
 	getProductBenchmark: publicProcedure.query(async ({ ctx }) => {
 		try {
-			const startTime = performance.now();
+			const cacheKey = "benchmark:products:5";
 
-			// Query products with images using Drizzle ORM
+			// First, fetch products from DB to have data to cache
+			const dbStartTime = performance.now();
 			const products = await ctx.db.query.ProductsTable.findMany({
 				columns: {
 					id: true,
@@ -182,10 +185,8 @@ export const product = router({
 					},
 				},
 			});
+			const dbElapsed = performance.now() - dbStartTime;
 
-			const dbElapsed = performance.now() - startTime;
-
-			// Transform to match expected format
 			const product = products.map((p) => ({
 				id: p.id,
 				name: p.name,
@@ -194,9 +195,25 @@ export const product = router({
 				images: p.images.map((img) => ({ url: img.url })),
 			}));
 
+			// Measure KV write time
+			const kvWriteStartTime = performance.now();
+			await ctx.kv.put(cacheKey, JSON.stringify(product), {
+				expirationTtl: 3600, // 1 hour
+			});
+			const kvWriteElapsed = performance.now() - kvWriteStartTime;
+
+			// Measure KV read time
+			const kvReadStartTime = performance.now();
+			const cached = await ctx.kv.get(cacheKey);
+			const kvReadElapsed = performance.now() - kvReadStartTime;
+
+			const kvReadProduct = cached ? JSON.parse(cached) : null;
+
 			return {
 				dbElapsed,
-				product,
+				kvWriteElapsed,
+				kvReadElapsed,
+				product: kvReadProduct || product,
 			};
 		} catch (error) {
 			console.error("Error in benchmark:", error);
@@ -205,6 +222,24 @@ export const product = router({
 				message: "Failed to run benchmark",
 				cause: error,
 			});
+		}
+	}),
+	getInfiniteProducts: publicProcedure.input(v.object({
+		cursor: v.optional(v.string()),
+		limit: v.optional(v.number(), 10),
+	})).query(async ({ input, ctx }) => {
+		try {	
+			const q = storeQueries(ctx.db);
+			
+			const products = await q.getInfiniteProducts(input.cursor, input.limit);
+			return products;
+		} catch (error) {
+		console.error("Error in getInfiniteProducts:", error);
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to get infinite products",
+			cause: error,
+		});
 		}
 	}),
 });

@@ -4,6 +4,9 @@ import * as v from "valibot";
 import { newOrderSchema } from "../../../../shared/src";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
+import { addCustomerToDB } from "./auth";
+import { createSession } from "../../lib/session/store";
+import { setSessionTokenCookie } from "../../lib/session/store";
 
 export const order = router({
 	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {
@@ -43,6 +46,7 @@ export const order = router({
 		.input(newOrderSchema)
 		.mutation(async ({ input, ctx }) => {
 			try {
+				const start = performance.now();
 				const q = storeQueries(ctx.db);
 				const adminQ = adminQueries(ctx.db);
 				const products = await q.getProductsByIds(
@@ -107,6 +111,22 @@ export const order = router({
 						cause: e,
 					});
 				}
+
+				const user = await addCustomerToDB(input.phoneNumber, ctx.db);
+
+				if (!user) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to create or retrieve user",
+					});
+				}
+
+				const { session, token } = await createSession(user, ctx.kv);
+
+
+				setSessionTokenCookie(ctx.c, token, session.expiresAt);
+				const end = performance.now();
+				console.log("time taken to add customer to db and create session", end - start);
 				return { paymentNumber };
 			} catch (e) {
 				console.error(e);
