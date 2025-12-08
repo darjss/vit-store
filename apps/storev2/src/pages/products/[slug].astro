@@ -17,10 +17,15 @@ export const prerender = true;
 
 import { api } from "@/lib/trpc";
 export async function getStaticPaths() {
+	try {3
 	const products = await api.product.getAllProducts.query();
 	return products.map((product) => ({
-		params: { slug: `${product.slug}-${product.id}` },
-	}));
+			params: { slug: `${product.slug}-${product.id}` },
+		}));
+	} catch (error) {
+		console.error("Error getting static paths", error);
+		return [];
+	}
 }
 const { slug } = Astro.params;
 const slugParts = slug.split("-");
@@ -28,13 +33,13 @@ const productId = Number(slugParts[slugParts.length - 1]);
 
 if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
-	return Astro.redirect("/404");
+	await Astro.redirect("/404");
 }
 
 const product = await api.product.getProductById.query({ id: productId });
 if (!product) {
 	console.error("Product not found");
-	return Astro.redirect("/404");
+	await Astro.redirect("/404");
 }
 
 const breadcrumbItems = [

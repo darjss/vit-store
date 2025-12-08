@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { useAppForm } from "../form/form";
 import { showToast } from "../ui/toast";
+import IconInformation from "~icons/ri/information-line";
 
 const PhoneForm = ({
 	setStep,
@@ -57,19 +58,7 @@ const PhoneForm = ({
 			<div class="border-3 border-black bg-muted/50 p-4 shadow-[4px_4px_0_0_#000]">
 				<div class="flex items-start gap-3">
 					<div class="mt-1 flex-shrink-0">
-						<svg
-							class="h-5 w-5 md:h-6 md:w-6"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="3"
-								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
+						<IconInformation class="h-5 w-5 md:h-6 md:w-6" />
 					</div>
 					<div class="flex-1">
 						<p class="font-bold text-xs leading-relaxed md:text-sm">

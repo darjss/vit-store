@@ -1,5 +1,6 @@
 import { cart } from "@/store/cart";
 import CartCount from "./cart-count";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-line";
 
 const CartButton = () => {
 	return (
@@ -9,19 +10,7 @@ const CartButton = () => {
 			aria-label="Сагс"
 			class="relative flex items-center justify-center border-[3px] border-black bg-white p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
 		>
-			<svg
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				aria-hidden="true"
-			>
-				<circle cx="9" cy="21" r="1" />
-				<circle cx="20" cy="21" r="1" />
-				<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-			</svg>
+			<IconShoppingCart class="h-5 w-5" aria-hidden="true" />
 
 			<CartCount />
 		</button>

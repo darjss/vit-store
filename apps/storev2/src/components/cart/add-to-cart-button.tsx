@@ -1,6 +1,7 @@
 import type { CartItems } from "@/lib/types";
 import { cart } from "@/store/cart";
 import { Button } from "../ui/button";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 
 interface AddToCartButtonProps {
 	cartItem: CartItems;
@@ -20,7 +21,7 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 			type="button"
 			onClick={() => cart.add(props.cartItem)}
 		>
-			<span class="text-base sm:text-lg">🛒</span>
+			<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
 			<span class="hidden text-[10px] sm:inline sm:text-xs">Сагслах</span>
 		</Button>
 	);

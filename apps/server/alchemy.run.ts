@@ -10,7 +10,7 @@ import {
 } from "alchemy/cloudflare";
 
 const app = await alchemy("server");
-const _stage = app.stage;
+const stage = app.stage;
 console.log("cors origin", process.env.CORS_ORIGIN);
 
 const kv = await KVNamespace("kv", {
@@ -29,7 +29,7 @@ const r2 = await R2Bucket("r2", {
 const rateLimit = RateLimit({
 	namespace_id: 1001,
 	simple: {
-		limit: 300,
+		limit: 500,
 		period: 60,
 	},
 });
@@ -39,13 +39,7 @@ const images = Images({
 		remote: true,
 	},
 });
-console.log(
-	"planetscale credentials",
-	process.env.PLANETSCALE_HOST,
-	process.env.PLANETSCALE_USER,
-	process.env.PLANETSCALE_PASSWORD,
-	process.env.PLANETSCALE_DATABASE,
-);
+
 const hyperdriveDB = await Hyperdrive("pscale-db", {
 	origin: {
 		host: process.env.PLANETSCALE_HOST || "",
@@ -62,6 +56,8 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
+	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
+	
 	adopt:true,
 	bindings: {
 		RATE_LIMITER: rateLimit,

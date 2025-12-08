@@ -1,59 +1,78 @@
 ---
+import IconSun from "~icons/ri/sun-line";
+import IconHeart from "~icons/ri/heart-line";
+import IconFlash from "~icons/ri/flashlight-line";
+import IconShield from "~icons/ri/shield-line";
+import IconBone from "~icons/ri/body-scan-line";
+import IconSparkle from "~icons/ri/sparkling-line";
+import IconLeaf from "~icons/ri/leaf-line";
+import IconBrain from "~icons/ri/brain-line";
+
+const iconComponents = {
+	sun: IconSun,
+	heart: IconHeart,
+	flash: IconFlash,
+	shield: IconShield,
+	bone: IconBone,
+	sparkle: IconSparkle,
+	leaf: IconLeaf,
+	brain: IconBrain,
+};
 
 const categories = [
     {
         title: "Өдөр тутмын",
         description: "Витамин D, C, B12",
-        icon: "🌞",
+        icon: "sun",
         span: "md:col-span-2 md:row-span-2",
         textSize: "text-2xl md:text-3xl"
     },
     {
         title: "Зүрх судас",
         description: "Omega-3, CoQ10",
-        icon: "❤️",
+        icon: "heart",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Энерги",
         description: "B-Complex, Ашваганда",
-        icon: "⚡",
+        icon: "flash",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Дархлаа",
         description: "Цайр, Probiotics",
-        icon: "🛡️",
+        icon: "shield",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Яс үе мөч",
         description: "Кальци, D3",
-        icon: "🦴",
+        icon: "bone",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Гоо сайхан",
         description: "Коллаген, Биотин",
-        icon: "✨",
+        icon: "sparkle",
         span: "md:col-span-2",
         textSize: "text-2xl"
     },
     {
         title: "Ходоод гэдэс",
         description: "Probiotics, Enzyme",
-        icon: "🌿",
+        icon: "leaf",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Тархи мэдрэл",
         description: "Omega-3 DHA",
-        icon: "🧠",
+        icon: "brain",
         span: "md:col-span-1",
         textSize: "text-xl"
     },
@@ -71,31 +90,34 @@ const categories = [
     <!-- Mobile: Horizontal Scroll / Desktop: Grid -->
     <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 md:grid md:grid-cols-4 md:auto-rows-[180px] md:pb-0 md:mx-0 md:px-0 scrollbar-hide">
         {
-            categories.map((c) => (
-                <a
-                    href={`/products?category=${encodeURIComponent(c.title)}`}
-                    class={`group relative flex-none w-[280px] md:w-auto ${c.span} snap-center bg-card border-2 border-border p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-hard overflow-hidden h-[180px] md:h-auto`}
-                >
-                    <!-- Hover Effect Background -->
-                    <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-0"></div>
-                    
-                    <div class="relative z-10 flex justify-between items-start">
-                        <h3 class={`font-black uppercase leading-tight ${c.textSize} transition-colors group-hover:text-primary-foreground`}>
-                            {c.title}
-                        </h3>
-                        <span class="text-4xl group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300">{c.icon}</span>
-                    </div>
-                    
-                    <div class="relative z-10">
-                        <p class="font-bold border-t-2 border-border pt-2 mt-2 text-sm transition-colors group-hover:text-primary-foreground group-hover:border-primary-foreground">
-                            {c.description}
-                        </p>
-                    </div>
+            categories.map((c) => {
+                const IconComponent = iconComponents[c.icon as keyof typeof iconComponents];
+                return (
+                    <a
+                        href={`/products?category=${encodeURIComponent(c.title)}`}
+                        class={`group relative flex-none w-[280px] md:w-auto ${c.span} snap-center bg-card border-2 border-border p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-hard overflow-hidden h-[180px] md:h-auto`}
+                    >
+                        <!-- Hover Effect Background -->
+                        <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-0"></div>
+                        
+                        <div class="relative z-10 flex justify-between items-start">
+                            <h3 class={`font-black uppercase leading-tight ${c.textSize} transition-colors group-hover:text-primary-foreground`}>
+                                {c.title}
+                            </h3>
+                            <IconComponent class="h-10 w-10 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300" />
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <p class="font-bold border-t-2 border-border pt-2 mt-2 text-sm transition-colors group-hover:text-primary-foreground group-hover:border-primary-foreground">
+                                {c.description}
+                            </p>
+                        </div>
 
-                    <!-- Decorative Corner -->
-                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-border opacity-10 rounded-tl-xl group-hover:opacity-0 transition-opacity"></div>
-                </a>
-            ))
+                        <!-- Decorative Corner -->
+                        <div class="absolute bottom-0 right-0 w-8 h-8 bg-border opacity-10 rounded-tl-xl group-hover:opacity-0 transition-opacity"></div>
+                    </a>
+                );
+            })
         }
     </div>
 </section>

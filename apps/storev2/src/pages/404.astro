@@ -1,5 +1,8 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import IconInfoCircle from "~icons/ri/information-line";
+import IconQuestion from "~icons/ri/question-line";
+import IconLightbulb from "~icons/ri/lightbulb-line";
 
 export const prerender = true
 
@@ -43,23 +46,7 @@ export const prerender = true
                         <div
                             class="bg-white border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-float inline-block"
                         >
-                            <svg
-                                width="32"
-                                height="32"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.5"
-                                ><circle cx="12" cy="12" r="10"></circle><line
-                                    x1="12"
-                                    y1="8"
-                                    x2="12"
-                                    y2="12"></line><line
-                                    x1="12"
-                                    y1="16"
-                                    x2="12.01"
-                                    y2="16"></line></svg
-                            >
+                            <IconInfoCircle class="h-8 w-8" />
                         </div>
                         <div
                             class="bg-black text-white border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.4)] animate-float-delayed inline-block font-black text-xl"
@@ -69,21 +56,7 @@ export const prerender = true
                         <div
                             class="bg-primary border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] animate-float-slow inline-block"
                         >
-                            <svg
-                                width="32"
-                                height="32"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.5"
-                                ><path
-                                    d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
-                                ></path><line
-                                    x1="12"
-                                    y1="17"
-                                    x2="12.01"
-                                    y2="17"></line></svg
-                            >
+                            <IconQuestion class="h-8 w-8" />
                         </div>
                     </div>
 
@@ -109,8 +82,8 @@ export const prerender = true
 
                     <!-- Help Text -->
                     <div class="mt-8 pt-6 border-t-4 border-black/20">
-                        <p class="font-bold text-sm">
-                            💡 <strong>Зөвлөмж:</strong> URL хаягаа шалгаад дахин
+                        <p class="font-bold text-sm flex items-center gap-2">
+                            <IconLightbulb class="h-5 w-5" /> <strong>Зөвлөмж:</strong> URL хаягаа шалгаад дахин
                             оролдоно уу, эсвэл хайлт хийж үзнэ үү.
                         </p>
                     </div>

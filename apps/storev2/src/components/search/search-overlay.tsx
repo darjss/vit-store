@@ -11,6 +11,7 @@ import { addSearch } from "@/lib/search-history";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";
+import IconSearch from "~icons/ri/search-line";
 
 const SearchOverlay: Component = () => {
 	const [isOpen, setIsOpen] = createSignal(false);
@@ -47,18 +48,7 @@ const SearchOverlay: Component = () => {
 				aria-label="Хайх"
 				class="flex items-center justify-center border-[3px] border-black bg-white p-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0_0_rgba(0,0,0,1)]"
 			>
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
-				>
-					<circle cx="11" cy="11" r="8" />
-					<path d="m21 21-4.3-4.3" />
-				</svg>
+				<IconSearch class="h-5 w-5" aria-hidden="true" />
 			</SheetTrigger>
 
 			<SheetContent
@@ -70,7 +60,7 @@ const SearchOverlay: Component = () => {
 					<div class="border-black border-b-3 bg-primary/10 px-4 py-4 sm:px-6">
 						<SheetHeader class="mb-4">
 							<SheetTitle class="flex items-center gap-2 font-black text-xl uppercase tracking-tight sm:text-2xl">
-								<span>🔍</span>
+								<IconSearch class="h-6 w-6 text-primary" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
 						</SheetHeader>

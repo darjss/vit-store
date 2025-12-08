@@ -4,6 +4,21 @@ import TabsContent from "@/components/starwind/tabs/TabsContent.astro";
 import TabsList from "@/components/starwind/tabs/TabsList.astro";
 import TabsTrigger from "@/components/starwind/tabs/TabsTrigger.astro";
 
+// Icons for tabs
+import IconClipboard from "~icons/ri/clipboard-line";
+import IconFileText from "~icons/ri/file-text-line";
+import IconCapsule from "~icons/ri/capsule-line";
+import IconTestTube from "~icons/ri/test-tube-line";
+import IconBarChart from "~icons/ri/bar-chart-line";
+import IconTime from "~icons/ri/time-line";
+import IconSunrise from "~icons/ri/sun-line";
+import IconMoon from "~icons/ri/moon-line";
+import IconAlertTriangle from "~icons/ri/alert-line";
+import IconCheck from "~icons/ri/check-line";
+import IconScale from "~icons/ri/scales-line";
+import IconStrong from "~icons/ri/heart-pulse-line";
+import IconCalendar from "~icons/ri/calendar-line";
+
 interface Props {
 	product: {
 		description?: string | null;
@@ -36,7 +51,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 
 <div class="w-full space-y-8">
 	<div class="border-t-2 border-border pt-8">
-		<h2 class="text-2xl sm:text-3xl font-black mb-6 uppercase tracking-tight">📋 Дэлгэрэнгүй мэдээлэл</h2>
+		<h2 class="text-2xl sm:text-3xl font-black mb-6 uppercase tracking-tight flex items-center gap-2"><IconClipboard class="h-7 w-7" /> Дэлгэрэнгүй мэдээлэл</h2>
 	</div>
 
 	<Tabs defaultValue="description" class="w-full">
@@ -45,28 +60,28 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 				value="description" 
 				class="text-xs sm:text-sm font-black px-2 py-3 sm:px-4 sm:py-3 transition-all uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-hard-sm hover:bg-primary/20"
 			>
-				<span class="block sm:inline">📝</span>
+				<span class="block sm:inline"><IconFileText class="h-4 w-4" /></span>
 				<span class="hidden sm:inline ml-2">Тайлбар</span>
 			</TabsTrigger>
 			<TabsTrigger 
 				value="usage" 
 				class="text-xs sm:text-sm font-black px-2 py-3 sm:px-4 sm:py-3 transition-all uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-hard-sm hover:bg-primary/20"
 			>
-				<span class="block sm:inline">💊</span>
+				<span class="block sm:inline"><IconCapsule class="h-4 w-4" /></span>
 				<span class="hidden sm:inline ml-2">Хэрэглээ</span>
 			</TabsTrigger>
 			<TabsTrigger 
 				value="ingredients" 
 				class="text-xs sm:text-sm font-black px-2 py-3 sm:px-4 sm:py-3 transition-all uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-hard-sm hover:bg-primary/20"
 			>
-				<span class="block sm:inline">🧪</span>
+				<span class="block sm:inline"><IconTestTube class="h-4 w-4" /></span>
 				<span class="hidden sm:inline ml-2">Найрлага</span>
 			</TabsTrigger>
 			<TabsTrigger 
 				value="specs" 
 				class="text-xs sm:text-sm font-black px-2 py-3 sm:px-4 sm:py-3 transition-all uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-2 data-[state=active]:border-border data-[state=active]:shadow-hard-sm hover:bg-primary/20"
 			>
-				<span class="block sm:inline">📊</span>
+				<span class="block sm:inline"><IconBarChart class="h-4 w-4" /></span>
 				<span class="hidden sm:inline ml-2">Үзүүлэлт</span>
 			</TabsTrigger>
 		</TabsList>
@@ -81,7 +96,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 					</div>
 				) : (
 					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20">📝</div>
+						<div class="text-5xl mb-4 opacity-20"><IconFileText class="h-12 w-12" /></div>
 						<p class="text-base sm:text-lg text-muted-foreground font-bold uppercase tracking-wide">
 							Тайлбар одоогоор байхгүй байна
 						</p>
@@ -95,7 +110,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 				<div class="space-y-8">
 					<div class="space-y-4">
 						<h3 class="text-lg sm:text-xl font-black flex items-center gap-3 uppercase">
-							<span>💊</span>
+							<IconCapsule class="h-5 w-5" />
 							<span>Тун болон хэрэглэх арга</span>
 						</h3>
 						<div class="border-2 border-border bg-muted/30 p-6">
@@ -118,19 +133,19 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 
 					<div class="space-y-4">
 						<h3 class="text-lg sm:text-xl font-black flex items-center gap-3 uppercase">
-							<span>⏰</span>
+							<IconTime class="h-5 w-5" />
 							<span>Хэзээ уух вэ?</span>
 						</h3>
 						<div class="grid gap-4 sm:grid-cols-2">
 							<div class="flex items-start gap-4 p-4 border-2 border-border bg-background hover:shadow-hard-sm transition-shadow">
-								<span class="text-3xl">🌅</span>
+								<IconSunrise class="h-8 w-8 text-primary" />
 								<div>
 									<div class="font-black text-sm sm:text-base uppercase">Өглөө</div>
 									<div class="text-xs sm:text-sm text-muted-foreground font-medium">Өглөөний цайны дараа</div>
 								</div>
 							</div>
 							<div class="flex items-start gap-4 p-4 border-2 border-border bg-background hover:shadow-hard-sm transition-shadow">
-								<span class="text-3xl">🌃</span>
+								<IconMoon class="h-8 w-8 text-primary" />
 								<div>
 									<div class="font-black text-sm sm:text-base uppercase">Орой</div>
 									<div class="text-xs sm:text-sm text-muted-foreground font-medium">Оройн хоолны дараа</div>
@@ -141,7 +156,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 
 					<div class="border-2 border-border bg-yellow-50 p-6">
 						<h4 class="font-black text-sm sm:text-base mb-4 flex items-center gap-2 uppercase text-yellow-900">
-							<span>⚠️</span>
+							<IconAlertTriangle class="h-5 w-5" />
 							<span>Анхаарах зүйлс</span>
 						</h4>
 						<ul class="space-y-3 text-xs sm:text-sm text-yellow-900/80 font-medium">
@@ -171,7 +186,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 						<ul class="grid gap-3 sm:grid-cols-2">
 							{product.ingredients?.map((ingredient) => (
 								<li class="flex items-center gap-3 p-4 border-2 border-border bg-muted/20 hover:bg-muted/40 transition-colors">
-									<span class="text-lg text-primary">✓</span>
+									<IconCheck class="h-5 w-5 text-primary" />
 									<span class="text-sm sm:text-base font-bold uppercase tracking-wide">{ingredient}</span>
 								</li>
 							))}
@@ -179,7 +194,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 					</div>
 				) : (
 					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20">🧪</div>
+						<div class="text-5xl mb-4 opacity-20"><IconTestTube class="h-12 w-12" /></div>
 						<p class="text-sm sm:text-base text-muted-foreground font-bold uppercase tracking-wide">
 							Найрлагын мэдээлэл одоогоор байхгүй байна
 						</p>
@@ -196,25 +211,25 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 						<div class="grid gap-4 sm:grid-cols-2">
 							{product.amount && (
 								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase">⚖️ Тоо ширхэг</span>
+									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconScale class="h-4 w-4" /> Тоо ширхэг</span>
 									<span class="text-base sm:text-lg font-black">{product.amount}</span>
 								</div>
 							)}
 							{product.potency && (
 								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase">💪 Идэвхтэй бодис</span>
+									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconStrong class="h-4 w-4" /> Идэвхтэй бодис</span>
 									<span class="text-base sm:text-lg font-black">{product.potency}</span>
 								</div>
 							)}
 							{product.dailyIntake && (
 								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase">📅 Өдрийн тун</span>
+									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconCalendar class="h-4 w-4" /> Өдрийн тун</span>
 									<span class="text-base sm:text-lg font-black">{product.dailyIntake} ширхэг</span>
 								</div>
 							)}
 							{product.weightGrams && (
 								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase">⚖️ Жин</span>
+									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconScale class="h-4 w-4" /> Жин</span>
 									<span class="text-base sm:text-lg font-black">{product.weightGrams}г</span>
 								</div>
 							)}
@@ -222,7 +237,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 					</div>
 				) : (
 					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20">📊</div>
+						<div class="text-5xl mb-4 opacity-20"><IconBarChart class="h-12 w-12" /></div>
 						<p class="text-sm sm:text-base text-muted-foreground font-bold uppercase tracking-wide">
 							Техникийн үзүүлэлт одоогоор байхгүй байна
 						</p>
@@ -235,7 +250,7 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 	{/* Disclaimer */}
 	<div class="border-2 border-border bg-destructive/10 p-6 shadow-hard-sm">
 		<p class="text-xs sm:text-sm font-bold text-center text-destructive flex items-center justify-center gap-3 flex-wrap uppercase tracking-wide">
-			<span class="text-lg">⚠️</span>
+			<IconAlertTriangle class="h-5 w-5" />
 			<span>Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу.</span>
 		</p>
 	</div>

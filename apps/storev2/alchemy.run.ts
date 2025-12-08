@@ -26,7 +26,7 @@ export const storev2 = await Astro("front", {
 		PUBLIC_API_URL: process.env.PUBLIC_API_URL || "",
 	},
 	adopt:true,
-	domains: stage === "dev" ? ["vitstore.dev"] : undefined,
+	domains: stage === "prod" ? ["amerikvitamin.mn"] : undefined,
 	observability: {
 		enabled: false,
 		logs: {

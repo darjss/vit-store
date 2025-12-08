@@ -1,5 +1,7 @@
 import { createMemo, createResource, Show } from "solid-js";
 import { api } from "../lib/trpc";
+import IconComputer from "~icons/ri/computer-line";
+import IconCheck from "~icons/ri/check-line";
 
 interface BenchmarkComparisonProps {
 	serverFetchTime: number;
@@ -80,21 +82,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			{/* Client-Side Results */}
 			<div class="rounded-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-md">
 				<div class="mb-4 flex items-center gap-2">
-					<svg
-						class="h-6 w-6 text-blue-600"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-						aria-label="Client-side icon"
-					>
-						<title>Client-side icon</title>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-						/>
-					</svg>
+					<IconComputer class="h-6 w-6 text-blue-600" />
 					<h2 class="font-bold text-2xl text-blue-800">Client-Side (CSR)</h2>
 				</div>
 
@@ -151,8 +139,8 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 					</div>
 
 					<div class="mt-4 rounded-lg bg-blue-200 p-3">
-						<p class="font-medium text-blue-800 text-sm">
-							✓ Rendered in browser
+						<p class="font-medium text-blue-800 text-sm flex items-center gap-1">
+							<IconCheck class="h-4 w-4" /> Rendered in browser
 						</p>
 						<p class="mt-1 text-blue-700 text-xs">
 							Includes network latency + processing time

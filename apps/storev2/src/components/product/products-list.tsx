@@ -1,43 +1,46 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/solid-query";
+import {
+	keepPreviousData,
+	useInfiniteQuery,
+	useQuery,
+} from "@tanstack/solid-query";
 import {
 	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	onCleanup,
-	onMount,
 	Show,
 } from "solid-js";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
+import { cn } from "@/lib/utils";
 import FilterBar from "../search/filter-bar";
 import ProductCard from "./product-card";
+import IconSearch from "~icons/ri/search-line";
+import IconErrorWarning from "~icons/ri/error-warning-line";
+import IconSparkle from "~icons/ri/sparkling-fill";
 
 // Loading skeleton component
 const ProductCardSkeleton = () => (
-	<div class="flex animate-pulse flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000]">
+	<div class="flex animate-pulse flex-col border-2 border-black bg-white shadow-[2px_2px_0_0_#000] transition-all sm:border-3 sm:shadow-[3px_3px_0_0_#000] lg:shadow-[5px_5px_0_0_#000]">
 		<div class="relative aspect-4/5 overflow-hidden border-black border-b-2 bg-gray-100 sm:aspect-4/3 sm:border-b-3">
 			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.05)_2px,transparent_0)] bg-size-[14px_14px]" />
-			<div class="absolute right-1.5 bottom-1.5 h-4 w-12 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:right-3 sm:bottom-3 sm:h-5 sm:w-16" />
+			<div class="absolute right-1.5 bottom-1.5 h-3 w-10 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:right-2 sm:bottom-2 sm:h-4 sm:w-12 lg:right-3 lg:bottom-3 lg:h-5 lg:w-16" />
 		</div>
-		<div class="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-3">
-			<div class="h-3 w-full rounded bg-gray-200 sm:h-4" />
-			<div class="h-3 w-3/4 rounded bg-gray-200 sm:h-4" />
+		<div class="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-2.5 lg:gap-2 lg:p-3">
+			<div class="h-3 w-full rounded bg-gray-200 sm:h-3.5 lg:h-4" />
+			<div class="h-3 w-3/4 rounded bg-gray-200 sm:h-3.5 lg:h-4" />
 		</div>
-		<div class="flex items-center justify-between border-black border-t-2 bg-primary/10 px-2 py-1.5 sm:border-t-3 sm:px-3 sm:py-2">
-			<div class="h-4 w-16 rounded bg-gray-200 sm:h-5 sm:w-20" />
-			<div class="h-7 w-10 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:h-8 sm:w-12" />
+		<div class="flex items-center justify-between border-black border-t-2 bg-primary/10 px-2 py-1.5 sm:border-t-3 sm:px-2.5 sm:py-2 lg:px-3 lg:py-2.5">
+			<div class="h-3.5 w-14 rounded bg-gray-200 sm:h-4 sm:w-16 lg:h-5 lg:w-20" />
+			<div class="h-7 w-9 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:h-8 sm:w-11 lg:h-9 lg:w-14" />
 		</div>
 	</div>
 );
 
 const ProductsList = () => {
 	// URL search params for filters
-	const [cursor, setCursor] = useSearchParam("cursor", {
-		defaultValue: undefined,
-		skipTransition: true,
-	});
 	const [searchTerm, setSearchTerm] = useSearchParam("q", {
 		defaultValue: undefined,
 	});
@@ -106,8 +109,14 @@ const ProductsList = () => {
 				brandId(),
 			],
 			queryFn: async ({ pageParam }) => {
-				return await api.product.getInfiniteProducts.query({
-					cursor: pageParam ?? cursor() ?? undefined,
+				console.log("[ProductsList] Fetching products with:", {
+					cursor: pageParam,
+					searchTerm: searchTerm(),
+					sortField: sortField(),
+					sortDirection: sortDirection(),
+				});
+				const result = await api.product.getInfiniteProducts.query({
+					cursor: pageParam,
 					limit: 12,
 					searchTerm: searchTerm() || undefined,
 					sortField:
@@ -116,44 +125,74 @@ const ProductsList = () => {
 					categoryId: categoryId() ?? undefined,
 					brandId: brandId() ?? undefined,
 				});
+				console.log("[ProductsList] Got result:", result.items.length, "items");
+				return result;
 			},
-			initialPageParam: (cursor() ?? undefined) as string | undefined,
+			initialPageParam: undefined as string | undefined,
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+			placeholderData: keepPreviousData,
 		}),
 		() => queryClient,
 	);
 
+	// Computed states for better state management
+	const isInitialLoading = createMemo(() => {
+		return productsQuery.isLoading && !productsQuery.data;
+	});
+
+	const isRefetching = createMemo(() => {
+		return (
+			productsQuery.isFetching &&
+			!productsQuery.isLoading &&
+			!productsQuery.isFetchingNextPage &&
+			!!productsQuery.data
+		);
+	});
+
 	// Flatten all pages into a single array
+	// Handle placeholder data during transitions
 	const allProducts = createMemo(() => {
-		if (!productsQuery.data) return [];
-		return productsQuery.data.pages.flatMap((page) => page.items);
+		// Use data if available, even during refetch (keepPreviousData ensures this)
+		const data = productsQuery.data;
+		if (!data) return [];
+		return data.pages.flatMap((page) => page.items);
+	});
+
+	// Check if we have any products to display (including placeholder data)
+	const hasProducts = createMemo(() => {
+		return allProducts().length > 0;
+	});
+
+	// Check if we should show empty state (only when we have confirmed empty data, not during transitions)
+	const shouldShowEmptyState = createMemo(() => {
+		return (
+			productsQuery.data &&
+			!productsQuery.isLoading &&
+			!productsQuery.isFetching &&
+			allProducts().length === 0
+		);
 	});
 
 	// Filter handlers
 	const handleSearch = (term: string) => {
 		setLocalSearchTerm(term);
-		setCursor(null);
 		setSearchTerm(term || null);
 	};
 
 	const handleSortChange = (field: string | null, direction: string | null) => {
-		setCursor(null);
 		setSortField(field);
 		setSortDirection(direction);
 	};
 
 	const handleCategoryChange = (id: number | null) => {
-		setCursor(null);
 		setCategoryIdParam(id?.toString() ?? null);
 	};
 
 	const handleBrandChange = (id: number | null) => {
-		setCursor(null);
 		setBrandIdParam(id?.toString() ?? null);
 	};
 
 	const handleClearFilters = () => {
-		setCursor(null);
 		setSearchTerm(null);
 		setSortField(null);
 		setSortDirection(null);
@@ -170,70 +209,6 @@ const ProductsList = () => {
 		!!categoryId() ||
 		!!brandId();
 
-	// Scroll position tracking for restoration
-	let scrollRestored = false;
-
-	onMount(() => {
-		if (typeof window === "undefined") return;
-
-		let scrollTimeout: number | undefined;
-		const handleScroll = () => {
-			if (scrollTimeout) clearTimeout(scrollTimeout);
-			scrollTimeout = window.setTimeout(() => {
-				const urlCursor = cursor();
-				if (urlCursor) {
-					sessionStorage.setItem(
-						`products-scroll-${urlCursor}`,
-						window.scrollY.toString(),
-					);
-				}
-			}, 150);
-		};
-
-		window.addEventListener("scroll", handleScroll, { passive: true });
-
-		onCleanup(() => {
-			window.removeEventListener("scroll", handleScroll);
-			if (scrollTimeout) clearTimeout(scrollTimeout);
-		});
-	});
-
-	// Restore scroll position
-	createEffect(() => {
-		if (typeof window === "undefined") return;
-		if (scrollRestored) return;
-		if (!productsQuery.data || allProducts().length === 0) return;
-
-		const urlCursor = cursor();
-		if (!urlCursor) return;
-
-		const savedScroll = sessionStorage.getItem(`products-scroll-${urlCursor}`);
-		if (savedScroll) {
-			setTimeout(() => {
-				window.scrollTo({
-					top: Number.parseInt(savedScroll, 10),
-					behavior: "auto",
-				});
-				scrollRestored = true;
-			}, 100);
-		}
-	});
-
-	// Sync cursor with latest nextCursor
-	createEffect(() => {
-		if (!productsQuery.data) return;
-		const pages = productsQuery.data.pages;
-		if (pages.length === 0) return;
-
-		const lastPage = pages[pages.length - 1];
-		const nextCursor = lastPage.nextCursor ?? undefined;
-		const currentCursor = cursor();
-
-		if (currentCursor !== nextCursor) {
-			setCursor(nextCursor ?? null);
-		}
-	});
-
 	// Infinite scroll observer
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
@@ -248,7 +223,7 @@ const ProductsList = () => {
 					productsQuery.fetchNextPage();
 				}
 			},
-			{ rootMargin: "200px", threshold: 0.1 },
+			{ rootMargin: "300px", threshold: 0.1 },
 		);
 
 		observer.observe(element);
@@ -277,16 +252,34 @@ const ProductsList = () => {
 	};
 
 	return (
-		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-			<div class="overflow-hidden border-3 border-black bg-primary/5 px-3 py-3 shadow-[5px_5px_0_0_#000] sm:border-4 sm:px-5 sm:py-4 sm:shadow-[6px_6px_0_0_#000]">
+		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+			<div class="overflow-hidden border-2 border-black bg-primary/5 px-3 py-3 shadow-[3px_3px_0_0_#000] sm:border-4 sm:px-5 sm:py-4 sm:shadow-[6px_6px_0_0_#000]">
 				{/* Compact Header */}
-				<div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 sm:mb-3">
-					<h1 class="font-black text-lg tracking-tight sm:text-2xl">
+				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
+					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
 						{getPageTitle()}
 					</h1>
-					<Show when={productsQuery.data}>
-						<span class="font-bold text-black/50 text-xs sm:text-sm">
-							{allProducts().length}+ бүтээгдэхүүн
+					<Show
+						when={!isInitialLoading()}
+						fallback={
+							<div class="h-3.5 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24 lg:h-5 lg:w-28" />
+						}
+					>
+						<span class="font-bold text-black/60 text-xs sm:text-sm lg:text-base">
+							<Show
+								when={hasProducts()}
+								fallback={
+									<>
+										{shouldShowEmptyState()
+											? "0 бүтээгдэхүүн"
+											: `${allProducts().length}+ бүтээгдэхүүн`}
+									</>
+								}
+							>
+								{productsQuery.hasNextPage
+									? `${allProducts().length}+ бүтээгдэхүүн`
+									: `${allProducts().length} бүтээгдэхүүн`}
+							</Show>
 						</span>
 					</Show>
 				</div>
@@ -310,37 +303,43 @@ const ProductsList = () => {
 
 				{/* Products Grid */}
 				<Show
-					when={productsQuery.data && allProducts().length > 0}
+					when={hasProducts() || isRefetching()}
 					fallback={
 						<Show
-							when={productsQuery.isLoading}
+							when={isInitialLoading()}
 							fallback={
-								<Show when={productsQuery.data && allProducts().length === 0}>
+								<Show when={shouldShowEmptyState()}>
 									{/* Empty State */}
-									<div class="py-8 text-center sm:py-12">
-										<div class="mb-2 text-4xl sm:mb-3 sm:text-5xl">🔍</div>
+									<div class="py-8 text-center sm:py-10 lg:py-14">
+										<div class="mb-3 flex justify-center sm:mb-4 lg:mb-5">
+											<IconSearch class="h-12 w-12 text-black/20 sm:h-14 sm:w-14 lg:h-16 lg:w-16" />
+										</div>
 										<Show
-											when={searchTerm()}
+											when={hasActiveFilters()}
 											fallback={
 												<>
-													<h3 class="font-black text-base sm:text-lg">
+													<h3 class="mb-2 font-black text-base sm:mb-2.5 sm:text-lg lg:text-xl">
 														Бүтээгдэхүүн олдсонгүй
 													</h3>
-													<p class="text-black/50 text-xs sm:text-sm">
-														Одоогоор бүтээгдэхүүн байхгүй
+													<p class="px-4 text-black/60 text-xs sm:text-sm lg:text-base">
+														Одоогоор бүтээгдэхүүн байхгүй байна
 													</p>
 												</>
 											}
 										>
-											<h3 class="font-black text-base sm:text-lg">
+											<h3 class="mb-2 font-black text-base sm:mb-2.5 sm:text-lg lg:text-xl">
 												Үр дүн олдсонгүй
 											</h3>
+											<p class="mb-4 px-4 text-black/60 text-xs sm:mb-5 sm:text-sm lg:mb-6 lg:text-base">
+												Таны шүүлтүүрт тохирох бүтээгдэхүүн олдсонгүй.
+												Шүүлтүүрээ өөрчилж үзнэ үү.
+											</p>
 											<button
 												type="button"
 												onClick={handleClearFilters}
-												class="mt-2 border-2 border-black bg-primary px-3 py-1.5 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_0_#000] sm:mt-3 sm:px-4 sm:py-2 sm:text-sm"
+												class="mx-auto min-h-[44px] border-2 border-black bg-primary px-4 py-2.5 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all active:translate-x-px active:translate-y-px active:shadow-[1px_1px_0_0_#000] sm:px-5 sm:py-3 sm:text-sm lg:px-6 lg:py-3.5 lg:text-base"
 											>
-												Цэвэрлэх
+												Бүх шүүлтүүр цэвэрлэх
 											</button>
 										</Show>
 									</div>
@@ -348,32 +347,56 @@ const ProductsList = () => {
 							}
 						>
 							{/* Initial Loading Skeleton */}
-							<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+							<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 								<For each={Array(8)}>{() => <ProductCardSkeleton />}</For>
 							</div>
 						</Show>
 					}
 				>
-					{/* Products Grid */}
-					<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-						<For each={allProducts()}>
-							{(product) => <ProductCard product={product} />}
-						</For>
+					{/* Products Grid with refetching overlay */}
+					<div class="relative">
+						{/* Loading indicator for initial load */}
+						<Show when={isInitialLoading()}>
+							<div class="absolute inset-0 z-10 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+								<div class="flex flex-col items-center gap-3 border-2 border-black bg-white px-5 py-4 shadow-[3px_3px_0_0_#000] sm:gap-3.5 sm:border-3 sm:px-6 sm:py-5 sm:shadow-[4px_4px_0_0_#000] lg:px-8 lg:py-6">
+									<div class="h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent sm:h-7 sm:w-7 sm:border-3 lg:h-8 lg:w-8" />
+									<p class="font-bold text-xs sm:text-sm lg:text-base">
+										Ачааллаж байна...
+									</p>
+								</div>
+							</div>
+						</Show>
+						<div
+							class={cn(
+								"grid grid-cols-2 gap-2 transition-opacity duration-200 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4",
+								isRefetching() && "pointer-events-none opacity-50",
+							)}
+						>
+							<For each={allProducts()}>
+								{(product) => <ProductCard product={product} />}
+							</For>
+						</div>
 					</div>
 				</Show>
 
 				{/* Error State */}
 				<Show when={productsQuery.isError}>
-					<div class="py-6 text-center sm:py-8">
-						<p class="font-bold text-destructive text-sm sm:text-base">
+					<div class="py-8 text-center sm:py-10">
+						<div class="mb-3 flex justify-center sm:mb-4">
+							<IconErrorWarning class="h-10 w-10 text-destructive sm:h-12 sm:w-12" />
+						</div>
+						<p class="font-bold text-base text-destructive sm:text-lg">
 							Алдаа гарлаа
+						</p>
+						<p class="mt-1 text-black/60 text-xs sm:text-sm">
+							Дахин оролдох уу?
 						</p>
 					</div>
 				</Show>
 
 				{/* Loading More Skeleton */}
 				<Show when={productsQuery.isFetchingNextPage}>
-					<div class="mt-2 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+					<div class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 						<For each={Array(4)}>{() => <ProductCardSkeleton />}</For>
 					</div>
 				</Show>
@@ -386,9 +409,10 @@ const ProductsList = () => {
 						allProducts().length > 0
 					}
 				>
-					<div class="mt-4 py-4 text-center sm:mt-6">
-						<span class="font-bold text-black/40 text-xs uppercase tracking-wide sm:text-sm">
-							✨ Нийт {allProducts().length} бүтээгдэхүүн
+					<div class="mt-4 py-4 text-center sm:mt-6 sm:py-5 lg:mt-8 lg:py-6">
+						<span class="font-bold text-black/50 text-xs uppercase tracking-wide sm:text-sm lg:text-base flex items-center justify-center gap-2">
+							<IconSparkle class="text-yellow-500" /> Нийт{" "}
+							{allProducts().length} бүтээгдэхүүн
 						</span>
 					</div>
 				</Show>
@@ -401,7 +425,7 @@ const ProductsList = () => {
 						!productsQuery.isFetchingNextPage
 					}
 				>
-					<div ref={setupObserver} class="h-1 w-full" aria-hidden="true" />
+					<div ref={setupObserver} class="h-2 w-full" aria-hidden="true" />
 				</Show>
 			</div>
 		</div>

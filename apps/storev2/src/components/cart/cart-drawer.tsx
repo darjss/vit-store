@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/sheet";
 import CartDrawerItem from "./cart-drawer-item";
 import EmptyCart from "./empty-cart";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import IconArrowRight from "~icons/ri/arrow-right-line";
 
 const CartDrawer = () => {
 	const isEmpty = () => cart.items().length === 0;
@@ -21,8 +23,8 @@ const CartDrawer = () => {
 			>
 				{/* Header */}
 				<SheetHeader class="border-border border-b-4 bg-primary p-4">
-					<SheetTitle class="font-black text-2xl uppercase tracking-tighter">
-						🛒 Таны сагс
+					<SheetTitle class="flex items-center gap-2 font-black text-2xl uppercase tracking-tighter">
+						<IconShoppingCart class="h-6 w-6" /> Таны сагс
 					</SheetTitle>
 					<p class="font-bold text-foreground text-sm">
 						{cart.count()} бүтээгдэхүүн
@@ -75,12 +77,16 @@ const CartDrawer = () => {
 							</div>
 
 							{/* Checkout Button */}
-							<a href="/checkout" class="mt-4 block">
+							<a
+								href="/checkout"
+								class="mt-4 block"
+								onClick={() => cart.closeDrawer()}
+							>
 								<button
 									type="button"
-									class="w-full border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
+									class="flex w-full items-center justify-center gap-2 border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
 								>
-									Худалдан авах →
+									Худалдан авах <IconArrowRight class="h-5 w-5" />
 								</button>
 							</a>
 

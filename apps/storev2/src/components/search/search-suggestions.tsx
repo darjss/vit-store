@@ -6,6 +6,9 @@ import {
 	clearHistory,
 	type SearchHistoryItem,
 } from "@/lib/search-history";
+import IconClose from "~icons/ri/close-line";
+import IconTime from "~icons/ri/time-line";
+import IconFire from "~icons/ri/fire-fill";
 
 interface SearchSuggestionsProps {
 	onSelectSearch: (term: string) => void;
@@ -48,7 +51,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 				<div>
 					<div class="mb-3 flex items-center justify-between">
 						<h3 class="font-black text-sm uppercase tracking-wider text-black/70">
-							<span class="mr-2">🕐</span>
+							<IconTime class="mr-2 inline-block h-4 w-4 text-blue-500" />
 							Сүүлд хайсан
 						</h3>
 						<button
@@ -72,16 +75,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 										onClick={(e) => handleRemoveSearch(item.term, e)}
 										class="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/10 text-black/60 opacity-0 transition-all group-hover:opacity-100 hover:bg-destructive hover:text-white"
 									>
-										<svg
-											class="h-3 w-3"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2.5"
-										>
-											<path d="M18 6 6 18" />
-											<path d="m6 6 12 12" />
-										</svg>
+										<IconClose class="h-3 w-3" />
 									</span>
 								</button>
 							)}
@@ -93,7 +87,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 			{/* Trending Searches */}
 			<div>
 				<h3 class="mb-3 font-black text-sm uppercase tracking-wider text-black/70">
-					<span class="mr-2">🔥</span>
+					<IconFire class="mr-2 inline-block h-4 w-4 text-orange-500" />
 					Түгээмэл хайлт
 				</h3>
 				<div class="flex flex-wrap gap-2">
@@ -115,4 +109,3 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 };
 
 export default SearchSuggestions;
-

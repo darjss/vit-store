@@ -1,6 +1,11 @@
 ---
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { createServerClient } from "@/lib/trpc";
+import IconHome from "~icons/ri/home-4-line";
+import IconGrid from "~icons/ri/grid-line";
+import IconCart from "~icons/ri/shopping-cart-2-line";
+import IconUser from "~icons/ri/user-line";
+import IconArrowRight from "~icons/ri/arrow-right-s-line";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
@@ -25,10 +30,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                 href="/" 
                 class="flex flex-col items-center justify-center gap-2 p-4 bg-primary border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-primary/80"
             >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+                <IconHome class="w-6 h-6" />
                 <span class="font-black text-xs uppercase tracking-wide">Нүүр</span>
             </a>
             
@@ -36,12 +38,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                 href="/products" 
                 class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
             >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                    <rect x="14" y="14" width="7" height="7" />
-                </svg>
+                <IconGrid class="w-6 h-6" />
                 <span class="font-black text-xs uppercase tracking-wide">Бүтээгдэхүүн</span>
             </a>
             
@@ -49,11 +46,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                 href="/cart" 
                 class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
             >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <circle cx="9" cy="21" r="1" />
-                    <circle cx="20" cy="21" r="1" />
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                </svg>
+                <IconCart class="w-6 h-6" />
                 <span class="font-black text-xs uppercase tracking-wide">Сагс</span>
             </a>
             
@@ -61,9 +54,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                 href="/profile" 
                 class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
             >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+                <IconUser class="w-6 h-6" />
                 <span class="font-black text-xs uppercase tracking-wide">Профайл</span>
             </a>
         </div>
@@ -135,9 +126,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                             class="mt-3 flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors"
                         >
                             Бүх брэнд харах
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
+                            <IconArrowRight class="w-4 h-4" />
                         </a>
                     )}
                 </>

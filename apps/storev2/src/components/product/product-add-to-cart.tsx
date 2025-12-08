@@ -1,10 +1,19 @@
 import { useQuery } from "@tanstack/solid-query";
-import { createEffect, createMemo, createSignal, Match, Suspense, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	Match,
+	Suspense,
+	Switch,
+} from "solid-js";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import type { CartItems } from "@/lib/types";
 import AddToCartButton from "../cart/add-to-cart-button";
+import IconAlertTriangle from "~icons/ri/error-warning-fill";
+import IconNotification from "~icons/ri/notification-3-fill";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -24,14 +33,10 @@ export default function ProductQuantitySelector(
 	);
 	const [quantity, setQuantity] = createSignal(1);
 	const isInStock = createMemo(() => statusQuery.data?.isInStock);
-	console.log("isInStock", isInStock());
 
 	const increment = () => setQuantity((prev) => prev + 1);
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
-	console.log("quantity", quantity());
-	createEffect(() => {
-		console.log({ ...props.cartItem, quantity: quantity() }, "cartItem");
-	});
+
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
 			<Switch>
@@ -69,7 +74,7 @@ export default function ProductQuantitySelector(
 						{/* Out of Stock Alert */}
 						<div class="animate-float-slow rounded-sm border-4 border-black bg-destructive/10 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
 							<div class="mb-3 flex items-center gap-3">
-								<span class="text-2xl">⚠️</span>
+								<IconAlertTriangle class="text-2xl text-yellow-500" />
 								<h3 class="font-black text-destructive text-lg sm:text-xl">
 									Дууссан байна
 								</h3>
@@ -82,7 +87,7 @@ export default function ProductQuantitySelector(
 
 						{/* Notify Button */}
 						<Button class="w-full py-6 text-base sm:text-lg">
-							<span class="mr-2">🔔</span>
+							<IconNotification class="mr-2 text-yellow-500" />
 							Мэдэгдэл авах
 						</Button>
 					</div>

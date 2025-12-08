@@ -9,6 +9,8 @@ import {
 } from "solid-js";
 import { TextField, TextFieldInput } from "@/components/ui/text-field";
 import { cn } from "@/lib/utils";
+import IconSearch from "~icons/ri/search-line";
+import IconClose from "~icons/ri/close-line";
 
 interface SearchInputProps {
 	value?: string;
@@ -81,6 +83,8 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
 			local.onSearch?.(inputValue());
+			// Blur input on mobile after search to hide keyboard
+			inputRef?.blur();
 		}
 		if (e.key === "Escape") {
 			handleClear();
@@ -91,20 +95,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		<TextField class={cn("relative w-full flex-row gap-0", local.class)}>
 			{/* Search Icon */}
 			<div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-4">
-				<svg
-					class="h-5 w-5 text-black/60"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2.5"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					aria-hidden="true"
-				>
-					<title>Search icon</title>
-					<circle cx="11" cy="11" r="8" />
-					<path d="m21 21-4.3-4.3" />
-				</svg>
+				<IconSearch class="h-5 w-5 text-black/60" aria-hidden="true" />
 			</div>
 
 			<TextFieldInput
@@ -130,20 +121,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-white transition-all hover:bg-primary active:scale-95"
 								aria-label="Clear search"
 							>
-								<svg
-									class="h-4 w-4"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<title>Clear icon</title>
-									<path d="M18 6 6 18" />
-									<path d="m6 6 12 12" />
-								</svg>
+								<IconClose class="h-4 w-4" aria-hidden="true" />
 							</button>
 						</Show>
 					}

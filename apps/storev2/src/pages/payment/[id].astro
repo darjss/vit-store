@@ -8,6 +8,10 @@ import TabsTrigger from "@/components/starwind/tabs/TabsTrigger.astro";
 import CopyButton from "@/components/ui/copy-button";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
+import IconCreditCard from "~icons/ri/bank-card-line";
+import IconBank from "~icons/ri/bank-line";
+import IconMobile from "~icons/ri/smartphone-line";
+import IconAlert from "~icons/ri/alert-line";
 
 const { id } = Astro.params;
 if(id===undefined){
@@ -27,8 +31,8 @@ if(!payment){
         <div class="mb-4 sm:mb-6">
             <div class="border-3 sm:border-4 border-border bg-primary p-3 sm:p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)] mb-3 sm:mb-4">
                 <div class="flex items-center gap-2 sm:gap-3">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 border-3 border-border bg-card flex items-center justify-center text-xl sm:text-2xl">
-                        💳
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 border-3 border-border bg-card flex items-center justify-center">
+                        <IconCreditCard class="h-6 w-6" />
                     </div>
                     <div class="flex-1 min-w-0">
                         <h1 class="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tight">
@@ -73,7 +77,7 @@ if(!payment){
                     class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
                 >
                     <span class="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <span class="text-sm sm:text-base">🏦</span>
+                        <IconBank class="h-4 w-4 sm:h-5 sm:w-5" />
                         <span>Данс</span>
                     </span>
                 </TabsTrigger>
@@ -82,7 +86,7 @@ if(!payment){
                     class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
                 >
                     <span class="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <span class="text-sm sm:text-base">📱</span>
+                        <IconMobile class="h-4 w-4 sm:h-5 sm:w-5" />
                         <span>QPay</span>
                     </span>
                 </TabsTrigger>
@@ -159,7 +163,7 @@ if(!payment){
 
                         <div class="p-2.5 sm:p-3 border-2 border-border bg-yellow-50">
                             <div class="flex items-start gap-2 sm:gap-2.5">
-                                <span class="text-base sm:text-lg shrink-0">⚠️</span>
+                                <IconAlert class="h-5 w-5 shrink-0 text-yellow-700" />
                                 <div class="flex-1">
                                     <p class="text-[11px] sm:text-xs font-bold leading-snug">
                                         <strong>Гүйлгээний утга</strong> хэсэгт заавал <strong>{payment.order.orderNumber}</strong> дугаарыг бичнэ үү. Төлбөр 5-15 минутын дотор баталгаажна.

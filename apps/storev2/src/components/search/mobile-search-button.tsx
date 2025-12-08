@@ -10,6 +10,7 @@ import { addSearch } from "@/lib/search-history";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";
+import IconSearch from "~icons/ri/search-line";
 
 /**
  * Mobile-optimized search button that opens a full-screen search overlay.
@@ -50,21 +51,10 @@ const MobileSearchButton: Component = () => {
 				aria-label="Хайх"
 			>
 				<div class="flex flex-col items-center gap-1">
-					<svg
-						width="20"
-						height="20"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2.5"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						class="transition-transform duration-200 group-hover:scale-110"
+					<IconSearch
+						class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
 						aria-hidden="true"
-					>
-						<circle cx="11" cy="11" r="8" />
-						<path d="m21 21-4.3-4.3" />
-					</svg>
+					/>
 					<p class="font-bold text-[11px] leading-none">Хайх</p>
 				</div>
 			</button>
@@ -80,7 +70,7 @@ const MobileSearchButton: Component = () => {
 						<div class="border-black border-b-3 bg-primary/10 px-4 py-4">
 							<SheetHeader class="mb-4">
 								<SheetTitle class="flex items-center gap-2 font-black text-lg uppercase tracking-tight">
-									<span>🔍</span>
+									<IconSearch class="h-5 w-5 text-primary" />
 									Бүтээгдэхүүн хайх
 								</SheetTitle>
 							</SheetHeader>

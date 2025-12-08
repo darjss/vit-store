@@ -4,6 +4,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import IconMenu from "~icons/ri/menu-line";
 
 interface MobileMenuProps {
   children: JSX.Element;
@@ -13,21 +14,7 @@ const MobileMenu: Component<MobileMenuProps> = (props) => {
   return (
     <Sheet>
       <SheetTrigger class=" p-2 border-[3px] border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <line x1="4" x2="20" y1="12" y2="12" />
-          <line x1="4" x2="20" y1="6" y2="6" />
-          <line x1="4" x2="20" y1="18" y2="18" />
-        </svg>
+        <IconMenu class="w-6 h-6" />
         <span class="sr-only">Toggle menu</span>
       </SheetTrigger>
       <SheetContent position="left" class="w-[300px] sm:w-[400px] border-r-4 border-black p-0">

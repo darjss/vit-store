@@ -10,7 +10,11 @@ import {
 	onCleanup,
 	Switch,
 } from "solid-js";
-	import { api } from "@/lib/trpc";
+import { api } from "@/lib/trpc";
+import IconCheck from "~icons/ri/check-line";
+import IconTime from "~icons/ri/time-line";
+import IconClose from "~icons/ri/close-line";
+import IconRefresh from "~icons/ri/refresh-line";
 
 const PaymentStatus = ({
 	payment,
@@ -57,19 +61,7 @@ const PaymentStatus = ({
 			<Match when={currentData()?.status === "success"}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-black bg-success text-success-foreground shadow-[8px_8px_0_0_#000]">
-						<svg
-							class="h-10 w-10"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="3"
-								d="M5 13l4 4L19 7"
-							/>
-						</svg>
+						<IconCheck class="h-10 w-10" />
 					</div>
 					<h1 class="mb-4 font-black text-4xl uppercase tracking-tight md:text-5xl">
 						Захиалга баталгаажлаа!
@@ -82,19 +74,7 @@ const PaymentStatus = ({
 			<Match when={currentData()?.status === "pending"}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-4 border-black bg-yellow-400 text-black shadow-[8px_8px_0_0_#000]">
-						<svg
-							class="h-10 w-10 animate-spin"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
+						<IconTime class="h-10 w-10 animate-spin" />
 					</div>
 					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
 						Төлбөр боловсруулж байна
@@ -103,19 +83,7 @@ const PaymentStatus = ({
 						Таны төлбөр шалгагдаж байна. Түр хүлээнэ үү.
 					</p>
 					<div class="inline-flex items-center gap-2 text-muted-foreground text-sm">
-						<svg
-							class="h-4 w-4 animate-spin"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-							/>
-						</svg>
+						<IconRefresh class="h-4 w-4 animate-spin" />
 						Автоматаар шалгаж байна...
 					</div>
 				</div>
@@ -123,19 +91,7 @@ const PaymentStatus = ({
 			<Match when={currentData()?.status === "failed"}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-black bg-destructive text-destructive-foreground shadow-[8px_8px_0_0_#000]">
-						<svg
-							class="h-10 w-10"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="3"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
+						<IconClose class="h-10 w-10" />
 					</div>
 					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
 						Төлбөр амжилтгүй боллоо
@@ -147,20 +103,7 @@ const PaymentStatus = ({
 						href={`/payment/${payment.paymentNumber}`}
 						class="inline-flex h-12 items-center gap-2 whitespace-nowrap border-3 border-black bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0_0_#000] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 active:shadow-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						<svg
-							class="h-4 w-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-							aria-hidden="true"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-							/>
-						</svg>
+						<IconRefresh class="h-4 w-4" />
 						Дахин оролдох
 					</a>
 				</div>
@@ -168,19 +111,7 @@ const PaymentStatus = ({
 			<Match when={data.loading && !data.latest}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-black bg-gray-400 text-gray-400 shadow-[8px_8px_0_0_#000]">
-						<svg
-							class="h-10 w-10"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
+						<IconTime class="h-10 w-10" />
 					</div>
 				</div>
 			</Match>

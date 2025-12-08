@@ -11,6 +11,7 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
+import IconCloseCircle from "~icons/ri/close-circle-fill";
 
 const OtpForm = ({
 	phone,
@@ -116,17 +117,7 @@ const OtpForm = ({
 			{loginMutation.isError && (
 				<div class="animate-shake border-4 border-destructive bg-destructive/10 p-4 shadow-[4px_4px_0_0_oklch(0.577_0.245_27.325)]">
 					<div class="flex items-center gap-3">
-						<svg
-							class="h-5 w-5 flex-shrink-0"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+						<IconCloseCircle class="h-5 w-5 flex-shrink-0 text-destructive" />
 						<p class="font-black text-destructive text-sm uppercase">
 							Код буруу байна. Дахин оролдоно уу.
 						</p>

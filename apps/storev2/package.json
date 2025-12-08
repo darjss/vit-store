@@ -17,10 +17,8 @@
 		"@astrojs/solid-js": "^5.1.1",
 		"@corvu/otp-field": "^0.1.4",
 		"@kobalte/core": "^0.13.11",
-		"@lucide/astro": "^0.553.0",
 		"@radix-ui/react-slot": "^1.2.3",
 		"@solid-primitives/storage": "^4.3.3",
-		"@tabler/icons": "^3",
 		"@tailwindcss/forms": "^0.5",
 		"@tailwindcss/vite": "^4",
 		"@tanstack/solid-form": "^1.23.8",
@@ -37,9 +35,6 @@
 		"clsx": "^2.1.1",
 		"embla-carousel-react": "^8.6.0",
 		"embla-carousel-solid": "^8.6.0",
-		"lucide-astro": "^0.554.0",
-		"lucide-react": "^0.546.0",
-		"lucide-solid": "^0.554.0",
 		"server": "workspace:*",
 		"sharp": "^0.34.4",
 		"solid-js": "^1.9.9",
@@ -53,8 +48,10 @@
 	"devDependencies": {
 		"@astrojs/cloudflare": "^12.6.10",
 		"@cloudflare/workers-types": "^4.20250805.0",
+		"@iconify/json": "^2.2.416",
 		"alchemy": "catalog:",
 		"miniflare": "^4.20250617.3",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"unplugin-icons": "^22.5.0"
 	}
 }

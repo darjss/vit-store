@@ -15,6 +15,7 @@ import {
 import type { DB } from "../db";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "../db/schema";
 import type { status } from "../lib/constants";
+import { searchProducts } from "../lib/upstash-search";
 
 type ProductStatus = (typeof status)[number];
 
@@ -643,136 +644,135 @@ export function productQueries(db: DB) {
 				});
 			},
 
-			async getInfiniteProducts(
-				params: {
-					cursor?: string | undefined ;
-					limit: number;
-					brandId?: number;
-					categoryId?: number;
-					sortField?: string;
-					sortDirection?: "asc" | "desc";
-					searchTerm?: string;
-				},
-			) {
-				let items: {
-					id: number;
-					name: string;
-					price: number;
-					slug: string;
-					createdAt: Date;
-					images: { url: string | null }[];
-					brand?: { name: string } | null;
-				}[];
-				const { cursor, limit, brandId, categoryId, searchTerm, sortField, sortDirection } = params;
+			async getInfiniteProducts(params: {
+				cursor?: string | undefined;
+				limit: number;
+				brandId?: number;
+				categoryId?: number;
+				sortField?: "price" | "stock" | "createdAt";
+				sortDirection?: "asc" | "desc";
+				searchTerm?: string;
+			}) {
+				const {
+					cursor,
+					limit,
+					brandId,
+					categoryId,
+					searchTerm,
+					sortField = "createdAt",
+					sortDirection = "desc",
+				} = params;
+
+				// Build filter conditions
 				const conditions: (SQL<unknown> | undefined)[] = [];
 				if (brandId !== undefined && brandId !== 0)
 					conditions.push(eq(ProductsTable.brandId, brandId));
 				if (categoryId !== undefined && categoryId !== 0)
 					conditions.push(eq(ProductsTable.categoryId, categoryId));
-				if (searchTerm !== undefined)
-					conditions.push(like(ProductsTable.name, `%${searchTerm}%`));
-				const orderByClauses: SQL<unknown>[] = [];
-				const primarySortColumn =
+
+				// Use Upstash search for better text matching
+				if (searchTerm !== undefined && searchTerm !== "") {
+					const searchResults = await searchProducts(searchTerm, 100);
+					if (searchResults.length > 0) {
+						const productIds = searchResults.map((r) => r.id);
+						conditions.push(inArray(ProductsTable.id, productIds));
+					} else {
+						// No results from search, return empty
+						return { items: [], nextCursor: null };
+					}
+				}
+
+				const finalConditions = conditions.filter(
+					(c): c is SQL<unknown> => c !== undefined,
+				);
+
+				// Determine sort column and order
+				const sortColumn =
 					sortField === "price"
 						? ProductsTable.price
 						: sortField === "stock"
 							? ProductsTable.stock
 							: ProductsTable.createdAt;
-				const primaryOrderBy =
-					sortDirection === "asc"
-						? asc(primarySortColumn)
-						: desc(primarySortColumn);
-				orderByClauses.push(primaryOrderBy);
-				orderByClauses.push(asc(ProductsTable.id));
-				const finalConditions = conditions.filter(
-					(c): c is SQL<unknown> => c !== undefined,
-				);
-				if (!cursor) {
-					items = await db.query.ProductsTable.findMany({
-						limit,
-						columns: {
-							id: true,
-							name: true,
-							price: true,
-							slug: true,
-							createdAt: true,
-						},
-						where: and(
-							isNull(ProductsTable.deletedAt),
-							eq(ProductsTable.status, "active"),
-							finalConditions.length > 0
-							? and(...finalConditions)
-							: undefined,
-						),
-						orderBy: [desc(ProductsTable.createdAt), desc(ProductsTable.id)],
-						with: {
-							images: {
-								columns: {
-									url: true,
-								},
-								where: and(
-									isNull(ProductImagesTable.deletedAt),
-									eq(ProductImagesTable.isPrimary, true),
-								),
-							},
-							brand: {
-								columns: {
-									name: true,
-								},
-							},
-						},
-					});
-				} else {
-					const [createdAtStr, idStr] = cursor.split(",");
-					const createdAt = new Date(createdAtStr);
-					const id = Number.parseInt(idStr, 10);
-					items = await db.query.ProductsTable.findMany({
-						limit,
-						columns: {
-							id: true,
-							slug: true,
-							name: true,
-							price: true,
-							createdAt: true,
-						},
-						where: and(
-							isNull(ProductsTable.deletedAt),
-							eq(ProductsTable.status, "active"),
-							or(
-								lt(ProductsTable.createdAt, createdAt),
-								and(
-									eq(ProductsTable.createdAt, createdAt),
-									lt(ProductsTable.id, id),
-								),
-							),
-							finalConditions.length > 0
-							? and(...finalConditions)
-							: undefined,
-						),
-						orderBy: [desc(ProductsTable.createdAt), desc(ProductsTable.id)],
-						with: {
-							images: {
-								columns: {
-									url: true,
-								},
-								where: and(
-									isNull(ProductImagesTable.deletedAt),
-									eq(ProductImagesTable.isPrimary, true),
-								),
-							},
-							brand: {
-								columns: {
-									name: true,
-								},
-							},
-						},
-					});
+
+				const isAsc = sortDirection === "asc";
+				const orderByClauses = isAsc
+					? [asc(sortColumn), asc(ProductsTable.id)]
+					: [desc(sortColumn), desc(ProductsTable.id)];
+
+				// Build cursor condition for pagination
+				let cursorCondition: SQL<unknown> | undefined;
+				if (cursor) {
+					const [sortValueStr, idStr] = cursor.split(",");
+					const cursorId = Number.parseInt(idStr, 10);
+
+					let sortValue: number | Date;
+					if (sortField === "price" || sortField === "stock") {
+						sortValue = Number.parseInt(sortValueStr, 10);
+					} else {
+						sortValue = new Date(sortValueStr);
+					}
+
+					// For cursor pagination: get items after/before the cursor based on sort direction
+					if (isAsc) {
+						cursorCondition = or(
+							gt(sortColumn, sortValue),
+							and(eq(sortColumn, sortValue), gt(ProductsTable.id, cursorId)),
+						);
+					} else {
+						cursorCondition = or(
+							lt(sortColumn, sortValue),
+							and(eq(sortColumn, sortValue), lt(ProductsTable.id, cursorId)),
+						);
+					}
 				}
 
-				const nextCursor =
-					items.length === limit && items.length > 0
-						? `${items[items.length - 1].createdAt.toISOString()},${items[items.length - 1].id}`
-						: null;
+				const items = await db.query.ProductsTable.findMany({
+					limit,
+					columns: {
+						id: true,
+						name: true,
+						price: true,
+						slug: true,
+						createdAt: true,
+						stock: true,
+					},
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						eq(ProductsTable.status, "active"),
+						cursorCondition,
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					),
+					orderBy: orderByClauses,
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: and(
+								isNull(ProductImagesTable.deletedAt),
+								eq(ProductImagesTable.isPrimary, true),
+							),
+						},
+						brand: {
+							columns: {
+								name: true,
+							},
+						},
+					},
+				});
+
+				// Build next cursor from the last item
+				let nextCursor: string | null = null;
+				if (items.length === limit && items.length > 0) {
+					const lastItem = items[items.length - 1];
+					const sortValue =
+						sortField === "price"
+							? lastItem.price
+							: sortField === "stock"
+								? lastItem.stock
+								: lastItem.createdAt.toISOString();
+					nextCursor = `${sortValue},${lastItem.id}`;
+				}
 
 				return {
 					items,

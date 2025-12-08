@@ -1,5 +1,6 @@
 import { Search } from "@upstash/search";
 import type { ProductSelectType } from "../db/schema";
+import { getSearchClient } from "./upstash-search";
 
 export const syncProductToUpstash = async (
 	product: ProductSelectType,
@@ -16,8 +17,8 @@ export const syncProductToUpstash = async (
 	await client.index("products").upsert({
 		id: `product-${product.id}`,
 		content: {
-			// Searchable text - includes both English and Mongolian names
-			name: `${product.name} ${product.name_mn || ""}`.trim(),
+			// Searchable text
+			name: product.name,
 			description: product.description,
 		},
 		metadata: {
@@ -31,4 +32,90 @@ export const syncProductToUpstash = async (
 			image: images?.[0] || "",
 		},
 	});
+};
+
+export interface ProductForSync {
+	id: number;
+	name: string;
+	slug: string;
+	price: number;
+	description: string | null;
+	brand: { name: string } | null;
+	category: { name: string } | null;
+	images: { url: string }[];
+}
+
+/**
+ * Bulk sync products to Upstash Search
+ * Returns sync statistics
+ */
+export const bulkSyncProductsToUpstash = async (
+	products: ProductForSync[],
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+	const client = getSearchClient();
+	const errors: string[] = [];
+	let success = 0;
+	let failed = 0;
+
+	// Process in batches of 10 to avoid rate limiting
+	const batchSize = 10;
+	for (let i = 0; i < products.length; i += batchSize) {
+		const batch = products.slice(i, i + batchSize);
+
+		const upsertPromises = batch.map(async (product) => {
+			try {
+				await client.index("products").upsert({
+					id: `product-${product.id}`,
+					content: {
+						name: product.name,
+						description: product.description || "",
+					},
+					metadata: {
+						productId: product.id,
+						name: product.name,
+						slug: product.slug,
+						price: product.price,
+						brand: product.brand?.name || "",
+						category: product.category?.name || "",
+						image: product.images[0]?.url || "",
+					},
+				});
+				return { success: true, id: product.id };
+			} catch (error) {
+				const errorMsg = `Product ${product.id} (${product.name}): ${error instanceof Error ? error.message : "Unknown error"}`;
+				return { success: false, id: product.id, error: errorMsg };
+			}
+		});
+
+		const results = await Promise.all(upsertPromises);
+
+		for (const result of results) {
+			if (result.success) {
+				success++;
+			} else {
+				failed++;
+				if (result.error) {
+					errors.push(result.error);
+				}
+			}
+		}
+
+		// Small delay between batches to avoid rate limiting
+		if (i + batchSize < products.length) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
+
+	return { success, failed, errors };
+};
+
+/**
+ * Clear all products from Upstash Search index
+ */
+export const clearUpstashProductsIndex = async (): Promise<void> => {
+	const client = getSearchClient();
+	// Note: Upstash Search doesn't have a clear all method,
+	// so we'd need to delete by IDs if needed
+	// For now, we'll just upsert which will update existing records
+	console.log("[Upstash] Index will be updated via upsert");
 };

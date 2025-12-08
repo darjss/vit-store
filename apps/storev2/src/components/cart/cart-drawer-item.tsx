@@ -1,6 +1,7 @@
 import { Image } from "@unpic/solid";
 import type { CartItems } from "@/lib/types";
 import { cart } from "@/store/cart";
+import IconClose from "~icons/ri/close-line";
 
 interface CartDrawerItemProps {
 	item: CartItems;
@@ -86,19 +87,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 							class="flex h-7 w-7 items-center justify-center border-2 border-border bg-error text-error-foreground shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
 							aria-label="Устгах"
 						>
-							<svg
-								class="h-4 w-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
+							<IconClose class="h-4 w-4" />
 						</button>
 					</div>
 

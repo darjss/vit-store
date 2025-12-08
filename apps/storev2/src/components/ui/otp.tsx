@@ -5,6 +5,7 @@ import type { DynamicProps, RootProps } from "@corvu/otp-field"
 import OtpField from "@corvu/otp-field"
  
 import { cn } from "@/lib/utils"
+import IconCircle from "~icons/ri/circle-fill"
  
 export const REGEXP_ONLY_DIGITS = "^\\d*$"
 export const REGEXP_ONLY_CHARS = "^[a-zA-Z]*$"
@@ -65,18 +66,7 @@ const OTPFieldSlot: Component<ComponentProps<"div"> & { index: number }> = (prop
 const OTPFieldSeparator: Component<ComponentProps<"div">> = (props) => {
   return (
     <div {...props}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="size-6"
-      >
-        <circle cx="12.1" cy="12.1" r="1" />
-      </svg>
+      <IconCircle class="size-2" />
     </div>
   )
 }

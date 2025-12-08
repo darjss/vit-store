@@ -6,6 +6,9 @@ import AddToCartButton from "@/components/cart/add-to-cart-button";
 import { productColors } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import IconSearch from "~icons/ri/search-line";
+import IconEmotionSad from "~icons/ri/emotion-sad-line";
+import IconArrowRight from "~icons/ri/arrow-right-line";
 
 interface SearchResultsProps {
 	searchQuery: string;
@@ -68,7 +71,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				{/* Error State */}
 				<Match when={query.isError}>
 					<div class="flex flex-col items-center justify-center py-8 text-center">
-						<div class="mb-3 text-4xl">😕</div>
+						<IconEmotionSad class="mb-3 h-10 w-10 text-amber-500" />
 						<p class="font-bold text-black/70">
 							Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.
 						</p>
@@ -78,7 +81,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				{/* Empty State */}
 				<Match when={query.data && query.data.length === 0}>
 					<div class="flex flex-col items-center justify-center py-8 text-center">
-						<div class="mb-3 text-4xl">🔍</div>
+						<IconSearch class="mb-3 h-10 w-10 text-gray-400" />
 						<p class="font-bold text-black/70">
 							"{props.searchQuery}" хайлтаар үр дүн олдсонгүй
 						</p>
@@ -98,10 +101,10 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							</p>
 							<a
 								href={`/products?q=${encodeURIComponent(props.searchQuery)}`}
-								class="font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
+								class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
 								onClick={props.onProductClick}
 							>
-								Бүгдийг үзэх →
+								Бүгдийг үзэх <IconArrowRight class="h-3 w-3" />
 							</a>
 						</div>
 

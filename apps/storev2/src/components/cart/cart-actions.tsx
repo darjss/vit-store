@@ -1,4 +1,7 @@
 import { cart } from "@/store/cart";
+import IconMinus from "~icons/ri/subtract-line";
+import IconPlus from "~icons/ri/add-line";
+import IconClose from "~icons/ri/close-line";
 
 const CartActions = ({
 	quantity,
@@ -18,21 +21,7 @@ const CartActions = ({
 					onClick={() => cart.updateQuantity(productId, -1)}
 					aria-label="Decrease quantity"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="18"
-						height="18"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-						stroke-linecap="square"
-						stroke-linejoin="miter"
-						aria-hidden="true"
-					>
-						<title>Decrease quantity</title>
-						<path d="M5 12h14" />
-					</svg>
+					<IconMinus class="h-4 w-4" aria-hidden="true" />
 				</button>
 				<div class="flex h-10 min-w-[2.5rem] items-center justify-center border-border border-x-4 bg-background px-3 font-bold text-base">
 					{quantity()}
@@ -45,22 +34,7 @@ const CartActions = ({
 					onClick={() => cart.updateQuantity(productId, 1)}
 					aria-label="Increase quantity"
 				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="18"
-						height="18"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-						stroke-linecap="square"
-						stroke-linejoin="miter"
-						aria-hidden="true"
-					>
-						<title>Increase quantity</title>
-						<path d="M5 12h14" />
-						<path d="M12 5v14" />
-					</svg>
+					<IconPlus class="h-4 w-4" aria-hidden="true" />
 				</button>
 			</div>
 			<button
@@ -69,22 +43,7 @@ const CartActions = ({
 				onClick={() => cart.remove(productId)}
 				aria-label="Remove item"
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="3"
-					stroke-linecap="square"
-					stroke-linejoin="miter"
-					aria-hidden="true"
-				>
-					<title>Remove item</title>
-					<path d="M18 6L6 18" />
-					<path d="M6 6l12 12" />
-				</svg>
+				<IconClose class="h-4 w-4 text-white" aria-hidden="true" />
 			</button>
 		</div>
 	);

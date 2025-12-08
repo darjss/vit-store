@@ -46,7 +46,6 @@ export const searchProducts = async (
 		const results = await client.index("products").search({
 			query,
 			limit,
-			// semanticWeight: 0.5,
 		});
 
 		return results.map((result) => {

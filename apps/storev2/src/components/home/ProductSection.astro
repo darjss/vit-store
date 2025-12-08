@@ -1,6 +1,9 @@
 ---
 import ProductCard from "@/components/home/ProductCard.astro";
 import type { ProductForHome } from "@/lib/types";
+import IconStar from "~icons/ri/star-fill";
+import IconSparkle from "~icons/ri/sparkling-line";
+import IconFire from "~icons/ri/fire-fill";
 
 interface Props {
     title: string;
@@ -22,19 +25,21 @@ const {
     disclaimer,
 } = Astro.props;
 
-const badgeEmoji = {
-    featured: "⭐",
-    new: "✨",
-    discount: "🔥",
+const badgeIcons = {
+    featured: IconStar,
+    new: IconSparkle,
+    discount: IconFire,
 };
+
+const BadgeIcon = badgeIcons[badgeStyle];
 ---
 
 <section id={filterLink?.split("=")[1]} class={`relative py-12 ${bgClass}`}>
     <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <div class="mb-8 flex items-end justify-between">
             <div>
-                <h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2">
-                    {badgeEmoji[badgeStyle]}
+                <h2 class="text-3xl font-black tracking-tight sm:text-4xl mb-2 flex items-center gap-2">
+                    <BadgeIcon class="h-6 w-6" />
                     {title}
                 </h2>
                 <p class="text-base text-muted-foreground">{subtitle}</p>

@@ -58,4 +58,6 @@ export {
 } from "./lib/trpc";
 export * from "./lib/types";
 export * from "./lib/utils";
+export * from "./lib/upstash-sync";
+export * from "./lib/upstash-search";
 export * from "./routers";

@@ -1,6 +1,15 @@
 ---
 import ProductQuantitySelector from "@/components/product/product-add-to-cart";
 import { formatCurrency } from "@/lib/utils";
+import IconPriceTag from "~icons/ri/price-tag-3-fill";
+import IconBox from "~icons/ri/box-3-line";
+import IconFlask from "~icons/ri/flask-line";
+import IconMuscle from "~icons/ri/boxing-line";
+import IconFire from "~icons/ri/fire-fill";
+import IconCheck from "~icons/ri/checkbox-circle-fill";
+import IconTruck from "~icons/ri/truck-line";
+import IconShield from "~icons/ri/shield-check-line";
+import IconRefund from "~icons/ri/refund-2-line";
 
 interface Props {
 	product: {
@@ -31,7 +40,7 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 		transition:name={`product-brand-${product.id}`}
 		class="inline-flex items-center gap-2 border-2 border-border bg-background px-3 py-1.5 sm:px-4 sm:py-2 font-black text-xs sm:text-sm uppercase shadow-hard-sm"
 	>
-		<span>🏷️</span>
+		<IconPriceTag class="w-4 h-4 text-amber-500" />
 		<span>{product.brand.name}</span>
 	</div>
 
@@ -44,21 +53,21 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 
 	<div class="flex flex-wrap gap-3">
 		<div
-			class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide"
+			class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide"
 		>
-			📦 {product.category.name}
+			<IconBox class="w-4 h-4 text-blue-500" /> {product.category.name}
 		</div>
 		{
 			product.amount && (
-				<div class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
-					⚖️ {product.amount}
+				<div class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
+					<IconFlask class="w-4 h-4 text-purple-500" /> {product.amount}
 				</div>
 			)
 		}
 		{
 			product.potency && (
-				<div class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
-					💪 {product.potency}
+				<div class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
+					<IconMuscle class="w-4 h-4 text-green-500" /> {product.potency}
 				</div>
 			)
 		}
@@ -71,7 +80,7 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 			<div class="space-y-4">
 				{/* Discount Badge */}
 				<div class="inline-flex items-center gap-2 border-2 border-border bg-destructive px-4 py-1.5 font-black text-sm sm:text-base text-destructive-foreground shadow-hard-sm uppercase tracking-wider">
-					🔥 {product.discount}% ХЯМДРАЛ
+					<IconFire class="w-4 h-4 text-yellow-300" /> {product.discount}% ХЯМДРАЛ
 				</div>
 				
 				{/* Price Container */}
@@ -125,23 +134,22 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 		</ProductQuantitySelector>
 	</div>
 
-	{/* Trust Signals */}
 	<div class="border-2 border-border bg-background p-4 sm:p-6 shadow-hard">
 		<div class="grid grid-cols-2 gap-4">
 			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<span class="text-lg">✓</span>
+				<IconCheck class="w-5 h-5 text-green-500" />
 				<span>Баталгаатай</span>
 			</div>
 			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<span class="text-lg">🚚</span>
+				<IconTruck class="w-5 h-5 text-blue-500" />
 				<span>Хурдан хүргэлт</span>
 			</div>
 			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<span class="text-lg">🔒</span>
+				<IconShield class="w-5 h-5 text-purple-500" />
 				<span>Найдвартай</span>
 			</div>
 			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<span class="text-lg">↩️</span>
+				<IconRefund class="w-5 h-5 text-orange-500" />
 				<span>Буцаалт</span>
 			</div>
 		</div>

@@ -1,4 +1,6 @@
 import { createSignal, onMount } from "solid-js";
+import IconArrowLeft from "~icons/ri/arrow-left-s-line";
+import IconArrowRight from "~icons/ri/arrow-right-s-line";
 
 interface CarouselItem {
 	id: number;
@@ -84,14 +86,14 @@ export default function ProductCarousel(props: Props) {
 						onClick={prevSlide}
 						class="-translate-y-1/2 -translate-x-4 sm:-translate-x-6 absolute top-1/2 left-0 z-10 flex size-10 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[-14px] hover:translate-y-[-50%] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-12 sm:hover:translate-x-[-22px]"
 					>
-						←
+						<IconArrowLeft class="h-6 w-6" />
 					</button>
 					<button
 						type="button"
 						onClick={nextSlide}
 						class="-translate-y-1/2 absolute top-1/2 right-0 z-10 flex size-10 translate-x-4 items-center justify-center rounded-full border-3 border-black bg-white font-black text-xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[14px] hover:translate-y-[-50%] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-12 sm:translate-x-6 sm:hover:translate-x-[22px]"
 					>
-						→
+						<IconArrowRight class="h-6 w-6" />
 					</button>
 				</>
 			)}

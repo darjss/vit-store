@@ -1,6 +1,9 @@
 ---
 import CartCount from "@/components/cart/cart-count";
 import MobileSearchButton from "@/components/search/mobile-search-button";
+import IconHome from "~icons/ri/home-4-line";
+import IconStore from "~icons/ri/store-2-line";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-line";
 ---
 
 <nav
@@ -15,23 +18,7 @@ import MobileSearchButton from "@/components/search/mobile-search-button";
                     aria-label="Нүүр"
                 >
                     <div class="flex flex-col items-center gap-1">
-                        <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="transition-transform duration-200 group-hover:scale-110"
-                            aria-hidden="true"
-                        >
-                            <path
-                                d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-                            ></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
+                        <IconHome class="w-5 h-5 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
                         <p class="font-bold text-[11px] leading-none">Нүүр</p>
                     </div>
                 </a>
@@ -44,28 +31,7 @@ import MobileSearchButton from "@/components/search/mobile-search-button";
                     aria-label="Бүтээгдэхүүн"
                 >
                     <div class="flex flex-col items-center gap-1">
-                        <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="transition-transform duration-200 group-hover:scale-110"
-                            aria-hidden="true"
-                        >
-                            <rect
-                                x="2"
-                                y="7"
-                                width="20"
-                                height="15"
-                                rx="2"
-                                ry="2"></rect>
-                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
-                            ></path>
-                        </svg>
+                        <IconStore class="w-5 h-5 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
                         <p class="font-bold text-[11px] leading-none">
                             Бүтээгдэхүүн
                         </p>
@@ -81,24 +47,7 @@ import MobileSearchButton from "@/components/search/mobile-search-button";
                 >
                     <div class="flex flex-col items-center gap-1">
                         <div class="relative">
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                class="transition-transform duration-200 group-hover:scale-110"
-                                aria-hidden="true"
-                            >
-                                <circle cx="9" cy="21" r="1"></circle>
-                                <circle cx="20" cy="21" r="1"></circle>
-                                <path
-                                    d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
-                                ></path>
-                            </svg>
+                            <IconShoppingCart class="w-5 h-5 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
                             <span
                                 class="absolute -top-2 -right-2 bg-secondary text-secondary-foreground w-4 h-4 rounded-full text-[9px] flex items-center justify-center border-2 border-black font-black"
                             >

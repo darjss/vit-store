@@ -14,6 +14,7 @@ import {
 } from "@vit/api/integrations";
 import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
 import { createQueries } from "@vit/api/queries";
+import { bulkSyncProductsToUpstash } from "@vit/api/lib/upstash-sync";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -484,4 +485,70 @@ app.get("/messenger/test/transfer", async (c) => {
 	await sendTransferNotification("1234567890", 10000);
 	return c.json({ message: "Message sent" });
 });
+
+app.post("/admin/sync-upstash", async (c) => {
+	try {
+		console.log("[sync-upstash] Starting sync...");
+		const db = createDb(c.env.DB);
+
+		// Query all active products with their relations
+		const products = await db.query.ProductsTable.findMany({
+			columns: {
+				id: true,
+				name: true,
+				slug: true,
+				price: true,
+				description: true,
+			},
+			where: (table, { isNull, eq, and }) =>
+				and(isNull(table.deletedAt), eq(table.status, "active")),
+			with: {
+				brand: {
+					columns: { name: true },
+				},
+				category: {
+					columns: { name: true },
+				},
+				images: {
+					columns: { url: true },
+					where: (table, { isNull, eq, and }) =>
+						and(isNull(table.deletedAt), eq(table.isPrimary, true)),
+				},
+			},
+		});
+
+		console.log(`[sync-upstash] Found ${products.length} products to sync`);
+
+		if (products.length === 0) {
+			return c.json({
+				message: "No products to sync",
+				success: 0,
+				failed: 0,
+				total: 0,
+			});
+		}
+
+		const result = await bulkSyncProductsToUpstash(products);
+
+		console.log("[sync-upstash] Sync complete:", result);
+
+		return c.json({
+			message: `Synced ${result.success} products to Upstash`,
+			success: result.success,
+			failed: result.failed,
+			total: products.length,
+			errors: result.errors.slice(0, 10),
+		});
+	} catch (error) {
+		console.error("[sync-upstash] Error:", error);
+		return c.json(
+			{
+				error: "Failed to sync products to Upstash",
+				details: error instanceof Error ? error.message : "Unknown error",
+			},
+			500,
+		);
+	}
+});
+
 export default app;

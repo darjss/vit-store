@@ -31,9 +31,10 @@ export const badgeClasses = {
 	discount: "bg-destructive text-destructive-foreground",
 };
 
-export const badgeEmoji = {
-	featured: "⭐",
-	new: "✨",
-	discount: "🔥",
+// Icon names for badges - use with ~icons/ri/{name}
+export const badgeIconNames = {
+	featured: "star-fill",
+	new: "sparkles-line",
+	discount: "fire-fill",
 };
 export const deliveryFee = 6000;
