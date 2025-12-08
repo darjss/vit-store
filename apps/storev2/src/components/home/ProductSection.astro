@@ -1,133 +1,6 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import ProductCard from "@/components/home/ProductCard.astro";
 import type { ProductForHome } from "@/lib/types";
-import ProductCard from "./ProductCard.astro";
 
 interface Props {
     title: string;
@@ -164,7 +37,7 @@ const badgeEmoji = {
                     {badgeEmoji[badgeStyle]}
                     {title}
                 </h2>
-                <p class="text-base text-black/70">{subtitle}</p>
+                <p class="text-base text-muted-foreground">{subtitle}</p>
             </div>
             {
                 filterLink && (
@@ -181,8 +54,13 @@ const badgeEmoji = {
             class="grid grid-cols-2 gap-2 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
             {
-                products.map((product) => (
-                    <ProductCard product={product} badgeStyle={badgeStyle} />
+                products.map((product, index) => (
+                    <ProductCard 
+                        product={product} 
+                        badgeStyle={badgeStyle} 
+                        sectionId={filterLink?.split("=")[1] || badgeStyle}
+                        index={index} 
+                    />
                 ))
             }
         </div>

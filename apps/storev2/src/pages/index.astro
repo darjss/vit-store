@@ -1,20 +1,18 @@
 ---
-
-import BenefitsSection from "@/components/home/BenefitsSection.astro";
-import CategoryGrid from "@/components/home/CategoryGrid.astro";
-import CTASection from "@/components/home/CTASection.astro";
+import Layout from "@/layouts/Layout.astro";
 import Hero from "@/components/home/Hero.astro";
 import ProductSection from "@/components/home/ProductSection.astro";
-import Layout from "@/layouts/Layout.astro";
+import CategoryGrid from "@/components/home/CategoryGrid.astro";
+import BenefitsSection from "@/components/home/BenefitsSection.astro";
+import CTASection from "@/components/home/CTASection.astro";
+
 export const prerender = true;
 
 import { api } from "@/lib/trpc";
 
-
 const products = await api.product.getProductsForHome.query();
-console.log("🔴 products", products);
+console.log("products", products);
 const { featuredProducts, newProducts, discountedProducts } = products;
-
 ---
 
 <Layout>
@@ -28,32 +26,32 @@ const { featuredProducts, newProducts, discountedProducts } = products;
         badgeStyle="featured"
     />
 
-    <!-- <ProductSection
-        title="Шинэ ирсэн бүтээгдэхүүн"
-        subtitle="Саяхан нэмэгдсэн"
+    <CategoryGrid />
+
+    <ProductSection
+        title="Шинэ ирсэн"
+        subtitle="Хамгийн сүүлийн үеийн нэмэлтүүд"
         products={newProducts}
         filterLink="filter=recent"
         badgeStyle="new"
-        bgClass="bg-muted/30"
+        bgClass="bg-muted/20 border-y-2 border-border"
     />
 
     <ProductSection
-        title="Хөнгөлөлттэй бүтээгдэхүүн"
+        title="Хямдралтай"
         subtitle="Тусгай үнийн саналууд"
         products={discountedProducts}
         filterLink="filter=discount"
         badgeStyle="discount"
         disclaimer="Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу."
-    /> -->
-
-    <CategoryGrid />
+    />
 
     <BenefitsSection />
 
     <CTASection
-        title="Чанартай витамин, нэмэлт тэжээл"
-        description="АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлээр эрүүл мэндээ дэмжээрэй."
-        buttonText="Бүх бүтээгдэхүүн"
+        title="Эрүүл мэндээ дэмжээрэй"
+        description="АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлүүд таны гарт."
+        buttonText="Дэлгүүр хэсэх"
         buttonLink="/products"
     />
 </Layout>

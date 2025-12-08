@@ -1,4 +1,4 @@
-import { keepPreviousData, useSuspenseQueries } from "@tanstack/react-query";
+import { useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -9,7 +9,6 @@ import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,
-	Loader2,
 	PlusCircle,
 	RotateCcw,
 	Search,

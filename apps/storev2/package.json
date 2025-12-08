@@ -29,6 +29,7 @@
 		"@trpc/client": "^11.7.0",
 		"@unpic/astro": "^1.0.1",
 		"@unpic/solid": "^1.0.0",
+		"@upstash/search": "^0.1.7",
 		"@vit/api": "workspace:*",
 		"@vit/shared": "workspace:*",
 		"astro": "^5.10.0",

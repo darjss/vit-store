@@ -53,12 +53,12 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 	);
 	console.log("products", products());
 	return (
-		<section class="w-full py-6 sm:py-12">
-			<div class="mb-6 sm:mb-8">
-				<h2 class="mb-1.5 font-black text-2xl tracking-tight sm:mb-2 sm:text-3xl md:text-4xl">
+		<section class="w-full py-8 sm:py-12">
+			<div class="mb-8 sm:mb-10">
+				<h2 class="mb-2 font-black text-2xl uppercase tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
 					💡 Таньд таалагдаж магадгүй
 				</h2>
-				<p class="font-bold text-black/70 text-sm sm:text-base">
+				<p class="font-bold text-muted-foreground text-sm uppercase tracking-wide sm:text-base">
 					Таны сонголтод тулгуурлан санал болгож байна
 				</p>
 			</div>
@@ -66,19 +66,19 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 			<Show
 				when={!products.loading && products()}
 				fallback={
-					<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+					<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
 						{Array(4)
 							.fill(0)
 							.map((_, _i) => (
-								<div class="h-[280px] animate-pulse rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] sm:h-[380px] sm:border-4 sm:shadow-[6px_6px_0_0_#000]" />
+								<div class="h-[300px] animate-pulse border-2 border-border bg-muted/30 shadow-hard sm:h-[400px]" />
 							))}
 					</div>
 				}
 			>
-				<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+				<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
 					<For each={products()}>
 						{(product) => {
-							const randomColor =
+							const _randomColor =
 								productColors[Math.floor(Math.random() * productColors.length)];
 							const hasDiscount = product.discount && product.discount > 0;
 							const originalPrice = product.price;
@@ -89,63 +89,58 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 							return (
 								<a
 									href={`/products/${product.slug}-${product.id}`}
-									class="group relative block rounded-sm border-3 border-black bg-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] focus:outline-none focus:ring-2 focus:ring-black/40 sm:border-4 sm:shadow-[6px_6px_0_0_#000] sm:hover:translate-x-[3px] sm:hover:translate-y-[3px] sm:hover:shadow-[3px_3px_0_0_#000]"
+									class="group hover:-translate-y-1 relative block border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg"
 								>
 									{/* Image Section */}
 									<div
-										class="relative aspect-square overflow-hidden border-black border-b-3 sm:border-b-4"
-										style={`background:${randomColor}`}
+										class="relative aspect-[4/5] overflow-hidden border-border border-b-2 bg-muted/20"
 									>
-										<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-[size:12px_12px] sm:bg-[size:14px_14px]" />
+										<div class="absolute inset-0 bg-dots-pattern opacity-30" />
+										
+										{/* Brand Badge */}
+										<div class="absolute top-3 left-3 z-10">
+											<span class="border-2 border-border bg-background px-2 py-1 font-bold text-[10px] uppercase shadow-hard-sm sm:text-xs">
+												{product.brand}
+											</span>
+										</div>
 
 										<Show when={product.image}>
 											<Image
 												src={product.image}
 												alt={product.name}
 												width={300}
-												height={300}
+												height={375}
 												layout="constrained"
-												class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
+												class="relative z-10 h-full w-full object-contain p-6 drop-shadow-md transition-transform duration-500 group-hover:scale-110"
 												loading="lazy"
 											/>
 										</Show>
 
 										{/* Discount Badge */}
 										<Show when={hasDiscount}>
-											<div class="absolute top-2 left-2 rounded-full border-2 border-black bg-destructive px-2 py-0.5 font-black text-[10px] text-white shadow-[2px_2px_0_0_#000] sm:top-3 sm:left-3 sm:px-2.5 sm:py-1 sm:text-xs">
+											<div class="absolute top-3 right-3 z-10 border-2 border-border bg-destructive px-2 py-1 font-black text-[10px] text-destructive-foreground shadow-hard-sm sm:text-xs">
 												-{product.discount}%
 											</div>
 										</Show>
-
-										{/* Brand Badge */}
-										<div class="absolute right-2 bottom-2 rounded-full border-2 border-black bg-white px-2 py-0.5 font-black text-[9px] uppercase shadow-[2px_2px_0_0_#000] sm:right-2.5 sm:bottom-2.5 sm:px-2.5 sm:py-1 sm:text-[10px]">
-											{product.brand}
-										</div>
 									</div>
 
 									{/* Content Section */}
-									<div class="p-2.5 sm:p-4">
+									<div class="flex flex-col gap-3 p-4">
 										{/* Product Name */}
-										<h3 class="mb-2 line-clamp-2 min-h-[32px] font-black text-xs leading-tight group-hover:underline sm:mb-3 sm:min-h-[44px] sm:text-base">
+										<h3 class="line-clamp-2 min-h-[2.5em] font-bold text-sm leading-tight transition-colors group-hover:text-primary sm:text-base">
 											{product.name}
 										</h3>
 
 										{/* Price Section */}
-										<div class="flex flex-col gap-1 sm:gap-1.5">
+										<div class="mt-auto flex flex-col">
 											<Show when={hasDiscount}>
-												<div class="font-bold text-[10px] text-black/40 line-through sm:text-sm">
+												<span class="font-bold text-muted-foreground text-xs line-through decoration-2 decoration-destructive">
 													{formatCurrency(originalPrice)}
-												</div>
+												</span>
 											</Show>
-											<div
-												class={
-													hasDiscount
-														? "font-black text-base text-destructive sm:text-xl"
-														: "font-black text-base sm:text-xl"
-												}
-											>
+											<span class="font-black text-lg tracking-tight sm:text-xl">
 												{formatCurrency(discountedPrice)}
-											</div>
+											</span>
 										</div>
 									</div>
 								</a>

@@ -1,11 +1,14 @@
 ---
+import BrandMarquee from "./BrandMarquee.astro";
 import Marquee from "./Marquee.astro";
 ---
 
 <section class="relative w-full overflow-hidden bg-background border-b-2 border-border">
     <!-- Background Grid -->
     <div class="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
-
+    <div class="rotate-1 bg-background border-y-2 border-border transform scale-105">
+        <BrandMarquee direction="right" speed="fast" className="bg-foreground text-background border-b-2 border-border" />
+    </div>
     <div class="container mx-auto px-4 pt-20 pb-32 relative z-10">
         <div class="flex flex-col items-center text-center">
             <!-- Badge -->
@@ -31,7 +34,7 @@ import Marquee from "./Marquee.astro";
                 АНУ-ын шилдэг брэндүүдийн баталгаат бүтээгдэхүүн.
             </p>
 
-            <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto">
+            <div class="flex flex-col md:flex-row gap-6 w-full md:w-auto mb-16">
                 <a href="/products" class="group relative px-8 py-4 bg-foreground text-background font-bold text-xl uppercase tracking-wider hover:-translate-y-1 hover:translate-x-1 transition-transform border-2 border-transparent">
                     <span class="relative z-10">Бүх бүтээгдэхүүн</span>
                     <div class="absolute inset-0 bg-primary translate-x-2 translate-y-2 -z-10 border-2 border-border group-hover:translate-x-3 group-hover:translate-y-3 transition-transform"></div>
@@ -41,11 +44,15 @@ import Marquee from "./Marquee.astro";
                     Бидний тухай
                 </a>
             </div>
+
+            <!-- Brands Section -->
+           
+
         </div>
     </div>
 
     <!-- Bottom Marquee -->
     <div class="rotate-1 bg-background border-y-2 border-border transform scale-105">
-        <Marquee text="100% ORIGINAL • FAST DELIVERY • PREMIUM QUALITY •" speed="slow" />
+        <Marquee text="100% ОРИГИНАЛ • ШУУРХАЙ ХҮРГЭЛТ • ЧАНАРЫН БАТАЛГАА •" speed="slow" />
     </div>
 </section>

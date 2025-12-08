@@ -6,6 +6,7 @@ import { customer } from "./customer";
 import { order } from "./order";
 import { payment } from "./payment";
 import { product } from "./product";
+import {category} from "./category";
 
 export const storeRouter = router({
 	healthCheck: publicProcedure.query(() => {
@@ -14,6 +15,7 @@ export const storeRouter = router({
 	auth,
 	brand,
 	customer,
+	category,
 	payment,
 	order,
 	product,

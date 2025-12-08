@@ -122,29 +122,29 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 						<div class="rounded-lg bg-white p-4">
 							<p class="mb-1 text-gray-600 text-sm">Total Fetch Time</p>
 							<p class="font-bold text-3xl text-blue-700">
-								{formatTime(data()!.fetchTime)}
+								{formatTime(data()?.fetchTime ?? 0)}
 							</p>
 						</div>
 
 						<div class="rounded-lg bg-white p-4">
 							<p class="mb-1 text-gray-600 text-sm">Database Query Time</p>
 							<p class="font-semibold text-2xl text-blue-600">
-								{formatTime(data()!.dbElapsed)}
+								{formatTime(data()?.dbElapsed ?? 0)}
 							</p>
 						</div>
 
 						<div class="rounded-lg bg-white p-4">
 							<p class="mb-1 text-gray-600 text-sm">Products Fetched</p>
 							<p class="font-semibold text-2xl text-blue-600">
-								{data()!.productCount}
+								{data()?.productCount}
 							</p>
 						</div>
 
-						<Show when={data()!.kvReadElapsed !== undefined}>
+						<Show when={data()?.kvReadElapsed !== undefined}>
 							<div class="rounded-lg bg-white p-4">
 								<p class="mb-1 text-gray-600 text-sm">KV Read Time (Client)</p>
 								<p class="font-semibold text-2xl text-purple-600">
-									{formatTime(data()!.kvReadElapsed!)}
+									{formatTime(data()?.kvReadElapsed!)}
 								</p>
 							</div>
 						</Show>
@@ -195,7 +195,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 								<p class="mb-1 text-gray-600 text-sm">Network Overhead</p>
 								<p class="font-bold text-2xl text-purple-600">
 									{formatTime(
-										data()!.fetchTime - data()!.dbElapsed - props.serverDbTime,
+										(data()?.fetchTime ?? 0) -
+											(data()?.dbElapsed ?? 0) -
+											props.serverDbTime,
 									)}
 								</p>
 							</div>
@@ -222,12 +224,12 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 								</li>
 								<Show
 									when={
-										data()!.kvReadElapsed !== undefined &&
+										data()?.kvReadElapsed !== undefined &&
 										props.kvReadTime !== undefined
 									}
 								>
 									<li>
-										• KV read time: {formatTime(data()!.kvReadElapsed!)}{" "}
+										• KV read time: {formatTime(data()?.kvReadElapsed!)}{" "}
 										(client) vs {formatTime(props.kvReadTime!)} (server) -
 										typically very fast
 									</li>

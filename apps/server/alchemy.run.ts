@@ -8,10 +8,9 @@ import {
 	RateLimit,
 	Worker,
 } from "alchemy/cloudflare";
-import { Exec } from "alchemy/os";
 
 const app = await alchemy("server");
-const stage = app.stage;
+const _stage = app.stage;
 console.log("cors origin", process.env.CORS_ORIGIN);
 
 const kv = await KVNamespace("kv", {

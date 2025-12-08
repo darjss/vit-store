@@ -1,105 +1,99 @@
 ---
+
 const categories = [
     {
-        title: "Өдөр тутмын хэрэгцээ",
-        description: "Витамин D, C, B12, Мультивитамин",
+        title: "Өдөр тутмын",
+        description: "Витамин D, C, B12",
         icon: "🌞",
-        color: "bg-yellow-200",
-        span: "col-span-1 md:col-span-2 row-span-2",
-        textSize: "text-3xl"
+        span: "md:col-span-2 md:row-span-2",
+        textSize: "text-2xl md:text-3xl"
     },
     {
         title: "Зүрх судас",
         description: "Omega-3, CoQ10",
         icon: "❤️",
-        color: "bg-red-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Энерги",
         description: "B-Complex, Ашваганда",
         icon: "⚡",
-        color: "bg-orange-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
         title: "Дархлаа",
         description: "Цайр, Probiotics",
         icon: "🛡️",
-        color: "bg-cyan-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
-        title: "Ясны эрүүл мэнд",
+        title: "Яс үе мөч",
         description: "Кальци, D3",
         icon: "🦴",
-        color: "bg-indigo-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
-        title: "Арьс, үс, хумс",
+        title: "Гоо сайхан",
         description: "Коллаген, Биотин",
         icon: "✨",
-        color: "bg-pink-200",
-        span: "col-span-1 md:col-span-2",
+        span: "md:col-span-2",
         textSize: "text-2xl"
     },
     {
         title: "Ходоод гэдэс",
         description: "Probiotics, Enzyme",
         icon: "🌿",
-        color: "bg-green-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
     {
-        title: "Тархи",
+        title: "Тархи мэдрэл",
         description: "Omega-3 DHA",
         icon: "🧠",
-        color: "bg-purple-200",
-        span: "col-span-1 md:col-span-1",
+        span: "md:col-span-1",
         textSize: "text-xl"
     },
 ];
 ---
 
-<section class="container mx-auto px-4 py-20">
-    <div class="mb-12 flex items-end gap-4">
-        <h2 class="text-5xl md:text-7xl font-black uppercase leading-none">
+<section class="container mx-auto px-4 py-12 md:py-20">
+    <div class="mb-8 md:mb-12 flex items-end gap-4">
+        <h2 class="text-4xl md:text-7xl font-black uppercase leading-none">
             Ангилал
         </h2>
         <div class="h-4 w-full bg-border mb-2 hidden md:block"></div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 auto-rows-[180px] gap-4">
+    <!-- Mobile: Horizontal Scroll / Desktop: Grid -->
+    <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 -mx-4 px-4 md:grid md:grid-cols-4 md:auto-rows-[180px] md:pb-0 md:mx-0 md:px-0 scrollbar-hide">
         {
             categories.map((c) => (
                 <a
                     href={`/products?category=${encodeURIComponent(c.title)}`}
-                    class={`group relative ${c.span} ${c.color} border-2 border-border p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-hard overflow-hidden`}
+                    class={`group relative flex-none w-[280px] md:w-auto ${c.span} snap-center bg-card border-2 border-border p-6 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-hard overflow-hidden h-[180px] md:h-auto`}
                 >
                     <!-- Hover Effect Background -->
-                    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                    <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity z-0"></div>
                     
                     <div class="relative z-10 flex justify-between items-start">
-                        <h3 class={`font-black uppercase leading-tight ${c.textSize}`}>
+                        <h3 class={`font-black uppercase leading-tight ${c.textSize} transition-colors group-hover:text-primary-foreground`}>
                             {c.title}
                         </h3>
-                        <span class="text-4xl group-hover:scale-125 transition-transform duration-300">{c.icon}</span>
+                        <span class="text-4xl group-hover:scale-125 group-hover:rotate-12 transition-transform duration-300">{c.icon}</span>
                     </div>
                     
                     <div class="relative z-10">
-                        <p class="font-bold border-t-2 border-black/20 pt-2 mt-2 text-sm">
+                        <p class="font-bold border-t-2 border-border pt-2 mt-2 text-sm transition-colors group-hover:text-primary-foreground group-hover:border-primary-foreground">
                             {c.description}
                         </p>
                     </div>
 
                     <!-- Decorative Corner -->
-                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-black opacity-10 rounded-tl-xl"></div>
+                    <div class="absolute bottom-0 right-0 w-8 h-8 bg-border opacity-10 rounded-tl-xl group-hover:opacity-0 transition-opacity"></div>
                 </a>
             ))
         }

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminAuth, invalidateAdminSession } from "../../lib/session/admin";
 import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
@@ -26,7 +26,7 @@ export const auth = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).users.admin;
 				const { googleId, username, isApproved } = input;
 				const user = await q.createUser(googleId, username, isApproved);
 
@@ -60,7 +60,7 @@ export const auth = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).users.admin;
 				const { googleId } = input;
 				const result = await q.getUserFromGoogleId(googleId);
 				return result;

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "../../lib/constants";
 import { generatePaymentNumber } from "../../lib/utils";
@@ -17,7 +17,7 @@ export const payment = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).payments.admin;
 				const result = await q.createPayment({
 					paymentNumber: generatePaymentNumber(),
 					orderId: input.orderId,
@@ -38,7 +38,7 @@ export const payment = router({
 
 	getPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).payments.admin;
 			const result = await q.getPayments();
 			return result;
 		} catch (error) {
@@ -53,7 +53,7 @@ export const payment = router({
 
 	getPendingPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).payments.admin;
 			const result = await q.getPendingPayments();
 			return result;
 		} catch (error) {

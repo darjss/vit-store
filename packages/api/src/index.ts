@@ -1,4 +1,5 @@
-export { db as database } from "./db";
+export { createDb } from "./db";
+export type { DB } from "./db";
 export type {
 	BrandInsertType,
 	BrandSelectType,

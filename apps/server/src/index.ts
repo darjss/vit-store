@@ -13,7 +13,7 @@ import {
 	messengerWebhookHandler,
 } from "@vit/api/integrations";
 import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -218,7 +218,7 @@ app.get("/admin/login/google/callback", async (c) => {
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
 		const db = createDb(c.env.DB);
-		const q = adminQueries(db);
+		const q = createQueries(db).users.admin;
 		const existingUser = await q.getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
 		if (existingUser !== null && existingUser.isApproved === true) {
@@ -243,7 +243,6 @@ app.get("/admin/login/google/callback", async (c) => {
 			console.log("redirecting to login");
 			return c.redirect(`${process.env.DASH_URL}/login`);
 		}
-
 
 		return c.redirect(`${process.env.DASH_URL}/login`);
 	} catch (e) {

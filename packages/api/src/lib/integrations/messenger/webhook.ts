@@ -1,5 +1,5 @@
 import type { DB } from "../../../db";
-import { storeQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
@@ -9,7 +9,7 @@ export async function messengerWebhookHandler(
 	payload: GenericWebhookPayload,
 	db: DB,
 ) {
-	const q = storeQueries(db);
+	const q = createQueries(db).payments.store;
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {
 			const userId = event.sender.id;
@@ -35,20 +35,14 @@ export async function messengerWebhookHandler(
 					console.error("Payment number not found");
 					return;
 				}
-				await q.updatePaymentStatus(
-					paymentNumber,
-					"success",
-				);
+				await q.updatePaymentStatus(paymentNumber, "success");
 			} else if (event.postback.payload.startsWith("reject_payment")) {
 				console.log("rejecting payment", paymentNumber);
 				if (!paymentNumber) {
 					console.error("Payment number not found");
 					return;
 				}
-				await q.updatePaymentStatus(
-					paymentNumber,
-					"failed",
-				);
+				await q.updatePaymentStatus(paymentNumber, "failed");
 			}
 		},
 	});

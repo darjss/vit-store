@@ -1,17 +1,43 @@
 ---
 
-import UserProfile from "@/components/auth/UserProfile.astro"
-import CartCount from "@/components/cart/cart-count"
-import { Dropdown, DropdownTrigger } from "@/components/starwind/dropdown"
+import UserProfile from "@/components/auth/UserProfile.astro";
+import CartButton from "@/components/cart/cart-button";
+import SidebarContent from "@/components/SidebarContent.astro";
+import SearchOverlay from "@/components/search/search-overlay";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/starwind/sheet";
 ---
 
 <header
     class="sticky top-0 z-50  bg-white/90  border-b-4 border-black" transition:persist transition:name="header"
 >
-    <div class="container mx-auto px-4 py-4">
-        <div class="flex items-center justify-between">
-                <a href="/">
-            <div class="flex items-center gap-2">
+    <div class="container  mx-auto px-4 py-4">
+        <div class="flex items-center justify-between gap-4">
+            <Sheet>
+                <SheetTrigger class="p-2 border-[3px] border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <line x1="4" x2="20" y1="12" y2="12" />
+                        <line x1="4" x2="20" y1="6" y2="6" />
+                        <line x1="4" x2="20" y1="18" y2="18" />
+                    </svg>
+                    <span class="sr-only">Toggle menu</span>
+                </SheetTrigger>
+                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r-4 border-black p-0">
+                    <div class="h-full overflow-y-auto bg-background">
+                        <SidebarContent />
+                    </div>
+                </SheetContent>
+            </Sheet>
+            <div class="flex items-center gap-2 w-full">
                     <div
                         class="w-10 h-10 bg-primary border-[3px] border-black flex items-center justify-center font-black text-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                     >
@@ -21,8 +47,8 @@ import { Dropdown, DropdownTrigger } from "@/components/starwind/dropdown"
                         >ВитаБүүст</span
                     >
             </div>
-                </a>
 
+<!-- 
             <nav class="hidden md:flex items-center gap-6">
                 <a
                     href="/products"
@@ -41,98 +67,30 @@ import { Dropdown, DropdownTrigger } from "@/components/starwind/dropdown"
                     href="/products#bundles"
                     class="font-bold hover:underline decoration-4">Багц</a
                 >
-            </nav>
+            </nav> -->
 
-            <div class="flex items-center gap-3">
-                <button
-                    type="button"
-                    aria-label="Хайх"
-                    class="hidden sm:flex items-center justify-center border-[3px] border-black p-2 hover:bg-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white"
-                >
-                    <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        aria-hidden="true"
-                        ><circle cx="11" cy="11" r="8"></circle><path
-                            d="m21 21-4.3-4.3"></path></svg
-                    >
-                </button>
+            <div class="flex items-center  gap-3">
+                <!-- Search Button - triggers SearchOverlay -->
+                <div class="hidden sm:block">
+                    <SearchOverlay client:idle />
+                </div>
 
-                <UserProfile server:defer >
-                    	<div
+                <UserProfile server:defer>
+                    <div
                         slot="fallback"
-		aria-label="Профайл"
-		class="flex items-center justify-center border-[3px] border-black bg-white p-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
-	>
-		<svg
-			class="h-5 w-5"
-			fill="none"
-			stroke="currentColor"
-			viewBox="0 0 24 24"
-		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				stroke-width="2"
-				d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-			></path>
-		</svg>
-    </div>
+                        aria-label="Профайл"
+                        class="flex items-center justify-center w-9 h-9 border-2 border-border bg-background shadow-hard-sm"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
                 </UserProfile>
                 
                 
-                <a href="/cart">
-                    <button
-                        type="button"
-                        aria-label="Сагс"
-                        class="relative flex items-center justify-center border-[3px] border-black p-2 hover:bg-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white"
-                    >
-                        <svg
-                            width="20"
-                            height="20"
-                        viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            aria-hidden="true"
-                            ><circle cx="9" cy="21" r="1"></circle><circle
-                                cx="20"
-                                cy="21"
-                                r="1"></circle><path
-                                d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
-                            ></path></svg
-                        >
-
-                            <CartCount client:load>
-                            <div slot="fallback">
-                                <span class="-top-1 -right-1 absolute flex h-5 w-5 items-center justify-center rounded-full border-[3px] border-black bg-secondary font-bold text-secondary-foreground text-xs">
-                                    <p class="font-bold text-xs">0</p>
-                                </span>
-                            </div>
-                            </CartCount>
-                    </button>
-                </a>
-                <button
-                    type="button"
-                    aria-label="Цэс"
-                    class="md:hidden flex items-center justify-center border-[3px] border-black p-2 hover:bg-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white"
-                >
-                    <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        aria-hidden="true"
-                        ><path d="M3 6h18M3 12h18M3 18h18"></path></svg
-                    >
-                </button>
-            </div>
+                <div class="hidden md:block">
+                    <CartButton client:idle />
+                </div>
         </div>
     </div>
 </header>

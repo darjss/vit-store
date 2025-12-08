@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { storeQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { paymentProvider } from "../../lib/constants";
 import { sendTransferNotification } from "../../lib/integrations/messenger/messages";
@@ -10,7 +10,7 @@ export const payment = router({
 		.input(v.object({ paymentNumber: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = storeQueries(ctx.db);
+				const q = createQueries(ctx.db).payments.store;
 				const payment = await q.getPaymentInfoByNumber(input.paymentNumber);
 
 				if (!payment) {
@@ -66,7 +66,7 @@ export const payment = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = storeQueries(ctx.db);
+				const q = createQueries(ctx.db).payments.store;
 				await q.confirmPayment(input.paymentNumber, input.provider);
 			} catch (e) {
 				console.error(e);
@@ -76,7 +76,7 @@ export const payment = router({
 		.input(v.object({ paymentNumber: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = storeQueries(ctx.db);
+				const q = createQueries(ctx.db).payments.store;
 				console.log(
 					"sending transfer notification to messenger",
 					input.paymentNumber,
@@ -97,11 +97,11 @@ export const payment = router({
 				console.error(e);
 			}
 		}),
-		getPaymentStatus: publicProcedure
+	getPaymentStatus: publicProcedure
 		.input(v.object({ paymentNumber: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = storeQueries(ctx.db);
+				const q = createQueries(ctx.db).payments.store;
 				console.log("getting payment status", input.paymentNumber);
 				const payment = await q.getPaymentByNumber(input.paymentNumber);
 				console.log("payment", payment);
@@ -115,8 +115,7 @@ export const payment = router({
 					status: payment.status,
 					provider: payment.provider,
 				};
-			}
-			catch (e) {
+			} catch (e) {
 				console.error(e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",

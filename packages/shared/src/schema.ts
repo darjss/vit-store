@@ -28,6 +28,7 @@ const productSchema = v.object({
 	price: v.pipe(v.number(), v.integer(), v.minValue(20000)),
 	name: v.optional(v.string()),
 	imageUrl: v.optional(v.pipe(v.string(), v.url())),
+	stock: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0), v.finite())),
 });
 
 const purchaseProductSchema = v.object({

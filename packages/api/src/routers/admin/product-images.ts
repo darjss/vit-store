@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
@@ -14,7 +14,7 @@ export const productImages = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				await q.createImage(input);
 				return { message: "Successfully added image" };
 			} catch (error) {
@@ -41,7 +41,7 @@ export const productImages = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
 				const response = await fetch(
@@ -77,10 +77,12 @@ export const productImages = router({
 					time: number;
 				};
 
-				const imagesToInsert = uploadedImages.images.map((uploadedImage, index) => ({
-					...input.images[index],
-					url: uploadedImage.url,
-				}));
+				const imagesToInsert = uploadedImages.images.map(
+					(uploadedImage, index) => ({
+						...input.images[index],
+						url: uploadedImage.url,
+					}),
+				);
 
 				await q.createImages(imagesToInsert);
 				return { message: "Successfully uploaded images" };
@@ -107,7 +109,7 @@ export const productImages = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { newImages, productId } = input;
 
 				const existingImages = await q.getImagesByProductId(productId);
@@ -165,7 +167,7 @@ export const productImages = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { productId } = input;
 				const images = await q.getImagesByProductId(productId);
 				return images;
@@ -187,7 +189,7 @@ export const productImages = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { id } = input;
 				await q.deleteImage(id);
 				return { message: "Successfully deleted image" };
@@ -210,7 +212,7 @@ export const productImages = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, imageId } = input;
 				await q.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
@@ -226,7 +228,7 @@ export const productImages = router({
 
 	getAllImages: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).productImages.admin;
 			const images = await q.getAllImages();
 			return images;
 		} catch (error) {

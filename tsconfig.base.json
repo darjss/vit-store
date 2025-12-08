@@ -23,7 +23,6 @@
 		"noImplicitThis": false,
 		"types": ["node", "@cloudflare/workers-types"],
 		"disableSolutionSearching": true,
-		"baseUrl": ".",
 		"paths": {
 			"@vit/shared": ["./packages/shared/dist/index.js"],
 			"@vit/shared/*": ["./packages/shared/dist/*"],

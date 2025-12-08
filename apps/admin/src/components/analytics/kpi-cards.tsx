@@ -8,7 +8,6 @@ import {
 	TrendingUp,
 	Warehouse,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { StatCard } from "../dashboard/stat-card";

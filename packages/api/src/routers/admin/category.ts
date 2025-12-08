@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const category = router({
 	getAllCategories: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).categories.admin;
 			console.log("fetching categories");
 			const categories = await q.getAllCategories();
 			return categories;
@@ -28,7 +28,7 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).categories.admin;
 				await q.createCategory(input.name);
 				return { message: "Successfully added category" };
 			} catch (error) {
@@ -50,7 +50,7 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).categories.admin;
 				const { id, name } = input;
 				await q.updateCategory(id, name);
 				return { message: "Successfully updated category" };
@@ -72,7 +72,7 @@ export const category = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).categories.admin;
 				const { id } = input;
 				await q.deleteCategory(id);
 				return { message: "Successfully deleted category" };
@@ -94,7 +94,7 @@ export const category = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).categories.admin;
 				const { id } = input;
 				const category = await q.getCategoryById(id);
 

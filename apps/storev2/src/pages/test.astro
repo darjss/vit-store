@@ -1,9 +1,10 @@
 ---
+
 import { createServerClient } from "@/lib/trpc";
 
 
 const result = await Astro.locals.runtime.env.server.fetch("https://internal/health-check");
-const data= await result.json()
+const data = await result.json()
 const serverApi = createServerClient( "",Astro.locals.runtime.env.server);
 const trpcResult=await serverApi.healthCheck.query();
 console.log("trpcresult",trpcResult)

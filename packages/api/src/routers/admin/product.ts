@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { addProductSchema, updateProductSchema } from "@vit/shared";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
@@ -10,7 +10,7 @@ export const product = router({
 		.input(v.object({ searchTerm: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const products = await q.searchByName(input.searchTerm, 3);
 				return products;
 			} catch (error) {
@@ -27,7 +27,7 @@ export const product = router({
 		.input(v.object({ searchTerm: v.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const products = await q.searchByNameForOrder(input.searchTerm, 3);
 				return products;
 			} catch (error) {
@@ -44,7 +44,7 @@ export const product = router({
 		.input(addProductSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
 				// Validate image URLs
@@ -107,7 +107,7 @@ export const product = router({
 
 	getProductBenchmark: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).products.admin;
 			const startTime = performance.now();
 			await q.getProductBenchmark();
 			return performance.now() - startTime;
@@ -125,7 +125,7 @@ export const product = router({
 		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const product = await q.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
@@ -148,7 +148,7 @@ export const product = router({
 		.input(updateProductSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				if (!input.id)
 					throw new TRPCError({
 						code: "BAD_REQUEST",
@@ -228,18 +228,14 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const product = await q.getProductById(input.productId);
 				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				await q.updateStock(
-					input.productId,
-					input.numberToUpdate,
-					input.type,
-				);
+				await q.updateStock(input.productId, input.numberToUpdate, input.type);
 				return { message: "Stock updated successfully" };
 			} catch (error) {
 				console.error("Error updating stock:", error);
@@ -256,7 +252,7 @@ export const product = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const product = await q.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
@@ -278,7 +274,7 @@ export const product = router({
 
 	getAllProducts: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).products.admin;
 			const products = await q.getAllProducts();
 			return products;
 		} catch (error) {
@@ -308,7 +304,7 @@ export const product = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				return await q.getPaginatedProducts({
 					page: input.page ?? 1,
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
@@ -332,7 +328,7 @@ export const product = router({
 		.input(v.object({ id: v.number(), newStock: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const product = await q.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
@@ -354,7 +350,7 @@ export const product = router({
 
 	getAllProductValue: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).products.admin;
 			const result = await q.getAllProductValue();
 			return result;
 		} catch (error) {
@@ -377,7 +373,7 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).products.admin;
 				const value = input.stringValue ?? input.numberValue;
 				await q.updateProductField(input.id, input.field, value ?? null);
 				return { message: "Product field updated successfully" };

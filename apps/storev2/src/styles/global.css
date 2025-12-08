@@ -14,7 +14,7 @@
     --color-primary-foreground: oklch(0.15 0 0);
     --color-secondary: oklch(0.15 0 0);
     --color-secondary-foreground: oklch(0.99 0 0);
-    --color-muted: oklch(0.95 0.05 95);
+    --color-muted: oklch(0.95 0 0);
     --color-muted-foreground: oklch(0.45 0 0);
     --color-accent: oklch(0.92 0.15 95);
     --color-accent-foreground: oklch(0.15 0 0);
@@ -24,30 +24,22 @@
     --color-error-foreground: oklch(0.15 0 0);
     --color-border: oklch(0.15 0 0);
     --color-input: oklch(0.922 0 0);
-    --color-ring: oklch(0.92 0.15 95);
+    --color-ring: oklch(0.15 0 0);
     --color-chart-1: oklch(0.92 0.15 95);
     --color-chart-2: oklch(0.75 0.12 85);
     --color-chart-3: oklch(0.65 0.18 105);
     --color-chart-4: oklch(0.85 0.1 90);
     --color-chart-5: oklch(0.55 0.15 100);
-    --color-sidebar: oklch(0.99 0 0);
-    --color-sidebar-foreground: oklch(0.15 0 0);
-    --color-sidebar-primary: oklch(0.92 0.15 95);
-    --color-sidebar-primary-foreground: oklch(0.15 0 0);
-    --color-sidebar-accent: oklch(0.95 0.05 95);
-    --color-sidebar-accent-foreground: oklch(0.15 0 0);
-    --color-sidebar-border: oklch(0.15 0 0);
-    --color-sidebar-ring: oklch(0.92 0.15 95);
 
     --font-sans:
         "Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif;
     --font-mono: "Geist Mono", "Geist Mono Fallback";
 
     --radius: 0rem;
-    --radius-sm: calc(var(--radius) - 4px);
-    --radius-md: calc(var(--radius) - 2px);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) + 4px);
+    --radius-sm: 0rem;
+    --radius-md: 0rem;
+    --radius-lg: 0rem;
+    --radius-xl: 0rem;
 }
 
 @layer base {
@@ -232,15 +224,11 @@
 
     .loading-bar-progress {
         height: 100%;
-        background: linear-gradient(
-            90deg,
-            oklch(0.92 0.15 95),
-            oklch(0.95 0.18 85),
-            oklch(0.92 0.15 95)
-        );
+        background: var(--color-primary);
         width: 0%;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 0 10px oklch(0.92 0.15 95 / 0.5);
+        box-shadow: 0 0 10px var(--color-primary);
+        border: 2px solid var(--color-border);
     }
 
     .loading-bar.show .loading-bar-progress {
@@ -270,6 +258,9 @@
     .shadow-hard-lg {
         box-shadow: 8px 8px 0px 0px var(--color-border);
     }
+    .shadow-hard-xl {
+        box-shadow: 12px 12px 0px 0px var(--color-border);
+    }
     .shadow-hard-reverse {
         box-shadow: -4px 4px 0px 0px var(--color-border);
     }
@@ -288,11 +279,22 @@
         background-size: 40px 40px;
         background-image: linear-gradient(to right, var(--color-border) 1px, transparent 1px),
                           linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
     }
     
     .bg-dots-pattern {
         background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
         background-size: 20px 20px;
+    }
+}
+
+@layer components {
+    .brutal-btn {
+        @apply px-6 py-3 bg-background border-2 border-border font-bold uppercase tracking-wider hover:translate-y-1 hover:shadow-none transition-all active:translate-y-1 active:shadow-none;
+        box-shadow: 4px 4px 0px 0px var(--color-border);
+    }
+    
+    .brutal-card {
+        @apply bg-background border-2 border-border p-4;
+        box-shadow: 4px 4px 0px 0px var(--color-border);
     }
 }

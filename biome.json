@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
 	"vcs": {
 		"enabled": false,
 		"clientKind": "git",
@@ -21,12 +21,21 @@
 			"!bts.jsonc",
 			"!**/.wrangler",
 			"!**/.alchemy",
-			"!**/components/ui"
+			"!**/components/ui",
+			"!**/.astro"
 		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
+	},
+	"css": {
+		"parser": {
+			"cssModules": true
+		},
+		"linter": {
+			"enabled": false
+		}
 	},
 	"linter": {
 		"enabled": true,
@@ -69,5 +78,22 @@
 		"formatter": {
 			"quoteStyle": "double"
 		}
-	}
+	},
+	"overrides": [
+		{
+		  "includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
+		  "linter": {
+			"rules": {
+			  "style": {
+				"useConst": "off",
+				"useImportType": "off"
+			  },
+			  "correctness": {
+				"noUnusedVariables": "off",
+				"noUnusedImports": "off"
+			  }
+			}
+		  }
+		}
+	  ]
 }

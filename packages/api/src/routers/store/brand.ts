@@ -1,10 +1,10 @@
-import { storeQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { publicProcedure, router } from "../../lib/trpc";
 
 export const brand = router({
 	getAllBrands: publicProcedure.query(async ({ ctx }) => {
-		const q = storeQueries(ctx.db);
+		const q = createQueries(ctx.db).brands.store;
 		return await q.getAllBrands();
 	}),
 	getBrandById: publicProcedure
@@ -14,7 +14,7 @@ export const brand = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const q = storeQueries(ctx.db);
+			const q = createQueries(ctx.db).brands.store;
 			return await q.getBrandById(input.id);
 		}),
 });

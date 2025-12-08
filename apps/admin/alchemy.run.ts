@@ -1,7 +1,7 @@
 import alchemy from "alchemy";
 import { Vite } from "alchemy/cloudflare";
 import { config } from "dotenv";
-import path from "path";
+import path from "node:path";
 
 const app = await alchemy("admin");
 const stage = app.stage;

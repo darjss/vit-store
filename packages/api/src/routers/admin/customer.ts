@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { timeRangeSchema } from "@vit/shared/schema";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 import { getDaysFromTimeRange } from "../../lib/utils";
@@ -20,7 +20,7 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).customers.admin;
 				const result = await q.createCustomer(input);
 				return result;
 			} catch (error) {
@@ -46,7 +46,7 @@ export const customer = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).customers.admin;
 				console.log("GETTING CUSTOMER BY PHONE");
 				const result = await q.getCustomerByPhone(input.phone);
 				console.log("RESULT", result);
@@ -70,7 +70,7 @@ export const customer = router({
 
 	getCustomerCount: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).customers.admin;
 			const count = await q.getCustomerCount();
 			return count;
 		} catch (error) {
@@ -91,7 +91,7 @@ export const customer = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).customers.admin;
 				const { timeRange } = input;
 				const startDate = await getDaysFromTimeRange(timeRange);
 				const count = await q.getNewCustomersCount(startDate);
@@ -108,7 +108,7 @@ export const customer = router({
 
 	getAllCustomers: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).customers.admin;
 			const customers = await q.getAllCustomers();
 			return customers;
 		} catch (error) {
@@ -135,7 +135,7 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).customers.admin;
 				const { phone, address } = input;
 				const result = await q.updateCustomer(phone, { address });
 				if (!result) {
@@ -169,7 +169,7 @@ export const customer = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).customers.admin;
 				const { phone } = input;
 				await q.deleteCustomer(phone);
 				return { message: "Successfully deleted customer" };

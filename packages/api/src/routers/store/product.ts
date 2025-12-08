@@ -1,14 +1,55 @@
 import { TRPCError } from "@trpc/server";
-import { storeQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import { isNull } from "drizzle-orm";
 import * as v from "valibot";
 import { ProductImagesTable, ProductsTable } from "../../db/schema";
 import { publicProcedure, router } from "../../lib/trpc";
+import { searchProducts } from "../../lib/upstash-search";
 
 export const product = router({
+	searchProducts: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			try {
+				const { query, limit } = input;
+
+				// Search using Upstash - returns all data needed for display
+				const searchResults = await searchProducts(query, limit);
+
+				// If Upstash returns results, return them directly (no DB query needed)
+				if (searchResults.length > 0) {
+					return searchResults;
+				}
+
+				// Fallback to Postgres LIKE search if Upstash returns nothing
+				const q = createQueries(ctx.db).products.store;
+				const fallbackResults = await q.searchByName(query, limit ?? 8);
+				return fallbackResults.map((p) => ({
+					id: p.id,
+					slug: p.slug,
+					name: p.name,
+					price: p.price,
+					image: p.images[0]?.url || "",
+					brand: p.brand?.name || "",
+				}));
+			} catch (error) {
+				console.error("Error searching products:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
+
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
-			const q = storeQueries(ctx.db);
+			const q = createQueries(ctx.db).products.store;
 			const [featuredProducts, newProducts, discountedProducts] =
 				await Promise.all([
 					q.getFeaturedProducts(),
@@ -52,7 +93,7 @@ export const product = router({
 		}
 	}),
 	getAllProducts: publicProcedure.query(async ({ ctx }) => {
-		const q = storeQueries(ctx.db);
+		const q = createQueries(ctx.db).products.store;
 		return await q.getAllProducts();
 	}),
 	getProductById: publicProcedure
@@ -62,7 +103,7 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const q = storeQueries(ctx.db);
+			const q = createQueries(ctx.db).products.store;
 			const result = await q.getProductById(input.id);
 			if (result === null || result === undefined) {
 				return null;
@@ -71,7 +112,11 @@ export const product = router({
 				url: image.url,
 				isPrimary: image.isPrimary,
 			}));
-			console.log("result.ingredients", result.ingredients, typeof result.ingredients);
+			console.log(
+				"result.ingredients",
+				result.ingredients,
+				typeof result.ingredients,
+			);
 			// result.ingredients = result.ingredients ? JSON.parse() : [];
 			return result;
 		}),
@@ -82,7 +127,7 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input, ctx }) => {
-			const q = storeQueries(ctx.db);
+			const q = createQueries(ctx.db).products.store;
 			const result = await q.getProductsByIds(input.ids);
 			return result.map((product) => ({
 				id: product.id,
@@ -101,7 +146,7 @@ export const product = router({
 		)
 		.query(async ({ input, ctx }) => {
 			try {
-				const q = storeQueries(ctx.db);
+				const q = createQueries(ctx.db).products.store;
 				const [sameCategory, sameBrand] = await Promise.all([
 					q.getRecommendedProductsByCategory(input.categoryId, input.productId),
 					q.getRecommendedProductsByBrand(input.brandId, input.productId),
@@ -144,7 +189,7 @@ export const product = router({
 					isInStock: false,
 				};
 			}
-			const q = storeQueries(ctx.db);
+			const q = createQueries(ctx.db).products.store;
 			const product = await q.getProductStockStatus(input.productId);
 			if (product === null || product === undefined) {
 				throw new TRPCError({
@@ -224,22 +269,31 @@ export const product = router({
 			});
 		}
 	}),
-	getInfiniteProducts: publicProcedure.input(v.object({
-		cursor: v.optional(v.string()),
-		limit: v.optional(v.number(), 10),
-	})).query(async ({ input, ctx }) => {
-		try {	
-			const q = storeQueries(ctx.db);
-			
-			const products = await q.getInfiniteProducts(input.cursor, input.limit);
-			return products;
-		} catch (error) {
-		console.error("Error in getInfiniteProducts:", error);
-		throw new TRPCError({
-			code: "INTERNAL_SERVER_ERROR",
-			message: "Failed to get infinite products",
-			cause: error,
-		});
-		}
-	}),
+	getInfiniteProducts: publicProcedure
+		.input(
+			v.object({
+				cursor: v.optional(v.string()),
+				limit: v.optional(v.number(), 10),
+				brandId: v.optional(v.number(), 0),
+				categoryId: v.optional(v.number(), 0),
+				searchTerm: v.optional(v.string()),
+				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			try {
+				const q = createQueries(ctx.db).products.store;
+
+				const products = await q.getInfiniteProducts(input);
+				return products;
+			} catch (error) {
+				console.error("Error in getInfiniteProducts:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get infinite products",
+					cause: error,
+				});
+			}
+		}),
 });

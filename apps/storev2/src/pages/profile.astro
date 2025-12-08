@@ -1,6 +1,6 @@
 ---
-
 import Layout from "@/layouts/Layout.astro";
+
 
 import { createServerClient } from "@/lib/trpc";
 
@@ -27,19 +27,20 @@ const formatDate = (timestamp: Date) => {
 
 // Format phone helper
 const formatPhone = (phone?: number) => {
+	if (!phone) return "";
 	const phoneStr = phone.toString();
 	return `+976 ${phoneStr.slice(0, 4)} ${phoneStr.slice(4)}`;
 };
 
 // Status badges
-const statusColors = {
+const statusColors: Record<string, string> = {
 	pending: "bg-primary text-foreground",
 	processing: "bg-chart-2 text-foreground",
 	completed: "bg-chart-4 text-foreground",
 	cancelled: "bg-destructive text-destructive-foreground",
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
 	pending: "Хүлээгдэж буй",
 	processing: "Боловсруулж байна",
 	completed: "Дууссан",

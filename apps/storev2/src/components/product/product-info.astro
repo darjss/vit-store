@@ -1,6 +1,6 @@
 ---
-import { formatCurrency } from "@vit/shared/utils";
-import ProductQuantitySelector from "./product-add-to-cart.tsx";
+import ProductQuantitySelector from "@/components/product/product-add-to-cart";
+import { formatCurrency } from "@/lib/utils";
 
 interface Props {
 	product: {
@@ -26,10 +26,10 @@ const hasDiscount = product.discount && product.discount > 0;
 const savings = hasDiscount ? product.price - discountedPrice : 0;
 ---
 
-<div class="space-y-4 sm:space-y-6">
+<div class="space-y-6 sm:space-y-8">
 	<div
-	transition:name={`product-brand-${product.id}`}
-		class="inline-flex items-center gap-2 rounded-sm border-3 border-black bg-white px-3 py-1.5 sm:px-4 sm:py-2 font-black text-xs sm:text-sm uppercase shadow-[3px_3px_0_0_#000]"
+		transition:name={`product-brand-${product.id}`}
+		class="inline-flex items-center gap-2 border-2 border-border bg-background px-3 py-1.5 sm:px-4 sm:py-2 font-black text-xs sm:text-sm uppercase shadow-hard-sm"
 	>
 		<span>🏷️</span>
 		<span>{product.brand.name}</span>
@@ -37,27 +37,27 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 
 	<h1
 		transition:name={`product-name-${product.id}`}
-		class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tight"
+		class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight uppercase"
 	>
 		{product.name}
 	</h1>
 
-	<div class="flex flex-wrap gap-2">
+	<div class="flex flex-wrap gap-3">
 		<div
-			class="rounded-sm border-2 border-black bg-muted px-2.5 py-1 text-xs sm:text-sm font-bold"
+			class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide"
 		>
 			📦 {product.category.name}
 		</div>
 		{
 			product.amount && (
-				<div class="rounded-sm border-2 border-black bg-muted px-2.5 py-1 text-xs sm:text-sm font-bold">
+				<div class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
 					⚖️ {product.amount}
 				</div>
 			)
 		}
 		{
 			product.potency && (
-				<div class="rounded-sm border-2 border-black bg-muted px-2.5 py-1 text-xs sm:text-sm font-bold">
+				<div class="border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
 					💪 {product.potency}
 				</div>
 			)
@@ -65,83 +65,83 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 	</div>
 
 	<div
-		class="rounded-sm border-4 border-black bg-gradient-to-br from-primary/30 to-primary/50 p-4 sm:p-6 shadow-[6px_6px_0_0_#000]"
+		class="border-2 border-border bg-card p-6 sm:p-8 shadow-hard"
 	>
 		{hasDiscount ? (
-			<div class="space-y-3">
+			<div class="space-y-4">
 				{/* Discount Badge */}
-				<div class="inline-flex items-center gap-2 rounded-sm border-3 border-black bg-red-500 px-3 py-1 font-black text-sm sm:text-base text-white shadow-[3px_3px_0_0_#000]">
+				<div class="inline-flex items-center gap-2 border-2 border-border bg-destructive px-4 py-1.5 font-black text-sm sm:text-base text-destructive-foreground shadow-hard-sm uppercase tracking-wider">
 					🔥 {product.discount}% ХЯМДРАЛ
 				</div>
 				
 				{/* Price Container */}
-				<div class="space-y-1">
-					<div class="flex items-baseline gap-3 flex-wrap">
+				<div class="space-y-2">
+					<div class="flex items-baseline gap-4 flex-wrap">
 						{/* Original Price */}
-						<div class="text-lg sm:text-xl font-bold text-black/50 line-through" transition:name={`product-price-${product.id}`}>
+						<div class="text-xl sm:text-2xl font-bold text-muted-foreground line-through decoration-2 decoration-destructive" transition:name={`product-price-${product.id}`}>
 							{formatCurrency(product.price)}
-			
 						</div>
 					</div>
 					
 					{/* Sale Price */}
-					<div class="text-4xl sm:text-5xl font-black text-black">
+					<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight">
 						{formatCurrency(discountedPrice)}
 					</div>
 					
 					{/* Savings Display */}
-					<div class="text-sm sm:text-base font-bold text-green-700">
+					<div class="text-base sm:text-lg font-bold text-primary">
 						{formatCurrency(savings)} хэмнэлт
 					</div>
 				</div>
 			</div>
 		) : (
-			<div class="space-y-2">
-				<div class="text-sm font-bold text-black/60 uppercase tracking-wide">
+			<div class="space-y-3">
+				<div class="text-sm font-bold text-muted-foreground uppercase tracking-wider">
 					Үнэ
 				</div>
-				<div class="text-4xl sm:text-5xl font-black text-black" transition:name={`product-price-${product.id}`}>
+				<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight" transition:name={`product-price-${product.id}`}>
 					{formatCurrency(product.price)}
 				</div>
 			</div>
 		)}
 	</div>
 
-	<div transition:name=`product-add-to-cart-button-${product.id}`>
-	<ProductQuantitySelector
-	client:load
-	cartItem={{
-		productId: product.id,
-		quantity: 1,
-		name: product.name,
-		price: product.price,
-		image: primaryImage,
-	}}
->
-	<div slot="fallback" class="flex gap-3">
-		<div class="h-14 flex-1 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
-		<div class="h-14 w-14 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
-		<div class="h-14 w-14 border-4 border-black bg-black/5 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+	<div transition:name={`product-add-to-cart-button-${product.id}`}>
+		<ProductQuantitySelector
+			client:load
+			cartItem={{
+				productId: product.id,
+				quantity: 1,
+				name: product.name,
+				price: product.price,
+				image: primaryImage,
+			}}
+		>
+			<div slot="fallback" class="flex gap-4">
+				<div class="h-16 flex-1 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
+				<div class="h-16 w-16 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
+				<div class="h-16 w-16 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
+			</div>
+		</ProductQuantitySelector>
 	</div>
-</ProductQuantitySelector>
 
 	{/* Trust Signals */}
-	<div class="rounded-sm border-2 border-black bg-white/80 p-3 sm:p-4 shadow-[3px_3px_0_0_#000]">
-		<div class="grid grid-cols-2 gap-3">
-			<div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-black/80">
-				<span class="text-base">✓</span>
+	<div class="border-2 border-border bg-background p-4 sm:p-6 shadow-hard">
+		<div class="grid grid-cols-2 gap-4">
+			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
+				<span class="text-lg">✓</span>
 				<span>Баталгаатай</span>
 			</div>
-			<div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-black/80">
-				<span class="text-base">🚚</span>
+			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
+				<span class="text-lg">🚚</span>
 				<span>Хурдан хүргэлт</span>
 			</div>
-			<div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-black/80">
-				<span class="text-base">🔒</span>
+			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
+				<span class="text-lg">🔒</span>
 				<span>Найдвартай</span>
 			</div>
-			<div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-black/80">
-				<span class="text-base">↩️</span>
+			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
+				<span class="text-lg">↩️</span>
 				<span>Буцаалт</span>
 			</div>
 		</div>

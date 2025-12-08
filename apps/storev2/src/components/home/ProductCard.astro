@@ -1,18 +1,18 @@
 ---
-import { formatCurrency } from "@vit/shared/utils";
+import AddToCartButton from "@/components/cart/add-to-cart-button";
 import { productColors } from "@/lib/constant";
 import type { ProductForHome } from "@/lib/types";
-import AddToCartButton from "../cart/add-to-cart-button.tsx";
+import { formatCurrency } from "@/lib/utils";
 
 interface Props {
     product: ProductForHome;
     badgeStyle?: "featured" | "new" | "discount";
+    sectionId?: string;
+    index?: number;
 }
 
-const { product: p } = Astro.props;
-
-const randomColor =
-    productColors[Math.floor(Math.random() * productColors.length)];
+const { product: p, sectionId = "", index = 0 } = Astro.props;
+const uniqueId = sectionId ? `${sectionId}-${index}` : `card-${index}`;
 ---
 
 <div
@@ -38,7 +38,7 @@ const randomColor =
                 alt={p.name}
                 class="relative z-10 w-full h-full object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-md"
                 loading="lazy"
-                transition:name={`product-image-${p.id}`}
+                transition:name={`product-image-${p.id}-${uniqueId}`}
             />
         </div>
     </a>
@@ -48,17 +48,14 @@ const randomColor =
         <a href={`/products/${p.slug}-${p.id}`} class="block">
             <h3 
                 class="font-bold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors"
-                transition:name={`product-name-${p.id}`}
+                transition:name={`product-name-${p.id}-${uniqueId}`}
             >
                 {p.name}
             </h3>
         </a>
 
-        <!-- Stats / Tags (Mocked for visual style) -->
-        <div class="flex gap-2 text-[10px] font-mono uppercase text-muted-foreground">
-            <span class="border border-border px-1 bg-muted/30">Energy</span>
-            <span class="border border-border px-1 bg-muted/30">Focus</span>
-        </div>
+        <!-- Stats / Tags (removed mocked tags) -->
+        <div class="h-2"></div>
 
         <div class="mt-auto flex items-end justify-between gap-4">
             <div class="flex flex-col">
@@ -69,7 +66,7 @@ const randomColor =
                 )}
                 <span 
                     class="text-2xl font-black tracking-tight"
-                    transition:name={`product-price-${p.id}`}
+                    transition:name={`product-price-${p.id}-${uniqueId}`}
                 >
                     {formatCurrency(p.price)}
                 </span>
@@ -79,7 +76,7 @@ const randomColor =
 
     <!-- Detached Action Button -->
     <div class="p-4 pt-0">
-        <div transition:name={`product-add-to-cart-button-${p.id}`}>
+        <div transition:name={`product-add-to-cart-button-${p.id}-${uniqueId}`}>
             <AddToCartButton
                 client:load
                 cartItem={{

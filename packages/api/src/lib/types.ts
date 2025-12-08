@@ -1,6 +1,5 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
-import type * as schema from "../db/schema";
 import type {
 	deliveryProvider,
 	orderStatus,

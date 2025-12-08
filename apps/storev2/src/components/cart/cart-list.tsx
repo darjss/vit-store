@@ -1,5 +1,5 @@
 import { Image } from "@unpic/solid";
-import { For, Match, Show, Switch } from "solid-js";
+import { For, Match, Switch } from "solid-js";
 import { deliveryFee } from "@/lib/constant";
 import { cart } from "@/store/cart";
 import Loading from "../loading";

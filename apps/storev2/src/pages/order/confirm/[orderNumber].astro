@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import { createServerClient } from "@/lib/trpc";
 import PaymentStatus from "@/components/payment/payment-status";
+import { createServerClient } from "@/lib/trpc";
 
 const { orderNumber } = Astro.params;
 const cookieHeader = Astro.request.headers.get("cookie") || "";

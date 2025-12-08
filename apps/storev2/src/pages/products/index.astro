@@ -1,7 +1,7 @@
 ---
 
-import Layout from "@/layouts/Layout.astro";
 import ProductsList from "@/components/product/products-list";
+import Layout from "@/layouts/Layout.astro";
 export const prerender = true;
 
 ---
@@ -9,29 +9,40 @@ export const prerender = true;
 <Layout>
     <ProductsList client:load>
         <div slot="fallback">
-            <div class="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-                <div class="rounded-2xl border-4 border-black bg-primary/5 px-3 py-4 shadow-[8px_8px_0_0_#000] sm:px-6 sm:py-6 sm:shadow-[10px_10px_0_0_#000]">
-                    <div class="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-6">
-                        <div>
-                            <div class="mb-2 inline-flex items-center gap-2 rounded-sm border-2 border-black bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] shadow-[3px_3px_0_0_#000] sm:text-xs">
-                                <span>🛒</span>
-                                <span>Product catalog</span>
-                            </div>
-                            <h1 class="mb-1.5 font-black text-2xl tracking-tight sm:mb-2 sm:text-4xl">
-                                All Products
-                            </h1>
-                            <p class="text-sm text-black/70 sm:text-base">
-                                Browse our complete collection of products
-                            </p>
+            <div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+                <div class="overflow-hidden border-3 border-black bg-primary/5 px-3 py-3 shadow-[5px_5px_0_0_#000] sm:border-4 sm:px-5 sm:py-4 sm:shadow-[6px_6px_0_0_#000]">
+                    <!-- Compact Header Skeleton -->
+                    <div class="mb-2 flex items-baseline justify-between gap-3 sm:mb-3">
+                        <div class="h-5 w-40 animate-pulse bg-gray-200 sm:h-7 sm:w-52"></div>
+                        <div class="h-3 w-24 animate-pulse bg-gray-200 sm:h-4 sm:w-32"></div>
+                    </div>
+
+                    <!-- Filter Bar Skeleton -->
+                    <div class="mb-3 flex flex-wrap items-center gap-1.5 sm:mb-4 sm:gap-2">
+                        <div class="h-9 min-w-[120px] flex-1 animate-pulse border-2 border-black bg-gray-100 shadow-[2px_2px_0_0_#000] sm:h-10 sm:border-3"></div>
+                        <div class="h-9 w-24 animate-pulse border-2 border-black bg-gray-100 shadow-[2px_2px_0_0_#000] sm:h-10 sm:w-28 sm:border-3"></div>
+                        <div class="h-9 w-20 animate-pulse border-2 border-black bg-gray-100 shadow-[2px_2px_0_0_#000] sm:h-10 sm:w-24 sm:border-3"></div>
+                        <div class="flex h-9 border-2 border-black shadow-[2px_2px_0_0_#000] sm:h-10 sm:border-3">
+                            <div class="w-12 animate-pulse bg-gray-100 sm:w-14"></div>
+                            <div class="w-12 animate-pulse border-black border-l-2 bg-gray-100 sm:w-14 sm:border-l-3"></div>
+                            <div class="w-14 animate-pulse border-black border-l-2 bg-gray-100 sm:w-16 sm:border-l-3"></div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+
+                    <!-- Products Grid Skeleton -->
+                    <div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
                         {Array.from({ length: 8 }).map(() => (
-                            <div class="flex flex-col rounded-md border-2 border-black bg-white shadow-[3px_3px_0_0_#000] sm:rounded-lg sm:border-3 sm:shadow-[6px_6px_0_0_#000]">
-                                <div class="aspect-4/5 bg-gray-200 sm:aspect-4/3"></div>
-                                <div class="animate-pulse space-y-2 p-2.5 sm:p-3">
-                                    <div class="h-3.5 w-4/5 rounded bg-gray-200"></div>
-                                    <div class="h-4 w-1/2 rounded bg-gray-200"></div>
+                            <div class="flex animate-pulse flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000]">
+                                <div class="relative aspect-4/5 overflow-hidden border-black border-b-2 bg-gray-100 sm:aspect-4/3 sm:border-b-3">
+                                    <div class="absolute right-1.5 bottom-1.5 h-4 w-12 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:right-3 sm:bottom-3 sm:h-5 sm:w-16"></div>
+                                </div>
+                                <div class="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-3">
+                                    <div class="h-3 w-full bg-gray-200 sm:h-4"></div>
+                                    <div class="h-3 w-3/4 bg-gray-200 sm:h-4"></div>
+                                </div>
+                                <div class="flex items-center justify-between border-black border-t-2 bg-primary/10 px-2 py-1.5 sm:border-t-3 sm:px-3 sm:py-2">
+                                    <div class="h-4 w-16 bg-gray-200 sm:h-5 sm:w-20"></div>
+                                    <div class="h-7 w-10 border-2 border-black bg-gray-200 shadow-[2px_2px_0_0_#000] sm:h-8 sm:w-12"></div>
                                 </div>
                             </div>
                         ))}

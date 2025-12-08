@@ -74,7 +74,7 @@ const loggingMiddleware = t.middleware(
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
 
 		// Log request
-		console.log("\n" + "=".repeat(80));
+		console.log(`\n${"=".repeat(80)}`);
 		console.log(`🔵 [${timestamp}] tRPC ${procedureType}: ${path}`);
 		console.log("─".repeat(80));
 		console.log("📥 INPUT:");
@@ -91,7 +91,7 @@ const loggingMiddleware = t.middleware(
 				// For large outputs, truncate if needed
 				const outputStr = JSON.stringify(result.data, null, 2);
 				if (outputStr.length > 2000) {
-					console.log(outputStr.substring(0, 2000) + "\n... (truncated)");
+					console.log(`${outputStr.substring(0, 2000)}\n... (truncated)`);
 				} else {
 					console.log(outputStr);
 				}
@@ -100,7 +100,7 @@ const loggingMiddleware = t.middleware(
 			}
 			console.log("─".repeat(80));
 			console.log(`✅ SUCCESS (${duration}ms)`);
-			console.log("=".repeat(80) + "\n");
+			console.log(`${"=".repeat(80)}\n`);
 
 			return result;
 		} catch (error) {
@@ -125,7 +125,7 @@ const loggingMiddleware = t.middleware(
 			}
 			console.log("─".repeat(80));
 			console.log(`❌ FAILED (${duration}ms)`);
-			console.log("=".repeat(80) + "\n");
+			console.log(`${"=".repeat(80)}\n`);
 
 			throw error;
 		}

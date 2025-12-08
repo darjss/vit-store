@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
@@ -13,7 +13,7 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, url } = input;
 				await q.createImage({ productId, url });
 				return { message: "Successfully added image" };
@@ -34,7 +34,7 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { id } = input;
 				await q.deleteImage(id);
 				return { message: "Image deleted successfully" };
@@ -56,7 +56,7 @@ export const image = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, imageId } = input;
 				await q.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };

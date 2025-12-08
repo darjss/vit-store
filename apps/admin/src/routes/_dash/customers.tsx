@@ -4,7 +4,7 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { Loader2, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { Suspense, useMemo, useState } from "react";
 import * as v from "valibot";
 import CustomerCard from "@/components/customers/customer-card";

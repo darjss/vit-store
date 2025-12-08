@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
 import { adminCachedProcedure, router } from "../../lib/trpc";
@@ -13,7 +13,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getAverageOrderValue(input.timeRange);
 				return result;
 			} catch (error) {
@@ -34,7 +34,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getTotalProfit(input.timeRange);
 				return result;
 			} catch (error) {
@@ -55,7 +55,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getSalesByCategory(input.timeRange);
 				return result;
 			} catch (error) {
@@ -70,7 +70,7 @@ export const analytics = router({
 
 	getCustomerLifetimeValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).analytics.admin;
 			const result = await q.getCustomerLifetimeValue();
 			return result;
 		} catch (error) {
@@ -91,7 +91,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getRepeatCustomersCount(input.timeRange);
 				return result;
 			} catch (error) {
@@ -106,7 +106,7 @@ export const analytics = router({
 
 	getInventoryStatus: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).analytics.admin;
 			const result = await q.getInventoryStatus();
 			return result;
 		} catch (error) {
@@ -127,7 +127,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getFailedPayments(input.timeRange);
 				return result;
 			} catch (error) {
@@ -142,7 +142,7 @@ export const analytics = router({
 
 	getLowInventoryProducts: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).analytics.admin;
 			const result = await q.getLowInventoryProducts();
 			console.log("getLowInventoryProducts result:", result);
 			return result;
@@ -165,7 +165,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getTopBrandsBySales(input.timeRange);
 				return result;
 			} catch (error) {
@@ -180,7 +180,7 @@ export const analytics = router({
 
 	getCurrentProductsValue: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).analytics.admin;
 			const result = await q.getCurrentProductsValue();
 			return result;
 		} catch (error) {
@@ -201,7 +201,7 @@ export const analytics = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).analytics.admin;
 				const result = await q.getAnalyticsData(input.timeRange);
 				return result;
 			} catch (error) {
@@ -221,11 +221,11 @@ export const analytics = router({
 		)
 		.query(async ({ input, ctx }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const queries = createQueries(ctx.db);
 				const timeRange = input.timeRange;
-				const _pendingOrders = await q.getPendingOrders();
-				const _revenue = await q.getRevenue(timeRange);
-				const _orderCount = await q.getOrderCount(timeRange);
+				const _pendingOrders = await queries.orders.admin.getPendingOrders();
+				const _revenue = await queries.sales.admin.getRevenue(timeRange);
+				const _orderCount = await queries.orders.admin.getOrderCount(timeRange);
 				return {
 					pendingOrders: _pendingOrders,
 					revenue: _revenue,

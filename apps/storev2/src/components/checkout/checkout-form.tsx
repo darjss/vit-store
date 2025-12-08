@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
-import { createEffect, For, Match, Show, Suspense, Switch } from "solid-js";
+import { createEffect, For, Match, Suspense, Switch } from "solid-js";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import { deliveryFee } from "@/lib/constant";

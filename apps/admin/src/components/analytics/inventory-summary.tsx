@@ -54,7 +54,7 @@ export function InventorySummary() {
 												<img
 													src={item.imageUrl}
 													alt={item.name}
-													className="h-12 w-12 rounded-base object-cover border-2 border-border"
+													className="h-12 w-12 rounded-base border-2 border-border object-cover"
 												/>
 											)}
 											<div>

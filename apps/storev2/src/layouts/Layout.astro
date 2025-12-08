@@ -1,12 +1,13 @@
 ---
-
-import ClientRouter from "astro/components/ClientRouter.astro";
-import "../styles/global.css";
-import QueryDevtools from "@/components/query-devtools";
+import { ClientRouter } from "astro:transitions";
+import Header from "@/layouts/Header.astro";
+import Footer from "@/layouts/Footer.astro";
+import MobileNavbar from "@/layouts/MobileNavbar.astro";
+import CartDrawer from "@/components/cart/cart-drawer";
 import { Toaster } from "@/components/ui/toast";
-import Footer from "./Footer.astro";
-import Header from "./Header.astro";
-import MobileNavbar from "./MobileNavbar.astro";
+import QueryDevtools from "@/components/query-devtools";
+
+import "../styles/global.css";
 import "../styles/starwind.css"
 ---
 
@@ -21,32 +22,28 @@ import "../styles/starwind.css"
         <ClientRouter />
     </head>
     <body>
-        <!-- Loading indicator for view transitions -->
         <div id="loading-bar" class="loading-bar">
             <div class="loading-bar-progress"></div>
         </div>
 
-        <div class="min-h-screen w-full bg-white relative">
-            <div
-                class="absolute inset-0"
-                style="background:#ffffff;background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,0.35) 1px, transparent 0);background-size:20px 20px;"
-            >
-            </div>
-            <div
-                class="absolute inset-0"
-                style="background-image:radial-gradient(circle at 50% 40%, #FFF991 0%, rgba(255,255,255,0) 70%);opacity:.6;mix-blend-mode:multiply;"
-            >
-            </div>
-
-            <Header />
-      <main class="relative z-10">
-                <slot />
-                    <Toaster client:idle />
-            </main>
-
-            <Footer />
-            <MobileNavbar />
+        <div
+            class="absolute inset-0 opacity-10 pointer-events-none"
+            style="background-image: linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px); background-size: 40px 40px;"
+        >
         </div>
+
+        <Header />
+        
+
+        <main class="relative z-10 flex-1">
+            <slot />
+            <Toaster client:idle />
+        </main>
+
+        <Footer />
+        <MobileNavbar />
+        
+        <CartDrawer client:idle />
         		{import.meta.env.DEV && <QueryDevtools client:idle />}
 
     </body>

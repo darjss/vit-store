@@ -69,6 +69,7 @@ const safeStorage: Storage = {
 
 export const cart = createRoot(() => {
 	const [isHydrated, setIsHydrated] = createSignal(false);
+	const [isDrawerOpen, setIsDrawerOpen] = createSignal(false);
 
 	const [cartStore, setCart] = makePersisted(
 		createStore<{ items: CartItems[] }>({
@@ -102,6 +103,12 @@ export const cart = createRoot(() => {
 		isHydrated() {
 			return isHydrated();
 		},
+		isDrawerOpen() {
+			return isDrawerOpen();
+		},
+		openDrawer: () => setIsDrawerOpen(true),
+		closeDrawer: () => setIsDrawerOpen(false),
+		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
 
 		add: (product: CartItems) => {
 			console.log("product", product);
@@ -115,6 +122,9 @@ export const cart = createRoot(() => {
 			} else {
 				setCart("items", cartStore.items.length, product);
 			}
+			
+			// Open drawer after adding item
+			setIsDrawerOpen(true);
 		},
 		remove: (productId: number) => {
 			setCart("items", (items) =>

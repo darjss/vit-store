@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import type { CartItems } from "@/lib/types";
-import { cart } from "@/store/cart";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 interface ProductQuantitySelectorProps {

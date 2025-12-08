@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
 import { adminCachedProcedure, router } from "../../lib/trpc";
@@ -7,7 +7,7 @@ import { adminCachedProcedure, router } from "../../lib/trpc";
 export const sales = router({
 	analytics: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).sales.admin;
 			const analyticsDaily = q.getAnalyticsForHome("daily");
 			const analyticsWeekly = q.getAnalyticsForHome("weekly");
 			const analyticsMonthly = q.getAnalyticsForHome("monthly");
@@ -43,7 +43,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).sales.admin;
 				const result = await q.getMostSoldProducts(
 					input.timeRange,
 					input.productCount,
@@ -63,7 +63,7 @@ export const sales = router({
 
 	weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).orders.admin;
 			return await q.getOrderCountForWeek();
 		} catch (error) {
 			console.error("Error getting order count for week:", error);
@@ -83,7 +83,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				return await q.getAverageOrderValue(input.timeRange);
 			} catch (error) {
 				console.error("Error getting average order value:", error);
@@ -103,7 +103,7 @@ export const sales = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				return await q.getOrderCount(input.timeRange);
 			} catch (error) {
 				console.error("Error getting order count:", error);
@@ -117,7 +117,7 @@ export const sales = router({
 
 	pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).orders.admin;
 			return await q.getPendingOrders();
 		} catch (error) {
 			console.error("Error getting pending orders:", error);
@@ -131,7 +131,9 @@ export const sales = router({
 
 	dashboard: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const queries = createQueries(ctx.db);
+			const salesQ = queries.sales.admin;
+			const ordersQ = queries.orders.admin;
 			const [
 				salesDaily,
 				salesWeekly,
@@ -144,16 +146,16 @@ export const sales = router({
 				monthlyOrders,
 				pendingOrders,
 			] = await Promise.all([
-				q.getAnalyticsForHome("daily"),
-				q.getAnalyticsForHome("weekly"),
-				q.getAnalyticsForHome("monthly"),
-				q.getMostSoldProducts("daily", 5),
-				q.getMostSoldProducts("weekly", 5),
-				q.getMostSoldProducts("monthly", 5),
-				q.getOrderCount("daily"),
-				q.getOrderCount("weekly"),
-				q.getOrderCount("monthly"),
-				q.getPendingOrders(),
+				salesQ.getAnalyticsForHome("daily"),
+				salesQ.getAnalyticsForHome("weekly"),
+				salesQ.getAnalyticsForHome("monthly"),
+				salesQ.getMostSoldProducts("daily", 5),
+				salesQ.getMostSoldProducts("weekly", 5),
+				salesQ.getMostSoldProducts("monthly", 5),
+				ordersQ.getOrderCount("daily"),
+				ordersQ.getOrderCount("weekly"),
+				ordersQ.getOrderCount("monthly"),
+				ordersQ.getPendingOrders(),
 			]);
 
 			const dashboardData = {

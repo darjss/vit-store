@@ -1,18 +1,12 @@
 ---
-
-
-
-
-
-import type { CustomerSelectType } from "@vit/shared";
-import CheckoutForm from "@/components/checkout/checkout-form.tsx";
 import Layout from "@/layouts/Layout.astro";
+import CheckoutForm from "@/components/checkout/checkout-form";
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 
-    const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
-    const user = await serverApi.auth.check.query();
+const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const user = await serverApi.auth.check.query();
 
 
 ---

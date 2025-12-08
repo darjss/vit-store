@@ -11,7 +11,6 @@ import {
 	Switch,
 } from "solid-js";
 	import { api } from "@/lib/trpc";
-import { Button } from "../ui/button";
 
 const PaymentStatus = ({
 	payment,
@@ -49,7 +48,7 @@ const PaymentStatus = ({
 		onCleanup(() => clearInterval(interval));
 	});
 
-	const refetch = () => {
+	const _refetch = () => {
 		setRefetchTrigger((prev) => prev + 1);
 	};
 

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import {
 	addOrderSchema,
 	timeRangeSchema,
@@ -11,27 +11,26 @@ import { adminProcedure, router } from "../../lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 
 export const order = router({
-	addOrder: adminProcedure.input(addOrderSchema).mutation(async ({ input, ctx }) => {
-		console.log("addOrder called with", input);
-		try {
-			const q = adminQueries(ctx.db);
-			const orderTotal = input.products.reduce(
-				(acc, currentProduct) =>
-					acc + currentProduct.price * currentProduct.quantity,
-				0,
-			);
+	addOrder: adminProcedure
+		.input(addOrderSchema)
+		.mutation(async ({ input, ctx }) => {
+			console.log("addOrder called with", input);
+			try {
+				const q = createQueries(ctx.db);
+				const orderTotal = input.products.reduce(
+					(acc, currentProduct) =>
+						acc + currentProduct.price * currentProduct.quantity,
+					0,
+				);
 
-			if (input.isNewCustomer) {
-				await q.createCustomer(
-					{
+				if (input.isNewCustomer) {
+					await q.customers.admin.createCustomer({
 						phone: Number(input.customerPhone),
 						address: input.address,
-					},
-				);
-			}
-			const orderNumber = generateOrderNumber();
-			const order = await q.createOrder(
-				{
+					});
+				}
+				const orderNumber = generateOrderNumber();
+				const order = await q.orders.admin.createOrder({
 					orderNumber: orderNumber,
 					customerPhone: Number(input.customerPhone),
 					status: input.status,
@@ -39,84 +38,79 @@ export const order = router({
 					total: orderTotal,
 					address: input.address,
 					deliveryProvider: input.deliveryProvider,
-				},
-			);
+				});
 
-			const orderId = order?.orderId;
+				const orderId = order?.orderId;
 
-			const orderDetails = input.products.map((product) => ({
-				productId: product.productId,
-				quantity: product.quantity,
-			}));
-			await q.createOrderDetails(orderId, orderDetails);
+				const orderDetails = input.products.map((product) => ({
+					productId: product.productId,
+					quantity: product.quantity,
+				}));
+				await q.orders.admin.createOrderDetails(orderId, orderDetails);
 
-			if (input.paymentStatus === "success") {
-				for (const product of input.products) {
-					const productCost = await q.getAverageCostOfProduct(
-						product.productId,
-						new Date(),
-					);
-					await q.addSale(
-						{
+				if (input.paymentStatus === "success") {
+					for (const product of input.products) {
+						const productCost = await q.purchases.admin.getAverageCostOfProduct(
+							product.productId,
+							new Date(),
+						);
+						await q.sales.admin.addSale({
 							productCost: productCost,
 							quantitySold: product.quantity,
 							orderId: order.orderId,
 							sellingPrice: product.price,
 							productId: product.productId,
-						},
-					);
-					await q.updateStock(
-						product.productId,
-						product.quantity,
-						"minus",
-					);
+						});
+						await q.products.admin.updateStock(
+							product.productId,
+							product.quantity,
+							"minus",
+						);
+					}
 				}
-			}
 
-			try {
-				const paymentResult = await q.createPayment(
-					{
+				try {
+					const paymentResult = await q.payments.admin.createPayment({
 						paymentNumber: generatePaymentNumber(),
 						orderId: orderId,
 						provider: "transfer",
 						status: input.paymentStatus,
 						amount: orderTotal,
-					},
-				);
-				console.log("Payment created:", paymentResult);
-			} catch (error) {
-				console.error("Error creating payment:", error);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to create payment",
-					cause: error,
-				});
-			}
-			console.log("transaction done");
+					});
+					console.log("Payment created:", paymentResult);
+				} catch (error) {
+					console.error("Error creating payment:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to create payment",
+						cause: error,
+					});
+				}
+				console.log("transaction done");
 
-			console.log("added order");
-			return { message: "Order added successfully" };
-		} catch (e) {
-			if (e instanceof Error) {
+				console.log("added order");
+				return { message: "Order added successfully" };
+			} catch (e) {
+				if (e instanceof Error) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to add order",
+						cause: e,
+					});
+				}
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add order",
 					cause: e,
 				});
 			}
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to add order",
-				cause: e,
-			});
-		}
-	}),
+		}),
 
 	updateOrder: adminProcedure
 		.input(updateOrderSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db);
 				console.log("updating order");
 
 				const orderTotal = input.products.reduce(
@@ -126,18 +120,16 @@ export const order = router({
 				);
 
 				if (input.isNewCustomer) {
-					const existingCustomer = await q.getCustomerByPhone(
+					const existingCustomer = await q.customers.admin.getCustomerByPhone(
 						Number(input.customerPhone),
 					);
 					if (!existingCustomer) {
-						await q.createCustomer(
-							{
-								phone: Number(input.customerPhone),
-								address: input.address,
-							},
-						);
+						await q.customers.admin.createCustomer({
+							phone: Number(input.customerPhone),
+							address: input.address,
+						});
 					} else {
-						await q.updateCustomer(
+						await q.customers.admin.updateCustomer(
 							Number(input.customerPhone),
 							{
 								address: input.address,
@@ -146,62 +138,53 @@ export const order = router({
 					}
 				}
 
-				await q.updateOrder(
-					input.id,
-					{
-						customerPhone: Number(input.customerPhone),
-						status: input.status,
-						notes: input.notes,
-						total: orderTotal,
-					},
-				);
+				await q.orders.admin.updateOrder(input.id, {
+					customerPhone: Number(input.customerPhone),
+					status: input.status,
+					notes: input.notes,
+					total: orderTotal,
+				});
 
-				const currentOrderDetails = await q.getOrderDetailsByOrderId(
-					input.id,
-				);
+				const currentOrderDetails =
+					await q.orders.admin.getOrderDetailsByOrderId(input.id);
 
-				await q.deleteOrderDetails(input.id);
+				await q.orders.admin.deleteOrderDetails(input.id);
 
 				const orderDetailsPromise = input.products.map(async (product) => {
-					await q.createOrderDetails(
-						input.id,
-						[
-							{
-								productId: product.productId,
-								quantity: product.quantity,
-							},
-						],
-					);
+					await q.orders.admin.createOrderDetails(input.id, [
+						{
+							productId: product.productId,
+							quantity: product.quantity,
+						},
+					]);
 
 					const existingDetail = currentOrderDetails.find(
 						(detail) => detail.productId === product.productId,
 					);
 					if (input.paymentStatus === "success") {
-						const productCost = await q.getAverageCostOfProduct(
+						const productCost = await q.purchases.admin.getAverageCostOfProduct(
 							product.productId,
 							new Date(),
 						);
-						await q.addSale(
-							{
-								productCost: productCost,
-								quantitySold: product.quantity,
-								orderId: input.id,
-								sellingPrice: product.price,
-								productId: product.productId,
-							},
-						);
+						await q.sales.admin.addSale({
+							productCost: productCost,
+							quantitySold: product.quantity,
+							orderId: input.id,
+							sellingPrice: product.price,
+							productId: product.productId,
+						});
 					}
 					if (existingDetail) {
 						const quantityDiff = product.quantity - existingDetail.quantity;
 						if (quantityDiff !== 0) {
-							await q.updateStock(
+							await q.products.admin.updateStock(
 								product.productId,
 								Math.abs(quantityDiff),
 								quantityDiff > 0 ? "minus" : "add",
 							);
 						}
 					} else {
-						await q.updateStock(
+						await q.products.admin.updateStock(
 							product.productId,
 							product.quantity,
 							"minus",
@@ -215,14 +198,14 @@ export const order = router({
 				);
 
 				const restoreStockPromises = removedProducts.map((detail) =>
-					q.updateStock(
+					q.products.admin.updateStock(
 						detail.productId,
 						detail.quantity,
 						"add",
 					),
 				);
 
-				await q.updatePaymentStatus(
+				await q.payments.admin.updatePaymentStatus(
 					input.id,
 					input.paymentStatus,
 				);
@@ -247,19 +230,23 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db);
 				console.log("deleting order", input.id);
-				const orderDetails = await q.getOrderDetailsByOrderId(
+				const orderDetails = await q.orders.admin.getOrderDetailsByOrderId(
 					input.id,
 				);
 
 				const restoreStockPromises = orderDetails
 					.filter((detail) => !detail.deletedAt)
 					.map((detail) =>
-						q.updateStock(detail.productId, detail.quantity, "add"),
+						q.products.admin.updateStock(
+							detail.productId,
+							detail.quantity,
+							"add",
+						),
 					);
 
-				await q.softDeleteOrder(input.id);
+				await q.orders.admin.softDeleteOrder(input.id);
 
 				await Promise.allSettled(restoreStockPromises);
 
@@ -278,19 +265,19 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db);
 				// Deduct stock again based on soft-deleted details
-				const details = await q.getOrderDetailsByOrderId(input.id);
+				const details = await q.orders.admin.getOrderDetailsByOrderId(input.id);
 
 				const deductPromises = details
 					.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
 					.map((d) =>
-						q.updateStock(d.productId, d.quantity, "minus"),
+						q.products.admin.updateStock(d.productId, d.quantity, "minus"),
 					);
 
 				await Promise.allSettled(deductPromises);
 
-				await q.restoreOrder(input.id);
+				await q.orders.admin.restoreOrder(input.id);
 
 				return { message: "Order restored successfully" };
 			} catch (e) {
@@ -307,7 +294,7 @@ export const order = router({
 		.input(v.object({ searchTerm: v.string() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				const orders = await q.searchOrder(input.searchTerm);
 				return orders;
 			} catch (e) {
@@ -322,7 +309,7 @@ export const order = router({
 
 	getAllOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).orders.admin;
 			const orders = await q.getAllOrders();
 			return orders;
 		} catch (e) {
@@ -346,7 +333,7 @@ export const order = router({
 		.input(v.object({ id: v.number() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				const result = await q.getOrderById(input.id);
 				if (!result) {
 					throw new TRPCError({
@@ -413,7 +400,7 @@ export const order = router({
 			);
 
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				return await q.getPaginatedOrders({
 					page: input.page ?? 1,
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
@@ -443,12 +430,12 @@ export const order = router({
 	getOrderCount: adminProcedure
 		.input(v.object({ timeRange: timeRangeSchema }))
 		.query(async ({ ctx, input }) => {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).orders.admin;
 			return await q.getOrderCount(input.timeRange);
 		}),
 
 	getPendingOrders: adminProcedure.query(async ({ ctx }) => {
-		const q = adminQueries(ctx.db);
+		const q = createQueries(ctx.db).orders.admin;
 		return await q.getPendingOrders();
 	}),
 
@@ -467,7 +454,7 @@ export const order = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).orders.admin;
 				await q.updateOrderStatus(input.id, input.status);
 				return {
 					message: `Order status updated successfully to ${input.status}`,
@@ -489,10 +476,8 @@ export const order = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
-				const orders = await q.getRecentOrdersByProductId(
-					input.productId,
-				);
+				const q = createQueries(ctx.db).orders.admin;
+				const orders = await q.getRecentOrdersByProductId(input.productId);
 				return orders;
 			} catch (e) {
 				console.error(e);

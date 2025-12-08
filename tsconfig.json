@@ -1,11 +1,10 @@
 {
 	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		"baseUrl": ".",
 		"paths": {
-			"@vit-store/shared": ["packages/shared/dist/index.js"],
-			"@vit-store/shared/*": ["packages/shared/dist/*"],
-			"server/alchemy": ["apps/server/alchemy.run.ts"]
+			"@vit-store/shared": ["./packages/shared/dist/index.js"],
+			"@vit-store/shared/*": ["./packages/shared/dist/*"],
+			"server/alchemy": ["./apps/server/alchemy.run.ts"]
 		}
 	},
 	"include": ["alchemy.run.ts"],

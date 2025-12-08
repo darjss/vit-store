@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { addPurchaseSchema } from "@vit/shared/schema";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
@@ -9,7 +9,7 @@ export const purchase = router({
 		.input(addPurchaseSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				await ctx.db.transaction(async (tx) => {
 					await q.addPurchaseWithStockUpdate(tx, input.products);
 				});
@@ -34,7 +34,7 @@ export const purchase = router({
 
 	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).purchases.admin;
 			const result = await q.getAllPurchases();
 			return result;
 		} catch (e) {
@@ -51,7 +51,7 @@ export const purchase = router({
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				const result = await q.getPurchaseById(input.id);
 				return result;
 			} catch (e) {
@@ -76,7 +76,7 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				return await q.getPaginatedPurchases({
 					page: input.page,
 					pageSize: input.pageSize,
@@ -99,7 +99,7 @@ export const purchase = router({
 		.query(async ({ ctx, input }) => {
 			if (!input.query) return [];
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				const results = await q.searchByProductName(input.query);
 				return results;
 			} catch (e) {
@@ -121,7 +121,7 @@ export const purchase = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				await ctx.db.transaction(async (tx) => {
 					await q.updatePurchaseWithStockAdjustment(
 						tx,
@@ -151,7 +151,7 @@ export const purchase = router({
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).purchases.admin;
 				await ctx.db.transaction(async (tx) => {
 					await q.deletePurchaseWithStockRestore(tx, input.id);
 				});
@@ -182,8 +182,11 @@ export const purchase = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
-				return await q.getAverageCostOfProduct(input.productId, input.createdAt);
+				const q = createQueries(ctx.db).purchases.admin;
+				return await q.getAverageCostOfProduct(
+					input.productId,
+					input.createdAt,
+				);
 			} catch (e) {
 				console.error("Error calculating average cost:", e);
 				return 0;

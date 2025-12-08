@@ -37,8 +37,8 @@
 		"db:studio": "drizzle-kit studio",
 		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
-		"db:seed": "bun run src/lib/seed-postgres.ts"
-
+		"db:seed": "bun run src/lib/seed-postgres.ts",
+		"sync:upstash": "bun run scripts/sync-products-to-upstash.ts"
 	},
 	"devDependencies": {
 		"tsdown": "catalog:",

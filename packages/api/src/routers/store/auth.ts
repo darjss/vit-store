@@ -1,9 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
-import { storeQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import type { DB } from "../../db";
-import type { Context } from "../../lib/context";
 import {
 	auth as authCheck,
 	createSession,
@@ -56,6 +55,10 @@ export const auth = router({
 				// }
 				//   console.log("response", response);
 				//   return response;
+				return {
+					success: true,
+					message: "OTP sent successfully",
+				};
 			} catch (error) {
 				console.error("error", error);
 				throw error;
@@ -108,7 +111,6 @@ export const auth = router({
 
 				const { session, token } = await createSession(user, ctx.kv);
 
-
 				setSessionTokenCookie(ctx.c, token, session.expiresAt);
 				console.log("Session cookie set via resHeaders");
 
@@ -140,8 +142,8 @@ export const auth = router({
 	check: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const session = await authCheck(ctx);
-			if(session===null){
-				return null
+			if (session === null) {
+				return null;
 			}
 			return session?.user;
 		} catch (e) {
@@ -154,7 +156,7 @@ export const auth = router({
 
 export const addCustomerToDB = async (phone: string, db: DB) => {
 	try {
-		const q = storeQueries(db);
+		const q = createQueries(db).customers.store;
 		const user = await q.getCustomerByPhone(Number.parseInt(phone, 10));
 		console.log("user", user);
 		if (!user) {

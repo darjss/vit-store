@@ -1,4 +1,4 @@
-import { PaymentSelectType } from "@vit/api/db/schema";
+
 import type { newOrderType } from "@vit/shared";
 import { messenger } from "./client";
 

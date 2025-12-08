@@ -1,5 +1,7 @@
 ---
 
+
+
 import type { HTMLAttributes } from "astro/types";
 
 type Props = HTMLAttributes<"div"> & {
@@ -48,7 +50,7 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
     constructor(dropdown: HTMLElement, dropdownIdx: number) {
       this.dropdown = dropdown;
       this.openOnHover = dropdown.getAttribute("data-open-on-hover") === "true";
-      this.closeDelay = Number.parseInt(dropdown.getAttribute("data-close-delay") || "200");
+      this.closeDelay = Number.parseInt(dropdown.getAttribute("data-close-delay") || "200", 10);
 
       // Get the temporary trigger element
       const tempTrigger = dropdown.querySelector(".starwind-dropdown-trigger") as HTMLElement;

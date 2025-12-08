@@ -1,7 +1,7 @@
 import alchemy from "alchemy";
-import { Astro, Images } from "alchemy/cloudflare";
+import { Astro, } from "alchemy/cloudflare";
 import { config } from "dotenv";
-import path from "path";
+import path from "node:path";
 import { server } from "server/alchemy";
 
 const app = await alchemy("storev2");

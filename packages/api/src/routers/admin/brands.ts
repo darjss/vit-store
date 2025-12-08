@@ -1,13 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { addBrandSchema } from "@vit/shared";
-import { adminQueries } from "@vit/api/queries";
+import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const brands = router({
 	getAllBrands: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = adminQueries(ctx.db);
+			const q = createQueries(ctx.db).brands.admin;
 			const brands = await q.getAllBrands();
 			console.log("brands", brands);
 			return brands;
@@ -24,7 +24,7 @@ export const brands = router({
 		.input(addBrandSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).brands.admin;
 				const { name, logoUrl } = input;
 				await q.createBrand({ name, logoUrl });
 				return { message: "Successfully updated category" };
@@ -41,7 +41,7 @@ export const brands = router({
 		.input(addBrandSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).brands.admin;
 				const id = input.id;
 				if (!id) {
 					throw new TRPCError({
@@ -64,7 +64,7 @@ export const brands = router({
 		.input(v.object({ id: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const q = adminQueries(ctx.db);
+				const q = createQueries(ctx.db).brands.admin;
 				await q.deleteBrand(input.id);
 			} catch (err) {
 				console.error("Error deleting brand:", err);

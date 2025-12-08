@@ -1,6 +1,6 @@
 ---
-
-import CartCount from "@/components/cart/cart-count"
+import CartCount from "@/components/cart/cart-count";
+import MobileSearchButton from "@/components/search/mobile-search-button";
 ---
 
 <nav
@@ -113,31 +113,7 @@ import CartCount from "@/components/cart/cart-count"
             </li>
 
             <li>
-                <a
-                    href="#"
-                    class="group block rounded-sm px-3 py-2 transition-colors duration-200 text-foreground/70 hover:text-foreground hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label="Цэс"
-                >
-                    <div class="flex flex-col items-center gap-1">
-                        <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            class="transition-transform duration-200 group-hover:scale-110"
-                            aria-hidden="true"
-                        >
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                        <p class="font-bold text-[11px] leading-none">Цэс</p>
-                    </div>
-                </a>
+                <MobileSearchButton client:idle />
             </li>
         </ul>
     </div>
