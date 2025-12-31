@@ -73,6 +73,9 @@ export const server = await Worker("api", {
 		DOMAIN: process.env.DOMAIN || "",
 		MESSENGER_ACCESS_TOKEN: process.env.MESSENGER_ACCESS_TOKEN || "",
 		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
+		SMS_GATEWAY_LOGIN: process.env.SMS_GATEWAY_LOGIN || "",
+		SMS_GATEWAY_PASSWORD: process.env.SMS_GATEWAY_PASSWORD || "",
+		
 	},
 
 	observability: {

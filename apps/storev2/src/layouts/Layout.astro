@@ -6,20 +6,42 @@ import MobileNavbar from "@/layouts/MobileNavbar.astro";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { Toaster } from "@/components/ui/toast";
 import QueryDevtools from "@/components/query-devtools";
+import PostHog from "../components/posthog.astro";
+import SEO from "@/components/SEO.astro";
 
 import "../styles/global.css";
 import "../styles/starwind.css"
+
+export interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	imageAlt?: string;
+	noindex?: boolean;
+	nofollow?: boolean;
+	canonical?: string;
+}
+
+const { title, description, image, imageAlt, noindex, nofollow, canonical } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="mn">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="generator" content={Astro.generator} />
-        <title>Vitamin Store</title>
+        <SEO 
+            title={title}
+            description={description}
+            image={image}
+            imageAlt={imageAlt}
+            noindex={noindex}
+            nofollow={nofollow}
+            canonical={canonical}
+        />
         <ClientRouter />
+        <PostHog />
     </head>
     <body>
         <div id="loading-bar" class="loading-bar">
@@ -78,4 +100,3 @@ import "../styles/starwind.css"
         }
     });
 </script>
-

@@ -10,6 +10,7 @@ import {
 	setSessionTokenCookie,
 } from "../../lib/session/store";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
+import { smsGateway } from "@/lib/integrations";
 
 export const auth = router({
 	sendOtp: publicProcedure
@@ -26,35 +27,24 @@ export const auth = router({
 				const otp = nanoid();
 				console.log("otp", otp, input.phone);
 				await ctx.kv.put(input.phone, otp, { expirationTtl: 3600 });
-				// const body = {
-				//   message: `Tanii nevtreh kod ${otp}`,
-				//   phoneNumbers: [`+976${input.phone}`],
-				//   simNumber: 2,
-				//   ttl: 3600,
-				//   withDeliveryReport: true,
-				//   priority: 100,
-				// };
-				// console.log("body", body);
-				// const response = await fetch(
-				//   "https://api.sms-gate.app/3rdparty/v1/messages",
-				//   {
-				//     method: "POST",
-				//     headers: {
-				//       "Content-Type": "application/json",
-				//       Authorization: "Basic UTFTM1FQOi16djJzeF9sMms2bnBy",
-				//     },
-				//     body: JSON.stringify(body),
-				//   }
-				// );
+				console.log("sms auth",process.env.SMS_GATEWAY_LOGIN,process.env.SMS_GATEWAY_PASSWORD) 
+				// Send SMS and wait for it to be sent
+				const finalState = await smsGateway.sendSmsAndWait({
+					message: `Tanii nevtreh kod ${otp}`,
+					phoneNumbers: [`+976${input.phone}`],
+				});
+				console.log("SMS finalState", finalState);
 
-				// if (!response.ok) {
-				//   const errorText = await response.text();
-				//   throw new Error(
-				//     `HTTP error! status: ${response.status}, message: ${errorText}`
-				//   );
-				// }
-				//   console.log("response", response);
-				//   return response;
+				// Check if SMS failed to send
+				if (finalState.state === "Failed") {
+					const errorMsg =
+						finalState.recipients[0]?.error ?? "Unknown SMS error";
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: `Failed to send OTP: ${errorMsg}`,
+					});
+				}
+
 				return {
 					success: true,
 					message: "OTP sent successfully",

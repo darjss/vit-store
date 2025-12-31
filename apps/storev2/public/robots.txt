@@ -1,0 +1,17 @@
+# robots.txt for amerikvitamin.mn
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+
+# Disallow private/user pages
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /profile
+Disallow: /payment/
+Disallow: /order/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://amerikvitamin.mn/sitemap-index.xml

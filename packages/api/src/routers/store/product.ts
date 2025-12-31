@@ -47,6 +47,47 @@ export const product = router({
 			}
 		}),
 
+	// Search endpoint for products page - higher limit, returns flat list
+	searchProductsForPage: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 50),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			try {
+				const { query, limit } = input;
+
+				// Search using Upstash - returns all data needed for display
+				const searchResults = await searchProducts(query, limit);
+
+				// If Upstash returns results, return them directly
+				if (searchResults.length > 0) {
+					return searchResults;
+				}
+
+				// Fallback to Postgres LIKE search if Upstash returns nothing
+				const q = createQueries(ctx.db).products.store;
+				const fallbackResults = await q.searchByName(query, limit ?? 50);
+				return fallbackResults.map((p) => ({
+					id: p.id,
+					slug: p.slug,
+					name: p.name,
+					price: p.price,
+					image: p.images[0]?.url || "",
+					brand: p.brand?.name || "",
+				}));
+			} catch (error) {
+				console.error("Error searching products for page:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
+
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = createQueries(ctx.db).products.store;

@@ -1,0 +1,105 @@
+---
+import { SEO as AstroSEO } from "astro-seo";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  imageAlt?: string;
+  noindex?: boolean;
+  nofollow?: boolean;
+  article?: {
+    publishedTime?: string;
+    modifiedTime?: string;
+    section?: string;
+    tags?: string[];
+  };
+  canonical?: string;
+}
+
+const SITE_NAME = "Америк Витамин";
+const SITE_URL = "https://amerikvitamin.mn";
+const DEFAULT_DESCRIPTION = "АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээл. Эрүүл мэндээ дэмжээрэй - 100% жинхэнэ бүтээгдэхүүн, хурдан хүргэлт.";
+const DEFAULT_IMAGE = `${SITE_URL}/og-image.svg`;
+
+const {
+  title,
+  description = DEFAULT_DESCRIPTION,
+  image = DEFAULT_IMAGE,
+  imageAlt = "Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл",
+  noindex = false,
+  nofollow = false,
+  article,
+  canonical,
+} = Astro.props;
+
+// Build page title with template
+const pageTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - АНУ-ын витамин, нэмэлт тэжээл`;
+
+// Canonical URL
+const canonicalURL = canonical || new URL(Astro.url.pathname, SITE_URL).toString();
+
+// Ensure image is absolute URL
+const absoluteImage = image.startsWith("http") ? image : `${SITE_URL}${image}`;
+
+// Open Graph type
+const ogType = article ? "article" : "website";
+---
+
+<AstroSEO
+  title={pageTitle}
+  description={description}
+  canonical={canonicalURL}
+  noindex={noindex}
+  nofollow={nofollow}
+  openGraph={{
+    basic: {
+      title: title || SITE_NAME,
+      type: ogType,
+      image: absoluteImage,
+      url: canonicalURL,
+    },
+    optional: {
+      description: description,
+      locale: "mn_MN",
+      siteName: SITE_NAME,
+    },
+    image: {
+      alt: imageAlt,
+      width: 1200,
+      height: 630,
+      type: "image/svg+xml",
+    },
+    ...(article && {
+      article: {
+        publishedTime: article.publishedTime,
+        modifiedTime: article.modifiedTime,
+        section: article.section,
+        tags: article.tags,
+      },
+    }),
+  }}
+  twitter={{
+    card: "summary_large_image",
+    site: "@amerikvitamin",
+    title: title || SITE_NAME,
+    image: absoluteImage,
+    imageAlt: imageAlt,
+    description: description,
+  }}
+  extend={{
+    link: [
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "sitemap", href: "/sitemap-index.xml" },
+    ],
+    meta: [
+      { name: "theme-color", content: "#FFF991" },
+      { name: "msapplication-TileColor", content: "#FFF991" },
+      { property: "og:locale", content: "mn_MN" },
+    ],
+  }}
+/>
+
+<!-- Additional meta tags not handled by astro-seo -->
+<meta name="robots" content={`${noindex ? 'noindex' : 'index'}, ${nofollow ? 'nofollow' : 'follow'}`} />
+<link rel="canonical" href={canonicalURL} />

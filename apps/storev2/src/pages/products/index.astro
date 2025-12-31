@@ -3,10 +3,11 @@
 import ProductsList from "@/components/product/products-list";
 import Layout from "@/layouts/Layout.astro";
 
-
+const title = "Бүтээгдэхүүн";
+const description = "АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлийн бүрэн цуглуулга. Эрүүл мэндээ дэмжих бүтээгдэхүүнүүдийг сонгоорой.";
 ---
 
-<Layout>
+<Layout title={title} description={description}>
     <ProductsList client:only="solidjs">
         <div slot="fallback">
             <div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">

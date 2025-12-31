@@ -193,10 +193,15 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
 			props.onSearchChange(inputValue());
+			setIsSearchDropdownOpen(false);
+			// Blur input to dismiss mobile keyboard
+			e.currentTarget.blur();
 		}
 		if (e.key === "Escape") {
 			setInputValue("");
 			props.onSearchChange("");
+			setIsSearchDropdownOpen(false);
+			e.currentTarget.blur();
 		}
 	};
 

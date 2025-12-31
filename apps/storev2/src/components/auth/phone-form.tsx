@@ -72,6 +72,10 @@ const PhoneForm = ({
 				onSubmit={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
+					// Blur active input to dismiss mobile keyboard
+					if (document.activeElement instanceof HTMLElement) {
+						document.activeElement.blur();
+					}
 					form.handleSubmit();
 				}}
 				class="space-y-6"

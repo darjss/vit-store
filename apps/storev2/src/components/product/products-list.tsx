@@ -15,11 +15,12 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
+import IconErrorWarning from "~icons/ri/error-warning-line";
+import IconSearch from "~icons/ri/search-line";
+import IconSparkle from "~icons/ri/sparkling-fill";
 import FilterBar from "../search/filter-bar";
 import ProductCard from "./product-card";
-import IconSearch from "~icons/ri/search-line";
-import IconErrorWarning from "~icons/ri/error-warning-line";
-import IconSparkle from "~icons/ri/sparkling-fill";
+import SearchProductCard from "./search-product-card";
 
 // Loading skeleton component
 const ProductCardSkeleton = () => (
@@ -67,6 +68,12 @@ const ProductsList = () => {
 		setLocalSearchTerm(searchTerm() ?? "");
 	});
 
+	// Check if we're in search mode (using Upstash) vs browse mode (using DB)
+	const isSearchMode = createMemo(() => {
+		const term = searchTerm();
+		return term !== undefined && term !== null && term.length >= 2;
+	});
+
 	// Fetch categories and brands for filters
 	const categoriesQuery = useQuery(
 		() => ({
@@ -97,50 +104,73 @@ const ProductsList = () => {
 		return val ? Number.parseInt(val, 10) : null;
 	});
 
-	// Products infinite query
+	// Search query - uses Upstash directly for search results (when searching)
+	const searchQuery = useQuery(
+		() => ({
+			queryKey: ["search-products-page", searchTerm()],
+			queryFn: async () => {
+				const term = searchTerm();
+				if (!term || term.length < 2) return [];
+				return await api.product.searchProductsForPage.query({
+					query: term,
+					limit: 50,
+				});
+			},
+			enabled: isSearchMode(),
+			staleTime: 1000 * 60 * 5, // 5 minutes
+			placeholderData: keepPreviousData,
+		}),
+		() => queryClient,
+	);
+
+	// Browse query - uses DB with infinite scroll (when not searching)
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
-				"products",
-				searchTerm(),
+				"products-browse",
 				sortField(),
 				sortDirection(),
 				categoryId(),
 				brandId(),
 			],
 			queryFn: async ({ pageParam }) => {
-				console.log("[ProductsList] Fetching products with:", {
-					cursor: pageParam,
-					searchTerm: searchTerm(),
-					sortField: sortField(),
-					sortDirection: sortDirection(),
-				});
 				const result = await api.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
-					searchTerm: searchTerm() || undefined,
 					sortField:
 						(sortField() as "price" | "stock" | "createdAt") || undefined,
 					sortDirection: (sortDirection() as "asc" | "desc") || undefined,
 					categoryId: categoryId() ?? undefined,
 					brandId: brandId() ?? undefined,
 				});
-				console.log("[ProductsList] Got result:", result.items.length, "items");
 				return result;
 			},
 			initialPageParam: undefined as string | undefined,
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
+			enabled: !isSearchMode(),
 		}),
 		() => queryClient,
 	);
 
-	// Computed states for better state management
+	// Computed states for search mode
+	const searchResults = createMemo(() => searchQuery.data ?? []);
+	const isSearchLoading = createMemo(
+		() => searchQuery.isLoading && !searchQuery.data,
+	);
+	const isSearchRefetching = createMemo(
+		() =>
+			searchQuery.isFetching && !searchQuery.isLoading && !!searchQuery.data,
+	);
+
+	// Computed states for browse mode
 	const isInitialLoading = createMemo(() => {
+		if (isSearchMode()) return isSearchLoading();
 		return productsQuery.isLoading && !productsQuery.data;
 	});
 
 	const isRefetching = createMemo(() => {
+		if (isSearchMode()) return isSearchRefetching();
 		return (
 			productsQuery.isFetching &&
 			!productsQuery.isLoading &&
@@ -149,28 +179,41 @@ const ProductsList = () => {
 		);
 	});
 
-	// Flatten all pages into a single array
-	// Handle placeholder data during transitions
-	const allProducts = createMemo(() => {
-		// Use data if available, even during refetch (keepPreviousData ensures this)
+	// Flatten all pages into a single array (for browse mode)
+	const allBrowseProducts = createMemo(() => {
 		const data = productsQuery.data;
 		if (!data) return [];
 		return data.pages.flatMap((page) => page.items);
 	});
 
-	// Check if we have any products to display (including placeholder data)
+	// Check if we have any products to display
 	const hasProducts = createMemo(() => {
-		return allProducts().length > 0;
+		if (isSearchMode()) return searchResults().length > 0;
+		return allBrowseProducts().length > 0;
 	});
 
-	// Check if we should show empty state (only when we have confirmed empty data, not during transitions)
+	// Check if we should show empty state
 	const shouldShowEmptyState = createMemo(() => {
+		if (isSearchMode()) {
+			return (
+				searchQuery.data !== undefined &&
+				!searchQuery.isLoading &&
+				!searchQuery.isFetching &&
+				searchResults().length === 0
+			);
+		}
 		return (
 			productsQuery.data &&
 			!productsQuery.isLoading &&
 			!productsQuery.isFetching &&
-			allProducts().length === 0
+			allBrowseProducts().length === 0
 		);
+	});
+
+	// Get total product count for display
+	const productCount = createMemo(() => {
+		if (isSearchMode()) return searchResults().length;
+		return allBrowseProducts().length;
 	});
 
 	// Filter handlers
@@ -209,7 +252,7 @@ const ProductsList = () => {
 		!!categoryId() ||
 		!!brandId();
 
-	// Infinite scroll observer
+	// Infinite scroll observer (only for browse mode)
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
 			(entries) => {
@@ -269,16 +312,21 @@ const ProductsList = () => {
 							<Show
 								when={hasProducts()}
 								fallback={
-									<>
-										{shouldShowEmptyState()
-											? "0 бүтээгдэхүүн"
-											: `${allProducts().length}+ бүтээгдэхүүн`}
-									</>
+									shouldShowEmptyState()
+										? "0 бүтээгдэхүүн"
+										: `${productCount()}+ бүтээгдэхүүн`
 								}
 							>
-								{productsQuery.hasNextPage
-									? `${allProducts().length}+ бүтээгдэхүүн`
-									: `${allProducts().length} бүтээгдэхүүн`}
+								<Show
+									when={isSearchMode()}
+									fallback={
+										productsQuery.hasNextPage
+											? `${productCount()}+ бүтээгдэхүүн`
+											: `${productCount()} бүтээгдэхүүн`
+									}
+								>
+									{`${productCount()} бүтээгдэхүүн`}
+								</Show>
 							</Show>
 						</span>
 					</Show>
@@ -372,15 +420,26 @@ const ProductsList = () => {
 								isRefetching() && "pointer-events-none opacity-50",
 							)}
 						>
-							<For each={allProducts()}>
-								{(product) => <ProductCard product={product} />}
-							</For>
+							{/* Search mode: render search results */}
+							<Show when={isSearchMode()}>
+								<For each={searchResults()}>
+									{(product) => <SearchProductCard product={product} />}
+								</For>
+							</Show>
+							{/* Browse mode: render infinite scroll products */}
+							<Show when={!isSearchMode()}>
+								<For each={allBrowseProducts()}>
+									{(product) => <ProductCard product={product} />}
+								</For>
+							</Show>
 						</div>
 					</div>
 				</Show>
 
 				{/* Error State */}
-				<Show when={productsQuery.isError}>
+				<Show
+					when={isSearchMode() ? searchQuery.isError : productsQuery.isError}
+				>
 					<div class="py-8 text-center sm:py-10">
 						<div class="mb-3 flex justify-center sm:mb-4">
 							<IconErrorWarning class="h-10 w-10 text-destructive sm:h-12 sm:w-12" />
@@ -394,8 +453,8 @@ const ProductsList = () => {
 					</div>
 				</Show>
 
-				{/* Loading More Skeleton */}
-				<Show when={productsQuery.isFetchingNextPage}>
+				{/* Loading More Skeleton (browse mode only) */}
+				<Show when={!isSearchMode() && productsQuery.isFetchingNextPage}>
 					<div class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 						<For each={Array(4)}>{() => <ProductCardSkeleton />}</For>
 					</div>
@@ -404,22 +463,25 @@ const ProductsList = () => {
 				{/* End of List */}
 				<Show
 					when={
-						productsQuery.data &&
-						!productsQuery.hasNextPage &&
-						allProducts().length > 0
+						isSearchMode()
+							? searchResults().length > 0
+							: productsQuery.data &&
+								!productsQuery.hasNextPage &&
+								allBrowseProducts().length > 0
 					}
 				>
 					<div class="mt-4 py-4 text-center sm:mt-6 sm:py-5 lg:mt-8 lg:py-6">
-						<span class="font-bold text-black/50 text-xs uppercase tracking-wide sm:text-sm lg:text-base flex items-center justify-center gap-2">
-							<IconSparkle class="text-yellow-500" /> Нийт{" "}
-							{allProducts().length} бүтээгдэхүүн
+						<span class="flex items-center justify-center gap-2 font-bold text-black/50 text-xs uppercase tracking-wide sm:text-sm lg:text-base">
+							<IconSparkle class="text-yellow-500" /> Нийт {productCount()}{" "}
+							бүтээгдэхүүн
 						</span>
 					</div>
 				</Show>
 
-				{/* Infinite Scroll Sentinel */}
+				{/* Infinite Scroll Sentinel (browse mode only) */}
 				<Show
 					when={
+						!isSearchMode() &&
 						productsQuery.hasNextPage &&
 						productsQuery.data &&
 						!productsQuery.isFetchingNextPage

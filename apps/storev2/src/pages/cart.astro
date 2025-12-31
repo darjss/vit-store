@@ -2,12 +2,13 @@
 import Layout from "@/layouts/Layout.astro";
 import CartList from "@/components/cart/cart-list";
 
-
 export const prerender = true;
 
+const title = "Сагс";
+const description = "Таны сагсанд байгаа бүтээгдэхүүнүүд. Захиалгаа баталгаажуулж, төлбөрөө хийгээрэй.";
 ---
 
-<Layout>
+<Layout title={title} description={description} noindex>
     <div class="container mx-auto px-4 py-8 min-h-screen">
         <CartList client:load>
             <div slot="fallback" class="space-y-6 min-h-[calc(100vh-200px)]">

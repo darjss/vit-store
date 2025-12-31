@@ -1,6 +1,11 @@
 import { makePersisted } from "@solid-primitives/storage";
 import { createMemo, createRoot, createSignal, onMount } from "solid-js";
 import { createStore } from "solid-js/store";
+import {
+	trackAddToCart,
+	trackCartOpened,
+	trackRemoveFromCart,
+} from "@/lib/analytics";
 import type { CartItems } from "@/lib/types";
 
 // Safe storage wrapper that handles SSR
@@ -106,7 +111,10 @@ export const cart = createRoot(() => {
 		isDrawerOpen() {
 			return isDrawerOpen();
 		},
-		openDrawer: () => setIsDrawerOpen(true),
+		openDrawer: () => {
+			trackCartOpened(count(), total());
+			setIsDrawerOpen(true);
+		},
 		closeDrawer: () => setIsDrawerOpen(false),
 		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
 
@@ -122,11 +130,20 @@ export const cart = createRoot(() => {
 			} else {
 				setCart("items", cartStore.items.length, product);
 			}
-			
+
+			// Track add to cart event
+			trackAddToCart({
+				product_id: product.productId,
+				product_name: product.name,
+				price: product.price,
+				quantity: product.quantity,
+			});
+
 			// Open drawer after adding item
 			setIsDrawerOpen(true);
 		},
 		remove: (productId: number) => {
+			trackRemoveFromCart(productId);
 			setCart("items", (items) =>
 				items.filter((item) => item.productId !== productId),
 			);

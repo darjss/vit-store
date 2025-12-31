@@ -5,6 +5,7 @@ import IconClose from "~icons/ri/close-line";
 
 interface CartDrawerItemProps {
 	item: CartItems;
+	onNavigate?: () => void;
 }
 
 const CartDrawerItem = (props: CartDrawerItemProps) => {
@@ -29,7 +30,10 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 			<div class="flex gap-3">
 				{/* Product Image */}
 				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-3 border-border bg-secondary/5 shadow-hard-sm">
-					<a href={`/product/${props.item.productId}`}>
+					<a
+						href={`/product/${props.item.productId}`}
+						onClick={props.onNavigate}
+					>
 						<Image
 							src={props.item.image}
 							alt={props.item.name}
@@ -46,6 +50,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 					<div>
 						<a
 							href={`/product/${props.item.productId}`}
+							onClick={props.onNavigate}
 							class="line-clamp-2 font-black text-sm uppercase transition-colors hover:text-primary"
 						>
 							{props.item.name}

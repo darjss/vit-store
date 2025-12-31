@@ -15,19 +15,18 @@ import IconAlert from "~icons/ri/alert-line";
 
 const { id } = Astro.params;
 if(id===undefined){
-    return Astro.redirect("/404");
+     Astro.redirect("/404");
 }
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
 const payment = await serverApi.payment.getPaymentByNumber.query({ paymentNumber: id });
 if(!payment){
-    return Astro.redirect("/404");
+    Astro.redirect("/404");
 }
 ---
 
 <Layout>
     <div class="container mx-auto px-3 py-4 sm:px-4 sm:py-6 max-w-3xl min-h-screen">
-        <!-- Header Section -->
         <div class="mb-4 sm:mb-6">
             <div class="border-3 sm:border-4 border-border bg-primary p-3 sm:p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)] mb-3 sm:mb-4">
                 <div class="flex items-center gap-2 sm:gap-3">
@@ -55,8 +54,8 @@ if(!payment){
                         {payment.order.products.map((product) => (
                             <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 border-2 border-border bg-background">
                                 {product.imageUrl && (
-                                    <img 
-                                        src={product.imageUrl} 
+                                    <img
+                                        src={product.imageUrl}
                                         alt={product.name}
                                         class="w-10 h-10 sm:w-12 sm:h-12 object-cover border-2 border-border shrink-0"
                                     />
@@ -72,8 +71,8 @@ if(!payment){
 
         <Tabs defaultValue="transfer" class="w-full">
             <TabsList class="w-full grid grid-cols-2 gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-muted/50 border-3 sm:border-4 border-border rounded-sm shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] mb-4 sm:mb-6">
-                <TabsTrigger 
-                    value="transfer" 
+                <TabsTrigger
+                    value="transfer"
                     class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
                 >
                     <span class="flex items-center justify-center gap-1.5 sm:gap-2">
@@ -81,8 +80,8 @@ if(!payment){
                         <span>Данс</span>
                     </span>
                 </TabsTrigger>
-                <TabsTrigger 
-                    value="qpay" 
+                <TabsTrigger
+                    value="qpay"
                     class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
                 >
                     <span class="flex items-center justify-center gap-1.5 sm:gap-2">
@@ -105,36 +104,32 @@ if(!payment){
                             </div>
                         </div>
 
-                        <!-- Payment Details Grid -->
                         <div class="space-y-3">
                             <div class="grid sm:grid-cols-2 gap-2.5 sm:gap-3">
-                                <!-- Account Number -->
                                 <div class="space-y-1.5">
                                     <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
                                         Данс
                                     </label>
                                     <div class="flex items-stretch">
                                         <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-white border-2 border-border rounded-l-sm text-sm sm:text-base font-black">
-                                            5063627657
+                                            5011147435
                                         </div>
-                                        <CopyButton text="5063627657" title="Данс" client:load />
+                                        <CopyButton text="5011147435" title="Данс" client:load />
                                     </div>
                                 </div>
 
-                                <!-- Account Name -->
                                 <div class="space-y-1.5">
                                     <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
                                         Нэр
                                     </label>
                                     <div class="flex items-stretch">
                                         <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-white border-2 border-border rounded-l-sm text-xs sm:text-sm font-bold leading-tight">
-                                            Олуулаа Икоммерс ХХК
+                                            Batdelger Jigjidsuren
                                         </div>
-                                        <CopyButton text="Олуулаа Икоммерс ХХК" title="Нэр" client:load />
+                                        <CopyButton text="Batdelger Jigjidsuren" title="Нэр" client:load />
                                     </div>
                                 </div>
 
-                                <!-- Amount -->
                                 <div class="space-y-1.5">
                                     <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
                                         Дүн
@@ -182,7 +177,6 @@ if(!payment){
                 <div class="border-3 sm:border-4 border-border bg-card shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
                     <div class="p-4 sm:p-5">
                         <div class="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-5 md:gap-6">
-                            <!-- QPay Logo -->
                             <div class="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 border-3 border-border bg-[#21399C] rounded-sm flex items-center justify-center p-3 sm:p-4 md:p-5 shadow-[3px_3px_0_0_rgba(0,0,0,1)] sm:shadow-[4px_4px_0_0_rgba(0,0,0,1)] shrink-0">
                                 <img src="/qpay.png" alt="QPay logo" class="w-full h-full object-contain" />
                             </div>

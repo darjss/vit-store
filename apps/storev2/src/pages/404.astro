@@ -4,11 +4,13 @@ import IconInfoCircle from "~icons/ri/information-line";
 import IconQuestion from "~icons/ri/question-line";
 import IconLightbulb from "~icons/ri/lightbulb-line";
 
-export const prerender = true
+export const prerender = true;
 
+const title = "404 - Хуудас олдсонгүй";
+const description = "Уучлаарай, таны хайж буй хуудас олдсонгүй.";
 ---
 
-<Layout>
+<Layout title={title} description={description} noindex>
     <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
         <div class="max-w-2xl w-full">
             <div

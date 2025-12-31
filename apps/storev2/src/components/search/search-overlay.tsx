@@ -1,5 +1,5 @@
 import type { Component } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
 	Sheet,
 	SheetContent,
@@ -17,6 +17,20 @@ const SearchOverlay: Component = () => {
 	const [isOpen, setIsOpen] = createSignal(false);
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [isSearching, setIsSearching] = createSignal(false);
+
+	// Close sheet on Astro View Transitions navigation
+	onMount(() => {
+		const handleNavigation = () => {
+			setIsOpen(false);
+		};
+		document.addEventListener("astro:before-preparation", handleNavigation);
+		onCleanup(() => {
+			document.removeEventListener(
+				"astro:before-preparation",
+				handleNavigation,
+			);
+		});
+	});
 
 	const handleSearch = (query: string) => {
 		setSearchQuery(query);

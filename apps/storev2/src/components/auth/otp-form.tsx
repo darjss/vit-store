@@ -1,12 +1,13 @@
 import { navigate } from "astro:transitions/client";
 import { useMutation } from "@tanstack/solid-query";
-import { createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import {
 	OTPField,
 	OTPFieldGroup,
 	OTPFieldInput,
 	OTPFieldSlot,
 } from "@/components/ui/otp";
+import { identifyUser } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { Button } from "../ui/button";
@@ -55,6 +56,9 @@ const OtpForm = ({
 				return await api.auth.login.mutate({ phone, otp });
 			},
 			onSuccess: async () => {
+				// Identify user in PostHog for cross-session tracking
+				await identifyUser(phone);
+
 				showToast({
 					title: "Амжилттай нэвтэрлээ",
 					description: "Тавтай морил!",
@@ -90,6 +94,15 @@ const OtpForm = ({
 		sendOptMutation.mutate(phone);
 		startTimer(59);
 	};
+
+	// Auto-submit when OTP is complete (4 digits)
+	createEffect(() => {
+		const otpValue = otp();
+		if (otpValue.length === 4 && !loginMutation.isPending) {
+			loginMutation.mutate(otpValue);
+		}
+	});
+
 	return (
 		<div class="space-y-6">
 			<div class="space-y-2 text-center">

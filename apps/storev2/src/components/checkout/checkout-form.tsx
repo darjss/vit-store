@@ -3,8 +3,9 @@ import { useMutation } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
-import { createEffect, For, Match, Suspense, Switch } from "solid-js";
+import { createEffect, For, Match, onMount, Suspense, Switch } from "solid-js";
 import * as v from "valibot";
+import { trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
 import EmptyCart from "@/components/cart/empty-cart";
 import { deliveryFee } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
@@ -16,16 +17,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
 
 const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
-	// const { data: user, isLoading: isUserLoading } = useQuery(
-	// 	() => ({
-	// 		queryKey: ["user"],
-	// 		queryFn: async () => {
-	// 			const data = await api.auth.me.query();
-	// 			return data;
-	// 		},
-	// 	}),
-	// 	() => queryClient,
-	// );
+	// Track checkout started when component mounts with items
+	onMount(() => {
+		if (cart.items().length > 0) {
+			trackCheckoutStarted(
+				cart.total(),
+				cart.count(),
+				cart.items().map((item) => item.productId),
+			);
+		}
+	});
+
 	createEffect(() => {
 		console.log("user", user);
 	});
@@ -37,6 +39,12 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 			},
 			onSuccess: async (data) => {
 				const paymentNumber = data?.paymentNumber;
+
+				// Track order placed (use payment number since order number isn't returned)
+				if (paymentNumber) {
+					trackOrderPlaced(paymentNumber, cart.count());
+				}
+
 				showToast({
 					title: "Амжилттай",
 					description: "Захиалга амжилттай үүслээ",
@@ -198,6 +206,10 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 										onSubmit={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
+											// Blur active input to dismiss mobile keyboard
+											if (document.activeElement instanceof HTMLElement) {
+												document.activeElement.blur();
+											}
 											form.handleSubmit();
 										}}
 									>

@@ -43,7 +43,12 @@ const CartDrawer = () => {
 						{/* Cart Items - Scrollable */}
 						<div class="scrollbar-hide flex-[2] space-y-3 overflow-y-auto p-4">
 							<For each={cart.items()}>
-								{(item) => <CartDrawerItem item={item} />}
+								{(item) => (
+									<CartDrawerItem
+										item={item}
+										onNavigate={() => cart.closeDrawer()}
+									/>
+								)}
 							</For>
 						</div>
 
@@ -79,15 +84,10 @@ const CartDrawer = () => {
 							{/* Checkout Button */}
 							<a
 								href="/checkout"
-								class="mt-4 block"
+								class="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
 								onClick={() => cart.closeDrawer()}
 							>
-								<button
-									type="button"
-									class="flex w-full items-center justify-center gap-2 border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
-								>
-									Худалдан авах <IconArrowRight class="h-5 w-5" />
-								</button>
+								Худалдан авах <IconArrowRight class="h-5 w-5" />
 							</a>
 
 							{/* Continue Shopping */}

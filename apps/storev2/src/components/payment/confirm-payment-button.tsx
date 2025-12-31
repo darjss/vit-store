@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
+import { trackPaymentConfirmed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { Button } from "../ui/button";
@@ -22,6 +23,10 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 				if (!data) {
 					return;
 				}
+
+				// Track payment confirmed
+				trackPaymentConfirmed(paymentNumber, data.orderNumber);
+
 				showToast({
 					title: "Амжилттай",
 					description: "Төлбөр баталгаажуулагдлаа",

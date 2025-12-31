@@ -13,9 +13,44 @@ import { api } from "@/lib/trpc";
 const products = await api.product.getProductsForHome.query();
 console.log("products", products);
 const { featuredProducts, newProducts, discountedProducts } = products;
+
+// JSON-LD for WebSite and Organization
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Америк Витамин",
+  url: "https://amerikvitamin.mn",
+  description: "АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээл",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: "https://amerikvitamin.mn/products?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+};
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Америк Витамин",
+  url: "https://amerikvitamin.mn",
+  logo: "https://amerikvitamin.mn/logo1.png",
+  sameAs: [],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer service",
+    availableLanguage: "Mongolian"
+  }
+};
 ---
 
 <Layout>
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    
     <Hero />
 
     <ProductSection

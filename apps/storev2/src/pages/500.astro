@@ -5,33 +5,29 @@ import IconCloseCircle from "~icons/ri/close-circle-line";
 import IconRefresh from "~icons/ri/refresh-line";
 import IconLightbulb from "~icons/ri/lightbulb-line";
 
-export const prerender = true
+export const prerender = true;
 
-
+const title = "500 - Серверийн алдаа";
+const description = "Уучлаарай, серверийн алдаа гарлаа. Бид асуудлыг засч байна.";
 ---
 
-<Layout>
+<Layout title={title} description={description} noindex>
     <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
         <div class="max-w-2xl w-full">
-            <!-- Main Error Container -->
             <div
                 class="bg-[oklch(0.92_0.18_15)] border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-8 md:p-12 relative overflow-hidden"
             >
-                <!-- Background Pattern -->
                 <div
                     class="absolute inset-0 opacity-10"
                     style="background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px);"
                 >
                 </div>
 
-                <!-- Glitch Effect Background -->
                 <div class="absolute top-4 right-4 opacity-30 animate-pulse">
                     <IconAlertTriangle class="h-20 w-20" />
                 </div>
 
-                <!-- Content -->
                 <div class="relative z-10">
-                    <!-- 500 Number -->
                     <div class="mb-6">
                         <h1
                             class="text-8xl md:text-9xl font-black leading-none animate-glitch inline-block"
@@ -44,7 +40,6 @@ export const prerender = true
                         </div>
                     </div>
 
-                    <!-- Error Message -->
                     <h2 class="text-3xl md:text-4xl font-black mb-4">
                         Серверийн алдаа!
                     </h2>
@@ -53,7 +48,6 @@ export const prerender = true
                         асуудлыг яаралтай засч байна.
                     </p>
 
-                    <!-- Error Icons -->
                     <div class="my-8 flex gap-4 flex-wrap">
                         <div
                             class="bg-black text-white border-[3px] border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.4)] animate-float-1 inline-block"
@@ -72,7 +66,6 @@ export const prerender = true
                         </div>
                     </div>
 
-                    <!-- Status Info -->
                     <div
                         class="bg-white/60 border-[3px] border-black p-4 mb-6 font-mono text-sm"
                     >

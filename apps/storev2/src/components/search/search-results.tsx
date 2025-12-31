@@ -2,6 +2,10 @@ import { useQuery } from "@tanstack/solid-query";
 import { formatCurrency } from "@vit/shared/utils";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
+import {
+	trackSearchPerformed,
+	trackSearchResultClicked,
+} from "@/lib/analytics";
 import AddToCartButton from "@/components/cart/add-to-cart-button";
 import { productColors } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
@@ -41,6 +45,27 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 	createEffect(() => {
 		props.onLoadingChange?.(query.isFetching);
 	});
+
+	// Track search when results are loaded
+	createEffect(() => {
+		if (query.data && !query.isFetching && props.searchQuery.length >= 2) {
+			trackSearchPerformed(props.searchQuery, query.data.length);
+		}
+	});
+
+	const handleProductClick = (
+		productId: number,
+		productName: string,
+		position: number,
+	) => {
+		trackSearchResultClicked(
+			props.searchQuery,
+			productId,
+			productName,
+			position,
+		);
+		props.onProductClick?.();
+	};
 
 	return (
 		<div class="mt-4 sm:mt-6">
@@ -111,12 +136,14 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						{/* Products List */}
 						<div class="flex flex-col gap-3">
 							<For each={query.data}>
-								{(product) => (
+								{(product, index) => (
 									<div class="group relative flex items-stretch gap-3 rounded-md border-2 border-black bg-white p-2 shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#000]">
 										{/* Image */}
 										<a
 											href={`/products/${product.slug}-${product.id}`}
-											onClick={props.onProductClick}
+											onClick={() =>
+												handleProductClick(product.id, product.name, index())
+											}
 											class="relative h-28 w-28 shrink-0 overflow-hidden rounded-sm border-2 border-black sm:h-32 sm:w-32"
 											style={`background: ${getProductColor(product.id)}`}
 										>
@@ -135,7 +162,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 										<div class="flex flex-1 flex-col justify-between py-1">
 											<a
 												href={`/products/${product.slug}-${product.id}`}
-												onClick={props.onProductClick}
+												onClick={() =>
+													handleProductClick(product.id, product.name, index())
+												}
 												class="flex flex-col gap-1.5"
 											>
 												<h3 class="line-clamp-3 font-bold text-base text-black leading-snug group-hover:underline sm:text-lg">

@@ -1,8 +1,13 @@
 import { makePersisted } from "@solid-primitives/storage";
-import { createEffect, createSignal, Match, Switch } from "solid-js";
+import { createEffect, createSignal, Match, onMount, Switch } from "solid-js";
 import { Card, CardContent } from "../ui/card";
 import OtpForm from "./otp-form";
 import PhoneForm from "./phone-form";
+
+// Key for storing the timestamp when OTP step was entered
+const OTP_TIMESTAMP_KEY = "login-otp-timestamp";
+// OTP expires after 5 minutes (in milliseconds)
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
 
 const LoginForm = () => {
 	const [phone, setPhone] = makePersisted(createSignal(""), {
@@ -10,7 +15,7 @@ const LoginForm = () => {
 		storage: localStorage,
 		deferInit: true,
 	});
-	const [step, setStep] = makePersisted(
+	const [step, setStepRaw] = makePersisted(
 		createSignal<"phone" | "otp">("phone"),
 		{
 			name: "login-step",
@@ -18,6 +23,35 @@ const LoginForm = () => {
 			deferInit: true,
 		},
 	);
+
+	// Wrapper to also track timestamp when entering OTP step
+	const setStep = (newStep: "phone" | "otp") => {
+		if (newStep === "otp") {
+			localStorage.setItem(OTP_TIMESTAMP_KEY, Date.now().toString());
+		} else {
+			localStorage.removeItem(OTP_TIMESTAMP_KEY);
+		}
+		setStepRaw(newStep);
+	};
+
+	// Check for stale OTP state on mount
+	onMount(() => {
+		const currentStep = step();
+		if (currentStep === "otp") {
+			const timestamp = localStorage.getItem(OTP_TIMESTAMP_KEY);
+			if (timestamp) {
+				const elapsed = Date.now() - Number.parseInt(timestamp, 10);
+				if (elapsed > OTP_EXPIRY_MS) {
+					// OTP has expired, reset to phone step
+					setStep("phone");
+				}
+			} else {
+				// No timestamp found, reset to phone step for safety
+				setStep("phone");
+			}
+		}
+	});
+
 	createEffect(() => {
 		console.log(step());
 	}, [step()]);

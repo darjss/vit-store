@@ -13,13 +13,11 @@ const EmptyCart = () => {
 				<p class="mb-6 font-bold text-muted-foreground">
 					Та одоогоор ямар ч бүтээгдэхүүн нэмээгүй байна
 				</p>
-				<a href="/products">
-					<button
-						type="button"
-						class="inline-flex h-12 items-center justify-center border-4 border-border bg-primary px-8 py-3 font-black text-base text-primary-foreground uppercase tracking-wider shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:bg-primary/90 hover:shadow-[3px_3px_0_0_#000] active:scale-[0.98]"
-					>
-						Дэлгүүр үзэх
-					</button>
+				<a
+					href="/products"
+					class="inline-flex h-12 items-center justify-center border-4 border-border bg-primary px-8 py-3 font-black text-base text-primary-foreground uppercase tracking-wider shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:bg-primary/90 hover:shadow-[3px_3px_0_0_#000] active:scale-[0.98]"
+				>
+					Дэлгүүр үзэх
 				</a>
 			</div>
 		</div>
