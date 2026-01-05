@@ -379,6 +379,7 @@ export const order = router({
 				sortField: v.optional(v.string()),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 				searchTerm: v.optional(v.string()),
+				date: v.optional(v.string()),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -397,6 +398,8 @@ export const order = router({
 				input.sortDirection,
 				"searchTerm:",
 				input.searchTerm,
+				"date:",
+				input.date,
 			);
 
 			try {
@@ -409,6 +412,7 @@ export const order = router({
 					sortField: input.sortField,
 					sortDirection: input.sortDirection,
 					searchTerm: input.searchTerm,
+					date: input.date,
 				});
 			} catch (e) {
 				console.error(e);

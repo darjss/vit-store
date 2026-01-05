@@ -24,8 +24,9 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 	);
 
 	const { data, isFetching } = useQuery({
-		...trpc.product.searchProductByNameForOrder.queryOptions({
-			searchTerm: debouncedSearchValue,
+		...trpc.product.searchProductsInstant.queryOptions({
+			query: debouncedSearchValue,
+			limit: 10,
 		}),
 		staleTime: 5 * 60 * 1000,
 		refetchOnWindowFocus: false,

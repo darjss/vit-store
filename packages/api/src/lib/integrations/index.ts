@@ -1,16 +1,8 @@
 export {
+	type GenericWebhookPayload,
 	messenger,
 	messengerWebhookHandler,
-	type GenericWebhookPayload,
 } from "./messenger";
-
-export {
-	createSmsClient,
-	smsClient,
-	smsGateway,
-	WebHookEventType as SmsWebHookEventType,
-} from "./sms";
-
 export type {
 	Device as SmsDevice,
 	DeviceSettings as SmsDeviceSettings,
@@ -24,4 +16,10 @@ export type {
 	TokenRequest as SmsTokenRequest,
 	TokenResponse as SmsTokenResponse,
 	WebHook as SmsWebHook,
+} from "./sms";
+export {
+	createSmsClient,
+	smsClient,
+	smsGateway,
+	WebHookEventType as SmsWebHookEventType,
 } from "./sms";

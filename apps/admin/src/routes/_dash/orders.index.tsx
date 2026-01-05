@@ -11,6 +11,7 @@ import {
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
 import {
+	Calendar as CalendarIcon,
 	ChevronDown,
 	ChevronUp,
 	PlusCircle,
@@ -24,8 +25,14 @@ import { DataPagination } from "@/components/data-pagination";
 import OrderCard from "@/components/order/order-card";
 import SubmitButton from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -47,6 +54,7 @@ export const Route = createFileRoute("/_dash/orders/")({
 			sortDirection?: "asc" | "desc";
 			orderStatus?: string;
 			paymentStatus?: string;
+			date?: string;
 		};
 		await ctx.queryClient.ensureQueryData(
 			ctx.trpc.order.getPaginatedOrders.queryOptions({
@@ -61,6 +69,7 @@ export const Route = createFileRoute("/_dash/orders/")({
 				paymentStatus: search.paymentStatus as
 					| (typeof paymentStatusConstants)[number]
 					| undefined,
+				date: search.date,
 			}),
 		);
 	},
@@ -75,6 +84,7 @@ export const Route = createFileRoute("/_dash/orders/")({
 		sortDirection: v.optional(v.picklist(["asc", "desc"])),
 		orderStatus: v.optional(v.picklist(orderStatusConstants)),
 		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
+		date: v.optional(v.string()),
 	}),
 });
 
@@ -87,8 +97,10 @@ function RouteComponent() {
 		sortDirection,
 		orderStatus,
 		paymentStatus,
+		date,
 	} = useSearch({ from: "/_dash/orders/" });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
+	const [isDateOpen, setIsDateOpen] = useState(false);
 	const hasActiveFilters =
 		orderStatus !== undefined ||
 		paymentStatus !== undefined ||
@@ -138,13 +150,13 @@ function RouteComponent() {
 		console.log("reset filters");
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
+			search: (_prev) => ({
 				orderStatus: undefined,
 				paymentStatus: undefined,
 				sortField: undefined,
 				sortDirection: "asc",
 				searchTerm: undefined,
+				date: undefined,
 				page: 1,
 			}),
 		});
@@ -162,6 +174,38 @@ function RouteComponent() {
 			}),
 		});
 	};
+	const handleDateSelect = (selectedDate: Date | undefined) => {
+		if (selectedDate) {
+			const dateStr = selectedDate.toISOString().split("T")[0];
+			navigate({
+				to: "/orders",
+				search: (prev) => ({
+					...prev,
+					date: dateStr,
+					page: 1,
+				}),
+			});
+		} else {
+			navigate({
+				to: "/orders",
+				search: (prev) => ({
+					...prev,
+					date: undefined,
+					page: 1,
+				}),
+			});
+		}
+		setIsDateOpen(false);
+	};
+	const formatDateDisplay = () => {
+		if (!date) return "Өнөөдөр";
+		const d = new Date(`${date}T00:00:00+08:00`);
+		return d.toLocaleDateString("mn-MN", {
+			month: "short",
+			day: "numeric",
+		});
+	};
+	const selectedDate = date ? new Date(`${date}T00:00:00+08:00`) : undefined;
 
 	return (
 		<Card className="w-full bg-transparent">
@@ -213,13 +257,54 @@ function RouteComponent() {
 
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
 						<div className="flex gap-2">
+							<Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
+								<PopoverTrigger asChild>
+									<button
+										type="button"
+										className={`inline-flex h-9 min-w-[100px] max-w-[120px] items-center justify-center gap-1 whitespace-nowrap rounded-md border px-3 py-2 font-medium text-xs ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+											date
+												? "bg-primary text-primary-foreground hover:bg-primary/90"
+												: "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+										}`}
+									>
+										<CalendarIcon className="h-4 w-4" />
+										<span className="truncate">{formatDateDisplay()}</span>
+									</button>
+								</PopoverTrigger>
+								<PopoverContent className="w-auto p-0" align="start">
+									<Calendar
+										mode="single"
+										selected={selectedDate}
+										onSelect={handleDateSelect}
+										disabled={(date) =>
+											date > new Date() ||
+											date < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+										}
+										components={{
+											DayButton: CalendarDayButton,
+										}}
+									/>
+									{date && (
+										<div className="border-t p-2">
+											<Button
+												variant="ghost"
+												size="sm"
+												className="w-full"
+												onClick={() => handleDateSelect(undefined)}
+											>
+												Өнөөдөр
+											</Button>
+										</div>
+									)}
+								</PopoverContent>
+							</Popover>
 							<Select
 								value={orderStatus ?? "all"}
 								onValueChange={(value) =>
 									handleFilterChange("orderStatus", value)
 								}
 							>
-								<SelectTrigger className="h-9 w-full sm:w-[140px]">
+								<SelectTrigger className="h-9 min-w-[100px] max-w-[140px]">
 									<SelectValue placeholder="All Statuses" />
 								</SelectTrigger>
 								<SelectContent>
@@ -237,7 +322,7 @@ function RouteComponent() {
 									handleFilterChange("paymentStatus", value)
 								}
 							>
-								<SelectTrigger className="h-9 w-full sm:w-[140px]">
+								<SelectTrigger className="h-9 min-w-[100px] max-w-[140px]">
 									<SelectValue placeholder="All Payments" />
 								</SelectTrigger>
 								<SelectContent>
@@ -252,7 +337,7 @@ function RouteComponent() {
 						</div>
 
 						<div className="flex items-center gap-2 sm:ml-auto">
-							{(filtersActive || sortField !== "") && (
+							{(filtersActive || sortField !== "" || date) && (
 								<Button
 									variant="default"
 									size="sm"
@@ -297,7 +382,7 @@ function RouteComponent() {
 
 				<Suspense
 					fallback={
-						<div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+						<div className="grid grid-cols-1 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
 							{Array.from({ length: 6 }).map((_, index) => (
 								<Skeleton
 									key={index}
@@ -315,6 +400,7 @@ function RouteComponent() {
 						sortDirection={sortDirection}
 						orderStatus={orderStatus}
 						paymentStatus={paymentStatus}
+						date={date}
 					/>
 				</Suspense>
 			</CardContent>
@@ -330,6 +416,7 @@ function OrdersList({
 	sortDirection,
 	orderStatus,
 	paymentStatus,
+	date,
 }: {
 	page: number;
 	pageSize: number;
@@ -338,6 +425,7 @@ function OrdersList({
 	sortDirection?: "asc" | "desc";
 	orderStatus?: string;
 	paymentStatus?: string;
+	date?: string;
 }) {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const { data: ordersData } = useSuspenseQuery({
@@ -353,6 +441,7 @@ function OrdersList({
 				| (typeof orderStatusConstants)[number]
 				| undefined,
 			searchTerm,
+			date,
 		}),
 	});
 	const orders = ordersData.orders;
@@ -371,7 +460,7 @@ function OrdersList({
 
 	return (
 		<>
-			<div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<div className="grid grid-cols-1 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{orders.map((order) => (
 					<div key={order.orderNumber} className="min-w-0">
 						<OrderCard order={order} />

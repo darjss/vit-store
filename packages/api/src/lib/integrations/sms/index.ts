@@ -1,10 +1,3 @@
-export {
-	createSmsClient,
-	smsClient,
-	smsGateway,
-	WebHookEventType,
-} from "./client";
-
 export type {
 	Device,
 	DeviceSettings,
@@ -18,4 +11,10 @@ export type {
 	TokenRequest,
 	TokenResponse,
 	WebHook,
+} from "./client";
+export {
+	createSmsClient,
+	smsClient,
+	smsGateway,
+	WebHookEventType,
 } from "./client";

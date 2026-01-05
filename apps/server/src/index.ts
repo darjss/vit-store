@@ -13,8 +13,8 @@ import {
 	messengerWebhookHandler,
 } from "@vit/api/integrations";
 import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
-import { createQueries } from "@vit/api/queries";
 import { bulkSyncProductsToUpstash } from "@vit/api/lib/upstash-sync";
+import { createQueries } from "@vit/api/queries";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -242,7 +242,12 @@ app.get("/admin/login/google/callback", async (c) => {
 
 		if (existingUser === null || existingUser.isApproved === false) {
 			console.log("redirecting to login");
-			return c.redirect(`${process.env.DASH_URL}/login`);
+			return c.redirect(
+				`${process.env.DASH_URL}/login?message=` +
+					encodeURIComponent(
+						"Таны бүртгэл баталгаажуулалтаар хүлээгдэж байна. Администратораас батламж авна уу.",
+					),
+			);
 		}
 
 		return c.redirect(`${process.env.DASH_URL}/login`);

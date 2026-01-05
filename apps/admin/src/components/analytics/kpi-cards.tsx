@@ -1,10 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
+	AlertTriangle,
 	DollarSign,
 	Package,
 	Repeat,
-	AlertTriangle,
 	TrendingUp,
 	Warehouse,
 } from "lucide-react";
@@ -66,4 +66,3 @@ export function KpiCards() {
 		</div>
 	);
 }
-

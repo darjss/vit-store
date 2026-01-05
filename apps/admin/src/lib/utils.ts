@@ -49,7 +49,7 @@ export const getPaymentProviderIcon = (provider: string) => {
 	}
 };
 export function formatCurrency(amount: number): string {
-	const formmated=amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+	const formmated = amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 	return `${formmated}₮`;
 }
 

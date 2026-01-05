@@ -1,5 +1,8 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import  type {CustomerSelectType, UserSelectType} from "../../api/src/db/schema"
+import type {
+	CustomerSelectType,
+	UserSelectType,
+} from "../../api/src/db/schema";
 export interface SessionConfig {
 	kvSessionPrefix: string;
 	kvUserSessionPrefix: string;
@@ -77,4 +80,4 @@ export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	user: TUser;
 	expiresAt: Date;
 }
-export type { CustomerSelectType, UserSelectType } 
+export type { CustomerSelectType, UserSelectType };

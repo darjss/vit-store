@@ -1,7 +1,7 @@
 import { cart } from "@/store/cart";
-import IconMinus from "~icons/ri/subtract-line";
 import IconPlus from "~icons/ri/add-line";
 import IconClose from "~icons/ri/close-line";
+import IconMinus from "~icons/ri/subtract-line";
 
 const CartActions = ({
 	quantity,

@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dropdown";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import IconUser from "~icons/ri/user-line";
 import IconLogin from "~icons/ri/login-box-line";
 import IconLogout from "~icons/ri/logout-box-line";
+import IconUser from "~icons/ri/user-line";
 
 const UserProfile = () => {
 	const userQuery = useQuery(

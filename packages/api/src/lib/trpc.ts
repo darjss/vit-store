@@ -184,7 +184,7 @@ export const adminProcedure = t.procedure
 	.use(adminAuthMiddleware);
 
 export const cachedProcedure = t.procedure
-.use(loggingMiddleware)
+	.use(loggingMiddleware)
 	.use(cacheMiddleware);
 export const customerCachedProcedure = customerProcedure.use(cacheMiddleware);
 export const adminCachedProcedure = adminProcedure.use(cacheMiddleware);

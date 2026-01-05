@@ -8,10 +8,10 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
+import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";
-import IconSearch from "~icons/ri/search-line";
 
 const SearchOverlay: Component = () => {
 	const [isOpen, setIsOpen] = createSignal(false);

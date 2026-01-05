@@ -1,9 +1,9 @@
-import type { DB } from "../../../db";
 import { createQueries } from "@vit/api/queries";
 import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
+import type { DB } from "../../../db";
 
 export async function messengerWebhookHandler(
 	payload: GenericWebhookPayload,

@@ -42,9 +42,7 @@ export function FailedPaymentsCard() {
 							</div>
 						</div>
 						<div className="rounded-base border-2 border-border bg-card p-4">
-							<p className="text-muted-foreground text-sm">
-								Нийт дүн:
-							</p>
+							<p className="text-muted-foreground text-sm">Нийт дүн:</p>
 							<p className="font-bold font-heading text-xl">
 								{formatCurrency(total)}
 							</p>
@@ -59,4 +57,3 @@ export function FailedPaymentsCard() {
 		</Card>
 	);
 }
-

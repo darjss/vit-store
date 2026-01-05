@@ -1,7 +1,7 @@
-import alchemy from "alchemy";
-import { Astro, } from "alchemy/cloudflare";
-import { config } from "dotenv";
 import path from "node:path";
+import alchemy from "alchemy";
+import { Astro } from "alchemy/cloudflare";
+import { config } from "dotenv";
 import { server } from "server/alchemy";
 
 const app = await alchemy("storev2");
@@ -25,7 +25,7 @@ export const storev2 = await Astro("front", {
 		server: server,
 		PUBLIC_API_URL: process.env.PUBLIC_API_URL || "",
 	},
-	adopt:true,
+	adopt: true,
 	domains: stage === "prod" ? ["amerikvitamin.mn"] : undefined,
 	observability: {
 		enabled: false,

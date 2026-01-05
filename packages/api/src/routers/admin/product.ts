@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { addProductSchema, updateProductSchema } from "@vit/shared";
 import { createQueries } from "@vit/api/queries";
+import { addProductSchema, updateProductSchema } from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
+import { searchProducts } from "../../lib/upstash-search";
 
 export const product = router({
 	searchProductByName: adminProcedure
@@ -35,6 +36,50 @@ export const product = router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products for order",
+					cause: error,
+				});
+			}
+		}),
+
+	searchProductsInstant: adminProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 50),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				const { query, limit } = input;
+				const searchResults = await searchProducts(query, limit);
+
+				if (searchResults.length > 0) {
+					const q = createQueries(ctx.db).products.admin;
+					const productsWithStock = await Promise.all(
+						searchResults.map(async (product) => {
+							const dbProduct = await q.getProductById(product.id);
+							return {
+								id: product.id,
+								name: product.name,
+								slug: product.slug,
+								price: product.price,
+								stock: dbProduct?.stock ?? 0,
+								images:
+									dbProduct?.images?.map((img) => ({
+										url: img.url,
+									})) ?? [],
+							};
+						}),
+					);
+					return productsWithStock;
+				}
+
+				return [];
+			} catch (error) {
+				console.error("Error in instant product search:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
 					cause: error,
 				});
 			}

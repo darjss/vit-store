@@ -12,9 +12,9 @@ import {
 } from "solid-js";
 import { api } from "@/lib/trpc";
 import IconCheck from "~icons/ri/check-line";
-import IconTime from "~icons/ri/time-line";
 import IconClose from "~icons/ri/close-line";
 import IconRefresh from "~icons/ri/refresh-line";
+import IconTime from "~icons/ri/time-line";
 
 const PaymentStatus = ({
 	payment,

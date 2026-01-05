@@ -2,9 +2,9 @@ import { useMutation } from "@tanstack/solid-query";
 import * as v from "valibot";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import IconInformation from "~icons/ri/information-line";
 import { useAppForm } from "../form/form";
 import { showToast } from "../ui/toast";
-import IconInformation from "~icons/ri/information-line";
 
 const PhoneForm = ({
 	setStep,

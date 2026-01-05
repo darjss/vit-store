@@ -1,7 +1,7 @@
 import { createMemo, createResource, Show } from "solid-js";
-import { api } from "../lib/trpc";
-import IconComputer from "~icons/ri/computer-line";
 import IconCheck from "~icons/ri/check-line";
+import IconComputer from "~icons/ri/computer-line";
+import { api } from "../lib/trpc";
 
 interface BenchmarkComparisonProps {
 	serverFetchTime: number;
@@ -139,7 +139,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 					</div>
 
 					<div class="mt-4 rounded-lg bg-blue-200 p-3">
-						<p class="font-medium text-blue-800 text-sm flex items-center gap-1">
+						<p class="flex items-center gap-1 font-medium text-blue-800 text-sm">
 							<IconCheck class="h-4 w-4" /> Rendered in browser
 						</p>
 						<p class="mt-1 text-blue-700 text-xs">

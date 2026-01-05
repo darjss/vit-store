@@ -20,14 +20,16 @@ const ProductCard = (props: ProductCardProps) => {
 	const product = props.product;
 
 	// Use product ID to get consistent color per product
-	const bgColor = createMemo(() => productColors[product.id % productColors.length]);
+	const bgColor = createMemo(
+		() => productColors[product.id % productColors.length],
+	);
 	const productImage = createMemo(() => product.images?.[0]?.url);
 	const productUrl = `/products/${product.slug}-${product.id}`;
 	const brandName = createMemo(() => product.brand?.name);
 
 	return (
 		<div
-			class="group relative flex flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000] sm:hover:shadow-[6px_6px_0_0_#000]"
+			class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] transition-all duration-200 hover:shadow-[4px_4px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000] sm:hover:shadow-[6px_6px_0_0_#000]"
 			data-product-id={product.id}
 		>
 			{/* Image Section */}
@@ -96,4 +98,3 @@ const ProductCard = (props: ProductCardProps) => {
 };
 
 export default ProductCard;
-

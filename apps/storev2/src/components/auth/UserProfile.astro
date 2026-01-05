@@ -1,6 +1,7 @@
 ---
-import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownTrigger } from "@/components/starwind/dropdown";
+
 import LogoutButton from "@/components/auth/logout-button";
+import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownTrigger } from "@/components/starwind/dropdown";
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";

@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
+import { createQueries } from "@vit/api/queries";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
-import { createQueries } from "@vit/api/queries";
+import { smsGateway } from "@/lib/integrations";
 import type { DB } from "../../db";
 import {
 	auth as authCheck,
@@ -10,7 +11,6 @@ import {
 	setSessionTokenCookie,
 } from "../../lib/session/store";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
-import { smsGateway } from "@/lib/integrations";
 
 export const auth = router({
 	sendOtp: publicProcedure
@@ -27,7 +27,11 @@ export const auth = router({
 				const otp = nanoid();
 				console.log("otp", otp, input.phone);
 				await ctx.kv.put(input.phone, otp, { expirationTtl: 3600 });
-				console.log("sms auth",process.env.SMS_GATEWAY_LOGIN,process.env.SMS_GATEWAY_PASSWORD) 
+				console.log(
+					"sms auth",
+					process.env.SMS_GATEWAY_LOGIN,
+					process.env.SMS_GATEWAY_PASSWORD,
+				);
 				// Send SMS and wait for it to be sent
 				const finalState = await smsGateway.sendSmsAndWait({
 					message: `Tanii nevtreh kod ${otp}`,

@@ -1,4 +1,3 @@
-
 import type { newOrderType } from "@vit/shared";
 import { messenger } from "./client";
 
@@ -20,21 +19,20 @@ export const sendTransferNotification = async (
 	console.log("sending transfer notification to messenger", message);
 	const result = await messenger.templates.button({
 		recipient: { id: "25172502442390308" },
-		
-			text: message,
-			buttons: [
-				{
-					type: "postback",
-					title: "Баталгаажуулах",
-					payload: `confirm_payment:${paymentNumber}`,
-				},
-				{
-					type: "postback",
-					title: "Цуцлах",
-					payload: `reject_payment:${paymentNumber}`,
-				},
-			],
 
+		text: message,
+		buttons: [
+			{
+				type: "postback",
+				title: "Баталгаажуулах",
+				payload: `confirm_payment:${paymentNumber}`,
+			},
+			{
+				type: "postback",
+				title: "Цуцлах",
+				payload: `reject_payment:${paymentNumber}`,
+			},
+		],
 	});
 	return result;
 };

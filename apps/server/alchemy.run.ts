@@ -47,7 +47,7 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 		password: process.env.PLANETSCALE_PASSWORD || "",
 		database: process.env.PLANETSCALE_DATABASE || "",
 	},
-	adopt:true,
+	adopt: true,
 	dev: {
 		origin: "postgres://postgres:postgres@localhost:5433/vitstore",
 	},
@@ -57,8 +57,8 @@ export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
 	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
-	
-	adopt:true,
+
+	adopt: true,
 	bindings: {
 		RATE_LIMITER: rateLimit,
 		DB: hyperdriveDB,
@@ -75,7 +75,6 @@ export const server = await Worker("api", {
 		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
 		SMS_GATEWAY_LOGIN: process.env.SMS_GATEWAY_LOGIN || "",
 		SMS_GATEWAY_PASSWORD: process.env.SMS_GATEWAY_PASSWORD || "",
-		
 	},
 
 	observability: {

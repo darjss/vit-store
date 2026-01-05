@@ -10,9 +10,9 @@ import {
 import { identifyUser } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import IconCloseCircle from "~icons/ri/close-circle-fill";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
-import IconCloseCircle from "~icons/ri/close-circle-fill";
 
 const OtpForm = ({
 	phone,

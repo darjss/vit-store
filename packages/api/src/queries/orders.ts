@@ -360,6 +360,7 @@ export function orderQueries(db: DB) {
 				sortField?: string;
 				sortDirection?: "asc" | "desc";
 				searchTerm?: string;
+				date?: string;
 			}) {
 				const conditions: (SQL<unknown> | undefined)[] = [];
 
@@ -379,6 +380,36 @@ export function orderQueries(db: DB) {
 						),
 					);
 				}
+
+				let startDate: Date;
+				let endDate: Date;
+
+				if (params.date !== undefined) {
+					const selectedDate = new Date(params.date + "T00:00:00+08:00");
+					startDate = new Date(selectedDate);
+					startDate.setHours(12, 0, 0, 0);
+					endDate = new Date(selectedDate);
+					endDate.setDate(endDate.getDate() + 1);
+					endDate.setHours(11, 59, 59, 999);
+				} else {
+					const now = new Date();
+					const currentHour = now.getHours();
+					if (currentHour < 12) {
+						startDate = new Date(now);
+						startDate.setDate(startDate.getDate() - 1);
+						startDate.setHours(12, 0, 0, 0);
+						endDate = new Date(now);
+						endDate.setHours(11, 59, 59, 999);
+					} else {
+						startDate = new Date(now);
+						startDate.setHours(12, 0, 0, 0);
+						endDate = new Date(now);
+						endDate.setDate(endDate.getDate() + 1);
+						endDate.setHours(11, 59, 59, 999);
+					}
+				}
+
+				conditions.push(between(OrdersTable.createdAt, startDate, endDate));
 
 				const orderByClauses: SQL<unknown>[] = [];
 				const primarySortColumn =

@@ -10,7 +10,6 @@ import * as v from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
 import { DataPagination } from "@/components/data-pagination";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -21,6 +20,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/customers")({
@@ -138,7 +138,11 @@ function RouteComponent() {
 					</div>
 				}
 			>
-				<CustomersList page={page} pageSize={pageSize} searchTerm={searchTerm} />
+				<CustomersList
+					page={page}
+					pageSize={pageSize}
+					searchTerm={searchTerm}
+				/>
 			</Suspense>
 		</div>
 	);

@@ -27,11 +27,7 @@ export function InventorySummary() {
 					</div>
 					{data.lowInventoryProducts.length > 5 && (
 						<Link to="/products">
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-8 text-xs"
-							>
+							<Button variant="ghost" size="sm" className="h-8 text-xs">
 								Бүгдийг харах
 								<ArrowRight className="ml-1 h-3 w-3" />
 							</Button>
@@ -86,4 +82,3 @@ export function InventorySummary() {
 		</Card>
 	);
 }
-

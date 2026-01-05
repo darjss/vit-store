@@ -56,7 +56,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 	return (
 		<section class="w-full py-8 sm:py-12">
 			<div class="mb-8 sm:mb-10">
-				<h2 class="mb-2 font-black text-2xl uppercase tracking-tight sm:mb-3 sm:text-3xl md:text-4xl flex items-center gap-2">
+				<h2 class="mb-2 flex items-center gap-2 font-black text-2xl uppercase tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
 					<IconLightbulb class="text-yellow-500" /> Таньд таалагдаж магадгүй
 				</h2>
 				<p class="font-bold text-muted-foreground text-sm uppercase tracking-wide sm:text-base">

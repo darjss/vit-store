@@ -74,7 +74,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 			</Dialog>
 			<Card
 				className={
-					"h-64 border-l-4 border-l-gray-400 transition-shadow duration-200 hover:shadow-md sm:h-72 md:h-80"
+					"h-auto min-h-[320px] border-l-4 border-l-gray-400 transition-shadow duration-200 hover:shadow-md sm:min-h-[360px] md:min-h-[400px]"
 				}
 				onClick={(e) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
@@ -175,13 +175,13 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 									</span>
 								</div>
 
-								<div className="grid flex-1 grid-cols-2 gap-1.5 overflow-auto pr-1">
+								<div className="grid flex-1 grid-cols-2 gap-2 overflow-auto pr-1">
 									{order.products?.map((detail, index) => (
 										<div
 											key={order.orderNumber + detail.productId + index}
-											className="flex items-center gap-1.5 rounded border bg-card p-1.5 text-xs"
+											className="flex items-center gap-2 rounded border bg-card p-2 sm:p-2.5"
 										>
-											<div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted/10 sm:h-12 sm:w-12">
+											<div className="h-16 w-16 shrink-0 overflow-hidden rounded bg-muted/10 sm:h-20 sm:w-20">
 												<img
 													src={detail.imageUrl || "/placeholder.jpg"}
 													alt={detail.name}
@@ -190,10 +190,10 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 												/>
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-xs">
+												<p className="truncate font-medium text-sm sm:text-base">
 													{detail.name}
 												</p>
-												<span className="text-muted-foreground text-xs">
+												<span className="text-muted-foreground text-xs sm:text-sm">
 													x{detail.quantity}
 												</span>
 											</div>

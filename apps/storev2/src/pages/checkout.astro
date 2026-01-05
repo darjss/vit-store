@@ -1,6 +1,7 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
 import CheckoutForm from "@/components/checkout/checkout-form";
+import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";

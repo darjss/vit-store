@@ -1,6 +1,6 @@
 import { cart } from "@/store/cart";
-import CartCount from "./cart-count";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-line";
+import CartCount from "./cart-count";
 
 const CartButton = () => {
 	return (

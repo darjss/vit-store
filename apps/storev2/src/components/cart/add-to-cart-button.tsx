@@ -1,9 +1,9 @@
 import { createSignal, Show } from "solid-js";
 import type { CartItems } from "@/lib/types";
 import { cart } from "@/store/cart";
-import { Button } from "../ui/button";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import IconCheck from "~icons/ri/check-line";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import { Button } from "../ui/button";
 
 interface AddToCartButtonProps {
 	cartItem: CartItems;

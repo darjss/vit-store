@@ -2,17 +2,17 @@ import { useQuery } from "@tanstack/solid-query";
 import { formatCurrency } from "@vit/shared/utils";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
+import AddToCartButton from "@/components/cart/add-to-cart-button";
 import {
 	trackSearchPerformed,
 	trackSearchResultClicked,
 } from "@/lib/analytics";
-import AddToCartButton from "@/components/cart/add-to-cart-button";
 import { productColors } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import IconSearch from "~icons/ri/search-line";
-import IconEmotionSad from "~icons/ri/emotion-sad-line";
 import IconArrowRight from "~icons/ri/arrow-right-line";
+import IconEmotionSad from "~icons/ri/emotion-sad-line";
+import IconSearch from "~icons/ri/search-line";
 
 interface SearchResultsProps {
 	searchQuery: string;

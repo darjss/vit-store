@@ -1,17 +1,20 @@
 ---
 
-const brands = [
-    "NOW Foods",
-    "Doctor's Best",
-    "Swanson",
-    "Life Extension",
-    "Nature's Bounty",
-    "21st Century",
-    "Solgar",
-    "Jarrow Formulas",
-    "Garden of Life"
-];
+import { api } from '@/lib/trpc';
 
+
+// const brands = [
+//     "NOW Foods",
+//     "Doctor's Best",
+//     "Swanson",
+//     "Life Extension",
+//     "Nature's Bounty",
+//     "21st Century",
+//     "Solgar",
+//     "Jarrow Formulas",
+//     "Garden of Life"
+// ];
+const brands=await api.brand.getAllBrands.query();
 interface Props {
     direction?: "left" | "right";
     speed?: "slow" | "normal" | "fast";
@@ -35,22 +38,13 @@ const animationDirection = direction === "left" ? "normal" : "reverse";
         {Array(4).fill(null).map(() => (
             brands.map((brand) => (
                 <span class="text-lg md:text-xl font-black uppercase tracking-wider flex items-center gap-12">
-                    {brand}
+                    {brand.name}
                     <span class="w-2 h-2 bg-primary rotate-45 block"></span>
                 </span>
             ))
         ))}
     </div>
-    <div class="absolute top-0 animate-marquee2 whitespace-nowrap flex gap-12 items-center min-w-full">
-        {Array(4).fill(null).map(() => (
-            brands.map((brand) => (
-                <span class="text-lg md:text-xl font-black uppercase tracking-wider flex items-center gap-12">
-                    {brand}
-                    <span class="w-2 h-2 bg-primary rotate-45 block"></span>
-                </span>
-            ))
-        ))}
-    </div>
+</div>
 </div>
 
 <style define:vars={{ duration: animationDuration, direction: animationDirection }}>
@@ -58,17 +52,9 @@ const animationDirection = direction === "left" ? "normal" : "reverse";
         animation: marquee var(--duration) linear infinite;
         animation-direction: var(--direction);
     }
-    .animate-marquee2 {
-        animation: marquee2 var(--duration) linear infinite;
-        animation-direction: var(--direction);
-    }
 
     @keyframes marquee {
         0% { transform: translateX(0%); }
         100% { transform: translateX(-100%); }
-    }
-    @keyframes marquee2 {
-        0% { transform: translateX(100%); }
-        100% { transform: translateX(0%); }
     }
 </style>

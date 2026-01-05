@@ -7,10 +7,10 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
+import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";
-import IconSearch from "~icons/ri/search-line";
 
 /**
  * Mobile-optimized search button that opens a full-screen search overlay.

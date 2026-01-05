@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import type { CartItems } from "@/lib/types";
-import AddToCartButton from "../cart/add-to-cart-button";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
+import AddToCartButton from "../cart/add-to-cart-button";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;

@@ -18,7 +18,9 @@ export function getRecentSearches(): SearchHistoryItem[] {
 
 		const items: SearchHistoryItem[] = JSON.parse(stored);
 		// Return sorted by most recent first
-		return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_SEARCHES);
+		return items
+			.sort((a, b) => b.timestamp - a.timestamp)
+			.slice(0, MAX_SEARCHES);
 	} catch {
 		return [];
 	}
@@ -80,4 +82,3 @@ export function clearHistory(): void {
 		// Silently fail
 	}
 }
-

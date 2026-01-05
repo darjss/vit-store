@@ -1,7 +1,7 @@
+import path from "node:path";
 import alchemy from "alchemy";
 import { Vite } from "alchemy/cloudflare";
 import { config } from "dotenv";
-import path from "node:path";
 
 const app = await alchemy("admin");
 const stage = app.stage;
@@ -14,7 +14,7 @@ console.log("Admin Stage:", stage, process.env.VITE_SERVER_URL);
 export const admin = await Vite("dashboard", {
 	domains: stage === "prod" ? ["admin.amerikvitamin.mn"] : undefined,
 	cwd: import.meta.dirname,
-	adopt:true,
+	adopt: true,
 	assets: "dist",
 	bindings: {
 		VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",

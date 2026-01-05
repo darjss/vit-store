@@ -1,9 +1,10 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
 import BenchmarkComparison from "@/components/benchmark-comparison";
-import { createServerClient } from "../lib/trpc";
-import IconServer from "~icons/ri/server-line";
+import Layout from "@/layouts/Layout.astro";
 import IconCheck from "~icons/ri/check-line";
+import IconServer from "~icons/ri/server-line";
+import { createServerClient } from "../lib/trpc";
 
 // Force dynamic rendering
 export const prerender = false;

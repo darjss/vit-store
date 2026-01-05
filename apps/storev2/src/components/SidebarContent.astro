@@ -1,11 +1,12 @@
 ---
+
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { createServerClient } from "@/lib/trpc";
-import IconHome from "~icons/ri/home-4-line";
+import IconArrowRight from "~icons/ri/arrow-right-s-line";
 import IconGrid from "~icons/ri/grid-line";
+import IconHome from "~icons/ri/home-4-line";
 import IconCart from "~icons/ri/shopping-cart-2-line";
 import IconUser from "~icons/ri/user-line";
-import IconArrowRight from "~icons/ri/arrow-right-s-line";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);

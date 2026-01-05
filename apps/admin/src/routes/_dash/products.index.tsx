@@ -1,4 +1,5 @@
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -14,7 +15,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import * as v from "valibot";
 import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";
@@ -28,8 +29,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/utils/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
+import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -87,7 +88,8 @@ function RouteComponent() {
 		sortDirection,
 		searchTerm,
 	} = useSearch({ from: "/_dash/products/" });
-	const [inputValue, setInputValue] = useState(searchTerm || "");
+	const [searchInput, setSearchInput] = useState(searchTerm || "");
+	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
 	const hasActiveFilters =
 		brandId !== undefined ||
 		categoryId !== undefined ||
@@ -96,33 +98,57 @@ function RouteComponent() {
 		searchTerm !== undefined;
 	const navigate = useNavigate({ from: Route.fullPath });
 
-	const handleSearch = () => {
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearch(searchInput);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchInput]);
+
+	const handleSearchChange = (value: string) => {
+		setSearchInput(value);
+	};
+
+	const handleClearSearch = () => {
+		setSearchInput("");
+		setDebouncedSearch("");
 		navigate({
 			to: "/products",
 			search: (prev) => ({
 				...prev,
-				searchTerm: inputValue,
+				searchTerm: undefined,
+				page: 1,
 			}),
 		});
 	};
-	const handleClearSearch = () => {
-		console.log("clear search");
-	};
+
+	const instantSearchQuery = useQuery({
+		...trpc.product.searchProductsInstant.queryOptions({
+			query: debouncedSearch,
+			limit: 50,
+		}),
+		enabled: debouncedSearch.length >= 2,
+		staleTime: 60_000,
+	});
+
+	const hasInstantResults =
+		instantSearchQuery.data && instantSearchQuery.data.length > 0;
+	const isSearching = instantSearchQuery.isFetching;
+
 	const handleFilterChange = (
 		field: "brandId" | "categoryId",
 		value: number | undefined,
 	) => {
-		console.log("filter change", field, value);
 		navigate({
 			to: "/products",
 			search: (prev) => ({
 				...prev,
 				[field]: value ?? undefined,
+				page: 1,
 			}),
 		});
 	};
 	const handleResetFilters = () => {
-		console.log("reset filters");
 		navigate({
 			to: "/products",
 			search: (prev) => ({
@@ -137,7 +163,6 @@ function RouteComponent() {
 		});
 	};
 	const handleSort = (field: string) => {
-		console.log("sort", field);
 		const newDirection =
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
@@ -156,12 +181,11 @@ function RouteComponent() {
 				<Search className="-translate-y-1/2 absolute top-1/2 left-4 h-6 w-6 text-muted-foreground" />
 				<Input
 					placeholder="Бүтээгдэхүүн хайх..."
-					value={inputValue}
-					onChange={(e) => setInputValue(e.target.value)}
-					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+					value={searchInput}
+					onChange={(e) => handleSearchChange(e.target.value)}
 					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
 				/>
-				{inputValue && (
+				{searchInput && (
 					<Button
 						size="icon"
 						variant="secondary"
@@ -172,15 +196,73 @@ function RouteComponent() {
 						<X className="h-4 w-4" />
 					</Button>
 				)}
-				<Button
-					onClick={handleSearch}
-					className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border shadow-shadow transition-shadow hover:shadow-md"
-					disabled={!inputValue.trim()}
-					aria-label="Search"
-				>
-					<Search className="h-5 w-5" />
-				</Button>
+				{isSearching && (
+					<div className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 flex items-center justify-center">
+						<div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+					</div>
+				)}
 			</div>
+
+			{hasInstantResults ? (
+				<div className="space-y-3">
+					<div className="flex items-center justify-between">
+						<p className="text-sm text-muted-foreground">
+							{instantSearchQuery.data?.length} үр дүн олдсон
+						</p>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handleClearSearch}
+							className="h-8"
+						>
+							Бүх бүтээгдэхүүн үзэх
+						</Button>
+					</div>
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						{instantSearchQuery.data?.map((product) => (
+							<ProductCard
+								key={product.id}
+								product={
+									{
+										id: product.id,
+										name: product.name,
+										slug: product.slug,
+										price: product.price,
+										stock: 0,
+										status: "active" as const,
+										discount: 0,
+										brandId: 0,
+										categoryId: 0,
+										description: "",
+										amount: "",
+										potency: "",
+										dailyIntake: 0,
+										createdAt: new Date(),
+										updatedAt: null,
+										deletedAt: null,
+										tags: [],
+										isFeatured: false,
+										ingredients: [],
+										seoTitle: null,
+										seoDescription: null,
+										name_mn: null,
+										weightGrams: 0,
+										images: product.image
+											? [{ id: 0, url: product.image, isPrimary: true }]
+											: [],
+									} as never
+								}
+								brands={[]}
+								categories={[]}
+							/>
+						))}
+					</div>
+				</div>
+			) : debouncedSearch.length >= 2 && !isSearching ? (
+				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+					"{debouncedSearch}" хайлтаар үр дүн олдсонгүй
+				</div>
+			) : null}
 
 			<Suspense
 				fallback={
@@ -229,7 +311,10 @@ function ProductsFilters({
 }: {
 	brandId?: number;
 	categoryId?: number;
-	onFilterChange: (field: "brandId" | "categoryId", value: number | undefined) => void;
+	onFilterChange: (
+		field: "brandId" | "categoryId",
+		value: number | undefined,
+	) => void;
 	hasActiveFilters: boolean;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";

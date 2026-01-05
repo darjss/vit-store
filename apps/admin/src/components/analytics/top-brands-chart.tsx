@@ -91,9 +91,7 @@ export function TopBrandsChart() {
 													<span className="text-muted-foreground">
 														Тоо ширхэг:{" "}
 													</span>
-													<span className="font-semibold">
-														{data.quantity}
-													</span>
+													<span className="font-semibold">{data.quantity}</span>
 												</p>
 											</div>
 										);
@@ -116,4 +114,3 @@ export function TopBrandsChart() {
 		</Card>
 	);
 }
-

@@ -1,5 +1,5 @@
-export { createDb } from "./db";
 export type { DB } from "./db";
+export { createDb } from "./db";
 export type {
 	BrandInsertType,
 	BrandSelectType,
@@ -57,7 +57,7 @@ export {
 	router,
 } from "./lib/trpc";
 export * from "./lib/types";
-export * from "./lib/utils";
-export * from "./lib/upstash-sync";
 export * from "./lib/upstash-search";
+export * from "./lib/upstash-sync";
+export * from "./lib/utils";
 export * from "./routers";

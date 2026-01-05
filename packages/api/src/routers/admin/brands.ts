@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { addBrandSchema } from "@vit/shared";
 import { createQueries } from "@vit/api/queries";
+import { addBrandSchema } from "@vit/shared";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 

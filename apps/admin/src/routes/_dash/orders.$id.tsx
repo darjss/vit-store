@@ -4,7 +4,6 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Suspense } from "react";
 import {
 	AlertCircle,
 	ArrowLeft,
@@ -20,7 +19,7 @@ import {
 	User,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { EditableField } from "@/components/editable-field";

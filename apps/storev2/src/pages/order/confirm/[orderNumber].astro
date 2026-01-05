@@ -1,12 +1,13 @@
 ---
-import Layout from "@/layouts/Layout.astro";
+
 import PaymentStatus from "@/components/payment/payment-status";
+import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
+import IconHome from "~icons/ri/home-4-line";
+import IconMail from "~icons/ri/mail-line";
 import IconMapPin from "~icons/ri/map-pin-line";
 import IconPhone from "~icons/ri/phone-line";
-import IconHome from "~icons/ri/home-4-line";
 import IconUser from "~icons/ri/user-line";
-import IconMail from "~icons/ri/mail-line";
 
 const { orderNumber } = Astro.params;
 const cookieHeader = Astro.request.headers.get("cookie") || "";

@@ -77,7 +77,7 @@ VALUES
   ('Jarrow Formulas', 'https://cdn.darjs.dev/brands/jarrow-formulas.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
   ('HEALTHS HARMONY', 'https://cdn.darjs.dev/brands/healths-harmony.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
   ('Terry Naturally', 'https://cdn.darjs.dev/brands/terry-naturally.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('Sambugra', NULL, NOW() - (RANDOM() * INTERVAL '30 days')),
+  ('Sambugra', 'https://cdn.darjs.dev/brands/mega.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
   ('Doctor''s Recipes', 'https://cdn.darjs.dev/brands/doctors-recipes.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
   ('Physician''s Choice', 'https://cdn.darjs.dev/brands/physicians-choice.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
   ('Mega', 'https://cdn.darjs.dev/brands/mega.webp', NOW() - (RANDOM() * INTERVAL '30 days')),
@@ -3634,23 +3634,106 @@ VALUES
   (99444555, 'Сонгинохайрхан дүүрэг, 14-р хороо, Худалдааны төв гудамж 45, байр 6', NOW() - (RANDOM() * INTERVAL '30 days')),
   (99555666, 'Сүхбаатар дүүрэг, 15-р хороо, Соёлын төв гудамж 112, байр 17', NOW() - (RANDOM() * INTERVAL '30 days'));
 
--- Seed Orders (depends on Customers) - Updated with Mongolian addresses
+-- Seed Orders (depends on Customers) - 30 orders with more variety
 INSERT INTO ecom_vit_order (order_number, customer_phone, status, address, delivery_provider, total, notes, created_at)
 VALUES
-  ('A1B2C3D4', 99123456, 'delivered', 'Баянзүрх дүүрэг, 1-р хороо, Нарны гудамж 15, байр 23', 'tu-delivery', 100000, NULL, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('E5F6G7H8', 99234567, 'pending', 'Сонгинохайрхан дүүрэг, 5-р хороо, Чингис хааны өргөн чөлөө 42, байр 8', 'self', 155000, 'Хаалганы ард үлдээх', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('J1K2L3M4', 99345678, 'shipped', 'Сүхбаатар дүүрэг, 2-р хороо, Энхтайвны өргөн чөлөө 78, байр 12', 'avidaa', 120000, NULL, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('N5P6Q7R8', 99456789, 'delivered', 'Хан-Уул дүүрэг, 3-р хороо, Жуулчны гудамж 34, байр 5', 'tu-delivery', 145000, 'Хонх дуудах', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('S1T2U3V4', 99567890, 'cancelled', 'Баянгол дүүрэг, 4-р хороо, Сэлбийн гудамж 56, байр 19', 'self', 85000, 'Харилцагч дуудсан', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('W5X6Y7Z8', 99678901, 'delivered', 'Чингэлтэй дүүрэг, 6-р хороо, Олимпийн гудамж 89, байр 7', 'tu-delivery', 112000, NULL, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('A9B8C7D6', 99789012, 'pending', 'Баянзүрх дүүрэг, 7-р хороо, Их наран гудамж 123, байр 45', 'avidaa', 178000, 'Болгоомжтой ачих', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('E1F2G3H4', 99890123, 'shipped', 'Сонгинохайрхан дүүрэг, 8-р хороо, Зайсан гудамж 67, байр 11', 'self', 93000, NULL, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('I5J6K7L8', 99901234, 'delivered', 'Сүхбаатар дүүрэг, 9-р хороо, Жамъян гүний гудамж 91, байр 3', 'tu-delivery', 234000, 'Харилцагч оройн цагт хүлээн авахыг илүүд үздэг', NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('M9N8O7P6', 99012345, 'pending', 'Хан-Уул дүүрэг, 10-р хороо, Буддын гудамж 145, байр 28', 'self', 156000, NULL, NOW() - (RANDOM() * INTERVAL '30 days'));
+  ('ORD001', 99123456, 'delivered', 'Баянзүрх дүүрэг, 1-р хороо, Нарны гудамж 15, байр 23', 'tu-delivery', 125000, NULL, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('ORD002', 99234567, 'pending', 'Сонгинохайрхан дүүрэг, 5-р хороо, Чингис хааны өргөн чөлөө 42, байр 8', 'self', 89000, 'Хаалганы ард үлдээх', NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('ORD003', 99345678, 'shipped', 'Сүхбаатар дүүрэг, 2-р хороо, Энхтайвны өргөн чөлөө 78, байр 12', 'avidaa', 156000, NULL, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('ORD004', 99456789, 'delivered', 'Хан-Уул дүүрэг, 3-р хороо, Жуулчны гудамж 34, байр 5', 'tu-delivery', 234000, 'Хонх дуудах', NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD005', 99567890, 'cancelled', 'Баянгол дүүрэг, 4-р хороо, Сэлбийн гудамж 56, байр 19', 'self', 45000, 'Харилцагч дуудсан', NOW() - (RANDOM() * INTERVAL '40 days')),
+  ('ORD006', 99678901, 'delivered', 'Чингэлтэй дүүрэг, 6-р хороо, Олимпийн гудамж 89, байр 7', 'tu-delivery', 178000, NULL, NOW() - (RANDOM() * INTERVAL '35 days')),
+  ('ORD007', 99789012, 'pending', 'Баянзүрх дүүрэг, 7-р хороо, Их наран гудамж 123, байр 45', 'avidaa', 67000, 'Болгоомжтой ачих', NOW() - (RANDOM() * INTERVAL '30 days')),
+  ('ORD008', 99890123, 'shipped', 'Сонгинохайрхан дүүрэг, 8-р хороо, Зайсан гудамж 67, байр 11', 'self', 312000, NULL, NOW() - (RANDOM() * INTERVAL '25 days')),
+  ('ORD009', 99901234, 'delivered', 'Сүхбаатар дүүрэг, 9-р хороо, Жамъян гүний гудамж 91, байр 3', 'tu-delivery', 189000, 'Оройн цагт хүлээн авах', NOW() - (RANDOM() * INTERVAL '20 days')),
+  ('ORD010', 99012345, 'pending', 'Хан-Уул дүүрэг, 10-р хороо, Буддын гудамж 145, байр 28', 'self', 245000, NULL, NOW() - (RANDOM() * INTERVAL '15 days')),
+  ('ORD011', 99111222, 'delivered', 'Баянгол дүүрэг, 11-р хороо, Цагаан элэгний гудамж 23, байр 14', 'tu-delivery', 98000, NULL, NOW() - (RANDOM() * INTERVAL '14 days')),
+  ('ORD012', 99222333, 'shipped', 'Чингэлтэй дүүрэг, 12-р хороо, Нарантуул гудамж 167, байр 9', 'avidaa', 134000, 'Цахим хаягаар мэдэгдэх', NOW() - (RANDOM() * INTERVAL '13 days')),
+  ('ORD013', 99333444, 'pending', 'Баянзүрх дүүрэг, 13-р хороо, Төв гудамж 201, байр 22', 'self', 267000, 'Гар утасны дугаар: 88889999', NOW() - (RANDOM() * INTERVAL '12 days')),
+  ('ORD014', 99444555, 'delivered', 'Сонгинохайрхан дүүрэг, 14-р хороо, Худалдааны төв гудамж 45, байр 6', 'tu-delivery', 345000, 'Түргэн хүргэлт хийнэ үү', NOW() - (RANDOM() * INTERVAL '11 days')),
+  ('ORD015', 99555666, 'cancelled', 'Сүхбаатар дүүрэг, 15-р хороо, Соёлын төв гудамж 112, байр 17', 'self', 78000, 'Бараа буцаасан', NOW() - (RANDOM() * INTERVAL '10 days')),
+  ('ORD016', 99123456, 'delivered', 'Баянзүрх дүүрэг, 1-р хороо, Нарны гудамж 15, байр 23', 'tu-delivery', 412000, NULL, NOW() - (RANDOM() * INTERVAL '9 days')),
+  ('ORD017', 99234567, 'shipped', 'Сонгинохайрхан дүүрэг, 5-р хороо, Чингис хааны өргөн чөлөө 42, байр 8', 'avidaa', 156000, NULL, NOW() - (RANDOM() * INTERVAL '8 days')),
+  ('ORD018', 99345678, 'pending', 'Сүхбаатар дүүрэг, 2-р хороо, Энхтайвны өргөн чөлөө 78, байр 12', 'self', 289000, 'Өрөөний 10-р давхар', NOW() - (RANDOM() * INTERVAL '7 days')),
+  ('ORD019', 99456789, 'delivered', 'Хан-Уул дүүрэг, 3-р хороо, Жуулчны гудамж 34, байр 5', 'tu-delivery', 167000, 'Нээлттэй хаалгатай', NOW() - (RANDOM() * INTERVAL '6 days')),
+  ('ORD020', 99567890, 'shipped', 'Баянгол дүүрэг, 4-р хороо, Сэлбийн гудамж 56, байр 19', 'self', 223000, NULL, NOW() - (RANDOM() * INTERVAL '5 days')),
+  ('ORD021', 99678901, 'delivered', 'Чингэлтэй дүүрэг, 6-р хороо, Олимпийн гудамж 89, байр 7', 'tu-delivery', 356000, 'Ажлын цагаар хүлээн авахгүй', NOW() - (RANDOM() * INTERVAL '4 days')),
+  ('ORD022', 99789012, 'pending', 'Баянзүрх дүүрэг, 7-р хороо, Их наран гудамж 123, байр 45', 'avidaa', 445000, NULL, NOW() - (RANDOM() * INTERVAL '3 days')),
+  ('ORD023', 99890123, 'cancelled', 'Сонгинохайрхан дүүрэг, 8-р хороо, Зайсан гудамж 67, байр 11', 'self', 89000, 'Үнийн зөрүү гарсан', NOW() - (RANDOM() * INTERVAL '2 days')),
+  ('ORD024', 99901234, 'delivered', 'Сүхбаатар дүүрэг, 9-р хороо, Жамъян гүний гудамж 91, байр 3', 'tu-delivery', 567000, 'Их бараа авсан', NOW() - (RANDOM() * INTERVAL '1 days')),
+  ('ORD025', 99012345, 'pending', 'Хан-Уул дүүрэг, 10-р хороо, Буддын гудамж 145, байр 28', 'self', 189000, NULL, NOW() - (RANDOM() * INTERVAL '12 hours')),
+  ('ORD026', 99111222, 'shipped', 'Баянгол дүүрэг, 11-р хороо, Цагаан элэгний гудамж 23, байр 14', 'avidaa', 234000, NULL, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('ORD027', 99222333, 'delivered', 'Чингэлтэй дүүрэг, 12-р хороо, Нарантуул гудамж 167, байр 9', 'tu-delivery', 312000, NULL, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('ORD028', 99333444, 'pending', 'Баянзүрх дүүрэг, 13-р хороо, Төв гудамж 201, байр 22', 'self', 145000, NULL, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('ORD029', 99444555, 'delivered', 'Сонгинохайрхан дүүрэг, 14-р хороо, Худалдааны төв гудамж 45, байр 6', 'tu-delivery', 478000, 'VIP харилцагч', NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD030', 99555666, 'shipped', 'Сүхбаатар дүүрэг, 15-р хороо, Соёлын төв гудамж 112, байр 17', 'self', 267000, NULL, NOW() - (RANDOM() * INTERVAL '40 days'));
 
 -- Create order lookup table for efficient joins
 CREATE TEMP TABLE order_lookup AS 
 SELECT order_number, id FROM ecom_vit_order;
+
+-- Seed Order Details (depends on Orders and Products)
+INSERT INTO ecom_vit_order_detail (order_id, product_id, quantity, created_at)
+SELECT 
+  ol.id AS order_id,
+  pl.id AS product_id,
+  v.quantity,
+  v.created_at
+FROM (VALUES
+  ('ORD001', 'micro-ingredients-vitamin-d3-1000-iu-k2-mk-7-25-mcg-300-softgels', 2, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('ORD001', 'micro-ingredients-vitamin-d3-5000-iu-k2-mk-7-100-mcg-300-softgels', 1, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('ORD002', 'doctors-best-vitamin-d3-5000-iu', 3, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('ORD003', 'double-wood-supplements-magnesium-glycinate-400mg', 2, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('ORD003', 'dr-tobias-turmeric-curcumin-1500mg-with-bioperine', 1, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('ORD004', 'doctors-best-glucosamine-chondroitin-msm', 1, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD004', 'doctors-best-msm-powder', 3, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD005', 'bioptimizers-magnesium-breakthrough-complex-supplement', 1, NOW() - (RANDOM() * INTERVAL '40 days')),
+  ('ORD006', 'doctors-best-vitamin-c-with-q-c', 2, NOW() - (RANDOM() * INTERVAL '35 days')),
+  ('ORD006', 'doctors-best-fully-active-methyl-b12-1500-mcg', 1, NOW() - (RANDOM() * INTERVAL '35 days')),
+  ('ORD007', 'deal-supplement-zinc-50mg-with-selenium-copper-240-capsules', 1, NOW() - (RANDOM() * INTERVAL '30 days')),
+  ('ORD008', 'further-food-collagen-peptides-powder', 2, NOW() - (RANDOM() * INTERVAL '25 days')),
+  ('ORD008', 'doctors-best-pure-collagen-types-1-3', 1, NOW() - (RANDOM() * INTERVAL '25 days')),
+  ('ORD008', 'biotin-and-collagen-supplements-with-keratin-25000-mcg', 3, NOW() - (RANDOM() * INTERVAL '25 days')),
+  ('ORD009', 'berberine-supplement-1500mg-with-ceylon-cinnamon-turmeric-root-240-veggie-capsules', 1, NOW() - (RANDOM() * INTERVAL '20 days')),
+  ('ORD009', 'doctor-recommended-supplements-berberine-plus-1200mg-per-serving-120-veggie-capsules', 2, NOW() - (RANDOM() * INTERVAL '20 days')),
+  ('ORD010', 'detoxadine-organic-nascent-liquid-iodine-supplement-drops', 1, NOW() - (RANDOM() * INTERVAL '15 days')),
+  ('ORD010', 'black-seed-oil-180-softgel-capsules-non-gmo-vegan-premium-cold-pressed', 2, NOW() - (RANDOM() * INTERVAL '15 days')),
+  ('ORD011', 'carlson-super-daily-d3-4000-iu-100-mcg-per-drop', 3, NOW() - (RANDOM() * INTERVAL '14 days')),
+  ('ORD012', 'carlson-super-daily-d3-k2', 2, NOW() - (RANDOM() * INTERVAL '13 days')),
+  ('ORD012', 'carlson-zinc-15-mg-zinc-supplement-zinc-gluconate', 1, NOW() - (RANDOM() * INTERVAL '13 days')),
+  ('ORD013', 'carlyle-dl-phenylalanine', 1, NOW() - (RANDOM() * INTERVAL '12 days')),
+  ('ORD013', 'carlyle-oregano-oil-4000mg-supplement', 2, NOW() - (RANDOM() * INTERVAL '12 days')),
+  ('ORD014', 'culturelle-kids-daily-probiotic-packets-for-kids-ages-3-30-count', 1, NOW() - (RANDOM() * INTERVAL '11 days')),
+  ('ORD014', 'culturelle-daily-probiotic-for-kids-veggie-fiber-gummies-ages-3', 3, NOW() - (RANDOM() * INTERVAL '11 days')),
+  ('ORD015', 'carlson-kids-chewable-zinc', 2, NOW() - (RANDOM() * INTERVAL '10 days')),
+  ('ORD016', 'enfamil-baby-vitamin-d-vi-sol-liquid-vitamin-d-drops', 1, NOW() - (RANDOM() * INTERVAL '9 days')),
+  ('ORD016', 'carlson-kids-chewable-vitamin-c', 2, NOW() - (RANDOM() * INTERVAL '9 days')),
+  ('ORD016', 'carlson-kids-chewable-iron', 1, NOW() - (RANDOM() * INTERVAL '9 days')),
+  ('ORD017', 'carlson-tocomin-suprabio-full-spectrum-tocotrienol-complex-non-gmo', 3, NOW() - (RANDOM() * INTERVAL '8 days')),
+  ('ORD018', 'ecological-formulas-annatto-tocotrienols-125-mg-60-gels', 1, NOW() - (RANDOM() * INTERVAL '7 days')),
+  ('ORD018', 'folic-acid-1000-mcg-500-coconut-oil-softgels', 2, NOW() - (RANDOM() * INTERVAL '7 days')),
+  ('ORD019', 'basigano-red-vine-leaf-horse-chestnut-extract-capsule-supplements', 1, NOW() - (RANDOM() * INTERVAL '6 days')),
+  ('ORD020', 'adrenal-system-support-cortisol-manager-2-month-supply', 2, NOW() - (RANDOM() * INTERVAL '5 days')),
+  ('ORD020', '2-pack-maximum-strength-zinc-100mg-zinc-picolinate-supplement-480-capsules', 1, NOW() - (RANDOM() * INTERVAL '5 days')),
+  ('ORD021', 'betterbody-foods-organic-chia-seeds', 1, NOW() - (RANDOM() * INTERVAL '4 days')),
+  ('ORD021', 'black-seed-oil-120-softgel-capsules', 3, NOW() - (RANDOM() * INTERVAL '4 days')),
+  ('ORD022', 'berrilys-organic-bitter-apricot-kernels', 2, NOW() - (RANDOM() * INTERVAL '3 days')),
+  ('ORD023', 'bitter-apricot-kernels-organic-raw', 1, NOW() - (RANDOM() * INTERVAL '2 days')),
+  ('ORD024', 'bio-vitalica-sea-moss-gummies-elderberry', 1, NOW() - (RANDOM() * INTERVAL '1 days')),
+  ('ORD024', 'b-beworths-elderberry-gummies', 2, NOW() - (RANDOM() * INTERVAL '1 days')),
+  ('ORD024', 'b-beworths-elderberry-gummies-irish-sea-moss', 3, NOW() - (RANDOM() * INTERVAL '1 days')),
+  ('ORD025', 'biotequelab-height-growth-maximizer', 1, NOW() - (RANDOM() * INTERVAL '12 hours')),
+  ('ORD026', 'certified-organic-tendon-mending-pills', 2, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('ORD027', 'doctors-best-pepzin-gi-zinc-l-carnosine-complex', 1, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('ORD027', 'doctors-best-betaine-hci-pepsin-gentian-bitters', 3, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('ORD028', 'doctors-best-pure-l-glutamine-powder', 2, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('ORD029', 'doctors-best-2-pack-glucosamine-chondroitin-msm-with-optimsm-240-veggie-caps', 1, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD029', 'glucosamine-chondroitin-msm-turmeric-4000mg-equivalent-300-bisected-tablets', 2, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD030', '100-natural-resveratrol-1000mg-per-serving-max-strength-180-capsules', 1, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('ORD030', 'growth-capsules-to-grow-taller-height-growth-maximizer-with-calcium', 3, NOW() - (RANDOM() * INTERVAL '40 days'))
+) AS v(order_number, product_slug, quantity, created_at)
+JOIN order_lookup ol ON v.order_number = ol.order_number
+JOIN product_lookup pl ON v.product_slug = pl.slug;
 
 -- Seed Payments (depends on Orders)
 INSERT INTO ecom_vit_payment (payment_number, order_id, provider, status, amount, created_at)
@@ -3662,16 +3745,36 @@ SELECT
   v.amount,
   v.created_at
 FROM (VALUES
-  ('A1B2C3D4E5', 'A1B2C3D4', 'transfer', 'success', 100000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('F6G7H8I9J0', 'E5F6G7H8', 'qpay', 'pending', 155000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('K1L2M3N4O5', 'J1K2L3M4', 'cash', 'success', 120000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('P6Q7R8S9T0', 'N5P6Q7R8', 'transfer', 'success', 145000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('U1V2W3X4Y5', 'S1T2U3V4', 'cash', 'failed', 85000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('Z6A7B8C9D0', 'W5X6Y7Z8', 'qpay', 'success', 112000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('E1F2G3H4I5', 'A9B8C7D6', 'transfer', 'pending', 178000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('J6K7L8M9N0', 'E1F2G3H4', 'cash', 'success', 93000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('O1P2Q3R4S5', 'I5J6K7L8', 'qpay', 'success', 234000, NOW() - (RANDOM() * INTERVAL '30 days')),
-  ('T6U7V8W9X0', 'M9N8O7P6', 'transfer', 'pending', 156000, NOW() - (RANDOM() * INTERVAL '30 days'))
+  ('PAY-00001A', 'ORD001', 'transfer', 'success', 125000, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('PAY-00002A', 'ORD002', 'qpay', 'pending', 89000, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('PAY-00003A', 'ORD003', 'cash', 'success', 156000, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('PAY-00004A', 'ORD004', 'transfer', 'success', 234000, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('PAY-00005A', 'ORD005', 'cash', 'failed', 45000, NOW() - (RANDOM() * INTERVAL '40 days')),
+  ('PAY-00006A', 'ORD006', 'qpay', 'success', 178000, NOW() - (RANDOM() * INTERVAL '35 days')),
+  ('PAY-00007A', 'ORD007', 'transfer', 'pending', 67000, NOW() - (RANDOM() * INTERVAL '30 days')),
+  ('PAY-00008A', 'ORD008', 'cash', 'success', 312000, NOW() - (RANDOM() * INTERVAL '25 days')),
+  ('PAY-00009A', 'ORD009', 'qpay', 'success', 189000, NOW() - (RANDOM() * INTERVAL '20 days')),
+  ('PAY-00010A', 'ORD010', 'transfer', 'pending', 245000, NOW() - (RANDOM() * INTERVAL '15 days')),
+  ('PAY-00011A', 'ORD011', 'qpay', 'success', 98000, NOW() - (RANDOM() * INTERVAL '14 days')),
+  ('PAY-00012A', 'ORD012', 'transfer', 'pending', 134000, NOW() - (RANDOM() * INTERVAL '13 days')),
+  ('PAY-00013A', 'ORD013', 'cash', 'success', 267000, NOW() - (RANDOM() * INTERVAL '12 days')),
+  ('PAY-00014A', 'ORD014', 'qpay', 'success', 345000, NOW() - (RANDOM() * INTERVAL '11 days')),
+  ('PAY-00015A', 'ORD015', 'cash', 'failed', 78000, NOW() - (RANDOM() * INTERVAL '10 days')),
+  ('PAY-00016A', 'ORD016', 'transfer', 'success', 412000, NOW() - (RANDOM() * INTERVAL '9 days')),
+  ('PAY-00017A', 'ORD017', 'qpay', 'pending', 156000, NOW() - (RANDOM() * INTERVAL '8 days')),
+  ('PAY-00018A', 'ORD018', 'cash', 'success', 289000, NOW() - (RANDOM() * INTERVAL '7 days')),
+  ('PAY-00019A', 'ORD019', 'transfer', 'success', 167000, NOW() - (RANDOM() * INTERVAL '6 days')),
+  ('PAY-00020A', 'ORD020', 'qpay', 'pending', 223000, NOW() - (RANDOM() * INTERVAL '5 days')),
+  ('PAY-00021A', 'ORD021', 'cash', 'success', 356000, NOW() - (RANDOM() * INTERVAL '4 days')),
+  ('PAY-00022A', 'ORD022', 'transfer', 'pending', 445000, NOW() - (RANDOM() * INTERVAL '3 days')),
+  ('PAY-00023A', 'ORD023', 'qpay', 'failed', 89000, NOW() - (RANDOM() * INTERVAL '2 days')),
+  ('PAY-00024A', 'ORD024', 'transfer', 'success', 567000, NOW() - (RANDOM() * INTERVAL '1 days')),
+  ('PAY-00025A', 'ORD025', 'cash', 'pending', 189000, NOW() - (RANDOM() * INTERVAL '12 hours')),
+  ('PAY-00026A', 'ORD026', 'qpay', 'pending', 234000, NOW() - (RANDOM() * INTERVAL '60 days')),
+  ('PAY-00027A', 'ORD027', 'transfer', 'success', 312000, NOW() - (RANDOM() * INTERVAL '55 days')),
+  ('PAY-00028A', 'ORD028', 'cash', 'pending', 145000, NOW() - (RANDOM() * INTERVAL '50 days')),
+  ('PAY-00029A', 'ORD029', 'qpay', 'success', 478000, NOW() - (RANDOM() * INTERVAL '45 days')),
+  ('PAY-00030A', 'ORD030', 'transfer', 'pending', 267000, NOW() - (RANDOM() * INTERVAL '40 days'))
 ) AS v(payment_number, order_number, provider, status, amount, created_at)
 JOIN order_lookup ol ON v.order_number = ol.order_number;
 

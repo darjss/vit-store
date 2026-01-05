@@ -1,14 +1,14 @@
+import { navigate } from "astro:transitions/client";
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
 import { trackPaymentConfirmed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import { Button } from "../ui/button";
-import { showToast } from "../ui/toast";
-import { navigate } from "astro:transitions/client";
-import IconLoader from "~icons/ri/loader-4-line";
 import IconCheckboxCircle from "~icons/ri/checkbox-circle-fill";
 import IconCloseCircle from "~icons/ri/close-circle-fill";
+import IconLoader from "~icons/ri/loader-4-line";
+import { Button } from "../ui/button";
+import { showToast } from "../ui/toast";
 
 const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 	console.log("paymentNumber", paymentNumber);
@@ -47,14 +47,14 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 	return (
 		<Button onClick={handleConfirmPayment}>
 			<Show when={mutation.isPending}>
-				<IconLoader class="h-4 w-4 animate-spin mr-2" /> loading...
+				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> loading...
 			</Show>
 			<Show when={mutation.isSuccess}>
-				<IconCheckboxCircle class="h-4 w-4 text-green-500 mr-2" /> Төлбөр
+				<IconCheckboxCircle class="mr-2 h-4 w-4 text-green-500" /> Төлбөр
 				баталгаажуулагдлаа
 			</Show>
 			<Show when={mutation.isError}>
-				<IconCloseCircle class="h-4 w-4 text-red-500 mr-2" /> Төлбөр
+				<IconCloseCircle class="mr-2 h-4 w-4 text-red-500" /> Төлбөр
 				баталгаажуулах үед алдаа гарлаа
 			</Show>
 			<Show

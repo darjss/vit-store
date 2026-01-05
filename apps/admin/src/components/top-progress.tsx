@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 export function TopProgress({ visible }: { visible: boolean }) {
@@ -10,7 +9,7 @@ export function TopProgress({ visible }: { visible: boolean }) {
 			const timer = setTimeout(() => setShouldShow(true), 100);
 			return () => clearTimeout(timer);
 		}
-			setShouldShow(false);
+		setShouldShow(false);
 	}, [visible]);
 
 	if (!shouldShow) return null;
@@ -23,4 +22,3 @@ export function TopProgress({ visible }: { visible: boolean }) {
 		</div>
 	);
 }
-

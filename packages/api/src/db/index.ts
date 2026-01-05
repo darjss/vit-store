@@ -7,7 +7,6 @@ export type DB = PostgresJsDatabase<typeof schema>;
 
 // Hyperdrive binding type - connectionString is the main property
 
-
 /**
  * Creates a database instance from a Hyperdrive binding.
  * This must be called within a request handler, not at module scope.

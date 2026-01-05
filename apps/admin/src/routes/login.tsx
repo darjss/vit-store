@@ -1,4 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
+import { AlertCircle } from "lucide-react";
+import * as v from "valibot";
 import { GoogleIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
@@ -14,9 +16,14 @@ export const Route = createFileRoute("/login")({
 		}
 		return { session };
 	},
+	validateSearch: v.object({
+		message: v.optional(v.string()),
+	}),
 });
 
 function RouteComponent() {
+	const { message } = useSearch({ from: "/login" });
+
 	return (
 		<div className="min-h-screen w-full bg-background">
 			<div
@@ -42,6 +49,13 @@ function RouteComponent() {
 							Sign in to access your admin dashboard
 						</p>
 					</div>
+
+					{message && (
+						<div className="mb-6 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+							<AlertCircle className="h-4 w-4 shrink-0" />
+							<p>{message}</p>
+						</div>
+					)}
 
 					<Button asChild variant="default" size="lg" className="w-full gap-3">
 						<a href={`${import.meta.env.VITE_SERVER_URL}/admin/login/google`}>

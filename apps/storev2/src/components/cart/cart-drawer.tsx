@@ -1,16 +1,16 @@
 import { For, Show } from "solid-js";
-import { cart } from "@/store/cart";
-import { deliveryFee } from "@/lib/constant";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { deliveryFee } from "@/lib/constant";
+import { cart } from "@/store/cart";
+import IconArrowRight from "~icons/ri/arrow-right-line";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import CartDrawerItem from "./cart-drawer-item";
 import EmptyCart from "./empty-cart";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import IconArrowRight from "~icons/ri/arrow-right-line";
 
 const CartDrawer = () => {
 	const isEmpty = () => cart.items().length === 0;

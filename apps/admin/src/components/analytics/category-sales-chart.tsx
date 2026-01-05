@@ -84,9 +84,7 @@ export function CategorySalesChart() {
 														Орлого:{" "}
 													</span>
 													<span className="font-semibold">
-														{formatCurrency(
-															payload[0].value as number,
-														)}
+														{formatCurrency(payload[0].value as number)}
 													</span>
 												</p>
 											</div>
@@ -110,4 +108,3 @@ export function CategorySalesChart() {
 		</Card>
 	);
 }
-

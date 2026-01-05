@@ -2,11 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { createQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { newOrderSchema } from "../../../../shared/src";
+import { createSession, setSessionTokenCookie } from "../../lib/session/store";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
 import { addCustomerToDB } from "./auth";
-import { createSession } from "../../lib/session/store";
-import { setSessionTokenCookie } from "../../lib/session/store";
 
 export const order = router({
 	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {

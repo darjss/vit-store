@@ -1,5 +1,7 @@
 ---
 
+
+
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import Tabs from "@/components/starwind/tabs/Tabs.astro";
 import TabsContent from "@/components/starwind/tabs/TabsContent.astro";
@@ -8,10 +10,10 @@ import TabsTrigger from "@/components/starwind/tabs/TabsTrigger.astro";
 import CopyButton from "@/components/ui/copy-button";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
+import IconAlert from "~icons/ri/alert-line";
 import IconCreditCard from "~icons/ri/bank-card-line";
 import IconBank from "~icons/ri/bank-line";
 import IconMobile from "~icons/ri/smartphone-line";
-import IconAlert from "~icons/ri/alert-line";
 
 const { id } = Astro.params;
 if(id===undefined){
