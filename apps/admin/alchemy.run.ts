@@ -7,21 +7,21 @@ const app = await alchemy("admin");
 const stage = app.stage;
 
 config({
-	path: path.join(import.meta.dirname, `.env.${stage}`),
+  path: path.join(import.meta.dirname, `.env.${stage}`),
 });
 
 console.log("Admin Stage:", stage, process.env.VITE_SERVER_URL);
 export const admin = await Vite("dashboard", {
-	domains: stage === "prod" ? ["admin.amerikvitamin.mn"] : undefined,
-	cwd: import.meta.dirname,
-	adopt: true,
-	assets: "dist",
-	bindings: {
-		VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",
-	},
-	dev: {
-		command: "bun run dev:vite",
-	},
+  domains: stage === "prod" ? ["admin.amerikvitamin.mn"] : undefined,
+  cwd: import.meta.dirname,
+  adopt: true,
+  assets: "dist",
+  bindings: {
+    VITE_SERVER_URL: process.env.VITE_SERVER_URL || "",
+  },
+  dev: {
+    command: "bun run dev:vite",
+  },
 });
 
 console.log(`Admin  -> ${admin.url}`);

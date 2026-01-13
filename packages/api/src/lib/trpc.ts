@@ -66,6 +66,56 @@ const createCacheKey = async (path: string, input: any): Promise<string> => {
 	return `cache:${hashHex}`;
 };
 
+/**
+ * Safely wraps any error into a TRPCError.
+ * This ensures the frontend always receives a valid JSON error response.
+ */
+export function ensureTRPCError(
+	error: unknown,
+	fallbackMessage = "An unexpected error occurred",
+): TRPCError {
+	// Already a TRPCError - return as-is
+	if (error instanceof TRPCError) {
+		return error;
+	}
+
+	// Regular Error - wrap it
+	if (error instanceof Error) {
+		return new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: error.message || fallbackMessage,
+			cause: error,
+		});
+	}
+
+	// String error
+	if (typeof error === "string") {
+		return new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: error || fallbackMessage,
+		});
+	}
+
+	// Unknown error type - use fallback
+	return new TRPCError({
+		code: "INTERNAL_SERVER_ERROR",
+		message: fallbackMessage,
+		cause: error,
+	});
+}
+
+/**
+ * Error handling middleware that ensures ALL errors are proper TRPCErrors.
+ * This prevents the "Unexpected token" JSON parse errors on the frontend.
+ */
+const errorHandlingMiddleware = t.middleware(async ({ next }) => {
+	try {
+		return await next();
+	} catch (error) {
+		throw ensureTRPCError(error);
+	}
+});
+
 const loggingMiddleware = t.middleware(
 	async ({ ctx, next, path, type, input }) => {
 		const startTime = Date.now();
@@ -75,18 +125,18 @@ const loggingMiddleware = t.middleware(
 
 		// Log request
 		console.log(`\n${"=".repeat(80)}`);
-		console.log(`🔵 [${timestamp}] tRPC ${procedureType}: ${path}`);
-		console.log("─".repeat(80));
-		console.log("📥 INPUT:");
+		console.log(`[${timestamp}] tRPC ${procedureType}: ${path}`);
+		console.log("-".repeat(80));
+		console.log("INPUT:");
 		console.log(JSON.stringify(input, null, 2));
-		console.log("─".repeat(80));
+		console.log("-".repeat(80));
 
 		try {
 			const result = await next();
 			const duration = Date.now() - startTime;
 
 			// Log success response
-			console.log("📤 OUTPUT:");
+			console.log("OUTPUT:");
 			if (result && typeof result === "object" && "data" in result) {
 				// For large outputs, truncate if needed
 				const outputStr = JSON.stringify(result.data, null, 2);
@@ -98,8 +148,8 @@ const loggingMiddleware = t.middleware(
 			} else {
 				console.log(JSON.stringify(result, null, 2));
 			}
-			console.log("─".repeat(80));
-			console.log(`✅ SUCCESS (${duration}ms)`);
+			console.log("-".repeat(80));
+			console.log(`SUCCESS (${duration}ms)`);
 			console.log(`${"=".repeat(80)}\n`);
 
 			return result;
@@ -107,7 +157,7 @@ const loggingMiddleware = t.middleware(
 			const duration = Date.now() - startTime;
 
 			// Log error response
-			console.log("❌ ERROR:");
+			console.log("ERROR:");
 			if (error instanceof TRPCError) {
 				console.log(`   Code: ${error.code}`);
 				console.log(`   Message: ${error.message}`);
@@ -123,8 +173,8 @@ const loggingMiddleware = t.middleware(
 			} else {
 				console.log(JSON.stringify(error, null, 2));
 			}
-			console.log("─".repeat(80));
-			console.log(`❌ FAILED (${duration}ms)`);
+			console.log("-".repeat(80));
+			console.log(`FAILED (${duration}ms)`);
 			console.log(`${"=".repeat(80)}\n`);
 
 			throw error;
@@ -175,15 +225,21 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	return result;
 });
 
-export const publicProcedure = t.procedure.use(loggingMiddleware);
+// All procedures use errorHandlingMiddleware FIRST to ensure errors are always valid TRPCErrors
+export const publicProcedure = t.procedure
+	.use(errorHandlingMiddleware)
+	.use(loggingMiddleware);
 export const customerProcedure = t.procedure
+	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware)
 	.use(customerAuthMiddleware);
 export const adminProcedure = t.procedure
+	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware)
 	.use(adminAuthMiddleware);
 
 export const cachedProcedure = t.procedure
+	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware)
 	.use(cacheMiddleware);
 export const customerCachedProcedure = customerProcedure.use(cacheMiddleware);

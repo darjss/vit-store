@@ -15,6 +15,8 @@ export type DB = PostgresJsDatabase<typeof schema>;
  * and Hyperdrive handles the connection pooling and routing.
  */
 export function createDb(binding: Hyperdrive): DB {
-	const client = postgres(binding.connectionString);
-	return drizzle(client, { schema });
+  const client = postgres(binding.connectionString, {
+    ssl: "require",
+  });
+  return drizzle(client, { schema });
 }
