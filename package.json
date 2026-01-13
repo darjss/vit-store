@@ -17,7 +17,7 @@
 			"tsdown": "^0.15.12",
 			"drizzle-orm": "^0.44.4",
 			"drizzle-kit": "^0.31.4",
-			"alchemy": "0.79.0"
+			"alchemy": "0.83.1"
 		}
 	},
 	"scripts": {
@@ -56,7 +56,7 @@
 		"@cloudflare/workers-types": "^4.20251202.0",
 		"@types/node": "^22.19.1",
 		"typescript": "^5.8.3",
-		"alchemy": "catalog:",
+		"alchemy": "0.83.1",
 		"miniflare": "^4.20251128.0",
 		"oxlint": "^1.31.0",
 		"tsdown": "catalog:",
