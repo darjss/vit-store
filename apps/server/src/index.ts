@@ -218,7 +218,68 @@ app.get("/admin/login/google/callback", async (c) => {
 		const username = claims.name;
 		console.log("googleUserId", googleUserId);
 		console.log("username", username);
-		const db = createDb(c.env.DB);
+
+		const directDbUrl =
+			typeof (c.env as any).DIRECT_DB_URL === "string"
+				? ((c.env as any).DIRECT_DB_URL as string)
+				: "";
+		const chosenConnectionString = directDbUrl || (c.env.DB as any).connectionString;
+
+		// #region agent log
+		fetch("http://127.0.0.1:7242/ingest/d8649d3e-6bd3-4fb3-81d4-f824c2864b88", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				sessionId: "debug-session",
+				runId: "admin-oauth-pre-fix",
+				hypothesisId: "A",
+				location: "apps/server/src/index.ts:/admin/login/google/callback",
+				message: "DB selection for admin oauth callback",
+				data: {
+					usingDirectDbUrl: Boolean(directDbUrl),
+					directDbUrlLength: directDbUrl ? directDbUrl.length : 0,
+				},
+				timestamp: Date.now(),
+			}),
+		}).catch(() => {});
+		// #endregion
+
+		let parsed: {
+			hostname?: string;
+			port?: string;
+			dbname?: string;
+			looksLikeHyperdriveLocal?: boolean;
+			parseError?: string;
+		} = {};
+		try {
+			const u = new URL(chosenConnectionString);
+			parsed = {
+				hostname: u.hostname,
+				port: u.port,
+				dbname: u.pathname?.replace(/^\//, "") || "",
+				looksLikeHyperdriveLocal: u.hostname.endsWith(".hyperdrive.local"),
+			};
+		} catch (e) {
+			parsed = { parseError: e instanceof Error ? e.message : String(e) };
+		}
+
+		// #region agent log
+		fetch("http://127.0.0.1:7242/ingest/d8649d3e-6bd3-4fb3-81d4-f824c2864b88", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				sessionId: "debug-session",
+				runId: "admin-oauth-pre-fix",
+				hypothesisId: "B",
+				location: "apps/server/src/index.ts:/admin/login/google/callback",
+				message: "DB target (sanitized) for admin oauth callback",
+				data: parsed,
+				timestamp: Date.now(),
+			}),
+		}).catch(() => {});
+		// #endregion
+
+		const db = directDbUrl ? createDb(directDbUrl) : createDb(c.env.DB);
 		const q = createQueries(db).users.admin;
 		const existingUser = await q.getUserFromGoogleId(googleUserId);
 		console.log(existingUser);
