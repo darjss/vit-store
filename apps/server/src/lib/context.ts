@@ -15,7 +15,12 @@ export async function createContext({
 	try {
 		const kv = context.env.vitStoreKV;
 		const r2 = context.env.r2Bucket;
-		const db = createDb(context.env.DB);
+		const directDbUrl =
+			typeof (context.env as any).DIRECT_DB_URL === "string"
+				? ((context.env as any).DIRECT_DB_URL as string)
+				: "";
+
+		const db = directDbUrl ? createDb(directDbUrl) : createDb(context.env.DB);
 
 		console.log("context created");
 		return {
