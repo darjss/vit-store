@@ -1,9 +1,3 @@
-/**
- * PostHog Analytics Utility
- * Centralized, SSR-safe tracking functions for e-commerce events
- */
-
-// Types for cart items
 interface CartItemProperties {
 	product_id: number;
 	product_name: string;
@@ -18,14 +12,12 @@ interface ProductViewedProperties {
 	product_slug: string;
 }
 
-// SSR-safe capture wrapper
 function capture(event: string, properties?: Record<string, unknown>) {
 	if (typeof window !== "undefined" && window.posthog) {
 		window.posthog.capture(event, properties);
 	}
 }
 
-// SSR-safe identify wrapper
 function identify(distinctId: string, properties?: Record<string, unknown>) {
 	if (typeof window !== "undefined" && window.posthog) {
 		window.posthog.identify(distinctId, properties);
@@ -43,13 +35,6 @@ async function hashString(str: string): Promise<string> {
 	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ============================================
-// E-commerce Core Events
-// ============================================
-
-/**
- * Track when a product page is viewed
- */
 export function trackProductViewed(properties: ProductViewedProperties) {
 	capture("product_viewed", { ...properties });
 }

@@ -2,7 +2,6 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 
-// Custom error class for server-side unauthorized handling
 export class UnauthorizedError extends Error {
 	constructor(message = "Unauthorized") {
 		super(message);
@@ -10,19 +9,15 @@ export class UnauthorizedError extends Error {
 	}
 }
 
-// Helper function to check if response contains UNAUTHORIZED error
 const checkUnauthorized = async (response: Response): Promise<boolean> => {
-	// Check HTTP status code
 	if (response.status === 401) {
 		return true;
 	}
 
-	// For batched requests, status might be 200 but errors are in the body
-	// Clone response to read body without consuming it
 	const clonedResponse = response.clone();
 	try {
 		const data = await clonedResponse.json();
-		// tRPC batch responses are arrays
+
 		if (Array.isArray(data)) {
 			return data.some((item: unknown) => {
 				const error = (
@@ -33,7 +28,7 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 				);
 			});
 		}
-		// Single response
+
 		const singleData = data as {
 			error?: { data?: { code?: string }; code?: string };
 		};
@@ -44,7 +39,6 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 			);
 		}
 	} catch {
-		// If parsing fails, just check status code
 		return false;
 	}
 
@@ -53,7 +47,7 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 
 const getBackendUrl = () => {
 	const apiUrlFromEnv = import.meta.env.PUBLIC_API_URL;
-	console.log(apiUrlFromEnv);
+
 	return apiUrlFromEnv
 		? `${apiUrlFromEnv}/trpc/store`
 		: "http://localhost:3000/trpc/store";
@@ -85,9 +79,7 @@ export const createServerClient = (
 						},
 					});
 
-					// Check for unauthorized response
 					if (await checkUnauthorized(response)) {
-						// If redirect function is provided, use it; otherwise throw error
 						if (redirectFn) {
 							redirectFn("/login");
 						} else {
@@ -102,14 +94,12 @@ export const createServerClient = (
 	});
 };
 
-// Client-side tRPC client
 export const api = createTRPCClient<StoreRouter>({
 	links: [
 		httpBatchLink({
 			url: getBackendUrl(),
 			transformer: SuperJSON,
 			fetch: async (url, options) => {
-				console.log("fetching", url);
 				const headers: Record<string, string> = {
 					...(options?.headers as Record<string, string>),
 				};
@@ -124,14 +114,11 @@ export const api = createTRPCClient<StoreRouter>({
 					headers,
 				});
 
-				// Check for unauthorized response
 				if (await checkUnauthorized(response)) {
-					// Prevent redirect loops - don't redirect if already on login page
 					if (
 						typeof window !== "undefined" &&
 						window.location.pathname !== "/login"
 					) {
-						// Dynamically import navigate to avoid SSR issues
 						const { navigate } = await import("astro:transitions/client");
 						navigate("/login", { history: "replace" });
 					}

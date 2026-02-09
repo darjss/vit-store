@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
@@ -11,11 +11,10 @@ export const image = router({
 				url: v.pipe(v.string(), v.url()),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, url } = input;
-				await q.createImage({ productId, url });
+				await productImageQueries.admin.createImage({ productId, url });
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
@@ -32,11 +31,10 @@ export const image = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { id } = input;
-				await q.deleteImage(id);
+				await productImageQueries.admin.deleteImage(id);
 				return { message: "Image deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -54,11 +52,10 @@ export const image = router({
 				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, imageId } = input;
-				await q.setPrimaryImage(productId, imageId);
+				await productImageQueries.admin.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);

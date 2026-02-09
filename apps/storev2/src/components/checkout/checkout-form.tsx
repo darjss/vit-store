@@ -17,7 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
 
 const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
-	// Track checkout started when component mounts with items
 	onMount(() => {
 		if (cart.items().length > 0) {
 			trackCheckoutStarted(
@@ -40,7 +39,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 			onSuccess: async (data) => {
 				const paymentNumber = data?.paymentNumber;
 
-				// Track order placed (use payment number since order number isn't returned)
 				if (paymentNumber) {
 					trackOrderPlaced(paymentNumber, cart.count());
 				}
@@ -51,7 +49,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 					variant: "success",
 					duration: 5000,
 				});
-				cart.clearCart();
 				navigate(`/payment/${paymentNumber}`);
 			},
 			onError: (error) => {
@@ -127,7 +124,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 						</div>
 
 						<div class="space-y-6">
-							{/* Order Summary Card */}
 							<Card>
 								<CardHeader>
 									<CardTitle>Таны захиалга</CardTitle>
@@ -169,7 +165,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 										</For>
 									</div>
 
-									{/* Price Breakdown */}
 									<div class="mt-4 space-y-3 border-border border-t-4 pt-4">
 										<div class="flex items-center justify-between">
 											<p class="font-bold text-sm uppercase">Дэд дүн</p>
@@ -195,7 +190,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 								</CardContent>
 							</Card>
 
-							{/* Delivery Information Card */}
 							<Card>
 								<CardHeader>
 									<CardTitle>Хүргэлтийн мэдээлэл</CardTitle>
@@ -206,7 +200,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 										onSubmit={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
-											// Blur active input to dismiss mobile keyboard
 											if (document.activeElement instanceof HTMLElement) {
 												document.activeElement.blur();
 											}

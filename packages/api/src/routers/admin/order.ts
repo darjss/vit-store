@@ -1,5 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import {
+	customerQueries,
+	orderQueries,
+	paymentQueries,
+	productQueries,
+	purchaseQueries,
+	salesQueries,
+} from "@vit/api/queries";
 import {
 	addOrderSchema,
 	timeRangeSchema,
@@ -14,9 +21,7 @@ export const order = router({
 	addOrder: adminProcedure
 		.input(addOrderSchema)
 		.mutation(async ({ input, ctx }) => {
-			console.log("addOrder called with", input);
 			try {
-				const q = createQueries(ctx.db);
 				const orderTotal = input.products.reduce(
 					(acc, currentProduct) =>
 						acc + currentProduct.price * currentProduct.quantity,
@@ -24,13 +29,14 @@ export const order = router({
 				);
 
 				if (input.isNewCustomer) {
-					await q.customers.admin.createCustomer({
+					await customerQueries.admin.createCustomer({
 						phone: Number(input.customerPhone),
 						address: input.address,
 					});
 				}
+
 				const orderNumber = generateOrderNumber();
-				const order = await q.orders.admin.createOrder({
+				const order = await orderQueries.admin.createOrder({
 					orderNumber: orderNumber,
 					customerPhone: Number(input.customerPhone),
 					status: input.status,
@@ -46,22 +52,23 @@ export const order = router({
 					productId: product.productId,
 					quantity: product.quantity,
 				}));
-				await q.orders.admin.createOrderDetails(orderId, orderDetails);
+				await orderQueries.admin.createOrderDetails(orderId, orderDetails);
 
 				if (input.paymentStatus === "success") {
 					for (const product of input.products) {
-						const productCost = await q.purchases.admin.getAverageCostOfProduct(
-							product.productId,
-							new Date(),
-						);
-						await q.sales.admin.addSale({
+						const productCost =
+							await purchaseQueries.admin.getAverageCostOfProduct(
+								product.productId,
+								new Date(),
+							);
+						await salesQueries.admin.addSale({
 							productCost: productCost,
 							quantitySold: product.quantity,
 							orderId: order.orderId,
 							sellingPrice: product.price,
 							productId: product.productId,
 						});
-						await q.products.admin.updateStock(
+						await productQueries.admin.updateStock(
 							product.productId,
 							product.quantity,
 							"minus",
@@ -70,34 +77,44 @@ export const order = router({
 				}
 
 				try {
-					const paymentResult = await q.payments.admin.createPayment({
-						paymentNumber: generatePaymentNumber(),
+					const paymentNumber = generatePaymentNumber();
+					await paymentQueries.admin.createPayment({
+						paymentNumber,
 						orderId: orderId,
 						provider: "transfer",
 						status: input.paymentStatus,
 						amount: orderTotal,
 					});
-					console.log("Payment created:", paymentResult);
+
+					ctx.log.payment.created({
+						paymentNumber,
+						orderId,
+						amount: orderTotal,
+						provider: "transfer",
+						status: input.paymentStatus,
+					});
 				} catch (error) {
-					console.error("Error creating payment:", error);
+					ctx.log.error("admin.payment_create_failed", error, { orderId });
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to create payment",
 						cause: error,
 					});
 				}
-				console.log("transaction done");
 
-				console.log("added order");
+				ctx.log.order.created({
+					orderId,
+					orderNumber,
+					customerPhone: Number(input.customerPhone),
+					total: orderTotal,
+					itemCount: input.products.length,
+					status: input.status,
+				});
+
 				return { message: "Order added successfully" };
 			} catch (e) {
-				if (e instanceof Error) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to add order",
-						cause: e,
-					});
-				}
+				if (e instanceof TRPCError) throw e;
+				ctx.log.error("admin.order_add_failed", e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add order",
@@ -108,11 +125,8 @@ export const order = router({
 
 	updateOrder: adminProcedure
 		.input(updateOrderSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db);
-				console.log("updating order");
-
 				const orderTotal = input.products.reduce(
 					(acc, currentProduct) =>
 						acc + currentProduct.price * currentProduct.quantity,
@@ -120,25 +134,24 @@ export const order = router({
 				);
 
 				if (input.isNewCustomer) {
-					const existingCustomer = await q.customers.admin.getCustomerByPhone(
-						Number(input.customerPhone),
-					);
+					const existingCustomer =
+						await customerQueries.admin.getCustomerByPhone(
+							Number(input.customerPhone),
+						);
 					if (!existingCustomer) {
-						await q.customers.admin.createCustomer({
+						await customerQueries.admin.createCustomer({
 							phone: Number(input.customerPhone),
 							address: input.address,
 						});
 					} else {
-						await q.customers.admin.updateCustomer(
+						await customerQueries.admin.updateCustomer(
 							Number(input.customerPhone),
-							{
-								address: input.address,
-							},
+							{ address: input.address },
 						);
 					}
 				}
 
-				await q.orders.admin.updateOrder(input.id, {
+				await orderQueries.admin.updateOrder(input.id, {
 					customerPhone: Number(input.customerPhone),
 					status: input.status,
 					notes: input.notes,
@@ -146,12 +159,12 @@ export const order = router({
 				});
 
 				const currentOrderDetails =
-					await q.orders.admin.getOrderDetailsByOrderId(input.id);
+					await orderQueries.admin.getOrderDetailsByOrderId(input.id);
 
-				await q.orders.admin.deleteOrderDetails(input.id);
+				await orderQueries.admin.deleteOrderDetails(input.id);
 
 				const orderDetailsPromise = input.products.map(async (product) => {
-					await q.orders.admin.createOrderDetails(input.id, [
+					await orderQueries.admin.createOrderDetails(input.id, [
 						{
 							productId: product.productId,
 							quantity: product.quantity,
@@ -162,11 +175,12 @@ export const order = router({
 						(detail) => detail.productId === product.productId,
 					);
 					if (input.paymentStatus === "success") {
-						const productCost = await q.purchases.admin.getAverageCostOfProduct(
-							product.productId,
-							new Date(),
-						);
-						await q.sales.admin.addSale({
+						const productCost =
+							await purchaseQueries.admin.getAverageCostOfProduct(
+								product.productId,
+								new Date(),
+							);
+						await salesQueries.admin.addSale({
 							productCost: productCost,
 							quantitySold: product.quantity,
 							orderId: input.id,
@@ -177,14 +191,14 @@ export const order = router({
 					if (existingDetail) {
 						const quantityDiff = product.quantity - existingDetail.quantity;
 						if (quantityDiff !== 0) {
-							await q.products.admin.updateStock(
+							await productQueries.admin.updateStock(
 								product.productId,
 								Math.abs(quantityDiff),
 								quantityDiff > 0 ? "minus" : "add",
 							);
 						}
 					} else {
-						await q.products.admin.updateStock(
+						await productQueries.admin.updateStock(
 							product.productId,
 							product.quantity,
 							"minus",
@@ -198,14 +212,14 @@ export const order = router({
 				);
 
 				const restoreStockPromises = removedProducts.map((detail) =>
-					q.products.admin.updateStock(
+					productQueries.admin.updateStock(
 						detail.productId,
 						detail.quantity,
 						"add",
 					),
 				);
 
-				await q.payments.admin.updatePaymentStatus(
+				await paymentQueries.admin.updatePaymentStatus(
 					input.id,
 					input.paymentStatus,
 				);
@@ -215,9 +229,15 @@ export const order = router({
 					...restoreStockPromises,
 				]);
 
+				ctx.log.order.updated({
+					orderId: input.id,
+					total: orderTotal,
+					status: input.status,
+				});
+
 				return { message: "Order updated successfully" };
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.order_update_failed", e, { orderId: input.id });
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update order",
@@ -228,31 +248,30 @@ export const order = router({
 
 	deleteOrder: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db);
-				console.log("deleting order", input.id);
-				const orderDetails = await q.orders.admin.getOrderDetailsByOrderId(
+				const orderDetails = await orderQueries.admin.getOrderDetailsByOrderId(
 					input.id,
 				);
 
 				const restoreStockPromises = orderDetails
 					.filter((detail) => !detail.deletedAt)
 					.map((detail) =>
-						q.products.admin.updateStock(
+						productQueries.admin.updateStock(
 							detail.productId,
 							detail.quantity,
 							"add",
 						),
 					);
 
-				await q.orders.admin.softDeleteOrder(input.id);
-
+				await orderQueries.admin.softDeleteOrder(input.id);
 				await Promise.allSettled(restoreStockPromises);
+
+				ctx.log.order.cancelled({ orderId: input.id });
 
 				return { message: "Order deleted successfully" };
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.order_delete_failed", e, { orderId: input.id });
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete order",
@@ -263,25 +282,30 @@ export const order = router({
 
 	restoreOrder: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db);
-				// Deduct stock again based on soft-deleted details
-				const details = await q.orders.admin.getOrderDetailsByOrderId(input.id);
+				const details = await orderQueries.admin.getOrderDetailsByOrderId(
+					input.id,
+				);
 
 				const deductPromises = details
 					.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
 					.map((d) =>
-						q.products.admin.updateStock(d.productId, d.quantity, "minus"),
+						productQueries.admin.updateStock(d.productId, d.quantity, "minus"),
 					);
 
 				await Promise.allSettled(deductPromises);
+				await orderQueries.admin.restoreOrder(input.id);
 
-				await q.orders.admin.restoreOrder(input.id);
+				ctx.log.admin.action({
+					action: "restore_order",
+					targetType: "order",
+					targetId: input.id,
+				});
 
 				return { message: "Order restored successfully" };
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.order_restore_failed", e, { orderId: input.id });
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to restore order",
@@ -292,13 +316,14 @@ export const order = router({
 
 	searchOrder: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db).orders.admin;
-				const orders = await q.searchOrder(input.searchTerm);
+				const orders = await orderQueries.admin.searchOrder(input.searchTerm);
 				return orders;
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.order_search_failed", e, {
+					searchTerm: input.searchTerm,
+				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search order",
@@ -309,18 +334,10 @@ export const order = router({
 
 	getAllOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
-			const q = createQueries(ctx.db).orders.admin;
-			const orders = await q.getAllOrders();
+			const orders = await orderQueries.admin.getAllOrders();
 			return orders;
 		} catch (e) {
-			if (e instanceof Error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to fetch orders",
-					cause: e,
-				});
-			}
-			console.log("error", e);
+			ctx.log.error("admin.orders_fetch_failed", e);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch orders",
@@ -331,10 +348,9 @@ export const order = router({
 
 	getOrderById: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db).orders.admin;
-				const result = await q.getOrderById(input.id);
+				const result = await orderQueries.admin.getOrderById(input.id);
 				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -343,13 +359,8 @@ export const order = router({
 				}
 				return result;
 			} catch (e) {
-				if (e instanceof Error) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to fetch order",
-						cause: e,
-					});
-				}
+				if (e instanceof TRPCError) throw e;
+				ctx.log.error("admin.order_fetch_failed", e, { orderId: input.id });
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch order",
@@ -382,29 +393,9 @@ export const order = router({
 				date: v.optional(v.string()),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
-			console.log(
-				"Fetching paginated orders with page:",
-				input.page,
-				"pageSize:",
-				input.pageSize,
-				"paymentStatus:",
-				input.paymentStatus,
-				"orderStatus:",
-				input.orderStatus,
-				"sortField:",
-				input.sortField,
-				"sortDirection:",
-				input.sortDirection,
-				"searchTerm:",
-				input.searchTerm,
-				"date:",
-				input.date,
-			);
-
+		.query(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db).orders.admin;
-				return await q.getPaginatedOrders({
+				return await orderQueries.admin.getPaginatedOrders({
 					page: input.page ?? 1,
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
 					paymentStatus: input.paymentStatus,
@@ -415,14 +406,7 @@ export const order = router({
 					date: input.date,
 				});
 			} catch (e) {
-				console.error(e);
-				if (e instanceof Error) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to fetch paginated orders",
-						cause: e,
-					});
-				}
+				ctx.log.error("admin.orders_paginated_fetch_failed", e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch paginated orders",
@@ -433,14 +417,12 @@ export const order = router({
 
 	getOrderCount: adminProcedure
 		.input(v.object({ timeRange: timeRangeSchema }))
-		.query(async ({ ctx, input }) => {
-			const q = createQueries(ctx.db).orders.admin;
-			return await q.getOrderCount(input.timeRange);
+		.query(async ({ input }) => {
+			return await orderQueries.admin.getOrderCount(input.timeRange);
 		}),
 
-	getPendingOrders: adminProcedure.query(async ({ ctx }) => {
-		const q = createQueries(ctx.db).orders.admin;
-		return await q.getPendingOrders();
+	getPendingOrders: adminProcedure.query(async () => {
+		return await orderQueries.admin.getPendingOrders();
 	}),
 
 	updateOrderStatus: adminProcedure
@@ -456,15 +438,23 @@ export const order = router({
 				]),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db).orders.admin;
-				await q.updateOrderStatus(input.id, input.status);
+				await orderQueries.admin.updateOrderStatus(input.id, input.status);
+
+				ctx.log.order.statusChanged({
+					orderId: input.id,
+					status: input.status,
+				});
+
 				return {
 					message: `Order status updated successfully to ${input.status}`,
 				};
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.order_status_update_failed", e, {
+					orderId: input.id,
+					status: input.status,
+				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update order status",
@@ -472,19 +462,19 @@ export const order = router({
 				});
 			}
 		}),
+
 	getRecentOrdersByProductId: adminProcedure
-		.input(
-			v.object({
-				productId: v.number(),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
+		.input(v.object({ productId: v.number() }))
+		.query(async ({ input, ctx }) => {
 			try {
-				const q = createQueries(ctx.db).orders.admin;
-				const orders = await q.getRecentOrdersByProductId(input.productId);
+				const orders = await orderQueries.admin.getRecentOrdersByProductId(
+					input.productId,
+				);
 				return orders;
 			} catch (e) {
-				console.error(e);
+				ctx.log.error("admin.recent_orders_fetch_failed", e, {
+					productId: input.productId,
+				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch recent orders",

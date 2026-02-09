@@ -1,0 +1,30 @@
+{
+	"name": "@vit/logger",
+	"version": "1.0.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./types": {
+			"types": "./src/types.ts",
+			"default": "./src/types.ts"
+		},
+		"./middleware": {
+			"types": "./src/middleware.ts",
+			"default": "./src/middleware.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "echo 'Logger package uses source files directly'"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:"
+	},
+	"peerDependencies": {
+		"typescript": "^5",
+		"hono": "^4"
+	}
+}

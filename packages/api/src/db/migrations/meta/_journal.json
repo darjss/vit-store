@@ -1,34 +1,41 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1763345549490,
-			"tag": "0000_empty_joystick",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1763345615841,
-			"tag": "0001_parallel_karen_page",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1763447695221,
-			"tag": "0002_cold_roughhouse",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1765960628093,
-			"tag": "0003_loose_puff_adder",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1763345549490,
+      "tag": "0000_empty_joystick",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763345615841,
+      "tag": "0001_parallel_karen_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763447695221,
+      "tag": "0002_cold_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765960628093,
+      "tag": "0003_loose_puff_adder",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769148185361,
+      "tag": "0004_flippant_mentor",
+      "breakpoints": true
+    }
+  ]
 }

@@ -1,4 +1,5 @@
 import { publicProcedure, router } from "../../lib/trpc";
+import { aiProduct } from "./ai-product";
 import { analytics } from "./analytics";
 import { auth } from "./auth";
 import { brands } from "./brands";
@@ -15,6 +16,7 @@ export const adminRouter = router({
 	healthCheck: publicProcedure.query(() => {
 		return "OK";
 	}),
+	aiProduct,
 	analytics,
 	auth,
 	brands,

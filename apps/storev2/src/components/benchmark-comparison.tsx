@@ -9,6 +9,8 @@ interface BenchmarkComparisonProps {
 	productCount: number;
 	kvWriteTime?: number;
 	kvReadTime?: number;
+	redisWriteTime?: number;
+	redisReadTime?: number;
 }
 
 interface BenchmarkResult {
@@ -17,6 +19,8 @@ interface BenchmarkResult {
 	fetchTime: number;
 	kvWriteElapsed?: number;
 	kvReadElapsed?: number;
+	redisWriteElapsed?: number;
+	redisReadElapsed?: number;
 }
 
 export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
@@ -31,6 +35,8 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			fetchTime,
 			kvWriteElapsed: result.kvWriteElapsed,
 			kvReadElapsed: result.kvReadElapsed,
+			redisWriteElapsed: result.redisWriteElapsed,
+			redisReadElapsed: result.redisReadElapsed,
 		};
 	};
 
@@ -128,13 +134,30 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</p>
 						</div>
 
-						<Show when={data()?.kvReadElapsed !== undefined}>
-							<div class="rounded-lg bg-white p-4">
-								<p class="mb-1 text-gray-600 text-sm">KV Read Time (Client)</p>
-								<p class="font-semibold text-2xl text-purple-600">
-									{formatTime(data()?.kvReadElapsed!)}
-								</p>
-							</div>
+						<Show when={data()?.kvReadElapsed}>
+							{(elapsed) => (
+								<div class="rounded-lg bg-white p-4">
+									<p class="mb-1 text-gray-600 text-sm">
+										KV Read Time (Client)
+									</p>
+									<p class="font-semibold text-2xl text-purple-600">
+										{formatTime(elapsed())}
+									</p>
+								</div>
+							)}
+						</Show>
+
+						<Show when={data()?.redisReadElapsed}>
+							{(elapsed) => (
+								<div class="rounded-lg bg-white p-4">
+									<p class="mb-1 text-gray-600 text-sm">
+										Redis Read Time (Client)
+									</p>
+									<p class="font-semibold text-2xl text-orange-600">
+										{formatTime(elapsed())}
+									</p>
+								</div>
+							)}
 						</Show>
 					</div>
 
@@ -210,18 +233,23 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 									• The main difference is network latency from browser to
 									server
 								</li>
-								<Show
-									when={
-										data()?.kvReadElapsed !== undefined &&
-										props.kvReadTime !== undefined
-									}
-								>
-									<li>
-										• KV read time: {formatTime(data()?.kvReadElapsed!)}{" "}
-										(client) vs {formatTime(props.kvReadTime!)} (server) -
-										typically very fast
-									</li>
-								</Show>
+								{data()?.kvReadElapsed !== undefined &&
+									props.kvReadTime !== undefined && (
+										<li>
+											• KV read time: {formatTime(data()?.kvReadElapsed ?? 0)}{" "}
+											(client) vs {formatTime(props.kvReadTime ?? 0)} (server) -
+											typically very fast
+										</li>
+									)}
+								{data()?.redisReadElapsed !== undefined &&
+									props.redisReadTime !== undefined && (
+										<li>
+											• Redis read time:{" "}
+											{formatTime(data()?.redisReadElapsed ?? 0)} (client) vs{" "}
+											{formatTime(props.redisReadTime ?? 0)} (server) - often
+											faster than KV for simple operations
+										</li>
+									)}
 							</ul>
 						</div>
 					</div>

@@ -8,7 +8,6 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, CustomerSelectType, UserSelectType } from "../context";
 import type { HonoContextType, SessionConfig } from "../types";
 
-// Re-export types for convenience
 export type { CustomerSelectType, UserSelectType } from "../context";
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
@@ -30,7 +29,6 @@ export function createSessionManager<
 		kvSessionPrefix,
 		kvUserSessionPrefix,
 		cookieName,
-		domainEnvVar,
 		sessionDurationMs,
 		renewalThresholdMs,
 	} = config;
@@ -117,6 +115,7 @@ export function createSessionManager<
 
 		if (Date.now() >= expiresAt.getTime()) {
 			await ctx.kv.delete(`${kvSessionPrefix}:${sessionId}`);
+			ctx.log.auth.sessionExpired({ sessionId });
 			return null;
 		}
 
@@ -136,6 +135,7 @@ export function createSessionManager<
 					expirationTtl: Math.floor(updatedSession.expiresAt.getTime() / 1000),
 				},
 			);
+			ctx.log.auth.sessionRenewed({ sessionId: session.id });
 			return updatedSession;
 		}
 
@@ -145,6 +145,7 @@ export function createSessionManager<
 	async function invalidateSession(ctx: Context): Promise<void> {
 		if (ctx.session?.id) {
 			await ctx.kv.delete(`${kvSessionPrefix}:${ctx.session.id}`);
+			ctx.log.auth.logout({ sessionId: ctx.session.id });
 		}
 		deleteSessionTokenCookie(ctx);
 	}
@@ -154,7 +155,6 @@ export function createSessionManager<
 		token: string,
 		expiresAt: Date,
 	): void {
-		console.log(process.env.DOMAIN);
 		setCookie(c, cookieName, token, {
 			httpOnly: true,
 			sameSite: "None",
@@ -177,17 +177,9 @@ export function createSessionManager<
 	}
 
 	const auth = async (ctx: Context): Promise<Session<TUser> | null> => {
-		console.log(`[${cookieName}] auth: checking for cookie`);
-		console.log(`[${cookieName}] auth: context type:`, typeof ctx.c);
-		console.log(
-			`[${cookieName}] auth: cookie header:`,
-			ctx.c.req.header("cookie"),
-		);
 		const token = getCookie(ctx.c, cookieName);
-		console.log(`[${cookieName}] auth: token value:`, token);
 
 		if (token === undefined) {
-			console.log(`[${cookieName}] auth: no token found, returning null`);
 			return null;
 		}
 
@@ -204,7 +196,6 @@ export function createSessionManager<
 	};
 }
 
-// Pre-configured session managers for convenience
 export const createCustomerSessionManager = (config: SessionConfig) =>
 	createSessionManager<CustomerSelectType>(config);
 

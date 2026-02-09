@@ -1,8 +1,11 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { productQueries } from "@vit/api/queries";
 import { isNull } from "drizzle-orm";
 import * as v from "valibot";
+import { db } from "../../db/client";
 import { ProductImagesTable, ProductsTable } from "../../db/schema";
+import { kv } from "../../lib/kv";
+import { redis } from "../../lib/redis";
 import { publicProcedure, router } from "../../lib/trpc";
 import { searchProducts } from "../../lib/upstash-search";
 
@@ -14,20 +17,17 @@ export const product = router({
 				limit: v.optional(v.number(), 8),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
 				const { query, limit } = input;
 
-				// Search using Upstash - returns all data needed for display
 				const searchResults = await searchProducts(query, limit);
 
-				// If Upstash returns results, return them directly (no DB query needed)
 				if (searchResults.length > 0) {
 					return searchResults;
 				}
 
-				// Fallback to Postgres LIKE search if Upstash returns nothing
-				const q = createQueries(ctx.db).products.store;
+				const q = productQueries.store;
 				const fallbackResults = await q.searchByName(query, limit ?? 8);
 				return fallbackResults.map((p) => ({
 					id: p.id,
@@ -38,7 +38,6 @@ export const product = router({
 					brand: p.brand?.name || "",
 				}));
 			} catch (error) {
-				console.error("Error searching products:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products",
@@ -47,7 +46,6 @@ export const product = router({
 			}
 		}),
 
-	// Search endpoint for products page - higher limit, returns flat list
 	searchProductsForPage: publicProcedure
 		.input(
 			v.object({
@@ -55,20 +53,17 @@ export const product = router({
 				limit: v.optional(v.number(), 50),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
 				const { query, limit } = input;
 
-				// Search using Upstash - returns all data needed for display
 				const searchResults = await searchProducts(query, limit);
 
-				// If Upstash returns results, return them directly
 				if (searchResults.length > 0) {
 					return searchResults;
 				}
 
-				// Fallback to Postgres LIKE search if Upstash returns nothing
-				const q = createQueries(ctx.db).products.store;
+				const q = productQueries.store;
 				const fallbackResults = await q.searchByName(query, limit ?? 50);
 				return fallbackResults.map((p) => ({
 					id: p.id,
@@ -79,7 +74,6 @@ export const product = router({
 					brand: p.brand?.name || "",
 				}));
 			} catch (error) {
-				console.error("Error searching products for page:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products",
@@ -88,9 +82,9 @@ export const product = router({
 			}
 		}),
 
-	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
+	getProductsForHome: publicProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).products.store;
+			const q = productQueries.store;
 			const [featuredProducts, newProducts, discountedProducts] =
 				await Promise.all([
 					q.getFeaturedProducts(),
@@ -125,7 +119,6 @@ export const product = router({
 				})),
 			};
 		} catch (error) {
-			console.error("Error getting products for home:", error);
 			throw new TRPCError({
 				code: "BAD_REQUEST",
 				message: "Error getting products for home",
@@ -133,8 +126,8 @@ export const product = router({
 			});
 		}
 	}),
-	getAllProducts: publicProcedure.query(async ({ ctx }) => {
-		const q = createQueries(ctx.db).products.store;
+	getAllProducts: publicProcedure.query(async () => {
+		const q = productQueries.store;
 		return await q.getAllProducts();
 	}),
 	getProductById: publicProcedure
@@ -143,8 +136,8 @@ export const product = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
-			const q = createQueries(ctx.db).products.store;
+		.query(async ({ input }) => {
+			const q = productQueries.store;
 			const result = await q.getProductById(input.id);
 			if (result === null || result === undefined) {
 				return null;
@@ -153,12 +146,7 @@ export const product = router({
 				url: image.url,
 				isPrimary: image.isPrimary,
 			}));
-			console.log(
-				"result.ingredients",
-				result.ingredients,
-				typeof result.ingredients,
-			);
-			// result.ingredients = result.ingredients ? JSON.parse() : [];
+
 			return result;
 		}),
 	getProductsByIds: publicProcedure
@@ -167,8 +155,8 @@ export const product = router({
 				ids: v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
-			const q = createQueries(ctx.db).products.store;
+		.query(async ({ input }) => {
+			const q = productQueries.store;
 			const result = await q.getProductsByIds(input.ids);
 			return result.map((product) => ({
 				id: product.id,
@@ -185,9 +173,9 @@ export const product = router({
 				brandId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.store;
+				const q = productQueries.store;
 				const [sameCategory, sameBrand] = await Promise.all([
 					q.getRecommendedProductsByCategory(input.categoryId, input.productId),
 					q.getRecommendedProductsByBrand(input.brandId, input.productId),
@@ -209,7 +197,6 @@ export const product = router({
 					discount: product.discount,
 				}));
 			} catch (error) {
-				console.error("Error getting recommended products:", error);
 				throw new TRPCError({
 					code: "BAD_REQUEST",
 					message: "Error getting recommended products",
@@ -223,14 +210,13 @@ export const product = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
-			console.log("input.productId", input.productId);
+		.query(async ({ input }) => {
 			if (input.productId === 7) {
 				return {
 					isInStock: false,
 				};
 			}
-			const q = createQueries(ctx.db).products.store;
+			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 			if (product === null || product === undefined) {
 				throw new TRPCError({
@@ -247,13 +233,13 @@ export const product = router({
 				isInStock: true,
 			};
 		}),
-	getProductBenchmark: publicProcedure.query(async ({ ctx }) => {
+	getProductBenchmark: publicProcedure.query(async () => {
 		try {
-			const cacheKey = "benchmark:products:5";
+			const kvCacheKey = "benchmark:products:5";
+			const redisCacheKey = "benchmark:products:5:redis";
 
-			// First, fetch products from DB to have data to cache
 			const dbStartTime = performance.now();
-			const products = await ctx.db.query.ProductsTable.findMany({
+			const products = await db().query.ProductsTable.findMany({
 				columns: {
 					id: true,
 					name: true,
@@ -281,28 +267,39 @@ export const product = router({
 				images: p.images.map((img) => ({ url: img.url })),
 			}));
 
-			// Measure KV write time
+			// Cloudflare KV Benchmark
 			const kvWriteStartTime = performance.now();
-			await ctx.kv.put(cacheKey, JSON.stringify(product), {
-				expirationTtl: 3600, // 1 hour
+			await kv().put(kvCacheKey, JSON.stringify(product), {
+				expirationTtl: 3600,
 			});
 			const kvWriteElapsed = performance.now() - kvWriteStartTime;
 
-			// Measure KV read time
 			const kvReadStartTime = performance.now();
-			const cached = await ctx.kv.get(cacheKey);
+			const kvCached = await kv().get(kvCacheKey);
 			const kvReadElapsed = performance.now() - kvReadStartTime;
 
-			const kvReadProduct = cached ? JSON.parse(cached) : null;
+			// Upstash Redis Benchmark
+			const redisWriteStartTime = performance.now();
+			await redis().set(redisCacheKey, JSON.stringify(product), {
+				ex: 3600,
+			});
+			const redisWriteElapsed = performance.now() - redisWriteStartTime;
+
+			const redisReadStartTime = performance.now();
+			const redisCached = await redis().get(redisCacheKey);
+			const redisReadElapsed = performance.now() - redisReadStartTime;
+
+			const kvReadProduct = kvCached ? JSON.parse(kvCached) : null;
 
 			return {
 				dbElapsed,
 				kvWriteElapsed,
 				kvReadElapsed,
+				redisWriteElapsed,
+				redisReadElapsed,
 				product: kvReadProduct || product,
 			};
 		} catch (error) {
-			console.error("Error in benchmark:", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to run benchmark",
@@ -322,14 +319,13 @@ export const product = router({
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 			}),
 		)
-		.query(async ({ input, ctx }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.store;
+				const q = productQueries.store;
 
 				const products = await q.getInfiniteProducts(input);
 				return products;
 			} catch (error) {
-				console.error("Error in getInfiniteProducts:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to get infinite products",

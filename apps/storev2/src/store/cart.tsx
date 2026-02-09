@@ -8,7 +8,6 @@ import {
 } from "@/lib/analytics";
 import type { CartItems } from "@/lib/types";
 
-// Safe storage wrapper that handles SSR
 const safeStorage: Storage = {
 	getItem: (key: string) => {
 		if (typeof window === "undefined") {
@@ -26,9 +25,7 @@ const safeStorage: Storage = {
 		}
 		try {
 			localStorage.setItem(key, value);
-		} catch {
-			// Ignore storage errors
-		}
+		} catch {}
 	},
 	removeItem: (key: string) => {
 		if (typeof window === "undefined") {
@@ -36,9 +33,7 @@ const safeStorage: Storage = {
 		}
 		try {
 			localStorage.removeItem(key);
-		} catch {
-			// Ignore storage errors
-		}
+		} catch {}
 	},
 	clear: () => {
 		if (typeof window === "undefined") {
@@ -46,9 +41,7 @@ const safeStorage: Storage = {
 		}
 		try {
 			localStorage.clear();
-		} catch {
-			// Ignore storage errors
-		}
+		} catch {}
 	},
 	get length() {
 		if (typeof window === "undefined") {
@@ -131,7 +124,6 @@ export const cart = createRoot(() => {
 				setCart("items", cartStore.items.length, product);
 			}
 
-			// Track add to cart event
 			trackAddToCart({
 				product_id: product.productId,
 				product_name: product.name,
@@ -139,7 +131,6 @@ export const cart = createRoot(() => {
 				quantity: product.quantity,
 			});
 
-			// Open drawer after adding item
 			setIsDrawerOpen(true);
 		},
 		remove: (productId: number) => {

@@ -9,13 +9,6 @@ type RateLimitMiddlewareOptions = {
 	getRateLimitKey: (c: Context) => string;
 };
 
-/**
- * Rate limiting middleware
- *
- * Returns:
- * - HTTP 400 if the rate limit key is missing
- * - HTTP 429 if the rate limit is exceeded
- */
 export const rateLimit = ({
 	rateLimiter,
 	getRateLimitKey,
@@ -39,7 +32,6 @@ export const rateLimit = ({
 		const limiter = rateLimiter(c);
 		const { success } = await limiter.limit({ key });
 
-		// Store the result in context for downstream access
 		c.set(RATE_LIMIT_CONTEXT_KEY, success);
 
 		if (!success) {
@@ -60,9 +52,6 @@ export const rateLimit = ({
 	});
 };
 
-/**
- * Returns whether the current request passed the rate limit check.
- */
 export const isRateLimitOk = (c: Context): boolean => {
 	return c.get(RATE_LIMIT_CONTEXT_KEY) ?? false;
 };

@@ -53,7 +53,6 @@ export function formatCurrency(amount: number): string {
 	return `${formmated}₮`;
 }
 
-// Order status styles for badges and left-border colors
 export const getOrderStatusStyles = (status: string) => {
 	switch (status.toLowerCase()) {
 		case "delivered":
@@ -109,12 +108,6 @@ export function formatDateToText(d: Date, now = new Date()): string {
 	if (dayDiff === 1) {
 		return `өчигдөр ${time}`;
 	}
-
-	// const daysText = `${dayDiff} хоногийн өмнө`;
-
-	// if (dayDiff <= 2) {
-	// 	return `${daysText} ${time}`;
-	// }
 
 	const yyyy = d.getFullYear();
 	const mmth = pad(d.getMonth() + 1);

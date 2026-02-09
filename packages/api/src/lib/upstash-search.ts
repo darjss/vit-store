@@ -1,14 +1,13 @@
+import { env } from "cloudflare:workers";
 import { Search } from "@upstash/search";
 
-// Singleton search client
 let searchClient: Search | null = null;
 
 export const getSearchClient = () => {
 	if (!searchClient) {
 		searchClient = new Search({
-			url: "https://suited-joey-76189-eu1-search.upstash.io",
-			token:
-				"ABUFMHN1aXRlZC1qb2V5LTc2MTg5LWV1MWFkbWluT0RnMlpEUmlOakV0T0dNNU5pMDBOakZoTFdJMU1ESXRNakEyWkRKak1qSTNNemd3",
+			url: env.UPSTASH_SEARCH_URL,
+			token: env.UPSTASH_SEARCH_TOKEN,
 		});
 	}
 	return searchClient;

@@ -1,17 +1,20 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { purchaseQueries } from "@vit/api/queries";
 import { addPurchaseSchema } from "@vit/shared/schema";
 import * as v from "valibot";
+import { db } from "../../db/client";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const purchase = router({
 	addPurchase: adminProcedure
 		.input(addPurchaseSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				await ctx.db.transaction(async (tx) => {
-					await q.addPurchaseWithStockUpdate(tx, input.products);
+				await db().transaction(async (tx) => {
+					await purchaseQueries.admin.addPurchaseWithStockUpdate(
+						tx,
+						input.products,
+					);
 				});
 
 				return { message: "Purchase added successfully" };
@@ -32,10 +35,9 @@ export const purchase = router({
 			}
 		}),
 
-	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
+	getAllPurchases: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).purchases.admin;
-			const result = await q.getAllPurchases();
+			const result = await purchaseQueries.admin.getAllPurchases();
 			return result;
 		} catch (e) {
 			console.error("error", e);
@@ -49,10 +51,9 @@ export const purchase = router({
 
 	getPurchaseById: adminProcedure
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				const result = await q.getPurchaseById(input.id);
+				const result = await purchaseQueries.admin.getPurchaseById(input.id);
 				return result;
 			} catch (e) {
 				console.error("error", e);
@@ -74,10 +75,9 @@ export const purchase = router({
 				sortDirection: v.picklist(["asc", "desc"]),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				return await q.getPaginatedPurchases({
+				return await purchaseQueries.admin.getPaginatedPurchases({
 					page: input.page,
 					pageSize: input.pageSize,
 					productId: input.productId,
@@ -96,11 +96,12 @@ export const purchase = router({
 
 	searchPurchaseByProductName: adminProcedure
 		.input(v.object({ query: v.string() }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			if (!input.query) return [];
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				const results = await q.searchByProductName(input.query);
+				const results = await purchaseQueries.admin.searchByProductName(
+					input.query,
+				);
 				return results;
 			} catch (e) {
 				console.error("Error searching purchases:", e);
@@ -119,11 +120,10 @@ export const purchase = router({
 				data: addPurchaseSchema,
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				await ctx.db.transaction(async (tx) => {
-					await q.updatePurchaseWithStockAdjustment(
+				await db().transaction(async (tx) => {
+					await purchaseQueries.admin.updatePurchaseWithStockAdjustment(
 						tx,
 						input.id,
 						input.data.products,
@@ -149,11 +149,13 @@ export const purchase = router({
 
 	deletePurchase: adminProcedure
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				await ctx.db.transaction(async (tx) => {
-					await q.deletePurchaseWithStockRestore(tx, input.id);
+				await db().transaction(async (tx) => {
+					await purchaseQueries.admin.deletePurchaseWithStockRestore(
+						tx,
+						input.id,
+					);
 				});
 				return { message: "Purchase deleted successfully" };
 			} catch (e) {
@@ -180,10 +182,9 @@ export const purchase = router({
 				createdAt: v.date(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).purchases.admin;
-				return await q.getAverageCostOfProduct(
+				return await purchaseQueries.admin.getAverageCostOfProduct(
 					input.productId,
 					input.createdAt,
 				);

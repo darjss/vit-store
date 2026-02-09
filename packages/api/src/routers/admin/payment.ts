@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
@@ -15,10 +15,9 @@ export const payment = router({
 				amount: v.pipe(v.number(), v.integer(), v.minValue(0)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).payments.admin;
-				const result = await q.createPayment({
+				const result = await paymentQueries.admin.createPayment({
 					paymentNumber: generatePaymentNumber(),
 					orderId: input.orderId,
 					provider: input.provider,
@@ -36,10 +35,9 @@ export const payment = router({
 			}
 		}),
 
-	getPayments: adminProcedure.query(async ({ ctx }) => {
+	getPayments: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).payments.admin;
-			const result = await q.getPayments();
+			const result = await paymentQueries.admin.getPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting payments:", error);
@@ -51,10 +49,9 @@ export const payment = router({
 		}
 	}),
 
-	getPendingPayments: adminProcedure.query(async ({ ctx }) => {
+	getPendingPayments: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).payments.admin;
-			const result = await q.getPendingPayments();
+			const result = await paymentQueries.admin.getPendingPayments();
 			return result;
 		} catch (error) {
 			console.error("Error getting pending payments:", error);

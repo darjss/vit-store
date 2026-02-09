@@ -37,6 +37,7 @@
 		"@trpc/client": "catalog:",
 		"@trpc/server": "catalog:",
 		"@vit/api": "workspace:*",
+		"@vit/logger": "workspace:*",
 		"@vit/shared": "workspace:*",
 		"arctic": "^3.7.0",
 		"better-sqlite3": "^12.4.1",

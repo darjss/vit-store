@@ -26,32 +26,56 @@ export const router = t.router;
 const customerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	const session = await auth(ctx);
 	if (!session) {
+		ctx.log.auth.loginFailed({ failureReason: "no_session" });
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}
-	return next({ ctx: { ...ctx, session } });
+
+	const enrichedLog = ctx.log.child({
+		userId: session.user.id,
+		userPhone: session.user.phone,
+		userType: "customer",
+	});
+	return next({ ctx: { ...ctx, session, log: enrichedLog } });
 });
+
 const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	const session = await adminAuth(ctx);
 	if (!session) {
+		ctx.log.auth.loginFailed({ failureReason: "no_admin_session" });
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}
-	return next({ ctx: { ...ctx, session } });
+
+	const enrichedLog = ctx.log.child({
+		userId: session.user.id,
+		userEmail: session.user.username,
+		userType: "admin",
+	});
+	return next({ ctx: { ...ctx, session, log: enrichedLog } });
 });
 
-const createCacheKey = async (path: string, input: any): Promise<string> => {
+const createCacheKey = async (
+	path: string,
+	input: unknown,
+): Promise<string> => {
 	const cacheableInput =
 		input && typeof input === "object"
-			? { timeRange: input.timeRange, ttl: input.ttl }
+			? {
+					timeRange: (input as Record<string, unknown>).timeRange,
+					ttl: (input as Record<string, unknown>).ttl,
+				}
 			: input;
 
 	const keyString = `${path}:${JSON.stringify(
 		cacheableInput && typeof cacheableInput === "object"
 			? Object.keys(cacheableInput)
 					.sort()
-					.reduce((result, key) => {
-						result[key] = cacheableInput[key];
-						return result;
-					}, {} as any)
+					.reduce(
+						(result, key) => {
+							result[key] = (cacheableInput as Record<string, unknown>)[key];
+							return result;
+						},
+						{} as Record<string, unknown>,
+					)
 			: cacheableInput,
 	)}`;
 
@@ -66,10 +90,6 @@ const createCacheKey = async (path: string, input: any): Promise<string> => {
 	return `cache:${hashHex}`;
 };
 
-/**
- * Safely wraps any error into a TRPCError.
- * This ensures the frontend always receives a valid JSON error response.
- */
 export function ensureTRPCError(
 	error: unknown,
 	fallbackMessage = "An unexpected error occurred",
@@ -104,10 +124,6 @@ export function ensureTRPCError(
 	});
 }
 
-/**
- * Error handling middleware that ensures ALL errors are proper TRPCErrors.
- * This prevents the "Unexpected token" JSON parse errors on the frontend.
- */
 const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	try {
 		return await next();
@@ -116,116 +132,92 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	}
 });
 
-const loggingMiddleware = t.middleware(
-	async ({ ctx, next, path, type, input }) => {
-		const startTime = Date.now();
-		const timestamp = new Date().toISOString();
-		const procedureType =
-			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
+const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
+	const startTime = Date.now();
+	const procedureType =
+		(type as string | undefined)?.toUpperCase() || "PROCEDURE";
 
-		// Log request
-		console.log(`\n${"=".repeat(80)}`);
-		console.log(`[${timestamp}] tRPC ${procedureType}: ${path}`);
-		console.log("-".repeat(80));
-		console.log("INPUT:");
-		console.log(JSON.stringify(input, null, 2));
-		console.log("-".repeat(80));
+	// Log procedure start
+	ctx.log.info("trpc.procedure_start", {
+		procedure: path,
+		type: procedureType,
+	});
 
-		try {
-			const result = await next();
-			const duration = Date.now() - startTime;
+	try {
+		const result = await next();
+		const durationMs = Date.now() - startTime;
 
-			// Log success response
-			console.log("OUTPUT:");
-			if (result && typeof result === "object" && "data" in result) {
-				// For large outputs, truncate if needed
-				const outputStr = JSON.stringify(result.data, null, 2);
-				if (outputStr.length > 2000) {
-					console.log(`${outputStr.substring(0, 2000)}\n... (truncated)`);
-				} else {
-					console.log(outputStr);
-				}
-			} else {
-				console.log(JSON.stringify(result, null, 2));
-			}
-			console.log("-".repeat(80));
-			console.log(`SUCCESS (${duration}ms)`);
-			console.log(`${"=".repeat(80)}\n`);
+		// Log procedure success
+		ctx.log.info("trpc.procedure_success", {
+			procedure: path,
+			type: procedureType,
+			durationMs,
+		});
 
-			return result;
-		} catch (error) {
-			const duration = Date.now() - startTime;
+		return result;
+	} catch (error) {
+		const durationMs = Date.now() - startTime;
 
-			// Log error response
-			console.log("ERROR:");
-			if (error instanceof TRPCError) {
-				console.log(`   Code: ${error.code}`);
-				console.log(`   Message: ${error.message}`);
-				if (error.cause) {
-					console.log("cause:", error.cause);
-				}
-			} else if (error instanceof Error) {
-				console.log(`   Name: ${error.name}`);
-				console.log(`   Message: ${error.message}`);
-				if (error.stack) {
-					console.log(`   Stack: ${error.stack}`);
-				}
-			} else {
-				console.log(JSON.stringify(error, null, 2));
-			}
-			console.log("-".repeat(80));
-			console.log(`FAILED (${duration}ms)`);
-			console.log(`${"=".repeat(80)}\n`);
+		// Log procedure error
+		ctx.log.error("trpc.procedure_error", error, {
+			procedure: path,
+			type: procedureType,
+			durationMs,
+			errorCode: error instanceof TRPCError ? error.code : undefined,
+		});
 
-			throw error;
-		}
-	},
-);
+		throw error;
+	}
+});
 
 const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	const cacheKey = await createCacheKey(path, input);
-	console.log("cache middleware", cacheKey);
 
 	const cached = await ctx.kv.get(cacheKey);
-	console.log("path", path, "input", input, "cache middleware", cached);
 	if (cached) {
-		console.log("cache middleware returning cached");
+		ctx.log.system.cacheHit({ cacheKey, path });
 		// Return in the same format as next() returns
 		// Using type assertion because the middleware marker type is branded and can't be created directly
 		return {
 			ok: true as const,
 			data: JSON.parse(cached),
-			marker: "middlewareMarker" as any,
+			marker: "middlewareMarker" as "middlewareMarker" & {
+				__brand: "middlewareMarker";
+			},
 		};
 	}
 
+	ctx.log.system.cacheMiss({ cacheKey, path });
+
 	const result = await next();
-	console.log("path", path, "input", input, "cache middleware result", result);
 	if (result && typeof result === "object" && "data" in result) {
 		let ttl: number;
 
 		if (input && typeof input === "object" && "timeRange" in input) {
-			ttl = getTtlForTimeRange(input.timeRange as timeRangeType);
+			ttl = getTtlForTimeRange(
+				(input as Record<string, unknown>).timeRange as timeRangeType,
+			);
 		} else if (
 			input &&
 			typeof input === "object" &&
 			"ttl" in input &&
-			typeof input.ttl === "number"
+			typeof (input as Record<string, unknown>).ttl === "number"
 		) {
-			ttl = input.ttl;
+			ttl = (input as Record<string, unknown>).ttl as number;
 		} else {
 			ttl = 3000;
 		}
-		console.log("cache middleware", ttl);
+
 		await ctx.kv.put(cacheKey, JSON.stringify(result.data), {
 			expirationTtl: ttl,
 		});
+
+		ctx.log.system.cacheSet({ cacheKey, path, cacheTtl: ttl });
 	}
 
 	return result;
 });
 
-// All procedures use errorHandlingMiddleware FIRST to ensure errors are always valid TRPCErrors
 export const publicProcedure = t.procedure
 	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware);

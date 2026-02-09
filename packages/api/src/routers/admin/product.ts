@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { productQueries } from "@vit/api/queries";
 import { addProductSchema, updateProductSchema } from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
@@ -9,10 +9,12 @@ import { searchProducts } from "../../lib/upstash-search";
 export const product = router({
 	searchProductByName: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const products = await q.searchByName(input.searchTerm, 3);
+				const products = await productQueries.admin.searchByName(
+					input.searchTerm,
+					3,
+				);
 				return products;
 			} catch (error) {
 				console.error("Error searching products:", error);
@@ -26,10 +28,12 @@ export const product = router({
 
 	searchProductByNameForOrder: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const products = await q.searchByNameForOrder(input.searchTerm, 3);
+				const products = await productQueries.admin.searchByNameForOrder(
+					input.searchTerm,
+					3,
+				);
 				return products;
 			} catch (error) {
 				console.error("Error searching products for order:", error);
@@ -48,16 +52,17 @@ export const product = router({
 				limit: v.optional(v.number(), 50),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
 				const { query, limit } = input;
 				const searchResults = await searchProducts(query, limit);
 
 				if (searchResults.length > 0) {
-					const q = createQueries(ctx.db).products.admin;
 					const productsWithStock = await Promise.all(
 						searchResults.map(async (product) => {
-							const dbProduct = await q.getProductById(product.id);
+							const dbProduct = await productQueries.admin.getProductById(
+								product.id,
+							);
 							return {
 								id: product.id,
 								name: product.name,
@@ -87,9 +92,8 @@ export const product = router({
 
 	addProduct: adminProcedure
 		.input(addProductSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
 				// Validate image URLs
@@ -102,7 +106,7 @@ export const product = router({
 						});
 					}
 				}
-				const brand = await q.getBrandById(input.brandId);
+				const brand = await productQueries.admin.getBrandById(input.brandId);
 				if (!brand) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -111,7 +115,7 @@ export const product = router({
 				}
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
 				const slug = productName.replace(/\s+/g, "-").toLowerCase();
-				const productResult = await q.createProduct({
+				const productResult = await productQueries.admin.createProduct({
 					name: productName,
 					slug,
 					description: input.description,
@@ -123,7 +127,14 @@ export const product = router({
 					dailyIntake: input.dailyIntake,
 					categoryId: input.categoryId,
 					brandId: input.brandId,
-					status: "active",
+					status: input.status || "active",
+					// Optional AI-extracted fields
+					name_mn: input.name_mn || null,
+					ingredients: input.ingredients || [],
+					tags: input.tags || [],
+					seoTitle: input.seoTitle || null,
+					seoDescription: input.seoDescription || null,
+					weightGrams: input.weightGrams || 0,
 				});
 				if (!productResult) {
 					throw new TRPCError({
@@ -137,7 +148,10 @@ export const product = router({
 					url: image.url,
 					isPrimary: index === 0,
 				}));
-				await q.createProductImages(productId, imagesToInsert);
+				await productQueries.admin.createProductImages(
+					productId,
+					imagesToInsert,
+				);
 				return { message: "Product added successfully" };
 			} catch (error) {
 				console.error("Error adding product:", error);
@@ -150,11 +164,10 @@ export const product = router({
 			}
 		}),
 
-	getProductBenchmark: adminProcedure.query(async ({ ctx }) => {
+	getProductBenchmark: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).products.admin;
 			const startTime = performance.now();
-			await q.getProductBenchmark();
+			await productQueries.admin.getProductBenchmark();
 			return performance.now() - startTime;
 		} catch (error) {
 			console.error("Error in benchmark:", error);
@@ -168,10 +181,9 @@ export const product = router({
 
 	getProductById: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const product = await q.getProductById(input.id);
+				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -191,9 +203,8 @@ export const product = router({
 
 	updateProduct: adminProcedure
 		.input(updateProductSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
 				if (!input.id)
 					throw new TRPCError({
 						code: "BAD_REQUEST",
@@ -211,7 +222,7 @@ export const product = router({
 							message: "Invalid image URL",
 						});
 				}
-				const brand = await q.getBrandById(input.brandId);
+				const brand = await productQueries.admin.getBrandById(input.brandId);
 				if (!brand)
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -219,12 +230,14 @@ export const product = router({
 					});
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
 				const slug = productName.replace(/\s+/g, "-").toLowerCase();
-				await q.updateProduct(input.id, {
+				await productQueries.admin.updateProduct(input.id, {
 					...productData,
 					name: productName,
 					slug,
 				});
-				const existingImages = await q.getProductImages(input.id);
+				const existingImages = await productQueries.admin.getProductImages(
+					input.id,
+				);
 				let isDiff = false;
 				if (filteredImages.length !== existingImages.length) {
 					isDiff = true;
@@ -243,13 +256,16 @@ export const product = router({
 					}
 				}
 				if (isDiff) {
-					await q.softDeleteProductImages(input.id);
+					await productQueries.admin.softDeleteProductImages(input.id);
 					const imagesToInsert = filteredImages.map((image, index) => ({
 						productId: input.id,
 						url: image.url,
 						isPrimary: index === 0,
 					}));
-					await q.createProductImages(input.id, imagesToInsert);
+					await productQueries.admin.createProductImages(
+						input.id,
+						imagesToInsert,
+					);
 				}
 				return { message: "Product updated successfully" };
 			} catch (error) {
@@ -271,16 +287,21 @@ export const product = router({
 				type: v.picklist(["add", "minus"]),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const product = await q.getProductById(input.productId);
+				const product = await productQueries.admin.getProductById(
+					input.productId,
+				);
 				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				await q.updateStock(input.productId, input.numberToUpdate, input.type);
+				await productQueries.admin.updateStock(
+					input.productId,
+					input.numberToUpdate,
+					input.type,
+				);
 				return { message: "Stock updated successfully" };
 			} catch (error) {
 				console.error("Error updating stock:", error);
@@ -295,16 +316,15 @@ export const product = router({
 
 	deleteProduct: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const product = await q.getProductById(input.id);
+				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				await q.deleteProduct(input.id);
+				await productQueries.admin.deleteProduct(input.id);
 				return { message: "Product deleted successfully" };
 			} catch (error) {
 				console.error("Error deleting product:", error);
@@ -317,10 +337,9 @@ export const product = router({
 			}
 		}),
 
-	getAllProducts: adminProcedure.query(async ({ ctx }) => {
+	getAllProducts: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).products.admin;
-			const products = await q.getAllProducts();
+			const products = await productQueries.admin.getAllProducts();
 			return products;
 		} catch (error) {
 			console.error("Error fetching all products:", error);
@@ -347,10 +366,9 @@ export const product = router({
 				searchTerm: v.optional(v.string()),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				return await q.getPaginatedProducts({
+				return await productQueries.admin.getPaginatedProducts({
 					page: input.page ?? 1,
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
 					brandId: input.brandId,
@@ -371,16 +389,15 @@ export const product = router({
 
 	setProductStock: adminProcedure
 		.input(v.object({ id: v.number(), newStock: v.number() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
-				const product = await q.getProductById(input.id);
+				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: "Product not found",
 					});
-				await q.setProductStock(input.id, input.newStock);
+				await productQueries.admin.setProductStock(input.id, input.newStock);
 				return { message: "Stock set successfully" };
 			} catch (error) {
 				console.error("Error setting product stock:", error);
@@ -393,10 +410,9 @@ export const product = router({
 			}
 		}),
 
-	getAllProductValue: adminProcedure.query(async ({ ctx }) => {
+	getAllProductValue: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).products.admin;
-			const result = await q.getAllProductValue();
+			const result = await productQueries.admin.getAllProductValue();
 			return result;
 		} catch (error) {
 			console.error("Error calculating product value:", error);
@@ -416,11 +432,14 @@ export const product = router({
 				numberValue: v.optional(v.number()),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).products.admin;
 				const value = input.stringValue ?? input.numberValue;
-				await q.updateProductField(input.id, input.field, value ?? null);
+				await productQueries.admin.updateProductField(
+					input.id,
+					input.field,
+					value ?? null,
+				);
 				return { message: "Product field updated successfully" };
 			} catch (error) {
 				console.error("Error updating product field:", error);

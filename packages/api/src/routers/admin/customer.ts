@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { customerQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
@@ -18,10 +18,9 @@ export const customer = router({
 				address: v.optional(v.string()),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).customers.admin;
-				const result = await q.createCustomer(input);
+				const result = await customerQueries.admin.createCustomer(input);
 				return result;
 			} catch (error) {
 				console.error("Error adding customer:", error);
@@ -44,11 +43,12 @@ export const customer = router({
 				),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).customers.admin;
 				console.log("GETTING CUSTOMER BY PHONE");
-				const result = await q.getCustomerByPhone(input.phone);
+				const result = await customerQueries.admin.getCustomerByPhone(
+					input.phone,
+				);
 				console.log("RESULT", result);
 				if (!result) {
 					throw new TRPCError({
@@ -68,10 +68,9 @@ export const customer = router({
 			}
 		}),
 
-	getCustomerCount: adminProcedure.query(async ({ ctx }) => {
+	getCustomerCount: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).customers.admin;
-			const count = await q.getCustomerCount();
+			const count = await customerQueries.admin.getCustomerCount();
 			return count;
 		} catch (error) {
 			console.error("Error getting customer count:", error);
@@ -89,12 +88,12 @@ export const customer = router({
 				timeRange: timeRangeSchema,
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).customers.admin;
 				const { timeRange } = input;
 				const startDate = await getDaysFromTimeRange(timeRange);
-				const count = await q.getNewCustomersCount(startDate);
+				const count =
+					await customerQueries.admin.getNewCustomersCount(startDate);
 				return count;
 			} catch (error) {
 				console.error("Error getting new customers count:", error);
@@ -106,10 +105,9 @@ export const customer = router({
 			}
 		}),
 
-	getAllCustomers: adminProcedure.query(async ({ ctx }) => {
+	getAllCustomers: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).customers.admin;
-			const customers = await q.getAllCustomers();
+			const customers = await customerQueries.admin.getAllCustomers();
 			return customers;
 		} catch (error) {
 			console.error("Error getting all customers:", error);
@@ -133,11 +131,12 @@ export const customer = router({
 				address: v.optional(v.string()),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).customers.admin;
 				const { phone, address } = input;
-				const result = await q.updateCustomer(phone, { address });
+				const result = await customerQueries.admin.updateCustomer(phone, {
+					address,
+				});
 				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -167,11 +166,10 @@ export const customer = router({
 				),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).customers.admin;
 				const { phone } = input;
-				await q.deleteCustomer(phone);
+				await customerQueries.admin.deleteCustomer(phone);
 				return { message: "Successfully deleted customer" };
 			} catch (error) {
 				console.error("Error deleting customer:", error);
