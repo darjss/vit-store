@@ -22,7 +22,6 @@ import FilterBar from "../search/filter-bar";
 import ProductCard from "./product-card";
 import SearchProductCard from "./search-product-card";
 
-// Loading skeleton component
 const ProductCardSkeleton = () => (
 	<div class="flex animate-pulse flex-col border-2 border-black bg-white shadow-[2px_2px_0_0_#000] transition-all sm:border-3 sm:shadow-[3px_3px_0_0_#000] lg:shadow-[5px_5px_0_0_#000]">
 		<div class="relative aspect-4/5 overflow-hidden border-black border-b-2 bg-gray-100 sm:aspect-4/3 sm:border-b-3">
@@ -58,23 +57,19 @@ const ProductsList = () => {
 		defaultValue: undefined,
 	});
 
-	// Local state for search input
 	const [localSearchTerm, setLocalSearchTerm] = createSignal(
 		searchTerm() ?? "",
 	);
 
-	// Sync local search with URL param changes
 	createEffect(() => {
 		setLocalSearchTerm(searchTerm() ?? "");
 	});
 
-	// Check if we're in search mode (using Upstash) vs browse mode (using DB)
 	const isSearchMode = createMemo(() => {
 		const term = searchTerm();
 		return term !== undefined && term !== null && term.length >= 2;
 	});
 
-	// Fetch categories and brands for filters
 	const categoriesQuery = useQuery(
 		() => ({
 			queryKey: ["categories"],
@@ -93,7 +88,6 @@ const ProductsList = () => {
 		() => queryClient,
 	);
 
-	// Parse numeric params
 	const categoryId = createMemo(() => {
 		const val = categoryIdParam();
 		return val ? Number.parseInt(val, 10) : null;
@@ -104,7 +98,6 @@ const ProductsList = () => {
 		return val ? Number.parseInt(val, 10) : null;
 	});
 
-	// Search query - uses Upstash directly for search results (when searching)
 	const searchQuery = useQuery(
 		() => ({
 			queryKey: ["search-products-page", searchTerm()],
@@ -123,7 +116,6 @@ const ProductsList = () => {
 		() => queryClient,
 	);
 
-	// Browse query - uses DB with infinite scroll (when not searching)
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
@@ -153,7 +145,6 @@ const ProductsList = () => {
 		() => queryClient,
 	);
 
-	// Computed states for search mode
 	const searchResults = createMemo(() => searchQuery.data ?? []);
 	const isSearchLoading = createMemo(
 		() => searchQuery.isLoading && !searchQuery.data,
@@ -163,7 +154,6 @@ const ProductsList = () => {
 			searchQuery.isFetching && !searchQuery.isLoading && !!searchQuery.data,
 	);
 
-	// Computed states for browse mode
 	const isInitialLoading = createMemo(() => {
 		if (isSearchMode()) return isSearchLoading();
 		return productsQuery.isLoading && !productsQuery.data;
@@ -179,20 +169,17 @@ const ProductsList = () => {
 		);
 	});
 
-	// Flatten all pages into a single array (for browse mode)
 	const allBrowseProducts = createMemo(() => {
 		const data = productsQuery.data;
 		if (!data) return [];
 		return data.pages.flatMap((page) => page.items);
 	});
 
-	// Check if we have any products to display
 	const hasProducts = createMemo(() => {
 		if (isSearchMode()) return searchResults().length > 0;
 		return allBrowseProducts().length > 0;
 	});
 
-	// Check if we should show empty state
 	const shouldShowEmptyState = createMemo(() => {
 		if (isSearchMode()) {
 			return (
@@ -210,13 +197,11 @@ const ProductsList = () => {
 		);
 	});
 
-	// Get total product count for display
 	const productCount = createMemo(() => {
 		if (isSearchMode()) return searchResults().length;
 		return allBrowseProducts().length;
 	});
 
-	// Filter handlers
 	const handleSearch = (term: string) => {
 		setLocalSearchTerm(term);
 		setSearchTerm(term || null);
@@ -244,7 +229,6 @@ const ProductsList = () => {
 		setLocalSearchTerm("");
 	};
 
-	// Check if any filters are active
 	const hasActiveFilters = () =>
 		!!searchTerm() ||
 		!!sortField() ||
@@ -252,7 +236,6 @@ const ProductsList = () => {
 		!!categoryId() ||
 		!!brandId();
 
-	// Infinite scroll observer (only for browse mode)
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
 			(entries) => {

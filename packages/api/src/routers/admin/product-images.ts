@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
@@ -12,10 +12,9 @@ export const productImages = router({
 				isPrimary: v.boolean(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
-				await q.createImage(input);
+				await productImageQueries.admin.createImage(input);
 				return { message: "Successfully added image" };
 			} catch (error) {
 				console.error("Error adding image:", error);
@@ -39,9 +38,8 @@ export const productImages = router({
 				),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
 				const response = await fetch(
@@ -84,7 +82,7 @@ export const productImages = router({
 					}),
 				);
 
-				await q.createImages(imagesToInsert);
+				await productImageQueries.admin.createImages(imagesToInsert);
 				return { message: "Successfully uploaded images" };
 			} catch (error) {
 				console.error("Error in uploadImagesFromUrl:", error);
@@ -107,12 +105,12 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { newImages, productId } = input;
 
-				const existingImages = await q.getImagesByProductId(productId);
+				const existingImages =
+					await productImageQueries.admin.getImagesByProductId(productId);
 
 				console.log("existing", existingImages);
 				console.log("updated", newImages);
@@ -137,7 +135,9 @@ export const productImages = router({
 
 				if (isDiff) {
 					// Delete existing images
-					await q.softDeleteImagesByProductId(productId);
+					await productImageQueries.admin.softDeleteImagesByProductId(
+						productId,
+					);
 
 					// Insert new images
 					const imagesToInsert = newImages.map((image, index) => ({
@@ -145,7 +145,7 @@ export const productImages = router({
 						url: image.url,
 						isPrimary: index === 0,
 					}));
-					await q.createImages(imagesToInsert);
+					await productImageQueries.admin.createImages(imagesToInsert);
 				}
 
 				return { message: "Successfully updated images" };
@@ -165,11 +165,11 @@ export const productImages = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { productId } = input;
-				const images = await q.getImagesByProductId(productId);
+				const images =
+					await productImageQueries.admin.getImagesByProductId(productId);
 				return images;
 			} catch (error) {
 				console.error("Error getting images by product ID:", error);
@@ -187,11 +187,10 @@ export const productImages = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { id } = input;
-				await q.deleteImage(id);
+				await productImageQueries.admin.deleteImage(id);
 				return { message: "Successfully deleted image" };
 			} catch (error) {
 				console.error("Error deleting image:", error);
@@ -210,11 +209,10 @@ export const productImages = router({
 				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).productImages.admin;
 				const { productId, imageId } = input;
-				await q.setPrimaryImage(productId, imageId);
+				await productImageQueries.admin.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
 				console.error("Error setting primary image:", error);
@@ -226,10 +224,9 @@ export const productImages = router({
 			}
 		}),
 
-	getAllImages: adminProcedure.query(async ({ ctx }) => {
+	getAllImages: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).productImages.admin;
-			const images = await q.getAllImages();
+			const images = await productImageQueries.admin.getAllImages();
 			return images;
 		} catch (error) {
 			console.error("Error getting all images:", error);

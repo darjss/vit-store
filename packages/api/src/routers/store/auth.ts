@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { customerQueries } from "@vit/api/queries";
+import { createMinimalLogger } from "@vit/logger";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
 import { smsGateway } from "@/lib/integrations";
-import type { DB } from "../../db";
+import { kv } from "../../lib/kv";
 import {
 	auth as authCheck,
 	createSession,
@@ -21,43 +22,53 @@ export const auth = router({
 		)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				console.log("sendOtp called", input);
-
 				const nanoid = customAlphabet("1234567890", 4);
 				const otp = nanoid();
-				console.log("otp", otp, input.phone);
-				await ctx.kv.put(input.phone, otp, { expirationTtl: 3600 });
-				console.log(
-					"sms auth",
-					process.env.SMS_GATEWAY_LOGIN,
-					process.env.SMS_GATEWAY_PASSWORD,
-				);
-				// Send SMS and wait for it to be sent
+
+				await kv().put(input.phone, otp, { expirationTtl: 3600 });
+
+				ctx.log.auth.otpSent({ phone: Number(input.phone) });
+
 				const finalState = await smsGateway.sendSmsAndWait({
 					message: `Tanii nevtreh kod ${otp}`,
 					phoneNumbers: [`+976${input.phone}`],
 				});
-				console.log("SMS finalState", finalState);
 
-				// Check if SMS failed to send
 				if (finalState.state === "Failed") {
 					const errorMsg =
 						finalState.recipients[0]?.error ?? "Unknown SMS error";
+
+					ctx.log.error("auth.sms_failed", new Error(errorMsg), {
+						phone: Number(input.phone),
+					});
+
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: `Failed to send OTP: ${errorMsg}`,
 					});
 				}
 
+				ctx.log.info("auth.sms_sent", { phone: Number(input.phone) });
+
 				return {
 					success: true,
 					message: "OTP sent successfully",
 				};
 			} catch (error) {
-				console.error("error", error);
-				throw error;
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+				ctx.log.error("auth.send_otp_failed", error, {
+					phone: Number(input.phone),
+				});
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to send OTP",
+					cause: error,
+				});
 			}
 		}),
+
 	login: publicProcedure
 		.input(
 			v.object({
@@ -72,48 +83,64 @@ export const auth = router({
 				if (process.env.NODE_ENV === "development") {
 					isValidOtp = true;
 				} else {
-					const otpFromRedis = (await ctx.kv.get(input.phone)) as string;
-					console.log(
-						"otpFromRedis",
-						otpFromRedis,
-						input.otp,
-						typeof otpFromRedis,
-						typeof input.otp,
-					);
+					const otpFromRedis = (await kv().get(input.phone)) as string;
 					isValidOtp = otpFromRedis === input.otp;
 
 					if (isValidOtp) {
-						await ctx.kv.delete(input.phone);
+						await kv().delete(input.phone);
 					}
 				}
 
 				if (!isValidOtp) {
+					ctx.log.auth.otpFailed({
+						phone: Number(input.phone),
+						failureReason: "invalid_otp",
+					});
+
 					throw new TRPCError({
 						code: "UNAUTHORIZED",
 						message: "Invalid OTP",
 					});
 				}
 
-				const user = await addCustomerToDB(input.phone, ctx.db);
+				ctx.log.auth.otpVerified({ phone: Number(input.phone) });
+
+				const user = await addCustomerToDB(input.phone);
 
 				if (!user) {
+					ctx.log.error(
+						"auth.customer_create_failed",
+						new Error("No user returned"),
+						{
+							phone: Number(input.phone),
+						},
+					);
+
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to create or retrieve user",
 					});
 				}
 
-				const { session, token } = await createSession(user, ctx.kv);
-
+				const { session, token } = await createSession(user, kv());
 				setSessionTokenCookie(ctx.c, token, session.expiresAt);
-				console.log("Session cookie set via resHeaders");
+
+				ctx.log.auth.loginSuccess({
+					phone: Number(input.phone),
+					sessionId: session.id,
+				});
 
 				return {
 					success: true,
 					user: session.user,
 				};
 			} catch (error) {
-				console.error("Login error:", error);
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+				ctx.log.error("auth.login_failed", error, {
+					phone: Number(input.phone),
+				});
 				throw error;
 			}
 		}),
@@ -122,17 +149,22 @@ export const auth = router({
 		try {
 			if (ctx.session) {
 				await invalidateSession(ctx);
+				ctx.log.auth.logout({
+					phone: ctx.session.user.phone,
+				});
 			}
 
 			return { success: true };
 		} catch (error) {
-			console.error("Logout error:", error);
+			ctx.log.error("auth.logout_failed", error);
 			throw error;
 		}
 	}),
+
 	me: customerProcedure.query(async ({ ctx }) => {
 		return ctx.session.user;
 	}),
+
 	check: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const session = await authCheck(ctx);
@@ -141,28 +173,32 @@ export const auth = router({
 			}
 			return session?.user;
 		} catch (e) {
-			console.log(e);
-			console.error(e);
+			ctx.log.error("auth.check_failed", e);
 			return null;
 		}
 	}),
 });
 
-export const addCustomerToDB = async (phone: string, db: DB) => {
+export const addCustomerToDB = async (phone: string) => {
+	const log = createMinimalLogger();
+
 	try {
-		const q = createQueries(db).customers.store;
+		const q = customerQueries.store;
 		const user = await q.getCustomerByPhone(Number.parseInt(phone, 10));
-		console.log("user", user);
+
 		if (!user) {
 			const newUser = await q.createCustomer({
 				phone: Number.parseInt(phone, 10),
 				address: "",
 			});
-			console.log("newUser", newUser);
+
+			log.info("customer.created", { phone: Number(phone) });
 			return newUser;
 		}
+
 		return user;
 	} catch (error) {
-		console.error(error);
+		log.error("customer.create_failed", error, { phone: Number(phone) });
+		return undefined;
 	}
 };

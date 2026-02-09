@@ -20,8 +20,6 @@ const SearchBar = ({
 		const value = inputRef.current?.value?.trim() ?? "";
 		if (!value) return;
 		if (onSubmit) onSubmit(value);
-		// fallback demo action
-		if (!onSubmit) console.log("search:", value);
 	};
 
 	const clearInput = () => {

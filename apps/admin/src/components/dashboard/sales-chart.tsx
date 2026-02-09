@@ -1,5 +1,4 @@
-import { useSearch } from "@tanstack/react-router";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, TrendingUp } from "lucide-react";
 import {
 	Bar,
 	BarChart,
@@ -12,51 +11,69 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getRevenueData } from "@/lib/utils";
 
-export function SalesChart() {
-	const { timeRange } = useSearch({ from: "/_dash/" });
+export function SalesChart({
+	timeRange = "daily",
+}: {
+	timeRange?: "daily" | "weekly" | "monthly";
+}) {
 	const data = getRevenueData(timeRange);
 
 	return (
-		<Card className="border-2 border-border shadow-shadow">
-			<CardHeader className="border-border border-b-2 bg-secondary-background">
-				<CardTitle className="flex items-center gap-3 font-heading text-xl">
-					<BarChart3 className="h-5 w-5" />
-					Орлогын чиг хандлага
+		<Card className="border-2 border-border shadow-hard">
+			<CardHeader className="flex flex-row items-center justify-between space-y-0 border-border border-b-2 bg-background p-4 pb-2">
+				<CardTitle className="font-black font-heading text-xl uppercase tracking-tight">
+					Орлого
 				</CardTitle>
+				<div className="rounded-none border-2 border-border bg-primary px-2 py-1 font-bold text-xs">
+					{timeRange === "daily"
+						? "Өнөөдөр"
+						: timeRange === "weekly"
+							? "7 хоног"
+							: "Сар"}
+				</div>
 			</CardHeader>
-			<CardContent className="p-4">
+			<CardContent className="p-4 pt-6">
 				<div className="h-[300px] w-full">
 					<ResponsiveContainer width="100%" height="100%">
 						<BarChart
 							data={data}
-							margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+							margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
 						>
-							<CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+							<CartesianGrid
+								strokeDasharray="4 4"
+								vertical={false}
+								stroke="var(--color-border)"
+								opacity={0.3}
+							/>
 							<XAxis
 								dataKey="date"
-								tick={{ fontSize: 12 }}
+								tick={{ fontSize: 11, fontWeight: 600 }}
 								tickLine={false}
 								axisLine={false}
+								dy={10}
 							/>
 							<YAxis
-								tick={{ fontSize: 12 }}
+								tick={{ fontSize: 11, fontWeight: 600 }}
 								tickLine={false}
 								axisLine={false}
+								tickFormatter={(value) => `${value / 1000}k`}
 							/>
 							<Tooltip
+								cursor={{
+									fill: "var(--color-muted)",
+									opacity: 0.2,
+								}}
 								content={({ active, payload, label }) => {
 									if (!active || !payload?.length) return null;
-
 									return (
-										<div className="rounded-lg border border-border bg-background p-3 shadow-lg">
-											<p className="mb-2 font-medium text-sm">{label}</p>
-											<p className="text-sm">
-												<span className="text-muted-foreground">Орлого: </span>
-												<span className="font-semibold">
-													{new Intl.NumberFormat("mn-MN", {
-														style: "currency",
-														currency: "MNT",
-													}).format(payload[0].value as number)}
+										<div className="brutal-card bg-background p-2 text-xs shadow-hard-sm">
+											<p className="mb-1 font-bold">{label}</p>
+											<p className="font-bold font-mono text-primary-foreground">
+												<span className="bg-primary px-1">
+													₮
+													{new Intl.NumberFormat("mn-MN").format(
+														payload[0].value as number,
+													)}
 												</span>
 											</p>
 										</div>
@@ -65,8 +82,15 @@ export function SalesChart() {
 							/>
 							<Bar
 								dataKey="revenue"
-								fill="hsl(var(--chart-1))"
-								radius={[8, 8, 0, 0]}
+								fill="var(--color-primary)"
+								stroke="var(--color-border)"
+								strokeWidth={2}
+								radius={0}
+								activeBar={{
+									fill: "var(--color-accent)",
+									stroke: "var(--color-border)",
+									strokeWidth: 2,
+								}}
 							/>
 						</BarChart>
 					</ResponsiveContainer>

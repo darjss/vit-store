@@ -81,3 +81,23 @@ export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	expiresAt: Date;
 }
 export type { CustomerSelectType, UserSelectType };
+export interface PaymentWebhookResponse {
+  type: string;
+  status: string;
+  message: string;
+  body: {
+    amount: number;
+    currency: string;
+    completedAt: string;
+    terminalId: string;
+    invoiceId: string;
+    paymentVendor: string;
+    initType: string;
+    status: string;
+    respCode: string;
+    transactionId: string | null;
+    linkId: number;
+    linkRef: string;
+    [key: string]: any;
+  };
+}

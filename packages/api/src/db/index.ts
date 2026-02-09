@@ -17,14 +17,25 @@ export type DB = PostgresJsDatabase<typeof schema>;
 export function createDb(binding: Hyperdrive): DB;
 export function createDb(connectionString: string): DB;
 export function createDb(bindingOrConnectionString: Hyperdrive | string): DB {
-  const binding: Hyperdrive =
-    typeof bindingOrConnectionString === "string"
-      ? ({ connectionString: bindingOrConnectionString } as any as Hyperdrive)
-      : bindingOrConnectionString;
+	const binding: Hyperdrive =
+		typeof bindingOrConnectionString === "string"
+			? ({ connectionString: bindingOrConnectionString } as any as Hyperdrive)
+			: bindingOrConnectionString;
 
-  const client = postgres(binding.connectionString, {
-    ssl: "require",
-  });
+	const connStr = binding.connectionString;
+	// Hyperdrive proxy URLs use a 32-char hex string as username (no dots/special chars)
+	// e.g., postgresql://c5de5ebad34245c58c6d5d50cc9409ff:token@host
+	// Direct connections have normal usernames like postgres.5xhixrjzaz36
+	const isHyperdriveProxy = /^postgres(ql)?:\/\/[a-f0-9]{32}:/.test(connStr);
 
-  return drizzle(client, { schema });
+	const client = postgres(connStr, {
+		// Only require SSL for direct connections (dev mode), not Hyperdrive proxy (prod)
+		ssl: isHyperdriveProxy ? false : "require",
+		// Limit connections due to Workers' limits on concurrent external connections
+		max: 5,
+		// Disable fetch_types to avoid an extra round-trip if not using array types
+		fetch_types: false,
+	});
+
+	return drizzle(client, { schema });
 }

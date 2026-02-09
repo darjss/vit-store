@@ -1,14 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { categoryQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const category = router({
-	getAllCategories: adminProcedure.query(async ({ ctx }) => {
+	getAllCategories: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).categories.admin;
 			console.log("fetching categories");
-			const categories = await q.getAllCategories();
+			const categories = await categoryQueries.admin.getAllCategories();
 			return categories;
 		} catch (error) {
 			console.error("Error fetching categories:", error);
@@ -26,10 +25,9 @@ export const category = router({
 				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).categories.admin;
-				await q.createCategory(input.name);
+				await categoryQueries.admin.createCategory(input.name);
 				return { message: "Successfully added category" };
 			} catch (error) {
 				console.error("Error adding category:", error);
@@ -48,11 +46,10 @@ export const category = router({
 				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).categories.admin;
 				const { id, name } = input;
-				await q.updateCategory(id, name);
+				await categoryQueries.admin.updateCategory(id, name);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				console.error("Error updating category:", error);
@@ -70,11 +67,10 @@ export const category = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).categories.admin;
 				const { id } = input;
-				await q.deleteCategory(id);
+				await categoryQueries.admin.deleteCategory(id);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				console.error("Error deleting category:", error);
@@ -92,11 +88,10 @@ export const category = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).categories.admin;
 				const { id } = input;
-				const category = await q.getCategoryById(id);
+				const category = await categoryQueries.admin.getCategoryById(id);
 
 				if (!category) {
 					throw new TRPCError({

@@ -1,14 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { brandQueries } from "@vit/api/queries";
 import { addBrandSchema } from "@vit/shared";
 import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const brands = router({
-	getAllBrands: adminProcedure.query(async ({ ctx }) => {
+	getAllBrands: adminProcedure.query(async () => {
 		try {
-			const q = createQueries(ctx.db).brands.admin;
-			const brands = await q.getAllBrands();
+			const brands = await brandQueries.admin.getAllBrands();
 			console.log("brands", brands);
 			return brands;
 		} catch (error) {
@@ -20,28 +19,24 @@ export const brands = router({
 			});
 		}
 	}),
-	addBrand: adminProcedure
-		.input(addBrandSchema)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const q = createQueries(ctx.db).brands.admin;
-				const { name, logoUrl } = input;
-				await q.createBrand({ name, logoUrl });
-				return { message: "Successfully updated category" };
-			} catch (err) {
-				console.error("Error adding products:", err);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to add products",
-					cause: err,
-				});
-			}
-		}),
+	addBrand: adminProcedure.input(addBrandSchema).mutation(async ({ input }) => {
+		try {
+			const { name, logoUrl } = input;
+			await brandQueries.admin.createBrand({ name, logoUrl });
+			return { message: "Successfully updated category" };
+		} catch (err) {
+			console.error("Error adding products:", err);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to add products",
+				cause: err,
+			});
+		}
+	}),
 	updateBrand: adminProcedure
 		.input(addBrandSchema)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).brands.admin;
 				const id = input.id;
 				if (!id) {
 					throw new TRPCError({
@@ -50,7 +45,7 @@ export const brands = router({
 					});
 				}
 				const { name, logoUrl } = input;
-				await q.updateBrand(id, { name, logoUrl });
+				await brandQueries.admin.updateBrand(id, { name, logoUrl });
 			} catch (err) {
 				console.error("Error adding products:", err);
 				throw new TRPCError({
@@ -62,10 +57,9 @@ export const brands = router({
 		}),
 	deleteBrand: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).brands.admin;
-				await q.deleteBrand(input.id);
+				await brandQueries.admin.deleteBrand(input.id);
 			} catch (err) {
 				console.error("Error deleting brand:", err);
 				throw new TRPCError({

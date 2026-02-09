@@ -22,7 +22,6 @@ const uploadImage = async (image: File, category: string) => {
 		}
 		throw new Error(data.message || "Failed to upload image");
 	} catch (error) {
-		console.error(error);
 		throw new Error("Failed to upload image");
 	}
 };
@@ -50,21 +49,18 @@ export const UploadButton = ({
 		if (!files || files.length === 0) {
 			throw new Error("Select a file");
 		}
-		// Allow multiple files
+
 		Array.from(files).forEach((file) => {
 			upload(
 				{ image: file, category },
 				{
 					onSuccess: (url) => {
-						console.log("image uploaded successfully", url);
 						append?.({ url });
-						// If you still need a single imageUrl, the last one wins
+
 						setValue?.("imageUrl", url);
 						onSuccess(url);
 					},
-					onError: (error) => {
-						console.error(error);
-					},
+					onError: (error) => {},
 				},
 			);
 		});

@@ -62,7 +62,6 @@ const OrderForm = ({
 			onSuccess();
 		},
 		onError: (error) => {
-			console.error("error", error);
 			toast.error("Failed to add order");
 		},
 	});
@@ -82,7 +81,6 @@ const OrderForm = ({
 	const handlePhoneChange = useCallback(
 		async (form: UseFormReturn<any>) => {
 			const result = customerInfo;
-			console.log("result", result);
 			if (result && isSuccess) {
 				form.setValue("isNewCustomer", false);
 				form.setValue("address", result?.address, {
@@ -98,7 +96,6 @@ const OrderForm = ({
 	);
 
 	const onSubmit = async (values: addOrderType) => {
-		console.log("submitting values", values);
 		mutation.mutate(values);
 	};
 

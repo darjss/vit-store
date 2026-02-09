@@ -1,3 +1,4 @@
+import type { Logger } from "@vit/logger";
 import type { Context as HonoContext } from "hono";
 import type { DB } from "../db";
 import type { CustomerSelectType, UserSelectType } from "../db/schema";
@@ -20,4 +21,6 @@ export type Context = {
 	db: DB;
 	kv: KVNamespace;
 	r2: R2Bucket;
+	/** Structured logger for this request */
+	log: Logger;
 };

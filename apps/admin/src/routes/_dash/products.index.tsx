@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import {
 	createFileRoute,
@@ -15,7 +14,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import * as v from "valibot";
 import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";
@@ -197,7 +196,7 @@ function RouteComponent() {
 					</Button>
 				)}
 				{isSearching && (
-					<div className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 flex items-center justify-center">
+					<div className="-translate-y-1/2 absolute top-1/2 right-1 flex h-10 w-12 items-center justify-center">
 						<div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
 					</div>
 				)}
@@ -206,7 +205,7 @@ function RouteComponent() {
 			{hasInstantResults ? (
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
-						<p className="text-sm text-muted-foreground">
+						<p className="text-muted-foreground text-sm">
 							{instantSearchQuery.data?.length} үр дүн олдсон
 						</p>
 						<Button
@@ -487,7 +486,6 @@ function ProductsList({
 	const pagination = productsData.pagination;
 
 	const handlePageChange = (page: number) => {
-		console.log("page change", page);
 		navigate({
 			to: "/products",
 			search: (prev) => ({

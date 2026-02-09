@@ -1,14 +1,14 @@
-import { publicProcedure, router } from "@/lib/trpc";
-import { createQueries } from "@/queries";
+import { categoryQueries } from "@vit/api/queries";
+import { publicProcedure, router } from "../../lib/trpc";
 
 export const category = router({
-	getAllCategoryNames: publicProcedure.query(async ({ ctx }) => {
-		const q = createQueries(ctx.db).categories.store;
+	getAllCategoryNames: publicProcedure.query(async () => {
+		const q = categoryQueries.store;
 		return await q.getAllCategoryNames();
 	}),
 
-	getAllCategories: publicProcedure.query(async ({ ctx }) => {
-		const q = createQueries(ctx.db).categories.store;
+	getAllCategories: publicProcedure.query(async () => {
+		const q = categoryQueries.store;
 		return await q.getAllCategories();
 	}),
 });

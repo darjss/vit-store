@@ -45,12 +45,10 @@ const BrandForm = ({
 			onSuccess();
 		},
 		onError: (error) => {
-			console.error("error", error);
 			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
 		},
 	});
 	const onSubmit = async (values: addBrandType) => {
-		console.log("submitting values", values);
 		mutation.mutate(values);
 	};
 

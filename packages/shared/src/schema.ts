@@ -51,6 +51,13 @@ export const addProductSchema = v.object({
 	stock: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
 	price: v.pipe(v.number(), v.integer(), v.minValue(20000)),
 	images: v.array(imageSchema),
+	// Optional AI-extracted fields
+	name_mn: v.optional(v.pipe(v.string(), v.maxLength(256))),
+	ingredients: v.optional(v.array(v.string())),
+	tags: v.optional(v.array(v.string())),
+	seoTitle: v.optional(v.pipe(v.string(), v.maxLength(256))),
+	seoDescription: v.optional(v.pipe(v.string(), v.maxLength(512))),
+	weightGrams: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 });
 
 export const updateProductSchema = v.object({

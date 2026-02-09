@@ -1,15 +1,11 @@
-import { createQueries } from "@vit/api/queries";
+import { paymentQueries } from "@vit/api/queries";
 import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
-import type { DB } from "../../../db";
 
-export async function messengerWebhookHandler(
-	payload: GenericWebhookPayload,
-	db: DB,
-) {
-	const q = createQueries(db).payments.store;
+export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
+	const q = paymentQueries.store;
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {
 			const userId = event.sender.id;

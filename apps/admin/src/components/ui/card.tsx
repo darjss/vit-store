@@ -10,7 +10,7 @@ const Card = ({ className, ...props }: ICardProps) => {
 	return (
 		<div
 			className={cn(
-				"inline-block rounded border-2 bg-card shadow-md transition-all hover:shadow-nonw",
+				"brutal-card block transition-all", // Use the class from your global CSS
 				className,
 			)}
 			{...props}
@@ -21,22 +21,41 @@ const Card = ({ className, ...props }: ICardProps) => {
 const CardHeader = ({ className, ...props }: ICardProps) => {
 	return (
 		<div
-			className={cn("flex flex-col justify-start p-4", className)}
+			className={cn("flex flex-col justify-start space-y-1.5 p-6", className)}
 			{...props}
 		/>
 	);
 };
 
 const CardTitle = ({ className, ...props }: ICardProps) => {
-	return <Text as="h3" className={cn("mb-2", className)} {...props} />;
+	return (
+		<Text
+			as="h3"
+			className={cn("font-heading font-semibold leading-none tracking-tight", className)}
+			{...props}
+		/>
+	);
 };
 
 const CardDescription = ({ className, ...props }: ICardProps) => (
-	<p className={cn("text-muted-foreground", className)} {...props} />
+	<p className={cn("text-muted-foreground text-sm", className)} {...props} />
 );
 
 const CardContent = ({ className, ...props }: ICardProps) => {
-	return <div className={cn("p-4", className)} {...props} />;
+	return <div className={cn("p-6 pt-0", className)} {...props} />;
 };
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent };
+const CardFooter = ({ className, ...props }: ICardProps) => {
+	return (
+		<div className={cn("flex items-center p-6 pt-0", className)} {...props} />
+	);
+};
+
+export {
+	Card,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+	CardContent,
+	CardFooter,
+};

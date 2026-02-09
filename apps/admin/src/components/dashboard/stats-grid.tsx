@@ -1,5 +1,4 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { timeRangeType } from "@vit/shared";
 import {
 	Activity,
@@ -10,16 +9,20 @@ import {
 	ShoppingCart,
 	TrendingUp,
 } from "lucide-react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { StatCard } from "./stat-card";
 
-export function StatsGrid() {
+export function StatsGrid({
+	defaultTimeRange = "daily",
+}: {
+	defaultTimeRange?: timeRangeType;
+}) {
 	const { data: stats } = useSuspenseQuery(trpc.sales.analytics.queryOptions());
-	const { timeRange } = useSearch({ from: "/_dash/" });
-	const navigate = useNavigate();
+	const [timeRange, setTimeRange] = useState<timeRangeType>(defaultTimeRange);
 	const todayStats = [
 		{
 			title: "Өдрийн орлого",
@@ -107,15 +110,7 @@ export function StatsGrid() {
 				<Tabs
 					defaultValue={timeRange}
 					className="space-y-4"
-					onValueChange={(value) => {
-						navigate({
-							to: "/",
-							search: (prev) => ({
-								...prev,
-								timeRange: value as timeRangeType,
-							}),
-						});
-					}}
+					onValueChange={(value) => setTimeRange(value as timeRangeType)}
 				>
 					<TabsList className="grid w-full grid-cols-3 border-2 border-border bg-card">
 						<TabsTrigger value="daily" className="font-bold">

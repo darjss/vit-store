@@ -1,6 +1,5 @@
 import { createCustomerSessionManager } from "./index";
 
-// Store session configuration - 7 days duration
 export const storeSessionManager = createCustomerSessionManager({
 	kvSessionPrefix: "store_session",
 	kvUserSessionPrefix: "store_user_sessions",

@@ -9,6 +9,7 @@ import IconCloseCircle from "~icons/ri/close-circle-fill";
 import IconLoader from "~icons/ri/loader-4-line";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
+import { cart } from "@/store/cart";
 
 const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 	console.log("paymentNumber", paymentNumber);
@@ -24,7 +25,6 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 					return;
 				}
 
-				// Track payment confirmed
 				trackPaymentConfirmed(paymentNumber, data.orderNumber);
 
 				showToast({
@@ -32,7 +32,8 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 					description: "Төлбөр баталгаажуулагдлаа",
 					variant: "success",
 					duration: 5000,
-				});
+        });
+        cart.clearCart();
 				navigate(`/order/confirm/${data.orderNumber}`);
 			},
 		}),

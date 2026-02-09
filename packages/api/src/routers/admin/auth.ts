@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { createQueries } from "@vit/api/queries";
+import { userQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { adminAuth, invalidateAdminSession } from "../../lib/session/admin";
 import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
@@ -24,11 +24,14 @@ export const auth = router({
 				isApproved: v.boolean(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.mutation(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).users.admin;
 				const { googleId, username, isApproved } = input;
-				const user = await q.createUser(googleId, username, isApproved);
+				const user = await userQueries.admin.createUser(
+					googleId,
+					username,
+					isApproved,
+				);
 
 				if (!user) {
 					throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
@@ -58,11 +61,10 @@ export const auth = router({
 				googleId: v.string(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
-				const q = createQueries(ctx.db).users.admin;
 				const { googleId } = input;
-				const result = await q.getUserFromGoogleId(googleId);
+				const result = await userQueries.admin.getUserFromGoogleId(googleId);
 				return result;
 			} catch (error) {
 				console.error("Error getting user from Google ID:", error);

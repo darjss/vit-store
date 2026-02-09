@@ -110,9 +110,7 @@ function RouteComponent() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const mutation = useMutation({
 		...trpc.order.searchOrder.mutationOptions(),
-		onSuccess: (data) => {
-			console.log("data", data);
-		},
+		onSuccess: (data) => {},
 	});
 	const filtersActive = hasActiveFilters || sortField !== "";
 
@@ -135,7 +133,6 @@ function RouteComponent() {
 		});
 	};
 	const handleFilterChange = (field: string, value: string) => {
-		console.log("filter change", field, value);
 		const normalized = value === "all" ? undefined : value;
 		navigate({
 			to: "/orders",
@@ -147,7 +144,6 @@ function RouteComponent() {
 		});
 	};
 	const handleResetFilters = () => {
-		console.log("reset filters");
 		navigate({
 			to: "/orders",
 			search: (_prev) => ({
@@ -162,7 +158,6 @@ function RouteComponent() {
 		});
 	};
 	const handleSort = (field: string) => {
-		console.log("sort", field);
 		const newDirection =
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
@@ -448,7 +443,6 @@ function OrdersList({
 	const pagination = ordersData.pagination;
 
 	const handlePageChange = (page: number) => {
-		console.log("page change", page);
 		navigate({
 			to: "/orders",
 			search: (prev) => ({

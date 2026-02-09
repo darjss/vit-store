@@ -57,7 +57,6 @@ export const bulkSyncProductsToUpstash = async (
 	let success = 0;
 	let failed = 0;
 
-	// Process in batches of 10 to avoid rate limiting
 	const batchSize = 10;
 	for (let i = 0; i < products.length; i += batchSize) {
 		const batch = products.slice(i, i + batchSize);
@@ -114,8 +113,6 @@ export const bulkSyncProductsToUpstash = async (
  */
 export const clearUpstashProductsIndex = async (): Promise<void> => {
 	const client = getSearchClient();
-	// Note: Upstash Search doesn't have a clear all method,
-	// so we'd need to delete by IDs if needed
-	// For now, we'll just upsert which will update existing records
+  client.index("products").reset();
 	console.log("[Upstash] Index will be updated via upsert");
 };
