@@ -6,6 +6,7 @@ import {
 } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
 import * as v from "valibot";
+import { sendDetailedOrderNotification } from "../../lib/integrations/messenger/messages";
 import { kv } from "../../lib/kv";
 import { createSession, setSessionTokenCookie } from "../../lib/session/store";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
@@ -190,6 +191,35 @@ export const order = router({
 					paymentNumber,
 					durationMs,
 				});
+
+				if (paymentNumber) {
+					try {
+						const paymentInfo =
+							await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+
+						if (paymentInfo) {
+							await sendDetailedOrderNotification({
+								paymentNumber,
+								customerPhone: paymentInfo.order.customerPhone,
+								address: paymentInfo.order.address,
+								notes: paymentInfo.order.notes,
+								total: paymentInfo.order.total,
+								products: paymentInfo.order.orderDetails.map((detail) => ({
+									name: detail.product.name,
+									quantity: detail.quantity,
+									price: detail.product.price,
+									imageUrl: detail.product.images[0]?.url,
+								})),
+								status: "pending_transfer",
+							});
+						}
+					} catch (notificationError) {
+						ctx.log.error("order.notification_failed", notificationError, {
+							paymentNumber,
+							orderNumber,
+						});
+					}
+				}
 
 				return { paymentNumber };
 			} catch (e) {

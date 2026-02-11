@@ -11,6 +11,13 @@ const MAX_URL_IMAGES = 10;
 
 type ImageUrlArray = { url: string }[];
 
+function extensionFromContentType(contentType: string): string {
+	if (contentType.includes("png")) return "png";
+	if (contentType.includes("gif")) return "gif";
+	if (contentType.includes("webp")) return "webp";
+	return "jpg";
+}
+
 // POST /upload/products (main product images)
 app.post("/products", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
@@ -259,31 +266,48 @@ app.post("/images/urls", async (c) => {
 				}
 
 				const generatedId = nanoid();
-				const carouselKey = `products/ai-extracted/${generatedId}.webp`;
+				const rawExt = extensionFromContentType(contentType);
+				let carouselKey = `products/ai-extracted/${generatedId}.webp`;
 
 				const imageArrayBuffer = await imageResponse.arrayBuffer();
 				const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
 
-				const carouselImageResult = c.env.images
-					.input(imageBlob.stream())
-					.transform({
-						width: 800,
-						height: 600,
-						fit: "contain",
-					})
-					.output({ format: "image/webp" });
+				let wrotePrimaryWithTransform = false;
+				try {
+					const carouselImageResult = c.env.images
+						.input(imageBlob.stream())
+						.transform({
+							width: 800,
+							height: 600,
+							fit: "contain",
+						})
+						.output({ format: "image/webp" });
 
-				const carouselImage = await carouselImageResult;
-				const carouselResponse = carouselImage.response();
-				const carouselArrayBuffer = await carouselResponse.arrayBuffer();
+					const carouselImage = await carouselImageResult;
+					const carouselResponse = carouselImage.response();
+					const carouselArrayBuffer = await carouselResponse.arrayBuffer();
 
-				await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-					httpMetadata: { contentType: "image/webp" },
-				});
+					await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
+						httpMetadata: { contentType: "image/webp" },
+					});
+					wrotePrimaryWithTransform = true;
+				} catch (transformError) {
+					log.warn("upload.images_transform_unavailable", {
+						url,
+						error:
+							transformError instanceof Error
+								? transformError.message
+								: "unknown",
+					});
+					carouselKey = `products/ai-extracted/${generatedId}.${rawExt}`;
+					await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
+						httpMetadata: { contentType },
+					});
+				}
 
 				const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
 
-				if (isPrimary) {
+				if (isPrimary && wrotePrimaryWithTransform) {
 					const thumbnailKey = `products/ai-extracted/${generatedId}-thumbnail.webp`;
 					const thumbnailBlob = new Blob([imageArrayBuffer], {
 						type: contentType,

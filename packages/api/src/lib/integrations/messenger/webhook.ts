@@ -3,6 +3,7 @@ import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
+import { sendDetailedOrderNotification } from "./messages";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;
@@ -32,6 +33,30 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					return;
 				}
 				await q.updatePaymentStatus(paymentNumber, "success");
+				try {
+					const paymentInfo = await q.getPaymentInfoByNumber(paymentNumber);
+					if (paymentInfo) {
+						await sendDetailedOrderNotification({
+							paymentNumber,
+							customerPhone: paymentInfo.order.customerPhone,
+							address: paymentInfo.order.address,
+							notes: paymentInfo.order.notes,
+							total: paymentInfo.order.total,
+							products: paymentInfo.order.orderDetails.map((detail) => ({
+								name: detail.product.name,
+								quantity: detail.quantity,
+								price: detail.product.price,
+								imageUrl: detail.product.images[0]?.url,
+							})),
+							status: "payment_confirmed",
+						});
+					}
+				} catch (notificationError) {
+					console.error(
+						"Failed to send payment confirmed notification",
+						notificationError,
+					);
+				}
 			} else if (event.postback.payload.startsWith("reject_payment")) {
 				console.log("rejecting payment", paymentNumber);
 				if (!paymentNumber) {

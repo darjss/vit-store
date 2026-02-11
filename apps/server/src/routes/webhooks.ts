@@ -1,7 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { GenericWebhookPayload } from "@vit/api/integrations";
 import { messenger, messengerWebhookHandler } from "@vit/api/integrations";
-import { sendTransferNotification } from "@vit/api/lib/integrations/messenger/messages";
+import {
+	sendDetailedOrderNotification,
+	sendTransferNotification,
+} from "@vit/api/lib/integrations/messenger/messages";
 import { createLogger, createRequestContext } from "@vit/logger";
 import { Hono } from "hono";
 
@@ -75,6 +78,40 @@ app.get("/messenger/test/transfer", async (c) => {
 
 	await sendTransferNotification("1234567890", 10000);
 	return c.json({ message: "Message sent" });
+});
+
+app.get("/messenger/test/order", async (c) => {
+	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
+	const log = createLogger(logContext);
+
+	log.info("messenger.test_order_notification");
+
+	await sendDetailedOrderNotification({
+		paymentNumber: "MOCK-PAYMENT-001",
+		customerPhone: 99112233,
+		address: "Ulaanbaatar, Sukhbaatar duureg, 1-r khoroo",
+		notes: "Mock test order notification",
+		total: 235000,
+		products: [
+			{
+				name: "NOW Vitamin D-3",
+				quantity: 2,
+				price: 45000,
+				imageUrl:
+					"https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200",
+			},
+			{
+				name: "Omega 3 Fish Oil",
+				quantity: 1,
+				price: 145000,
+				imageUrl:
+					"https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=1200",
+			},
+		],
+		status: "pending_transfer",
+	});
+
+	return c.json({ message: "Mock detailed order notification sent" });
 });
 
 export default app;
