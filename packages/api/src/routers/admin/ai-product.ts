@@ -4,10 +4,11 @@ import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import * as v from "valibot";
 import { z } from "zod";
+import type { Context } from "../../lib/context";
 import { adminProcedure, router } from "../../lib/trpc";
 
 // Types
-type ExtractedProductData = {
+export type ExtractedProductData = {
 	originalTitle: string;
 	originalDescription: string | null;
 	originalFeatures: string[];
@@ -59,6 +60,11 @@ type TranslationResult = {
 	seoDescription: string;
 	ingredients: string[];
 };
+
+const imageSelectionSchema = z.object({
+	keepIndices: z.array(z.number().int().min(0)).max(8),
+	primaryIndex: z.number().int().min(0).nullable(),
+});
 
 // Helper: Check if input is an Amazon URL
 function isAmazonUrl(input: string): boolean {
@@ -149,6 +155,146 @@ function extractProductImageIds(html: string): string[] {
 	}
 
 	return Array.from(imageIds).slice(0, 10);
+}
+
+function normalizedImageKey(url: string): string {
+	try {
+		const u = new URL(url);
+		return `${u.origin}${u.pathname}`.toLowerCase().replace(/\/$/, "");
+	} catch {
+		return url.toLowerCase().split("?")[0] || url.toLowerCase();
+	}
+}
+
+function isLikelyJunkImage(url: string): boolean {
+	const u = url.toLowerCase();
+	if (u.includes("thumbnail")) return true;
+	if (u.includes("sprite") || u.includes("icon") || u.includes("favicon")) {
+		return true;
+	}
+	if (
+		u.includes("hero") ||
+		u.includes("banner") ||
+		u.includes("carousel-placeholder")
+	) {
+		return true;
+	}
+	if (u.includes("/brands/")) return true;
+	return false;
+}
+
+function uniqueStable<T>(arr: T[], keyFn: (x: T) => string): T[] {
+	const seen = new Set<string>();
+	const out: T[] = [];
+	for (const item of arr) {
+		const key = keyFn(item);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(item);
+	}
+	return out;
+}
+
+async function selectProductImagesWithGemini(
+	productName: string,
+	candidates: string[],
+): Promise<{ keep: string[]; primary: string | null; usedFallback: boolean }> {
+	if (candidates.length <= 1) {
+		return {
+			keep: candidates,
+			primary: candidates[0] ?? null,
+			usedFallback: false,
+		};
+	}
+
+	try {
+		const { output } = await generateText({
+			model: google("gemini-2.5-flash"),
+			output: Output.object({ schema: imageSelectionSchema }),
+			messages: [
+				{
+					role: "user",
+					content: [
+						{
+							type: "text",
+							text: `Choose the best product images for this product: ${productName}.
+Keep only images that clearly show this exact product, package, label, or supplement facts.
+Drop hero banners, collage strips, generic lifestyle, unrelated products, and duplicates.
+Return keepIndices and primaryIndex from the provided image order. Keep max 8.`,
+						},
+						...candidates.map((url) => ({
+							type: "image" as const,
+							image: url,
+						})),
+					],
+				},
+			],
+		});
+
+		const keepIndices = Array.from(new Set(output?.keepIndices ?? [])).filter(
+			(i) => i >= 0 && i < candidates.length,
+		);
+		const keep = (keepIndices.length > 0 ? keepIndices : [0])
+			.map((i) => candidates[i]!)
+			.slice(0, 8);
+		const primary =
+			output?.primaryIndex != null &&
+			output.primaryIndex >= 0 &&
+			output.primaryIndex < candidates.length
+				? candidates[output.primaryIndex]!
+				: (keep[0] ?? null);
+		return { keep, primary, usedFallback: false };
+	} catch {
+		return {
+			keep: candidates.slice(0, 8),
+			primary: candidates[0] ?? null,
+			usedFallback: true,
+		};
+	}
+}
+
+async function filterProductImages(
+	productName: string,
+	imageUrls: string[],
+): Promise<{ images: string[]; usedGemini: boolean; usedFallback: boolean }> {
+	const deJunk = imageUrls.filter((url) => !isLikelyJunkImage(url));
+	const deduped = uniqueStable(deJunk, normalizedImageKey);
+
+	if (deduped.length <= 1) {
+		return {
+			images: deduped.slice(0, 8),
+			usedGemini: false,
+			usedFallback: false,
+		};
+	}
+
+	const picked = await selectProductImagesWithGemini(productName, deduped);
+	const uniquePicked = uniqueStable(picked.keep, normalizedImageKey).slice(
+		0,
+		8,
+	);
+	const primary = picked.primary;
+	if (!primary || uniquePicked.length === 0) {
+		return {
+			images: uniquePicked,
+			usedGemini: true,
+			usedFallback: picked.usedFallback,
+		};
+	}
+
+	const primaryIndex = uniquePicked.findIndex(
+		(url) => normalizedImageKey(url) === normalizedImageKey(primary),
+	);
+	if (primaryIndex > 0) {
+		const [head] = uniquePicked.splice(primaryIndex, 1);
+		uniquePicked.unshift(head!);
+	}
+
+	return {
+		images: uniquePicked,
+		usedGemini: true,
+		usedFallback: picked.usedFallback,
+	};
 }
 
 // Schema for Firecrawl extract
@@ -443,7 +589,7 @@ async function uploadImagesToR2(
 		`[AI Product] Uploading ${imageUrls.length} images to ${backendUrl}`,
 	);
 	try {
-		const response = await fetch(`${backendUrl}/upload/image/urls`, {
+		const response = await fetch(`${backendUrl}/upload/images/urls`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(imageUrls.map((url) => ({ url }))),
@@ -468,139 +614,156 @@ export const aiProduct = router({
 	extractProduct: adminProcedure
 		.input(v.object({ query: v.pipe(v.string(), v.minLength(3)) }))
 		.mutation(async ({ ctx, input }): Promise<ExtractedProductData> => {
-			const errors: string[] = [];
-			let extractionStatus: "success" | "partial" | "failed" = "success";
-
-			console.log("[AI Product] Starting extraction for:", input.query);
-
-			const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
-			if (!firecrawlApiKey) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Firecrawl API key not configured",
-				});
-			}
-
-			// Note: Google API key is read automatically from GOOGLE_GENERATIVE_AI_API_KEY env var
-			const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
-
-			// Step 1: Get product URL
-			let productUrl: string | null = null;
-			if (isAmazonUrl(input.query)) {
-				productUrl = input.query;
-			} else {
-				productUrl = await searchAmazonProduct(firecrawl, input.query);
-				if (!productUrl) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Could not find product on Amazon. Try a direct URL.",
-					});
-				}
-			}
-
-			// Step 2: Scrape product page
-			const scrapeResult = await scrapeAmazonProduct(firecrawl, productUrl);
-			if (!scrapeResult?.extracted.title) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to scrape product page.",
-				});
-			}
-
-			const { extracted: extractedData } = scrapeResult;
-
-			console.log("[AI Product] Extracted:", {
-				title: extractedData.title,
-				brand: extractedData.brand,
-				imagesCount: extractedData.images.length,
-			});
-
-			// Step 3: Analyze images with Gemini Vision
-			let visionData: VisionAnalysisResult = {
-				ingredients: [],
-				servingSize: null,
-				dailyIntake: null,
-				supplementFacts: null,
-			};
-
-			if (extractedData.images.length > 0) {
-				visionData = await analyzeProductImages(extractedData.images);
-				if (
-					visionData.ingredients.length === 0 &&
-					extractedData.ingredients.length === 0
-				) {
-					errors.push("Could not extract ingredients from images.");
-					extractionStatus = "partial";
-				}
-			} else {
-				errors.push("No product images found.");
-				extractionStatus = "partial";
-			}
-
-			// Step 4: Translate and structure
-			const structuredData = await translateAndStructureProduct(
-				extractedData,
-				visionData,
-			);
-			if (!structuredData) {
-				errors.push("Translation failed. Using raw data.");
-				extractionStatus = "partial";
-			}
-
-			// Step 5: Upload images
-			let uploadedImages: { url: string }[] = [];
-			if (extractedData.images.length > 0) {
-				const requestUrl = new URL(ctx.c.req.url);
-				const backendUrl = `${requestUrl.protocol}//${requestUrl.host}`;
-				uploadedImages = await uploadImagesToR2(
-					extractedData.images,
-					backendUrl,
-				);
-
-				if (
-					extractedData.images.every((url, i) => url === uploadedImages[i]?.url)
-				) {
-					errors.push("Image upload failed. Using Amazon URLs.");
-					extractionStatus = "partial";
-				}
-			}
-
-			const allOriginalIngredients = [
-				...new Set([...extractedData.ingredients, ...visionData.ingredients]),
-			];
-
-			const response: ExtractedProductData = {
-				originalTitle: extractedData.title,
-				originalDescription: extractedData.description,
-				originalFeatures: extractedData.features,
-				originalIngredients: allOriginalIngredients,
-				name: structuredData?.name || extractedData.title,
-				name_mn:
-					structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
-				description:
-					structuredData?.description ||
-					extractedData.description ||
-					"Тайлбар байхгүй",
-				brand: extractedData.brand,
-				amount: structuredData?.amount || "Unknown",
-				potency: structuredData?.potency || "Unknown",
-				dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
-				weightGrams: structuredData?.weightGrams || 200,
-				seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
-				seoDescription:
-					structuredData?.seoDescription ||
-					(extractedData.description || "").slice(0, 155),
-				ingredients: structuredData?.ingredients || allOriginalIngredients,
-				images: uploadedImages,
-				sourceUrl: productUrl,
-				extractionStatus,
-				errors,
-			};
-
-			console.log("[AI Product] Done:", {
-				status: extractionStatus,
-				errors: errors.length,
-			});
-			return response;
+			return extractProductFromQuery(ctx, input.query);
 		}),
 });
+
+export async function extractProductFromQuery(
+	ctx: Context,
+	query: string,
+): Promise<ExtractedProductData> {
+	const errors: string[] = [];
+	let extractionStatus: "success" | "partial" | "failed" = "success";
+
+	console.log("[AI Product] Starting extraction for:", query);
+
+	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
+	if (!firecrawlApiKey) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Firecrawl API key not configured",
+		});
+	}
+
+	// Note: Google API key is read automatically from GOOGLE_GENERATIVE_AI_API_KEY env var
+	const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
+
+	// Step 1: Get product URL
+	let productUrl: string | null = null;
+	if (isAmazonUrl(query)) {
+		productUrl = query;
+	} else {
+		productUrl = await searchAmazonProduct(firecrawl, query);
+		if (!productUrl) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Could not find product on Amazon. Try a direct URL.",
+			});
+		}
+	}
+
+	// Step 2: Scrape product page
+	const scrapeResult = await scrapeAmazonProduct(firecrawl, productUrl);
+	if (!scrapeResult?.extracted.title) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to scrape product page.",
+		});
+	}
+
+	const { extracted: extractedData } = scrapeResult;
+
+	console.log("[AI Product] Extracted:", {
+		title: extractedData.title,
+		brand: extractedData.brand,
+		imagesCount: extractedData.images.length,
+	});
+
+	const imageFilter = await filterProductImages(
+		extractedData.title,
+		extractedData.images,
+	);
+	const filteredImages = imageFilter.images;
+	console.log("[AI Product] Image filtering:", {
+		before: extractedData.images.length,
+		after: filteredImages.length,
+		usedGemini: imageFilter.usedGemini,
+		usedFallback: imageFilter.usedFallback,
+	});
+	if (filteredImages.length === 0 && extractedData.images.length > 0) {
+		errors.push("Image filtering removed all candidates.");
+		extractionStatus = "partial";
+	}
+
+	// Step 3: Analyze images with Gemini Vision
+	let visionData: VisionAnalysisResult = {
+		ingredients: [],
+		servingSize: null,
+		dailyIntake: null,
+		supplementFacts: null,
+	};
+
+	if (filteredImages.length > 0) {
+		visionData = await analyzeProductImages(filteredImages);
+		if (
+			visionData.ingredients.length === 0 &&
+			extractedData.ingredients.length === 0
+		) {
+			errors.push("Could not extract ingredients from images.");
+			extractionStatus = "partial";
+		}
+	} else {
+		errors.push("No product images found.");
+		extractionStatus = "partial";
+	}
+
+	// Step 4: Translate and structure
+	const structuredData = await translateAndStructureProduct(
+		extractedData,
+		visionData,
+	);
+	if (!structuredData) {
+		errors.push("Translation failed. Using raw data.");
+		extractionStatus = "partial";
+	}
+
+	// Step 5: Upload images
+	let uploadedImages: { url: string }[] = [];
+	if (filteredImages.length > 0) {
+		const requestUrl = new URL(ctx.c.req.url);
+		const backendUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+		uploadedImages = await uploadImagesToR2(filteredImages, backendUrl);
+
+		if (filteredImages.every((url, i) => url === uploadedImages[i]?.url)) {
+			errors.push("Image upload failed. Using Amazon URLs.");
+			extractionStatus = "partial";
+		}
+	}
+
+	const allOriginalIngredients = [
+		...new Set([...extractedData.ingredients, ...visionData.ingredients]),
+	];
+
+	const response: ExtractedProductData = {
+		originalTitle: extractedData.title,
+		originalDescription: extractedData.description,
+		originalFeatures: extractedData.features,
+		originalIngredients: allOriginalIngredients,
+		name: structuredData?.name || extractedData.title,
+		name_mn: structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
+		description:
+			structuredData?.description ||
+			extractedData.description ||
+			"Тайлбар байхгүй",
+		brand: extractedData.brand,
+		amount: structuredData?.amount || "Unknown",
+		potency: structuredData?.potency || "Unknown",
+		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
+		weightGrams: structuredData?.weightGrams || 200,
+		seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
+		seoDescription:
+			structuredData?.seoDescription ||
+			(extractedData.description || "").slice(0, 155),
+		ingredients: structuredData?.ingredients || allOriginalIngredients,
+		images: uploadedImages,
+		sourceUrl: productUrl,
+		extractionStatus,
+		errors,
+	};
+
+	console.log("[AI Product] Done:", {
+		status: extractionStatus,
+		errors: errors.length,
+	});
+	return response;
+}
