@@ -1,11 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { createInvoice, InvoiceResponse } from "@/lib/payments/bonum";
-import { paymentProvider } from "../../lib/constants";
-import { sendTransferNotification } from "../../lib/integrations/messenger/messages";
-import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 import { kv } from "@/lib/kv";
+import { createInvoice, type InvoiceResponse } from "@/lib/payments/bonum";
+import { paymentProvider } from "../../lib/constants";
+import {
+	sendDetailedOrderNotification,
+	sendTransferNotification,
+} from "../../lib/integrations/messenger/messages";
+import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 export const payment = router({
 	getPaymentByNumber: customerProcedure
 		.input(v.object({ paymentNumber: v.string() }))
@@ -88,6 +91,36 @@ export const payment = router({
 			try {
 				const q = paymentQueries.store;
 				await q.confirmPayment(input.paymentNumber, input.provider);
+
+				try {
+					const paymentInfo = await q.getPaymentInfoByNumber(
+						input.paymentNumber,
+					);
+					if (paymentInfo) {
+						await sendDetailedOrderNotification({
+							paymentNumber: input.paymentNumber,
+							customerPhone: paymentInfo.order.customerPhone,
+							address: paymentInfo.order.address,
+							notes: paymentInfo.order.notes,
+							total: paymentInfo.order.total,
+							products: paymentInfo.order.orderDetails.map((detail) => ({
+								name: detail.product.name,
+								quantity: detail.quantity,
+								price: detail.product.price,
+								imageUrl: detail.product.images[0]?.url,
+							})),
+							status: "payment_confirmed",
+						});
+					}
+				} catch (notificationError) {
+					ctx.log.error(
+						"payment.confirm_notification_failed",
+						notificationError,
+						{
+							paymentNumber: input.paymentNumber,
+						},
+					);
+				}
 
 				ctx.log.payment.confirmed({
 					paymentNumber: input.paymentNumber,
@@ -195,12 +228,12 @@ export const payment = router({
 		}),
 	createQr: publicProcedure
 		.input(v.object({ paymentNumber: v.string() }))
-    .mutation(async ({ input, ctx }) => {
-      const responseFromKv = await kv().get(input.paymentNumber);
-      if (responseFromKv) {
-        const responseObject = JSON.parse(responseFromKv) as InvoiceResponse;
-        return responseObject.followUpLink
-      }
+		.mutation(async ({ input, ctx }) => {
+			const responseFromKv = await kv().get(input.paymentNumber);
+			if (responseFromKv) {
+				const responseObject = JSON.parse(responseFromKv) as InvoiceResponse;
+				return responseObject.followUpLink;
+			}
 			const payment = await paymentQueries.store.getPaymentInfoByNumber(
 				input.paymentNumber,
 			);
@@ -221,19 +254,23 @@ export const payment = router({
 						amount: isDev
 							? Math.ceil(detail.product.price / 10000)
 							: detail.product.price,
-            count: detail.quantity,
-						remark:detail.product.name,
+						count: detail.quantity,
+						remark: detail.product.name,
 					};
 				}),
-      });
-      const KVCachePutPromise = kv().put(payment.paymentNumber, JSON.stringify(bonumInvoiceResponse), {
-        expirationTtl:1800
-			})
-			const changePaymentPromise= paymentQueries.store.changePaymentToQpay(
+			});
+			const KVCachePutPromise = kv().put(
+				payment.paymentNumber,
+				JSON.stringify(bonumInvoiceResponse),
+				{
+					expirationTtl: 1800,
+				},
+			);
+			const changePaymentPromise = paymentQueries.store.changePaymentToQpay(
 				input.paymentNumber,
 				bonumInvoiceResponse.invoiceId,
-      );
-			Promise.all([KVCachePutPromise, changePaymentPromise])
+			);
+			Promise.all([KVCachePutPromise, changePaymentPromise]);
 			return bonumInvoiceResponse.followUpLink;
 		}),
 });

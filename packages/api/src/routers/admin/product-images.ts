@@ -43,7 +43,7 @@ export const productImages = router({
 				const imageUrls = input.images.map((image) => ({ url: image.url }));
 
 				const response = await fetch(
-					`${process.env.BACKEND_URL}/upload/image/urls`,
+					`${process.env.BACKEND_URL}/upload/images/urls`,
 					{
 						method: "POST",
 						headers: {

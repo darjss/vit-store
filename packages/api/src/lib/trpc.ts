@@ -132,43 +132,48 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	}
 });
 
-const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
-	const startTime = Date.now();
-	const procedureType =
-		(type as string | undefined)?.toUpperCase() || "PROCEDURE";
+const loggingMiddleware = t.middleware(
+	async ({ ctx, next, path, type, input }) => {
+		const startTime = Date.now();
+		const procedureType =
+			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
 
-	// Log procedure start
-	ctx.log.info("trpc.procedure_start", {
-		procedure: path,
-		type: procedureType,
-	});
-
-	try {
-		const result = await next();
-		const durationMs = Date.now() - startTime;
-
-		// Log procedure success
-		ctx.log.info("trpc.procedure_success", {
+		// Log procedure start with input
+		ctx.log.info("trpc.procedure_start", {
 			procedure: path,
 			type: procedureType,
-			durationMs,
+			input,
 		});
 
-		return result;
-	} catch (error) {
-		const durationMs = Date.now() - startTime;
+		try {
+			const result = await next();
+			const durationMs = Date.now() - startTime;
 
-		// Log procedure error
-		ctx.log.error("trpc.procedure_error", error, {
-			procedure: path,
-			type: procedureType,
-			durationMs,
-			errorCode: error instanceof TRPCError ? error.code : undefined,
-		});
+			// Log procedure success with output
+			ctx.log.info("trpc.procedure_success", {
+				procedure: path,
+				type: procedureType,
+				durationMs,
+				output: result,
+			});
 
-		throw error;
-	}
-});
+			return result;
+		} catch (error) {
+			const durationMs = Date.now() - startTime;
+
+			// Log procedure error with input for debugging
+			ctx.log.error("trpc.procedure_error", error, {
+				procedure: path,
+				type: procedureType,
+				durationMs,
+				input,
+				errorCode: error instanceof TRPCError ? error.code : undefined,
+			});
+
+			throw error;
+		}
+	},
+);
 
 const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	const cacheKey = await createCacheKey(path, input);
