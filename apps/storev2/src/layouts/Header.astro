@@ -12,57 +12,34 @@ import IconUser from "~icons/ri/user-line";
 ---
 
 <header
-    class="sticky top-0 z-50  bg-white/90  border-b-4 border-black" transition:persist transition:name="header"
+    class="sticky top-0 z-50 border-b-2 border-border bg-background/95 backdrop-blur" transition:persist transition:name="header"
 >
-    <div class="container  mx-auto px-4 py-4">
-        <div class="flex items-center justify-between gap-4">
+    <div class="mx-auto max-w-screen-2xl px-5 py-3 lg:px-8 lg:py-4">
+        <div class="flex items-center justify-between gap-3 lg:gap-4">
             <Sheet>
-                <SheetTrigger class="p-2 border-[3px] border-black bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                <SheetTrigger class="p-2 border-2 border-border bg-card shadow-hard-sm active:translate-x-px active:translate-y-px active:shadow-none transition-all">
                     <IconMenu class="w-6 h-6" />
                     <span class="sr-only">Toggle menu</span>
                 </SheetTrigger>
-                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r-4 border-black p-0">
+                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r-2 border-border p-0">
                     <div class="h-full overflow-y-auto bg-background">
                         <SidebarContent />
                     </div>
                 </SheetContent>
             </Sheet>
-            <div class="flex items-center gap-2 w-full">
-                <a href="/" class="flex items-center gap-2">
-                    
-                    <div
-                        class="w-10 h-10 bg-primary border-[3px] border-black flex items-center justify-center font-black text-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                    >
-                        V+
+            <div class="flex min-w-0 items-center gap-2 w-full">
+                <a href="/" class="flex min-w-0 items-center gap-2.5">
+                    <div class="h-10 w-10 shrink-0 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">
+                        AV
                     </div>
-                    <span class="font-black text-xl hidden sm:block"
-                        >ВитаБүүст</span
-                    >
+                    <div class="min-w-0">
+                        <span class="block truncate font-black text-sm uppercase tracking-wider sm:text-base">Amerik Vitamin</span>
+                        <span class="hidden sm:block text-[10px] font-semibold text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
+                    </div>
                 </a>
             </div>
 
-<!-- 
-            <nav class="hidden md:flex items-center gap-6">
-                <a
-                    href="/products"
-                    class="font-bold hover:underline decoration-4">Бүгд</a
-                >
-                <a
-                    href="/products#vitamins"
-                    class="font-bold hover:underline decoration-4">Витамин</a
-                >
-                <a
-                    href="/products#supplements"
-                    class="font-bold hover:underline decoration-4"
-                    >Нэмэлт бүтээгдэхүүн</a
-                >
-                <a
-                    href="/products#bundles"
-                    class="font-bold hover:underline decoration-4">Багц</a
-                >
-            </nav> -->
-
-            <div class="flex items-center  gap-3">
+            <div class="flex items-center gap-2.5 lg:gap-3">
                 <!-- Search Button - triggers SearchOverlay -->
                 <div class="hidden sm:block">
                     <SearchOverlay client:idle />
@@ -72,7 +49,7 @@ import IconUser from "~icons/ri/user-line";
                     <div
                         slot="fallback"
                         aria-label="Профайл"
-                        class="flex items-center justify-center w-9 h-9 border-2 border-border bg-background shadow-hard-sm"
+                        class="flex items-center justify-center w-9 h-9 border-2 border-border bg-card shadow-hard-sm"
                     >
                         <IconUser class="w-4 h-4" />
                     </div>
@@ -82,6 +59,7 @@ import IconUser from "~icons/ri/user-line";
                 <div class="hidden md:block">
                     <CartButton client:idle />
                 </div>
+            </div>
         </div>
     </div>
 </header>

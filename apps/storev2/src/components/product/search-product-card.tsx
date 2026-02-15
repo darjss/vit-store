@@ -1,6 +1,7 @@
 import { formatCurrency } from "@vit/shared/utils";
 import { createMemo, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 // Search result format from Upstash
@@ -23,6 +24,9 @@ const SearchProductCard = (props: SearchProductCardProps) => {
 	// Use product ID to get consistent color per product
 	const bgColor = createMemo(
 		() => productColors[product.id % productColors.length],
+	);
+	const productImageSmall = createMemo(() =>
+		toProductImageUrl(product.image, "sm"),
 	);
 	const productUrl = `/products/${product.slug}-${product.id}`;
 
@@ -47,7 +51,7 @@ const SearchProductCard = (props: SearchProductCardProps) => {
 					{/* Product Image */}
 					<Show when={product.image}>
 						<img
-							src={product.image}
+							src={productImageSmall() || product.image}
 							alt={product.name}
 							class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
 							width={400}

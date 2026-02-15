@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import {
-	createEffect,
 	createMemo,
 	createSignal,
 	Match,
+	Show,
 	Suspense,
 	Switch,
 } from "solid-js";
@@ -14,6 +14,7 @@ import type { CartItems } from "@/lib/types";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
+import { showToast } from "../ui/toast";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -23,7 +24,6 @@ export default function ProductQuantitySelector(
 	props: ProductQuantitySelectorProps,
 ) {
 	const { productId } = props.cartItem;
-	console.log("productId", productId);
 	const statusQuery = useQuery(
 		() => ({
 			queryKey: ["is-product-in-stock", productId],
@@ -33,9 +33,60 @@ export default function ProductQuantitySelector(
 	);
 	const [quantity, setQuantity] = createSignal(1);
 	const isInStock = createMemo(() => statusQuery.data?.isInStock);
+	const [showNotifyForm, setShowNotifyForm] = createSignal(false);
+	const [notifyChannel, setNotifyChannel] = createSignal<"sms" | "email">(
+		"sms",
+	);
+	const [contact, setContact] = createSignal("");
+
+	const restockMutation = useMutation(
+		() => ({
+			mutationFn: async (input: {
+				productId: number;
+				channel: "sms" | "email";
+				contact: string;
+			}) => {
+				return await api.product.subscribeToRestock.mutate(input);
+			},
+			onSuccess: () => {
+				showToast({
+					title: "Амжилттай",
+					description: "Бараа орж ирэхэд танд мэдэгдэнэ.",
+					variant: "success",
+					duration: 4000,
+				});
+				setContact("");
+				setShowNotifyForm(false);
+			},
+			onError: (error) => {
+				showToast({
+					title: "Алдаа гарлаа",
+					description: error.message || "Мэдэгдэл захиалах үед алдаа гарлаа.",
+					variant: "destructive",
+					duration: 5000,
+				});
+			},
+		}),
+		() => queryClient,
+	);
 
 	const increment = () => setQuantity((prev) => prev + 1);
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
+
+	const isValidContact = createMemo(() => {
+		if (notifyChannel() === "sms") {
+			return /^[6-9]\d{7}$/.test(contact().replace(/\D/g, ""));
+		}
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact().trim().toLowerCase());
+	});
+
+	const submitRestockSubscription = () => {
+		restockMutation.mutate({
+			productId,
+			channel: notifyChannel(),
+			contact: contact(),
+		});
+	};
 
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
@@ -86,10 +137,64 @@ export default function ProductQuantitySelector(
 						</div>
 
 						{/* Notify Button */}
-						<Button class="w-full py-6 text-base sm:text-lg">
+						<Button
+							class="w-full py-6 text-base sm:text-lg"
+							onClick={() => setShowNotifyForm((prev) => !prev)}
+						>
 							<IconNotification class="mr-2 text-yellow-500" />
 							Мэдэгдэл авах
 						</Button>
+
+						<Show when={showNotifyForm()}>
+							<div class="space-y-3 rounded-sm border-4 border-black bg-background p-4 shadow-[6px_6px_0_0_#000]">
+								<p class="font-black text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
+								<div class="grid grid-cols-2 gap-2">
+									<Button
+										type="button"
+										variant={notifyChannel() === "sms" ? "default" : "outline"}
+										onClick={() => {
+											setNotifyChannel("sms");
+											setContact("");
+										}}
+									>
+										Утас
+									</Button>
+									<Button
+										type="button"
+										variant={
+											notifyChannel() === "email" ? "default" : "outline"
+										}
+										onClick={() => {
+											setNotifyChannel("email");
+											setContact("");
+										}}
+									>
+										Имэйл
+									</Button>
+								</div>
+
+								<input
+									type={notifyChannel() === "sms" ? "tel" : "email"}
+									value={contact()}
+									onInput={(e) => setContact(e.currentTarget.value)}
+									placeholder={
+										notifyChannel() === "sms" ? "88889999" : "name@example.com"
+									}
+									class="h-12 w-full rounded-sm border-3 border-black bg-white px-4 font-bold text-base shadow-[4px_4px_0_0_#000] focus:outline-none"
+								/>
+
+								<Button
+									type="button"
+									class="w-full"
+									onClick={submitRestockSubscription}
+									disabled={!isValidContact() || restockMutation.isPending}
+								>
+									{restockMutation.isPending
+										? "Илгээж байна..."
+										: "Мэдэгдэл захиалах"}
+								</Button>
+							</div>
+						</Show>
 					</div>
 				</Match>
 			</Switch>

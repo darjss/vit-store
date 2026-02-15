@@ -2,6 +2,7 @@
 
 import AddToCartButton from "@/components/cart/add-to-cart-button";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const { product: p, sectionId = "", index = 0 } = Astro.props;
 const uniqueId = sectionId ? `${sectionId}-${index}` : `card-${index}`;
 const bgColor = productColors[p.id % productColors.length];
 const productUrl = `/products/${p.slug}-${p.id}`;
+const productImageSmall = toProductImageUrl(p.image, "sm") || p.image;
 ---
 
 <div
@@ -38,7 +40,7 @@ const productUrl = `/products/${p.slug}-${p.id}`;
             <!-- Product Image -->
             {p.image && (
                 <img
-                    src={p.image}
+                    src={productImageSmall}
                     alt={p.name}
                     class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
                     width="400"

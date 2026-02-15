@@ -8,6 +8,7 @@ import {
 	trackSearchResultClicked,
 } from "@/lib/analytics";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconArrowRight from "~icons/ri/arrow-right-line";
@@ -34,7 +35,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				});
 			},
 			enabled: props.searchQuery.length >= 2,
-			staleTime: 1000 * 60 * 5, // 5 minutes
+			staleTime: 1000 * 60 * 5,
 		}),
 		() => queryClient,
 	);
@@ -150,7 +151,10 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
 											<Show when={product.image}>
 												<img
-													src={product.image}
+													src={
+														toProductImageUrl(product.image, "sm") ||
+														product.image
+													}
 													alt={product.name}
 													class="absolute inset-0 h-full w-full object-contain p-2"
 													loading="lazy"

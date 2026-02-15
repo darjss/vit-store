@@ -41,7 +41,6 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 
 	const debounceMs = () => local.debounceMs ?? 300;
 
-	// Sync internal state with external value prop
 	createEffect(() => {
 		if (local.value !== undefined && local.value !== inputValue()) {
 			setInputValue(local.value);

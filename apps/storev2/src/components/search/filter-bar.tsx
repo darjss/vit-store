@@ -37,15 +37,25 @@ interface FilterBarProps {
 	sortDirection: string | null;
 	categoryId: number | null;
 	brandId: number | null;
+	presetFilter: "featured" | "recent" | "discount" | null;
 	categories: Category[];
 	brands: Brand[];
 	onSearchChange: (term: string) => void;
 	onSortChange: (field: string | null, direction: string | null) => void;
 	onCategoryChange: (categoryId: number | null) => void;
 	onBrandChange: (brandId: number | null) => void;
+	onPresetFilterChange: (
+		value: "featured" | "recent" | "discount" | null,
+	) => void;
 	onClearFilters: () => void;
 	hasActiveFilters: boolean;
 }
+
+const presetFilterLabels: Record<"featured" | "recent" | "discount", string> = {
+	featured: "Онцлох",
+	recent: "Шинэ ирсэн",
+	discount: "Хямдралтай",
+};
 
 const sortOptions = [
 	{ label: "Шинэ", field: "createdAt", direction: "desc" },
@@ -111,6 +121,11 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 	const activeBrandName = createMemo(() => {
 		if (!props.brandId) return null;
 		return props.brands.find((b) => b.id === props.brandId)?.name ?? null;
+	});
+
+	const activePresetFilterLabel = createMemo(() => {
+		if (!props.presetFilter) return null;
+		return presetFilterLabels[props.presetFilter];
 	});
 
 	const categoryOptions = createMemo<FilterOption[]>(() => [
@@ -268,6 +283,20 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 									onClick={() => props.onBrandChange(null)}
 									class="ml-1 flex items-center hover:opacity-70"
 									aria-label="Remove brand filter"
+								>
+									<IconClose class="h-3 w-3" />
+								</button>
+							</div>
+						</Show>
+						<Show when={activePresetFilterLabel()}>
+							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+								<IconPriceTag class="h-4 w-4" />
+								<span>{activePresetFilterLabel()}</span>
+								<button
+									type="button"
+									onClick={() => props.onPresetFilterChange(null)}
+									class="ml-1 flex items-center hover:opacity-70"
+									aria-label="Remove preset filter"
 								>
 									<IconClose class="h-3 w-3" />
 								</button>
