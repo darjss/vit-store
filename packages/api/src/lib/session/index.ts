@@ -29,9 +29,16 @@ export function createSessionManager<
 		kvSessionPrefix,
 		kvUserSessionPrefix,
 		cookieName,
+		domainEnvVar,
 		sessionDurationMs,
 		renewalThresholdMs,
 	} = config;
+
+	const cookieDomain = process.env[domainEnvVar];
+	const cookieDomainOption =
+		typeof cookieDomain === "string" && cookieDomain.length > 0
+			? cookieDomain
+			: undefined;
 
 	function getUserIdentifier(user: TUser): string {
 		if ("phone" in user && user.phone) {
@@ -67,10 +74,12 @@ export function createSessionManager<
 				expires_at: Math.floor(session.expiresAt.getTime() / 1000),
 			}),
 			{
-				expirationTtl: Math.floor(session.expiresAt.getTime() / 1000),
+				expirationTtl: Math.ceil(sessionDurationMs / 1000),
 			},
 		);
-		await kv.put(`${kvUserSessionPrefix}:${userIdentifier}`, sessionId);
+		await kv.put(`${kvUserSessionPrefix}:${userIdentifier}`, sessionId, {
+			expirationTtl: Math.ceil(sessionDurationMs / 1000),
+		});
 
 		return { session, token };
 	}
@@ -115,6 +124,9 @@ export function createSessionManager<
 
 		if (Date.now() >= expiresAt.getTime()) {
 			await ctx.kv.delete(`${kvSessionPrefix}:${sessionId}`);
+			await ctx.kv.delete(
+				`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`,
+			);
 			ctx.log.auth.sessionExpired({ sessionId });
 			return null;
 		}
@@ -132,9 +144,15 @@ export function createSessionManager<
 					expires_at: Math.floor(updatedSession.expiresAt.getTime() / 1000),
 				}),
 				{
-					expirationTtl: Math.floor(updatedSession.expiresAt.getTime() / 1000),
+					expirationTtl: Math.ceil(sessionDurationMs / 1000),
 				},
 			);
+			await ctx.kv.put(
+				`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`,
+				session.id,
+				{ expirationTtl: Math.ceil(sessionDurationMs / 1000) },
+			);
+			setSessionTokenCookie(ctx.c, token, updatedSession.expiresAt);
 			ctx.log.auth.sessionRenewed({ sessionId: session.id });
 			return updatedSession;
 		}
@@ -145,6 +163,19 @@ export function createSessionManager<
 	async function invalidateSession(ctx: Context): Promise<void> {
 		if (ctx.session?.id) {
 			await ctx.kv.delete(`${kvSessionPrefix}:${ctx.session.id}`);
+
+			const sessionUser = ctx.session.user;
+			const userIdentifier =
+				"phone" in sessionUser && sessionUser.phone
+					? sessionUser.phone.toString()
+					: "id" in sessionUser && sessionUser.id
+						? sessionUser.id.toString()
+						: null;
+
+			if (userIdentifier) {
+				await ctx.kv.delete(`${kvUserSessionPrefix}:${userIdentifier}`);
+			}
+
 			ctx.log.auth.logout({ sessionId: ctx.session.id });
 		}
 		deleteSessionTokenCookie(ctx);
@@ -161,7 +192,7 @@ export function createSessionManager<
 			secure: true,
 			expires: expiresAt,
 			path: "/",
-			domain: process.env.DOMAIN,
+			domain: cookieDomainOption,
 		});
 	}
 
@@ -170,9 +201,10 @@ export function createSessionManager<
 			httpOnly: true,
 			sameSite: "None",
 			secure: true,
-			expires: ctx.session?.expiresAt,
+			expires: new Date(0),
+			maxAge: 0,
 			path: "/",
-			domain: process.env.DOMAIN,
+			domain: cookieDomainOption,
 		});
 	}
 
