@@ -34,6 +34,11 @@ export const Route = createFileRoute("/_dash/")({
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.order.getPendingOrders.queryOptions(),
 			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getWebAnalytics.queryOptions({
+					timeRange: "daily",
+				}),
+			),
 		]);
 	},
 });
@@ -47,6 +52,11 @@ function HomeComponent() {
 		trpc.sales.topProducts.queryOptions({
 			timeRange: "daily",
 			productCount: 5,
+		}),
+	);
+	const { data: webAnalytics } = useSuspenseQuery(
+		trpc.analytics.getWebAnalytics.queryOptions({
+			timeRange: "daily",
 		}),
 	);
 
@@ -139,12 +149,14 @@ function HomeComponent() {
 						</span>
 					</div>
 					<p className="mt-1 font-black font-heading text-lg leading-tight">
-						1,247
+						{webAnalytics.current.uniqueVisitors.toLocaleString()}
 					</p>
 					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
-						<span className="flex items-center font-medium text-green-600">
+						<span
+							className={`flex items-center font-medium ${webAnalytics.changes.visitors >= 0 ? "text-green-600" : "text-red-600"}`}
+						>
 							<ArrowUpRight className="h-2.5 w-2.5" />
-							5%
+							{Math.abs(webAnalytics.changes.visitors)}%
 						</span>
 						<span className="text-muted-foreground">өчигдөрөөс</span>
 					</div>

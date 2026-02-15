@@ -377,12 +377,9 @@ function RouteComponent() {
 
 				<Suspense
 					fallback={
-						<div className="grid grid-cols-1 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+						<div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
 							{Array.from({ length: 6 }).map((_, index) => (
-								<Skeleton
-									key={index}
-									className="h-48 rounded-lg border-2 border-border"
-								/>
+								<Skeleton key={index} className="h-40 border-2 border-border" />
 							))}
 						</div>
 					}
@@ -454,7 +451,7 @@ function OrdersList({
 
 	return (
 		<>
-			<div className="grid grid-cols-1 gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
 				{orders.map((order) => (
 					<div key={order.orderNumber} className="min-w-0">
 						<OrderCard order={order} />

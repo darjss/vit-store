@@ -98,12 +98,12 @@ const DialogContent = React.forwardRef<HTMLDivElement, IDialogContentProps>(
 					ref={forwardedRef}
 					{...props}
 				>
-					<VisuallyHidden>
+					<VisuallyHidden.Root>
 						<ReactDialog.Title />
-					</VisuallyHidden>
-					<VisuallyHidden>
+					</VisuallyHidden.Root>
+					<VisuallyHidden.Root>
 						<ReactDialog.Description />
-					</VisuallyHidden>
+					</VisuallyHidden.Root>
 					<div className="relative flex flex-col">{children}</div>
 				</ReactDialog.Content>
 			</ReactDialog.Portal>

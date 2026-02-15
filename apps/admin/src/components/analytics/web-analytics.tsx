@@ -1,4 +1,14 @@
-import { Eye, MousePointer, Target, TrendingUp } from "lucide-react";
+import {
+	ArrowDownRight,
+	ArrowUpRight,
+	Eye,
+	MousePointer,
+	Search,
+	ShoppingBag,
+	ShoppingCart,
+	Target,
+	Users,
+} from "lucide-react";
 import {
 	Bar,
 	BarChart,
@@ -7,242 +17,350 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockData } from "@/lib/mock-data";
 
-export function WebAnalytics() {
-	const visitorData = [
+interface WebAnalyticsData {
+	current: {
+		uniqueVisitors: number;
+		pageviews: number;
+		productViews: number;
+		addToCarts: number;
+		checkouts: number;
+		orders: number;
+		payments: number;
+		searches: number;
+	};
+	changes: {
+		visitors: number;
+		pageviews: number;
+		orders: number;
+	};
+}
+
+interface ConversionFunnelData {
+	visitors: number;
+	productViewers: number;
+	cartAdders: number;
+	checkoutStarters: number;
+	orderPlacers: number;
+	paymentConfirmers: number;
+}
+
+interface DailyTrendData {
+	date: string;
+	visitors: number;
+	pageviews: number;
+	orders: number;
+}
+
+interface WebAnalyticsProps {
+	webAnalytics: WebAnalyticsData;
+	funnel: ConversionFunnelData;
+	dailyTrend: DailyTrendData[];
+	timeRangeLabel: string;
+}
+
+function ChangeIndicator({ value }: { value: number }) {
+	const isPositive = value >= 0;
+	const Icon = isPositive ? ArrowUpRight : ArrowDownRight;
+	return (
+		<div className="mt-1 flex items-center gap-0.5 text-[10px]">
+			<span
+				className={`flex items-center font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}
+			>
+				<Icon className="h-2.5 w-2.5" />
+				{Math.abs(value)}%
+			</span>
+		</div>
+	);
+}
+
+export function WebAnalytics({
+	webAnalytics,
+	funnel,
+	dailyTrend,
+	timeRangeLabel,
+}: WebAnalyticsProps) {
+	const { current, changes } = webAnalytics;
+
+	// Build funnel steps for display
+	const funnelSteps = [
+		{ label: "Зочин", count: funnel.visitors, icon: Users },
+		{ label: "Бараа үзсэн", count: funnel.productViewers, icon: Eye },
+		{ label: "Сагсанд нэмсэн", count: funnel.cartAdders, icon: ShoppingCart },
 		{
-			period: "Өнөөдөр",
-			visitors: mockData.dailyVisits,
-			orders: mockData.dailyOrders,
+			label: "Төлбөр эхлүүлсэн",
+			count: funnel.checkoutStarters,
+			icon: Target,
 		},
 		{
-			period: "7 хоног",
-			visitors: mockData.weeklyVisits,
-			orders: mockData.weeklyOrders,
+			label: "Захиалга өгсөн",
+			count: funnel.orderPlacers,
+			icon: ShoppingBag,
 		},
 		{
-			period: "Сар",
-			visitors: mockData.monthlyVisits,
-			orders: mockData.monthlyOrders,
+			label: "Төлбөр баталсан",
+			count: funnel.paymentConfirmers,
+			icon: MousePointer,
 		},
 	];
 
-	const conversionData = [
-		{
-			metric: "Зочин → Захиалга",
-			rate: mockData.conversionMetrics.visitorToOrderRate,
-		},
-		{
-			metric: "Сагс → Захиалга",
-			rate: mockData.conversionMetrics.cartToOrderRate,
-		},
-		{
-			metric: "Үзсэн → Сагс",
-			rate: mockData.conversionMetrics.productViewToCartRate,
-		},
-		{
-			metric: "Төлбөр → Дууссан",
-			rate: mockData.conversionMetrics.checkoutCompletionRate,
-		},
-	];
+	// Calculate conversion rates between steps
+	const funnelWithRates = funnelSteps.map((step, i) => {
+		const prevCount = i > 0 ? funnelSteps[i - 1].count : step.count;
+		const rate =
+			prevCount > 0 ? Math.round((step.count / prevCount) * 1000) / 10 : 0;
+		return { ...step, rate: i === 0 ? 100 : rate };
+	});
+
+	// Format trend dates for chart display
+	const chartData = dailyTrend.map((d) => {
+		const date = new Date(d.date);
+		return {
+			label: `${date.getMonth() + 1}/${date.getDate()}`,
+			visitors: d.visitors,
+			pageviews: d.pageviews,
+			orders: d.orders,
+		};
+	});
 
 	return (
-		<div className="space-y-6">
-			{/* Visitor Overview Cards */}
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<Card className="border-2 border-border shadow-shadow">
-					<CardContent className="p-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-muted-foreground text-sm">Өдрийн зочин</p>
-								<p className="font-bold font-heading text-2xl">
-									{mockData.dailyVisits.toLocaleString()}
-								</p>
-								<div className="mt-1 flex items-center gap-1">
-									<TrendingUp className="h-3 w-3 text-green-600" />
-									<span className="text-green-600 text-xs">+8.7%</span>
-								</div>
-							</div>
-							<Eye className="h-8 w-8 text-muted-foreground" />
-						</div>
-					</CardContent>
-				</Card>
+		<div className="space-y-3">
+			{/* Overview Cards - 2x2 */}
+			<div className="grid grid-cols-2 gap-2">
+				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+					<div className="flex items-center gap-1.5 text-muted-foreground">
+						<Users className="h-3.5 w-3.5" />
+						<span className="font-bold text-[10px] uppercase tracking-wide">
+							Зочин
+						</span>
+					</div>
+					<p className="mt-1 font-black font-heading text-lg leading-tight">
+						{current.uniqueVisitors.toLocaleString()}
+					</p>
+					<ChangeIndicator value={changes.visitors} />
+				</div>
 
-				<Card className="border-2 border-border shadow-shadow">
-					<CardContent className="p-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-muted-foreground text-sm">
-									7 хоногийн зочин
-								</p>
-								<p className="font-bold font-heading text-2xl">
-									{mockData.weeklyVisits.toLocaleString()}
-								</p>
-								<div className="mt-1 flex items-center gap-1">
-									<TrendingUp className="h-3 w-3 text-green-600" />
-									<span className="text-green-600 text-xs">+12.3%</span>
-								</div>
-							</div>
-							<Eye className="h-8 w-8 text-muted-foreground" />
-						</div>
-					</CardContent>
-				</Card>
+				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+					<div className="flex items-center gap-1.5 text-muted-foreground">
+						<Eye className="h-3.5 w-3.5" />
+						<span className="font-bold text-[10px] uppercase tracking-wide">
+							Хуудас үзэлт
+						</span>
+					</div>
+					<p className="mt-1 font-black font-heading text-lg leading-tight">
+						{current.pageviews.toLocaleString()}
+					</p>
+					<ChangeIndicator value={changes.pageviews} />
+				</div>
 
-				<Card className="border-2 border-border shadow-shadow">
-					<CardContent className="p-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-muted-foreground text-sm">Сарын зочин</p>
-								<p className="font-bold font-heading text-2xl">
-									{mockData.monthlyVisits.toLocaleString()}
-								</p>
-								<div className="mt-1 flex items-center gap-1">
-									<TrendingUp className="h-3 w-3 text-green-600" />
-									<span className="text-green-600 text-xs">+5.4%</span>
-								</div>
-							</div>
-							<Eye className="h-8 w-8 text-muted-foreground" />
-						</div>
-					</CardContent>
-				</Card>
+				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+					<div className="flex items-center gap-1.5 text-muted-foreground">
+						<ShoppingBag className="h-3.5 w-3.5" />
+						<span className="font-bold text-[10px] uppercase tracking-wide">
+							Захиалга
+						</span>
+					</div>
+					<p className="mt-1 font-black font-heading text-lg leading-tight">
+						{current.orders.toLocaleString()}
+					</p>
+					<ChangeIndicator value={changes.orders} />
+				</div>
 
-				<Card className="border-2 border-border shadow-shadow">
-					<CardContent className="p-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-muted-foreground text-sm">Хөрвүүлэлт</p>
-								<p className="font-bold font-heading text-2xl">
-									{mockData.conversionMetrics.visitorToOrderRate}%
-								</p>
-								<div className="mt-1 flex items-center gap-1">
-									<TrendingUp className="h-3 w-3 text-green-600" />
-									<span className="text-green-600 text-xs">+0.8%</span>
-								</div>
-							</div>
-							<Target className="h-8 w-8 text-muted-foreground" />
-						</div>
-					</CardContent>
-				</Card>
+				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+					<div className="flex items-center gap-1.5 text-muted-foreground">
+						<Search className="h-3.5 w-3.5" />
+						<span className="font-bold text-[10px] uppercase tracking-wide">
+							Хайлт
+						</span>
+					</div>
+					<p className="mt-1 font-black font-heading text-lg leading-tight">
+						{current.searches.toLocaleString()}
+					</p>
+				</div>
 			</div>
 
-			{/* Visitor vs Orders Chart */}
-			<Card className="border-2 border-border shadow-shadow">
-				<CardHeader className="border-border border-b-2 bg-secondary-background">
-					<CardTitle className="flex items-center gap-3 font-heading text-xl">
-						<Eye className="h-5 w-5" />
-						Зочин болон захиалгын харьцуулалт
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="p-4">
-					<div className="h-[300px] w-full">
-						<ResponsiveContainer width="100%" height="100%">
-							<BarChart
-								data={visitorData}
-								margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-							>
-								<Tooltip
-									content={({ active, payload, label }) => {
-										if (!active || !payload?.length) return null;
-
-										return (
-											<div className="rounded-lg border border-border bg-background p-3 shadow-lg">
-												<p className="mb-2 font-medium text-sm">{label}</p>
-												<p className="text-sm">
-													<span className="text-muted-foreground">Зочин: </span>
-													<span className="font-semibold">
-														{payload[0].value?.toLocaleString()}
-													</span>
-												</p>
-												<p className="text-sm">
-													<span className="text-muted-foreground">
-														Захиалга:{" "}
-													</span>
-													<span className="font-semibold">
-														{payload[1].value?.toLocaleString()}
-													</span>
-												</p>
-											</div>
-										);
-									}}
-								/>
-								<Bar
-									dataKey="visitors"
-									fill="hsl(var(--chart-1))"
-									radius={[8, 8, 0, 0]}
-								/>
-								<Bar
-									dataKey="orders"
-									fill="hsl(var(--chart-2))"
-									radius={[8, 8, 0, 0]}
-								/>
-								<XAxis
-									dataKey="period"
-									tick={{ fontSize: 12 }}
-									tickLine={false}
-									axisLine={false}
-								/>
-								<YAxis
-									tick={{ fontSize: 12 }}
-									tickLine={false}
-									axisLine={false}
-								/>
-							</BarChart>
-						</ResponsiveContainer>
+			{/* Daily Trend Chart */}
+			{chartData.length > 0 && (
+				<div className="border-2 border-border bg-card shadow-hard-sm">
+					<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+						<div className="flex items-center gap-2">
+							<Eye className="h-4 w-4 text-muted-foreground" />
+							<span className="font-bold text-sm">
+								Зочин болон захиалгын чиг хандлага
+							</span>
+						</div>
+						<span className="text-muted-foreground text-xs">
+							{timeRangeLabel}
+						</span>
 					</div>
-				</CardContent>
-			</Card>
+					<div className="p-3">
+						<div className="h-[160px] w-full">
+							<ResponsiveContainer width="100%" height="100%">
+								<BarChart
+									data={chartData}
+									margin={{ top: 5, right: 5, left: 0, bottom: 0 }}
+								>
+									<XAxis
+										dataKey="label"
+										tick={{ fontSize: 9, fontWeight: 600 }}
+										tickLine={false}
+										axisLine={false}
+									/>
+									<YAxis
+										tick={{ fontSize: 9 }}
+										tickLine={false}
+										axisLine={false}
+										width={30}
+									/>
+									<Tooltip
+										content={({ active, payload, label }) => {
+											if (!active || !payload?.length) return null;
+											return (
+												<div className="border-2 border-border bg-card p-1.5 text-[10px] shadow-hard-sm">
+													<p className="font-bold">{label}</p>
+													<p>
+														<span className="text-muted-foreground">
+															Зочин:{" "}
+														</span>
+														<span className="font-mono">
+															{(payload[0]?.value as number)?.toLocaleString()}
+														</span>
+													</p>
+													<p>
+														<span className="text-muted-foreground">
+															Захиалга:{" "}
+														</span>
+														<span className="font-mono">
+															{(payload[1]?.value as number)?.toLocaleString()}
+														</span>
+													</p>
+												</div>
+											);
+										}}
+									/>
+									<Bar
+										dataKey="visitors"
+										fill="var(--color-primary)"
+										stroke="var(--color-border)"
+										strokeWidth={1.5}
+										radius={0}
+									/>
+									<Bar
+										dataKey="orders"
+										fill="var(--color-chart-2)"
+										stroke="var(--color-border)"
+										strokeWidth={1.5}
+										radius={0}
+									/>
+								</BarChart>
+							</ResponsiveContainer>
+						</div>
+						<div className="mt-2 flex items-center justify-center gap-4 text-[10px]">
+							<div className="flex items-center gap-1">
+								<div className="h-2.5 w-2.5 border border-border bg-primary" />
+								<span className="text-muted-foreground">Зочин</span>
+							</div>
+							<div className="flex items-center gap-1">
+								<div
+									className="h-2.5 w-2.5 border border-border"
+									style={{ backgroundColor: "var(--color-chart-2)" }}
+								/>
+								<span className="text-muted-foreground">Захиалга</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 
-			{/* Conversion Metrics */}
-			<Card className="border-2 border-border shadow-shadow">
-				<CardHeader className="border-border border-b-2 bg-secondary-background">
-					<CardTitle className="flex items-center gap-3 font-heading text-xl">
-						<MousePointer className="h-5 w-5" />
-						Хөрвүүлэлтийн үзүүлэлтүүд
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="p-4">
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						{conversionData.map((item) => (
-							<div
-								key={item.metric}
-								className="border-2 border-border bg-card p-4"
-							>
-								<div className="flex items-center justify-between">
-									<div>
-										<h4 className="mb-1 font-bold font-heading text-base">
-											{item.metric}
-										</h4>
-										<p className="text-muted-foreground text-sm">
-											Хөрвүүлэлтийн хувь
-										</p>
-									</div>
-									<div className="text-right">
-										<p className="font-bold font-heading text-2xl">
-											{item.rate}%
-										</p>
-										<div className="mt-1 flex items-center gap-1">
-											<TrendingUp className="h-3 w-3 text-green-600" />
-											<span className="text-green-600 text-xs">
-												+{(Math.random() * 2) | 0}.{(Math.random() * 9) | 0}%
-											</span>
+			{/* Conversion Funnel */}
+			<div className="border-2 border-border bg-card shadow-hard-sm">
+				<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+					<div className="flex items-center gap-2">
+						<Target className="h-4 w-4 text-muted-foreground" />
+						<span className="font-bold text-sm">Хөрвүүлэлтийн юүлүүр</span>
+					</div>
+					<span className="text-muted-foreground text-xs">
+						{timeRangeLabel}
+					</span>
+				</div>
+				<div className="divide-y divide-border">
+					{funnelWithRates.map((step, index) => {
+						const Icon = step.icon;
+						const widthPct =
+							funnel.visitors > 0
+								? Math.max((step.count / funnel.visitors) * 100, 5)
+								: 5;
+						return (
+							<div key={step.label} className="relative p-2.5">
+								<div
+									className="absolute inset-y-0 left-0 bg-primary/10"
+									style={{ width: `${widthPct}%` }}
+								/>
+								<div className="relative flex items-center justify-between">
+									<div className="flex items-center gap-2.5">
+										<div className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-border bg-card">
+											<Icon className="h-3 w-3" />
+										</div>
+										<div>
+											<p className="font-bold text-sm leading-tight">
+												{step.label}
+											</p>
+											{index > 0 && (
+												<p className="text-[10px] text-muted-foreground">
+													{step.rate}% өмнөх алхмаас
+												</p>
+											)}
 										</div>
 									</div>
-								</div>
-								<div className="mt-3">
-									<div className="h-2 w-full rounded-full bg-muted">
-										<div
-											className="h-2 rounded-full bg-chart-1"
-											style={{ width: `${Math.min(item.rate * 10, 100)}%` }}
-										/>
-									</div>
+									<span className="shrink-0 font-bold font-mono text-xs">
+										{step.count.toLocaleString()}
+									</span>
 								</div>
 							</div>
-						))}
+						);
+					})}
+				</div>
+				{funnel.visitors > 0 && (
+					<div className="border-border border-t-2 bg-muted/20 px-3 py-2">
+						<div className="flex items-center justify-between text-xs">
+							<span className="font-medium text-muted-foreground">
+								Нийт хөрвүүлэлт (Зочин → Захиалга)
+							</span>
+							<span className="font-black font-heading">
+								{((funnel.orderPlacers / funnel.visitors) * 100).toFixed(1)}%
+							</span>
+						</div>
 					</div>
-				</CardContent>
-			</Card>
+				)}
+			</div>
+
+			{/* Quick Event Stats */}
+			<div className="grid grid-cols-3 gap-2">
+				<div className="border-2 border-border bg-card p-2.5 shadow-hard-sm">
+					<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						Бараа үзэлт
+					</p>
+					<p className="mt-0.5 font-black font-heading text-base leading-tight">
+						{current.productViews.toLocaleString()}
+					</p>
+				</div>
+				<div className="border-2 border-border bg-card p-2.5 shadow-hard-sm">
+					<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						Сагсанд нэмсэн
+					</p>
+					<p className="mt-0.5 font-black font-heading text-base leading-tight">
+						{current.addToCarts.toLocaleString()}
+					</p>
+				</div>
+				<div className="border-2 border-border bg-card p-2.5 shadow-hard-sm">
+					<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						Төлбөр баталсан
+					</p>
+					<p className="mt-0.5 font-black font-heading text-base leading-tight">
+						{current.payments.toLocaleString()}
+					</p>
+				</div>
+			</div>
 		</div>
 	);
 }
