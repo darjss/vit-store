@@ -28,7 +28,7 @@ const r2 = await R2Bucket("r2", {
 const rateLimit = RateLimit({
 	namespace_id: 1001,
 	simple: {
-		limit: 500,
+		limit: 1000,
 		period: 60,
 	},
 });
@@ -58,6 +58,7 @@ const directDbUrl =
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
+	crons: ["*/10 * * * *"],
 	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
 
 	adopt: true,
@@ -79,6 +80,8 @@ export const server = await Worker("api", {
 		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
 		SMS_GATEWAY_LOGIN: process.env.SMS_GATEWAY_LOGIN || "",
 		SMS_GATEWAY_PASSWORD: process.env.SMS_GATEWAY_PASSWORD || "",
+		RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+		RESTOCK_FROM_EMAIL: process.env.RESTOCK_FROM_EMAIL || "",
 		FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || "",
 		GOOGLE_GENERATIVE_AI_API_KEY:
 			process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
@@ -86,12 +89,16 @@ export const server = await Worker("api", {
 		BONUM_APP_SECRET: process.env.BONUM_APP_SECRET || "",
 		BONUM_TERMINAL_ID: process.env.BONUM_TERMINAL_ID || "",
 		BONUM_WEBHOOK_URL: process.env.BONUM_WEBHOOK_URL || "",
-		// Upstash Search
 		UPSTASH_SEARCH_URL: process.env.UPSTASH_SEARCH_URL || "",
 		UPSTASH_SEARCH_TOKEN: process.env.UPSTASH_SEARCH_TOKEN || "",
-		// Upstash Redis
 		UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "",
 		UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+		QPAY_URL: process.env.QPAY_URL || "",
+		QPAY_USERNAME: process.env.QPAY_USERNAME || "",
+		QPAY_PASSWORD: process.env.QPAY_PASSWORD || "",
+		POSTHOG_PERSONAL_API_KEY: process.env.POSTHOG_PERSONAL_API_KEY || "",
+		POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID || "",
+		POSTHOG_HOST: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
 	},
 
 	observability: {
@@ -109,7 +116,7 @@ export const server = await Worker("api", {
 		},
 	},
 	placement: {
-		mode: "smart",
+		region: "aws:ap-southeast-1",
 	},
 	dev: {
 		port: 3006,

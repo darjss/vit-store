@@ -30,6 +30,8 @@
 	"scripts": {
 		"build": "tsdown",
 		"dev": "echo 'API package uses source files directly - no dev build needed'",
+		"images:refine": "bun scripts/refine-and-migrate-images.ts",
+		"products:dedupe": "bun scripts/dedupe-products.ts",
 		"db:push": "drizzle-kit push",
 		"db:push:local": "drizzle-kit push --config=./drizzle.local.config.ts",
 		"db:migrate": "drizzle-kit migrate",
@@ -67,6 +69,7 @@
 		"ky": "^1.14.2",
 		"nanoid": "^5.1.5",
 		"postgres": "^3.4.7",
+		"resend": "^4.0.1",
 		"superjson": "^2.2.2",
 		"valibot": "catalog:"
 	}

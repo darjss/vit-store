@@ -14,19 +14,14 @@ if (!paymentNumber) {
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-
-try {
-    await serverApi.payment.confirmPayment.mutate({ 
-        paymentNumber, 
-        provider: "qpay" 
-    });
-} catch (e) {
-    console.error("Failed to confirm payment:", e);
-}
 const payment = await serverApi.payment.getPaymentByNumber.query({ paymentNumber });
 
 if (!payment) {
     throw Astro.redirect("/404");
+}
+
+if (payment.status !== "success") {
+	throw Astro.redirect(`/payment/${paymentNumber}`);
 }
 ---
 

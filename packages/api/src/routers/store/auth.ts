@@ -3,7 +3,7 @@ import { customerQueries } from "@vit/api/queries";
 import { createMinimalLogger } from "@vit/logger";
 import { customAlphabet } from "nanoid";
 import * as v from "valibot";
-import { smsGateway } from "@/lib/integrations";
+import { smsGateway } from "../../lib/integrations";
 import { kv } from "../../lib/kv";
 import {
 	auth as authCheck,

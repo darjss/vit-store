@@ -1,13 +1,16 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { kv } from "@/lib/kv";
-import { createInvoice, type InvoiceResponse } from "@/lib/payments/bonum";
 import { paymentProvider } from "../../lib/constants";
 import {
 	sendDetailedOrderNotification,
 	sendTransferNotification,
 } from "../../lib/integrations/messenger/messages";
+import { kv } from "../../lib/kv";
+import {
+	createQpayInvoice,
+	type InvoiceResponse,
+} from "../../lib/payments/qpay";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 export const payment = router({
 	getPaymentByNumber: customerProcedure
@@ -228,49 +231,64 @@ export const payment = router({
 		}),
 	createQr: publicProcedure
 		.input(v.object({ paymentNumber: v.string() }))
-		.mutation(async ({ input, ctx }) => {
-			const responseFromKv = await kv().get(input.paymentNumber);
-			if (responseFromKv) {
-				const responseObject = JSON.parse(responseFromKv) as InvoiceResponse;
-				return responseObject.followUpLink;
-			}
-			const payment = await paymentQueries.store.getPaymentInfoByNumber(
-				input.paymentNumber,
-			);
-			if (!payment) {
+		.mutation(async ({ input, ctx }): Promise<InvoiceResponse> => {
+			try {
+				const responseFromKv = await kv().get(`QPAY:${input.paymentNumber}`);
+				if (responseFromKv) {
+					return JSON.parse(responseFromKv) as InvoiceResponse;
+				}
+
+				const payment = await paymentQueries.store.getPaymentInfoByNumber(
+					input.paymentNumber,
+				);
+				if (!payment) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "No payment found",
+					});
+				}
+				if (payment.status === "success") {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "ALREADY_PAID",
+					});
+				}
+
+				const isDev = process.env.NODE_ENV === "development";
+				const qpayResponse = await createQpayInvoice(
+					isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
+					input.paymentNumber,
+				);
+
+				const kvPromise = ctx.c.env.vitStoreKV.put(
+					`QPAY:${input.paymentNumber}`,
+					JSON.stringify(qpayResponse),
+					{
+						expirationTtl: 3600,
+					},
+				);
+				const dbPromise = paymentQueries.store.changePaymentToQpay(
+					input.paymentNumber,
+					qpayResponse.invoice_id,
+				);
+				await Promise.all([kvPromise, dbPromise]);
+
+				return qpayResponse;
+			} catch (e) {
+				if (e instanceof TRPCError) {
+					throw e;
+				}
+
+				ctx.log.error("payment.create_qr_failed", e, {
+					paymentNumber: input.paymentNumber,
+				});
+
 				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "No payment found",
+					code: "BAD_GATEWAY",
+					message:
+						e instanceof Error ? e.message : "Failed to create QPay invoice",
+					cause: e,
 				});
 			}
-			const isDev = process.env.NODE_ENV === "development";
-			const bonumInvoiceResponse = await createInvoice({
-				totalAmount: isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
-				transactionId: payment.paymentNumber,
-				products: payment.order.orderDetails.map((detail) => {
-					return {
-						image: detail.product.images[0].url,
-						title: detail.product.name,
-						amount: isDev
-							? Math.ceil(detail.product.price / 10000)
-							: detail.product.price,
-						count: detail.quantity,
-						remark: detail.product.name,
-					};
-				}),
-			});
-			const KVCachePutPromise = kv().put(
-				payment.paymentNumber,
-				JSON.stringify(bonumInvoiceResponse),
-				{
-					expirationTtl: 1800,
-				},
-			);
-			const changePaymentPromise = paymentQueries.store.changePaymentToQpay(
-				input.paymentNumber,
-				bonumInvoiceResponse.invoiceId,
-			);
-			Promise.all([KVCachePutPromise, changePaymentPromise]);
-			return bonumInvoiceResponse.followUpLink;
 		}),
 });

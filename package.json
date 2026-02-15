@@ -17,7 +17,7 @@
 			"tsdown": "^0.15.12",
 			"drizzle-orm": "^0.44.4",
 			"drizzle-kit": "^0.31.4",
-			"alchemy": "0.83.1"
+			"alchemy": "0.84.0"
 		}
 	},
 	"scripts": {
