@@ -39,5 +39,43 @@ export const userQueries = {
 			}
 			return result[0];
 		},
+
+		async updateUserByGoogleId(
+			googleId: string,
+			updates: {
+				username?: string;
+				isApproved?: boolean;
+			},
+		): Promise<UserSelectType | null> {
+			const valuesToSet: {
+				username?: string;
+				isApproved?: boolean;
+				updatedAt: Date;
+			} = {
+				updatedAt: new Date(),
+			};
+
+			if (updates.username !== undefined) {
+				valuesToSet.username = updates.username;
+			}
+
+			if (updates.isApproved !== undefined) {
+				valuesToSet.isApproved = updates.isApproved;
+			}
+
+			const result = await db()
+				.update(UsersTable)
+				.set(valuesToSet)
+				.where(
+					and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)),
+				)
+				.returning();
+
+			if (result.length < 1 || result[0] === undefined) {
+				return null;
+			}
+
+			return result[0];
+		},
 	},
 };
