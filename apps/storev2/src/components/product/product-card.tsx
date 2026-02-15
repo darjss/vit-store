@@ -1,6 +1,7 @@
 import { formatCurrency } from "@vit/shared/utils";
 import { createMemo, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 export interface ProductCardData {
@@ -24,6 +25,9 @@ const ProductCard = (props: ProductCardProps) => {
 		() => productColors[product.id % productColors.length],
 	);
 	const productImage = createMemo(() => product.images?.[0]?.url);
+	const productImageSmall = createMemo(() =>
+		toProductImageUrl(productImage() ?? "", "sm"),
+	);
 	const productUrl = `/products/${product.slug}-${product.id}`;
 	const brandName = createMemo(() => product.brand?.name);
 
@@ -49,7 +53,7 @@ const ProductCard = (props: ProductCardProps) => {
 					<Show when={productImage()}>
 						{(img) => (
 							<img
-								src={img()}
+								src={productImageSmall() || img()}
 								alt={product.name}
 								class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
 								width={400}

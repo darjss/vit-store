@@ -1,6 +1,7 @@
 import { Image } from "@unpic/solid";
 import { createSignal, For, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import { cn } from "@/lib/utils";
 
 interface ProductImage {
@@ -53,7 +54,10 @@ export default function ProductImageCarousel(props: Props) {
 					}
 				>
 					<Image
-						src={images[selectedIndex()].url}
+						src={
+							toProductImageUrl(images[selectedIndex()].url, "md") ||
+							images[selectedIndex()].url
+						}
 						alt={props.productName}
 						width={800}
 						height={800}
@@ -82,7 +86,7 @@ export default function ProductImageCarousel(props: Props) {
 							>
 								<div class="absolute inset-0 bg-dots-pattern opacity-20" />
 								<Image
-									src={image.url}
+									src={toProductImageUrl(image.url, "sm") || image.url}
 									alt={`${props.productName} харагдац ${index() + 1}`}
 									width={96}
 									height={96}

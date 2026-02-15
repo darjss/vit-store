@@ -2,6 +2,7 @@ import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared/utils";
 import { createResource, For, Show } from "solid-js";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import IconLightbulb from "~icons/ri/lightbulb-flash-fill";
@@ -105,7 +106,10 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 
 										<Show when={product.image}>
 											<Image
-												src={product.image}
+												src={
+													toProductImageUrl(product.image, "sm") ||
+													product.image
+												}
 												alt={product.name}
 												width={300}
 												height={375}

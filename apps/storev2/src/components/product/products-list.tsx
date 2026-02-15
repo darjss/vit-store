@@ -22,6 +22,14 @@ import FilterBar from "../search/filter-bar";
 import ProductCard from "./product-card";
 import SearchProductCard from "./search-product-card";
 
+type ListFilter = "featured" | "recent" | "discount";
+
+const LIST_FILTER_LABELS: Record<ListFilter, string> = {
+	featured: "Онцлох",
+	recent: "Шинэ ирсэн",
+	discount: "Хямдралтай",
+};
+
 const ProductCardSkeleton = () => (
 	<div class="flex animate-pulse flex-col border-2 border-black bg-white shadow-[2px_2px_0_0_#000] transition-all sm:border-3 sm:shadow-[3px_3px_0_0_#000] lg:shadow-[5px_5px_0_0_#000]">
 		<div class="relative aspect-4/5 overflow-hidden border-black border-b-2 bg-gray-100 sm:aspect-4/3 sm:border-b-3">
@@ -56,6 +64,9 @@ const ProductsList = () => {
 	const [brandIdParam, setBrandIdParam] = useSearchParam("brand", {
 		defaultValue: undefined,
 	});
+	const [listFilterParam, setListFilterParam] = useSearchParam("filter", {
+		defaultValue: undefined,
+	});
 
 	const [localSearchTerm, setLocalSearchTerm] = createSignal(
 		searchTerm() ?? "",
@@ -88,14 +99,42 @@ const ProductsList = () => {
 		() => queryClient,
 	);
 
+	const listFilter = createMemo<ListFilter | null>(() => {
+		const val = listFilterParam();
+		if (val === "featured" || val === "recent" || val === "discount") {
+			return val;
+		}
+		return null;
+	});
+
 	const categoryId = createMemo(() => {
 		const val = categoryIdParam();
-		return val ? Number.parseInt(val, 10) : null;
+		if (!val) return null;
+
+		const parsed = Number.parseInt(val, 10);
+		if (!Number.isNaN(parsed)) return parsed;
+
+		const categoryByName = categoriesQuery.data?.find(
+			(c: { id: number; name: string }) =>
+				c.name.trim().toLowerCase() === val.trim().toLowerCase(),
+		);
+
+		return categoryByName?.id ?? null;
 	});
 
 	const brandId = createMemo(() => {
 		const val = brandIdParam();
-		return val ? Number.parseInt(val, 10) : null;
+		if (!val) return null;
+
+		const parsed = Number.parseInt(val, 10);
+		if (!Number.isNaN(parsed)) return parsed;
+
+		const brandByName = brandsQuery.data?.find(
+			(b: { id: number; name: string }) =>
+				b.name.trim().toLowerCase() === val.trim().toLowerCase(),
+		);
+
+		return brandByName?.id ?? null;
 	});
 
 	const searchQuery = useQuery(
@@ -124,11 +163,13 @@ const ProductsList = () => {
 				sortDirection(),
 				categoryId(),
 				brandId(),
+				listFilter(),
 			],
 			queryFn: async ({ pageParam }) => {
 				const result = await api.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
+					listType: listFilter() ?? undefined,
 					sortField:
 						(sortField() as "price" | "stock" | "createdAt") || undefined,
 					sortDirection: (sortDirection() as "asc" | "desc") || undefined,
@@ -226,6 +267,7 @@ const ProductsList = () => {
 		setSortDirection(null);
 		setCategoryIdParam(null);
 		setBrandIdParam(null);
+		setListFilterParam(null);
 		setLocalSearchTerm("");
 	};
 
@@ -234,7 +276,8 @@ const ProductsList = () => {
 		!!sortField() ||
 		!!sortDirection() ||
 		!!categoryId() ||
-		!!brandId();
+		!!brandId() ||
+		!!listFilter();
 
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
@@ -262,6 +305,7 @@ const ProductsList = () => {
 	// Get active filter display text
 	const getPageTitle = () => {
 		if (searchTerm()) return `"${searchTerm()}" хайлтын үр дүн`;
+		if (listFilter()) return LIST_FILTER_LABELS[listFilter() as ListFilter];
 		if (categoryId()) {
 			const cat = categoriesQuery.data?.find(
 				(c: { id: number; name: string }) => c.id === categoryId(),
@@ -328,6 +372,10 @@ const ProductsList = () => {
 					onSortChange={handleSortChange}
 					onCategoryChange={handleCategoryChange}
 					onBrandChange={handleBrandChange}
+					presetFilter={listFilter()}
+					onPresetFilterChange={(value: ListFilter | null) =>
+						setListFilterParam(value)
+					}
 					onClearFilters={handleClearFilters}
 					hasActiveFilters={hasActiveFilters()}
 				/>

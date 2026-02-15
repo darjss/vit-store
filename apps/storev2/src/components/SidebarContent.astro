@@ -11,7 +11,7 @@ import IconUser from "~icons/ri/user-line";
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
 
-const categories = await serverApi.category.getAllCategoryNames.query();
+const categories = await serverApi.category.getAllCategories.query();
 const brands = await serverApi.brand.getAllBrands.query();
 ---
 
@@ -67,14 +67,41 @@ const brands = await serverApi.brand.getAllBrands.query();
                 Ангилал
             </h3>
             <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
-                {categories.map((name: string) => (
+                {categories.map((category: { id: number; name: string }) => (
                     <a 
-                        href={`/products?category=${encodeURIComponent(name)}`} 
+                        href={`/products?category=${category.id}`} 
                         class="flex-shrink-0 px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all whitespace-nowrap"
                     >
-                        {name}
+                        {category.name}
                     </a>
                 ))}
+            </div>
+        </div>
+
+        <div class="px-4 pb-4">
+            <h3 class="font-black text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-primary"></span>
+                Онцлох хэсэг
+            </h3>
+            <div class="grid grid-cols-3 gap-2">
+                <a
+                    href="/products?filter=featured"
+                    class="flex items-center justify-center p-2.5 bg-background border-3 border-border text-[11px] font-bold uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    Онцлох
+                </a>
+                <a
+                    href="/products?filter=recent"
+                    class="flex items-center justify-center p-2.5 bg-background border-3 border-border text-[11px] font-bold uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    Шинэ
+                </a>
+                <a
+                    href="/products?filter=discount"
+                    class="flex items-center justify-center p-2.5 bg-background border-3 border-border text-[11px] font-bold uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    Хямдрал
+                </a>
             </div>
         </div>
 
@@ -87,9 +114,9 @@ const brands = await serverApi.brand.getAllBrands.query();
             {brands.length > 0 ? (
                 <>
                     <div class="grid grid-cols-3 gap-2">
-                        {brands.slice(0, 6).map((brand: { name: string; logoUrl?: string | null }) => (
+                        {brands.slice(0, 6).map((brand: { id: number; name: string; logoUrl?: string | null }) => (
                             <a 
-                                href={`/products?brand=${encodeURIComponent(brand.name)}`} 
+                                href={`/products?brand=${brand.id}`} 
                                 class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
                             >
                                 {brand.logoUrl ? (
@@ -142,12 +169,12 @@ const brands = await serverApi.brand.getAllBrands.query();
     <!-- Bottom Branding -->
     <div class="p-4 border-t-3 border-border bg-muted/50">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-primary border-3 border-border flex items-center justify-center font-black text-lg shadow-hard-sm">
-                V+
+            <div class="w-10 h-10 bg-primary border-3 border-border flex items-center justify-center font-black text-xs uppercase tracking-wider shadow-hard-sm">
+                AV
             </div>
             <div>
-                <span class="font-black text-sm block">ВитаБүүст</span>
-                <span class="text-[10px] text-muted-foreground font-medium">© 2024</span>
+                <span class="font-black text-sm block uppercase tracking-wider">Amerik Vitamin</span>
+                <span class="text-[10px] text-muted-foreground font-medium">Баталгаатай импорт</span>
             </div>
         </div>
     </div>

@@ -1,23 +1,39 @@
-	<footer class="relative z-10 pb-16 md:pb-0">
-		<div class="mx-auto mt-16 max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-			<div class="border-t-4 border-black pt-8 pb-8">
-				<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-					<div class="flex items-center gap-2">
-						<div class="w-10 h-10 bg-primary border-[3px] border-black flex items-center justify-center font-black text-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">V+</div>
-						<span class="font-black text-xl">ВитаБүүст</span>
+	<footer class="relative z-10 border-t-2 border-border bg-muted/20 pb-16 md:pb-0">
+		<div class="mx-auto max-w-screen-2xl px-5 py-8 lg:px-8 lg:py-10">
+			<div class="grid gap-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-8">
+				<div>
+					<div class="mb-3 flex items-center gap-2.5">
+						<div class="h-10 w-10 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">AV</div>
+						<span class="font-black text-base uppercase tracking-wider">Amerik Vitamin</span>
 					</div>
-					
-					<div class="flex flex-col md:flex-row gap-4 md:gap-8 text-sm">
-						<a href="/products" class="font-bold hover:underline decoration-2">Бүтээгдэхүүн</a>
-						<a href="/about" class="font-bold hover:underline decoration-2">Бидний тухай</a>
-						<a href="/contact" class="font-bold hover:underline decoration-2">Холбоо барих</a>
+					<p class="max-w-md text-xs font-medium leading-relaxed text-muted-foreground lg:text-sm">
+						АНУ-аас шууд авчирсан витамин, нэмэлт тэжээл. Захиалга өгмөгц хурдан хүргэнэ.
+					</p>
+				</div>
+
+				<div>
+					<h3 class="mb-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Цэс</h3>
+					<div class="flex flex-col gap-2 text-sm">
+						<a href="/" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Нүүр</a>
+						<a href="/products" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Бүтээгдэхүүн</a>
+						<a href="/cart" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Сагс</a>
+						<a href="/profile" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Профайл</a>
 					</div>
 				</div>
-				
-				<div class="mt-6 pt-6 border-t-2 border-black/20 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs">
-					<p class="font-semibold text-black/60">Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу.</p>
-					<p class="font-black">© {new Date().getFullYear()} Vit Store. All rights reserved.</p>
+
+				<div>
+					<h3 class="mb-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Мэдээлэл</h3>
+					<div class="space-y-2 text-xs font-medium text-muted-foreground lg:text-sm">
+						<p>УБ хотод 24-48 цагт хүргэлт</p>
+						<p>30,000₮-с дээш хүргэлт үнэгүй</p>
+						<p>Таарахгүй бол 14 хоногт буцаалттай</p>
+					</div>
 				</div>
+			</div>
+
+			<div class="mt-6 border-t-2 border-border/30 pt-4 flex flex-col gap-2 text-xs lg:flex-row lg:items-center lg:justify-between">
+				<p class="font-semibold text-muted-foreground">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
+				<p class="font-black uppercase tracking-wider text-muted-foreground">© {new Date().getFullYear()} Amerik Vitamin</p>
 			</div>
 		</div>
 	</footer>
