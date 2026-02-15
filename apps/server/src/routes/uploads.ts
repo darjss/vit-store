@@ -18,6 +18,17 @@ function extensionFromContentType(contentType: string): string {
 	return "jpg";
 }
 
+function sanitizePrefix(prefix: string | undefined): string {
+	if (!prefix) return "products/ai-extracted";
+	return prefix
+		.trim()
+		.replace(/\.{2,}/g, "")
+		.replace(/[^a-zA-Z0-9/_-]/g, "-")
+		.replace(/\/+/g, "/")
+		.replace(/^\/+|\/+$/g, "")
+		.slice(0, 120);
+}
+
 // POST /upload/products (main product images)
 app.post("/products", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
@@ -216,6 +227,7 @@ app.post("/images/urls", async (c) => {
 	const startTime = Date.now();
 
 	try {
+		const uploadPrefix = sanitizePrefix(c.req.query("prefix"));
 		const body = (await c.req.json()) as ImageUrlArray;
 
 		if (!Array.isArray(body) || body.length === 0) {
@@ -267,7 +279,7 @@ app.post("/images/urls", async (c) => {
 
 				const generatedId = nanoid();
 				const rawExt = extensionFromContentType(contentType);
-				let carouselKey = `products/ai-extracted/${generatedId}.webp`;
+				let carouselKey = `${uploadPrefix}/${generatedId}.webp`;
 
 				const imageArrayBuffer = await imageResponse.arrayBuffer();
 				const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
@@ -299,7 +311,7 @@ app.post("/images/urls", async (c) => {
 								? transformError.message
 								: "unknown",
 					});
-					carouselKey = `products/ai-extracted/${generatedId}.${rawExt}`;
+					carouselKey = `${uploadPrefix}/${generatedId}.${rawExt}`;
 					await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
 						httpMetadata: { contentType },
 					});
@@ -308,7 +320,7 @@ app.post("/images/urls", async (c) => {
 				const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
 
 				if (isPrimary && wrotePrimaryWithTransform) {
-					const thumbnailKey = `products/ai-extracted/${generatedId}-thumbnail.webp`;
+					const thumbnailKey = `${uploadPrefix}/${generatedId}-thumbnail.webp`;
 					const thumbnailBlob = new Blob([imageArrayBuffer], {
 						type: contentType,
 					});
