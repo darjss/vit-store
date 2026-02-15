@@ -7,6 +7,34 @@ import { adminAuth } from "./session/admin";
 import { auth } from "./session/store";
 import { getTtlForTimeRange } from "./utils";
 
+const normalizeLogPayload = (value: unknown): unknown => {
+	if (value === undefined) {
+		return undefined;
+	}
+
+	try {
+		return JSON.parse(
+			JSON.stringify(value, (_key, currentValue) => {
+				if (currentValue instanceof Error) {
+					return {
+						name: currentValue.name,
+						message: currentValue.message,
+						stack: currentValue.stack,
+					};
+				}
+
+				if (typeof currentValue === "bigint") {
+					return currentValue.toString();
+				}
+
+				return currentValue;
+			}),
+		);
+	} catch {
+		return String(value);
+	}
+};
+
 export const t = initTRPC.context<Context>().create({
 	transformer: superjson,
 	errorFormatter({ shape, error }) {
@@ -137,12 +165,13 @@ const loggingMiddleware = t.middleware(
 		const startTime = Date.now();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
+		const safeInput = normalizeLogPayload(input);
 
 		// Log procedure start with input
 		ctx.log.info("trpc.procedure_start", {
 			procedure: path,
 			type: procedureType,
-			input,
+			input: safeInput,
 		});
 
 		try {
@@ -154,7 +183,7 @@ const loggingMiddleware = t.middleware(
 				procedure: path,
 				type: procedureType,
 				durationMs,
-				output: result,
+				output: normalizeLogPayload(result),
 			});
 
 			return result;
@@ -166,8 +195,9 @@ const loggingMiddleware = t.middleware(
 				procedure: path,
 				type: procedureType,
 				durationMs,
-				input,
+				input: safeInput,
 				errorCode: error instanceof TRPCError ? error.code : undefined,
+				errorMessage: error instanceof Error ? error.message : String(error),
 			});
 
 			throw error;
