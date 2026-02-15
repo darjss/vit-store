@@ -3,6 +3,9 @@ export {
 	messenger,
 	messengerWebhookHandler,
 } from "./messenger";
+export type { PostHogConfig } from "./posthog";
+export { createPostHogClient, PostHogClient } from "./posthog";
+export { resendClient, sendEmail } from "./resend";
 export type {
 	Device as SmsDevice,
 	DeviceSettings as SmsDeviceSettings,

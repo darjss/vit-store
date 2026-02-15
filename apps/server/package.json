@@ -36,6 +36,7 @@
 		"@oslojs/encoding": "^1.1.0",
 		"@trpc/client": "catalog:",
 		"@trpc/server": "catalog:",
+		"@upstash/redis": "^1.36.1",
 		"@vit/api": "workspace:*",
 		"@vit/logger": "workspace:*",
 		"@vit/shared": "workspace:*",

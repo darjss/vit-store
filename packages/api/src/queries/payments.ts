@@ -135,6 +135,24 @@ export const paymentQueries = {
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 
+		async confirmPaymentIfPending(
+			paymentNumber: string,
+			provider: PaymentProviderType,
+		) {
+			const updated = await db()
+				.update(PaymentsTable)
+				.set({ status: "success", provider })
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						eq(PaymentsTable.status, "pending"),
+					),
+				)
+				.returning({ id: PaymentsTable.id });
+
+			return updated.length > 0;
+		},
+
 		async getPaymentByNumber(paymentNumber: string) {
 			return await db().query.PaymentsTable.findFirst({
 				where: and(

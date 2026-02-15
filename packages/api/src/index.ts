@@ -1,3 +1,5 @@
+/// <reference path="../env.d.ts" />
+
 export type { DB } from "./db";
 export { createDb } from "./db";
 export type {
