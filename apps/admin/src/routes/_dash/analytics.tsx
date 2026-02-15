@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import * as v from "valibot";
+import { ProductPerformance } from "@/components/analytics/product-performance";
+import { WebAnalytics } from "@/components/analytics/web-analytics";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -27,11 +29,39 @@ export const Route = createFileRoute("/_dash/analytics")({
 	loader: async ({ context: ctx, location }) => {
 		const timeRange =
 			(location.search as { timeRange?: string })?.timeRange || "monthly";
-		await ctx.queryClient.ensureQueryData(
-			ctx.trpc.analytics.getAnalyticsData.queryOptions({
-				timeRange: timeRange as "daily" | "weekly" | "monthly",
-			}),
-		);
+		const tr = timeRange as "daily" | "weekly" | "monthly";
+		await Promise.all([
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getAnalyticsData.queryOptions({
+					timeRange: tr,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getWebAnalytics.queryOptions({
+					timeRange: tr,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getConversionFunnel.queryOptions({
+					timeRange: tr,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getDailyVisitorTrend.queryOptions({
+					timeRange: tr,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getMostViewedProducts.queryOptions({
+					timeRange: tr,
+				}),
+			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getTopSearches.queryOptions({
+					timeRange: tr,
+				}),
+			),
+		]);
 	},
 });
 
@@ -46,11 +76,25 @@ const COLORS = [
 function RouteComponent() {
 	const { timeRange = "monthly" } = Route.useSearch();
 	const navigate = useNavigate({ from: "/analytics" });
+	const tr = timeRange as "daily" | "weekly" | "monthly";
 
 	const { data } = useSuspenseQuery(
-		trpc.analytics.getAnalyticsData.queryOptions({
-			timeRange: timeRange as "daily" | "weekly" | "monthly",
-		}),
+		trpc.analytics.getAnalyticsData.queryOptions({ timeRange: tr }),
+	);
+	const { data: webAnalytics } = useSuspenseQuery(
+		trpc.analytics.getWebAnalytics.queryOptions({ timeRange: tr }),
+	);
+	const { data: funnel } = useSuspenseQuery(
+		trpc.analytics.getConversionFunnel.queryOptions({ timeRange: tr }),
+	);
+	const { data: dailyTrend } = useSuspenseQuery(
+		trpc.analytics.getDailyVisitorTrend.queryOptions({ timeRange: tr }),
+	);
+	const { data: mostViewedProducts } = useSuspenseQuery(
+		trpc.analytics.getMostViewedProducts.queryOptions({ timeRange: tr }),
+	);
+	const { data: topSearches } = useSuspenseQuery(
+		trpc.analytics.getTopSearches.queryOptions({ timeRange: tr }),
 	);
 
 	const categoryMap = new Map<string, number>();
@@ -115,7 +159,22 @@ function RouteComponent() {
 				</div>
 			</div>
 
-			{/* KPI Grid - 2x3 compact */}
+			{/* ─── PostHog Web Analytics ──────────────────────────── */}
+			<WebAnalytics
+				webAnalytics={webAnalytics}
+				funnel={funnel}
+				dailyTrend={dailyTrend}
+				timeRangeLabel={timeRangeLabel}
+			/>
+
+			{/* ─── PostHog Product Performance ───────────────────── */}
+			<ProductPerformance
+				mostViewedProducts={mostViewedProducts}
+				topSearches={topSearches}
+				timeRangeLabel={timeRangeLabel}
+			/>
+
+			{/* ─── DB-backed KPI Grid ────────────────────────────── */}
 			<div className="grid grid-cols-2 gap-2">
 				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
 					<div className="flex items-center gap-1.5 text-muted-foreground">

@@ -71,6 +71,10 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		setIsStockDialogOpen(false);
 	};
 
+	const openProductDetails = () => {
+		navigate({ to: "/products/$id", params: { id: String(product.id) } });
+	};
+
 	return (
 		<>
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -87,6 +91,11 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								...product,
 								brandId: String(product.brandId),
 								categoryId: String(product.categoryId),
+								name_mn: product.name_mn ?? undefined,
+								seoTitle: product.seoTitle ?? undefined,
+								seoDescription: product.seoDescription ?? undefined,
+								ingredients: product.ingredients ?? undefined,
+								tags: product.tags ?? undefined,
 							}}
 							onSuccess={() => {
 								setIsEditDialogOpen(false);
@@ -98,27 +107,19 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					</div>
 				</DialogContent>
 			</Dialog>
-			<Card
-				className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
-				onClick={(e) => {
-					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
-					navigate({ to: "/products/$id", params: { id: String(product.id) } });
-				}}
-				tabIndex={0}
-				onKeyDown={(e) => {
-					if (
-						e.key === "Enter" &&
-						!(e.target as HTMLElement).closest("[data-no-nav]")
-					) {
-						navigate({
-							to: "/products/$id",
-							params: { id: String(product.id) },
-						});
-					}
-				}}
-			>
+			<Card className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none">
 				<CardContent className="p-0">
-					<div className="flex flex-row">
+					<button
+						type="button"
+						onClick={openProductDetails}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								openProductDetails();
+							}
+						}}
+						className="flex w-full flex-row text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					>
 						<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
 							<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
 								<img
@@ -161,65 +162,64 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 									<span className="ml-1 text-xs">үлдэгдэл</span>
 								</div>
 							</div>
+						</div>
+					</button>
 
-							<div
-								data-no-nav
-								className="mt-2 flex flex-wrap items-center justify-between gap-2"
+					<div className="border-border border-t-2 p-3" data-no-nav>
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<AlertDialog
+								open={isStockDialogOpen}
+								onOpenChange={setIsStockDialogOpen}
 							>
-								<AlertDialog
-									open={isStockDialogOpen}
-									onOpenChange={setIsStockDialogOpen}
-								>
-									<AlertDialogTrigger asChild>
-										<Button
-											variant="secondary"
-											size="sm"
-											onClick={(e) => e.stopPropagation()}
-											className="h-8 border-2 border-border px-3 text-sm"
-										>
-											<Edit className="mr-1 h-4 w-4" />
-											үлдэгдэл засах
-										</Button>
-									</AlertDialogTrigger>
-									<AlertDialogContent>
-										<AlertDialogHeader>
-											<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
-											<AlertDialogDescription>
-												"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог оруулна
-												уу.
-											</AlertDialogDescription>
-										</AlertDialogHeader>
-										<div className="py-4">
-											<Input
-												className="w-full border-2 border-border text-center"
-												value={stockValue}
-												type="number"
-												min="0"
-												onChange={(e) => {
-													const value =
-														e.target.value === ""
-															? 0
-															: Number.parseInt(e.target.value, 10);
-													setStockValue(Math.max(0, value));
-												}}
-											/>
-										</div>
-										<AlertDialogFooter>
-											<AlertDialogCancel>Цуцлах</AlertDialogCancel>
-											<AlertDialogAction onClick={handleSaveStock}>
-												Хадгалах
-											</AlertDialogAction>
-										</AlertDialogFooter>
-									</AlertDialogContent>
-								</AlertDialog>
+								<AlertDialogTrigger asChild>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={(e) => e.stopPropagation()}
+										className="h-8 border-2 border-border px-3 text-sm"
+									>
+										<Edit className="mr-1 h-4 w-4" />
+										үлдэгдэл засах
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
+										<AlertDialogDescription>
+											"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог оруулна
+											уу.
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<div className="py-4">
+										<Input
+											className="w-full border-2 border-border text-center"
+											value={stockValue}
+											type="number"
+											min="0"
+											onChange={(e) => {
+												const value =
+													e.target.value === ""
+														? 0
+														: Number.parseInt(e.target.value, 10);
+												setStockValue(Math.max(0, value));
+											}}
+										/>
+									</div>
+									<AlertDialogFooter>
+										<AlertDialogCancel>Цуцлах</AlertDialogCancel>
+										<AlertDialogAction onClick={handleSaveStock}>
+											Хадгалах
+										</AlertDialogAction>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 
-								<RowActions
-									id={product.id}
-									setIsEditDialogOpen={setIsEditDialogOpen}
-									deleteMutation={deleteHelper}
-									isDeletePending={isDeletePending}
-								/>
-							</div>
+							<RowActions
+								id={product.id}
+								setIsEditDialogOpen={setIsEditDialogOpen}
+								deleteMutation={deleteHelper}
+								isDeletePending={isDeletePending}
+							/>
 						</div>
 					</div>
 				</CardContent>

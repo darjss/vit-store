@@ -10,12 +10,12 @@ import {
 	BarChart3,
 	Calendar,
 	Check,
-	DollarSign,
 	Eye,
 	Image as ImageIcon,
 	Loader2,
 	Package,
 	Phone,
+	ShoppingCart,
 	Trash2,
 	TrendingUp,
 } from "lucide-react";
@@ -51,6 +51,12 @@ export const Route = createFileRoute("/_dash/products/$id")({
 					productId: productId,
 				}),
 			),
+			ctx.queryClient.ensureQueryData(
+				ctx.trpc.analytics.getProductBehavior.queryOptions({
+					productId: productId,
+					timeRange: "weekly",
+				}),
+			),
 		]);
 	},
 });
@@ -77,6 +83,12 @@ function ProductDetailContent() {
 	const { data: orders } = useSuspenseQuery({
 		...trpc.order.getRecentOrdersByProductId.queryOptions({
 			productId: productId,
+		}),
+	});
+	const { data: productBehavior } = useSuspenseQuery({
+		...trpc.analytics.getProductBehavior.queryOptions({
+			productId: productId,
+			timeRange: "weekly",
 		}),
 	});
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
@@ -461,30 +473,36 @@ function ProductDetailContent() {
 									<div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-2">
 										<div className="rounded-lg border bg-muted/20 p-2">
 											<div className="flex items-center gap-1">
-												<TrendingUp className="h-3 w-3 text-green-600" />
-												<span className="text-muted-foreground text-xs">
-													Борлуулалт
-												</span>
-											</div>
-											<p className="font-semibold text-sm">120</p>
-										</div>
-										<div className="rounded-lg border bg-muted/20 p-2">
-											<div className="flex items-center gap-1">
-												<DollarSign className="h-3 w-3 text-blue-600" />
-												<span className="text-muted-foreground text-xs">
-													Орлого
-												</span>
-											</div>
-											<p className="font-semibold text-sm">₮24K</p>
-										</div>
-										<div className="rounded-lg border bg-muted/20 p-2">
-											<div className="flex items-center gap-1">
 												<Eye className="h-3 w-3 text-purple-600" />
 												<span className="text-muted-foreground text-xs">
 													Үзэлт
 												</span>
 											</div>
-											<p className="font-semibold text-sm">1.25K</p>
+											<p className="font-semibold text-sm">
+												{productBehavior.views.toLocaleString()}
+											</p>
+										</div>
+										<div className="rounded-lg border bg-muted/20 p-2">
+											<div className="flex items-center gap-1">
+												<TrendingUp className="h-3 w-3 text-green-600" />
+												<span className="text-muted-foreground text-xs">
+													Үзэгч
+												</span>
+											</div>
+											<p className="font-semibold text-sm">
+												{productBehavior.uniqueViewers.toLocaleString()}
+											</p>
+										</div>
+										<div className="rounded-lg border bg-muted/20 p-2">
+											<div className="flex items-center gap-1">
+												<ShoppingCart className="h-3 w-3 text-blue-600" />
+												<span className="text-muted-foreground text-xs">
+													Сагсанд
+												</span>
+											</div>
+											<p className="font-semibold text-sm">
+												{productBehavior.addToCartCount.toLocaleString()}
+											</p>
 										</div>
 										<div className="rounded-lg border bg-muted/20 p-2">
 											<div className="flex items-center gap-1">
@@ -493,27 +511,30 @@ function ProductDetailContent() {
 													Хувь
 												</span>
 											</div>
-											<p className="font-semibold text-sm">9.6%</p>
+											<p className="font-semibold text-sm">
+												{productBehavior.views > 0
+													? `${((productBehavior.addToCartCount / productBehavior.views) * 100).toFixed(1)}%`
+													: "0%"}
+											</p>
 										</div>
 									</div>
 
 									<div>
 										<h3 className="mb-2 font-medium text-muted-foreground text-xs">
-											7 хоногийн борлуулалтын чиг хандлага
+											7 хоногийн үзэлтийн чиг хандлага
 										</h3>
 										<LineChart
-											data={[
-												{ day: "Mon", sales: 12, revenue: 2400 },
-												{ day: "Tue", sales: 8, revenue: 1600 },
-												{ day: "Wed", sales: 15, revenue: 3000 },
-												{ day: "Thu", sales: 22, revenue: 4400 },
-												{ day: "Fri", sales: 18, revenue: 3600 },
-												{ day: "Sat", sales: 25, revenue: 5000 },
-												{ day: "Sun", sales: 20, revenue: 4000 },
+											data={productBehavior.dailyTrend.map((d) => ({
+												date: d.date.slice(5),
+												views: d.views,
+												addToCarts: d.addToCarts,
+											}))}
+											index="date"
+											categories={["views", "addToCarts"]}
+											strokeColors={[
+												"hsl(var(--primary))",
+												"hsl(var(--chart-2))",
 											]}
-											index="day"
-											categories={["sales"]}
-											strokeColors={["hsl(var(--primary))"]}
 											className="h-20 sm:h-24"
 										/>
 									</div>

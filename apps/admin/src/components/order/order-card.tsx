@@ -1,16 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { OrderStatusType } from "@vit/shared";
-import {
-	Calendar,
-	CheckCircle,
-	Copy,
-	DollarSign,
-	MapPin,
-	Package,
-	Phone,
-	Truck,
-} from "lucide-react";
+import { CheckCircle, Copy, MapPin, Package, Phone, Truck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
@@ -59,6 +50,9 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 	const handleUpdateOrder = (status: OrderStatusType) => {
 		updateOrder.mutate({ id: order.id, status });
 	};
+
+	const productCount = order.products?.length ?? 0;
+
 	return (
 		<>
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -73,9 +67,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 				</DialogContent>
 			</Dialog>
 			<Card
-				className={
-					"h-auto min-h-[320px] border-l-4 border-l-gray-400 transition-shadow duration-200 hover:shadow-md sm:min-h-[360px] md:min-h-[400px]"
-				}
+				className="cursor-pointer transition-all duration-150 hover:translate-y-[-2px] active:translate-y-0"
 				onClick={(e) => {
 					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
 					navigate({ to: "/orders/$id", params: { id: order.id.toString() } });
@@ -93,37 +85,39 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 					}
 				}}
 			>
-				<CardContent className="flex h-full flex-col p-0">
-					<div className="flex items-center justify-between gap-2 border-b bg-muted/5 p-3">
-						<div className="flex flex-col gap-1">
-							<div className="flex items-center gap-2">
-								<Phone className="h-4 w-4 text-primary" />
-								<h3 className="font-semibold text-base">
-									{order.customerPhone}
-								</h3>
+				<CardContent className="flex flex-col gap-0 p-0">
+					{/* Header: Order number + status badges */}
+					<div className="flex items-start justify-between gap-2 px-3 pt-3 pb-2">
+						<div className="min-w-0 flex-1">
+							<div className="flex items-center gap-1.5">
+								<span className="font-bold text-foreground text-sm tracking-tight">
+									#{order.orderNumber}
+								</span>
+								<span className="text-[11px] text-muted-foreground">
+									{new Date(order.createdAt).toLocaleDateString("mn-MN", {
+										month: "short",
+										day: "numeric",
+										hour: "2-digit",
+										minute: "2-digit",
+									})}
+								</span>
 							</div>
-							<div className="flex items-center gap-2 text-muted-foreground text-xs">
-								<div className="flex items-center gap-1">
-									<Package className="h-3 w-3" />
-									<span className="font-medium">#{order.orderNumber}</span>
-								</div>
-								<div className="flex items-center gap-1">
-									<Calendar className="h-3 w-3" />
-									<span>{new Date(order.createdAt).toLocaleDateString()}</span>
-								</div>
+							<div className="mt-1 flex items-center gap-1.5">
+								<Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
+								<span className="font-medium text-foreground text-xs">
+									{order.customerPhone}
+								</span>
 							</div>
 						</div>
-
-						<div className="flex flex-col items-end gap-1">
+						<div className="flex shrink-0 flex-col items-end gap-1">
 							<OrderStatusBadge status={order.status} />
-
-							{order.paymentStatus && order.status && order.paymentProvider && (
+							{order.paymentStatus && order.paymentProvider && (
 								<Badge
-									className={`flex h-5 items-center gap-1.5 rounded-md px-2 text-[10px] shadow-sm ${getPaymentStatusColor(
-										order.paymentStatus,
-									)}`}
+									className={`flex h-5 items-center gap-1 px-1.5 text-[10px] leading-none ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
-									<span>{getPaymentProviderIcon(order.paymentProvider)}</span>
+									<span className="text-[10px]">
+										{getPaymentProviderIcon(order.paymentProvider)}
+									</span>
 									<span>
 										{order.paymentStatus === "success"
 											? "Paid"
@@ -136,107 +130,106 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 						</div>
 					</div>
 
-					<div className="border-b bg-muted/5 px-3 py-2">
-						<div className="flex items-center gap-1">
-							<MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-							<span className="font-semibold text-sm">
-								{order.address || "No address provided"}
+					{/* Address row */}
+					<div className="flex items-center gap-1.5 border-t border-dashed px-3 py-1.5">
+						<MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+						<span className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
+							{order.address || "Хаяг оруулаагүй"}
+						</span>
+						<Button
+							size="icon"
+							variant="ghost"
+							className="h-5 w-5 shrink-0"
+							data-no-nav
+							onClick={async () => {
+								await navigator.clipboard.writeText(order.address);
+								toast("Хаяг хуулагдлаа");
+							}}
+						>
+							<Copy className="h-2.5 w-2.5" />
+						</Button>
+					</div>
+
+					{/* Products list */}
+					<div className="border-t px-3 py-2">
+						<div className="flex items-center justify-between pb-1.5">
+							<div className="flex items-center gap-1.5">
+								<Package className="h-3 w-3 text-muted-foreground" />
+								<span className="font-medium text-[11px] text-muted-foreground uppercase tracking-wider">
+									Бүтээгдэхүүн
+								</span>
+								<span className="flex h-4 min-w-4 items-center justify-center border border-border bg-muted px-1 font-bold text-[10px] text-foreground">
+									{productCount}
+								</span>
+							</div>
+							<span className="font-bold text-foreground text-sm tabular-nums">
+								₮{order.total.toLocaleString()}
 							</span>
-							<Button
-								size={"icon"}
-								className="h-7 w-7"
-								variant={"default"}
-								data-no-nav
-								onClick={async () => {
-									await navigator.clipboard.writeText(order.address);
-									toast("Хаяг хуулагдлаа");
-								}}
-							>
-								<Copy className="h-4 w-4" />
-							</Button>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							{order.products?.map((detail, index) => (
+								<div
+									key={order.orderNumber + detail.productId + index}
+									className="flex items-center gap-2.5 border border-border/50 bg-muted/30 p-1.5"
+								>
+									<div className="h-10 w-10 shrink-0 overflow-hidden border border-border/50 bg-muted sm:h-12 sm:w-12">
+										<img
+											src={detail.imageUrl || "/placeholder.jpg"}
+											alt={detail.name}
+											className="h-full w-full object-cover"
+											loading="lazy"
+										/>
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-medium text-foreground text-xs leading-tight sm:text-sm">
+											{detail.name}
+										</p>
+									</div>
+									<span className="shrink-0 border border-border bg-background px-1.5 py-0.5 font-bold text-[11px] text-foreground tabular-nums">
+										x{detail.quantity}
+									</span>
+								</div>
+							))}
 						</div>
 					</div>
 
-					<div className="flex-1 overflow-y-auto p-3">
-						<div className="flex h-full flex-col sm:gap-4">
-							<div className="flex w-full flex-1 flex-col overflow-hidden">
-								<div className="mb-2 flex shrink-0 items-center justify-between">
-									<div className="flex items-center gap-2">
-										<h4 className="font-medium text-muted-foreground text-xs">
-											Бүтээгдэхүүн
-										</h4>
-										<span className="rounded-full bg-muted/20 px-1.5 py-0.5 text-xs">
-											{order.products?.length}
-										</span>
-									</div>
-									<span className="flex items-center gap-1 font-bold text-primary text-sm">
-										<DollarSign className="h-3.5 w-3.5" />₮
-										{order.total.toFixed(2)}
-									</span>
-								</div>
-
-								<div className="grid flex-1 grid-cols-2 gap-2 overflow-auto pr-1">
-									{order.products?.map((detail, index) => (
-										<div
-											key={order.orderNumber + detail.productId + index}
-											className="flex items-center gap-2 rounded border bg-card p-2 sm:p-2.5"
-										>
-											<div className="h-16 w-16 shrink-0 overflow-hidden rounded bg-muted/10 sm:h-20 sm:w-20">
-												<img
-													src={detail.imageUrl || "/placeholder.jpg"}
-													alt={detail.name}
-													className="h-full w-full object-cover"
-													loading="lazy"
-												/>
-											</div>
-											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-sm sm:text-base">
-													{detail.name}
-												</p>
-												<span className="text-muted-foreground text-xs sm:text-sm">
-													x{detail.quantity}
-												</span>
-											</div>
-										</div>
-									))}
-								</div>
-
-								<div
-									className="flex shrink-0 items-center justify-between gap-2 border-t pt-1"
-									data-no-nav
-								>
-									{order.status === "pending" && (
-										<Button
-											variant="default"
-											size="sm"
-											className="h-7 gap-1 px-2 text-xs"
-											onClick={() => handleUpdateOrder("shipped")}
-										>
-											<Truck className="h-3 w-3" />
-											<span>Илгээсэн</span>
-										</Button>
-									)}
-									{order.status === "shipped" && (
-										<Button
-											variant="default"
-											size="sm"
-											className="h-7 gap-1 px-2 text-xs"
-											onClick={() => handleUpdateOrder("delivered")}
-										>
-											<CheckCircle className="h-3 w-3" />
-											<span>Хүргэсэн</span>
-										</Button>
-									)}
-									<div />
-									<RowActions
-										id={order.id}
-										setIsEditDialogOpen={setIsEditDialogOpen}
-										deleteMutation={() => deleteOrderHandler(order.id)}
-										isDeletePending={isDeletePending}
-									/>
-								</div>
-							</div>
-						</div>
+					{/* Footer: actions */}
+					<div
+						className="flex items-center justify-between gap-2 border-t px-3 py-2"
+						data-no-nav
+					>
+						{order.status === "pending" && (
+							<Button
+								variant="default"
+								size="sm"
+								className="h-7 gap-1 px-2.5 text-xs"
+								onClick={() => handleUpdateOrder("shipped")}
+							>
+								<Truck className="h-3 w-3" />
+								<span>Илгээсэн</span>
+							</Button>
+						)}
+						{order.status === "shipped" && (
+							<Button
+								variant="default"
+								size="sm"
+								className="h-7 gap-1 px-2.5 text-xs"
+								onClick={() => handleUpdateOrder("delivered")}
+							>
+								<CheckCircle className="h-3 w-3" />
+								<span>Хүргэсэн</span>
+							</Button>
+						)}
+						{order.status !== "pending" && order.status !== "shipped" && (
+							<div />
+						)}
+						<RowActions
+							id={order.id}
+							setIsEditDialogOpen={setIsEditDialogOpen}
+							deleteMutation={() => deleteOrderHandler(order.id)}
+							isDeletePending={isDeletePending}
+						/>
 					</div>
 				</CardContent>
 			</Card>

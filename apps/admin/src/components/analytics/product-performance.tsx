@@ -1,173 +1,159 @@
-import { BarChart3, Eye, ShoppingCart, TrendingUp } from "lucide-react";
-import {
-	Bar,
-	BarChart,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockData } from "@/lib/mock-data";
-import { formatCurrency } from "@/lib/utils";
+import { Eye, Search, ShoppingCart } from "lucide-react";
 
-export function ProductPerformance() {
+interface MostViewedProduct {
+	productId: number;
+	productName: string;
+	productSlug: string;
+	views: number;
+	uniqueViewers: number;
+	addToCartCount: number;
+}
+
+interface TopSearch {
+	query: string;
+	count: number;
+	avgResults: number;
+	noResultCount: number;
+}
+
+interface ProductPerformanceProps {
+	mostViewedProducts: MostViewedProduct[];
+	topSearches: TopSearch[];
+	timeRangeLabel: string;
+}
+
+export function ProductPerformance({
+	mostViewedProducts,
+	topSearches,
+	timeRangeLabel,
+}: ProductPerformanceProps) {
 	return (
-		<div className="space-y-6">
-			{/* Top Products by Revenue */}
-			<Card className="border-2 border-border shadow-shadow">
-				<CardHeader className="border-border border-b-2 bg-secondary-background">
-					<CardTitle className="flex items-center gap-3 font-heading text-xl">
-						<TrendingUp className="h-5 w-5" />
-						Хамгийн их зарагдсан бүтээгдэхүүнүүд
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="max-h-96 space-y-3 overflow-y-auto p-4">
-					{mockData.topProducts.map((product, index) => (
-						<div
-							key={product.name}
-							className="border-2 border-border bg-card shadow-sm transition-shadow hover:shadow-md"
-						>
-							<div className="p-4">
-								<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded border-2 border-border bg-primary font-bold font-heading text-lg">
-											{index + 1}
-										</div>
-										<div>
-											<div className="font-bold font-heading text-base">
-												{product.name}
-											</div>
-											<div className="text-muted-foreground text-sm">
-												{product.sold} ширхэг зарагдсан
-											</div>
-										</div>
-									</div>
-									<div className="text-right">
-										<div className="font-bold font-heading text-lg">
-											{formatCurrency(product.revenue)}
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					))}
-				</CardContent>
-			</Card>
-
-			{/* Product Performance Metrics */}
-			<Card className="border-2 border-border shadow-shadow">
-				<CardHeader className="border-border border-b-2 bg-secondary-background">
-					<CardTitle className="flex items-center gap-3 font-heading text-xl">
-						<BarChart3 className="h-5 w-5" />
-						Бүтээгдэхүүний гүйцэтгэл
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="p-4">
-					<div className="space-y-4">
-						{mockData.productPerformance.map((product) => (
-							<div
-								key={product.name}
-								className="border-2 border-border bg-card p-4"
-							>
-								<div className="mb-3 flex items-center justify-between">
-									<h4 className="font-bold font-heading">{product.name}</h4>
-									<div className="flex items-center gap-4 text-sm">
-										<div className="flex items-center gap-1">
-											<Eye className="h-4 w-4 text-muted-foreground" />
-											<span>{product.views.toLocaleString()}</span>
-										</div>
-										<div className="flex items-center gap-1">
-											<ShoppingCart className="h-4 w-4 text-muted-foreground" />
-											<span>{product.conversions}</span>
-										</div>
-									</div>
-								</div>
-								<div className="grid grid-cols-2 gap-4 text-sm">
-									<div>
-										<span className="text-muted-foreground">
-											Хөрвүүлэлтийн хувь:{" "}
-										</span>
-										<span className="font-semibold">
-											{product.conversionRate}%
-										</span>
-									</div>
-									<div>
-										<span className="text-muted-foreground">Буцаалт: </span>
-										<span className="font-semibold">
-											{product.returns} ширхэг
-										</span>
-									</div>
-								</div>
-							</div>
-						))}
+		<div className="space-y-3">
+			{/* Most Viewed Products */}
+			<div className="border-2 border-border bg-card shadow-hard-sm">
+				<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+					<div className="flex items-center gap-2">
+						<Eye className="h-4 w-4 text-muted-foreground" />
+						<span className="font-bold text-sm">
+							Хамгийн их үзэгдсэн бүтээгдэхүүн
+						</span>
 					</div>
-				</CardContent>
-			</Card>
-
-			{/* Category Performance */}
-			<Card className="border-2 border-border shadow-shadow">
-				<CardHeader className="border-border border-b-2 bg-secondary-background">
-					<CardTitle className="flex items-center gap-3 font-heading text-xl">
-						<BarChart3 className="h-5 w-5" />
-						Ангиллын гүйцэтгэл
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="p-4">
-					<div className="h-[300px] w-full">
-						<ResponsiveContainer width="100%" height="100%">
-							<BarChart
-								data={mockData.categoryPerformance}
-								margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-							>
-								<Tooltip
-									content={({ active, payload, label }) => {
-										if (!active || !payload?.length) return null;
-
-										return (
-											<div className="rounded-lg border border-border bg-background p-3 shadow-lg">
-												<p className="mb-2 font-medium text-sm">{label}</p>
-												<p className="text-sm">
-													<span className="text-muted-foreground">
-														Орлого:{" "}
-													</span>
-													<span className="font-semibold">
-														{formatCurrency(payload[0].value as number)}
-													</span>
-												</p>
-												<p className="text-sm">
-													<span className="text-muted-foreground">
-														Захиалга:{" "}
-													</span>
-													<span className="font-semibold">
-														{payload[1].value} ширхэг
-													</span>
-												</p>
+					<span className="text-muted-foreground text-xs">
+						{timeRangeLabel}
+					</span>
+				</div>
+				{mostViewedProducts.length > 0 ? (
+					<div className="divide-y divide-border">
+						{mostViewedProducts.map((product, index) => {
+							const maxViews = mostViewedProducts[0]?.views || 1;
+							const widthPct = (product.views / maxViews) * 100;
+							const convRate =
+								product.views > 0
+									? ((product.addToCartCount / product.views) * 100).toFixed(1)
+									: "0.0";
+							return (
+								<div key={product.productId} className="relative p-2.5">
+									<div
+										className="absolute inset-y-0 left-0 bg-primary/10"
+										style={{ width: `${widthPct}%` }}
+									/>
+									<div className="relative flex items-center justify-between">
+										<div className="flex items-center gap-2.5">
+											<div className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-border bg-card font-bold font-heading text-xs">
+												{index + 1}
 											</div>
-										);
-									}}
-								/>
-								<Bar
-									dataKey="revenue"
-									fill="hsl(var(--chart-1))"
-									radius={[8, 8, 0, 0]}
-								/>
-								<XAxis
-									dataKey="category"
-									tick={{ fontSize: 12 }}
-									tickLine={false}
-									axisLine={false}
-								/>
-								<YAxis
-									tick={{ fontSize: 12 }}
-									tickLine={false}
-									axisLine={false}
-								/>
-							</BarChart>
-						</ResponsiveContainer>
+											<div className="min-w-0">
+												<p className="truncate font-bold text-sm leading-tight">
+													{product.productName}
+												</p>
+												<div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+													<span className="flex items-center gap-0.5">
+														<Eye className="h-2.5 w-2.5" />
+														{product.views.toLocaleString()} үзэлт
+													</span>
+													<span>•</span>
+													<span className="flex items-center gap-0.5">
+														<ShoppingCart className="h-2.5 w-2.5" />
+														{product.addToCartCount} сагс
+													</span>
+													<span>•</span>
+													<span>{convRate}%</span>
+												</div>
+											</div>
+										</div>
+										<span className="shrink-0 font-bold font-mono text-xs">
+											{product.uniqueViewers.toLocaleString()} хүн
+										</span>
+									</div>
+								</div>
+							);
+						})}
 					</div>
-				</CardContent>
-			</Card>
+				) : (
+					<div className="p-6 text-center text-muted-foreground text-sm">
+						Өгөгдөл байхгүй
+					</div>
+				)}
+			</div>
+
+			{/* Top Searches */}
+			<div className="border-2 border-border bg-card shadow-hard-sm">
+				<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+					<div className="flex items-center gap-2">
+						<Search className="h-4 w-4 text-muted-foreground" />
+						<span className="font-bold text-sm">Топ хайлтууд</span>
+					</div>
+					<span className="text-muted-foreground text-xs">
+						{timeRangeLabel}
+					</span>
+				</div>
+				{topSearches.length > 0 ? (
+					<div className="divide-y divide-border">
+						{topSearches.map((search, index) => {
+							const maxCount = topSearches[0]?.count || 1;
+							const widthPct = (search.count / maxCount) * 100;
+							return (
+								<div key={search.query} className="relative p-2.5">
+									<div
+										className="absolute inset-y-0 left-0 bg-chart-2/10"
+										style={{ width: `${widthPct}%` }}
+									/>
+									<div className="relative flex items-center justify-between">
+										<div className="flex items-center gap-2.5">
+											<div className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-border bg-card font-bold font-heading text-xs">
+												{index + 1}
+											</div>
+											<div className="min-w-0">
+												<p className="truncate font-bold text-sm leading-tight">
+													"{search.query}"
+												</p>
+												<div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+													<span>{search.count} удаа хайсан</span>
+													{search.noResultCount > 0 && (
+														<>
+															<span>•</span>
+															<span className="text-orange-600">
+																{search.noResultCount} үр дүнгүй
+															</span>
+														</>
+													)}
+												</div>
+											</div>
+										</div>
+										<span className="shrink-0 font-mono text-muted-foreground text-xs">
+											~{Math.round(search.avgResults)} үр дүн
+										</span>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				) : (
+					<div className="p-6 text-center text-muted-foreground text-sm">
+						Хайлтын өгөгдөл байхгүй
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }
