@@ -113,6 +113,6 @@ export const bulkSyncProductsToUpstash = async (
  */
 export const clearUpstashProductsIndex = async (): Promise<void> => {
 	const client = getSearchClient();
-  client.index("products").reset();
+	await client.index("products").reset();
 	console.log("[Upstash] Index will be updated via upsert");
 };
