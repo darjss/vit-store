@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/solid-query";
-import { formatCurrency } from "@vit/shared/utils";
+import { formatCurrency, productColors } from "@vit/shared";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
 import AddToCartButton from "@/components/cart/add-to-cart-button";
@@ -7,7 +7,6 @@ import {
 	trackSearchPerformed,
 	trackSearchResultClicked,
 } from "@/lib/analytics";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";

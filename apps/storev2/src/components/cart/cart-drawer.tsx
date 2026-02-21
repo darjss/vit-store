@@ -1,3 +1,4 @@
+import { deliveryFee } from "@vit/shared/constants";
 import { For, Show } from "solid-js";
 import {
 	Sheet,
@@ -5,7 +6,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { deliveryFee } from "@/lib/constant";
 import { cart } from "@/store/cart";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
@@ -81,7 +81,6 @@ const CartDrawer = () => {
 								</div>
 							</div>
 
-							{/* Checkout Button */}
 							<a
 								href="/checkout"
 								class="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
@@ -90,7 +89,6 @@ const CartDrawer = () => {
 								Худалдан авах <IconArrowRight class="h-5 w-5" />
 							</a>
 
-							{/* Continue Shopping */}
 							<button
 								type="button"
 								onClick={() => cart.closeDrawer()}

@@ -1,6 +1,6 @@
 import { Image } from "@unpic/solid";
+import { productColors } from "@vit/shared";
 import { createSignal, For, Show } from "solid-js";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { cn } from "@/lib/utils";
 
@@ -62,8 +62,9 @@ export default function ProductImageCarousel(props: Props) {
 						width={800}
 						height={800}
 						layout="constrained"
+						objectFit="contain"
 						priority={true}
-						class="relative z-10 h-full w-full object-contain p-8 transition-transform duration-500 hover:scale-105 sm:p-12"
+						class="relative z-10 h-full w-full p-8 transition-transform duration-500 hover:scale-105 sm:p-12"
 					/>
 				</Show>
 			</div>
@@ -91,7 +92,8 @@ export default function ProductImageCarousel(props: Props) {
 									width={96}
 									height={96}
 									layout="constrained"
-									class="relative z-10 h-full w-full object-contain p-2 sm:p-3"
+									objectFit="contain"
+									class="relative z-10 h-full w-full p-2 sm:p-3"
 								/>
 								<Show when={selectedIndex() === index()}>
 									<div class="absolute inset-0 border-2 border-primary bg-primary/10" />

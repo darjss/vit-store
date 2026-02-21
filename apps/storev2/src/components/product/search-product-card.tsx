@@ -1,6 +1,5 @@
-import { formatCurrency } from "@vit/shared/utils";
+import { formatCurrency, productColors } from "@vit/shared";
 import { createMemo, Show } from "solid-js";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
@@ -21,7 +20,6 @@ interface SearchProductCardProps {
 const SearchProductCard = (props: SearchProductCardProps) => {
 	const product = props.product;
 
-	// Use product ID to get consistent color per product
 	const bgColor = createMemo(
 		() => productColors[product.id % productColors.length],
 	);

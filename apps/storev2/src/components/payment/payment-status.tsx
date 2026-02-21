@@ -44,7 +44,6 @@ const PaymentStatus = ({
 		if (status === "success" || status === "failed") {
 			return;
 		}
-		console.log("refetching");
 		const interval = setInterval(() => {
 			setRefetchTrigger((prev) => prev + 1);
 		}, 5000);

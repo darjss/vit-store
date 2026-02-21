@@ -1,6 +1,6 @@
 import { Image } from "@unpic/solid";
+import { deliveryFee } from "@vit/shared/constants";
 import { For, Match, Switch } from "solid-js";
-import { deliveryFee } from "@/lib/constant";
 import { cart } from "@/store/cart";
 import Loading from "../loading";
 import CartActions from "./cart-actions";

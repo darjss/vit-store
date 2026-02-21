@@ -1,5 +1,5 @@
+import type { CartItems } from "@vit/shared/types";
 import { createSignal, Show } from "solid-js";
-import type { CartItems } from "@/lib/types";
 import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";

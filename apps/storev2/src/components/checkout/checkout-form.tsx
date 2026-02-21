@@ -3,11 +3,11 @@ import { useMutation } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
+import { deliveryFee } from "@vit/shared/constants";
 import { createEffect, For, Match, onMount, Suspense, Switch } from "solid-js";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import { trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
-import { deliveryFee } from "@/lib/constant";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
@@ -27,10 +27,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 		}
 	});
 
-	createEffect(() => {
-		console.log("user", user);
-	});
-
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async (values: newOrderType) => {
@@ -41,18 +37,31 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 
 				if (paymentNumber) {
 					trackOrderPlaced(paymentNumber, cart.count());
-				}
+					showToast({
+						title: "Амжилттай",
+						description: "Захиалга амжилттай үүслээ",
+						variant: "success",
+						duration: 5000,
+					});
 
-				showToast({
-					title: "Амжилттай",
-					description: "Захиалга амжилттай үүслээ",
-					variant: "success",
-					duration: 5000,
-				});
-				navigate(`/payment/${paymentNumber}`);
+					const targetPath = `/payment/${paymentNumber}`;
+					navigate(targetPath, { history: "push" });
+
+					window.setTimeout(() => {
+						if (window.location.pathname !== targetPath) {
+							window.location.assign(targetPath);
+						}
+					}, 50);
+				} else {
+					showToast({
+						title: "Алдаа",
+						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+						variant: "error",
+						duration: 5000,
+					});
+				}
 			},
-			onError: (error) => {
-				console.error("Order submission error:", error);
+			onError: () => {
 				showToast({
 					title: "Алдаа",
 					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
@@ -89,7 +98,6 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 			}),
 		},
 		onSubmit: async (values) => {
-			console.log("Submitting");
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,

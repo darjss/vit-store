@@ -1,10 +1,9 @@
 import { Image } from "@unpic/solid";
-import { formatCurrency } from "@vit/shared/utils";
+import { formatCurrency, productColors } from "@vit/shared";
+import type { ProductForHome } from "@vit/shared/types";
 import { createResource, For, Show } from "solid-js";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
-import type { ProductForHome } from "@/lib/types";
 import IconLightbulb from "~icons/ri/lightbulb-flash-fill";
 
 interface RecommendedProductsProps {
@@ -19,21 +18,17 @@ async function fetchRecommendedProducts(
 	brandId: number,
 ): Promise<ProductForHome[]> {
 	try {
-		// Use tRPC API client
 		const products = await api.product.getRecommendedProducts.query({
 			productId,
 			categoryId,
 			brandId,
 		});
 		return products;
-	} catch (error) {
-		console.error("Error fetching recommended products:", error);
-		// Fallback: fetch featured products
+	} catch {
 		try {
 			const fallbackProducts = await api.product.getProductsForHome.query();
 			return fallbackProducts.featuredProducts.slice(0, 4);
-		} catch (fallbackError) {
-			console.error("Error fetching fallback products:", fallbackError);
+		} catch {
 			return [];
 		}
 	}
@@ -53,7 +48,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 				params.brandId,
 			),
 	);
-	console.log("products", products());
 	return (
 		<section class="w-full py-8 sm:py-12">
 			<div class="mb-8 sm:mb-10">
@@ -114,7 +108,8 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 												width={300}
 												height={375}
 												layout="constrained"
-												class="relative z-10 h-full w-full object-contain p-6 drop-shadow-md transition-transform duration-500 group-hover:scale-110"
+												objectFit="contain"
+												class="relative z-10 h-full w-full p-6 drop-shadow-md transition-transform duration-500 group-hover:scale-110"
 												loading="lazy"
 											/>
 										</Show>

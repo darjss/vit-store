@@ -1,5 +1,5 @@
 import { makePersisted } from "@solid-primitives/storage";
-import { createEffect, createSignal, Match, onMount, Switch } from "solid-js";
+import { createSignal, Match, onMount, Switch } from "solid-js";
 import { Card, CardContent } from "../ui/card";
 import OtpForm from "./otp-form";
 import PhoneForm from "./phone-form";
@@ -34,7 +34,6 @@ const LoginForm = () => {
 		setStepRaw(newStep);
 	};
 
-	// Check for stale OTP state on mount
 	onMount(() => {
 		const currentStep = step();
 		if (currentStep === "otp") {
@@ -46,15 +45,10 @@ const LoginForm = () => {
 					setStep("phone");
 				}
 			} else {
-				// No timestamp found, reset to phone step for safety
 				setStep("phone");
 			}
 		}
 	});
-
-	createEffect(() => {
-		console.log(step());
-	}, [step()]);
 
 	return (
 		<div class="flex min-h-[80vh] w-full items-center justify-center px-4 py-8 md:py-12">

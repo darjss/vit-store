@@ -1,18 +1,18 @@
 import { navigate } from "astro:transitions/client";
 import { useMutation, useQuery } from "@tanstack/solid-query";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconLoader from "~icons/ri/loader-4-line";
 import IconQrCode from "~icons/ri/qr-code-line";
 
-interface QpayButtonProps {
+interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
 }
 
-const QpayButton = (props: QpayButtonProps) => {
+const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
 
 	const mutation = useMutation(
@@ -35,7 +35,7 @@ const QpayButton = (props: QpayButtonProps) => {
 
 	const invoiceData = () => mutation.data;
 
-	createEffect(() => {
+	onMount(() => {
 		if (!mutation.isSuccess && !mutation.isPending && !mutation.isError) {
 			mutation.mutate();
 		}
@@ -176,4 +176,4 @@ const QpayButton = (props: QpayButtonProps) => {
 	);
 };
 
-export default QpayButton;
+export default QpayPaymentPanel;

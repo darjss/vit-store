@@ -4,15 +4,14 @@ import { Show } from "solid-js";
 import { trackPaymentConfirmed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import { cart } from "@/store/cart";
 import IconCheckboxCircle from "~icons/ri/checkbox-circle-fill";
 import IconCloseCircle from "~icons/ri/close-circle-fill";
 import IconLoader from "~icons/ri/loader-4-line";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
-import { cart } from "@/store/cart";
 
 const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
-	console.log("paymentNumber", paymentNumber);
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async () => {
@@ -32,8 +31,8 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 					description: "Төлбөр баталгаажуулагдлаа",
 					variant: "success",
 					duration: 5000,
-        });
-        cart.clearCart();
+				});
+				cart.clearCart();
 				navigate(`/order/confirm/${data.orderNumber}`);
 			},
 		}),
