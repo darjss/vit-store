@@ -85,16 +85,6 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 
 	const credentials = btoa(`${username}:${password}`);
 
-	if (process.env.NODE_ENV === "development") {
-		console.log("[QPay Auth Debug]", {
-			baseUrl: apiUrl,
-			username,
-			password,
-			usernameLength: username.length,
-			passwordLength: password.length,
-		});
-	}
-
 	let authResponse: TokenResponse;
 	try {
 		authResponse = await ky
@@ -166,7 +156,11 @@ export const createQpayInvoice = async (
 	amount: number,
 	paymentNumber: string,
 ) => {
-	const callbackOrigin = new URL(env.GOOGLE_CALLBACK_URL).origin;
+	const callbackUrl = new URL(
+		env.QPAY_CALLBACK_URL ??
+			`${new URL(env.GOOGLE_CALLBACK_URL).origin}/webhooks/qpay`,
+	);
+	callbackUrl.searchParams.set("id", paymentNumber);
 
 	try {
 		const response = await qpayClient
@@ -175,10 +169,10 @@ export const createQpayInvoice = async (
 					invoice_code: "AMERIK_VITAMIN_INVOICE",
 					sender_invoice_no: paymentNumber,
 					invoice_receiver_code: "terminal",
-					invoice_description: `tulbur ${paymentNumber}`,
+					invoice_description: `${paymentNumber}`,
 					sender_branch_code: "SALBAR1",
 					amount: amount,
-					callback_url: `${callbackOrigin}/webhooks/qpay?id=${paymentNumber}`,
+					callback_url: callbackUrl.toString(),
 				},
 			})
 			.json<InvoiceResponse>();
