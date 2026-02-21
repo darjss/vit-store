@@ -44,7 +44,7 @@ const BrandForm = ({
 			queryClient.invalidateQueries(trpc.brands.getAllBrands.queryOptions());
 			onSuccess();
 		},
-		onError: (error) => {
+		onError: (_error) => {
 			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
 		},
 	});

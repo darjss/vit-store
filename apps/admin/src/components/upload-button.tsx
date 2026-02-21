@@ -21,7 +21,7 @@ const uploadImage = async (image: File, category: string) => {
 			return data.url;
 		}
 		throw new Error(data.message || "Failed to upload image");
-	} catch (error) {
+	} catch (_error) {
 		throw new Error("Failed to upload image");
 	}
 };
@@ -60,7 +60,7 @@ export const UploadButton = ({
 						setValue?.("imageUrl", url);
 						onSuccess(url);
 					},
-					onError: (error) => {},
+					onError: (_error) => {},
 				},
 			);
 		});

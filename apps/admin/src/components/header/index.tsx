@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { Search, UserRound } from "lucide-react";
 import {
 	Popover,
@@ -11,6 +12,22 @@ import SearchBar from "./search-bar";
 import UserData from "./user-data";
 
 const Header = () => {
+	const navigate = useNavigate();
+
+	const handleSelectProduct = (productId: number) => {
+		navigate({
+			to: "/products/$id",
+			params: { id: String(productId) },
+		});
+	};
+
+	const handleSelectOrder = (orderId: number) => {
+		navigate({
+			to: "/orders/$id",
+			params: { id: String(orderId) },
+		});
+	};
+
 	return (
 		<header className="sticky top-0 z-40 w-full border-border border-b-4 bg-transparent shadow-shadow">
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
@@ -27,7 +44,11 @@ const Header = () => {
 
 				<div className="hidden min-w-0 flex-1 px-4 md:block">
 					<div className="mx-auto w-full max-w-xl">
-						<SearchBar />
+						<SearchBar
+							placeholder="Бүтээгдэхүүн, захиалга хайх..."
+							onSelectProduct={handleSelectProduct}
+							onSelectOrder={handleSelectOrder}
+						/>
 					</div>
 				</div>
 
@@ -49,7 +70,12 @@ const Header = () => {
 							sideOffset={8}
 						>
 							<h4 className="mb-3 font-medium text-base">Search</h4>
-							<SearchBar autoFocus />
+							<SearchBar
+								autoFocus
+								placeholder="Бүтээгдэхүүн, захиалга хайх..."
+								onSelectProduct={handleSelectProduct}
+								onSelectOrder={handleSelectOrder}
+							/>
 						</PopoverContent>
 					</Popover>
 

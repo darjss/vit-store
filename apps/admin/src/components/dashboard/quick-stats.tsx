@@ -1,12 +1,3 @@
-import {
-	Activity,
-	BarChart3,
-	DollarSign,
-	Eye,
-	Package,
-	ShoppingCart,
-	TrendingUp,
-} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { mockData } from "@/lib/mock-data";
 

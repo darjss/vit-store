@@ -110,7 +110,7 @@ function RouteComponent() {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const mutation = useMutation({
 		...trpc.order.searchOrder.mutationOptions(),
-		onSuccess: (data) => {},
+		onSuccess: (_data) => {},
 	});
 	const filtersActive = hasActiveFilters || sortField !== "";
 

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { AIExtractedData } from "@vit/shared";
 import { Bot, PenLine } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,9 +8,7 @@ import {
 	AIProductInput,
 	AIProductPreview,
 } from "@/components/product/ai-product-input";
-import ProductForm, {
-	type AIExtractedData,
-} from "@/components/product/product-form";
+import ProductForm from "@/components/product/product-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/utils/trpc";
 
@@ -67,7 +66,6 @@ function RouteComponent() {
 	const handleConfirmPreview = () => {
 		if (aiState.mode !== "preview") return;
 
-		// Convert to form data format
 		const formData: AIExtractedData = {
 			name: aiState.data.name,
 			name_mn: aiState.data.name_mn,

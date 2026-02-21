@@ -440,7 +440,6 @@ function OrderDetailContent() {
 															variant="outline"
 															className="h-8 w-8"
 															onClick={() => {
-																// TODO: Implement quantity decrease
 																toast.info(
 																	"Тоо бууруулах функц хөгжүүлэгдэж байна",
 																);
@@ -456,8 +455,8 @@ function OrderDetailContent() {
 															variant="outline"
 															className="h-8 w-8"
 															onClick={() => {
-																// TODO: Implement quantity increase
 																toast.info(
+																	"Тоо нэмэх функц хөгжүүлэгдэж байна",
 																	"Тоо нэмэх функц хөгжүүлэгдэж байна",
 																);
 															}}
@@ -476,8 +475,8 @@ function OrderDetailContent() {
 															variant="destructive"
 															className="mt-2 h-8 w-8"
 															onClick={() => {
-																// TODO: Implement product removal
 																toast.info(
+																	"Бүтээгдэхүүн устгах функц хөгжүүлэгдэж байна",
 																	"Бүтээгдэхүүн устгах функц хөгжүүлэгдэж байна",
 																);
 															}}
@@ -497,8 +496,8 @@ function OrderDetailContent() {
 											variant="outline"
 											className="w-full gap-2"
 											onClick={() => {
-												// TODO: Implement add product functionality
 												toast.info(
+													"Бүтээгдэхүүн нэмэх функц хөгжүүлэгдэж байна",
 													"Бүтээгдэхүүн нэмэх функц хөгжүүлэгдэж байна",
 												);
 											}}

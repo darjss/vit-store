@@ -11,37 +11,37 @@ export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
 			case "pending":
 				return {
 					label: "Хүлээгдэж буй",
-					className: "bg-yellow-100 text-yellow-800 border-yellow-200",
+					className: "border-border bg-[#ffa502] text-black",
 					icon: Clock,
 				};
 			case "shipped":
 				return {
 					label: "Илгээгдсэн",
-					className: "bg-blue-100 text-blue-800 border-blue-200",
+					className: "border-border bg-[#3742fa] text-white",
 					icon: Truck,
 				};
 			case "delivered":
 				return {
 					label: "Хүргэгдсэн",
-					className: "bg-green-100 text-green-800 border-green-200",
+					className: "border-border bg-[#00ff88] text-black",
 					icon: CheckCircle,
 				};
 			case "cancelled":
 				return {
 					label: "Цуцлагдсан",
-					className: "bg-red-100 text-red-800 border-red-200",
+					className: "border-border bg-[#ff4757] text-white",
 					icon: XCircle,
 				};
 			case "pendingOrders":
 				return {
 					label: "Хүлээгдэж буй",
-					className: "bg-yellow-100 text-yellow-800 border-yellow-200",
+					className: "border-border bg-[#ffa502] text-black",
 					icon: Clock,
 				};
 			default:
 				return {
 					label: status,
-					className: "bg-gray-100 text-gray-800 border-gray-200",
+					className: "border-border bg-[#5f27cd] text-white",
 					icon: Clock,
 				};
 		}
@@ -51,7 +51,9 @@ export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
 	const Icon = config.icon;
 
 	return (
-		<Badge className={`flex w-fit items-center gap-1 ${config.className}`}>
+		<Badge
+			className={`flex w-fit items-center gap-1 border-2 px-2 py-0.5 font-bold text-xs ${config.className}`}
+		>
 			<Icon className="h-3 w-3" />
 			{config.label}
 		</Badge>

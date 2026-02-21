@@ -61,7 +61,7 @@ const OrderForm = ({
 			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
 			onSuccess();
 		},
-		onError: (error) => {
+		onError: (_error) => {
 			toast.error("Failed to add order");
 		},
 	});
@@ -108,10 +108,12 @@ const OrderForm = ({
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)}>
-				<div className="grid grid-cols-1 gap-6">
-					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
-						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Харилцагчийн мэдээлэл</h3>
+				<div className="grid grid-cols-1 gap-4">
+					<Card className="border-2 border-border bg-transparent shadow-none">
+						<CardContent className="space-y-4 p-3 sm:p-4">
+							<h3 className="font-bold text-sm uppercase tracking-wider">
+								Харилцагчийн мэдээлэл
+							</h3>
 							<FormField
 								control={form.control}
 								name="customerPhone"
@@ -154,9 +156,11 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
-						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Захиалгын дэлгэрэнгүй</h3>
+					<Card className="border-2 border-border bg-transparent shadow-none">
+						<CardContent className="space-y-4 p-3 sm:p-4">
+							<h3 className="font-bold text-sm uppercase tracking-wider">
+								Захиалгын дэлгэрэнгүй
+							</h3>
 							<FormField
 								control={form.control}
 								name="notes"
@@ -175,7 +179,7 @@ const OrderForm = ({
 								)}
 							/>
 
-							<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-3 sm:grid-cols-2">
 								<FormField
 									control={form.control}
 									name="status"
@@ -234,17 +238,19 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="overflow-visible bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg">
-						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Бүтээгдэхүүн</h3>
+					<Card className="overflow-visible border-2 border-border bg-transparent shadow-none">
+						<CardContent className="space-y-4 p-3 sm:p-4">
+							<h3 className="font-bold text-sm uppercase tracking-wider">
+								Бүтээгдэхүүн
+							</h3>
 							<SelectProductForm form={form} />
 						</CardContent>
 					</Card>
 
-					<div className="flex justify-end">
+					<div className="flex justify-end pt-1">
 						<SubmitButton
 							isPending={form.formState.isSubmitting}
-							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
+							className="w-full border-2 border-border px-6 py-2.5 font-bold text-sm uppercase tracking-wider transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}
 						</SubmitButton>
