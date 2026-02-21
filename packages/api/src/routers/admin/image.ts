@@ -11,13 +11,13 @@ export const image = router({
 				url: v.pipe(v.string(), v.url()),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { productId, url } = input;
 				await productImageQueries.admin.createImage({ productId, url });
 				return { message: "Successfully added image" };
 			} catch (error) {
-				console.error("Error adding image:", error);
+				ctx.log.error("addImage", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Operation failed",
@@ -31,13 +31,13 @@ export const image = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
 				await productImageQueries.admin.deleteImage(id);
 				return { message: "Image deleted successfully" };
 			} catch (error) {
-				console.error("Error deleting image:", error);
+				ctx.log.error("deleteImage", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Operation failed",
@@ -52,13 +52,13 @@ export const image = router({
 				imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { productId, imageId } = input;
 				await productImageQueries.admin.setPrimaryImage(productId, imageId);
 				return { message: "Successfully set primary image" };
 			} catch (error) {
-				console.error("Error setting primary image:", error);
+				ctx.log.error("setPrimaryImage", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Operation failed",

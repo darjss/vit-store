@@ -5,7 +5,7 @@ import * as v from "valibot";
 import { adminCachedProcedure, router } from "../../lib/trpc";
 
 export const sales = router({
-	analytics: adminCachedProcedure.query(async () => {
+	analytics: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			const analyticsDaily = salesQueries.admin.getAnalyticsForHome("daily");
 			const analyticsWeekly = salesQueries.admin.getAnalyticsForHome("weekly");
@@ -21,11 +21,9 @@ export const sales = router({
 				weekly: analytics[1],
 				monthly: analytics[2],
 			};
-			console.log("sales.analytics result:", result);
 			return result;
 		} catch (error) {
-			console.error("Error getting analytics for home:", error);
-			console.error("Error details:", JSON.stringify(error, null, 2));
+			ctx.log.error("analytics", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch analytics",
@@ -41,17 +39,15 @@ export const sales = router({
 				productCount: v.number(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const result = await salesQueries.admin.getMostSoldProducts(
 					input.timeRange,
 					input.productCount,
 				);
-				console.log("topProducts result:", result);
 				return result;
 			} catch (error) {
-				console.error("Error getting most sold products:", error);
-				console.error("Error details:", JSON.stringify(error, null, 2));
+				ctx.log.error("topProducts", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch top products",
@@ -60,11 +56,11 @@ export const sales = router({
 			}
 		}),
 
-	weeklyOrders: adminCachedProcedure.query(async () => {
+	weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await orderQueries.admin.getOrderCountForWeek();
 		} catch (error) {
-			console.error("Error getting order count for week:", error);
+			ctx.log.error("weeklyOrders", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch weekly orders",
@@ -79,11 +75,11 @@ export const sales = router({
 				timeRange: timeRangeSchema,
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				return await orderQueries.admin.getAverageOrderValue(input.timeRange);
 			} catch (error) {
-				console.error("Error getting average order value:", error);
+				ctx.log.error("avgOrderValue", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch average order value",
@@ -98,11 +94,11 @@ export const sales = router({
 				timeRange: timeRangeSchema,
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				return await orderQueries.admin.getOrderCount(input.timeRange);
 			} catch (error) {
-				console.error("Error getting order count:", error);
+				ctx.log.error("orderCount", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch order count",
@@ -111,11 +107,11 @@ export const sales = router({
 			}
 		}),
 
-	pendingOrders: adminCachedProcedure.query(async () => {
+	pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			return await orderQueries.admin.getPendingOrders();
 		} catch (error) {
-			console.error("Error getting pending orders:", error);
+			ctx.log.error("pendingOrders", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch pending orders",
@@ -124,7 +120,7 @@ export const sales = router({
 		}
 	}),
 
-	dashboard: adminCachedProcedure.query(async () => {
+	dashboard: adminCachedProcedure.query(async ({ ctx }) => {
 		try {
 			const [
 				salesDaily,
@@ -171,7 +167,7 @@ export const sales = router({
 
 			return dashboardData;
 		} catch (error) {
-			console.error("Error fetching dashboard homepage data:", error);
+			ctx.log.error("dashboard", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch dashboard data",

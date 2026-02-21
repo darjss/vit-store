@@ -332,6 +332,31 @@ export const order = router({
 			}
 		}),
 
+	searchOrderQuick: adminProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 5),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			try {
+				return await orderQueries.admin.searchOrdersQuick(
+					input.query,
+					input.limit,
+				);
+			} catch (e) {
+				ctx.log.error("admin.order_search_quick_failed", e, {
+					query: input.query,
+				});
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search order quick",
+					cause: e,
+				});
+			}
+		}),
+
 	getAllOrders: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const orders = await orderQueries.admin.getAllOrders();

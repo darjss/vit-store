@@ -9,7 +9,7 @@ import { searchProducts } from "../../lib/upstash-search";
 export const product = router({
 	searchProductByName: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const products = await productQueries.admin.searchByName(
 					input.searchTerm,
@@ -17,7 +17,7 @@ export const product = router({
 				);
 				return products;
 			} catch (error) {
-				console.error("Error searching products:", error);
+				ctx.log.error("searchProductByName", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products",
@@ -28,7 +28,7 @@ export const product = router({
 
 	searchProductByNameForOrder: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const products = await productQueries.admin.searchByNameForOrder(
 					input.searchTerm,
@@ -36,7 +36,7 @@ export const product = router({
 				);
 				return products;
 			} catch (error) {
-				console.error("Error searching products for order:", error);
+				ctx.log.error("searchProductByNameForOrder", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products for order",
@@ -52,36 +52,42 @@ export const product = router({
 				limit: v.optional(v.number(), 50),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const { query, limit } = input;
 				const searchResults = await searchProducts(query, limit);
 
-				if (searchResults.length > 0) {
-					const productsWithStock = await Promise.all(
-						searchResults.map(async (product) => {
-							const dbProduct = await productQueries.admin.getProductById(
-								product.id,
-							);
-							return {
-								id: product.id,
-								name: product.name,
-								slug: product.slug,
-								price: product.price,
-								stock: dbProduct?.stock ?? 0,
-								images:
-									dbProduct?.images?.map((img) => ({
-										url: img.url,
-									})) ?? [],
-							};
-						}),
-					);
-					return productsWithStock;
-				}
+				if (searchResults.length === 0) return [];
 
-				return [];
+				const ids = searchResults.map((result) => result.id);
+				const dbProducts =
+					await productQueries.admin.getProductsByIdsForSearch(ids);
+				const byId = new Map(
+					dbProducts.map((product) => [product.id, product]),
+				);
+
+				return searchResults
+					.map((result) => {
+						const product = byId.get(result.id);
+						if (!product) return null;
+
+						return {
+							id: product.id,
+							name: product.name,
+							slug: product.slug,
+							price: product.price,
+							stock: product.stock,
+							images: product.images.map((image) => ({
+								url: image.url,
+							})),
+						};
+					})
+					.filter(
+						(product): product is NonNullable<typeof product> => !!product,
+					)
+					.slice(0, limit);
 			} catch (error) {
-				console.error("Error in instant product search:", error);
+				ctx.log.error("searchProductsInstant", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products",
@@ -92,7 +98,7 @@ export const product = router({
 
 	addProduct: adminProcedure
 		.input(addProductSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
@@ -154,7 +160,7 @@ export const product = router({
 				);
 				return { message: "Product added successfully" };
 			} catch (error) {
-				console.error("Error adding product:", error);
+				ctx.log.error("addProduct", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -164,13 +170,13 @@ export const product = router({
 			}
 		}),
 
-	getProductBenchmark: adminProcedure.query(async () => {
+	getProductBenchmark: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const startTime = performance.now();
 			await productQueries.admin.getProductBenchmark();
 			return performance.now() - startTime;
 		} catch (error) {
-			console.error("Error in benchmark:", error);
+			ctx.log.error("getProductBenchmark", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to run benchmark",
@@ -181,7 +187,7 @@ export const product = router({
 
 	getProductById: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
@@ -191,7 +197,7 @@ export const product = router({
 					});
 				return product;
 			} catch (error) {
-				console.error("Error fetching product:", error);
+				ctx.log.error("getProductById", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -203,7 +209,7 @@ export const product = router({
 
 	updateProduct: adminProcedure
 		.input(updateProductSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				if (!input.id)
 					throw new TRPCError({
@@ -269,7 +275,7 @@ export const product = router({
 				}
 				return { message: "Product updated successfully" };
 			} catch (error) {
-				console.error("Error updating product:", error);
+				ctx.log.error("updateProduct", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -287,7 +293,7 @@ export const product = router({
 				type: v.picklist(["add", "minus"]),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await productQueries.admin.getProductById(
 					input.productId,
@@ -304,7 +310,7 @@ export const product = router({
 				);
 				return { message: "Stock updated successfully" };
 			} catch (error) {
-				console.error("Error updating stock:", error);
+				ctx.log.error("updateStock", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -316,7 +322,7 @@ export const product = router({
 
 	deleteProduct: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
@@ -327,7 +333,7 @@ export const product = router({
 				await productQueries.admin.deleteProduct(input.id);
 				return { message: "Product deleted successfully" };
 			} catch (error) {
-				console.error("Error deleting product:", error);
+				ctx.log.error("deleteProduct", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -337,12 +343,12 @@ export const product = router({
 			}
 		}),
 
-	getAllProducts: adminProcedure.query(async () => {
+	getAllProducts: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const products = await productQueries.admin.getAllProducts();
 			return products;
 		} catch (error) {
-			console.error("Error fetching all products:", error);
+			ctx.log.error("getAllProducts", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to fetch products",
@@ -366,7 +372,7 @@ export const product = router({
 				searchTerm: v.optional(v.string()),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				return await productQueries.admin.getPaginatedProducts({
 					page: input.page ?? 1,
@@ -378,7 +384,7 @@ export const product = router({
 					searchTerm: input.searchTerm,
 				});
 			} catch (error) {
-				console.error("Error fetching paginated products:", error);
+				ctx.log.error("getPaginatedProducts", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch paginated products",
@@ -389,7 +395,7 @@ export const product = router({
 
 	setProductStock: adminProcedure
 		.input(v.object({ id: v.number(), newStock: v.number() }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const product = await productQueries.admin.getProductById(input.id);
 				if (!product)
@@ -400,7 +406,7 @@ export const product = router({
 				await productQueries.admin.setProductStock(input.id, input.newStock);
 				return { message: "Stock set successfully" };
 			} catch (error) {
-				console.error("Error setting product stock:", error);
+				ctx.log.error("setProductStock", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -410,12 +416,12 @@ export const product = router({
 			}
 		}),
 
-	getAllProductValue: adminProcedure.query(async () => {
+	getAllProductValue: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await productQueries.admin.getAllProductValue();
 			return result;
 		} catch (error) {
-			console.error("Error calculating product value:", error);
+			ctx.log.error("getAllProductValue", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to calculate product value",
@@ -432,7 +438,7 @@ export const product = router({
 				numberValue: v.optional(v.number()),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const value = input.stringValue ?? input.numberValue;
 				await productQueries.admin.updateProductField(
@@ -442,7 +448,7 @@ export const product = router({
 				);
 				return { message: "Product field updated successfully" };
 			} catch (error) {
-				console.error("Error updating product field:", error);
+				ctx.log.error("updateProductField", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update product field",

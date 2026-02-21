@@ -15,7 +15,7 @@ export const payment = router({
 				amount: v.pipe(v.number(), v.integer(), v.minValue(0)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const result = await paymentQueries.admin.createPayment({
 					paymentNumber: generatePaymentNumber(),
@@ -26,7 +26,7 @@ export const payment = router({
 				});
 				return result;
 			} catch (error) {
-				console.error("Error creating payment:", error);
+				ctx.log.error("createPayment", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to create payment",
@@ -35,12 +35,12 @@ export const payment = router({
 			}
 		}),
 
-	getPayments: adminProcedure.query(async () => {
+	getPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await paymentQueries.admin.getPayments();
 			return result;
 		} catch (error) {
-			console.error("Error getting payments:", error);
+			ctx.log.error("getPayments", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to get payments",
@@ -49,12 +49,12 @@ export const payment = router({
 		}
 	}),
 
-	getPendingPayments: adminProcedure.query(async () => {
+	getPendingPayments: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await paymentQueries.admin.getPendingPayments();
 			return result;
 		} catch (error) {
-			console.error("Error getting pending payments:", error);
+			ctx.log.error("getPendingPayments", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to get pending payments",

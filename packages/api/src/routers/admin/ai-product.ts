@@ -5,6 +5,7 @@ import { generateText, Output } from "ai";
 import * as v from "valibot";
 import { z } from "zod";
 import type { Context } from "../../lib/context";
+import { logger } from "../../lib/logger";
 import { adminProcedure, router } from "../../lib/trpc";
 
 // Types
@@ -331,21 +332,26 @@ async function searchAmazonProduct(
 	firecrawl: Firecrawl,
 	query: string,
 ): Promise<string | null> {
-	console.log("[AI Product] Searching for:", query);
+	logger.info("searchAmazonProduct", { query });
 	try {
 		const searchResponse = await firecrawl.search(`site:amazon.com ${query}`, {
 			limit: 5,
 		});
 
 		if (!searchResponse.web?.length) {
-			console.log("[AI Product] No search results found");
+			logger.info("searchAmazonProduct", {
+				message: "No search results found",
+			});
 			return null;
 		}
 
 		for (const result of searchResponse.web) {
 			const url = "url" in result ? result.url : undefined;
 			if (url && (url.includes("/dp/") || url.includes("/gp/product/"))) {
-				console.log("[AI Product] Found product URL:", url);
+				logger.info("searchAmazonProduct", {
+					message: "Found product URL",
+					url,
+				});
 				return url;
 			}
 		}
@@ -358,7 +364,7 @@ async function searchAmazonProduct(
 
 		return null;
 	} catch (error) {
-		console.error("[AI Product] Search error:", error);
+		logger.error("searchAmazonProduct", error);
 		return null;
 	}
 }
@@ -368,7 +374,7 @@ async function scrapeAmazonProduct(
 	firecrawl: Firecrawl,
 	url: string,
 ): Promise<{ extracted: FirecrawlExtractedProduct } | null> {
-	console.log("[AI Product] Scraping:", url);
+	logger.info("scrapeAmazonProduct", { url });
 	try {
 		// Get both JSON extraction and HTML for image parsing
 		const scrapeResponse = await firecrawl.scrape(url, {
@@ -378,7 +384,8 @@ async function scrapeAmazonProduct(
 		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
 		const html = scrapeResponse.html || "";
 
-		console.log("[AI Product] Firecrawl extracted:", {
+		logger.info("scrapeAmazonProduct", {
+			message: "Firecrawl extracted",
 			title: jsonData.title,
 			brand: jsonData.brand,
 			ingredientsCount: (jsonData.ingredients as string[])?.length || 0,
@@ -388,9 +395,9 @@ async function scrapeAmazonProduct(
 		// Extract product images from HTML (more reliable than images format)
 		const imageIds = extractProductImageIds(html);
 		const images = imageIds.map(toHighResUrl);
-		console.log(
-			`[AI Product] Extracted ${images.length} product images from HTML`,
-		);
+		logger.info("scrapeAmazonProduct", {
+			message: `Extracted ${images.length} product images from HTML`,
+		});
 
 		return {
 			extracted: {
@@ -405,7 +412,7 @@ async function scrapeAmazonProduct(
 			},
 		};
 	} catch (error) {
-		console.error("[AI Product] Scrape error:", error);
+		logger.error("scrapeAmazonProduct", error);
 		return null;
 	}
 }
@@ -415,9 +422,9 @@ async function analyzeProductImages(
 	imageUrls: string[],
 ): Promise<VisionAnalysisResult> {
 	const imagesToAnalyze = imageUrls.slice(0, 4);
-	console.log(
-		`[AI Product] Analyzing ${imagesToAnalyze.length} images with Gemini`,
-	);
+	logger.info("analyzeProductImages", {
+		message: `Analyzing ${imagesToAnalyze.length} images with Gemini`,
+	});
 
 	if (imagesToAnalyze.length === 0) {
 		return {
@@ -475,7 +482,8 @@ Example: "Vitamin D3 - 5000 IU (625%)"`,
 			],
 		});
 
-		console.log("[AI Product] Vision result:", {
+		logger.info("analyzeProductImages", {
+			message: "Vision result",
 			ingredientsCount: output?.ingredients?.length || 0,
 			servingSize: output?.servingSize,
 			dailyIntake: output?.dailyIntake,
@@ -488,7 +496,7 @@ Example: "Vitamin D3 - 5000 IU (625%)"`,
 			supplementFacts: output?.supplementFacts || null,
 		};
 	} catch (error) {
-		console.error("[AI Product] Vision error:", error);
+		logger.error("analyzeProductImages", error);
 		return {
 			ingredients: [],
 			servingSize: null,
@@ -503,7 +511,9 @@ async function translateAndStructureProduct(
 	extractedData: FirecrawlExtractedProduct,
 	visionData: VisionAnalysisResult,
 ): Promise<TranslationResult | null> {
-	console.log("[AI Product] Translating product data...");
+	logger.info("translateAndStructureProduct", {
+		message: "Translating product data...",
+	});
 
 	const allIngredients = [
 		...new Set([...extractedData.ingredients, ...visionData.ingredients]),
@@ -567,7 +577,8 @@ INSTRUCTIONS:
 7. Extract amount (e.g. "240 Veggie Capsules") and potency (e.g. "1500mg") from title`,
 		});
 
-		console.log("[AI Product] Translation complete:", {
+		logger.info("translateAndStructureProduct", {
+			message: "Translation complete",
 			name: output?.name,
 			amount: output?.amount,
 			potency: output?.potency,
@@ -575,7 +586,7 @@ INSTRUCTIONS:
 
 		return output ?? null;
 	} catch (error) {
-		console.error("[AI Product] Translation error:", error);
+		logger.error("translateAndStructureProduct", error);
 		return null;
 	}
 }
@@ -585,9 +596,9 @@ async function uploadImagesToR2(
 	imageUrls: string[],
 	backendUrl: string,
 ): Promise<{ url: string }[]> {
-	console.log(
-		`[AI Product] Uploading ${imageUrls.length} images to ${backendUrl}`,
-	);
+	logger.info("uploadImagesToR2", {
+		message: `Uploading ${imageUrls.length} images to ${backendUrl}`,
+	});
 	try {
 		const response = await fetch(`${backendUrl}/upload/images/urls`, {
 			method: "POST",
@@ -596,15 +607,19 @@ async function uploadImagesToR2(
 		});
 
 		if (!response.ok) {
-			console.error(`[AI Product] Upload failed: ${response.status}`);
+			logger.error("uploadImagesToR2", {
+				message: `Upload failed: ${response.status}`,
+			});
 			return imageUrls.map((url) => ({ url }));
 		}
 
 		const result = (await response.json()) as { images: { url: string }[] };
-		console.log(`[AI Product] Uploaded ${result.images.length} images`);
+		logger.info("uploadImagesToR2", {
+			message: `Uploaded ${result.images.length} images`,
+		});
 		return result.images;
 	} catch (error) {
-		console.error("[AI Product] Upload error:", error);
+		logger.error("uploadImagesToR2", error);
 		return imageUrls.map((url) => ({ url }));
 	}
 }
@@ -625,7 +640,7 @@ export async function extractProductFromQuery(
 	const errors: string[] = [];
 	let extractionStatus: "success" | "partial" | "failed" = "success";
 
-	console.log("[AI Product] Starting extraction for:", query);
+	logger.info("extractProductFromQuery", { query });
 
 	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
 	if (!firecrawlApiKey) {
@@ -663,7 +678,8 @@ export async function extractProductFromQuery(
 
 	const { extracted: extractedData } = scrapeResult;
 
-	console.log("[AI Product] Extracted:", {
+	logger.info("extractProductFromQuery", {
+		message: "Extracted",
 		title: extractedData.title,
 		brand: extractedData.brand,
 		imagesCount: extractedData.images.length,
@@ -674,7 +690,8 @@ export async function extractProductFromQuery(
 		extractedData.images,
 	);
 	const filteredImages = imageFilter.images;
-	console.log("[AI Product] Image filtering:", {
+	logger.info("extractProductFromQuery", {
+		message: "Image filtering",
 		before: extractedData.images.length,
 		after: filteredImages.length,
 		usedGemini: imageFilter.usedGemini,
@@ -761,9 +778,10 @@ export async function extractProductFromQuery(
 		errors,
 	};
 
-	console.log("[AI Product] Done:", {
+	logger.info("extractProductFromQuery", {
+		message: "Done",
 		status: extractionStatus,
-		errors: errors.length,
+		errorsCount: errors.length,
 	});
 	return response;
 }

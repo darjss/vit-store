@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Search } from "@upstash/search";
+import { logger } from "./logger";
 
 let searchClient: Search | null = null;
 
@@ -62,7 +63,7 @@ export const searchProducts = async (
 			};
 		});
 	} catch (error) {
-		console.error("Upstash search error:", error);
+		logger.error("upstash.search.error", error);
 		return [];
 	}
 };
@@ -75,6 +76,6 @@ export const deleteProductFromSearch = async (productId: number) => {
 		const client = getSearchClient();
 		await client.index("products").delete([`product-${productId}`]);
 	} catch (error) {
-		console.error("Error deleting product from search:", error);
+		logger.error("upstash.delete.error", error);
 	}
 };

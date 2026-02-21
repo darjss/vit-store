@@ -7,7 +7,7 @@ import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
 export const auth = router({
 	me: publicProcedure.query(async ({ ctx }) => {
 		const session = await adminAuth(ctx);
-		console.log("returning session", session);
+		ctx.log.info("me", { hasSession: !!session });
 		return session;
 	}),
 
@@ -24,7 +24,7 @@ export const auth = router({
 				isApproved: v.boolean(),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { googleId, username, isApproved } = input;
 				const user = await userQueries.admin.createUser(
@@ -46,7 +46,7 @@ export const auth = router({
 					updatedAt: user.updatedAt,
 				};
 			} catch (error) {
-				console.error("Error creating user:", error);
+				ctx.log.error("createUser", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to create user",
@@ -61,13 +61,13 @@ export const auth = router({
 				googleId: v.string(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const { googleId } = input;
 				const result = await userQueries.admin.getUserFromGoogleId(googleId);
 				return result;
 			} catch (error) {
-				console.error("Error getting user from Google ID:", error);
+				ctx.log.error("getUserFromGoogleId", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to get user from Google ID",

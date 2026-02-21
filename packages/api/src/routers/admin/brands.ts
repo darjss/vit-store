@@ -5,13 +5,13 @@ import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const brands = router({
-	getAllBrands: adminProcedure.query(async () => {
+	getAllBrands: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const brands = await brandQueries.admin.getAllBrands();
-			console.log("brands", brands);
+			ctx.log.info("getAllBrands", { count: brands.length });
 			return brands;
 		} catch (error) {
-			console.error("Error fetching brands:", error);
+			ctx.log.error("getAllBrands", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Error fetching brands",
@@ -19,23 +19,25 @@ export const brands = router({
 			});
 		}
 	}),
-	addBrand: adminProcedure.input(addBrandSchema).mutation(async ({ input }) => {
-		try {
-			const { name, logoUrl } = input;
-			await brandQueries.admin.createBrand({ name, logoUrl });
-			return { message: "Successfully updated category" };
-		} catch (err) {
-			console.error("Error adding products:", err);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to add products",
-				cause: err,
-			});
-		}
-	}),
+	addBrand: adminProcedure
+		.input(addBrandSchema)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				const { name, logoUrl } = input;
+				await brandQueries.admin.createBrand({ name, logoUrl });
+				return { message: "Successfully updated category" };
+			} catch (err) {
+				ctx.log.error("addBrand", err);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add products",
+					cause: err,
+				});
+			}
+		}),
 	updateBrand: adminProcedure
 		.input(addBrandSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const id = input.id;
 				if (!id) {
@@ -47,7 +49,7 @@ export const brands = router({
 				const { name, logoUrl } = input;
 				await brandQueries.admin.updateBrand(id, { name, logoUrl });
 			} catch (err) {
-				console.error("Error adding products:", err);
+				ctx.log.error("updateBrand", err);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add products",
@@ -57,11 +59,11 @@ export const brands = router({
 		}),
 	deleteBrand: adminProcedure
 		.input(v.object({ id: v.number() }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				await brandQueries.admin.deleteBrand(input.id);
 			} catch (err) {
-				console.error("Error deleting brand:", err);
+				ctx.log.error("deleteBrand", err);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete brand",
