@@ -1,6 +1,7 @@
 import { createAdminSession, setAdminSessionTokenCookie } from "@vit/api";
 import { userQueries } from "@vit/api/queries";
 import { createLogger, createRequestContext, setLogger } from "@vit/logger";
+import type { GoogleIdTokenClaims, OAuthCookieData } from "@vit/shared";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
@@ -12,21 +13,6 @@ const app = new Hono<{ Bindings: Env }>();
 const COOKIE_MAX_AGE = 60 * 10;
 const OAUTH_TEMP_COOKIE = "google_oauth_temp";
 const BOOTSTRAP_ADMIN_GOOGLE_ID = "118271302696111351988";
-
-type OAuthCookieData = {
-	state?: string;
-	codeVerifier?: string;
-};
-
-type GoogleIdTokenClaims = {
-	sub: string;
-	name?: string;
-	email?: string;
-	email_verified?: boolean;
-	iss?: string;
-	aud?: string | string[];
-	exp?: number;
-};
 
 function getOAuthCookieOptions(isSecure: boolean): {
 	path: string;
@@ -87,7 +73,7 @@ function isValidGoogleIdTokenClaims(
 		return false;
 	}
 
-	if (claims.email_verified !== true) {
+	if (claims.email !== undefined && claims.email_verified !== true) {
 		return false;
 	}
 
@@ -112,6 +98,7 @@ app.get("/login/google", (c) => {
 	const url = google.createAuthorizationURL(state, codeVerifier, [
 		"openid",
 		"profile",
+		"email",
 	]);
 
 	setCookie(
@@ -188,7 +175,10 @@ app.get("/login/google/callback", async (c) => {
 		});
 
 		const claims = decodeIdToken(tokens.idToken()) as GoogleIdTokenClaims;
-		if (!isValidGoogleIdTokenClaims(claims, c.env.GOOGLE_CLIENT_ID)) {
+		const googleClientId =
+			c.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
+
+		if (!isValidGoogleIdTokenClaims(claims, googleClientId)) {
 			log.auth.loginFailed({
 				failureReason: "invalid_id_token_claims",
 			});
