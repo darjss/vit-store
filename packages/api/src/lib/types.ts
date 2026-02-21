@@ -19,7 +19,6 @@ export interface SessionConfig {
 	kvSessionPrefix: string;
 	kvUserSessionPrefix: string;
 	cookieName: string;
-	domainEnvVar: string;
 	sessionDurationMs: number;
 	renewalThresholdMs: number;
 }

@@ -1,3 +1,4 @@
+import type { status } from "@vit/shared/constants";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -14,7 +15,6 @@ import {
 } from "drizzle-orm";
 import { db } from "../db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "../db/schema";
-import type { status } from "../lib/constants";
 import { searchProducts } from "../lib/upstash-search";
 
 type ProductStatus = (typeof status)[number];
@@ -22,25 +22,43 @@ type ProductStatus = (typeof status)[number];
 export const productQueries = {
 	admin: {
 		async searchByName(searchTerm: string, limit = 3) {
-			return db().query.ProductsTable.findMany({
+			const term = searchTerm.trim();
+			if (!term) return [];
+
+			const searchResults = await searchProducts(term, limit);
+			if (searchResults.length === 0) return [];
+
+			const ids = searchResults.map((result) => result.id);
+			const products = await db().query.ProductsTable.findMany({
 				where: and(
 					isNull(ProductsTable.deletedAt),
-					like(ProductsTable.name, `%${searchTerm}%`),
+					inArray(ProductsTable.id, ids),
 				),
-				limit,
 				with: {
 					images: { where: isNull(ProductImagesTable.deletedAt) },
 				},
 			});
+
+			const byId = new Map(products.map((product) => [product.id, product]));
+			return ids
+				.map((id) => byId.get(id))
+				.filter((product): product is NonNullable<typeof product> => !!product)
+				.slice(0, limit);
 		},
 
 		async searchByNameForOrder(searchTerm: string, limit = 3) {
-			return db().query.ProductsTable.findMany({
+			const term = searchTerm.trim();
+			if (!term) return [];
+
+			const searchResults = await searchProducts(term, limit);
+			if (searchResults.length === 0) return [];
+
+			const ids = searchResults.map((result) => result.id);
+			const products = await db().query.ProductsTable.findMany({
 				where: and(
 					isNull(ProductsTable.deletedAt),
-					like(ProductsTable.name, `%${searchTerm}%`),
+					inArray(ProductsTable.id, ids),
 				),
-				limit,
 				columns: {
 					id: true,
 					name: true,
@@ -57,6 +75,12 @@ export const productQueries = {
 					},
 				},
 			});
+
+			const byId = new Map(products.map((product) => [product.id, product]));
+			return ids
+				.map((id) => byId.get(id))
+				.filter((product): product is NonNullable<typeof product> => !!product)
+				.slice(0, limit);
 		},
 
 		async getBrandById(brandId: number) {
@@ -207,6 +231,35 @@ export const productQueries = {
 			});
 		},
 
+		async getProductsByIdsForSearch(ids: number[]) {
+			if (ids.length === 0) return [];
+
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					price: true,
+					stock: true,
+				},
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					inArray(ProductsTable.id, ids),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+				},
+			});
+		},
+
 		async getPaginatedProducts(params: {
 			page: number;
 			pageSize: number;
@@ -217,12 +270,33 @@ export const productQueries = {
 			searchTerm?: string;
 		}) {
 			const conditions: (SQL<unknown> | undefined)[] = [];
+			let searchIds: number[] | undefined;
 			if (params.brandId !== undefined && params.brandId !== 0)
 				conditions.push(eq(ProductsTable.brandId, params.brandId));
 			if (params.categoryId !== undefined && params.categoryId !== 0)
 				conditions.push(eq(ProductsTable.categoryId, params.categoryId));
-			if (params.searchTerm !== undefined)
-				conditions.push(like(ProductsTable.name, `%${params.searchTerm}%`));
+			if (params.searchTerm !== undefined && params.searchTerm.trim() !== "") {
+				const searchResults = await searchProducts(
+					params.searchTerm.trim(),
+					1000,
+				);
+				searchIds = searchResults.map((result) => result.id);
+
+				if (searchIds.length === 0) {
+					return {
+						products: [],
+						pagination: {
+							currentPage: params.page,
+							totalPages: 0,
+							totalCount: 0,
+							hasNextPage: false,
+							hasPreviousPage: params.page > 1,
+						},
+					};
+				}
+
+				conditions.push(inArray(ProductsTable.id, searchIds));
+			}
 			const orderByClauses: SQL<unknown>[] = [];
 			const primarySortColumn =
 				params.sortField === "price"
@@ -250,6 +324,7 @@ export const productQueries = {
 				),
 				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
 			});
+
 			const totalCountResult = await db()
 				.select({ count: sql<number>`COUNT(*)` })
 				.from(ProductsTable)
@@ -483,6 +558,39 @@ export const productQueries = {
 			});
 		},
 
+		async getSearchProductsByIds(ids: number[]) {
+			if (ids.length === 0) return [];
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					slug: true,
+					name: true,
+					price: true,
+				},
+				where: and(
+					inArray(ProductsTable.id, ids),
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+				},
+			});
+		},
+
 		async getRecommendedProductsByCategory(
 			categoryId: number,
 			excludeProductId: number,
@@ -644,6 +752,7 @@ export const productQueries = {
 			limit: number;
 			brandId?: number;
 			categoryId?: number;
+			listType?: "featured" | "recent" | "discount";
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
@@ -653,6 +762,7 @@ export const productQueries = {
 				limit,
 				brandId,
 				categoryId,
+				listType,
 				searchTerm,
 				sortField = "createdAt",
 				sortDirection = "desc",
@@ -664,6 +774,12 @@ export const productQueries = {
 				conditions.push(eq(ProductsTable.brandId, brandId));
 			if (categoryId !== undefined && categoryId !== 0)
 				conditions.push(eq(ProductsTable.categoryId, categoryId));
+			if (listType === "featured") {
+				conditions.push(eq(ProductsTable.isFeatured, true));
+			}
+			if (listType === "discount") {
+				conditions.push(gt(ProductsTable.discount, 0));
+			}
 
 			// Use Upstash search for better text matching
 			if (searchTerm !== undefined && searchTerm !== "") {
