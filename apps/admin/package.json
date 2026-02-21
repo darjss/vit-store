@@ -58,6 +58,7 @@
 		"vite-plugin-pwa": "^1.0.1"
 	},
 	"devDependencies": {
+		"@t3-oss/env-core": "catalog:",
 		"@tanstack/react-query-devtools": "^5.80.5",
 		"@tanstack/react-router-devtools": "^1.114.27",
 		"@tanstack/router-plugin": "^1.114.27",

@@ -51,6 +51,7 @@
 		"@astrojs/cloudflare": "^12.6.10",
 		"@cloudflare/workers-types": "^4.20250805.0",
 		"@iconify/json": "^2.2.416",
+		"@t3-oss/env-core": "catalog:",
 		"alchemy": "catalog:",
 		"miniflare": "^4.20250617.3",
 		"typescript": "^5.9.3",
