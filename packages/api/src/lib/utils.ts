@@ -1,11 +1,63 @@
+import {
+	deliveryProvider,
+	orderStatus,
+	paymentProvider,
+	paymentStatus,
+} from "@vit/shared/constants";
 import type { timeRangeType } from "@vit/shared/schema";
-import { customAlphabet } from "nanoid";
 import type {
 	OrderDeliveryProviderType,
 	OrderStatusType,
 	PaymentProviderType,
 	PaymentStatusType,
-} from "./types";
+} from "@vit/shared/types";
+import { customAlphabet } from "nanoid";
+
+export { deliveryProvider, orderStatus, paymentProvider, paymentStatus };
+
+export const percentile = (sortedValues: number[], p: number): number => {
+	if (sortedValues.length === 0) {
+		return 0;
+	}
+
+	const index = Math.ceil((p / 100) * sortedValues.length) - 1;
+	return (
+		sortedValues[Math.max(0, Math.min(index, sortedValues.length - 1))] ?? 0
+	);
+};
+
+export const summarizeTimings = (values: number[]) => {
+	if (values.length === 0) {
+		return {
+			count: 0,
+			mean: 0,
+			min: 0,
+			p50: 0,
+			p95: 0,
+			max: 0,
+		};
+	}
+
+	const sorted = [...values].sort((a, b) => a - b);
+	const sum = values.reduce((acc, value) => acc + value, 0);
+
+	return {
+		count: values.length,
+		mean: sum / values.length,
+		min: sorted[0] ?? 0,
+		p50: percentile(sorted, 50),
+		p95: percentile(sorted, 95),
+		max: sorted[sorted.length - 1] ?? 0,
+	};
+};
+
+export const measureMs = async (
+	fn: () => Promise<unknown>,
+): Promise<number> => {
+	const startedAt = performance.now();
+	await fn();
+	return performance.now() - startedAt;
+};
 
 export const generateOrderNumber = () => {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -85,6 +137,10 @@ export const getDaysFromTimeRange = (timerange: timeRangeType) => {
 	}
 	return startDate;
 };
+
+type OrderStatus = (typeof orderStatus)[number];
+type DeliveryProvider = (typeof deliveryProvider)[number];
+
 interface OrderResult {
 	id: number;
 	orderNumber: string;
@@ -169,7 +225,6 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 		);
 		if (result.payments[0] === undefined) {
-			console.log("No payment info found");
 			throw new Error("No payment info found");
 		}
 		return {

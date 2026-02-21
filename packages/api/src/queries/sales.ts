@@ -2,6 +2,7 @@ import type { timeRangeType } from "@vit/shared/schema";
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { ProductImagesTable, ProductsTable, SalesTable } from "../db/schema";
+import { logger } from "../lib/logger";
 import type { AddSalesType } from "../lib/types";
 import { getDaysFromTimeRange } from "../lib/utils";
 
@@ -36,19 +37,9 @@ export const salesQueries = {
 				const profit = revenue - cost;
 				const salesCount = result[0]?.salesCount ?? 0;
 
-				console.log(
-					"salesCount",
-					salesCount,
-					"revenue",
-					revenue,
-					"cost",
-					cost,
-					"profit",
-					profit,
-				);
 				return { revenue, salesCount, profit };
 			} catch (e) {
-				console.error(e);
+				logger.error("getAnalyticsForHome", e);
 				return { revenue: 0, salesCount: 0, profit: 0 };
 			}
 		},
@@ -88,8 +79,7 @@ export const salesQueries = {
 					.limit(productCount);
 				return result;
 			} catch (e) {
-				console.log(e);
-				console.error("Error getting most sold products:", e);
+				logger.error("getMostSoldProducts", e);
 				throw e;
 			}
 		},
@@ -105,7 +95,7 @@ export const salesQueries = {
 					.where(gte(SalesTable.createdAt, startDate));
 				return result;
 			} catch (e) {
-				console.error(e);
+				logger.error("getRevenue", e);
 				return [];
 			}
 		},

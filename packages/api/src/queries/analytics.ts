@@ -10,6 +10,7 @@ import {
 	ProductsTable,
 	SalesTable,
 } from "../db/schema";
+import { logger } from "../lib/logger";
 import { getDaysFromTimeRange } from "../lib/utils";
 
 export const analyticsQueries = {
@@ -190,8 +191,7 @@ export const analyticsQueries = {
 					.orderBy(ProductsTable.stock);
 				return result;
 			} catch (error) {
-				console.log(error);
-				console.error("Error in getLowInventoryProducts:", error);
+				logger.error("getLowInventoryProducts", error);
 				throw error;
 			}
 		},

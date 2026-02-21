@@ -5,7 +5,7 @@ import {
 	PaymentsTable,
 	ProductImagesTable,
 } from "../db/schema";
-import type { paymentProvider, paymentStatus } from "../lib/constants";
+import type { paymentProvider, paymentStatus } from "../lib/utils";
 
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];

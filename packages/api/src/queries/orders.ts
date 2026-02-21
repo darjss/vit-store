@@ -1,5 +1,5 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import type { OrderStatusType } from "@vit/shared/types";
+import type { OrderStatusType } from "@vit/shared/types/order";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -24,10 +24,12 @@ import {
 	ProductsTable,
 	SalesTable,
 } from "../db/schema";
-import type { deliveryProvider, orderStatus } from "../lib/constants";
+import { logger } from "../lib/logger";
 import {
+	type deliveryProvider,
 	getDaysFromTimeRange,
 	getStartAndEndofDayAgo,
+	type orderStatus,
 	shapeOrderResult,
 	shapeOrderResults,
 } from "../lib/utils";
@@ -82,7 +84,6 @@ export const orderQueries = {
 					};
 				});
 			} catch (e) {
-				console.error(e);
 				return [];
 			}
 		},
@@ -125,7 +126,6 @@ export const orderQueries = {
 
 				return { count };
 			} catch (e) {
-				console.log(e);
 				return { count: 0 };
 			}
 		},
@@ -176,7 +176,6 @@ export const orderQueries = {
 				});
 				return shapeOrderResults(result);
 			} catch (e) {
-				console.log(e);
 				return [];
 			}
 		},
@@ -259,6 +258,31 @@ export const orderQueries = {
 				},
 			});
 			return shapeOrderResults(orders);
+		},
+
+		async searchOrdersQuick(searchTerm: string, limit = 5) {
+			const term = searchTerm.trim();
+			if (!term) return [];
+
+			return db().query.OrdersTable.findMany({
+				where: and(
+					isNull(OrdersTable.deletedAt),
+					or(
+						ilike(OrdersTable.orderNumber, `%${term}%`),
+						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
+					),
+				),
+				columns: {
+					id: true,
+					orderNumber: true,
+					customerPhone: true,
+					status: true,
+					total: true,
+					createdAt: true,
+				},
+				orderBy: desc(OrdersTable.createdAt),
+				limit,
+			});
 		},
 
 		async getAllOrders() {
@@ -384,7 +408,7 @@ export const orderQueries = {
 			let endDate: Date;
 
 			if (params.date !== undefined) {
-				const selectedDate = new Date(params.date + "T00:00:00+08:00");
+				const selectedDate = new Date(`${params.date}T00:00:00+08:00`);
 				startDate = new Date(selectedDate);
 				startDate.setHours(12, 0, 0, 0);
 				endDate = new Date(selectedDate);

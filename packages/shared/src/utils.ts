@@ -77,6 +77,17 @@ export const getOrderStatusStyles = (status: string) => {
 	}
 };
 
+export function findBrandId(
+	brandName: string | null | undefined,
+	brands: { id: number; name: string }[],
+): number {
+	if (!brandName) return 0;
+	const brand = brands.find(
+		(b) => b.name.toLowerCase() === brandName.toLowerCase(),
+	);
+	return brand?.id || 0;
+}
+
 function pad(n: number) {
 	return n.toString().padStart(2, "0");
 }

@@ -8,11 +8,7 @@ export const queryClient = new QueryClient({
 			gcTime: 1000 * 60 * 60,
 		},
 		mutations: {
-			onSettled: async () => {
-				await queryClient.invalidateQueries();
-			},
 			onError: (error) => {
-				console.error(error);
 				showToast({
 					title: "Алдаа гарлаа",
 					description:
