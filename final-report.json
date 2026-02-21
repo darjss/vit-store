@@ -1,2178 +1,2178 @@
 {
-  "generatedAt": "2026-01-20T10:24:30.005Z",
-  "dataCleanup": {
-    "originalProductCount": 422,
-    "duplicatesRemoved": 27,
-    "pricesFixed": 8,
-    "cleanedProductCount": 395
-  },
-  "comparison": {
-    "currentDatabase": 318,
-    "newInventory": 395,
-    "matchRate": "63.8%"
-  },
-  "actions": {
-    "productsToAdd": {
-      "count": 192,
-      "note": "New products that need full details (images, description, ingredients, etc.)",
-      "products": [
-        {
-          "brand": "nordic naturals",
-          "name": "children's dha fish oil ages 1+ 530 mg omega-3s per serving 8 fl oz (237 ml) great strawberry taste dietary supplement",
-          "price": 145000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "omega-3 gummies purified fish oil gummies for kids with a great tangerine taste 120 gummies ages 3+ fish oil supplement",
-          "price": 150000
-        },
-        {
-          "brand": "now",
-          "name": "biocell collagen hydrolyzed type ii joint & skin support 120 veg capsules a dietary supplement",
-          "price": 120000
-        },
-        {
-          "brand": "microingredients",
-          "name": "multi collagen peptides type i, ii, iii, v, x unflavored with biotin, vitamin c, hyaluronic acid 2 lb (907 g) dietary supplement",
-          "price": 200000
-        },
-        {
-          "brand": "further food",
-          "name": "grass-fed collagen peptides unflavored 20g collagen per serving net wt. 21.16 oz (1.3 lb) (600g)",
-          "price": 220000
-        },
-        {
-          "brand": "terry naturally",
-          "name": "tri-iodine 25 mg three forms of iodine breast prostate & colon health healthy detoxification 60 capsules 2 month supply dietary supplement vegan",
-          "price": 160000
-        },
-        {
-          "brand": "microingredients",
-          "name": "organic freeze-dried pomegranate juice powder 1 lb (454 g)",
-          "price": 145000
-        },
-        {
-          "brand": "microingredients",
-          "name": "electrolyte powder lemon & raspberry flavor 2 lb (907 g)",
-          "price": 175000
-        },
-        {
-          "brand": "beworths",
-          "name": "elderberry sea moss gummies (with vitamin c, vitamin d3, zinc), 5 in 1 immune support, 60 gummies",
-          "price": 90000
-        },
-        {
-          "brand": "fulllon",
-          "name": "extra large capacity pill organizer 7 days a week am pm, capacity per compartment fits 14 pcs fish oil (0.98 in), 28 pcs capsules (0.59 in), 32 pcs pills (0.55 in)",
-          "price": 70000
-        },
-        {
-          "brand": "fulllon",
-          "name": "jumbo capacity weekly pill organizer 2 times a day am pm, capacity per compartment fits 14 pcs fish oil, 17 pcs large pills, 27 pcs medium vitamins, 56 pcs small capsules",
-          "price": 90000
-        },
-        {
-          "brand": "fulllon",
-          "name": "larger capacity 7 day am pm pill organizer, capacity per compartment fits 14 pcs fish oil, 18 pcs pills, 28 pcs capsules",
-          "price": 70000
-        },
-        {
-          "brand": "now",
-          "name": "choline & inositol nervous system health 100 veg capsules",
-          "price": 70000
-        },
-        {
-          "brand": "wholesome story",
-          "name": "myo & d-chiro inositol 40:1 ratio 360 vegetarian capsules",
-          "price": 270000
-        },
-        {
-          "brand": "wholesome story",
-          "name": "myo & d-chiro inositol with mthf folate + vitamin d3 40:1 ratio 120 vegetarian capsules",
-          "price": 135000
-        },
-        {
-          "brand": "microingredients",
-          "name": "myo & d-chiro inositol 2,050 mg per serving 40:1 blend with vitamin c, dim & coq10 240 vegetarian capsules",
-          "price": 120000
-        },
-        {
-          "brand": "zazzee",
-          "name": "myo + d-chiro + folate & vitamin d3 2000 mg myo-inositol 50 mg d-chiro inositol 40:1 ratio 120 vegan capsules",
-          "price": 130000
-        },
-        {
-          "brand": "zazzee",
-          "name": "pregnositol myo-inositol + d-chiro inositol powder 40:1 ratio blend 183 servings 13.8 oz (392 g)",
-          "price": 260000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3 50,000 iu + k2-mk7 200 mcg one pill one week made with coconut oil 240 softgels (family pack)",
-          "price": 145000
-        },
-        {
-          "brand": "carlson",
-          "name": "liquid vitamins super daily d3+k2, 50 mcg (2,000 iu) & 45 mcg, 360 vegetarian drops, 0.34 fl oz (10.16 ml)",
-          "price": 120000
-        },
-        {
-          "brand": "carlson",
-          "name": "zinc, 15 mg, 250 tablets, 250 servings",
-          "price": 90000
-        },
-        {
-          "brand": "carlson",
-          "name": "chelated zinc, 30 mg, superior absorption, 250 tablets, 250 servings",
-          "price": 110000
-        },
-        {
-          "brand": "carlson",
-          "name": "kid's chewable iron, 15 mg, superior absorption, natural strawberry flavor, 60 tablets, 60 servings",
-          "price": 70000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "omega-3 gummies purified fish oil gummies for kids 120 gummies",
-          "price": 150000
-        },
-        {
-          "brand": "carlson",
-          "name": "zinc 15 mg immune support antioxidant skin health 250 tablets 250 servings",
-          "price": 90000
-        },
-        {
-          "brand": "magnesium citrate kids",
-          "name": "magnesium citrate kids anti-stress gummies calming and relaxation support 60 count",
-          "price": 85000
-        },
-        {
-          "brand": "silverpeaks",
-          "name": "height growth maximizer 60 capsules dietary supplement",
-          "price": 150000
-        },
-        {
-          "brand": "microingredients",
-          "name": "kids omega-3 chewable softgels 200 mg dha lemon flavor 240 chewable softgels",
-          "price": 125000
-        },
-        {
-          "brand": "microingredients",
-          "name": "triple strength omega-3 fish oil 4,200 mg per serving 1,200 mg epa + 900 mg dha lemon flavor burpless 240 softgels",
-          "price": 145000
-        },
-        {
-          "brand": "microingredients",
-          "name": "sunflower lecithin 1,600 mg per serving 300 softgels",
-          "price": 105000
-        },
-        {
-          "brand": "microingredients",
-          "name": "dim+ diindolylmethane 400 mg per serving natural vitamin e cdg broccoli extract black pepper extract made with pumpkin seed oil 240 softgels",
-          "price": 125000
-        },
-        {
-          "brand": "microingredients",
-          "name": "black seed oil with vitamin d3 virgin cold pressed 2,000 mg per serving 240 softgels",
-          "price": 140000
-        },
-        {
-          "brand": "microingredients",
-          "name": "multi vitamins two daily high bioavailability 180 vegetarian capsules",
-          "price": 100000
-        },
-        {
-          "brand": "naturebell",
-          "name": "creatine monohydrate 5000 mg per serving 100 servings 500 g (1.1 lb)",
-          "price": 130000
-        },
-        {
-          "brand": "nutricost",
-          "name": "turmeric made with 95% curcuminoids turmeric extract 2,000mg 20mg 120 servings 240 lemon flavored gummies dietary supplement",
-          "price": 130000
-        },
-        {
-          "brand": "microingredients",
-          "name": "turmeric curcumin ginger & black pepper extract made with mct oil highly bioavailable 300 softgels dietary supplement",
-          "price": 130000
-        },
-        {
-          "brand": "cfilihtc",
-          "name": "magnesium complex drops combined with l-theanine, omega-3 vitamin b6 & vitamin d 2 fl oz / 60 ml",
-          "price": 85000
-        },
-        {
-          "brand": "nature's craft",
-          "name": "magnesium citrate kids anti-stress gummies 100 mg 60 count",
-          "price": 85000
-        },
-        {
-          "brand": "trace minerals",
-          "name": "magnesium gummies tangerine flavor 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "trace minerals",
-          "name": "magnesium gummies watermelon flavor 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "naturebell",
-          "name": "pure magnesium glycinate 500 mg formulated with fat-soluble vitamin c 240 vegetarian capsules",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 1lb (454 g) unflavored",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 2lb (907 g) unflavored",
-          "price": 160000
-        },
-        {
-          "brand": "now",
-          "name": "chewable c-500 100 tablets",
-          "price": 75000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin c powder pure unflavored 2.2 lb (1 kg)",
-          "price": 150000
-        },
-        {
-          "brand": "naturebell",
-          "name": "berberine 1,500 mg per serving herbal equivalent with ceylon cinnamon & turmeric 240 vegetarian capsules",
-          "price": 120000
-        },
-        {
-          "brand": "doctor's best",
-          "name": "pure collagen types 1 and 3 powder net wt. 7.1 oz (200 grams)",
-          "price": 80000
-        },
-        {
-          "brand": "doctor's best",
-          "name": "msm optimsm 1500 mg 120 tablets",
-          "price": 75000
-        },
-        {
-          "brand": "microingredients",
-          "name": "organic spirulina chlorella broken cell wall rich in chlorophyll 720 tablets",
-          "price": 140000
-        },
-        {
-          "brand": "microingredients",
-          "name": "selenium (l-selenomethionine) 200 mcg per serving highly bioavailable made with coconut oil 500 softgels",
-          "price": 110000
-        },
-        {
-          "brand": "microingredients",
-          "name": "ashwagandha made with mct oil highly bioavailable 300 softgels",
-          "price": 135000
-        },
-        {
-          "brand": "microingredients",
-          "name": "cold pressed virgin pumpkin seed oil 2-in-1 formula with saw palmetto 3,000 mg per serving 300 softgels",
-          "price": 145000
-        },
-        {
-          "brand": "now",
-          "name": "cod liver oil 1000 mg - extra strength cardiovascular support* vitamins a & d-3, epa, dha 180 softgels non-gmo dietary supplement contains gelatin",
-          "price": 110000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "arctic cod liver oil omega-3 from wild arctic cod for heart and brain health* great lemon taste 180 soft gels fish oil supplement new look same great formula",
-          "price": 110000
-        },
-        {
-          "brand": "naturebell",
-          "name": "biotin hyaluronic acid 10,000 mcg per serving 2 in 1 formula made with coconut oil 360 softgels",
-          "price": 95000
-        },
-        {
-          "brand": "microingredients",
-          "name": "biotin with hyaluronic acid 10,000 mcg per serving made with coconut oil gmo free, gluten free, lab tested 365 softgels",
-          "price": 120000
-        },
-        {
-          "brand": "lovebug",
-          "name": "kids probiotics tummy gummies 4+ years 2.5 billion cfu 30 gummies dietary supplement",
-          "price": 100000
-        },
-        {
-          "brand": "supersmart",
-          "name": "lactobacillus reuteri dietary supplement 60 delayed release capsules",
-          "price": 90000
-        },
-        {
-          "brand": "supersmart",
-          "name": "lactobacillus rhamnosus gg dietary supplement 60 gastro-resistant capsules",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "cdp choline citicoline 300mg per serving 60 capsules",
-          "price": 90000
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "tudca tauroursodeoxycholic acid 500 mg 60 capsules",
-          "price": 125000
-        },
-        {
-          "brand": "sharoaid",
-          "name": "advanced tudca tauroursodeoxycholic acid 1200 mg 60 capsules",
-          "price": 125000
-        },
-        {
-          "brand": "now",
-          "name": "liquid chlorophyll super concentrated over 90 servings internal deodorizer promotes cleansing freshens breath 16 fl. oz. (473 ml)",
-          "price": 95000
-        },
-        {
-          "brand": "dr.mercola",
-          "name": "fermented chlorella with chlorophyll 450 tablets",
-          "price": 95000
-        },
-        {
-          "brand": "healths harmony",
-          "name": "adrenal system support powerful adaptogenic formula includes ashwagandha l-tyrosine ginseng & more vegan non-gmo 60 capsules",
-          "price": 110000
-        },
-        {
-          "brand": "healths harmony",
-          "name": "thyroid support herb & mineral blend supports healthy thyroid function energy levels metabolism vegan non-gmo 120 capsules",
-          "price": 120000
-        },
-        {
-          "brand": "nulifely",
-          "name": "l-methylfolate 5-mthf plus methyl b12 kids formula berry flavor 1 fl. oz 300 servings",
-          "price": 105000
-        },
-        {
-          "brand": "triquetra",
-          "name": "l-methylfolate 5-mthf plus methyl b12 15 mg active form berry flavor 1 fl. oz 60 servings",
-          "price": 115000
-        },
-        {
-          "brand": "microingredients",
-          "name": "extra strength omega-3 fish oil 1,000 mg per serving 180 mg epa + 120 mg dha lemon flavor burpless 300 softgels dietary supplement",
-          "price": 100000
-        },
-        {
-          "brand": "microingredients",
-          "name": "triple strength omega-3 fish oil 4,200 mg per serving 1,200 mg epa + 900 mg dha lemon flavor burpless 240 softgels dietary supplement",
-          "price": 145000
-        },
-        {
-          "brand": "dr tobias",
-          "name": "omega 3 fish oil triple strength dietary supplement 180 softgels (90 day supply) molecular distillation for highest purity enteric coating to help reduce fishy aftertaste",
-          "price": 180000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "ultimate omega for heart, brain and immune health 1280 mg omega-3s per 2 soft gels 60 soft gels fish oil supplement",
-          "price": 125000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "ultimate omega for heart, brain and immune health 1280 mg omega-3s per 2 soft gels 180 soft gels fish oil supplement",
-          "price": 250000
-        },
-        {
-          "brand": "nordic naturals",
-          "name": "ultimate omega 2x high-strength omega-3s for heart, brain, and immune health 2150 mg omega-3s per 2 soft gels 120 soft gels fish oil supplement",
-          "price": 305000
-        },
-        {
-          "brand": "carlson",
-          "name": "kid's super daily d3+k2 25 mcg (1,000 iu) & 22.5 mcg liquid vitamins 360 vegetarian drops 0.34 fl oz (10.16 ml)",
-          "price": 120000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3+k2 2-in-1 formula 1,000 iu d3 + 25 mcg k2 mk-7 per serving made with coconut oil 240 softgels",
-          "price": 100000
-        },
-        {
-          "brand": "bio vitalica",
-          "name": "sea moss & elderberry premium gummies, zinc + vitamin c, d, burdock and bladderwrack, 60 gummies, adults & kids, assorted flavor",
-          "price": 90000
-        },
-        {
-          "brand": "beworths",
-          "name": "elderberry sea moss gummies (with vitamin c | vitamin d3 | zinc), 5 in 1 immune support, thyroid support, antioxidant support, boosts immunity support, 60 gummies",
-          "price": 90000
-        },
-        {
-          "brand": "bronson",
-          "name": "selenium 200 mcg chelated superior absorption 250 vegetarian capsules",
-          "price": 95000
-        },
-        {
-          "brand": "microingredients",
-          "name": "selenium (l-selenomethionine) 200 mcg per serving highly bioavailable made with coconut oil 500 softgels dietary supplement",
-          "price": 100000
-        },
-        {
-          "brand": "now",
-          "name": "eve tablets superior women's multi with cranberry, alpha lipoic acid & coq10 plus superfruits - pomegranate, acai & mangosteen 90 tablets",
-          "price": 100000
-        },
-        {
-          "brand": "naturebell",
-          "name": "methylated multivitamin advanced with nad, nac, coq10, d3 & k2, resveratrol highly bioavailable 240 capsules",
-          "price": 120000
-        },
-        {
-          "brand": "mary ruth's",
-          "name": "organic ionic zinc liquid drops unflavored 4 fl oz (120 ml)",
-          "price": 100000
-        },
-        {
-          "brand": "mary ruth's",
-          "name": "ionic zinc organic liquid drops antioxidant strawberry 4 fl oz (120 ml)",
-          "price": 100000
-        },
-        {
-          "brand": "mary ruth's",
-          "name": "organic kids elderberry liquid drops herbals blueberry + raspberry 1 fl oz (30 ml)",
-          "price": 100000
-        },
-        {
-          "brand": "mary ruth's",
-          "name": "organic oil of oregano liquid drops herbals 1 fl oz (30 ml)",
-          "price": 90000
-        },
-        {
-          "brand": "nutricost",
-          "name": "nutricost kids elderberry gummies with vitamin c & zinc 1,750mg 120 gummies",
-          "price": 90000
-        },
-        {
-          "brand": "tenvis",
-          "name": "quercetin bromelain gummies 8 in 1 immune support 60 gummies",
-          "price": 100000
-        },
-        {
-          "brand": "carlson",
-          "name": "kid's chewable zinc 5 mg 160 tablets",
-          "price": 110000
-        },
-        {
-          "brand": "triquetra",
-          "name": "l-methylfolate 5-mthf plus methyl b12 15 mg berry flavor 60 servings",
-          "price": 115000
-        },
-        {
-          "brand": "trace",
-          "name": "magnesium gummies watermelon flavor 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "naturebell",
-          "name": "biotin hyaluronic acid 10,000 mcg per serving 360 softgels",
-          "price": 95000
-        },
-        {
-          "brand": "naturebell",
-          "name": "moringa 8,000 mg per serving herbal equivalent 240 capsules",
-          "price": 110000
-        },
-        {
-          "brand": "naturebell",
-          "name": "pqq 40 mg per serving with coq 10 2 in 1 formula 240 capsules",
-          "price": 125000
-        },
-        {
-          "brand": "naturebell",
-          "name": "advanced electrolyte hydration pills made with himalayan pink salt 240 capsules",
-          "price": 95000
-        },
-        {
-          "brand": "microingredients",
-          "name": "5-htp+ gaba l-theanine vitamin b6 made with hemp seed oil 240 softgels",
-          "price": 135000
-        },
-        {
-          "brand": "naturebell",
-          "name": "ginkgo biloba 6,000 mg 2-in-1 formula with panax ginseng 300 capsules",
-          "price": 105000
-        },
-        {
-          "brand": "microingredients",
-          "name": "ginkgo biloba panax ginseng lion's mane 5,600 mg made with mct oil 400 softgels",
-          "price": 120000
-        },
-        {
-          "brand": "jarrow formulas",
-          "name": "toco-sorb high absorption tocotrienols + vitamin e heart support 60 softgels dietary supplement",
-          "price": 125000
-        },
-        {
-          "brand": "naturebell",
-          "name": "vitamin e 1,000 iu per serving essential vitamin antioxidant protection 300 softgels dietary supplement",
-          "price": 135000
-        },
-        {
-          "brand": "now",
-          "name": "egcg green tea extract - 400 mg, 180 veg capsules, free radical scavenger, 200 mg egcg / 80% catechins, supports cellular health",
-          "price": 100000
-        },
-        {
-          "brand": "zazzee naturals",
-          "name": "extra strength green tea 20:1 extract, 6000 mg strength, 150 vegan capsules, 98% polyphenols, 80% catechins & 50% egcg, supports optimal metabolism & healthy energy levels, naturally occurring antioxidants",
-          "price": 135000
-        },
-        {
-          "brand": "doctor's best",
-          "name": "betaine hcl pepsin & gentian bitters 360 capsules dietary supplement science-based nutrition",
-          "price": 140000
-        },
-        {
-          "brand": "codeage",
-          "name": "akkermansia akkermansia muciniphila probiotic - prebiotic 100 million afu 90 vegetable capsules",
-          "price": 150000
-        },
-        {
-          "brand": "codeage",
-          "name": "leaky gut formula. prebiotic - probiotic - postbiotic l-glutamine - dgl - zinc 60 capsules",
-          "price": 150000
-        },
-        {
-          "brand": "supersmart",
-          "name": "lactobacillus rhamnosus gg 60 gastro-resistant capsules",
-          "price": 110000
-        },
-        {
-          "brand": "physician's choice",
-          "name": "physician's choice 60 billion probiotic 10 diverse strains 60 billion cfus contains prebiotics 60 capsules",
-          "price": 175000
-        },
-        {
-          "brand": "supersmart",
-          "name": "lactobacillus reuteri 60 delayed release capsules",
-          "price": 90000
-        },
-        {
-          "brand": "naturebell",
-          "name": "antarctic krill oil 1,000 mg per serving high concentration omega-3 extra strength epa / dha with astaxanthin 240 softgels",
-          "price": 115000
-        },
-        {
-          "brand": "naturebell",
-          "name": "antarctic krill oil 2,000 mg per serving high concentration omega-3 double strength epa / dha with astaxanthin 240 softgels",
-          "price": 145000
-        },
-        {
-          "brand": "microingredients",
-          "name": "antarctic krill oil natural astaxanthin omega-3 (dha+epa) 1,000 mg per serving 300 softgels",
-          "price": 145000
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "nattokinase 4,000fu 200 mg per serving max activity (fu) enzyme 120 capsules dietary supplement",
-          "price": 110000
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "sulforaphane broccoli seed extract 20 mg per serving 120 capsules dietary supplement",
-          "price": 120000
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "tudca tauroursodeoxycholic acid 500 mg per serving 60 capsules dietary supplement",
-          "price": 125000
-        },
-        {
-          "brand": "naturebell",
-          "name": "vitamin b2 (riboflavin) 400 mg per serving 240 capsules",
-          "price": 110000
-        },
-        {
-          "brand": "microingredients",
-          "name": "biotin 5,000 mcg per serving made with coconut oil 365 softgels",
-          "price": 95000
-        },
-        {
-          "brand": "microingredients",
-          "name": "l-methylfolate 5-mthf 15 mg per serving with b6 & methyl b12 made with coconut oil 365 softgels",
-          "price": 150000
-        },
-        {
-          "brand": "nutricost",
-          "name": "choline bitartrate 650mg 240 capsules",
-          "price": 100000
-        },
-        {
-          "brand": "naturebell",
-          "name": "ashwagandha root with black pepper extract maximum potency high absorption 240 capsules",
-          "price": 115000
-        },
-        {
-          "brand": "california gold nutrition",
-          "name": "bone boost mbp supports bone health 120 tablets dietary supplement",
-          "price": 120000
-        },
-        {
-          "brand": "zhou",
-          "name": "organic black seed oil 100% pure virgin cold pressed dietary supplement 8 fl. oz / 240ml",
-          "price": 100000
-        },
-        {
-          "brand": "nutruissa",
-          "name": "world's first black seed oil 90 gummies 1050mg",
-          "price": 125000
-        },
-        {
-          "brand": "microingredients",
-          "name": "black seed oil 3,000 mg per serving with oil of oregano 240 softgels dietary supplement",
-          "price": 145000
-        },
-        {
-          "brand": "naturesplus",
-          "name": "ultra prenatal multivitamin for pregnant & nursing mothers 90 tablets dietary supplement",
-          "price": 120000
-        },
-        {
-          "brand": "lovebug probiotics",
-          "name": "prenatal probiotic labor of love tummy soothe blend for morning sickness heartburn and digestion with peppermint leaf, ginger root, lemon balm 20 billion cfu for pregnancy dietary supplement 30 count",
-          "price": 110000
-        },
-        {
-          "brand": "carlyle",
-          "name": "dlpa dl-phenylalanine 1000 mg per serving free form 180 capsules",
-          "price": 110000
-        },
-        {
-          "brand": "heritage store",
-          "name": "organic castor oil nourishing treatment 100% cold-pressed hexane-free 16 fl oz 473 ml",
-          "price": 120000
-        },
-        {
-          "brand": "zemvelo",
-          "name": "silica chd-fulvic acid for enhanced absorption dietary supplement 8 fl oz 240 ml",
-          "price": 135000
-        },
-        {
-          "brand": "naturalisimolife",
-          "name": "peruvian chanca piedra stone breaker 1600 mg per serving 120 tablets",
-          "price": 105000
-        },
-        {
-          "brand": "maac10",
-          "name": "ursolic acid from rosemary leaf extract 300 mg per serving 120 capsules",
-          "price": 120000
-        },
-        {
-          "brand": "dimmak herbs",
-          "name": "tendon mending pills restores joint, ligament and tendon health 100 capsules",
-          "price": 125000
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-lysine 1,000mg 240 tablets 240 servings",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-theanine 200mg 240 capsules 240 servings",
-          "price": 110000
-        },
-        {
-          "brand": "now sports",
-          "name": "arginine & citrulline 500 mg / 250 mg amino acids 120 veg capsules",
-          "price": 95000
-        },
-        {
-          "brand": "now",
-          "name": "l-glutamine 500 mg 120 veg capsules",
-          "price": 70000
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-glutamine 800mg 180 capsules 180 servings",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-glutamine 5g per serving 100 servings 500g powder unflavored",
-          "price": 135000
-        },
-        {
-          "brand": "nutricost",
-          "name": "msm methylsulfonylmethane 1g per serving 500 servings 500g unflavored",
-          "price": 95000
-        },
-        {
-          "brand": "now",
-          "name": "biocell collagen hydrolyzed type ii 120 veg capsules",
-          "price": 120000
-        },
-        {
-          "brand": "naturebell",
-          "name": "advanced glucosamine chondroitin & msm 10-in-1 joint support 240 capsules",
-          "price": 85000
-        },
-        {
-          "brand": "tnvitamins",
-          "name": "glucosamine chondroitin & msm joint support supplement 4000 mg per serving 240 capsules",
-          "price": 120000
-        },
-        {
-          "brand": "dr. moritz",
-          "name": "magnesium citrate kids anti-stress gummies 60 count 100 mg",
-          "price": 85000
-        },
-        {
-          "brand": "trace minerals",
-          "name": "magnesium gummies tangerine naturally flavored 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "now",
-          "name": "high potency vitamin d-3, 5,000 iu, bone & immune health, 240 softgels",
-          "price": 65000
-        },
-        {
-          "brand": "now",
-          "name": "high potency vitamin d-3, 10,000 iu, bone & immune health, 240 softgels",
-          "price": 90000
-        },
-        {
-          "brand": "now",
-          "name": "chewable c-500 cherry flavor, antioxidant & collagen support, 100 tablets",
-          "price": 75000
-        },
-        {
-          "brand": "now",
-          "name": "nac, 1000 mg, free radical protection, 120 tablets",
-          "price": 120000
-        },
-        {
-          "brand": "now",
-          "name": "cod liver oil, 1000 mg extra strength, cardiovascular support, 180 softgels",
-          "price": 110000
-        },
-        {
-          "brand": "naturebell",
-          "name": "vitamin d3+k2 made with duo-ack in coconut oil 5000 iu vitamin d3 100 mcg vitamin k2 240 softgels",
-          "price": 110000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3+k2 2-in-1 formula 5,000 iu d3 + 100 mcg k2 300 softgels",
-          "price": 110000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3+k2 2-in-1 formula 5,000 iu d3 + 100 mcg k2-mk7 made with coconut oil 300 softgels",
-          "price": 125000
-        },
-        {
-          "brand": "nutricost",
-          "name": "acetyl l-carnitine 500mg 180 capsules",
-          "price": 95000
-        },
-        {
-          "brand": "nutricost",
-          "name": "nac vegan n-acetyl l-cysteine 600mg 180 capsules",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost",
-          "name": "dim diindolylmethane 300mg 120 capsules",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost",
-          "name": "msm methylsulfonylmethane 1g 500g unflavored powder",
-          "price": 95000
-        },
-        {
-          "brand": "nutricost",
-          "name": "glucomannan konjac root extract 1,800mg 180 capsules",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost kids",
-          "name": "elderberry with vitamin c & zinc 1,450mg 120 elderberry flavored gummies",
-          "price": 90000
-        },
-        {
-          "brand": "microingredients",
-          "name": "niacinamide (vitamin b3) flush-free 1,000 mg per serving 400 capsules dietary supplement",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "niacin vitamin b3 500mg 240 capsules 240 servings",
-          "price": 90000
-        },
-        {
-          "brand": "mary ruth's",
-          "name": "organic ionic zinc liquid drops strawberry lemon 4 fl oz (120 ml)",
-          "price": 100000
-        },
-        {
-          "brand": "carlson",
-          "name": "zinc 15 mg 250 tablets",
-          "price": 90000
-        },
-        {
-          "brand": "nutricost",
-          "name": "zinc picolinate 30 mg 240 capsules",
-          "price": 95000
-        },
-        {
-          "brand": "carlson",
-          "name": "chelated zinc 30 mg 250 tablets",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "zinc picolinate 50 mg 240 capsules",
-          "price": 95000
-        },
-        {
-          "brand": "nutribiotic",
-          "name": "immunity vitamin c + d3 & zinc 250 capsules",
-          "price": 115000
-        },
-        {
-          "brand": "deal supplement",
-          "name": "zinc selenium with copper 50 mg 240 capsules",
-          "price": 110000
-        },
-        {
-          "brand": "now",
-          "name": "eve tablets superior women's multi 90 tablets",
-          "price": 100000
-        },
-        {
-          "brand": "now",
-          "name": "biocell collagen hydrolyzed type ii joint & skin support 120 veg capsules",
-          "price": 120000
-        },
-        {
-          "brand": "now",
-          "name": "magnesium malate 1000 mg 180 tablets",
-          "price": 110000
-        },
-        {
-          "brand": "now",
-          "name": "natural beta carotene 7,500 mcg (25,000 iu) 180 softgels",
-          "price": 120000
-        },
-        {
-          "brand": "now",
-          "name": "liquid chlorophyll internal deodorizer super concentrated 16 fl. oz. (473 ml)",
-          "price": 95000
-        },
-        {
-          "brand": "naturebell",
-          "name": "magnesium glycinate 1,000 mg per serving double strength 240 capsules dietary supplement",
-          "price": 110000
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-glutamine unflavored 5g per serving 100 servings 500g per container",
-          "price": 135000
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 227 servings 8oz per container unflavored dietary supplement net wt. 8.1 oz (227 g)",
-          "price": 65000
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 454 servings 1lb per container unflavored dietary supplement net wt. 16.2 oz (1 lb) (454 g)",
-          "price": 100000
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 907 servings 2lb per container unflavored dietary supplement net wt. 32.4 oz (2 lb) (907 g)",
-          "price": 160000
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin c powder pure unflavored 2.2 lb (1 kg) dietary supplement gmo free gluten free lab tested",
-          "price": 150000
-        },
-        {
-          "brand": "calming and relaxation support",
-          "name": "magnesium citrate kids anti-stress gummies 60 count 100 mg",
-          "price": 85000
-        },
-        {
-          "brand": "trace minerals",
-          "name": "magnesium gummies mood support - relaxing tangerine naturally flavored 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "trace",
-          "name": "magnesium gummies supports relaxation, calm mood, immunity, & energy watermelon flavor 120 gummies",
-          "price": 120000
-        },
-        {
-          "brand": "now",
-          "name": "magnesium malate 1000 mg nervous system support 113 mg of elemental magnesium 180 tablets",
-          "price": 110000
-        },
-        {
-          "brand": "bioptimizers",
-          "name": "magnesium breakthrough vegan gluten-free soy-free premium magnesium complex 30 veggie caps version 4.0",
-          "price": 115000
-        },
-        {
-          "brand": "jarrow formulas",
-          "name": "vegan mastic gum gastric health 1000 mg 120 veggie capsules",
-          "price": 200000
-        },
-        {
-          "brand": "naturebell",
-          "name": "oregano oil 7,500 mg with black seed oil 2-in-1 formula 360 softgels",
-          "price": 145000
-        },
-        {
-          "brand": "zazzee",
-          "name": "extra strength organic bilberry, 6000 mg strength, 120 vegan capsules, 20:1 extract",
-          "price": 130000
-        },
-        {
-          "brand": "zazzee naturals",
-          "name": "myo + d-chiro + folate & vitamin d3, 2000 mg myo-inositol, 50 mg d-chiro inositol, 800 mcg folate and 10 mcg of vitamin d3, 120 vegan capsules, optimal 40:1 ratio",
-          "price": 130000
-        },
-        {
-          "brand": "zazzee",
-          "name": "extra strength saw palmetto, 6000 mg, 120 vegan capsules, 20:1 extract, standardized to 40% fatty acids",
-          "price": 120000
-        },
-        {
-          "brand": "zazzee naturals",
-          "name": "extra strength fenugreek 30:1 extract, 6000 mg strength, 120 vegan capsules",
-          "price": 135000
-        },
-        {
-          "brand": "zazzee naturals",
-          "name": "extra strength green tea 20:1 extract, 6000 mg strength, 150 vegan capsules, 98% polyphenols, 80% catechins & 50% egcg",
-          "price": 135000
-        },
-        {
-          "brand": "zazzee naturals",
-          "name": "pregnositol myo-inositol & d-chiro inositol powder, 183 servings, 13.8 oz (392 g), 6 month supply, optimal 40:1 blend",
-          "price": 260000
-        },
-        {
-          "brand": "nutricost",
-          "name": "melatonin 5mg 240 tablets",
-          "price": 85000
-        },
-        {
-          "brand": "nutricost",
-          "name": "dhea dehydroepiandrosterone 50mg 240 capsules 240 servings",
-          "price": 100000
-        }
-      ]
-    },
-    "productsToRemove": {
-      "count": 110,
-      "note": "Products in DB but not in new inventory - may be discontinued",
-      "products": [
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Instant Creatine Monohydrate Powder",
-          "slug": "naturebell-instant-creatine-monohydrate-powder",
-          "price": 130000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Probiotic 200 Billion CFU – 40 Strains Per Serving",
-          "slug": "naturebell-probiotic-200-billion-cfu-40-strains-per-serving",
-          "price": 125000
-        },
-        {
-          "brand": "Nutricost",
-          "name": "Nutricost Turmeric Gummies",
-          "slug": "nutricost-turmeric-gummies",
-          "price": 130000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Sambucus Zinc-C with Elderberry Concentrate and Vitamin C, 60 Lozenges",
-          "slug": "now-foods-supplements-sambucus-zinc-c-with-elderberry-concentrate-and-vitamin-c-60-lozenges",
-          "price": 60000
-        },
-        {
-          "brand": "NOW",
-          "name": "Vitamin C-500 Chewable Orange",
-          "slug": "vitamin-c-500-chewable-orange",
-          "price": 75000
-        },
-        {
-          "brand": "NOW",
-          "name": "Now Foods C 1000, 250 Capsules",
-          "slug": "now-foods-c-1000-250-capsules",
-          "price": 110000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Glycine 1,000 mg Free-Form, Neurotransmitter Support*, 100 Veg Capsules",
-          "slug": "now-foods-supplements-glycine-1000-mg-free-form-neurotransmitter-support-100-veg-capsules",
-          "price": 70000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Supplements, Ubiquinol 100 mg, High Bioavailability (the Active Form of CoQ10), 120 Softgels",
-          "slug": "now-supplements-ubiquinol-100-mg-high-bioavailability-the-active-form-of-coq10-120-softgels",
-          "price": 200000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Methyl Folate 1,000 mcg, Metabolically Active Folate*, Co-Enzyme B Vitamin, 90 Tablets",
-          "slug": "now-foods-supplements-methyl-folate-1000-mcg-metabolically-active-folate-co-enzyme-b-vitamin-90-tablets",
-          "price": 80000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Candida Support with Pau D'Arco, Oregano Oil, Black Walnut & Caprylic Acid, 180 Veg Capsules",
-          "slug": "now-foods-supplements-candida-support-with-pau-darco-oregano-oil-black-walnut-caprylic-acid-180-veg-capsules",
-          "price": 130000
-        },
-        {
-          "brand": "Magtein",
-          "name": "Magnesium L Threonate, Magtein, Sleep and Cognitive Support – High Absorption – Most Bioavailable Form of Magnesium",
-          "slug": "magnesium-l-threonate-magtein-sleep-and-cognitive-support-high-absorption-most-bioavailable-form-of-magnesium",
-          "price": 140000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctors Best MSM Powder",
-          "slug": "doctors-best-msm-powder",
-          "price": 75000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Vitamin C Powder with Q-C",
-          "slug": "doctors-best-vitamin-c-powder-with-q-c",
-          "price": 100000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Vitamin D3 5,000 IU",
-          "slug": "doctors-best-vitamin-d3-5000-iu",
-          "price": 100000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctors Best Fully Active Methyl B12, Methylcobalamin, Energy, Memory, & Mood Support, Non-GMO, Gluten Free, Soy Free, Vegan 180 Veggie Caps",
-          "slug": "doctors-best-fully-active-methyl-b12-methylcobalamin-energy-memory-mood-support-non-gmo-gluten-free-soy-free-vegan-180-veggie-caps",
-          "price": 85000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Glucosamine Chondroitin Msm with OptiMSM Capsules",
-          "slug": "doctors-best-glucosamine-chondroitin-msm-with-optimsm-capsules",
-          "price": 190000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Organic Matcha Green Tea Powder First Harvest Ceremonial Grade 100% Pure Premium Matcha for Drinking and Latte No Additives",
-          "slug": "organic-matcha-green-tea-powder-first-harvest-ceremonial-grade-100-pure-premium-matcha-for-drinking-and-latte-no-additives",
-          "price": 140000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients Organic Black Seed Oil, 16 fl oz",
-          "slug": "micro-ingredients-organic-black-seed-oil-16-fl-oz",
-          "price": 140000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients Lutein & Zeaxanthin 40mg Softgels",
-          "slug": "micro-ingredients-lutein-zeaxanthin-40mg-softgels",
-          "price": 120000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Beta 1,3/1,6- D-Glucan 100 mg with Maitake Mushrooms, 90 Veg Capsules",
-          "slug": "now-foods-supplements-beta-1316-d-glucan-100-mg-with-maitake-mushrooms-90-veg-capsules",
-          "price": 75000
-        },
-        {
-          "brand": "NOW",
-          "name": "NOW Foods Supplements, Inulin Prebiotic Pure Powder, Certified Organic, Non-GMO Project Verified, Intestinal Support*",
-          "slug": "now-foods-supplements-inulin-prebiotic-pure-powder-certified-organic-non-gmo-project-verified-intestinal-support",
-          "price": 70000
-        },
-        {
-          "brand": "NOW",
-          "name": "Swanson Amino Acid L-Arginine 500 Milligrams 200 Capsules",
-          "slug": "swanson-amino-acid-l-arginine-500-milligrams-200-capsules",
-          "price": 95000
-        },
-        {
-          "brand": "Nutricost",
-          "name": "Nutricost Bromelain Powder 4 OZ - Non-GMO, Vegetarian, Gluten Free",
-          "slug": "nutricost-bromelain-powder-4-oz-non-gmo-vegetarian-gluten-free",
-          "price": 95000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Turkey Tail Mushroom Capsules",
-          "slug": "naturebell-turkey-tail-mushroom-capsules",
-          "price": 95000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Glutathione Supplement 2,000mg Per Serving, 240 Veggie Capsules",
-          "slug": "naturebell-glutathione-supplement-2000mg-per-serving-240-veggie-capsules",
-          "price": 130000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Astaxanthin 12mg, 240 Softgels",
-          "slug": "naturebell-astaxanthin-12mg-240-softgels",
-          "price": 145000
-        },
-        {
-          "brand": "Vital Nutrients",
-          "name": "Hyperbiotics Vital Nutrients Pro Kids Probiotic",
-          "slug": "hyperbiotics-vital-nutrients-pro-kids-probiotic",
-          "price": 120000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "HERBAMAMA Irish Sea Moss Gummies",
-          "slug": "herbamama-irish-sea-moss-gummies",
-          "price": 80000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "HERBAMAMA Mullein Gummies for Lungs",
-          "slug": "herbamama-mullein-gummies-for-lungs",
-          "price": 125000
-        },
-        {
-          "brand": "KAL",
-          "name": "KAL Melatonin 1mg Sleep Aid",
-          "slug": "kal-melatonin-1mg-sleep-aid",
-          "price": 80000
-        },
-        {
-          "brand": "Carlson",
-          "name": "Carlson - Kid's Chewable Vitamin C",
-          "slug": "carlson-kids-chewable-vitamin-c",
-          "price": 85000
-        },
-        {
-          "brand": "Nutricost",
-          "name": "Nutricost Pure MSM Powder",
-          "slug": "nutricost-pure-msm-powder",
-          "price": 95000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients Milk Thistle Supplement 6,000mg",
-          "slug": "micro-ingredients-milk-thistle-supplement-6000mg",
-          "price": 110000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Folic Acid 1,000 mcg, 500 Coconut Oil Softgels",
-          "slug": "folic-acid-1000-mcg-500-coconut-oil-softgels",
-          "price": 100000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients L-Theanine 400mg, 400 Softgels",
-          "slug": "micro-ingredients-l-theanine-400mg-400-softgels",
-          "price": 125000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Citicoline Supplements, CDP Choline, Citicoline 500mg Plus Tyrosine 50mg Per Serving, Optimized Dosage, 120 Capsules, 2 in 1 Formula, Dual Action Brain Supplement, Non-GMO",
-          "slug": "naturebell-citicoline-supplements-cdp-choline-citicoline-500mg-plus-tyrosine-50mg-per-serving-optimized-dosage-120-capsules-2-in-1-formula-dual-action-brain-supplement-non-gmo",
-          "price": 140000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "Potassium Citrate Supplement 99mg, 500 Capsules",
-          "slug": "potassium-citrate-supplement-99mg-500-capsules",
-          "price": 95000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "NatureBell Sunflower Lecithin 2,400mg, 240 Softgels",
-          "slug": "naturebell-sunflower-lecithin-2400mg-240-softgels",
-          "price": 125000
-        },
-        {
-          "brand": "Life Extension",
-          "name": "Life Extension High Potency Optimized Folate",
-          "slug": "life-extension-high-potency-optimized-folate",
-          "price": 85000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients Pure Magnesium Complex",
-          "slug": "micro-ingredients-pure-magnesium-complex",
-          "price": 130000
-        },
-        {
-          "brand": "Double Wood Supplements",
-          "name": "Magnesium Complex Supplement",
-          "slug": "magnesium-complex-supplement",
-          "price": 110000
-        },
-        {
-          "brand": "Nordic Naturals",
-          "name": "Nordic Naturals Baby’s DHA, Unflavored",
-          "slug": "nordic-naturals-babys-dha-unflavored",
-          "price": 95000
-        },
-        {
-          "brand": "Nordic Naturals",
-          "name": "Nordic Naturals Children's DHA Liquid",
-          "slug": "nordic-naturals-childrens-dha-liquid",
-          "price": 145000
-        },
-        {
-          "brand": "Enfamil",
-          "name": "Enfamil Baby Vitamin D-Vi-Sol Liquid Vitamin D Drops",
-          "slug": "enfamil-baby-vitamin-d-vi-sol-liquid-vitamin-d-drops",
-          "price": 70000
-        },
-        {
-          "brand": "Beworths",
-          "name": "B BEWORTHS Elderberry Gummies",
-          "slug": "b-beworths-elderberry-gummies",
-          "price": 90000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "Horbäach Mullein Leaf Extract Drops",
-          "slug": "horbach-mullein-leaf-extract-drops",
-          "price": 100000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "Mullein Drops for Lungs - USDA Organic Liquid - Mullein Leaf Extract Supplement - Made in USA - Lung & Bronchial Cleanse for Smokers - Respiratory Health Support - As Tincture, Tea, Pills - 4 fl oz",
-          "slug": "mullein-drops-for-lungs-usda-organic-liquid-mullein-leaf-extract-supplement-made-in-usa-lung-bronchial-cleanse-for-smokers-respiratory-health-support-as-tincture-tea-pills-4-fl-oz",
-          "price": 145000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "Irish Sea Moss Gummies 3000mg",
-          "slug": "irish-sea-moss-gummies-3000mg",
-          "price": 80000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "HERBAMAMA Sea Moss and Bladderwrack Capsules",
-          "slug": "herbamama-sea-moss-and-bladderwrack-capsules",
-          "price": 100000
-        },
-        {
-          "brand": "HERBAMAMA",
-          "name": "HERBAMAMA Vitex Berry Capsules",
-          "slug": "herbamama-vitex-berry-capsules",
-          "price": 105000
-        },
-        {
-          "brand": "Zazzee Naturals",
-          "name": "Zazzee PREGNOSITOL Powder",
-          "slug": "zazzee-pregnositol-powder",
-          "price": 200000
-        },
-        {
-          "brand": "Berrilys",
-          "name": "Bitter Apricot Kernels Organic Raw",
-          "slug": "bitter-apricot-kernels-organic-raw",
-          "price": 120000
-        },
-        {
-          "brand": "CARLYLE",
-          "name": "Carlyle DL-Phenylalanine",
-          "slug": "carlyle-dl-phenylalanine",
-          "price": 110000
-        },
-        {
-          "brand": "CALIFORNIA GOLD NUTRITION",
-          "name": "California Gold Nutrition Bone Boost Supplement",
-          "slug": "california-gold-nutrition-bone-boost-supplement",
-          "price": 120000
-        },
-        {
-          "brand": "Quality of Life",
-          "name": "Quality of Life Premium Kinoko Platinum AHCC Herbal Supplement",
-          "slug": "quality-of-life-premium-kinoko-platinum-ahcc-herbal-supplement",
-          "price": 300000
-        },
-        {
-          "brand": "NaturesPlus",
-          "name": "NaturesPlus Ultra-Zyme",
-          "slug": "naturesplus-ultra-zyme",
-          "price": 160000
-        },
-        {
-          "brand": "Heritage Store",
-          "name": "HERITAGE STORE Organic Castor Oil",
-          "slug": "heritage-store-organic-castor-oil",
-          "price": 120000
-        },
-        {
-          "brand": "aSquared Nutrition",
-          "name": "100% Natural Resveratrol - 1000mg Per Serving Max Strength (180 Capsules) Antioxidant Supplement, Trans-Resveratrol Pills for Heart Health & Pure, Polyphenols",
-          "slug": "100-natural-resveratrol-1000mg-per-serving-max-strength-180-capsules-antioxidant-supplement-trans-resveratrol-pills-for-heart-health-pure-polyphenols",
-          "price": 330000
-        },
-        {
-          "brand": "DETOXADINE",
-          "name": "Detoxadine - Organic Nascent Liquid Iodine Supplement Drops",
-          "slug": "detoxadine-organic-nascent-liquid-iodine-supplement-drops",
-          "price": 140000
-        },
-        {
-          "brand": "Maaci",
-          "name": "STAY ALIVE Ursolic Acid Supplement for Men & Women",
-          "slug": "stay-alive-ursolic-acid-supplement-for-men-women",
-          "price": 120000
-        },
-        {
-          "brand": "DIMMAK HERBS",
-          "name": "Certified Organic Tendon Mending Pills",
-          "slug": "certified-organic-tendon-mending-pills",
-          "price": 125000
-        },
-        {
-          "brand": "Carlson",
-          "name": "Carlson - Tocomin SupraBio, Full Spectrum Tocotrienol Complex, Non-GMO Tocotrienols, Alpha, Beta, Gamma, Delta, 120 Softgels",
-          "slug": "carlson-tocomin-suprabio-full-spectrum-tocotrienol-complex-non-gmo-tocotrienols-alpha-beta-gamma-delta-120-softgels",
-          "price": 160000
-        },
-        {
-          "brand": "Silverpeaks",
-          "name": "SILVERPEAKS Height Growth Gummies for Kids, Teens & Adults",
-          "slug": "silverpeaks-height-growth-gummies-for-kids-teens-adults",
-          "price": 150000
-        },
-        {
-          "brand": "TruHeight",
-          "name": "TruHeight Growth Gummies (Watermelon)",
-          "slug": "truheight-growth-gummies-watermelon",
-          "price": 160000
-        },
-        {
-          "brand": "Silverpeaks",
-          "name": "Growth Capsules to Grow Taller - Height Growth Maximizer with Calcium for Bone Strength",
-          "slug": "growth-capsules-to-grow-taller-height-growth-maximizer-with-calcium-for-bone-strength",
-          "price": 170000
-        },
-        {
-          "brand": "Bioteque Lab",
-          "name": "BIOTEQUELAB Height Growth Maximizer",
-          "slug": "biotequelab-height-growth-maximizer",
-          "price": 170000
-        },
-        {
-          "brand": "NaturesPlus",
-          "name": "NaturesPlus Animal Parade Gold Children's Multivitamin - Assorted Cherry, Orange & Grape Flavors - 120 Animal-Shaped Chewable Tablets, Pack of 2 - Vegan, Gluten Free - 120 Total Servings",
-          "slug": "naturesplus-animal-parade-gold-childrens-multivitamin-assorted-cherry-orange-grape-flavors-120-animal-shaped-chewable-tablets-pack-of-2-vegan-gluten-free-120-total-servings",
-          "price": 135000
-        },
-        {
-          "brand": "Zazzee",
-          "name": "Zazzee USDA Organic Bilberry 20:1 Extract",
-          "slug": "zazzee-usda-organic-bilberry-201-extract",
-          "price": 130000
-        },
-        {
-          "brand": "Zazzee Naturals",
-          "name": "Zazzee USDA Organic Vitex",
-          "slug": "zazzee-usda-organic-vitex",
-          "price": 130000
-        },
-        {
-          "brand": "SuperSmart",
-          "name": "Supersmart - Lactobacillus Rhamnosus GG 10 Billion CFU per Day (LGG Probiotic with Inulin) - Digestive & Immune Support - Vaginal Flora Health | Non-GMO & Gluten Free - 60 DR Capsules",
-          "slug": "supersmart-lactobacillus-rhamnosus-gg-10-billion-cfu-per-day-lgg-probiotic-with-inulin-digestive-immune-support-vaginal-flora-health-non-gmo-gluten-free-60-dr-capsules",
-          "price": 110000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Vitamin D3 5000 IU",
-          "slug": "doctors-best-vitamin-d3-5000-iu",
-          "price": 75000
-        },
-        {
-          "brand": "Nature's Bounty",
-          "name": "Nature's Bounty Zinc 50mg",
-          "slug": "natures-bounty-zinc-50mg",
-          "price": 65000
-        },
-        {
-          "brand": "Naturebell",
-          "name": "2 Pack Maximum Strength Zinc 100mg, Zinc Picolinate Supplement, 480 Capsules",
-          "slug": "2-pack-maximum-strength-zinc-100mg-zinc-picolinate-supplement-480-capsules",
-          "price": 110000
-        },
-        {
-          "brand": "NOW Foods",
-          "name": "NOW Foods Supplements, Vitamin C-1,000 with 100 mg of Bioflavonoids",
-          "slug": "now-foods-supplements-vitamin-c-1000-with-100-mg-of-bioflavonoids",
-          "price": 110000
-        },
-        {
-          "brand": "CARLYLE",
-          "name": "Carlyle Oregano Oil 4000mg Supplement",
-          "slug": "carlyle-oregano-oil-4000mg-supplement",
-          "price": 75000
-        },
-        {
-          "brand": "HEALTHS HARMONY",
-          "name": "Black Seed Oil - 180 Softgel Capsules (Non-GMO & Vegan) Premium Cold-Pressed Nigella Sativa Producing Pure Black Cumin Seed Oil with Vitamin E - 500mg Each, 1000mg Per 2 Capsule Serving",
-          "slug": "black-seed-oil-180-softgel-capsules-non-gmo-vegan-premium-cold-pressed-nigella-sativa-producing-pure-black-cumin-seed-oil-with-vitamin-e-500mg-each-1000mg-per-2-capsule-serving",
-          "price": 100000
-        },
-        {
-          "brand": "HEALTHS HARMONY",
-          "name": "Adrenal System Support & Cortisol Manager (2 Month Supply)",
-          "slug": "adrenal-system-support-cortisol-manager-2-month-supply",
-          "price": 110000
-        },
-        {
-          "brand": "HEALTHS HARMONY",
-          "name": "MegaFood Thyroid Strength - Mineral Supplement",
-          "slug": "megafood-thyroid-strength-mineral-supplement",
-          "price": 130000
-        },
-        {
-          "brand": "Double Wood Supplements",
-          "name": "TUDCA Bile Salts Liver Support Supplement",
-          "slug": "tudca-bile-salts-liver-support-supplement",
-          "price": 125000
-        },
-        {
-          "brand": "Doctor's Recipes",
-          "name": "Doctor's Recipes Women’s Probiotic",
-          "slug": "doctors-recipes-womens-probiotic",
-          "price": 105000
-        },
-        {
-          "brand": "Mega",
-          "name": "Sookwang Korea MEGADOSE Vitamin C Powder 3000mg",
-          "slug": "sookwang-korea-megadose-vitamin-c-powder-3000mg",
-          "price": 100000
-        },
-        {
-          "brand": "Nutricost",
-          "name": "PURE ORIGINAL INGREDIENTS Vitamin C Powder",
-          "slug": "pure-original-ingredients-vitamin-c-powder",
-          "price": 150000
-        },
-        {
-          "brand": "Berrilys",
-          "name": "Berrilys Organic Bitter Apricot Kernels",
-          "slug": "berrilys-organic-bitter-apricot-kernels",
-          "price": 120000
-        },
-        {
-          "brand": "Life Extension",
-          "name": "Life Extension Optimized Chromium with Crominex 3+",
-          "slug": "life-extension-optimized-chromium-with-crominex-3",
-          "price": 60000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Fully Active B12 1500 mcg",
-          "slug": "doctors-best-fully-active-b12-1500-mcg",
-          "price": 85000
-        },
-        {
-          "brand": "KAL",
-          "name": "KAL Melatonin DropIns 3mg",
-          "slug": "kal-melatonin-dropins-3mg",
-          "price": 80000
-        },
-        {
-          "brand": "Microingredients",
-          "name": "Micro Ingredients CoQ10 100mg Per Serving",
-          "slug": "micro-ingredients-coq10-100mg-per-serving",
-          "price": 105000
-        },
-        {
-          "brand": "Bio Vitalica",
-          "name": "BIO VITALICA Sea Moss Gummies Elderberry",
-          "slug": "bio-vitalica-sea-moss-gummies-elderberry",
-          "price": 90000
-        },
-        {
-          "brand": "Beworths",
-          "name": "B BEWORTHS Elderberry Gummies & Irish Sea Moss",
-          "slug": "b-beworths-elderberry-gummies-irish-sea-moss",
-          "price": 90000
-        },
-        {
-          "brand": "Nordic Naturals",
-          "name": "Nordic Naturals Children’s DHA Liquid",
-          "slug": "nordic-naturals-childrens-dha-liquid",
-          "price": 100000
-        },
-        {
-          "brand": "Nordic Naturals",
-          "name": "Nordic Naturals Zero Sugar Children’s DHA Gummy Chews",
-          "slug": "nordic-naturals-zero-sugar-childrens-dha-gummy-chews",
-          "price": 100000
-        },
-        {
-          "brand": "Jarrow Formulas",
-          "name": "Jarrow Formulas® Type II Collagen Complex",
-          "slug": "jarrow-formulas-type-ii-collagen-complex",
-          "price": 100000
-        },
-        {
-          "brand": "Double Wood Supplements",
-          "name": "Serrapeptase 240,000 SPU Max Potency (120 Veggie Capsules)",
-          "slug": "serrapeptase-240000-spu-max-potency-120-veggie-capsules",
-          "price": 110000
-        },
-        {
-          "brand": "Jarrow Formulas",
-          "name": "Jarrow Formulas® Toco-Sorb Cardiovascular Health and Brain Function Support",
-          "slug": "jarrow-formulas-toco-sorb-cardiovascular-health-and-brain-function-support",
-          "price": 110
-        },
-        {
-          "brand": "Sveikata",
-          "name": "Sveikata Liposomal Tocotrienols 1000mg",
-          "slug": "sveikata-liposomal-tocotrienols-1000mg",
-          "price": 120000
-        },
-        {
-          "brand": "Wellness Extract",
-          "name": "WELLNESS EXTRACT Eannatto Tocotrienols Vitamin E Supplements Tocopherol Free, Non-GMO, Gluten Free & Antioxidant",
-          "slug": "wellness-extract-eannatto-tocotrienols-vitamin-e-supplements-tocopherol-free-non-gmo-gluten-free-antioxidant",
-          "price": 120000
-        },
-        {
-          "brand": "Carlson",
-          "name": "Carlson - Tocomin SupraBio, Full Spectrum Tocotrienol Complex, Non-GMO Tocotrienols, Alpha, Beta, Gamma, Delta, 60 Softgels",
-          "slug": "carlson-tocomin-suprabio-full-spectrum-tocotrienol-complex-non-gmo-tocotrienols-alpha-beta-gamma-delta-60-softgels",
-          "price": 160000
-        },
-        {
-          "brand": "NutriVein",
-          "name": "Nutrivein Premium Berberine HCL 1200 mg with Ceylon Cinnamon",
-          "slug": "nutrivein-premium-berberine-hcl-1200-mg-with-ceylon-cinnamon",
-          "price": 130
-        },
-        {
-          "brand": "Deal Supplement",
-          "name": "DEAL SUPPLEMENT Berberine Max Supplement with Turmeric",
-          "slug": "deal-supplement-berberine-max-supplement-with-turmeric",
-          "price": 135000
-        },
-        {
-          "brand": "Nutriflair",
-          "name": "NutriFlair Premium Berberine HCL 1200mg, 120 Capsules - Plus Pure True Ceylon Cinnamon",
-          "slug": "nutriflair-premium-berberine-hcl-1200mg-120-capsules-plus-pure-true-ceylon-cinnamon",
-          "price": 145000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctors Best MSM, Supports Hair, Skin, Nails, & Joints, Non-GMO, Gluten Free, Vegan 120 Tablets",
-          "slug": "doctors-best-msm-supports-hair-skin-nails-joints-non-gmo-gluten-free-vegan-120-tablets",
-          "price": 75000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Glucosamine Chondroitin MSM",
-          "slug": "doctors-best-glucosamine-chondroitin-msm",
-          "price": 190000
-        },
-        {
-          "brand": "New Age",
-          "name": "NEW AGE AREDS 2 Eye Vitamins",
-          "slug": "new-age-areds-2-eye-vitamins",
-          "price": 110000
-        },
-        {
-          "brand": "SuperSmart",
-          "name": "Supersmart - Lactobacillus Reuteri 5 Billion CFU per Day - Probiotic Supplement | Non-GMO & Gluten Free - 60 DR Capsules",
-          "slug": "supersmart-lactobacillus-reuteri-5-billion-cfu-per-day-probiotic-supplement-non-gmo-gluten-free-60-dr-capsules",
-          "price": 90000
-        },
-        {
-          "brand": "Nutricost",
-          "name": "Nutricost Tart Cherry Extract 3000mg Equivalent (from 300mg of 10:1 Extract), 240 Vegetarian Capsules - Gluten Free, Non-GMO",
-          "slug": "nutricost-tart-cherry-extract-3000mg-equivalent-from-300mg-of-101-extract-240-vegetarian-capsules-gluten-free-non-gmo",
-          "price": 90000
-        },
-        {
-          "brand": "NOW",
-          "name": "THORNE - L-Glutamine - Amino Acid Supplement for GI Health and Immune Function - Promotes Post-Exercise Muscle Cell Repair* - 90 Servings",
-          "slug": "thorne-l-glutamine-amino-acid-supplement-for-gi-health-and-immune-function-promotes-post-exercise-muscle-cell-repair-90-servings",
-          "price": 70000
-        },
-        {
-          "brand": "DR TOBIAS",
-          "name": "Dr. Tobias Turmeric Curcumin 1500mg with BioPerine",
-          "slug": "dr-tobias-turmeric-curcumin-1500mg-with-bioperine",
-          "price": 160000
-        },
-        {
-          "brand": "Doctor's Best",
-          "name": "Doctor's Best Vitamin C with Q-C",
-          "slug": "doctors-best-vitamin-c-with-q-c",
-          "price": 180000
-        },
-        {
-          "brand": "FURTHER FOOD",
-          "name": "Further Food Collagen Peptides Powder",
-          "slug": "further-food-collagen-peptides-powder",
-          "price": 220000
-        },
-        {
-          "brand": "Wellness Extract",
-          "name": "Ecological Formulas - Annatto Tocotrienols 125 mg 60 gels",
-          "slug": "ecological-formulas-annatto-tocotrienols-125-mg-60-gels",
-          "price": 120000
-        }
-      ]
-    },
-    "priceUpdates": {
-      "count": 73,
-      "note": "Products with price changes that need updating",
-      "increases": 30,
-      "decreases": 43,
-      "products": [
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3+k2 1,000 iu d3 + 25 mcg k2 mk-7 240 softgels",
-          "oldPrice": 115000,
-          "newPrice": 100000,
-          "change": "-13.0%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin d3 & k2 10,000 iu + 200 mcg 300 softgels",
-          "oldPrice": 100000,
-          "newPrice": 125000,
-          "change": "+25.0%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "5-htp+ gaba l-theanine vitamin b6 240 softgels",
-          "oldPrice": 125000,
-          "newPrice": 135000,
-          "change": "+8.0%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "extra strength k2 as mk-7 vitamin d3 & k2 10,000 iu + 200 mcg made with coconut oil 300 softgels dietary supplement",
-          "oldPrice": 70000,
-          "newPrice": 125000,
-          "change": "+78.6%"
-        },
-        {
-          "brand": "wholesome story",
-          "name": "myo & d-chiro inositol 40:1 ratio 120 vegetarian capsules",
-          "oldPrice": 270000,
-          "newPrice": 120000,
-          "change": "-55.6%"
-        },
-        {
-          "brand": "physician's choice",
-          "name": "women's probiotic 6 diverse strains 50 billion cfus 60 capsules",
-          "oldPrice": 130000,
-          "newPrice": 175000,
-          "change": "+34.6%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "dim+ diindolylmethane 400 mg natural vitamin e cdg broccoli extract black pepper extract made with pumpkin seed oil highly bioavailable 240 softgels",
-          "oldPrice": 145000,
-          "newPrice": 125000,
-          "change": "-13.8%"
-        },
-        {
-          "brand": "carlson",
-          "name": "liquid vitamin d super daily d3, 2,000 iu (50 mcg) per drop, 365 vegetarian drops, 0.35 fl oz (10.3 ml)",
-          "oldPrice": 95000,
-          "newPrice": 85000,
-          "change": "-10.5%"
-        },
-        {
-          "brand": "carlson",
-          "name": "zinc, 15 mg, 100 tablets, 100 servings",
-          "oldPrice": 90000,
-          "newPrice": 55000,
-          "change": "-38.9%"
-        },
-        {
-          "brand": "carlson",
-          "name": "kid's chewable iron 15 mg superior absorption 60 tablets 60 servings",
-          "oldPrice": 110000,
-          "newPrice": 70000,
-          "change": "-36.4%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "extra strength omega-3 fish oil 1,000 mg per serving 180 mg epa + 120 mg dha lemon flavor burpless 300 softgels",
-          "oldPrice": 145000,
-          "newPrice": 100000,
-          "change": "-31.0%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "pure triple magnesium complex glycinate + malate + taurate 400 mg per serving enhanced with fat-soluble vitamin c 300 capsules",
-          "oldPrice": 110000,
-          "newPrice": 130000,
-          "change": "+18.2%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "magnesium citrate 400 mg per serving with vitamin d3 & b6 240 capsules",
-          "oldPrice": 125000,
-          "newPrice": 85000,
-          "change": "-32.0%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "glycine 2,000 mg per serving double strength 240 vegetarian capsules",
-          "oldPrice": 90000,
-          "newPrice": 110000,
-          "change": "+22.2%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "premium hyaluronic acid 250 mg plus vitamin c & biotin 240 capsules",
-          "oldPrice": 120000,
-          "newPrice": 110000,
-          "change": "-8.3%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "pure magnesium glycinate 500 mg 240 vegetarian capsules",
-          "oldPrice": 130000,
-          "newPrice": 110000,
-          "change": "-15.4%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "liver cleanse detox repair 240 vegetarian capsules",
-          "oldPrice": 110000,
-          "newPrice": 120000,
-          "change": "+9.1%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "pure turmeric curcumin 95 1,000 mg per serving 95% curcuminoids highly bioavailable bee propolis ginger black pepper extract mct oil fat-soluble vitamin c 120 vegetarian capsules dietary supplement",
-          "oldPrice": 150000,
-          "newPrice": 130000,
-          "change": "-13.3%"
-        },
-        {
-          "brand": "naturewise",
-          "name": "made with organic turmeric curcumin plus organic ginger & bioperine 2250 mg of organic turmeric curcumin 500 mg of curcuminoids to support heart health & promote strong joints 360 vegan capsules dietary supplement",
-          "oldPrice": 135000,
-          "newPrice": 180000,
-          "change": "+33.3%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "vitamin a 25,000 iu made with coconut oil 500 softgels dietary supplement",
-          "oldPrice": 110000,
-          "newPrice": 100000,
-          "change": "-9.1%"
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "magnesium taurate 1500 mg per serving 210 capsules",
-          "oldPrice": 130000,
-          "newPrice": 110000,
-          "change": "-15.4%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "triple complex magnesium glycinate + citrate + malate providing 300 mg of elemental magnesium 240 capsules",
-          "oldPrice": 100000,
-          "newPrice": 130000,
-          "change": "+30.0%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "magnesium citrate 500 mg high potency elemental magnesium 240 capsules",
-          "oldPrice": 95000,
-          "newPrice": 105000,
-          "change": "+10.5%"
-        },
-        {
-          "brand": "nutribiotic",
-          "name": "vitamin c 1000 mg capsules 100 capsules",
-          "oldPrice": 170000,
-          "newPrice": 65000,
-          "change": "-61.8%"
-        },
-        {
-          "brand": "nutribiotic",
-          "name": "vitamin c 1000 mg capsules 250 capsules",
-          "oldPrice": 110000,
-          "newPrice": 100000,
-          "change": "-9.1%"
-        },
-        {
-          "brand": "nutribiotic",
-          "name": "vitamin c + d3 & zinc pharmaceutical grade 250 capsules",
-          "oldPrice": 95000,
-          "newPrice": 115000,
-          "change": "+21.1%"
-        },
-        {
-          "brand": "nutribiotic",
-          "name": "vitamin c 1000 mg capsules 500 capsules",
-          "oldPrice": 100000,
-          "newPrice": 170000,
-          "change": "+70.0%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c with zinc 1,000mg 120 capsules",
-          "oldPrice": 65000,
-          "newPrice": 95000,
-          "change": "+46.2%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c with rose hips 1,000mg 240 capsules",
-          "oldPrice": 85000,
-          "newPrice": 100000,
-          "change": "+17.6%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin c ascorbic acid 1g per serving 8oz (227 g) unflavored",
-          "oldPrice": 160000,
-          "newPrice": 65000,
-          "change": "-59.4%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "zinc quercetin vitamin c + d3 7 in 1 formula 240 capsules",
-          "oldPrice": 120000,
-          "newPrice": 110000,
-          "change": "-8.3%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "liposomal vitamin c 2,500 mg per serving 240 vegetarian capsules",
-          "oldPrice": 95000,
-          "newPrice": 100000,
-          "change": "+5.3%"
-        },
-        {
-          "brand": "deal supplement",
-          "name": "berberine max 5,000 mg per serving herbal equivalent 240 vegetarian capsules",
-          "oldPrice": 140000,
-          "newPrice": 135000,
-          "change": "-3.6%"
-        },
-        {
-          "brand": "doctor's best",
-          "name": "glucosamine chondroitin msm optimsm 240 veggie caps",
-          "oldPrice": 85000,
-          "newPrice": 145000,
-          "change": "+70.6%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "organic chlorella broken cell wall 10 oz (283 g) powder",
-          "oldPrice": 140000,
-          "newPrice": 125000,
-          "change": "-10.7%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "black seed oil 3,000 mg per serving with oil of oregano 240 softgels",
-          "oldPrice": 150000,
-          "newPrice": 145000,
-          "change": "-3.3%"
-        },
-        {
-          "brand": "microingredients",
-          "name": "astaxanthin from microalgae triple strength 12 mg 120 softgels",
-          "oldPrice": 140000,
-          "newPrice": 145000,
-          "change": "+3.6%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "premium hyaluronic acid 250 mg per serving plus vitamin c & biotin skin hydration, joint, connective tissue support 240 capsules",
-          "oldPrice": 160000,
-          "newPrice": 110000,
-          "change": "-31.3%"
-        },
-        {
-          "brand": "lovebug",
-          "name": "baby probiotics 6 months - 12 months 4 billion cfu 30 single serve stick packs dietary supplement",
-          "oldPrice": 110000,
-          "newPrice": 120000,
-          "change": "+9.1%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "uva ursi 4,500mg 240 capsules",
-          "oldPrice": 100000,
-          "newPrice": 90000,
-          "change": "-10.0%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "tart cherry 3,000mg 240 capsules",
-          "oldPrice": 85000,
-          "newPrice": 90000,
-          "change": "+5.9%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "alpha gpc 600mg 120 capsules",
-          "oldPrice": 85000,
-          "newPrice": 120000,
-          "change": "+41.2%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "milk thistle 1,000mg 240 capsules",
-          "oldPrice": 170000,
-          "newPrice": 85000,
-          "change": "-50.0%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "cdp choline citicoline 300mg 60 capsules",
-          "oldPrice": 100000,
-          "newPrice": 90000,
-          "change": "-10.0%"
-        },
-        {
-          "brand": "nutricost women",
-          "name": "myo & d-chiro inositol 2,000mg 50mg 120 capsules",
-          "oldPrice": 110000,
-          "newPrice": 95000,
-          "change": "-13.6%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "ashwagandha root extract 600mg 120 capsules",
-          "oldPrice": 90000,
-          "newPrice": 85000,
-          "change": "-5.6%"
-        },
-        {
-          "brand": "nutricost women",
-          "name": "boric acid vaginal suppository 600mg 30 capsules",
-          "oldPrice": 75000,
-          "newPrice": 55000,
-          "change": "-26.7%"
-        },
-        {
-          "brand": "nutricost women",
-          "name": "boric acid vaginal suppository 600mg 60 capsules",
-          "oldPrice": 120000,
-          "newPrice": 75000,
-          "change": "-37.5%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "choline 500 mg per serving with omega-3 240 capsules",
-          "oldPrice": 130000,
-          "newPrice": 95000,
-          "change": "-26.9%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "choline bitartrate 650mg per serving 240 capsules",
-          "oldPrice": 90000,
-          "newPrice": 100000,
-          "change": "+11.1%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "selenium 200mcg 240 capsules 240 servings dietary supplement",
-          "oldPrice": 90000,
-          "newPrice": 85000,
-          "change": "-5.6%"
-        },
-        {
-          "brand": "lovebug",
-          "name": "baby probiotics 4 billion cfu 30 single serve stick packs",
-          "oldPrice": 110000,
-          "newPrice": 120000,
-          "change": "+9.1%"
-        },
-        {
-          "brand": "herbamama",
-          "name": "mullein dietary supplement 1200 mg 100 capsules",
-          "oldPrice": 145000,
-          "newPrice": 100000,
-          "change": "-31.0%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "double strength d3+k2 10,000 iu per serving 200 mcg per serving 240 softgels",
-          "oldPrice": 135000,
-          "newPrice": 130000,
-          "change": "-3.7%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "quercetin 1,000 mg per serving double strength 240 capsules",
-          "oldPrice": 100000,
-          "newPrice": 145000,
-          "change": "+45.0%"
-        },
-        {
-          "brand": "naturebell",
-          "name": "coq10 400 mg per serving with omega-3 240 capsules",
-          "oldPrice": 95000,
-          "newPrice": 130000,
-          "change": "+36.8%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "5-htp 100mg 240 capsules",
-          "oldPrice": 115000,
-          "newPrice": 110000,
-          "change": "-4.3%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "betaine hcl + pepsin 790mg 240 capsules 240 servings dietary supplement",
-          "oldPrice": 95000,
-          "newPrice": 85000,
-          "change": "-10.5%"
-        },
-        {
-          "brand": "now",
-          "name": "high potency vitamin d-3, 2,000 iu, 240 softgels",
-          "oldPrice": 90000,
-          "newPrice": 65000,
-          "change": "-27.8%"
-        },
-        {
-          "brand": "lovebug",
-          "name": "lovebug baby probiotics 6 months - 12 months 4 billion cfu 30 single serve stick packs",
-          "oldPrice": 110000,
-          "newPrice": 120000,
-          "change": "+9.1%"
-        },
-        {
-          "brand": "culturelle",
-          "name": "culturelle probiotics kids purely probiotics packets 50 single serve packets",
-          "oldPrice": 95000,
-          "newPrice": 170000,
-          "change": "+78.9%"
-        },
-        {
-          "brand": "double wood supplements",
-          "name": "lumbrokinase 150 mg per serving 10,000 fu / gram high activity 120 capsules dietary supplement",
-          "oldPrice": 120000,
-          "newPrice": 110000,
-          "change": "-8.3%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "niacin vitamin b3 500mg 240 capsules",
-          "oldPrice": 95000,
-          "newPrice": 90000,
-          "change": "-5.3%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "ashwagandha root extract 600mg 120 capsules 120 servings",
-          "oldPrice": 110000,
-          "newPrice": 85000,
-          "change": "-22.7%"
-        },
-        {
-          "brand": "zazzee",
-          "name": "extra strength saw palmetto 120 vegan capsules 6000 mg 20:1 extract",
-          "oldPrice": 120000,
-          "newPrice": 115000,
-          "change": "-4.2%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "l-proline 1000mg 180 capsules 90 servings",
-          "oldPrice": 100000,
-          "newPrice": 95000,
-          "change": "-5.0%"
-        },
-        {
-          "brand": "now",
-          "name": "l-arginine 500 mg 250 veg capsules",
-          "oldPrice": 70000,
-          "newPrice": 95000,
-          "change": "+35.7%"
-        },
-        {
-          "brand": "now sports",
-          "name": "amino complete amino acids 360 veg capsules",
-          "oldPrice": 120000,
-          "newPrice": 145000,
-          "change": "+20.8%"
-        },
-        {
-          "brand": "now",
-          "name": "high potency vitamin d-3, 2,000 iu, bone & immune health, 240 softgels",
-          "oldPrice": 90000,
-          "newPrice": 65000,
-          "change": "-27.8%"
-        },
-        {
-          "brand": "now",
-          "name": "candida support, intestinal health, 180 veg capsules",
-          "oldPrice": 110000,
-          "newPrice": 130000,
-          "change": "+18.2%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "melatonin 10mg 240 capsules",
-          "oldPrice": 100000,
-          "newPrice": 85000,
-          "change": "-15.0%"
-        },
-        {
-          "brand": "nutricost",
-          "name": "vitamin b complex 462mg 240 capsules",
-          "oldPrice": 65000,
-          "newPrice": 130000,
-          "change": "+100.0%"
-        },
-        {
-          "brand": "jarrow formulas",
-          "name": "vegan mastic gum gastric health 1000 mg 60 veggie capsules",
-          "oldPrice": 200000,
-          "newPrice": 100000,
-          "change": "-50.0%"
-        }
-      ]
-    },
-    "noChanges": {
-      "count": 130,
-      "note": "Products that are already up to date"
-    }
-  },
-  "quickStats": {
-    "Total operations needed": 375,
-    "Products to add": 192,
-    "Products to remove": 110,
-    "Prices to update": 73,
-    "Already matched": 130
-  }
+	"generatedAt": "2026-01-20T10:24:30.005Z",
+	"dataCleanup": {
+		"originalProductCount": 422,
+		"duplicatesRemoved": 27,
+		"pricesFixed": 8,
+		"cleanedProductCount": 395
+	},
+	"comparison": {
+		"currentDatabase": 318,
+		"newInventory": 395,
+		"matchRate": "63.8%"
+	},
+	"actions": {
+		"productsToAdd": {
+			"count": 192,
+			"note": "New products that need full details (images, description, ingredients, etc.)",
+			"products": [
+				{
+					"brand": "nordic naturals",
+					"name": "children's dha fish oil ages 1+ 530 mg omega-3s per serving 8 fl oz (237 ml) great strawberry taste dietary supplement",
+					"price": 145000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "omega-3 gummies purified fish oil gummies for kids with a great tangerine taste 120 gummies ages 3+ fish oil supplement",
+					"price": 150000
+				},
+				{
+					"brand": "now",
+					"name": "biocell collagen hydrolyzed type ii joint & skin support 120 veg capsules a dietary supplement",
+					"price": 120000
+				},
+				{
+					"brand": "microingredients",
+					"name": "multi collagen peptides type i, ii, iii, v, x unflavored with biotin, vitamin c, hyaluronic acid 2 lb (907 g) dietary supplement",
+					"price": 200000
+				},
+				{
+					"brand": "further food",
+					"name": "grass-fed collagen peptides unflavored 20g collagen per serving net wt. 21.16 oz (1.3 lb) (600g)",
+					"price": 220000
+				},
+				{
+					"brand": "terry naturally",
+					"name": "tri-iodine 25 mg three forms of iodine breast prostate & colon health healthy detoxification 60 capsules 2 month supply dietary supplement vegan",
+					"price": 160000
+				},
+				{
+					"brand": "microingredients",
+					"name": "organic freeze-dried pomegranate juice powder 1 lb (454 g)",
+					"price": 145000
+				},
+				{
+					"brand": "microingredients",
+					"name": "electrolyte powder lemon & raspberry flavor 2 lb (907 g)",
+					"price": 175000
+				},
+				{
+					"brand": "beworths",
+					"name": "elderberry sea moss gummies (with vitamin c, vitamin d3, zinc), 5 in 1 immune support, 60 gummies",
+					"price": 90000
+				},
+				{
+					"brand": "fulllon",
+					"name": "extra large capacity pill organizer 7 days a week am pm, capacity per compartment fits 14 pcs fish oil (0.98 in), 28 pcs capsules (0.59 in), 32 pcs pills (0.55 in)",
+					"price": 70000
+				},
+				{
+					"brand": "fulllon",
+					"name": "jumbo capacity weekly pill organizer 2 times a day am pm, capacity per compartment fits 14 pcs fish oil, 17 pcs large pills, 27 pcs medium vitamins, 56 pcs small capsules",
+					"price": 90000
+				},
+				{
+					"brand": "fulllon",
+					"name": "larger capacity 7 day am pm pill organizer, capacity per compartment fits 14 pcs fish oil, 18 pcs pills, 28 pcs capsules",
+					"price": 70000
+				},
+				{
+					"brand": "now",
+					"name": "choline & inositol nervous system health 100 veg capsules",
+					"price": 70000
+				},
+				{
+					"brand": "wholesome story",
+					"name": "myo & d-chiro inositol 40:1 ratio 360 vegetarian capsules",
+					"price": 270000
+				},
+				{
+					"brand": "wholesome story",
+					"name": "myo & d-chiro inositol with mthf folate + vitamin d3 40:1 ratio 120 vegetarian capsules",
+					"price": 135000
+				},
+				{
+					"brand": "microingredients",
+					"name": "myo & d-chiro inositol 2,050 mg per serving 40:1 blend with vitamin c, dim & coq10 240 vegetarian capsules",
+					"price": 120000
+				},
+				{
+					"brand": "zazzee",
+					"name": "myo + d-chiro + folate & vitamin d3 2000 mg myo-inositol 50 mg d-chiro inositol 40:1 ratio 120 vegan capsules",
+					"price": 130000
+				},
+				{
+					"brand": "zazzee",
+					"name": "pregnositol myo-inositol + d-chiro inositol powder 40:1 ratio blend 183 servings 13.8 oz (392 g)",
+					"price": 260000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3 50,000 iu + k2-mk7 200 mcg one pill one week made with coconut oil 240 softgels (family pack)",
+					"price": 145000
+				},
+				{
+					"brand": "carlson",
+					"name": "liquid vitamins super daily d3+k2, 50 mcg (2,000 iu) & 45 mcg, 360 vegetarian drops, 0.34 fl oz (10.16 ml)",
+					"price": 120000
+				},
+				{
+					"brand": "carlson",
+					"name": "zinc, 15 mg, 250 tablets, 250 servings",
+					"price": 90000
+				},
+				{
+					"brand": "carlson",
+					"name": "chelated zinc, 30 mg, superior absorption, 250 tablets, 250 servings",
+					"price": 110000
+				},
+				{
+					"brand": "carlson",
+					"name": "kid's chewable iron, 15 mg, superior absorption, natural strawberry flavor, 60 tablets, 60 servings",
+					"price": 70000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "omega-3 gummies purified fish oil gummies for kids 120 gummies",
+					"price": 150000
+				},
+				{
+					"brand": "carlson",
+					"name": "zinc 15 mg immune support antioxidant skin health 250 tablets 250 servings",
+					"price": 90000
+				},
+				{
+					"brand": "magnesium citrate kids",
+					"name": "magnesium citrate kids anti-stress gummies calming and relaxation support 60 count",
+					"price": 85000
+				},
+				{
+					"brand": "silverpeaks",
+					"name": "height growth maximizer 60 capsules dietary supplement",
+					"price": 150000
+				},
+				{
+					"brand": "microingredients",
+					"name": "kids omega-3 chewable softgels 200 mg dha lemon flavor 240 chewable softgels",
+					"price": 125000
+				},
+				{
+					"brand": "microingredients",
+					"name": "triple strength omega-3 fish oil 4,200 mg per serving 1,200 mg epa + 900 mg dha lemon flavor burpless 240 softgels",
+					"price": 145000
+				},
+				{
+					"brand": "microingredients",
+					"name": "sunflower lecithin 1,600 mg per serving 300 softgels",
+					"price": 105000
+				},
+				{
+					"brand": "microingredients",
+					"name": "dim+ diindolylmethane 400 mg per serving natural vitamin e cdg broccoli extract black pepper extract made with pumpkin seed oil 240 softgels",
+					"price": 125000
+				},
+				{
+					"brand": "microingredients",
+					"name": "black seed oil with vitamin d3 virgin cold pressed 2,000 mg per serving 240 softgels",
+					"price": 140000
+				},
+				{
+					"brand": "microingredients",
+					"name": "multi vitamins two daily high bioavailability 180 vegetarian capsules",
+					"price": 100000
+				},
+				{
+					"brand": "naturebell",
+					"name": "creatine monohydrate 5000 mg per serving 100 servings 500 g (1.1 lb)",
+					"price": 130000
+				},
+				{
+					"brand": "nutricost",
+					"name": "turmeric made with 95% curcuminoids turmeric extract 2,000mg 20mg 120 servings 240 lemon flavored gummies dietary supplement",
+					"price": 130000
+				},
+				{
+					"brand": "microingredients",
+					"name": "turmeric curcumin ginger & black pepper extract made with mct oil highly bioavailable 300 softgels dietary supplement",
+					"price": 130000
+				},
+				{
+					"brand": "cfilihtc",
+					"name": "magnesium complex drops combined with l-theanine, omega-3 vitamin b6 & vitamin d 2 fl oz / 60 ml",
+					"price": 85000
+				},
+				{
+					"brand": "nature's craft",
+					"name": "magnesium citrate kids anti-stress gummies 100 mg 60 count",
+					"price": 85000
+				},
+				{
+					"brand": "trace minerals",
+					"name": "magnesium gummies tangerine flavor 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "trace minerals",
+					"name": "magnesium gummies watermelon flavor 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "naturebell",
+					"name": "pure magnesium glycinate 500 mg formulated with fat-soluble vitamin c 240 vegetarian capsules",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 1lb (454 g) unflavored",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 2lb (907 g) unflavored",
+					"price": 160000
+				},
+				{
+					"brand": "now",
+					"name": "chewable c-500 100 tablets",
+					"price": 75000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin c powder pure unflavored 2.2 lb (1 kg)",
+					"price": 150000
+				},
+				{
+					"brand": "naturebell",
+					"name": "berberine 1,500 mg per serving herbal equivalent with ceylon cinnamon & turmeric 240 vegetarian capsules",
+					"price": 120000
+				},
+				{
+					"brand": "doctor's best",
+					"name": "pure collagen types 1 and 3 powder net wt. 7.1 oz (200 grams)",
+					"price": 80000
+				},
+				{
+					"brand": "doctor's best",
+					"name": "msm optimsm 1500 mg 120 tablets",
+					"price": 75000
+				},
+				{
+					"brand": "microingredients",
+					"name": "organic spirulina chlorella broken cell wall rich in chlorophyll 720 tablets",
+					"price": 140000
+				},
+				{
+					"brand": "microingredients",
+					"name": "selenium (l-selenomethionine) 200 mcg per serving highly bioavailable made with coconut oil 500 softgels",
+					"price": 110000
+				},
+				{
+					"brand": "microingredients",
+					"name": "ashwagandha made with mct oil highly bioavailable 300 softgels",
+					"price": 135000
+				},
+				{
+					"brand": "microingredients",
+					"name": "cold pressed virgin pumpkin seed oil 2-in-1 formula with saw palmetto 3,000 mg per serving 300 softgels",
+					"price": 145000
+				},
+				{
+					"brand": "now",
+					"name": "cod liver oil 1000 mg - extra strength cardiovascular support* vitamins a & d-3, epa, dha 180 softgels non-gmo dietary supplement contains gelatin",
+					"price": 110000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "arctic cod liver oil omega-3 from wild arctic cod for heart and brain health* great lemon taste 180 soft gels fish oil supplement new look same great formula",
+					"price": 110000
+				},
+				{
+					"brand": "naturebell",
+					"name": "biotin hyaluronic acid 10,000 mcg per serving 2 in 1 formula made with coconut oil 360 softgels",
+					"price": 95000
+				},
+				{
+					"brand": "microingredients",
+					"name": "biotin with hyaluronic acid 10,000 mcg per serving made with coconut oil gmo free, gluten free, lab tested 365 softgels",
+					"price": 120000
+				},
+				{
+					"brand": "lovebug",
+					"name": "kids probiotics tummy gummies 4+ years 2.5 billion cfu 30 gummies dietary supplement",
+					"price": 100000
+				},
+				{
+					"brand": "supersmart",
+					"name": "lactobacillus reuteri dietary supplement 60 delayed release capsules",
+					"price": 90000
+				},
+				{
+					"brand": "supersmart",
+					"name": "lactobacillus rhamnosus gg dietary supplement 60 gastro-resistant capsules",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "cdp choline citicoline 300mg per serving 60 capsules",
+					"price": 90000
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "tudca tauroursodeoxycholic acid 500 mg 60 capsules",
+					"price": 125000
+				},
+				{
+					"brand": "sharoaid",
+					"name": "advanced tudca tauroursodeoxycholic acid 1200 mg 60 capsules",
+					"price": 125000
+				},
+				{
+					"brand": "now",
+					"name": "liquid chlorophyll super concentrated over 90 servings internal deodorizer promotes cleansing freshens breath 16 fl. oz. (473 ml)",
+					"price": 95000
+				},
+				{
+					"brand": "dr.mercola",
+					"name": "fermented chlorella with chlorophyll 450 tablets",
+					"price": 95000
+				},
+				{
+					"brand": "healths harmony",
+					"name": "adrenal system support powerful adaptogenic formula includes ashwagandha l-tyrosine ginseng & more vegan non-gmo 60 capsules",
+					"price": 110000
+				},
+				{
+					"brand": "healths harmony",
+					"name": "thyroid support herb & mineral blend supports healthy thyroid function energy levels metabolism vegan non-gmo 120 capsules",
+					"price": 120000
+				},
+				{
+					"brand": "nulifely",
+					"name": "l-methylfolate 5-mthf plus methyl b12 kids formula berry flavor 1 fl. oz 300 servings",
+					"price": 105000
+				},
+				{
+					"brand": "triquetra",
+					"name": "l-methylfolate 5-mthf plus methyl b12 15 mg active form berry flavor 1 fl. oz 60 servings",
+					"price": 115000
+				},
+				{
+					"brand": "microingredients",
+					"name": "extra strength omega-3 fish oil 1,000 mg per serving 180 mg epa + 120 mg dha lemon flavor burpless 300 softgels dietary supplement",
+					"price": 100000
+				},
+				{
+					"brand": "microingredients",
+					"name": "triple strength omega-3 fish oil 4,200 mg per serving 1,200 mg epa + 900 mg dha lemon flavor burpless 240 softgels dietary supplement",
+					"price": 145000
+				},
+				{
+					"brand": "dr tobias",
+					"name": "omega 3 fish oil triple strength dietary supplement 180 softgels (90 day supply) molecular distillation for highest purity enteric coating to help reduce fishy aftertaste",
+					"price": 180000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "ultimate omega for heart, brain and immune health 1280 mg omega-3s per 2 soft gels 60 soft gels fish oil supplement",
+					"price": 125000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "ultimate omega for heart, brain and immune health 1280 mg omega-3s per 2 soft gels 180 soft gels fish oil supplement",
+					"price": 250000
+				},
+				{
+					"brand": "nordic naturals",
+					"name": "ultimate omega 2x high-strength omega-3s for heart, brain, and immune health 2150 mg omega-3s per 2 soft gels 120 soft gels fish oil supplement",
+					"price": 305000
+				},
+				{
+					"brand": "carlson",
+					"name": "kid's super daily d3+k2 25 mcg (1,000 iu) & 22.5 mcg liquid vitamins 360 vegetarian drops 0.34 fl oz (10.16 ml)",
+					"price": 120000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3+k2 2-in-1 formula 1,000 iu d3 + 25 mcg k2 mk-7 per serving made with coconut oil 240 softgels",
+					"price": 100000
+				},
+				{
+					"brand": "bio vitalica",
+					"name": "sea moss & elderberry premium gummies, zinc + vitamin c, d, burdock and bladderwrack, 60 gummies, adults & kids, assorted flavor",
+					"price": 90000
+				},
+				{
+					"brand": "beworths",
+					"name": "elderberry sea moss gummies (with vitamin c | vitamin d3 | zinc), 5 in 1 immune support, thyroid support, antioxidant support, boosts immunity support, 60 gummies",
+					"price": 90000
+				},
+				{
+					"brand": "bronson",
+					"name": "selenium 200 mcg chelated superior absorption 250 vegetarian capsules",
+					"price": 95000
+				},
+				{
+					"brand": "microingredients",
+					"name": "selenium (l-selenomethionine) 200 mcg per serving highly bioavailable made with coconut oil 500 softgels dietary supplement",
+					"price": 100000
+				},
+				{
+					"brand": "now",
+					"name": "eve tablets superior women's multi with cranberry, alpha lipoic acid & coq10 plus superfruits - pomegranate, acai & mangosteen 90 tablets",
+					"price": 100000
+				},
+				{
+					"brand": "naturebell",
+					"name": "methylated multivitamin advanced with nad, nac, coq10, d3 & k2, resveratrol highly bioavailable 240 capsules",
+					"price": 120000
+				},
+				{
+					"brand": "mary ruth's",
+					"name": "organic ionic zinc liquid drops unflavored 4 fl oz (120 ml)",
+					"price": 100000
+				},
+				{
+					"brand": "mary ruth's",
+					"name": "ionic zinc organic liquid drops antioxidant strawberry 4 fl oz (120 ml)",
+					"price": 100000
+				},
+				{
+					"brand": "mary ruth's",
+					"name": "organic kids elderberry liquid drops herbals blueberry + raspberry 1 fl oz (30 ml)",
+					"price": 100000
+				},
+				{
+					"brand": "mary ruth's",
+					"name": "organic oil of oregano liquid drops herbals 1 fl oz (30 ml)",
+					"price": 90000
+				},
+				{
+					"brand": "nutricost",
+					"name": "nutricost kids elderberry gummies with vitamin c & zinc 1,750mg 120 gummies",
+					"price": 90000
+				},
+				{
+					"brand": "tenvis",
+					"name": "quercetin bromelain gummies 8 in 1 immune support 60 gummies",
+					"price": 100000
+				},
+				{
+					"brand": "carlson",
+					"name": "kid's chewable zinc 5 mg 160 tablets",
+					"price": 110000
+				},
+				{
+					"brand": "triquetra",
+					"name": "l-methylfolate 5-mthf plus methyl b12 15 mg berry flavor 60 servings",
+					"price": 115000
+				},
+				{
+					"brand": "trace",
+					"name": "magnesium gummies watermelon flavor 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "naturebell",
+					"name": "biotin hyaluronic acid 10,000 mcg per serving 360 softgels",
+					"price": 95000
+				},
+				{
+					"brand": "naturebell",
+					"name": "moringa 8,000 mg per serving herbal equivalent 240 capsules",
+					"price": 110000
+				},
+				{
+					"brand": "naturebell",
+					"name": "pqq 40 mg per serving with coq 10 2 in 1 formula 240 capsules",
+					"price": 125000
+				},
+				{
+					"brand": "naturebell",
+					"name": "advanced electrolyte hydration pills made with himalayan pink salt 240 capsules",
+					"price": 95000
+				},
+				{
+					"brand": "microingredients",
+					"name": "5-htp+ gaba l-theanine vitamin b6 made with hemp seed oil 240 softgels",
+					"price": 135000
+				},
+				{
+					"brand": "naturebell",
+					"name": "ginkgo biloba 6,000 mg 2-in-1 formula with panax ginseng 300 capsules",
+					"price": 105000
+				},
+				{
+					"brand": "microingredients",
+					"name": "ginkgo biloba panax ginseng lion's mane 5,600 mg made with mct oil 400 softgels",
+					"price": 120000
+				},
+				{
+					"brand": "jarrow formulas",
+					"name": "toco-sorb high absorption tocotrienols + vitamin e heart support 60 softgels dietary supplement",
+					"price": 125000
+				},
+				{
+					"brand": "naturebell",
+					"name": "vitamin e 1,000 iu per serving essential vitamin antioxidant protection 300 softgels dietary supplement",
+					"price": 135000
+				},
+				{
+					"brand": "now",
+					"name": "egcg green tea extract - 400 mg, 180 veg capsules, free radical scavenger, 200 mg egcg / 80% catechins, supports cellular health",
+					"price": 100000
+				},
+				{
+					"brand": "zazzee naturals",
+					"name": "extra strength green tea 20:1 extract, 6000 mg strength, 150 vegan capsules, 98% polyphenols, 80% catechins & 50% egcg, supports optimal metabolism & healthy energy levels, naturally occurring antioxidants",
+					"price": 135000
+				},
+				{
+					"brand": "doctor's best",
+					"name": "betaine hcl pepsin & gentian bitters 360 capsules dietary supplement science-based nutrition",
+					"price": 140000
+				},
+				{
+					"brand": "codeage",
+					"name": "akkermansia akkermansia muciniphila probiotic - prebiotic 100 million afu 90 vegetable capsules",
+					"price": 150000
+				},
+				{
+					"brand": "codeage",
+					"name": "leaky gut formula. prebiotic - probiotic - postbiotic l-glutamine - dgl - zinc 60 capsules",
+					"price": 150000
+				},
+				{
+					"brand": "supersmart",
+					"name": "lactobacillus rhamnosus gg 60 gastro-resistant capsules",
+					"price": 110000
+				},
+				{
+					"brand": "physician's choice",
+					"name": "physician's choice 60 billion probiotic 10 diverse strains 60 billion cfus contains prebiotics 60 capsules",
+					"price": 175000
+				},
+				{
+					"brand": "supersmart",
+					"name": "lactobacillus reuteri 60 delayed release capsules",
+					"price": 90000
+				},
+				{
+					"brand": "naturebell",
+					"name": "antarctic krill oil 1,000 mg per serving high concentration omega-3 extra strength epa / dha with astaxanthin 240 softgels",
+					"price": 115000
+				},
+				{
+					"brand": "naturebell",
+					"name": "antarctic krill oil 2,000 mg per serving high concentration omega-3 double strength epa / dha with astaxanthin 240 softgels",
+					"price": 145000
+				},
+				{
+					"brand": "microingredients",
+					"name": "antarctic krill oil natural astaxanthin omega-3 (dha+epa) 1,000 mg per serving 300 softgels",
+					"price": 145000
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "nattokinase 4,000fu 200 mg per serving max activity (fu) enzyme 120 capsules dietary supplement",
+					"price": 110000
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "sulforaphane broccoli seed extract 20 mg per serving 120 capsules dietary supplement",
+					"price": 120000
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "tudca tauroursodeoxycholic acid 500 mg per serving 60 capsules dietary supplement",
+					"price": 125000
+				},
+				{
+					"brand": "naturebell",
+					"name": "vitamin b2 (riboflavin) 400 mg per serving 240 capsules",
+					"price": 110000
+				},
+				{
+					"brand": "microingredients",
+					"name": "biotin 5,000 mcg per serving made with coconut oil 365 softgels",
+					"price": 95000
+				},
+				{
+					"brand": "microingredients",
+					"name": "l-methylfolate 5-mthf 15 mg per serving with b6 & methyl b12 made with coconut oil 365 softgels",
+					"price": 150000
+				},
+				{
+					"brand": "nutricost",
+					"name": "choline bitartrate 650mg 240 capsules",
+					"price": 100000
+				},
+				{
+					"brand": "naturebell",
+					"name": "ashwagandha root with black pepper extract maximum potency high absorption 240 capsules",
+					"price": 115000
+				},
+				{
+					"brand": "california gold nutrition",
+					"name": "bone boost mbp supports bone health 120 tablets dietary supplement",
+					"price": 120000
+				},
+				{
+					"brand": "zhou",
+					"name": "organic black seed oil 100% pure virgin cold pressed dietary supplement 8 fl. oz / 240ml",
+					"price": 100000
+				},
+				{
+					"brand": "nutruissa",
+					"name": "world's first black seed oil 90 gummies 1050mg",
+					"price": 125000
+				},
+				{
+					"brand": "microingredients",
+					"name": "black seed oil 3,000 mg per serving with oil of oregano 240 softgels dietary supplement",
+					"price": 145000
+				},
+				{
+					"brand": "naturesplus",
+					"name": "ultra prenatal multivitamin for pregnant & nursing mothers 90 tablets dietary supplement",
+					"price": 120000
+				},
+				{
+					"brand": "lovebug probiotics",
+					"name": "prenatal probiotic labor of love tummy soothe blend for morning sickness heartburn and digestion with peppermint leaf, ginger root, lemon balm 20 billion cfu for pregnancy dietary supplement 30 count",
+					"price": 110000
+				},
+				{
+					"brand": "carlyle",
+					"name": "dlpa dl-phenylalanine 1000 mg per serving free form 180 capsules",
+					"price": 110000
+				},
+				{
+					"brand": "heritage store",
+					"name": "organic castor oil nourishing treatment 100% cold-pressed hexane-free 16 fl oz 473 ml",
+					"price": 120000
+				},
+				{
+					"brand": "zemvelo",
+					"name": "silica chd-fulvic acid for enhanced absorption dietary supplement 8 fl oz 240 ml",
+					"price": 135000
+				},
+				{
+					"brand": "naturalisimolife",
+					"name": "peruvian chanca piedra stone breaker 1600 mg per serving 120 tablets",
+					"price": 105000
+				},
+				{
+					"brand": "maac10",
+					"name": "ursolic acid from rosemary leaf extract 300 mg per serving 120 capsules",
+					"price": 120000
+				},
+				{
+					"brand": "dimmak herbs",
+					"name": "tendon mending pills restores joint, ligament and tendon health 100 capsules",
+					"price": 125000
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-lysine 1,000mg 240 tablets 240 servings",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-theanine 200mg 240 capsules 240 servings",
+					"price": 110000
+				},
+				{
+					"brand": "now sports",
+					"name": "arginine & citrulline 500 mg / 250 mg amino acids 120 veg capsules",
+					"price": 95000
+				},
+				{
+					"brand": "now",
+					"name": "l-glutamine 500 mg 120 veg capsules",
+					"price": 70000
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-glutamine 800mg 180 capsules 180 servings",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-glutamine 5g per serving 100 servings 500g powder unflavored",
+					"price": 135000
+				},
+				{
+					"brand": "nutricost",
+					"name": "msm methylsulfonylmethane 1g per serving 500 servings 500g unflavored",
+					"price": 95000
+				},
+				{
+					"brand": "now",
+					"name": "biocell collagen hydrolyzed type ii 120 veg capsules",
+					"price": 120000
+				},
+				{
+					"brand": "naturebell",
+					"name": "advanced glucosamine chondroitin & msm 10-in-1 joint support 240 capsules",
+					"price": 85000
+				},
+				{
+					"brand": "tnvitamins",
+					"name": "glucosamine chondroitin & msm joint support supplement 4000 mg per serving 240 capsules",
+					"price": 120000
+				},
+				{
+					"brand": "dr. moritz",
+					"name": "magnesium citrate kids anti-stress gummies 60 count 100 mg",
+					"price": 85000
+				},
+				{
+					"brand": "trace minerals",
+					"name": "magnesium gummies tangerine naturally flavored 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "now",
+					"name": "high potency vitamin d-3, 5,000 iu, bone & immune health, 240 softgels",
+					"price": 65000
+				},
+				{
+					"brand": "now",
+					"name": "high potency vitamin d-3, 10,000 iu, bone & immune health, 240 softgels",
+					"price": 90000
+				},
+				{
+					"brand": "now",
+					"name": "chewable c-500 cherry flavor, antioxidant & collagen support, 100 tablets",
+					"price": 75000
+				},
+				{
+					"brand": "now",
+					"name": "nac, 1000 mg, free radical protection, 120 tablets",
+					"price": 120000
+				},
+				{
+					"brand": "now",
+					"name": "cod liver oil, 1000 mg extra strength, cardiovascular support, 180 softgels",
+					"price": 110000
+				},
+				{
+					"brand": "naturebell",
+					"name": "vitamin d3+k2 made with duo-ack in coconut oil 5000 iu vitamin d3 100 mcg vitamin k2 240 softgels",
+					"price": 110000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3+k2 2-in-1 formula 5,000 iu d3 + 100 mcg k2 300 softgels",
+					"price": 110000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3+k2 2-in-1 formula 5,000 iu d3 + 100 mcg k2-mk7 made with coconut oil 300 softgels",
+					"price": 125000
+				},
+				{
+					"brand": "nutricost",
+					"name": "acetyl l-carnitine 500mg 180 capsules",
+					"price": 95000
+				},
+				{
+					"brand": "nutricost",
+					"name": "nac vegan n-acetyl l-cysteine 600mg 180 capsules",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost",
+					"name": "dim diindolylmethane 300mg 120 capsules",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost",
+					"name": "msm methylsulfonylmethane 1g 500g unflavored powder",
+					"price": 95000
+				},
+				{
+					"brand": "nutricost",
+					"name": "glucomannan konjac root extract 1,800mg 180 capsules",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost kids",
+					"name": "elderberry with vitamin c & zinc 1,450mg 120 elderberry flavored gummies",
+					"price": 90000
+				},
+				{
+					"brand": "microingredients",
+					"name": "niacinamide (vitamin b3) flush-free 1,000 mg per serving 400 capsules dietary supplement",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "niacin vitamin b3 500mg 240 capsules 240 servings",
+					"price": 90000
+				},
+				{
+					"brand": "mary ruth's",
+					"name": "organic ionic zinc liquid drops strawberry lemon 4 fl oz (120 ml)",
+					"price": 100000
+				},
+				{
+					"brand": "carlson",
+					"name": "zinc 15 mg 250 tablets",
+					"price": 90000
+				},
+				{
+					"brand": "nutricost",
+					"name": "zinc picolinate 30 mg 240 capsules",
+					"price": 95000
+				},
+				{
+					"brand": "carlson",
+					"name": "chelated zinc 30 mg 250 tablets",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "zinc picolinate 50 mg 240 capsules",
+					"price": 95000
+				},
+				{
+					"brand": "nutribiotic",
+					"name": "immunity vitamin c + d3 & zinc 250 capsules",
+					"price": 115000
+				},
+				{
+					"brand": "deal supplement",
+					"name": "zinc selenium with copper 50 mg 240 capsules",
+					"price": 110000
+				},
+				{
+					"brand": "now",
+					"name": "eve tablets superior women's multi 90 tablets",
+					"price": 100000
+				},
+				{
+					"brand": "now",
+					"name": "biocell collagen hydrolyzed type ii joint & skin support 120 veg capsules",
+					"price": 120000
+				},
+				{
+					"brand": "now",
+					"name": "magnesium malate 1000 mg 180 tablets",
+					"price": 110000
+				},
+				{
+					"brand": "now",
+					"name": "natural beta carotene 7,500 mcg (25,000 iu) 180 softgels",
+					"price": 120000
+				},
+				{
+					"brand": "now",
+					"name": "liquid chlorophyll internal deodorizer super concentrated 16 fl. oz. (473 ml)",
+					"price": 95000
+				},
+				{
+					"brand": "naturebell",
+					"name": "magnesium glycinate 1,000 mg per serving double strength 240 capsules dietary supplement",
+					"price": 110000
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-glutamine unflavored 5g per serving 100 servings 500g per container",
+					"price": 135000
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 227 servings 8oz per container unflavored dietary supplement net wt. 8.1 oz (227 g)",
+					"price": 65000
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 454 servings 1lb per container unflavored dietary supplement net wt. 16.2 oz (1 lb) (454 g)",
+					"price": 100000
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 907 servings 2lb per container unflavored dietary supplement net wt. 32.4 oz (2 lb) (907 g)",
+					"price": 160000
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin c powder pure unflavored 2.2 lb (1 kg) dietary supplement gmo free gluten free lab tested",
+					"price": 150000
+				},
+				{
+					"brand": "calming and relaxation support",
+					"name": "magnesium citrate kids anti-stress gummies 60 count 100 mg",
+					"price": 85000
+				},
+				{
+					"brand": "trace minerals",
+					"name": "magnesium gummies mood support - relaxing tangerine naturally flavored 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "trace",
+					"name": "magnesium gummies supports relaxation, calm mood, immunity, & energy watermelon flavor 120 gummies",
+					"price": 120000
+				},
+				{
+					"brand": "now",
+					"name": "magnesium malate 1000 mg nervous system support 113 mg of elemental magnesium 180 tablets",
+					"price": 110000
+				},
+				{
+					"brand": "bioptimizers",
+					"name": "magnesium breakthrough vegan gluten-free soy-free premium magnesium complex 30 veggie caps version 4.0",
+					"price": 115000
+				},
+				{
+					"brand": "jarrow formulas",
+					"name": "vegan mastic gum gastric health 1000 mg 120 veggie capsules",
+					"price": 200000
+				},
+				{
+					"brand": "naturebell",
+					"name": "oregano oil 7,500 mg with black seed oil 2-in-1 formula 360 softgels",
+					"price": 145000
+				},
+				{
+					"brand": "zazzee",
+					"name": "extra strength organic bilberry, 6000 mg strength, 120 vegan capsules, 20:1 extract",
+					"price": 130000
+				},
+				{
+					"brand": "zazzee naturals",
+					"name": "myo + d-chiro + folate & vitamin d3, 2000 mg myo-inositol, 50 mg d-chiro inositol, 800 mcg folate and 10 mcg of vitamin d3, 120 vegan capsules, optimal 40:1 ratio",
+					"price": 130000
+				},
+				{
+					"brand": "zazzee",
+					"name": "extra strength saw palmetto, 6000 mg, 120 vegan capsules, 20:1 extract, standardized to 40% fatty acids",
+					"price": 120000
+				},
+				{
+					"brand": "zazzee naturals",
+					"name": "extra strength fenugreek 30:1 extract, 6000 mg strength, 120 vegan capsules",
+					"price": 135000
+				},
+				{
+					"brand": "zazzee naturals",
+					"name": "extra strength green tea 20:1 extract, 6000 mg strength, 150 vegan capsules, 98% polyphenols, 80% catechins & 50% egcg",
+					"price": 135000
+				},
+				{
+					"brand": "zazzee naturals",
+					"name": "pregnositol myo-inositol & d-chiro inositol powder, 183 servings, 13.8 oz (392 g), 6 month supply, optimal 40:1 blend",
+					"price": 260000
+				},
+				{
+					"brand": "nutricost",
+					"name": "melatonin 5mg 240 tablets",
+					"price": 85000
+				},
+				{
+					"brand": "nutricost",
+					"name": "dhea dehydroepiandrosterone 50mg 240 capsules 240 servings",
+					"price": 100000
+				}
+			]
+		},
+		"productsToRemove": {
+			"count": 110,
+			"note": "Products in DB but not in new inventory - may be discontinued",
+			"products": [
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Instant Creatine Monohydrate Powder",
+					"slug": "naturebell-instant-creatine-monohydrate-powder",
+					"price": 130000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Probiotic 200 Billion CFU – 40 Strains Per Serving",
+					"slug": "naturebell-probiotic-200-billion-cfu-40-strains-per-serving",
+					"price": 125000
+				},
+				{
+					"brand": "Nutricost",
+					"name": "Nutricost Turmeric Gummies",
+					"slug": "nutricost-turmeric-gummies",
+					"price": 130000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Sambucus Zinc-C with Elderberry Concentrate and Vitamin C, 60 Lozenges",
+					"slug": "now-foods-supplements-sambucus-zinc-c-with-elderberry-concentrate-and-vitamin-c-60-lozenges",
+					"price": 60000
+				},
+				{
+					"brand": "NOW",
+					"name": "Vitamin C-500 Chewable Orange",
+					"slug": "vitamin-c-500-chewable-orange",
+					"price": 75000
+				},
+				{
+					"brand": "NOW",
+					"name": "Now Foods C 1000, 250 Capsules",
+					"slug": "now-foods-c-1000-250-capsules",
+					"price": 110000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Glycine 1,000 mg Free-Form, Neurotransmitter Support*, 100 Veg Capsules",
+					"slug": "now-foods-supplements-glycine-1000-mg-free-form-neurotransmitter-support-100-veg-capsules",
+					"price": 70000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Supplements, Ubiquinol 100 mg, High Bioavailability (the Active Form of CoQ10), 120 Softgels",
+					"slug": "now-supplements-ubiquinol-100-mg-high-bioavailability-the-active-form-of-coq10-120-softgels",
+					"price": 200000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Methyl Folate 1,000 mcg, Metabolically Active Folate*, Co-Enzyme B Vitamin, 90 Tablets",
+					"slug": "now-foods-supplements-methyl-folate-1000-mcg-metabolically-active-folate-co-enzyme-b-vitamin-90-tablets",
+					"price": 80000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Candida Support with Pau D'Arco, Oregano Oil, Black Walnut & Caprylic Acid, 180 Veg Capsules",
+					"slug": "now-foods-supplements-candida-support-with-pau-darco-oregano-oil-black-walnut-caprylic-acid-180-veg-capsules",
+					"price": 130000
+				},
+				{
+					"brand": "Magtein",
+					"name": "Magnesium L Threonate, Magtein, Sleep and Cognitive Support – High Absorption – Most Bioavailable Form of Magnesium",
+					"slug": "magnesium-l-threonate-magtein-sleep-and-cognitive-support-high-absorption-most-bioavailable-form-of-magnesium",
+					"price": 140000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctors Best MSM Powder",
+					"slug": "doctors-best-msm-powder",
+					"price": 75000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Vitamin C Powder with Q-C",
+					"slug": "doctors-best-vitamin-c-powder-with-q-c",
+					"price": 100000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Vitamin D3 5,000 IU",
+					"slug": "doctors-best-vitamin-d3-5000-iu",
+					"price": 100000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctors Best Fully Active Methyl B12, Methylcobalamin, Energy, Memory, & Mood Support, Non-GMO, Gluten Free, Soy Free, Vegan 180 Veggie Caps",
+					"slug": "doctors-best-fully-active-methyl-b12-methylcobalamin-energy-memory-mood-support-non-gmo-gluten-free-soy-free-vegan-180-veggie-caps",
+					"price": 85000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Glucosamine Chondroitin Msm with OptiMSM Capsules",
+					"slug": "doctors-best-glucosamine-chondroitin-msm-with-optimsm-capsules",
+					"price": 190000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Organic Matcha Green Tea Powder First Harvest Ceremonial Grade 100% Pure Premium Matcha for Drinking and Latte No Additives",
+					"slug": "organic-matcha-green-tea-powder-first-harvest-ceremonial-grade-100-pure-premium-matcha-for-drinking-and-latte-no-additives",
+					"price": 140000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients Organic Black Seed Oil, 16 fl oz",
+					"slug": "micro-ingredients-organic-black-seed-oil-16-fl-oz",
+					"price": 140000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients Lutein & Zeaxanthin 40mg Softgels",
+					"slug": "micro-ingredients-lutein-zeaxanthin-40mg-softgels",
+					"price": 120000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Beta 1,3/1,6- D-Glucan 100 mg with Maitake Mushrooms, 90 Veg Capsules",
+					"slug": "now-foods-supplements-beta-1316-d-glucan-100-mg-with-maitake-mushrooms-90-veg-capsules",
+					"price": 75000
+				},
+				{
+					"brand": "NOW",
+					"name": "NOW Foods Supplements, Inulin Prebiotic Pure Powder, Certified Organic, Non-GMO Project Verified, Intestinal Support*",
+					"slug": "now-foods-supplements-inulin-prebiotic-pure-powder-certified-organic-non-gmo-project-verified-intestinal-support",
+					"price": 70000
+				},
+				{
+					"brand": "NOW",
+					"name": "Swanson Amino Acid L-Arginine 500 Milligrams 200 Capsules",
+					"slug": "swanson-amino-acid-l-arginine-500-milligrams-200-capsules",
+					"price": 95000
+				},
+				{
+					"brand": "Nutricost",
+					"name": "Nutricost Bromelain Powder 4 OZ - Non-GMO, Vegetarian, Gluten Free",
+					"slug": "nutricost-bromelain-powder-4-oz-non-gmo-vegetarian-gluten-free",
+					"price": 95000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Turkey Tail Mushroom Capsules",
+					"slug": "naturebell-turkey-tail-mushroom-capsules",
+					"price": 95000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Glutathione Supplement 2,000mg Per Serving, 240 Veggie Capsules",
+					"slug": "naturebell-glutathione-supplement-2000mg-per-serving-240-veggie-capsules",
+					"price": 130000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Astaxanthin 12mg, 240 Softgels",
+					"slug": "naturebell-astaxanthin-12mg-240-softgels",
+					"price": 145000
+				},
+				{
+					"brand": "Vital Nutrients",
+					"name": "Hyperbiotics Vital Nutrients Pro Kids Probiotic",
+					"slug": "hyperbiotics-vital-nutrients-pro-kids-probiotic",
+					"price": 120000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "HERBAMAMA Irish Sea Moss Gummies",
+					"slug": "herbamama-irish-sea-moss-gummies",
+					"price": 80000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "HERBAMAMA Mullein Gummies for Lungs",
+					"slug": "herbamama-mullein-gummies-for-lungs",
+					"price": 125000
+				},
+				{
+					"brand": "KAL",
+					"name": "KAL Melatonin 1mg Sleep Aid",
+					"slug": "kal-melatonin-1mg-sleep-aid",
+					"price": 80000
+				},
+				{
+					"brand": "Carlson",
+					"name": "Carlson - Kid's Chewable Vitamin C",
+					"slug": "carlson-kids-chewable-vitamin-c",
+					"price": 85000
+				},
+				{
+					"brand": "Nutricost",
+					"name": "Nutricost Pure MSM Powder",
+					"slug": "nutricost-pure-msm-powder",
+					"price": 95000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients Milk Thistle Supplement 6,000mg",
+					"slug": "micro-ingredients-milk-thistle-supplement-6000mg",
+					"price": 110000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Folic Acid 1,000 mcg, 500 Coconut Oil Softgels",
+					"slug": "folic-acid-1000-mcg-500-coconut-oil-softgels",
+					"price": 100000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients L-Theanine 400mg, 400 Softgels",
+					"slug": "micro-ingredients-l-theanine-400mg-400-softgels",
+					"price": 125000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Citicoline Supplements, CDP Choline, Citicoline 500mg Plus Tyrosine 50mg Per Serving, Optimized Dosage, 120 Capsules, 2 in 1 Formula, Dual Action Brain Supplement, Non-GMO",
+					"slug": "naturebell-citicoline-supplements-cdp-choline-citicoline-500mg-plus-tyrosine-50mg-per-serving-optimized-dosage-120-capsules-2-in-1-formula-dual-action-brain-supplement-non-gmo",
+					"price": 140000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "Potassium Citrate Supplement 99mg, 500 Capsules",
+					"slug": "potassium-citrate-supplement-99mg-500-capsules",
+					"price": 95000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "NatureBell Sunflower Lecithin 2,400mg, 240 Softgels",
+					"slug": "naturebell-sunflower-lecithin-2400mg-240-softgels",
+					"price": 125000
+				},
+				{
+					"brand": "Life Extension",
+					"name": "Life Extension High Potency Optimized Folate",
+					"slug": "life-extension-high-potency-optimized-folate",
+					"price": 85000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients Pure Magnesium Complex",
+					"slug": "micro-ingredients-pure-magnesium-complex",
+					"price": 130000
+				},
+				{
+					"brand": "Double Wood Supplements",
+					"name": "Magnesium Complex Supplement",
+					"slug": "magnesium-complex-supplement",
+					"price": 110000
+				},
+				{
+					"brand": "Nordic Naturals",
+					"name": "Nordic Naturals Baby’s DHA, Unflavored",
+					"slug": "nordic-naturals-babys-dha-unflavored",
+					"price": 95000
+				},
+				{
+					"brand": "Nordic Naturals",
+					"name": "Nordic Naturals Children's DHA Liquid",
+					"slug": "nordic-naturals-childrens-dha-liquid",
+					"price": 145000
+				},
+				{
+					"brand": "Enfamil",
+					"name": "Enfamil Baby Vitamin D-Vi-Sol Liquid Vitamin D Drops",
+					"slug": "enfamil-baby-vitamin-d-vi-sol-liquid-vitamin-d-drops",
+					"price": 70000
+				},
+				{
+					"brand": "Beworths",
+					"name": "B BEWORTHS Elderberry Gummies",
+					"slug": "b-beworths-elderberry-gummies",
+					"price": 90000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "Horbäach Mullein Leaf Extract Drops",
+					"slug": "horbach-mullein-leaf-extract-drops",
+					"price": 100000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "Mullein Drops for Lungs - USDA Organic Liquid - Mullein Leaf Extract Supplement - Made in USA - Lung & Bronchial Cleanse for Smokers - Respiratory Health Support - As Tincture, Tea, Pills - 4 fl oz",
+					"slug": "mullein-drops-for-lungs-usda-organic-liquid-mullein-leaf-extract-supplement-made-in-usa-lung-bronchial-cleanse-for-smokers-respiratory-health-support-as-tincture-tea-pills-4-fl-oz",
+					"price": 145000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "Irish Sea Moss Gummies 3000mg",
+					"slug": "irish-sea-moss-gummies-3000mg",
+					"price": 80000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "HERBAMAMA Sea Moss and Bladderwrack Capsules",
+					"slug": "herbamama-sea-moss-and-bladderwrack-capsules",
+					"price": 100000
+				},
+				{
+					"brand": "HERBAMAMA",
+					"name": "HERBAMAMA Vitex Berry Capsules",
+					"slug": "herbamama-vitex-berry-capsules",
+					"price": 105000
+				},
+				{
+					"brand": "Zazzee Naturals",
+					"name": "Zazzee PREGNOSITOL Powder",
+					"slug": "zazzee-pregnositol-powder",
+					"price": 200000
+				},
+				{
+					"brand": "Berrilys",
+					"name": "Bitter Apricot Kernels Organic Raw",
+					"slug": "bitter-apricot-kernels-organic-raw",
+					"price": 120000
+				},
+				{
+					"brand": "CARLYLE",
+					"name": "Carlyle DL-Phenylalanine",
+					"slug": "carlyle-dl-phenylalanine",
+					"price": 110000
+				},
+				{
+					"brand": "CALIFORNIA GOLD NUTRITION",
+					"name": "California Gold Nutrition Bone Boost Supplement",
+					"slug": "california-gold-nutrition-bone-boost-supplement",
+					"price": 120000
+				},
+				{
+					"brand": "Quality of Life",
+					"name": "Quality of Life Premium Kinoko Platinum AHCC Herbal Supplement",
+					"slug": "quality-of-life-premium-kinoko-platinum-ahcc-herbal-supplement",
+					"price": 300000
+				},
+				{
+					"brand": "NaturesPlus",
+					"name": "NaturesPlus Ultra-Zyme",
+					"slug": "naturesplus-ultra-zyme",
+					"price": 160000
+				},
+				{
+					"brand": "Heritage Store",
+					"name": "HERITAGE STORE Organic Castor Oil",
+					"slug": "heritage-store-organic-castor-oil",
+					"price": 120000
+				},
+				{
+					"brand": "aSquared Nutrition",
+					"name": "100% Natural Resveratrol - 1000mg Per Serving Max Strength (180 Capsules) Antioxidant Supplement, Trans-Resveratrol Pills for Heart Health & Pure, Polyphenols",
+					"slug": "100-natural-resveratrol-1000mg-per-serving-max-strength-180-capsules-antioxidant-supplement-trans-resveratrol-pills-for-heart-health-pure-polyphenols",
+					"price": 330000
+				},
+				{
+					"brand": "DETOXADINE",
+					"name": "Detoxadine - Organic Nascent Liquid Iodine Supplement Drops",
+					"slug": "detoxadine-organic-nascent-liquid-iodine-supplement-drops",
+					"price": 140000
+				},
+				{
+					"brand": "Maaci",
+					"name": "STAY ALIVE Ursolic Acid Supplement for Men & Women",
+					"slug": "stay-alive-ursolic-acid-supplement-for-men-women",
+					"price": 120000
+				},
+				{
+					"brand": "DIMMAK HERBS",
+					"name": "Certified Organic Tendon Mending Pills",
+					"slug": "certified-organic-tendon-mending-pills",
+					"price": 125000
+				},
+				{
+					"brand": "Carlson",
+					"name": "Carlson - Tocomin SupraBio, Full Spectrum Tocotrienol Complex, Non-GMO Tocotrienols, Alpha, Beta, Gamma, Delta, 120 Softgels",
+					"slug": "carlson-tocomin-suprabio-full-spectrum-tocotrienol-complex-non-gmo-tocotrienols-alpha-beta-gamma-delta-120-softgels",
+					"price": 160000
+				},
+				{
+					"brand": "Silverpeaks",
+					"name": "SILVERPEAKS Height Growth Gummies for Kids, Teens & Adults",
+					"slug": "silverpeaks-height-growth-gummies-for-kids-teens-adults",
+					"price": 150000
+				},
+				{
+					"brand": "TruHeight",
+					"name": "TruHeight Growth Gummies (Watermelon)",
+					"slug": "truheight-growth-gummies-watermelon",
+					"price": 160000
+				},
+				{
+					"brand": "Silverpeaks",
+					"name": "Growth Capsules to Grow Taller - Height Growth Maximizer with Calcium for Bone Strength",
+					"slug": "growth-capsules-to-grow-taller-height-growth-maximizer-with-calcium-for-bone-strength",
+					"price": 170000
+				},
+				{
+					"brand": "Bioteque Lab",
+					"name": "BIOTEQUELAB Height Growth Maximizer",
+					"slug": "biotequelab-height-growth-maximizer",
+					"price": 170000
+				},
+				{
+					"brand": "NaturesPlus",
+					"name": "NaturesPlus Animal Parade Gold Children's Multivitamin - Assorted Cherry, Orange & Grape Flavors - 120 Animal-Shaped Chewable Tablets, Pack of 2 - Vegan, Gluten Free - 120 Total Servings",
+					"slug": "naturesplus-animal-parade-gold-childrens-multivitamin-assorted-cherry-orange-grape-flavors-120-animal-shaped-chewable-tablets-pack-of-2-vegan-gluten-free-120-total-servings",
+					"price": 135000
+				},
+				{
+					"brand": "Zazzee",
+					"name": "Zazzee USDA Organic Bilberry 20:1 Extract",
+					"slug": "zazzee-usda-organic-bilberry-201-extract",
+					"price": 130000
+				},
+				{
+					"brand": "Zazzee Naturals",
+					"name": "Zazzee USDA Organic Vitex",
+					"slug": "zazzee-usda-organic-vitex",
+					"price": 130000
+				},
+				{
+					"brand": "SuperSmart",
+					"name": "Supersmart - Lactobacillus Rhamnosus GG 10 Billion CFU per Day (LGG Probiotic with Inulin) - Digestive & Immune Support - Vaginal Flora Health | Non-GMO & Gluten Free - 60 DR Capsules",
+					"slug": "supersmart-lactobacillus-rhamnosus-gg-10-billion-cfu-per-day-lgg-probiotic-with-inulin-digestive-immune-support-vaginal-flora-health-non-gmo-gluten-free-60-dr-capsules",
+					"price": 110000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Vitamin D3 5000 IU",
+					"slug": "doctors-best-vitamin-d3-5000-iu",
+					"price": 75000
+				},
+				{
+					"brand": "Nature's Bounty",
+					"name": "Nature's Bounty Zinc 50mg",
+					"slug": "natures-bounty-zinc-50mg",
+					"price": 65000
+				},
+				{
+					"brand": "Naturebell",
+					"name": "2 Pack Maximum Strength Zinc 100mg, Zinc Picolinate Supplement, 480 Capsules",
+					"slug": "2-pack-maximum-strength-zinc-100mg-zinc-picolinate-supplement-480-capsules",
+					"price": 110000
+				},
+				{
+					"brand": "NOW Foods",
+					"name": "NOW Foods Supplements, Vitamin C-1,000 with 100 mg of Bioflavonoids",
+					"slug": "now-foods-supplements-vitamin-c-1000-with-100-mg-of-bioflavonoids",
+					"price": 110000
+				},
+				{
+					"brand": "CARLYLE",
+					"name": "Carlyle Oregano Oil 4000mg Supplement",
+					"slug": "carlyle-oregano-oil-4000mg-supplement",
+					"price": 75000
+				},
+				{
+					"brand": "HEALTHS HARMONY",
+					"name": "Black Seed Oil - 180 Softgel Capsules (Non-GMO & Vegan) Premium Cold-Pressed Nigella Sativa Producing Pure Black Cumin Seed Oil with Vitamin E - 500mg Each, 1000mg Per 2 Capsule Serving",
+					"slug": "black-seed-oil-180-softgel-capsules-non-gmo-vegan-premium-cold-pressed-nigella-sativa-producing-pure-black-cumin-seed-oil-with-vitamin-e-500mg-each-1000mg-per-2-capsule-serving",
+					"price": 100000
+				},
+				{
+					"brand": "HEALTHS HARMONY",
+					"name": "Adrenal System Support & Cortisol Manager (2 Month Supply)",
+					"slug": "adrenal-system-support-cortisol-manager-2-month-supply",
+					"price": 110000
+				},
+				{
+					"brand": "HEALTHS HARMONY",
+					"name": "MegaFood Thyroid Strength - Mineral Supplement",
+					"slug": "megafood-thyroid-strength-mineral-supplement",
+					"price": 130000
+				},
+				{
+					"brand": "Double Wood Supplements",
+					"name": "TUDCA Bile Salts Liver Support Supplement",
+					"slug": "tudca-bile-salts-liver-support-supplement",
+					"price": 125000
+				},
+				{
+					"brand": "Doctor's Recipes",
+					"name": "Doctor's Recipes Women’s Probiotic",
+					"slug": "doctors-recipes-womens-probiotic",
+					"price": 105000
+				},
+				{
+					"brand": "Mega",
+					"name": "Sookwang Korea MEGADOSE Vitamin C Powder 3000mg",
+					"slug": "sookwang-korea-megadose-vitamin-c-powder-3000mg",
+					"price": 100000
+				},
+				{
+					"brand": "Nutricost",
+					"name": "PURE ORIGINAL INGREDIENTS Vitamin C Powder",
+					"slug": "pure-original-ingredients-vitamin-c-powder",
+					"price": 150000
+				},
+				{
+					"brand": "Berrilys",
+					"name": "Berrilys Organic Bitter Apricot Kernels",
+					"slug": "berrilys-organic-bitter-apricot-kernels",
+					"price": 120000
+				},
+				{
+					"brand": "Life Extension",
+					"name": "Life Extension Optimized Chromium with Crominex 3+",
+					"slug": "life-extension-optimized-chromium-with-crominex-3",
+					"price": 60000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Fully Active B12 1500 mcg",
+					"slug": "doctors-best-fully-active-b12-1500-mcg",
+					"price": 85000
+				},
+				{
+					"brand": "KAL",
+					"name": "KAL Melatonin DropIns 3mg",
+					"slug": "kal-melatonin-dropins-3mg",
+					"price": 80000
+				},
+				{
+					"brand": "Microingredients",
+					"name": "Micro Ingredients CoQ10 100mg Per Serving",
+					"slug": "micro-ingredients-coq10-100mg-per-serving",
+					"price": 105000
+				},
+				{
+					"brand": "Bio Vitalica",
+					"name": "BIO VITALICA Sea Moss Gummies Elderberry",
+					"slug": "bio-vitalica-sea-moss-gummies-elderberry",
+					"price": 90000
+				},
+				{
+					"brand": "Beworths",
+					"name": "B BEWORTHS Elderberry Gummies & Irish Sea Moss",
+					"slug": "b-beworths-elderberry-gummies-irish-sea-moss",
+					"price": 90000
+				},
+				{
+					"brand": "Nordic Naturals",
+					"name": "Nordic Naturals Children’s DHA Liquid",
+					"slug": "nordic-naturals-childrens-dha-liquid",
+					"price": 100000
+				},
+				{
+					"brand": "Nordic Naturals",
+					"name": "Nordic Naturals Zero Sugar Children’s DHA Gummy Chews",
+					"slug": "nordic-naturals-zero-sugar-childrens-dha-gummy-chews",
+					"price": 100000
+				},
+				{
+					"brand": "Jarrow Formulas",
+					"name": "Jarrow Formulas® Type II Collagen Complex",
+					"slug": "jarrow-formulas-type-ii-collagen-complex",
+					"price": 100000
+				},
+				{
+					"brand": "Double Wood Supplements",
+					"name": "Serrapeptase 240,000 SPU Max Potency (120 Veggie Capsules)",
+					"slug": "serrapeptase-240000-spu-max-potency-120-veggie-capsules",
+					"price": 110000
+				},
+				{
+					"brand": "Jarrow Formulas",
+					"name": "Jarrow Formulas® Toco-Sorb Cardiovascular Health and Brain Function Support",
+					"slug": "jarrow-formulas-toco-sorb-cardiovascular-health-and-brain-function-support",
+					"price": 110
+				},
+				{
+					"brand": "Sveikata",
+					"name": "Sveikata Liposomal Tocotrienols 1000mg",
+					"slug": "sveikata-liposomal-tocotrienols-1000mg",
+					"price": 120000
+				},
+				{
+					"brand": "Wellness Extract",
+					"name": "WELLNESS EXTRACT Eannatto Tocotrienols Vitamin E Supplements Tocopherol Free, Non-GMO, Gluten Free & Antioxidant",
+					"slug": "wellness-extract-eannatto-tocotrienols-vitamin-e-supplements-tocopherol-free-non-gmo-gluten-free-antioxidant",
+					"price": 120000
+				},
+				{
+					"brand": "Carlson",
+					"name": "Carlson - Tocomin SupraBio, Full Spectrum Tocotrienol Complex, Non-GMO Tocotrienols, Alpha, Beta, Gamma, Delta, 60 Softgels",
+					"slug": "carlson-tocomin-suprabio-full-spectrum-tocotrienol-complex-non-gmo-tocotrienols-alpha-beta-gamma-delta-60-softgels",
+					"price": 160000
+				},
+				{
+					"brand": "NutriVein",
+					"name": "Nutrivein Premium Berberine HCL 1200 mg with Ceylon Cinnamon",
+					"slug": "nutrivein-premium-berberine-hcl-1200-mg-with-ceylon-cinnamon",
+					"price": 130
+				},
+				{
+					"brand": "Deal Supplement",
+					"name": "DEAL SUPPLEMENT Berberine Max Supplement with Turmeric",
+					"slug": "deal-supplement-berberine-max-supplement-with-turmeric",
+					"price": 135000
+				},
+				{
+					"brand": "Nutriflair",
+					"name": "NutriFlair Premium Berberine HCL 1200mg, 120 Capsules - Plus Pure True Ceylon Cinnamon",
+					"slug": "nutriflair-premium-berberine-hcl-1200mg-120-capsules-plus-pure-true-ceylon-cinnamon",
+					"price": 145000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctors Best MSM, Supports Hair, Skin, Nails, & Joints, Non-GMO, Gluten Free, Vegan 120 Tablets",
+					"slug": "doctors-best-msm-supports-hair-skin-nails-joints-non-gmo-gluten-free-vegan-120-tablets",
+					"price": 75000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Glucosamine Chondroitin MSM",
+					"slug": "doctors-best-glucosamine-chondroitin-msm",
+					"price": 190000
+				},
+				{
+					"brand": "New Age",
+					"name": "NEW AGE AREDS 2 Eye Vitamins",
+					"slug": "new-age-areds-2-eye-vitamins",
+					"price": 110000
+				},
+				{
+					"brand": "SuperSmart",
+					"name": "Supersmart - Lactobacillus Reuteri 5 Billion CFU per Day - Probiotic Supplement | Non-GMO & Gluten Free - 60 DR Capsules",
+					"slug": "supersmart-lactobacillus-reuteri-5-billion-cfu-per-day-probiotic-supplement-non-gmo-gluten-free-60-dr-capsules",
+					"price": 90000
+				},
+				{
+					"brand": "Nutricost",
+					"name": "Nutricost Tart Cherry Extract 3000mg Equivalent (from 300mg of 10:1 Extract), 240 Vegetarian Capsules - Gluten Free, Non-GMO",
+					"slug": "nutricost-tart-cherry-extract-3000mg-equivalent-from-300mg-of-101-extract-240-vegetarian-capsules-gluten-free-non-gmo",
+					"price": 90000
+				},
+				{
+					"brand": "NOW",
+					"name": "THORNE - L-Glutamine - Amino Acid Supplement for GI Health and Immune Function - Promotes Post-Exercise Muscle Cell Repair* - 90 Servings",
+					"slug": "thorne-l-glutamine-amino-acid-supplement-for-gi-health-and-immune-function-promotes-post-exercise-muscle-cell-repair-90-servings",
+					"price": 70000
+				},
+				{
+					"brand": "DR TOBIAS",
+					"name": "Dr. Tobias Turmeric Curcumin 1500mg with BioPerine",
+					"slug": "dr-tobias-turmeric-curcumin-1500mg-with-bioperine",
+					"price": 160000
+				},
+				{
+					"brand": "Doctor's Best",
+					"name": "Doctor's Best Vitamin C with Q-C",
+					"slug": "doctors-best-vitamin-c-with-q-c",
+					"price": 180000
+				},
+				{
+					"brand": "FURTHER FOOD",
+					"name": "Further Food Collagen Peptides Powder",
+					"slug": "further-food-collagen-peptides-powder",
+					"price": 220000
+				},
+				{
+					"brand": "Wellness Extract",
+					"name": "Ecological Formulas - Annatto Tocotrienols 125 mg 60 gels",
+					"slug": "ecological-formulas-annatto-tocotrienols-125-mg-60-gels",
+					"price": 120000
+				}
+			]
+		},
+		"priceUpdates": {
+			"count": 73,
+			"note": "Products with price changes that need updating",
+			"increases": 30,
+			"decreases": 43,
+			"products": [
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3+k2 1,000 iu d3 + 25 mcg k2 mk-7 240 softgels",
+					"oldPrice": 115000,
+					"newPrice": 100000,
+					"change": "-13.0%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin d3 & k2 10,000 iu + 200 mcg 300 softgels",
+					"oldPrice": 100000,
+					"newPrice": 125000,
+					"change": "+25.0%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "5-htp+ gaba l-theanine vitamin b6 240 softgels",
+					"oldPrice": 125000,
+					"newPrice": 135000,
+					"change": "+8.0%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "extra strength k2 as mk-7 vitamin d3 & k2 10,000 iu + 200 mcg made with coconut oil 300 softgels dietary supplement",
+					"oldPrice": 70000,
+					"newPrice": 125000,
+					"change": "+78.6%"
+				},
+				{
+					"brand": "wholesome story",
+					"name": "myo & d-chiro inositol 40:1 ratio 120 vegetarian capsules",
+					"oldPrice": 270000,
+					"newPrice": 120000,
+					"change": "-55.6%"
+				},
+				{
+					"brand": "physician's choice",
+					"name": "women's probiotic 6 diverse strains 50 billion cfus 60 capsules",
+					"oldPrice": 130000,
+					"newPrice": 175000,
+					"change": "+34.6%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "dim+ diindolylmethane 400 mg natural vitamin e cdg broccoli extract black pepper extract made with pumpkin seed oil highly bioavailable 240 softgels",
+					"oldPrice": 145000,
+					"newPrice": 125000,
+					"change": "-13.8%"
+				},
+				{
+					"brand": "carlson",
+					"name": "liquid vitamin d super daily d3, 2,000 iu (50 mcg) per drop, 365 vegetarian drops, 0.35 fl oz (10.3 ml)",
+					"oldPrice": 95000,
+					"newPrice": 85000,
+					"change": "-10.5%"
+				},
+				{
+					"brand": "carlson",
+					"name": "zinc, 15 mg, 100 tablets, 100 servings",
+					"oldPrice": 90000,
+					"newPrice": 55000,
+					"change": "-38.9%"
+				},
+				{
+					"brand": "carlson",
+					"name": "kid's chewable iron 15 mg superior absorption 60 tablets 60 servings",
+					"oldPrice": 110000,
+					"newPrice": 70000,
+					"change": "-36.4%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "extra strength omega-3 fish oil 1,000 mg per serving 180 mg epa + 120 mg dha lemon flavor burpless 300 softgels",
+					"oldPrice": 145000,
+					"newPrice": 100000,
+					"change": "-31.0%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "pure triple magnesium complex glycinate + malate + taurate 400 mg per serving enhanced with fat-soluble vitamin c 300 capsules",
+					"oldPrice": 110000,
+					"newPrice": 130000,
+					"change": "+18.2%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "magnesium citrate 400 mg per serving with vitamin d3 & b6 240 capsules",
+					"oldPrice": 125000,
+					"newPrice": 85000,
+					"change": "-32.0%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "glycine 2,000 mg per serving double strength 240 vegetarian capsules",
+					"oldPrice": 90000,
+					"newPrice": 110000,
+					"change": "+22.2%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "premium hyaluronic acid 250 mg plus vitamin c & biotin 240 capsules",
+					"oldPrice": 120000,
+					"newPrice": 110000,
+					"change": "-8.3%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "pure magnesium glycinate 500 mg 240 vegetarian capsules",
+					"oldPrice": 130000,
+					"newPrice": 110000,
+					"change": "-15.4%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "liver cleanse detox repair 240 vegetarian capsules",
+					"oldPrice": 110000,
+					"newPrice": 120000,
+					"change": "+9.1%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "pure turmeric curcumin 95 1,000 mg per serving 95% curcuminoids highly bioavailable bee propolis ginger black pepper extract mct oil fat-soluble vitamin c 120 vegetarian capsules dietary supplement",
+					"oldPrice": 150000,
+					"newPrice": 130000,
+					"change": "-13.3%"
+				},
+				{
+					"brand": "naturewise",
+					"name": "made with organic turmeric curcumin plus organic ginger & bioperine 2250 mg of organic turmeric curcumin 500 mg of curcuminoids to support heart health & promote strong joints 360 vegan capsules dietary supplement",
+					"oldPrice": 135000,
+					"newPrice": 180000,
+					"change": "+33.3%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "vitamin a 25,000 iu made with coconut oil 500 softgels dietary supplement",
+					"oldPrice": 110000,
+					"newPrice": 100000,
+					"change": "-9.1%"
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "magnesium taurate 1500 mg per serving 210 capsules",
+					"oldPrice": 130000,
+					"newPrice": 110000,
+					"change": "-15.4%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "triple complex magnesium glycinate + citrate + malate providing 300 mg of elemental magnesium 240 capsules",
+					"oldPrice": 100000,
+					"newPrice": 130000,
+					"change": "+30.0%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "magnesium citrate 500 mg high potency elemental magnesium 240 capsules",
+					"oldPrice": 95000,
+					"newPrice": 105000,
+					"change": "+10.5%"
+				},
+				{
+					"brand": "nutribiotic",
+					"name": "vitamin c 1000 mg capsules 100 capsules",
+					"oldPrice": 170000,
+					"newPrice": 65000,
+					"change": "-61.8%"
+				},
+				{
+					"brand": "nutribiotic",
+					"name": "vitamin c 1000 mg capsules 250 capsules",
+					"oldPrice": 110000,
+					"newPrice": 100000,
+					"change": "-9.1%"
+				},
+				{
+					"brand": "nutribiotic",
+					"name": "vitamin c + d3 & zinc pharmaceutical grade 250 capsules",
+					"oldPrice": 95000,
+					"newPrice": 115000,
+					"change": "+21.1%"
+				},
+				{
+					"brand": "nutribiotic",
+					"name": "vitamin c 1000 mg capsules 500 capsules",
+					"oldPrice": 100000,
+					"newPrice": 170000,
+					"change": "+70.0%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c with zinc 1,000mg 120 capsules",
+					"oldPrice": 65000,
+					"newPrice": 95000,
+					"change": "+46.2%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c with rose hips 1,000mg 240 capsules",
+					"oldPrice": 85000,
+					"newPrice": 100000,
+					"change": "+17.6%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin c ascorbic acid 1g per serving 8oz (227 g) unflavored",
+					"oldPrice": 160000,
+					"newPrice": 65000,
+					"change": "-59.4%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "zinc quercetin vitamin c + d3 7 in 1 formula 240 capsules",
+					"oldPrice": 120000,
+					"newPrice": 110000,
+					"change": "-8.3%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "liposomal vitamin c 2,500 mg per serving 240 vegetarian capsules",
+					"oldPrice": 95000,
+					"newPrice": 100000,
+					"change": "+5.3%"
+				},
+				{
+					"brand": "deal supplement",
+					"name": "berberine max 5,000 mg per serving herbal equivalent 240 vegetarian capsules",
+					"oldPrice": 140000,
+					"newPrice": 135000,
+					"change": "-3.6%"
+				},
+				{
+					"brand": "doctor's best",
+					"name": "glucosamine chondroitin msm optimsm 240 veggie caps",
+					"oldPrice": 85000,
+					"newPrice": 145000,
+					"change": "+70.6%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "organic chlorella broken cell wall 10 oz (283 g) powder",
+					"oldPrice": 140000,
+					"newPrice": 125000,
+					"change": "-10.7%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "black seed oil 3,000 mg per serving with oil of oregano 240 softgels",
+					"oldPrice": 150000,
+					"newPrice": 145000,
+					"change": "-3.3%"
+				},
+				{
+					"brand": "microingredients",
+					"name": "astaxanthin from microalgae triple strength 12 mg 120 softgels",
+					"oldPrice": 140000,
+					"newPrice": 145000,
+					"change": "+3.6%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "premium hyaluronic acid 250 mg per serving plus vitamin c & biotin skin hydration, joint, connective tissue support 240 capsules",
+					"oldPrice": 160000,
+					"newPrice": 110000,
+					"change": "-31.3%"
+				},
+				{
+					"brand": "lovebug",
+					"name": "baby probiotics 6 months - 12 months 4 billion cfu 30 single serve stick packs dietary supplement",
+					"oldPrice": 110000,
+					"newPrice": 120000,
+					"change": "+9.1%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "uva ursi 4,500mg 240 capsules",
+					"oldPrice": 100000,
+					"newPrice": 90000,
+					"change": "-10.0%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "tart cherry 3,000mg 240 capsules",
+					"oldPrice": 85000,
+					"newPrice": 90000,
+					"change": "+5.9%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "alpha gpc 600mg 120 capsules",
+					"oldPrice": 85000,
+					"newPrice": 120000,
+					"change": "+41.2%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "milk thistle 1,000mg 240 capsules",
+					"oldPrice": 170000,
+					"newPrice": 85000,
+					"change": "-50.0%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "cdp choline citicoline 300mg 60 capsules",
+					"oldPrice": 100000,
+					"newPrice": 90000,
+					"change": "-10.0%"
+				},
+				{
+					"brand": "nutricost women",
+					"name": "myo & d-chiro inositol 2,000mg 50mg 120 capsules",
+					"oldPrice": 110000,
+					"newPrice": 95000,
+					"change": "-13.6%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "ashwagandha root extract 600mg 120 capsules",
+					"oldPrice": 90000,
+					"newPrice": 85000,
+					"change": "-5.6%"
+				},
+				{
+					"brand": "nutricost women",
+					"name": "boric acid vaginal suppository 600mg 30 capsules",
+					"oldPrice": 75000,
+					"newPrice": 55000,
+					"change": "-26.7%"
+				},
+				{
+					"brand": "nutricost women",
+					"name": "boric acid vaginal suppository 600mg 60 capsules",
+					"oldPrice": 120000,
+					"newPrice": 75000,
+					"change": "-37.5%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "choline 500 mg per serving with omega-3 240 capsules",
+					"oldPrice": 130000,
+					"newPrice": 95000,
+					"change": "-26.9%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "choline bitartrate 650mg per serving 240 capsules",
+					"oldPrice": 90000,
+					"newPrice": 100000,
+					"change": "+11.1%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "selenium 200mcg 240 capsules 240 servings dietary supplement",
+					"oldPrice": 90000,
+					"newPrice": 85000,
+					"change": "-5.6%"
+				},
+				{
+					"brand": "lovebug",
+					"name": "baby probiotics 4 billion cfu 30 single serve stick packs",
+					"oldPrice": 110000,
+					"newPrice": 120000,
+					"change": "+9.1%"
+				},
+				{
+					"brand": "herbamama",
+					"name": "mullein dietary supplement 1200 mg 100 capsules",
+					"oldPrice": 145000,
+					"newPrice": 100000,
+					"change": "-31.0%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "double strength d3+k2 10,000 iu per serving 200 mcg per serving 240 softgels",
+					"oldPrice": 135000,
+					"newPrice": 130000,
+					"change": "-3.7%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "quercetin 1,000 mg per serving double strength 240 capsules",
+					"oldPrice": 100000,
+					"newPrice": 145000,
+					"change": "+45.0%"
+				},
+				{
+					"brand": "naturebell",
+					"name": "coq10 400 mg per serving with omega-3 240 capsules",
+					"oldPrice": 95000,
+					"newPrice": 130000,
+					"change": "+36.8%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "5-htp 100mg 240 capsules",
+					"oldPrice": 115000,
+					"newPrice": 110000,
+					"change": "-4.3%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "betaine hcl + pepsin 790mg 240 capsules 240 servings dietary supplement",
+					"oldPrice": 95000,
+					"newPrice": 85000,
+					"change": "-10.5%"
+				},
+				{
+					"brand": "now",
+					"name": "high potency vitamin d-3, 2,000 iu, 240 softgels",
+					"oldPrice": 90000,
+					"newPrice": 65000,
+					"change": "-27.8%"
+				},
+				{
+					"brand": "lovebug",
+					"name": "lovebug baby probiotics 6 months - 12 months 4 billion cfu 30 single serve stick packs",
+					"oldPrice": 110000,
+					"newPrice": 120000,
+					"change": "+9.1%"
+				},
+				{
+					"brand": "culturelle",
+					"name": "culturelle probiotics kids purely probiotics packets 50 single serve packets",
+					"oldPrice": 95000,
+					"newPrice": 170000,
+					"change": "+78.9%"
+				},
+				{
+					"brand": "double wood supplements",
+					"name": "lumbrokinase 150 mg per serving 10,000 fu / gram high activity 120 capsules dietary supplement",
+					"oldPrice": 120000,
+					"newPrice": 110000,
+					"change": "-8.3%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "niacin vitamin b3 500mg 240 capsules",
+					"oldPrice": 95000,
+					"newPrice": 90000,
+					"change": "-5.3%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "ashwagandha root extract 600mg 120 capsules 120 servings",
+					"oldPrice": 110000,
+					"newPrice": 85000,
+					"change": "-22.7%"
+				},
+				{
+					"brand": "zazzee",
+					"name": "extra strength saw palmetto 120 vegan capsules 6000 mg 20:1 extract",
+					"oldPrice": 120000,
+					"newPrice": 115000,
+					"change": "-4.2%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "l-proline 1000mg 180 capsules 90 servings",
+					"oldPrice": 100000,
+					"newPrice": 95000,
+					"change": "-5.0%"
+				},
+				{
+					"brand": "now",
+					"name": "l-arginine 500 mg 250 veg capsules",
+					"oldPrice": 70000,
+					"newPrice": 95000,
+					"change": "+35.7%"
+				},
+				{
+					"brand": "now sports",
+					"name": "amino complete amino acids 360 veg capsules",
+					"oldPrice": 120000,
+					"newPrice": 145000,
+					"change": "+20.8%"
+				},
+				{
+					"brand": "now",
+					"name": "high potency vitamin d-3, 2,000 iu, bone & immune health, 240 softgels",
+					"oldPrice": 90000,
+					"newPrice": 65000,
+					"change": "-27.8%"
+				},
+				{
+					"brand": "now",
+					"name": "candida support, intestinal health, 180 veg capsules",
+					"oldPrice": 110000,
+					"newPrice": 130000,
+					"change": "+18.2%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "melatonin 10mg 240 capsules",
+					"oldPrice": 100000,
+					"newPrice": 85000,
+					"change": "-15.0%"
+				},
+				{
+					"brand": "nutricost",
+					"name": "vitamin b complex 462mg 240 capsules",
+					"oldPrice": 65000,
+					"newPrice": 130000,
+					"change": "+100.0%"
+				},
+				{
+					"brand": "jarrow formulas",
+					"name": "vegan mastic gum gastric health 1000 mg 60 veggie capsules",
+					"oldPrice": 200000,
+					"newPrice": 100000,
+					"change": "-50.0%"
+				}
+			]
+		},
+		"noChanges": {
+			"count": 130,
+			"note": "Products that are already up to date"
+		}
+	},
+	"quickStats": {
+		"Total operations needed": 375,
+		"Products to add": 192,
+		"Products to remove": 110,
+		"Prices to update": 73,
+		"Already matched": 130
+	}
 }

@@ -1,4 +1,5 @@
 import { makePersisted } from "@solid-primitives/storage";
+import type { CartItems } from "@vit/shared/types";
 import { createMemo, createRoot, createSignal, onMount } from "solid-js";
 import { createStore } from "solid-js/store";
 import {
@@ -6,7 +7,6 @@ import {
 	trackCartOpened,
 	trackRemoveFromCart,
 } from "@/lib/analytics";
-import type { CartItems } from "@/lib/types";
 
 const safeStorage: Storage = {
 	getItem: (key: string) => {
@@ -112,13 +112,11 @@ export const cart = createRoot(() => {
 		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
 
 		add: (product: CartItems) => {
-			console.log("product", product);
 			const index = cartStore.items.findIndex(
 				(item) => item.productId === product.productId,
 			);
 
 			if (index !== -1) {
-				console.log("updating quantity", index, product.quantity);
 				setCart("items", index, "quantity", (q) => q + 1);
 			} else {
 				setCart("items", cartStore.items.length, product);

@@ -6,7 +6,6 @@ import { createContext } from "../lib/context";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Admin tRPC
 app.use(
 	"/admin/*",
 	trpcServer({
@@ -28,7 +27,6 @@ app.use(
 	}),
 );
 
-// Store tRPC
 app.use(
 	"/store/*",
 	trpcServer({

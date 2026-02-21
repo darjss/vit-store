@@ -1,4 +1,5 @@
 import { createLogger, createRequestContext } from "@vit/logger";
+import type { ImageUrlArray } from "@vit/shared";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
 
@@ -8,8 +9,6 @@ const CDN_BASE_URL = "https://cdn.darjs.dev";
 const R2_PUBLIC_URL = "https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
-
-type ImageUrlArray = { url: string }[];
 
 function extensionFromContentType(contentType: string): string {
 	if (contentType.includes("png")) return "png";
@@ -29,7 +28,6 @@ function sanitizePrefix(prefix: string | undefined): string {
 		.slice(0, 120);
 }
 
-// POST /upload/products (main product images)
 app.post("/products", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);
@@ -148,7 +146,6 @@ app.post("/products", async (c) => {
 	}
 });
 
-// POST /upload/brands
 app.post("/brands", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);
@@ -220,7 +217,6 @@ app.post("/brands", async (c) => {
 	}
 });
 
-// POST /upload/images/urls (batch URL upload)
 app.post("/images/urls", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);

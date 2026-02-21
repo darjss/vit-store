@@ -8,7 +8,6 @@ import { Hono } from "hono";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// POST /admin/sync-upstash
 app.post("/sync-upstash", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);
@@ -50,7 +49,7 @@ app.post("/sync-upstash", async (c) => {
 				total: 0,
 			});
 		}
-		const clear = await clearUpstashProductsIndex();
+		const _clear = await clearUpstashProductsIndex();
 		const result = await bulkSyncProductsToUpstash(products);
 		const durationMs = Date.now() - startTime;
 

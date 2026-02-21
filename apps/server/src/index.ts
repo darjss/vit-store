@@ -5,6 +5,7 @@ import { createDb } from "@vit/api/db";
 import { ProductsTable } from "@vit/api/db/schema";
 import { sendEmail, smsGateway } from "@vit/api/integrations";
 import { createLogger, loggerMiddleware } from "@vit/logger";
+import type { RestockSubscription } from "@vit/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -25,13 +26,6 @@ const DEFAULT_CORS_ORIGINS = [
 const app = new Hono<{ Bindings: Env }>();
 const RESTOCK_WATCH_PRODUCTS_KEY = "restock:watch:products";
 
-type RestockSubscription = {
-	productId: number;
-	channel: "sms" | "email";
-	contact: string;
-	createdAt: string;
-};
-
 const createRedisClient = (env: Env) => {
 	return new Redis({
 		url: env.UPSTASH_REDIS_REST_URL,
@@ -39,7 +33,6 @@ const createRedisClient = (env: Env) => {
 	});
 };
 
-// Global middleware
 app.use(
 	loggerMiddleware({
 		excludePaths: ["/health-check", "/favicon.ico", "/"],
@@ -67,7 +60,6 @@ app.use("/*", (c, next) => {
 	return corsMiddleware(c, next);
 });
 
-// tPC routers
 app.use(
 	"/trpc/admin/*",
 	trpcServer({
@@ -110,7 +102,6 @@ app.use(
 	}),
 );
 
-// Route mounting
 app.route("/", healthRoutes);
 app.route("/admin", authRoutes);
 app.route("/upload", uploadRoutes);
@@ -210,7 +201,11 @@ const runRestockNotifier = async (env: Env) => {
 				await redis.del(subscriberDataKey);
 				await redis.srem(productSubscribersKey, subscriberId);
 			} catch (error) {
-				console.error("restock.notify_failed", {
+				const log = createLogger({
+					requestId: crypto.randomUUID(),
+					userType: "system",
+				});
+				log.error("restock.notify_failed", error, {
 					productId,
 					subscriberId,
 					error,
