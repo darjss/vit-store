@@ -29,16 +29,9 @@ export function createSessionManager<
 		kvSessionPrefix,
 		kvUserSessionPrefix,
 		cookieName,
-		domainEnvVar,
 		sessionDurationMs,
 		renewalThresholdMs,
 	} = config;
-
-	const cookieDomain = process.env[domainEnvVar];
-	const cookieDomainOption =
-		typeof cookieDomain === "string" && cookieDomain.length > 0
-			? cookieDomain
-			: undefined;
 
 	function getUserIdentifier(user: TUser): string {
 		if ("phone" in user && user.phone) {
@@ -186,6 +179,12 @@ export function createSessionManager<
 		token: string,
 		expiresAt: Date,
 	): void {
+		const cookieDomain = c.env.DOMAIN;
+		const cookieDomainOption =
+			typeof cookieDomain === "string" && cookieDomain.length > 0
+				? cookieDomain
+				: undefined;
+
 		setCookie(c, cookieName, token, {
 			httpOnly: true,
 			sameSite: "None",
@@ -197,6 +196,12 @@ export function createSessionManager<
 	}
 
 	function deleteSessionTokenCookie(ctx: Context): void {
+		const cookieDomain = ctx.c.env.DOMAIN;
+		const cookieDomainOption =
+			typeof cookieDomain === "string" && cookieDomain.length > 0
+				? cookieDomain
+				: undefined;
+
 		deleteCookie(ctx.c, cookieName, {
 			httpOnly: true,
 			sameSite: "None",
