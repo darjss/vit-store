@@ -4,13 +4,12 @@ import * as v from "valibot";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const category = router({
-	getAllCategories: adminProcedure.query(async () => {
+	getAllCategories: adminProcedure.query(async ({ ctx }) => {
 		try {
-			console.log("fetching categories");
 			const categories = await categoryQueries.admin.getAllCategories();
 			return categories;
 		} catch (error) {
-			console.error("Error fetching categories:", error);
+			ctx.log.error("getAllCategories", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Error fetching categories",
@@ -25,12 +24,12 @@ export const category = router({
 				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				await categoryQueries.admin.createCategory(input.name);
 				return { message: "Successfully added category" };
 			} catch (error) {
-				console.error("Error adding category:", error);
+				ctx.log.error("addCategory", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Error adding category",
@@ -46,13 +45,13 @@ export const category = router({
 				name: v.pipe(v.string(), v.minLength(1, "Category name is required")),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id, name } = input;
 				await categoryQueries.admin.updateCategory(id, name);
 				return { message: "Successfully updated category" };
 			} catch (error) {
-				console.error("Error updating category:", error);
+				ctx.log.error("updateCategory", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Error updating category",
@@ -67,13 +66,13 @@ export const category = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
 				await categoryQueries.admin.deleteCategory(id);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
-				console.error("Error deleting category:", error);
+				ctx.log.error("deleteCategory", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Error deleting category",
@@ -88,7 +87,7 @@ export const category = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const { id } = input;
 				const category = await categoryQueries.admin.getCategoryById(id);
@@ -102,7 +101,7 @@ export const category = router({
 
 				return category;
 			} catch (error) {
-				console.error("Error fetching category by ID:", error);
+				ctx.log.error("getCategoryById", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Error fetching category by ID",

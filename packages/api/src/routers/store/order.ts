@@ -62,20 +62,57 @@ export const order = router({
 			try {
 				const storeOrderQ = orderQueries.store;
 				const storeCustomerQ = customerQueries.store;
-				const adminPaymentQ = paymentQueries.admin;
+				const _adminPaymentQ = paymentQueries.admin;
 
-				const products = await storeOrderQ.getProductsByIds(
-					input.products.map((p) => p.productId),
+				const productsById = new Map<number, number>();
+				for (const item of input.products) {
+					const productId = Math.trunc(item.productId);
+					const quantity = Math.trunc(item.quantity);
+					if (productId <= 0 || quantity <= 0) {
+						continue;
+					}
+					productsById.set(
+						productId,
+						(productsById.get(productId) ?? 0) + quantity,
+					);
+				}
+
+				const normalizedProducts = Array.from(productsById.entries()).map(
+					([productId, quantity]) => ({ productId, quantity }),
 				);
 
-				const total = products.reduce((acc, p) => {
-					const quantity = input.products.find(
-						(p2) => p2.productId === p.id,
-					)?.quantity;
-					if (quantity) {
-						return acc + p.price * quantity;
-					}
-					return acc;
+				if (normalizedProducts.length === 0) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Сагс хоосон эсвэл буруу байна. Дахин оролдоно уу.",
+					});
+				}
+
+				const products = await storeOrderQ.getProductsByIds(
+					normalizedProducts.map((p) => p.productId),
+				);
+
+				const existingProductIds = new Set(products.map((p) => p.id));
+				const missingProductIds = normalizedProducts
+					.filter((p) => !existingProductIds.has(p.productId))
+					.map((p) => p.productId);
+
+				if (missingProductIds.length > 0) {
+					ctx.log.warn("order.invalid_products", {
+						missingProductIds,
+					});
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message:
+							"Зарим бараа олдсонгүй. Сагсаа шинэчлээд дахин оролдоно уу.",
+					});
+				}
+
+				const priceByProductId = new Map(products.map((p) => [p.id, p.price]));
+
+				const total = normalizedProducts.reduce((acc, item) => {
+					const price = priceByProductId.get(item.productId) ?? 0;
+					return acc + price * item.quantity;
 				}, 0);
 
 				const customer = await storeCustomerQ.getCustomerByPhone(
@@ -117,20 +154,50 @@ export const order = router({
 					});
 				}
 
-				await storeOrderQ.createOrderDetails(
-					orderId,
-					input.products.map((p) => ({
-						productId: p.productId,
-						quantity: p.quantity,
-					})),
-				);
+				const orderDetailsPayload = normalizedProducts.map((p) => ({
+					productId: p.productId,
+					quantity: p.quantity,
+				}));
+
+				let orderDetailsInserted = false;
+				for (let attempt = 1; attempt <= 3; attempt++) {
+					try {
+						await storeOrderQ.createOrderDetails(orderId, orderDetailsPayload);
+						orderDetailsInserted = true;
+						break;
+					} catch (error) {
+						const isLastAttempt = attempt === 3;
+						ctx.log.warn("order.details_insert_retry", {
+							orderId,
+							attempt,
+							isLastAttempt,
+							error:
+								error instanceof Error
+									? error.message.slice(0, 300)
+									: String(error),
+						});
+
+						if (isLastAttempt) {
+							throw error;
+						}
+
+						await new Promise((resolve) => setTimeout(resolve, attempt * 120));
+					}
+				}
+
+				if (!orderDetailsInserted) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to create order details",
+					});
+				}
 
 				ctx.log.order.created({
 					orderId,
 					orderNumber,
 					customerPhone: Number(input.phoneNumber),
 					total,
-					itemCount: input.products.length,
+					itemCount: normalizedProducts.length,
 					status: "pending",
 				});
 

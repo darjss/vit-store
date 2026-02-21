@@ -1,4 +1,5 @@
 import type { newOrderType } from "@vit/shared";
+import { logger } from "../../../lib/logger";
 import { messenger } from "./client";
 
 const RECIPIENT_ID = "25172502442390308";
@@ -93,7 +94,7 @@ export const sendTransferNotification = async (
 	amount: number,
 ) => {
 	const message = `Шинэ шилжүүлэг  ${amount}`;
-	console.log("sending transfer notification to messenger", message);
+	logger.info("sendTransferNotification", { paymentNumber, amount, message });
 	const result = await messenger.templates.button({
 		recipient: { id: RECIPIENT_ID },
 

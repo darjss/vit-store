@@ -8,7 +8,7 @@ import { adminProcedure, router } from "../../lib/trpc";
 export const purchase = router({
 	addPurchase: adminProcedure
 		.input(addPurchaseSchema)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				await db().transaction(async (tx) => {
 					await purchaseQueries.admin.addPurchaseWithStockUpdate(
@@ -19,7 +19,7 @@ export const purchase = router({
 
 				return { message: "Purchase added successfully" };
 			} catch (e) {
-				console.error("Error adding purchase:", e);
+				ctx.log.error("addPurchase", e);
 				if (e instanceof Error && e.message === "Purchase not found") {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -35,12 +35,12 @@ export const purchase = router({
 			}
 		}),
 
-	getAllPurchases: adminProcedure.query(async () => {
+	getAllPurchases: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const result = await purchaseQueries.admin.getAllPurchases();
 			return result;
 		} catch (e) {
-			console.error("error", e);
+			ctx.log.error("getPurchaseById", e);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Fetching purchases failed",
@@ -51,12 +51,12 @@ export const purchase = router({
 
 	getPurchaseById: adminProcedure
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const result = await purchaseQueries.admin.getPurchaseById(input.id);
 				return result;
 			} catch (e) {
-				console.error("error", e);
+				ctx.log.error("getAllPurchases", e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Fetching purchase failed",
@@ -75,7 +75,7 @@ export const purchase = router({
 				sortDirection: v.picklist(["asc", "desc"]),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				return await purchaseQueries.admin.getPaginatedPurchases({
 					page: input.page,
@@ -85,7 +85,7 @@ export const purchase = router({
 					sortDirection: input.sortDirection,
 				});
 			} catch (e) {
-				console.log("Error fetching paginated purchases:", e);
+				ctx.log.error("getPaginatedPurchases", e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Fetching purchases failed",
@@ -96,7 +96,7 @@ export const purchase = router({
 
 	searchPurchaseByProductName: adminProcedure
 		.input(v.object({ query: v.string() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			if (!input.query) return [];
 			try {
 				const results = await purchaseQueries.admin.searchByProductName(
@@ -104,7 +104,7 @@ export const purchase = router({
 				);
 				return results;
 			} catch (e) {
-				console.error("Error searching purchases:", e);
+				ctx.log.error("searchPurchaseByProductName", e);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Searching purchases failed",
@@ -120,7 +120,7 @@ export const purchase = router({
 				data: addPurchaseSchema,
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				await db().transaction(async (tx) => {
 					await purchaseQueries.admin.updatePurchaseWithStockAdjustment(
@@ -131,7 +131,7 @@ export const purchase = router({
 				});
 				return { message: "Purchase updated successfully" };
 			} catch (e) {
-				console.error("Error updating purchase:", e);
+				ctx.log.error("updatePurchase", e);
 				if (e instanceof Error && e.message === "Purchase not found") {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -149,7 +149,7 @@ export const purchase = router({
 
 	deletePurchase: adminProcedure
 		.input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				await db().transaction(async (tx) => {
 					await purchaseQueries.admin.deletePurchaseWithStockRestore(
@@ -159,7 +159,7 @@ export const purchase = router({
 				});
 				return { message: "Purchase deleted successfully" };
 			} catch (e) {
-				console.error("Error deleting purchase:", e);
+				ctx.log.error("deletePurchase", e);
 				if (e instanceof Error && e.message === "Purchase not found") {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -182,14 +182,14 @@ export const purchase = router({
 				createdAt: v.date(),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				return await purchaseQueries.admin.getAverageCostOfProduct(
 					input.productId,
 					input.createdAt,
 				);
 			} catch (e) {
-				console.error("Error calculating average cost:", e);
+				ctx.log.error("getAverageCostOfProduct", e);
 				return 0;
 			}
 		}),

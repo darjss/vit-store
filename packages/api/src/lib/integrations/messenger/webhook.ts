@@ -3,6 +3,7 @@ import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
+import { logger } from "../../../lib/logger";
 import { sendDetailedOrderNotification } from "./messages";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
@@ -10,26 +11,32 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {
 			const userId = event.sender.id;
-			console.log(
-				`Received message: ${event.message.text} from user ${userId}`,
-			);
+			logger.info("messengerWebhook.onMessage", {
+				userId,
+				text: event.message.text,
+			});
 		},
 		onMessageEdit: async (event) => {
-			// TypeScript knows this is MessageEditWebhookEvent
-			console.log(`Message edited to: ${event.message_edit.text}`);
+			logger.info("messengerWebhook.onMessageEdit", {
+				text: event.message_edit.text,
+			});
 		},
 		onMessageReaction: async (event) => {
-			// TypeScript knows this is MessageReactionWebhookEvent
-			console.log(`Reaction: ${event.reaction.reaction}`);
+			logger.info("messengerWebhook.onMessageReaction", {
+				reaction: event.reaction.reaction,
+			});
 		},
 		onMessagingPostback: async (event) => {
-			console.log("event", event);
-			console.log(`Postback: ${event.postback.payload}`);
+			logger.info("messengerWebhook.onMessagingPostback", {
+				payload: event.postback.payload,
+			});
 			const paymentNumber = event.postback.payload.split(":")[1];
 			if (event.postback.payload.startsWith("confirm_payment")) {
-				console.log("confirming payment", paymentNumber);
+				logger.info("messengerWebhook.confirmPayment", { paymentNumber });
 				if (!paymentNumber) {
-					console.error("Payment number not found");
+					logger.error("messengerWebhook.paymentNumberNotFound", {
+						payload: event.postback.payload,
+					});
 					return;
 				}
 				await q.updatePaymentStatus(paymentNumber, "success");
@@ -52,15 +59,17 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 						});
 					}
 				} catch (notificationError) {
-					console.error(
-						"Failed to send payment confirmed notification",
+					logger.error(
+						"messengerWebhook.sendNotificationFailed",
 						notificationError,
 					);
 				}
 			} else if (event.postback.payload.startsWith("reject_payment")) {
-				console.log("rejecting payment", paymentNumber);
+				logger.info("messengerWebhook.rejectPayment", { paymentNumber });
 				if (!paymentNumber) {
-					console.error("Payment number not found");
+					logger.error("messengerWebhook.paymentNumberNotFound", {
+						payload: event.postback.payload,
+					});
 					return;
 				}
 				await q.updatePaymentStatus(paymentNumber, "failed");

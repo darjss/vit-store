@@ -1,5 +1,6 @@
 import { Search } from "@upstash/search";
 import type { ProductSelectType } from "../db/schema";
+import { logger } from "./logger";
 import { getSearchClient } from "./upstash-search";
 
 export const syncProductToUpstash = async (
@@ -114,5 +115,5 @@ export const bulkSyncProductsToUpstash = async (
 export const clearUpstashProductsIndex = async (): Promise<void> => {
 	const client = getSearchClient();
 	await client.index("products").reset();
-	console.log("[Upstash] Index will be updated via upsert");
+	logger.info("clearUpstashProductsIndex", { message: "Index cleared" });
 };

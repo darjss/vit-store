@@ -8,6 +8,55 @@ import { kv } from "../../lib/kv";
 import { redis } from "../../lib/redis";
 import { publicProcedure, router } from "../../lib/trpc";
 import { searchProducts } from "../../lib/upstash-search";
+import { measureMs, summarizeTimings } from "../../lib/utils";
+
+interface SearchProductResult {
+	id: number;
+	slug: string;
+	name: string;
+	price: number;
+	image: string;
+	brand: string;
+}
+
+const performProductSearch = async (
+	query: string,
+	limit: number,
+): Promise<SearchProductResult[]> => {
+	const searchResults = await searchProducts(query, limit);
+
+	if (searchResults.length > 0) {
+		const ids = searchResults.map((r) => r.id);
+		const canonical = await productQueries.store.getSearchProductsByIds(ids);
+		const byId = new Map(canonical.map((p) => [p.id, p]));
+		const merged = searchResults
+			.map((r) => {
+				const c = byId.get(r.id);
+				if (!c) return null;
+				return {
+					id: c.id,
+					slug: c.slug,
+					name: c.name,
+					price: c.price,
+					image: c.images[0]?.url || r.image || "",
+					brand: c.brand?.name || r.brand || "",
+				};
+			})
+			.filter((x): x is NonNullable<typeof x> => x !== null);
+		if (merged.length > 0) return merged;
+	}
+
+	const q = productQueries.store;
+	const fallbackResults = await q.searchByName(query, limit);
+	return fallbackResults.map((p) => ({
+		id: p.id,
+		slug: p.slug,
+		name: p.name,
+		price: p.price,
+		image: p.images[0]?.url || "",
+		brand: p.brand?.name || "",
+	}));
+};
 
 export const product = router({
 	searchProducts: publicProcedure
@@ -19,24 +68,7 @@ export const product = router({
 		)
 		.query(async ({ input }) => {
 			try {
-				const { query, limit } = input;
-
-				const searchResults = await searchProducts(query, limit);
-
-				if (searchResults.length > 0) {
-					return searchResults;
-				}
-
-				const q = productQueries.store;
-				const fallbackResults = await q.searchByName(query, limit ?? 8);
-				return fallbackResults.map((p) => ({
-					id: p.id,
-					slug: p.slug,
-					name: p.name,
-					price: p.price,
-					image: p.images[0]?.url || "",
-					brand: p.brand?.name || "",
-				}));
+				return await performProductSearch(input.query, input.limit);
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -55,24 +87,7 @@ export const product = router({
 		)
 		.query(async ({ input }) => {
 			try {
-				const { query, limit } = input;
-
-				const searchResults = await searchProducts(query, limit);
-
-				if (searchResults.length > 0) {
-					return searchResults;
-				}
-
-				const q = productQueries.store;
-				const fallbackResults = await q.searchByName(query, limit ?? 50);
-				return fallbackResults.map((p) => ({
-					id: p.id,
-					slug: p.slug,
-					name: p.name,
-					price: p.price,
-					image: p.images[0]?.url || "",
-					brand: p.brand?.name || "",
-				}));
+				return await performProductSearch(input.query, input.limit);
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -233,6 +248,77 @@ export const product = router({
 				isInStock: true,
 			};
 		}),
+	subscribeToRestock: publicProcedure
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				channel: v.picklist(["sms", "email"]),
+				contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			const q = productQueries.store;
+			const product = await q.getProductStockStatus(input.productId);
+
+			if (!product) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Product not found",
+				});
+			}
+
+			if (product.stock > 0 && product.status !== "out_of_stock") {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Product is already in stock",
+				});
+			}
+
+			const normalizedContact =
+				input.channel === "sms"
+					? input.contact.replace(/\D/g, "")
+					: input.contact.trim().toLowerCase();
+
+			if (input.channel === "sms" && !/^[6-9]\d{7}$/.test(normalizedContact)) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Invalid phone number",
+				});
+			}
+
+			if (
+				input.channel === "email" &&
+				!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedContact)
+			) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Invalid email address",
+				});
+			}
+
+			const subscriberId = `${input.channel}:${normalizedContact}`;
+			const productSubscribersKey = `restock:subs:${input.productId}`;
+			const subscriberDataKey = `restock:sub:${input.productId}:${subscriberId}`;
+
+			await redis().sadd(productSubscribersKey, subscriberId);
+			await redis().set(
+				subscriberDataKey,
+				JSON.stringify({
+					productId: input.productId,
+					channel: input.channel,
+					contact: normalizedContact,
+					createdAt: new Date().toISOString(),
+				}),
+				{ ex: 60 * 60 * 24 * 30 },
+			);
+
+			await redis().sadd("restock:watch:products", String(input.productId));
+
+			return {
+				success: true,
+				message: "Subscription created",
+			};
+		}),
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {
 			const kvCacheKey = "benchmark:products:5";
@@ -286,7 +372,7 @@ export const product = router({
 			const redisWriteElapsed = performance.now() - redisWriteStartTime;
 
 			const redisReadStartTime = performance.now();
-			const redisCached = await redis().get(redisCacheKey);
+			const _redisCached = await redis().get(redisCacheKey);
 			const redisReadElapsed = performance.now() - redisReadStartTime;
 
 			const kvReadProduct = kvCached ? JSON.parse(kvCached) : null;
@@ -307,6 +393,154 @@ export const product = router({
 			});
 		}
 	}),
+	getCacheBenchmarkV2: publicProcedure
+		.input(
+			v.optional(
+				v.object({
+					iterations: v.optional(
+						v.pipe(v.number(), v.integer(), v.minValue(5), v.maxValue(100)),
+						12,
+					),
+					warmup: v.optional(
+						v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(20)),
+						2,
+					),
+				}),
+			),
+		)
+		.query(async ({ input }) => {
+			try {
+				const iterations = input?.iterations ?? 12;
+				const warmup = input?.warmup ?? 2;
+
+				const sourceProducts = await db().query.ProductsTable.findMany({
+					columns: {
+						id: true,
+						name: true,
+						slug: true,
+						price: true,
+					},
+					where: isNull(ProductsTable.deletedAt),
+					limit: 5,
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: isNull(ProductImagesTable.deletedAt),
+						},
+					},
+				});
+
+				const payload = JSON.stringify(
+					sourceProducts.map((product) => ({
+						id: product.id,
+						name: product.name,
+						slug: product.slug,
+						price: product.price,
+						images: product.images.map((image) => ({ url: image.url })),
+					})),
+				);
+
+				const benchmarkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+				const kvReadKey = `benchmark:v2:${benchmarkId}:kv:read`;
+				const redisReadKey = `benchmark:v2:${benchmarkId}:redis:read`;
+
+				await kv().put(kvReadKey, payload, { expirationTtl: 3600 });
+				await redis().set(redisReadKey, payload, { ex: 3600 });
+
+				for (let i = 0; i < warmup; i++) {
+					await kv().get(kvReadKey);
+					await redis().get(redisReadKey);
+				}
+
+				const dbTimes: number[] = [];
+				const kvReadHitTimes: number[] = [];
+				const kvWriteTimes: number[] = [];
+				const redisReadHitTimes: number[] = [];
+				const redisWriteTimes: number[] = [];
+
+				for (let i = 0; i < iterations; i++) {
+					dbTimes.push(
+						await measureMs(async () => {
+							await db().query.ProductsTable.findMany({
+								columns: {
+									id: true,
+								},
+								where: isNull(ProductsTable.deletedAt),
+								limit: 5,
+							});
+						}),
+					);
+
+					kvReadHitTimes.push(
+						await measureMs(async () => {
+							await kv().get(kvReadKey);
+						}),
+					);
+
+					kvWriteTimes.push(
+						await measureMs(async () => {
+							await kv().put(
+								`benchmark:v2:${benchmarkId}:kv:write:${i}`,
+								payload,
+								{
+									expirationTtl: 3600,
+								},
+							);
+						}),
+					);
+
+					redisReadHitTimes.push(
+						await measureMs(async () => {
+							await redis().get(redisReadKey);
+						}),
+					);
+
+					redisWriteTimes.push(
+						await measureMs(async () => {
+							await redis().set(
+								`benchmark:v2:${benchmarkId}:redis:write:${i}`,
+								payload,
+								{ ex: 3600 },
+							);
+						}),
+					);
+				}
+
+				const kvCompositeMean =
+					summarizeTimings(kvReadHitTimes).mean +
+					summarizeTimings(kvWriteTimes).mean;
+				const redisCompositeMean =
+					summarizeTimings(redisReadHitTimes).mean +
+					summarizeTimings(redisWriteTimes).mean;
+
+				return {
+					iterations,
+					warmup,
+					placementHint: "Compare p95 and tail behavior over mean only",
+					db: summarizeTimings(dbTimes),
+					kv: {
+						readHit: summarizeTimings(kvReadHitTimes),
+						write: summarizeTimings(kvWriteTimes),
+						compositeMean: kvCompositeMean,
+					},
+					redis: {
+						readHit: summarizeTimings(redisReadHitTimes),
+						write: summarizeTimings(redisWriteTimes),
+						compositeMean: redisCompositeMean,
+					},
+					recommendation:
+						kvCompositeMean <= redisCompositeMean ? "kv" : "redis",
+				};
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to run cache benchmark",
+					cause: error,
+				});
+			}
+		}),
 	getInfiniteProducts: publicProcedure
 		.input(
 			v.object({
@@ -314,6 +548,7 @@ export const product = router({
 				limit: v.optional(v.number(), 10),
 				brandId: v.optional(v.number(), 0),
 				categoryId: v.optional(v.number(), 0),
+				listType: v.optional(v.picklist(["featured", "recent", "discount"])),
 				searchTerm: v.optional(v.string()),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),

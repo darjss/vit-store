@@ -18,12 +18,12 @@ export const customer = router({
 				address: v.optional(v.string()),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const result = await customerQueries.admin.createCustomer(input);
 				return result;
 			} catch (error) {
-				console.error("Error adding customer:", error);
+				ctx.log.error("addUser", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add customer",
@@ -43,13 +43,11 @@ export const customer = router({
 				),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
-				console.log("GETTING CUSTOMER BY PHONE");
 				const result = await customerQueries.admin.getCustomerByPhone(
 					input.phone,
 				);
-				console.log("RESULT", result);
 				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -58,7 +56,7 @@ export const customer = router({
 				}
 				return result;
 			} catch (error) {
-				console.error("Error getting customer by phone:", error);
+				ctx.log.error("getCustomerByPhone", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -68,12 +66,12 @@ export const customer = router({
 			}
 		}),
 
-	getCustomerCount: adminProcedure.query(async () => {
+	getCustomerCount: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const count = await customerQueries.admin.getCustomerCount();
 			return count;
 		} catch (error) {
-			console.error("Error getting customer count:", error);
+			ctx.log.error("getCustomerCount", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to get customer count",
@@ -88,7 +86,7 @@ export const customer = router({
 				timeRange: timeRangeSchema,
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const { timeRange } = input;
 				const startDate = await getDaysFromTimeRange(timeRange);
@@ -96,7 +94,7 @@ export const customer = router({
 					await customerQueries.admin.getNewCustomersCount(startDate);
 				return count;
 			} catch (error) {
-				console.error("Error getting new customers count:", error);
+				ctx.log.error("getNewCustomersCount", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to get new customers count",
@@ -105,12 +103,12 @@ export const customer = router({
 			}
 		}),
 
-	getAllCustomers: adminProcedure.query(async () => {
+	getAllCustomers: adminProcedure.query(async ({ ctx }) => {
 		try {
 			const customers = await customerQueries.admin.getAllCustomers();
 			return customers;
 		} catch (error) {
-			console.error("Error getting all customers:", error);
+			ctx.log.error("getAllCustomers", error);
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to get all customers",
@@ -131,7 +129,7 @@ export const customer = router({
 				address: v.optional(v.string()),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { phone, address } = input;
 				const result = await customerQueries.admin.updateCustomer(phone, {
@@ -145,7 +143,7 @@ export const customer = router({
 				}
 				return result;
 			} catch (error) {
-				console.error("Error updating customer:", error);
+				ctx.log.error("updateCustomer", error);
 				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -166,13 +164,13 @@ export const customer = router({
 				),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			try {
 				const { phone } = input;
 				await customerQueries.admin.deleteCustomer(phone);
 				return { message: "Successfully deleted customer" };
 			} catch (error) {
-				console.error("Error deleting customer:", error);
+				ctx.log.error("deleteCustomer", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete customer",
