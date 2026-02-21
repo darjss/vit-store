@@ -20,7 +20,6 @@ const PhoneForm = ({
 			},
 
 			onSuccess: async () => {
-				console.log("Form submitted ");
 				setStep("otp");
 				showToast({
 					title: "Амжилттай",
@@ -47,7 +46,8 @@ const PhoneForm = ({
 				),
 			}),
 		},
-		onSubmit: async (values) => {
+    onSubmit: async (values) => {
+      console.log("form submitting")
 			setPhone(values.value.phone);
 			mutation.mutate(values.value.phone);
 		},

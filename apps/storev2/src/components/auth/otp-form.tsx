@@ -78,7 +78,6 @@ const OtpForm = ({
 			},
 
 			onSuccess: async () => {
-				console.log("Form submitted ");
 				showToast({
 					title: "Код дахин илгээгдлээ",
 					description: "Таны утсанд шинэ баталгаажуулах код илгээгдлээ",

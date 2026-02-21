@@ -1,5 +1,5 @@
 import { Image } from "@unpic/solid";
-import type { CartItems } from "@/lib/types";
+import type { CartItems } from "@vit/shared/types";
 import { cart } from "@/store/cart";
 import IconClose from "~icons/ri/close-line";
 
