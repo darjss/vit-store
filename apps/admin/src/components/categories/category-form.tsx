@@ -41,8 +41,7 @@ const CategoryForm = ({
 			);
 			onSuccess();
 		},
-		onError: (error) => {
-			console.error("error", error);
+		onError: () => {
 			toast.error("Ангилал нэмэхэд алдаа гарлаа");
 		},
 	});
@@ -55,8 +54,7 @@ const CategoryForm = ({
 			);
 			onSuccess();
 		},
-		onError: (error) => {
-			console.error("error", error);
+		onError: () => {
 			toast.error("Ангилал шинэчлэхэд алдаа гарлаа");
 		},
 	});

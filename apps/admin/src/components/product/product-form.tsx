@@ -5,11 +5,15 @@ import {
 	useSuspenseQueries,
 } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
-import { addProductSchema } from "@vit/shared";
-import { status } from "@vit/shared/constants";
+import {
+	type AIExtractedData,
+	addProductSchema,
+	findBrandId,
+	type ProductFormValues,
+	status,
+} from "@vit/shared";
 import { ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { FieldValues } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
@@ -36,21 +40,7 @@ import { Textarea } from "../ui/textarea";
 import { UploadButton } from "../upload-button";
 import { ArrayInput, TagsInput } from "./array-input";
 
-export type AIExtractedData = {
-	name: string;
-	name_mn?: string;
-	description: string;
-	brand?: string | null;
-	amount: string;
-	potency: string;
-	dailyIntake: number;
-	weightGrams?: number;
-	seoTitle?: string;
-	seoDescription?: string;
-	tags?: string[];
-	ingredients?: string[];
-	images: { url: string }[];
-};
+export type { AIExtractedData } from "@vit/shared";
 
 const TAG_SUGGESTIONS = [
 	"витамин",
@@ -77,26 +67,6 @@ const TAG_SUGGESTIONS = [
 	"хүүхэд",
 ];
 
-interface ProductFormValues extends FieldValues {
-	name: string;
-	description: string;
-	dailyIntake: number;
-	brandId: string;
-	categoryId: string;
-	amount: string;
-	potency: string;
-	status: "active" | "draft" | "out_of_stock";
-	stock: number;
-	price: number;
-	images: { url: string; id?: number }[];
-	name_mn?: string;
-	ingredients?: string[];
-	tags?: string[];
-	seoTitle?: string;
-	seoDescription?: string;
-	weightGrams?: number;
-}
-
 const ProductForm = ({
 	product,
 	aiData,
@@ -115,14 +85,6 @@ const ProductForm = ({
 		],
 	});
 
-	const findBrandId = (brandName: string | null | undefined): number => {
-		if (!brandName) return 0;
-		const brand = brands.find(
-			(b) => b.name.toLowerCase() === brandName.toLowerCase(),
-		);
-		return brand?.id || 0;
-	};
-
 	const [showAdvancedFields, setShowAdvancedFields] = useState(showAIFields);
 
 	const form = useForm<ProductFormValues>({
@@ -132,7 +94,7 @@ const ProductForm = ({
 			description: aiData?.description || product?.description || "",
 			dailyIntake: aiData?.dailyIntake || product?.dailyIntake || 1,
 			brandId: aiData?.brand
-				? String(findBrandId(aiData.brand))
+				? String(findBrandId(aiData.brand, brands ?? []))
 				: product?.brandId || "",
 			categoryId: product?.categoryId || "",
 			amount: aiData?.amount || product?.amount || "",
@@ -157,7 +119,7 @@ const ProductForm = ({
 				name: aiData.name,
 				description: aiData.description,
 				dailyIntake: aiData.dailyIntake || 1,
-				brandId: String(findBrandId(aiData.brand)),
+				brandId: String(findBrandId(aiData.brand, brands ?? [])),
 				amount: aiData.amount,
 				potency: aiData.potency,
 				images: aiData.images,
@@ -170,7 +132,7 @@ const ProductForm = ({
 			});
 			setShowAdvancedFields(true);
 		}
-	}, [aiData]);
+	}, [aiData, brands, form.getValues, form.reset]);
 
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
@@ -180,7 +142,7 @@ const ProductForm = ({
 			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 			onSuccess();
 		},
-		onError: (error) => {
+		onError: (_error) => {
 			toast.error("Failed to add product");
 		},
 	});

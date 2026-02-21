@@ -82,7 +82,6 @@ export function WebAnalytics({
 }: WebAnalyticsProps) {
 	const { current, changes } = webAnalytics;
 
-	// Build funnel steps for display
 	const funnelSteps = [
 		{ label: "Зочин", count: funnel.visitors, icon: Users },
 		{ label: "Бараа үзсэн", count: funnel.productViewers, icon: Eye },
@@ -104,7 +103,6 @@ export function WebAnalytics({
 		},
 	];
 
-	// Calculate conversion rates between steps
 	const funnelWithRates = funnelSteps.map((step, i) => {
 		const prevCount = i > 0 ? funnelSteps[i - 1].count : step.count;
 		const rate =
@@ -112,7 +110,6 @@ export function WebAnalytics({
 		return { ...step, rate: i === 0 ? 100 : rate };
 	});
 
-	// Format trend dates for chart display
 	const chartData = dailyTrend.map((d) => {
 		const date = new Date(d.date);
 		return {

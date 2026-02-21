@@ -104,6 +104,11 @@ function RouteComponent() {
 		return () => clearTimeout(timer);
 	}, [searchInput]);
 
+	useEffect(() => {
+		setSearchInput(searchTerm || "");
+		setDebouncedSearch(searchTerm || "");
+	}, [searchTerm]);
+
 	const handleSearchChange = (value: string) => {
 		setSearchInput(value);
 	};
@@ -133,6 +138,7 @@ function RouteComponent() {
 	const hasInstantResults =
 		instantSearchQuery.data && instantSearchQuery.data.length > 0;
 	const isSearching = instantSearchQuery.isFetching;
+	const isInstantSearchActive = debouncedSearch.length >= 2;
 
 	const handleFilterChange = (
 		field: "brandId" | "categoryId",
@@ -202,6 +208,26 @@ function RouteComponent() {
 				)}
 			</div>
 
+			<Suspense
+				fallback={
+					<div className="flex w-full flex-row gap-2">
+						<Skeleton className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]" />
+						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]" />
+					</div>
+				}
+			>
+				<ProductsFilters
+					brandId={brandId}
+					categoryId={categoryId}
+					onFilterChange={handleFilterChange}
+					hasActiveFilters={hasActiveFilters}
+					sortField={sortField}
+					sortDirection={sortDirection}
+					onSort={handleSort}
+					onResetFilters={handleResetFilters}
+				/>
+			</Suspense>
+
 			{hasInstantResults ? (
 				<div className="space-y-3">
 					<div className="flex items-center justify-between">
@@ -227,7 +253,7 @@ function RouteComponent() {
 										name: product.name,
 										slug: product.slug,
 										price: product.price,
-										stock: 0,
+										stock: product.stock,
 										status: "active" as const,
 										discount: 0,
 										brandId: 0,
@@ -246,9 +272,11 @@ function RouteComponent() {
 										seoDescription: null,
 										name_mn: null,
 										weightGrams: 0,
-										images: product.image
-											? [{ id: 0, url: product.image, isPrimary: true }]
-											: [],
+										images: product.images.map((image, index) => ({
+											id: index,
+											url: image.url,
+											isPrimary: index === 0,
+										})),
 									} as never
 								}
 								brands={[]}
@@ -257,43 +285,25 @@ function RouteComponent() {
 						))}
 					</div>
 				</div>
-			) : debouncedSearch.length >= 2 && !isSearching ? (
+			) : isInstantSearchActive && !isSearching ? (
 				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
 					"{debouncedSearch}" хайлтаар үр дүн олдсонгүй
 				</div>
 			) : null}
 
-			<Suspense
-				fallback={
-					<div className="flex w-full flex-row gap-2">
-						<Skeleton className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]" />
-						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]" />
-					</div>
-				}
-			>
-				<ProductsFilters
-					brandId={brandId}
-					categoryId={categoryId}
-					onFilterChange={handleFilterChange}
-					hasActiveFilters={hasActiveFilters}
-					sortField={sortField}
-					sortDirection={sortDirection}
-					onSort={handleSort}
-					onResetFilters={handleResetFilters}
-				/>
-			</Suspense>
-
-			<Suspense fallback={<ProductsPageSkeleton />}>
-				<ProductsList
-					page={page}
-					pageSize={pageSize}
-					brandId={brandId}
-					categoryId={categoryId}
-					sortField={sortField}
-					sortDirection={sortDirection}
-					searchTerm={searchTerm}
-				/>
-			</Suspense>
+			{!isInstantSearchActive && (
+				<Suspense fallback={<ProductsPageSkeleton />}>
+					<ProductsList
+						page={page}
+						pageSize={pageSize}
+						brandId={brandId}
+						categoryId={categoryId}
+						sortField={sortField}
+						sortDirection={sortDirection}
+						searchTerm={searchTerm}
+					/>
+				</Suspense>
+			)}
 		</div>
 	);
 }

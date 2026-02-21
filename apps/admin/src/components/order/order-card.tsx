@@ -56,14 +56,19 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 	return (
 		<>
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-				<DialogContent data-no-nav>
+				<DialogContent
+					data-no-nav
+					className="max-w-[95vw] sm:max-w-[600px] lg:max-w-[640px]"
+				>
 					<DialogHeader>
 						<DialogTitle>Захиалга засах</DialogTitle>
 					</DialogHeader>
-					<OrderForm
-						order={{ ...order, isNewCustomer: false }}
-						onSuccess={() => setIsEditDialogOpen(false)}
-					/>
+					<div className="max-h-[80vh] overflow-y-auto p-3 sm:p-4">
+						<OrderForm
+							order={{ ...order, isNewCustomer: false }}
+							onSuccess={() => setIsEditDialogOpen(false)}
+						/>
+					</div>
 				</DialogContent>
 			</Dialog>
 			<Card
@@ -104,7 +109,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 							</div>
 							<div className="mt-1 flex items-center gap-1.5">
 								<Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
-								<span className="font-medium text-foreground text-xs">
+								<span className="font-medium text-foreground text-xs tabular-nums">
 									{order.customerPhone}
 								</span>
 							</div>
@@ -113,12 +118,13 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 							<OrderStatusBadge status={order.status} />
 							{order.paymentStatus && order.paymentProvider && (
 								<Badge
-									className={`flex h-5 items-center gap-1 px-1.5 text-[10px] leading-none ${getPaymentStatusColor(order.paymentStatus)}`}
+									variant="outline"
+									className={`flex h-5 items-center gap-1 border-2 px-1.5 text-[10px] leading-none ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
-									<span className="text-[10px]">
+									<span className="text-[10px] leading-none">
 										{getPaymentProviderIcon(order.paymentProvider)}
 									</span>
-									<span>
+									<span className="font-bold">
 										{order.paymentStatus === "success"
 											? "Paid"
 											: order.paymentStatus === "failed"
@@ -131,7 +137,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 					</div>
 
 					{/* Address row */}
-					<div className="flex items-center gap-1.5 border-t border-dashed px-3 py-1.5">
+					<div className="flex items-center gap-1.5 border-border border-t border-dashed px-3 py-1.5">
 						<MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
 						<span className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
 							{order.address || "Хаяг оруулаагүй"}
@@ -139,26 +145,26 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 						<Button
 							size="icon"
 							variant="ghost"
-							className="h-5 w-5 shrink-0"
+							className="h-6 w-6 shrink-0"
 							data-no-nav
 							onClick={async () => {
 								await navigator.clipboard.writeText(order.address);
 								toast("Хаяг хуулагдлаа");
 							}}
 						>
-							<Copy className="h-2.5 w-2.5" />
+							<Copy className="h-3 w-3" />
 						</Button>
 					</div>
 
 					{/* Products list */}
-					<div className="border-t px-3 py-2">
+					<div className="border-border border-t px-3 py-2">
 						<div className="flex items-center justify-between pb-1.5">
 							<div className="flex items-center gap-1.5">
 								<Package className="h-3 w-3 text-muted-foreground" />
-								<span className="font-medium text-[11px] text-muted-foreground uppercase tracking-wider">
+								<span className="font-bold text-[11px] text-muted-foreground uppercase tracking-wider">
 									Бүтээгдэхүүн
 								</span>
-								<span className="flex h-4 min-w-4 items-center justify-center border border-border bg-muted px-1 font-bold text-[10px] text-foreground">
+								<span className="flex h-4 min-w-4 items-center justify-center border-2 border-border bg-muted px-1 font-bold text-[10px] text-foreground">
 									{productCount}
 								</span>
 							</div>
@@ -171,9 +177,9 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 							{order.products?.map((detail, index) => (
 								<div
 									key={order.orderNumber + detail.productId + index}
-									className="flex items-center gap-2.5 border border-border/50 bg-muted/30 p-1.5"
+									className="flex items-center gap-2 border-2 border-border/50 bg-muted/30 p-1.5"
 								>
-									<div className="h-10 w-10 shrink-0 overflow-hidden border border-border/50 bg-muted sm:h-12 sm:w-12">
+									<div className="h-10 w-10 shrink-0 overflow-hidden border-2 border-border/50 bg-muted sm:h-11 sm:w-11">
 										<img
 											src={detail.imageUrl || "/placeholder.jpg"}
 											alt={detail.name}
@@ -182,11 +188,11 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 										/>
 									</div>
 									<div className="min-w-0 flex-1">
-										<p className="truncate font-medium text-foreground text-xs leading-tight sm:text-sm">
+										<p className="truncate font-bold text-foreground text-xs leading-tight">
 											{detail.name}
 										</p>
 									</div>
-									<span className="shrink-0 border border-border bg-background px-1.5 py-0.5 font-bold text-[11px] text-foreground tabular-nums">
+									<span className="shrink-0 border-2 border-border bg-background px-1.5 py-0.5 font-bold text-[11px] text-foreground tabular-nums">
 										x{detail.quantity}
 									</span>
 								</div>
@@ -196,14 +202,14 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 
 					{/* Footer: actions */}
 					<div
-						className="flex items-center justify-between gap-2 border-t px-3 py-2"
+						className="flex items-center justify-end gap-2 border-border border-t px-3 py-2"
 						data-no-nav
 					>
 						{order.status === "pending" && (
 							<Button
 								variant="default"
 								size="sm"
-								className="h-7 gap-1 px-2.5 text-xs"
+								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
 								onClick={() => handleUpdateOrder("shipped")}
 							>
 								<Truck className="h-3 w-3" />
@@ -214,15 +220,12 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 							<Button
 								variant="default"
 								size="sm"
-								className="h-7 gap-1 px-2.5 text-xs"
+								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
 								onClick={() => handleUpdateOrder("delivered")}
 							>
 								<CheckCircle className="h-3 w-3" />
 								<span>Хүргэсэн</span>
 							</Button>
-						)}
-						{order.status !== "pending" && order.status !== "shipped" && (
-							<div />
 						)}
 						<RowActions
 							id={order.id}

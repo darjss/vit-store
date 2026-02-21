@@ -6,7 +6,6 @@ import { type UseFormReturn, useFieldArray } from "react-hook-form";
 import type { ProductSearchForOrderType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
@@ -87,36 +86,36 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 	};
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-3">
 			{/* Search Section */}
 			<div className="relative">
 				<div className="relative">
 					<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
 					<Input
 						placeholder="Бүтээгдэхүүнийг нэрээр хайх..."
-						className="pl-10"
+						className="border-2 border-border pl-10"
 						value={inputValue}
 						onChange={handleSearchChange}
 					/>
 				</div>
 				{isFetching && (
-					<div className="mt-2 flex items-center text-muted-foreground text-sm">
-						<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+					<div className="mt-2 flex items-center text-muted-foreground text-xs">
+						<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
 						Хайж байна...
 					</div>
 				)}
 				{data !== undefined && data?.length > 0 && inputValue && (
-					<Card className="absolute right-0 left-0 z-[100] mt-2 w-full shadow-lg">
-						<ScrollArea className="max-h-[300px]">
+					<Card className="absolute right-0 left-0 z-[100] mt-1 border-2 border-border shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+						<ScrollArea className="max-h-[260px]">
 							<div className="p-1">
 								{data.map((product) => (
 									<button
 										key={product.id}
-										className="flex w-full items-center gap-3 rounded-md p-3 text-left transition-colors hover:bg-accent"
+										className="flex w-full items-center gap-2.5 p-2 text-left transition-colors hover:bg-accent"
 										onClick={() => handleSelectProduct(product)}
 										type="button"
 									>
-										<div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md border bg-accent/50">
+										<div className="h-10 w-10 flex-shrink-0 overflow-hidden border-2 border-border bg-muted">
 											<img
 												src={product.images[0]?.url || "/placeholder.svg"}
 												alt={product.name}
@@ -124,16 +123,16 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 											/>
 										</div>
 										<div className="min-w-0 flex-1">
-											<p className="truncate font-medium text-sm">
+											<p className="truncate font-bold text-xs">
 												{product.name}
 											</p>
-											<div className="flex items-center gap-2">
-												<p className="font-semibold text-primary text-sm">
+											<div className="mt-0.5 flex items-center gap-2">
+												<span className="font-bold text-foreground text-xs tabular-nums">
 													{formatCurrency(product.price)}
-												</p>
-												<Badge variant="default" className="text-xs">
+												</span>
+												<span className="text-[10px] text-muted-foreground">
 													үлдэгдэл: {product.stock}
-												</Badge>
+												</span>
 											</div>
 										</div>
 									</button>
@@ -143,8 +142,8 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 					</Card>
 				)}
 				{data?.length === 0 && inputValue && !isFetching && (
-					<Card className="absolute right-0 left-0 z-[100] mt-2 w-full shadow-lg">
-						<CardContent className="p-4 text-center text-muted-foreground text-sm">
+					<Card className="absolute right-0 left-0 z-[100] mt-1 border-2 border-border">
+						<CardContent className="p-3 text-center text-muted-foreground text-xs">
 							"{inputValue}" олдсонгүй
 						</CardContent>
 					</Card>
@@ -153,100 +152,102 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 
 			{/* Selected Products */}
 			{fields.length > 0 && (
-				<div className="space-y-4">
-					<div className="flex items-center justify-between">
-						<h3 className="flex items-center gap-2 font-semibold text-base">
-							<ShoppingCart className="h-5 w-5" />
-							Сонгосон бүтээгдэхүүн
-							<Badge variant="default">{getTotalItems()} ширхэг</Badge>
-						</h3>
-						<p className="font-bold text-foreground text-xl">
-							Нийт: {formatCurrency(getTotalPrice())}
-						</p>
+				<div className="space-y-2.5">
+					{/* Summary bar */}
+					<div className="flex flex-wrap items-center justify-between gap-2 border-2 border-border bg-muted/50 px-3 py-2">
+						<div className="flex items-center gap-2">
+							<ShoppingCart className="h-3.5 w-3.5 text-muted-foreground" />
+							<span className="font-bold text-muted-foreground text-xs uppercase tracking-wider">
+								Сонгосон
+							</span>
+							<span className="flex h-5 min-w-5 items-center justify-center border-2 border-border bg-background px-1 font-bold text-[10px] tabular-nums">
+								{getTotalItems()}
+							</span>
+						</div>
+						<span className="font-bold text-sm tabular-nums">
+							{formatCurrency(getTotalPrice())}
+						</span>
 					</div>
 
-					<div className="space-y-3">
+					{/* Product list */}
+					<div className="space-y-2">
 						{fields.map((field, index) => {
 							const product = form.getValues(`products.${index}`);
 							const itemTotal = product.price * product.quantity;
 
 							return (
-								<Card
+								<div
 									key={field.id}
-									className="overflow-hidden transition-shadow hover:shadow-md"
+									className="border-2 border-border bg-background"
 								>
-									<CardContent className="p-4">
-										<div className="flex items-center gap-4">
-											<div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border bg-accent/50">
-												<img
-													src={product.imageUrl || "/placeholder.svg"}
-													alt={product.name}
-													className="h-full w-full object-cover"
-												/>
-											</div>
-
-											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-sm">
-													{product.name}
-												</p>
-												<div className="mt-1 flex items-center gap-2">
-													<p className="text-muted-foreground text-sm">
-														{formatCurrency(product.price)} ш/нэг
-													</p>
-													<span className="text-muted-foreground">•</span>
-													<Badge variant="outline" className="text-xs">
-														үлдэгдэл: {product.stock}
-													</Badge>
-												</div>
-											</div>
-
-											<div className="flex items-center gap-3">
-												<div className="flex items-center gap-1">
-													<Button
-														type="button"
-														variant="outline"
-														size="icon"
-														onClick={() => handleQuantityChange(index, "minus")}
-														className="h-8 w-8"
-														disabled={product.quantity <= 1}
-													>
-														<Minus className="h-4 w-4" />
-													</Button>
-													<div className="flex h-8 w-12 items-center justify-center rounded-md border bg-accent/30">
-														<span className="font-medium text-sm">
-															{product.quantity}
-														</span>
-													</div>
-													<Button
-														type="button"
-														variant="outline"
-														size="icon"
-														onClick={() => handleQuantityChange(index, "add")}
-														className="h-8 w-8"
-														disabled={product.quantity >= product.stock}
-													>
-														<Plus className="h-4 w-4" />
-													</Button>
-												</div>
-
-												<div className="flex min-w-[80px] items-center justify-end gap-2">
-													<span className="font-bold text-foreground text-sm">
-														{formatCurrency(itemTotal)}
-													</span>
-													<Button
-														type="button"
-														variant="destructive"
-														size="icon"
-														onClick={() => remove(index)}
-														className="h-8 w-8"
-													>
-														<X className="h-4 w-4" />
-													</Button>
-												</div>
+									{/* Top row: image + name + remove */}
+									<div className="flex items-center gap-2.5 p-2.5 pb-2">
+										<div className="h-11 w-11 flex-shrink-0 overflow-hidden border-2 border-border bg-muted">
+											<img
+												src={product.imageUrl || "/placeholder.svg"}
+												alt={product.name}
+												className="h-full w-full object-cover"
+											/>
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="truncate font-bold text-xs leading-tight sm:text-sm">
+												{product.name}
+											</p>
+											<div className="mt-0.5 flex items-center gap-1.5">
+												<span className="text-[11px] text-muted-foreground tabular-nums">
+													{formatCurrency(product.price)} /ш
+												</span>
+												<span className="text-border">|</span>
+												<span className="text-[11px] text-muted-foreground">
+													үлдэгдэл: {product.stock}
+												</span>
 											</div>
 										</div>
-									</CardContent>
-								</Card>
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											onClick={() => remove(index)}
+											className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+										>
+											<X className="h-3.5 w-3.5" />
+										</Button>
+									</div>
+
+									{/* Bottom row: quantity controls + line total */}
+									<div className="flex items-center justify-between border-border border-t border-dashed px-2.5 py-2">
+										<div className="flex items-center gap-1">
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												onClick={() => handleQuantityChange(index, "minus")}
+												className="h-7 w-7 border-2 border-border"
+												disabled={product.quantity <= 1}
+											>
+												<Minus className="h-3 w-3" />
+											</Button>
+											<div className="flex h-7 w-10 items-center justify-center border-2 border-border bg-muted">
+												<span className="font-bold text-xs tabular-nums">
+													{product.quantity}
+												</span>
+											</div>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												onClick={() => handleQuantityChange(index, "add")}
+												className="h-7 w-7 border-2 border-border"
+												disabled={product.quantity >= product.stock}
+											>
+												<Plus className="h-3 w-3" />
+											</Button>
+										</div>
+										<span className="font-bold text-sm tabular-nums">
+											{formatCurrency(itemTotal)}
+										</span>
+									</div>
+								</div>
 							);
 						})}
 					</div>
@@ -255,17 +256,15 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 
 			{/* Empty State */}
 			{fields.length === 0 && (
-				<Card className="border-dashed">
-					<CardContent className="flex flex-col items-center justify-center py-12">
-						<ShoppingCart className="mb-4 h-12 w-12 text-muted-foreground" />
-						<p className="text-center font-medium text-muted-foreground">
-							Бүтээгдэхүүн сонгогдоогүй
-						</p>
-						<p className="text-center text-muted-foreground text-sm">
-							Бүтээгдэхүүн хайж захиалгад нэмнэ үү
-						</p>
-					</CardContent>
-				</Card>
+				<div className="flex flex-col items-center justify-center border-2 border-border border-dashed py-8">
+					<ShoppingCart className="mb-2 h-8 w-8 text-muted-foreground/50" />
+					<p className="font-bold text-muted-foreground text-xs uppercase tracking-wider">
+						Бүтээгдэхүүн сонгогдоогүй
+					</p>
+					<p className="mt-0.5 text-[11px] text-muted-foreground/70">
+						Бүтээгдэхүүн хайж захиалгад нэмнэ үү
+					</p>
+				</div>
 			)}
 		</div>
 	);

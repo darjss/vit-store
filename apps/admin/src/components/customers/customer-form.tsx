@@ -59,7 +59,7 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 			);
 			onSuccess();
 		},
-		onError: (error) => {
+		onError: (_error) => {
 			toast.error("Хэрэглэгч нэмэхэд алдаа гарлаа");
 		},
 	});
@@ -72,7 +72,7 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 			);
 			onSuccess();
 		},
-		onError: (error) => {
+		onError: (_error) => {
 			toast.error("Хэрэглэгч засахад алдаа гарлаа");
 		},
 	});

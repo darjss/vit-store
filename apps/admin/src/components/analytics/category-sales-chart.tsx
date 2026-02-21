@@ -22,7 +22,6 @@ export function CategorySalesChart() {
 		}),
 	);
 
-	// Group sales by category
 	const categoryMap = new Map<string, number>();
 	for (const sale of data.salesByCategory) {
 		const current = categoryMap.get(sale.categoryName) || 0;
@@ -35,7 +34,7 @@ export function CategorySalesChart() {
 			total: total,
 		}))
 		.sort((a, b) => b.total - a.total)
-		.slice(0, 10); // Top 10 categories
+		.slice(0, 10);
 
 	return (
 		<Card className="border-2 border-border shadow-shadow">

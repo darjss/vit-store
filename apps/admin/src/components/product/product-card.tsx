@@ -132,34 +132,39 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 						</div>
 
 						<div className="flex flex-1 flex-col p-3">
-							<div className="flex items-start justify-between gap-3">
+							<div className="flex items-start justify-between gap-2">
 								<div className="min-w-0 flex-1">
-									<h3 className="break-words font-bold text-base">
+									<h3 className="truncate font-bold text-sm leading-snug sm:text-base">
 										{product.name}
 									</h3>
-									<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+									<div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs sm:text-sm">
 										{brand?.name && <span>{brand.name}</span>}
-										{brand?.name && category?.name && <span>•</span>}
+										{brand?.name && category?.name && (
+											<span className="text-border">|</span>
+										)}
 										{category?.name && <span>{category.name}</span>}
 									</div>
 								</div>
 								<Badge
-									className={`${getStatusColor(product.status)} whitespace-nowrap border-2 border-border px-2 py-1 font-bold text-xs`}
+									variant="outline"
+									className={`${getStatusColor(product.status)} shrink-0 border-2 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wider sm:text-xs`}
 								>
 									{product.status.replace("_", " ")}
 								</Badge>
 							</div>
 
-							<div className="mt-1 flex items-center gap-3">
-								<div className="font-bold text-lg">
-									${product.price.toFixed(2)}
+							<div className="mt-1.5 flex items-center gap-3">
+								<div className="font-bold text-sm tabular-nums sm:text-base">
+									₮{product.price.toLocaleString()}
 								</div>
 								<div
-									className={`flex items-center ${getStockColor(product.stock)}`}
+									className={`flex items-center gap-1 ${getStockColor(product.stock)}`}
 								>
-									<Package className="mr-1 h-4 w-4" />
-									<span className="font-bold text-sm">{product.stock}</span>
-									<span className="ml-1 text-xs">үлдэгдэл</span>
+									<Package className="h-3.5 w-3.5" />
+									<span className="font-bold text-xs tabular-nums sm:text-sm">
+										{product.stock}
+									</span>
+									<span className="text-[10px] sm:text-xs">үлдэгдэл</span>
 								</div>
 							</div>
 						</div>
