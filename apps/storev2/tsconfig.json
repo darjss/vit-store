@@ -2,6 +2,7 @@
 	"extends": "astro/tsconfigs/strict",
 	"include": [
 		"alchemy.run.ts",
+		"../../env.ts",
 		"types/**/*.ts",
 		".astro/types.d.ts",
 		"**/*",

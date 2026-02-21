@@ -10,7 +10,6 @@ import { Hono } from "hono";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// POST /webhooks/messenger
 app.post("/messenger", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "system" });
 	const log = createLogger(logContext);
@@ -32,7 +31,6 @@ app.post("/messenger", async (c) => {
 	return c.text("OK", 200);
 });
 
-// GET /webhooks/messenger (verification)
 app.get("/messenger", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "system" });
 	const log = createLogger(logContext);
@@ -54,7 +52,6 @@ app.get("/messenger", async (c) => {
 	return c.text("Invalid request", 400);
 });
 
-// Test endpoints (can be moved to separate test routes later)
 app.get("/messenger/test", async (c) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);

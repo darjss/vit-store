@@ -1,17 +1,11 @@
 ---
-import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
-import QpayButton from "@/components/payment/qpay-button";
-import Tabs from "@/components/starwind/tabs/Tabs.astro";
-import TabsContent from "@/components/starwind/tabs/TabsContent.astro";
-import TabsList from "@/components/starwind/tabs/TabsList.astro";
-import TabsTrigger from "@/components/starwind/tabs/TabsTrigger.astro";
-import CopyButton from "@/components/ui/copy-button";
+
+
+
+import PaymentOptions from "@/components/payment/payment-options";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
-import IconAlert from "~icons/ri/alert-line";
 import IconCreditCard from "~icons/ri/bank-card-line";
-import IconBank from "~icons/ri/bank-line";
-import IconMobile from "~icons/ri/smartphone-line";
 
 const { id } = Astro.params;
 if(id===undefined){
@@ -21,13 +15,12 @@ const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
 const payment = await serverApi.payment.getPaymentByNumber.query({ paymentNumber: id });
 if(!payment){
-    Astro.redirect("/404");
+    throw Astro.redirect("/404");
 }
 
 if (payment.status === "success") {
     throw Astro.redirect(`/payment/success/${payment.paymentNumber}`);
 }
-console.log(id)
 ---
 
 <Layout>
@@ -74,116 +67,15 @@ console.log(id)
             </div>
         </div>
 
-        <Tabs defaultValue="transfer" class="w-full">
-            <TabsList class="w-full grid grid-cols-2 gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-muted/50 border-3 sm:border-4 border-border rounded-sm shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] mb-4 sm:mb-6">
-                <TabsTrigger
-                    value="transfer"
-                    class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
-                >
-                    <span class="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <IconBank class="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>Данс</span>
-                    </span>
-                </TabsTrigger>
-                <TabsTrigger
-                    value="qpay"
-                    class="text-xs sm:text-sm font-black px-3 py-2.5 sm:px-4 sm:py-3 rounded-sm transition-all data-[state=active]:bg-primary data-[state=active]:border-2 data-[state=active]:border-black data-[state=active]:shadow-[2px_2px_0_0_#000] hover:bg-primary/30"
-                >
-                    <span class="flex items-center justify-center gap-1.5 sm:gap-2">
-                        <IconMobile class="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>QPay</span>
-                    </span>
-                </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="transfer">
-                <div class="border-3 sm:border-4 border-border bg-card shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
-                    <div class="p-3 sm:p-4 space-y-4 sm:space-y-5">
-                        <div class="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border-2 border-border bg-muted/30">
-                            <div class="w-10 h-10 sm:w-12 sm:h-12 border-2 border-border bg-white rounded-full flex items-center justify-center shrink-0">
-                                <img src="/khaan.png" alt="Khaan logo" class="w-full h-full object-contain p-1.5 sm:p-2" />
-                            </div>
-                            <div>
-                                <div class="text-[10px] sm:text-xs font-bold text-muted-foreground mb-0.5">БАНК</div>
-                                <div class="text-sm sm:text-base font-black">Хаан банк</div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-3">
-                            <div class="grid sm:grid-cols-2 gap-2.5 sm:gap-3">
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                                        Данс
-                                    </label>
-                                    <div class="flex items-stretch">
-                                        <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-white border-2 border-border rounded-l-sm text-sm sm:text-base font-black">
-                                            5011147435
-                                        </div>
-                                        <CopyButton text="5011147435" title="Данс" client:load />
-                                    </div>
-                                </div>
-
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                                        Нэр
-                                    </label>
-                                    <div class="flex items-stretch">
-                                        <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-white border-2 border-border rounded-l-sm text-xs sm:text-sm font-bold leading-tight">
-                                            Batdelger Jigjidsuren
-                                        </div>
-                                        <CopyButton text="Batdelger Jigjidsuren" title="Нэр" client:load />
-                                    </div>
-                                </div>
-
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                                        Дүн
-                                    </label>
-                                    <div class="flex items-stretch">
-                                        <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-primary/20 border-2 border-border rounded-l-sm text-base sm:text-lg font-black text-primary">
-                                            {payment.total.toLocaleString()}₮
-                                        </div>
-                                        <CopyButton text={payment.total} title="Дүн" client:load />
-                                    </div>
-                                </div>
-
-                                <div class="space-y-1.5">
-                                    <label class="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">
-                                        Гүйлгээний утга
-                                    </label>
-                                    <div class="flex items-stretch">
-                                        <div class="flex-1 px-2.5 py-2 sm:px-3 sm:py-2.5 bg-white border-2 border-border rounded-l-sm text-sm sm:text-base font-black">
-                                            {payment.order.orderNumber}
-                                        </div>
-                                        <CopyButton text={payment.order.orderNumber} title="Гүйлгээний утга" client:load />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-2.5 sm:p-3 border-2 border-border bg-yellow-50">
-                            <div class="flex items-start gap-2 sm:gap-2.5">
-                                <IconAlert class="h-5 w-5 shrink-0 text-yellow-700" />
-                                <div class="flex-1">
-                                    <p class="text-[11px] sm:text-xs font-bold leading-snug">
-                                        <strong>Гүйлгээний утга</strong> хэсэгт заавал <strong>{payment.order.orderNumber}</strong> дугаарыг бичнэ үү. Төлбөр 5-15 минутын дотор баталгаажна.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <ConfirmPaymentButton paymentNumber={id} client:load/>
-                    </div>
-                </div>
-            </TabsContent>
-
-            <TabsContent value="qpay">
-                <div class="border-3 sm:border-4 border-border bg-card shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
-                    <div class="p-3 sm:p-5">
-                        <QpayButton paymentNumber={id} amount={payment.total} client:visible />
-                    </div>
-                </div>
-            </TabsContent>
-        </Tabs>
+        <PaymentOptions
+            paymentNumber={id}
+            total={payment.total}
+            orderNumber={payment.order.orderNumber}
+            client:load
+        >
+            <div slot="fallback" class="w-full border-3 border-border bg-card p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                <div class="h-10 w-full animate-pulse border-2 border-border bg-muted/40"></div>
+            </div>
+        </PaymentOptions>
     </div>
 </Layout>

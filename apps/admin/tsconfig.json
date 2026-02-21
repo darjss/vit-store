@@ -9,7 +9,7 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"types": ["vite/client"],
-		"rootDirs": ["."],
+		"rootDirs": [".", "../.."],
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
@@ -17,6 +17,7 @@
 			"server/alchemy": ["../server/alchemy.run.ts"]
 		}
 	},
+	"include": ["**/*.ts", "../../env.ts"],
 	"references": [
 		{
 			"path": "../server"

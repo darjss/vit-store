@@ -8,9 +8,12 @@ import {
 	RateLimit,
 	Worker,
 } from "alchemy/cloudflare";
+import { createServerAlchemyEnv } from "../../env";
 
 const app = await alchemy("server");
 const stage = app.stage;
+
+const env = createServerAlchemyEnv(process.env);
 
 const kv = await KVNamespace("kv", {
 	title: `vit-kv-${app.stage}`,
@@ -41,24 +44,25 @@ const images = Images({
 
 const hyperdriveDB = await Hyperdrive("pscale-db", {
 	origin: {
-		host: process.env.PLANETSCALE_HOST || "",
+		host: env.PLANETSCALE_HOST,
 		port: 5432,
-		user: process.env.PLANETSCALE_USER || "",
-		password: process.env.PLANETSCALE_PASSWORD || "",
-		database: process.env.PLANETSCALE_DATABASE || "",
+		user: env.PLANETSCALE_USER,
+		password: env.PLANETSCALE_PASSWORD,
+		database: env.PLANETSCALE_DATABASE,
 	},
 });
 
 // Direct DB URL for dev mode (Hyperdrive doesn't work in miniflare)
 const directDbUrl =
 	stage === "dev"
-		? `postgresql://${process.env.PLANETSCALE_USER}:${process.env.PLANETSCALE_PASSWORD}@${process.env.PLANETSCALE_HOST}:5432/${process.env.PLANETSCALE_DATABASE}?sslmode=require`
+		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
 		: "";
 
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
-	crons: ["*/10 * * * *"],
+	// Cloudflare cron is UTC; 03:00 UTC = 11:00 Ulaanbaatar (UTC+8)
+	crons: ["0 3 * * *"],
 	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
 
 	adopt: true,
@@ -70,35 +74,31 @@ export const server = await Worker("api", {
 		vitStoreKV: kv,
 		r2Bucket: r2,
 		images: images,
-		CORS_ORIGIN: process.env.CORS_ORIGIN || "",
-		DASH_URL: process.env.DASH_URL || "",
-		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
-		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
-		GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || "",
-		DOMAIN: process.env.DOMAIN || "",
-		MESSENGER_ACCESS_TOKEN: process.env.MESSENGER_ACCESS_TOKEN || "",
-		MESSENGER_VERIFY_TOKEN: process.env.MESSENGER_VERIFY_TOKEN || "",
-		SMS_GATEWAY_LOGIN: process.env.SMS_GATEWAY_LOGIN || "",
-		SMS_GATEWAY_PASSWORD: process.env.SMS_GATEWAY_PASSWORD || "",
-		RESEND_API_KEY: process.env.RESEND_API_KEY || "",
-		RESTOCK_FROM_EMAIL: process.env.RESTOCK_FROM_EMAIL || "",
-		FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || "",
-		GOOGLE_GENERATIVE_AI_API_KEY:
-			process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
-		BONUM_URL: process.env.BONUM_URL || "",
-		BONUM_APP_SECRET: process.env.BONUM_APP_SECRET || "",
-		BONUM_TERMINAL_ID: process.env.BONUM_TERMINAL_ID || "",
-		BONUM_WEBHOOK_URL: process.env.BONUM_WEBHOOK_URL || "",
-		UPSTASH_SEARCH_URL: process.env.UPSTASH_SEARCH_URL || "",
-		UPSTASH_SEARCH_TOKEN: process.env.UPSTASH_SEARCH_TOKEN || "",
-		UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "",
-		UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-		QPAY_URL: process.env.QPAY_URL || "",
-		QPAY_USERNAME: process.env.QPAY_USERNAME || "",
-		QPAY_PASSWORD: process.env.QPAY_PASSWORD || "",
-		POSTHOG_PERSONAL_API_KEY: process.env.POSTHOG_PERSONAL_API_KEY || "",
-		POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID || "",
-		POSTHOG_HOST: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
+		CORS_ORIGIN: env.CORS_ORIGIN,
+		DASH_URL: env.DASH_URL,
+		GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
+		GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
+		GOOGLE_CALLBACK_URL: env.GOOGLE_CALLBACK_URL,
+		DOMAIN: env.DOMAIN,
+		MESSENGER_ACCESS_TOKEN: env.MESSENGER_ACCESS_TOKEN,
+		MESSENGER_VERIFY_TOKEN: env.MESSENGER_VERIFY_TOKEN,
+		SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
+		SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
+		RESEND_API_KEY: env.RESEND_API_KEY,
+		RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
+		FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
+		GOOGLE_GENERATIVE_AI_API_KEY: env.GOOGLE_GENERATIVE_AI_API_KEY,
+		UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
+		UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
+		UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,
+		UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN,
+		QPAY_URL: env.QPAY_URL,
+		QPAY_USERNAME: env.QPAY_USERNAME,
+		QPAY_PASSWORD: env.QPAY_PASSWORD,
+		QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
+		POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
+		POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
+		POSTHOG_HOST: env.POSTHOG_HOST,
 	},
 
 	observability: {

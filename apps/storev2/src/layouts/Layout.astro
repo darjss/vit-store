@@ -1,5 +1,11 @@
 ---
 
+
+
+
+
+
+
 import { ClientRouter } from "astro:transitions";
 import CartDrawer from "@/components/cart/cart-drawer";
 import QueryDevtools from "@/components/query-devtools";
@@ -81,12 +87,7 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
     }
 </style>
 <script>
-    document.addEventListener("astro:page-load", () => {
-        console.log("✅ View transition page load!");
-    });
-
     document.addEventListener("astro:before-preparation", () => {
-        console.log("🚀 Starting navigation...");
         const loadingBar = document.getElementById("loading-bar");
         if (loadingBar) {
             loadingBar.classList.add("show");
@@ -94,7 +95,6 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
     });
 
     document.addEventListener("astro:after-preparation", () => {
-        console.log("✨ Navigation prepared!");
         const loadingBar = document.getElementById("loading-bar");
         if (loadingBar) {
             loadingBar.classList.remove("show");

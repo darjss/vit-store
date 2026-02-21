@@ -1,21 +1,14 @@
 import type {
-	AdminEventData,
 	AdminLogger,
-	AuthEventData,
 	AuthLogger,
 	LogContext,
 	LogEntry,
 	Logger,
 	LogLevel,
-	OrderEventData,
 	OrderLogger,
-	PaymentEventData,
 	PaymentLogger,
-	ProductEventData,
 	ProductLogger,
-	SystemEventData,
 	SystemLogger,
-	WebhookEventData,
 	WebhookLogger,
 } from "./types";
 
@@ -107,7 +100,7 @@ function output(entry: LogEntry): void {
 }
 
 function createAuthLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): AuthLogger {
 	return {
@@ -124,7 +117,7 @@ function createAuthLogger(
 }
 
 function createOrderLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): OrderLogger {
 	return {
@@ -138,7 +131,7 @@ function createOrderLogger(
 }
 
 function createPaymentLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): PaymentLogger {
 	return {
@@ -151,7 +144,7 @@ function createPaymentLogger(
 }
 
 function createProductLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): ProductLogger {
 	return {
@@ -164,7 +157,7 @@ function createProductLogger(
 }
 
 function createAdminLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): AdminLogger {
 	return {
@@ -176,7 +169,7 @@ function createAdminLogger(
 }
 
 function createSystemLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): SystemLogger {
 	return {
@@ -191,7 +184,7 @@ function createSystemLogger(
 }
 
 function createWebhookLogger(
-	context: LogContext,
+	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): WebhookLogger {
 	return {
