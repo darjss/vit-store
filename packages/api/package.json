@@ -30,6 +30,7 @@
 	"scripts": {
 		"build": "tsdown",
 		"dev": "echo 'API package uses source files directly - no dev build needed'",
+		"pricing:discover": "bun scripts/discover-amazon-pricing-formula.ts",
 		"images:refine": "bun scripts/refine-and-migrate-images.ts",
 		"products:dedupe": "bun scripts/dedupe-products.ts",
 		"db:push": "drizzle-kit push",
