@@ -22,8 +22,10 @@ interface SearchProductResult {
 const performProductSearch = async (
 	query: string,
 	limit: number,
+	filters?: { brandId?: number; categoryId?: number },
 ): Promise<SearchProductResult[]> => {
-	const searchResults = await searchProducts(query, limit);
+	const safeLimit = Math.min(limit, 10);
+	const searchResults = await searchProducts(query, safeLimit, filters);
 
 	if (searchResults.length > 0) {
 		const ids = searchResults.map((r) => r.id);
@@ -47,7 +49,7 @@ const performProductSearch = async (
 	}
 
 	const q = productQueries.store;
-	const fallbackResults = await q.searchByName(query, limit);
+	const fallbackResults = await q.searchByName(query, safeLimit);
 	return fallbackResults.map((p) => ({
 		id: p.id,
 		slug: p.slug,
@@ -64,11 +66,16 @@ export const product = router({
 			v.object({
 				query: v.pipe(v.string(), v.minLength(1)),
 				limit: v.optional(v.number(), 8),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
 		.query(async ({ input }) => {
 			try {
-				return await performProductSearch(input.query, input.limit);
+				return await performProductSearch(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -82,12 +89,17 @@ export const product = router({
 		.input(
 			v.object({
 				query: v.pipe(v.string(), v.minLength(1)),
-				limit: v.optional(v.number(), 50),
+				limit: v.optional(v.number(), 10),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
 		.query(async ({ input }) => {
 			try {
-				return await performProductSearch(input.query, input.limit);
+				return await performProductSearch(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -226,11 +238,6 @@ export const product = router({
 			}),
 		)
 		.query(async ({ input }) => {
-			if (input.productId === 7) {
-				return {
-					isInStock: false,
-				};
-			}
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 			if (product === null || product === undefined) {
@@ -242,10 +249,12 @@ export const product = router({
 			if (product.stock === 0 || product.status === "out_of_stock") {
 				return {
 					isInStock: false,
+					stock: product.stock,
 				};
 			}
 			return {
 				isInStock: true,
+				stock: product.stock,
 			};
 		}),
 	subscribeToRestock: publicProcedure

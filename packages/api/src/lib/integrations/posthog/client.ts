@@ -303,6 +303,8 @@ export class PostHogClient {
 
 	/**
 	 * Get per-product behavior analytics (views, add-to-cart, daily trend).
+	 * Uses a single query with both aggregate stats and daily breakdown to
+	 * stay within PostHog's concurrent query limit.
 	 */
 	async getProductBehavior(
 		productId: number,
@@ -314,20 +316,23 @@ export class PostHogClient {
 		searchClicks: number;
 		dailyTrend: Array<{ date: string; views: number; addToCarts: number }>;
 	}> {
-		// Aggregate stats
+		// Fetch aggregate stats first
 		const statsHogql = `
 			SELECT
-				countIf(event = 'product_viewed' AND properties.product_id = ${productId}) AS views,
-				uniqExactIf(person_id, event = 'product_viewed' AND properties.product_id = ${productId}) AS unique_viewers,
-				countIf(event = 'add_to_cart' AND properties.product_id = ${productId}) AS add_to_carts,
-				countIf(event = 'search_result_clicked' AND properties.product_id = ${productId}) AS search_clicks
+				countIf(event = 'product_viewed') AS views,
+				uniqExactIf(person_id, event = 'product_viewed') AS unique_viewers,
+				countIf(event = 'add_to_cart') AS add_to_carts,
+				countIf(event = 'search_result_clicked') AS search_clicks
 			FROM events
 			WHERE timestamp >= now() - interval ${daysBack} day
 				AND timestamp <= now()
 				AND properties.product_id = ${productId}
 		`;
 
-		// Daily trend
+		const statsResult = await this.query(statsHogql);
+		const statsRow = statsResult.results[0] || [];
+
+		// Then fetch daily trend
 		const trendHogql = `
 			SELECT
 				toDate(timestamp) AS day,
@@ -341,12 +346,7 @@ export class PostHogClient {
 			ORDER BY day ASC
 		`;
 
-		const [statsResult, trendResult] = await Promise.all([
-			this.query(statsHogql),
-			this.query(trendHogql),
-		]);
-
-		const statsRow = statsResult.results[0] || [];
+		const trendResult = await this.query(trendHogql);
 
 		return {
 			views: Number(statsRow[0]) || 0,

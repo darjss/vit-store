@@ -1,6 +1,11 @@
 import { google } from "@ai-sdk/google";
 import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
+import {
+	brandQueries,
+	categoryQueries,
+	productQueries,
+} from "@vit/api/queries";
 import { generateText, Output } from "ai";
 import * as v from "valibot";
 import { z } from "zod";
@@ -18,6 +23,8 @@ export type ExtractedProductData = {
 	name_mn: string;
 	description: string;
 	brand: string | null;
+	brandId: number | null;
+	categoryId: number | null;
 	amount: string;
 	potency: string;
 	dailyIntake: number;
@@ -27,6 +34,8 @@ export type ExtractedProductData = {
 	ingredients: string[];
 	images: { url: string }[];
 	sourceUrl: string | null;
+	amazonPriceUsd: number | null;
+	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
 };
@@ -40,7 +49,16 @@ type FirecrawlExtractedProduct = {
 	servingSize: string | null;
 	servingsPerContainer: number | null;
 	ingredients: string[];
+	priceUsd: number | null;
 };
+
+const PRICING_FORMULA = {
+	slope: 4587,
+	intercept: 16929,
+	min: 40000,
+	max: 500000,
+	roundingStep: 500,
+} as const;
 
 type VisionAnalysisResult = {
 	ingredients: string[];
@@ -60,6 +78,8 @@ type TranslationResult = {
 	seoTitle: string;
 	seoDescription: string;
 	ingredients: string[];
+	brandId: number | null;
+	categoryId: number | null;
 };
 
 const imageSelectionSchema = z.object({
@@ -196,6 +216,59 @@ function uniqueStable<T>(arr: T[], keyFn: (x: T) => string): T[] {
 	return out;
 }
 
+function parsePriceTokenToUsd(token: string): number | null {
+	const cleaned = token.replace(/,/g, "").trim();
+	if (!/^\d+(?:\.\d{1,2})?$/.test(cleaned)) {
+		return null;
+	}
+	const value = Number.parseFloat(cleaned);
+	if (!Number.isFinite(value) || value <= 0 || value > 1000) {
+		return null;
+	}
+	return value;
+}
+
+function extractAmazonPriceUsd(html: string): number | null {
+	const patterns = [
+		/"priceToPay"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/"apex_desktop"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/<span[^>]*class="a-price-whole"[^>]*>\s*([0-9,]+)\s*<\/span>[\s\S]{0,120}?<span[^>]*class="a-price-fraction"[^>]*>\s*([0-9]{2})\s*<\/span>/i,
+		/\$\s*([0-9]+(?:\.[0-9]{2})?)/,
+	];
+
+	for (const pattern of patterns) {
+		const match = html.match(pattern);
+		if (!match) continue;
+
+		if (match.length >= 3 && pattern.source.includes("a-price-whole")) {
+			const whole = match[1]?.replace(/,/g, "");
+			const fraction = match[2];
+			const combined = `${whole}.${fraction}`;
+			const parsed = parsePriceTokenToUsd(combined);
+			if (parsed) return parsed;
+			continue;
+		}
+
+		const parsed = parsePriceTokenToUsd(match[1] ?? "");
+		if (parsed) return parsed;
+	}
+
+	return null;
+}
+
+function calculatePriceMntFromUsd(amazonPriceUsd: number): number {
+	const raw =
+		PRICING_FORMULA.slope * amazonPriceUsd + PRICING_FORMULA.intercept;
+	const bounded = Math.min(
+		PRICING_FORMULA.max,
+		Math.max(PRICING_FORMULA.min, raw),
+	);
+	return (
+		Math.round(bounded / PRICING_FORMULA.roundingStep) *
+		PRICING_FORMULA.roundingStep
+	);
+}
+
 async function selectProductImagesWithGemini(
 	productName: string,
 	candidates: string[],
@@ -236,13 +309,82 @@ Return keepIndices and primaryIndex from the provided image order. Keep max 8.`,
 			(i) => i >= 0 && i < candidates.length,
 		);
 		const keep = (keepIndices.length > 0 ? keepIndices : [0])
-			.map((i) => candidates[i]!)
+			.map((i) => candidates[i])
+			.filter((url): url is string => typeof url === "string")
 			.slice(0, 8);
-		const primary =
+		const primaryCandidate =
 			output?.primaryIndex != null &&
 			output.primaryIndex >= 0 &&
 			output.primaryIndex < candidates.length
-				? candidates[output.primaryIndex]!
+				? candidates[output.primaryIndex]
+				: null;
+		const primary =
+			typeof primaryCandidate === "string"
+				? primaryCandidate
+				: (keep[0] ?? null);
+		return { keep, primary, usedFallback: false };
+	} catch {
+		return {
+			keep: candidates.slice(0, 8),
+			primary: candidates[0] ?? null,
+			usedFallback: true,
+		};
+	}
+}
+
+async function refineProductOnlyImagesWithGemini(
+	productName: string,
+	candidates: string[],
+): Promise<{ keep: string[]; primary: string | null; usedFallback: boolean }> {
+	if (candidates.length <= 1) {
+		return {
+			keep: candidates,
+			primary: candidates[0] ?? null,
+			usedFallback: false,
+		};
+	}
+
+	try {
+		const { output } = await generateText({
+			model: google("gemini-2.5-flash"),
+			output: Output.object({ schema: imageSelectionSchema }),
+			messages: [
+				{
+					role: "user",
+					content: [
+						{
+							type: "text",
+							text: `Second-pass strict filtering for product: ${productName}.
+Keep only images where the actual product package/bottle/box is the main visible subject.
+Reject images that are mostly brand logos, brand story graphics, banners, collages, badges, or unrelated items.
+Prefer clear front/back/label/supplement facts shots of the same product.
+Return keepIndices and primaryIndex from the given order. Keep max 8.`,
+						},
+						...candidates.map((url) => ({
+							type: "image" as const,
+							image: url,
+						})),
+					],
+				},
+			],
+		});
+
+		const keepIndices = Array.from(new Set(output?.keepIndices ?? [])).filter(
+			(i) => i >= 0 && i < candidates.length,
+		);
+		const keep = (keepIndices.length > 0 ? keepIndices : [0])
+			.map((i) => candidates[i])
+			.filter((url): url is string => typeof url === "string")
+			.slice(0, 8);
+		const primaryCandidate =
+			output?.primaryIndex != null &&
+			output.primaryIndex >= 0 &&
+			output.primaryIndex < candidates.length
+				? candidates[output.primaryIndex]
+				: null;
+		const primary =
+			typeof primaryCandidate === "string"
+				? primaryCandidate
 				: (keep[0] ?? null);
 		return { keep, primary, usedFallback: false };
 	} catch {
@@ -270,16 +412,20 @@ async function filterProductImages(
 	}
 
 	const picked = await selectProductImagesWithGemini(productName, deduped);
-	const uniquePicked = uniqueStable(picked.keep, normalizedImageKey).slice(
-		0,
-		8,
+	const strictPicked = await refineProductOnlyImagesWithGemini(
+		productName,
+		picked.keep,
 	);
-	const primary = picked.primary;
+	const uniquePicked = uniqueStable(
+		strictPicked.keep,
+		normalizedImageKey,
+	).slice(0, 8);
+	const primary = strictPicked.primary;
 	if (!primary || uniquePicked.length === 0) {
 		return {
 			images: uniquePicked,
 			usedGemini: true,
-			usedFallback: picked.usedFallback,
+			usedFallback: picked.usedFallback || strictPicked.usedFallback,
 		};
 	}
 
@@ -288,13 +434,13 @@ async function filterProductImages(
 	);
 	if (primaryIndex > 0) {
 		const [head] = uniquePicked.splice(primaryIndex, 1);
-		uniquePicked.unshift(head!);
+		if (head) uniquePicked.unshift(head);
 	}
 
 	return {
 		images: uniquePicked,
 		usedGemini: true,
-		usedFallback: picked.usedFallback,
+		usedFallback: picked.usedFallback || strictPicked.usedFallback,
 	};
 }
 
@@ -383,11 +529,13 @@ async function scrapeAmazonProduct(
 
 		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
 		const html = scrapeResponse.html || "";
+		const priceUsd = extractAmazonPriceUsd(html);
 
 		logger.info("scrapeAmazonProduct", {
 			message: "Firecrawl extracted",
 			title: jsonData.title,
 			brand: jsonData.brand,
+			priceUsd,
 			ingredientsCount: (jsonData.ingredients as string[])?.length || 0,
 			htmlLength: html.length,
 		});
@@ -409,6 +557,7 @@ async function scrapeAmazonProduct(
 				servingSize: (jsonData.servingSize as string) || null,
 				servingsPerContainer: (jsonData.servingsPerContainer as number) || null,
 				ingredients: (jsonData.ingredients as string[]) || [],
+				priceUsd,
 			},
 		};
 	} catch (error) {
@@ -510,6 +659,8 @@ Example: "Vitamin D3 - 5000 IU (625%)"`,
 async function translateAndStructureProduct(
 	extractedData: FirecrawlExtractedProduct,
 	visionData: VisionAnalysisResult,
+	brands: { id: number; name: string }[],
+	categories: { id: number; name: string }[],
 ): Promise<TranslationResult | null> {
 	logger.info("translateAndStructureProduct", {
 		message: "Translating product data...",
@@ -520,6 +671,11 @@ async function translateAndStructureProduct(
 	];
 
 	try {
+		const brandList = brands.map((b) => `  ID ${b.id}: ${b.name}`).join("\n");
+		const categoryList = categories
+			.map((c) => `  ID ${c.id}: ${c.name}`)
+			.join("\n");
+
 		const { output } = await generateText({
 			model: google("gemini-2.5-flash"),
 			output: Output.object({
@@ -546,6 +702,18 @@ async function translateAndStructureProduct(
 					ingredients: z
 						.array(z.string())
 						.describe("Ingredients in Mongolian Cyrillic"),
+					brandId: z
+						.number()
+						.nullable()
+						.describe(
+							"The ID of the matching brand from the BRANDS list, or null if no match",
+						),
+					categoryId: z
+						.number()
+						.nullable()
+						.describe(
+							"The ID of the best matching category from the CATEGORIES list, or null if no match",
+						),
 				}),
 			}),
 			prompt: `You are a product specialist for a Mongolian supplement store. Translate this product for Mongolian customers who search in both Cyrillic and Latin scripts.
@@ -565,6 +733,12 @@ SERVING INFO:
 - Per Day: ${visionData.dailyIntake || "Unknown"}
 - Per Container: ${extractedData.servingsPerContainer || "Unknown"}
 
+AVAILABLE BRANDS (match the product brand to one of these by ID):
+${brandList || "  (no brands available)"}
+
+AVAILABLE CATEGORIES (pick the best matching category by ID):
+${categoryList || "  (no categories available)"}
+
 INSTRUCTIONS:
 1. name: Clean English product name (no brand). Example: "Berberine 1500mg 240 Veggie Capsules"
 2. name_mn: Mongolian Cyrillic name. Example: "Берберин 1500мг 240 Ургамлын Капсул"
@@ -574,7 +748,9 @@ INSTRUCTIONS:
 5. seoDescription: Mongolian Cyrillic with key English terms mixed in for search visibility.
    Example: "НэйчерБэлл (NatureBell) Берберин 1500mg нэмэлт тэжээл. Blood sugar, heart health дэмжинэ. 240 capsules, 80 өдрийн хэрэглээ."
 6. ingredients: Mongolian Cyrillic, keep amounts. Example: "Берберин HCl - 1500мг"
-7. Extract amount (e.g. "240 Veggie Capsules") and potency (e.g. "1500mg") from title`,
+7. Extract amount (e.g. "240 Veggie Capsules") and potency (e.g. "1500mg") from title
+8. brandId: Match the product brand "${extractedData.brand || "Unknown"}" to one of the AVAILABLE BRANDS above. Use exact or fuzzy name matching (e.g. "NOW Foods" matches "Now Foods"). Return the brand ID or null if no match.
+9. categoryId: Based on the product type and ingredients, pick the single best matching category from AVAILABLE CATEGORIES above. Return the category ID or null if no match.`,
 		});
 
 		logger.info("translateAndStructureProduct", {
@@ -582,6 +758,8 @@ INSTRUCTIONS:
 			name: output?.name,
 			amount: output?.amount,
 			potency: output?.potency,
+			brandId: output?.brandId,
+			categoryId: output?.categoryId,
 		});
 
 		return output ?? null;
@@ -594,34 +772,193 @@ INSTRUCTIONS:
 // Helper: Upload images to R2
 async function uploadImagesToR2(
 	imageUrls: string[],
-	backendUrl: string,
+	ctx: Context,
 ): Promise<{ url: string }[]> {
-	logger.info("uploadImagesToR2", {
-		message: `Uploading ${imageUrls.length} images to ${backendUrl}`,
-	});
-	try {
-		const response = await fetch(`${backendUrl}/upload/images/urls`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(imageUrls.map((url) => ({ url }))),
-		});
+	const CDN_BASE_URL = "https://cdn.darjs.dev";
+	const uploadPrefix = "products/catalog";
+	const sampleImageHosts = Array.from(
+		new Set(
+			imageUrls
+				.slice(0, 5)
+				.map((url) => {
+					try {
+						return new URL(url).hostname;
+					} catch {
+						return "invalid-url";
+					}
+				})
+				.filter((host) => host.length > 0),
+		),
+	);
 
-		if (!response.ok) {
-			logger.error("uploadImagesToR2", {
-				message: `Upload failed: ${response.status}`,
-			});
-			return imageUrls.map((url) => ({ url }));
+	logger.info("uploadImagesToR2", {
+		operation: "ai_image_upload",
+		message: "Uploading AI product images directly to R2",
+		imageCount: imageUrls.length,
+		sampleImageHosts,
+	});
+
+	const uploadedImages: { url: string }[] = [];
+	const skippedImages: { url: string; reason: string }[] = [];
+
+	try {
+		for (const sourceUrl of imageUrls) {
+			try {
+				const response = await fetch(sourceUrl, {
+					headers: {
+						"User-Agent":
+							"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+						Accept: "image/*",
+					},
+					signal: AbortSignal.timeout(15000),
+				});
+
+				if (!response.ok) {
+					skippedImages.push({
+						url: sourceUrl,
+						reason: `fetch_status_${response.status}`,
+					});
+					continue;
+				}
+
+				const contentType = response.headers.get("content-type") || "";
+				if (!contentType.startsWith("image/")) {
+					skippedImages.push({
+						url: sourceUrl,
+						reason: "invalid_content_type",
+					});
+					continue;
+				}
+
+				const rawExt = contentType.includes("png")
+					? "png"
+					: contentType.includes("gif")
+						? "gif"
+						: contentType.includes("webp")
+							? "webp"
+							: "jpg";
+				const generatedId = crypto.randomUUID().replace(/-/g, "");
+				let key = `${uploadPrefix}/${generatedId}.webp`;
+
+				const imageArrayBuffer = await response.arrayBuffer();
+				const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
+
+				let wroteWithTransform = false;
+				try {
+					const transformed = await ctx.c.env.images
+						.input(imageBlob.stream())
+						.transform({
+							width: 800,
+							height: 600,
+							fit: "contain",
+						})
+						.output({ format: "image/webp" });
+
+					const transformedBuffer = await transformed.response().arrayBuffer();
+
+					await ctx.c.env.r2Bucket.put(key, transformedBuffer, {
+						httpMetadata: { contentType: "image/webp" },
+					});
+					wroteWithTransform = true;
+				} catch {
+					key = `${uploadPrefix}/${generatedId}.${rawExt}`;
+					await ctx.c.env.r2Bucket.put(key, imageArrayBuffer, {
+						httpMetadata: { contentType },
+					});
+				}
+
+				uploadedImages.push({ url: `${CDN_BASE_URL}/${key}` });
+
+				logger.debug("uploadImagesToR2.imageProcessed", {
+					operation: "ai_image_upload",
+					sourceHost: (() => {
+						try {
+							return new URL(sourceUrl).hostname;
+						} catch {
+							return "invalid-url";
+						}
+					})(),
+					storedKey: key,
+					usedTransform: wroteWithTransform,
+				});
+			} catch (imageError) {
+				skippedImages.push({
+					url: sourceUrl,
+					reason: imageError instanceof Error ? imageError.message : "unknown",
+				});
+			}
 		}
 
-		const result = (await response.json()) as { images: { url: string }[] };
 		logger.info("uploadImagesToR2", {
-			message: `Uploaded ${result.images.length} images`,
+			operation: "ai_image_upload",
+			message: `Uploaded ${uploadedImages.length} of ${imageUrls.length} images`,
+			uploadedCount: uploadedImages.length,
+			skippedCount: skippedImages.length,
+			skippedReasons: skippedImages.slice(0, 5),
 		});
-		return result.images;
+
+		return uploadedImages;
 	} catch (error) {
-		logger.error("uploadImagesToR2", error);
-		return imageUrls.map((url) => ({ url }));
+		logger.error("uploadImagesToR2", error, {
+			operation: "ai_image_upload",
+			message: "Direct upload process failed",
+			imageCount: imageUrls.length,
+			sampleImageHosts,
+			fallbackToSourceUrls: false,
+		});
+		return [];
 	}
+}
+
+async function extractAndUploadProductImages(
+	ctx: Context,
+	query: string,
+): Promise<{ images: { url: string }[]; sourceUrl: string }> {
+	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
+	if (!firecrawlApiKey) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Firecrawl API key not configured",
+		});
+	}
+
+	const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
+	const productUrl = isAmazonUrl(query)
+		? query
+		: await searchAmazonProduct(firecrawl, query);
+
+	if (!productUrl) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Could not find product on Amazon. Try a direct URL.",
+		});
+	}
+
+	const scrapeResult = await scrapeAmazonProduct(firecrawl, productUrl);
+	if (!scrapeResult?.extracted.title) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to scrape product page.",
+		});
+	}
+
+	const imageFilter = await filterProductImages(
+		scrapeResult.extracted.title,
+		scrapeResult.extracted.images,
+	);
+	if (imageFilter.images.length === 0) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Could not extract usable product images from Amazon listing.",
+		});
+	}
+
+	const uploadedImages = await uploadImagesToR2(imageFilter.images, ctx);
+
+	return {
+		images: uploadedImages,
+		sourceUrl: productUrl,
+	};
 }
 
 // Main router
@@ -630,6 +967,47 @@ export const aiProduct = router({
 		.input(v.object({ query: v.pipe(v.string(), v.minLength(3)) }))
 		.mutation(async ({ ctx, input }): Promise<ExtractedProductData> => {
 			return extractProductFromQuery(ctx, input.query);
+		}),
+	regenerateProductImages: adminProcedure
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				query: v.optional(v.pipe(v.string(), v.minLength(3))),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const product = await productQueries.admin.getProductById(
+				input.productId,
+			);
+			if (!product) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Product not found",
+				});
+			}
+
+			const query =
+				input.query?.trim() ||
+				[product.brand?.name, product.name, product.potency, product.amount]
+					.filter((part): part is string => !!part && part.trim().length > 0)
+					.join(" ")
+					.trim();
+			const result = await extractAndUploadProductImages(ctx, query);
+
+			await productQueries.admin.softDeleteProductImages(input.productId);
+			await productQueries.admin.createProductImages(
+				input.productId,
+				result.images.map((image, index) => ({
+					url: image.url,
+					isPrimary: index === 0,
+				})),
+			);
+
+			return {
+				images: result.images,
+				sourceUrl: result.sourceUrl,
+				count: result.images.length,
+			};
 		}),
 });
 
@@ -677,6 +1055,14 @@ export async function extractProductFromQuery(
 	}
 
 	const { extracted: extractedData } = scrapeResult;
+	const calculatedPriceMnt =
+		typeof extractedData.priceUsd === "number"
+			? calculatePriceMntFromUsd(extractedData.priceUsd)
+			: null;
+	if (calculatedPriceMnt == null) {
+		errors.push("Could not extract Amazon USD price.");
+		extractionStatus = "partial";
+	}
 
 	logger.info("extractProductFromQuery", {
 		message: "Extracted",
@@ -724,11 +1110,28 @@ export async function extractProductFromQuery(
 		extractionStatus = "partial";
 	}
 
-	// Step 4: Translate and structure
+	// Step 4: Translate and structure (fetch brands/categories for LLM matching)
+	const [allBrands, allCategories] = await Promise.all([
+		brandQueries.admin.getAllBrands(),
+		categoryQueries.admin.getAllCategories(),
+	]);
 	const structuredData = await translateAndStructureProduct(
 		extractedData,
 		visionData,
+		allBrands.map((b) => ({ id: b.id, name: b.name })),
+		allCategories.map((c) => ({ id: c.id, name: c.name })),
 	);
+	const validBrandIds = new Set(allBrands.map((b) => b.id));
+	const validCategoryIds = new Set(allCategories.map((c) => c.id));
+	const matchedBrandId =
+		structuredData?.brandId != null && validBrandIds.has(structuredData.brandId)
+			? structuredData.brandId
+			: null;
+	const matchedCategoryId =
+		structuredData?.categoryId != null &&
+		validCategoryIds.has(structuredData.categoryId)
+			? structuredData.categoryId
+			: null;
 	if (!structuredData) {
 		errors.push("Translation failed. Using raw data.");
 		extractionStatus = "partial";
@@ -737,11 +1140,56 @@ export async function extractProductFromQuery(
 	// Step 5: Upload images
 	let uploadedImages: { url: string }[] = [];
 	if (filteredImages.length > 0) {
-		const requestUrl = new URL(ctx.c.req.url);
-		const backendUrl = `${requestUrl.protocol}//${requestUrl.host}`;
-		uploadedImages = await uploadImagesToR2(filteredImages, backendUrl);
+		uploadedImages = await uploadImagesToR2(filteredImages, ctx);
+
+		if (uploadedImages.length === 0) {
+			logger.warn("extractProductFromQuery.imageUploadFailed", {
+				message: "No images were uploaded to CDN",
+				requestedCount: filteredImages.length,
+				sourceHosts: Array.from(
+					new Set(
+						filteredImages.slice(0, 5).map((url) => {
+							try {
+								return new URL(url).hostname;
+							} catch {
+								return "invalid-url";
+							}
+						}),
+					),
+				),
+			});
+			errors.push("Image upload failed. No images were imported.");
+			extractionStatus = "partial";
+		}
 
 		if (filteredImages.every((url, i) => url === uploadedImages[i]?.url)) {
+			logger.warn("extractProductFromQuery.imageUploadFallback", {
+				message: "All uploaded image URLs matched source URLs; using fallback",
+				requestedCount: filteredImages.length,
+				uploadedCount: uploadedImages.length,
+				sourceHosts: Array.from(
+					new Set(
+						filteredImages.slice(0, 5).map((url) => {
+							try {
+								return new URL(url).hostname;
+							} catch {
+								return "invalid-url";
+							}
+						}),
+					),
+				),
+				uploadedHosts: Array.from(
+					new Set(
+						uploadedImages.slice(0, 5).map((image) => {
+							try {
+								return new URL(image.url).hostname;
+							} catch {
+								return "invalid-url";
+							}
+						}),
+					),
+				),
+			});
 			errors.push("Image upload failed. Using Amazon URLs.");
 			extractionStatus = "partial";
 		}
@@ -763,6 +1211,8 @@ export async function extractProductFromQuery(
 			extractedData.description ||
 			"Тайлбар байхгүй",
 		brand: extractedData.brand,
+		brandId: matchedBrandId,
+		categoryId: matchedCategoryId,
 		amount: structuredData?.amount || "Unknown",
 		potency: structuredData?.potency || "Unknown",
 		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
@@ -774,6 +1224,8 @@ export async function extractProductFromQuery(
 		ingredients: structuredData?.ingredients || allOriginalIngredients,
 		images: uploadedImages,
 		sourceUrl: productUrl,
+		amazonPriceUsd: extractedData.priceUsd,
+		calculatedPriceMnt,
 		extractionStatus,
 		errors,
 	};

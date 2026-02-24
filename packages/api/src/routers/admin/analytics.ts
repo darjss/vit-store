@@ -270,10 +270,9 @@ export const analytics = router({
 				const posthog = createPostHogClient(ctx.c.env);
 				const days = timeRangeToDays(input.timeRange);
 
-				const [current, previous] = await Promise.all([
-					posthog.getWebAnalytics(days),
-					posthog.getWebAnalyticsPrevious(days),
-				]);
+				// Run sequentially to stay within PostHog's concurrent query limit (3)
+				const current = await posthog.getWebAnalytics(days);
+				const previous = await posthog.getWebAnalyticsPrevious(days);
 
 				const calcChange = (curr: number, prev: number) => {
 					if (prev === 0) return curr > 0 ? 100 : 0;
