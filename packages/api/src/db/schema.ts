@@ -121,6 +121,7 @@ export const ProductsTable = createTable(
 		seoDescription: varchar("seo_description", { length: 512 }),
 		name_mn: varchar("name_mn", { length: 256 }),
 		weightGrams: integer("weight_grams").default(0).notNull(),
+		expirationDate: varchar("expiration_date", { length: 7 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),

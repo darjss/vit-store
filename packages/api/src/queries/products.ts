@@ -109,6 +109,7 @@ export const productQueries = {
 			seoTitle?: string | null;
 			seoDescription?: string | null;
 			weightGrams?: number;
+			expirationDate?: string | null;
 		}) {
 			const result = await db().insert(ProductsTable).values(data).returning();
 			return result[0];
@@ -161,6 +162,7 @@ export const productQueries = {
 				categoryId?: number;
 				brandId?: number;
 				status?: ProductStatus;
+				expirationDate?: string | null;
 			},
 		) {
 			await db()
@@ -508,6 +510,7 @@ export const productQueries = {
 					brandId: true,
 					ingredients: true,
 					weightGrams: true,
+					expirationDate: true,
 					seoTitle: true,
 					seoDescription: true,
 				},

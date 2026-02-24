@@ -386,6 +386,7 @@ export const orderQueries = {
 			date?: string;
 		}) {
 			const conditions: (SQL<unknown> | undefined)[] = [];
+			conditions.push(isNull(OrdersTable.deletedAt));
 
 			if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
@@ -468,7 +469,10 @@ export const orderQueries = {
 								with: {
 									images: {
 										columns: { url: true },
-										where: eq(ProductImagesTable.isPrimary, true),
+										where: and(
+											eq(ProductImagesTable.isPrimary, true),
+											isNull(ProductImagesTable.deletedAt),
+										),
 									},
 								},
 							},
@@ -478,11 +482,25 @@ export const orderQueries = {
 						columns: { provider: true, status: true, createdAt: true },
 						where:
 							params.paymentStatus === undefined
-								? undefined
-								: eq(PaymentsTable.status, params.paymentStatus),
+								? isNull(PaymentsTable.deletedAt)
+								: and(
+										isNull(PaymentsTable.deletedAt),
+										eq(PaymentsTable.status, params.paymentStatus),
+									),
 					},
 				},
 			});
+
+			const ordersWithoutPayment = orderResults
+				.filter((order) => order.payments.length === 0)
+				.map((order) => order.id);
+
+			if (ordersWithoutPayment.length > 0) {
+				logger.warn("admin.orders_missing_payment", {
+					count: ordersWithoutPayment.length,
+					orderIds: ordersWithoutPayment,
+				});
+			}
 
 			let filteredOrders = orderResults;
 			if (params.paymentStatus !== undefined) {

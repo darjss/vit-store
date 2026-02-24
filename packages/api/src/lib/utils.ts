@@ -194,9 +194,7 @@ export interface ShapedOrder {
 
 export const shapeOrderResult = (result: OrderResult) => {
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-	if (result.payments[0] === undefined) {
-		throw new Error("No payment info found");
-	}
+	const latestPayment = result.payments[0];
 	return {
 		id: result.id,
 		orderNumber: result.orderNumber,
@@ -215,8 +213,8 @@ export const shapeOrderResult = (result: OrderResult) => {
 			imageUrl: orderDetail.product.images[0]?.url,
 		})),
 		deliveryProvider: result.deliveryProvider,
-		paymentStatus: result.payments[0]?.status,
-		paymentProvider: result.payments[0]?.provider,
+		paymentStatus: latestPayment?.status ?? "pending",
+		paymentProvider: latestPayment?.provider ?? "transfer",
 	};
 };
 export const shapeOrderResults = (results: OrderResult[]) => {
@@ -224,9 +222,7 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 		result.payments.sort(
 			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 		);
-		if (result.payments[0] === undefined) {
-			throw new Error("No payment info found");
-		}
+		const latestPayment = result.payments[0];
 		return {
 			id: result.id,
 			orderNumber: result.orderNumber,
@@ -245,8 +241,8 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 				price: orderDetail.product.price,
 				imageUrl: orderDetail.product.images[0]?.url,
 			})),
-			paymentStatus: result.payments[0]?.status,
-			paymentProvider: result.payments[0]?.provider,
+			paymentStatus: latestPayment?.status ?? "pending",
+			paymentProvider: latestPayment?.provider ?? "transfer",
 		};
 	});
 };

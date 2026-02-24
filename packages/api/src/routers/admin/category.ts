@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
 import * as v from "valibot";
+import { CATALOG_CACHE_KEYS } from "../../lib/cache/catalog";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const category = router({
@@ -27,6 +28,7 @@ export const category = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await categoryQueries.admin.createCategory(input.name);
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
 				return { message: "Successfully added category" };
 			} catch (error) {
 				ctx.log.error("addCategory", error);
@@ -49,6 +51,7 @@ export const category = router({
 			try {
 				const { id, name } = input;
 				await categoryQueries.admin.updateCategory(id, name);
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				ctx.log.error("updateCategory", error);
@@ -70,6 +73,7 @@ export const category = router({
 			try {
 				const { id } = input;
 				await categoryQueries.admin.deleteCategory(id);
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				ctx.log.error("deleteCategory", error);

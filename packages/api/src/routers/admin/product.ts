@@ -4,7 +4,28 @@ import { addProductSchema, updateProductSchema } from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
-import { searchProducts } from "../../lib/upstash-search";
+import {
+	deleteProductFromSearch,
+	searchProducts,
+	upsertProductToSearch,
+} from "../../lib/upstash-search";
+
+const normalizeExpirationDate = (value?: string | null) => {
+	if (!value) return null;
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+
+	const yyyyMmMatch = trimmed.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+	if (yyyyMmMatch) return `${yyyyMmMatch[1]}-${yyyyMmMatch[2]}`;
+
+	const mmYyMatch = trimmed.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+	if (mmYyMatch) return `20${mmYyMatch[2]}-${mmYyMatch[1]}`;
+
+	const mmYyyyMatch = trimmed.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+	if (mmYyyyMatch) return `${mmYyyyMatch[2]}-${mmYyyyMatch[1]}`;
+
+	return null;
+};
 
 export const product = router({
 	searchProductByName: adminProcedure
@@ -49,13 +70,19 @@ export const product = router({
 		.input(
 			v.object({
 				query: v.pipe(v.string(), v.minLength(1)),
-				limit: v.optional(v.number(), 50),
+				limit: v.optional(v.number(), 10),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const { query, limit } = input;
-				const searchResults = await searchProducts(query, limit);
+				const { query, limit, brandId, categoryId } = input;
+				const safeLimit = Math.min(limit, 10);
+				const searchResults = await searchProducts(query, safeLimit, {
+					brandId,
+					categoryId,
+				});
 
 				if (searchResults.length === 0) return [];
 
@@ -85,7 +112,7 @@ export const product = router({
 					.filter(
 						(product): product is NonNullable<typeof product> => !!product,
 					)
-					.slice(0, limit);
+					.slice(0, safeLimit);
 			} catch (error) {
 				ctx.log.error("searchProductsInstant", error);
 				throw new TRPCError({
@@ -100,6 +127,11 @@ export const product = router({
 		.input(addProductSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const expirationInput = (input as Record<string, unknown>)
+					.expirationDate;
+				const normalizedExpirationDate = normalizeExpirationDate(
+					typeof expirationInput === "string" ? expirationInput : null,
+				);
 				// Remove the last empty image if present
 				const images = input.images.filter((image) => image.url.trim() !== "");
 				// Validate image URLs
@@ -141,6 +173,7 @@ export const product = router({
 					seoTitle: input.seoTitle || null,
 					seoDescription: input.seoDescription || null,
 					weightGrams: input.weightGrams || 0,
+					expirationDate: normalizedExpirationDate,
 				});
 				if (!productResult) {
 					throw new TRPCError({
@@ -158,6 +191,23 @@ export const product = router({
 					productId,
 					imagesToInsert,
 				);
+				const createdProduct =
+					await productQueries.admin.getProductById(productId);
+				if (createdProduct) {
+					await upsertProductToSearch({
+						id: createdProduct.id,
+						name: createdProduct.name,
+						description: createdProduct.description,
+						slug: createdProduct.slug,
+						price: createdProduct.price,
+						brand: createdProduct.brand?.name || "",
+						category: createdProduct.category?.name || "",
+						brandId: createdProduct.brandId,
+						categoryId: createdProduct.categoryId,
+						image:
+							createdProduct.images.find((img) => img.isPrimary)?.url || "",
+					});
+				}
 				return { message: "Product added successfully" };
 			} catch (error) {
 				ctx.log.error("addProduct", error);
@@ -211,6 +261,11 @@ export const product = router({
 		.input(updateProductSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const expirationInput = (input as Record<string, unknown>)
+					.expirationDate;
+				const normalizedExpirationDate = normalizeExpirationDate(
+					typeof expirationInput === "string" ? expirationInput : null,
+				);
 				if (!input.id)
 					throw new TRPCError({
 						code: "BAD_REQUEST",
@@ -238,6 +293,7 @@ export const product = router({
 				const slug = productName.replace(/\s+/g, "-").toLowerCase();
 				await productQueries.admin.updateProduct(input.id, {
 					...productData,
+					expirationDate: normalizedExpirationDate,
 					name: productName,
 					slug,
 				});
@@ -331,6 +387,7 @@ export const product = router({
 						message: "Product not found",
 					});
 				await productQueries.admin.deleteProduct(input.id);
+				await deleteProductFromSearch(input.id);
 				return { message: "Product deleted successfully" };
 			} catch (error) {
 				ctx.log.error("deleteProduct", error);
@@ -440,7 +497,10 @@ export const product = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const value = input.stringValue ?? input.numberValue;
+				const value =
+					String(input.field) === "expirationDate"
+						? normalizeExpirationDate(input.stringValue)
+						: (input.stringValue ?? input.numberValue);
 				await productQueries.admin.updateProductField(
 					input.id,
 					input.field,

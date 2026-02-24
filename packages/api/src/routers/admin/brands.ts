@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { brandQueries } from "@vit/api/queries";
 import { addBrandSchema } from "@vit/shared";
 import * as v from "valibot";
+import { CATALOG_CACHE_KEYS } from "../../lib/cache/catalog";
 import { adminProcedure, router } from "../../lib/trpc";
 
 export const brands = router({
@@ -25,6 +26,7 @@ export const brands = router({
 			try {
 				const { name, logoUrl } = input;
 				await brandQueries.admin.createBrand({ name, logoUrl });
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
 				return { message: "Successfully updated category" };
 			} catch (err) {
 				ctx.log.error("addBrand", err);
@@ -48,6 +50,7 @@ export const brands = router({
 				}
 				const { name, logoUrl } = input;
 				await brandQueries.admin.updateBrand(id, { name, logoUrl });
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
 			} catch (err) {
 				ctx.log.error("updateBrand", err);
 				throw new TRPCError({
@@ -62,6 +65,7 @@ export const brands = router({
 		.mutation(async ({ ctx, input }) => {
 			try {
 				await brandQueries.admin.deleteBrand(input.id);
+				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
 			} catch (err) {
 				ctx.log.error("deleteBrand", err);
 				throw new TRPCError({

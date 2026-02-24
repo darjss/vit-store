@@ -12,6 +12,8 @@ const normalizeLogPayload = (value: unknown): unknown => {
 		return undefined;
 	}
 
+	const seen = new WeakSet<object>();
+
 	try {
 		return JSON.parse(
 			JSON.stringify(value, (_key, currentValue) => {
@@ -27,11 +29,42 @@ const normalizeLogPayload = (value: unknown): unknown => {
 					return currentValue.toString();
 				}
 
+				if (currentValue instanceof Map) {
+					return Object.fromEntries(currentValue);
+				}
+
+				if (currentValue instanceof Set) {
+					return Array.from(currentValue);
+				}
+
+				if (typeof currentValue === "object" && currentValue !== null) {
+					if (seen.has(currentValue)) {
+						return "[Circular]";
+					}
+
+					seen.add(currentValue);
+				}
+
 				return currentValue;
 			}),
 		);
 	} catch {
-		return String(value);
+		if (value instanceof Error) {
+			return {
+				name: value.name,
+				message: value.message,
+				stack: value.stack,
+			};
+		}
+
+		if (typeof value === "object" && value !== null) {
+			return {
+				unserializable: true,
+				type: value.constructor?.name ?? "Object",
+			};
+		}
+
+		return value;
 	}
 };
 
@@ -177,13 +210,17 @@ const loggingMiddleware = t.middleware(
 		try {
 			const result = await next();
 			const durationMs = Date.now() - startTime;
+			const resultData =
+				result && typeof result === "object" && "data" in result
+					? (result as { data?: unknown }).data
+					: result;
 
 			// Log procedure success with output
 			ctx.log.info("trpc.procedure_success", {
 				procedure: path,
 				type: procedureType,
 				durationMs,
-				output: normalizeLogPayload(result),
+				output: normalizeLogPayload(resultData),
 			});
 
 			return result;

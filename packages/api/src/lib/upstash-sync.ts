@@ -1,19 +1,25 @@
 import { Search } from "@upstash/search";
 import type { ProductSelectType } from "../db/schema";
 import { logger } from "./logger";
-import { getSearchClient } from "./upstash-search";
+
+const getSyncSearchClient = () => {
+	const url = process.env.UPSTASH_SEARCH_URL;
+	const token = process.env.UPSTASH_SEARCH_TOKEN;
+	if (!url || !token) {
+		throw new Error("UPSTASH_SEARCH_URL and UPSTASH_SEARCH_TOKEN are required");
+	}
+	return new Search({ url, token });
+};
 
 export const syncProductToUpstash = async (
 	product: ProductSelectType,
 	brandName: string,
 	categoryName: string,
+	brandId?: number,
+	categoryId?: number,
 	images?: string[],
 ) => {
-	const client = new Search({
-		url: "https://suited-joey-76189-eu1-search.upstash.io",
-		token:
-			"ABUFMHN1aXRlZC1qb2V5LTc2MTg5LWV1MWFkbWluT0RnMlpEUmlOakV0T0dNNU5pMDBOakZoTFdJMU1ESXRNakEyWkRKak1qSTNNemd3",
-	});
+	const client = getSyncSearchClient();
 
 	await client.index("products").upsert({
 		id: `product-${product.id}`,
@@ -30,6 +36,8 @@ export const syncProductToUpstash = async (
 			price: product.price,
 			brand: brandName,
 			category: categoryName,
+			brandId,
+			categoryId,
 			image: images?.[0] || "",
 		},
 	});
@@ -41,6 +49,8 @@ export interface ProductForSync {
 	slug: string;
 	price: number;
 	description: string | null;
+	brandId?: number;
+	categoryId?: number;
 	brand: { name: string } | null;
 	category: { name: string } | null;
 	images: { url: string }[];
@@ -53,7 +63,7 @@ export interface ProductForSync {
 export const bulkSyncProductsToUpstash = async (
 	products: ProductForSync[],
 ): Promise<{ success: number; failed: number; errors: string[] }> => {
-	const client = getSearchClient();
+	const client = getSyncSearchClient();
 	const errors: string[] = [];
 	let success = 0;
 	let failed = 0;
@@ -77,6 +87,8 @@ export const bulkSyncProductsToUpstash = async (
 						price: product.price,
 						brand: product.brand?.name || "",
 						category: product.category?.name || "",
+						brandId: product.brandId,
+						categoryId: product.categoryId,
 						image: product.images[0]?.url || "",
 					},
 				});
@@ -113,7 +125,7 @@ export const bulkSyncProductsToUpstash = async (
  * Clear all products from Upstash Search index
  */
 export const clearUpstashProductsIndex = async (): Promise<void> => {
-	const client = getSearchClient();
+	const client = getSyncSearchClient();
 	await client.index("products").reset();
 	logger.info("clearUpstashProductsIndex", { message: "Index cleared" });
 };

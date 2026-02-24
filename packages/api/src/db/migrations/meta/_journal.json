@@ -36,6 +36,13 @@
 			"when": 1769148185361,
 			"tag": "0004_flippant_mentor",
 			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1771766400000,
+			"tag": "0005_friendly_steel_serpent",
+			"breakpoints": true
 		}
 	]
 }

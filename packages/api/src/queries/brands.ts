@@ -1,6 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../db/client";
-import { BrandsTable } from "../db/schema";
+import { BrandsTable, ProductsTable } from "../db/schema";
 
 export const brandQueries = {
 	admin: {
@@ -33,13 +33,27 @@ export const brandQueries = {
 
 	store: {
 		async getAllBrands() {
-			return db().query.BrandsTable.findMany({
-				columns: {
-					id: true,
-					name: true,
-					logoUrl: true,
-				},
-			});
+			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
+			return db()
+				.select({
+					id: BrandsTable.id,
+					name: BrandsTable.name,
+					logoUrl: BrandsTable.logoUrl,
+					productCount,
+				})
+				.from(BrandsTable)
+				.leftJoin(
+					ProductsTable,
+					and(
+						eq(ProductsTable.brandId, BrandsTable.id),
+						eq(ProductsTable.status, "active"),
+						isNull(ProductsTable.deletedAt),
+					),
+				)
+				.where(isNull(BrandsTable.deletedAt))
+				.groupBy(BrandsTable.id, BrandsTable.name, BrandsTable.logoUrl)
+				.orderBy(desc(productCount), asc(BrandsTable.name));
 		},
 
 		async getBrandById(id: number) {
