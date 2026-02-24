@@ -10,6 +10,7 @@ export function useEditableField<T>({
 	onSave,
 }: UseEditableOptions<T>) {
 	const [isEditing, setIsEditing] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 	const [tempValue, setTempValue] = useState<T>(initialValue);
 
 	const start = (value: T) => {
@@ -18,13 +19,27 @@ export function useEditableField<T>({
 	};
 
 	const cancel = () => {
+		if (isSaving) return;
 		setIsEditing(false);
 	};
 
 	const save = async () => {
-		await onSave(tempValue);
-		setIsEditing(false);
+		setIsSaving(true);
+		try {
+			await onSave(tempValue);
+			setIsEditing(false);
+		} finally {
+			setIsSaving(false);
+		}
 	};
 
-	return { isEditing, tempValue, setTempValue, start, cancel, save } as const;
+	return {
+		isEditing,
+		isSaving,
+		tempValue,
+		setTempValue,
+		start,
+		cancel,
+		save,
+	} as const;
 }
