@@ -30,12 +30,20 @@ export const Route = createFileRoute("/_dash/analytics")({
 		const timeRange =
 			(location.search as { timeRange?: string })?.timeRange || "monthly";
 		const tr = timeRange as "daily" | "weekly" | "monthly";
+
+		// DB-backed query can always run in parallel with PostHog queries
+		const dbQuery = ctx.queryClient.ensureQueryData(
+			ctx.trpc.analytics.getAnalyticsData.queryOptions({
+				timeRange: tr,
+			}),
+		);
+
+		// PostHog has a max 3 concurrent queries per team.
+		// Each tRPC endpoint may issue 1-2 PostHog queries internally,
+		// so we batch them sequentially in small groups.
+		// Batch 1: webAnalytics (2 internal queries) + funnel (1 query)
 		await Promise.all([
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.analytics.getAnalyticsData.queryOptions({
-					timeRange: tr,
-				}),
-			),
+			dbQuery,
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.analytics.getWebAnalytics.queryOptions({
 					timeRange: tr,
@@ -46,13 +54,12 @@ export const Route = createFileRoute("/_dash/analytics")({
 					timeRange: tr,
 				}),
 			),
+		]);
+
+		// Batch 2: dailyTrend (1 query) + topSearches (1 query)
+		await Promise.all([
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.analytics.getDailyVisitorTrend.queryOptions({
-					timeRange: tr,
-				}),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.analytics.getMostViewedProducts.queryOptions({
 					timeRange: tr,
 				}),
 			),
@@ -62,6 +69,13 @@ export const Route = createFileRoute("/_dash/analytics")({
 				}),
 			),
 		]);
+
+		// Batch 3: mostViewedProducts (2 internal queries)
+		await ctx.queryClient.ensureQueryData(
+			ctx.trpc.analytics.getMostViewedProducts.queryOptions({
+				timeRange: tr,
+			}),
+		);
 	},
 });
 
