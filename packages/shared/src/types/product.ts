@@ -35,6 +35,7 @@ export interface ProductDetail {
 	brandId: number;
 	ingredients?: string | null;
 	weightGrams?: number | null;
+	expirationDate?: string | null;
 	seoTitle?: string | null;
 	seoDescription?: string | null;
 	images: ProductImage[];

@@ -58,6 +58,14 @@ export const addProductSchema = v.object({
 	seoTitle: v.optional(v.pipe(v.string(), v.maxLength(256))),
 	seoDescription: v.optional(v.pipe(v.string(), v.maxLength(512))),
 	weightGrams: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+	expirationDate: v.optional(
+		v.union([
+			v.literal(""),
+			v.pipe(v.string(), v.regex(/^\d{4}-(0[1-9]|1[0-2])$/)),
+			v.pipe(v.string(), v.regex(/^(0[1-9]|1[0-2])\/\d{2}$/)),
+			v.pipe(v.string(), v.regex(/^(0[1-9]|1[0-2])\/\d{4}$/)),
+		]),
+	),
 });
 
 export const updateProductSchema = v.object({
