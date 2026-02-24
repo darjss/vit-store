@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { AIExtractedData } from "@vit/shared";
-import { Bot, PenLine } from "lucide-react";
+import { ArrowLeft, Bot, PenLine, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -9,7 +9,7 @@ import {
 	AIProductPreview,
 } from "@/components/product/ai-product-input";
 import ProductForm from "@/components/product/product-form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/products/add")({
@@ -25,16 +25,20 @@ type ExtractedProductData = {
 	name_mn: string;
 	description: string;
 	brand: string | null;
+	brandId: number | null;
+	categoryId: number | null;
 	amount: string;
 	potency: string;
 	dailyIntake: number;
 	weightGrams: number;
 	seoTitle: string;
 	seoDescription: string;
-	tags: string[];
+	tags?: string[];
 	ingredients: string[];
 	images: { url: string }[];
 	sourceUrl: string | null;
+	amazonPriceUsd: number | null;
+	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
 };
@@ -48,7 +52,7 @@ function RouteComponent() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 
-	const [activeTab, setActiveTab] = useState<"manual" | "ai">("manual");
+	const [activeTab, setActiveTab] = useState<"manual" | "ai">("ai");
 	const [aiState, setAiState] = useState<AIState>({ mode: "input" });
 
 	const handleSuccess = () => {
@@ -71,10 +75,13 @@ function RouteComponent() {
 			name_mn: aiState.data.name_mn,
 			description: aiState.data.description,
 			brand: aiState.data.brand,
+			brandId: aiState.data.brandId,
+			categoryId: aiState.data.categoryId,
 			amount: aiState.data.amount,
 			potency: aiState.data.potency,
 			dailyIntake: aiState.data.dailyIntake,
 			weightGrams: aiState.data.weightGrams,
+			price: aiState.data.calculatedPriceMnt ?? undefined,
 			seoTitle: aiState.data.seoTitle,
 			seoDescription: aiState.data.seoDescription,
 			tags: aiState.data.tags,
@@ -86,7 +93,7 @@ function RouteComponent() {
 	};
 
 	const handleEditFromPreview = () => {
-		handleConfirmPreview(); // Same action - goes to form for editing
+		handleConfirmPreview();
 	};
 
 	const handleCancelAI = () => {
@@ -99,69 +106,168 @@ function RouteComponent() {
 	};
 
 	return (
-		<div className="space-y-4">
-			{/* Tab Switcher */}
-			<Tabs
-				value={activeTab}
-				onValueChange={(v) => setActiveTab(v as "manual" | "ai")}
-			>
-				<TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto sm:grid-cols-none">
-					<TabsTrigger value="manual" className="gap-2">
-						<PenLine className="h-4 w-4" />
-						<span>Гараар нэмэх</span>
-					</TabsTrigger>
-					<TabsTrigger value="ai" className="gap-2">
-						<Bot className="h-4 w-4" />
-						<span>AI-аар нэмэх</span>
-					</TabsTrigger>
-				</TabsList>
+		<div className="min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+			<div className="mx-auto w-full max-w-5xl">
+				{/* Page Header */}
+				<div className="mb-6 sm:mb-8">
+					<div className="mb-4 flex items-center gap-2 text-muted-foreground text-sm">
+						<Link
+							to="/products"
+							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+						>
+							<ArrowLeft className="h-3.5 w-3.5" />
+							Бүтээгдэхүүн
+						</Link>
+						<span>/</span>
+						<span className="text-foreground">Шинэ нэмэх</span>
+					</div>
+					<h1 className="font-heading text-2xl sm:text-3xl">
+						Бүтээгдэхүүн нэмэх
+					</h1>
+					<p className="mt-1 text-muted-foreground text-sm">
+						Гараар эсвэл AI ашиглан бүтээгдэхүүн нэмнэ үү
+					</p>
+				</div>
 
-				{/* Manual Tab Content */}
-				<TabsContent value="manual" className="mt-4">
-					<ProductForm onSuccess={handleSuccess} />
-				</TabsContent>
-
-				{/* AI Tab Content */}
-				<TabsContent value="ai" className="mt-4">
-					{aiState.mode === "input" && (
-						<div className="space-y-4">
-							<AIProductInput
-								onExtracted={handleAIExtracted}
-								onCancel={handleSwitchToManual}
-							/>
-						</div>
-					)}
-
-					{aiState.mode === "preview" && (
-						<AIProductPreview
-							data={aiState.data}
-							onConfirm={handleConfirmPreview}
-							onEdit={handleEditFromPreview}
-							onCancel={handleCancelAI}
-						/>
-					)}
-
-					{aiState.mode === "form" && (
-						<div className="space-y-4">
-							{/* Back to AI input button */}
-							<button
-								type="button"
-								onClick={handleCancelAI}
-								className="flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+				{/* Mode Switcher */}
+				<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+					<button
+						type="button"
+						onClick={() => setActiveTab("manual")}
+						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
+							activeTab === "manual"
+								? "bg-primary shadow-hard"
+								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
+						}`}
+					>
+						<div className="flex items-start gap-3">
+							<div
+								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+									activeTab === "manual"
+										? "bg-primary-foreground text-primary"
+										: "bg-muted text-muted-foreground"
+								}`}
 							>
-								<Bot className="h-4 w-4" />
-								<span>Дахин AI татах</span>
-							</button>
-
-							<ProductForm
-								aiData={aiState.data}
-								onSuccess={handleSuccess}
-								showAIFields
-							/>
+								<PenLine className="h-5 w-5" />
+							</div>
+							<div className="min-w-0 flex-1">
+								<p
+									className={`font-bold font-heading ${
+										activeTab === "manual"
+											? "text-primary-foreground"
+											: "text-foreground"
+									}`}
+								>
+									Гараар нэмэх
+								</p>
+								<p
+									className={`mt-0.5 text-sm ${
+										activeTab === "manual"
+											? "text-primary-foreground/70"
+											: "text-muted-foreground"
+									}`}
+								>
+									Бүх мэдээллийг өөрөө оруулах
+								</p>
+							</div>
 						</div>
+						{activeTab === "manual" && (
+							<div className="absolute top-2 right-2 h-2 w-2 bg-primary-foreground" />
+						)}
+					</button>
+
+					<button
+						type="button"
+						onClick={() => setActiveTab("ai")}
+						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
+							activeTab === "ai"
+								? "bg-secondary text-secondary-foreground shadow-hard"
+								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
+						}`}
+					>
+						<div className="flex items-start gap-3">
+							<div
+								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+									activeTab === "ai"
+										? "bg-secondary-foreground text-secondary"
+										: "bg-muted text-muted-foreground"
+								}`}
+							>
+								<Sparkles className="h-5 w-5" />
+							</div>
+							<div className="min-w-0 flex-1">
+								<p
+									className={`font-bold font-heading ${
+										activeTab === "ai"
+											? "text-secondary-foreground"
+											: "text-foreground"
+									}`}
+								>
+									AI-аар нэмэх
+								</p>
+								<p
+									className={`mt-0.5 text-sm ${
+										activeTab === "ai"
+											? "text-secondary-foreground/70"
+											: "text-muted-foreground"
+									}`}
+								>
+									Amazon-оос автомат татах
+								</p>
+							</div>
+						</div>
+						{activeTab === "ai" && (
+							<div className="absolute top-2 right-2 h-2 w-2 bg-secondary-foreground" />
+						)}
+					</button>
+				</div>
+
+				{/* Content Area */}
+				<div>
+					{/* Manual Tab Content */}
+					{activeTab === "manual" && <ProductForm onSuccess={handleSuccess} />}
+
+					{/* AI Tab Content */}
+					{activeTab === "ai" && (
+						<>
+							{aiState.mode === "input" && (
+								<AIProductInput
+									onExtracted={handleAIExtracted}
+									onCancel={handleSwitchToManual}
+								/>
+							)}
+
+							{aiState.mode === "preview" && (
+								<AIProductPreview
+									data={aiState.data}
+									onConfirm={handleConfirmPreview}
+									onEdit={handleEditFromPreview}
+									onCancel={handleCancelAI}
+								/>
+							)}
+
+							{aiState.mode === "form" && (
+								<div className="space-y-4">
+									<button
+										type="button"
+										onClick={handleCancelAI}
+										className="flex items-center gap-1.5 border-2 border-border bg-muted/30 px-3 py-1.5 font-heading text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
+									>
+										<Bot className="h-3.5 w-3.5" />
+										<span>Дахин AI татах</span>
+									</button>
+
+									<ProductForm
+										aiData={aiState.data}
+										onSuccess={handleSuccess}
+										showAIFields
+									/>
+								</div>
+							)}
+						</>
 					)}
-				</TabsContent>
-			</Tabs>
+				</div>
+			</div>
 		</div>
 	);
 }
