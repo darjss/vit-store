@@ -47,6 +47,8 @@ export interface ExtractedProductData {
 	ingredients: string[];
 	images: { url: string }[];
 	sourceUrl: string | null;
+	amazonPriceUsd: number | null;
+	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
 }

@@ -25,16 +25,20 @@ type ExtractedProductData = {
 	name_mn: string;
 	description: string;
 	brand: string | null;
+	brandId: number | null;
+	categoryId: number | null;
 	amount: string;
 	potency: string;
 	dailyIntake: number;
 	weightGrams: number;
 	seoTitle: string;
 	seoDescription: string;
-	tags: string[];
+	tags?: string[];
 	ingredients: string[];
 	images: { url: string }[];
 	sourceUrl: string | null;
+	amazonPriceUsd: number | null;
+	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
 };
@@ -439,13 +443,28 @@ export function AIProductPreview({
 						</div>
 					</div>
 
-					<div className="grid grid-cols-3 gap-2">
+					<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
 						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
 							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
 								Брэнд
 							</p>
 							<p className="truncate font-medium text-sm">
 								{data.brand || "-"}
+								{data.brandId && (
+									<span className="ml-1 text-green-600 text-xs">✓</span>
+								)}
+							</p>
+						</div>
+						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
+							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+								Ангилал
+							</p>
+							<p className="truncate font-medium text-sm">
+								{data.categoryId ? (
+									<span className="text-green-600">auto ✓</span>
+								) : (
+									<span className="text-muted-foreground">—</span>
+								)}
 							</p>
 						</div>
 						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
@@ -461,6 +480,31 @@ export function AIProductPreview({
 							<p className="truncate font-medium text-sm">{data.potency}</p>
 						</div>
 					</div>
+
+					{(data.amazonPriceUsd != null || data.calculatedPriceMnt != null) && (
+						<div className="grid grid-cols-2 gap-2">
+							<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
+								<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+									Amazon үнэ (USD)
+								</p>
+								<p className="truncate font-medium text-sm">
+									{data.amazonPriceUsd != null
+										? `$${data.amazonPriceUsd.toFixed(2)}`
+										: "—"}
+								</p>
+							</div>
+							<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
+								<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+									Тооцсон үнэ (MNT)
+								</p>
+								<p className="truncate font-medium text-sm">
+									{data.calculatedPriceMnt != null
+										? `${data.calculatedPriceMnt.toLocaleString("en-US")}`
+										: "—"}
+								</p>
+							</div>
+						</div>
+					)}
 
 					<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
 						<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
