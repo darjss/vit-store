@@ -15,7 +15,7 @@ import { useEditableField } from "@/hooks/use-editable-field";
 type EditableFieldProps<T> = {
 	label?: string;
 	value: T;
-	type?: "text" | "number" | "textarea" | "select";
+	type?: "text" | "number" | "textarea" | "select" | "month";
 	options?: { value: string; label: string }[];
 	onSave: (next: T) => void | Promise<void>;
 	format?: (value: T) => string;
@@ -35,10 +35,12 @@ export function EditableField<T>({
 	parse,
 	renderDisplay,
 	className = "",
-	isLoading = false,
+	isLoading: externalLoading = false,
 }: EditableFieldProps<T>) {
-	const { isEditing, tempValue, setTempValue, start, cancel, save } =
+	const { isEditing, isSaving, tempValue, setTempValue, start, cancel, save } =
 		useEditableField<T>({ initialValue: value, onSave });
+
+	const isLoading = isSaving || externalLoading;
 
 	const display = renderDisplay
 		? renderDisplay(value)
@@ -70,7 +72,10 @@ export function EditableField<T>({
 					</Button>
 				</div>
 			) : (
-				<div className="flex flex-1 items-center gap-3">
+				<div className="relative flex flex-1 items-center gap-3">
+					{isLoading && (
+						<div className="pointer-events-none absolute inset-0 z-10 rounded-base bg-background/50" />
+					)}
 					{type === "textarea" ? (
 						<Textarea
 							value={String(tempValue ?? "")}
@@ -82,7 +87,8 @@ export function EditableField<T>({
 								)
 							}
 							rows={3}
-							className="min-w-0 flex-1 font-medium text-base text-foreground"
+							disabled={isLoading}
+							className="min-w-0 flex-1 font-medium text-base text-foreground disabled:opacity-60"
 						/>
 					) : type === "select" ? (
 						<Select
@@ -90,8 +96,9 @@ export function EditableField<T>({
 							onValueChange={(value) =>
 								setTempValue(parse ? parse(value) : (value as unknown as T))
 							}
+							disabled={isLoading}
 						>
-							<SelectTrigger className="min-w-0 flex-1 font-medium text-base text-foreground">
+							<SelectTrigger className="min-w-0 flex-1 font-medium text-base text-foreground disabled:opacity-60">
 								<SelectValue placeholder="Select an option" />
 							</SelectTrigger>
 							<SelectContent>
@@ -113,7 +120,8 @@ export function EditableField<T>({
 										: (e.target.value as unknown as T),
 								)
 							}
-							className="min-w-0 flex-1 font-medium text-base text-foreground"
+							disabled={isLoading}
+							className="min-w-0 flex-1 font-medium text-base text-foreground disabled:opacity-60"
 							step={type === "number" ? "0.01" : undefined}
 						/>
 					)}
