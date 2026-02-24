@@ -16,9 +16,12 @@ export interface AIExtractedData {
 	name_mn?: string;
 	description: string;
 	brand?: string | null;
+	brandId?: number | null;
+	categoryId?: number | null;
 	amount: string;
 	potency: string;
 	dailyIntake: number;
+	price?: number;
 	weightGrams?: number;
 	seoTitle?: string;
 	seoDescription?: string;
@@ -45,6 +48,7 @@ export interface ProductFormValues {
 	seoTitle?: string;
 	seoDescription?: string;
 	weightGrams?: number;
+	expirationDate?: string;
 }
 
 export interface ProductCardData {

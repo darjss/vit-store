@@ -33,6 +33,7 @@ export const productFields = [
 	"stock",
 	"price",
 	"dailyIntake",
+	"expirationDate",
 	"categoryId",
 	"brandId",
 	"createdAt",
