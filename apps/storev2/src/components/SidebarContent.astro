@@ -19,6 +19,8 @@ const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.serv
 
 const categories = await serverApi.category.getAllCategories.query();
 const brands = await serverApi.brand.getAllBrands.query();
+const topBrands = brands.slice(0, 6);
+const remainingBrands = brands.slice(6);
 ---
 
 <div class="flex flex-col h-full bg-background">
@@ -66,20 +68,25 @@ const brands = await serverApi.brand.getAllBrands.query();
             </a>
         </div>
 
-        <!-- Categories - Horizontal Scroll -->
+        <!-- Categories -->
         <div class="px-4 pb-4">
             <h3 class="font-black text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
                 <span class="w-1.5 h-4 bg-primary"></span>
                 Ангилал
             </h3>
-            <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+            <div class="grid grid-cols-2 gap-2">
                 {categories.map((category: { id: number; name: string }) => (
                     <a 
                         href={`/products?category=${category.id}`} 
-                        class="flex-shrink-0 px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all whitespace-nowrap"
+                        class="px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center"
                     >
                         {category.name}
                     </a>
+                ))}
+                {Array.from({ length: Math.max(0, 4 - categories.length) }).map(() => (
+                    <div class="px-4 py-2.5 bg-muted/30 border-3 border-border border-dashed font-bold text-sm text-muted-foreground text-center opacity-50">
+                        -
+                    </div>
                 ))}
             </div>
         </div>
@@ -120,7 +127,7 @@ const brands = await serverApi.brand.getAllBrands.query();
             {brands.length > 0 ? (
                 <>
                     <div class="grid grid-cols-3 gap-2">
-                        {brands.slice(0, 6).map((brand: { id: number; name: string; logoUrl?: string | null }) => (
+                        {topBrands.map((brand: { id: number; name: string; logoUrl?: string | null; productCount?: number }) => (
                             <a 
                                 href={`/products?brand=${brand.id}`} 
                                 class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
@@ -142,8 +149,7 @@ const brands = await serverApi.brand.getAllBrands.query();
                                 </span>
                             </a>
                         ))}
-                        {/* Fill empty slots if less than 6 brands */}
-                        {Array.from({ length: Math.max(0, 6 - brands.length) }).map(() => (
+                        {Array.from({ length: Math.max(0, 6 - topBrands.length) }).map(() => (
                             <div class="flex flex-col items-center justify-center p-3 bg-muted/30 border-3 border-border border-dashed aspect-square opacity-50">
                                 <div class="w-10 h-10 bg-muted border-2 border-border flex items-center justify-center text-sm font-black">
                                     --
@@ -154,14 +160,37 @@ const brands = await serverApi.brand.getAllBrands.query();
                             </div>
                         ))}
                     </div>
-                    {brands.length > 6 && (
-                        <a 
-                            href="/products" 
-                            class="mt-3 flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors"
-                        >
-                            Бүх брэнд харах
-                            <IconArrowRight class="w-4 h-4" />
-                        </a>
+                    {remainingBrands.length > 0 && (
+                        <details class="mt-3 group">
+                            <summary class="list-none flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors cursor-pointer select-none">
+                                <span>Илүү харах</span>
+                                <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
+                            </summary>
+                            <div class="mt-2 grid grid-cols-3 gap-2">
+                                {remainingBrands.map((brand: { id: number; name: string; logoUrl?: string | null; productCount?: number }) => (
+                                    <a 
+                                        href={`/products?brand=${brand.id}`} 
+                                        class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
+                                    >
+                                        {brand.logoUrl ? (
+                                            <img 
+                                                src={brand.logoUrl} 
+                                                alt={brand.name} 
+                                                class="w-10 h-10 object-contain group-hover:scale-110 transition-transform" 
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div class="w-10 h-10 bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                                {brand.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                        )}
+                                        <span class="text-[10px] font-bold text-center leading-tight truncate w-full mt-2 uppercase">
+                                            {brand.name}
+                                        </span>
+                                    </a>
+                                ))}
+                            </div>
+                        </details>
                     )}
                 </>
             ) : (
