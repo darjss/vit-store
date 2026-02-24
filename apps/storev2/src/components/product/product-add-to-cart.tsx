@@ -38,7 +38,7 @@ export default function ProductQuantitySelector(
 		"sms",
 	);
 	const [contact, setContact] = createSignal("");
-
+	const stock = createMemo(() => statusQuery?.data?.stock ?? 0);
 	const restockMutation = useMutation(
 		() => ({
 			mutationFn: async (input: {
@@ -70,7 +70,19 @@ export default function ProductQuantitySelector(
 		() => queryClient,
 	);
 
-	const increment = () => setQuantity((prev) => prev + 1);
+	const increment = () => {
+		const max = Math.min(5, stock());
+		if (quantity() >= max) {
+			showToast({
+				title: "Нэмэх боломжгүй",
+				description: "Энэ бүтээгдэхүүнээс илүү тоо хэмжээгээр авах боломжгүй.",
+				variant: "destructive",
+				duration: 3000,
+			});
+			return;
+		}
+		setQuantity((prev) => prev + 1);
+	};
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
 
 	const isValidContact = createMemo(() => {
@@ -89,7 +101,7 @@ export default function ProductQuantitySelector(
 	};
 
 	return (
-		<Suspense fallback={<div>Loading...</div>}>
+		<Suspense fallback={<div>Ачааллаж байна...</div>}>
 			<Switch>
 				<Match when={isInStock()}>
 					<div class="space-y-4">
@@ -178,7 +190,7 @@ export default function ProductQuantitySelector(
 									value={contact()}
 									onInput={(e) => setContact(e.currentTarget.value)}
 									placeholder={
-										notifyChannel() === "sms" ? "88889999" : "name@example.com"
+										notifyChannel() === "sms" ? "88889999" : "ner@example.com"
 									}
 									class="h-12 w-full rounded-sm border-3 border-black bg-white px-4 font-bold text-base shadow-[4px_4px_0_0_#000] focus:outline-none"
 								/>

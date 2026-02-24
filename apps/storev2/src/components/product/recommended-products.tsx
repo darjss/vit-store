@@ -10,14 +10,39 @@ interface RecommendedProductsProps {
 	currentProductId: number;
 	categoryId: number;
 	brandId: number;
+	productName: string;
 }
 
 async function fetchRecommendedProducts(
 	productId: number,
 	categoryId: number,
 	brandId: number,
+	productName: string,
 ): Promise<ProductForHome[]> {
 	try {
+		const upstashMatches = await api.product.searchProductsForPage.query({
+			query: productName,
+			limit: 10,
+			categoryId,
+			brandId,
+		});
+		const filteredMatches = upstashMatches
+			.filter((p) => p.id !== productId)
+			.slice(0, 5)
+			.map((p) => ({
+				id: p.id,
+				slug: p.slug,
+				name: p.name,
+				price: p.price,
+				image: p.image,
+				brand: p.brand,
+				discount: 0,
+			}));
+
+		if (filteredMatches.length > 0) {
+			return filteredMatches;
+		}
+
 		const products = await api.product.getRecommendedProducts.query({
 			productId,
 			categoryId,
@@ -40,12 +65,14 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 			productId: props.currentProductId,
 			categoryId: props.categoryId,
 			brandId: props.brandId,
+			productName: props.productName,
 		}),
 		(params) =>
 			fetchRecommendedProducts(
 				params.productId,
 				params.categoryId,
 				params.brandId,
+				params.productName,
 			),
 	);
 	return (

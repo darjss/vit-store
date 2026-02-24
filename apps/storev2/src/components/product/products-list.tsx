@@ -139,13 +139,15 @@ const ProductsList = () => {
 
 	const searchQuery = useQuery(
 		() => ({
-			queryKey: ["search-products-page", searchTerm()],
+			queryKey: ["search-products-page", searchTerm(), categoryId(), brandId()],
 			queryFn: async () => {
 				const term = searchTerm();
 				if (!term || term.length < 2) return [];
 				return await api.product.searchProductsForPage.query({
 					query: term,
-					limit: 50,
+					limit: 10,
+					categoryId: categoryId() ?? undefined,
+					brandId: brandId() ?? undefined,
 				});
 			},
 			enabled: isSearchMode(),

@@ -33,6 +33,7 @@ interface Props {
 		weightGrams?: number | null;
 		amount?: string | null;
 		potency?: string | null;
+		expirationDate?: string | null;
 	};
 }
 
@@ -49,9 +50,16 @@ const hasIngredients = Boolean(
 const hasSpecs = !!(
 	product.dailyIntake ||
 	product.weightGrams ||
+	product.expirationDate ||
 	product.amount ||
 	product.potency
 );
+const expirationDisplay = product.expirationDate
+	? (() => {
+		const [year, month] = product.expirationDate.split("-");
+		return year && month ? `${month}/${year}` : product.expirationDate;
+	})()
+	: null;
 console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredients, product.ingredients?.length, typeof product.ingredients)
 ---
 
@@ -237,6 +245,12 @@ console.log("ingredeients","has ingredients" ,product.ingredients, hasIngredient
 								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
 									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconScale class="h-4 w-4" /> Жин</span>
 									<span class="text-base sm:text-lg font-black">{product.weightGrams}г</span>
+								</div>
+							)}
+							{expirationDisplay && (
+								<div class="flex items-center justify-between p-4 border-2 border-border bg-muted/20">
+									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconCalendar class="h-4 w-4" /> Дуусах хугацаа</span>
+									<span class="text-base sm:text-lg font-black">{expirationDisplay}</span>
 								</div>
 							)}
 						</div>
