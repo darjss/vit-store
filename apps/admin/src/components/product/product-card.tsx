@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Edit, Package } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,17 +10,6 @@ import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
 import { getStatusColor, getStockColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "../ui/alert-dialog";
 import {
 	Dialog,
 	DialogContent,
@@ -38,16 +27,41 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-	const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+	const [isStockEditing, setIsStockEditing] = useState(false);
+	const [isExpEditing, setIsExpEditing] = useState(false);
 	const [stockValue, setStockValue] = useState(product.stock);
+	const [expValue, setExpValue] = useState(product.expirationDate ?? "");
+
+	useEffect(() => {
+		setStockValue(product.stock);
+		setExpValue(product.expirationDate ?? "");
+	}, [product.stock, product.expirationDate]);
+
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
-	const { mutate: setProductStock } = useMutation({
-		...trpc.product.setProductStock.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
-		},
-	});
+	const { mutate: setProductStock, isPending: isSetProductStockPending } =
+		useMutation({
+			...trpc.product.setProductStock.mutationOptions(),
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					...trpc.product.getPaginatedProducts.queryKey,
+				});
+				queryClient.invalidateQueries(
+					trpc.product.getAllProducts.queryOptions(),
+				);
+				setIsStockEditing(false);
+			},
+		});
+	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
+		useMutation({
+			...trpc.product.updateProductField.mutationOptions(),
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					...trpc.product.getPaginatedProducts.queryKey,
+				});
+				setIsExpEditing(false);
+			},
+		});
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: () => {
@@ -68,11 +82,25 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const handleSaveStock = () => {
 		setProductStock({ id: product.id, newStock: stockValue });
-		setIsStockDialogOpen(false);
+	};
+
+	const handleSaveExpDate = () => {
+		updateProductField({
+			id: product.id,
+			field: "expirationDate" as never,
+			stringValue: expValue || undefined,
+		});
 	};
 
 	const openProductDetails = () => {
 		navigate({ to: "/products/$id", params: { id: String(product.id) } });
+	};
+
+	const formatExpirationMonthYear = (value?: string | null) => {
+		if (!value) return "Тодорхойлоогүй";
+		const [year, month] = value.split("-");
+		if (!year || !month) return value;
+		return `${month}/${year}`;
 	};
 
 	return (
@@ -172,52 +200,128 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 					<div className="border-border border-t-2 p-3" data-no-nav>
 						<div className="flex flex-wrap items-center justify-between gap-2">
-							<AlertDialog
-								open={isStockDialogOpen}
-								onOpenChange={setIsStockDialogOpen}
-							>
-								<AlertDialogTrigger asChild>
-									<Button
-										variant="secondary"
-										size="sm"
+							{isStockEditing ? (
+								<div className="flex items-center gap-1">
+									<Input
+										type="number"
+										min="0"
+										value={stockValue}
 										onClick={(e) => e.stopPropagation()}
-										className="h-8 border-2 border-border px-3 text-sm"
+										onChange={(e) => {
+											const value =
+												e.target.value === ""
+													? 0
+													: Number.parseInt(e.target.value, 10);
+											setStockValue(Math.max(0, value));
+										}}
+										onKeyDown={(e) => {
+											e.stopPropagation();
+											if (e.key === "Enter") handleSaveStock();
+											if (e.key === "Escape") {
+												setStockValue(product.stock);
+												setIsStockEditing(false);
+											}
+										}}
+										className="h-8 w-20 border-2 border-border text-center text-sm"
+										disabled={isSetProductStockPending}
+									/>
+									<Button
+										size="sm"
+										className="h-8 px-2 text-xs"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleSaveStock();
+										}}
+										disabled={isSetProductStockPending}
 									>
-										<Edit className="mr-1 h-4 w-4" />
-										үлдэгдэл засах
+										Хадг
 									</Button>
-								</AlertDialogTrigger>
-								<AlertDialogContent>
-									<AlertDialogHeader>
-										<AlertDialogTitle>Үлдэгдэл засах</AlertDialogTitle>
-										<AlertDialogDescription>
-											"{product.name}" бүтээгдэхүүний үлдэгдлийн тоог оруулна
-											уу.
-										</AlertDialogDescription>
-									</AlertDialogHeader>
-									<div className="py-4">
-										<Input
-											className="w-full border-2 border-border text-center"
-											value={stockValue}
-											type="number"
-											min="0"
-											onChange={(e) => {
-												const value =
-													e.target.value === ""
-														? 0
-														: Number.parseInt(e.target.value, 10);
-												setStockValue(Math.max(0, value));
-											}}
-										/>
-									</div>
-									<AlertDialogFooter>
-										<AlertDialogCancel>Цуцлах</AlertDialogCancel>
-										<AlertDialogAction onClick={handleSaveStock}>
-											Хадгалах
-										</AlertDialogAction>
-									</AlertDialogFooter>
-								</AlertDialogContent>
-							</AlertDialog>
+									<Button
+										variant="outline"
+										size="sm"
+										className="h-8 px-2 text-xs"
+										onClick={(e) => {
+											e.stopPropagation();
+											setStockValue(product.stock);
+											setIsStockEditing(false);
+										}}
+										disabled={isSetProductStockPending}
+									>
+										Цуц
+									</Button>
+								</div>
+							) : (
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsStockEditing(true);
+									}}
+									className="h-8 border-2 border-border px-3 text-sm"
+								>
+									<Edit className="mr-1 h-4 w-4" />
+									үлдэгдэл засах
+								</Button>
+							)}
+
+							{isExpEditing ? (
+								<div className="hidden items-center gap-1 sm:flex">
+									<Input
+										type="month"
+										value={expValue}
+										onClick={(e) => e.stopPropagation()}
+										onChange={(e) => setExpValue(e.target.value)}
+										onKeyDown={(e) => {
+											e.stopPropagation();
+											if (e.key === "Enter") handleSaveExpDate();
+											if (e.key === "Escape") {
+												setExpValue(product.expirationDate ?? "");
+												setIsExpEditing(false);
+											}
+										}}
+										className="h-8 w-36 border-2 border-border text-sm"
+										disabled={isUpdateFieldPending}
+									/>
+									<Button
+										size="sm"
+										className="h-8 px-2 text-xs"
+										onClick={(e) => {
+											e.stopPropagation();
+											handleSaveExpDate();
+										}}
+										disabled={isUpdateFieldPending}
+									>
+										Хадг
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										className="h-8 px-2 text-xs"
+										onClick={(e) => {
+											e.stopPropagation();
+											setExpValue(product.expirationDate ?? "");
+											setIsExpEditing(false);
+										}}
+										disabled={isUpdateFieldPending}
+									>
+										Цуц
+									</Button>
+								</div>
+							) : (
+								<Button
+									variant="secondary"
+									size="sm"
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsExpEditing(true);
+									}}
+									className="hidden h-8 border-2 border-border px-3 text-sm sm:inline-flex"
+								>
+									<Edit className="mr-1 h-4 w-4" />
+									{formatExpirationMonthYear(product.expirationDate)}
+								</Button>
+							)}
 
 							<RowActions
 								id={product.id}

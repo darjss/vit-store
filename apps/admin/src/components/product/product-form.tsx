@@ -67,13 +67,34 @@ const TAG_SUGGESTIONS = [
 	"хүүхэд",
 ];
 
+type ProductFormProduct = {
+	name?: string;
+	description?: string;
+	dailyIntake?: number;
+	brandId?: string | number | null;
+	categoryId?: string | number | null;
+	amount?: string;
+	potency?: string;
+	status?: "active" | "draft" | "out_of_stock";
+	stock?: number;
+	price?: number;
+	images?: { url: string; id?: number }[];
+	name_mn?: string | null;
+	ingredients?: string[];
+	tags?: string[];
+	seoTitle?: string | null;
+	seoDescription?: string | null;
+	weightGrams?: number;
+	expirationDate?: string | null;
+};
+
 const ProductForm = ({
 	product,
 	aiData,
 	onSuccess,
 	showAIFields = false,
 }: {
-	product?: ProductFormValues;
+	product?: ProductFormProduct;
 	aiData?: AIExtractedData;
 	onSuccess: () => void;
 	showAIFields?: boolean;
@@ -88,20 +109,24 @@ const ProductForm = ({
 	const [showAdvancedFields, setShowAdvancedFields] = useState(showAIFields);
 
 	const form = useForm<ProductFormValues>({
-		resolver: valibotResolver(addProductSchema),
+		resolver: valibotResolver(addProductSchema, undefined, { raw: true }),
 		defaultValues: {
 			name: aiData?.name || product?.name || "",
 			description: aiData?.description || product?.description || "",
 			dailyIntake: aiData?.dailyIntake || product?.dailyIntake || 1,
-			brandId: aiData?.brand
-				? String(findBrandId(aiData.brand, brands ?? []))
-				: product?.brandId || "",
-			categoryId: product?.categoryId || "",
+			brandId: aiData?.brandId
+				? String(aiData.brandId)
+				: aiData?.brand
+					? String(findBrandId(aiData.brand, brands ?? []))
+					: String(product?.brandId ?? ""),
+			categoryId: aiData?.categoryId
+				? String(aiData.categoryId)
+				: String(product?.categoryId ?? ""),
 			amount: aiData?.amount || product?.amount || "",
 			potency: aiData?.potency || product?.potency || "",
 			status: product?.status || "draft",
 			stock: product?.stock || 0,
-			price: product?.price || 0,
+			price: aiData?.price || product?.price || 0,
 			images: aiData?.images || product?.images || [],
 			name_mn: aiData?.name_mn || product?.name_mn || "",
 			ingredients: aiData?.ingredients || product?.ingredients || [],
@@ -109,6 +134,7 @@ const ProductForm = ({
 			seoTitle: aiData?.seoTitle || product?.seoTitle || "",
 			seoDescription: aiData?.seoDescription || product?.seoDescription || "",
 			weightGrams: aiData?.weightGrams || product?.weightGrams || 0,
+			expirationDate: product?.expirationDate || "",
 		},
 	});
 
@@ -119,9 +145,13 @@ const ProductForm = ({
 				name: aiData.name,
 				description: aiData.description,
 				dailyIntake: aiData.dailyIntake || 1,
-				brandId: String(findBrandId(aiData.brand, brands ?? [])),
+				brandId: aiData.brandId
+					? String(aiData.brandId)
+					: String(findBrandId(aiData.brand, brands ?? [])),
+				categoryId: aiData.categoryId ? String(aiData.categoryId) : "",
 				amount: aiData.amount,
 				potency: aiData.potency,
+				price: aiData.price || 0,
 				images: aiData.images,
 				name_mn: aiData.name_mn || "",
 				ingredients: aiData.ingredients || [],
@@ -129,6 +159,7 @@ const ProductForm = ({
 				seoTitle: aiData.seoTitle || "",
 				seoDescription: aiData.seoDescription || "",
 				weightGrams: aiData.weightGrams || 0,
+				expirationDate: "",
 			});
 			setShowAdvancedFields(true);
 		}
@@ -161,7 +192,10 @@ const ProductForm = ({
 	};
 
 	const onSubmit = async (values: ProductFormValues) => {
-		mutation.mutate(values as any);
+		mutation.mutate({
+			...values,
+			expirationDate: values.expirationDate || "",
+		});
 	};
 
 	const currentImageUrl = form.watch("images");
@@ -361,6 +395,23 @@ const ProductForm = ({
 												onChange={(e) =>
 													field.onChange(Number.parseInt(e.target.value, 10))
 												}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="expirationDate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Дуусах хугацаа (сар/жил)</FormLabel>
+										<FormControl>
+											<Input
+												type="month"
+												{...field}
+												value={field.value || ""}
 											/>
 										</FormControl>
 										<FormMessage />
