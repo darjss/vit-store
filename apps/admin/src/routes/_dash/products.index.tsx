@@ -9,6 +9,7 @@ import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,
+	Loader2,
 	PlusCircle,
 	RotateCcw,
 	Search,
@@ -31,17 +32,30 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
 
+type ProductsSearch = {
+	page: number;
+	pageSize: number;
+	brandId?: number;
+	categoryId?: number;
+	sortField?: string;
+	sortDirection?: "asc" | "desc";
+	searchTerm?: string;
+};
+
+const INSTANT_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
+const INSTANT_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
+
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
 	loader: async ({ context: ctx, location }) => {
 		const search = location.search as {
-			page?: number;
-			pageSize?: number;
-			brandId?: number;
-			categoryId?: number;
-			sortField?: string;
-			sortDirection?: "asc" | "desc";
-			searchTerm?: string;
+			page?: ProductsSearch["page"];
+			pageSize?: ProductsSearch["pageSize"];
+			brandId?: ProductsSearch["brandId"];
+			categoryId?: ProductsSearch["categoryId"];
+			sortField?: ProductsSearch["sortField"];
+			sortDirection?: ProductsSearch["sortDirection"];
+			searchTerm?: ProductsSearch["searchTerm"];
 		};
 		await Promise.all([
 			ctx.queryClient.ensureQueryData(
@@ -86,7 +100,7 @@ function RouteComponent() {
 		sortField,
 		sortDirection,
 		searchTerm,
-	} = useSearch({ from: "/_dash/products/" });
+	} = useSearch({ from: "/_dash/products/" }) as ProductsSearch;
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
 	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
 	const hasActiveFilters =
@@ -105,6 +119,25 @@ function RouteComponent() {
 	}, [searchInput]);
 
 	useEffect(() => {
+		const normalizedDebouncedSearch = debouncedSearch.trim();
+		const normalizedSearchTerm = (searchTerm ?? "").trim();
+
+		if (normalizedDebouncedSearch === normalizedSearchTerm) {
+			return;
+		}
+
+		navigate({
+			to: "/products",
+			replace: true,
+			search: (prev: ProductsSearch) => ({
+				...prev,
+				searchTerm: normalizedDebouncedSearch || undefined,
+				page: 1,
+			}),
+		});
+	}, [debouncedSearch, navigate, searchTerm]);
+
+	useEffect(() => {
 		setSearchInput(searchTerm || "");
 		setDebouncedSearch(searchTerm || "");
 	}, [searchTerm]);
@@ -118,7 +151,7 @@ function RouteComponent() {
 		setDebouncedSearch("");
 		navigate({
 			to: "/products",
-			search: (prev) => ({
+			search: (prev: ProductsSearch) => ({
 				...prev,
 				searchTerm: undefined,
 				page: 1,
@@ -126,19 +159,28 @@ function RouteComponent() {
 		});
 	};
 
+	const normalizedDebouncedSearch = debouncedSearch.trim();
+
 	const instantSearchQuery = useQuery({
 		...trpc.product.searchProductsInstant.queryOptions({
-			query: debouncedSearch,
-			limit: 50,
+			query: normalizedDebouncedSearch,
+			limit: 10,
+			brandId,
+			categoryId,
 		}),
-		enabled: debouncedSearch.length >= 2,
-		staleTime: 60_000,
+		enabled: normalizedDebouncedSearch.length >= 2,
+		staleTime: INSTANT_SEARCH_STALE_TIME_MS,
+		gcTime: INSTANT_SEARCH_GC_TIME_MS,
+		refetchOnWindowFocus: false,
 	});
 
 	const hasInstantResults =
 		instantSearchQuery.data && instantSearchQuery.data.length > 0;
 	const isSearching = instantSearchQuery.isFetching;
-	const isInstantSearchActive = debouncedSearch.length >= 2;
+	const isInstantSearchActive = normalizedDebouncedSearch.length >= 2;
+	const isTypingSearch =
+		searchInput.trim() !== debouncedSearch.trim() &&
+		searchInput.trim().length >= 2;
 
 	const handleFilterChange = (
 		field: "brandId" | "categoryId",
@@ -146,7 +188,7 @@ function RouteComponent() {
 	) => {
 		navigate({
 			to: "/products",
-			search: (prev) => ({
+			search: (prev: ProductsSearch) => ({
 				...prev,
 				[field]: value ?? undefined,
 				page: 1,
@@ -156,7 +198,7 @@ function RouteComponent() {
 	const handleResetFilters = () => {
 		navigate({
 			to: "/products",
-			search: (prev) => ({
+			search: (prev: ProductsSearch) => ({
 				...prev,
 				sortField: undefined,
 				sortDirection: "asc",
@@ -172,7 +214,7 @@ function RouteComponent() {
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/products",
-			search: (prev) => ({
+			search: (prev: ProductsSearch) => ({
 				...prev,
 				sortField: field,
 				sortDirection: newDirection,
@@ -201,9 +243,9 @@ function RouteComponent() {
 						<X className="h-4 w-4" />
 					</Button>
 				)}
-				{isSearching && (
+				{(isSearching || isTypingSearch) && (
 					<div className="-translate-y-1/2 absolute top-1/2 right-1 flex h-10 w-12 items-center justify-center">
-						<div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+						<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
 					</div>
 				)}
 			</div>
@@ -228,66 +270,86 @@ function RouteComponent() {
 				/>
 			</Suspense>
 
-			{hasInstantResults ? (
+			{isInstantSearchActive ? (
 				<div className="space-y-3">
-					<div className="flex items-center justify-between">
-						<p className="text-muted-foreground text-sm">
-							{instantSearchQuery.data?.length} үр дүн олдсон
-						</p>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={handleClearSearch}
-							className="h-8"
-						>
-							Бүх бүтээгдэхүүн үзэх
-						</Button>
-					</div>
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-						{instantSearchQuery.data?.map((product) => (
-							<ProductCard
-								key={product.id}
-								product={
-									{
-										id: product.id,
-										name: product.name,
-										slug: product.slug,
-										price: product.price,
-										stock: product.stock,
-										status: "active" as const,
-										discount: 0,
-										brandId: 0,
-										categoryId: 0,
-										description: "",
-										amount: "",
-										potency: "",
-										dailyIntake: 0,
-										createdAt: new Date(),
-										updatedAt: null,
-										deletedAt: null,
-										tags: [],
-										isFeatured: false,
-										ingredients: [],
-										seoTitle: null,
-										seoDescription: null,
-										name_mn: null,
-										weightGrams: 0,
-										images: product.images.map((image, index) => ({
-											id: index,
-											url: image.url,
-											isPrimary: index === 0,
-										})),
-									} as never
-								}
-								brands={[]}
-								categories={[]}
-							/>
-						))}
-					</div>
-				</div>
-			) : isInstantSearchActive && !isSearching ? (
-				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
-					"{debouncedSearch}" хайлтаар үр дүн олдсонгүй
+					{(isSearching || isTypingSearch) && !hasInstantResults ? (
+						<>
+							<div className="flex items-center gap-2 text-muted-foreground text-sm">
+								<Loader2 className="h-4 w-4 animate-spin" />
+								<span>Хайж байна...</span>
+							</div>
+							<SearchResultsSkeleton />
+						</>
+					) : hasInstantResults ? (
+						<>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<p className="text-muted-foreground text-sm">
+										{instantSearchQuery.data?.length} үр дүн олдсон
+									</p>
+									{isSearching && (
+										<Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+									)}
+								</div>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={handleClearSearch}
+									className="h-8"
+								>
+									Бүх бүтээгдэхүүн үзэх
+								</Button>
+							</div>
+							<div
+								className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 xl:grid-cols-3 ${isSearching ? "opacity-50" : "opacity-100"}`}
+							>
+								{instantSearchQuery.data?.map((product) => (
+									<ProductCard
+										key={product.id}
+										product={
+											{
+												id: product.id,
+												name: product.name,
+												slug: product.slug,
+												price: product.price,
+												stock: product.stock,
+												status: "active" as const,
+												discount: 0,
+												brandId: 0,
+												categoryId: 0,
+												description: "",
+												amount: "",
+												potency: "",
+												dailyIntake: 0,
+												createdAt: new Date(),
+												updatedAt: null,
+												deletedAt: null,
+												tags: [],
+												isFeatured: false,
+												ingredients: [],
+												seoTitle: null,
+												seoDescription: null,
+												name_mn: null,
+												weightGrams: 0,
+												expirationDate: null,
+												images: product.images.map((image, index) => ({
+													id: index,
+													url: image.url,
+													isPrimary: index === 0,
+												})),
+											} as never
+										}
+										brands={[]}
+										categories={[]}
+									/>
+								))}
+							</div>
+						</>
+					) : !isSearching && !isTypingSearch ? (
+						<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+							"{normalizedDebouncedSearch}" хайлтаар үр дүн олдсонгүй
+						</div>
+					) : null}
 				</div>
 			) : null}
 
@@ -486,7 +548,8 @@ function ProductsList({
 					sortDirection,
 					searchTerm,
 				}),
-				staleTime: 30_000,
+				staleTime: 60_000,
+				gcTime: 15 * 60 * 1000,
 			},
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
@@ -498,7 +561,7 @@ function ProductsList({
 	const handlePageChange = (page: number) => {
 		navigate({
 			to: "/products",
-			search: (prev) => ({
+			search: (prev: ProductsSearch) => ({
 				...prev,
 				page: page,
 			}),
@@ -528,52 +591,7 @@ function ProductsList({
 	return (
 		<>
 			<div className="space-y-4">
-				{isPending && (
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-						{Array.from({ length: 6 }).map((_, index) => (
-							<div
-								key={index}
-								className="overflow-hidden rounded-base border-2 border-border bg-card shadow-none transition-all hover:shadow-none"
-							>
-								<div className="flex flex-row">
-									<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
-										<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
-											<div className="h-full w-full animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-										</div>
-									</div>
-									<div className="flex flex-1 flex-col p-3">
-										<div className="flex items-start justify-between gap-3">
-											<div className="min-w-0 flex-1 space-y-2">
-												<div className="h-5 w-3/4 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												<div className="flex items-center gap-2">
-													<div className="h-4 w-16 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-													<div className="h-4 w-1 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-													<div className="h-4 w-20 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												</div>
-											</div>
-											<div className="h-6 w-20 animate-pulse rounded-full border-2 border-border bg-secondary-background" />
-										</div>
-										<div className="mt-1 flex items-center gap-3">
-											<div className="h-6 w-16 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-											<div className="flex items-center gap-1">
-												<div className="h-4 w-4 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												<div className="h-4 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												<div className="h-3 w-12 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-											</div>
-										</div>
-										<div className="mt-2 flex items-center justify-between gap-2">
-											<div className="flex gap-2">
-												<div className="h-8 w-24 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												<div className="h-8 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-												<div className="h-8 w-8 animate-pulse rounded-base border-2 border-border bg-secondary-background" />
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						))}
-					</div>
-				)}
+				{isPending && <SearchResultsSkeleton />}
 				{!isPending && (
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 						{products.map((product) => (
@@ -596,5 +614,45 @@ function ProductsList({
 				/>
 			</div>
 		</>
+	);
+}
+
+function SearchResultsSkeleton() {
+	return (
+		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+			{Array.from({ length: 6 }).map((_, index) => (
+				<div
+					key={index}
+					className="overflow-hidden rounded-base border-2 border-border bg-card shadow-none"
+				>
+					<div className="flex flex-row">
+						<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
+							<Skeleton className="h-full w-full rounded-base" />
+						</div>
+						<div className="flex flex-1 flex-col p-3">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0 flex-1 space-y-2">
+									<Skeleton className="h-5 w-3/4 rounded-base" />
+									<div className="flex items-center gap-2">
+										<Skeleton className="h-4 w-16 rounded-base" />
+										<Skeleton className="h-4 w-20 rounded-base" />
+									</div>
+								</div>
+								<Skeleton className="h-6 w-20 rounded-full" />
+							</div>
+							<div className="mt-1 flex items-center gap-3">
+								<Skeleton className="h-6 w-16 rounded-base" />
+								<Skeleton className="h-4 w-12 rounded-base" />
+							</div>
+							<div className="mt-2 flex gap-2">
+								<Skeleton className="h-8 w-24 rounded-base" />
+								<Skeleton className="h-8 w-8 rounded-base" />
+								<Skeleton className="h-8 w-8 rounded-base" />
+							</div>
+						</div>
+					</div>
+				</div>
+			))}
+		</div>
 	);
 }
