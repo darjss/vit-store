@@ -52,7 +52,6 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 	},
 });
 
-// Direct DB URL for dev mode (Hyperdrive doesn't work in miniflare)
 const directDbUrl =
 	stage === "dev"
 		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
@@ -69,7 +68,6 @@ export const server = await Worker("api", {
 	bindings: {
 		RATE_LIMITER: rateLimit,
 		DB: hyperdriveDB,
-		// Only pass DIRECT_DB_URL in dev mode
 		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
 		vitStoreKV: kv,
 		r2Bucket: r2,
@@ -107,12 +105,6 @@ export const server = await Worker("api", {
 			enabled: true,
 			persist: true,
 			destinations: ["axiom-logs"],
-		},
-		traces: {
-			enabled: true,
-			persist: true,
-			headSamplingRate: 1,
-			destinations: ["axiom-traces"],
 		},
 	},
 	placement: {
