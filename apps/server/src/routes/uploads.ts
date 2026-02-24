@@ -18,7 +18,7 @@ function extensionFromContentType(contentType: string): string {
 }
 
 function sanitizePrefix(prefix: string | undefined): string {
-	if (!prefix) return "products/ai-extracted";
+	if (!prefix) return "products/catalog";
 	return prefix
 		.trim()
 		.replace(/\.{2,}/g, "")
