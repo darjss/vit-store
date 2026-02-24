@@ -1,0 +1,193 @@
+---
+import AddToCartButton from "@/components/cart/add-to-cart-button";
+import Layout from "@/layouts/Layout.astro";
+import { productColors } from "@/lib/constant";
+import { api } from "@/lib/trpc";
+import type { ProductForHome } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
+
+export const prerender = true;
+
+const products = await api.product.getProductsForHome.query();
+const { featuredProducts, newProducts } = products;
+const brands = await api.brand.getAllBrands.query();
+const allCategories = await api.category.getAllCategories.query();
+
+const topBrands = brands.slice(0, 10) as Array<{ name: string }>;
+
+const preferredCategoryNames = [
+  "Дархлаа", "Гоо сайхан", "Энерги", "Яс үе мөч",
+  "Зүрх судас", "Ходоод гэдэс", "Нойр", "Тархи мэдрэл",
+];
+const orderedCategories = [
+  ...preferredCategoryNames
+    .map((name) => allCategories.find((c: { id: number; name: string }) => c.name === name))
+    .filter(Boolean),
+  ...allCategories.filter(
+    (c: { id: number; name: string }) => !preferredCategoryNames.includes(c.name),
+  ),
+];
+const categoriesForPills = orderedCategories.slice(0, 8) as Array<{ id: number; name: string }>;
+---
+
+<Layout title="Amerikvitamin — АНУ-ын витамин, Монголд хүргэнэ">
+  <!-- V5: BADGES + BENTO — Brand badges inline, category navigation grid, mixed product sizes -->
+
+  <!-- Hero with trust facts + brand badges integrated -->
+  <section class="border-b-2 border-border bg-foreground text-background">
+    <div class="px-5 py-5 lg:px-8 lg:py-7">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tighter">
+            АНУ-ын витамин. <span class="text-primary">Монголд хүргэнэ.</span>
+          </h1>
+          <div class="flex items-center gap-3 mt-2">
+            {["FDA баталгаат", "Шууд импорт", "24ц хүргэлт", "Буцаалттай"].map((t, i: number) => (
+              <span class="text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-background/40 flex items-center gap-3">
+                {t}
+                {i < 3 && <span class="w-1 h-1 bg-primary rotate-45 block"></span>}
+              </span>
+            ))}
+          </div>
+        </div>
+        <a href="/products" class="self-start lg:self-center flex-none px-6 py-2.5 bg-primary text-foreground font-bold text-[12px] uppercase tracking-wider border-2 border-primary active:scale-[0.97] transition-transform">
+          Дэлгүүр хэсэх
+        </a>
+      </div>
+
+      <!-- Brand badges row integrated into hero -->
+      <div class="flex gap-1.5 overflow-x-auto scrollbar-hide mt-4 -mx-5 px-5 pb-1 lg:mx-0 lg:px-0">
+        {topBrands.map((brand) => (
+          <span class="flex-none px-3 py-1.5 border border-background/20 text-[10px] md:text-xs font-black uppercase tracking-tight text-background/60">
+            {brand.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIES: Full-width navigation grid with bordered cells -->
+  <section class="border-b-2 border-border">
+    <div class="grid grid-cols-4 md:grid-cols-8">
+      {categoriesForPills.map((cat, i: number) => (
+        <a
+          href={`/products?category=${cat.id}`}
+          class={`px-2 py-3 lg:px-3 lg:py-4 text-center active:bg-foreground active:text-background transition-colors border-border ${
+            i < 4 ? 'border-b-2 md:border-b-0' : ''
+          } ${i % 4 !== 3 ? 'border-r-2' : ''} ${i % 8 !== 7 ? 'md:border-r-2' : 'md:border-r-0'}`}
+        >
+          <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-wider block">{cat.name}</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- Featured: Bento pattern (1 wide then 2 standard, repeating) -->
+  <section class="border-b-2 border-border">
+    <div class="px-3 pt-6 pb-8 lg:px-6 lg:py-12">
+      <div class="flex items-center justify-between mb-4 px-2">
+        <h2 class="text-lg md:text-2xl font-black uppercase tracking-tight">Шилдэг бүтээгдэхүүн</h2>
+        <a href="/products?filter=featured" class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
+      </div>
+
+      <div class="space-y-2 lg:space-y-2.5">
+        {featuredProducts.reduce((groups: ProductForHome[][], p: ProductForHome, i: number) => {
+          const gi = Math.floor(i / 3);
+          if (!groups[gi]) groups[gi] = [];
+          groups[gi].push(p);
+          return groups;
+        }, []).map((group: ProductForHome[]) => (
+          <div>
+            {/* First item: wide horizontal card */}
+            {group[0] && (
+              <div class="border-2 border-border bg-card active:shadow-hard-sm transition-all mb-2 lg:mb-2.5">
+                <div class="flex">
+                  <a href={`/products/${group[0].slug}-${group[0].id}`} class="block flex-none w-[110px] md:w-[140px] lg:w-[180px]">
+                    <div class="relative aspect-square overflow-hidden border-r-2 border-border" style={`background: ${productColors[group[0].id % productColors.length]}`}>
+                      {group[0].image && <img src={group[0].image} alt={group[0].name} class="absolute inset-0 w-full h-full object-contain p-3 lg:p-5" width="180" height="180" loading="eager" />}
+                    </div>
+                  </a>
+                  <div class="flex-1 p-2.5 md:p-3 lg:p-4 flex flex-col justify-between min-w-0">
+                    <div>
+                      <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{group[0].brand}</div>
+                      <a href={`/products/${group[0].slug}-${group[0].id}`}><h3 class="text-[11px] md:text-sm font-bold line-clamp-2 mt-0.5 leading-tight">{group[0].name}</h3></a>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
+                      <span class="font-black text-[13px] md:text-base">{formatCurrency(group[0].price)}</span>
+                      <AddToCartButton client:load compact cartItem={{ productId: group[0].id, quantity: 1, name: group[0].name, price: group[0].price, image: group[0].image }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Remaining: 2-col grid */}
+            {group.length > 1 && (
+              <div class="grid grid-cols-2 gap-2 lg:gap-2.5">
+                {group.slice(1).map((p: ProductForHome) => (
+                  <div class="group border-2 border-border bg-card active:shadow-hard-sm transition-all">
+                    <a href={`/products/${p.slug}-${p.id}`} class="block">
+                      <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
+                        {p.image && <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3 lg:p-4" width="300" height="300" loading="lazy" />}
+                      </div>
+                    </a>
+                    <div class="p-2">
+                      <div class="text-[7px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
+                      <a href={`/products/${p.slug}-${p.id}`}><h3 class="text-[10px] md:text-[11px] font-bold line-clamp-1 mt-0.5 leading-tight">{p.name}</h3></a>
+                      <div class="flex items-center justify-between mt-1.5 pt-1.5 border-t-2 border-border">
+                        <span class="font-black text-[12px]">{formatCurrency(p.price)}</span>
+                        <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- New arrivals: portrait scroll -->
+  <section class="border-b-2 border-border">
+    <div class="px-3 pt-6 pb-8 lg:px-6 lg:py-12">
+      <div class="flex items-center justify-between mb-4 px-2">
+        <h2 class="text-lg md:text-2xl font-black uppercase tracking-tight">Шинэ ирсэн</h2>
+        <a href="/products?filter=recent" class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
+      </div>
+      <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-3 px-3 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-2.5">
+        {newProducts.map((p: ProductForHome) => (
+          <div class="flex-none w-[140px] lg:w-auto snap-start border-2 border-border bg-card">
+            <a href={`/products/${p.slug}-${p.id}`} class="block">
+              <div class="relative aspect-[3/4] overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
+                {p.image && <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3 lg:p-4" width="280" height="373" loading="lazy" />}
+              </div>
+            </a>
+            <div class="p-2">
+              <div class="text-[7px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
+              <a href={`/products/${p.slug}-${p.id}`}><h3 class="text-[10px] font-bold line-clamp-1 mt-0.5 leading-tight">{p.name}</h3></a>
+              <div class="flex items-center justify-between mt-1.5 pt-1.5 border-t-2 border-border">
+                <span class="font-black text-[11px]">{formatCurrency(p.price)}</span>
+                <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="px-3 py-8 lg:px-6 lg:py-14">
+    <div class="border-3 border-border bg-primary p-5 lg:p-10 shadow-hard-lg relative overflow-hidden">
+      <div class="absolute inset-0 bg-grid-pattern opacity-[0.08] pointer-events-none"></div>
+      <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 class="text-xl md:text-3xl font-black uppercase tracking-tight">Танд тохирох витамин энд байна</h2>
+          <p class="text-[12px] md:text-sm font-medium text-foreground/70 mt-1">Оригинал бүтээгдэхүүн, хурдан хүргэлт. 200+ нэр төрөл.</p>
+        </div>
+        <a href="/products" class="self-start lg:self-center flex-none px-8 py-3.5 bg-foreground text-background font-black text-[13px] uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform">Бүгдийг үзэх</a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,185 @@
+---
+import AddToCartButton from "@/components/cart/add-to-cart-button";
+import Layout from "@/layouts/Layout.astro";
+import { productColors } from "@/lib/constant";
+import { api } from "@/lib/trpc";
+import type { ProductForHome } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
+
+export const prerender = true;
+
+const products = await api.product.getProductsForHome.query();
+const { featuredProducts, newProducts } = products;
+const brands = await api.brand.getAllBrands.query();
+const allCategories = await api.category.getAllCategories.query();
+
+const topBrands = brands.slice(0, 10) as Array<{ name: string }>;
+
+const categoryMeta: Record<string, string> = {
+  "Дархлаа": "Биеийн эсэргүүцэл",
+  "Гоо сайхан": "Арьс, үс, хумс",
+  "Энерги": "Тэсвэр, идэвх",
+  "Яс үе мөч": "Уян хатан чанар",
+  "Зүрх судас": "Зүрхний эрүүл мэнд",
+  "Ходоод гэдэс": "Хоол боловсруулалт",
+  "Нойр": "Гүн нойр, тайвшрал",
+  "Тархи мэдрэл": "Ой тогтоолт, анхаарал",
+};
+
+const preferredCategoryNames = Object.keys(categoryMeta);
+const orderedCategories = [
+  ...preferredCategoryNames
+    .map((name) => allCategories.find((c: { id: number; name: string }) => c.name === name))
+    .filter(Boolean),
+  ...allCategories.filter(
+    (c: { id: number; name: string }) => !preferredCategoryNames.includes(c.name),
+  ),
+];
+const categoriesForDisplay = orderedCategories.slice(0, 8) as Array<{ id: number; name: string }>;
+---
+
+<Layout title="Amerikvitamin — Өөртөө зөв витамин сонго">
+  <!-- V2: MARQUEE + HORIZONTAL CARDS — Animated brands, large category cards, landscape product cards -->
+
+  <!-- Hero bar -->
+  <section class="border-b-2 border-border bg-foreground text-background">
+    <div class="px-5 py-5 lg:px-8 lg:py-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <h1 class="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tighter">
+          Өөртөө зөв витамин <span class="text-primary">сонго.</span>
+        </h1>
+        <p class="text-[11px] md:text-sm font-medium text-background/50 mt-1">Шууд АНУ-аас. Баталгаатай. Хурдан хүргэлт.</p>
+      </div>
+      <a href="/products" class="self-start lg:self-center flex-none px-6 py-2.5 bg-primary text-foreground font-bold text-[12px] uppercase tracking-wider border-2 border-primary active:scale-[0.97] transition-transform">
+        Сонголтоо хий
+      </a>
+    </div>
+  </section>
+
+  <!-- BRANDS: Animated scrolling marquee -->
+  <section class="border-b-2 border-border overflow-hidden bg-muted/30">
+    <div class="py-3.5 lg:py-4 flex items-center gap-6 whitespace-nowrap" style="animation: marquee-v2 20s linear infinite;">
+      {[...Array(3)].map(() => topBrands.map((brand) => (
+        <span class="text-base lg:text-xl font-black uppercase tracking-wider text-foreground/25 flex items-center gap-6">
+          {brand.name}
+          <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
+        </span>
+      )))}
+    </div>
+  </section>
+
+  <!-- CATEGORIES: Horizontal scroll cards with subtitle descriptions -->
+  <section class="border-b-2 border-border">
+    <div class="px-5 py-4 lg:px-8 lg:py-5">
+      <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
+        {categoriesForDisplay.map((cat, i: number) => (
+          <a href={`/products?category=${cat.id}`} class="flex-none w-[130px] lg:w-auto border-2 border-border bg-card px-3 py-2.5 lg:px-4 lg:py-3 active:bg-primary/20 transition-colors">
+            <span class="text-[9px] font-black text-primary tracking-widest block">0{i + 1}</span>
+            <span class="text-xs md:text-sm font-bold uppercase tracking-tight block mt-0.5">{cat.name}</span>
+            <span class="text-[9px] text-muted-foreground font-medium block mt-0.5">{categoryMeta[cat.name] || ""}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured: Horizontal landscape cards (image left, info right) -->
+  <section class="border-b-2 border-border">
+    <div class="px-3 pt-6 pb-8 lg:px-6 lg:py-12">
+      <div class="flex items-center justify-between mb-4 px-2">
+        <h2 class="text-lg md:text-2xl font-black uppercase tracking-tight">Хамгийн их авдаг</h2>
+        <a href="/products?filter=featured" class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
+      </div>
+      <div class="space-y-2 lg:space-y-2.5">
+        {featuredProducts.slice(0, 6).map((p: ProductForHome) => (
+          <div class="border-2 border-border bg-card active:shadow-hard-sm transition-all">
+            <div class="flex">
+              <a href={`/products/${p.slug}-${p.id}`} class="block flex-none w-[100px] md:w-[130px] lg:w-[160px]">
+                <div class="relative aspect-square overflow-hidden border-r-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
+                  {p.image && <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-2.5 md:p-3 lg:p-4" width="160" height="160" loading="eager" />}
+                </div>
+              </a>
+              <div class="flex-1 p-2.5 md:p-3 lg:p-4 flex flex-col justify-between min-w-0">
+                <div>
+                  <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
+                  <a href={`/products/${p.slug}-${p.id}`}><h3 class="text-[11px] md:text-sm font-bold line-clamp-2 mt-0.5 leading-tight">{p.name}</h3></a>
+                </div>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
+                  <span class="font-black text-[13px] md:text-base">{formatCurrency(p.price)}</span>
+                  <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- New arrivals: standard grid -->
+  <section class="border-b-2 border-border">
+    <div class="px-3 pt-6 pb-8 lg:px-6 lg:py-12">
+      <div class="flex items-center justify-between mb-4 px-2">
+        <h2 class="text-lg md:text-2xl font-black uppercase tracking-tight">Саяхан нэмэгдсэн</h2>
+        <a href="/products?filter=recent" class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 lg:gap-2.5">
+        {newProducts.map((p: ProductForHome) => (
+          <div class="group border-2 border-border bg-card active:shadow-hard-sm transition-all">
+            <a href={`/products/${p.slug}-${p.id}`} class="block">
+              <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
+                {p.image && <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3 lg:p-4" width="300" height="300" loading="lazy" />}
+              </div>
+            </a>
+            <div class="p-2">
+              <div class="text-[7px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
+              <a href={`/products/${p.slug}-${p.id}`}><h3 class="text-[10px] md:text-[11px] font-bold line-clamp-1 mt-0.5 leading-tight">{p.name}</h3></a>
+              <div class="flex items-center justify-between mt-1.5 pt-1.5 border-t-2 border-border">
+                <span class="font-black text-[12px]">{formatCurrency(p.price)}</span>
+                <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust -->
+  <section class="border-b-2 border-border bg-foreground text-background">
+    <div class="grid grid-cols-2 lg:grid-cols-4 divide-x-2 divide-background/10">
+      {[
+        { val: "100%", label: "Жинхэнэ бараа" },
+        { val: "FDA", label: "Шалгагдсан" },
+        { val: "24ц", label: "УБ хүргэлт" },
+        { val: "14 хоног", label: "Буцаах боломж" },
+      ].map((s) => (
+        <div class="px-4 py-4 lg:py-5 text-center">
+          <div class="font-black text-lg text-primary">{s.val}</div>
+          <div class="text-[8px] font-bold uppercase tracking-widest text-background/40">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="px-3 py-8 lg:px-6 lg:py-14">
+    <div class="border-3 border-border bg-primary p-5 lg:p-10 shadow-hard-lg relative overflow-hidden">
+      <div class="absolute inset-0 bg-grid-pattern opacity-[0.08] pointer-events-none"></div>
+      <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 class="text-xl md:text-3xl font-black uppercase tracking-tight">Эрүүл мэндэд хөрөнгө оруул</h2>
+          <p class="text-[12px] md:text-sm font-medium text-foreground/70 mt-1">Чанартай витамин, зөв сонголт. 200+ бүтээгдэхүүн.</p>
+        </div>
+        <a href="/products" class="self-start lg:self-center flex-none px-8 py-3.5 bg-foreground text-background font-black text-[13px] uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform">Бүгдийг үзэх</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  @keyframes marquee-v2 {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-33.33%); }
+  }
+</style>

@@ -189,6 +189,7 @@ const breadcrumbSchema = {
 					ingredients: product.ingredients,
 					dailyIntake: product.dailyIntake,
 					weightGrams: product.weightGrams,
+					expirationDate: product.expirationDate,
 					amount: product.amount,
 					potency: product.potency,
 				}}
@@ -201,6 +202,7 @@ const breadcrumbSchema = {
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}
+				productName={product.name}
 			>
 				<div slot="fallback" class="min-h-[300px]">
 					<h2 class="mb-6 text-2xl font-black sm:text-3xl">Санал болгох бүтээгдэхүүн</h2>
