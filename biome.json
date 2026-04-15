@@ -9,9 +9,14 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!**/node_modules",
+			"!**/products-translated-final-final.json",
 			"!**/.next",
 			"!**/dist",
+			"!**/generated",
 			"!**/.turbo",
+			"!**/tmp",
+			"!**/.bun",
 			"!**/dev-dist",
 			"!**/.zed",
 			"!**/.vscode",
@@ -21,8 +26,14 @@
 			"!bts.jsonc",
 			"!**/.wrangler",
 			"!**/.alchemy",
+			"!**/dev.log",
+			"!**/public",
 			"!**/components/ui",
-			"!**/.astro"
+			"!**/.astro",
+			"!**/vit",
+			"!**/*.sql",
+			"!**/migrations/meta",
+			"!apps/storev2/src/components/starwind/accordion/AccordionContent.astro"
 		]
 	},
 	"formatter": {
@@ -31,7 +42,8 @@
 	},
 	"css": {
 		"parser": {
-			"cssModules": true
+			"cssModules": true,
+			"tailwindDirectives": true
 		},
 		"linter": {
 			"enabled": false
@@ -41,6 +53,14 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "warn",
+					"options": {
+						"maxAllowedComplexity": 15
+					}
+				}
+			},
 			"correctness": {
 				"useExhaustiveDependencies": "info"
 			},
@@ -84,6 +104,9 @@
 			"includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
 			"linter": {
 				"rules": {
+					"complexity": {
+						"noExcessiveCognitiveComplexity": "off"
+					},
 					"style": {
 						"useConst": "off",
 						"useImportType": "off"
@@ -91,6 +114,16 @@
 					"correctness": {
 						"noUnusedVariables": "off",
 						"noUnusedImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["**/src/components/ui/**", "**/src/components/starwind/**"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noExcessiveCognitiveComplexity": "off"
 					}
 				}
 			}
