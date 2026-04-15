@@ -65,19 +65,23 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 					<div class="flex flex-wrap gap-2">
 						<For each={recentSearches()}>
 							{(item) => (
-								<button
-									type="button"
-									onClick={() => props.onSelectSearch(item.term)}
-									class="group flex items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-2 font-bold text-sm shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-								>
-									<span>{item.term}</span>
-									<span
+								<div class="group flex items-center gap-2 rounded-full border-2 border-black bg-white px-4 py-2 font-bold text-sm shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+									<button
+										type="button"
+										onClick={() => props.onSelectSearch(item.term)}
+										class="min-w-0 flex-1 truncate text-left"
+									>
+										{item.term}
+									</button>
+									<button
+										type="button"
 										onClick={(e) => handleRemoveSearch(item.term, e)}
 										class="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/10 text-black/60 opacity-0 transition-all hover:bg-destructive hover:text-white group-hover:opacity-100"
+										aria-label={`${item.term} хайлтыг арилгах`}
 									>
 										<IconClose class="h-3 w-3" />
-									</span>
-								</button>
+									</button>
+								</div>
 							)}
 						</For>
 					</div>

@@ -6,7 +6,16 @@
 
 
 
+
+
+
+
+
+
+
+
 import { ClientRouter } from "astro:transitions";
+import StoreAssistant from "@/components/ai/store-assistant";
 import CartDrawer from "@/components/cart/cart-drawer";
 import QueryDevtools from "@/components/query-devtools";
 import SEO from "@/components/SEO.astro";
@@ -71,6 +80,7 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
 
         <Footer />
         <MobileNavbar />
+        <StoreAssistant client:load />
         
         <CartDrawer client:idle />
         		{import.meta.env.DEV && <QueryDevtools client:idle />}

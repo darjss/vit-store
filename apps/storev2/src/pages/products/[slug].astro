@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 import Breadcrumb from "@/components/product/breadcrumb.astro";
 import ProductDetails from "@/components/product/product-details.astro";
 import ProductImageCarousel from "@/components/product/product-image-carousel.tsx";
@@ -33,17 +37,16 @@ const productId = Number(slugParts[slugParts.length - 1]);
 
 if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
-	Astro.redirect("/404");
+	throw Astro.redirect("/404");
 }
 
 const productData = await api.product.getProductById.query({ id: productId });
 if (!productData) {
 	console.error("Product not found");
-	Astro.redirect("/404");
+	throw Astro.redirect("/404");
 }
 
-// Use non-null assertion since we've handled the null case above
-const product = productData!;
+const product = productData;
 
 // Determine availability based on status
 const isInStock = product.status === "active";
@@ -68,7 +71,7 @@ const breadcrumbItems = [
 ];
 
 const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "/placeholder-product.png";
-const absoluteImage = primaryImage.startsWith("http") ? primaryImage : `${SITE_URL}${primaryImage}`;
+const ogImage = `/og/products/${slug}.png`;
 
 // SEO metadata
 const seoTitle = product.name;
@@ -141,7 +144,7 @@ const breadcrumbSchema = {
 <Layout 
 	title={seoTitle}
 	description={seoDescription}
-	image={absoluteImage}
+	image={ogImage}
 	imageAlt={product.name}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(productSchema)} />

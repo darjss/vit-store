@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 import { tv } from "tailwind-variants";
 
@@ -14,7 +22,7 @@ type Props = Omit<HTMLAttributes<"h2">, "id"> & {
    * The content to be rendered inside the dialog title
    */
 
-  children: any;
+  children?: unknown;
 };
 
 export const dialogTitle = tv({ base: "text-xl leading-none font-semibold tracking-tight" });

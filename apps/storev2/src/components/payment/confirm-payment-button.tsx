@@ -11,12 +11,12 @@ import IconLoader from "~icons/ri/loader-4-line";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
-const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
+const ConfirmPaymentButton = (props: { paymentNumber: string }) => {
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async () => {
 				return await api.payment.sendTransferNotification.mutate({
-					paymentNumber,
+					paymentNumber: props.paymentNumber,
 				});
 			},
 			onSuccess: async (data) => {
@@ -24,7 +24,7 @@ const ConfirmPaymentButton = ({ paymentNumber }: { paymentNumber: string }) => {
 					return;
 				}
 
-				trackPaymentConfirmed(paymentNumber, data.orderNumber);
+				trackPaymentConfirmed(props.paymentNumber, data.orderNumber);
 
 				showToast({
 					title: "Амжилттай",

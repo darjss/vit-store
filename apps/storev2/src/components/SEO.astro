@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import { SEO as AstroSEO } from "astro-seo";
 
 export interface Props {
@@ -13,6 +21,7 @@ export interface Props {
   description?: string;
   image?: string;
   imageAlt?: string;
+  imageType?: string;
   noindex?: boolean;
   nofollow?: boolean;
   article?: {
@@ -34,6 +43,7 @@ const {
   description = DEFAULT_DESCRIPTION,
   image = DEFAULT_IMAGE,
   imageAlt = "Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл",
+  imageType,
   noindex = false,
   nofollow = false,
   article,
@@ -48,6 +58,18 @@ const canonicalURL = canonical || new URL(Astro.url.pathname, SITE_URL).toString
 
 // Ensure image is absolute URL
 const absoluteImage = image.startsWith("http") ? image : `${SITE_URL}${image}`;
+
+function inferImageType(url: string): string | undefined {
+  const pathname = new URL(url).pathname.toLowerCase();
+  if (pathname.endsWith(".png")) return "image/png";
+  if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) return "image/jpeg";
+  if (pathname.endsWith(".webp")) return "image/webp";
+  if (pathname.endsWith(".gif")) return "image/gif";
+  if (pathname.endsWith(".svg")) return "image/svg+xml";
+  return undefined;
+}
+
+const resolvedImageType = imageType || inferImageType(absoluteImage);
 
 // Open Graph type
 const ogType = article ? "article" : "website";
@@ -75,7 +97,7 @@ const ogType = article ? "article" : "website";
       alt: imageAlt,
       width: 1200,
       height: 630,
-      type: "image/svg+xml",
+      ...(resolvedImageType ? { type: resolvedImageType } : {}),
     },
     ...(article && {
       article: {

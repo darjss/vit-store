@@ -6,10 +6,7 @@ import IconInformation from "~icons/ri/information-line";
 import { useAppForm } from "../form/form";
 import { showToast } from "../ui/toast";
 
-const PhoneForm = ({
-	setStep,
-	setPhone,
-}: {
+const PhoneForm = (props: {
 	setStep: (step: "phone" | "otp") => void;
 	setPhone: (phone: string) => void;
 }) => {
@@ -20,7 +17,7 @@ const PhoneForm = ({
 			},
 
 			onSuccess: async () => {
-				setStep("otp");
+				props.setStep("otp");
 				showToast({
 					title: "Амжилттай",
 					description: "Таны утсанд баталгаажуулах код илгээгдлээ",
@@ -46,9 +43,8 @@ const PhoneForm = ({
 				),
 			}),
 		},
-    onSubmit: async (values) => {
-      console.log("form submitting")
-			setPhone(values.value.phone);
+		onSubmit: async (values) => {
+			props.setPhone(values.value.phone);
 			mutation.mutate(values.value.phone);
 		},
 	}));

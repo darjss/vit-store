@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import ProductQuantitySelector from "@/components/product/product-add-to-cart";
 import { formatCurrency } from "@/lib/utils";
 import IconBox from "~icons/ri/box-3-line";
@@ -85,26 +93,26 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 	>
 		{hasDiscount ? (
 			<div class="space-y-4">
-				{/* Discount Badge */}
+				<!-- Discount Badge -->
 				<div class="inline-flex items-center gap-2 border-2 border-border bg-destructive px-4 py-1.5 font-black text-sm sm:text-base text-destructive-foreground shadow-hard-sm uppercase tracking-wider">
 					<IconFire class="w-4 h-4 text-yellow-300" /> {product.discount}% ХЯМДРАЛ
 				</div>
 				
-				{/* Price Container */}
+				<!-- Price container -->
 				<div class="space-y-2">
 					<div class="flex items-baseline gap-4 flex-wrap">
-						{/* Original Price */}
+						<!-- Original price -->
 						<div class="text-xl sm:text-2xl font-bold text-muted-foreground line-through decoration-2 decoration-destructive" transition:name={`product-price-${product.id}`}>
 							{formatCurrency(product.price)}
 						</div>
 					</div>
 					
-					{/* Sale Price */}
+					<!-- Sale price -->
 					<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight">
 						{formatCurrency(discountedPrice)}
 					</div>
 					
-					{/* Savings Display */}
+					<!-- Savings display -->
 					<div class="text-base sm:text-lg font-bold text-primary">
 						{formatCurrency(savings)} хэмнэлт
 					</div>

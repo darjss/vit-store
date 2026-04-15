@@ -1,6 +1,6 @@
 import { navigate } from "astro:transitions/client";
 import { useMutation } from "@tanstack/solid-query";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
 	OTPField,
 	OTPFieldGroup,
@@ -14,10 +14,7 @@ import IconCloseCircle from "~icons/ri/close-circle-fill";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
-const OtpForm = ({
-	phone,
-	setStep,
-}: {
+const OtpForm = (props: {
 	phone: string;
 	setStep: (step: "phone" | "otp") => void;
 }) => {
@@ -45,7 +42,9 @@ const OtpForm = ({
 		}, 1000);
 	};
 
-	startTimer(59);
+	onMount(() => {
+		startTimer(59);
+	});
 
 	onCleanup(() => {
 		if (currentInterval) clearInterval(currentInterval);
@@ -53,11 +52,11 @@ const OtpForm = ({
 	const loginMutation = useMutation(
 		() => ({
 			mutationFn: async (otp: string) => {
-				return await api.auth.login.mutate({ phone, otp });
+				return await api.auth.login.mutate({ phone: props.phone, otp });
 			},
 			onSuccess: async () => {
 				// Identify user in PostHog for cross-session tracking
-				await identifyUser(phone);
+				await identifyUser(props.phone);
 
 				showToast({
 					title: "Амжилттай нэвтэрлээ",
@@ -65,7 +64,7 @@ const OtpForm = ({
 					variant: "success",
 					duration: 3000,
 				});
-				setStep("phone");
+				props.setStep("phone");
 				navigate("/profile", { history: "push" });
 			},
 		}),
@@ -84,13 +83,13 @@ const OtpForm = ({
 					variant: "success",
 					duration: 5000,
 				});
-				setStep("otp");
+				props.setStep("otp");
 			},
 		}),
 		() => queryClient,
 	);
 	const handleResend = () => {
-		sendOptMutation.mutate(phone);
+		sendOptMutation.mutate(props.phone);
 		startTimer(59);
 	};
 
@@ -147,7 +146,7 @@ const OtpForm = ({
 				</Button>
 
 				<Button
-					onClick={() => setStep("phone")}
+					onClick={() => props.setStep("phone")}
 					variant="outline"
 					class="w-full"
 				>

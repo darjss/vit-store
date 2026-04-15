@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme {
     --color-background: oklch(0.99 0 0);
     --color-foreground: oklch(0.15 0 0);
@@ -43,8 +41,15 @@
 }
 
 @layer base {
+    :root {
+        color-scheme: light;
+    }
+
     * {
         @apply border-border outline-ring/50;
+    }
+    html {
+        @apply bg-background text-foreground;
     }
     body {
         @apply bg-background text-foreground;
