@@ -44,7 +44,7 @@ function PaginationLink({
 	...props
 }: React.ComponentProps<"a"> & {
 	isActive?: boolean;
-	size?: "sm" | "md" | "lg" | "icon";
+	size?: "sm" | "default" | "lg" | "icon";
 }) {
 	return (
 		<a
@@ -72,7 +72,7 @@ function PaginationPrevious({
 		<PaginationLink
 			data-slot="pagination-previous"
 			aria-label="Go to previous page"
-			size="md"
+			size="default"
 			className={cn("gap-1 pl-2.5", className)}
 			{...props}
 		>
@@ -89,7 +89,7 @@ function PaginationNext({
 		<PaginationLink
 			data-slot="pagination-next"
 			aria-label="Go to next page"
-			size="md"
+			size="default"
 			className={cn("gap-1 pr-2.5", className)}
 			{...props}
 		>

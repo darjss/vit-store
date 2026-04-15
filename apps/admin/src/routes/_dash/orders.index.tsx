@@ -117,36 +117,54 @@ function RouteComponent() {
 	const handleSearch = () => {
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
+			search: {
+				date,
+				orderStatus,
+				page,
+				pageSize,
+				paymentStatus,
 				searchTerm: inputValue,
-			}),
+				sortDirection,
+				sortField,
+			},
 		});
 	};
 	const clearSearch = () => {
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
+			search: {
+				date,
+				orderStatus,
+				page,
+				pageSize,
+				paymentStatus,
 				searchTerm: undefined,
-			}),
+				sortDirection,
+				sortField,
+			},
 		});
 	};
 	const handleFilterChange = (field: string, value: string) => {
 		const normalized = value === "all" ? undefined : value;
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
-				[field]: normalized,
+			search: {
+				date,
+				orderStatus: field === "orderStatus" ? normalized : orderStatus,
 				page: 1,
-			}),
+				pageSize,
+				paymentStatus: field === "paymentStatus" ? normalized : paymentStatus,
+				searchTerm,
+				sortDirection,
+				sortField,
+				[field]: normalized,
+			},
 		});
 	};
 	const handleResetFilters = () => {
 		navigate({
 			to: "/orders",
-			search: (_prev) => ({
+			search: {
 				orderStatus: undefined,
 				paymentStatus: undefined,
 				sortField: undefined,
@@ -154,7 +172,7 @@ function RouteComponent() {
 				searchTerm: undefined,
 				date: undefined,
 				page: 1,
-			}),
+			},
 		});
 	};
 	const handleSort = (field: string) => {
@@ -162,11 +180,16 @@ function RouteComponent() {
 			sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
+			search: {
+				date,
+				orderStatus,
+				page,
+				pageSize,
+				paymentStatus,
+				searchTerm,
 				sortField: field,
 				sortDirection: newDirection,
-			}),
+			},
 		});
 	};
 	const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -174,20 +197,30 @@ function RouteComponent() {
 			const dateStr = selectedDate.toISOString().split("T")[0];
 			navigate({
 				to: "/orders",
-				search: (prev) => ({
-					...prev,
+				search: {
 					date: dateStr,
+					orderStatus,
 					page: 1,
-				}),
+					pageSize,
+					paymentStatus,
+					searchTerm,
+					sortDirection,
+					sortField,
+				},
 			});
 		} else {
 			navigate({
 				to: "/orders",
-				search: (prev) => ({
-					...prev,
+				search: {
 					date: undefined,
+					orderStatus,
 					page: 1,
-				}),
+					pageSize,
+					paymentStatus,
+					searchTerm,
+					sortDirection,
+					sortField,
+				},
 			});
 		}
 		setIsDateOpen(false);
@@ -442,10 +475,16 @@ function OrdersList({
 	const handlePageChange = (page: number) => {
 		navigate({
 			to: "/orders",
-			search: (prev) => ({
-				...prev,
+			search: {
+				date,
+				orderStatus,
 				page: page,
-			}),
+				pageSize,
+				paymentStatus,
+				searchTerm,
+				sortDirection,
+				sortField,
+			},
 		});
 	};
 

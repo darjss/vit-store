@@ -24,6 +24,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { Suspense, useState } from "react";
+import { toast } from "sonner";
 import { EditableField } from "@/components/editable-field";
 import ProductDetailSkeleton from "@/components/product/product-detail-skeleton";
 import ProductForm from "@/components/product/product-form";
@@ -121,11 +122,25 @@ function ProductDetailContent() {
 		isPending: isRegenerateProductImagesPending,
 	} = useMutation({
 		...trpc.aiProduct.regenerateProductImages.mutationOptions(),
-		onSuccess: () => {
+		onSuccess: (result) => {
 			setFeaturedImageIndex(0);
 			queryClient.invalidateQueries(
 				trpc.product.getProductById.queryOptions({ id: productId }),
 			);
+
+			if (result.count > 0) {
+				toast.success(`AI зураг амжилттай шинэчлэгдлээ (${result.count})`);
+			} else {
+				toast.warning("AI зураг олдсонгүй. Query-г шалгаад дахин оролдоно уу.");
+			}
+		},
+		onError: (error, variables) => {
+			console.error("aiProduct.regenerateProductImages.error", {
+				productId: variables.productId,
+				query: variables.query,
+				error,
+			});
+			toast.error(error.message || "AI зураг татах үед алдаа гарлаа");
 		},
 	});
 	const { mutate: setPrimaryImage, isPending: isSetPrimaryImagePending } =
@@ -163,23 +178,27 @@ function ProductDetailContent() {
 						</DialogDescription>
 					</DialogHeader>
 					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
-						<ProductForm
-							product={{
-								...product,
-								brandId: String(product.brandId),
-								categoryId: String(product.categoryId),
-								name_mn: product.name_mn ?? undefined,
-								seoTitle: product.seoTitle ?? undefined,
-								seoDescription: product.seoDescription ?? undefined,
-								expirationDate: product.expirationDate ?? undefined,
-							}}
-							onSuccess={() => {
-								setIsEditDialogOpen(false);
-								queryClient.invalidateQueries(
-									trpc.product.getAllProducts.queryOptions(),
-								);
-							}}
-						/>
+						{isEditDialogOpen ? (
+							<Suspense fallback={<ProductDetailSkeleton />}>
+								<ProductForm
+									product={{
+										...product,
+										brandId: String(product.brandId),
+										categoryId: String(product.categoryId),
+										name_mn: product.name_mn ?? undefined,
+										seoTitle: product.seoTitle ?? undefined,
+										seoDescription: product.seoDescription ?? undefined,
+										expirationDate: product.expirationDate ?? undefined,
+									}}
+									onSuccess={() => {
+										setIsEditDialogOpen(false);
+										queryClient.invalidateQueries(
+											trpc.product.getAllProducts.queryOptions(),
+										);
+									}}
+								/>
+							</Suspense>
+						) : null}
 					</div>
 				</DialogContent>
 			</Dialog>
@@ -343,11 +362,17 @@ function ProductDetailContent() {
 											type="button"
 											size="sm"
 											variant="outline"
-											onClick={() =>
+											onClick={() => {
+												console.info(
+													"aiProduct.regenerateProductImages.mutate",
+													{
+														productId,
+													},
+												);
 												regenerateProductImages({
 													productId,
-												})
-											}
+												});
+											}}
 											disabled={isRegenerateProductImagesPending}
 											className="gap-1.5"
 										>
@@ -648,7 +673,7 @@ function ProductDetailContent() {
 												onSave={(next) =>
 													updateProductField({
 														id: productId,
-														field: "expirationDate",
+														field: "expirationDate" as never,
 														stringValue: next || undefined,
 													})
 												}

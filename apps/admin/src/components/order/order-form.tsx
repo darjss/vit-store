@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addOrderSchema, type addOrderType } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
 import { useCallback, useEffect } from "react";
-import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
@@ -35,7 +34,7 @@ const OrderForm = ({
 	order?: addOrderType;
 	onSuccess: () => void;
 }) => {
-	const form = useForm({
+	const form = useForm<addOrderType>({
 		resolver: valibotResolver(addOrderSchema),
 		defaultValues: {
 			customerPhone: order?.customerPhone || "",
@@ -78,22 +77,20 @@ const OrderForm = ({
 		enabled: !!isValidPhone,
 	});
 
-	const handlePhoneChange = useCallback(
-		async (form: UseFormReturn<any>) => {
-			const result = customerInfo;
-			if (result && isSuccess) {
-				form.setValue("isNewCustomer", false);
-				form.setValue("address", result?.address, {
-					shouldValidate: true,
-					shouldDirty: true,
-					shouldTouch: true,
-				});
-			} else {
-				form.setValue("isNewCustomer", true);
-			}
-		},
-		[customerInfo, isSuccess],
-	);
+	const handlePhoneChange = useCallback(() => {
+		const result = customerInfo;
+		if (result && isSuccess) {
+			form.setValue("isNewCustomer", false);
+			form.setValue("address", result.address ?? "", {
+				shouldValidate: true,
+				shouldDirty: true,
+				shouldTouch: true,
+			});
+			return;
+		}
+
+		form.setValue("isNewCustomer", true);
+	}, [customerInfo, form, isSuccess]);
 
 	const onSubmit = async (values: addOrderType) => {
 		mutation.mutate(values);
@@ -101,9 +98,9 @@ const OrderForm = ({
 
 	useEffect(() => {
 		if (isValidPhone) {
-			handlePhoneChange(form);
+			handlePhoneChange();
 		}
-	}, [isValidPhone, handlePhoneChange, form]);
+	}, [handlePhoneChange, isValidPhone]);
 
 	return (
 		<Form {...form}>

@@ -119,7 +119,6 @@ const BrandForm = ({
 													</div>
 												)}
 												<UploadButton
-													setValue={form.setValue}
 													category="brand"
 													onSuccess={(url) => form.setValue("logoUrl", url)}
 												/>

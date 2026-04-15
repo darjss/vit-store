@@ -1,4 +1,4 @@
-import { keepPreviousData, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	useNavigate,
@@ -47,11 +47,11 @@ function RouteComponent() {
 	const handleSearch = () => {
 		navigate({
 			to: "/customers",
-			search: (prev) => ({
-				...prev,
+			search: {
 				page: 1,
+				pageSize,
 				searchTerm: inputValue || undefined,
-			}),
+			},
 		});
 	};
 
@@ -59,7 +59,11 @@ function RouteComponent() {
 		setInputValue("");
 		navigate({
 			to: "/customers",
-			search: (prev) => ({ ...prev, page: 1, searchTerm: undefined }),
+			search: {
+				page: 1,
+				pageSize,
+				searchTerm: undefined,
+			},
 		});
 	};
 
@@ -159,7 +163,6 @@ function CustomersList({
 }) {
 	const { data: customers, isFetching } = useSuspenseQuery({
 		...trpc.customer.getAllCustomers.queryOptions(),
-		placeholderData: keepPreviousData,
 		staleTime: 30_000,
 	});
 
@@ -181,7 +184,11 @@ function CustomersList({
 	const handlePageChange = (newPage: number) => {
 		navigate({
 			to: "/customers",
-			search: (prev) => ({ ...prev, page: newPage }),
+			search: {
+				page: newPage,
+				pageSize,
+				searchTerm,
+			},
 		});
 	};
 

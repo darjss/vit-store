@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Edit, Package } from "lucide-react";
+import { Edit, Eye, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,24 @@ import { getStatusColor, getStockColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "../ui/dialog";
+import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
 import ProductForm from "./product-form";
 
 interface ProductCardProps {
@@ -29,6 +41,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isStockEditing, setIsStockEditing] = useState(false);
 	const [isExpEditing, setIsExpEditing] = useState(false);
+	const [isOutOfStockAlertOpen, setIsOutOfStockAlertOpen] = useState(false);
 	const [stockValue, setStockValue] = useState(product.stock);
 	const [expValue, setExpValue] = useState(product.expirationDate ?? "");
 
@@ -46,6 +59,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 				queryClient.invalidateQueries({
 					...trpc.product.getPaginatedProducts.queryKey,
 				});
+				queryClient.invalidateQueries({
+					queryKey: ["admin-products-infinite"],
+				});
 				queryClient.invalidateQueries(
 					trpc.product.getAllProducts.queryOptions(),
 				);
@@ -59,6 +75,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 				queryClient.invalidateQueries({
 					...trpc.product.getPaginatedProducts.queryKey,
 				});
+				queryClient.invalidateQueries({
+					queryKey: ["admin-products-infinite"],
+				});
 				setIsExpEditing(false);
 			},
 		});
@@ -67,6 +86,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				...trpc.product.getPaginatedProducts.queryKey,
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
 			});
 		},
 	});
@@ -94,6 +116,15 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const openProductDetails = () => {
 		navigate({ to: "/products/$id", params: { id: String(product.id) } });
+	};
+
+	const openProductDetailsInNewPage = () => {
+		window.open(`/products/${product.id}`, "_blank", "noopener,noreferrer");
+	};
+
+	const handleMarkOutOfStock = () => {
+		setProductStock({ id: product.id, newStock: 0 });
+		setIsOutOfStockAlertOpen(false);
 	};
 
 	const formatExpirationMonthYear = (value?: string | null) => {
@@ -328,6 +359,69 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								setIsEditDialogOpen={setIsEditDialogOpen}
 								deleteMutation={deleteHelper}
 								isDeletePending={isDeletePending}
+								extraActions={
+									<>
+										<AlertDialog
+											open={isOutOfStockAlertOpen}
+											onOpenChange={setIsOutOfStockAlertOpen}
+										>
+											<AlertDialogTrigger asChild>
+												<DropdownMenuItem
+													className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+													disabled={
+														isSetProductStockPending || product.stock === 0
+													}
+													onSelect={(e) => {
+														e.stopPropagation();
+														e.preventDefault();
+														setIsOutOfStockAlertOpen(true);
+													}}
+												>
+													<Package className="h-4 w-4" />
+													<span>Mark out of stock</span>
+												</DropdownMenuItem>
+											</AlertDialogTrigger>
+											<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
+												<AlertDialogHeader>
+													<AlertDialogTitle className="font-heading text-lg">
+														Mark Out Of Stock
+													</AlertDialogTitle>
+													<AlertDialogDescription>
+														This will set the product stock to 0.
+													</AlertDialogDescription>
+												</AlertDialogHeader>
+												<AlertDialogFooter className="mt-6 flex gap-3">
+													<AlertDialogCancel asChild>
+														<Button variant="outline" className="flex-1">
+															Cancel
+														</Button>
+													</AlertDialogCancel>
+													<AlertDialogAction asChild>
+														<Button
+															className="flex-1"
+															onClick={handleMarkOutOfStock}
+															disabled={isSetProductStockPending}
+														>
+															Mark out of stock
+														</Button>
+													</AlertDialogAction>
+												</AlertDialogFooter>
+											</AlertDialogContent>
+										</AlertDialog>
+										<DropdownMenuSeparator className="bg-border" />
+										<DropdownMenuItem
+											className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+											onSelect={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												openProductDetailsInNewPage();
+											}}
+										>
+											<Eye className="h-4 w-4" />
+											<span>See info</span>
+										</DropdownMenuItem>
+									</>
+								}
 							/>
 						</div>
 					</div>

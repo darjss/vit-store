@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
+import type { ImageUrlArray } from "@vit/shared";
 import { nanoid } from "nanoid";
 import { useRef } from "react";
-import type { UseFieldArrayAppend, UseFormSetValue } from "react-hook-form";
 import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
@@ -28,12 +28,10 @@ const uploadImage = async (image: File, category: string) => {
 
 export const UploadButton = ({
 	append,
-	setValue,
 	category,
 	onSuccess,
 }: {
-	append?: UseFieldArrayAppend<any, "images">;
-	setValue?: UseFormSetValue<any>;
+	append?: (value: ImageUrlArray[number]) => void;
 	category: string;
 	onSuccess: (url: string) => void;
 }) => {
@@ -56,8 +54,6 @@ export const UploadButton = ({
 				{
 					onSuccess: (url) => {
 						append?.({ url });
-
-						setValue?.("imageUrl", url);
 						onSuccess(url);
 					},
 					onError: (_error) => {},

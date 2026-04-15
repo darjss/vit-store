@@ -457,7 +457,6 @@ function OrderDetailContent() {
 															onClick={() => {
 																toast.info(
 																	"Тоо нэмэх функц хөгжүүлэгдэж байна",
-																	"Тоо нэмэх функц хөгжүүлэгдэж байна",
 																);
 															}}
 														>
@@ -476,7 +475,6 @@ function OrderDetailContent() {
 															className="mt-2 h-8 w-8"
 															onClick={() => {
 																toast.info(
-																	"Бүтээгдэхүүн устгах функц хөгжүүлэгдэж байна",
 																	"Бүтээгдэхүүн устгах функц хөгжүүлэгдэж байна",
 																);
 															}}
@@ -497,7 +495,6 @@ function OrderDetailContent() {
 											className="w-full gap-2"
 											onClick={() => {
 												toast.info(
-													"Бүтээгдэхүүн нэмэх функц хөгжүүлэгдэж байна",
 													"Бүтээгдэхүүн нэмэх функц хөгжүүлэгдэж байна",
 												);
 											}}
