@@ -1,5 +1,5 @@
 import { Image } from "@unpic/solid";
-import { formatCurrency, productColors } from "@vit/shared";
+import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
 import { createResource, For, Show } from "solid-js";
 import { toProductImageUrl } from "@/lib/image";
@@ -101,8 +101,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 				<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
 					<For each={products()}>
 						{(product) => {
-							const _randomColor =
-								productColors[Math.floor(Math.random() * productColors.length)];
 							const hasDiscount = product.discount && product.discount > 0;
 							const originalPrice = product.price;
 							const discountedPrice = hasDiscount

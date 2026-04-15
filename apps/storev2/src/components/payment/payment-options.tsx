@@ -72,9 +72,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 						<div class="space-y-3">
 							<div class="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
 								<div class="space-y-1.5">
-									<label class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
+									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Данс
-									</label>
+									</p>
 									<div class="flex items-stretch">
 										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											5011147435
@@ -84,9 +84,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</div>
 
 								<div class="space-y-1.5">
-									<label class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
+									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Нэр
-									</label>
+									</p>
 									<div class="flex items-stretch">
 										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
 											Batdelger Jigjidsuren
@@ -96,9 +96,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</div>
 
 								<div class="space-y-1.5">
-									<label class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
+									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Дүн
-									</label>
+									</p>
 									<div class="flex items-stretch">
 										<div class="flex-1 rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
 											{props.total.toLocaleString()}₮
@@ -108,9 +108,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</div>
 
 								<div class="space-y-1.5">
-									<label class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
+									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Гүйлгээний утга
-									</label>
+									</p>
 									<div class="flex items-stretch">
 										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{props.orderNumber}

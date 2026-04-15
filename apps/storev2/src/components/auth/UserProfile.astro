@@ -6,8 +6,22 @@
 
 
 
+
+
+
+
+
+
+
+
 import LogoutButton from "@/components/auth/logout-button";
-import { Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownTrigger } from "@/components/starwind/dropdown";
+import {
+	Dropdown,
+	DropdownContent,
+	DropdownItem,
+	DropdownLabel,
+	DropdownTrigger,
+} from "@/components/starwind/dropdown";
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
@@ -43,7 +57,7 @@ try {
 			<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 border-2 border-border"></span>
 		)}
 	</DropdownTrigger>
-	<DropdownContent>
+	<DropdownContent align="end" class="w-[min(18rem,calc(100vw-1rem))]">
 		{
 			user !== null ? (
 				<>

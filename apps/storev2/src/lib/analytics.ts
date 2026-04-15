@@ -152,3 +152,47 @@ export function trackSearchResultClicked(
 		position,
 	});
 }
+
+export function trackAssistantOpened() {
+	capture("assistant_opened");
+}
+
+export function trackAssistantMessageSent(message: string) {
+	capture("assistant_message_sent", {
+		message_length: message.trim().length,
+	});
+}
+
+export function trackAssistantStarterPromptClicked(prompt: string) {
+	capture("assistant_starter_prompt_clicked", {
+		prompt,
+	});
+}
+
+export function trackAssistantProductsShown(
+	displayType: "single-product" | "product-carousel",
+	productIds: number[],
+) {
+	capture("assistant_products_shown", {
+		display_type: displayType,
+		product_ids: productIds,
+		product_count: productIds.length,
+	});
+}
+
+export function trackAssistantAddToCart(
+	productId: number,
+	productName: string,
+) {
+	capture("assistant_add_to_cart", {
+		product_id: productId,
+		product_name: productName,
+	});
+}
+
+export function trackAssistantCheckoutClicked(productIds: number[]) {
+	capture("assistant_checkout_clicked", {
+		product_ids: productIds,
+		product_count: productIds.length,
+	});
+}

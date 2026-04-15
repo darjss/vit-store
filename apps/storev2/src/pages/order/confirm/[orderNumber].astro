@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import PaymentStatus from "@/components/payment/payment-status";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
@@ -19,12 +27,12 @@ const { orderNumber } = Astro.params;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
 if(!orderNumber || orderNumber===undefined){
-    return Astro.redirect("/404");
+    throw Astro.redirect("/404");
 }
 const order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber });
 console.log(order);
 if(!order){
-    return Astro.redirect("/404");
+    throw Astro.redirect("/404");
 }
 
 ---

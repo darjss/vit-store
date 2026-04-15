@@ -16,9 +16,7 @@ import IconClose from "~icons/ri/close-line";
 import IconRefresh from "~icons/ri/refresh-line";
 import IconTime from "~icons/ri/time-line";
 
-const PaymentStatus = ({
-	payment,
-}: {
+const PaymentStatus = (props: {
 	payment: {
 		paymentNumber: string;
 		status: PaymentStatusType;
@@ -29,12 +27,15 @@ const PaymentStatus = ({
 
 	const fetchPaymentStatus = async () => {
 		return await api.payment.getPaymentStatus.query({
-			paymentNumber: payment.paymentNumber,
+			paymentNumber: props.payment.paymentNumber,
 		});
 	};
 
 	const [data] = createResource(refetchTrigger, fetchPaymentStatus, {
-		initialValue: { status: payment.status, provider: payment.provider },
+		initialValue: {
+			status: props.payment.status,
+			provider: props.payment.provider,
+		},
 	});
 
 	const currentData = () => data.latest ?? data();
@@ -50,10 +51,6 @@ const PaymentStatus = ({
 
 		onCleanup(() => clearInterval(interval));
 	});
-
-	const _refetch = () => {
-		setRefetchTrigger((prev) => prev + 1);
-	};
 
 	return (
 		<Switch>
@@ -99,7 +96,7 @@ const PaymentStatus = ({
 						Төлбөрийн явцад алдаа гарлаа. Дахин оролдоно уу.
 					</p>
 					<a
-						href={`/payment/${payment.paymentNumber}`}
+						href={`/payment/${props.payment.paymentNumber}`}
 						class="inline-flex h-12 items-center gap-2 whitespace-nowrap border-3 border-black bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0_0_#000] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 active:shadow-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<IconRefresh class="h-4 w-4" />

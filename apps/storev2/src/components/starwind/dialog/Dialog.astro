@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 
 type Props = HTMLAttributes<"div">;
@@ -91,7 +99,6 @@ const { class: className, ...rest } = Astro.props;
             button.parentNode?.replaceChild(childElement, button);
           }
         }
-        return button;
       });
 
       // Convert NodeList to Array for consistency with triggers

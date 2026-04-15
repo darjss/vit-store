@@ -1,4 +1,5 @@
 ---
+
 import AddToCartButton from "@/components/cart/add-to-cart-button";
 import Layout from "@/layouts/Layout.astro";
 import { productColors } from "@/lib/constant";
@@ -98,7 +99,7 @@ const categoriesForPills = orderedCategories.slice(0, 8) as Array<{ id: number; 
           return groups;
         }, []).map((group: ProductForHome[]) => (
           <div>
-            {/* First item: wide horizontal card */}
+            <!-- First item: wide horizontal card -->
             {group[0] && (
               <div class="border-2 border-border bg-card active:shadow-hard-sm transition-all mb-2 lg:mb-2.5">
                 <div class="flex">
@@ -120,7 +121,7 @@ const categoriesForPills = orderedCategories.slice(0, 8) as Array<{ id: number; 
                 </div>
               </div>
             )}
-            {/* Remaining: 2-col grid */}
+            <!-- Remaining: 2-col grid -->
             {group.length > 1 && (
               <div class="grid grid-cols-2 gap-2 lg:gap-2.5">
                 {group.slice(1).map((p: ProductForHome) => (

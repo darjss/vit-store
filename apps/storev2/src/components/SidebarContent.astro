@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+
+
+
+
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { createServerClient } from "@/lib/trpc";
 import IconArrowRight from "~icons/ri/arrow-right-s-line";
@@ -219,13 +227,20 @@ const remainingBrands = brands.slice(6);
   // Close sidebar when navigation links are clicked
   // Use event delegation to handle dynamically added links
   function setupSidebarNavigation() {
+    interface SidebarNavigationContainer extends HTMLElement {
+      __sidebarNavSetup?: boolean;
+      __sidebarNavHandler?: EventListener;
+    }
+
     // Find the sidebar container - look for the dialog wrapper
-    const sidebarContainer = document.querySelector('.starwind-dialog');
+    const sidebarContainer = document.querySelector(
+      '.starwind-dialog',
+    ) as SidebarNavigationContainer | null;
     if (!sidebarContainer) return;
 
     // Remove existing listener if any (using a data attribute to track)
-    if ((sidebarContainer as any).__sidebarNavSetup) {
-      sidebarContainer.removeEventListener('click', (sidebarContainer as any).__sidebarNavHandler);
+    if (sidebarContainer.__sidebarNavSetup && sidebarContainer.__sidebarNavHandler) {
+      sidebarContainer.removeEventListener('click', sidebarContainer.__sidebarNavHandler);
     }
 
     // Create a single event handler using event delegation
@@ -246,8 +261,8 @@ const remainingBrands = brands.slice(6);
     };
 
     // Store handler reference for cleanup
-    (sidebarContainer as any).__sidebarNavHandler = handleLinkClick;
-    (sidebarContainer as any).__sidebarNavSetup = true;
+    sidebarContainer.__sidebarNavHandler = handleLinkClick;
+    sidebarContainer.__sidebarNavSetup = true;
 
     sidebarContainer.addEventListener('click', handleLinkClick);
   }

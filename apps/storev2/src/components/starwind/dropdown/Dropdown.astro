@@ -30,6 +30,38 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { HTMLAttributes } from "astro/types";
 
 type Props = HTMLAttributes<"div"> & {
@@ -43,7 +75,7 @@ type Props = HTMLAttributes<"div"> & {
    */
   closeDelay?: number;
 
-  children: any;
+  children?: unknown;
 };
 
 const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Astro.props;
@@ -191,10 +223,13 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
       this.content.addEventListener("click", (e) => {
         const target = e.target as HTMLElement;
         const item = target.closest('[role="menuitem"]');
-        if (item && !(item as HTMLElement).hasAttribute("data-disabled")) {
+        if (
+          item &&
+          !(item as HTMLElement).hasAttribute("data-disabled") &&
+          !(item as HTMLElement).hasAttribute("data-keep-open")
+        ) {
           // Close the dropdown after item selection
           this.closeDropdown();
-          console.log("click closing");
         }
       });
 
@@ -380,8 +415,8 @@ const { class: className, openOnHover = false, closeDelay = 200, ...rest } = Ast
     private positionContent() {
       if (!this.content || !this.trigger) return;
 
-      // Set content width to match trigger width
-      this.content.style.width = "var(--starwind-dropdown-trigger-width)";
+      // Keep the panel at least as wide as the trigger but allow wider custom widths.
+      this.content.style.minWidth = "var(--starwind-dropdown-trigger-width)";
       this.content.style.setProperty(
         "--starwind-dropdown-trigger-width",
         `${this.trigger.offsetWidth}px`,

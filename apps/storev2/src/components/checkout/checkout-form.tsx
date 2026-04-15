@@ -16,7 +16,7 @@ import Loading from "../loading";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
 
-const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
+const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
 		if (cart.items().length > 0) {
 			trackCheckoutStarted(
@@ -75,8 +75,8 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 
 	const form = useAppForm(() => ({
 		defaultValues: {
-			phoneNumber: user?.phone.toString() || "",
-			address: user?.address || "",
+			phoneNumber: props.user?.phone.toString() || "",
+			address: props.user?.address || "",
 			notes: "",
 		},
 		validators: {
@@ -106,9 +106,9 @@ const CheckoutForm = ({ user }: { user: CustomerSelectType | null }) => {
 		},
 	}));
 	createEffect(() => {
-		if (user) {
-			form.setFieldValue?.("phoneNumber", user.phone?.toString() || "");
-			form.setFieldValue?.("address", user.address || "");
+		if (props.user) {
+			form.setFieldValue?.("phoneNumber", props.user.phone?.toString() || "");
+			form.setFieldValue?.("address", props.user.address || "");
 		}
 	});
 	const isEmpty = () => cart.items().length === 0;

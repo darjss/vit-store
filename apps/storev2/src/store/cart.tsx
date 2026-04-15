@@ -111,7 +111,7 @@ export const cart = createRoot(() => {
 		closeDrawer: () => setIsDrawerOpen(false),
 		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
 
-		add: (product: CartItems) => {
+		add: (product: CartItems, options?: { openDrawer?: boolean }) => {
 			const index = cartStore.items.findIndex(
 				(item) => item.productId === product.productId,
 			);
@@ -129,7 +129,9 @@ export const cart = createRoot(() => {
 				quantity: product.quantity,
 			});
 
-			setIsDrawerOpen(true);
+			if (options?.openDrawer !== false) {
+				setIsDrawerOpen(true);
+			}
 		},
 		remove: (productId: number) => {
 			trackRemoveFromCart(productId);
