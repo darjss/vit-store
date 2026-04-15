@@ -1,4 +1,8 @@
-import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useQuery,
+	useSuspenseQueries,
+} from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -17,7 +21,6 @@ import {
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import * as v from "valibot";
-import { DataPagination } from "@/components/data-pagination";
 import ProductCard from "@/components/product/product-card";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
 import { Button } from "@/components/ui/button";
@@ -30,13 +33,14 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { trpc } from "@/utils/trpc";
+import { trpc, trpcClient } from "@/utils/trpc";
 
 type ProductsSearch = {
 	page: number;
 	pageSize: number;
 	brandId?: number;
 	categoryId?: number;
+	status?: "active" | "draft" | "out_of_stock";
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 	searchTerm?: string;
@@ -44,31 +48,12 @@ type ProductsSearch = {
 
 const INSTANT_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
 const INSTANT_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
+const INFINITE_PRODUCTS_PAGE_SIZE = 9;
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
-	loader: async ({ context: ctx, location }) => {
-		const search = location.search as {
-			page?: ProductsSearch["page"];
-			pageSize?: ProductsSearch["pageSize"];
-			brandId?: ProductsSearch["brandId"];
-			categoryId?: ProductsSearch["categoryId"];
-			sortField?: ProductsSearch["sortField"];
-			sortDirection?: ProductsSearch["sortDirection"];
-			searchTerm?: ProductsSearch["searchTerm"];
-		};
+	loader: async ({ context: ctx }) => {
 		await Promise.all([
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getPaginatedProducts.queryOptions({
-					page: search.page ?? 1,
-					pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
-					brandId: search.brandId,
-					categoryId: search.categoryId,
-					sortField: search.sortField,
-					sortDirection: search.sortDirection,
-					searchTerm: search.searchTerm,
-				}),
-			),
 			ctx.queryClient.ensureQueryData(
 				ctx.trpc.category.getAllCategories.queryOptions(),
 			),
@@ -92,15 +77,8 @@ export const Route = createFileRoute("/_dash/products/")({
 });
 
 function RouteComponent() {
-	const {
-		page,
-		pageSize,
-		brandId,
-		categoryId,
-		sortField,
-		sortDirection,
-		searchTerm,
-	} = useSearch({ from: "/_dash/products/" }) as ProductsSearch;
+	const { brandId, categoryId, sortField, sortDirection, searchTerm } =
+		useSearch({ from: "/_dash/products/" }) as ProductsSearch;
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
 	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
 	const hasActiveFilters =
@@ -167,6 +145,7 @@ function RouteComponent() {
 			limit: 10,
 			brandId,
 			categoryId,
+			status: "active",
 		}),
 		enabled: normalizedDebouncedSearch.length >= 2,
 		staleTime: INSTANT_SEARCH_STALE_TIME_MS,
@@ -356,8 +335,6 @@ function RouteComponent() {
 			{!isInstantSearchActive && (
 				<Suspense fallback={<ProductsPageSkeleton />}>
 					<ProductsList
-						page={page}
-						pageSize={pageSize}
 						brandId={brandId}
 						categoryId={categoryId}
 						sortField={sortField}
@@ -515,105 +492,117 @@ function ProductsFilters({
 }
 
 function ProductsList({
-	page,
-	pageSize,
 	brandId,
 	categoryId,
 	sortField,
 	sortDirection,
 	searchTerm,
 }: {
-	page: number;
-	pageSize: number;
 	brandId?: number;
 	categoryId?: number;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 	searchTerm?: string;
 }) {
-	const navigate = useNavigate({ from: Route.fullPath });
-	const [
-		{ data: productsData, isPending },
-		{ data: categories },
-		{ data: brands },
-	] = useSuspenseQueries({
+	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
 		queries: [
-			{
-				...trpc.product.getPaginatedProducts.queryOptions({
-					page,
-					pageSize,
-					brandId,
-					categoryId,
-					sortField,
-					sortDirection,
-					searchTerm,
-				}),
-				staleTime: 60_000,
-				gcTime: 15 * 60 * 1000,
-			},
 			trpc.category.getAllCategories.queryOptions(),
 			trpc.brands.getAllBrands.queryOptions(),
 		],
 	});
-	const products = productsData.products;
-	const pagination = productsData.pagination;
 
-	const handlePageChange = (page: number) => {
-		navigate({
-			to: "/products",
-			search: (prev: ProductsSearch) => ({
-				...prev,
-				page: page,
+	const {
+		data: productsData,
+		isPending,
+		isFetchingNextPage,
+		hasNextPage,
+		fetchNextPage,
+	} = useInfiniteQuery({
+		queryKey: [
+			"admin-products-infinite",
+			INFINITE_PRODUCTS_PAGE_SIZE,
+			brandId,
+			categoryId,
+			sortField,
+			sortDirection,
+			searchTerm,
+		],
+		initialPageParam: 1,
+		queryFn: async ({ pageParam }) =>
+			trpcClient.product.getPaginatedProducts.query({
+				page: Number(pageParam),
+				pageSize: INFINITE_PRODUCTS_PAGE_SIZE,
+				brandId,
+				categoryId,
+				status: "active",
+				sortField,
+				sortDirection,
+				searchTerm,
 			}),
-		});
-	};
+		getNextPageParam: (lastPage) =>
+			lastPage.pagination.hasNextPage
+				? lastPage.pagination.currentPage + 1
+				: undefined,
+		staleTime: 60_000,
+		gcTime: 15 * 60 * 1000,
+	});
+
+	const products = productsData?.pages.flatMap((page) => page.products) ?? [];
+
+	useEffect(() => {
+		const sentinel = document.getElementById("products-infinite-sentinel");
+		if (!sentinel || !hasNextPage) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const entry = entries[0];
+				if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+					void fetchNextPage();
+				}
+			},
+			{ rootMargin: "300px", threshold: 0.1 },
+		);
+
+		observer.observe(sentinel);
+		return () => observer.disconnect();
+	}, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+	if (isPending) {
+		return <SearchResultsSkeleton />;
+	}
 
 	if (products.length === 0) {
 		return (
-			<>
-				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
-					{searchTerm
-						? `"${searchTerm}" олдсонгүй`
-						: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
-				</div>
-				<div>
-					<DataPagination
-						currentPage={pagination.currentPage}
-						totalItems={pagination.totalCount}
-						itemsPerPage={PRODUCT_PER_PAGE}
-						onPageChange={handlePageChange}
-					/>
-				</div>
-			</>
+			<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+				{searchTerm
+					? `"${searchTerm}" олдсонгүй`
+					: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
+			</div>
 		);
 	}
 
 	return (
-		<>
-			<div className="space-y-4">
-				{isPending && <SearchResultsSkeleton />}
-				{!isPending && (
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-						{products.map((product) => (
-							<ProductCard
-								key={product.id}
-								product={product}
-								brands={brands}
-								categories={categories}
-							/>
-						))}
-					</div>
-				)}
+		<div className="space-y-4">
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+				{products.map((product) => (
+					<ProductCard
+						key={product.id}
+						product={product}
+						brands={brands}
+						categories={categories}
+					/>
+				))}
 			</div>
-			<div>
-				<DataPagination
-					currentPage={pagination.currentPage}
-					totalItems={pagination.totalCount}
-					itemsPerPage={PRODUCT_PER_PAGE}
-					onPageChange={handlePageChange}
-				/>
-			</div>
-		</>
+			{isFetchingNextPage && <SearchResultsSkeleton />}
+			{hasNextPage && (
+				<div id="products-infinite-sentinel" className="h-2 w-full" />
+			)}
+			{!hasNextPage && (
+				<div className="py-4 text-center text-muted-foreground text-sm">
+					Нийт {products.length} бүтээгдэхүүн
+				</div>
+			)}
+		</div>
 	);
 }
 

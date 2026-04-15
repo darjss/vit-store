@@ -4,6 +4,7 @@ import {
 	FolderTree,
 	Home,
 	Package,
+	ScanSearch,
 	ShoppingCart,
 	Tags,
 	Users,
@@ -24,6 +25,11 @@ export const sideNavItems = [
 		title: "Бүтээгдэхүүнүүд",
 		url: "/products",
 		icon: Package,
+	},
+	{
+		title: "Харьцуулалт",
+		url: "/review-products",
+		icon: ScanSearch,
 	},
 	{
 		title: "Аналитик",

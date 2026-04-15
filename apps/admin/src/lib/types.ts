@@ -12,6 +12,9 @@ export type BrandsType = RouterOutputs["brands"]["getAllBrands"];
 export type CategoriesType = RouterOutputs["category"]["getAllCategories"];
 export type ProductType = RouterOutputs["product"]["getAllProducts"][number];
 export type PurchaseType = RouterOutputs["purchase"]["getAllPurchases"][number];
+export type PurchaseDetailType = NonNullable<
+	RouterOutputs["purchase"]["getPurchaseById"]
+>;
 export type UserType = RouterOutputs["auth"]["me"];
 export type ProductSearchForOrderType =
 	RouterOutputs["product"]["searchProductByNameForOrder"][number];

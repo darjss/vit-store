@@ -9,7 +9,6 @@ import {
 	AIProductPreview,
 } from "@/components/product/ai-product-input";
 import ProductForm from "@/components/product/product-form";
-import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/products/add")({

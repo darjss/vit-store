@@ -1,5 +1,10 @@
 import { Edit2, MoreVertical, Trash2 } from "lucide-react";
-import { type Dispatch, type SetStateAction, useState } from "react";
+import {
+	type Dispatch,
+	type ReactNode,
+	type SetStateAction,
+	useState,
+} from "react";
 import SubmitButton from "@/components/submit-button";
 import {
 	AlertDialog,
@@ -25,6 +30,7 @@ interface RowActionProps {
 	setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>;
 	deleteMutation: (id: number) => void;
 	isDeletePending: boolean;
+	extraActions?: ReactNode;
 }
 
 const RowAction = ({
@@ -32,6 +38,7 @@ const RowAction = ({
 	setIsEditDialogOpen,
 	deleteMutation,
 	isDeletePending,
+	extraActions,
 }: RowActionProps) => {
 	const [isDeleteAlertOpen, setIsDelteAlertOpen] = useState(false);
 
@@ -79,6 +86,9 @@ const RowAction = ({
 					<Edit2 className="h-4 w-4" />
 					<span>Edit</span>
 				</DropdownMenuItem>
+
+				{extraActions ? <DropdownMenuSeparator className="bg-border" /> : null}
+				{extraActions}
 
 				<DropdownMenuSeparator className="bg-border" />
 

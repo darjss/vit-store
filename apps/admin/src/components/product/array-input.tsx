@@ -1,40 +1,55 @@
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
+import type {
+	FieldPathByValue,
+	FieldPathValue,
+	FieldValues,
+	UseFormReturn,
+} from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-interface ArrayInputProps {
-	form: UseFormReturn<any>;
-	name: string;
+interface ArrayInputProps<
+	TFieldValues extends FieldValues,
+	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+> {
+	form: UseFormReturn<TFieldValues>;
+	name: TName;
 	label: string;
 	placeholder?: string;
 	maxItems?: number;
 }
 
-export function ArrayInput({
+export function ArrayInput<
+	TFieldValues extends FieldValues,
+	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+>({
 	form,
 	name,
 	label,
 	placeholder = "Шинэ утга...",
 	maxItems = 50,
-}: ArrayInputProps) {
+}: ArrayInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
-	const values: string[] = form.watch(name) || [];
+	const values = (form.watch(name) ?? []) as string[];
 
 	const handleAdd = () => {
 		if (!newValue.trim()) return;
 		if (values.length >= maxItems) return;
 
 		const updated = [...values, newValue.trim()];
-		form.setValue(name, updated, { shouldValidate: true });
+		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+			shouldValidate: true,
+		});
 		setNewValue("");
 	};
 
 	const handleRemove = (index: number) => {
 		const updated = values.filter((_, i) => i !== index);
-		form.setValue(name, updated, { shouldValidate: true });
+		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+			shouldValidate: true,
+		});
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -103,26 +118,32 @@ export function ArrayInput({
 	);
 }
 
-interface TagsInputProps {
-	form: UseFormReturn<any>;
-	name: string;
+interface TagsInputProps<
+	TFieldValues extends FieldValues,
+	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+> {
+	form: UseFormReturn<TFieldValues>;
+	name: TName;
 	label: string;
 	placeholder?: string;
 	suggestions?: string[];
 	maxItems?: number;
 }
 
-export function TagsInput({
+export function TagsInput<
+	TFieldValues extends FieldValues,
+	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+>({
 	form,
 	name,
 	label,
 	placeholder = "Таг нэмэх...",
 	suggestions = [],
 	maxItems = 20,
-}: TagsInputProps) {
+}: TagsInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
-	const values: string[] = form.watch(name) || [];
+	const values = (form.watch(name) ?? []) as string[];
 
 	const filteredSuggestions = suggestions.filter(
 		(s) =>
@@ -136,14 +157,18 @@ export function TagsInput({
 		if (values.length >= maxItems) return;
 
 		const updated = [...values, trimmed];
-		form.setValue(name, updated, { shouldValidate: true });
+		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+			shouldValidate: true,
+		});
 		setNewValue("");
 		setShowSuggestions(false);
 	};
 
 	const handleRemove = (index: number) => {
 		const updated = values.filter((_, i) => i !== index);
-		form.setValue(name, updated, { shouldValidate: true });
+		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+			shouldValidate: true,
+		});
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {

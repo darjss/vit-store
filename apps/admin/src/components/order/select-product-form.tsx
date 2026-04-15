@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { addOrderType } from "@vit/shared";
 import { debounce } from "lodash";
 import { Loader2, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -11,7 +12,7 @@ import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 
-const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
+const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 	const [inputValue, setInputValue] = useState("");
 	const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
 
@@ -46,7 +47,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 
 	const handleSelectProduct = (product: ProductSearchForOrderType) => {
 		const existingIndex = fields.findIndex(
-			(field: any) => field.productId === product.id,
+			(field) => field.productId === product.id,
 		);
 
 		if (existingIndex >= 0) {
@@ -238,7 +239,10 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<any> }) => {
 												size="icon"
 												onClick={() => handleQuantityChange(index, "add")}
 												className="h-7 w-7 border-2 border-border"
-												disabled={product.quantity >= product.stock}
+												disabled={
+													product.stock !== undefined &&
+													product.quantity >= product.stock
+												}
 											>
 												<Plus className="h-3 w-3" />
 											</Button>

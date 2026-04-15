@@ -66,6 +66,6 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 });
 
 export const trpc = createTRPCOptionsProxy<AdminRouter>({
-	client: trpcClient,
+	client: trpcClient as never,
 	queryClient,
 });

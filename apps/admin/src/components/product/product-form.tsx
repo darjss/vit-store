@@ -108,7 +108,7 @@ const ProductForm = ({
 
 	const [showAdvancedFields, setShowAdvancedFields] = useState(showAIFields);
 
-	const form = useForm<ProductFormValues>({
+	const form = useForm<ProductFormValues, undefined, ProductFormValues>({
 		resolver: valibotResolver(addProductSchema, undefined, { raw: true }),
 		defaultValues: {
 			name: aiData?.name || product?.name || "",
