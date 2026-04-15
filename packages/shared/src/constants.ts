@@ -19,6 +19,23 @@ export const deliveryProvider = [
 
 export const paymentStatus = ["pending", "success", "failed"] as const;
 
+export const purchaseProvider = [
+	"amazon",
+	"iherb",
+	"naturebell",
+	"unknown",
+] as const;
+
+export const purchaseStatus = [
+	"draft",
+	"ordered",
+	"shipped",
+	"forwarder_received",
+	"partially_received",
+	"received",
+	"cancelled",
+] as const;
+
 export const PRODUCT_PER_PAGE = 10;
 
 export const productFields = [

@@ -10,7 +10,7 @@ import { publicProcedure, router } from "../../lib/trpc";
 import { searchProducts } from "../../lib/upstash-search";
 import { measureMs, summarizeTimings } from "../../lib/utils";
 
-interface SearchProductResult {
+export interface SearchProductResult {
 	id: number;
 	slug: string;
 	name: string;
@@ -18,6 +18,31 @@ interface SearchProductResult {
 	image: string;
 	brand: string;
 }
+
+export interface AssistantProductResult {
+	id: number;
+	slug: string;
+	name: string;
+	price: number;
+	image: string;
+	brand: string;
+	stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+}
+
+const mapStockStatus = (
+	status: string,
+	stock: number,
+): AssistantProductResult["stockStatus"] => {
+	if (status === "out_of_stock" || stock <= 0) {
+		return "out_of_stock";
+	}
+
+	if (stock <= 5) {
+		return "low_stock";
+	}
+
+	return "in_stock";
+};
 
 const performProductSearch = async (
 	query: string,
@@ -191,6 +216,30 @@ export const product = router({
 				price: product.price,
 				image: product.images[0]?.url,
 			}));
+		}),
+	getProductsByIdsForAssistant: publicProcedure
+		.input(
+			v.object({
+				ids: v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			const q = productQueries.store;
+			const results = await q.getProductsByIdsWithDetails(input.ids);
+			const byId = new Map(results.map((product) => [product.id, product]));
+
+			return input.ids
+				.map((id) => byId.get(id))
+				.filter((product): product is NonNullable<typeof product> => !!product)
+				.map((product) => ({
+					id: product.id,
+					slug: product.slug,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url || "",
+					brand: product.brand?.name || "",
+					stockStatus: mapStockStatus(product.status, product.stock),
+				}));
 		}),
 	getRecommendedProducts: publicProcedure
 		.input(

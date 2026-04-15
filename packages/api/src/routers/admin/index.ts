@@ -1,5 +1,6 @@
 import { publicProcedure, router } from "../../lib/trpc";
 import { aiProduct } from "./ai-product";
+import { aiPurchase } from "./ai-purchase";
 import { analytics } from "./analytics";
 import { auth } from "./auth";
 import { brands } from "./brands";
@@ -17,6 +18,7 @@ export const adminRouter = router({
 		return "OK";
 	}),
 	aiProduct,
+	aiPurchase,
 	analytics,
 	auth,
 	brands,

@@ -32,9 +32,6 @@
 	},
 	"dependencies": {
 		"@hono/trpc-server": "^0.4.0",
-		"@oslojs/crypto": "^1.0.1",
-		"@oslojs/encoding": "^1.1.0",
-		"@trpc/client": "catalog:",
 		"@trpc/server": "catalog:",
 		"@upstash/redis": "^1.36.1",
 		"@vit/api": "workspace:*",
@@ -43,21 +40,16 @@
 		"arctic": "^3.7.0",
 		"better-sqlite3": "^12.4.1",
 		"drizzle-orm": "catalog:",
-		"drizzle-seed": "^0.3.1",
 		"hono": "catalog:",
 		"nanoid": "^5.1.5",
-		"postgres": "^3.4.7",
-		"superjson": "^2.2.2",
-		"valibot": "catalog:"
+		"postgres": "^3.4.7"
 	},
 	"devDependencies": {
-		"@t3-oss/env-core": "catalog:",
 		"alchemy": "catalog:",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"tsdown": "catalog:",
 		"@types/node": "^22.13.11",
-		"dotenv": "catalog:",
 		"@cloudflare/workers-types": "^4.20250822.0"
 	}
 }

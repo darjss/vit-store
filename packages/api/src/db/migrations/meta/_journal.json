@@ -43,6 +43,13 @@
 			"when": 1771766400000,
 			"tag": "0005_friendly_steel_serpent",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1775606400000,
+			"tag": "0006_curious_purchase_rebuild",
+			"breakpoints": true
 		}
 	]
 }
