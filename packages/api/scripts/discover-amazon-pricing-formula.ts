@@ -10,6 +10,7 @@ type ProductRow = {
 	amount: string;
 	potency: string;
 	price: number;
+	weightGrams: number;
 	brandName: string;
 };
 
@@ -18,6 +19,7 @@ type Sample = {
 	query: string;
 	priceMnt: number;
 	amazonPriceUsd: number;
+	weightGrams: number;
 	amazonUrl: string;
 };
 
@@ -38,28 +40,48 @@ function parsePriceTokenToUsd(token: string): number | null {
 }
 
 function extractAmazonPriceUsd(html: string): number | null {
-	const patterns = [
-		/"priceToPay"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
-		/"apex_desktop"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+	const candidates: number[] = [];
+	const preferredPatterns = [
+		/apex-pricetopay-value[\s\S]{0,300}?class=['"]a-offscreen['"][^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/apex-pricetopay-accessibility-label[^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/data-pricetopay-label[^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/['"]priceToPay['"]\s*:\s*\{[\s\S]*?['"]amount['"]\s*:\s*['"]?([0-9]+(?:\.[0-9]{1,2})?)['"]?/i,
+		/['"]apex_desktop['"]\s*:\s*\{[\s\S]*?['"]amount['"]\s*:\s*['"]?([0-9]+(?:\.[0-9]{1,2})?)['"]?/i,
 		/<span[^>]*class="a-price-whole"[^>]*>\s*([0-9,]+)\s*<\/span>[\s\S]{0,120}?<span[^>]*class="a-price-fraction"[^>]*>\s*([0-9]{2})\s*<\/span>/i,
-		/\$\s*([0-9]+(?:\.[0-9]{2})?)/,
 	];
 
-	for (const pattern of patterns) {
+	for (const pattern of preferredPatterns) {
 		const match = html.match(pattern);
 		if (!match) continue;
 
 		if (match.length >= 3 && pattern.source.includes("a-price-whole")) {
-			const whole = match[1]?.replace(/,/g, "");
-			const fraction = match[2];
-			const combined = `${whole}.${fraction}`;
-			const parsed = parsePriceTokenToUsd(combined);
-			if (parsed) return parsed;
+			const parsed = parsePriceTokenToUsd(
+				`${(match[1] || "").replace(/,/g, "")}.${match[2] || "00"}`,
+			);
+			if (parsed) candidates.push(parsed);
 			continue;
 		}
 
 		const parsed = parsePriceTokenToUsd(match[1] ?? "");
-		if (parsed) return parsed;
+		if (parsed) candidates.push(parsed);
+	}
+
+	const preferredCandidates = candidates.filter((v) => v >= 5 && v <= 300);
+	if (preferredCandidates.length > 0) {
+		return Math.min(...preferredCandidates);
+	}
+
+	const fallbackCandidates = Array.from(
+		html.matchAll(
+			/class=['"]a-offscreen['"][^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{2})?)/g,
+		),
+	)
+		.map((match) => parsePriceTokenToUsd(match[1] ?? ""))
+		.filter((v): v is number => v != null && v >= 5 && v <= 300)
+		.slice(0, 10);
+
+	if (fallbackCandidates.length > 0) {
+		return Math.min(...fallbackCandidates);
 	}
 
 	return null;
@@ -112,6 +134,114 @@ function rmse(samples: Sample[], a: number, b: number): number {
 	return Math.sqrt(mse);
 }
 
+function pearsonCorrelation(xs: number[], ys: number[]): number {
+	if (xs.length !== ys.length || xs.length < 2) return 0;
+	const n = xs.length;
+	const meanX = xs.reduce((acc, x) => acc + x, 0) / n;
+	const meanY = ys.reduce((acc, y) => acc + y, 0) / n;
+	let num = 0;
+	let denX = 0;
+	let denY = 0;
+	for (let i = 0; i < n; i++) {
+		const dx = (xs[i] ?? 0) - meanX;
+		const dy = (ys[i] ?? 0) - meanY;
+		num += dx * dy;
+		denX += dx * dx;
+		denY += dy * dy;
+	}
+	if (denX <= 0 || denY <= 0) return 0;
+	return num / Math.sqrt(denX * denY);
+}
+
+function fitWithWeight(samples: Sample[]): {
+	aUsd: number;
+	aWeight: number;
+	c: number;
+} {
+	if (samples.length < 3) {
+		return { aUsd: 0, aWeight: 0, c: 0 };
+	}
+
+	let sX1 = 0;
+	let sX2 = 0;
+	let sY = 0;
+	let sX1X1 = 0;
+	let sX2X2 = 0;
+	let sX1X2 = 0;
+	let sX1Y = 0;
+	let sX2Y = 0;
+
+	for (const s of samples) {
+		const x1 = s.amazonPriceUsd;
+		const x2 = s.weightGrams;
+		const y = s.priceMnt;
+		sX1 += x1;
+		sX2 += x2;
+		sY += y;
+		sX1X1 += x1 * x1;
+		sX2X2 += x2 * x2;
+		sX1X2 += x1 * x2;
+		sX1Y += x1 * y;
+		sX2Y += x2 * y;
+	}
+
+	const n = samples.length;
+	const a11 = sX1X1;
+	const a12 = sX1X2;
+	const a13 = sX1;
+	const a21 = sX1X2;
+	const a22 = sX2X2;
+	const a23 = sX2;
+	const a31 = sX1;
+	const a32 = sX2;
+	const a33 = n;
+
+	const b1 = sX1Y;
+	const b2 = sX2Y;
+	const b3 = sY;
+
+	const det =
+		a11 * (a22 * a33 - a23 * a32) -
+		a12 * (a21 * a33 - a23 * a31) +
+		a13 * (a21 * a32 - a22 * a31);
+
+	if (Math.abs(det) < 1e-9) {
+		const linear = fitLinear(samples);
+		return { aUsd: linear.a, aWeight: 0, c: linear.b };
+	}
+
+	const detUsd =
+		b1 * (a22 * a33 - a23 * a32) -
+		a12 * (b2 * a33 - a23 * b3) +
+		a13 * (b2 * a32 - a22 * b3);
+	const detWeight =
+		a11 * (b2 * a33 - a23 * b3) -
+		b1 * (a21 * a33 - a23 * a31) +
+		a13 * (a21 * b3 - b2 * a31);
+	const detC =
+		a11 * (a22 * b3 - b2 * a32) -
+		a12 * (a21 * b3 - b2 * a31) +
+		b1 * (a21 * a32 - a22 * a31);
+
+	return { aUsd: detUsd / det, aWeight: detWeight / det, c: detC / det };
+}
+
+function rmseWithWeight(
+	samples: Sample[],
+	aUsd: number,
+	aWeight: number,
+	c: number,
+): number {
+	if (samples.length === 0) return 0;
+	const mse =
+		samples.reduce((acc, s) => {
+			const predicted = aUsd * s.amazonPriceUsd + aWeight * s.weightGrams + c;
+			const err = s.priceMnt - predicted;
+			return acc + err * err;
+		}, 0) / samples.length;
+	return Math.sqrt(mse);
+}
+
 function roundToNearest(value: number, step: number): number {
 	return Math.round(value / step) * step;
 }
@@ -151,6 +281,7 @@ async function main() {
 			p.amount,
 			p.potency,
 			p.price,
+			p.weight_grams as "weightGrams",
 			coalesce(b.name, '') as "brandName"
 		from ecom_vit_product p
 		left join ecom_vit_brand b on b.id = p.brand_id
@@ -232,6 +363,7 @@ async function main() {
 				query,
 				priceMnt: product.price,
 				amazonPriceUsd: priceUsd,
+				weightGrams: product.weightGrams,
 				amazonUrl: candidateUrl,
 			});
 
@@ -269,6 +401,17 @@ async function main() {
 
 	const fitAll = fitLinear(results);
 	const fitInliers = fitLinear(inliers);
+	const fitAllWithWeight = fitWithWeight(results);
+	const fitInliersWithWeight = fitWithWeight(inliers);
+
+	const corrWeightToPrice = pearsonCorrelation(
+		results.map((s) => s.weightGrams),
+		results.map((s) => s.priceMnt),
+	);
+	const corrWeightToRatio = pearsonCorrelation(
+		results.map((s) => s.weightGrams),
+		results.map((s) => s.priceMnt / s.amazonPriceUsd),
+	);
 
 	console.log("\n=== Pricing Formula Discovery ===");
 	console.log(`Samples: ${results.length} (inliers: ${inliers.length})`);
@@ -277,6 +420,15 @@ async function main() {
 	);
 	console.log(
 		`Inlier fit:      price_mnt = ${fitInliers.a.toFixed(0)} * usd + ${fitInliers.b.toFixed(0)} (rmse=${rmse(inliers, fitInliers.a, fitInliers.b).toFixed(0)})`,
+	);
+	console.log(
+		`All + weight:    price_mnt = ${fitAllWithWeight.aUsd.toFixed(0)} * usd + ${fitAllWithWeight.aWeight.toFixed(1)} * g + ${fitAllWithWeight.c.toFixed(0)} (rmse=${rmseWithWeight(results, fitAllWithWeight.aUsd, fitAllWithWeight.aWeight, fitAllWithWeight.c).toFixed(0)})`,
+	);
+	console.log(
+		`Inlier + weight: price_mnt = ${fitInliersWithWeight.aUsd.toFixed(0)} * usd + ${fitInliersWithWeight.aWeight.toFixed(1)} * g + ${fitInliersWithWeight.c.toFixed(0)} (rmse=${rmseWithWeight(inliers, fitInliersWithWeight.aUsd, fitInliersWithWeight.aWeight, fitInliersWithWeight.c).toFixed(0)})`,
+	);
+	console.log(
+		`Weight correlation: corr(weight, price)=${corrWeightToPrice.toFixed(3)}, corr(weight, mnt/usd)=${corrWeightToRatio.toFixed(3)}`,
 	);
 
 	const medianMultiplier = percentile(multipliers, 0.5);
@@ -299,7 +451,7 @@ async function main() {
 	console.log("\nTop matched samples:");
 	for (const sample of results.slice(0, 12)) {
 		console.log(
-			`product=${sample.productId} usd=$${sample.amazonPriceUsd.toFixed(2)} mnt=${sample.priceMnt} ratio=${(sample.priceMnt / sample.amazonPriceUsd).toFixed(0)} url=${sample.amazonUrl}`,
+			`product=${sample.productId} usd=$${sample.amazonPriceUsd.toFixed(2)} mnt=${sample.priceMnt} weight=${sample.weightGrams}g ratio=${(sample.priceMnt / sample.amazonPriceUsd).toFixed(0)} url=${sample.amazonUrl}`,
 		);
 	}
 
