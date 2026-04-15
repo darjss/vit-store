@@ -17,9 +17,13 @@ export type DB = PostgresJsDatabase<typeof schema>;
 export function createDb(binding: Hyperdrive): DB;
 export function createDb(connectionString: string): DB;
 export function createDb(bindingOrConnectionString: Hyperdrive | string): DB {
-	const binding: Hyperdrive =
+	type HyperdriveConnection = Hyperdrive & { connectionString: string };
+
+	const binding: HyperdriveConnection =
 		typeof bindingOrConnectionString === "string"
-			? ({ connectionString: bindingOrConnectionString } as any as Hyperdrive)
+			? ({
+					connectionString: bindingOrConnectionString,
+				} as HyperdriveConnection)
 			: bindingOrConnectionString;
 
 	const connStr = binding.connectionString;

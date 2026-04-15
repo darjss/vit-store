@@ -38,6 +38,7 @@ export type ExtractedProductData = {
 	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
+	slug: string;
 };
 
 type FirecrawlExtractedProduct = {
@@ -57,8 +58,10 @@ const PRICING_FORMULA = {
 	intercept: 16929,
 	min: 40000,
 	max: 500000,
-	roundingStep: 500,
+	roundingStep: 5000,
 } as const;
+
+const DEFAULT_BRAND_LOGO_URL = "https://www.placeholder.com/logo.png";
 
 type VisionAnalysisResult = {
 	ingredients: string[];
@@ -229,28 +232,48 @@ function parsePriceTokenToUsd(token: string): number | null {
 }
 
 function extractAmazonPriceUsd(html: string): number | null {
-	const patterns = [
-		/"priceToPay"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
-		/"apex_desktop"\s*:\s*\{[\s\S]*?"amount"\s*:\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+	const candidates: number[] = [];
+	const preferredPatterns = [
+		/apex-pricetopay-value[\s\S]{0,300}?class=['"]a-offscreen['"][^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/apex-pricetopay-accessibility-label[^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/data-pricetopay-label[^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{1,2})?)/i,
+		/['"]priceToPay['"]\s*:\s*\{[\s\S]*?['"]amount['"]\s*:\s*['"]?([0-9]+(?:\.[0-9]{1,2})?)['"]?/i,
+		/['"]apex_desktop['"]\s*:\s*\{[\s\S]*?['"]amount['"]\s*:\s*['"]?([0-9]+(?:\.[0-9]{1,2})?)['"]?/i,
 		/<span[^>]*class="a-price-whole"[^>]*>\s*([0-9,]+)\s*<\/span>[\s\S]{0,120}?<span[^>]*class="a-price-fraction"[^>]*>\s*([0-9]{2})\s*<\/span>/i,
-		/\$\s*([0-9]+(?:\.[0-9]{2})?)/,
 	];
 
-	for (const pattern of patterns) {
+	for (const pattern of preferredPatterns) {
 		const match = html.match(pattern);
 		if (!match) continue;
 
 		if (match.length >= 3 && pattern.source.includes("a-price-whole")) {
-			const whole = match[1]?.replace(/,/g, "");
-			const fraction = match[2];
-			const combined = `${whole}.${fraction}`;
-			const parsed = parsePriceTokenToUsd(combined);
-			if (parsed) return parsed;
+			const parsed = parsePriceTokenToUsd(
+				`${(match[1] || "").replace(/,/g, "")}.${match[2] || "00"}`,
+			);
+			if (parsed) candidates.push(parsed);
 			continue;
 		}
 
 		const parsed = parsePriceTokenToUsd(match[1] ?? "");
-		if (parsed) return parsed;
+		if (parsed) candidates.push(parsed);
+	}
+
+	const preferredCandidates = candidates.filter((v) => v >= 5 && v <= 300);
+	if (preferredCandidates.length > 0) {
+		return Math.min(...preferredCandidates);
+	}
+
+	const fallbackCandidates = Array.from(
+		html.matchAll(
+			/class=['"]a-offscreen['"][^>]*>\s*\$\s*([0-9]+(?:\.[0-9]{2})?)/g,
+		),
+	)
+		.map((match) => parsePriceTokenToUsd(match[1] ?? ""))
+		.filter((v): v is number => v != null && v >= 5 && v <= 300)
+		.slice(0, 10);
+
+	if (fallbackCandidates.length > 0) {
+		return Math.min(...fallbackCandidates);
 	}
 
 	return null;
@@ -267,6 +290,59 @@ function calculatePriceMntFromUsd(amazonPriceUsd: number): number {
 		Math.round(bounded / PRICING_FORMULA.roundingStep) *
 		PRICING_FORMULA.roundingStep
 	);
+}
+
+function normalizeBrandName(name: string): string {
+	return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function generateCleanSlug(
+	productName: string,
+	brandName: string | null,
+	amount: string,
+	potency: string,
+): string {
+	const fullName = `${brandName || ""} ${productName} ${potency} ${amount}`;
+	return fullName
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
+async function resolveOrCreateBrandId(
+	brandName: string | null,
+	brands: { id: number; name: string }[],
+): Promise<number | null> {
+	if (!brandName?.trim()) return null;
+
+	const normalizedTarget = normalizeBrandName(brandName);
+	const existing = brands.find(
+		(brand) => normalizeBrandName(brand.name) === normalizedTarget,
+	);
+	if (existing) return existing.id;
+
+	const cleanBrandName = brandName.trim().replace(/\s+/g, " ");
+	try {
+		const created = await brandQueries.admin.createBrand({
+			name: cleanBrandName,
+			logoUrl: DEFAULT_BRAND_LOGO_URL,
+		});
+		logger.info("extractProductFromQuery.brandAutoCreate", {
+			brandName: cleanBrandName,
+			brandId: created?.id ?? null,
+		});
+		return created?.id ?? null;
+	} catch (error) {
+		logger.warn("extractProductFromQuery.brandAutoCreateConflict", {
+			brandName: cleanBrandName,
+			error: error instanceof Error ? error.message : "unknown",
+		});
+		const latestBrands = await brandQueries.admin.getAllBrands();
+		const matched = latestBrands.find(
+			(brand) => normalizeBrandName(brand.name) === normalizedTarget,
+		);
+		return matched?.id ?? null;
+	}
 }
 
 async function selectProductImagesWithGemini(
@@ -464,6 +540,14 @@ const amazonProductSchema = {
 			type: "number",
 			description: "Number of servings per container",
 		},
+		priceUsd: {
+			type: "number",
+			description: "Current buy-box / price-to-pay in USD",
+		},
+		priceText: {
+			type: "string",
+			description: "Visible product price text like '$16.95'",
+		},
 		ingredients: {
 			type: "array",
 			items: { type: "string" },
@@ -529,7 +613,15 @@ async function scrapeAmazonProduct(
 
 		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
 		const html = scrapeResponse.html || "";
-		const priceUsd = extractAmazonPriceUsd(html);
+		const jsonPriceRaw = jsonData.priceUsd;
+		const jsonPrice =
+			typeof jsonPriceRaw === "number" &&
+			Number.isFinite(jsonPriceRaw) &&
+			jsonPriceRaw > 0 &&
+			jsonPriceRaw <= 1000
+				? jsonPriceRaw
+				: null;
+		const priceUsd = jsonPrice ?? extractAmazonPriceUsd(html);
 
 		logger.info("scrapeAmazonProduct", {
 			message: "Firecrawl extracted",
@@ -914,8 +1006,16 @@ async function extractAndUploadProductImages(
 	ctx: Context,
 	query: string,
 ): Promise<{ images: { url: string }[]; sourceUrl: string }> {
+	logger.info("aiProduct.regenerateProductImages.extract.start", {
+		query,
+		isAmazonUrl: isAmazonUrl(query),
+	});
+
 	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
 	if (!firecrawlApiKey) {
+		logger.error("aiProduct.regenerateProductImages.extract.missingConfig", {
+			message: "Firecrawl API key not configured",
+		});
 		throw new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
 			message: "Firecrawl API key not configured",
@@ -927,7 +1027,18 @@ async function extractAndUploadProductImages(
 		? query
 		: await searchAmazonProduct(firecrawl, query);
 
+	logger.info("aiProduct.regenerateProductImages.extract.productUrl", {
+		query,
+		productUrl,
+	});
+
 	if (!productUrl) {
+		logger.warn(
+			"aiProduct.regenerateProductImages.extract.productUrlNotFound",
+			{
+				query,
+			},
+		);
 		throw new TRPCError({
 			code: "NOT_FOUND",
 			message: "Could not find product on Amazon. Try a direct URL.",
@@ -936,17 +1047,38 @@ async function extractAndUploadProductImages(
 
 	const scrapeResult = await scrapeAmazonProduct(firecrawl, productUrl);
 	if (!scrapeResult?.extracted.title) {
+		logger.warn("aiProduct.regenerateProductImages.extract.scrapeFailed", {
+			query,
+			productUrl,
+		});
 		throw new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
 			message: "Failed to scrape product page.",
 		});
 	}
 
+	logger.info("aiProduct.regenerateProductImages.extract.scrapeDone", {
+		productUrl,
+		title: scrapeResult.extracted.title,
+		rawImageCount: scrapeResult.extracted.images.length,
+	});
+
 	const imageFilter = await filterProductImages(
 		scrapeResult.extracted.title,
 		scrapeResult.extracted.images,
 	);
+	logger.info("aiProduct.regenerateProductImages.extract.filterDone", {
+		productUrl,
+		rawImageCount: scrapeResult.extracted.images.length,
+		filteredImageCount: imageFilter.images.length,
+		usedGemini: imageFilter.usedGemini,
+		usedFallback: imageFilter.usedFallback,
+	});
 	if (imageFilter.images.length === 0) {
+		logger.warn("aiProduct.regenerateProductImages.extract.noUsableImages", {
+			productUrl,
+			query,
+		});
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: "Could not extract usable product images from Amazon listing.",
@@ -954,6 +1086,19 @@ async function extractAndUploadProductImages(
 	}
 
 	const uploadedImages = await uploadImagesToR2(imageFilter.images, ctx);
+	logger.info("aiProduct.regenerateProductImages.extract.uploadDone", {
+		productUrl,
+		filteredImageCount: imageFilter.images.length,
+		uploadedImageCount: uploadedImages.length,
+		sampleUploadedUrls: uploadedImages.slice(0, 3).map((img) => img.url),
+	});
+
+	if (uploadedImages.length === 0) {
+		logger.warn("aiProduct.regenerateProductImages.extract.uploadEmpty", {
+			productUrl,
+			filteredImageCount: imageFilter.images.length,
+		});
+	}
 
 	return {
 		images: uploadedImages,
@@ -976,38 +1121,109 @@ export const aiProduct = router({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const product = await productQueries.admin.getProductById(
-				input.productId,
-			);
-			if (!product) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "Product not found",
+			let query = input.query?.trim() || "";
+			logger.info("aiProduct.regenerateProductImages.start", {
+				productId: input.productId,
+				providedQuery: input.query ?? null,
+			});
+
+			try {
+				const product = await productQueries.admin.getProductById(
+					input.productId,
+				);
+				if (!product) {
+					logger.warn("aiProduct.regenerateProductImages.productNotFound", {
+						productId: input.productId,
+					});
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Product not found",
+					});
+				}
+
+				query =
+					query ||
+					[product.brand?.name, product.name, product.potency, product.amount]
+						.filter((part): part is string => !!part && part.trim().length > 0)
+						.join(" ")
+						.trim();
+
+				logger.info("aiProduct.regenerateProductImages.queryReady", {
+					productId: input.productId,
+					query,
+					productName: product.name,
+					brandName: product.brand?.name ?? null,
 				});
-			}
 
-			const query =
-				input.query?.trim() ||
-				[product.brand?.name, product.name, product.potency, product.amount]
-					.filter((part): part is string => !!part && part.trim().length > 0)
-					.join(" ")
-					.trim();
-			const result = await extractAndUploadProductImages(ctx, query);
+				const result = await extractAndUploadProductImages(ctx, query);
 
-			await productQueries.admin.softDeleteProductImages(input.productId);
-			await productQueries.admin.createProductImages(
-				input.productId,
-				result.images.map((image, index) => ({
+				logger.info("aiProduct.regenerateProductImages.extracted", {
+					productId: input.productId,
+					query,
+					sourceUrl: result.sourceUrl,
+					uploadedImageCount: result.images.length,
+					sampleUploadedUrls: result.images
+						.slice(0, 3)
+						.map((image) => image.url),
+				});
+
+				if (result.images.length === 0) {
+					logger.warn("aiProduct.regenerateProductImages.emptyResult", {
+						productId: input.productId,
+						query,
+						sourceUrl: result.sourceUrl,
+					});
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "No images were uploaded. Please try again.",
+					});
+				}
+
+				logger.info("aiProduct.regenerateProductImages.db.softDelete.start", {
+					productId: input.productId,
+				});
+				await productQueries.admin.softDeleteProductImages(input.productId);
+				logger.info("aiProduct.regenerateProductImages.db.softDelete.done", {
+					productId: input.productId,
+				});
+
+				const imagesToCreate = result.images.map((image, index) => ({
 					url: image.url,
 					isPrimary: index === 0,
-				})),
-			);
+				}));
 
-			return {
-				images: result.images,
-				sourceUrl: result.sourceUrl,
-				count: result.images.length,
-			};
+				logger.info("aiProduct.regenerateProductImages.db.create.start", {
+					productId: input.productId,
+					imageCount: imagesToCreate.length,
+				});
+				await productQueries.admin.createProductImages(
+					input.productId,
+					imagesToCreate,
+				);
+				logger.info("aiProduct.regenerateProductImages.db.create.done", {
+					productId: input.productId,
+					imageCount: imagesToCreate.length,
+				});
+
+				logger.info("aiProduct.regenerateProductImages.done", {
+					productId: input.productId,
+					query,
+					sourceUrl: result.sourceUrl,
+					count: result.images.length,
+				});
+
+				return {
+					images: result.images,
+					sourceUrl: result.sourceUrl,
+					count: result.images.length,
+				};
+			} catch (error) {
+				logger.error("aiProduct.regenerateProductImages.failed", error, {
+					productId: input.productId,
+					query,
+				});
+				throw error;
+			}
 		}),
 });
 
@@ -1137,6 +1353,13 @@ export async function extractProductFromQuery(
 		extractionStatus = "partial";
 	}
 
+	const finalBrandId =
+		matchedBrandId ??
+		(await resolveOrCreateBrandId(
+			extractedData.brand,
+			allBrands.map((b) => ({ id: b.id, name: b.name })),
+		));
+
 	// Step 5: Upload images
 	let uploadedImages: { url: string }[] = [];
 	if (filteredImages.length > 0) {
@@ -1211,7 +1434,7 @@ export async function extractProductFromQuery(
 			extractedData.description ||
 			"Тайлбар байхгүй",
 		brand: extractedData.brand,
-		brandId: matchedBrandId,
+		brandId: finalBrandId,
 		categoryId: matchedCategoryId,
 		amount: structuredData?.amount || "Unknown",
 		potency: structuredData?.potency || "Unknown",
@@ -1228,6 +1451,12 @@ export async function extractProductFromQuery(
 		calculatedPriceMnt,
 		extractionStatus,
 		errors,
+		slug: generateCleanSlug(
+			structuredData?.name || extractedData.title,
+			extractedData.brand,
+			structuredData?.amount || "Unknown",
+			structuredData?.potency || "Unknown",
+		),
 	};
 
 	logger.info("extractProductFromQuery", {

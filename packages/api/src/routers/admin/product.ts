@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import { addProductSchema, updateProductSchema } from "@vit/shared";
+import { status } from "@vit/shared/constants";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
 import { adminProcedure, router } from "../../lib/trpc";
@@ -73,11 +74,12 @@ export const product = router({
 				limit: v.optional(v.number(), 10),
 				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				status: v.optional(v.picklist(status)),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const { query, limit, brandId, categoryId } = input;
+				const { query, limit, brandId, categoryId, status } = input;
 				const safeLimit = Math.min(limit, 10);
 				const searchResults = await searchProducts(query, safeLimit, {
 					brandId,
@@ -90,7 +92,9 @@ export const product = router({
 				const dbProducts =
 					await productQueries.admin.getProductsByIdsForSearch(ids);
 				const byId = new Map(
-					dbProducts.map((product) => [product.id, product]),
+					dbProducts
+						.filter((product) => !status || product.status === status)
+						.map((product) => [product.id, product]),
 				);
 
 				return searchResults
@@ -152,7 +156,10 @@ export const product = router({
 					});
 				}
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
-				const slug = productName.replace(/\s+/g, "-").toLowerCase();
+				const slug = productName
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, "-")
+					.replace(/^-+|-+$/g, "");
 				const productResult = await productQueries.admin.createProduct({
 					name: productName,
 					slug,
@@ -290,7 +297,10 @@ export const product = router({
 						message: "Brand not found",
 					});
 				const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
-				const slug = productName.replace(/\s+/g, "-").toLowerCase();
+				const slug = productName
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, "-")
+					.replace(/^-+|-+$/g, "");
 				await productQueries.admin.updateProduct(input.id, {
 					...productData,
 					expirationDate: normalizedExpirationDate,
@@ -424,6 +434,7 @@ export const product = router({
 				),
 				brandId: v.optional(v.number()),
 				categoryId: v.optional(v.number()),
+				status: v.optional(v.picklist(status)),
 				sortField: v.optional(v.string()),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 				searchTerm: v.optional(v.string()),
@@ -436,6 +447,7 @@ export const product = router({
 					pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
 					brandId: input.brandId,
 					categoryId: input.categoryId,
+					status: input.status,
 					sortField: input.sortField,
 					sortDirection: input.sortDirection ?? "desc",
 					searchTerm: input.searchTerm,

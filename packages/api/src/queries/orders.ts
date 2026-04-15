@@ -83,7 +83,7 @@ export const orderQueries = {
 						date: `${date.getMonth() + 1}/${date.getDate()}`,
 					};
 				});
-			} catch (e) {
+			} catch {
 				return [];
 			}
 		},
@@ -125,7 +125,7 @@ export const orderQueries = {
 				const count = result[0]?.count ?? 0;
 
 				return { count };
-			} catch (e) {
+			} catch {
 				return { count: 0 };
 			}
 		},
@@ -175,7 +175,7 @@ export const orderQueries = {
 					},
 				});
 				return shapeOrderResults(result);
-			} catch (e) {
+			} catch {
 				return [];
 			}
 		},

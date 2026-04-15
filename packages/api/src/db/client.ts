@@ -6,7 +6,8 @@ import * as schema from "./schema";
 
 export function db(): DB {
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
-	const directDbUrl = (env as any).DIRECT_DB_URL;
+	const workerEnv = env as typeof env & { DIRECT_DB_URL?: string };
+	const directDbUrl = workerEnv.DIRECT_DB_URL;
 	const connStr =
 		directDbUrl && directDbUrl.length > 0
 			? directDbUrl

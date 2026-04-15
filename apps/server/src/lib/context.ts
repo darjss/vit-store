@@ -15,9 +15,10 @@ export async function createContext({
 }: CreateContextOptions): Promise<ApiContext> {
 	const kv = context.env.vitStoreKV;
 	const r2 = context.env.r2Bucket;
+	type EnvWithDirectDbUrl = typeof context.env & { DIRECT_DB_URL?: string };
 
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
-	const directDbUrl = (context.env as any).DIRECT_DB_URL;
+	const directDbUrl = (context.env as EnvWithDirectDbUrl).DIRECT_DB_URL;
 	const db =
 		directDbUrl && directDbUrl.length > 0
 			? createDb(directDbUrl)

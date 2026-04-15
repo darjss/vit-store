@@ -15,6 +15,7 @@ import {
 	orderStatus,
 	paymentProvider,
 	paymentStatus,
+	purchaseProvider,
 	status,
 } from "../lib/constants";
 
@@ -311,21 +312,99 @@ export const PurchasesTable = createTable(
 	"purchase",
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		productId: integer("product_id")
-			.references(() => ProductsTable.id)
+		provider: text("provider", { enum: purchaseProvider })
+			.default("unknown")
 			.notNull(),
-		quantityPurchased: integer("quantity_purchased").notNull(),
-		unitCost: integer("unit_cost").notNull(),
+		externalOrderNumber: varchar("external_order_number", {
+			length: 128,
+		}).notNull(),
+		trackingNumber: varchar("tracking_number", { length: 128 }),
+		shippingCost: integer("shipping_cost").default(0).notNull(),
+		notes: text("notes"),
+		orderedAt: timestamp("ordered_at"),
+		shippedAt: timestamp("shipped_at"),
+		forwarderReceivedAt: timestamp("forwarder_received_at"),
+		receivedAt: timestamp("received_at"),
+		cancelledAt: timestamp("cancelled_at"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_id_idx").on(table.id),
-		index("purchase_product_idx").on(table.productId),
+		index("purchase_provider_idx").on(table.provider),
+		index("purchase_external_order_idx").on(table.externalOrderNumber),
+		index("purchase_tracking_number_idx").on(table.trackingNumber),
 		index("purchase_created_idx").on(table.createdAt),
-		index("purchase_product_created_idx").on(table.productId, table.createdAt),
+		index("purchase_ordered_at_idx").on(table.orderedAt),
+		index("purchase_received_at_idx").on(table.receivedAt),
+		index("purchase_cancelled_at_idx").on(table.cancelledAt),
 		index("purchase_deleted_at_idx").on(table.deletedAt),
+	],
+);
+
+export const PurchaseItemsTable = createTable(
+	"purchase_item",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		purchaseId: integer("purchase_id")
+			.references(() => PurchasesTable.id, { onDelete: "cascade" })
+			.notNull(),
+		productId: integer("product_id")
+			.references(() => ProductsTable.id)
+			.notNull(),
+		quantityOrdered: integer("quantity_ordered").notNull(),
+		unitCost: integer("unit_cost").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
+	},
+	(table) => [
+		index("purchase_item_purchase_idx").on(table.purchaseId),
+		index("purchase_item_product_idx").on(table.productId),
+		index("purchase_item_deleted_at_idx").on(table.deletedAt),
+	],
+);
+
+export const PurchaseReceiptsTable = createTable(
+	"purchase_receipt",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		purchaseId: integer("purchase_id")
+			.references(() => PurchasesTable.id, { onDelete: "cascade" })
+			.notNull(),
+		receivedAt: timestamp("received_at").notNull(),
+		notes: text("notes"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
+	},
+	(table) => [
+		index("purchase_receipt_purchase_idx").on(table.purchaseId),
+		index("purchase_receipt_received_at_idx").on(table.receivedAt),
+		index("purchase_receipt_deleted_at_idx").on(table.deletedAt),
+	],
+);
+
+export const PurchaseReceiptItemsTable = createTable(
+	"purchase_receipt_item",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		receiptId: integer("receipt_id")
+			.references(() => PurchaseReceiptsTable.id, { onDelete: "cascade" })
+			.notNull(),
+		purchaseItemId: integer("purchase_item_id")
+			.references(() => PurchaseItemsTable.id, { onDelete: "cascade" })
+			.notNull(),
+		quantityReceived: integer("quantity_received").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		deletedAt: timestamp("deleted_at"),
+	},
+	(table) => [
+		index("purchase_receipt_item_receipt_idx").on(table.receiptId),
+		index("purchase_receipt_item_purchase_item_idx").on(table.purchaseItemId),
+		index("purchase_receipt_item_deleted_at_idx").on(table.deletedAt),
 	],
 );
 
@@ -377,12 +456,50 @@ export const productImagesRelations = relations(
 		}),
 	}),
 );
-export const purchaseRelations = relations(PurchasesTable, ({ one }) => ({
-	product: one(ProductsTable, {
-		fields: [PurchasesTable.productId],
-		references: [ProductsTable.id],
-	}),
+export const purchaseRelations = relations(PurchasesTable, ({ many }) => ({
+	items: many(PurchaseItemsTable),
+	receipts: many(PurchaseReceiptsTable),
 }));
+
+export const purchaseItemsRelations = relations(
+	PurchaseItemsTable,
+	({ one, many }) => ({
+		purchase: one(PurchasesTable, {
+			fields: [PurchaseItemsTable.purchaseId],
+			references: [PurchasesTable.id],
+		}),
+		product: one(ProductsTable, {
+			fields: [PurchaseItemsTable.productId],
+			references: [ProductsTable.id],
+		}),
+		receiptItems: many(PurchaseReceiptItemsTable),
+	}),
+);
+
+export const purchaseReceiptsRelations = relations(
+	PurchaseReceiptsTable,
+	({ one, many }) => ({
+		purchase: one(PurchasesTable, {
+			fields: [PurchaseReceiptsTable.purchaseId],
+			references: [PurchasesTable.id],
+		}),
+		items: many(PurchaseReceiptItemsTable),
+	}),
+);
+
+export const purchaseReceiptItemsRelations = relations(
+	PurchaseReceiptItemsTable,
+	({ one }) => ({
+		receipt: one(PurchaseReceiptsTable, {
+			fields: [PurchaseReceiptItemsTable.receiptId],
+			references: [PurchaseReceiptsTable.id],
+		}),
+		purchaseItem: one(PurchaseItemsTable, {
+			fields: [PurchaseReceiptItemsTable.purchaseItemId],
+			references: [PurchaseItemsTable.id],
+		}),
+	}),
+);
 
 export const salesRelations = relations(SalesTable, ({ one }) => ({
 	order: one(OrdersTable, {
@@ -411,6 +528,15 @@ export type CartSelectType = InferSelectModel<typeof CartsTable>;
 export type CartItemSelectType = InferSelectModel<typeof CartItemsTable>;
 
 export type PurchaseSelectType = InferSelectModel<typeof PurchasesTable>;
+export type PurchaseItemSelectType = InferSelectModel<
+	typeof PurchaseItemsTable
+>;
+export type PurchaseReceiptSelectType = InferSelectModel<
+	typeof PurchaseReceiptsTable
+>;
+export type PurchaseReceiptItemSelectType = InferSelectModel<
+	typeof PurchaseReceiptItemsTable
+>;
 export type SalesSelectType = InferSelectModel<typeof SalesTable>;
 
 export type UserInsertType = InferInsertModel<typeof UsersTable>;
@@ -428,4 +554,13 @@ export type CartInsertType = InferInsertModel<typeof CartsTable>;
 export type CartItemInsertType = InferInsertModel<typeof CartItemsTable>;
 
 export type PurchaseInsertType = InferInsertModel<typeof PurchasesTable>;
+export type PurchaseItemInsertType = InferInsertModel<
+	typeof PurchaseItemsTable
+>;
+export type PurchaseReceiptInsertType = InferInsertModel<
+	typeof PurchaseReceiptsTable
+>;
+export type PurchaseReceiptItemInsertType = InferInsertModel<
+	typeof PurchaseReceiptItemsTable
+>;
 export type SalesInsertType = InferInsertModel<typeof SalesTable>;

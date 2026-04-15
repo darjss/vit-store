@@ -243,10 +243,12 @@ export const productQueries = {
 					slug: true,
 					price: true,
 					stock: true,
+					status: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
 					inArray(ProductsTable.id, ids),
+					eq(ProductsTable.status, "active"),
 				),
 				with: {
 					images: {
@@ -267,6 +269,7 @@ export const productQueries = {
 			pageSize: number;
 			brandId?: number;
 			categoryId?: number;
+			status?: ProductStatus;
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
@@ -277,6 +280,9 @@ export const productQueries = {
 				conditions.push(eq(ProductsTable.brandId, params.brandId));
 			if (params.categoryId !== undefined && params.categoryId !== 0)
 				conditions.push(eq(ProductsTable.categoryId, params.categoryId));
+			if (params.status !== undefined) {
+				conditions.push(eq(ProductsTable.status, params.status));
+			}
 			if (params.searchTerm !== undefined && params.searchTerm.trim() !== "") {
 				const searchResults = await searchProducts(
 					params.searchTerm.trim(),
@@ -490,7 +496,10 @@ export const productQueries = {
 					id: true,
 					slug: true,
 				},
-				where: isNull(ProductsTable.deletedAt),
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+				),
 			});
 		},
 
@@ -514,7 +523,11 @@ export const productQueries = {
 					seoTitle: true,
 					seoDescription: true,
 				},
-				where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
+				where: and(
+					eq(ProductsTable.id, id),
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
 				with: {
 					images: {
 						columns: {
@@ -545,6 +558,7 @@ export const productQueries = {
 				},
 				where: and(
 					inArray(ProductsTable.id, ids),
+					eq(ProductsTable.status, "active"),
 					isNull(ProductsTable.deletedAt),
 				),
 				with: {
@@ -722,6 +736,8 @@ export const productQueries = {
 					name: true,
 					slug: true,
 					price: true,
+					status: true,
+					stock: true,
 				},
 				where: and(
 					inArray(ProductsTable.id, ids),

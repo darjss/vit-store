@@ -10,6 +10,7 @@ import Client, {
 	type WebHook,
 	WebHookEventType,
 } from "android-sms-gateway";
+import ky from "ky";
 
 // Re-export types from android-sms-gateway
 export type {
@@ -69,9 +70,11 @@ interface HttpClient {
 }
 
 /**
- * Create a fetch-based HTTP client
+ * Create a ky-based HTTP client
  */
 function createHttpClient(): HttpClient {
+	const client = ky.create({ throwHttpErrors: false });
+
 	const handleResponse = async <T>(response: Response): Promise<T> => {
 		if (response.status === 204) {
 			return null as T;
@@ -91,7 +94,7 @@ function createHttpClient(): HttpClient {
 
 	return {
 		async get<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await fetch(url, { method: "GET", headers });
+			const response = await client.get(url, { headers });
 			return handleResponse<T>(response);
 		},
 		async post<T>(
@@ -99,11 +102,7 @@ function createHttpClient(): HttpClient {
 			body: unknown,
 			headers?: Record<string, string>,
 		): Promise<T> {
-			const response = await fetch(url, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(body),
-			});
+			const response = await client.post(url, { headers, json: body });
 			return handleResponse<T>(response);
 		},
 		async put<T>(
@@ -111,11 +110,7 @@ function createHttpClient(): HttpClient {
 			body: unknown,
 			headers?: Record<string, string>,
 		): Promise<T> {
-			const response = await fetch(url, {
-				method: "PUT",
-				headers,
-				body: JSON.stringify(body),
-			});
+			const response = await client.put(url, { headers, json: body });
 			return handleResponse<T>(response);
 		},
 		async patch<T>(
@@ -123,15 +118,11 @@ function createHttpClient(): HttpClient {
 			body: unknown,
 			headers?: Record<string, string>,
 		): Promise<T> {
-			const response = await fetch(url, {
-				method: "PATCH",
-				headers,
-				body: JSON.stringify(body),
-			});
+			const response = await client.patch(url, { headers, json: body });
 			return handleResponse<T>(response);
 		},
 		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await fetch(url, { method: "DELETE", headers });
+			const response = await client.delete(url, { headers });
 			return handleResponse<T>(response);
 		},
 	};

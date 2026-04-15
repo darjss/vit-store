@@ -138,9 +138,6 @@ export const getDaysFromTimeRange = (timerange: timeRangeType) => {
 	return startDate;
 };
 
-type OrderStatus = (typeof orderStatus)[number];
-type DeliveryProvider = (typeof deliveryProvider)[number];
-
 interface OrderResult {
 	id: number;
 	orderNumber: string;

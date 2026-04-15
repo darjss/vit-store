@@ -30,6 +30,59 @@ export interface AIExtractedData {
 	images: { url: string }[];
 }
 
+export interface AIPurchaseProductDraft {
+	name: string;
+	name_mn?: string | null;
+	description?: string | null;
+	brand?: string | null;
+	brandId?: number | null;
+	categoryId?: number | null;
+	amount: string;
+	potency: string;
+	images?: { url: string }[];
+	sourceCode?: string | null;
+	rawText?: string | null;
+}
+
+export interface AIPurchaseMatchedProduct {
+	id: number;
+	name: string;
+	price: number;
+	imageUrl?: string | null;
+}
+
+export interface AIPurchaseExtractedItem {
+	sourceCode?: string | null;
+	description: string;
+	quantity: number;
+	unitPrice: number;
+	lineTotal?: number | null;
+	expirationDate?: string | null;
+	matchStatus: "matched" | "ambiguous" | "unmatched";
+	productId?: number | null;
+	matchedProduct?: AIPurchaseMatchedProduct | null;
+	candidateMatches?: AIPurchaseMatchedProduct[];
+	newProductDraft?: AIPurchaseProductDraft | null;
+	warnings: string[];
+}
+
+export interface AIPurchaseExtractedData {
+	header: {
+		provider: "amazon" | "iherb" | "naturebell" | "unknown";
+		externalOrderNumber?: string | null;
+		orderedAt?: Date | null;
+		trackingNumber?: string | null;
+		shippingCost?: number | null;
+		notes?: string | null;
+		subtotal?: number | null;
+		total?: number | null;
+	};
+	items: AIPurchaseExtractedItem[];
+	extractionStatus: "success" | "partial" | "failed";
+	errors: string[];
+	rawText?: string | null;
+}
+
 export interface ProductFormValues {
 	name: string;
 	description: string;
@@ -79,7 +132,7 @@ export interface AddSalesType {
 }
 
 export type TransactionType = Parameters<
-	Parameters<PostgresJsDatabase<any>["transaction"]>[0]
+	Parameters<PostgresJsDatabase<Record<string, never>>["transaction"]>[0]
 >[0];
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
@@ -105,7 +158,7 @@ export interface PaymentWebhookResponse {
 		transactionId: string | null;
 		linkId: number;
 		linkRef: string;
-		[key: string]: any;
+		[key: string]: unknown;
 	};
 }
 

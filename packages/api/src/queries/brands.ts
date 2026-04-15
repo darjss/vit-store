@@ -5,10 +5,36 @@ import { BrandsTable, ProductsTable } from "../db/schema";
 export const brandQueries = {
 	admin: {
 		async getAllBrands() {
+			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
 			return db()
-				.select()
+				.select({
+					id: BrandsTable.id,
+					name: BrandsTable.name,
+					logoUrl: BrandsTable.logoUrl,
+					createdAt: BrandsTable.createdAt,
+					updatedAt: BrandsTable.updatedAt,
+					deletedAt: BrandsTable.deletedAt,
+					productCount,
+				})
 				.from(BrandsTable)
-				.where(isNull(BrandsTable.deletedAt));
+				.leftJoin(
+					ProductsTable,
+					and(
+						eq(ProductsTable.brandId, BrandsTable.id),
+						isNull(ProductsTable.deletedAt),
+					),
+				)
+				.where(isNull(BrandsTable.deletedAt))
+				.groupBy(
+					BrandsTable.id,
+					BrandsTable.name,
+					BrandsTable.logoUrl,
+					BrandsTable.createdAt,
+					BrandsTable.updatedAt,
+					BrandsTable.deletedAt,
+				)
+				.orderBy(desc(productCount), asc(BrandsTable.name));
 		},
 
 		async createBrand(data: { name: string; logoUrl: string }) {
