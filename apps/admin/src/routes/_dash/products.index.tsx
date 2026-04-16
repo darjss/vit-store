@@ -19,7 +19,7 @@ import {
 	Search,
 	X,
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as v from "valibot";
 import ProductCard from "@/components/product/product-card";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
@@ -49,6 +49,22 @@ type ProductsSearch = {
 const INSTANT_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
 const INSTANT_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
 const INFINITE_PRODUCTS_PAGE_SIZE = 9;
+const ADMIN_VIRTUAL_OVERSCAN_ROWS = 2;
+const ADMIN_DEFAULT_ROW_HEIGHT = 248;
+
+function getAdminProductColumns(width: number) {
+	if (width >= 1280) return 3;
+	if (width >= 640) return 2;
+	return 1;
+}
+
+function chunkItems<T>(items: T[], chunkSize: number) {
+	const chunks: T[][] = [];
+	for (let index = 0; index < items.length; index += chunkSize) {
+		chunks.push(items.slice(index, index + chunkSize));
+	}
+	return chunks;
+}
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -548,6 +564,101 @@ function ProductsList({
 	});
 
 	const products = productsData?.pages.flatMap((page) => page.products) ?? [];
+	const gridRef = useRef<HTMLDivElement | null>(null);
+	const firstRowRef = useRef<HTMLDivElement | null>(null);
+	const animationFrameRef = useRef<number | null>(null);
+	const [gridWidth, setGridWidth] = useState(0);
+	const [gridTop, setGridTop] = useState(0);
+	const [viewportTop, setViewportTop] = useState(0);
+	const [viewportHeight, setViewportHeight] = useState(0);
+	const [rowHeight, setRowHeight] = useState(ADMIN_DEFAULT_ROW_HEIGHT);
+
+	const columnCount = useMemo(
+		() => getAdminProductColumns(gridWidth || 1280),
+		[gridWidth],
+	);
+	const productRows = useMemo(
+		() => chunkItems(products, columnCount),
+		[products, columnCount],
+	);
+	const totalHeight = productRows.length * rowHeight;
+	const visibleRange = useMemo(() => {
+		if (productRows.length === 0) return { start: 0, end: 0 };
+
+		const overscan = rowHeight * ADMIN_VIRTUAL_OVERSCAN_ROWS;
+		const start = Math.max(
+			0,
+			Math.floor((viewportTop - gridTop - overscan) / rowHeight),
+		);
+		const end = Math.min(
+			productRows.length,
+			Math.ceil(
+				(viewportTop + viewportHeight - gridTop + overscan) / rowHeight,
+			),
+		);
+
+		return {
+			start,
+			end: Math.max(start + 1, end),
+		};
+	}, [gridTop, productRows.length, rowHeight, viewportHeight, viewportTop]);
+	const visibleRows = productRows.slice(visibleRange.start, visibleRange.end);
+
+	useEffect(() => {
+		const updateLayout = () => {
+			const nextWidth = gridRef.current?.clientWidth ?? window.innerWidth;
+			const nextTop = gridRef.current
+				? window.scrollY + gridRef.current.getBoundingClientRect().top
+				: 0;
+
+			setGridWidth(nextWidth);
+			setGridTop(nextTop);
+			setViewportTop(window.scrollY);
+			setViewportHeight(window.innerHeight);
+		};
+
+		updateLayout();
+
+		const handleWindowChange = () => {
+			if (animationFrameRef.current !== null) return;
+			animationFrameRef.current = window.requestAnimationFrame(() => {
+				animationFrameRef.current = null;
+				updateLayout();
+			});
+		};
+
+		const resizeObserver = new ResizeObserver(() => updateLayout());
+		if (gridRef.current) resizeObserver.observe(gridRef.current);
+
+		window.addEventListener("scroll", handleWindowChange, { passive: true });
+		window.addEventListener("resize", handleWindowChange);
+
+		return () => {
+			if (animationFrameRef.current !== null) {
+				window.cancelAnimationFrame(animationFrameRef.current);
+			}
+			resizeObserver.disconnect();
+			window.removeEventListener("scroll", handleWindowChange);
+			window.removeEventListener("resize", handleWindowChange);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!firstRowRef.current) return;
+
+		const updateHeight = () => {
+			const nextHeight = firstRowRef.current?.getBoundingClientRect().height;
+			if (nextHeight && Math.abs(nextHeight - rowHeight) > 1) {
+				setRowHeight(nextHeight);
+			}
+		};
+
+		updateHeight();
+		const resizeObserver = new ResizeObserver(() => updateHeight());
+		resizeObserver.observe(firstRowRef.current);
+
+		return () => resizeObserver.disconnect();
+	}, [rowHeight]);
 
 	useEffect(() => {
 		const sentinel = document.getElementById("products-infinite-sentinel");
@@ -583,15 +694,31 @@ function ProductsList({
 
 	return (
 		<div className="space-y-4">
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-				{products.map((product) => (
-					<ProductCard
-						key={product.id}
-						product={product}
-						brands={brands}
-						categories={categories}
-					/>
-				))}
+			<div ref={gridRef} className="relative w-full">
+				<div style={{ height: `${totalHeight}px` }}>
+					{visibleRows.map((row, rowIndex) => {
+						const actualRowIndex = visibleRange.start + rowIndex;
+						return (
+							<div
+								key={`row-${actualRowIndex}`}
+								ref={rowIndex === 0 ? firstRowRef : undefined}
+								className="absolute top-0 left-0 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+								style={{
+									transform: `translateY(${actualRowIndex * rowHeight}px)`,
+								}}
+							>
+								{row.map((product) => (
+									<ProductCard
+										key={product.id}
+										product={product}
+										brands={brands}
+										categories={categories}
+									/>
+								))}
+							</div>
+						);
+					})}
+				</div>
 			</div>
 			{isFetchingNextPage && <SearchResultsSkeleton />}
 			{hasNextPage && (

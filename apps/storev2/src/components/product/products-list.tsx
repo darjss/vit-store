@@ -9,6 +9,7 @@ import {
 	createSignal,
 	For,
 	onCleanup,
+	onMount,
 	Show,
 } from "solid-js";
 import { queryClient } from "@/lib/query";
@@ -23,11 +24,27 @@ import ProductCard from "./product-card";
 import SearchProductCard from "./search-product-card";
 
 type ListFilter = "featured" | "recent" | "discount";
+const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
+const STORE_DEFAULT_ROW_HEIGHT = 360;
 
 const LIST_FILTER_LABELS: Record<ListFilter, string> = {
 	featured: "Онцлох",
 	recent: "Шинэ ирсэн",
 	discount: "Хямдралтай",
+};
+
+const getStoreProductColumns = (width: number) => {
+	if (width >= 1280) return 4;
+	if (width >= 1024) return 3;
+	return 2;
+};
+
+const chunkItems = <T,>(items: T[], chunkSize: number) => {
+	const chunks: T[][] = [];
+	for (let index = 0; index < items.length; index += chunkSize) {
+		chunks.push(items.slice(index, index + chunkSize));
+	}
+	return chunks;
 };
 
 const ProductCardSkeleton = () => (
@@ -217,6 +234,43 @@ const ProductsList = () => {
 		if (!data) return [];
 		return data.pages.flatMap((page) => page.items);
 	});
+	let browseGridRef: HTMLDivElement | undefined;
+	let layoutRafId: number | undefined;
+	const [gridWidth, setGridWidth] = createSignal(0);
+	const [gridTop, setGridTop] = createSignal(0);
+	const [viewportTop, setViewportTop] = createSignal(0);
+	const [viewportHeight, setViewportHeight] = createSignal(0);
+	const [rowHeight, setRowHeight] = createSignal(STORE_DEFAULT_ROW_HEIGHT);
+	const [firstBrowseRowEl, setFirstBrowseRowEl] =
+		createSignal<HTMLDivElement>();
+
+	const columnCount = createMemo(() =>
+		getStoreProductColumns(gridWidth() || 1280),
+	);
+	const browseRows = createMemo(() =>
+		chunkItems(allBrowseProducts(), columnCount()),
+	);
+	const totalBrowseHeight = createMemo(() => browseRows().length * rowHeight());
+	const visibleBrowseRange = createMemo(() => {
+		if (browseRows().length === 0) return { start: 0, end: 0 };
+
+		const overscan = rowHeight() * STORE_VIRTUAL_OVERSCAN_ROWS;
+		const start = Math.max(
+			0,
+			Math.floor((viewportTop() - gridTop() - overscan) / rowHeight()),
+		);
+		const end = Math.min(
+			browseRows().length,
+			Math.ceil(
+				(viewportTop() + viewportHeight() - gridTop() + overscan) / rowHeight(),
+			),
+		);
+
+		return { start, end: Math.max(start + 1, end) };
+	});
+	const visibleBrowseRows = createMemo(() =>
+		browseRows().slice(visibleBrowseRange().start, visibleBrowseRange().end),
+	);
 
 	const hasProducts = createMemo(() => {
 		if (isSearchMode()) return searchResults().length > 0;
@@ -303,6 +357,62 @@ const ProductsList = () => {
 			observer.disconnect();
 		});
 	};
+
+	const updateVirtualLayout = () => {
+		setGridWidth(browseGridRef?.clientWidth ?? window.innerWidth);
+		setGridTop(
+			browseGridRef
+				? window.scrollY + browseGridRef.getBoundingClientRect().top
+				: 0,
+		);
+		setViewportTop(window.scrollY);
+		setViewportHeight(window.innerHeight);
+	};
+
+	onMount(() => {
+		updateVirtualLayout();
+
+		const handleWindowChange = () => {
+			if (layoutRafId !== undefined) return;
+			layoutRafId = window.requestAnimationFrame(() => {
+				layoutRafId = undefined;
+				updateVirtualLayout();
+			});
+		};
+
+		const resizeObserver = new ResizeObserver(() => updateVirtualLayout());
+		if (browseGridRef) resizeObserver.observe(browseGridRef);
+
+		window.addEventListener("scroll", handleWindowChange, { passive: true });
+		window.addEventListener("resize", handleWindowChange);
+
+		onCleanup(() => {
+			if (layoutRafId !== undefined) {
+				window.cancelAnimationFrame(layoutRafId);
+			}
+			resizeObserver.disconnect();
+			window.removeEventListener("scroll", handleWindowChange);
+			window.removeEventListener("resize", handleWindowChange);
+		});
+	});
+
+	createEffect(() => {
+		const row = firstBrowseRowEl();
+		if (!row) return;
+
+		const updateHeight = () => {
+			const nextHeight = row.getBoundingClientRect().height;
+			if (nextHeight > 0 && Math.abs(nextHeight - rowHeight()) > 1) {
+				setRowHeight(nextHeight);
+			}
+		};
+
+		updateHeight();
+		const resizeObserver = new ResizeObserver(() => updateHeight());
+		resizeObserver.observe(row);
+
+		onCleanup(() => resizeObserver.disconnect());
+	});
 
 	// Get active filter display text
 	const getPageTitle = () => {
@@ -449,21 +559,47 @@ const ProductsList = () => {
 						</Show>
 						<div
 							class={cn(
-								"grid grid-cols-2 gap-2 transition-opacity duration-200 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4",
+								"transition-opacity duration-200",
 								isRefetching() && "pointer-events-none opacity-50",
 							)}
 						>
 							{/* Search mode: render search results */}
 							<Show when={isSearchMode()}>
-								<For each={searchResults()}>
-									{(product) => <SearchProductCard product={product} />}
-								</For>
+								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
+									<For each={searchResults()}>
+										{(product) => <SearchProductCard product={product} />}
+									</For>
+								</div>
 							</Show>
 							{/* Browse mode: render infinite scroll products */}
 							<Show when={!isSearchMode()}>
-								<For each={allBrowseProducts()}>
-									{(product) => <ProductCard product={product} />}
-								</For>
+								<div ref={browseGridRef} class="relative w-full">
+									<div style={{ height: `${totalBrowseHeight()}px` }}>
+										<For each={visibleBrowseRows()}>
+											{(row, rowIndex) => {
+												const actualRowIndex = () =>
+													visibleBrowseRange().start + rowIndex();
+												return (
+													<div
+														ref={
+															rowIndex() === 0
+																? (el) => setFirstBrowseRowEl(el)
+																: undefined
+														}
+														class="absolute top-0 left-0 grid w-full grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
+														style={{
+															transform: `translateY(${actualRowIndex() * rowHeight()}px)`,
+														}}
+													>
+														<For each={row}>
+															{(product) => <ProductCard product={product} />}
+														</For>
+													</div>
+												);
+											}}
+										</For>
+									</div>
+								</div>
 							</Show>
 						</div>
 					</div>
