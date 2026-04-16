@@ -1,6 +1,7 @@
+import { Image } from "@unpic/solid";
 import { formatCurrency, productColors } from "@vit/shared";
 import { createMemo, Show } from "solid-js";
-import { toProductImageUrl } from "@/lib/image";
+import { getProductImageProps } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 // Search result format from Upstash
@@ -23,8 +24,8 @@ const SearchProductCard = (props: SearchProductCardProps) => {
 	const bgColor = createMemo(
 		() => productColors[product.id % productColors.length],
 	);
-	const productImageSmall = createMemo(() =>
-		toProductImageUrl(product.image, "sm"),
+	const productImageProps = createMemo(() =>
+		getProductImageProps(product.image, "card"),
 	);
 	const productUrl = `/products/${product.slug}-${product.id}`;
 
@@ -48,13 +49,17 @@ const SearchProductCard = (props: SearchProductCardProps) => {
 
 					{/* Product Image */}
 					<Show when={product.image}>
-						<img
-							src={productImageSmall() || product.image}
+						<Image
+							src={productImageProps().src || product.image}
 							alt={product.name}
+							width={productImageProps().width}
+							height={productImageProps().height}
+							sizes={productImageProps().sizes}
+							layout="constrained"
+							objectFit="contain"
 							class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
-							width={400}
-							height={500}
 							loading="lazy"
+							decoding="async"
 						/>
 					</Show>
 

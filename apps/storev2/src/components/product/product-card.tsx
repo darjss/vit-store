@@ -1,7 +1,8 @@
+import { Image } from "@unpic/solid";
 import { formatCurrency, productColors } from "@vit/shared";
 import type { ProductCardData } from "@vit/shared/types";
 import { createMemo, Show } from "solid-js";
-import { toProductImageUrl } from "@/lib/image";
+import { getProductImageProps } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 interface ProductCardProps {
@@ -15,8 +16,8 @@ const ProductCard = (props: ProductCardProps) => {
 		() => productColors[product.id % productColors.length],
 	);
 	const productImage = createMemo(() => product.images?.[0]?.url);
-	const productImageSmall = createMemo(() =>
-		toProductImageUrl(productImage() ?? "", "sm"),
+	const productImageProps = createMemo(() =>
+		getProductImageProps(productImage() ?? "", "card"),
 	);
 	const productUrl = `/products/${product.slug}-${product.id}`;
 	const brandName = createMemo(() => product.brand?.name);
@@ -42,13 +43,17 @@ const ProductCard = (props: ProductCardProps) => {
 					{/* Product Image */}
 					<Show when={productImage()}>
 						{(img) => (
-							<img
-								src={productImageSmall() || img()}
+							<Image
+								src={productImageProps().src || img()}
 								alt={product.name}
+								width={productImageProps().width}
+								height={productImageProps().height}
+								sizes={productImageProps().sizes}
+								layout="constrained"
+								objectFit="contain"
 								class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
-								width={400}
-								height={500}
 								loading="lazy"
+								decoding="async"
 							/>
 						)}
 					</Show>

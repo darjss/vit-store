@@ -2,7 +2,7 @@ import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
 import { createResource, For, Show } from "solid-js";
-import { toProductImageUrl } from "@/lib/image";
+import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import IconLightbulb from "~icons/ri/lightbulb-flash-fill";
 
@@ -106,6 +106,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 							const discountedPrice = hasDiscount
 								? product.price * (1 - (product.discount || 0) / 100)
 								: product.price;
+							const imageProps = getProductImageProps(product.image, "card");
 
 							return (
 								<a
@@ -125,17 +126,16 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 
 										<Show when={product.image}>
 											<Image
-												src={
-													toProductImageUrl(product.image, "sm") ||
-													product.image
-												}
+												src={imageProps.src || product.image}
 												alt={product.name}
-												width={300}
-												height={375}
+												width={imageProps.width}
+												height={imageProps.height}
+												sizes={imageProps.sizes}
 												layout="constrained"
 												objectFit="contain"
 												class="relative z-10 h-full w-full p-6 drop-shadow-md transition-transform duration-500 group-hover:scale-110"
 												loading="lazy"
+												decoding="async"
 											/>
 										</Show>
 

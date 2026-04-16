@@ -1,7 +1,7 @@
 import { Image } from "@unpic/solid";
 import { productColors } from "@vit/shared";
 import { createSignal, For, Show } from "solid-js";
-import { toProductImageUrl } from "@/lib/image";
+import { getProductImageProps } from "@/lib/image";
 import { cn } from "@/lib/utils";
 
 interface ProductImage {
@@ -36,6 +36,8 @@ export default function ProductImageCarousel(props: Props) {
 
 	const images = sortedImages();
 	const hasMultipleImages = images.length > 1;
+	const selectedImageProps = () =>
+		getProductImageProps(images[selectedIndex()]?.url, "hero");
 
 	return (
 		<div class="w-full space-y-6">
@@ -54,13 +56,11 @@ export default function ProductImageCarousel(props: Props) {
 					}
 				>
 					<Image
-						src={
-							toProductImageUrl(images[selectedIndex()].url, "md") ||
-							images[selectedIndex()].url
-						}
+						src={selectedImageProps().src || images[selectedIndex()].url}
 						alt={props.productName}
-						width={800}
-						height={800}
+						width={selectedImageProps().width}
+						height={selectedImageProps().height}
+						sizes={selectedImageProps().sizes}
 						layout="constrained"
 						objectFit="contain"
 						priority={true}
@@ -73,33 +73,38 @@ export default function ProductImageCarousel(props: Props) {
 			<Show when={hasMultipleImages}>
 				<div class="scrollbar-hide flex justify-center gap-3 overflow-x-auto pb-4 sm:gap-4">
 					<For each={images}>
-						{(image, index) => (
-							<button
-								type="button"
-								onClick={() => handleThumbnailClick(index())}
-								class={cn(
-									"relative aspect-square w-16 shrink-0 overflow-hidden border-2 border-border transition-all sm:w-20 md:w-24",
-									selectedIndex() === index()
-										? "scale-105 shadow-hard ring-2 ring-primary ring-offset-2"
-										: "opacity-60 shadow-sm hover:scale-105 hover:opacity-100 hover:shadow-hard-sm",
-								)}
-								style={{ background: colors[index()] }}
-							>
-								<div class="absolute inset-0 bg-dots-pattern opacity-20" />
-								<Image
-									src={toProductImageUrl(image.url, "sm") || image.url}
-									alt={`${props.productName} харагдац ${index() + 1}`}
-									width={96}
-									height={96}
-									layout="constrained"
-									objectFit="contain"
-									class="relative z-10 h-full w-full p-2 sm:p-3"
-								/>
-								<Show when={selectedIndex() === index()}>
-									<div class="absolute inset-0 border-2 border-primary bg-primary/10" />
-								</Show>
-							</button>
-						)}
+						{(image, index) => {
+							const imageProps = getProductImageProps(image.url, "thumb");
+							return (
+								<button
+									type="button"
+									onClick={() => handleThumbnailClick(index())}
+									class={cn(
+										"relative aspect-square w-16 shrink-0 overflow-hidden border-2 border-border transition-all sm:w-20 md:w-24",
+										selectedIndex() === index()
+											? "scale-105 shadow-hard ring-2 ring-primary ring-offset-2"
+											: "opacity-60 shadow-sm hover:scale-105 hover:opacity-100 hover:shadow-hard-sm",
+									)}
+									style={{ background: colors[index()] }}
+								>
+									<div class="absolute inset-0 bg-dots-pattern opacity-20" />
+									<Image
+										src={imageProps.src || image.url}
+										alt={`${props.productName} харагдац ${index() + 1}`}
+										width={imageProps.width}
+										height={imageProps.height}
+										sizes={imageProps.sizes}
+										layout="constrained"
+										objectFit="contain"
+										class="relative z-10 h-full w-full p-2 sm:p-3"
+										decoding="async"
+									/>
+									<Show when={selectedIndex() === index()}>
+										<div class="absolute inset-0 border-2 border-primary bg-primary/10" />
+									</Show>
+								</button>
+							);
+						}}
 					</For>
 				</div>
 			</Show>

@@ -9,6 +9,7 @@
 import AddToCartButton from "@/components/cart/add-to-cart-button";
 import Layout from "@/layouts/Layout.astro";
 import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -90,7 +91,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
           <a href={`/products/${p.slug}-${p.id}`} class={`group relative block overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
             <div class="relative aspect-square overflow-hidden" style={`background: ${productColors[p.id % productColors.length]}`}>
               {p.image && (
-                <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-5 md:p-6 group-hover:scale-105 transition-transform duration-500" width="400" height="400" loading="eager" />
+                <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-5 md:p-6 group-hover:scale-105 transition-transform duration-500" width="480" height="480" loading="eager" decoding="async" />
               )}
             </div>
             <!-- Always-visible label on mobile (no hover state needed) -->
@@ -150,7 +151,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
             <a href={`/products/${p.slug}-${p.id}`} class="block">
               <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
                 {p.image && (
-                  <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-4 lg:p-5" width="400" height="400" loading="lazy" />
+                  <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-4 lg:p-5" width="480" height="480" loading="lazy" decoding="async" />
                 )}
               </div>
             </a>
@@ -209,7 +210,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
             <a href={`/products/${p.slug}-${p.id}`} class="block">
               <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
                 {p.image && (
-                  <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5" width="400" height="400" loading="lazy" />
+                  <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5" width="480" height="480" loading="lazy" decoding="async" />
                 )}
               </div>
             </a>
@@ -255,7 +256,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
                   <div class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 bg-foreground text-background text-[10px] font-black">-{p.discount}%</div>
                 )}
                 {p.image && (
-                  <img src={p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-4" width="400" height="300" loading="lazy" />
+                  <img src={toProductImageUrl(p.image, "card") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-4" width="360" height="450" loading="lazy" decoding="async" />
                 )}
               </div>
             </a>
