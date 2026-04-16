@@ -53,24 +53,14 @@ const performProductSearch = async (
 	const searchResults = await searchProducts(query, safeLimit, filters);
 
 	if (searchResults.length > 0) {
-		const ids = searchResults.map((r) => r.id);
-		const canonical = await productQueries.store.getSearchProductsByIds(ids);
-		const byId = new Map(canonical.map((p) => [p.id, p]));
-		const merged = searchResults
-			.map((r) => {
-				const c = byId.get(r.id);
-				if (!c) return null;
-				return {
-					id: c.id,
-					slug: c.slug,
-					name: c.name,
-					price: c.price,
-					image: c.images[0]?.url || r.image || "",
-					brand: c.brand?.name || r.brand || "",
-				};
-			})
-			.filter((x): x is NonNullable<typeof x> => x !== null);
-		if (merged.length > 0) return merged;
+		return searchResults.map((result) => ({
+			id: result.id,
+			slug: result.slug,
+			name: result.name,
+			price: result.price,
+			image: result.image,
+			brand: result.brand,
+		}));
 	}
 
 	const q = productQueries.store;

@@ -1,6 +1,7 @@
 import { Search } from "@upstash/search";
 import type { ProductSelectType } from "../db/schema";
 import { logger } from "./logger";
+import { upsertProductToSearch } from "./upstash-search";
 
 const getSyncSearchClient = () => {
 	const url = process.env.UPSTASH_SEARCH_URL;
@@ -19,27 +20,27 @@ export const syncProductToUpstash = async (
 	categoryId?: number,
 	images?: string[],
 ) => {
-	const client = getSyncSearchClient();
-
-	await client.index("products").upsert({
-		id: `product-${product.id}`,
-		content: {
-			// Searchable text
-			name: product.name,
-			description: product.description,
-		},
-		metadata: {
-			// All data needed for display (no DB refetch required)
-			productId: product.id,
-			name: product.name,
-			slug: product.slug,
-			price: product.price,
-			brand: brandName,
-			category: categoryName,
-			brandId,
-			categoryId,
-			image: images?.[0] || "",
-		},
+	await upsertProductToSearch({
+		id: product.id,
+		name: product.name,
+		nameMn: product.name_mn,
+		description: product.description,
+		slug: product.slug,
+		price: product.price,
+		discount: product.discount,
+		brand: brandName,
+		category: categoryName,
+		status: product.status,
+		stock: product.stock,
+		amount: product.amount,
+		potency: product.potency,
+		dailyIntake: product.dailyIntake,
+		brandId,
+		categoryId,
+		isFeatured: product.isFeatured,
+		ingredients: product.ingredients,
+		tags: product.tags,
+		image: images?.[0] || "",
 	});
 };
 
@@ -63,7 +64,6 @@ export interface ProductForSync {
 export const bulkSyncProductsToUpstash = async (
 	products: ProductForSync[],
 ): Promise<{ success: number; failed: number; errors: string[] }> => {
-	const client = getSyncSearchClient();
 	const errors: string[] = [];
 	let success = 0;
 	let failed = 0;
@@ -74,23 +74,26 @@ export const bulkSyncProductsToUpstash = async (
 
 		const upsertPromises = batch.map(async (product) => {
 			try {
-				await client.index("products").upsert({
-					id: `product-${product.id}`,
-					content: {
-						name: product.name,
-						description: product.description || "",
-					},
-					metadata: {
-						productId: product.id,
-						name: product.name,
-						slug: product.slug,
-						price: product.price,
-						brand: product.brand?.name || "",
-						category: product.category?.name || "",
-						brandId: product.brandId,
-						categoryId: product.categoryId,
-						image: product.images[0]?.url || "",
-					},
+				await upsertProductToSearch({
+					id: product.id,
+					name: product.name,
+					description: product.description || "",
+					slug: product.slug,
+					price: product.price,
+					discount: 0,
+					brand: product.brand?.name || "",
+					category: product.category?.name || "",
+					status: "active",
+					stock: 0,
+					amount: "",
+					potency: "",
+					dailyIntake: 0,
+					brandId: product.brandId,
+					categoryId: product.categoryId,
+					isFeatured: false,
+					ingredients: [],
+					tags: [],
+					image: product.images[0]?.url || "",
 				});
 				return { success: true, id: product.id };
 			} catch (error) {

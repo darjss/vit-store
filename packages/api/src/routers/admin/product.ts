@@ -28,6 +28,34 @@ const normalizeExpirationDate = (value?: string | null) => {
 	return null;
 };
 
+const syncProductSearchIndex = async (productId: number) => {
+	const product = await productQueries.admin.getProductById(productId);
+	if (!product) return;
+
+	await upsertProductToSearch({
+		id: product.id,
+		name: product.name,
+		nameMn: product.name_mn,
+		description: product.description,
+		slug: product.slug,
+		price: product.price,
+		discount: product.discount,
+		brand: product.brand?.name || "",
+		category: product.category?.name || "",
+		status: product.status,
+		stock: product.stock,
+		amount: product.amount,
+		potency: product.potency,
+		dailyIntake: product.dailyIntake,
+		brandId: product.brandId,
+		categoryId: product.categoryId,
+		isFeatured: product.isFeatured,
+		ingredients: product.ingredients,
+		tags: product.tags,
+		image: product.images.find((img) => img.isPrimary)?.url || "",
+	});
+};
+
 export const product = router({
 	searchProductByName: adminProcedure
 		.input(v.object({ searchTerm: v.string() }))
@@ -86,36 +114,16 @@ export const product = router({
 					categoryId,
 				});
 
-				if (searchResults.length === 0) return [];
-
-				const ids = searchResults.map((result) => result.id);
-				const dbProducts =
-					await productQueries.admin.getProductsByIdsForSearch(ids);
-				const byId = new Map(
-					dbProducts
-						.filter((product) => !status || product.status === status)
-						.map((product) => [product.id, product]),
-				);
-
 				return searchResults
-					.map((result) => {
-						const product = byId.get(result.id);
-						if (!product) return null;
-
-						return {
-							id: product.id,
-							name: product.name,
-							slug: product.slug,
-							price: product.price,
-							stock: product.stock,
-							images: product.images.map((image) => ({
-								url: image.url,
-							})),
-						};
-					})
-					.filter(
-						(product): product is NonNullable<typeof product> => !!product,
-					)
+					.filter((result) => !status || result.status === status)
+					.map((result) => ({
+						id: result.id,
+						name: result.name,
+						slug: result.slug,
+						price: result.price,
+						stock: result.stock,
+						images: result.image ? [{ url: result.image }] : [],
+					}))
 					.slice(0, safeLimit);
 			} catch (error) {
 				ctx.log.error("searchProductsInstant", error);
@@ -198,23 +206,7 @@ export const product = router({
 					productId,
 					imagesToInsert,
 				);
-				const createdProduct =
-					await productQueries.admin.getProductById(productId);
-				if (createdProduct) {
-					await upsertProductToSearch({
-						id: createdProduct.id,
-						name: createdProduct.name,
-						description: createdProduct.description,
-						slug: createdProduct.slug,
-						price: createdProduct.price,
-						brand: createdProduct.brand?.name || "",
-						category: createdProduct.category?.name || "",
-						brandId: createdProduct.brandId,
-						categoryId: createdProduct.categoryId,
-						image:
-							createdProduct.images.find((img) => img.isPrimary)?.url || "",
-					});
-				}
+				await syncProductSearchIndex(productId);
 				return { message: "Product added successfully" };
 			} catch (error) {
 				ctx.log.error("addProduct", error);
@@ -339,6 +331,7 @@ export const product = router({
 						imagesToInsert,
 					);
 				}
+				await syncProductSearchIndex(input.id);
 				return { message: "Product updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateProduct", error);
@@ -374,6 +367,7 @@ export const product = router({
 					input.numberToUpdate,
 					input.type,
 				);
+				await syncProductSearchIndex(input.productId);
 				return { message: "Stock updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateStock", error);
@@ -473,6 +467,7 @@ export const product = router({
 						message: "Product not found",
 					});
 				await productQueries.admin.setProductStock(input.id, input.newStock);
+				await syncProductSearchIndex(input.id);
 				return { message: "Stock set successfully" };
 			} catch (error) {
 				ctx.log.error("setProductStock", error);
@@ -518,6 +513,7 @@ export const product = router({
 					input.field,
 					value ?? null,
 				);
+				await syncProductSearchIndex(input.id);
 				return { message: "Product field updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateProductField", error);
