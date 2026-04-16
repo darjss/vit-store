@@ -80,7 +80,7 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
 
         <Footer />
         <MobileNavbar />
-        <StoreAssistant client:load />
+		<StoreAssistant client:idle />
         
         <CartDrawer client:idle />
         		{import.meta.env.DEV && <QueryDevtools client:idle />}
