@@ -9,7 +9,6 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
-import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -34,38 +33,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc, trpcClient } from "@/utils/trpc";
-
-type ProductsSearch = {
-	page: number;
-	pageSize: number;
-	brandId?: number;
-	categoryId?: number;
-	status?: "active" | "draft" | "out_of_stock";
-	sortField?: string;
-	sortDirection?: "asc" | "desc";
-	searchTerm?: string;
-};
-
-const INSTANT_SEARCH_STALE_TIME_MS = 5 * 60 * 1000;
-const INSTANT_SEARCH_GC_TIME_MS = 30 * 60 * 1000;
-const INFINITE_PRODUCTS_PAGE_SIZE = 9;
-
-function getScrollParent(element: HTMLElement | null): HTMLElement | null {
-	if (!element) return null;
-	let parent: HTMLElement | null = element.parentElement;
-	while (parent) {
-		const { overflowY } = getComputedStyle(parent);
-		if (
-			overflowY === "auto" ||
-			overflowY === "scroll" ||
-			overflowY === "overlay"
-		) {
-			return parent;
-		}
-		parent = parent.parentElement;
-	}
-	return null;
-}
+import {
+	DEFAULT_PRODUCTS_PAGE_SIZE,
+	getScrollParent,
+	INFINITE_PRODUCTS_PAGE_SIZE,
+	INSTANT_SEARCH_GC_TIME_MS,
+	INSTANT_SEARCH_STALE_TIME_MS,
+	type ProductsSearch,
+} from "@/features/products/list/products-list.helpers";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -83,7 +58,7 @@ export const Route = createFileRoute("/_dash/products/")({
 		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
 		pageSize: v.optional(
 			v.pipe(v.number(), v.integer(), v.minValue(1)),
-			PRODUCT_PER_PAGE,
+			DEFAULT_PRODUCTS_PAGE_SIZE,
 		),
 		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
