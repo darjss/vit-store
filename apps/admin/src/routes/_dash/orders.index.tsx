@@ -41,7 +41,29 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/utils/trpc";
+
+const orderStatusTabs = [undefined, ...orderStatusConstants] as const;
+
+function formatStatusLabel(status?: string) {
+	if (!status) return "Бүх төлөв";
+
+	return status
+		.split("_")
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
+}
+
+function formatDateDisplay(date?: string) {
+	if (!date) return "Өнөөдөр";
+
+	const parsedDate = new Date(`${date}T00:00:00+08:00`);
+	return parsedDate.toLocaleDateString("mn-MN", {
+		month: "short",
+		day: "numeric",
+	});
+}
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
@@ -100,7 +122,6 @@ function RouteComponent() {
 		date,
 	} = useSearch({ from: "/_dash/orders/" });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
-	const [isDateOpen, setIsDateOpen] = useState(false);
 	const hasActiveFilters =
 		orderStatus !== undefined ||
 		paymentStatus !== undefined ||
@@ -192,48 +213,6 @@ function RouteComponent() {
 			},
 		});
 	};
-	const handleDateSelect = (selectedDate: Date | undefined) => {
-		if (selectedDate) {
-			const dateStr = selectedDate.toISOString().split("T")[0];
-			navigate({
-				to: "/orders",
-				search: {
-					date: dateStr,
-					orderStatus,
-					page: 1,
-					pageSize,
-					paymentStatus,
-					searchTerm,
-					sortDirection,
-					sortField,
-				},
-			});
-		} else {
-			navigate({
-				to: "/orders",
-				search: {
-					date: undefined,
-					orderStatus,
-					page: 1,
-					pageSize,
-					paymentStatus,
-					searchTerm,
-					sortDirection,
-					sortField,
-				},
-			});
-		}
-		setIsDateOpen(false);
-	};
-	const formatDateDisplay = () => {
-		if (!date) return "Өнөөдөр";
-		const d = new Date(`${date}T00:00:00+08:00`);
-		return d.toLocaleDateString("mn-MN", {
-			month: "short",
-			day: "numeric",
-		});
-	};
-	const selectedDate = date ? new Date(`${date}T00:00:00+08:00`) : undefined;
 
 	return (
 		<Card className="w-full bg-transparent">
@@ -283,129 +262,19 @@ function RouteComponent() {
 						</Button>
 					</div>
 
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
-						<div className="flex gap-2">
-							<Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
-								<PopoverTrigger asChild>
-									<button
-										type="button"
-										className={`inline-flex h-9 min-w-[100px] max-w-[120px] items-center justify-center gap-1 whitespace-nowrap rounded-md border px-3 py-2 font-medium text-xs ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
-											date
-												? "bg-primary text-primary-foreground hover:bg-primary/90"
-												: "border-input bg-background hover:bg-accent hover:text-accent-foreground"
-										}`}
-									>
-										<CalendarIcon className="h-4 w-4" />
-										<span className="truncate">{formatDateDisplay()}</span>
-									</button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0" align="start">
-									<Calendar
-										mode="single"
-										selected={selectedDate}
-										onSelect={handleDateSelect}
-										disabled={(date) =>
-											date > new Date() ||
-											date < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-										}
-										components={{
-											DayButton: CalendarDayButton,
-										}}
-									/>
-									{date && (
-										<div className="border-t p-2">
-											<Button
-												variant="ghost"
-												size="sm"
-												className="w-full"
-												onClick={() => handleDateSelect(undefined)}
-											>
-												Өнөөдөр
-											</Button>
-										</div>
-									)}
-								</PopoverContent>
-							</Popover>
-							<Select
-								value={orderStatus ?? "all"}
-								onValueChange={(value) =>
-									handleFilterChange("orderStatus", value)
-								}
-							>
-								<SelectTrigger className="h-9 min-w-[100px] max-w-[140px]">
-									<SelectValue placeholder="All Statuses" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">Бүх төлөв</SelectItem>
-									{orderStatusConstants.map((status) => (
-										<SelectItem key={status} value={status}>
-											{status.charAt(0).toUpperCase() + status.slice(1)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Select
-								value={paymentStatus ?? "all"}
-								onValueChange={(value) =>
-									handleFilterChange("paymentStatus", value)
-								}
-							>
-								<SelectTrigger className="h-9 min-w-[100px] max-w-[140px]">
-									<SelectValue placeholder="All Payments" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">Бүх төлбөр</SelectItem>
-									{paymentStatusConstants.map((status) => (
-										<SelectItem key={status} value={status}>
-											{status.charAt(0).toUpperCase() + status.slice(1)}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div className="flex items-center gap-2 sm:ml-auto">
-							{(filtersActive || sortField !== "" || date) && (
-								<Button
-									variant="default"
-									size="sm"
-									onClick={handleResetFilters}
-									className="h-9 px-3 text-xs"
-								>
-									<RotateCcw className="mr-1 h-3 w-3" />
-									Шинэчлэх
-								</Button>
-							)}
-							<Button
-								variant={sortField === "total" ? "default" : "outline"}
-								size="sm"
-								onClick={() => handleSort("total")}
-								className="h-9 px-3"
-							>
-								Нийт
-								{sortField === "total" &&
-									(sortDirection === "asc" ? (
-										<ChevronUp className="ml-1 h-4 w-4" />
-									) : (
-										<ChevronDown className="ml-1 h-4 w-4" />
-									))}
-							</Button>
-							<Button
-								variant={sortField === "createdAt" ? "default" : "outline"}
-								size="sm"
-								onClick={() => handleSort("createdAt")}
-								className="h-9 px-3"
-							>
-								Огноо
-								{sortField === "createdAt" &&
-									(sortDirection === "asc" ? (
-										<ChevronUp className="ml-1 h-4 w-4" />
-									) : (
-										<ChevronDown className="ml-1 h-4 w-4" />
-									))}
-							</Button>
-						</div>
-					</div>
+					<OrdersFilters
+						date={date}
+						orderStatus={orderStatus}
+						paymentStatus={paymentStatus}
+						pageSize={pageSize}
+						searchTerm={searchTerm}
+						sortDirection={sortDirection}
+						sortField={sortField}
+						filtersActive={filtersActive}
+						onFilterChange={handleFilterChange}
+						onResetFilters={handleResetFilters}
+						onSort={handleSort}
+					/>
 				</div>
 
 				<Suspense
@@ -430,6 +299,200 @@ function RouteComponent() {
 				</Suspense>
 			</CardContent>
 		</Card>
+	);
+}
+
+function OrdersFilters({
+	date,
+	orderStatus,
+	paymentStatus,
+	pageSize,
+	searchTerm,
+	sortDirection,
+	sortField,
+	filtersActive,
+	onFilterChange,
+	onResetFilters,
+	onSort,
+}: {
+	date?: string;
+	orderStatus?: string;
+	paymentStatus?: string;
+	pageSize: number;
+	searchTerm?: string;
+	sortDirection?: "asc" | "desc";
+	sortField?: string;
+	filtersActive: boolean;
+	onFilterChange: (field: string, value: string) => void;
+	onResetFilters: () => void;
+	onSort: (field: string) => void;
+}) {
+	const navigate = useNavigate({ from: Route.fullPath });
+	const [isDateOpen, setIsDateOpen] = useState(false);
+	const selectedDate = date ? new Date(`${date}T00:00:00+08:00`) : undefined;
+
+	const handleDateSelect = (selectedDate: Date | undefined) => {
+		if (selectedDate) {
+			const dateStr = selectedDate.toISOString().split("T")[0];
+			navigate({
+				to: "/orders",
+				search: {
+					date: dateStr,
+					orderStatus,
+					page: 1,
+					pageSize,
+					paymentStatus,
+					searchTerm,
+					sortDirection,
+					sortField,
+				},
+			});
+		} else {
+			navigate({
+				to: "/orders",
+				search: {
+					date: undefined,
+					orderStatus,
+					page: 1,
+					pageSize,
+					paymentStatus,
+					searchTerm,
+					sortDirection,
+					sortField,
+				},
+			});
+		}
+
+		setIsDateOpen(false);
+	};
+
+	return (
+		<div className="flex flex-col gap-3">
+			<Tabs
+				value={orderStatus ?? "all"}
+				onValueChange={(value) => onFilterChange("orderStatus", value)}
+			>
+				<TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border border-border/70 bg-muted/40 p-1">
+					{orderStatusTabs.map((status) => {
+						const value = status ?? "all";
+
+						return (
+							<TabsTrigger
+								key={value}
+								value={value}
+								className="h-9 rounded-lg px-3 text-xs sm:px-4 sm:text-sm"
+							>
+								{formatStatusLabel(status)}
+							</TabsTrigger>
+						);
+					})}
+				</TabsList>
+			</Tabs>
+
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+				<div className="flex gap-2">
+					<Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
+						<PopoverTrigger asChild>
+							<button
+								type="button"
+								className={`inline-flex h-9 min-w-[100px] max-w-[120px] items-center justify-center gap-1 whitespace-nowrap rounded-md border px-3 py-2 font-medium text-xs ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+									date
+										? "bg-primary text-primary-foreground hover:bg-primary/90"
+										: "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+								}`}
+							>
+								<CalendarIcon className="h-4 w-4" />
+								<span className="truncate">{formatDateDisplay(date)}</span>
+							</button>
+						</PopoverTrigger>
+						<PopoverContent className="w-auto p-0" align="start">
+							<Calendar
+								mode="single"
+								selected={selectedDate}
+								onSelect={handleDateSelect}
+								disabled={(date) =>
+									date > new Date() ||
+									date < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+								}
+								components={{
+									DayButton: CalendarDayButton,
+								}}
+							/>
+							{date && (
+								<div className="border-t p-2">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="w-full"
+										onClick={() => handleDateSelect(undefined)}
+									>
+										Өнөөдөр
+									</Button>
+								</div>
+							)}
+						</PopoverContent>
+					</Popover>
+					<Select
+						value={paymentStatus ?? "all"}
+						onValueChange={(value) => onFilterChange("paymentStatus", value)}
+					>
+						<SelectTrigger className="h-9 min-w-[100px] max-w-[140px]">
+							<SelectValue placeholder="All Payments" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">Бүх төлбөр</SelectItem>
+							{paymentStatusConstants.map((status) => (
+								<SelectItem key={status} value={status}>
+									{status.charAt(0).toUpperCase() + status.slice(1)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				<div className="flex items-center gap-2 sm:ml-auto">
+					{(filtersActive || date) && (
+						<Button
+							variant="default"
+							size="sm"
+							onClick={onResetFilters}
+							className="h-9 px-3 text-xs"
+						>
+							<RotateCcw className="mr-1 h-3 w-3" />
+							Шинэчлэх
+						</Button>
+					)}
+					<Button
+						variant={sortField === "total" ? "default" : "outline"}
+						size="sm"
+						onClick={() => onSort("total")}
+						className="h-9 px-3"
+					>
+						Нийт
+						{sortField === "total" &&
+							(sortDirection === "asc" ? (
+								<ChevronUp className="ml-1 h-4 w-4" />
+							) : (
+								<ChevronDown className="ml-1 h-4 w-4" />
+							))}
+					</Button>
+					<Button
+						variant={sortField === "createdAt" ? "default" : "outline"}
+						size="sm"
+						onClick={() => onSort("createdAt")}
+						className="h-9 px-3"
+					>
+						Огноо
+						{sortField === "createdAt" &&
+							(sortDirection === "asc" ? (
+								<ChevronUp className="ml-1 h-4 w-4" />
+							) : (
+								<ChevronDown className="ml-1 h-4 w-4" />
+							))}
+					</Button>
+				</div>
+			</div>
+		</div>
 	);
 }
 

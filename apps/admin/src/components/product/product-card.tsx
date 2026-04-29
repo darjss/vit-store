@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Edit, Eye, Package } from "lucide-react";
+import { Edit, Eye, Package, PackageX, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { getStatusColor, getStockColor } from "@/lib/utils";
+import { cn, getStockColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
@@ -35,6 +35,146 @@ interface ProductCardProps {
 	product: ProductType;
 	brands: BrandsType;
 	categories: CategoriesType;
+}
+
+function formatExpirationMonthYear(value?: string | null) {
+	if (!value) return "Тодорхойлоогүй";
+	const [year, month] = value.split("-");
+	if (!year || !month) return value;
+	return `${month}/${year}`;
+}
+
+function formatProductStatusMn(
+	status: ProductType["status"],
+	isOutOfStock: boolean,
+) {
+	if (isOutOfStock) return "Дууссан";
+	switch (status) {
+		case "active":
+			return "Идэвхтэй";
+		case "draft":
+			return "Ноорог";
+		case "out_of_stock":
+			return "Дууссан";
+		default:
+			return String(status).replaceAll("_", " ");
+	}
+}
+
+function ProductStatusBadge({
+	isOutOfStock,
+	statusLabel,
+}: {
+	isOutOfStock: boolean;
+	statusLabel: string;
+}) {
+	const badgeClassName = cn(
+		"inline-flex shrink-0 items-center self-start rounded-base border-2 px-2.5 py-1 font-semibold text-[11px] leading-none shadow-none sm:text-xs",
+		isOutOfStock
+			? "border-destructive/50 bg-destructive/10 text-destructive"
+			: "border-emerald-600/45 bg-emerald-500/10 text-emerald-950",
+	);
+
+	return (
+		<Badge className={badgeClassName}>
+			{isOutOfStock ? (
+				<PackageX className="mr-1 h-3.5 w-3.5" />
+			) : (
+				<Sparkles className="mr-1 h-3.5 w-3.5" />
+			)}
+			{statusLabel}
+		</Badge>
+	);
+}
+
+function ProductSummary({
+	product,
+	primaryImage,
+	brandName,
+	categoryName,
+	isOutOfStock,
+	statusLabel,
+	onOpen,
+}: {
+	product: ProductType;
+	primaryImage: string;
+	brandName?: string;
+	categoryName?: string;
+	isOutOfStock: boolean;
+	statusLabel: string;
+	onOpen: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onOpen}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onOpen();
+				}
+			}}
+			className="flex w-full flex-row text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+		>
+			<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
+				<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
+					<img
+						src={primaryImage || "/placeholder.jpg"}
+						alt={product.name}
+						className="h-full w-full object-contain"
+						loading="lazy"
+					/>
+				</div>
+			</div>
+
+			<div className="flex flex-1 flex-col p-3">
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+					<div className="min-w-0 flex-1">
+						<h3 className="line-clamp-2 font-bold text-sm leading-snug sm:text-base">
+							{product.name}
+						</h3>
+						<div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs sm:text-sm">
+							{brandName && <span>{brandName}</span>}
+							{brandName && categoryName && (
+								<span className="text-border">|</span>
+							)}
+							{categoryName && <span>{categoryName}</span>}
+						</div>
+					</div>
+					<ProductStatusBadge
+						isOutOfStock={isOutOfStock}
+						statusLabel={statusLabel}
+					/>
+				</div>
+
+				<div className="mt-1.5 flex items-center gap-3">
+					<div className="font-bold text-sm tabular-nums sm:text-base">
+						₮{product.price.toLocaleString()}
+					</div>
+					<div
+						className={cn(
+							"flex items-center gap-1 rounded-full px-2.5 py-1",
+							isOutOfStock
+								? "border border-[#7a1f1f] bg-[#ffe3e3] text-[#7a1f1f]"
+								: getStockColor(product.stock),
+						)}
+					>
+						{isOutOfStock ? (
+							<PackageX className="h-3.5 w-3.5" />
+						) : (
+							<Package className="h-3.5 w-3.5" />
+						)}
+						<span className="font-bold text-xs tabular-nums sm:text-sm">
+							{isOutOfStock ? "0" : product.stock}
+						</span>
+						<span className="text-[10px] sm:text-xs">
+							{isOutOfStock ? "дууссан" : "үлдэгдэл"}
+						</span>
+					</div>
+				</div>
+			</div>
+		</button>
+	);
 }
 
 const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
@@ -101,6 +241,8 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		"/placeholder.jpg";
 	const brand = brands.find((b) => b.id === product.brandId);
 	const category = categories.find((c) => c.id === product.categoryId);
+	const isOutOfStock = product.stock === 0 || product.status === "out_of_stock";
+	const statusLabel = formatProductStatusMn(product.status, isOutOfStock);
 
 	const handleSaveStock = () => {
 		setProductStock({ id: product.id, newStock: stockValue });
@@ -125,13 +267,6 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const handleMarkOutOfStock = () => {
 		setProductStock({ id: product.id, newStock: 0 });
 		setIsOutOfStockAlertOpen(false);
-	};
-
-	const formatExpirationMonthYear = (value?: string | null) => {
-		if (!value) return "Тодорхойлоогүй";
-		const [year, month] = value.split("-");
-		if (!year || !month) return value;
-		return `${month}/${year}`;
 	};
 
 	return (
@@ -168,66 +303,15 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			</Dialog>
 			<Card className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none">
 				<CardContent className="p-0">
-					<button
-						type="button"
-						onClick={openProductDetails}
-						onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") {
-								e.preventDefault();
-								openProductDetails();
-							}
-						}}
-						className="flex w-full flex-row text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					>
-						<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
-							<div className="h-full w-full overflow-hidden rounded-base border-2 border-border bg-background p-2">
-								<img
-									src={primaryImage || "/placeholder.jpg"}
-									alt={product.name}
-									className="h-full w-full object-contain"
-									loading="lazy"
-								/>
-							</div>
-						</div>
-
-						<div className="flex flex-1 flex-col p-3">
-							<div className="flex items-start justify-between gap-2">
-								<div className="min-w-0 flex-1">
-									<h3 className="truncate font-bold text-sm leading-snug sm:text-base">
-										{product.name}
-									</h3>
-									<div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs sm:text-sm">
-										{brand?.name && <span>{brand.name}</span>}
-										{brand?.name && category?.name && (
-											<span className="text-border">|</span>
-										)}
-										{category?.name && <span>{category.name}</span>}
-									</div>
-								</div>
-								<Badge
-									variant="outline"
-									className={`${getStatusColor(product.status)} shrink-0 border-2 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wider sm:text-xs`}
-								>
-									{product.status.replace("_", " ")}
-								</Badge>
-							</div>
-
-							<div className="mt-1.5 flex items-center gap-3">
-								<div className="font-bold text-sm tabular-nums sm:text-base">
-									₮{product.price.toLocaleString()}
-								</div>
-								<div
-									className={`flex items-center gap-1 ${getStockColor(product.stock)}`}
-								>
-									<Package className="h-3.5 w-3.5" />
-									<span className="font-bold text-xs tabular-nums sm:text-sm">
-										{product.stock}
-									</span>
-									<span className="text-[10px] sm:text-xs">үлдэгдэл</span>
-								</div>
-							</div>
-						</div>
-					</button>
+					<ProductSummary
+						product={product}
+						primaryImage={primaryImage}
+						brandName={brand?.name}
+						categoryName={category?.name}
+						isOutOfStock={isOutOfStock}
+						statusLabel={statusLabel}
+						onOpen={openProductDetails}
+					/>
 
 					<div className="border-border border-t-2 p-3" data-no-nav>
 						<div className="flex flex-wrap items-center justify-between gap-2">
@@ -378,22 +462,22 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 													}}
 												>
 													<Package className="h-4 w-4" />
-													<span>Mark out of stock</span>
+													<span>Үлдэгдэл тэглэх</span>
 												</DropdownMenuItem>
 											</AlertDialogTrigger>
 											<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
 												<AlertDialogHeader>
 													<AlertDialogTitle className="font-heading text-lg">
-														Mark Out Of Stock
+														Үлдэгдэл тэглэх
 													</AlertDialogTitle>
 													<AlertDialogDescription>
-														This will set the product stock to 0.
+														Бүтээгдэхүүний үлдэгдлийг 0 болгоно.
 													</AlertDialogDescription>
 												</AlertDialogHeader>
 												<AlertDialogFooter className="mt-6 flex gap-3">
 													<AlertDialogCancel asChild>
 														<Button variant="outline" className="flex-1">
-															Cancel
+															Цуцлах
 														</Button>
 													</AlertDialogCancel>
 													<AlertDialogAction asChild>
@@ -402,7 +486,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 															onClick={handleMarkOutOfStock}
 															disabled={isSetProductStockPending}
 														>
-															Mark out of stock
+															Тэглэх
 														</Button>
 													</AlertDialogAction>
 												</AlertDialogFooter>
@@ -418,7 +502,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 											}}
 										>
 											<Eye className="h-4 w-4" />
-											<span>See info</span>
+											<span>Шинэ цонхонд нээх</span>
 										</DropdownMenuItem>
 									</>
 								}

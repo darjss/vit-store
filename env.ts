@@ -40,6 +40,10 @@ export const createServerAlchemyEnv = (
 			POSTHOG_API_KEY: requiredString(),
 			POSTHOG_PROJECT_ID: requiredString(),
 			POSTHOG_HOST: v.optional(requiredUrl(), "https://us.i.posthog.com"),
+			DELIVERY_API_URL: requiredUrl(),
+			DELIVERY_USERNAME: requiredString(),
+			DELIVERY_PASSWORD: requiredString(),
+			DELIVERY_SENDERID: requiredString(),
 		},
 		runtimeEnvStrict: {
 			PLANETSCALE_HOST: runtimeEnv.PLANETSCALE_HOST,
@@ -71,6 +75,10 @@ export const createServerAlchemyEnv = (
 			POSTHOG_API_KEY: runtimeEnv.POSTHOG_API_KEY,
 			POSTHOG_PROJECT_ID: runtimeEnv.POSTHOG_PROJECT_ID,
 			POSTHOG_HOST: runtimeEnv.POSTHOG_HOST,
+			DELIVERY_API_URL: runtimeEnv.DELIVERY_API_URL,
+			DELIVERY_USERNAME: runtimeEnv.DELIVERY_USERNAME,
+			DELIVERY_PASSWORD: runtimeEnv.DELIVERY_PASSWORD,
+			DELIVERY_SENDERID: runtimeEnv.DELIVERY_SENDERID,
 		},
 	});
 };
