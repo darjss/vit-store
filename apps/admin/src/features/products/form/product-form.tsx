@@ -4,21 +4,17 @@ import {
 	useQueryClient,
 	useSuspenseQueries,
 } from "@tanstack/react-query";
-import { Image } from "@unpic/react";
 import {
 	type AIExtractedData,
 	addProductSchema,
-	productTagSuggestions,
 	type ProductFormValues,
 	status,
 } from "@vit/shared/domain/product";
-import { ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "@/components/submit-button";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Form,
@@ -37,13 +33,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { UploadButton } from "@/components/upload-button";
-import { ArrayInput, TagsInput } from "@/components/product/array-input";
 import {
 	getAiProductFormValues,
 	getProductFormDefaults,
 	type ProductFormProduct,
 } from "./product-form.helpers";
+import { ProductAdvancedSection } from "./sections/product-advanced-section";
+import { ProductImagesSection } from "./sections/product-images-section";
 
 const ProductForm = ({
 	product,
@@ -403,139 +399,17 @@ const ProductForm = ({
 						</CardContent>
 					</Card>
 
-					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
-						<CardContent className="space-y-4 p-6">
-							<h3 className="mb-4 font-semibold text-xl">
-								Бүтээгдэхүүний зураг
-							</h3>
-							{currentImageUrl.length > 0 && (
-								<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-									{currentImageUrl.map((image, i) => (
-										<div
-											key={`${image.url}-${i}`}
-											className="group relative aspect-square overflow-hidden border-2 border-border bg-muted"
-										>
-											<Button
-												type="button"
-												variant="destructive"
-												size="icon"
-												onClick={() => handleRemove(i)}
-												className="absolute top-2 right-2 z-10 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100"
-												aria-label="Remove image"
-											>
-												<X className="h-4 w-4" />
-											</Button>
-											<Image
-												src={image.url}
-												alt={`product image ${i + 1}`}
-												width={400}
-												height={400}
-												className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-											/>
-											{i === 0 && (
-												<div className="absolute bottom-0 left-0 bg-primary px-2 py-0.5 font-bold text-primary-foreground text-xs">
-													Үндсэн
-												</div>
-											)}
-										</div>
-									))}
-								</div>
-							)}
-							<UploadButton
-								append={append}
-								category="product"
-								onSuccess={() => {}}
-							/>
-						</CardContent>
-					</Card>
+					<ProductImagesSection
+						images={currentImageUrl}
+						onRemove={handleRemove}
+						append={append}
+					/>
 
-					<Card className="bg-transparent shadow-md transition-shadow duration-300 hover:shadow-lg md:col-span-2">
-						<CardContent className="space-y-4 p-6">
-							<button
-								type="button"
-								onClick={() => setShowAdvancedFields(!showAdvancedFields)}
-								className="flex w-full items-center justify-between"
-							>
-								<div className="flex items-center gap-2">
-									<Sparkles className="h-5 w-5 text-primary" />
-									<h3 className="font-semibold text-xl">
-										Нэмэлт мэдээлэл (AI)
-									</h3>
-								</div>
-								{showAdvancedFields ? (
-									<ChevronUp className="h-5 w-5" />
-								) : (
-									<ChevronDown className="h-5 w-5" />
-								)}
-							</button>
-
-							{showAdvancedFields && (
-								<div className="grid gap-4 pt-4 md:grid-cols-2">
-									<div className="md:col-span-2">
-										<ArrayInput
-											form={form}
-											name="ingredients"
-											label="Найрлага"
-											placeholder="Найрлага нэмэх..."
-										/>
-									</div>
-
-									<div className="md:col-span-2">
-										<TagsInput
-											form={form}
-											name="tags"
-											label="Таг"
-											placeholder="Таг нэмэх..."
-											suggestions={[...productTagSuggestions]}
-										/>
-									</div>
-
-									<FormField
-										control={form.control}
-										name="seoTitle"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>SEO Гарчиг</FormLabel>
-												<FormControl>
-													<Input
-														placeholder="SEO гарчиг (60 тэмдэгт хүртэл)"
-														{...field}
-														value={field.value || ""}
-													/>
-												</FormControl>
-												<FormMessage />
-												<p className="text-muted-foreground text-xs">
-													{(field.value || "").length} / 60
-												</p>
-											</FormItem>
-										)}
-									/>
-
-									<FormField
-										control={form.control}
-										name="seoDescription"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>SEO Тайлбар</FormLabel>
-												<FormControl>
-													<Textarea
-														placeholder="SEO тайлбар (160 тэмдэгт хүртэл)"
-														{...field}
-														value={field.value || ""}
-														className="h-20 resize-none"
-													/>
-												</FormControl>
-												<FormMessage />
-												<p className="text-muted-foreground text-xs">
-													{(field.value || "").length} / 160
-												</p>
-											</FormItem>
-										)}
-									/>
-								</div>
-							)}
-						</CardContent>
-					</Card>
+					<ProductAdvancedSection
+						form={form}
+						show={showAdvancedFields}
+						onToggle={() => setShowAdvancedFields((show) => !show)}
+					/>
 
 					<div className="mt-6 flex justify-end lg:col-span-2">
 						<SubmitButton
