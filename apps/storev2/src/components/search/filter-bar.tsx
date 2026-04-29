@@ -1,3 +1,9 @@
+import {
+	productPresetFilterLabels,
+	productSortOptions,
+	trendingProductSearches,
+	type ProductPresetFilter,
+} from "@vit/shared/domain/product";
 import type { Component, JSX } from "solid-js";
 import {
 	createEffect,
@@ -37,31 +43,17 @@ interface FilterBarProps {
 	sortDirection: string | null;
 	categoryId: number | null;
 	brandId: number | null;
-	presetFilter: "featured" | "recent" | "discount" | null;
+	presetFilter: ProductPresetFilter | null;
 	categories: Category[];
 	brands: Brand[];
 	onSearchChange: (term: string) => void;
 	onSortChange: (field: string | null, direction: string | null) => void;
 	onCategoryChange: (categoryId: number | null) => void;
 	onBrandChange: (brandId: number | null) => void;
-	onPresetFilterChange: (
-		value: "featured" | "recent" | "discount" | null,
-	) => void;
+	onPresetFilterChange: (value: ProductPresetFilter | null) => void;
 	onClearFilters: () => void;
 	hasActiveFilters: boolean;
 }
-
-const presetFilterLabels: Record<"featured" | "recent" | "discount", string> = {
-	featured: "Онцлох",
-	recent: "Шинэ ирсэн",
-	discount: "Хямдралтай",
-};
-
-const sortOptions = [
-	{ label: "Шинэ", field: "createdAt", direction: "desc" },
-	{ label: "Хямд", field: "price", direction: "asc" },
-	{ label: "Үнэтэй", field: "price", direction: "desc" },
-];
 
 type FilterOption = { label: string; value: string };
 
@@ -78,29 +70,19 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 	});
 
-	// Trending searches
-	const trendingSearches = [
-		"Vitamin D",
-		"Omega 3",
-		"Витамин C",
-		"Магний",
-		"Протеин",
-		"Collagen",
-	];
-
 	// Filter suggestions based on input
 	const searchSuggestions = createMemo(() => {
 		const term = inputValue().toLowerCase();
 		if (!term) {
 			return {
 				recent: recentSearches().slice(0, 3),
-				trending: trendingSearches.slice(0, 3),
+				trending: trendingProductSearches.slice(0, 3),
 			};
 		}
 		const filteredRecent = recentSearches().filter((item) =>
 			item.term.toLowerCase().includes(term),
 		);
-		const filteredTrending = trendingSearches.filter((search) =>
+		const filteredTrending = trendingProductSearches.filter((search) =>
 			search.toLowerCase().includes(term),
 		);
 		return {
@@ -125,7 +107,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 
 	const activePresetFilterLabel = createMemo(() => {
 		if (!props.presetFilter) return null;
-		return presetFilterLabels[props.presetFilter];
+		return productPresetFilterLabels[props.presetFilter];
 	});
 
 	const categoryOptions = createMemo<FilterOption[]>(() => [
@@ -312,7 +294,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						>
 							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
 								<span>
-									{sortOptions.find(
+									{productSortOptions.find(
 										(o) =>
 											o.field === props.sortField &&
 											o.direction === props.sortDirection,
@@ -509,7 +491,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 
 					{/* Sort - segmented button style */}
 					<div class="flex border-2 border-black shadow-[2px_2px_0_0_#000] lg:border-3">
-						<For each={sortOptions}>
+						<For each={productSortOptions}>
 							{(option, index) => {
 								const isActive =
 									props.sortField === option.field &&

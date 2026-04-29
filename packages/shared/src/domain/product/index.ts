@@ -2,4 +2,5 @@ export { productFields, productColors, productTagSuggestions, status } from "../
 export { addProductSchema } from "../../schema";
 export type { AIExtractedData, ProductFormValues } from "../../types";
 export * from "./display";
+export * from "./filters";
 export * from "./form";
