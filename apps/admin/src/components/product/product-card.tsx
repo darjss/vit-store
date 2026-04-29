@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Edit, Eye, Package } from "lucide-react";
+import { Eye, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { formatExpirationMonthYear, formatProductStatusMn } from "@vit/shared/domain/product";
+import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
@@ -30,6 +29,7 @@ import {
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
 import ProductForm from "./product-form";
 import { ProductSummary } from "./product-card-summary";
+import { ProductExpirationEditor, ProductStockEditor } from "./product-card-editors";
 
 interface ProductCardProps {
 	product: ProductType;
@@ -175,128 +175,27 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 					<div className="border-border border-t-2 p-3" data-no-nav>
 						<div className="flex flex-wrap items-center justify-between gap-2">
-							{isStockEditing ? (
-								<div className="flex items-center gap-1">
-									<Input
-										type="number"
-										min="0"
-										value={stockValue}
-										onClick={(e) => e.stopPropagation()}
-										onChange={(e) => {
-											const value =
-												e.target.value === ""
-													? 0
-													: Number.parseInt(e.target.value, 10);
-											setStockValue(Math.max(0, value));
-										}}
-										onKeyDown={(e) => {
-											e.stopPropagation();
-											if (e.key === "Enter") handleSaveStock();
-											if (e.key === "Escape") {
-												setStockValue(product.stock);
-												setIsStockEditing(false);
-											}
-										}}
-										className="h-8 w-20 border-2 border-border text-center text-sm"
-										disabled={isSetProductStockPending}
-									/>
-									<Button
-										size="sm"
-										className="h-8 px-2 text-xs"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleSaveStock();
-										}}
-										disabled={isSetProductStockPending}
-									>
-										Хадг
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										className="h-8 px-2 text-xs"
-										onClick={(e) => {
-											e.stopPropagation();
-											setStockValue(product.stock);
-											setIsStockEditing(false);
-										}}
-										disabled={isSetProductStockPending}
-									>
-										Цуц
-									</Button>
-								</div>
-							) : (
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={(e) => {
-										e.stopPropagation();
-										setIsStockEditing(true);
-									}}
-									className="h-8 border-2 border-border px-3 text-sm"
-								>
-									<Edit className="mr-1 h-4 w-4" />
-									үлдэгдэл засах
-								</Button>
-							)}
+							<ProductStockEditor
+								isEditing={isStockEditing}
+								stock={product.stock}
+								value={stockValue}
+								isPending={isSetProductStockPending}
+								onValueChange={setStockValue}
+								onEdit={() => setIsStockEditing(true)}
+								onCancel={() => setIsStockEditing(false)}
+								onSave={handleSaveStock}
+							/>
 
-							{isExpEditing ? (
-								<div className="hidden items-center gap-1 sm:flex">
-									<Input
-										type="month"
-										value={expValue}
-										onClick={(e) => e.stopPropagation()}
-										onChange={(e) => setExpValue(e.target.value)}
-										onKeyDown={(e) => {
-											e.stopPropagation();
-											if (e.key === "Enter") handleSaveExpDate();
-											if (e.key === "Escape") {
-												setExpValue(product.expirationDate ?? "");
-												setIsExpEditing(false);
-											}
-										}}
-										className="h-8 w-36 border-2 border-border text-sm"
-										disabled={isUpdateFieldPending}
-									/>
-									<Button
-										size="sm"
-										className="h-8 px-2 text-xs"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleSaveExpDate();
-										}}
-										disabled={isUpdateFieldPending}
-									>
-										Хадг
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										className="h-8 px-2 text-xs"
-										onClick={(e) => {
-											e.stopPropagation();
-											setExpValue(product.expirationDate ?? "");
-											setIsExpEditing(false);
-										}}
-										disabled={isUpdateFieldPending}
-									>
-										Цуц
-									</Button>
-								</div>
-							) : (
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={(e) => {
-										e.stopPropagation();
-										setIsExpEditing(true);
-									}}
-									className="hidden h-8 border-2 border-border px-3 text-sm sm:inline-flex"
-								>
-									<Edit className="mr-1 h-4 w-4" />
-									{formatExpirationMonthYear(product.expirationDate)}
-								</Button>
-							)}
+							<ProductExpirationEditor
+								isEditing={isExpEditing}
+								expirationDate={product.expirationDate}
+								value={expValue}
+								isPending={isUpdateFieldPending}
+								onValueChange={setExpValue}
+								onEdit={() => setIsExpEditing(true)}
+								onCancel={() => setIsExpEditing(false)}
+								onSave={handleSaveExpDate}
+							/>
 
 							<RowActions
 								id={product.id}
