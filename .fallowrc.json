@@ -1,0 +1,80 @@
+{
+	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+	"ignorePatterns": [
+		"scripts/**",
+		"**/scripts/**",
+		"**/routeTree.gen.ts",
+		"**/src/components/ui/**",
+		"apps/storev2/src/components/starwind/**",
+		"packages/api/src/lib/integrations/delivery/index.ts",
+		"**/*.generated.ts",
+		"**/*.d.ts"
+	],
+	"entry": [
+		"**/alchemy.run.ts",
+		"apps/admin/pwa-assets.config.ts",
+		"packages/api/drizzle.config.ts",
+		"packages/api/drizzle.local.config.ts"
+	],
+	"usedClassMembers": [
+		"getWebAnalytics",
+		"getWebAnalyticsPrevious",
+		"getConversionFunnel",
+		"getTopSearches",
+		"getMostViewedProducts",
+		"getProductBehavior",
+		"getDailyVisitorTrend"
+	],
+	"ignoreDependencies": [
+		"~icons",
+		"@radix-ui/react-slot",
+		"radix-ui",
+		"react-day-picker",
+		"@corvu/otp-field",
+		"@corvu/drawer",
+		"@kobalte/core",
+		"class-variance-authority",
+		"embla-carousel-solid",
+		"@astrojs/cloudflare",
+		"@iconify/json",
+		"miniflare",
+		"string-similarity"
+	],
+	"rules": {
+		"unresolved-imports": "error",
+		"unlisted-dependencies": "error",
+		"unused-files": "warn",
+		"unused-dependencies": "warn",
+		"unused-exports": "warn",
+		"unused-types": "warn",
+		"unused-class-members": "warn",
+		"duplicate-exports": "warn"
+	},
+	"duplicates": {
+		"mode": "mild",
+		"minTokens": 50,
+		"minLines": 5,
+		"threshold": 0,
+		"ignore": [
+			"scripts/**",
+			"**/scripts/**",
+			"**/routeTree.gen.ts",
+			"**/src/components/ui/**",
+			"apps/storev2/src/components/starwind/**"
+		],
+		"ignoreImports": true
+	},
+	"health": {
+		"maxCyclomatic": 20,
+		"maxCognitive": 15,
+		"maxCrap": 30,
+		"ignore": [
+			"scripts/**",
+			"**/scripts/**",
+			"**/routeTree.gen.ts",
+			"**/src/components/ui/**",
+			"apps/storev2/src/components/starwind/**"
+		],
+		"suggestInlineSuppression": true
+	}
+}

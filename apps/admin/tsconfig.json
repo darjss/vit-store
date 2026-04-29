@@ -10,7 +10,6 @@
 		"skipLibCheck": true,
 		"types": ["vite/client"],
 		"rootDirs": [".", "../.."],
-		"baseUrl": ".",
 		"paths": {
 			"@vit/api": ["../../packages/api/dist/index.d.ts"],
 			"@vit/api/*": ["../../packages/api/dist/*"],
