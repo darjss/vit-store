@@ -2,12 +2,7 @@ import { createFormHook } from "@tanstack/solid-form";
 import type { ComponentProps } from "solid-js";
 import { lazy } from "solid-js";
 import { Button } from "../ui/button";
-import {
-	fieldContext,
-	formContext,
-	useFieldContext,
-	useFormContext,
-} from "./form-context";
+import { fieldContext, formContext, useFormContext } from "./form-context";
 
 const FormTextField = lazy(() =>
 	import("./form-text-field").then((f) => ({ default: f.FormTextField })),
@@ -40,7 +35,7 @@ function SubmitButton(props: {
 	);
 }
 
-export const { useAppForm, withForm } = createFormHook({
+const { useAppForm } = createFormHook({
 	fieldComponents: {
 		FormTextField,
 		FormTextArea,
@@ -52,4 +47,4 @@ export const { useAppForm, withForm } = createFormHook({
 	formContext,
 });
 
-export { useFieldContext, useFormContext };
+export { useAppForm };

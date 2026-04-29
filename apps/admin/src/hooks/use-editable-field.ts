@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export type UseEditableOptions<T> = {
+type UseEditableOptions<T> = {
 	initialValue: T;
 	onSave: (next: T) => void | Promise<void>;
 };

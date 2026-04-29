@@ -1,6 +1,1 @@
-export type {
-	CartItems,
-	ProductDetail,
-	ProductForHome,
-	ProductImage,
-} from "@vit/shared/types";
+export type { ProductForHome } from "@vit/shared/types";

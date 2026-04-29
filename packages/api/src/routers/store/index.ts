@@ -1,6 +1,6 @@
 import { publicProcedure, router } from "../../lib/trpc";
 import { aiAssistant } from "./ai-assistant";
-import { auth } from "./auth";
+import { storeAuthRouter } from "./auth";
 import { brand } from "./brand";
 import { cart } from "./cart";
 import { category } from "./category";
@@ -14,7 +14,7 @@ export const storeRouter = router({
 		return "OK";
 	}),
 	aiAssistant,
-	auth,
+	auth: storeAuthRouter,
 	brand,
 	customer,
 	category,

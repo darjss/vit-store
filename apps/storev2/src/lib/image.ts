@@ -1,4 +1,4 @@
-export type ProductImageVariant =
+type ProductImageVariant =
 	| "thumb"
 	| "card"
 	| "feature"

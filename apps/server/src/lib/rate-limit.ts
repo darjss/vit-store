@@ -52,6 +52,6 @@ export const rateLimit = ({
 	});
 };
 
-export const isRateLimitOk = (c: Context): boolean => {
+const isRateLimitOk = (c: Context): boolean => {
 	return c.get(RATE_LIMIT_CONTEXT_KEY) ?? false;
 };

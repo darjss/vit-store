@@ -8,7 +8,6 @@ import type {
 import { createDb } from "@vit/api/db";
 import { createLogger, createRequestContext } from "@vit/logger";
 
-export type { CreateContextOptions } from "@vit/api";
 
 export async function createContext({
 	context,
@@ -39,4 +38,4 @@ export async function createContext({
 	};
 }
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+type Context = Awaited<ReturnType<typeof createContext>>;

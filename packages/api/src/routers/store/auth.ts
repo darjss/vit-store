@@ -13,7 +13,7 @@ import {
 } from "../../lib/session/store";
 import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
 
-export const auth = router({
+export const storeAuthRouter = router({
 	sendOtp: publicProcedure
 		.input(
 			v.object({

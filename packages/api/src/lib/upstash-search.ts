@@ -14,7 +14,7 @@ export const getSearchClient = () => {
 	return searchClient;
 };
 
-export interface SearchProductResult {
+interface SearchProductResult {
 	id: number;
 	name: string;
 	nameMn?: string;

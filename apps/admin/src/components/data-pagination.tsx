@@ -8,7 +8,7 @@ import {
 	PaginationPrevious,
 } from "@/components/ui/pagination";
 
-export interface DataPaginationProps {
+interface DataPaginationProps {
 	currentPage: number;
 	totalItems: number;
 	itemsPerPage: number;

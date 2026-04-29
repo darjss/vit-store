@@ -1,6 +1,6 @@
 import { createUserSessionManager } from "./index";
 
-export const adminSessionManager = createUserSessionManager({
+const adminSessionManager = createUserSessionManager({
 	kvSessionPrefix: "admin_session",
 	kvUserSessionPrefix: "admin_user_sessions",
 	cookieName: "admin_session",
@@ -8,7 +8,7 @@ export const adminSessionManager = createUserSessionManager({
 	renewalThresholdMs: 1000 * 60 * 1,
 });
 
-export const {
+const {
 	createSession: createAdminSession,
 	validateSessionToken: validateAdminSessionToken,
 	invalidateSession: invalidateAdminSession,
@@ -16,3 +16,11 @@ export const {
 	deleteSessionTokenCookie: deleteAdminSessionTokenCookie,
 	auth: adminAuth,
 } = adminSessionManager;
+
+export {
+	adminAuth,
+	createAdminSession,
+	deleteAdminSessionTokenCookie,
+	invalidateAdminSession,
+	setAdminSessionTokenCookie,
+};

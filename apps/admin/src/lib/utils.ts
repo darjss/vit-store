@@ -4,7 +4,6 @@ import { twMerge } from "tailwind-merge";
 export {
 	formatCurrency,
 	formatDateToText,
-	getOrderStatusStyles,
 	getPaymentProviderIcon,
 	getPaymentStatusColor,
 	getStatusColor,

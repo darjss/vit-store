@@ -68,7 +68,7 @@ const normalizeLogPayload = (value: unknown): unknown => {
 	}
 };
 
-export const t = initTRPC.context<Context>().create({
+const t = initTRPC.context<Context>().create({
 	transformer: superjson,
 	errorFormatter({ shape, error }) {
 		return {
@@ -151,7 +151,7 @@ const createCacheKey = async (
 	return `cache:${hashHex}`;
 };
 
-export function ensureTRPCError(
+function ensureTRPCError(
 	error: unknown,
 	fallbackMessage = "An unexpected error occurred",
 ): TRPCError {

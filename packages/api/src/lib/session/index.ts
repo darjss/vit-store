@@ -8,7 +8,6 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, CustomerSelectType, UserSelectType } from "../context";
 import type { HonoContextType, SessionConfig } from "../types";
 
-export type { CustomerSelectType, UserSelectType } from "../context";
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	id: string;

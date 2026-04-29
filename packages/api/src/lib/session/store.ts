@@ -1,6 +1,6 @@
 import { createCustomerSessionManager } from "./index";
 
-export const storeSessionManager = createCustomerSessionManager({
+const storeSessionManager = createCustomerSessionManager({
 	kvSessionPrefix: "store_session",
 	kvUserSessionPrefix: "store_user_sessions",
 	cookieName: "store_session",
@@ -8,7 +8,7 @@ export const storeSessionManager = createCustomerSessionManager({
 	renewalThresholdMs: 1000 * 60 * 30, // 30 minutes
 });
 
-export const {
+const {
 	createSession,
 	validateSessionToken,
 	invalidateSession,
@@ -16,3 +16,11 @@ export const {
 	deleteSessionTokenCookie,
 	auth,
 } = storeSessionManager;
+
+export {
+	auth,
+	createSession,
+	deleteSessionTokenCookie,
+	invalidateSession,
+	setSessionTokenCookie,
+};

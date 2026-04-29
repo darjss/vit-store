@@ -14,7 +14,7 @@ import "../index.css";
 import AppError from "@/components/errors/app-error";
 import NotFound from "@/components/errors/not-found";
 import type { Session } from "../lib/types";
-export interface RouterAppContext {
+interface RouterAppContext {
 	trpc: typeof trpc;
 	queryClient: QueryClient;
 	session?: Session;

@@ -32,7 +32,7 @@ const addCustomerSchema = v.object({
 	),
 });
 
-export type AddCustomerFormValues = v.InferOutput<typeof addCustomerSchema>;
+type AddCustomerFormValues = v.InferOutput<typeof addCustomerSchema>;
 
 type CustomerFormProps = {
 	onSuccess: () => void;

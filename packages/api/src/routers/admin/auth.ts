@@ -4,7 +4,7 @@ import * as v from "valibot";
 import { adminAuth, invalidateAdminSession } from "../../lib/session/admin";
 import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
 
-export const auth = router({
+export const adminAuthRouter = router({
 	me: publicProcedure.query(async ({ ctx }) => {
 		const session = await adminAuth(ctx);
 		ctx.log.info("me", { hasSession: !!session });

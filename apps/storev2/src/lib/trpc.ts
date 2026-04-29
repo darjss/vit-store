@@ -2,7 +2,7 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 
-export class UnauthorizedError extends Error {
+class UnauthorizedError extends Error {
 	constructor(message = "Unauthorized") {
 		super(message);
 		this.name = "UnauthorizedError";

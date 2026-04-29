@@ -1,4 +1,4 @@
-export const Loading = () => {
+const Loading = () => {
 	return (
 		<div class="flex flex-col items-center justify-center py-16 md:py-24">
 			<div class="max-w-md border-4 border-border bg-card p-8 text-center shadow-[8px_8px_0_0_#000] md:p-12">

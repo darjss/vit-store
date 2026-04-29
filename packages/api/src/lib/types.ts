@@ -59,12 +59,3 @@ export type TransactionType = Parameters<
 		PostgresJsDatabase<typeof import("../db/schema")>["transaction"]
 	>[0]
 >[0];
-
-export interface AddSalesType {
-	productCost: number;
-	quantitySold: number;
-	orderId: number;
-	sellingPrice: number;
-	productId: number;
-	createdAt?: Date;
-}

@@ -5,7 +5,6 @@ import type { CustomerSelectType, UserSelectType } from "../db/schema";
 import type { Session } from "./session";
 
 export type { CustomerSelectType, UserSelectType } from "../db/schema";
-export type { Session } from "./session";
 
 export type CreateContextOptions = {
 	context: HonoContext<{

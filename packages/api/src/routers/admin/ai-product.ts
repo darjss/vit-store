@@ -14,7 +14,7 @@ import { logger } from "../../lib/logger";
 import { adminProcedure, router } from "../../lib/trpc";
 
 // Types
-export type ExtractedProductData = {
+type ExtractedProductData = {
 	originalTitle: string;
 	originalDescription: string | null;
 	originalFeatures: string[];
@@ -1227,7 +1227,7 @@ export const aiProduct = router({
 		}),
 });
 
-export async function extractProductFromQuery(
+async function extractProductFromQuery(
 	ctx: Context,
 	query: string,
 ): Promise<ExtractedProductData> {

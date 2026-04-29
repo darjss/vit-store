@@ -5,4 +5,4 @@ export const logger = createLogger({
 	userType: "system",
 });
 
-export const minimalLogger = createMinimalLogger();
+const minimalLogger = createMinimalLogger();

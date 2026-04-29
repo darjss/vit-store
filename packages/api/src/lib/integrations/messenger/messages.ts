@@ -79,7 +79,7 @@ const sendProductImagesIfPossible = async (
 	}
 };
 
-export const sendOrderNotification = async (order: newOrderType) => {
+const sendOrderNotification = async (order: newOrderType) => {
 	const message = `Шинэ захиалга ирлээ: ${order.phoneNumber}`;
 	const result = await messenger.send.message({
 		messaging_type: "RESPONSE",

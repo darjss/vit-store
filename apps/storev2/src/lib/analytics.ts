@@ -5,13 +5,6 @@ interface CartItemProperties {
 	quantity: number;
 }
 
-interface ProductViewedProperties {
-	product_id: number;
-	product_name: string;
-	product_price: number;
-	product_slug: string;
-}
-
 function capture(event: string, properties?: Record<string, unknown>) {
 	if (typeof window !== "undefined" && window.posthog) {
 		window.posthog.capture(event, properties);
@@ -33,10 +26,6 @@ async function hashString(str: string): Promise<string> {
 	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 	const hashArray = Array.from(new Uint8Array(hashBuffer));
 	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export function trackProductViewed(properties: ProductViewedProperties) {
-	capture("product_viewed", { ...properties });
 }
 
 /**

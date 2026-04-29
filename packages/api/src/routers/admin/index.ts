@@ -2,12 +2,13 @@ import { publicProcedure, router } from "../../lib/trpc";
 import { aiProduct } from "./ai-product";
 import { aiPurchase } from "./ai-purchase";
 import { analytics } from "./analytics";
-import { auth } from "./auth";
+import { adminAuthRouter } from "./auth";
 import { brands } from "./brands";
 import { category } from "./category";
 import { customer } from "./customer";
 import { image } from "./image";
 import { order } from "./order";
+import { payment } from "./payment";
 import { product } from "./product";
 import { productImages } from "./product-images";
 import { purchase } from "./purchase";
@@ -20,13 +21,14 @@ export const adminRouter = router({
 	aiProduct,
 	aiPurchase,
 	analytics,
-	auth,
+	auth: adminAuthRouter,
 	brands,
 	category,
 	customer,
 	image,
 	productImages,
 	order,
+	payment,
 	product,
 	purchase,
 	sales,

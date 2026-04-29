@@ -167,7 +167,7 @@ interface OrderResult {
 	}>;
 }
 
-export interface ShapedOrder {
+interface ShapedOrder {
 	id: number;
 	orderNumber: string;
 	customerPhone: number;

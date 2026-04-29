@@ -10,7 +10,7 @@ import { publicProcedure, router } from "../../lib/trpc";
 import { searchProducts } from "../../lib/upstash-search";
 import { measureMs, summarizeTimings } from "../../lib/utils";
 
-export interface SearchProductResult {
+interface SearchProductResult {
 	id: number;
 	slug: string;
 	name: string;
@@ -19,7 +19,7 @@ export interface SearchProductResult {
 	brand: string;
 }
 
-export interface AssistantProductResult {
+interface AssistantProductResult {
 	id: number;
 	slug: string;
 	name: string;

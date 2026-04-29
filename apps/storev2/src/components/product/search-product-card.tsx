@@ -5,7 +5,7 @@ import { getProductImageProps } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
 
 // Search result format from Upstash
-export interface SearchProductData {
+interface SearchProductData {
 	id: number;
 	name: string;
 	slug: string;

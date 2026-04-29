@@ -45,7 +45,7 @@ export function toDateInputValue(date: Date | null | undefined) {
 	return new Date(value.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-export function createLineFromAIItem(
+function createLineFromAIItem(
 	item: NonNullable<PurchaseFormProps["aiData"]>["items"][number],
 ): PurchaseLineState {
 	return {
@@ -62,7 +62,7 @@ export function createLineFromAIItem(
 	};
 }
 
-export function createLineFromPurchaseItem(
+function createLineFromPurchaseItem(
 	item: PurchaseDetailType["items"][number],
 ): PurchaseLineState {
 	return {
@@ -109,7 +109,7 @@ export function hasUnresolvedAiItems(items: PurchaseLineState[]) {
 	});
 }
 
-export function buildAiDraft(
+function buildAiDraft(
 	item: PurchaseLineState,
 ): NonNullable<RouterInputs["aiPurchase"]["saveExtractedPurchase"]["items"][number]["newProductDraft"]> {
 	const draft = item.newProductDraft;
