@@ -8,6 +8,7 @@ import {
 	Plus,
 } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { purchaseProvider } from "@vit/shared";
 import { toast } from "sonner";
 import type { PurchaseDetailType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -45,7 +46,7 @@ export default function PurchaseForm({
 			],
 		});
 
-	const [provider, setProvider] = useState(
+	const [provider, setProvider] = useState<(typeof purchaseProvider)[number]>(
 		aiData?.header.provider ?? purchase?.provider ?? "amazon",
 	);
 	const [externalOrderNumber, setExternalOrderNumber] = useState(
@@ -239,7 +240,12 @@ export default function PurchaseForm({
 			<div className="grid gap-4 md:grid-cols-2">
 				<div className="space-y-2">
 					<Label htmlFor="provider">Provider</Label>
-					<Select value={provider} onValueChange={setProvider}>
+					<Select
+						value={provider}
+						onValueChange={(value) =>
+							setProvider(value as (typeof purchaseProvider)[number])
+						}
+					>
 						<SelectTrigger id="provider">
 							<SelectValue />
 						</SelectTrigger>
