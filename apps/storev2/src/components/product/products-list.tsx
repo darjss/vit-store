@@ -17,8 +17,8 @@ import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
 import FilterBar from "../search/filter-bar";
-import ProductCard from "./product-card";
 import SearchProductCard from "./search-product-card";
+import { ProductsVirtualGrid } from "./products-virtual-grid";
 import { ProductEmptyState, ProductErrorState, ProductListEnd, ProductSkeletonGrid } from "./products-list-states";
 
 type ListFilter = "featured" | "recent" | "discount";
@@ -522,33 +522,16 @@ const ProductsList = () => {
 							</Show>
 							{/* Browse mode: render infinite scroll products */}
 							<Show when={!isSearchMode()}>
-								<div ref={browseGridRef} class="relative w-full">
-									<div style={{ height: `${totalBrowseHeight()}px` }}>
-										<For each={visibleBrowseRows()}>
-											{(row, rowIndex) => {
-												const actualRowIndex = () =>
-													visibleBrowseRange().start + rowIndex();
-												return (
-													<div
-														ref={
-															rowIndex() === 0
-																? (el) => setFirstBrowseRowEl(el)
-																: undefined
-														}
-														class="absolute top-0 left-0 grid w-full grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
-														style={{
-															transform: `translateY(${actualRowIndex() * rowHeight()}px)`,
-														}}
-													>
-														<For each={row}>
-															{(product) => <ProductCard product={product} />}
-														</For>
-													</div>
-												);
-											}}
-										</For>
-									</div>
-								</div>
+								<ProductsVirtualGrid
+									rows={visibleBrowseRows()}
+									rangeStart={visibleBrowseRange().start}
+									rowHeight={rowHeight()}
+									totalHeight={totalBrowseHeight()}
+									setGridRef={(el) => {
+										browseGridRef = el;
+									}}
+									setFirstRowRef={setFirstBrowseRowEl}
+								/>
 							</Show>
 						</div>
 					</div>
