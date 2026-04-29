@@ -1,4 +1,5 @@
-import { findBrandId, type ProductFormValues, type AIExtractedData } from "@vit/shared";
+import { findBrandId } from "../../utils";
+import type { AIExtractedData, ProductFormValues } from "../../types";
 
 type BrandOption = Parameters<typeof findBrandId>[1];
 

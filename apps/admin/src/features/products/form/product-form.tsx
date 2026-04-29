@@ -7,6 +7,9 @@ import {
 import {
 	type AIExtractedData,
 	addProductSchema,
+	getAiProductFormValues,
+	getProductFormDefaults,
+	type ProductFormProduct,
 	type ProductFormValues,
 	status,
 } from "@vit/shared/domain/product";
@@ -33,11 +36,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	getAiProductFormValues,
-	getProductFormDefaults,
-	type ProductFormProduct,
-} from "./product-form.helpers";
 import { ProductAdvancedSection } from "./sections/product-advanced-section";
 import { ProductImagesSection } from "./sections/product-images-section";
 
