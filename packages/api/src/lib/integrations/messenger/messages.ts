@@ -1,6 +1,6 @@
 import type { newOrderType } from "@vit/shared";
-import { logger } from "../../../lib/logger";
-import { messenger } from "./client";
+import { logger } from "~/lib/logger";
+import { messenger } from "~/lib/integrations/messenger/client";
 
 const RECIPIENT_ID = "25172502442390308";
 

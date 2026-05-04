@@ -1,17 +1,17 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { paymentProvider } from "../../lib/constants";
+import { paymentProvider } from "~/lib/constants";
 import {
 	sendDetailedOrderNotification,
 	sendTransferNotification,
-} from "../../lib/integrations/messenger/messages";
-import { kv } from "../../lib/kv";
+} from "~/lib/integrations/messenger/messages";
+import { kv } from "~/lib/kv";
 import {
 	createQpayInvoice,
 	type InvoiceResponse,
-} from "../../lib/payments/qpay";
-import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
+} from "~/lib/payments/qpay";
+import { customerProcedure, publicProcedure, router } from "~/lib/trpc";
 export const payment = router({
 	getPaymentByNumber: customerProcedure
 		.input(v.object({ paymentNumber: v.string() }))

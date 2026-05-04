@@ -1,1 +1,1 @@
-export { resendClient, sendEmail } from "./client";
+export { resendClient, sendEmail } from "~/lib/integrations/resend/client";

@@ -1,2 +1,2 @@
-export type { PostHogConfig } from "./client";
-export { createPostHogClient, PostHogClient } from "./client";
+export type { PostHogConfig } from "~/lib/integrations/posthog/client";
+export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog/client";

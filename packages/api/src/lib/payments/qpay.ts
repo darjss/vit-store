@@ -1,7 +1,12 @@
+import { logger } from "~/lib/logger";
 import { env } from "cloudflare:workers";
 import ky, { HTTPError } from "ky";
 
 const apiUrl = env.QPAY_URL.endsWith("/") ? env.QPAY_URL : `${env.QPAY_URL}/`;
+const requestStartedAt = new WeakMap<Request, number>();
+
+const truncate = (value: string, maxLength = 500) =>
+	value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
 interface TokenResponse {
 	token_type: string;
@@ -73,8 +78,10 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 	if (!opts?.forceRefresh) {
 		const tokenFromKV = await env.vitStoreKV.get(QPAY_ACCESS_TOKEN_KEY);
 		if (tokenFromKV) {
+			logger.debug("qpay access token cache hit");
 			return tokenFromKV;
 		}
+		logger.info("qpay access token cache miss");
 	}
 
 	const username = env.QPAY_USERNAME?.trim();
@@ -87,6 +94,7 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 
 	let authResponse: TokenResponse;
 	try {
+		logger.info("requesting qpay access token", { baseUrl: apiUrl });
 		authResponse = await ky
 			.post(`${apiUrl}auth/token`, {
 				headers: {
@@ -98,6 +106,14 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 	} catch (error) {
 		if (error instanceof HTTPError) {
 			const body = await error.response.text();
+			logger.error("qpay auth failed", {
+				status: error.response.status,
+				statusText: error.response.statusText,
+				body: truncate(body),
+				baseUrl: apiUrl,
+				usernameLength: username.length,
+				passwordLength: password.length,
+			});
 			throw new Error(
 				`QPay auth failed (${error.response.status}): ${body.slice(0, 300)} [base=${apiUrl} userLen=${username.length} passLen=${password.length}]`,
 			);
@@ -108,9 +124,11 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 		throw error;
 	}
 
+	const expirationTtl = resolveTokenTtlFromUnixSeconds(authResponse.expires_in);
 	await env.vitStoreKV.put(QPAY_ACCESS_TOKEN_KEY, authResponse.access_token, {
-		expirationTtl: resolveTokenTtlFromUnixSeconds(authResponse.expires_in),
+		expirationTtl,
 	});
+	logger.info("qpay access token stored", { expirationTtl });
 
 	return authResponse.access_token;
 };
@@ -120,12 +138,23 @@ const qpayClient = ky.create({
 	hooks: {
 		beforeRequest: [
 			async (request) => {
+				requestStartedAt.set(request, Date.now());
+				logger.info("qpay request", {
+					method: request.method,
+					url: request.url,
+				});
 				const token = await getAccessToken();
 				request.headers.set("Authorization", `Bearer ${token}`);
 			},
 		],
 		afterResponse: [
 			async (request, options, response) => {
+				logger.info("qpay response", {
+					method: request.method,
+					url: request.url,
+					status: response.status,
+					durationMs: Date.now() - (requestStartedAt.get(request) ?? Date.now()),
+				});
 				if (response.status !== 401) {
 					return response;
 				}
@@ -139,6 +168,12 @@ const qpayClient = ky.create({
 					return response;
 				}
 
+				logger.warn("qpay token rejected, refreshing and retrying request", {
+					method: request.method,
+					url: request.url,
+					status: response.status,
+					body: truncate(body),
+				});
 				await env.vitStoreKV.delete(QPAY_ACCESS_TOKEN_KEY);
 				const refreshedToken = await getAccessToken({ forceRefresh: true });
 
@@ -147,6 +182,19 @@ const qpayClient = ky.create({
 				retryRequest.headers.set("x-qpay-retried", "1");
 
 				return await ky(retryRequest, options);
+			},
+		],
+		beforeError: [
+			async (error) => {
+				const body = await error.response.clone().text();
+				logger.error("qpay error", {
+					method: error.request.method,
+					url: error.request.url,
+					status: error.response.status,
+					statusText: error.response.statusText,
+					body: truncate(body),
+				});
+				return error;
 			},
 		],
 	},
@@ -161,6 +209,12 @@ export const createQpayInvoice = async (
 			`${new URL(env.GOOGLE_CALLBACK_URL).origin}/webhooks/qpay`,
 	);
 	callbackUrl.searchParams.set("id", paymentNumber);
+
+	logger.info("creating qpay invoice", {
+		paymentNumber,
+		amount,
+		callbackUrl: callbackUrl.toString(),
+	});
 
 	try {
 		const response = await qpayClient
@@ -177,6 +231,11 @@ export const createQpayInvoice = async (
 			})
 			.json<InvoiceResponse>();
 
+		logger.info("qpay invoice created", {
+			paymentNumber,
+			invoiceId: response.invoice_id,
+			amount,
+		});
 		return response;
 	} catch (error) {
 		if (error instanceof HTTPError) {
@@ -192,6 +251,7 @@ export const createQpayInvoice = async (
 	}
 };
 export const checkQpayInvoice = async (invoiceId: string) => {
+	logger.info("checking qpay invoice", { invoiceId });
 	const response = await qpayClient
 		.post("payment/check", {
 			json: {
@@ -206,8 +266,21 @@ export const checkQpayInvoice = async (invoiceId: string) => {
 		.json<PaymentResponse>();
 	const latestPayment = response.rows[0];
 	if (!latestPayment) {
+		logger.info("qpay invoice has no payments", {
+			invoiceId,
+			paymentCount: response.count,
+			paidAmount: response.paid_amount,
+		});
 		return false;
 	}
 
-	return latestPayment.payment_status === "PAID";
+	const isPaid = latestPayment.payment_status === "PAID";
+	logger.info("qpay invoice checked", {
+		invoiceId,
+		paymentCount: response.count,
+		paidAmount: response.paid_amount,
+		latestPaymentStatus: latestPayment.payment_status,
+		isPaid,
+	});
+	return isPaid;
 };

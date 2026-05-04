@@ -6,12 +6,14 @@ import {
 } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
 import * as v from "valibot";
-import { sendDetailedOrderNotification } from "../../lib/integrations/messenger/messages";
-import { kv } from "../../lib/kv";
-import { createSession, setSessionTokenCookie } from "../../lib/session/store";
-import { customerProcedure, publicProcedure, router } from "../../lib/trpc";
-import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
-import { addCustomerToDB } from "./auth";
+import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
+import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
+import { kv } from "~/lib/kv";
+import { createSession, setSessionTokenCookie } from "~/lib/session/store";
+import { customerProcedure, publicProcedure, router } from "~/lib/trpc";
+import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
+import { addCustomerToDB } from "~/routers/store/auth";
+
 
 export const order = router({
 	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {
@@ -62,7 +64,6 @@ export const order = router({
 			try {
 				const storeOrderQ = orderQueries.store;
 				const storeCustomerQ = customerQueries.store;
-				const _adminPaymentQ = paymentQueries.admin;
 
 				const productsById = new Map<number, number>();
 				for (const item of input.products) {
@@ -123,12 +124,14 @@ export const order = router({
 					await storeCustomerQ.createCustomer({
 						phone: Number(input.phoneNumber),
 						address: input.address,
+						addressZoneId: input.addressZoneId,
 					});
 				}
 
 				await storeCustomerQ.updateCustomerAddress(
 					Number(input.phoneNumber),
 					input.address,
+					input.addressZoneId,
 				);
 
 				const orderNumber = generateOrderNumber();
@@ -136,6 +139,7 @@ export const order = router({
 					orderNumber,
 					customerPhone: Number(input.phoneNumber),
 					address: input.address,
+					addressZoneId: input.addressZoneId,
 					notes: input.notes ?? null,
 					total: total,
 					status: "pending",
@@ -325,4 +329,18 @@ export const order = router({
 				});
 			}
 		}),
+	getDeliveryAddressZones: publicProcedure
+	.query(async ({ctx})=>{
+	  try{
+			return await getDeliveryAddressZones();
+			}
+			catch(e) {
+				ctx.log.error("order.fetch_zones_failed", e);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch delivery zones",
+					cause: e,
+				});
+			}
+  }),
 });

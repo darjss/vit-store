@@ -13,9 +13,10 @@ import {
 	updateOrderSchema,
 } from "@vit/shared";
 import * as v from "valibot";
-import { PRODUCT_PER_PAGE } from "../../lib/constants";
-import { adminProcedure, router } from "../../lib/trpc";
-import { generateOrderNumber, generatePaymentNumber } from "../../lib/utils";
+import { PRODUCT_PER_PAGE } from "~/lib/constants";
+import { adminProcedure, router } from "~/lib/trpc";
+import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
+import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
 
 export const order = router({
 	addOrder: adminProcedure
@@ -507,4 +508,74 @@ export const order = router({
 				});
 			}
 		}),
+
+	sendDeliveryTU: adminProcedure
+		.input(v.object({ orderId: v.number() }))
+		.mutation(async ({ input, ctx }) => {
+			const order = await orderQueries.admin.getOrderById(input.orderId);
+			if (!order) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Захиалга олдсонгүй",
+				});
+			}
+			if (order.status !== "pending") {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Зөвхөн хүлээгдэж буй захиалгыг TU руу илгээнэ",
+				});
+			}
+
+			try {
+				const deliveryResult = await createDelivery(
+					order.id,
+					order.orderNumber,
+					String(order.customerPhone),
+					15,
+					order.address,
+					order.notes,
+				);
+
+				await orderQueries.admin.updateOrderStatus(order.id, "shipped", {
+					deliveryProvider: "tu-delivery",
+				});
+
+				ctx.log.order.statusChanged({
+					orderId: order.id,
+					status: "shipped",
+				});
+
+				return {
+					orderId: order.id,
+					orderNumber: order.orderNumber,
+					documentNo: deliveryResult.documentNo,
+					deliveryOrderId: deliveryResult.orderId,
+				};
+			} catch (e) {
+				if (e instanceof TRPCError) throw e;
+				ctx.log.error("admin.send_delivery_tu_failed", e, {
+					orderId: input.orderId,
+				});
+				const message =
+					e instanceof Error ? e.message : "TU хүргэлт илгээхэд алдаа гарлаа";
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message,
+					cause: e,
+				});
+			}
+		}),
+
+	getDeliveryAddressZones: adminProcedure.query(async ({ ctx }) => {
+		try {
+			return await getDeliveryAddressZones();
+		} catch (e) {
+			ctx.log.error("order.fetch_zones_failed", e);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to fetch delivery zones",
+				cause: e,
+			});
+		}
+	}),
 });

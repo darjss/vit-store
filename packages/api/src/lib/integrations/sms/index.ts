@@ -11,10 +11,10 @@ export type {
 	TokenRequest,
 	TokenResponse,
 	WebHook,
-} from "./client";
+} from "~/lib/integrations/sms/client";
 export {
 	createSmsClient,
 	smsClient,
 	smsGateway,
 	WebHookEventType,
-} from "./client";
+} from "~/lib/integrations/sms/client";

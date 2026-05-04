@@ -3,8 +3,8 @@ import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
-import { logger } from "../../../lib/logger";
-import { sendDetailedOrderNotification } from "./messages";
+import { logger } from "~/lib/logger";
+import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;

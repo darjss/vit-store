@@ -1,11 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../db/client";
+import { db } from "~/db/client";
 import {
 	type PaymentInsertType,
 	PaymentsTable,
 	ProductImagesTable,
-} from "../db/schema";
-import type { paymentProvider, paymentStatus } from "../lib/utils";
+} from "~/db/schema";
+import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];

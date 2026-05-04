@@ -2,10 +2,10 @@ export {
 	type GenericWebhookPayload,
 	messenger,
 	messengerWebhookHandler,
-} from "./messenger";
-export type { PostHogConfig } from "./posthog";
-export { createPostHogClient, PostHogClient } from "./posthog";
-export { resendClient, sendEmail } from "./resend";
+} from "~/lib/integrations/messenger";
+export type { PostHogConfig } from "~/lib/integrations/posthog";
+export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog";
+export { resendClient, sendEmail } from "~/lib/integrations/resend";
 export type {
 	Device as SmsDevice,
 	DeviceSettings as SmsDeviceSettings,
@@ -19,10 +19,10 @@ export type {
 	TokenRequest as SmsTokenRequest,
 	TokenResponse as SmsTokenResponse,
 	WebHook as SmsWebHook,
-} from "./sms";
+} from "~/lib/integrations/sms";
 export {
 	createSmsClient,
 	smsClient,
 	smsGateway,
 	WebHookEventType as SmsWebHookEventType,
-} from "./sms";
+} from "~/lib/integrations/sms";

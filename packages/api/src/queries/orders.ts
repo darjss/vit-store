@@ -15,7 +15,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { db } from "../db/client";
+import { db } from "~/db/client";
 import {
 	OrderDetailsTable,
 	OrdersTable,
@@ -23,8 +23,8 @@ import {
 	ProductImagesTable,
 	ProductsTable,
 	SalesTable,
-} from "../db/schema";
-import { logger } from "../lib/logger";
+} from "~/db/schema";
+import { logger } from "~/lib/logger";
 import {
 	type deliveryProvider,
 	getDaysFromTimeRange,
@@ -32,7 +32,7 @@ import {
 	type orderStatus,
 	shapeOrderResult,
 	shapeOrderResults,
-} from "../lib/utils";
+} from "~/lib/utils";
 
 type OrderStatus = (typeof orderStatus)[number];
 type DeliveryProvider = (typeof deliveryProvider)[number];
@@ -530,10 +530,20 @@ export const orderQueries = {
 			};
 		},
 
-		async updateOrderStatus(id: number, status: OrderStatus) {
+		async updateOrderStatus(
+			id: number,
+			status: OrderStatus,
+			options?: { deliveryProvider?: DeliveryProvider },
+		) {
+			const patch: { status: OrderStatus; deliveryProvider?: DeliveryProvider } = {
+				status,
+			};
+			if (options?.deliveryProvider !== undefined) {
+				patch.deliveryProvider = options.deliveryProvider;
+			}
 			await db()
 				.update(OrdersTable)
-				.set({ status })
+				.set(patch)
 				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 		},
 
@@ -699,6 +709,7 @@ export const orderQueries = {
 			orderNumber: string;
 			customerPhone: number;
 			address: string;
+			addressZoneId: number;
 			notes: string | null;
 			total: number;
 			status: OrderStatus;

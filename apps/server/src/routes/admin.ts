@@ -1,77 +1,64 @@
-import { createDb } from "@vit/api/db";
 import {
-	bulkSyncProductsToUpstash,
-	clearUpstashProductsIndex,
-} from "@vit/api/lib/upstash-sync";
+	getProductSearchStatus,
+	rebuildProductSearchIndex,
+} from "@vit/api/lib/product-search/client";
 import { createLogger, createRequestContext } from "@vit/logger";
 import { Hono } from "hono";
+import type { Context } from "hono";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post("/sync-upstash", async (c) => {
+const syncProductSearch = async (
+	c: Context<{ Bindings: Env }>,
+	legacy: boolean,
+) => {
 	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
 	const log = createLogger(logContext);
 	const startTime = Date.now();
 
 	try {
-		log.admin.syncTriggered({ type: "upstash_products" });
-
-		const db = createDb(c.env.DB);
-
-		const products = await db.query.ProductsTable.findMany({
-			columns: {
-				id: true,
-				name: true,
-				slug: true,
-				price: true,
-				description: true,
-			},
-			where: (table, { isNull, eq, and }) =>
-				and(isNull(table.deletedAt), eq(table.status, "active")),
-			with: {
-				brand: { columns: { name: true } },
-				category: { columns: { name: true } },
-				images: {
-					columns: { url: true },
-					where: (table, { isNull, eq, and }) =>
-						and(isNull(table.deletedAt), eq(table.isPrimary, true)),
-				},
-			},
-		});
-
-		log.info("sync.products_found", { count: products.length });
-
-		if (products.length === 0) {
-			return c.json({
-				message: "No products to sync",
-				success: 0,
-				failed: 0,
-				total: 0,
-			});
-		}
-		const _clear = await clearUpstashProductsIndex();
-		const result = await bulkSyncProductsToUpstash(products);
+		log.admin.syncTriggered({ type: "product_search" });
+		const result = await rebuildProductSearchIndex("manual");
 		const durationMs = Date.now() - startTime;
 
 		log.info("sync.complete", {
-			success: result.success,
-			failed: result.failed,
-			total: products.length,
+			productCount: result.productCount,
+			generatedAt: result.generatedAt,
 			durationMs,
 		});
 
 		return c.json({
-			message: `Synced ${result.success} products to Upstash`,
-			success: result.success,
-			failed: result.failed,
-			total: products.length,
-			errors: result.errors.slice(0, 10),
+			message: legacy
+				? "Rebuilt product search index via legacy sync-upstash endpoint"
+				: "Rebuilt product search index",
+			productCount: result.productCount,
+			generatedAt: result.generatedAt,
+			lastRebuildFinishedAt: result.lastRebuildFinishedAt,
+			lastError: result.lastError,
 		});
 	} catch (error) {
 		log.error("sync.failed", error);
 		return c.json(
 			{
-				error: "Failed to sync products to Upstash",
+				error: "Failed to rebuild product search index",
+				details: error instanceof Error ? error.message : "Unknown error",
+			},
+			500,
+		);
+	}
+};
+
+app.post("/sync-search", (c) => syncProductSearch(c, false));
+
+app.post("/sync-upstash", (c) => syncProductSearch(c, true));
+
+app.get("/search-status", async (c) => {
+	try {
+		return c.json(await getProductSearchStatus());
+	} catch (error) {
+		return c.json(
+			{
+				error: "Failed to get product search status",
 				details: error instanceof Error ? error.message : "Unknown error",
 			},
 			500,
