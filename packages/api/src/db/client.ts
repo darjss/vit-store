@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import type { DB } from "./index";
-import * as schema from "./schema";
+import type { DB } from "~/db/index";
+import * as schema from "~/db/schema";
 
 export function db(): DB {
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod

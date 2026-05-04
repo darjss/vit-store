@@ -17,7 +17,7 @@ import {
 	paymentStatus,
 	purchaseProvider,
 	status,
-} from "../lib/constants";
+} from "~/lib/constants";
 
 export const createTable = pgTableCreator((name) => `ecom_vit_${name}`);
 
@@ -45,7 +45,8 @@ export const CustomersTable = createTable(
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		phone: integer("phone").notNull().unique(),
-		address: varchar("address", { length: 256 }),
+    address: varchar("address", { length: 256 }),
+		addressZoneId: integer("address_zone_id"),
 		facebook_username: varchar("facebook_username", { length: 256 }),
 		instagram_username: varchar("instagram_username", { length: 256 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -55,7 +56,7 @@ export const CustomersTable = createTable(
 	(table) => [
 		index("phone_idx").on(table.phone),
 		index("customer_created_at_idx").on(table.createdAt),
-		index("customer_deleted_at_idx").on(table.deletedAt),
+		index("customer_admin_list_idx").on(table.deletedAt, table.createdAt),
 	],
 );
 
@@ -130,14 +131,52 @@ export const ProductsTable = createTable(
 	(table) => [
 		index("product_id_idx").on(table.id),
 		index("product_name_idx").on(table.name),
-		index("product_status_idx").on(table.status),
 		index("product_category_idx").on(table.categoryId),
 		index("product_brand_idx").on(table.brandId),
 		index("product_stock_idx").on(table.stock),
 		index("product_price_idx").on(table.price),
-		index("product_created_at_idx").on(table.createdAt),
-		index("product_deleted_at_idx").on(table.deletedAt),
-		index("product_is_featured_idx").on(table.isFeatured),
+		index("product_admin_list_idx").on(
+			table.deletedAt,
+			table.brandId,
+			table.status,
+			table.createdAt,
+		),
+		index("product_store_list_created_idx").on(
+			table.deletedAt,
+			table.status,
+			table.createdAt,
+			table.id,
+		),
+		index("product_store_list_price_idx").on(
+			table.deletedAt,
+			table.status,
+			table.price,
+			table.id,
+		),
+		index("product_store_list_stock_idx").on(
+			table.deletedAt,
+			table.status,
+			table.stock,
+			table.id,
+		),
+		index("product_featured_store_idx").on(
+			table.isFeatured,
+			table.status,
+			table.deletedAt,
+			table.updatedAt,
+		),
+		index("product_category_store_idx").on(
+			table.categoryId,
+			table.deletedAt,
+			table.status,
+			table.updatedAt,
+		),
+		index("product_brand_store_idx").on(
+			table.brandId,
+			table.deletedAt,
+			table.status,
+			table.updatedAt,
+		),
 	],
 );
 
@@ -156,7 +195,11 @@ export const ProductImagesTable = createTable(
 	(table) => [
 		index("image_product_idx").on(table.productId),
 		index("image_product_primary_idx").on(table.productId, table.isPrimary),
-		index("image_deleted_at_idx").on(table.deletedAt),
+		index("image_product_deleted_primary_idx").on(
+			table.productId,
+			table.deletedAt,
+			table.isPrimary,
+		),
 	],
 );
 
@@ -171,10 +214,11 @@ export const OrdersTable = createTable(
 		status: text("status", {
 			enum: orderStatus,
 		}).notNull(),
-		address: varchar("address", { length: 256 }).notNull(),
+    address: varchar("address", { length: 256 }).notNull(),
+		addressZoneId: integer("address_zone_id"),
 		deliveryProvider: text("delivery_provider", {
 			enum: deliveryProvider,
-		}).notNull(),
+    }).notNull(),
 		total: integer("total").notNull(),
 		notes: text("notes"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -186,8 +230,16 @@ export const OrdersTable = createTable(
 		index("order_customer_idx").on(table.customerPhone),
 		index("order_number_idx").on(table.orderNumber),
 		index("order_status_idx").on(table.status),
-		index("order_created_at_idx").on(table.createdAt),
-		index("order_deleted_at_idx").on(table.deletedAt),
+		index("order_admin_list_idx").on(
+			table.deletedAt,
+			table.status,
+			table.createdAt,
+		),
+		index("order_date_range_idx").on(table.deletedAt, table.createdAt),
+		index("order_customer_deleted_idx").on(
+			table.customerPhone,
+			table.deletedAt,
+		),
 	],
 );
 
@@ -236,9 +288,12 @@ export const PaymentsTable = createTable(
 	(table) => [
 		index("payment_order_idx").on(table.orderId),
 		index("payment_number_idx").on(table.paymentNumber),
-		index("payment_status_idx").on(table.status),
 		index("payment_created_at_idx").on(table.createdAt),
-		index("payment_deleted_at_idx").on(table.deletedAt),
+		index("payment_status_created_idx").on(table.status, table.createdAt),
+		index("payment_number_status_idx").on(
+			table.paymentNumber,
+			table.status,
+		),
 	],
 );
 
@@ -304,7 +359,7 @@ export const SalesTable = createTable(
 		index("sales_product_idx").on(table.productId),
 		index("sales_created_at_idx").on(table.createdAt),
 		index("sales_product_created_idx").on(table.productId, table.createdAt),
-		index("sales_deleted_at_idx").on(table.deletedAt),
+		index("sales_date_range_idx").on(table.createdAt, table.deletedAt),
 	],
 );
 
@@ -338,8 +393,7 @@ export const PurchasesTable = createTable(
 		index("purchase_created_idx").on(table.createdAt),
 		index("purchase_ordered_at_idx").on(table.orderedAt),
 		index("purchase_received_at_idx").on(table.receivedAt),
-		index("purchase_cancelled_at_idx").on(table.cancelledAt),
-		index("purchase_deleted_at_idx").on(table.deletedAt),
+		index("purchase_active_idx").on(table.deletedAt, table.cancelledAt),
 	],
 );
 
@@ -362,7 +416,14 @@ export const PurchaseItemsTable = createTable(
 	(table) => [
 		index("purchase_item_purchase_idx").on(table.purchaseId),
 		index("purchase_item_product_idx").on(table.productId),
-		index("purchase_item_deleted_at_idx").on(table.deletedAt),
+		index("purchase_item_purchase_deleted_idx").on(
+			table.purchaseId,
+			table.deletedAt,
+		),
+		index("purchase_item_product_deleted_idx").on(
+			table.productId,
+			table.deletedAt,
+		),
 	],
 );
 
