@@ -12,6 +12,8 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconEmotionSad from "~icons/ri/emotion-sad-line";
+import IconFolder from "~icons/ri/folder-line";
+import IconStore from "~icons/ri/store-2-line";
 import IconSearch from "~icons/ri/search-line";
 
 interface SearchResultsProps {
@@ -26,9 +28,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 			queryKey: ["search-products", props.searchQuery],
 			queryFn: async () => {
 				if (!props.searchQuery || props.searchQuery.length < 2) {
-					return [];
+					return { products: [], brands: [], categories: [] };
 				}
-				return await api.product.searchProducts.query({
+				return await api.product.searchStorefront.query({
 					query: props.searchQuery,
 					limit: 8,
 				});
@@ -49,9 +51,13 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 	// Track search when results are loaded
 	createEffect(() => {
 		if (query.data && !query.isFetching && props.searchQuery.length >= 2) {
-			trackSearchPerformed(props.searchQuery, query.data.length);
+			trackSearchPerformed(props.searchQuery, query.data.products.length);
 		}
 	});
+
+	const hasNavigationResults = () =>
+		(query.data?.brands.length ?? 0) > 0 ||
+		(query.data?.categories.length ?? 0) > 0;
 
 	const handleProductClick = (
 		productId: number,
@@ -104,7 +110,13 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				</Match>
 
 				{/* Empty State */}
-				<Match when={query.data && query.data.length === 0}>
+				<Match
+					when={
+						query.data &&
+						query.data.products.length === 0 &&
+						!hasNavigationResults()
+					}
+				>
 					<div class="flex flex-col items-center justify-center py-8 text-center">
 						<IconSearch class="mb-3 h-10 w-10 text-gray-400" />
 						<p class="font-bold text-black/70">
@@ -117,25 +129,88 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				</Match>
 
 				{/* Results */}
-				<Match when={query.data && query.data.length > 0}>
+				<Match
+					when={
+						query.data &&
+						(query.data.products.length > 0 || hasNavigationResults())
+					}
+				>
 					<div>
+						<Show when={hasNavigationResults()}>
+							<div class="mb-4 space-y-3">
+								<Show when={(query.data?.brands.length ?? 0) > 0}>
+									<div>
+										<p class="mb-2 font-bold text-black/60 text-[11px] uppercase tracking-wide">
+											Брэнд
+										</p>
+										<div class="flex flex-wrap gap-2">
+											<For each={query.data?.brands ?? []}>
+												{(brand) => (
+													<a
+														href={`/products?brand=${brand.id}`}
+														onClick={props.onProductClick}
+														class="inline-flex min-h-10 items-center gap-2 border-2 border-black bg-primary px-3 py-2 font-black text-black text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_0_#000]"
+													>
+														<IconStore class="h-4 w-4 shrink-0" />
+														<span>{brand.name}</span>
+														<Show when={brand.productCount !== undefined}>
+															<span class="font-bold text-black/55">
+																{brand.productCount}
+															</span>
+														</Show>
+													</a>
+												)}
+											</For>
+										</div>
+									</div>
+								</Show>
+								<Show when={(query.data?.categories.length ?? 0) > 0}>
+									<div>
+										<p class="mb-2 font-bold text-black/60 text-[11px] uppercase tracking-wide">
+											Ангилал
+										</p>
+										<div class="flex flex-wrap gap-2">
+											<For each={query.data?.categories ?? []}>
+												{(category) => (
+													<a
+														href={`/products?category=${category.id}`}
+														onClick={props.onProductClick}
+														class="inline-flex min-h-10 items-center gap-2 border-2 border-black bg-white px-3 py-2 font-black text-black text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary/30 hover:shadow-[1px_1px_0_0_#000]"
+													>
+														<IconFolder class="h-4 w-4 shrink-0" />
+														<span>{category.name}</span>
+														<Show when={category.productCount !== undefined}>
+															<span class="font-bold text-black/55">
+																{category.productCount}
+															</span>
+														</Show>
+													</a>
+												)}
+											</For>
+										</div>
+									</div>
+								</Show>
+							</div>
+						</Show>
 						{/* Results Header */}
-						<div class="mb-3 flex items-center justify-between px-1">
-							<p class="font-bold text-black/70 text-xs uppercase tracking-wide">
-								{query.data?.length} үр дүн
-							</p>
-							<a
-								href={`/products?q=${encodeURIComponent(props.searchQuery)}`}
-								class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
-								onClick={props.onProductClick}
-							>
-								Бүгдийг үзэх <IconArrowRight class="h-3 w-3" />
-							</a>
-						</div>
+						<Show when={(query.data?.products.length ?? 0) > 0}>
+							<div class="mb-3 flex items-center justify-between px-1">
+								<p class="font-bold text-black/70 text-xs uppercase tracking-wide">
+									{query.data?.products.length} бүтээгдэхүүн
+								</p>
+								<a
+									href={`/products?q=${encodeURIComponent(props.searchQuery)}`}
+									class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
+									onClick={props.onProductClick}
+								>
+									Бүгдийг үзэх <IconArrowRight class="h-3 w-3" />
+								</a>
+							</div>
+						</Show>
 
 						{/* Products List */}
 						<div class="flex flex-col gap-3">
-							<For each={query.data}>
+							<For each={query.data?.products ?? []}>
 								{(product, index) => (
 									<div class="group relative flex items-stretch gap-3 rounded-md border-2 border-black bg-white p-2 shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_0_#000]">
 										{/* Image */}

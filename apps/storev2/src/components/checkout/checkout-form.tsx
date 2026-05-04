@@ -1,10 +1,10 @@
 import { navigate } from "astro:transitions/client";
-import { useMutation } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
 import { deliveryFee } from "@vit/shared/constants";
-import { createEffect, For, Match, onMount, Suspense, Switch } from "solid-js";
+import { createEffect, createMemo, For, Match, onMount, Suspense, Switch } from "solid-js";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import { trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
@@ -16,6 +16,11 @@ import Loading from "../loading";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
 
+type DeliveryZone = {
+	Id: number;
+	zoneName: string;
+};
+
 const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
 		if (cart.items().length > 0) {
@@ -26,6 +31,22 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			);
 		}
 	});
+
+	const addressZonesQuery = useQuery(
+		() => ({
+			queryKey: ["delivery-address-zones"],
+			queryFn: () => api.order.getDeliveryAddressZones.query(),
+			staleTime: 1000 * 60 * 60 * 24,
+		}),
+		() => queryClient,
+	);
+
+	const addressZoneOptions = createMemo(() =>
+		((addressZonesQuery.data || []) as DeliveryZone[]).map((zone) => ({
+			label: zone.zoneName,
+			value: zone.Id,
+		})),
+	);
 
 	const mutation = useMutation(
 		() => ({
@@ -77,6 +98,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		defaultValues: {
 			phoneNumber: props.user?.phone.toString() || "",
 			address: props.user?.address || "",
+			addressZoneId: props.user?.addressZoneId || 0,
 			notes: "",
 		},
 		validators: {
@@ -86,6 +108,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					v.string(),
 					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
 				),
+				addressZoneId: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(1, "Хаягийн бүс сонгоно уу"),
+				),
 				notes: v.string(),
 			}),
 			onSubmit: v.object({
@@ -93,6 +120,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				address: v.pipe(
 					v.string(),
 					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+				),
+				addressZoneId: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(1, "Хаягийн бүс сонгоно уу"),
 				),
 				notes: v.string(),
 			}),
@@ -109,6 +141,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		if (props.user) {
 			form.setFieldValue?.("phoneNumber", props.user.phone?.toString() || "");
 			form.setFieldValue?.("address", props.user.address || "");
+			form.setFieldValue?.("addressZoneId", props.user.addressZoneId || 0);
 		}
 	});
 	const isEmpty = () => cart.items().length === 0;
@@ -221,6 +254,21 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 													label="Утасны дугаар"
 													placeholder="88889999"
 													type="tel"
+												/>
+											)}
+										/>
+										<form.AppField
+											name="addressZoneId"
+											children={(field) => (
+												<field.FormSelectField
+													label="Хаягийн бүс"
+													placeholder={
+														addressZonesQuery.isLoading
+															? "Бүсүүд уншиж байна..."
+															: "Хаягийн бүс сонгох"
+													}
+													options={addressZoneOptions()}
+													disabled={addressZonesQuery.isLoading}
 												/>
 											)}
 										/>

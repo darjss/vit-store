@@ -10,6 +10,9 @@ const FormTextField = lazy(() =>
 const FormTextArea = lazy(() =>
 	import("./form-text-area-field").then((f) => ({ default: f.FormTextArea })),
 );
+const FormSelectField = lazy(() =>
+	import("./form-select-field").then((f) => ({ default: f.FormSelectField })),
+);
 function SubmitButton(props: {
 	children?: string;
 	disabled?: boolean;
@@ -39,6 +42,7 @@ const { useAppForm } = createFormHook({
 	fieldComponents: {
 		FormTextField,
 		FormTextArea,
+		FormSelectField,
 	},
 	formComponents: {
 		SubmitButton,

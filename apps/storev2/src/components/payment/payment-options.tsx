@@ -13,7 +13,7 @@ interface PaymentOptionsProps {
 }
 
 const PaymentOptions = (props: PaymentOptionsProps) => {
-	const [tab, setTab] = createSignal<"transfer" | "qpay">("transfer");
+	const [tab, setTab] = createSignal<"transfer" | "qpay">("qpay");
 
 	return (
 		<div class="w-full">
