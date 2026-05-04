@@ -1,11 +1,13 @@
-import { PRODUCT_PER_PAGE } from "@vit/shared/constants";
+import { PRODUCT_PER_PAGE, status } from "@vit/shared/constants";
+
+export type ProductListStatus = (typeof status)[number];
 
 export type ProductsSearch = {
 	page: number;
 	pageSize: number;
 	brandId?: number;
 	categoryId?: number;
-	status?: "active" | "draft" | "out_of_stock";
+	status?: ProductListStatus;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 	searchTerm?: string;

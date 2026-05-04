@@ -2,9 +2,9 @@ import { categoryQueries } from "@vit/api/queries";
 import {
 	CATALOG_CACHE_KEYS,
 	CATALOG_CACHE_TTL_SECONDS,
-} from "../../lib/cache/catalog";
-import type { Context } from "../../lib/context";
-import { publicProcedure, router } from "../../lib/trpc";
+} from "~/lib/cache/catalog";
+import type { Context } from "~/lib/context";
+import { publicProcedure, router } from "~/lib/trpc";
 
 const getCachedCategories = async (ctx: Context) => {
 	const cachedCategories = await ctx.kv.get(CATALOG_CACHE_KEYS.categoriesAll);

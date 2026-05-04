@@ -1,10 +1,10 @@
 import type { Logger } from "@vit/logger";
 import type { Context as HonoContext } from "hono";
-import type { DB } from "../db";
-import type { CustomerSelectType, UserSelectType } from "../db/schema";
-import type { Session } from "./session";
+import type { DB } from "~/db";
+import type { CustomerSelectType, UserSelectType } from "~/db/schema";
+import type { Session } from "~/lib/session";
 
-export type { CustomerSelectType, UserSelectType } from "../db/schema";
+export type { CustomerSelectType, UserSelectType } from "~/db/schema";
 
 export type CreateContextOptions = {
 	context: HonoContext<{

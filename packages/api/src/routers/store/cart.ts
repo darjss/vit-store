@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { publicProcedure, router } from "../../lib/trpc";
+import { publicProcedure, router } from "~/lib/trpc";
 
 export const cart = router({
 	hello: publicProcedure

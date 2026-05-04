@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Eye, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
@@ -42,6 +42,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const [isStockEditing, setIsStockEditing] = useState(false);
 	const [isExpEditing, setIsExpEditing] = useState(false);
 	const [isOutOfStockAlertOpen, setIsOutOfStockAlertOpen] = useState(false);
+	const [isActivateConfirmOpen, setIsActivateConfirmOpen] = useState(false);
 	const [stockValue, setStockValue] = useState(product.stock);
 	const [expValue, setExpValue] = useState(product.expirationDate ?? "");
 
@@ -52,43 +53,67 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
+	const previousStockRef = useRef<number>(0);
 	const { mutate: setProductStock, isPending: isSetProductStockPending } =
 		useMutation({
 			...trpc.product.setProductStock.mutationOptions(),
-			onSuccess: () => {
-				queryClient.invalidateQueries({
-					...trpc.product.getPaginatedProducts.queryKey,
-				});
-				queryClient.invalidateQueries({
+			onMutate: async (variables) => {
+				await queryClient.cancelQueries({
 					queryKey: ["admin-products-infinite"],
 				});
-				queryClient.invalidateQueries(
-					trpc.product.getAllProducts.queryOptions(),
+
+				previousStockRef.current = stockValue;
+				setStockValue(variables.newStock);
+
+				queryClient.setQueriesData(
+					{ queryKey: ["admin-products-infinite"], type: "all" },
+					(old: { pages: { products: { id: number; stock: number }[] }[] } | undefined) => {
+						if (!old) return old;
+						return {
+							...old,
+							pages: old.pages.map((page) => ({
+								...page,
+								products: page.products.map((p) =>
+									p.id === variables.id
+										? { ...p, stock: variables.newStock }
+										: p,
+								),
+							})),
+						};
+					},
 				);
+
 				setIsStockEditing(false);
+				return undefined;
+			},
+			onError: () => {
+				setStockValue(previousStockRef.current);
+			},
+			onSettled: () => {
+				void queryClient.invalidateQueries({
+					queryKey: ["admin-products-infinite"],
+					type: "all",
+				});
 			},
 		});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
 		useMutation({
 			...trpc.product.updateProductField.mutationOptions(),
-			onSuccess: () => {
-				queryClient.invalidateQueries({
-					...trpc.product.getPaginatedProducts.queryKey,
-				});
-				queryClient.invalidateQueries({
+			onSuccess: async () => {
+				await queryClient.invalidateQueries({
 					queryKey: ["admin-products-infinite"],
+					type: "all",
 				});
 				setIsExpEditing(false);
+				setIsActivateConfirmOpen(false);
 			},
 		});
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				...trpc.product.getPaginatedProducts.queryKey,
-			});
-			queryClient.invalidateQueries({
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({
 				queryKey: ["admin-products-infinite"],
+				type: "all",
 			});
 		},
 	});
@@ -101,7 +126,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		"/placeholder.jpg";
 	const brand = brands.find((b) => b.id === product.brandId);
 	const category = categories.find((c) => c.id === product.categoryId);
-	const isOutOfStock = product.stock === 0 || product.status === "out_of_stock";
+	const isOutOfStock = stockValue === 0 || product.status === "out_of_stock";
 	const statusLabel = formatProductStatusMn(product.status, isOutOfStock);
 
 	const handleSaveStock = () => {
@@ -129,6 +154,14 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		setIsOutOfStockAlertOpen(false);
 	};
 
+	const handleConfirmActivateProduct = () => {
+		updateProductField({
+			id: product.id,
+			field: "status" as never,
+			stringValue: "active",
+		});
+	};
+
 	return (
 		<>
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -153,9 +186,10 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 							}}
 							onSuccess={() => {
 								setIsEditDialogOpen(false);
-								queryClient.invalidateQueries(
-									trpc.product.getAllProducts.queryOptions(),
-								);
+								void queryClient.invalidateQueries({
+									queryKey: ["admin-products-infinite"],
+									type: "all",
+								});
 							}}
 						/>
 					</div>
@@ -165,13 +199,51 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 				<CardContent className="p-0">
 					<ProductSummary
 						product={product}
+						currentStock={stockValue}
 						primaryImage={primaryImage}
 						brandName={brand?.name}
 						categoryName={category?.name}
 						isOutOfStock={isOutOfStock}
 						statusLabel={statusLabel}
 						onOpen={openProductDetails}
+						onRequestActivateConfirm={
+							product.status === "active"
+								? undefined
+								: () => setIsActivateConfirmOpen(true)
+						}
 					/>
+					<AlertDialog
+						open={isActivateConfirmOpen}
+						onOpenChange={setIsActivateConfirmOpen}
+					>
+						<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
+							<AlertDialogHeader>
+								<AlertDialogTitle className="font-heading text-lg">
+									Бүтээгдэхүүнийг идэвхжүүлэх
+								</AlertDialogTitle>
+								<AlertDialogDescription>
+									«{product.name}»-ийг идэвхтэй төлөвт оруулах уу? Дэлгүүрт
+									харагдана.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter className="mt-6 flex gap-3">
+								<AlertDialogCancel asChild>
+									<Button variant="outline" className="flex-1">
+										Цуцлах
+									</Button>
+								</AlertDialogCancel>
+								<AlertDialogAction asChild>
+									<Button
+										className="flex-1"
+										onClick={handleConfirmActivateProduct}
+										disabled={isUpdateFieldPending}
+									>
+										Идэвхжүүлэх
+									</Button>
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
 
 					<div className="border-border border-t-2 p-3" data-no-nav>
 						<div className="flex flex-wrap items-center justify-between gap-2">

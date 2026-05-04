@@ -1,13 +1,13 @@
-import { publicProcedure, router } from "../../lib/trpc";
-import { aiAssistant } from "./ai-assistant";
-import { storeAuthRouter } from "./auth";
-import { brand } from "./brand";
-import { cart } from "./cart";
-import { category } from "./category";
-import { customer } from "./customer";
-import { order } from "./order";
-import { payment } from "./payment";
-import { product } from "./product";
+import { publicProcedure, router } from "~/lib/trpc";
+import { aiAssistant } from "~/routers/store/ai-assistant";
+import { storeAuthRouter } from "~/routers/store/auth";
+import { brand } from "~/routers/store/brand";
+import { cart } from "~/routers/store/cart";
+import { category } from "~/routers/store/category";
+import { customer } from "~/routers/store/customer";
+import { order } from "~/routers/store/order";
+import { payment } from "~/routers/store/payment";
+import { product } from "~/routers/store/product";
 
 export const storeRouter = router({
 	healthCheck: publicProcedure.query(() => {

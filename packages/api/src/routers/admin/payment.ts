@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { paymentProvider, paymentStatus } from "../../lib/constants";
-import { adminProcedure, router } from "../../lib/trpc";
-import { generatePaymentNumber } from "../../lib/utils";
+import { paymentProvider, paymentStatus } from "~/lib/constants";
+import { adminProcedure, router } from "~/lib/trpc";
+import { generatePaymentNumber } from "~/lib/utils";
 
 export const payment = router({
 	createPayment: adminProcedure

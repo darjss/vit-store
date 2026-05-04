@@ -5,7 +5,7 @@ import type {
 	orderStatus,
 	paymentProvider,
 	paymentStatus,
-} from "./constants";
+} from "~/lib/constants";
 
 export type HonoContextType = Context<{
 	Bindings: Env;
@@ -56,6 +56,6 @@ export interface AddSalesType {
 
 export type TransactionType = Parameters<
 	Parameters<
-		PostgresJsDatabase<typeof import("../db/schema")>["transaction"]
+		PostgresJsDatabase<typeof import("~/db/schema")>["transaction"]
 	>[0]
 >[0];

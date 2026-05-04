@@ -1,6 +1,6 @@
 import type { timeRangeType } from "@vit/shared/schema";
 import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
-import { db } from "../db/client";
+import { db } from "~/db/client";
 import {
 	BrandsTable,
 	CategoriesTable,
@@ -9,9 +9,9 @@ import {
 	ProductImagesTable,
 	ProductsTable,
 	SalesTable,
-} from "../db/schema";
-import { logger } from "../lib/logger";
-import { getDaysFromTimeRange } from "../lib/utils";
+} from "~/db/schema";
+import { logger } from "~/lib/logger";
+import { getDaysFromTimeRange } from "~/lib/utils";
 
 export const analyticsQueries = {
 	admin: {

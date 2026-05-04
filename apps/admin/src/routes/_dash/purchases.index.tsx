@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+import { PurchasesPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/purchases/")({
 	component: RouteComponent,
-	loader: async ({ context: ctx, location }) => {
+	pendingComponent: PurchasesPageSkeleton,
+	loader: ({ context: ctx, location }) => {
 		const search = location.search as {
 			page?: number;
 			pageSize?: number;
@@ -37,7 +39,7 @@ export const Route = createFileRoute("/_dash/purchases/")({
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
 		};
-		await ctx.queryClient.ensureQueryData(
+		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.purchase.getPaginatedPurchases.queryOptions({
 				page: search.page ?? 1,
 				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
@@ -65,7 +67,7 @@ export const Route = createFileRoute("/_dash/purchases/")({
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<div className="p-6">Loading purchases...</div>}>
+		<Suspense fallback={<PurchasesPageSkeleton />}>
 			<PurchasesPage />
 		</Suspense>
 	);

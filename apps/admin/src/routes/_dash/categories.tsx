@@ -16,13 +16,16 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
+import { SimpleCardsPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/categories")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		await ctx.queryClient.ensureQueryData(
-			ctx.trpc.category.getAllCategories.queryOptions(),
-		);
+	pendingComponent: SimpleCardsPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery({
+			...ctx.trpc.category.getAllCategories.queryOptions(),
+			staleTime: 15 * 60 * 1000,
+		});
 	},
 });
 

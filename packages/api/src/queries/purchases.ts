@@ -15,7 +15,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { db } from "../db/client";
+import { db } from "~/db/client";
 import {
 	ProductImagesTable,
 	ProductsTable,
@@ -23,8 +23,8 @@ import {
 	PurchaseReceiptItemsTable,
 	PurchaseReceiptsTable,
 	PurchasesTable,
-} from "../db/schema";
-import type { TransactionType } from "../lib/types";
+} from "~/db/schema";
+import type { TransactionType } from "~/lib/types";
 
 type Transaction = TransactionType;
 

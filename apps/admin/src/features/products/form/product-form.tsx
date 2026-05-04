@@ -50,13 +50,18 @@ const ProductForm = ({
 
 	useEffect(() => {
 		if (aiData) {
-			form.reset(getAiProductFormValues(form.getValues(), aiData, brands ?? []));
+			form.reset(
+				getAiProductFormValues(form.getValues(), aiData, brands ?? []),
+			);
 			setShowAdvancedFields(true);
 		}
 	}, [aiData, brands, form.getValues, form.reset]);
 
 	const queryClient = useQueryClient();
-	const mutation = useMutation({
+	const productId = product?.id;
+	const isEditing = typeof productId === "number";
+
+	const addMutation = useMutation({
 		...trpc.product.addProduct.mutationOptions(),
 		onSuccess: async () => {
 			form.reset();
@@ -64,9 +69,25 @@ const ProductForm = ({
 			onSuccess();
 		},
 		onError: (_error) => {
-			toast.error("Failed to add product");
+			toast.error("Бүтээгдэхүүн нэмэхэд алдаа гарлаа");
 		},
 	});
+
+	const updateMutation = useMutation({
+		...trpc.product.updateProduct.mutationOptions(),
+		onSuccess: async () => {
+			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
+			queryClient.invalidateQueries(
+				trpc.product.getProductById.queryOptions({ id: productId! }),
+			);
+			onSuccess();
+		},
+		onError: (_error) => {
+			toast.error("Бүтээгдэхүүн шинэчлэхэд алдаа гарлаа");
+		},
+	});
+
+	const mutation = isEditing ? updateMutation : addMutation;
 
 	const { fields, append, remove } = useFieldArray({
 		control: form.control,
@@ -82,10 +103,18 @@ const ProductForm = ({
 	};
 
 	const onSubmit = async (values: ProductFormValues) => {
-		mutation.mutate({
-			...values,
-			expirationDate: values.expirationDate || "",
-		});
+		if (typeof productId === "number") {
+			updateMutation.mutate({
+				...values,
+				id: productId,
+				expirationDate: values.expirationDate || "",
+			});
+		} else {
+			addMutation.mutate({
+				...values,
+				expirationDate: values.expirationDate || "",
+			});
+		}
 	};
 
 	const currentImageUrl = form.watch("images");
@@ -118,7 +147,7 @@ const ProductForm = ({
 							isPending={form.formState.isSubmitting || mutation.isPending}
 							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
-							Бүтээгдэхүүн нэмэх
+							{isEditing ? "Шинэчлэх" : "Бүтээгдэхүүн нэмэх"}
 						</SubmitButton>
 					</div>
 				</div>

@@ -9,6 +9,7 @@ import RowActions from "@/components/row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -20,7 +21,17 @@ import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import OrderForm from "./order-form";
 
-const OrderCard = ({ order }: { order: OrderType }) => {
+const OrderCard = ({
+	order,
+	selection,
+}: {
+	order: OrderType;
+	selection?: {
+		checked: boolean;
+		disabled?: boolean;
+		onCheckedChange: (checked: boolean) => void;
+	};
+}) => {
 	const navigate = useNavigate();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const queryClient = useQueryClient();
@@ -93,7 +104,25 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 				<CardContent className="flex flex-col gap-0 p-0">
 					{/* Header: Order number + status badges */}
 					<div className="flex items-start justify-between gap-2 px-3 pt-3 pb-2">
-						<div className="min-w-0 flex-1">
+						<div className="flex min-w-0 flex-1 items-start gap-2">
+							{selection ? (
+								<div
+									className="pt-0.5"
+									data-no-nav
+									onClick={(e) => e.stopPropagation()}
+									onKeyDown={(e) => e.stopPropagation()}
+								>
+									<Checkbox
+										checked={selection.checked}
+										disabled={selection.disabled}
+										onCheckedChange={(v) =>
+											selection.onCheckedChange(v === true)
+										}
+										aria-label={`Сонгох #${order.orderNumber}`}
+									/>
+								</div>
+							) : null}
+							<div className="min-w-0 flex-1">
 							<div className="flex items-center gap-1.5">
 								<span className="font-bold text-foreground text-sm tracking-tight">
 									#{order.orderNumber}
@@ -112,6 +141,7 @@ const OrderCard = ({ order }: { order: OrderType }) => {
 								<span className="font-medium text-foreground text-xs tabular-nums">
 									{order.customerPhone}
 								</span>
+							</div>
 							</div>
 						</div>
 						<div className="flex shrink-0 flex-col items-end gap-1">

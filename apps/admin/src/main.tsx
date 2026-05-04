@@ -1,13 +1,16 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
+import { GlobalPendingLoader } from "@/components/global-pending-loader";
 import { routeTree } from "./routeTree.gen";
 import { queryClient, trpc } from "./utils/trpc";
 
 const router = createRouter({
 	routeTree,
 	defaultPreload: "intent",
-	defaultPendingMs: 250,
+	defaultPreloadStaleTime: 30 * 1000,
+	defaultPendingComponent: GlobalPendingLoader,
+	defaultPendingMs: 100,
 	defaultPendingMinMs: 300,
 	scrollRestoration: true,
 	context: { trpc, queryClient },

@@ -1,6 +1,6 @@
 import { customerQueries } from "@vit/api/queries";
-import { updateCustomerSchema } from "../../db/valibot";
-import { customerProcedure, router } from "../../lib/trpc";
+import { updateCustomerSchema } from "~/db/valibot";
+import { customerProcedure, router } from "~/lib/trpc";
 
 export const customer = router({
 	getInfo: customerProcedure.query(({ ctx }) => {

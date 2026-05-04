@@ -5,7 +5,7 @@ import {
 	useSearch,
 } from "@tanstack/react-router";
 import { Plus, Search, X } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import * as v from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
@@ -22,17 +22,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/utils/trpc";
+import { CustomersPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/customers")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		await ctx.queryClient.ensureQueryData(
+	pendingComponent: CustomersPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.customer.getAllCustomers.queryOptions(),
 		);
 	},
 	validateSearch: v.object({
-		page: v.pipe(v.number(), v.integer(), v.minValue(1)),
-		pageSize: v.pipe(v.number(), v.integer(), v.minValue(1)),
+		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 10),
 		searchTerm: v.optional(v.string()),
 	}),
 });
@@ -43,6 +45,31 @@ function RouteComponent() {
 	});
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
+	const optimisticSearchTerm = inputValue.trim() || undefined;
+	const currentSearchTerm = searchTerm?.trim() || undefined;
+	const optimisticPage = optimisticSearchTerm !== currentSearchTerm ? 1 : page;
+
+	useEffect(() => {
+		setInputValue(searchTerm || "");
+	}, [searchTerm]);
+
+	useEffect(() => {
+		if (optimisticSearchTerm === currentSearchTerm) return;
+
+		const timeout = window.setTimeout(() => {
+			navigate({
+				to: "/customers",
+				replace: true,
+				search: {
+					page: 1,
+					pageSize,
+					searchTerm: optimisticSearchTerm,
+				},
+			});
+		}, 250);
+
+		return () => window.clearTimeout(timeout);
+	}, [currentSearchTerm, navigate, optimisticSearchTerm, pageSize]);
 
 	const handleSearch = () => {
 		navigate({
@@ -50,7 +77,7 @@ function RouteComponent() {
 			search: {
 				page: 1,
 				pageSize,
-				searchTerm: inputValue || undefined,
+				searchTerm: optimisticSearchTerm,
 			},
 		});
 	};
@@ -143,9 +170,9 @@ function RouteComponent() {
 				}
 			>
 				<CustomersList
-					page={page}
+					page={optimisticPage}
 					pageSize={pageSize}
-					searchTerm={searchTerm}
+					searchTerm={optimisticSearchTerm}
 				/>
 			</Suspense>
 		</div>

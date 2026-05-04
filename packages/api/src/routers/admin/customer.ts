@@ -2,8 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { customerQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
-import { adminProcedure, router } from "../../lib/trpc";
-import { getDaysFromTimeRange } from "../../lib/utils";
+import { adminProcedure, router } from "~/lib/trpc";
+import { getDaysFromTimeRange } from "~/lib/utils";
 
 export const customer = router({
 	addUser: adminProcedure
@@ -15,7 +15,8 @@ export const customer = router({
 					v.minValue(60000000),
 					v.maxValue(99999999),
 				),
-				address: v.optional(v.string()),
+        address: v.optional(v.string()),
+				addressZoneId: v.optional(v.number()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

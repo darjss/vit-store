@@ -7,23 +7,23 @@ import {
 } from "@/components/purchase/ai-purchase-input";
 import PurchaseForm from "@/components/purchase/purchase-form";
 import type { RouterOutputs } from "@/lib/types";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 type ExtractedPurchaseData = RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
 
 export const Route = createFileRoute("/_dash/purchases/add")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		await Promise.all([
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getAllProducts.queryOptions(),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.category.getAllCategories.queryOptions(),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.brands.getAllBrands.queryOptions(),
-			),
-		]);
+	pendingComponent: FormPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getAllProducts.queryOptions());
+		void ctx.queryClient.prefetchQuery({
+			...ctx.trpc.category.getAllCategories.queryOptions(),
+			staleTime: 15 * 60 * 1000,
+		});
+		void ctx.queryClient.prefetchQuery({
+			...ctx.trpc.brands.getAllBrands.queryOptions(),
+			staleTime: 15 * 60 * 1000,
+		});
 	},
 });
 
@@ -34,7 +34,7 @@ type AIState =
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<div className="p-6">Loading form...</div>}>
+		<Suspense fallback={<FormPageSkeleton />}>
 			<AddPurchasePage />
 		</Suspense>
 	);

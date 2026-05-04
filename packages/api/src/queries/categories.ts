@@ -1,6 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../db/client";
-import { CategoriesTable } from "../db/schema";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { db } from "~/db/client";
+import { CategoriesTable, ProductsTable } from "~/db/schema";
 
 export const categoryQueries = {
 	admin: {
@@ -66,13 +66,26 @@ export const categoryQueries = {
 		},
 
 		async getAllCategories() {
-			return db().query.CategoriesTable.findMany({
-				columns: {
-					id: true,
-					name: true,
-				},
-				where: isNull(CategoriesTable.deletedAt),
-			});
+			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
+			return db()
+				.select({
+					id: CategoriesTable.id,
+					name: CategoriesTable.name,
+					productCount,
+				})
+				.from(CategoriesTable)
+				.leftJoin(
+					ProductsTable,
+					and(
+						eq(ProductsTable.categoryId, CategoriesTable.id),
+						eq(ProductsTable.status, "active"),
+						isNull(ProductsTable.deletedAt),
+					),
+				)
+				.where(isNull(CategoriesTable.deletedAt))
+				.groupBy(CategoriesTable.id, CategoriesTable.name)
+				.orderBy(desc(productCount), asc(CategoriesTable.name));
 		},
 	},
 };

@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { opencode } from "~/lib/opencode-provider";
 import { TRPCError } from "@trpc/server";
 import {
 	brandQueries,
@@ -17,14 +17,14 @@ import { generateText, Output } from "ai";
 import { and, eq, isNull } from "drizzle-orm";
 import * as v from "valibot";
 import { z } from "zod";
-import { db } from "../../db/client";
+import { db } from "~/db/client";
 import {
 	BrandsTable,
 	ProductImagesTable,
 	ProductsTable,
-} from "../../db/schema";
-import { adminProcedure, router } from "../../lib/trpc";
-import { searchProducts } from "../../lib/upstash-search";
+} from "~/db/schema";
+import { adminProcedure, router } from "~/lib/trpc";
+import { searchProducts } from "~/lib/product-search/client";
 
 const DEFAULT_BRAND_LOGO_URL = "https://www.placeholder.com/logo.png";
 
@@ -234,7 +234,7 @@ async function rerankAmbiguousMatches(
 	);
 
 	const { output } = await generateText({
-		model: google("gemini-2.5-flash"),
+		model: opencode("kimi-k2.5"),
 		output: Output.object({ schema: invoiceMatchRerankSchema }),
 		prompt: `You are resolving invoice line items to existing catalog products.
 
@@ -290,7 +290,7 @@ async function inferInvoiceData(
 	categories: { id: number; name: string }[],
 ) {
 	const { output } = await generateText({
-		model: google("gemini-2.5-flash"),
+		model: opencode("kimi-k2.5"),
 		output: Output.object({ schema: invoiceExtractionSchema }),
 		messages: [
 			{

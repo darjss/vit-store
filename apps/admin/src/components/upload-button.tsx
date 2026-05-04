@@ -12,7 +12,7 @@ const uploadImage = async (image: File, category: string) => {
 		const formData = new FormData();
 		formData.append("image", image);
 		formData.append("key", key);
-		const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload`, {
+		const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`, {
 			method: "POST",
 			body: formData,
 		});

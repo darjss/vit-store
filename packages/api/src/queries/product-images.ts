@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../db/client";
-import { ProductImagesTable } from "../db/schema";
+import { db } from "~/db/client";
+import { ProductImagesTable } from "~/db/schema";
 
 export const productImageQueries = {
 	admin: {

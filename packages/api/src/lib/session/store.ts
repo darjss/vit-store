@@ -1,4 +1,4 @@
-import { createCustomerSessionManager } from "./index";
+import { createCustomerSessionManager } from "~/lib/session/index";
 
 const storeSessionManager = createCustomerSessionManager({
 	kvSessionPrefix: "store_session",

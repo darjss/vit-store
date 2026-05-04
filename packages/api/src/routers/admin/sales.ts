@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { orderQueries, salesQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
-import { adminCachedProcedure, router } from "../../lib/trpc";
+import { adminCachedProcedure, router } from "~/lib/trpc";
 
 export const sales = router({
 	analytics: adminCachedProcedure.query(async ({ ctx }) => {

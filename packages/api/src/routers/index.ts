@@ -1,2 +1,2 @@
-export { type AdminRouter, adminRouter } from "./admin";
-export { type StoreRouter, storeRouter } from "./store";
+export { type AdminRouter, adminRouter } from "~/routers/admin";
+export { type StoreRouter, storeRouter } from "~/routers/store";

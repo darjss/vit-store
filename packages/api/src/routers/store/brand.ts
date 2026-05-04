@@ -3,8 +3,8 @@ import * as v from "valibot";
 import {
 	CATALOG_CACHE_KEYS,
 	CATALOG_CACHE_TTL_SECONDS,
-} from "../../lib/cache/catalog";
-import { publicProcedure, router } from "../../lib/trpc";
+} from "~/lib/cache/catalog";
+import { publicProcedure, router } from "~/lib/trpc";
 
 export const brand = router({
 	getAllBrands: publicProcedure.query(async ({ ctx }) => {

@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../db/client";
-import type { UserSelectType } from "../db/schema";
-import { UsersTable } from "../db/schema";
+import { db } from "~/db/client";
+import type { UserSelectType } from "~/db/schema";
+import { UsersTable } from "~/db/schema";
 
 export const userQueries = {
 	admin: {

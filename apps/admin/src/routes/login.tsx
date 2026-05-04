@@ -10,6 +10,8 @@ export const Route = createFileRoute("/login")({
 		const session = await ctx.queryClient.ensureQueryData({
 			...ctx.trpc.auth.me.queryOptions(),
 			staleTime: 1000 * 60 * 15,
+			gcTime: 1000 * 60 * 30,
+			retry: false,
 		});
 		if (session) {
 			throw redirect({ to: "/" });

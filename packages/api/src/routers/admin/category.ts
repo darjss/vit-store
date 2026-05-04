@@ -1,8 +1,20 @@
 import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { CATALOG_CACHE_KEYS } from "../../lib/cache/catalog";
-import { adminProcedure, router } from "../../lib/trpc";
+import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
+import { rebuildProductSearchIndex } from "~/lib/product-search/client";
+import { adminProcedure, router } from "~/lib/trpc";
+
+const scheduleProductSearchRebuild = (ctx: {
+	c: { executionCtx: ExecutionContext };
+	log: { error: (message: string, error: unknown) => void };
+}) => {
+	ctx.c.executionCtx.waitUntil(
+		rebuildProductSearchIndex("category_updated").catch((error) => {
+			ctx.log.error("product_search.rebuild_failed", error);
+		}),
+	);
+};
 
 export const category = router({
 	getAllCategories: adminProcedure.query(async ({ ctx }) => {
@@ -29,6 +41,7 @@ export const category = router({
 			try {
 				await categoryQueries.admin.createCategory(input.name);
 				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+				scheduleProductSearchRebuild(ctx);
 				return { message: "Successfully added category" };
 			} catch (error) {
 				ctx.log.error("addCategory", error);
@@ -52,6 +65,7 @@ export const category = router({
 				const { id, name } = input;
 				await categoryQueries.admin.updateCategory(id, name);
 				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+				scheduleProductSearchRebuild(ctx);
 				return { message: "Successfully updated category" };
 			} catch (error) {
 				ctx.log.error("updateCategory", error);
@@ -74,6 +88,7 @@ export const category = router({
 				const { id } = input;
 				await categoryQueries.admin.deleteCategory(id);
 				await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+				scheduleProductSearchRebuild(ctx);
 				return { message: "Successfully deleted category" };
 			} catch (error) {
 				ctx.log.error("deleteCategory", error);

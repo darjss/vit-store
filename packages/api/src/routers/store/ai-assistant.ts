@@ -1,16 +1,16 @@
-import { google } from "@ai-sdk/google";
+import { opencode } from "~/lib/opencode-provider";
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import { generateText, Output } from "ai";
 import * as v from "valibot";
 import { z } from "zod";
-import { publicProcedure, router } from "../../lib/trpc";
+import { publicProcedure, router } from "~/lib/trpc";
 import type {
 	StoreAssistantDisplayType,
 	StoreAssistantPageContext,
 	StoreAssistantResponse,
-} from "../../lib/types";
-import { searchProducts } from "../../lib/upstash-search";
+} from "~/lib/types";
+import { searchProducts } from "~/lib/product-search/client";
 
 const assistantResponseSchema = z.object({
 	answer: z.string().min(1),
@@ -327,7 +327,7 @@ export const aiAssistant = router({
 				const catalogContext = buildCatalogContext(retrieval.detailedProducts);
 
 				const { output } = await generateText({
-					model: google("gemini-2.5-flash"),
+					model: opencode("kimi-k2.5"),
 					system: systemPrompt,
 					prompt: `${prompt}
 

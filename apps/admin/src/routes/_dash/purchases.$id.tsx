@@ -35,25 +35,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/purchases/$id")({
 	component: RouteComponent,
-	loader: async ({ context: ctx, params }) => {
+	pendingComponent: FormPageSkeleton,
+	loader: ({ context: ctx, params }) => {
 		const id = Number(params.id);
-		await Promise.all([
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.purchase.getPurchaseById.queryOptions({ id }),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.product.getAllProducts.queryOptions(),
-			),
-		]);
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.purchase.getPurchaseById.queryOptions({ id }),
+		);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getAllProducts.queryOptions());
 	},
 });
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<div className="p-6">Loading purchase...</div>}>
+		<Suspense fallback={<FormPageSkeleton />}>
 			<PurchaseDetailPage />
 		</Suspense>
 	);

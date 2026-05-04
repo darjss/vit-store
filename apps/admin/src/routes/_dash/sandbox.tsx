@@ -2,11 +2,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { trpc } from "@/utils/trpc";
+import { SimpleCardsPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/sandbox")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		await ctx.queryClient.ensureQueryData(
+	pendingComponent: SimpleCardsPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.product.getProductBenchmark.queryOptions(),
 		);
 	},
@@ -14,7 +16,7 @@ export const Route = createFileRoute("/_dash/sandbox")({
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<div className="p-6">Loading benchmark...</div>}>
+		<Suspense fallback={<SimpleCardsPageSkeleton />}>
 			<SandboxContent />
 		</Suspense>
 	);

@@ -6,8 +6,8 @@ import {
 	receivePurchaseSchema,
 } from "@vit/shared/schema";
 import * as v from "valibot";
-import { db } from "../../db/client";
-import { adminProcedure, router } from "../../lib/trpc";
+import { db } from "~/db/client";
+import { adminProcedure, router } from "~/lib/trpc";
 
 export const purchase = router({
 	addPurchase: adminProcedure

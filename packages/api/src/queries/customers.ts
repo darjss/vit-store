@@ -1,10 +1,10 @@
 import { and, eq, getTableColumns, gte, isNull, sql } from "drizzle-orm";
-import { db } from "../db/client";
-import { CustomersTable } from "../db/schema";
+import { db } from "~/db/client";
+import { CustomersTable } from "~/db/schema";
 
 export const customerQueries = {
 	admin: {
-		async createCustomer(data: { phone: number; address?: string }) {
+		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
 			const result = await db()
 				.insert(CustomersTable)
 				.values(data)
@@ -89,7 +89,7 @@ export const customerQueries = {
 			});
 		},
 
-		async createCustomer(data: { phone: number; address?: string }) {
+		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
 			const result = await db().insert(CustomersTable).values(data).returning();
 			return result[0];
 		},
@@ -97,11 +97,12 @@ export const customerQueries = {
 		async updateCustomerAddress(
 			phone: number,
 			address: string | null | undefined,
+			addressZoneId?: number,
 		) {
 			if (address === undefined || address === null) return;
 			await db()
 				.update(CustomersTable)
-				.set({ address })
+				.set({ address, addressZoneId })
 				.where(eq(CustomersTable.phone, phone));
 		},
 	},

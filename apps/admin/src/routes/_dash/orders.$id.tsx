@@ -39,11 +39,13 @@ import {
 	getPaymentStatusColor,
 } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
-	loader: async ({ context: ctx, params }) => {
-		await ctx.queryClient.ensureQueryData(
+	pendingComponent: FormPageSkeleton,
+	loader: ({ context: ctx, params }) => {
+		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
 		);
 	},
@@ -51,7 +53,7 @@ export const Route = createFileRoute("/_dash/orders/$id")({
 
 function RouteComponent() {
 	return (
-		<Suspense fallback={<div className="p-6">Loading order...</div>}>
+		<Suspense fallback={<FormPageSkeleton />}>
 			<OrderDetailContent />
 		</Suspense>
 	);

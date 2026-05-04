@@ -2,10 +2,10 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import type { timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
-import type { Context } from "./context";
-import { adminAuth } from "./session/admin";
-import { auth } from "./session/store";
-import { getTtlForTimeRange } from "./utils";
+import type { Context } from "~/lib/context";
+import { adminAuth } from "~/lib/session/admin";
+import { auth } from "~/lib/session/store";
+import { getTtlForTimeRange } from "~/lib/utils";
 
 const normalizeLogPayload = (value: unknown): unknown => {
 	if (value === undefined) {

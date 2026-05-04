@@ -38,9 +38,10 @@ const OrderForm = ({
 		resolver: valibotResolver(addOrderSchema),
 		defaultValues: {
 			customerPhone: order?.customerPhone || "",
-			address: order?.address || "",
+      address: order?.address || "",
+			addressZoneId: order?.addressZoneId ? Number(order.addressZoneId) : 0,
 			notes: order?.notes || "",
-			status: order?.status || "pending",
+      status: order?.status || "pending",
 			paymentStatus: order?.paymentStatus || "pending",
 			deliveryProvider: order?.deliveryProvider || "tu-delivery",
 			isNewCustomer: order?.isNewCustomer ?? true,
@@ -52,7 +53,11 @@ const OrderForm = ({
 	const isValidPhone =
 		phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$");
 
-	const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
+  const {data:addressZones} = useQuery({
+	...trpc.order.getDeliveryAddressZones.queryOptions(),
+  })
+  console.log(addressZones)
 	const mutation = useMutation({
 		...trpc.order.addOrder.mutationOptions(),
 		onSuccess: async () => {
@@ -82,6 +87,11 @@ const OrderForm = ({
 		if (result && isSuccess) {
 			form.setValue("isNewCustomer", false);
 			form.setValue("address", result.address ?? "", {
+				shouldValidate: true,
+				shouldDirty: true,
+				shouldTouch: true,
+			});
+			form.setValue("addressZoneId", result.addressZoneId ? Number(result.addressZoneId) : 0, {
 				shouldValidate: true,
 				shouldDirty: true,
 				shouldTouch: true,
@@ -124,6 +134,39 @@ const OrderForm = ({
 												inputMode="tel"
 											/>
 										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+              />
+             	<FormField
+								control={form.control}
+								name="addressZoneId"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Хаяг бүс</FormLabel>
+										<Select
+											onValueChange={(value) => field.onChange(Number(value))}
+											value={field.value ? field.value.toString() : undefined}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Хаяг бүс сонгох" />
+												</SelectTrigger>
+											</FormControl>
+                      <SelectContent>
+                        
+												{(addressZones===undefined || addressZones.length=== 0) && <div>Хаяг бүс байхгүй</div>}
+												{addressZones !== undefined && addressZones.length > 0 &&
+													addressZones.map((zone) => (
+														<SelectItem 
+															key={zone.Id}
+															value={zone.Id.toString()}
+														>
+															{zone.zoneName}
+														</SelectItem>
+													))}
+											</SelectContent>
+										</Select>
 										<FormMessage />
 									</FormItem>
 								)}

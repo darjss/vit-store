@@ -1,18 +1,18 @@
-import { publicProcedure, router } from "../../lib/trpc";
-import { aiProduct } from "./ai-product";
-import { aiPurchase } from "./ai-purchase";
-import { analytics } from "./analytics";
-import { adminAuthRouter } from "./auth";
-import { brands } from "./brands";
-import { category } from "./category";
-import { customer } from "./customer";
-import { image } from "./image";
-import { order } from "./order";
-import { payment } from "./payment";
-import { product } from "./product";
-import { productImages } from "./product-images";
-import { purchase } from "./purchase";
-import { sales } from "./sales";
+import { publicProcedure, router } from "~/lib/trpc";
+import { aiProduct } from "~/routers/admin/ai-product";
+import { aiPurchase } from "~/routers/admin/ai-purchase";
+import { analytics } from "~/routers/admin/analytics";
+import { adminAuthRouter } from "~/routers/admin/auth";
+import { brands } from "~/routers/admin/brands";
+import { category } from "~/routers/admin/category";
+import { customer } from "~/routers/admin/customer";
+import { image } from "~/routers/admin/image";
+import { order } from "~/routers/admin/order";
+import { payment } from "~/routers/admin/payment";
+import { product } from "~/routers/admin/product";
+import { productImages } from "~/routers/admin/product-images";
+import { purchase } from "~/routers/admin/purchase";
+import { sales } from "~/routers/admin/sales";
 
 export const adminRouter = router({
 	healthCheck: publicProcedure.query(() => {

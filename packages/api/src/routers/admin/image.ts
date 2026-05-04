@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { adminProcedure, router } from "../../lib/trpc";
+import { adminProcedure, router } from "~/lib/trpc";
 
 export const image = router({
 	addImage: adminProcedure

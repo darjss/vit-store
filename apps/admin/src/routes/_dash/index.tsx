@@ -19,27 +19,25 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDateToText, getRevenueData } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+import { DashboardPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
-	loader: async ({ context: ctx }) => {
-		await Promise.all([
-			ctx.queryClient.ensureQueryData(ctx.trpc.sales.analytics.queryOptions()),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.sales.topProducts.queryOptions({
-					timeRange: "daily",
-					productCount: 5,
-				}),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.order.getPendingOrders.queryOptions(),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.analytics.getWebAnalytics.queryOptions({
-					timeRange: "daily",
-				}),
-			),
-		]);
+	pendingComponent: DashboardPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery(ctx.trpc.sales.analytics.queryOptions());
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.sales.topProducts.queryOptions({
+				timeRange: "daily",
+				productCount: 5,
+			}),
+		);
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.order.getPendingOrders.queryOptions(),
+		);
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.analytics.getWebAnalytics.queryOptions({ timeRange: "daily" }),
+		);
 	},
 });
 

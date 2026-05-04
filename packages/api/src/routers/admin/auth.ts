@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { userQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { adminAuth, invalidateAdminSession } from "../../lib/session/admin";
-import { adminProcedure, publicProcedure, router } from "../../lib/trpc";
+import { adminAuth, invalidateAdminSession } from "~/lib/session/admin";
+import { adminProcedure, publicProcedure, router } from "~/lib/trpc";
 
 export const adminAuthRouter = router({
 	me: publicProcedure.query(async ({ ctx }) => {

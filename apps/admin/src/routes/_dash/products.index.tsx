@@ -39,20 +39,23 @@ import {
 	INFINITE_PRODUCTS_PAGE_SIZE,
 	INSTANT_SEARCH_GC_TIME_MS,
 	INSTANT_SEARCH_STALE_TIME_MS,
+	type ProductListStatus,
 	type ProductsSearch,
 } from "@/features/products/list/products-list.helpers";
+import { status as productStatuses } from "@vit/shared/constants";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
-	loader: async ({ context: ctx }) => {
-		await Promise.all([
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.category.getAllCategories.queryOptions(),
-			),
-			ctx.queryClient.ensureQueryData(
-				ctx.trpc.brands.getAllBrands.queryOptions(),
-			),
-		]);
+	pendingComponent: ProductsPageSkeleton,
+	loader: ({ context: ctx }) => {
+		void ctx.queryClient.prefetchQuery({
+			...ctx.trpc.category.getAllCategories.queryOptions(),
+			staleTime: 15 * 60 * 1000,
+		});
+		void ctx.queryClient.prefetchQuery({
+			...ctx.trpc.brands.getAllBrands.queryOptions(),
+			staleTime: 15 * 60 * 1000,
+		});
 	},
 	validateSearch: v.object({
 		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
@@ -62,6 +65,7 @@ export const Route = createFileRoute("/_dash/products/")({
 		),
 		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		status: v.optional(v.picklist(productStatuses), "active"),
 		sortField: v.optional(v.string()),
 		sortDirection: v.optional(v.picklist(["asc", "desc"])),
 		searchTerm: v.optional(v.string()),
@@ -69,8 +73,14 @@ export const Route = createFileRoute("/_dash/products/")({
 });
 
 function RouteComponent() {
-	const { brandId, categoryId, sortField, sortDirection, searchTerm } =
-		useSearch({ from: "/_dash/products/" }) as ProductsSearch;
+	const {
+		brandId,
+		categoryId,
+		sortField,
+		sortDirection,
+		searchTerm,
+		status: productStatus,
+	} = useSearch({ from: "/_dash/products/" }) as ProductsSearch;
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
 	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
 	const hasActiveFilters =
@@ -78,7 +88,8 @@ function RouteComponent() {
 		categoryId !== undefined ||
 		sortField !== undefined ||
 		sortDirection !== undefined ||
-		searchTerm !== undefined;
+		searchTerm !== undefined ||
+		productStatus !== "active";
 	const navigate = useNavigate({ from: Route.fullPath });
 
 	useEffect(() => {
@@ -137,7 +148,7 @@ function RouteComponent() {
 			limit: 10,
 			brandId,
 			categoryId,
-			status: "active",
+			status: productStatus ?? "active",
 		}),
 		enabled: normalizedDebouncedSearch.length >= 2,
 		staleTime: INSTANT_SEARCH_STALE_TIME_MS,
@@ -166,6 +177,18 @@ function RouteComponent() {
 			}),
 		});
 	};
+
+	const handleStatusChange = (value: ProductListStatus) => {
+		navigate({
+			to: "/products",
+			search: (prev: ProductsSearch) => ({
+				...prev,
+				status: value === "active" ? undefined : value,
+				page: 1,
+			}),
+		});
+	};
+
 	const handleResetFilters = () => {
 		navigate({
 			to: "/products",
@@ -177,6 +200,7 @@ function RouteComponent() {
 				page: 1,
 				brandId: undefined,
 				categoryId: undefined,
+				status: undefined,
 			}),
 		});
 	};
@@ -201,21 +225,20 @@ function RouteComponent() {
 					placeholder="Бүтээгдэхүүн хайх..."
 					value={searchInput}
 					onChange={(e) => handleSearchChange(e.target.value)}
-					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
+					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-none focus:shadow-none focus:translate-y-0"
 				/>
 				{searchInput && (
-					<Button
-						size="icon"
-						variant="secondary"
-						className="-translate-y-1/2 absolute top-1/2 right-14 h-8 w-8 rounded-base border-2 border-border hover:bg-muted"
+					<button
+						type="button"
+						className="-translate-y-1/2 absolute top-1/2 right-14 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-base border-2 border-border bg-secondary text-secondary-foreground transition-colors hover:bg-muted"
 						onClick={handleClearSearch}
 						aria-label="Clear search"
 					>
 						<X className="h-4 w-4" />
-					</Button>
+					</button>
 				)}
 				{(isSearching || isTypingSearch) && (
-					<div className="-translate-y-1/2 absolute top-1/2 right-1 flex h-10 w-12 items-center justify-center">
+					<div className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-1 flex h-10 w-12 items-center justify-center">
 						<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
 					</div>
 				)}
@@ -223,15 +246,18 @@ function RouteComponent() {
 
 			<Suspense
 				fallback={
-					<div className="flex w-full flex-row gap-2">
+					<div className="flex w-full flex-row flex-wrap gap-2">
 						<Skeleton className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]" />
 						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]" />
+						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[140px]" />
 					</div>
 				}
 			>
 				<ProductsFilters
 					brandId={brandId}
 					categoryId={categoryId}
+					status={productStatus ?? "active"}
+					onStatusChange={handleStatusChange}
 					onFilterChange={handleFilterChange}
 					hasActiveFilters={hasActiveFilters}
 					sortField={sortField}
@@ -284,7 +310,7 @@ function RouteComponent() {
 												slug: product.slug,
 												price: product.price,
 												stock: product.stock,
-												status: "active" as const,
+												status: product.status as ProductListStatus,
 												discount: 0,
 												brandId: 0,
 												categoryId: 0,
@@ -332,6 +358,7 @@ function RouteComponent() {
 						sortField={sortField}
 						sortDirection={sortDirection}
 						searchTerm={searchTerm}
+						status={productStatus ?? "active"}
 					/>
 				</Suspense>
 			)}
@@ -342,6 +369,8 @@ function RouteComponent() {
 function ProductsFilters({
 	brandId,
 	categoryId,
+	status,
+	onStatusChange,
 	onFilterChange,
 	hasActiveFilters,
 	sortField,
@@ -351,6 +380,8 @@ function ProductsFilters({
 }: {
 	brandId?: number;
 	categoryId?: number;
+	status: ProductListStatus;
+	onStatusChange: (value: ProductListStatus) => void;
 	onFilterChange: (
 		field: "brandId" | "categoryId",
 		value: number | undefined,
@@ -411,6 +442,21 @@ function ProductsFilters({
 								{brand.name}
 							</SelectItem>
 						))}
+					</SelectContent>
+				</Select>
+				<Select
+					value={status}
+					onValueChange={(value) =>
+						onStatusChange(value as ProductListStatus)
+					}
+				>
+					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[140px]">
+						<SelectValue placeholder="Төлөв" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="active">Идэвхтэй</SelectItem>
+						<SelectItem value="draft">Ноорог</SelectItem>
+						<SelectItem value="out_of_stock">Дууссан</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>
@@ -489,12 +535,14 @@ function ProductsList({
 	sortField,
 	sortDirection,
 	searchTerm,
+	status,
 }: {
 	brandId?: number;
 	categoryId?: number;
 	sortField?: string;
 	sortDirection?: "asc" | "desc";
 	searchTerm?: string;
+	status: ProductListStatus;
 }) {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
 		queries: [
@@ -518,6 +566,7 @@ function ProductsList({
 			sortField,
 			sortDirection,
 			searchTerm,
+			status,
 		],
 		initialPageParam: 1,
 		queryFn: async ({ pageParam }) =>
@@ -526,7 +575,7 @@ function ProductsList({
 				pageSize: INFINITE_PRODUCTS_PAGE_SIZE,
 				brandId,
 				categoryId,
-				status: "active",
+				status,
 				sortField,
 				sortDirection,
 				searchTerm,

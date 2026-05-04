@@ -2,8 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { analyticsQueries, orderQueries, salesQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
-import { createPostHogClient } from "../../lib/integrations/posthog";
-import { adminCachedProcedure, adminProcedure, router } from "../../lib/trpc";
+import { createPostHogClient } from "~/lib/integrations/posthog";
+import { adminCachedProcedure, adminProcedure, router } from "~/lib/trpc";
 
 /** Convert timeRange to days for PostHog queries */
 function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {

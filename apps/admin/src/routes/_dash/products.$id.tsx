@@ -46,6 +46,7 @@ import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/products/$id")({
 	component: RouteComponent,
+	pendingComponent: ProductDetailSkeleton,
 	loader: ({ context: ctx, params }) => {
 		const productId = Number(params.id);
 		// Fire off prefetches but don't await them — navigation is instant,

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
-import { db } from "../db/client";
-import { BrandsTable, ProductsTable } from "../db/schema";
+import { db } from "~/db/client";
+import { BrandsTable, ProductsTable } from "~/db/schema";
 
 export const brandQueries = {
 	admin: {

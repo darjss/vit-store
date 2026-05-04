@@ -5,8 +5,8 @@ import {
 } from "@oslojs/encoding";
 
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import type { Context, CustomerSelectType, UserSelectType } from "../context";
-import type { HonoContextType, SessionConfig } from "../types";
+import type { Context, CustomerSelectType, UserSelectType } from "~/lib/context";
+import type { HonoContextType, SessionConfig } from "~/lib/types";
 
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {

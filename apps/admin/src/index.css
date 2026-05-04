@@ -247,6 +247,76 @@
             width: 100%;
         }
     }
+
+    @keyframes admin-pending-shine {
+        0% {
+            transform: translateX(-42%) translateY(-28%) rotate(28deg);
+        }
+        100% {
+            transform: translateX(38%) translateY(32%) rotate(28deg);
+        }
+    }
+
+    @keyframes admin-pending-orbit {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes admin-pending-corner {
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.55;
+            transform: scale(0.88);
+        }
+    }
+
+    @keyframes admin-pending-bar {
+        0%,
+        100% {
+            transform: translateY(0) scaleY(1);
+            opacity: 1;
+        }
+        45% {
+            transform: translateY(-11px) scaleY(1.12);
+            opacity: 0.88;
+        }
+    }
+
+    .admin-pending-shine {
+        background: linear-gradient(
+            105deg,
+            transparent 0%,
+            color-mix(in oklch, var(--color-primary) 50%, transparent) 48%,
+            transparent 92%
+        );
+        animation: admin-pending-shine 2.1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+
+    .admin-pending-orbit {
+        animation: admin-pending-orbit 10s linear infinite;
+    }
+
+    .admin-pending-corner {
+        animation: admin-pending-corner 1.35s ease-in-out infinite;
+    }
+
+    .admin-pending-corner-delay {
+        animation: admin-pending-corner 1.35s ease-in-out infinite;
+        animation-delay: 0.35s;
+    }
+
+    .admin-pending-bar {
+        animation: admin-pending-bar 1s ease-in-out infinite;
+        transform-origin: center bottom;
+    }
 }
 
 @layer utilities {
