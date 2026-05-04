@@ -49,6 +49,7 @@
 		"start:dev": "./start-dev.sh",
 		"vit:extract": "bun scripts/extract-vit-products.ts",
 		"vit:compare": "bun scripts/compare-extracted-products-to-db.ts",
+		"brand-logos:scrape": "bun scripts/scrape-missing-brand-logos.ts",
 		"dead-code": "npx fallow dead-code",
 		"health": "npx fallow health",
 		"dupes": "npx fallow dupes",

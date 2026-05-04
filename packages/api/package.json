@@ -56,7 +56,7 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@ai-sdk/google": "^3.0.10",
+		"@ai-sdk/openai-compatible": "^2.0.45",
 		"@mendable/firecrawl-js": "^4.11.1",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
@@ -73,6 +73,7 @@
 		"drizzle-valibot": "^0.4.2",
 		"hono": "catalog:",
 		"ky": "^1.14.2",
+		"minisearch": "^7.2.0",
 		"nanoid": "^5.1.5",
 		"postgres": "^3.4.7",
 		"resend": "^4.0.1",

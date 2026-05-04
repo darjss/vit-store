@@ -83,24 +83,29 @@ function createLogEntry(
 }
 
 function output(entry: LogEntry): void {
+	const line = JSON.stringify(entry, (_key, value) => {
+		if (typeof value === "bigint") return value.toString();
+		if (value instanceof Error)
+			return { name: value.name, message: value.message, stack: value.stack };
+		return value;
+	});
 	switch (entry.level) {
 		case "debug":
-			console.debug(entry);
+			console.debug(line);
 			break;
 		case "info":
-			console.log(entry);
+			console.log(line);
 			break;
 		case "warn":
-			console.warn(entry);
+			console.warn(line);
 			break;
 		case "error":
-			console.error(entry);
+			console.error(line);
 			break;
 	}
 }
 
 function createAuthLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): AuthLogger {
 	return {
@@ -117,7 +122,6 @@ function createAuthLogger(
 }
 
 function createOrderLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): OrderLogger {
 	return {
@@ -131,7 +135,6 @@ function createOrderLogger(
 }
 
 function createPaymentLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): PaymentLogger {
 	return {
@@ -144,7 +147,6 @@ function createPaymentLogger(
 }
 
 function createProductLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): ProductLogger {
 	return {
@@ -157,7 +159,6 @@ function createProductLogger(
 }
 
 function createAdminLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): AdminLogger {
 	return {
@@ -169,7 +170,6 @@ function createAdminLogger(
 }
 
 function createSystemLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): SystemLogger {
 	return {
@@ -184,7 +184,6 @@ function createSystemLogger(
 }
 
 function createWebhookLogger(
-	_context: LogContext,
 	log: (level: LogLevel, event: string, data?: Record<string, unknown>) => void,
 ): WebhookLogger {
 	return {
@@ -194,7 +193,21 @@ function createWebhookLogger(
 	};
 }
 
-export function createLogger(context: LogContext): Logger {
+export function createLogger(
+	contextOrFactory: LogContext | (() => LogContext),
+): Logger {
+	let resolvedContext: LogContext | undefined;
+
+	const resolveContext = (): LogContext => {
+		if (!resolvedContext) {
+			resolvedContext =
+				typeof contextOrFactory === "function"
+					? contextOrFactory()
+					: contextOrFactory;
+		}
+		return resolvedContext;
+	};
+
 	const log = (
 		level: LogLevel,
 		event: string,
@@ -205,7 +218,7 @@ export function createLogger(context: LogContext): Logger {
 		const entry = createLogEntry(
 			level,
 			event,
-			context,
+			resolveContext(),
 			data,
 			error,
 			durationMs,
@@ -227,19 +240,19 @@ export function createLogger(context: LogContext): Logger {
 		warn: (event, data) => log("warn", event, data),
 		error: (event, error, data) => log("error", event, data, error),
 
-		auth: createAuthLogger(context, logWithLevel),
-		order: createOrderLogger(context, logWithLevel),
-		payment: createPaymentLogger(context, logWithLevel),
-		product: createProductLogger(context, logWithLevel),
-		admin: createAdminLogger(context, logWithLevel),
-		system: createSystemLogger(context, logWithLevel),
-		webhook: createWebhookLogger(context, logWithLevel),
+		auth: createAuthLogger(logWithLevel),
+		order: createOrderLogger(logWithLevel),
+		payment: createPaymentLogger(logWithLevel),
+		product: createProductLogger(logWithLevel),
+		admin: createAdminLogger(logWithLevel),
+		system: createSystemLogger(logWithLevel),
+		webhook: createWebhookLogger(logWithLevel),
 
 		child: (additionalContext) => {
-			return createLogger({ ...context, ...additionalContext });
+			return createLogger({ ...resolveContext(), ...additionalContext });
 		},
 
-		getContext: () => context,
+		getContext: resolveContext,
 	};
 
 	return logger;

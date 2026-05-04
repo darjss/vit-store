@@ -4,6 +4,7 @@ import type { AIExtractedData, ProductFormValues } from "../../types";
 type BrandOption = Parameters<typeof findBrandId>[1];
 
 export type ProductFormProduct = {
+	id?: number;
 	name?: string;
 	description?: string;
 	dailyIntake?: number;

@@ -137,7 +137,8 @@ export const addOrderSchema = v.object({
 		v.regex(/^[6-9]\d{7}$/),
 	),
 
-	address: v.pipe(v.string(), v.minLength(10)),
+  address: v.pipe(v.string(), v.minLength(10)),
+	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	notes: v.optional(v.nullable(v.pipe(v.string(), v.minLength(3)))),
 	status: v.picklist([
 		"pending",
@@ -258,6 +259,7 @@ export const newOrderSchema = v.object({
 		v.regex(/^[6-9]\d{7}$/),
 	),
 	address: v.string(),
+	addressZoneId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 	notes: v.optional(v.string()),
 	products: v.array(
 		v.object({
