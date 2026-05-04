@@ -3,13 +3,13 @@ import { productQueries } from "@vit/api/queries";
 import { addProductSchema, updateProductSchema } from "@vit/shared";
 import { status } from "@vit/shared/constants";
 import * as v from "valibot";
-import { PRODUCT_PER_PAGE, productFields } from "../../lib/constants";
-import { adminProcedure, router } from "../../lib/trpc";
+import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
 import {
-	deleteProductFromSearch,
+	rebuildProductSearchIndex,
 	searchProducts,
-	upsertProductToSearch,
-} from "../../lib/upstash-search";
+} from "~/lib/product-search/client";
+import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
+import { adminProcedure, router } from "~/lib/trpc";
 
 const normalizeExpirationDate = (value?: string | null) => {
 	if (!value) return null;
@@ -28,32 +28,18 @@ const normalizeExpirationDate = (value?: string | null) => {
 	return null;
 };
 
-const syncProductSearchIndex = async (productId: number) => {
-	const product = await productQueries.admin.getProductById(productId);
-	if (!product) return;
-
-	await upsertProductToSearch({
-		id: product.id,
-		name: product.name,
-		nameMn: product.name_mn,
-		description: product.description,
-		slug: product.slug,
-		price: product.price,
-		discount: product.discount,
-		brand: product.brand?.name || "",
-		category: product.category?.name || "",
-		status: product.status,
-		stock: product.stock,
-		amount: product.amount,
-		potency: product.potency,
-		dailyIntake: product.dailyIntake,
-		brandId: product.brandId,
-		categoryId: product.categoryId,
-		isFeatured: product.isFeatured,
-		ingredients: product.ingredients,
-		tags: product.tags,
-		image: product.images.find((img) => img.isPrimary)?.url || "",
-	});
+const scheduleProductSearchRebuild = (
+	ctx: {
+		c: { executionCtx: ExecutionContext };
+		log: { error: (message: string, error: unknown) => void };
+	},
+	reason: ProductSearchRebuildReason,
+) => {
+	ctx.c.executionCtx.waitUntil(
+		rebuildProductSearchIndex(reason).catch((error) => {
+			ctx.log.error("product_search.rebuild_failed", error);
+		}),
+	);
 };
 
 export const product = router({
@@ -122,6 +108,7 @@ export const product = router({
 						slug: result.slug,
 						price: result.price,
 						stock: result.stock,
+						status: result.status,
 						images: result.image ? [{ url: result.image }] : [],
 					}))
 					.slice(0, safeLimit);
@@ -206,7 +193,7 @@ export const product = router({
 					productId,
 					imagesToInsert,
 				);
-				await syncProductSearchIndex(productId);
+				scheduleProductSearchRebuild(ctx, "product_created");
 				return { message: "Product added successfully" };
 			} catch (error) {
 				ctx.log.error("addProduct", error);
@@ -270,7 +257,7 @@ export const product = router({
 						code: "BAD_REQUEST",
 						message: "Product ID is required",
 					});
-				const { images, ...productData } = input;
+				const { images, id, ...productData } = input;
 				const filteredImages = images.filter(
 					(image) => image.url.trim() !== "",
 				);
@@ -331,7 +318,7 @@ export const product = router({
 						imagesToInsert,
 					);
 				}
-				await syncProductSearchIndex(input.id);
+				scheduleProductSearchRebuild(ctx, "product_updated");
 				return { message: "Product updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateProduct", error);
@@ -367,7 +354,7 @@ export const product = router({
 					input.numberToUpdate,
 					input.type,
 				);
-				await syncProductSearchIndex(input.productId);
+				scheduleProductSearchRebuild(ctx, "product_stock_updated");
 				return { message: "Stock updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateStock", error);
@@ -391,7 +378,7 @@ export const product = router({
 						message: "Product not found",
 					});
 				await productQueries.admin.deleteProduct(input.id);
-				await deleteProductFromSearch(input.id);
+				scheduleProductSearchRebuild(ctx, "product_deleted");
 				return { message: "Product deleted successfully" };
 			} catch (error) {
 				ctx.log.error("deleteProduct", error);
@@ -460,18 +447,11 @@ export const product = router({
 		.input(v.object({ id: v.number(), newStock: v.number() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const product = await productQueries.admin.getProductById(input.id);
-				if (!product)
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Product not found",
-					});
 				await productQueries.admin.setProductStock(input.id, input.newStock);
-				await syncProductSearchIndex(input.id);
+				scheduleProductSearchRebuild(ctx, "product_stock_updated");
 				return { message: "Stock set successfully" };
 			} catch (error) {
 				ctx.log.error("setProductStock", error);
-				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to set product stock",
@@ -513,7 +493,7 @@ export const product = router({
 					input.field,
 					value ?? null,
 				);
-				await syncProductSearchIndex(input.id);
+				scheduleProductSearchRebuild(ctx, "product_updated");
 				return { message: "Product field updated successfully" };
 			} catch (error) {
 				ctx.log.error("updateProductField", error);

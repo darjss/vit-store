@@ -13,9 +13,9 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { db } from "../db/client";
-import { BrandsTable, ProductImagesTable, ProductsTable } from "../db/schema";
-import { searchProducts } from "../lib/upstash-search";
+import { db } from "~/db/client";
+import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
+import { searchProducts } from "~/lib/product-search/client";
 
 type ProductStatus = (typeof status)[number];
 
@@ -287,6 +287,16 @@ export const productQueries = {
 				const searchResults = await searchProducts(
 					params.searchTerm.trim(),
 					1000,
+					{
+						brandId:
+							params.brandId !== undefined && params.brandId !== 0
+								? params.brandId
+								: undefined,
+						categoryId:
+							params.categoryId !== undefined && params.categoryId !== 0
+								? params.categoryId
+								: undefined,
+					},
 				);
 				searchIds = searchResults.map((result) => result.id);
 
@@ -295,8 +305,6 @@ export const productQueries = {
 						products: [],
 						pagination: {
 							currentPage: params.page,
-							totalPages: 0,
-							totalCount: 0,
 							hasNextPage: false,
 							hasPreviousPage: params.page > 1,
 						},
@@ -322,8 +330,34 @@ export const productQueries = {
 				(c): c is SQL<unknown> => c !== undefined,
 			);
 			const offset = (params.page - 1) * params.pageSize;
-			const products = await db().query.ProductsTable.findMany({
-				limit: params.pageSize,
+
+			if (searchIds !== undefined && params.sortField === undefined) {
+				const products = await db().query.ProductsTable.findMany({
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						finalConditions.length > 0 ? and(...finalConditions) : undefined,
+					),
+					with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
+				});
+				const byId = new Map(products.map((product) => [product.id, product]));
+				const orderedProducts = searchIds
+					.map((id) => byId.get(id))
+					.filter((product): product is NonNullable<typeof product> =>
+						Boolean(product),
+					);
+
+				return {
+					products: orderedProducts.slice(offset, offset + params.pageSize),
+					pagination: {
+						currentPage: params.page,
+						hasNextPage: offset + params.pageSize < orderedProducts.length,
+						hasPreviousPage: params.page > 1,
+					},
+				};
+			}
+
+			const items = await db().query.ProductsTable.findMany({
+				limit: params.pageSize + 1,
 				offset: offset,
 				orderBy: orderByClauses,
 				where: and(
@@ -333,25 +367,14 @@ export const productQueries = {
 				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
 			});
 
-			const totalCountResult = await db()
-				.select({ count: sql<number>`COUNT(*)` })
-				.from(ProductsTable)
-				.where(
-					and(
-						isNull(ProductsTable.deletedAt),
-						finalConditions.length > 0 ? and(...finalConditions) : undefined,
-					),
-				)
-				.limit(1);
-			const totalCount = totalCountResult[0]?.count ?? 0;
-			const totalPages = Math.ceil(totalCount / params.pageSize);
+			const hasNextPage = items.length > params.pageSize;
+			const products = hasNextPage ? items.slice(0, params.pageSize) : items;
+
 			return {
 				products,
 				pagination: {
 					currentPage: params.page,
-					totalPages,
-					totalCount,
-					hasNextPage: params.page < totalPages,
+					hasNextPage,
 					hasPreviousPage: params.page > 1,
 				},
 			};

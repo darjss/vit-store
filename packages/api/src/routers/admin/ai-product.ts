@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { opencode } from "~/lib/opencode-provider";
 import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
 import {
@@ -9,9 +9,25 @@ import {
 import { generateText, Output } from "ai";
 import * as v from "valibot";
 import { z } from "zod";
-import type { Context } from "../../lib/context";
-import { logger } from "../../lib/logger";
-import { adminProcedure, router } from "../../lib/trpc";
+import type { Context } from "~/lib/context";
+import { kv } from "~/lib/kv";
+import { logger } from "~/lib/logger";
+import { adminProcedure, router } from "~/lib/trpc";
+
+// Cache TTLs
+const CACHE_TTL = {
+	SCRAPE: 60 * 60 * 24 * 7, // 7 days for scrape results
+	SEARCH: 60 * 60 * 24 * 3, // 3 days for search results
+} as const;
+
+// Cache key helpers
+function scrapeCacheKey(url: string): string {
+	return `ai-product:scrape:${Buffer.from(url).toString("base64url")}`;
+}
+
+function searchCacheKey(query: string): string {
+	return `ai-product:search:${Buffer.from(query.toLowerCase().trim()).toString("base64url")}`;
+}
 
 // Types
 type ExtractedProductData = {
@@ -359,7 +375,7 @@ async function selectProductImagesWithGemini(
 
 	try {
 		const { output } = await generateText({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			output: Output.object({ schema: imageSelectionSchema }),
 			messages: [
 				{
@@ -367,10 +383,21 @@ async function selectProductImagesWithGemini(
 					content: [
 						{
 							type: "text",
-							text: `Choose the best product images for this product: ${productName}.
-Keep only images that clearly show this exact product, package, label, or supplement facts.
-Drop hero banners, collage strips, generic lifestyle, unrelated products, and duplicates.
-Return keepIndices and primaryIndex from the provided image order. Keep max 8.`,
+							text: `Product: ${productName}
+
+Filter these images. KEEP images that show:
+- Product packaging, bottle, box, container
+- Supplement facts label, ingredient list
+- Product interior (capsules, tablets, powder, liquid)
+- Close-ups of the product itself
+
+REMOVE only:
+- Completely unrelated products
+- Generic lifestyle/landscape photos with no product
+- Brand logos or banners with no product visible
+- Exact duplicates (same image URL)
+
+Be lenient - when in doubt, keep the image. Return keepIndices and primaryIndex (best hero shot).`,
 						},
 						...candidates.map((url) => ({
 							type: "image" as const,
@@ -422,7 +449,7 @@ async function refineProductOnlyImagesWithGemini(
 
 	try {
 		const { output } = await generateText({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			output: Output.object({ schema: imageSelectionSchema }),
 			messages: [
 				{
@@ -476,10 +503,16 @@ async function filterProductImages(
 	productName: string,
 	imageUrls: string[],
 ): Promise<{ images: string[]; usedGemini: boolean; usedFallback: boolean }> {
+	const startTime = Date.now();
 	const deJunk = imageUrls.filter((url) => !isLikelyJunkImage(url));
 	const deduped = uniqueStable(deJunk, normalizedImageKey);
 
 	if (deduped.length <= 1) {
+		logger.info("filterProductImages.skip", {
+			reason: "too_few_images",
+			count: deduped.length,
+			elapsedMs: Date.now() - startTime,
+		});
 		return {
 			images: deduped.slice(0, 8),
 			usedGemini: false,
@@ -487,21 +520,25 @@ async function filterProductImages(
 		};
 	}
 
-	const picked = await selectProductImagesWithGemini(productName, deduped);
-	const strictPicked = await refineProductOnlyImagesWithGemini(
-		productName,
-		picked.keep,
-	);
-	const uniquePicked = uniqueStable(
-		strictPicked.keep,
-		normalizedImageKey,
-	).slice(0, 8);
-	const primary = strictPicked.primary;
+	// Limit to 6 images for faster processing
+	const candidates = deduped.slice(0, 6);
+
+	// Single pass - skip refinement for speed
+	const picked = await selectProductImagesWithGemini(productName, candidates);
+	const uniquePicked = uniqueStable(picked.keep, normalizedImageKey).slice(0, 8);
+	const primary = picked.primary;
+
 	if (!primary || uniquePicked.length === 0) {
+		logger.info("filterProductImages.done", {
+			before: imageUrls.length,
+			after: uniquePicked.length,
+			usedFallback: picked.usedFallback,
+			elapsedMs: Date.now() - startTime,
+		});
 		return {
 			images: uniquePicked,
 			usedGemini: true,
-			usedFallback: picked.usedFallback || strictPicked.usedFallback,
+			usedFallback: picked.usedFallback,
 		};
 	}
 
@@ -513,10 +550,17 @@ async function filterProductImages(
 		if (head) uniquePicked.unshift(head);
 	}
 
+	logger.info("filterProductImages.done", {
+		before: imageUrls.length,
+		after: uniquePicked.length,
+		usedFallback: picked.usedFallback,
+		elapsedMs: Date.now() - startTime,
+	});
+
 	return {
 		images: uniquePicked,
 		usedGemini: true,
-		usedFallback: picked.usedFallback || strictPicked.usedFallback,
+		usedFallback: picked.usedFallback,
 	};
 }
 
@@ -562,39 +606,79 @@ async function searchAmazonProduct(
 	firecrawl: Firecrawl,
 	query: string,
 ): Promise<string | null> {
-	logger.info("searchAmazonProduct", { query });
+	const cacheKey = searchCacheKey(query);
+	const startTime = Date.now();
+
+	// Check cache first
+	try {
+		const cached = await kv().get(cacheKey, "json");
+		if (cached) {
+			logger.info("searchAmazonProduct.cacheHit", {
+				query,
+				elapsedMs: Date.now() - startTime,
+			});
+			return cached as string | null;
+		}
+	} catch (cacheError) {
+		logger.warn("searchAmazonProduct.cacheReadFailed", {
+			query,
+			error: cacheError instanceof Error ? cacheError.message : "unknown",
+		});
+	}
+
+	logger.info("searchAmazonProduct.start", { query });
 	try {
 		const searchResponse = await firecrawl.search(`site:amazon.com ${query}`, {
 			limit: 5,
 		});
 
 		if (!searchResponse.web?.length) {
-			logger.info("searchAmazonProduct", {
-				message: "No search results found",
+			logger.info("searchAmazonProduct.noResults", {
+				query,
+				elapsedMs: Date.now() - startTime,
+			});
+			// Cache null result to avoid repeated searches
+			await kv().put(cacheKey, JSON.stringify(null), {
+				expirationTtl: CACHE_TTL.SEARCH,
 			});
 			return null;
 		}
 
+		let resultUrl: string | null = null;
 		for (const result of searchResponse.web) {
 			const url = "url" in result ? result.url : undefined;
 			if (url && (url.includes("/dp/") || url.includes("/gp/product/"))) {
-				logger.info("searchAmazonProduct", {
-					message: "Found product URL",
-					url,
-				});
-				return url;
+				resultUrl = url;
+				break;
 			}
 		}
 
-		const firstResult = searchResponse.web[0];
-		const firstUrl = "url" in firstResult ? firstResult.url : undefined;
-		if (firstUrl?.includes("amazon.com")) {
-			return firstUrl;
+		// Fallback to first amazon.com result
+		if (!resultUrl) {
+			const firstResult = searchResponse.web[0];
+			const firstUrl = "url" in firstResult ? firstResult.url : undefined;
+			if (firstUrl?.includes("amazon.com")) {
+				resultUrl = firstUrl;
+			}
 		}
 
-		return null;
+		logger.info("searchAmazonProduct.done", {
+			query,
+			resultUrl,
+			elapsedMs: Date.now() - startTime,
+		});
+
+		// Cache the result
+		await kv().put(cacheKey, JSON.stringify(resultUrl), {
+			expirationTtl: CACHE_TTL.SEARCH,
+		});
+
+		return resultUrl;
 	} catch (error) {
-		logger.error("searchAmazonProduct", error);
+		logger.error("searchAmazonProduct.failed", error, {
+			query,
+			elapsedMs: Date.now() - startTime,
+		});
 		return null;
 	}
 }
@@ -604,7 +688,27 @@ async function scrapeAmazonProduct(
 	firecrawl: Firecrawl,
 	url: string,
 ): Promise<{ extracted: FirecrawlExtractedProduct } | null> {
-	logger.info("scrapeAmazonProduct", { url });
+	const cacheKey = scrapeCacheKey(url);
+	const startTime = Date.now();
+
+	// Check cache first
+	try {
+		const cached = await kv().get(cacheKey, "json");
+		if (cached) {
+			logger.info("scrapeAmazonProduct.cacheHit", {
+				url,
+				elapsedMs: Date.now() - startTime,
+			});
+			return cached as { extracted: FirecrawlExtractedProduct } | null;
+		}
+	} catch (cacheError) {
+		logger.warn("scrapeAmazonProduct.cacheReadFailed", {
+			url,
+			error: cacheError instanceof Error ? cacheError.message : "unknown",
+		});
+	}
+
+	logger.info("scrapeAmazonProduct.start", { url });
 	try {
 		// Get both JSON extraction and HTML for image parsing
 		const scrapeResponse = await firecrawl.scrape(url, {
@@ -623,23 +727,11 @@ async function scrapeAmazonProduct(
 				: null;
 		const priceUsd = jsonPrice ?? extractAmazonPriceUsd(html);
 
-		logger.info("scrapeAmazonProduct", {
-			message: "Firecrawl extracted",
-			title: jsonData.title,
-			brand: jsonData.brand,
-			priceUsd,
-			ingredientsCount: (jsonData.ingredients as string[])?.length || 0,
-			htmlLength: html.length,
-		});
-
 		// Extract product images from HTML (more reliable than images format)
 		const imageIds = extractProductImageIds(html);
 		const images = imageIds.map(toHighResUrl);
-		logger.info("scrapeAmazonProduct", {
-			message: `Extracted ${images.length} product images from HTML`,
-		});
 
-		return {
+		const result = {
 			extracted: {
 				title: (jsonData.title as string) || "",
 				brand: (jsonData.brand as string) || null,
@@ -652,8 +744,29 @@ async function scrapeAmazonProduct(
 				priceUsd,
 			},
 		};
+
+		logger.info("scrapeAmazonProduct.done", {
+			url,
+			title: result.extracted.title,
+			brand: result.extracted.brand,
+			priceUsd,
+			imagesCount: images.length,
+			ingredientsCount: result.extracted.ingredients.length,
+			htmlLength: html.length,
+			elapsedMs: Date.now() - startTime,
+		});
+
+		// Cache the result
+		await kv().put(cacheKey, JSON.stringify(result), {
+			expirationTtl: CACHE_TTL.SCRAPE,
+		});
+
+		return result;
 	} catch (error) {
-		logger.error("scrapeAmazonProduct", error);
+		logger.error("scrapeAmazonProduct.failed", error, {
+			url,
+			elapsedMs: Date.now() - startTime,
+		});
 		return null;
 	}
 }
@@ -678,7 +791,7 @@ async function analyzeProductImages(
 
 	try {
 		const { output } = await generateText({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			output: Output.object({
 				schema: z.object({
 					ingredients: z
@@ -769,7 +882,7 @@ async function translateAndStructureProduct(
 			.join("\n");
 
 		const { output } = await generateText({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			output: Output.object({
 				schema: z.object({
 					name: z.string().describe("Clean product name without brand"),
@@ -1233,8 +1346,9 @@ async function extractProductFromQuery(
 ): Promise<ExtractedProductData> {
 	const errors: string[] = [];
 	let extractionStatus: "success" | "partial" | "failed" = "success";
+	const startTime = Date.now();
 
-	logger.info("extractProductFromQuery", { query });
+	logger.info("extractProductFromQuery.start", { query });
 
 	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
 	if (!firecrawlApiKey) {
@@ -1244,13 +1358,14 @@ async function extractProductFromQuery(
 		});
 	}
 
-	// Note: Google API key is read automatically from GOOGLE_GENERATIVE_AI_API_KEY env var
+	// Note: OpenCode API key is read from OPENCODE_GO_API_KEY env var via opencode-provider
 	const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
 
 	// Step 1: Get product URL
 	let productUrl: string | null = null;
 	if (isAmazonUrl(query)) {
 		productUrl = query;
+		logger.info("extractProductFromQuery.directUrl", { productUrl });
 	} else {
 		productUrl = await searchAmazonProduct(firecrawl, query);
 		if (!productUrl) {
@@ -1280,31 +1395,35 @@ async function extractProductFromQuery(
 		extractionStatus = "partial";
 	}
 
-	logger.info("extractProductFromQuery", {
-		message: "Extracted",
+	logger.info("extractProductFromQuery.scraped", {
 		title: extractedData.title,
 		brand: extractedData.brand,
+		priceUsd: extractedData.priceUsd,
+		calculatedPriceMnt,
 		imagesCount: extractedData.images.length,
+		ingredientsCount: extractedData.ingredients.length,
 	});
 
+	// Step 3: Filter product images
+	const imageFilterStart = Date.now();
 	const imageFilter = await filterProductImages(
 		extractedData.title,
 		extractedData.images,
 	);
 	const filteredImages = imageFilter.images;
-	logger.info("extractProductFromQuery", {
-		message: "Image filtering",
+	logger.info("extractProductFromQuery.imageFilter.done", {
 		before: extractedData.images.length,
 		after: filteredImages.length,
 		usedGemini: imageFilter.usedGemini,
 		usedFallback: imageFilter.usedFallback,
+		elapsedMs: Date.now() - imageFilterStart,
 	});
 	if (filteredImages.length === 0 && extractedData.images.length > 0) {
 		errors.push("Image filtering removed all candidates.");
 		extractionStatus = "partial";
 	}
 
-	// Step 3: Analyze images with Gemini Vision
+	// Step 4: Analyze images with Gemini Vision
 	let visionData: VisionAnalysisResult = {
 		ingredients: [],
 		servingSize: null,
@@ -1313,7 +1432,14 @@ async function extractProductFromQuery(
 	};
 
 	if (filteredImages.length > 0) {
+		const visionStart = Date.now();
 		visionData = await analyzeProductImages(filteredImages);
+		logger.info("extractProductFromQuery.vision.done", {
+			ingredientsCount: visionData.ingredients.length,
+			servingSize: visionData.servingSize,
+			dailyIntake: visionData.dailyIntake,
+			elapsedMs: Date.now() - visionStart,
+		});
 		if (
 			visionData.ingredients.length === 0 &&
 			extractedData.ingredients.length === 0
@@ -1326,7 +1452,8 @@ async function extractProductFromQuery(
 		extractionStatus = "partial";
 	}
 
-	// Step 4: Translate and structure (fetch brands/categories for LLM matching)
+	// Step 5: Translate and structure (fetch brands/categories for LLM matching)
+	const translateStart = Date.now();
 	const [allBrands, allCategories] = await Promise.all([
 		brandQueries.admin.getAllBrands(),
 		categoryQueries.admin.getAllCategories(),
@@ -1353,6 +1480,14 @@ async function extractProductFromQuery(
 		extractionStatus = "partial";
 	}
 
+	logger.info("extractProductFromQuery.translate.done", {
+		name: structuredData?.name,
+		name_mn: structuredData?.name_mn,
+		brandId: matchedBrandId,
+		categoryId: matchedCategoryId,
+		elapsedMs: Date.now() - translateStart,
+	});
+
 	const finalBrandId =
 		matchedBrandId ??
 		(await resolveOrCreateBrandId(
@@ -1360,10 +1495,17 @@ async function extractProductFromQuery(
 			allBrands.map((b) => ({ id: b.id, name: b.name })),
 		));
 
-	// Step 5: Upload images
+	// Step 6: Upload images
 	let uploadedImages: { url: string }[] = [];
 	if (filteredImages.length > 0) {
+		const uploadStart = Date.now();
 		uploadedImages = await uploadImagesToR2(filteredImages, ctx);
+
+		logger.info("extractProductFromQuery.upload.done", {
+			requestedCount: filteredImages.length,
+			uploadedCount: uploadedImages.length,
+			elapsedMs: Date.now() - uploadStart,
+		});
 
 		if (uploadedImages.length === 0) {
 			logger.warn("extractProductFromQuery.imageUploadFailed", {
@@ -1459,10 +1601,11 @@ async function extractProductFromQuery(
 		),
 	};
 
-	logger.info("extractProductFromQuery", {
-		message: "Done",
+	logger.info("extractProductFromQuery.done", {
+		query,
 		status: extractionStatus,
 		errorsCount: errors.length,
+		totalElapsedMs: Date.now() - startTime,
 	});
 	return response;
 }

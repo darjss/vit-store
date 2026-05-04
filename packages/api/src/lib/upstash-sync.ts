@@ -1,7 +1,7 @@
 import { Search } from "@upstash/search";
-import type { ProductSelectType } from "../db/schema";
-import { logger } from "./logger";
-import { upsertProductToSearch } from "./upstash-search";
+import type { ProductSelectType } from "~/db/schema";
+import { logger } from "~/lib/logger";
+import { upsertProductToSearch } from "~/lib/upstash-search";
 
 const getSyncSearchClient = () => {
 	const url = process.env.UPSTASH_SEARCH_URL;

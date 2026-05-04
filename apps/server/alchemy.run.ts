@@ -1,6 +1,7 @@
 import path from "node:path";
 import alchemy from "alchemy";
 import {
+	DurableObjectNamespace,
 	Hyperdrive,
 	Images,
 	KVNamespace,
@@ -42,6 +43,11 @@ const images = Images({
 	},
 });
 
+const productSearch = DurableObjectNamespace("product-search", {
+	className: "ProductSearchObject",
+	sqlite: true,
+});
+
 const hyperdriveDB = await Hyperdrive("pscale-db", {
 	origin: {
 		host: env.PLANETSCALE_HOST,
@@ -66,6 +72,7 @@ export const server = await Worker("api", {
 
 	adopt: true,
 	bindings: {
+		PRODUCT_SEARCH: productSearch,
 		RATE_LIMITER: rateLimit,
 		DB: hyperdriveDB,
 		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
@@ -85,7 +92,7 @@ export const server = await Worker("api", {
 		RESEND_API_KEY: env.RESEND_API_KEY,
 		RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
 		FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
-		GOOGLE_GENERATIVE_AI_API_KEY: env.GOOGLE_GENERATIVE_AI_API_KEY,
+		OPENCODE_GO_API_KEY: env.OPENCODE_GO_API_KEY,
 		UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
 		UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
 		UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,

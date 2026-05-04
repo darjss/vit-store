@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Search } from "@upstash/search";
-import { logger } from "./logger";
+import { logger } from "~/lib/logger";
 
 let searchClient: Search | null = null;
 

@@ -1,16 +1,24 @@
 import { TRPCError } from "@trpc/server";
-import { productQueries } from "@vit/api/queries";
+import {
+	brandQueries,
+	categoryQueries,
+	productQueries,
+} from "@vit/api/queries";
 import { isNull } from "drizzle-orm";
 import * as v from "valibot";
-import { db } from "../../db/client";
-import { ProductImagesTable, ProductsTable } from "../../db/schema";
-import { kv } from "../../lib/kv";
-import { redis } from "../../lib/redis";
-import { publicProcedure, router } from "../../lib/trpc";
-import { searchProducts } from "../../lib/upstash-search";
-import { measureMs, summarizeTimings } from "../../lib/utils";
+import { db } from "~/db/client";
+import { ProductImagesTable, ProductsTable } from "~/db/schema";
+import { kv } from "~/lib/kv";
+import {
+	normalizeSearchText,
+	transliterateCyrillicToLatin,
+} from "~/lib/product-search/text";
+import { redis } from "~/lib/redis";
+import { publicProcedure, router } from "~/lib/trpc";
+import { searchProducts } from "~/lib/product-search/client";
+import { measureMs, summarizeTimings } from "~/lib/utils";
 
-interface SearchProductResult {
+export interface SearchProductResult {
 	id: number;
 	slug: string;
 	name: string;
@@ -75,6 +83,107 @@ const performProductSearch = async (
 	}));
 };
 
+const GENERIC_PRODUCT_SEARCH_TERMS = new Set([
+	"vitamin",
+	"vitamins",
+	"vit",
+	"supplement",
+	"supplements",
+]);
+
+const scoreNavigationMatch = (
+	name: string,
+	query: string,
+	options?: { ignoreGenericTerms?: boolean },
+) => {
+	const normalizedQuery = normalizeSearchText(query);
+	if (!normalizedQuery) return 0;
+
+	const terms = normalizedQuery
+		.split(" ")
+		.filter((term) => term.length >= 2)
+		.filter(
+			(term) =>
+				!options?.ignoreGenericTerms || !GENERIC_PRODUCT_SEARCH_TERMS.has(term),
+		);
+	if (terms.length === 0) return 0;
+
+	return Math.max(
+		...Array.from(
+			new Set([
+				normalizeSearchText(name),
+				normalizeSearchText(transliterateCyrillicToLatin(name)),
+			]),
+		).map((normalizedName) => {
+			if (!normalizedName) return 0;
+			const nameTokens = normalizedName.split(" ");
+			let score = 0;
+
+			if (normalizedName === normalizedQuery) score += 1000;
+			if (normalizedQuery.includes(normalizedName)) score += 900;
+			if (normalizedName.startsWith(normalizedQuery)) score += 700;
+			if (normalizedName.includes(normalizedQuery)) score += 500;
+
+			for (const term of terms) {
+				if (nameTokens.includes(term)) score += 120;
+				else if (nameTokens.some((token) => token.startsWith(term)))
+					score += 80;
+				else if (normalizedName.includes(term)) score += 40;
+			}
+
+			return score;
+		}),
+	);
+};
+
+const searchNavigationResults = async (query: string, limit: number) => {
+	const [brands, categories] = await Promise.all([
+		brandQueries.store.getAllBrands(),
+		categoryQueries.store.getAllCategories(),
+	]);
+	const safeLimit = Math.min(Math.max(limit, 1), 8);
+
+	return {
+		brands: brands
+			.map((brand) => ({
+				id: brand.id,
+				name: brand.name,
+				type: "brand" as const,
+				productCount: brand.productCount,
+				logoUrl: brand.logoUrl,
+				score: scoreNavigationMatch(brand.name, query, {
+					ignoreGenericTerms: true,
+				}),
+			}))
+			.filter((brand) => brand.score > 0 && brand.productCount > 0)
+			.sort(
+				(a, b) =>
+					b.score - a.score ||
+					(b.productCount ?? 0) - (a.productCount ?? 0) ||
+					a.name.localeCompare(b.name),
+			)
+			.slice(0, safeLimit)
+			.map(({ score: _score, ...brand }) => brand),
+		categories: categories
+			.map((category) => ({
+				id: category.id,
+				name: category.name,
+				type: "category" as const,
+				productCount: category.productCount,
+				score: scoreNavigationMatch(category.name, query),
+			}))
+			.filter((category) => category.score > 0 && category.productCount > 0)
+			.sort(
+				(a, b) =>
+					b.score - a.score ||
+					(b.productCount ?? 0) - (a.productCount ?? 0) ||
+					a.name.localeCompare(b.name),
+			)
+			.slice(0, safeLimit)
+			.map(({ score: _score, ...category }) => category),
+	};
+};
+
 export const product = router({
 	searchProducts: publicProcedure
 		.input(
@@ -119,6 +228,35 @@ export const product = router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
+
+	searchStorefront: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const safeLimit = Math.min(input.limit, 12);
+				const [products, navigation] = await Promise.all([
+					performProductSearch(input.query, safeLimit),
+					searchNavigationResults(input.query, 4),
+				]);
+
+				return {
+					products,
+					brands: navigation.brands,
+					categories: navigation.categories,
+				};
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search storefront",
 					cause: error,
 				});
 			}

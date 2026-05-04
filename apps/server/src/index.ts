@@ -13,6 +13,8 @@ import paymentRoutes from "./routes/payments";
 import uploadRoutes from "./routes/uploads";
 import webhookRoutes from "./routes/webhooks";
 
+export { ProductSearchObject } from "./durable-objects/product-search-object";
+
 const DEFAULT_CORS_ORIGINS = [
 	"http://localhost:5173",
 	"https://admin.vitstore.dev",

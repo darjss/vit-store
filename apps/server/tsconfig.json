@@ -6,7 +6,8 @@
 		"outDir": "dist",
 		"rootDirs": [".", "../.."],
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"~/*": ["../../packages/api/src/*"]
 		},
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx"
