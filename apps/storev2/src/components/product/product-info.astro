@@ -19,7 +19,6 @@ import { formatCurrency } from "@/lib/utils";
 import IconBox from "~icons/ri/box-3-line";
 import IconMuscle from "~icons/ri/boxing-line";
 import IconCheck from "~icons/ri/checkbox-circle-fill";
-import IconFire from "~icons/ri/fire-fill";
 import IconFlask from "~icons/ri/flask-line";
 import IconPriceTag from "~icons/ri/price-tag-3-fill";
 import IconRefund from "~icons/ri/refund-2-line";
@@ -31,7 +30,6 @@ interface Props {
 		id: number;
 		name: string;
 		price: number;
-		discount?: number | null;
 		brand: { name: string };
 		category: { name: string };
 		status: string;
@@ -42,12 +40,6 @@ interface Props {
 }
 
 const { product, primaryImage } = Astro.props;
-
-const discountedPrice = product.discount
-	? product.price * (1 - product.discount / 100)
-	: product.price;
-const hasDiscount = product.discount && product.discount > 0;
-const savings = hasDiscount ? product.price - discountedPrice : 0;
 ---
 
 <div class="space-y-6 sm:space-y-8">
@@ -91,48 +83,19 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 	<div
 		class="border-2 border-border bg-card p-6 sm:p-8 shadow-hard"
 	>
-		{hasDiscount ? (
-			<div class="space-y-4">
-				<!-- Discount Badge -->
-				<div class="inline-flex items-center gap-2 border-2 border-border bg-destructive px-4 py-1.5 font-black text-sm sm:text-base text-destructive-foreground shadow-hard-sm uppercase tracking-wider">
-					<IconFire class="w-4 h-4 text-yellow-300" /> {product.discount}% ХЯМДРАЛ
-				</div>
-				
-				<!-- Price container -->
-				<div class="space-y-2">
-					<div class="flex items-baseline gap-4 flex-wrap">
-						<!-- Original price -->
-						<div class="text-xl sm:text-2xl font-bold text-muted-foreground line-through decoration-2 decoration-destructive" transition:name={`product-price-${product.id}`}>
-							{formatCurrency(product.price)}
-						</div>
-					</div>
-					
-					<!-- Sale price -->
-					<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight">
-						{formatCurrency(discountedPrice)}
-					</div>
-					
-					<!-- Savings display -->
-					<div class="text-base sm:text-lg font-bold text-primary">
-						{formatCurrency(savings)} хэмнэлт
-					</div>
-				</div>
+		<div class="space-y-3">
+			<div class="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+				Үнэ
 			</div>
-		) : (
-			<div class="space-y-3">
-				<div class="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-					Үнэ
-				</div>
-				<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight" transition:name={`product-price-${product.id}`}>
-					{formatCurrency(product.price)}
-				</div>
+			<div class="text-5xl sm:text-6xl font-black text-foreground tracking-tight" transition:name={`product-price-${product.id}`}>
+				{formatCurrency(product.price)}
 			</div>
-		)}
+		</div>
 	</div>
 
 	<div transition:name={`product-add-to-cart-button-${product.id}`}>
 		<ProductQuantitySelector
-			client:load
+			client:only="solid-js"
 			cartItem={{
 				productId: product.id,
 				quantity: 1,
@@ -141,10 +104,13 @@ const savings = hasDiscount ? product.price - discountedPrice : 0;
 				image: primaryImage,
 			}}
 		>
-			<div slot="fallback" class="flex gap-4">
-				<div class="h-16 flex-1 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
-				<div class="h-16 w-16 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
-				<div class="h-16 w-16 border-2 border-border bg-muted/20 shadow-hard animate-pulse"></div>
+			<div slot="fallback" class="space-y-4">
+				<div class="flex items-center gap-3">
+					<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+					<div class="h-14 flex-1 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+					<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+				</div>
+				<div class="h-14 sm:h-16 w-full rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
 			</div>
 		</ProductQuantitySelector>
 	</div>

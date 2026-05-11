@@ -21,14 +21,22 @@ if (!paymentNumber) {
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-const payment = await serverApi.payment.getPaymentByNumber.query({ paymentNumber });
+const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
+const payment = await serverApi.payment.getPaymentByNumber.query({
+    paymentNumber,
+    checkoutToken,
+} as { paymentNumber: string });
 
 if (!payment) {
     throw Astro.redirect("/404");
 }
 
 if (payment.status !== "success") {
-	throw Astro.redirect(`/payment/${paymentNumber}`);
+	throw Astro.redirect(
+        checkoutToken
+            ? `/payment/${paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
+            : `/payment/${paymentNumber}`,
+    );
 }
 ---
 

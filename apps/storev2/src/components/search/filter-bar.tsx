@@ -1,8 +1,8 @@
 import {
+	type ProductPresetFilter,
 	productPresetFilterLabels,
 	productSortOptions,
 	trendingProductSearches,
-	type ProductPresetFilter,
 } from "@vit/shared/domain/product";
 import type { Component, JSX } from "solid-js";
 import {
@@ -286,10 +286,10 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						</Show>
 						<Show
 							when={
-								props.sortField &&
-								props.sortDirection &&
-								(props.sortField !== "createdAt" ||
-									props.sortDirection !== "desc")
+								(props.sortField === "price" ||
+									props.sortField === "createdAt") &&
+								(props.sortDirection === "asc" ||
+									props.sortDirection === "desc")
 							}
 						>
 							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">

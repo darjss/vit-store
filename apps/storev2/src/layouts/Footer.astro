@@ -1,39 +1,210 @@
-	<footer class="relative z-10 border-t-2 border-border bg-muted/20 pb-16 md:pb-0">
-		<div class="mx-auto max-w-screen-2xl px-5 py-8 lg:px-8 lg:py-10">
-			<div class="grid gap-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-8">
-				<div>
-					<div class="mb-3 flex items-center gap-2.5">
-						<div class="h-10 w-10 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">AV</div>
-						<span class="font-black text-base uppercase tracking-wider">Amerik Vitamin</span>
-					</div>
-					<p class="max-w-md text-xs font-medium leading-relaxed text-muted-foreground lg:text-sm">
-						Өргөн сонголттой витамин, нэмэлт тэжээлийг боломжийн үнээр. Захиалгыг аль болох хурдан хүргэнэ.
-					</p>
-				</div>
+---
+import IconPhone from "~icons/ri/phone-line";
+import IconMail from "~icons/ri/mail-line";
+import IconClock from "~icons/ri/time-line";
+import IconMapPin from "~icons/ri/map-pin-line";
+import IconFacebook from "~icons/ri/facebook-fill";
+import IconInstagram from "~icons/ri/instagram-line";
+import IconTruck from "~icons/ri/truck-line";
+import IconQuestion from "~icons/ri/question-line";
+import IconShield from "~icons/ri/shield-check-line";
+import IconFile from "~icons/ri/file-list-line";
+import IconSearch from "~icons/ri/search-line";
+import IconClose from "~icons/ri/close-circle-line";
 
-				<div>
-					<h3 class="mb-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Цэс</h3>
-					<div class="flex flex-col gap-2 text-sm">
-						<a href="/" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Нүүр</a>
-						<a href="/products" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Бүтээгдэхүүн</a>
-						<a href="/cart" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Сагс</a>
-						<a href="/profile" class="font-bold hover:text-foreground text-muted-foreground transition-colors">Профайл</a>
-					</div>
-				</div>
+const currentYear = new Date().getFullYear();
 
-				<div>
-					<h3 class="mb-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground">Мэдээлэл</h3>
-					<div class="space-y-2 text-xs font-medium text-muted-foreground lg:text-sm">
-						<p>Боломжийн үнэтэй витамин, нэмэлт тэжээл</p>
-						<p>Өдөр тутмын хэрэгцээнд тохирсон өргөн сонголт</p>
-						<p>Захиалга бүрт шуурхай хүргэлт</p>
-					</div>
-				</div>
-			</div>
+const contactInfo = [
+  {
+    icon: IconPhone,
+    label: "Утас",
+    value: "9999-3950",
+    href: "tel:+97699993950",
+  },
+  {
+    icon: IconMail,
+    label: "И-мэйл",
+    value: "info@amerikvitamin.mn",
+    href: "mailto:info@amerikvitamin.mn",
+  },
+  {
+    icon: IconClock,
+    label: "Цагийн хуваарь",
+    value: "Даваа–Баасан 10:00–18:00",
+    href: null,
+  },
+  {
+    icon: IconMapPin,
+    label: "Хүргэлт",
+    value: "Улаанбаатар + Хөдөө",
+    href: "/shipping",
+  },
+];
 
-			<div class="mt-6 border-t-2 border-border/30 pt-4 flex flex-col gap-2 text-xs lg:flex-row lg:items-center lg:justify-between">
-				<p class="font-semibold text-muted-foreground">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
-				<p class="font-black uppercase tracking-wider text-muted-foreground">© {new Date().getFullYear()} Amerik Vitamin</p>
-			</div>
-		</div>
-	</footer>
+const shopLinks = [
+  { label: "Нүүр", href: "/" },
+  { label: "Бүтээгдэхүүн", href: "/products" },
+  { label: "Сагс", href: "/cart" },
+  { label: "Профайл", href: "/profile" },
+];
+
+const serviceLinks = [
+  { label: "Түгээмэл асуулт", href: "/faq", icon: IconQuestion },
+  { label: "Хүргэлтийн мэдээлэл", href: "/shipping", icon: IconTruck },
+  { label: "Буцаалтын бодлого", href: "/returns-refunds", icon: IconClose },
+  { label: "Захиалга хянах", href: "/order-tracking", icon: IconSearch },
+  { label: "Бидэнтэй холбогдох", href: "/contact", icon: IconPhone },
+];
+
+const legalLinks = [
+  { label: "Нууцлалын бодлого", href: "/privacy-policy", icon: IconShield },
+  { label: "Үйлчилгээний нөхцөл", href: "/terms-of-service", icon: IconFile },
+];
+
+const socials = [
+  {
+    icon: IconFacebook,
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=100057596651892",
+  },
+  {
+    icon: IconInstagram,
+    label: "Instagram",
+    href: "https://www.instagram.com/amerikhunsbaraa/",
+  },
+];
+
+const certifications = [
+  { label: "GMP", sub: "Certified" },
+  { label: "FDA", sub: "Registered" },
+  { label: "NSF", sub: "Certified" },
+  { label: "USP", sub: "Verified" },
+  { label: "Non-GMO", sub: "Project" },
+  { label: "USDA", sub: "Organic" },
+];
+---
+
+<footer class="relative z-10 border-t-2 border-border bg-muted/20 pb-16 md:pb-0">
+  <div class="mx-auto max-w-screen-2xl px-5 py-8 lg:px-8 lg:py-12">
+    <!-- Main footer grid -->
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-12 lg:gap-6">
+      <!-- Brand column -->
+      <div class="lg:col-span-3">
+        <div class="mb-4 flex items-center gap-2.5">
+          <div class="h-10 w-10 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">AV</div>
+          <span class="font-black text-base uppercase tracking-wider">Amerik Vitamin</span>
+        </div>
+        <p class="max-w-xs text-xs font-medium leading-relaxed text-muted-foreground mb-5">
+          АНУ-аас шууд импортлогдсон жинхэнэ витамин, нэмэлт тэжээлийг Монгол улсын дотоодод хүргэлттэй борлуулж байна.
+        </p>
+
+        <!-- Socials -->
+        <div class="flex items-center gap-2.5">
+          {socials.map((social) => (
+            <a
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-center w-9 h-9 border-2 border-border bg-card shadow-hard-sm hover:shadow-none hover:translate-x-px hover:translate-y-px hover:bg-primary transition-all"
+              aria-label={social.label}
+            >
+              <social.icon class="w-4 h-4" />
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Shop links -->
+      <div class="lg:col-span-2">
+        <h3 class="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Үндсэн цэс</h3>
+        <div class="flex flex-col gap-2">
+          {shopLinks.map((link) => (
+            <a href={link.href} class="font-bold text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Service links -->
+      <div class="lg:col-span-3">
+        <h3 class="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Үйлчилгээ</h3>
+        <div class="flex flex-col gap-2">
+          {serviceLinks.map((link) => (
+            <a href={link.href} class="group flex items-center gap-2 font-bold text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
+              <link.icon class="w-3.5 h-3.5 shrink-0" />
+              <span>{link.label}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- Contact -->
+      <div class="lg:col-span-4">
+        <h3 class="mb-3 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Холбоо барих</h3>
+        <div class="space-y-2.5">
+          {contactInfo.map((item) => (
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 border-2 border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
+                <item.icon class="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <div class="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{item.label}</div>
+                {item.href ? (
+                  <a href={item.href} class="text-sm font-bold hover:text-foreground text-muted-foreground transition-colors">
+                    {item.value}
+                  </a>
+                ) : (
+                  <span class="text-sm font-bold text-muted-foreground">{item.value}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- Certifications & Trust -->
+    <div class="mt-8 pt-6 border-t-2 border-border/30">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <!-- Cert badges -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">Баталгаа:</span>
+          {certifications.map((cert) => (
+            <div class="flex items-center gap-1 px-2 py-1 border-2 border-border bg-card shadow-hard-sm">
+              <IconShield class="w-3 h-3 text-primary" />
+              <span class="text-[10px] font-black uppercase tracking-wider">{cert.label}</span>
+              <span class="text-[9px] font-bold text-muted-foreground uppercase">{cert.sub}</span>
+            </div>
+          ))}
+        </div>
+
+        <!-- Payment methods -->
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Төлбөр:</span>
+          <div class="flex items-center gap-2">
+            <div class="h-8 px-2 border-2 border-border bg-white flex items-center justify-center">
+              <img src="/qpay.png" alt="QPay" class="h-5 w-auto object-contain" loading="lazy" />
+            </div>
+            <div class="h-8 px-2 border-2 border-border bg-white flex items-center justify-center">
+              <span class="text-[10px] font-black uppercase tracking-wider text-foreground">Банкны шилжүүлэг</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="mt-6 pt-4 border-t-2 border-border/30 flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <p class="font-semibold text-muted-foreground">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
+        {legalLinks.map((link) => (
+          <a href={link.href} class="font-bold text-muted-foreground hover:text-foreground transition-colors underline decoration-1 underline-offset-2">
+            {link.label}
+          </a>
+        ))}
+      </div>
+      <p class="font-black uppercase tracking-wider text-muted-foreground">© {currentYear} Amerik Vitamin</p>
+    </div>
+  </div>
+</footer>

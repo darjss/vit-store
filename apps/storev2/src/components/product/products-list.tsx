@@ -17,18 +17,24 @@ import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
 import FilterBar from "../search/filter-bar";
-import SearchProductCard from "./search-product-card";
+import {
+	ProductEmptyState,
+	ProductErrorState,
+	ProductListEnd,
+	ProductSkeletonGrid,
+} from "./products-list-states";
 import { ProductsVirtualGrid } from "./products-virtual-grid";
-import { ProductEmptyState, ProductErrorState, ProductListEnd, ProductSkeletonGrid } from "./products-list-states";
+import SearchProductCard from "./search-product-card";
 
-type ListFilter = "featured" | "recent" | "discount";
+type ListFilter = "featured" | "recent";
+type ProductSortField = "price" | "createdAt";
+type ProductSortDirection = "asc" | "desc";
 const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
 const STORE_DEFAULT_ROW_HEIGHT = 360;
 
 const LIST_FILTER_LABELS: Record<ListFilter, string> = {
 	featured: "Онцлох",
 	recent: "Шинэ ирсэн",
-	discount: "Хямдралтай",
 };
 
 const getStoreProductColumns = (width: number) => {
@@ -43,6 +49,21 @@ const chunkItems = <T,>(items: T[], chunkSize: number) => {
 		chunks.push(items.slice(index, index + chunkSize));
 	}
 	return chunks;
+};
+
+const getErrorDetails = (error: unknown) => {
+	if (error instanceof Error) {
+		return {
+			name: error.name,
+			message: error.message,
+			stack: error.stack,
+		};
+	}
+
+	return {
+		name: typeof error,
+		message: String(error),
+	};
 };
 
 const ProductsList = () => {
@@ -69,6 +90,8 @@ const ProductsList = () => {
 	const [localSearchTerm, setLocalSearchTerm] = createSignal(
 		searchTerm() ?? "",
 	);
+	const [lastLoggedProductsError, setLastLoggedProductsError] =
+		createSignal<unknown>();
 
 	createEffect(() => {
 		setLocalSearchTerm(searchTerm() ?? "");
@@ -82,7 +105,7 @@ const ProductsList = () => {
 	const categoriesQuery = useQuery(
 		() => ({
 			queryKey: ["categories"],
-			queryFn: () => api.category.getAllCategories.query(),
+			queryFn: () => api.category.getAllCategoriesWithStock.query(),
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
@@ -91,7 +114,7 @@ const ProductsList = () => {
 	const brandsQuery = useQuery(
 		() => ({
 			queryKey: ["brands"],
-			queryFn: () => api.brand.getAllBrands.query(),
+			queryFn: () => api.brand.getAllBrandsWithStock.query(),
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
@@ -99,7 +122,7 @@ const ProductsList = () => {
 
 	const listFilter = createMemo<ListFilter | null>(() => {
 		const val = listFilterParam();
-		if (val === "featured" || val === "recent" || val === "discount") {
+		if (val === "featured" || val === "recent") {
 			return val;
 		}
 		return null;
@@ -141,7 +164,7 @@ const ProductsList = () => {
 			queryFn: async () => {
 				const term = searchTerm();
 				if (!term || term.length < 2) return [];
-				return await api.product.searchProductsForPage.query({
+				return await api.product.searchProductsForPageWithStock.query({
 					query: term,
 					limit: 10,
 					categoryId: categoryId() ?? undefined,
@@ -155,24 +178,46 @@ const ProductsList = () => {
 		() => queryClient,
 	);
 
+	const selectedSort = createMemo<{
+		field: ProductSortField;
+		direction: ProductSortDirection;
+	} | null>(() => {
+		const field = sortField();
+		const direction = sortDirection();
+		if (
+			(field === "price" || field === "createdAt") &&
+			(direction === "asc" || direction === "desc")
+		) {
+			return { field, direction };
+		}
+		return null;
+	});
+
+	createEffect(() => {
+		if ((sortField() || sortDirection()) && !selectedSort()) {
+			setSortField(null);
+			setSortDirection(null);
+		}
+	});
+
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
 				"products-browse",
-				sortField(),
-				sortDirection(),
+				selectedSort()?.field,
+				selectedSort()?.direction,
 				categoryId(),
 				brandId(),
 				listFilter(),
 			],
 			queryFn: async ({ pageParam }) => {
-				const result = await api.product.getInfiniteProducts.query({
+				const sort = selectedSort();
+				const result = await api.product.getInfiniteProductsWithStock.query({
 					cursor: pageParam,
 					limit: 12,
 					listType: listFilter() ?? undefined,
-					sortField:
-						(sortField() as "price" | "stock" | "createdAt") || undefined,
-					sortDirection: (sortDirection() as "asc" | "desc") || undefined,
+					sortField: sort?.field,
+					sortDirection: sort?.direction,
 					categoryId: categoryId() ?? undefined,
 					brandId: brandId() ?? undefined,
 				});
@@ -258,6 +303,44 @@ const ProductsList = () => {
 		return allBrowseProducts().length > 0;
 	});
 
+	createEffect(() => {
+		const error = productsQuery.error;
+		if (
+			!productsQuery.isError ||
+			!error ||
+			lastLoggedProductsError() === error
+		) {
+			return;
+		}
+
+		setLastLoggedProductsError(error);
+		const sort = selectedSort();
+		const details = getErrorDetails(error);
+		const context = {
+			...details,
+			component: "ProductsList",
+			query: "product.getInfiniteProducts",
+			pageUrl: window.location.href,
+			userAgent: window.navigator.userAgent,
+			isOnline: window.navigator.onLine,
+			devicePixelRatio: window.devicePixelRatio,
+			viewportWidth: window.innerWidth,
+			viewportHeight: window.innerHeight,
+			loadedProductCount: allBrowseProducts().length,
+			loadedPageCount: productsQuery.data?.pages.length ?? 0,
+			hasNextPage: productsQuery.hasNextPage,
+			isFetching: productsQuery.isFetching,
+			isFetchingNextPage: productsQuery.isFetchingNextPage,
+			sortField: sort?.field ?? null,
+			sortDirection: sort?.direction ?? null,
+			categoryId: categoryId(),
+			brandId: brandId(),
+			listFilter: listFilter(),
+		};
+
+		console.error("[ProductsList] Infinite products query failed", context);
+	});
+
 	const shouldShowEmptyState = createMemo(() => {
 		if (isSearchMode()) {
 			return (
@@ -286,16 +369,46 @@ const ProductsList = () => {
 	};
 
 	const handleSortChange = (field: string | null, direction: string | null) => {
-		setSortField(field);
-		setSortDirection(direction);
+		if (
+			(field === "price" || field === "createdAt") &&
+			(direction === "asc" || direction === "desc")
+		) {
+			setSortField(field);
+			setSortDirection(direction);
+			return;
+		}
+		setSortField(null);
+		setSortDirection(null);
 	};
 
 	const handleCategoryChange = (id: number | null) => {
-		setCategoryIdParam(id?.toString() ?? null);
+		if (!id) {
+			setCategoryIdParam(null);
+			return;
+		}
+		const category = categoriesQuery.data?.find(
+			(c: { id: number; slug: string }) => c.id === id,
+		);
+		if (category?.slug) {
+			window.location.href = `/products/category/${category.slug}/1`;
+		} else {
+			setCategoryIdParam(id?.toString() ?? null);
+		}
 	};
 
 	const handleBrandChange = (id: number | null) => {
-		setBrandIdParam(id?.toString() ?? null);
+		if (!id) {
+			setBrandIdParam(null);
+			return;
+		}
+		const brand = brandsQuery.data?.find(
+			(b: { id: number; slug: string }) => b.id === id,
+		);
+		if (brand?.slug) {
+			window.location.href = `/products/brand/${brand.slug}/1`;
+		} else {
+			setBrandIdParam(id?.toString() ?? null);
+		}
 	};
 
 	const handleClearFilters = () => {
@@ -310,8 +423,7 @@ const ProductsList = () => {
 
 	const hasActiveFilters = () =>
 		!!searchTerm() ||
-		!!sortField() ||
-		!!sortDirection() ||
+		!!selectedSort() ||
 		!!categoryId() ||
 		!!brandId() ||
 		!!listFilter();
@@ -546,7 +658,10 @@ const ProductsList = () => {
 
 				{/* Loading More Skeleton (browse mode only) */}
 				<Show when={!isSearchMode() && productsQuery.isFetchingNextPage}>
-					<ProductSkeletonGrid count={4} class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4" />
+					<ProductSkeletonGrid
+						count={4}
+						class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
+					/>
 				</Show>
 
 				{/* End of List */}

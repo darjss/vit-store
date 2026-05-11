@@ -15,7 +15,6 @@
 
 
 import { ClientRouter } from "astro:transitions";
-import StoreAssistant from "@/components/ai/store-assistant";
 import CartDrawer from "@/components/cart/cart-drawer";
 import QueryDevtools from "@/components/query-devtools";
 import SEO from "@/components/SEO.astro";
@@ -60,6 +59,17 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
         <PostHog />
     </head>
     <body>
+        {/* Fallback pageview capture for Astro view transitions (SPA navigation).
+            PostHog's history_change listener should catch most, but this ensures
+            coverage if Astro's transition timing doesn't trigger it. */}
+        <script is:inline>
+            document.addEventListener('astro:after-swap', () => {
+                if (window.posthog && typeof window.posthog.capture === 'function') {
+                    window.posthog.capture('$pageview');
+                }
+            });
+        </script>
+
         <div id="loading-bar" class="loading-bar">
             <div class="loading-bar-progress"></div>
         </div>
@@ -80,8 +90,6 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
 
         <Footer />
         <MobileNavbar />
-		<StoreAssistant client:idle />
-        
         <CartDrawer client:idle />
         		{import.meta.env.DEV && <QueryDevtools client:idle />}
 

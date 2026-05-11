@@ -10,17 +10,25 @@ import IconQrCode from "~icons/ri/qr-code-line";
 interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
+	checkoutToken?: string;
 }
 
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
+
+	const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+
+	onMount(() => {
+		setShowQr(isDesktop());
+	});
 
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async () => {
 				return await api.payment.createQr.mutate({
 					paymentNumber: props.paymentNumber,
-				});
+					checkoutToken: props.checkoutToken,
+				} as { paymentNumber: string });
 			},
 		}),
 		() => queryClient,
@@ -51,7 +59,8 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			queryFn: () =>
 				api.payment.getPaymentStatus.query({
 					paymentNumber: props.paymentNumber,
-				}),
+					checkoutToken: props.checkoutToken,
+				} as { paymentNumber: string }),
 			enabled: Boolean(invoiceData()?.invoice_id),
 			refetchInterval: 5000,
 		}),
@@ -60,7 +69,11 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	createEffect(() => {
 		if (paymentStatusQuery.data?.status === "success") {
-			navigate(`/payment/success/${props.paymentNumber}`);
+			navigate(
+				props.checkoutToken
+					? `/payment/success/${props.paymentNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
+					: `/payment/success/${props.paymentNumber}`,
+			);
 		}
 	});
 
@@ -111,6 +124,31 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</div>
 					</Show>
 
+					{/* QR Code toggle */}
+					<div class="space-y-3">
+						<button
+							type="button"
+							onClick={() => setShowQr((v) => !v)}
+							class="flex w-full items-center justify-center gap-2 border-2 border-border bg-muted/30 px-3 py-2.5 font-bold text-xs uppercase tracking-wide transition-all hover:bg-muted/50"
+						>
+							<IconQrCode class="h-4 w-4" />
+							{showQr() ? "QR код хаах" : "QR код харах"}
+						</button>
+
+						<Show when={showQr()}>
+							<div class="flex flex-col items-center gap-3 border-2 border-border bg-white p-4">
+								<img
+									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
+									alt="QPay QR"
+									class="h-48 w-48 object-contain sm:h-56 sm:w-56"
+								/>
+								<p class="text-center text-[11px] text-muted-foreground">
+									QPay апп эсвэл мобайл банк ашиглан QR кодыг уншуулна уу
+								</p>
+							</div>
+						</Show>
+					</div>
+
 					{/* Bank deeplinks grid */}
 					<Show when={(invoiceData()?.urls?.length ?? 0) > 0}>
 						<div class="space-y-3">
@@ -141,31 +179,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							</div>
 						</div>
 					</Show>
-
-					{/* QR Code toggle */}
-					<div class="space-y-3">
-						<button
-							type="button"
-							onClick={() => setShowQr((v) => !v)}
-							class="flex w-full items-center justify-center gap-2 border-2 border-border bg-muted/30 px-3 py-2.5 font-bold text-xs uppercase tracking-wide transition-all hover:bg-muted/50"
-						>
-							<IconQrCode class="h-4 w-4" />
-							{showQr() ? "QR код хаах" : "QR код харах"}
-						</button>
-
-						<Show when={showQr()}>
-							<div class="flex flex-col items-center gap-3 border-2 border-border bg-white p-4">
-								<img
-									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
-									alt="QPay QR"
-									class="h-48 w-48 object-contain sm:h-56 sm:w-56"
-								/>
-								<p class="text-center text-[11px] text-muted-foreground">
-									QPay апп эсвэл мобайл банк ашиглан QR кодыг уншуулна уу
-								</p>
-							</div>
-						</Show>
-					</div>
 
 					<p class="text-center text-[11px] text-muted-foreground">
 						Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.

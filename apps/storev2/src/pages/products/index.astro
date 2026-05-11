@@ -1,37 +1,42 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import ProductsList from "@/components/product/products-list";
 import Layout from "@/layouts/Layout.astro";
+import { api } from "@/lib/trpc";
+
+// Redirect old query-param URLs to new slug-based URLs
+const url = new URL(Astro.request.url);
+const categoryParam = url.searchParams.get("category");
+const brandParam = url.searchParams.get("brand");
+
+if (categoryParam) {
+	const categoryId = Number.parseInt(categoryParam, 10);
+	if (!Number.isNaN(categoryId)) {
+		try {
+			const categories = await api.category.getAllCategoriesWithStock.query();
+			const category = categories.find((c) => c.id === categoryId);
+			if (category?.slug) {
+				return Astro.redirect(`/products/category/${category.slug}`, 301);
+			}
+		} catch {
+			// fall through to normal rendering
+		}
+	}
+}
+
+if (brandParam) {
+	const brandId = Number.parseInt(brandParam, 10);
+	if (!Number.isNaN(brandId)) {
+		try {
+			const brands = await api.brand.getAllBrandsWithStock.query();
+			const brand = brands.find((b) => b.id === brandId);
+			if (brand?.slug) {
+				return Astro.redirect(`/products/brand/${brand.slug}`, 301);
+			}
+		} catch {
+			// fall through to normal rendering
+		}
+	}
+}
 
 const title = "Бүтээгдэхүүн";
 const description = "АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлийн бүрэн цуглуулга. Эрүүл мэндээ дэмжих бүтээгдэхүүнүүдийг сонгоорой.";

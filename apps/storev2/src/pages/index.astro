@@ -6,7 +6,7 @@
 
 
 
-import AddToCartButton from "@/components/cart/add-to-cart-button";
+import HomeProductCard from "@/components/product/home-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
@@ -16,10 +16,10 @@ import { formatCurrency } from "@/lib/utils";
 
 export const prerender = true;
 
-const products = await api.product.getProductsForHome.query();
-const { featuredProducts, newProducts, discountedProducts } = products;
-const brands = await api.brand.getAllBrands.query();
-const allCategories = await api.category.getAllCategories.query();
+const products = await api.product.getProductsForHomeWithStock.query();
+const { featuredProducts, newProducts } = products;
+const brands = await api.brand.getAllBrandsWithStock.query();
+const allCategories = await api.category.getAllCategoriesWithStock.query();
 
 const preferredCategoryNames = [
   "Дархлаа",
@@ -44,10 +44,14 @@ const orderedCategories = [
 const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   id: number;
   name: string;
+  slug: string;
 }>;
 ---
 
-<Layout>
+<Layout
+  image="/og-landing.png"
+  imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
+>
   <!-- DESIGN 4 v2: "SPLIT EDITORIAL" — Mobile-first rewrite -->
   <!-- 99% mobile traffic. Every section designed for thumb-scrolling first. -->
 
@@ -110,11 +114,11 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   <!-- ==================== BRAND MARQUEE ==================== -->
   <section class="border-b-2 border-border bg-foreground overflow-hidden">
     <div class="py-3.5 lg:py-4 flex items-center gap-8 whitespace-nowrap" style="animation: brand-scroll-4 25s linear infinite;">
-      {[...Array(4)].map(() => brands.map((brand: {name: string}) => (
-        <span class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8">
+      {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
+        <a href={`/products/brand/${brand.slug}/1`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
           {brand.name}
           <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
-        </span>
+        </a>
       )))}
     </div>
   </section>
@@ -124,7 +128,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
     <div class="px-5 py-3.5 lg:px-8">
       <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
         {categoriesForPills.map((cat) => (
-          <a href={`/products?category=${cat.id}`} class="flex-none px-3.5 py-2 border-2 border-border bg-card font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
+          <a href={`/products/category/${cat.slug}/1`} class="flex-none px-3.5 py-2 border-2 border-border bg-card font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
             {cat.name}
           </a>
         ))}
@@ -144,28 +148,9 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
         <p class="text-[12px] text-muted-foreground font-medium mt-1">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
       </div>
 
-      <!-- Mobile: 2col tight grid -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
         {featuredProducts.map((p: ProductForHome) => (
-          <div class="group border-2 border-border bg-card active:shadow-hard-sm transition-all">
-            <a href={`/products/${p.slug}-${p.id}`} class="block">
-              <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
-                {p.image && (
-                  <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-4 lg:p-5" width="480" height="480" loading="lazy" decoding="async" />
-                )}
-              </div>
-            </a>
-            <div class="p-2.5">
-              <div class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
-              <a href={`/products/${p.slug}-${p.id}`}>
-                <h3 class="text-[11px] md:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">{p.name}</h3>
-              </a>
-              <div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
-                <span class="font-black text-[13px] md:text-sm">{formatCurrency(p.price)}</span>
-                <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
-              </div>
-            </div>
-          </div>
+          <HomeProductCard product={p} />
         ))}
       </div>
     </div>
@@ -203,83 +188,47 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
       </div>
       <p class="text-[12px] text-muted-foreground font-medium mb-5">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
 
-      <!-- Swipeable on mobile, grid on desktop -->
       <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-4">
         {newProducts.map((p: ProductForHome) => (
-          <div class="flex-none w-[165px] lg:w-auto snap-start group border-2 border-border bg-card">
-            <a href={`/products/${p.slug}-${p.id}`} class="block">
-              <div class="relative aspect-square overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
-                {p.image && (
-                  <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5" width="480" height="480" loading="lazy" decoding="async" />
-                )}
-              </div>
-            </a>
-            <div class="p-2 lg:p-3">
-              <div class="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
-              <a href={`/products/${p.slug}-${p.id}`}>
-                <h3 class="text-[10px] lg:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">{p.name}</h3>
-              </a>
-              <div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
-                <span class="font-black text-[12px] lg:text-sm">{formatCurrency(p.price)}</span>
-                <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
-              </div>
-            </div>
-          </div>
+          <HomeProductCard product={p} class="flex-none w-[165px] lg:w-auto snap-start" />
         ))}
       </div>
     </div>
   </section>
 
-  <!-- ==================== DISCOUNTED ==================== -->
-  <section class="border-b-2 border-border">
-    <!-- Dark header strip -->
-    <div class="border-b-2 border-border bg-foreground text-background">
-      <div class="px-5 py-4 lg:px-8 lg:py-6 flex items-center justify-between">
-        <div>
-          <h2 class="text-xl md:text-2xl font-black uppercase tracking-tight">Хямдралтай</h2>
-          <p class="text-[11px] font-medium text-background/50 mt-0.5">Илүү боломжийн үнээр авч болох бүтээгдэхүүнүүд</p>
-        </div>
-        <a href="/products?filter=discount" class="hidden sm:inline-flex px-4 py-2 border-2 border-background/30 text-background font-bold text-[11px] uppercase tracking-wider active:bg-background active:text-foreground transition-colors">
-          Бүгд
-        </a>
+  <!-- ==================== TRUST & CERTIFICATIONS ==================== -->
+  <section class="border-b-2 border-border bg-muted/30">
+    <div class="px-5 py-8 lg:px-8 lg:py-12">
+      <div class="text-center mb-6">
+        <h2 class="text-lg md:text-xl font-black uppercase tracking-tight">Баталгаат чанар</h2>
+        <p class="text-xs font-medium text-muted-foreground mt-1">АНУ-ын стандартын дагуу үйлдвэрлэгдсэн бүтээгдэхүүн</p>
       </div>
-    </div>
-
-    <!-- Products -->
-    <div class="px-5 py-8 lg:px-8 lg:py-14">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
-        {discountedProducts.map((p: ProductForHome) => (
-          <div class="group border-2 border-border bg-card active:shadow-hard-sm transition-all">
-            <a href={`/products/${p.slug}-${p.id}`} class="block">
-              <div class="relative aspect-[4/3] overflow-hidden border-b-2 border-border" style={`background: ${productColors[p.id % productColors.length]}`}>
-                {p.discount && (
-                  <div class="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 bg-foreground text-background text-[10px] font-black">-{p.discount}%</div>
-                )}
-                {p.image && (
-                  <img src={toProductImageUrl(p.image, "card") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-4" width="360" height="450" loading="lazy" decoding="async" />
-                )}
-              </div>
-            </a>
-            <div class="p-2.5">
-              <div class="text-[7px] lg:text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
-              <a href={`/products/${p.slug}-${p.id}`}>
-                <h3 class="text-[10px] lg:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">{p.name}</h3>
-              </a>
-              <div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
-                <span class="font-black text-[13px] lg:text-sm">{formatCurrency(p.price)}</span>
-                <AddToCartButton client:load compact cartItem={{ productId: p.id, quantity: 1, name: p.name, price: p.price, image: p.image }} />
-              </div>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        {[
+          { label: "GMP", sub: "Certified", desc: "Good Manufacturing Practice" },
+          { label: "FDA", sub: "Registered", desc: "Food & Drug Administration" },
+          { label: "NSF", sub: "Certified", desc: "National Sanitation Foundation" },
+          { label: "USP", sub: "Verified", desc: "United States Pharmacopeia" },
+          { label: "Non-GMO", sub: "Project", desc: "Non-GMO Project Verified" },
+          { label: "USDA", sub: "Organic", desc: "USDA Certified Organic" },
+        ].map((cert) => (
+          <div class="group flex items-center gap-2 px-3 py-2 border-3 border-border bg-card shadow-hard-sm hover:shadow-hard hover:-translate-y-0.5 transition-all">
+            <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4"/>
+              </svg>
+            </div>
+            <div>
+              <div class="font-black text-xs uppercase tracking-wider leading-none">{cert.label}</div>
+              <div class="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">{cert.sub}</div>
             </div>
           </div>
         ))}
       </div>
-
-      <!-- Mobile "see all" link -->
-      <a href="/products?filter=discount" class="sm:hidden flex items-center justify-center gap-1 mt-5 py-2.5 border-2 border-border font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
-        Бүгдийг үзэх →
-      </a>
-
-      <p class="mt-5 text-[9px] font-semibold text-muted-foreground text-center">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
+      <p class="text-center text-[10px] font-semibold text-muted-foreground mt-5 max-w-lg mx-auto leading-relaxed">
+        Бидний борлуулж буй бүтээгдэхүүнүүд АНУ-ын GMP баталгаат үйлдвэрүүдэд үйлдвэрлэгдсэн, FDA бүртгэлтэй, чанарын өндөр стандарт хангасан жинхэнэ бүтээгдэхүүнүүд юм.
+      </p>
     </div>
   </section>
 

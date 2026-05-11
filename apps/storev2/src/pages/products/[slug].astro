@@ -21,7 +21,7 @@ import { api } from "@/lib/trpc";
 
 export async function getStaticPaths() {
 	try {
-		const products = await api.product.getAllProducts.query();
+		const products = await api.product.getPrerenderProducts.query();
 		return products.map((product) => ({
 			params: { slug: `${product.slug}-${product.id}` },
 		}));
@@ -48,12 +48,13 @@ if (!productData) {
 
 const product = productData;
 
-// Determine availability based on status
-const isInStock = product.status === "active";
-// Calculate sale price if there's a discount
-const finalPrice = product.discount && product.discount > 0 
-	? Math.round(product.price * (1 - product.discount / 100))
-	: product.price;
+// Determine availability based on status and stock. This is evaluated at build
+// time for prerendered product pages.
+const isInStock = product.status === "active" && product.stock > 0;
+
+const categoryHref = product.category?.slug
+	? `/products/category/${product.category.slug}/1`
+	: `/products?category=${product.categoryId}`;
 
 const breadcrumbItems = [
 	{
@@ -62,7 +63,7 @@ const breadcrumbItems = [
 	},
 	{
 		label: product.category?.name || "Category",
-		href: `/products?category=${product.categoryId}`,
+		href: categoryHref,
 	},
 	{
 		label: product.name,
@@ -71,12 +72,20 @@ const breadcrumbItems = [
 ];
 
 const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "/placeholder-product.png";
-const ogImage = `/og/products/${slug}.png`;
+const ogImage = `/og/products/${slug}.svg`;
+
+function truncateAtWord(text: string, maxLength: number) {
+	const normalized = text.replace(/\s+/g, " ").trim();
+	if (normalized.length <= maxLength) return normalized;
+	const truncated = normalized.slice(0, maxLength + 1);
+	const lastSpace = truncated.lastIndexOf(" ");
+	return `${truncated.slice(0, lastSpace > 80 ? lastSpace : maxLength).trim()}…`;
+}
 
 // SEO metadata
 const seoTitle = product.name;
 const seoDescription = product.description 
-	? product.description.slice(0, 160) 
+	? truncateAtWord(product.description, 155)
 	: `${product.name} - ${product.brand?.name || "АНУ"} брэндийн витамин, нэмэлт тэжээл. Америк Витамин дэлгүүрээс захиалаарай.`;
 
 // Product JSON-LD Schema
@@ -95,7 +104,7 @@ const productSchema = {
 		"@type": "Offer",
 		url: `${SITE_URL}/products/${slug}`,
 		priceCurrency: "MNT",
-		price: finalPrice,
+		price: product.price,
 		priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
 		availability: isInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
 		seller: {
@@ -129,7 +138,9 @@ const breadcrumbSchema = {
 			"@type": "ListItem",
 			position: 3,
 			name: product.category.name,
-			item: `${SITE_URL}/products?category=${product.categoryId}`
+			item: product.category?.slug
+			? `${SITE_URL}/products/category/${product.category.slug}/1`
+			: `${SITE_URL}/products?category=${product.categoryId}`
 		}] : []),
 		{
 			"@type": "ListItem",

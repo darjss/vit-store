@@ -30,7 +30,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				if (!props.searchQuery || props.searchQuery.length < 2) {
 					return { products: [], brands: [], categories: [] };
 				}
-				return await api.product.searchStorefront.query({
+				return await api.product.searchStorefrontWithStock.query({
 					query: props.searchQuery,
 					limit: 8,
 				});
@@ -147,7 +147,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											<For each={query.data?.brands ?? []}>
 												{(brand) => (
 													<a
-														href={`/products?brand=${brand.id}`}
+														href={`/products/brand/${brand.slug}/1`}
 														onClick={props.onProductClick}
 														class="inline-flex min-h-10 items-center gap-2 border-2 border-black bg-primary px-3 py-2 font-black text-black text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_0_#000]"
 													>
@@ -173,7 +173,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											<For each={query.data?.categories ?? []}>
 												{(category) => (
 													<a
-														href={`/products?category=${category.id}`}
+														href={`/products/category/${category.slug}/1`}
 														onClick={props.onProductClick}
 														class="inline-flex min-h-10 items-center gap-2 border-2 border-black bg-white px-3 py-2 font-black text-black text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary/30 hover:shadow-[1px_1px_0_0_#000]"
 													>

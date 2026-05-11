@@ -29,7 +29,7 @@ const description = "Захиалгаа баталгаажуулж, төлбөр
 
 <Layout title={title} description={description} noindex nofollow>
     <div class="container mx-auto px-4 py-8 min-h-screen">
-        <CheckoutForm user={user} client:load>
+        <CheckoutForm user={user} client:only="solid-js">
             <div slot="fallback" class="max-w-4xl mx-auto min-h-[calc(100vh-200px)]">
                 <div class="border-4 border-black p-6 bg-white shadow-[6px_6px_0_0_#000]">
                     <div class="h-10 bg-black/10 w-64 mb-6 animate-pulse"></div>

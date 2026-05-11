@@ -17,13 +17,21 @@ if(id===undefined){
 }
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-const payment = await serverApi.payment.getPaymentByNumber.query({ paymentNumber: id });
+const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
+const payment = await serverApi.payment.getPaymentByNumber.query({
+    paymentNumber: id,
+    checkoutToken,
+} as { paymentNumber: string });
 if(!payment){
     throw Astro.redirect("/404");
 }
 
 if (payment.status === "success") {
-    throw Astro.redirect(`/payment/success/${payment.paymentNumber}`);
+    throw Astro.redirect(
+        checkoutToken
+            ? `/payment/success/${payment.paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
+            : `/payment/success/${payment.paymentNumber}`,
+    );
 }
 ---
 
@@ -75,7 +83,8 @@ if (payment.status === "success") {
             paymentNumber={id}
             total={payment.total}
             orderNumber={payment.order.orderNumber}
-            client:load
+            checkoutToken={checkoutToken}
+            client:only="solid-js"
         >
             <div slot="fallback" class="w-full border-3 border-border bg-card p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                 <div class="h-10 w-full animate-pulse border-2 border-border bg-muted/40"></div>

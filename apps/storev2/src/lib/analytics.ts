@@ -17,6 +17,15 @@ function identify(distinctId: string, properties?: Record<string, unknown>) {
 	}
 }
 
+export function captureException(
+	error: unknown,
+	properties?: Record<string, unknown>,
+) {
+	if (typeof window !== "undefined" && window.posthog) {
+		window.posthog.captureException(error, properties);
+	}
+}
+
 /**
  * Hash a string using SHA-256 (for phone number anonymization)
  */

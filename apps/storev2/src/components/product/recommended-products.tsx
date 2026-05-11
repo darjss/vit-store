@@ -20,7 +20,7 @@ async function fetchRecommendedProducts(
 	productName: string,
 ): Promise<ProductForHome[]> {
 	try {
-		const upstashMatches = await api.product.searchProductsForPage.query({
+		const upstashMatches = await api.product.searchProductsForPageWithStock.query({
 			query: productName,
 			limit: 10,
 			categoryId,
@@ -36,7 +36,6 @@ async function fetchRecommendedProducts(
 				price: p.price,
 				image: p.image,
 				brand: p.brand,
-				discount: 0,
 			}));
 
 		if (filteredMatches.length > 0) {
@@ -51,7 +50,7 @@ async function fetchRecommendedProducts(
 		return products;
 	} catch {
 		try {
-			const fallbackProducts = await api.product.getProductsForHome.query();
+			const fallbackProducts = await api.product.getProductsForHomeWithStock.query();
 			return fallbackProducts.featuredProducts.slice(0, 4);
 		} catch {
 			return [];
@@ -101,11 +100,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 				<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
 					<For each={products()}>
 						{(product) => {
-							const hasDiscount = product.discount && product.discount > 0;
-							const originalPrice = product.price;
-							const discountedPrice = hasDiscount
-								? product.price * (1 - (product.discount || 0) / 100)
-								: product.price;
 							const imageProps = getProductImageProps(product.image, "card");
 
 							return (
@@ -139,12 +133,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 											/>
 										</Show>
 
-										{/* Discount Badge */}
-										<Show when={hasDiscount}>
-											<div class="absolute top-3 right-3 z-10 border-2 border-border bg-destructive px-2 py-1 font-black text-[10px] text-destructive-foreground shadow-hard-sm sm:text-xs">
-												-{product.discount}%
-											</div>
-										</Show>
+	
 									</div>
 
 									{/* Content Section */}
@@ -156,13 +145,8 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 
 										{/* Price Section */}
 										<div class="mt-auto flex flex-col">
-											<Show when={hasDiscount}>
-												<span class="font-bold text-muted-foreground text-xs line-through decoration-2 decoration-destructive">
-													{formatCurrency(originalPrice)}
-												</span>
-											</Show>
 											<span class="font-black text-lg tracking-tight sm:text-xl">
-												{formatCurrency(discountedPrice)}
+												{formatCurrency(product.price)}
 											</span>
 										</div>
 									</div>

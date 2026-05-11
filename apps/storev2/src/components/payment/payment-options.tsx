@@ -10,6 +10,7 @@ interface PaymentOptionsProps {
 	paymentNumber: string;
 	total: number;
 	orderNumber: string;
+	checkoutToken?: string;
 }
 
 const PaymentOptions = (props: PaymentOptionsProps) => {
@@ -137,7 +138,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							</div>
 						</div>
 
-						<ConfirmPaymentButton paymentNumber={props.paymentNumber} />
+						<ConfirmPaymentButton
+							paymentNumber={props.paymentNumber}
+							checkoutToken={props.checkoutToken}
+						/>
 					</div>
 				</div>
 			</Show>
@@ -148,6 +152,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 						<QpayPaymentPanel
 							paymentNumber={props.paymentNumber}
 							amount={props.total}
+							checkoutToken={props.checkoutToken}
 						/>
 					</div>
 				</div>

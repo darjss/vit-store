@@ -1,7 +1,4 @@
-import type {
-	PaymentProviderType,
-	PaymentStatusType,
-} from "@vit/api/lib/types";
+import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
 import {
 	createEffect,
 	createResource,
@@ -19,23 +16,30 @@ import IconTime from "~icons/ri/time-line";
 const PaymentStatus = (props: {
 	payment: {
 		paymentNumber: string;
+		checkoutToken?: string;
 		status: PaymentStatusType;
 		provider: PaymentProviderType;
 	};
 }) => {
 	const [refetchTrigger, setRefetchTrigger] = createSignal(1);
 
-	const fetchPaymentStatus = async () => {
-		return await api.payment.getPaymentStatus.query({
+	type PaymentStatusResult = {
+		status: PaymentStatusType;
+		provider: PaymentProviderType;
+	};
+
+	const fetchPaymentStatus = async (): Promise<PaymentStatusResult> => {
+		return (await api.payment.getPaymentStatus.query({
 			paymentNumber: props.payment.paymentNumber,
-		});
+			checkoutToken: props.payment.checkoutToken,
+		} as { paymentNumber: string })) as PaymentStatusResult;
 	};
 
 	const [data] = createResource(refetchTrigger, fetchPaymentStatus, {
 		initialValue: {
 			status: props.payment.status,
 			provider: props.payment.provider,
-		},
+		} satisfies Awaited<ReturnType<typeof fetchPaymentStatus>>,
 	});
 
 	const currentData = () => data.latest ?? data();
@@ -67,7 +71,12 @@ const PaymentStatus = (props: {
 					</p>
 				</div>
 			</Match>
-			<Match when={currentData()?.status === "pending"}>
+			<Match
+				when={
+					currentData()?.status === "pending" ||
+					currentData()?.status === "customer_claimed_paid"
+				}
+			>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-4 border-black bg-yellow-400 text-black shadow-[8px_8px_0_0_#000]">
 						<IconTime class="h-10 w-10 animate-spin" />

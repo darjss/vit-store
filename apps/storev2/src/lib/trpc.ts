@@ -53,6 +53,49 @@ const getBackendUrl = () => {
 		: "http://localhost:3000/trpc/store";
 };
 
+const getClientBackendUrl = () => {
+	// Browser calls should stay same-origin. Facebook's in-app browser is much
+	// more fragile with cross-origin fetches (it only surfaces "Load failed"),
+	// so route client tRPC traffic through the Astro app and let the server proxy
+	// it to the API worker.
+	if (typeof window !== "undefined") {
+		return "/trpc/store";
+	}
+
+	return getBackendUrl();
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchWithServerRetry = async (
+	fetchFn: typeof fetch,
+	url: Parameters<typeof fetch>[0],
+	options?: Parameters<typeof fetch>[1],
+) => {
+	const attempts = typeof window === "undefined" ? 3 : 1;
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= attempts; attempt++) {
+		try {
+			return await fetchFn(url, options);
+		} catch (error) {
+			lastError = error;
+
+			if (attempt === attempts) {
+				break;
+			}
+
+			console.warn(
+				`tRPC fetch failed; retrying (${attempt}/${attempts - 1})`,
+				error,
+			);
+			await wait(500 * attempt);
+		}
+	}
+
+	throw lastError;
+};
+
 export const createServerClient = (
 	cookies?: string,
 	serverBinding?: { fetch: typeof fetch },
@@ -70,7 +113,7 @@ export const createServerClient = (
 						? serverBinding.fetch.bind(serverBinding)
 						: fetch;
 
-					const response = await fetchFn(url, {
+					const response = await fetchWithServerRetry(fetchFn, url, {
 						...options,
 						credentials: "include",
 						headers: {
@@ -97,21 +140,13 @@ export const createServerClient = (
 export const api = createTRPCClient<StoreRouter>({
 	links: [
 		httpBatchLink({
-			url: getBackendUrl(),
+			url: getClientBackendUrl(),
 			transformer: SuperJSON,
 			fetch: async (url, options) => {
-				const headers: Record<string, string> = {
-					...(options?.headers as Record<string, string>),
-				};
-
-				if (typeof window !== "undefined") {
-					headers.Origin = window.location.origin;
-				}
-
-				const response = await fetch(url, {
+				const response = await fetchWithServerRetry(fetch, url, {
 					...options,
 					credentials: "include",
-					headers,
+					headers: options?.headers,
 				});
 
 				if (await checkUnauthorized(response)) {

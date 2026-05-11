@@ -54,9 +54,14 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onSuccess: async (data) => {
-				const paymentNumber = data?.paymentNumber;
+				const checkoutData = data as typeof data & { checkoutToken?: string };
+				const paymentNumber = checkoutData?.paymentNumber;
+				const checkoutToken = checkoutData?.checkoutToken;
 
 				if (paymentNumber) {
+					if (checkoutToken) {
+						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
+					}
 					trackOrderPlaced(paymentNumber, cart.count());
 					showToast({
 						title: "Амжилттай",
@@ -65,7 +70,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						duration: 5000,
 					});
 
-					const targetPath = `/payment/${paymentNumber}`;
+					const targetPath = checkoutToken
+						? `/payment/${paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
+						: `/payment/${paymentNumber}`;
 					navigate(targetPath, { history: "push" });
 
 					window.setTimeout(() => {

@@ -73,6 +73,38 @@ const resolvedImageType = imageType || inferImageType(absoluteImage);
 
 // Open Graph type
 const ogType = article ? "article" : "website";
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/favicon.svg`,
+  sameAs: [
+    "https://www.facebook.com/profile.php?id=100057596651892",
+    "https://www.instagram.com/amerikhunsbaraa/",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    telephone: "+97699993950",
+    contactType: "customer service",
+    areaServed: "MN",
+    availableLanguage: ["mn"],
+  },
+};
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  inLanguage: "mn-MN",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${SITE_URL}/search?q={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
+};
 ---
 
 <AstroSEO
@@ -129,6 +161,5 @@ const ogType = article ? "article" : "website";
   }}
 />
 
-<!-- Additional meta tags not handled by astro-seo -->
-<meta name="robots" content={`${noindex ? 'noindex' : 'index'}, ${nofollow ? 'nofollow' : 'follow'}`} />
-<link rel="canonical" href={canonicalURL} />
+<script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+<script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
