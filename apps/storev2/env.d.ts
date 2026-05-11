@@ -6,8 +6,11 @@ import type { storev2 } from "./alchemy.run.ts";
 type Runtime = import("@astrojs/cloudflare").Runtime<typeof storev2.Env>;
 
 interface PostHog {
+	init: (apiKey: string, options?: Record<string, unknown>) => void;
 	capture: (event: string, properties?: Record<string, unknown>) => void;
 	identify: (distinctId: string, properties?: Record<string, unknown>) => void;
+	captureException: (error: unknown, properties?: Record<string, unknown>) => void;
+	get_distinct_id: () => string;
 }
 
 declare global {
