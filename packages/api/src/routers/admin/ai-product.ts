@@ -1,4 +1,3 @@
-import { opencode } from "~/lib/opencode-provider";
 import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
 import {
@@ -12,6 +11,8 @@ import { z } from "zod";
 import type { Context } from "~/lib/context";
 import { kv } from "~/lib/kv";
 import { logger } from "~/lib/logger";
+import { opencode } from "~/lib/opencode-provider";
+import { slugify } from "~/lib/utils";
 import { adminProcedure, router } from "~/lib/trpc";
 
 // Cache TTLs
@@ -341,6 +342,7 @@ async function resolveOrCreateBrandId(
 	try {
 		const created = await brandQueries.admin.createBrand({
 			name: cleanBrandName,
+			slug: slugify(cleanBrandName),
 			logoUrl: DEFAULT_BRAND_LOGO_URL,
 		});
 		logger.info("extractProductFromQuery.brandAutoCreate", {
@@ -525,7 +527,10 @@ async function filterProductImages(
 
 	// Single pass - skip refinement for speed
 	const picked = await selectProductImagesWithGemini(productName, candidates);
-	const uniquePicked = uniqueStable(picked.keep, normalizedImageKey).slice(0, 8);
+	const uniquePicked = uniqueStable(picked.keep, normalizedImageKey).slice(
+		0,
+		8,
+	);
 	const primary = picked.primary;
 
 	if (!primary || uniquePicked.length === 0) {
@@ -1225,6 +1230,129 @@ export const aiProduct = router({
 		.input(v.object({ query: v.pipe(v.string(), v.minLength(3)) }))
 		.mutation(async ({ ctx, input }): Promise<ExtractedProductData> => {
 			return extractProductFromQuery(ctx, input.query);
+		}),
+	batchCreateProducts: adminProcedure
+		.input(
+			v.object({
+				items: v.array(
+					v.object({
+						amazonUrl: v.pipe(v.string(), v.minLength(1)),
+						stock: v.pipe(v.number(), v.integer()),
+						price: v.pipe(v.number(), v.integer()),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const results: Array<{
+				amazonUrl: string;
+				productId: number | null;
+				slug: string | null;
+				status: "created" | "duplicate_flag" | "failed";
+				error?: string;
+			}> = [];
+
+			for (const item of input.items) {
+				logger.info("aiProduct.batchCreateProducts.item.start", {
+					amazonUrl: item.amazonUrl,
+					stock: item.stock,
+					price: item.price,
+				});
+
+				try {
+					const extracted = await extractProductFromQuery(ctx, item.amazonUrl);
+
+					const existingBySlug = await productQueries.admin.getProductBySlug(
+						extracted.slug,
+					);
+					const isDuplicate = !!existingBySlug;
+
+					const productResult = await productQueries.admin.createProduct({
+						name: `${extracted.brand ? `${extracted.brand} ` : ""}${extracted.name} ${extracted.potency} ${extracted.amount}`,
+						slug: extracted.slug,
+						description: extracted.description,
+						discount: 0,
+						amount: extracted.amount,
+						potency: extracted.potency,
+						stock: item.stock,
+						price: item.price,
+						dailyIntake: extracted.dailyIntake,
+						categoryId: extracted.categoryId ?? 1,
+						brandId: extracted.brandId ?? 1,
+						status: "active",
+						name_mn: extracted.name_mn,
+						ingredients: extracted.ingredients,
+						tags: [],
+						seoTitle: extracted.seoTitle,
+						seoDescription: extracted.seoDescription,
+						weightGrams: extracted.weightGrams,
+					});
+
+					if (!productResult) {
+						results.push({
+							amazonUrl: item.amazonUrl,
+							productId: null,
+							slug: extracted.slug,
+							status: "failed",
+							error: "createProduct returned undefined",
+						});
+						continue;
+					}
+
+					if (extracted.images.length > 0) {
+						await productQueries.admin.createProductImages(
+							productResult.id,
+							extracted.images.map((img, index) => ({
+								url: img.url,
+								isPrimary: index === 0,
+							})),
+						);
+					}
+
+					logger.info("aiProduct.batchCreateProducts.item.done", {
+						amazonUrl: item.amazonUrl,
+						productId: productResult.id,
+						slug: extracted.slug,
+						isDuplicate,
+					});
+
+					results.push({
+						amazonUrl: item.amazonUrl,
+						productId: productResult.id,
+						slug: extracted.slug,
+						status: isDuplicate ? "duplicate_flag" : "created",
+					});
+				} catch (error) {
+					logger.error("aiProduct.batchCreateProducts.item.failed", error, {
+						amazonUrl: item.amazonUrl,
+					});
+					results.push({
+						amazonUrl: item.amazonUrl,
+						productId: null,
+						slug: null,
+						status: "failed",
+						error: error instanceof Error ? error.message : "unknown error",
+					});
+				}
+			}
+
+			const created = results.filter((r) => r.status === "created").length;
+			const duplicates = results.filter(
+				(r) => r.status === "duplicate_flag",
+			).length;
+			const failed = results.filter((r) => r.status === "failed").length;
+
+			logger.info("aiProduct.batchCreateProducts.done", {
+				total: input.items.length,
+				created,
+				duplicates,
+				failed,
+			});
+
+			return {
+				results,
+				summary: { total: input.items.length, created, duplicates, failed },
+			};
 		}),
 	regenerateProductImages: adminProcedure
 		.input(

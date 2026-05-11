@@ -1,93 +1,115 @@
+import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { brandQueries } from "@vit/api/queries";
 import { addBrandSchema } from "@vit/shared";
 import * as v from "valibot";
 import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
 import { rebuildProductSearchIndex } from "~/lib/product-search/client";
+import { slugify } from "~/lib/utils";
 import { adminProcedure, router } from "~/lib/trpc";
-
 const scheduleProductSearchRebuild = (ctx: {
-	c: { executionCtx: ExecutionContext };
-	log: { error: (message: string, error: unknown) => void };
+    c: {
+        executionCtx: ExecutionContext;
+    };
+    log: RequestLogger<any>;
 }) => {
-	ctx.c.executionCtx.waitUntil(
-		rebuildProductSearchIndex("brand_updated").catch((error) => {
-			ctx.log.error("product_search.rebuild_failed", error);
-		}),
-	);
+    ctx.c.executionCtx.waitUntil(rebuildProductSearchIndex("brand_updated").catch((error) => {
+        ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+            event: "product_search.rebuild_failed"
+        });
+    }));
 };
-
 export const brands = router({
-	getAllBrands: adminProcedure.query(async ({ ctx }) => {
-		try {
-			const brands = await brandQueries.admin.getAllBrands();
-			ctx.log.info("getAllBrands", { count: brands.length });
-			return brands;
-		} catch (error) {
-			ctx.log.error("getAllBrands", error);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Error fetching brands",
-				cause: error,
-			});
-		}
-	}),
-	addBrand: adminProcedure
-		.input(addBrandSchema)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const { name, logoUrl } = input;
-				await brandQueries.admin.createBrand({ name, logoUrl });
-				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-				scheduleProductSearchRebuild(ctx);
-				return { message: "Successfully updated category" };
-			} catch (err) {
-				ctx.log.error("addBrand", err);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to add products",
-					cause: err,
-				});
-			}
-		}),
-	updateBrand: adminProcedure
-		.input(addBrandSchema)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				const id = input.id;
-				if (!id) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to add products",
-					});
-				}
-				const { name, logoUrl } = input;
-				await brandQueries.admin.updateBrand(id, { name, logoUrl });
-				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-				scheduleProductSearchRebuild(ctx);
-			} catch (err) {
-				ctx.log.error("updateBrand", err);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to add products",
-					cause: err,
-				});
-			}
-		}),
-	deleteBrand: adminProcedure
-		.input(v.object({ id: v.number() }))
-		.mutation(async ({ ctx, input }) => {
-			try {
-				await brandQueries.admin.deleteBrand(input.id);
-				await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-				scheduleProductSearchRebuild(ctx);
-			} catch (err) {
-				ctx.log.error("deleteBrand", err);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to delete brand",
-					cause: err,
-				});
-			}
-		}),
+    getAllBrands: adminProcedure.query(async ({ ctx }) => {
+        try {
+            const brands = await brandQueries.admin.getAllBrands();
+            ctx.log.info("getAllBrands", { count: brands.length });
+            return brands;
+        }
+        catch (error) {
+            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+                event: "getAllBrands"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Error fetching brands",
+                cause: error,
+            });
+        }
+    }),
+    addBrand: adminProcedure
+        .input(addBrandSchema)
+        .mutation(async ({ ctx, input }) => {
+        try {
+            const slug = input.slug || slugify(input.name);
+            const { id: _id, ...data } = input;
+            await brandQueries.admin.createBrand({
+                ...data,
+                slug,
+            });
+            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
+            scheduleProductSearchRebuild(ctx);
+            return { message: "Successfully updated category" };
+        }
+        catch (err) {
+            ctx.log.error(err instanceof Error ? err : new Error(String(err)), {
+                event: "addBrand"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to add products",
+                cause: err,
+            });
+        }
+    }),
+    updateBrand: adminProcedure
+        .input(addBrandSchema)
+        .mutation(async ({ ctx, input }) => {
+        try {
+            const id = input.id;
+            if (!id) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to add products",
+                });
+            }
+            const slug = input.slug || slugify(input.name);
+            const { id: _id, ...data } = input;
+            await brandQueries.admin.updateBrand(id, {
+                ...data,
+                slug,
+            });
+            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
+            scheduleProductSearchRebuild(ctx);
+        }
+        catch (err) {
+            ctx.log.error(err instanceof Error ? err : new Error(String(err)), {
+                event: "updateBrand"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to add products",
+                cause: err,
+            });
+        }
+    }),
+    deleteBrand: adminProcedure
+        .input(v.object({ id: v.number() }))
+        .mutation(async ({ ctx, input }) => {
+        try {
+            await brandQueries.admin.deleteBrand(input.id);
+            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
+            scheduleProductSearchRebuild(ctx);
+        }
+        catch (err) {
+            ctx.log.error(err instanceof Error ? err : new Error(String(err)), {
+                event: "deleteBrand"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to delete brand",
+                cause: err,
+            });
+        }
+    }),
 });
