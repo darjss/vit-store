@@ -9,16 +9,22 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { google } from "@ai-sdk/google";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import { z } from "zod";
 
 loadDotEnv({ path: ".env" });
 
+const opencode = createOpenAICompatible({
+	baseURL: "https://opencode.ai/zen/go/v1",
+	apiKey: process.env.OPENCODE_GO_API_KEY,
+	name: "opencode-go",
+});
+
 const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const defaultConcurrency = 4;
-const defaultModel = "gemini-2.5-flash";
+const defaultModel = "kimi-k2.5";
 const maxRetries = 3;
 
 const productSchema = z.object({
@@ -100,9 +106,9 @@ const finalJsonPath = path.join(reportsDir, "products.final.json");
 const rawMergedPath = path.join(reportsDir, "products.raw.json");
 let manifestWriteQueue: Promise<void> = Promise.resolve();
 
-if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+if (!process.env.OPENCODE_GO_API_KEY) {
 	throw new Error(
-		"Missing GOOGLE_GENERATIVE_AI_API_KEY in environment. The script loads .env automatically.",
+		"Missing OPENCODE_GO_API_KEY in environment. The script loads .env automatically.",
 	);
 }
 
@@ -420,7 +426,7 @@ async function extractProductsFromImage(
 	for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
 		try {
 			const { object } = await generateObject({
-				model: google(modelName),
+				model: opencode(modelName),
 				schema: extractionSchema,
 				schemaName: "vit_collage_products",
 				schemaDescription:

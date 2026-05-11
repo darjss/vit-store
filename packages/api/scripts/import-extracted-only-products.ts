@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { google } from "@ai-sdk/google";
+import { opencode } from "../src/lib/opencode-provider";
 import Firecrawl from "@mendable/firecrawl-js";
 import { Search } from "@upstash/search";
 import { createLogger } from "@vit/logger";
@@ -293,8 +293,8 @@ const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
 if (!firecrawlApiKey) {
 	throw new Error("FIRECRAWL_API_KEY is missing in .env");
 }
-if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-	throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is missing in .env");
+if (!process.env.OPENCODE_GO_API_KEY) {
+	throw new Error("OPENCODE_GO_API_KEY is missing in .env");
 }
 
 const firecrawl = new Firecrawl({ apiKey: firecrawlApiKey });
@@ -814,7 +814,7 @@ async function decideDuplicateWithAi(
 		: null;
 
 	const { object } = await generateObject({
-		model: google("gemini-2.5-flash"),
+		model: opencode("kimi-k2.5"),
 		schema: duplicateDecisionSchema,
 		system: [
 			"You are deciding whether an extracted-only shelf product already exists in the DB.",
@@ -1632,7 +1632,7 @@ async function analyzeProductImages(
 
 	try {
 		const { object } = await generateObject({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			schema: imageAnalysisSchema,
 			messages: [
 				{
@@ -1679,7 +1679,7 @@ async function translateAndStructureProduct(
 ): Promise<TranslationResult | null> {
 	try {
 		const { object } = await generateObject({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			schema: translationSchema,
 			prompt: `You are a product specialist for a Mongolian supplement store. Translate this product for Mongolian customers who search in both Cyrillic and Latin scripts.
 
@@ -1768,7 +1768,7 @@ async function selectProductImagesWithGemini(
 
 	try {
 		const { object } = await generateObject({
-			model: google("gemini-2.5-flash"),
+			model: opencode("kimi-k2.5"),
 			schema: imageSelectionSchema,
 			messages: [
 				{

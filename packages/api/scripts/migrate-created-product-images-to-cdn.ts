@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { google } from "@ai-sdk/google";
+import { opencode } from "../src/lib/opencode-provider";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import { and, eq, isNull } from "drizzle-orm";
@@ -379,7 +379,7 @@ async function selectProductImages(
 	);
 
 	const { object } = await generateObject({
-		model: google("gemini-2.5-flash"),
+		model: opencode("kimi-k2.5"),
 		schema: imageDecisionSchema,
 		system: [
 			"You are selecting ecommerce product images to keep.",

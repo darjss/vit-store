@@ -1,12 +1,18 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { google } from "@ai-sdk/google";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import stringSimilarity from "string-similarity";
 import { z } from "zod";
 
 loadDotEnv({ path: ".env" });
+
+const opencode = createOpenAICompatible({
+	baseURL: "https://opencode.ai/zen/go/v1",
+	apiKey: process.env.OPENCODE_GO_API_KEY,
+	name: "opencode-go",
+});
 
 type ExtractedProduct = {
 	brandName: string;
@@ -142,7 +148,7 @@ async function resolveWithAi(
 		: null;
 
 	const { object } = await generateObject({
-		model: google("gemini-2.5-flash"),
+		model: opencode("kimi-k2.5"),
 		schema: resolutionSchema,
 		system: [
 			"You are resolving whether one extracted product from a current shelf image matches one DB product.",
