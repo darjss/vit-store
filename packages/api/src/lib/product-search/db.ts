@@ -1,4 +1,4 @@
-import { eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import type { DB } from "~/db";
 import {
 	BrandsTable,
@@ -33,7 +33,13 @@ export const loadProductSearchDocumentsFromDb = async (
 			tags: ProductsTable.tags,
 		})
 		.from(ProductsTable)
-		.where(isNull(ProductsTable.deletedAt));
+		.where(
+			and(
+				isNull(ProductsTable.deletedAt),
+				eq(ProductsTable.status, "active"),
+				gt(ProductsTable.stock, 0),
+			),
+		);
 
 	if (products.length === 0) return [];
 

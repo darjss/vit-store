@@ -39,7 +39,16 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					});
 					return;
 				}
-				await q.updatePaymentStatus(paymentNumber, "success");
+				const confirmed = await q.confirmPaymentAndApplyStock(
+					paymentNumber,
+					"transfer",
+				);
+				if (!confirmed) {
+					logger.info("messengerWebhook.paymentAlreadyConfirmedOrNotPending", {
+						paymentNumber,
+					});
+					return;
+				}
 				try {
 					const paymentInfo = await q.getPaymentInfoByNumber(paymentNumber);
 					if (paymentInfo) {
