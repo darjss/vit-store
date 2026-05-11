@@ -4,69 +4,10 @@ import superjson from "superjson";
 import * as v from "valibot";
 import type { Context } from "~/lib/context";
 import { adminAuth } from "~/lib/session/admin";
+import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
+import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { getTtlForTimeRange } from "~/lib/utils";
-
-const normalizeLogPayload = (value: unknown): unknown => {
-	if (value === undefined) {
-		return undefined;
-	}
-
-	const seen = new WeakSet<object>();
-
-	try {
-		return JSON.parse(
-			JSON.stringify(value, (_key, currentValue) => {
-				if (currentValue instanceof Error) {
-					return {
-						name: currentValue.name,
-						message: currentValue.message,
-						stack: currentValue.stack,
-					};
-				}
-
-				if (typeof currentValue === "bigint") {
-					return currentValue.toString();
-				}
-
-				if (currentValue instanceof Map) {
-					return Object.fromEntries(currentValue);
-				}
-
-				if (currentValue instanceof Set) {
-					return Array.from(currentValue);
-				}
-
-				if (typeof currentValue === "object" && currentValue !== null) {
-					if (seen.has(currentValue)) {
-						return "[Circular]";
-					}
-
-					seen.add(currentValue);
-				}
-
-				return currentValue;
-			}),
-		);
-	} catch {
-		if (value instanceof Error) {
-			return {
-				name: value.name,
-				message: value.message,
-				stack: value.stack,
-			};
-		}
-
-		if (typeof value === "object" && value !== null) {
-			return {
-				unserializable: true,
-				type: value.constructor?.name ?? "Object",
-			};
-		}
-
-		return value;
-	}
-};
 
 const t = initTRPC.context<Context>().create({
 	transformer: superjson,
@@ -87,31 +28,56 @@ export const router = t.router;
 const customerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	const session = await auth(ctx);
 	if (!session) {
-		ctx.log.auth.loginFailed({ failureReason: "no_session" });
+		ctx.log.warn("auth.login_failed", { failure_reason: "no_session" });
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}
 
-	const enrichedLog = ctx.log.child({
-		userId: session.user.id,
-		userPhone: session.user.phone,
-		userType: "customer",
+	ctx.log.set({
+		user: { id: session.user.id, phone: session.user.phone },
+		user_type: "customer",
 	});
-	return next({ ctx: { ...ctx, session, log: enrichedLog } });
+	return next({ ctx: { ...ctx, session } });
+});
+
+const verifiedCustomerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
+	const session = await auth(ctx);
+	if (!session) {
+		ctx.log.warn("auth.login_failed", { failure_reason: "no_session" });
+		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+	}
+
+	const nextCtx = { ...ctx, session };
+	if (!isPhoneVerifiedCustomer(nextCtx)) {
+		ctx.log.warn("auth.login_failed", {
+			failure_reason: "phone_not_verified",
+		});
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "Phone verification required",
+		});
+	}
+
+	ctx.log.set({
+		user: { id: session.user.id, phone: session.user.phone },
+		user_type: "customer",
+	});
+	return next({ ctx: nextCtx });
 });
 
 const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	const session = await adminAuth(ctx);
 	if (!session) {
-		ctx.log.auth.loginFailed({ failureReason: "no_admin_session" });
+		ctx.log.warn("auth.login_failed", {
+			failure_reason: "no_admin_session",
+		});
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}
 
-	const enrichedLog = ctx.log.child({
-		userId: session.user.id,
-		userEmail: session.user.username,
-		userType: "admin",
+	ctx.log.set({
+		user: { id: session.user.id, email: session.user.username },
+		user_type: "admin",
 	});
-	return next({ ctx: { ...ctx, session, log: enrichedLog } });
+	return next({ ctx: { ...ctx, session } });
 });
 
 const createCacheKey = async (
@@ -198,13 +164,14 @@ const loggingMiddleware = t.middleware(
 		const startTime = Date.now();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput = normalizeLogPayload(input);
+		const safeInput = summarizeTrpcPayload(input);
 
-		// Log procedure start with input
-		ctx.log.info("trpc.procedure_start", {
-			procedure: path,
-			type: procedureType,
-			input: safeInput,
+		ctx.log.set({
+			trpc: {
+				procedure: path,
+				type: procedureType,
+				input: safeInput,
+			},
 		});
 
 		try {
@@ -215,26 +182,30 @@ const loggingMiddleware = t.middleware(
 					? (result as { data?: unknown }).data
 					: result;
 
-			// Log procedure success with output
-			ctx.log.info("trpc.procedure_success", {
-				procedure: path,
-				type: procedureType,
-				durationMs,
-				output: normalizeLogPayload(resultData),
+			ctx.log.set({
+				trpc: {
+					procedure: path,
+					type: procedureType,
+					duration_ms: durationMs,
+					outcome: "success",
+					output: summarizeTrpcPayload(resultData),
+				},
 			});
 
 			return result;
 		} catch (error) {
 			const durationMs = Date.now() - startTime;
 
-			// Log procedure error with input for debugging
-			ctx.log.error("trpc.procedure_error", error, {
-				procedure: path,
-				type: procedureType,
-				durationMs,
-				input: safeInput,
-				errorCode: error instanceof TRPCError ? error.code : undefined,
-				errorMessage: error instanceof Error ? error.message : String(error),
+			ctx.log.error(toError(error), {
+				event: "trpc.procedure_error",
+				trpc: {
+					procedure: path,
+					type: procedureType,
+					duration_ms: durationMs,
+					outcome: "error",
+					input: safeInput,
+					error_code: error instanceof TRPCError ? error.code : undefined,
+				},
 			});
 
 			throw error;
@@ -247,7 +218,7 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 
 	const cached = await ctx.kv.get(cacheKey);
 	if (cached) {
-		ctx.log.system.cacheHit({ cacheKey, path });
+		ctx.log.info("cache.hit", { cache_key: cacheKey, path });
 		// Return in the same format as next() returns
 		// Using type assertion because the middleware marker type is branded and can't be created directly
 		return {
@@ -259,7 +230,7 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 		};
 	}
 
-	ctx.log.system.cacheMiss({ cacheKey, path });
+	ctx.log.info("cache.miss", { cache_key: cacheKey, path });
 
 	const result = await next();
 	if (result && typeof result === "object" && "data" in result) {
@@ -284,7 +255,7 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 			expirationTtl: ttl,
 		});
 
-		ctx.log.system.cacheSet({ cacheKey, path, cacheTtl: ttl });
+		ctx.log.info("cache.set", { cache_key: cacheKey, path, cache_ttl: ttl });
 	}
 
 	return result;
@@ -297,6 +268,10 @@ export const customerProcedure = t.procedure
 	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware)
 	.use(customerAuthMiddleware);
+export const verifiedCustomerProcedure = t.procedure
+	.use(errorHandlingMiddleware)
+	.use(loggingMiddleware)
+	.use(verifiedCustomerAuthMiddleware);
 export const adminProcedure = t.procedure
 	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware)

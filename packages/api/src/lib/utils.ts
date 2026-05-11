@@ -107,6 +107,13 @@ export const calculateExpiration = (timerange: timeRangeType) => {
 	}
 };
 
+export const slugify = (text: string): string => {
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9\u0400-\u04FF]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+};
+
 export const getTtlForTimeRange = (timeRange?: timeRangeType) => {
 	switch (timeRange) {
 		case "daily":
@@ -146,6 +153,7 @@ interface OrderResult {
 	total: number;
 	notes: string | null;
 	address: string;
+	addressZoneId: number | null;
 	deliveryProvider: OrderDeliveryProviderType;
 	createdAt: Date;
 	updatedAt: Date | null;
@@ -176,6 +184,7 @@ interface ShapedOrder {
 	notes: string | null;
 	createdAt: Date;
 	address: string;
+	addressZoneId: number | undefined;
 	updatedAt: Date | null;
 	deliveryProvider: OrderDeliveryProviderType;
 	products: Array<{
@@ -201,6 +210,7 @@ export const shapeOrderResult = (result: OrderResult) => {
 		notes: result.notes,
 		createdAt: result.createdAt,
 		address: result.address,
+		addressZoneId: result.addressZoneId ?? undefined,
 		updatedAt: result.updatedAt,
 		products: result.orderDetails.map((orderDetail) => ({
 			quantity: orderDetail.quantity,
@@ -228,6 +238,7 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 			total: result.total,
 			notes: result.notes,
 			address: result.address,
+			addressZoneId: result.addressZoneId ?? undefined,
 			createdAt: result.createdAt,
 			updatedAt: result.updatedAt,
 			deliveryProvider: result.deliveryProvider,

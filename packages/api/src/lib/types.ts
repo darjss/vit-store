@@ -1,4 +1,5 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { RequestLogger } from "evlog";
 import type { Context } from "hono";
 import type {
 	deliveryProvider,
@@ -9,6 +10,7 @@ import type {
 
 export type HonoContextType = Context<{
 	Bindings: Env;
+	Variables: { log: RequestLogger<any> };
 }>;
 
 export interface SessionConfig {

@@ -119,7 +119,7 @@ export function createSessionManager<
 			await ctx.kv.delete(
 				`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`,
 			);
-			ctx.log.auth.sessionExpired({ sessionId });
+			ctx.log.info("auth.session_expired", { sessionId });
 			return null;
 		}
 
@@ -145,7 +145,7 @@ export function createSessionManager<
 				{ expirationTtl: Math.ceil(sessionDurationMs / 1000) },
 			);
 			setSessionTokenCookie(ctx.c, token, updatedSession.expiresAt);
-			ctx.log.auth.sessionRenewed({ sessionId: session.id });
+			ctx.log.info("auth.session_renewed", { sessionId: session.id });
 			return updatedSession;
 		}
 
@@ -168,7 +168,7 @@ export function createSessionManager<
 				await ctx.kv.delete(`${kvUserSessionPrefix}:${userIdentifier}`);
 			}
 
-			ctx.log.auth.logout({ sessionId: ctx.session.id });
+			ctx.log.info("auth.logout", { sessionId: ctx.session.id });
 		}
 		deleteSessionTokenCookie(ctx);
 	}
