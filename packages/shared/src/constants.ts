@@ -17,7 +17,12 @@ export const deliveryProvider = [
 	"pick-up",
 ] as const;
 
-export const paymentStatus = ["pending", "success", "failed"] as const;
+export const paymentStatus = [
+	"pending",
+	"customer_claimed_paid",
+	"success",
+	"failed",
+] as const;
 
 export const purchaseProvider = [
 	"amazon",

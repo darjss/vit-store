@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { purchaseProvider, purchaseStatus } from "./constants";
+import { paymentStatus, purchaseProvider, purchaseStatus } from "./constants";
 
 export const orderSchema = v.object({
 	phone: v.pipe(
@@ -139,7 +139,7 @@ export const addOrderSchema = v.object({
 
   address: v.pipe(v.string(), v.minLength(10)),
 	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
-	notes: v.optional(v.nullable(v.pipe(v.string(), v.minLength(3)))),
+	notes: v.optional(v.nullable(v.string())),
 	status: v.picklist([
 		"pending",
 		"shipped",
@@ -147,7 +147,7 @@ export const addOrderSchema = v.object({
 		"cancelled",
 		"refunded",
 	]),
-	paymentStatus: v.picklist(["pending", "success", "failed"]),
+	paymentStatus: v.picklist(paymentStatus),
 	deliveryProvider: v.picklist(["tu-delivery", "self", "avidaa", "pick-up"]),
 	isNewCustomer: v.boolean(),
 	products: v.array(productSchema),
@@ -235,12 +235,22 @@ export const saveExtractedPurchaseSchema = v.object({
 export const addBrandSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
 	logoUrl: v.pipe(v.string(), v.url()),
+	description: v.optional(v.nullable(v.string())),
+	bannerImage: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
+	seoTitle: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(256)))),
+	seoDescription: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(512)))),
 });
 
 export const addCategorySchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
+	description: v.optional(v.nullable(v.string())),
+	bannerImage: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
+	seoTitle: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(256)))),
+	seoDescription: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(512)))),
 });
 
 export const timeRangeSchema = v.picklist(["daily", "weekly", "monthly"]);

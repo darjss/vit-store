@@ -1,7 +1,6 @@
 export const productPresetFilterLabels = {
 	featured: "Онцлох",
 	recent: "Шинэ ирсэн",
-	discount: "Хямдралтай",
 } as const;
 
 export const productSortOptions = [

@@ -5,7 +5,11 @@ export type OrderStatusType =
 	| "cancelled"
 	| "refunded";
 export type PaymentProviderType = "qpay" | "transfer" | "cash";
-export type PaymentStatusType = "pending" | "success" | "failed";
+export type PaymentStatusType =
+	| "pending"
+	| "customer_claimed_paid"
+	| "success"
+	| "failed";
 export type OrderDeliveryProviderType =
 	| "tu-delivery"
 	| "self"
