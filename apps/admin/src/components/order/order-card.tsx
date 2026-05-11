@@ -1,7 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+  import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { OrderStatusType } from "@vit/shared";
-import { CheckCircle, Copy, MapPin, Package, Phone, Truck } from "lucide-react";
+import { CheckCircle, Copy, Loader2, MapPin, Package, Phone, Truck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
@@ -35,31 +34,74 @@ const OrderCard = ({
 	const navigate = useNavigate();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const queryClient = useQueryClient();
-	const updateOrder = useMutation({
+	const updateOrderStatus = useMutation({
 		...trpc.order.updateOrderStatus.mutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				...trpc.order.getPaginatedOrders.queryKey,
 			});
-			toast.success("захиалга амжилттай засагдлаа");
+			toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
 		},
 	});
-	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
-		...trpc.order.deleteOrder.mutationOptions(),
+	const shipOrder = useMutation({
+		...trpc.order.shipOrder.mutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				...trpc.order.getPaginatedOrders.queryKey,
 			});
-
-			toast.success("захиалга амжилттай устгагдлаа");
+			toast.success("Захиалга амжилттай илгээгдлээ");
+		},
+		onError: (error) => {
+			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
 		},
 	});
-	const deleteOrderHandler = async (id: number) => {
+	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
+		...trpc.order.deleteOrder.mutationOptions(),
+		onMutate: async (variables) => {
+			await queryClient.cancelQueries({
+				...trpc.order.getPaginatedOrders.queryKey,
+			});
+			const previous = queryClient.getQueriesData({
+				queryKey: trpc.order.getPaginatedOrders.queryKey,
+			});
+			for (const [key, data] of previous) {
+				if (data && typeof data === "object" && "orders" in data) {
+					const typed = data as { orders: OrderType[]; pagination: unknown };
+					queryClient.setQueryData(key, {
+						...typed,
+						orders: typed.orders.filter((o) => o.id !== variables.id),
+					});
+				}
+			}
+			return { previous };
+		},
+		onError: (_error, _variables, context) => {
+			if (context?.previous) {
+				for (const [key, data] of context.previous) {
+					queryClient.setQueryData(key, data);
+				}
+			}
+			toast.error("Захиалга устгахад алдаа гарлаа");
+		},
+		onSuccess: () => {
+			toast.success("Захиалга амжилттай устгагдлаа");
+		},
+		onSettled: () => {
+			void queryClient.invalidateQueries({
+				...trpc.order.getPaginatedOrders.queryKey,
+			});
+		},
+	});
+	const deleteOrderHandler = (id: number) => {
 		deleteOrder({ id });
 	};
 
-	const handleUpdateOrder = (status: OrderStatusType) => {
-		updateOrder.mutate({ id: order.id, status });
+	const handleShipOrder = () => {
+		shipOrder.mutate({ orderId: order.id });
+	};
+
+	const handleMarkDelivered = () => {
+		updateOrderStatus.mutate({ id: order.id, status: "delivered" });
 	};
 
 	const productCount = order.products?.length ?? 0;
@@ -240,10 +282,15 @@ const OrderCard = ({
 								variant="default"
 								size="sm"
 								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
-								onClick={() => handleUpdateOrder("shipped")}
+								disabled={shipOrder.isPending}
+								onClick={handleShipOrder}
 							>
-								<Truck className="h-3 w-3" />
-								<span>Илгээсэн</span>
+								{shipOrder.isPending ? (
+									<Loader2 className="h-3 w-3 animate-spin" />
+								) : (
+									<Truck className="h-3 w-3" />
+								)}
+								<span>{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}</span>
 							</Button>
 						)}
 						{order.status === "shipped" && (
@@ -251,10 +298,15 @@ const OrderCard = ({
 								variant="default"
 								size="sm"
 								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
-								onClick={() => handleUpdateOrder("delivered")}
+								disabled={updateOrderStatus.isPending}
+								onClick={handleMarkDelivered}
 							>
-								<CheckCircle className="h-3 w-3" />
-								<span>Хүргэсэн</span>
+								{updateOrderStatus.isPending ? (
+									<Loader2 className="h-3 w-3 animate-spin" />
+								) : (
+									<CheckCircle className="h-3 w-3" />
+								)}
+								<span>{updateOrderStatus.isPending ? "Шинэчилж байна..." : "Хүргэсэн"}</span>
 							</Button>
 						)}
 						<RowActions

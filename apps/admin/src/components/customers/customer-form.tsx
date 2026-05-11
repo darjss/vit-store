@@ -14,6 +14,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "../ui/form";
+import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 
@@ -95,7 +96,8 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+				<FormLoadingOverlay isLoading={form.formState.isSubmitting} />
 				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">

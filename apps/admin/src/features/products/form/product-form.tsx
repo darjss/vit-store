@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "@/components/submit-button";
 import { Form } from "@/components/ui/form";
+import { FormLoadingOverlay } from "@/components/ui/form-loading-overlay";
 import { ProductAdvancedSection } from "./sections/product-advanced-section";
 import { ProductDetailsSection } from "./sections/product-details-section";
 import { ProductImagesSection } from "./sections/product-images-section";
@@ -121,7 +122,8 @@ const ProductForm = ({
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+				<FormLoadingOverlay isLoading={form.formState.isSubmitting || mutation.isPending} />
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
 					<ProductDetailsSection
 						form={form}

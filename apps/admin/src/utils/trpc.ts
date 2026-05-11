@@ -38,7 +38,9 @@ async function checkUnauthorized(response: Response): Promise<boolean> {
 	if (response.status === 401) return true;
 	const cloned = response.clone();
 	try {
-		const data = await cloned.json();
+		const data = (await cloned.json()) as {
+			error?: { data?: { code?: string }; code?: string };
+		} | Array<{ error?: { data?: { code?: string }; code?: string } }>;
 		if (Array.isArray(data)) {
 			return data.some(
 				(item) =>

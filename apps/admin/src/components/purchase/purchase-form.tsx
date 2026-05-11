@@ -14,6 +14,7 @@ import type { PurchaseDetailType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { Button } from "../ui/button";
+import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -236,7 +237,8 @@ export default function PurchaseForm({
 	};
 
 	return (
-		<form className="space-y-6" onSubmit={handleSubmit}>
+		<form className="relative space-y-6" onSubmit={handleSubmit}>
+			<FormLoadingOverlay isLoading={isSubmitting} />
 			<div className="grid gap-4 md:grid-cols-2">
 				<div className="space-y-2">
 					<Label htmlFor="provider">Provider</Label>

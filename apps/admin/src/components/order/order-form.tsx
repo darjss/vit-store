@@ -5,6 +5,8 @@ import { orderStatus, paymentStatus } from "@vit/shared/constants";
 import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { Truck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -16,6 +18,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "../ui/form";
+import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import {
 	Select,
@@ -57,8 +60,25 @@ const OrderForm = ({
   const {data:addressZones} = useQuery({
 	...trpc.order.getDeliveryAddressZones.queryOptions(),
   })
-  console.log(addressZones)
-	const mutation = useMutation({
+
+	const isEditing = !!order;
+
+	const shipOrder = useMutation({
+		...trpc.order.shipOrder.mutationOptions(),
+		onSuccess: () => {
+			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
+			queryClient.invalidateQueries({
+				...trpc.order.getPaginatedOrders.queryKey,
+			});
+			toast.success("Захиалга амжилттай илгээгдлээ");
+			onSuccess();
+		},
+		onError: (error) => {
+			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
+		},
+	});
+
+	const addMutation = useMutation({
 		...trpc.order.addOrder.mutationOptions(),
 		onSuccess: async () => {
 			form.reset();
@@ -67,6 +87,20 @@ const OrderForm = ({
 		},
 		onError: (_error) => {
 			toast.error("Failed to add order");
+		},
+	});
+
+	const updateMutation = useMutation({
+		...trpc.order.updateOrder.mutationOptions(),
+		onSuccess: async () => {
+			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
+			queryClient.invalidateQueries({
+				...trpc.order.getPaginatedOrders.queryKey,
+			});
+			onSuccess();
+		},
+		onError: (_error) => {
+			toast.error("Failed to update order");
 		},
 	});
 
@@ -103,7 +137,11 @@ const OrderForm = ({
 	}, [customerInfo, form, isSuccess]);
 
 	const onSubmit = async (values: addOrderType) => {
-		mutation.mutate(values);
+		if (isEditing && order?.id) {
+			updateMutation.mutate({ ...values, id: order.id });
+		} else {
+			addMutation.mutate(values);
+		}
 	};
 
 	useEffect(() => {
@@ -114,7 +152,8 @@ const OrderForm = ({
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+				<FormLoadingOverlay isLoading={form.formState.isSubmitting} />
 				<div className="grid grid-cols-1 gap-4">
 					<Card className="border-2 border-border bg-transparent shadow-none">
 						<CardContent className="space-y-4 p-3 sm:p-4">
@@ -287,14 +326,27 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<div className="flex justify-end pt-1">
-						<SubmitButton
-							isPending={form.formState.isSubmitting}
-							className="w-full border-2 border-border px-6 py-2.5 font-bold text-sm uppercase tracking-wider transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
+					<div className="flex items-center gap-3 pt-1">
+					{isEditing && order?.status === "pending" && order?.id && (
+						<Button
+							type="button"
+							variant="default"
+							disabled={shipOrder.isPending}
+							onClick={() => shipOrder.mutate({ orderId: order.id! })}
+							className="gap-1.5 border-2 border-border font-bold text-sm uppercase tracking-wider"
 						>
-							{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}
-						</SubmitButton>
-					</div>
+							<Truck className="h-4 w-4" />
+							{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
+						</Button>
+					)}
+					<div className="flex-1" />
+					<SubmitButton
+						isPending={form.formState.isSubmitting}
+						className="border-2 border-border px-6 py-2.5 font-bold text-sm uppercase tracking-wider transition-colors duration-300 hover:bg-primary/90"
+					>
+						{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}
+					</SubmitButton>
+				</div>
 				</div>
 			</form>
 		</Form>

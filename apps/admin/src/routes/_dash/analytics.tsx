@@ -173,7 +173,7 @@ function RouteComponent() {
 						</span>
 					</div>
 					<p className="mt-1 font-black font-heading text-lg leading-tight">
-						{formatCurrency(data.averageOrderValue)}
+						{formatCurrency(Math.round(data.averageOrderValue / 1000) * 1000)}
 					</p>
 				</div>
 
@@ -233,7 +233,7 @@ function RouteComponent() {
 						</span>
 					</div>
 					<p className="mt-1 font-black font-heading text-lg leading-tight">
-						{formatCurrency(data.metrics.currentProductsValue)}
+						{`${data.metrics.currentProductsValue.toLocaleString("en-US")}₮`}
 					</p>
 				</div>
 			</div>

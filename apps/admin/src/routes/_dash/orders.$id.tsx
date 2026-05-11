@@ -11,6 +11,7 @@ import {
 	CheckCircle,
 	Copy,
 	Edit3,
+	Loader2,
 	Minus,
 	Package,
 	Plus,
@@ -90,6 +91,19 @@ function OrderDetailContent() {
 			},
 		});
 
+	const { mutate: shipOrder, isPending: isShipOrderPending } = useMutation({
+		...trpc.order.shipOrder.mutationOptions(),
+		onSuccess: () => {
+			queryClient.invalidateQueries(
+				trpc.order.getOrderById.queryOptions({ id: orderId }),
+			);
+			toast.success("Захиалга амжилттай илгээгдлээ");
+		},
+		onError: (error) => {
+			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
+		},
+	});
+
 	const { mutate: updateOrderField, isPending: isUpdateFieldPending } =
 		useMutation({
 			...trpc.order.updateOrder.mutationOptions(),
@@ -109,15 +123,18 @@ function OrderDetailContent() {
 	const [isProductManagementMode, setIsProductManagementMode] = useState(false);
 
 	const handleStatusChange = (newStatus: string) => {
-		updateOrderStatus({
-			id: orderId,
-			status: newStatus as
-				| "pending"
-				| "shipped"
-				| "delivered"
-				| "cancelled"
-				| "refunded",
-		});
+		if (newStatus === "shipped") {
+			shipOrder({ orderId });
+		} else {
+			updateOrderStatus({
+				id: orderId,
+				status: newStatus as
+					| "pending"
+					| "delivered"
+					| "cancelled"
+					| "refunded",
+			});
+		}
 	};
 
 	const handleCopyToClipboard = async (text: string, label: string) => {
@@ -325,6 +342,7 @@ function OrderDetailContent() {
 										value={order.paymentStatus}
 										options={[
 											{ value: "pending", label: "Хүлээгдэж буй" },
+											{ value: "customer_claimed_paid", label: "Хэрэглэгч төлсөн гэж мэдэгдсэн" },
 											{ value: "success", label: "Төлсөн" },
 											{ value: "failed", label: "Алдаатай" },
 										]}
@@ -338,7 +356,7 @@ function OrderDetailContent() {
 												notes: order.notes,
 												address: order.address,
 												products: order.products || [],
-												paymentStatus: next as "pending" | "success" | "failed",
+												paymentStatus: next as typeof order.paymentStatus,
 												deliveryProvider: order.deliveryProvider,
 												isNewCustomer: false,
 											})
@@ -543,13 +561,17 @@ function OrderDetailContent() {
 									<div className="space-y-3">
 										<Button
 											onClick={() => handleStatusChange(nextStatus)}
-											disabled={isUpdateStatusPending}
+											disabled={isUpdateStatusPending || (nextStatus === "shipped" && isShipOrderPending)}
 											className="w-full gap-2"
 										>
 											{nextStatus === "shipped" ? (
 												<>
-													<Truck className="h-4 w-4" />
-													Илгээх
+													{isShipOrderPending ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Truck className="h-4 w-4" />
+													)}
+													{isShipOrderPending ? "Илгээж байна..." : "Илгээх"}
 												</>
 											) : (
 												<>
