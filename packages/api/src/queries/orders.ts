@@ -1,5 +1,5 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import type { OrderStatusType } from "@vit/shared/types/order";
+import type { OrderStatusType, PaymentStatusType } from "@vit/shared/types/order";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -378,7 +378,7 @@ export const orderQueries = {
 		async getPaginatedOrders(params: {
 			page: number;
 			pageSize: number;
-			paymentStatus?: "pending" | "success" | "failed";
+			paymentStatus?: PaymentStatusType;
 			orderStatus?: OrderStatus;
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
@@ -554,6 +554,8 @@ export const orderQueries = {
 				status?: OrderStatusType;
 				notes?: string | null;
 				total?: number;
+				address?: string;
+				addressZoneId?: number | null;
 			},
 		) {
 			await db().update(OrdersTable).set(data).where(eq(OrdersTable.id, id));

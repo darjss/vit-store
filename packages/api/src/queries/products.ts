@@ -147,6 +147,16 @@ export const productQueries = {
 			});
 		},
 
+		async getProductBySlug(slug: string) {
+			return db().query.ProductsTable.findFirst({
+				where: and(
+					eq(ProductsTable.slug, slug),
+					isNull(ProductsTable.deletedAt),
+				),
+				columns: { id: true, slug: true },
+			});
+		},
+
 		async updateProduct(
 			id: number,
 			data: {
@@ -408,6 +418,28 @@ export const productQueries = {
 				.set({ [field]: value })
 				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
 		},
+
+		async getReviewProducts() {
+			const mayFirstUlat = new Date("2026-04-30T16:00:00Z");
+			return db().query.ProductsTable.findMany({
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+					or(
+						isNull(ProductsTable.updatedAt),
+						lt(ProductsTable.updatedAt, mayFirstUlat),
+					),
+				),
+				orderBy: sql`${ProductsTable.updatedAt} ASC NULLS FIRST`,
+				with: {
+					images: {
+						where: isNull(ProductImagesTable.deletedAt),
+					},
+					category: { columns: { name: true } },
+					brand: { columns: { name: true } },
+				},
+			});
+		},
 	},
 
 	store: {
@@ -419,10 +451,9 @@ export const productQueries = {
 					name: true,
 					price: true,
 				},
-				orderBy: asc(ProductsTable.updatedAt),
-				limit: 4,
+				orderBy: desc(ProductsTable.stock),
+				limit: 8,
 				where: and(
-					eq(ProductsTable.isFeatured, true),
 					eq(ProductsTable.status, "active"),
 					isNull(ProductsTable.deletedAt),
 				),
@@ -513,6 +544,110 @@ export const productQueries = {
 			});
 		},
 
+		async getFeaturedProductsWithStock() {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					slug: true,
+					name: true,
+					price: true,
+				},
+				orderBy: desc(ProductsTable.stock),
+				limit: 8,
+				where: and(
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+				},
+			});
+		},
+
+		async getNewProductsWithStock() {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					price: true,
+					slug: true,
+				},
+				orderBy: desc(ProductsTable.updatedAt),
+				limit: 4,
+				where: and(
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+				},
+			});
+		},
+
+		async getDiscountedProductsWithStock() {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					slug: true,
+					name: true,
+					price: true,
+					discount: true,
+				},
+				orderBy: desc(ProductsTable.updatedAt),
+				limit: 4,
+				where: and(
+					gt(ProductsTable.discount, 0),
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+					isNull(ProductsTable.deletedAt),
+				),
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+				},
+			});
+		},
+
 		async getAllProducts() {
 			return db().query.ProductsTable.findMany({
 				columns: {
@@ -526,6 +661,21 @@ export const productQueries = {
 			});
 		},
 
+		async getPrerenderProducts() {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					slug: true,
+					stock: true,
+				},
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+				),
+			});
+		},
+
 		async getProductById(id: number) {
 			return db().query.ProductsTable.findFirst({
 				columns: {
@@ -533,6 +683,7 @@ export const productQueries = {
 					name: true,
 					price: true,
 					status: true,
+					stock: true,
 					description: true,
 					discount: true,
 					amount: true,
@@ -549,6 +700,7 @@ export const productQueries = {
 				where: and(
 					eq(ProductsTable.id, id),
 					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
 					isNull(ProductsTable.deletedAt),
 				),
 				with: {
@@ -566,6 +718,7 @@ export const productQueries = {
 					category: {
 						columns: {
 							name: true,
+							slug: true,
 						},
 					},
 				},
@@ -751,6 +904,39 @@ export const productQueries = {
 			});
 		},
 
+		async searchByNameWithStock(searchTerm: string, limit = 8) {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					price: true,
+				},
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+					or(
+						like(ProductsTable.name, `%${searchTerm}%`),
+						like(ProductsTable.name_mn, `%${searchTerm}%`),
+					),
+				),
+				limit,
+				with: {
+					images: {
+						columns: { url: true },
+						where: and(
+							eq(ProductImagesTable.isPrimary, true),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					},
+					brand: {
+						columns: { name: true },
+					},
+				},
+			});
+		},
+
 		async getProductsByIdsWithDetails(ids: number[]) {
 			if (ids.length === 0) return [];
 			return db().query.ProductsTable.findMany({
@@ -806,7 +992,7 @@ export const productQueries = {
 				categoryId,
 				listType,
 				searchTerm,
-				sortField = "createdAt",
+				sortField = "stock",
 				sortDirection = "desc",
 			} = params;
 
@@ -930,6 +1116,373 @@ export const productQueries = {
 			return {
 				items,
 				nextCursor,
+			};
+		},
+
+		async getInfiniteProductsWithStock(params: {
+			cursor?: string | undefined;
+			limit: number;
+			brandId?: number;
+			categoryId?: number;
+			listType?: "featured" | "recent" | "discount";
+			sortField?: "price" | "stock" | "createdAt";
+			sortDirection?: "asc" | "desc";
+			searchTerm?: string;
+		}) {
+			const {
+				cursor,
+				limit,
+				brandId,
+				categoryId,
+				listType,
+				searchTerm,
+				sortField = "stock",
+				sortDirection = "desc",
+			} = params;
+
+			// Build filter conditions
+			const conditions: (SQL<unknown> | undefined)[] = [];
+			conditions.push(gt(ProductsTable.stock, 0));
+			if (brandId !== undefined && brandId !== 0)
+				conditions.push(eq(ProductsTable.brandId, brandId));
+			if (categoryId !== undefined && categoryId !== 0)
+				conditions.push(eq(ProductsTable.categoryId, categoryId));
+			if (listType === "featured") {
+				conditions.push(eq(ProductsTable.isFeatured, true));
+			}
+			if (listType === "discount") {
+				conditions.push(gt(ProductsTable.discount, 0));
+			}
+
+			// Use Upstash search for better text matching
+			if (searchTerm !== undefined && searchTerm !== "") {
+				const searchResults = await searchProducts(searchTerm, 10);
+				if (searchResults.length > 0) {
+					const productIds = searchResults.map((r) => r.id);
+					conditions.push(inArray(ProductsTable.id, productIds));
+				} else {
+					// No results from search, return empty
+					return { items: [], nextCursor: null };
+				}
+			}
+
+			const finalConditions = conditions.filter(
+				(c): c is SQL<unknown> => c !== undefined,
+			);
+
+			// Determine sort column and order
+			const sortColumn =
+				sortField === "price"
+					? ProductsTable.price
+					: sortField === "stock"
+						? ProductsTable.stock
+						: ProductsTable.createdAt;
+
+			const isAsc = sortDirection === "asc";
+			const orderByClauses = isAsc
+				? [asc(sortColumn), asc(ProductsTable.id)]
+				: [desc(sortColumn), desc(ProductsTable.id)];
+
+			// Build cursor condition for pagination
+			let cursorCondition: SQL<unknown> | undefined;
+			if (cursor) {
+				const [sortValueStr, idStr] = cursor.split(",");
+				const cursorId = Number.parseInt(idStr, 10);
+
+				let sortValue: number | Date;
+				if (sortField === "price" || sortField === "stock") {
+					sortValue = Number.parseInt(sortValueStr, 10);
+				} else {
+					sortValue = new Date(sortValueStr);
+				}
+
+				// For cursor pagination: get items after/before the cursor based on sort direction
+				if (isAsc) {
+					cursorCondition = or(
+						gt(sortColumn, sortValue),
+						and(eq(sortColumn, sortValue), gt(ProductsTable.id, cursorId)),
+					);
+				} else {
+					cursorCondition = or(
+						lt(sortColumn, sortValue),
+						and(eq(sortColumn, sortValue), lt(ProductsTable.id, cursorId)),
+					);
+				}
+			}
+
+			const items = await db().query.ProductsTable.findMany({
+				limit,
+				columns: {
+					id: true,
+					name: true,
+					price: true,
+					slug: true,
+					createdAt: true,
+					stock: true,
+				},
+				where: and(
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+					gt(ProductsTable.stock, 0),
+					cursorCondition,
+					finalConditions.length > 0 ? and(...finalConditions) : undefined,
+				),
+				orderBy: orderByClauses,
+				with: {
+					images: {
+						columns: {
+							url: true,
+						},
+						where: and(
+							isNull(ProductImagesTable.deletedAt),
+							eq(ProductImagesTable.isPrimary, true),
+						),
+					},
+					brand: {
+						columns: {
+							name: true,
+						},
+					},
+				},
+			});
+
+			// Build next cursor from the last item
+			let nextCursor: string | null = null;
+			if (items.length === limit && items.length > 0) {
+				const lastItem = items[items.length - 1];
+				const sortValue =
+					sortField === "price"
+						? lastItem.price
+						: sortField === "stock"
+							? lastItem.stock
+							: lastItem.createdAt.toISOString();
+				nextCursor = `${sortValue},${lastItem.id}`;
+			}
+
+			return {
+				items,
+				nextCursor,
+			};
+		},
+
+		async getPaginatedProducts(params: {
+			page: number;
+			pageSize: number;
+			brandId?: number;
+			categoryId?: number;
+			sortField?: "price" | "stock" | "createdAt";
+			sortDirection?: "asc" | "desc";
+		}) {
+			const {
+				page,
+				pageSize,
+				brandId,
+				categoryId,
+				sortField = "stock",
+				sortDirection = "desc",
+			} = params;
+
+			const conditions: (SQL<unknown> | undefined)[] = [];
+			if (brandId !== undefined && brandId !== 0)
+				conditions.push(eq(ProductsTable.brandId, brandId));
+			if (categoryId !== undefined && categoryId !== 0)
+				conditions.push(eq(ProductsTable.categoryId, categoryId));
+
+			const finalConditions = conditions.filter(
+				(c): c is SQL<unknown> => c !== undefined,
+			);
+
+			const sortColumn =
+				sortField === "price"
+					? ProductsTable.price
+					: sortField === "stock"
+						? ProductsTable.stock
+						: ProductsTable.createdAt;
+
+			const isAsc = sortDirection === "asc";
+			const orderByClauses = isAsc
+				? [asc(sortColumn), asc(ProductsTable.id)]
+				: [desc(sortColumn), desc(ProductsTable.id)];
+
+			const offset = (page - 1) * pageSize;
+
+			const [items, countResult] = await Promise.all([
+				db().query.ProductsTable.findMany({
+					limit: pageSize,
+					offset,
+					columns: {
+						id: true,
+						name: true,
+						price: true,
+						slug: true,
+						createdAt: true,
+						stock: true,
+						discount: true,
+					},
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						eq(ProductsTable.status, "active"),
+						finalConditions.length > 0
+							? and(...finalConditions)
+							: undefined,
+					),
+					orderBy: orderByClauses,
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: and(
+								isNull(ProductImagesTable.deletedAt),
+								eq(ProductImagesTable.isPrimary, true),
+							),
+						},
+						brand: {
+							columns: {
+								name: true,
+							},
+						},
+					},
+				}),
+				db()
+					.select({ count: sql<number>`count(*)::int` })
+					.from(ProductsTable)
+					.where(
+						and(
+							isNull(ProductsTable.deletedAt),
+							eq(ProductsTable.status, "active"),
+							finalConditions.length > 0
+								? and(...finalConditions)
+								: undefined,
+						),
+					),
+			]);
+
+			const totalCount = countResult[0]?.count ?? 0;
+			const totalPages = Math.ceil(totalCount / pageSize);
+
+			return {
+				items,
+				pagination: {
+					page,
+					pageSize,
+					totalCount,
+					totalPages,
+					hasNextPage: page < totalPages,
+					hasPreviousPage: page > 1,
+				},
+			};
+		},
+
+		async getPaginatedProductsWithStock(params: {
+			page: number;
+			pageSize: number;
+			brandId?: number;
+			categoryId?: number;
+			sortField?: "price" | "stock" | "createdAt";
+			sortDirection?: "asc" | "desc";
+		}) {
+			const {
+				page,
+				pageSize,
+				brandId,
+				categoryId,
+				sortField = "stock",
+				sortDirection = "desc",
+			} = params;
+
+			const conditions: (SQL<unknown> | undefined)[] = [];
+			conditions.push(gt(ProductsTable.stock, 0));
+			if (brandId !== undefined && brandId !== 0)
+				conditions.push(eq(ProductsTable.brandId, brandId));
+			if (categoryId !== undefined && categoryId !== 0)
+				conditions.push(eq(ProductsTable.categoryId, categoryId));
+
+			const finalConditions = conditions.filter(
+				(c): c is SQL<unknown> => c !== undefined,
+			);
+
+			const sortColumn =
+				sortField === "price"
+					? ProductsTable.price
+					: sortField === "stock"
+						? ProductsTable.stock
+						: ProductsTable.createdAt;
+
+			const isAsc = sortDirection === "asc";
+			const orderByClauses = isAsc
+				? [asc(sortColumn), asc(ProductsTable.id)]
+				: [desc(sortColumn), desc(ProductsTable.id)];
+
+			const offset = (page - 1) * pageSize;
+
+			const [items, countResult] = await Promise.all([
+				db().query.ProductsTable.findMany({
+					limit: pageSize,
+					offset,
+					columns: {
+						id: true,
+						name: true,
+						price: true,
+						slug: true,
+						createdAt: true,
+						stock: true,
+						discount: true,
+					},
+					where: and(
+						isNull(ProductsTable.deletedAt),
+						eq(ProductsTable.status, "active"),
+						gt(ProductsTable.stock, 0),
+						finalConditions.length > 0
+							? and(...finalConditions)
+							: undefined,
+					),
+					orderBy: orderByClauses,
+					with: {
+						images: {
+							columns: {
+								url: true,
+							},
+							where: and(
+								isNull(ProductImagesTable.deletedAt),
+								eq(ProductImagesTable.isPrimary, true),
+							),
+						},
+						brand: {
+							columns: {
+								name: true,
+							},
+						},
+					},
+				}),
+				db()
+					.select({ count: sql<number>`count(*)::int` })
+					.from(ProductsTable)
+					.where(
+						and(
+							isNull(ProductsTable.deletedAt),
+							eq(ProductsTable.status, "active"),
+							gt(ProductsTable.stock, 0),
+							finalConditions.length > 0
+								? and(...finalConditions)
+								: undefined,
+						),
+					),
+			]);
+
+			const totalCount = countResult[0]?.count ?? 0;
+			const totalPages = Math.ceil(totalCount / pageSize);
+
+			return {
+				items,
+				pagination: {
+					page,
+					pageSize,
+					totalCount,
+					totalPages,
+					hasNextPage: page < totalPages,
+					hasPreviousPage: page > 1,
+				},
 			};
 		},
 	},

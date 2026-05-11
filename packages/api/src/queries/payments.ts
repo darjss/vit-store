@@ -1,14 +1,71 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
+	OrderDetailsTable,
 	type PaymentInsertType,
 	PaymentsTable,
 	ProductImagesTable,
+	ProductsTable,
+	PurchaseItemsTable,
+	PurchaseReceiptItemsTable,
+	SalesTable,
 } from "~/db/schema";
+import type { TransactionType } from "~/lib/types";
 import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];
+
+async function getAverageCostOfProduct(
+	tx: TransactionType,
+	productId: number,
+	createdAt: Date,
+) {
+	const purchaseItems = await tx.query.PurchaseItemsTable.findMany({
+		where: and(
+			eq(PurchaseItemsTable.productId, productId),
+			isNull(PurchaseItemsTable.deletedAt),
+		),
+		with: {
+			purchase: {
+				columns: {
+					orderedAt: true,
+					createdAt: true,
+					cancelledAt: true,
+					deletedAt: true,
+				},
+			},
+			receiptItems: {
+				where: isNull(PurchaseReceiptItemsTable.deletedAt),
+				columns: {
+					quantityReceived: true,
+				},
+			},
+		},
+	});
+
+	const totals = purchaseItems.reduce(
+		(acc, item) => {
+			if (item.purchase.deletedAt) return acc;
+			const effectiveDate = item.purchase.orderedAt ?? item.purchase.createdAt;
+			if (effectiveDate >= createdAt) return acc;
+
+			const receivedQuantity = item.receiptItems.reduce(
+				(sum, receiptItem) => sum + receiptItem.quantityReceived,
+				0,
+			);
+			const effectiveQuantity = item.purchase.cancelledAt
+				? receivedQuantity
+				: item.quantityOrdered;
+			acc.totalCost += effectiveQuantity * item.unitCost;
+			acc.totalQuantity += effectiveQuantity;
+			return acc;
+		},
+		{ totalCost: 0, totalQuantity: 0 },
+	);
+
+	return totals.totalQuantity > 0 ? totals.totalCost / totals.totalQuantity : 0;
+}
 
 export const paymentQueries = {
 	admin: {
@@ -129,28 +186,105 @@ export const paymentQueries = {
 			paymentNumber: string,
 			provider: PaymentProviderType | undefined,
 		) {
-			await db()
-				.update(PaymentsTable)
-				.set({ status: "success", provider: provider ?? "transfer" })
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+			return await this.confirmPaymentAndApplyStock(
+				paymentNumber,
+				provider ?? "transfer",
+			);
 		},
 
 		async confirmPaymentIfPending(
 			paymentNumber: string,
 			provider: PaymentProviderType,
 		) {
-			const updated = await db()
-				.update(PaymentsTable)
-				.set({ status: "success", provider })
-				.where(
-					and(
-						eq(PaymentsTable.paymentNumber, paymentNumber),
-						eq(PaymentsTable.status, "pending"),
-					),
-				)
-				.returning({ id: PaymentsTable.id });
+			return await this.confirmPaymentAndApplyStock(paymentNumber, provider);
+		},
 
-			return updated.length > 0;
+		async confirmPaymentAndApplyStock(
+			paymentNumber: string,
+			provider: PaymentProviderType,
+		) {
+			return await db().transaction(async (tx) => {
+				const [claimedPayment] = await tx
+					.update(PaymentsTable)
+					.set({ status: "success", provider })
+					.where(
+						and(
+							eq(PaymentsTable.paymentNumber, paymentNumber),
+							inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+							isNull(PaymentsTable.deletedAt),
+						),
+					)
+					.returning({ id: PaymentsTable.id, orderId: PaymentsTable.orderId });
+
+				if (!claimedPayment) {
+					return false;
+				}
+
+				const orderDetails = await tx.query.OrderDetailsTable.findMany({
+					where: and(
+						eq(OrderDetailsTable.orderId, claimedPayment.orderId),
+						isNull(OrderDetailsTable.deletedAt),
+					),
+					with: {
+						product: {
+							columns: {
+								id: true,
+								price: true,
+								status: true,
+								stock: true,
+							},
+						},
+					},
+				});
+
+				for (const detail of orderDetails) {
+					if (
+						detail.quantity <= 0 ||
+						detail.product.status !== "active" ||
+						detail.product.stock < detail.quantity
+					) {
+						throw new Error(
+							`Insufficient stock for product ${detail.product.id}`,
+						);
+					}
+				}
+
+				for (const detail of orderDetails) {
+					const [updatedProduct] = await tx
+						.update(ProductsTable)
+						.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
+						.where(
+							and(
+								eq(ProductsTable.id, detail.product.id),
+								eq(ProductsTable.status, "active"),
+								sql`${ProductsTable.stock} >= ${detail.quantity}`,
+							),
+						)
+						.returning({ id: ProductsTable.id });
+
+					if (!updatedProduct) {
+						throw new Error(
+							`Insufficient stock for product ${detail.product.id}`,
+						);
+					}
+
+					const productCost = await getAverageCostOfProduct(
+						tx,
+						detail.product.id,
+						new Date(),
+					);
+
+					await tx.insert(SalesTable).values({
+						orderId: claimedPayment.orderId,
+						productId: detail.product.id,
+						quantitySold: detail.quantity,
+						productCost,
+						sellingPrice: detail.product.price,
+					});
+				}
+
+				return true;
+			});
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {
