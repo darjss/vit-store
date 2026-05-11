@@ -1,0 +1,123 @@
+---
+// Server-rendered: full HTML generated at request time for maximum reliability
+
+import Layout from "@/layouts/Layout.astro";
+import ServerProductCard from "@/components/product/server-product-card.astro";
+import Pagination from "@/components/product/pagination.astro";
+import { api } from "@/lib/trpc";
+
+const PAGE_SIZE = 24;
+const SITE_URL = "https://amerikvitamin.mn";
+
+
+const { slug, page: pageParam } = Astro.params;
+const page = Number.parseInt(pageParam!, 10);
+
+const category = await api.category.getCategoryBySlug.query({ slug: slug! });
+if (!category) {
+	throw Astro.redirect("/404");
+}
+
+const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
+	page,
+	pageSize: PAGE_SIZE,
+	categoryId: category.id,
+});
+
+const baseUrl = `/products/category/${slug}`;
+
+const seoTitle = page === 1
+	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл | Америк Витамин`)
+	: (category.seoTitle || `${category.name} - Хуудас ${page} | Америк Витамин`);
+const seoDescription = category.seoDescription ||
+	`${category.name} ангилалд ${pagination.totalCount} бүтээгдэхүүн байна.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
+
+const breadcrumbSchema = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: [
+		{ "@type": "ListItem", position: 1, name: "Нүүр", item: SITE_URL },
+		{ "@type": "ListItem", position: 2, name: "Бүтээгдэхүүн", item: `${SITE_URL}/products` },
+		{ "@type": "ListItem", position: 3, name: category.name, item: `${SITE_URL}${baseUrl}/1` },
+		...(page > 1 ? [{ "@type": "ListItem", position: 4, name: `Хуудас ${page}`, item: `${SITE_URL}${baseUrl}/${page}` }] : []),
+	],
+};
+
+const itemListSchema = {
+	"@context": "https://schema.org",
+	"@type": "ItemList",
+	name: category.name,
+	numberOfItems: pagination.totalCount,
+	itemListElement: products.map((p, i) => ({
+		"@type": "ListItem",
+		position: (page - 1) * PAGE_SIZE + i + 1,
+		url: `${SITE_URL}/products/${p.slug}-${p.id}`,
+		name: p.name,
+	})),
+};
+---
+
+<Layout title={seoTitle} description={seoDescription}>
+	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
+
+	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+		<div class="overflow-hidden border-3 border-black bg-primary/5 px-3 py-3 shadow-[5px_5px_0_0_#000] sm:border-4 sm:px-5 sm:py-4 sm:shadow-[6px_6px_0_0_#000]">
+			<!-- Breadcrumb -->
+			<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground sm:mb-4 sm:text-sm">
+				<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
+				<span>/</span>
+				<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
+				<span>/</span>
+				<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
+				{page > 1 && (
+					<>
+						<span>/</span>
+						<span class="text-foreground">Хуудас {page}</span>
+					</>
+				)}
+			</nav>
+
+			<!-- Header -->
+			<div class="mb-3 sm:mb-4">
+				<h1 class="font-black text-xl tracking-tight uppercase sm:text-2xl lg:text-3xl">
+					{category.name}
+				</h1>
+				<p class="mt-1 font-bold text-muted-foreground text-xs sm:text-sm">
+					Нийт {pagination.totalCount} бүтээгдэхүүн{page > 1 ? ` — Хуудас ${page}/${pagination.totalPages}` : ""}
+				</p>
+			</div>
+
+			<!-- Banner -->
+			{category.bannerImage && (
+				<div class="mb-3 overflow-hidden border-2 border-black shadow-[3px_3px_0_0_#000] sm:mb-4 sm:border-3 sm:shadow-[4px_4px_0_0_#000]">
+					<img
+						src={category.bannerImage}
+						alt={category.name}
+						class="h-32 w-full object-cover sm:h-48"
+						width="1200"
+						height="300"
+					/>
+				</div>
+			)}
+
+			{category.description && (
+				<div class="mb-3 border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000] sm:mb-4 sm:border-3 sm:p-4 sm:shadow-[4px_4px_0_0_#000]">
+					<p class="text-sm leading-relaxed">{category.description}</p>
+				</div>
+			)}
+
+			<!-- Products Grid -->
+			<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+				{products.map((product) => (
+					<ServerProductCard product={product} />
+				))}
+			</div>
+
+			<!-- Pagination -->
+			{pagination.totalPages > 1 && (
+				<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} />
+			)}
+		</div>
+	</div>
+</Layout>

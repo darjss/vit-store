@@ -1,0 +1,88 @@
+---
+interface Props {
+	page: number;
+	totalPages: number;
+	baseUrl: string;
+}
+
+const { page, totalPages, baseUrl } = Astro.props;
+
+const getPageUrl = (p: number) => {
+	return `${baseUrl}/${p}`;
+};
+
+// Generate page numbers to show
+const getVisiblePages = () => {
+	const pages: (number | string)[] = [];
+	const maxVisible = 5;
+
+	if (totalPages <= maxVisible) {
+		for (let i = 1; i <= totalPages; i++) pages.push(i);
+		return pages;
+	}
+
+	pages.push(1);
+
+	let start = Math.max(2, page - 1);
+	let end = Math.min(totalPages - 1, page + 1);
+
+	if (page <= 3) {
+		start = 2;
+		end = Math.min(totalPages - 1, 4);
+	}
+	if (page >= totalPages - 2) {
+		start = Math.max(2, totalPages - 3);
+		end = totalPages - 1;
+	}
+
+	if (start > 2) pages.push("...");
+	for (let i = start; i <= end; i++) pages.push(i);
+	if (end < totalPages - 1) pages.push("...");
+
+	pages.push(totalPages);
+	return pages;
+};
+
+const visiblePages = getVisiblePages();
+---
+
+<nav aria-label="Pagination" class="flex items-center justify-center gap-1.5 py-6 sm:gap-2 sm:py-8">
+	{page > 1 && (
+		<a
+			href={getPageUrl(page - 1)}
+			class="flex h-9 items-center justify-center border-2 border-black bg-white px-3 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:px-4 sm:text-sm"
+			rel="prev"
+		>
+			← Өмнөх
+		</a>
+	)}
+
+	{visiblePages.map((p) => (
+		p === "..." ? (
+			<span class="flex h-9 w-9 items-center justify-center font-bold text-muted-foreground text-xs sm:h-10 sm:w-10 sm:text-sm">
+				...
+			</span>
+		) : p === page ? (
+			<span class="flex h-9 w-9 items-center justify-center border-2 border-black bg-primary font-black text-xs text-primary-foreground shadow-[2px_2px_0_0_#000] sm:h-10 sm:w-10 sm:text-sm">
+				{p}
+			</span>
+		) : (
+			<a
+				href={getPageUrl(p as number)}
+				class="flex h-9 w-9 items-center justify-center border-2 border-black bg-white font-bold text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:w-10 sm:text-sm"
+			>
+				{p}
+			</a>
+		)
+	))}
+
+	{page < totalPages && (
+		<a
+			href={getPageUrl(page + 1)}
+			class="flex h-9 items-center justify-center border-2 border-black bg-white px-3 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:px-4 sm:text-sm"
+			rel="next"
+		>
+			Дараах →
+		</a>
+	)}
+</nav>

@@ -1,0 +1,22 @@
+---
+export const prerender = true;
+
+import { api } from "@/lib/trpc";
+
+export async function getStaticPaths() {
+	try {
+		const brands = await api.brand.getAllBrandsWithStock.query();
+		return brands
+			.filter((brand) => brand.productCount > 0)
+			.map((brand) => ({
+				params: { slug: brand.slug },
+			}));
+	} catch (error) {
+		console.error("Error getting static paths for brand redirect pages", error);
+		return [];
+	}
+}
+
+const { slug } = Astro.params;
+return Astro.redirect(`/products/brand/${slug}/1`, 301);
+---

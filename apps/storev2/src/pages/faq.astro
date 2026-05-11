@@ -1,0 +1,118 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import IconQuestion from "~icons/ri/question-line";
+import IconCheck from "~icons/ri/check-line";
+
+const title = "Түгээмэл асуулт хариулт";
+const description = "Amerik Vitamin-ийн тухай түгээмэл асуулт, хариулт. Бүтээгдэхүүн, хүргэлт, төлбөрийн талаар.";
+
+const faqs = [
+  {
+    q: "Бүтээгдэхүүнүүд хаанаас ирдэг вэ?",
+    a: "Бүтээгдэхүүнүүд маань бүгд АНУ-аас шууд импортлогдсон жинхэнэ, баталгаат бүтээгдэхүүнүүд юм. Бид олон улсын алдартай брэндүүдийн бүтээгдэхүүнүүдийг шууд нийлүүлдэг.",
+  },
+  {
+    q: "Хүргэлт хэр удаж байна вэ?",
+    a: "Захиалгыг өдөр бүр 12:00 цагаас хойш хүргэнэ. Өглөөний захиалгыг өдөрт нь, оройн захиалгыг маргааш хүргэнэ. Улаанбаатар хотын бүх дүүрэгт хүргэлт хийнэ.",
+  },
+  {
+    q: "Хөдөө орон нутаг руу хүргэлт хийдэг үү?",
+    a: 'Тийм ээ, бид хөдөө орон нутаг руу хүргэлт хийнэ. "Замын Унаа"-ар илгээдэг бөгөөд тээврийн зардал хүлээн авагчийн хариуцах болно.',
+  },
+  {
+    q: "Бараа буцааж болох уу?",
+    a: "Уучлаарай, бид бараа буцаалт хүлээн авдаггүй. Импортын хүнсний нэмэлт тэжээлийн онцлогоос шалтгаалан буцаалт хүлээн авах боломжгүй. Захиалга өгөхөөс өмнө бүтээгдэхүүнээ сайтар сонгоно уу.",
+  },
+  {
+    q: "Мөнгө буцаан олгох боломжтой юу?",
+    a: "Бид буцаан олголт хийдэггүй. Төлбөр төлсний дараа захиалгыг цуцлах боломжгүй. Хэрэв чанарын асуудал гарвал бидэнтэй холбогдоно уу.",
+  },
+  {
+    q: "Төлбөрийн ямар хэлбэр хүлээн авдаг вэ?",
+    a: "Бид дансаар шилжүүлэх болон QPay-ээр төлбөр хүлээн авдаг. QPay ашиглан бүх банкны апп-аар хурдан төлбөр хийх боломжтой.",
+  },
+  {
+    q: "Бүтээгдэхүүн жинхэнэ гэдгийг хэрхэн мэдэх вэ?",
+    a: "Бүтээгдэхүүнүүд маань АНУ-аас шууд ирсэн бөгөөд GMP, FDA бүртгэлтэй үйлдвэрүүдээс нийлүүлдэг. Бид хуурамч бүтээгдэхүүн борлуулдаггүй.",
+  },
+  {
+    q: "Захиалгаа хэрхэн хянах вэ?",
+    a: 'Та <a href="/order-tracking" class="font-black underline decoration-2 underline-offset-4">Захиалга хянах</a> хуудас руу ороод захиалгын дугаар, утасны дугаараа оруулан захиалгынхаа төлөвийг хянах боломжтой.',
+  },
+  {
+    q: "Хүргэлтийн хураамж хэд вэ?",
+    a: "Улаанбаатар хотод хүргэлтийн хураамж стандарт 6,000₮. Хөдөө орон нутаг руу хүргэхдээ 'Замын Унаа'-ар илгээдэг бөгөөд тээврийн зардал хүлээн авагчийн хариуцах болно.",
+  },
+  {
+    q: "Утасны дугаараар нэвтрэх боломжтой юу?",
+    a: "Тийм ээ, бид OTP баталгаажуулалт ашиглан утасны дугаараар нэвтрэх боломжыг олгодог. Нэвтэрсний дараа захиалгынхаа түүхийг харах боломжтой.",
+  },
+];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.a.replace(/<[^>]*>/g, ""),
+    },
+  })),
+};
+---
+
+<Layout title={title} description={description}>
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
+    <!-- Header -->
+    <div class="mb-8 lg:mb-10">
+      <div class="border-4 border-border bg-primary p-4 lg:p-6 shadow-hard-lg mb-4">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight">
+          Түгээмэл асуулт хариулт
+        </h1>
+        <p class="text-sm font-medium text-foreground/70 mt-2">
+          Таны мэдэхийг хүссэн бүх зүйл
+        </p>
+      </div>
+    </div>
+
+    <!-- FAQ List -->
+    <div class="space-y-4">
+      {faqs.map((faq, i) => (
+        <div class="border-3 border-border bg-card shadow-hard-sm">
+          <div class="p-4 lg:p-5">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
+                <IconQuestion class="w-4 h-4" />
+              </div>
+              <div class="flex-1">
+                <h3 class="font-black text-sm uppercase tracking-wider mb-2">{faq.q}</h3>
+                <p class="text-sm font-medium text-muted-foreground leading-relaxed" set:html={faq.a} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Still have questions -->
+    <div class="mt-8 border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-black uppercase tracking-tight">Асуулт байна уу?</h2>
+          <p class="text-sm font-medium text-muted-foreground mt-1">
+            Бидэнтэй шууд холбогдож асуултаа асууна уу
+          </p>
+        </div>
+        <a
+          href="/contact"
+          class="inline-flex items-center justify-center px-6 py-3 bg-foreground text-background font-black text-sm uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform"
+        >
+          Холбогдох
+        </a>
+      </div>
+    </div>
+  </div>
+</Layout>

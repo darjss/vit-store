@@ -1,0 +1,122 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cream" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFBEA"/>
+      <stop offset="0.58" stop-color="#FFF4B8"/>
+      <stop offset="1" stop-color="#FFE773"/>
+    </linearGradient>
+    <linearGradient id="yellowSlab" x1="136" y1="214" x2="654" y2="441" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF991"/>
+      <stop offset="1" stop-color="#FFD83D"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="653" y1="71" x2="1128" y2="558" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE552"/>
+      <stop offset="1" stop-color="#FFB636"/>
+    </linearGradient>
+    <linearGradient id="bottle" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#FFFEF5"/>
+      <stop offset="1" stop-color="#F2EBC7"/>
+    </linearGradient>
+    <linearGradient id="greenLabel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#58D083"/>
+      <stop offset="1" stop-color="#1E9A63"/>
+    </linearGradient>
+    <linearGradient id="blueLabel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#58A9FF"/>
+      <stop offset="1" stop-color="#2F63C8"/>
+    </linearGradient>
+    <filter id="hardShadow" x="-20%" y="-20%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="14" dy="16" stdDeviation="0" flood-color="#17150D" flood-opacity="1"/>
+    </filter>
+    <filter id="softShadow" x="-30%" y="-30%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="18" flood-color="#17150D" flood-opacity="0.22"/>
+    </filter>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" stroke="#17150D" stroke-opacity="0.08" stroke-width="2"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#cream)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="128" cy="86" r="220" fill="#FFF991" opacity="0.62"/>
+  <circle cx="1094" cy="566" r="180" fill="#B4F8C8" opacity="0.32"/>
+
+  <path d="M650 39H1136L1100 592H614L650 39Z" fill="url(#panel)" stroke="#17150D" stroke-width="5"/>
+  <path d="M681 72H1102L1073 558H651L681 72Z" fill="#FFFBEA" fill-opacity="0.42" stroke="#17150D" stroke-width="3" stroke-dasharray="12 12"/>
+
+  <rect x="40" y="40" width="1120" height="550" stroke="#17150D" stroke-width="5"/>
+  <rect x="56" y="56" width="1088" height="518" stroke="#17150D" stroke-opacity="0.22" stroke-width="2"/>
+
+  <g transform="translate(82 82)">
+    <rect x="0" y="0" width="58" height="58" fill="#17150D"/>
+    <circle cx="29" cy="29" r="15" fill="#FFF991"/>
+    <path d="M29 7V0M29 58V51M7 29H0M58 29H51M13 13L8 8M50 50L45 45M45 13L50 8M8 50L13 45" stroke="#FFF991" stroke-width="5" stroke-linecap="square"/>
+    <text x="78" y="24" font-family="Arial, DejaVu Sans, sans-serif" font-size="17" font-weight="900" letter-spacing="3" fill="#17150D">AMERIKVITAMIN.MN</text>
+    <text x="78" y="49" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="700" letter-spacing="1.8" fill="#6E6751">АНУ БРЭНДҮҮД НЭГ ДОРООС</text>
+  </g>
+
+  <g transform="translate(82 178)">
+    <rect x="16" y="150" width="533" height="76" fill="url(#yellowSlab)" stroke="#17150D" stroke-width="4"/>
+    <text x="0" y="66" font-family="Arial, DejaVu Sans, sans-serif" font-size="82" font-weight="900" letter-spacing="-4" fill="#17150D">АНУ-ЫН</text>
+    <text x="0" y="145" font-family="Arial, DejaVu Sans, sans-serif" font-size="82" font-weight="900" letter-spacing="-4" fill="#17150D">ВИТАМИН,</text>
+    <text x="34" y="208" font-family="Arial, DejaVu Sans, sans-serif" font-size="54" font-weight="900" letter-spacing="-2" fill="#17150D">НЭМЭЛТ ТЭЖЭЭЛ</text>
+    <text x="2" y="266" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="800" fill="#38331F">Өргөн сонголт • боломжийн үнэ</text>
+    <text x="2" y="302" font-family="Arial, DejaVu Sans, sans-serif" font-size="25" font-weight="800" fill="#38331F">Шуурхай хүргэлттэй</text>
+  </g>
+
+  <g transform="translate(82 490)">
+    <rect x="0" y="0" width="254" height="50" fill="#17150D"/>
+    <text x="127" y="32" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="900" letter-spacing="0.6" text-anchor="middle" fill="#FFFBEA">БҮТЭЭГДЭХҮҮН ҮЗЭХ</text>
+    <rect x="272" y="0" width="222" height="50" fill="#B4F8C8" stroke="#17150D" stroke-width="4"/>
+    <text x="383" y="32" font-family="Arial, DejaVu Sans, sans-serif" font-size="16" font-weight="900" letter-spacing="0.5" text-anchor="middle" fill="#17150D">ШУУРХАЙ ХҮРГЭЛТ</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <ellipse cx="888" cy="511" rx="238" ry="34" fill="#17150D" opacity="0.20"/>
+  </g>
+
+  <g transform="translate(735 178) rotate(-8 90 180)" filter="url(#hardShadow)">
+    <rect x="48" y="0" width="88" height="46" fill="#17150D"/>
+    <rect x="56" y="34" width="72" height="30" fill="#FFFBEA" stroke="#17150D" stroke-width="5"/>
+    <rect x="10" y="62" width="164" height="290" rx="18" fill="url(#bottle)" stroke="#17150D" stroke-width="6"/>
+    <rect x="28" y="140" width="128" height="118" fill="url(#blueLabel)" stroke="#17150D" stroke-width="5"/>
+    <text x="92" y="178" font-family="Arial, DejaVu Sans, sans-serif" font-size="24" font-weight="900" text-anchor="middle" fill="#FFFBEA">D3 + K2</text>
+    <text x="92" y="209" font-family="Arial, DejaVu Sans, sans-serif" font-size="13" font-weight="900" letter-spacing="2" text-anchor="middle" fill="#FFFBEA">IMMUNITY</text>
+    <rect x="50" y="278" width="84" height="18" fill="#FFD83D"/>
+  </g>
+
+  <g transform="translate(880 116) rotate(5 112 210)" filter="url(#hardShadow)">
+    <rect x="63" y="0" width="100" height="52" fill="#17150D"/>
+    <rect x="74" y="40" width="78" height="31" fill="#FFFBEA" stroke="#17150D" stroke-width="5"/>
+    <rect x="0" y="69" width="226" height="374" rx="24" fill="url(#bottle)" stroke="#17150D" stroke-width="7"/>
+    <rect x="24" y="171" width="178" height="147" fill="url(#greenLabel)" stroke="#17150D" stroke-width="6"/>
+    <text x="113" y="217" font-family="Arial, DejaVu Sans, sans-serif" font-size="31" font-weight="900" letter-spacing="-1" text-anchor="middle" fill="#FFFBEA">OMEGA</text>
+    <text x="113" y="255" font-family="Arial, DejaVu Sans, sans-serif" font-size="45" font-weight="900" text-anchor="middle" fill="#FFFBEA">3</text>
+    <text x="113" y="292" font-family="Arial, DejaVu Sans, sans-serif" font-size="13" font-weight="900" letter-spacing="2" text-anchor="middle" fill="#FFFBEA">DAILY SUPPORT</text>
+    <circle cx="113" cy="116" r="36" fill="#FFF991" stroke="#17150D" stroke-width="6"/>
+    <path d="M82 354H144" stroke="#17150D" stroke-width="7" stroke-linecap="square"/>
+  </g>
+
+  <g transform="translate(654 302) rotate(7 78 128)" filter="url(#hardShadow)">
+    <rect x="43" y="0" width="70" height="38" fill="#17150D"/>
+    <rect x="49" y="29" width="58" height="24" fill="#FFFBEA" stroke="#17150D" stroke-width="5"/>
+    <rect x="0" y="51" width="156" height="224" rx="16" fill="url(#bottle)" stroke="#17150D" stroke-width="6"/>
+    <rect x="20" y="123" width="116" height="82" fill="#FFF991" stroke="#17150D" stroke-width="5"/>
+    <text x="78" y="157" font-family="Arial, DejaVu Sans, sans-serif" font-size="22" font-weight="900" text-anchor="middle" fill="#17150D">MAG</text>
+    <text x="78" y="184" font-family="Arial, DejaVu Sans, sans-serif" font-size="15" font-weight="900" letter-spacing="1.5" text-anchor="middle" fill="#17150D">SLEEP</text>
+  </g>
+
+  <g stroke="#17150D" stroke-width="5">
+    <rect x="1004" y="93" width="102" height="46" rx="23" fill="#FFB5E8" transform="rotate(17 1004 93)"/>
+    <line x1="1051" y1="107" x2="1065" y2="151"/>
+    <rect x="678" y="116" width="102" height="46" rx="23" fill="#B4F8C8" transform="rotate(-21 678 116)"/>
+    <line x1="724" y1="98" x2="740" y2="143"/>
+    <rect x="1061" y="442" width="96" height="42" rx="21" fill="#A0C4FF" transform="rotate(-18 1061 442)"/>
+    <line x1="1106" y1="426" x2="1119" y2="468"/>
+  </g>
+
+  <g transform="translate(964 506)">
+    <rect x="0" y="0" width="124" height="38" fill="#17150D"/>
+    <text x="62" y="25" font-family="Arial, DejaVu Sans, sans-serif" font-size="14" font-weight="900" letter-spacing="1.4" text-anchor="middle" fill="#FFFBEA">USA BRANDS</text>
+  </g>
+</svg>

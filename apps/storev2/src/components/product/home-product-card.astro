@@ -1,0 +1,75 @@
+---
+import AddToCartButton from "@/components/cart/add-to-cart-button";
+import { productColors } from "@/lib/constant";
+import { toProductImageUrl } from "@/lib/image";
+import type { ProductForHome } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
+
+interface Props {
+	product: ProductForHome;
+	aspectRatio?: string;
+	imageSize?: "feature" | "card";
+	class?: string;
+}
+
+const {
+	product,
+	aspectRatio = "aspect-square",
+	imageSize = "feature",
+	class: className = "",
+} = Astro.props;
+
+const bgColor = productColors[product.id % productColors.length];
+const productUrl = `/products/${product.slug}-${product.id}`;
+---
+
+<div
+	class={`group border-2 border-border bg-card active:shadow-hard-sm transition-all ${className}`}
+>
+	<a href={productUrl} class="block">
+		<div
+			class={`relative overflow-hidden border-b-2 border-border ${aspectRatio}`}
+			style={`background: ${bgColor}`}
+		>
+			{
+				product.image && (
+					<img
+						src={toProductImageUrl(product.image, imageSize) || product.image}
+						alt={product.name}
+						class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5"
+						width="480"
+						height="480"
+						loading="lazy"
+						decoding="async"
+					/>
+				)
+			}
+		</div>
+	</a>
+	<div class="p-2.5">
+		<div class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">
+			{product.brand}
+		</div>
+		<a href={productUrl}>
+			<h3 class="text-[11px] md:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">
+				{product.name}
+			</h3>
+		</a>
+		<div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
+			<span class="font-black text-[13px] md:text-sm">
+				{formatCurrency(product.price)}
+			</span>
+			<AddToCartButton
+				client:load
+				compact
+				cartItem={{
+					productId: product.id,
+					quantity: 1,
+					name: product.name,
+					price: product.price,
+					image: product.image,
+				}}
+			/>
+		</div>
+	</div>
+</div>

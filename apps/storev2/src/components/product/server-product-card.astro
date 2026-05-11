@@ -1,0 +1,77 @@
+---
+import { formatCurrency, productColors } from "@vit/shared";
+import { toProductImageUrl } from "@/lib/image";
+import AddToCartButton from "@/components/cart/add-to-cart-button";
+
+interface Props {
+	product: {
+		id: number;
+		name: string;
+		slug: string;
+		price: number;
+		brand: { name: string } | null;
+		images: { url: string }[];
+	};
+}
+
+const { product } = Astro.props;
+const bgColor = productColors[product.id % productColors.length];
+const imageUrl = product.images[0]?.url || "";
+const productUrl = `/products/${product.slug}-${product.id}`;
+---
+
+<div
+	class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] transition-all duration-200 hover:shadow-[4px_4px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000] sm:hover:shadow-[6px_6px_0_0_#000]"
+	data-product-id={product.id}
+>
+	<a
+		href={productUrl}
+		class="relative block overflow-hidden border-black border-b-2 sm:border-b-3"
+		aria-label={`${product.name}${product.brand ? ` by ${product.brand.name}` : ""}`}
+	>
+		<div class="relative aspect-4/5 sm:aspect-4/3" style={`background: ${bgColor}`}>
+			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
+			{imageUrl && (
+				<img
+					src={toProductImageUrl(imageUrl, "card") || imageUrl}
+					alt={product.name}
+					width="400"
+					height="300"
+					loading="lazy"
+					decoding="async"
+					class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
+				/>
+			)}
+			{product.brand && (
+				<div class="absolute right-1.5 bottom-1.5 rounded-sm border-2 border-black bg-white px-1.5 py-0.5 font-black text-[8px] uppercase tracking-tight shadow-[2px_2px_0_0_#000] sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
+					{product.brand.name}
+				</div>
+			)}
+		</div>
+	</a>
+
+	<div class="flex flex-1 flex-col p-2 sm:p-3">
+		<a href={productUrl} class="block">
+			<h3 class="line-clamp-2 font-bold text-[11px] leading-tight tracking-tight group-hover:underline sm:text-sm sm:leading-snug">
+				{product.name}
+			</h3>
+		</a>
+	</div>
+
+	<div class="flex items-center justify-between gap-1.5 border-black border-t-2 bg-primary/10 px-2 py-1.5 sm:gap-2 sm:border-t-3 sm:px-3 sm:py-2">
+		<div class="font-black text-sm tracking-tight sm:text-lg">
+			{formatCurrency(product.price)}
+		</div>
+		<AddToCartButton
+			client:load
+			compact
+			cartItem={{
+				productId: product.id,
+				quantity: 1,
+				name: product.name,
+				price: product.price,
+				image: imageUrl || "",
+			}}
+		/>
+	</div>
+</div>
