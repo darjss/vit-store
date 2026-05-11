@@ -24,6 +24,26 @@ export const brand = router({
 
 		return brands;
 	}),
+
+	getAllBrandsWithStock: publicProcedure.query(async ({ ctx }) => {
+		const cacheKey = `${CATALOG_CACHE_KEYS.brandsAll}:stock`;
+		const cachedBrands = await ctx.kv.get(cacheKey);
+		if (cachedBrands) {
+			return JSON.parse(cachedBrands) as Awaited<
+				ReturnType<typeof brandQueries.store.getAllBrandsWithStock>
+			>;
+		}
+
+		const q = brandQueries.store;
+		const brands = await q.getAllBrandsWithStock();
+
+		await ctx.kv.put(cacheKey, JSON.stringify(brands), {
+			expirationTtl: CATALOG_CACHE_TTL_SECONDS,
+		});
+
+		return brands;
+	}),
+
 	getBrandById: publicProcedure
 		.input(
 			v.object({
@@ -33,5 +53,15 @@ export const brand = router({
 		.query(async ({ input }) => {
 			const q = brandQueries.store;
 			return await q.getBrandById(input.id);
+		}),
+	getBrandBySlug: publicProcedure
+		.input(
+			v.object({
+				slug: v.pipe(v.string(), v.minLength(1)),
+			}),
+		)
+		.query(async ({ input }) => {
+			const q = brandQueries.store;
+			return await q.getBrandBySlug(input.slug);
 		}),
 });

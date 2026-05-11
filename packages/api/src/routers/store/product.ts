@@ -15,7 +15,10 @@ import {
 } from "~/lib/product-search/text";
 import { redis } from "~/lib/redis";
 import { publicProcedure, router } from "~/lib/trpc";
-import { searchProducts } from "~/lib/product-search/client";
+import {
+	rebuildProductSearchIndex,
+	searchProducts,
+} from "~/lib/product-search/client";
 import { measureMs, summarizeTimings } from "~/lib/utils";
 
 export interface SearchProductResult {
@@ -73,6 +76,39 @@ const performProductSearch = async (
 
 	const q = productQueries.store;
 	const fallbackResults = await q.searchByName(query, safeLimit);
+	return fallbackResults.map((p) => ({
+		id: p.id,
+		slug: p.slug,
+		name: p.name,
+		price: p.price,
+		image: p.images[0]?.url || "",
+		brand: p.brand?.name || "",
+	}));
+};
+
+const performProductSearchWithStock = async (
+	query: string,
+	limit: number,
+	filters?: { brandId?: number; categoryId?: number },
+): Promise<SearchProductResult[]> => {
+	const safeLimit = Math.min(limit, 10);
+	const searchResults = await searchProducts(query, safeLimit, filters);
+
+	if (searchResults.length > 0) {
+		return searchResults
+			.filter((result) => result.inStock && result.stock > 0)
+			.map((result) => ({
+				id: result.id,
+				slug: result.slug,
+				name: result.name,
+				price: result.price,
+				image: result.image,
+				brand: result.brand,
+			}));
+	}
+
+	const q = productQueries.store;
+	const fallbackResults = await q.searchByNameWithStock(query, safeLimit);
 	return fallbackResults.map((p) => ({
 		id: p.id,
 		slug: p.slug,
@@ -148,6 +184,7 @@ const searchNavigationResults = async (query: string, limit: number) => {
 			.map((brand) => ({
 				id: brand.id,
 				name: brand.name,
+				slug: brand.slug,
 				type: "brand" as const,
 				productCount: brand.productCount,
 				logoUrl: brand.logoUrl,
@@ -168,6 +205,7 @@ const searchNavigationResults = async (query: string, limit: number) => {
 			.map((category) => ({
 				id: category.id,
 				name: category.name,
+				slug: category.slug,
 				type: "category" as const,
 				productCount: category.productCount,
 				score: scoreNavigationMatch(category.name, query),
@@ -262,6 +300,83 @@ export const product = router({
 			}
 		}),
 
+	searchProductsWithStock: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				return await performProductSearchWithStock(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
+
+	searchProductsForPageWithStock: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 10),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				return await performProductSearchWithStock(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
+
+	searchStorefrontWithStock: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const safeLimit = Math.min(input.limit, 12);
+				const [products, navigation] = await Promise.all([
+					performProductSearchWithStock(input.query, safeLimit),
+					searchNavigationResults(input.query, 4),
+				]);
+
+				return {
+					products,
+					brands: navigation.brands,
+					categories: navigation.categories,
+				};
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search storefront",
+					cause: error,
+				});
+			}
+		}),
+
 	getProductsForHome: publicProcedure.query(async () => {
 		try {
 			const q = productQueries.store;
@@ -306,9 +421,59 @@ export const product = router({
 			});
 		}
 	}),
+
+	getProductsForHomeWithStock: publicProcedure.query(async () => {
+		try {
+			const q = productQueries.store;
+			const [featuredProducts, newProducts, discountedProducts] =
+				await Promise.all([
+					q.getFeaturedProductsWithStock(),
+					q.getNewProductsWithStock(),
+					q.getDiscountedProductsWithStock(),
+				]);
+			return {
+				featuredProducts: featuredProducts.map((product) => ({
+					id: product.id,
+					slug: product.slug,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+				})),
+				newProducts: newProducts.map((product) => ({
+					id: product.id,
+					slug: product.slug,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+				})),
+				discountedProducts: discountedProducts.map((product) => ({
+					id: product.id,
+					slug: product.slug,
+					name: product.name,
+					price: product.price,
+					image: product.images[0]?.url,
+					brand: product.brand.name,
+					discount: product.discount,
+				})),
+			};
+		} catch (error) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Error getting products for home",
+				cause: error,
+			});
+		}
+	}),
+
 	getAllProducts: publicProcedure.query(async () => {
 		const q = productQueries.store;
 		return await q.getAllProducts();
+	}),
+	getPrerenderProducts: publicProcedure.query(async () => {
+		const q = productQueries.store;
+		return await q.getPrerenderProducts();
 	}),
 	getProductById: publicProcedure
 		.input(
@@ -322,12 +487,15 @@ export const product = router({
 			if (result === null || result === undefined) {
 				return null;
 			}
-			result.images = result.images.map((image) => ({
-				url: image.url,
-				isPrimary: image.isPrimary,
-			}));
 
-			return result;
+			return {
+				...result,
+				stock: result.stock,
+				images: result.images.map((image) => ({
+					url: image.url,
+					isPrimary: image.isPrimary,
+				})),
+			};
 		}),
 	getProductsByIds: publicProcedure
 		.input(
@@ -750,6 +918,94 @@ export const product = router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to get infinite products",
+					cause: error,
+				});
+			}
+		}),
+	getPaginatedProducts: publicProcedure
+		.input(
+			v.object({
+				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const q = productQueries.store;
+				return await q.getPaginatedProducts(input);
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get paginated products",
+					cause: error,
+				});
+			}
+		}),
+
+	getInfiniteProductsWithStock: publicProcedure
+		.input(
+			v.object({
+				cursor: v.optional(v.string()),
+				limit: v.optional(v.number(), 10),
+				brandId: v.optional(v.number(), 0),
+				categoryId: v.optional(v.number(), 0),
+				listType: v.optional(v.picklist(["featured", "recent", "discount"])),
+				searchTerm: v.optional(v.string()),
+				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const q = productQueries.store;
+				const products = await q.getInfiniteProductsWithStock(input);
+				return products;
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get infinite products",
+					cause: error,
+				});
+			}
+		}),
+
+	getPaginatedProductsWithStock: publicProcedure
+		.input(
+			v.object({
+				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
+				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				const q = productQueries.store;
+				return await q.getPaginatedProductsWithStock(input);
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get paginated products",
+					cause: error,
+				});
+			}
+		}),
+
+	rebuildSearchIndex: publicProcedure
+		.mutation(async () => {
+			try {
+				const status = await rebuildProductSearchIndex("manual");
+				return status;
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to rebuild search index",
 					cause: error,
 				});
 			}

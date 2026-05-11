@@ -1,346 +1,302 @@
 import { TRPCError } from "@trpc/server";
-import {
-	customerQueries,
-	orderQueries,
-	paymentQueries,
-} from "@vit/api/queries";
+import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
+import { deliveryFee } from "@vit/shared/constants";
 import * as v from "valibot";
+import { eq, inArray } from "drizzle-orm";
+import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, ProductsTable, } from "~/db/schema";
+import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 import { kv } from "~/lib/kv";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
-import { customerProcedure, publicProcedure, router } from "~/lib/trpc";
+import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { addCustomerToDB } from "~/routers/store/auth";
-
-
 export const order = router({
-	getOrdersByCustomerId: customerProcedure.query(async ({ ctx }) => {
-		try {
-			const q = orderQueries.store;
-			const customerPhone = ctx.session.user.phone;
-			const orders = await q.getOrdersByCustomerPhone(customerPhone);
-
-			ctx.log.order.viewed({
-				customerPhone,
-				itemCount: orders.length,
-			});
-
-			return orders.map((order) => {
-				const { orderDetails, sales, ...orderInfo } = order;
-
-				const salesPriceMap = new Map<number, number>();
-				for (const sale of sales) {
-					salesPriceMap.set(sale.productId, sale.sellingPrice);
-				}
-				const products = orderDetails.map((detail) => ({
-					name: detail.product.name,
-					brandName: detail.product.brand.name,
-					imageUrl: detail.product.images[0]?.url,
-					quantity: detail.quantity,
-					sellingPrice: salesPriceMap.get(detail.productId) ?? 0,
-				}));
-				return {
-					...orderInfo,
-					products,
-				};
-			});
-		} catch (e) {
-			ctx.log.error("order.fetch_failed", e);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to fetch orders",
-				cause: e,
-			});
-		}
-	}),
-
-	addOrder: publicProcedure
-		.input(newOrderSchema)
-		.mutation(async ({ input, ctx }) => {
-			const startTime = performance.now();
-
-			try {
-				const storeOrderQ = orderQueries.store;
-				const storeCustomerQ = customerQueries.store;
-
-				const productsById = new Map<number, number>();
-				for (const item of input.products) {
-					const productId = Math.trunc(item.productId);
-					const quantity = Math.trunc(item.quantity);
-					if (productId <= 0 || quantity <= 0) {
-						continue;
-					}
-					productsById.set(
-						productId,
-						(productsById.get(productId) ?? 0) + quantity,
-					);
-				}
-
-				const normalizedProducts = Array.from(productsById.entries()).map(
-					([productId, quantity]) => ({ productId, quantity }),
-				);
-
-				if (normalizedProducts.length === 0) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "Сагс хоосон эсвэл буруу байна. Дахин оролдоно уу.",
-					});
-				}
-
-				const products = await storeOrderQ.getProductsByIds(
-					normalizedProducts.map((p) => p.productId),
-				);
-
-				const existingProductIds = new Set(products.map((p) => p.id));
-				const missingProductIds = normalizedProducts
-					.filter((p) => !existingProductIds.has(p.productId))
-					.map((p) => p.productId);
-
-				if (missingProductIds.length > 0) {
-					ctx.log.warn("order.invalid_products", {
-						missingProductIds,
-					});
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message:
-							"Зарим бараа олдсонгүй. Сагсаа шинэчлээд дахин оролдоно уу.",
-					});
-				}
-
-				const priceByProductId = new Map(products.map((p) => [p.id, p.price]));
-
-				const total = normalizedProducts.reduce((acc, item) => {
-					const price = priceByProductId.get(item.productId) ?? 0;
-					return acc + price * item.quantity;
-				}, 0);
-
-				const customer = await storeCustomerQ.getCustomerByPhone(
-					Number(input.phoneNumber),
-				);
-
-				if (!customer) {
-					await storeCustomerQ.createCustomer({
-						phone: Number(input.phoneNumber),
-						address: input.address,
-						addressZoneId: input.addressZoneId,
-					});
-				}
-
-				await storeCustomerQ.updateCustomerAddress(
-					Number(input.phoneNumber),
-					input.address,
-					input.addressZoneId,
-				);
-
-				const orderNumber = generateOrderNumber();
-				const order = await storeOrderQ.createOrder({
-					orderNumber,
-					customerPhone: Number(input.phoneNumber),
-					address: input.address,
-					addressZoneId: input.addressZoneId,
-					notes: input.notes ?? null,
-					total: total,
-					status: "pending",
-					deliveryProvider: "tu-delivery",
-				});
-
-				const orderId = order?.orderId;
-				if (!orderId) {
-					ctx.log.error(
-						"order.create_failed",
-						new Error("No order ID returned"),
-					);
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to create order",
-					});
-				}
-
-				const orderDetailsPayload = normalizedProducts.map((p) => ({
-					productId: p.productId,
-					quantity: p.quantity,
-				}));
-
-				let orderDetailsInserted = false;
-				for (let attempt = 1; attempt <= 3; attempt++) {
-					try {
-						await storeOrderQ.createOrderDetails(orderId, orderDetailsPayload);
-						orderDetailsInserted = true;
-						break;
-					} catch (error) {
-						const isLastAttempt = attempt === 3;
-						ctx.log.warn("order.details_insert_retry", {
-							orderId,
-							attempt,
-							isLastAttempt,
-							error:
-								error instanceof Error
-									? error.message.slice(0, 300)
-									: String(error),
-						});
-
-						if (isLastAttempt) {
-							throw error;
-						}
-
-						await new Promise((resolve) => setTimeout(resolve, attempt * 120));
-					}
-				}
-
-				if (!orderDetailsInserted) {
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to create order details",
-					});
-				}
-
-				ctx.log.order.created({
-					orderId,
-					orderNumber,
-					customerPhone: Number(input.phoneNumber),
-					total,
-					itemCount: normalizedProducts.length,
-					status: "pending",
-				});
-
-				let paymentNumber: string | null = null;
-				try {
-					const paymentResult = await paymentQueries.store.createPayment({
-						paymentNumber: generatePaymentNumber(),
-						orderId: orderId,
-						provider: "transfer",
-						status: "pending",
-						amount: total,
-					});
-					paymentNumber = paymentResult?.paymentNumber ?? null;
-
-					if (paymentNumber) {
-						ctx.log.payment.created({
-							paymentNumber,
-							orderId,
-							amount: total,
-							provider: "transfer",
-							status: "pending",
-						});
-					}
-				} catch (e) {
-					ctx.log.error("payment.create_failed", e, { orderId });
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to create payment",
-						cause: e,
-					});
-				}
-
-				const user = await addCustomerToDB(input.phoneNumber);
-
-				if (!user) {
-					ctx.log.error(
-						"order.customer_create_failed",
-						new Error("No user returned"),
-					);
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to create or retrieve user",
-					});
-				}
-
-				const { session, token } = await createSession(user, kv());
-				setSessionTokenCookie(ctx.c, token, session.expiresAt);
-
-				const durationMs = performance.now() - startTime;
-				ctx.log.auth.sessionCreated({
-					phone: Number(input.phoneNumber),
-					sessionId: session.id,
-				});
-
-				ctx.log.info("order.flow_complete", {
-					orderId,
-					orderNumber,
-					paymentNumber,
-					durationMs,
-				});
-
-				if (paymentNumber) {
-					try {
-						const paymentInfo =
-							await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
-
-						if (paymentInfo) {
-							await sendDetailedOrderNotification({
-								paymentNumber,
-								customerPhone: paymentInfo.order.customerPhone,
-								address: paymentInfo.order.address,
-								notes: paymentInfo.order.notes,
-								total: paymentInfo.order.total,
-								products: paymentInfo.order.orderDetails.map((detail) => ({
-									name: detail.product.name,
-									quantity: detail.quantity,
-									price: detail.product.price,
-									imageUrl: detail.product.images[0]?.url,
-								})),
-								status: "pending_transfer",
-							});
-						}
-					} catch (notificationError) {
-						ctx.log.error("order.notification_failed", notificationError, {
-							paymentNumber,
-							orderNumber,
-						});
-					}
-				}
-
-				return { paymentNumber };
-			} catch (e) {
-				if (e instanceof TRPCError) {
-					throw e;
-				}
-				ctx.log.error("order.add_failed", e);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to add order",
-					cause: e,
-				});
-			}
-		}),
-
-	getOrderByOrderNumber: customerProcedure
-		.input(v.object({ orderNumber: v.string() }))
-		.query(async ({ input, ctx }) => {
-			try {
-				const q = orderQueries.store;
-				const order = await q.getOrderByOrderNumber(input.orderNumber);
-
-				ctx.log.order.viewed({
-					orderNumber: input.orderNumber,
-				});
-
-				return order;
-			} catch (e) {
-				ctx.log.error("order.fetch_by_number_failed", e, {
-					orderNumber: input.orderNumber,
-				});
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to fetch order",
-					cause: e,
-				});
-			}
-		}),
-	getDeliveryAddressZones: publicProcedure
-	.query(async ({ctx})=>{
-	  try{
-			return await getDeliveryAddressZones();
-			}
-			catch(e) {
-				ctx.log.error("order.fetch_zones_failed", e);
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to fetch delivery zones",
-					cause: e,
-				});
-			}
-  }),
+    getOrdersByCustomerId: verifiedCustomerProcedure.query(async ({ ctx }) => {
+        try {
+            const q = orderQueries.store;
+            const customerPhone = ctx.session.user.phone;
+            const orders = await q.getOrdersByCustomerPhone(customerPhone);
+            ctx.log.info("order.viewed", {
+                customerPhone,
+                itemCount: orders.length,
+            });
+            return orders.map((order) => {
+                const { orderDetails, sales, ...orderInfo } = order;
+                const salesPriceMap = new Map<number, number>();
+                for (const sale of sales) {
+                    salesPriceMap.set(sale.productId, sale.sellingPrice);
+                }
+                const products = orderDetails.map((detail) => ({
+                    name: detail.product.name,
+                    brandName: detail.product.brand.name,
+                    imageUrl: detail.product.images[0]?.url,
+                    quantity: detail.quantity,
+                    sellingPrice: salesPriceMap.get(detail.productId) ?? 0,
+                }));
+                return {
+                    ...orderInfo,
+                    products,
+                };
+            });
+        }
+        catch (e) {
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "order.fetch_failed"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch orders",
+                cause: e,
+            });
+        }
+    }),
+    addOrder: publicProcedure
+        .input(newOrderSchema)
+        .mutation(async ({ input, ctx }) => {
+        const startTime = performance.now();
+        try {
+            const productsById = new Map<number, number>();
+            for (const item of input.products) {
+                const productId = Math.trunc(item.productId);
+                const quantity = Math.trunc(item.quantity);
+                if (productId <= 0 || quantity <= 0) {
+                    continue;
+                }
+                productsById.set(productId, (productsById.get(productId) ?? 0) + quantity);
+            }
+            const normalizedProducts = Array.from(productsById.entries()).map(([productId, quantity]) => ({ productId, quantity }));
+            if (normalizedProducts.length === 0) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Сагс хоосон эсвэл буруу байна. Дахин оролдоно уу.",
+                });
+            }
+            const productIds = normalizedProducts.map((p) => p.productId);
+            const products = await ctx.db.query.ProductsTable.findMany({
+                where: inArray(ProductsTable.id, productIds),
+                columns: { id: true, name: true, price: true, stock: true, status: true },
+            });
+            const existingProductIds = new Set(products.map((p) => p.id));
+            const missingProductIds = normalizedProducts
+                .filter((p) => !existingProductIds.has(p.productId))
+                .map((p) => p.productId);
+            if (missingProductIds.length > 0) {
+                ctx.log.warn("order.invalid_products", {
+                    missingProductIds,
+                });
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Зарим бараа олдсонгүй. Сагсаа шинэчлээд дахин оролдоно уу.",
+                });
+            }
+            const productById = new Map(products.map((p) => [p.id, p]));
+            for (const item of normalizedProducts) {
+                const product = productById.get(item.productId);
+                if (!product || product.status !== "active" || product.stock < item.quantity) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: `${product?.name ?? "Бараа"} үлдэгдэл хүрэлцэхгүй байна.`,
+                    });
+                }
+            }
+            const productsTotal = normalizedProducts.reduce((acc, item) => {
+                const price = productById.get(item.productId)?.price ?? 0;
+                return acc + price * item.quantity;
+            }, 0);
+            const total = productsTotal + deliveryFee;
+            const orderNumber = generateOrderNumber();
+            const paymentNumberGenerated = generatePaymentNumber();
+            const customerPhone = Number(input.phoneNumber);
+            const txResult = await ctx.db.transaction(async (tx) => {
+                const existingCustomer = await tx.query.CustomersTable.findFirst({
+                    where: eq(CustomersTable.phone, customerPhone),
+                });
+                if (!existingCustomer) {
+                    await tx.insert(CustomersTable).values({
+                        phone: customerPhone,
+                        address: input.address,
+                        addressZoneId: input.addressZoneId,
+                    });
+                }
+                else {
+                    await tx
+                        .update(CustomersTable)
+                        .set({ address: input.address, addressZoneId: input.addressZoneId })
+                        .where(eq(CustomersTable.phone, customerPhone));
+                }
+                const [createdOrder] = await tx
+                    .insert(OrdersTable)
+                    .values({
+                    orderNumber,
+                    customerPhone,
+                    address: input.address,
+                    addressZoneId: input.addressZoneId,
+                    notes: input.notes ?? null,
+                    total,
+                    status: "pending",
+                    deliveryProvider: "tu-delivery",
+                })
+                    .returning({ orderId: OrdersTable.id });
+                if (!createdOrder)
+                    throw new Error("No order ID returned");
+                await tx.insert(OrderDetailsTable).values(normalizedProducts.map((p) => ({
+                    orderId: createdOrder.orderId,
+                    productId: p.productId,
+                    quantity: p.quantity,
+                })));
+                const [payment] = await tx
+                    .insert(PaymentsTable)
+                    .values({
+                    paymentNumber: paymentNumberGenerated,
+                    orderId: createdOrder.orderId,
+                    provider: "transfer",
+                    status: "pending",
+                    amount: total,
+                })
+                    .returning({ paymentNumber: PaymentsTable.paymentNumber });
+                return { orderId: createdOrder.orderId, paymentNumber: payment?.paymentNumber ?? null };
+            });
+            const orderId = txResult.orderId;
+            ctx.log.info("order.created", {
+                orderId,
+                orderNumber,
+                customerPhone: Number(input.phoneNumber),
+                total,
+                itemCount: normalizedProducts.length,
+                status_text: "pending",
+            });
+            const paymentNumber = txResult.paymentNumber;
+            if (paymentNumber) {
+                ctx.log.info("payment.created", {
+                    paymentNumber,
+                    orderId,
+                    amount: total,
+                    provider: "transfer",
+                    status_text: "pending",
+                });
+            }
+            const user = await addCustomerToDB(input.phoneNumber);
+            if (!user) {
+                ctx.log.error(new Error("No user returned"), {
+                    event: "order.customer_create_failed",
+                });
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to create or retrieve user",
+                });
+            }
+            const checkoutToken = paymentNumber
+                ? await createCheckoutAccessToken(ctx, {
+                    orderId,
+                    orderNumber,
+                    paymentNumber,
+                    phone: Number(input.phoneNumber),
+                })
+                : null;
+            const checkoutGuestUser = {
+                ...user,
+                trust: "checkout_guest" as const,
+                checkout: paymentNumber
+                    ? { orderId, orderNumber, paymentNumber }
+                    : undefined,
+            } satisfies typeof user & CustomerSessionClaims;
+            const { session, token } = await createSession(checkoutGuestUser, kv());
+            setSessionTokenCookie(ctx.c, token, session.expiresAt);
+            const durationMs = performance.now() - startTime;
+            ctx.log.info("auth.session_created", {
+                phone: Number(input.phoneNumber),
+                sessionId: session.id,
+            });
+            ctx.log.info("order.flow_complete", {
+                orderId,
+                orderNumber,
+                paymentNumber,
+                durationMs,
+            });
+            if (paymentNumber) {
+                try {
+                    const paymentInfo = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+                    if (paymentInfo) {
+                        await sendDetailedOrderNotification({
+                            paymentNumber,
+                            customerPhone: paymentInfo.order.customerPhone,
+                            address: paymentInfo.order.address,
+                            notes: paymentInfo.order.notes,
+                            total: paymentInfo.order.total,
+                            products: paymentInfo.order.orderDetails.map((detail) => ({
+                                name: detail.product.name,
+                                quantity: detail.quantity,
+                                price: detail.product.price,
+                                imageUrl: detail.product.images[0]?.url,
+                            })),
+                            status: "pending_transfer",
+                        });
+                    }
+                }
+                catch (notificationError) {
+                    ctx.log.error(notificationError instanceof Error ? notificationError : new Error(String(notificationError)), {
+                        event: "order.notification_failed",
+                        paymentNumber,
+                        orderNumber
+                    });
+                }
+            }
+            return { paymentNumber, orderNumber, checkoutToken };
+        }
+        catch (e) {
+            if (e instanceof TRPCError) {
+                throw e;
+            }
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "order.add_failed"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to add order",
+                cause: e,
+            });
+        }
+    }),
+    getOrderByOrderNumber: publicProcedure
+        .input(v.object({ orderNumber: v.string(), checkoutToken: v.optional(v.string()) }))
+        .query(async ({ input, ctx }) => {
+        try {
+            const order = await assertCanAccessOrder(ctx, input.orderNumber, input.checkoutToken);
+            ctx.log.info("order.viewed", { orderNumber: input.orderNumber });
+            return order;
+        }
+        catch (e) {
+            if (e instanceof TRPCError) {
+                throw e;
+            }
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "order.fetch_by_number_failed",
+                orderNumber: input.orderNumber
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch order",
+                cause: e,
+            });
+        }
+    }),
+    getDeliveryAddressZones: publicProcedure
+        .query(async ({ ctx }) => {
+        try {
+            return await getDeliveryAddressZones();
+        }
+        catch (e) {
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "order.fetch_zones_failed"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch delivery zones",
+                cause: e,
+            });
+        }
+    }),
 });
