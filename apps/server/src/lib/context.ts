@@ -6,7 +6,7 @@ import type {
 	UserSelectType,
 } from "@vit/api";
 import { createDb } from "@vit/api/db";
-import { createLogger, createRequestContext } from "@vit/logger";
+import type { AppRequestLogger } from "./logging";
 
 
 export async function createContext({
@@ -23,10 +23,8 @@ export async function createContext({
 			? createDb(directDbUrl)
 			: createDb(context.env.DB);
 
-	const logContext = createRequestContext(context.req.raw, {
-		userType: "anonymous",
-	});
-	const log = createLogger(logContext);
+	const log = context.get("log") as AppRequestLogger;
+	log.set({ user_type: "anonymous" });
 
 	return {
 		c: context,
@@ -37,5 +35,3 @@ export async function createContext({
 		log,
 	};
 }
-
-type Context = Awaited<ReturnType<typeof createContext>>;

@@ -2,7 +2,7 @@ import { Redis } from "@upstash/redis";
 import { createDb } from "@vit/api/db";
 import { ProductsTable } from "@vit/api/db/schema";
 import { sendEmail, smsGateway } from "@vit/api/integrations";
-import { createLogger } from "@vit/logger";
+import { createLogger } from "evlog";
 import type { RestockSubscription } from "@vit/shared";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -19,8 +19,9 @@ function createRedisClient(env: Env) {
 
 function createRestockLogger() {
 	return createLogger({
-		requestId: crypto.randomUUID(),
-		userType: "system",
+		operation: "restock.notifier",
+		request_id: crypto.randomUUID(),
+		user_type: "system",
 	});
 }
 
@@ -113,11 +114,13 @@ async function processSubscriber(
 		await notifySubscriber(productName, payload);
 		await cleanupSubscriber(redis, productId, subscriberId);
 	} catch (error) {
-		createRestockLogger().error("restock.notify_failed", error, {
-			productId,
-			subscriberId,
-			error,
+		const log = createRestockLogger();
+		log.error(error instanceof Error ? error : new Error(String(error)), {
+			event: "restock.notify_failed",
+			product_id: productId,
+			subscriber_id: subscriberId,
 		});
+		log.emit();
 	}
 }
 

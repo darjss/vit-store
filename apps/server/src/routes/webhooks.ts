@@ -1,114 +1,44 @@
 import { env } from "cloudflare:workers";
 import type { GenericWebhookPayload } from "@vit/api/integrations";
-import { messenger, messengerWebhookHandler } from "@vit/api/integrations";
-import {
-	sendDetailedOrderNotification,
-	sendTransferNotification,
-} from "@vit/api/lib/integrations/messenger/messages";
-import { createLogger, createRequestContext } from "@vit/logger";
+import { messengerWebhookHandler } from "@vit/api/integrations";
+import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
-
-const app = new Hono<{ Bindings: Env }>();
-
+const app = new Hono<ServerHonoEnv>();
 app.post("/messenger", async (c) => {
-	const logContext = createRequestContext(c.req.raw, { userType: "system" });
-	const log = createLogger(logContext);
-
-	const payload = (await c.req.json()) as GenericWebhookPayload;
-
-	log.webhook.received({
-		provider: "messenger",
-		eventType: payload.object,
-	});
-
-	try {
-		await messengerWebhookHandler(payload);
-		log.webhook.processed({ provider: "messenger", success: true });
-	} catch (e) {
-		log.webhook.failed({ provider: "messenger", error: String(e) });
-	}
-
-	return c.text("OK", 200);
+    const log = c.get("log");
+    log.set({ user_type: "system", operation: "messenger.webhook" });
+    const payload = (await c.req.json()) as GenericWebhookPayload;
+    log.info("webhook.received", {
+        provider: "messenger",
+        eventType: payload.object,
+    });
+    try {
+        await messengerWebhookHandler(payload);
+        log.info("webhook.processed", { provider: "messenger", success: true });
+    }
+    catch (e) {
+        log.error("webhook.failed", {
+            event: "webhook.failed",
+            provider: "messenger", error: String(e)
+        });
+    }
+    return c.text("OK", 200);
 });
-
 app.get("/messenger", async (c) => {
-	const logContext = createRequestContext(c.req.raw, { userType: "system" });
-	const log = createLogger(logContext);
-
-	const mode = c.req.query("hub.mode");
-	const verifyToken = c.req.query("hub.verify_token");
-	const challenge = c.req.query("hub.challenge");
-
-	if (mode && verifyToken && challenge) {
-		if (mode === "subscribe" && verifyToken === env.MESSENGER_VERIFY_TOKEN) {
-			log.info("messenger.webhook_verified");
-			return c.text(challenge, 200);
-		}
-		log.warn("messenger.webhook_verify_failed", { reason: "invalid_token" });
-		return c.text("Invalid verify token", 403);
-	}
-
-	log.warn("messenger.webhook_verify_failed", { reason: "missing_params" });
-	return c.text("Invalid request", 400);
+    const log = c.get("log");
+    log.set({ user_type: "system", operation: "messenger.webhook.verify" });
+    const mode = c.req.query("hub.mode");
+    const verifyToken = c.req.query("hub.verify_token");
+    const challenge = c.req.query("hub.challenge");
+    if (mode && verifyToken && challenge) {
+        if (mode === "subscribe" && verifyToken === env.MESSENGER_VERIFY_TOKEN) {
+            log.info("messenger.webhook_verified");
+            return c.text(challenge, 200);
+        }
+        log.warn("messenger.webhook_verify_failed", { reason: "invalid_token" });
+        return c.text("Invalid verify token", 403);
+    }
+    log.warn("messenger.webhook_verify_failed", { reason: "missing_params" });
+    return c.text("Invalid request", 400);
 });
-
-app.get("/messenger/test", async (c) => {
-	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
-	const log = createLogger(logContext);
-
-	log.info("messenger.test_message_sent");
-
-	const result = await messenger.send.message({
-		messaging_type: "RESPONSE",
-		recipient: { id: "25172502442390308" },
-		message: { text: "Hello from Vit Store Messenger SDK!" },
-	});
-
-	return c.json(result);
-});
-
-app.get("/messenger/test/transfer", async (c) => {
-	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
-	const log = createLogger(logContext);
-
-	log.info("messenger.test_transfer_notification");
-
-	await sendTransferNotification("1234567890", 10000);
-	return c.json({ message: "Message sent" });
-});
-
-app.get("/messenger/test/order", async (c) => {
-	const logContext = createRequestContext(c.req.raw, { userType: "admin" });
-	const log = createLogger(logContext);
-
-	log.info("messenger.test_order_notification");
-
-	await sendDetailedOrderNotification({
-		paymentNumber: "MOCK-PAYMENT-001",
-		customerPhone: 99112233,
-		address: "Ulaanbaatar, Sukhbaatar duureg, 1-r khoroo",
-		notes: "Mock test order notification",
-		total: 235000,
-		products: [
-			{
-				name: "NOW Vitamin D-3",
-				quantity: 2,
-				price: 45000,
-				imageUrl:
-					"https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200",
-			},
-			{
-				name: "Omega 3 Fish Oil",
-				quantity: 1,
-				price: 145000,
-				imageUrl:
-					"https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=1200",
-			},
-		],
-		status: "pending_transfer",
-	});
-
-	return c.json({ message: "Mock detailed order notification sent" });
-});
-
 export default app;

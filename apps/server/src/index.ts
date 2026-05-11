@@ -1,9 +1,10 @@
 import { trpcServer } from "@hono/trpc-server";
 import { adminRouter, storeRouter } from "@vit/api";
-import { createLogger, loggerMiddleware } from "@vit/logger";
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
+import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
 import adminRoutes from "./routes/admin";
@@ -20,15 +21,9 @@ const DEFAULT_CORS_ORIGINS = [
 	"https://admin.vitstore.dev",
 ];
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<ServerHonoEnv>();
 
-app.use(
-	loggerMiddleware({
-		excludePaths: ["/health-check", "/favicon.ico", "/"],
-		logRequestStart: true,
-		logRequestEnd: true,
-	}),
-);
+app.use(evlogMiddleware());
 
 app.use("/*", (c, next) => {
 	const rateLimitMiddleware = rateLimit({
@@ -57,14 +52,10 @@ app.use(
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
-		onError({ path, error }) {
-			const log = createLogger({
-				requestId: crypto.randomUUID(),
-				userType: "admin",
-			});
-			log.error("trpc.admin_error", error, {
-				path,
-				code: error.code,
+		onError({ path, error, ctx }) {
+			ctx?.log.error(error, {
+				event: "trpc.admin_error",
+				trpc: { path, code: error.code, user_type: "admin" },
 			});
 		},
 	}),
@@ -78,14 +69,10 @@ app.use(
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
-		onError({ path, error }) {
-			const log = createLogger({
-				requestId: crypto.randomUUID(),
-				userType: "customer",
-			});
-			log.error("trpc.store_error", error, {
-				path,
-				code: error.code,
+		onError({ path, error, ctx }) {
+			ctx?.log.error(error, {
+				event: "trpc.store_error",
+				trpc: { path, code: error.code, user_type: "customer" },
 			});
 		},
 	}),
