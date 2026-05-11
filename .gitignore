@@ -14,6 +14,18 @@ node_modules
 .vscode
 .idea
 
+# Build caches
+.astro/
+packages/logger/dist/
+
+# Temp and working files
+tmp/
+vit/
+executor.jsonc
+product-stock.md
+product-stock-retry.md
+delivery-zone.png
+
 # Environment files
 .env*
 !.env.example
