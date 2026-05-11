@@ -4,6 +4,7 @@ import {
 	boolean,
 	index,
 	integer,
+	uniqueIndex,
 	jsonb,
 	pgTableCreator,
 	text,
@@ -65,13 +66,19 @@ export const BrandsTable = createTable(
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		name: varchar("name", { length: 256 }).notNull().unique(),
+		slug: varchar("slug", { length: 256 }).notNull().unique(),
 		logoUrl: varchar("logo_url", { length: 512 }).notNull(),
+		description: text("description"),
+		bannerImage: varchar("banner_image", { length: 512 }),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		seoDescription: varchar("seo_description", { length: 512 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("brand_name_idx").on(table.name),
+		index("brand_slug_idx").on(table.slug),
 		index("brand_created_at_idx").on(table.createdAt),
 		index("brand_deleted_at_idx").on(table.deletedAt),
 	],
@@ -82,12 +89,18 @@ export const CategoriesTable = createTable(
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		name: varchar("name", { length: 256 }).notNull().unique(),
+		slug: varchar("slug", { length: 256 }).notNull().unique(),
+		description: text("description"),
+		bannerImage: varchar("banner_image", { length: 512 }),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		seoDescription: varchar("seo_description", { length: 512 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("category_name_idx").on(table.name),
+		index("category_slug_idx").on(table.slug),
 		index("category_created_at_idx").on(table.createdAt),
 		index("category_deleted_at_idx").on(table.deletedAt),
 	],
@@ -228,7 +241,7 @@ export const OrdersTable = createTable(
 	(table) => [
 		index("order_id_idx").on(table.id),
 		index("order_customer_idx").on(table.customerPhone),
-		index("order_number_idx").on(table.orderNumber),
+		uniqueIndex("order_number_unique_idx").on(table.orderNumber),
 		index("order_status_idx").on(table.status),
 		index("order_admin_list_idx").on(
 			table.deletedAt,
@@ -287,7 +300,7 @@ export const PaymentsTable = createTable(
 	},
 	(table) => [
 		index("payment_order_idx").on(table.orderId),
-		index("payment_number_idx").on(table.paymentNumber),
+		uniqueIndex("payment_number_unique_idx").on(table.paymentNumber),
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_status_created_idx").on(table.status, table.createdAt),
 		index("payment_number_status_idx").on(
