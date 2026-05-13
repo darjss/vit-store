@@ -51,9 +51,10 @@ const ConfirmPaymentButton = (props: {
 	};
 
 	return (
-		<Button onClick={handleConfirmPayment}>
+		<Button size="lg" onClick={handleConfirmPayment}>
 			<Show when={mutation.isPending}>
-				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> loading...
+				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> Уншиж
+				байна...
 			</Show>
 			<Show when={mutation.isSuccess}>
 				<IconCheckboxCircle class="mr-2 h-4 w-4 text-green-500" /> Төлбөр
