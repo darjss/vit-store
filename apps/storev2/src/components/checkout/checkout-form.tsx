@@ -344,13 +344,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<div class="border-b-4 border-border bg-secondary p-3">
 									<div class="flex items-center gap-2">
 										<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
-											<IconTruck class="h-3.5 w-3.5" />
+											<IconTruck class="h-3.5 w-3.5 text-secondary-foreground" />
 										</div>
 										<div>
-											<h2 class="font-black text-sm uppercase tracking-tight">
+											<h2 class="font-black text-sm uppercase tracking-tight text-secondary-foreground">
 												Хүргэлтийн мэдээлэл
 											</h2>
-											<p class="text-[10px] font-bold text-muted-foreground">
+											<p class="text-[10px] font-bold text-secondary-foreground/70">
 												Бүх талбарыг бөглөнө үү
 											</p>
 										</div>
@@ -436,30 +436,30 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 											/>
 										</div>
 
-										{/* Trust row */}
-										<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-2 border-border bg-muted/20 p-2.5">
-											<div class="flex items-center gap-1">
-												<IconLock class="h-3 w-3 text-muted-foreground" />
-												<span class="text-[10px] font-bold uppercase text-muted-foreground">
-													Аюулгүй
+										{/* Trust badges */}
+										<div class="grid grid-cols-2 gap-2">
+											<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
+												<IconLock class="h-4 w-4 shrink-0 text-secondary-foreground" />
+												<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
+													Аюулгүй төлбөр
 												</span>
 											</div>
-											<div class="flex items-center gap-1">
-												<IconShieldCheck class="h-3 w-3 text-muted-foreground" />
-												<span class="text-[10px] font-bold uppercase text-muted-foreground">
-													Баталгаат
+											<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
+												<IconShieldCheck class="h-4 w-4 shrink-0 text-secondary-foreground" />
+												<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
+													Баталгаат бараа
 												</span>
 											</div>
-											<div class="flex items-center gap-1">
-												<IconTruck class="h-3 w-3 text-muted-foreground" />
-												<span class="text-[10px] font-bold uppercase text-muted-foreground">
-													Шуурхай
+											<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
+												<IconTruck class="h-4 w-4 shrink-0 text-secondary-foreground" />
+												<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
+													Өдөрт нь хүргэнэ
 												</span>
 											</div>
-											<div class="flex items-center gap-1">
-												<IconSmartphone class="h-3 w-3 text-muted-foreground" />
-												<span class="text-[10px] font-bold uppercase text-muted-foreground">
-													QPay
+											<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
+												<IconSmartphone class="h-4 w-4 shrink-0 text-secondary-foreground" />
+												<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
+													QPay / Данс
 												</span>
 											</div>
 										</div>
