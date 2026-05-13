@@ -1,6 +1,6 @@
 import { useStore } from "@tanstack/solid-form";
 import type { ComponentProps } from "solid-js";
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import {
 	TextField,
 	TextFieldErrorMessage,
@@ -18,7 +18,14 @@ interface FormTextAreaProps {
 export function FormTextArea(props: FormTextAreaProps) {
 	const field = useFieldContext<string>();
 	const errors = useStore(field().store, (state) => state.meta.errors);
-	const validationState = () => (errors().length > 0 ? "invalid" : "valid");
+	const isTouched = useStore(field().store, (state) => state.meta.isTouched);
+	const submissionAttempts = useStore(
+		field().form.store,
+		(state) => state.submissionAttempts,
+	);
+	const showErrors = () => isTouched() || submissionAttempts() > 0;
+	const validationState = () =>
+		showErrors() && errors().length > 0 ? "invalid" : "valid";
 
 	return (
 		<TextField validationState={validationState()}>
@@ -30,11 +37,13 @@ export function FormTextArea(props: FormTextAreaProps) {
 				onBlur={field().handleBlur}
 				onInput={(e) => field().handleChange(e.currentTarget.value)}
 			/>
-			<For each={errors()}>
-				{(error) => (
-					<TextFieldErrorMessage>{error.message}</TextFieldErrorMessage>
-				)}
-			</For>
+			<Show when={showErrors()}>
+				<For each={errors()}>
+					{(error) => (
+						<TextFieldErrorMessage>{error.message}</TextFieldErrorMessage>
+					)}
+				</For>
+			</Show>
 		</TextField>
 	);
 }

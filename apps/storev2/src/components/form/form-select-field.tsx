@@ -1,5 +1,5 @@
 import { useStore } from "@tanstack/solid-form";
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { useFieldContext } from "./form-context";
 
 interface FormSelectOption {
@@ -17,6 +17,12 @@ interface FormSelectFieldProps {
 export function FormSelectField(props: FormSelectFieldProps) {
 	const field = useFieldContext<number>();
 	const errors = useStore(field().store, (state) => state.meta.errors);
+	const isTouched = useStore(field().store, (state) => state.meta.isTouched);
+	const submissionAttempts = useStore(
+		field().form.store,
+		(state) => state.submissionAttempts,
+	);
+	const showErrors = () => isTouched() || submissionAttempts() > 0;
 
 	return (
 		<div class="space-y-2">
@@ -37,9 +43,11 @@ export function FormSelectField(props: FormSelectFieldProps) {
 					{(option) => <option value={option.value}>{option.label}</option>}
 				</For>
 			</select>
-			<For each={errors()}>
-				{(error) => <p class="text-destructive text-xs">{error.message}</p>}
-			</For>
+			<Show when={showErrors()}>
+				<For each={errors()}>
+					{(error) => <p class="text-destructive text-xs">{error.message}</p>}
+				</For>
+			</Show>
 		</div>
 	);
 }

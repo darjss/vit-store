@@ -4,10 +4,23 @@ import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
 import { deliveryFee } from "@vit/shared/constants";
-import { createEffect, createMemo, For, Match, onMount, Suspense, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	For,
+	Match,
+	onMount,
+	Show,
+	Suspense,
+	Switch,
+} from "solid-js";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
-import { identifyUser, trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
+import {
+	identifyUser,
+	trackCheckoutStarted,
+	trackOrderPlaced,
+} from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
@@ -15,6 +28,11 @@ import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { showToast } from "../ui/toast";
+import DeliveryInfoSheet from "./delivery-info-sheet";
+import IconLock from "~icons/ri/lock-line";
+import IconTruck from "~icons/ri/truck-line";
+import IconShieldCheck from "~icons/ri/shield-check-line";
+import IconSmartphone from "~icons/ri/smartphone-line";
 
 type DeliveryZone = {
 	Id: number;
@@ -54,15 +72,24 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onSuccess: async (data, variables) => {
-				const checkoutData = data as typeof data & { checkoutToken?: string };
+				const checkoutData = data as typeof data & {
+					checkoutToken?: string;
+				};
 				const paymentNumber = checkoutData?.paymentNumber;
 				const checkoutToken = checkoutData?.checkoutToken;
 
 				if (paymentNumber) {
 					if (checkoutToken) {
-						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
+						sessionStorage.setItem(
+							`checkout:${paymentNumber}`,
+							checkoutToken,
+						);
 					}
-					trackOrderPlaced(paymentNumber, cart.count(), cart.total() + deliveryFee);
+					trackOrderPlaced(
+						paymentNumber,
+						cart.count(),
+						cart.total() + deliveryFee,
+					);
 					identifyUser(variables.phoneNumber);
 					showToast({
 						title: "Амжилттай",
@@ -84,7 +111,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				} else {
 					showToast({
 						title: "Алдаа",
-						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+						description:
+							"Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 						variant: "error",
 						duration: 5000,
 					});
@@ -93,7 +121,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			onError: () => {
 				showToast({
 					title: "Алдаа",
-					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+					description:
+						"Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 					variant: "error",
 					duration: 5000,
 				});
@@ -104,17 +133,20 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	const form = useAppForm(() => ({
 		defaultValues: {
-			phoneNumber: props.user?.phone.toString() || "",
+			phoneNumber: props.user?.phone?.toString() || "",
 			address: props.user?.address || "",
 			addressZoneId: props.user?.addressZoneId || 0,
 			notes: "",
 		},
 		validators: {
-			onChange: v.object({
+			onBlur: v.object({
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+					v.minLength(
+						15,
+						"Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой",
+					),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -127,7 +159,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+					v.minLength(
+						15,
+						"Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой",
+					),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -145,6 +180,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			mutation.mutate({ ...values.value, products });
 		},
 	}));
+
 	createEffect(() => {
 		if (props.user) {
 			form.setFieldValue?.("phoneNumber", props.user.phone?.toString() || "");
@@ -152,6 +188,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			form.setFieldValue?.("addressZoneId", props.user.addressZoneId || 0);
 		}
 	});
+
 	const isEmpty = () => cart.items().length === 0;
 	const isHydrated = () => cart.isHydrated();
 
@@ -166,13 +203,18 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen bg-background px-4 py-6">
+						{/* Header */}
 						<div class="mb-6 border-4 border-border bg-primary p-4 shadow-hard-xl">
 							<h1 class="font-black text-xl uppercase tracking-tight">
 								Захиалга баталгаажуулах
 							</h1>
+							<p class="mt-1 text-sm font-medium text-foreground/70">
+								2 алхам: Хүргэлтийн мэдээлэл оруулах → Төлбөр төлөх
+							</p>
 						</div>
 
 						<div class="space-y-6">
+							{/* Order Summary */}
 							<Card>
 								<CardHeader>
 									<CardTitle>Таны захиалга</CardTitle>
@@ -202,10 +244,14 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 														</a>
 														<div class="flex items-center justify-between">
 															<p class="font-bold text-muted-foreground text-xs">
-																₮{item.price.toLocaleString()} × {item.quantity}
+																₮{item.price.toLocaleString()} ×{" "}
+																{item.quantity}
 															</p>
 															<p class="font-black text-primary text-sm">
-																₮{(item.price * item.quantity).toLocaleString()}
+																₮
+																{(
+																	item.price * item.quantity
+																).toLocaleString()}
 															</p>
 														</div>
 													</div>
@@ -216,22 +262,34 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									<div class="mt-4 space-y-3 border-border border-t-4 pt-4">
 										<div class="flex items-center justify-between">
-											<p class="font-bold text-sm uppercase">Дэд дүн</p>
+											<p class="font-bold text-sm uppercase">
+												Дэд дүн
+											</p>
 											<p class="font-black text-base">
 												₮{cart.total().toLocaleString()}
 											</p>
 										</div>
 										<div class="flex items-center justify-between">
-											<p class="font-bold text-sm uppercase">Хүргэлт</p>
+											<div class="flex items-center gap-2">
+												<IconTruck class="h-4 w-4 text-muted-foreground" />
+												<p class="font-bold text-sm uppercase">
+													Хүргэлт
+												</p>
+											</div>
 											<p class="font-black text-base">
 												₮{deliveryFee.toLocaleString()}
 											</p>
 										</div>
 										<div class="border-4 border-border bg-primary/10 p-3 shadow-hard-lg">
 											<div class="flex items-center justify-between">
-												<p class="font-black text-base uppercase">Нийт дүн</p>
+												<p class="font-black text-base uppercase">
+													Нийт дүн
+												</p>
 												<p class="font-black text-2xl text-primary">
-													₮{(cart.total() + deliveryFee).toLocaleString()}
+													₮
+													{(
+														cart.total() + deliveryFee
+													).toLocaleString()}
 												</p>
 											</div>
 										</div>
@@ -239,17 +297,26 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								</CardContent>
 							</Card>
 
+							{/* Delivery Form */}
 							<Card>
 								<CardHeader>
-									<CardTitle>Хүргэлтийн мэдээлэл</CardTitle>
+									<div class="flex items-center justify-between">
+										<CardTitle>Хүргэлтийн мэдээлэл</CardTitle>
+										<span class="inline-flex h-7 w-7 items-center justify-center border-2 border-border bg-primary font-black text-xs">
+											1
+										</span>
+									</div>
 								</CardHeader>
 								<CardContent>
 									<form
-										class="space-y-4"
+										class="space-y-5"
 										onSubmit={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
-											if (document.activeElement instanceof HTMLElement) {
+											if (
+												document.activeElement instanceof
+												HTMLElement
+											) {
 												document.activeElement.blur();
 											}
 											form.handleSubmit();
@@ -265,21 +332,28 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												/>
 											)}
 										/>
-										<form.AppField
-											name="addressZoneId"
-											children={(field) => (
-												<field.FormSelectField
-													label="Хаягийн бүс"
-													placeholder={
-														addressZonesQuery.isLoading
-															? "Бүсүүд уншиж байна..."
-															: "Хаягийн бүс сонгох"
-													}
-													options={addressZoneOptions()}
-													disabled={addressZonesQuery.isLoading}
-												/>
-											)}
-										/>
+
+										<div class="space-y-2">
+											<form.AppField
+												name="addressZoneId"
+												children={(field) => (
+													<field.FormSelectField
+														label="Хаягийн бүс"
+														placeholder={
+															addressZonesQuery.isLoading
+																? "Бүсүүд уншиж байна..."
+																: "Хаягийн бүс сонгох"
+														}
+														options={addressZoneOptions()}
+														disabled={addressZonesQuery.isLoading}
+													/>
+												)}
+											/>
+											<div class="flex justify-end">
+												<DeliveryInfoSheet />
+											</div>
+										</div>
+
 										<form.AppField
 											name="address"
 											children={(field) => (
@@ -298,14 +372,65 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												/>
 											)}
 										/>
-										<div class="pb-6">
+
+										{/* Trust signals */}
+										<div class="grid grid-cols-2 gap-2">
+											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
+												<IconLock class="h-4 w-4 shrink-0 text-muted-foreground" />
+												<span class="text-xs font-bold text-muted-foreground">
+													Аюулгүй төлбөр
+												</span>
+											</div>
+											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
+												<IconShieldCheck class="h-4 w-4 shrink-0 text-muted-foreground" />
+												<span class="text-xs font-bold text-muted-foreground">
+													Баталгаат бараа
+												</span>
+											</div>
+											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
+												<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
+												<span class="text-xs font-bold text-muted-foreground">
+													Өдөрт нь хүргэнэ
+												</span>
+											</div>
+											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
+												<IconSmartphone class="h-4 w-4 shrink-0 text-muted-foreground" />
+												<span class="text-xs font-bold text-muted-foreground">
+													QPay / Данс
+												</span>
+											</div>
+										</div>
+
+										{/* Submit */}
+										<div class="space-y-3 pt-2">
+											<div class="flex items-center justify-between border-4 border-border bg-primary/10 p-3 shadow-hard-lg">
+												<div>
+													<p class="font-black text-sm uppercase">
+														Төлөх дүн
+													</p>
+													<p class="text-xs font-medium text-muted-foreground">
+														Хүргэлтийн хураамж орсон
+													</p>
+												</div>
+												<p class="font-black text-xl text-primary">
+													₮
+													{(
+														cart.total() + deliveryFee
+													).toLocaleString()}
+												</p>
+											</div>
+
 											<form.AppForm>
 												<form.SubmitButton>
 													{mutation.isPending
 														? "Уншиж байна..."
-														: "Захиалга үүсгэх"}
+														: "Төлбөр төлөх рүү үргэлжлүүлэх →"}
 												</form.SubmitButton>
 											</form.AppForm>
+
+											<p class="text-center text-xs font-medium text-muted-foreground">
+												Дараагийн алхамд төлбөрийн хуудсанд шилжих болно
+											</p>
 										</div>
 									</form>
 								</CardContent>
