@@ -61,7 +61,7 @@ const MobileSearchButton: Component = () => {
 			<button
 				type="button"
 				onClick={() => setIsOpen(true)}
-				class="group block w-full rounded-sm px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+				class="group block w-full px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 				aria-label="Хайх"
 			>
 				<div class="flex flex-col items-center gap-1">
@@ -77,11 +77,11 @@ const MobileSearchButton: Component = () => {
 			<Sheet open={isOpen()} onOpenChange={setIsOpen}>
 				<SheetContent
 					position="bottom"
-					class="h-[85vh] w-full max-w-none border-black border-t-4 p-0"
+					class="h-[85vh] w-full max-w-none border-border border-t-4 p-0"
 				>
 					<div class="flex h-full flex-col">
 						{/* Header */}
-						<div class="border-black border-b-3 bg-primary/10 px-4 py-4">
+						<div class="border-border border-b-3 bg-primary/10 px-4 py-4">
 							<SheetHeader class="mb-4">
 								<SheetTitle class="flex items-center gap-2 font-black text-lg uppercase tracking-tight">
 									<IconSearch class="h-5 w-5 text-primary" />

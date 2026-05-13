@@ -62,7 +62,7 @@ const itemListSchema = {
 	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
 
 	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-		<div class="overflow-hidden border-3 border-black bg-primary/5 px-3 py-3 shadow-[5px_5px_0_0_#000] sm:border-4 sm:px-5 sm:py-4 sm:shadow-[6px_6px_0_0_#000]">
+		<div class="overflow-hidden border-3 border-border bg-primary/5 px-3 py-3 shadow-hard-lg sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
 			<!-- Breadcrumb -->
 			<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground sm:mb-4 sm:text-sm">
 				<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
@@ -90,7 +90,7 @@ const itemListSchema = {
 
 			<!-- Banner -->
 			{category.bannerImage && (
-				<div class="mb-3 overflow-hidden border-2 border-black shadow-[3px_3px_0_0_#000] sm:mb-4 sm:border-3 sm:shadow-[4px_4px_0_0_#000]">
+				<div class="mb-3 overflow-hidden border-2 border-border shadow-hard sm:mb-4 sm:border-3 sm:shadow-hard-lg">
 					<img
 						src={category.bannerImage}
 						alt={category.name}
@@ -102,7 +102,7 @@ const itemListSchema = {
 			)}
 
 			{category.description && (
-				<div class="mb-3 border-2 border-black bg-white p-3 shadow-[3px_3px_0_0_#000] sm:mb-4 sm:border-3 sm:p-4 sm:shadow-[4px_4px_0_0_#000]">
+				<div class="mb-3 border-2 border-border bg-background p-3 shadow-hard sm:mb-4 sm:border-3 sm:p-4 sm:shadow-hard-lg">
 					<p class="text-sm leading-relaxed">{category.description}</p>
 				</div>
 			)}

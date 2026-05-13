@@ -45,10 +45,10 @@ const AssistantProductCard: Component<AssistantProductCardProps> = (props) => {
 	);
 
 	return (
-		<div class="flex h-full flex-col overflow-hidden border-3 border-black bg-white shadow-[6px_6px_0_0_#000]">
+		<div class="flex h-full flex-col overflow-hidden border-3 border-border bg-background shadow-hard-xl">
 			<a
 				href={productUrl()}
-				class="relative block border-black border-b-3"
+				class="relative block border-border border-b-3"
 				aria-label={props.product.name}
 			>
 				<div
@@ -68,7 +68,7 @@ const AssistantProductCard: Component<AssistantProductCardProps> = (props) => {
 					</Show>
 					<div
 						class={cn(
-							"absolute right-3 bottom-3 border-2 border-black px-2 py-1 font-black text-[10px] uppercase tracking-tight shadow-[2px_2px_0_0_#000]",
+							"absolute right-3 bottom-3 border-2 border-border px-2 py-1 font-black text-[10px] uppercase tracking-tight shadow-hard-sm",
 							stockBadgeClass[props.product.stockStatus],
 						)}
 					>
@@ -80,7 +80,7 @@ const AssistantProductCard: Component<AssistantProductCardProps> = (props) => {
 			<div class="flex flex-1 flex-col p-4">
 				<div class="mb-3 flex items-start justify-between gap-3">
 					<Show when={props.product.brand}>
-						<span class="border-2 border-black bg-black px-2 py-1 font-black text-[10px] text-white uppercase tracking-[0.18em]">
+						<span class="border-2 border-border bg-black px-2 py-1 font-black text-[10px] text-white uppercase tracking-[0.18em]">
 							{props.product.brand}
 						</span>
 					</Show>
@@ -99,7 +99,7 @@ const AssistantProductCard: Component<AssistantProductCardProps> = (props) => {
 					<div class="grid grid-cols-[1fr_auto] gap-2">
 						<button
 							type="button"
-							class="flex min-h-11 items-center justify-center rounded-sm border-3 border-black bg-primary px-4 py-2 font-black text-xs uppercase tracking-wide shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
+							class="flex min-h-11 items-center justify-center rounded-sm border-3 border-border bg-primary px-4 py-2 font-black text-xs uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
 							onClick={() => props.onAddToCart(props.product)}
 							disabled={props.product.stockStatus === "out_of_stock"}
 						>
@@ -109,7 +109,7 @@ const AssistantProductCard: Component<AssistantProductCardProps> = (props) => {
 						</button>
 						<a
 							href={productUrl()}
-							class="flex min-h-11 items-center justify-center rounded-sm border-3 border-black bg-white px-4 py-2 font-black text-xs uppercase tracking-wide shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-black hover:text-white hover:shadow-[2px_2px_0_0_#000]"
+							class="flex min-h-11 items-center justify-center rounded-sm border-3 border-border bg-background px-4 py-2 font-black text-xs uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-black hover:text-white hover:shadow-hard-sm"
 						>
 							Дэлгэрэнгүй
 						</a>

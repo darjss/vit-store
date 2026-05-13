@@ -681,6 +681,7 @@ export const productQueries = {
 				columns: {
 					id: true,
 					name: true,
+					slug: true,
 					price: true,
 					status: true,
 					stock: true,

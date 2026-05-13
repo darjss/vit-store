@@ -18,13 +18,13 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 
 	return (
 		<div class="w-full">
-			<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-[3px_3px_0_0_#000] sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-[4px_4px_0_0_#000]">
+			<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-hard sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-hard-lg">
 				<button
 					type="button"
 					onClick={() => setTab("transfer")}
-					class="rounded-sm px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
 					classList={{
-						"border-2 border-black bg-primary shadow-[2px_2px_0_0_#000]":
+						"border-2 border-border bg-primary shadow-hard-sm":
 							tab() === "transfer",
 						"hover:bg-primary/30": tab() !== "transfer",
 					}}
@@ -37,9 +37,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 				<button
 					type="button"
 					onClick={() => setTab("qpay")}
-					class="rounded-sm px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
 					classList={{
-						"border-2 border-black bg-primary shadow-[2px_2px_0_0_#000]":
+						"border-2 border-border bg-primary shadow-hard-sm":
 							tab() === "qpay",
 						"hover:bg-primary/30": tab() !== "qpay",
 					}}
@@ -52,10 +52,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</div>
 
 			<Show when={tab() === "transfer"}>
-				<div class="border-3 border-border bg-card shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:border-4 sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
+				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
 					<div class="space-y-4 p-3 sm:space-y-5 sm:p-4">
 						<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5 sm:gap-3 sm:p-3">
-							<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-border bg-white sm:h-12 sm:w-12">
+							<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background sm:h-12 sm:w-12">
 								<img
 									src="/khaan.png"
 									alt="Khaan logo"
@@ -77,7 +77,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Данс
 									</p>
 									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											5011147435
 										</div>
 										<CopyButton text="5011147435" title="Данс" />
@@ -89,7 +89,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Нэр
 									</p>
 									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
+										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
 											Batdelger Jigjidsuren
 										</div>
 										<CopyButton text="Batdelger Jigjidsuren" title="Нэр" />
@@ -113,7 +113,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Гүйлгээний утга
 									</p>
 									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-white px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{props.orderNumber}
 										</div>
 										<CopyButton
@@ -147,7 +147,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</Show>
 
 			<Show when={tab() === "qpay"}>
-				<div class="border-3 border-border bg-card shadow-[4px_4px_0_0_rgba(0,0,0,1)] sm:border-4 sm:shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
+				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
 					<div class="p-3 sm:p-5">
 						<QpayPaymentPanel
 							paymentNumber={props.paymentNumber}

@@ -180,9 +180,9 @@ const breadcrumbSchema = {
 						productName={product.name}
 						productId={product.id}
 					>
-						<div slot="fallback" class="aspect-square min-h-[400px] border-4 border-black bg-white shadow-[8px_8px_0_0_#000]">
-							<div class="flex h-full w-full animate-pulse items-center justify-center bg-black/5">
-								<div class="h-32 w-32 animate-spin rounded-full border-4 border-black/20 border-t-black"></div>
+						<div slot="fallback" class="aspect-square min-h-[400px] border-4 border-border bg-background shadow-hard-xl">
+							<div class="flex h-full w-full animate-pulse items-center justify-center bg-foreground/5">
+								<div class="h-32 w-32 animate-spin rounded-full border-4 border-border/20 border-t-black"></div>
 							</div>
 						</div>
 					</ProductImageCarousel>
@@ -210,7 +210,7 @@ const breadcrumbSchema = {
 			/>
 		</div>
 
-		<div class="border-t-4 border-black pb-8 pt-10">
+		<div class="border-t-4 border-border pb-8 pt-10">
 			<RecommendedProducts
 				client:load
 				currentProductId={product.id}
@@ -222,11 +222,11 @@ const breadcrumbSchema = {
 					<h2 class="mb-6 text-2xl font-black sm:text-3xl">Санал болгох бүтээгдэхүүн</h2>
 					<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
 						{[1, 2, 3, 4].map(() => (
-							<div class="border-3 border-black bg-white shadow-[4px_4px_0_0_#000]">
-								<div class="border-b-3 aspect-[4/3] animate-pulse border-black bg-black/5"></div>
+							<div class="border-3 border-border bg-background shadow-hard-lg">
+								<div class="border-b-3 aspect-[4/3] animate-pulse border-border bg-foreground/5"></div>
 								<div class="space-y-2 p-3">
-									<div class="h-4 w-3/4 animate-pulse bg-black/10"></div>
-									<div class="h-6 w-1/2 animate-pulse bg-black/10"></div>
+									<div class="h-4 w-3/4 animate-pulse bg-foreground/10"></div>
+									<div class="h-6 w-1/2 animate-pulse bg-foreground/10"></div>
 								</div>
 							</div>
 						))}
@@ -250,8 +250,8 @@ const breadcrumbSchema = {
 		position: absolute;
 		inset: 0;
 		opacity: var(--pattern-opacity);
-		background: #ffffff;
-		background-image: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.25) 1.5px, transparent 0);
+		background: var(--color-background);
+		background-image: radial-gradient(circle at 2px 2px, var(--color-foreground) 1.5px, transparent 0);
 		background-size: 30px 30px;
 	}
 

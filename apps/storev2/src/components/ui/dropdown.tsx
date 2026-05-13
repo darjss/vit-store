@@ -32,7 +32,7 @@ const DropdownMenuContent = <T extends ValidComponent = "div">(
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         class={cn(
-          "z-50 min-w-56 origin-[var(--kb-menu-content-transform-origin)] animate-content-hide overflow-hidden border-[3px] border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] data-[expanded]:animate-content-show",
+          "z-50 min-w-56 origin-[var(--kb-menu-content-transform-origin)] animate-content-hide overflow-hidden border-[3px] border-border bg-background shadow-hard-lg data-[expanded]:animate-content-show",
           props.class
         )}
         {...rest}
@@ -53,7 +53,7 @@ const DropdownMenuItem = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.Item
       class={cn(
-        "relative flex cursor-default select-none items-center gap-2 border-black border-b-[3px] px-4 py-3 font-bold outline-none transition-colors hover:bg-primary focus:bg-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 last:border-b-0",
+        "relative flex cursor-default select-none items-center gap-2 border-border border-b-[3px] px-4 py-3 font-bold outline-none transition-colors hover:bg-primary focus:bg-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 last:border-b-0",
         props.class
       )}
       {...rest}
@@ -70,7 +70,7 @@ const DropdownMenuLabel: Component<ComponentProps<"div"> & { inset?: boolean }> 
   const [, rest] = splitProps(props, ["class", "inset"])
   return (
     <div
-      class={cn("border-black border-b-[3px] bg-primary p-4 truncate font-bold text-sm", props.inset && "pl-8", props.class)}
+      class={cn("border-border border-b-[3px] bg-primary p-4 truncate font-bold text-sm", props.inset && "pl-8", props.class)}
       {...rest}
     />
   )

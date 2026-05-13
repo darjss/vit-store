@@ -17,7 +17,7 @@ const MobileCartButton = () => {
 		<button
 			type="button"
 			onClick={() => cart.toggleDrawer()}
-			class="group block w-full rounded-sm px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+			class="group block w-full px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 			aria-label="Сагс"
 		>
 			<div class="flex flex-col items-center gap-1">
@@ -27,7 +27,7 @@ const MobileCartButton = () => {
 						aria-hidden="true"
 					/>
 					<Show when={isHydrated() && cart.count() > 0}>
-						<span class="-top-2 -right-2 absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-black bg-secondary font-black text-[9px] text-secondary-foreground">
+						<span class="-top-2 -right-2 absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-border bg-secondary font-black text-[9px] text-secondary-foreground">
 							{cart.count()}
 						</span>
 					</Show>

@@ -9,14 +9,14 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-3 border-black active:translate-x-[4px] active:translate-y-[4px]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border-3 border-border active:translate-x-[4px] active:translate-y-[4px]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-[6px_6px_0_0_#000] hover:shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
-        destructive: "bg-destructive text-destructive-foreground shadow-[6px_6px_0_0_#000] hover:shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
-        outline: "bg-white text-black border-3 border-black shadow-[6px_6px_0_0_#000] hover:bg-black hover:text-white hover:shadow-[3px_3px_0_0_#000] hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
-        secondary: "bg-secondary text-secondary-foreground shadow-[6px_6px_0_0_#fff] hover:shadow-[3px_3px_0_0_#fff] hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
+        default: "bg-primary text-primary-foreground shadow-hard-lg hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
+        destructive: "bg-destructive text-destructive-foreground shadow-hard-lg hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
+        outline: "bg-background text-black border-3 border-border shadow-hard-lg hover:bg-black hover:text-white hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
+        secondary: "bg-secondary text-secondary-foreground shadow-hard-light-lg hover:shadow-hard-light hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
         ghost: "border-0 hover:bg-accent hover:text-accent-foreground shadow-none hover:shadow-none",
         link: "border-0 text-primary underline-offset-4 hover:underline shadow-none"
       },

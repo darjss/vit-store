@@ -94,7 +94,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		<TextField class={cn("relative w-full flex-row gap-0", local.class)}>
 			{/* Search Icon */}
 			<div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-4">
-				<IconSearch class="h-5 w-5 text-black/60" aria-hidden="true" />
+				<IconSearch class="h-5 w-5 text-muted-foreground/60" aria-hidden="true" />
 			</div>
 
 			<TextFieldInput
@@ -104,7 +104,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 				onKeyDown={handleKeyDown}
 				placeholder={local.placeholder ?? "Бүтээгдэхүүн хайх..."}
 				type="search"
-				class="h-14 pr-12 pl-12 text-lg placeholder:text-black/40 sm:h-16 sm:text-xl [&::-ms-clear]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+				class="h-14 pr-12 pl-12 text-lg placeholder:text-muted-foreground/40 sm:h-16 sm:text-xl [&::-ms-clear]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
 				{...others}
 			/>
 
@@ -117,7 +117,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 							<button
 								type="button"
 								onClick={handleClear}
-								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-white transition-all hover:bg-primary active:scale-95"
+								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-background transition-all hover:bg-primary active:scale-95"
 								aria-label="Clear search"
 							>
 								<IconClose class="h-4 w-4" aria-hidden="true" />
@@ -125,7 +125,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 						</Show>
 					}
 				>
-					<div class="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" />
+					<div class="h-5 w-5 animate-spin rounded-full border-2 border-border/20 border-t-black" />
 				</Show>
 			</div>
 		</TextField>

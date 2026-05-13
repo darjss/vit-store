@@ -251,7 +251,7 @@ const StoreAssistant: Component = () => {
 		<>
 			<button
 				type="button"
-				class="fixed right-4 bottom-24 z-[70] flex h-15 w-15 items-center justify-center rounded-full border-3 border-black bg-primary shadow-[6px_6px_0_0_#000] transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[3px_3px_0_0_#000] sm:right-6 sm:bottom-6 sm:h-18 sm:w-18"
+				class="fixed right-4 bottom-24 z-[70] flex h-15 w-15 items-center justify-center rounded-full border-3 border-border bg-primary shadow-hard-xl transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-hard sm:right-6 sm:bottom-6 sm:h-18 sm:w-18"
 				aria-label="AI shopping assistant"
 				onClick={() => setIsOpen(true)}
 			>
@@ -262,7 +262,7 @@ const StoreAssistant: Component = () => {
 				<div class="fixed inset-0 z-[80]">
 					<button
 						type="button"
-						class="absolute inset-0 bg-black/70"
+						class="absolute inset-0 bg-foreground/70"
 						aria-label="Close assistant"
 						onClick={() => setIsOpen(false)}
 					/>
@@ -272,18 +272,18 @@ const StoreAssistant: Component = () => {
 						aria-modal="true"
 						aria-label="AI shopping assistant"
 					>
-						<div class="border-black border-b-3 bg-[#FFE27A] px-4 py-4 sm:px-6">
+						<div class="border-border border-b-3 bg-[#FFE27A] px-4 py-4 sm:px-6">
 							<div class="space-y-3">
 								<div class="flex items-start justify-between gap-4">
 									<div class="flex items-start gap-3">
-										<div class="flex h-12 w-12 items-center justify-center rounded-sm border-3 border-black bg-white shadow-[4px_4px_0_0_#000]">
+										<div class="flex h-12 w-12 items-center justify-center rounded-sm border-3 border-border bg-background shadow-hard-lg">
 											<IconSparkling class="h-6 w-6" />
 										</div>
 										<div>
 											<h2 class="font-black text-xl uppercase tracking-tight sm:text-2xl">
 												Vit Assistant
 											</h2>
-											<p class="mt-1 max-w-2xl text-black/70 text-sm sm:text-base">
+											<p class="mt-1 max-w-2xl text-muted-foreground/70 text-sm sm:text-base">
 												Хэрэгцээнд тань тохирох бүтээгдэхүүнийг санал болгож,
 												харьцуулж, шууд сагсанд нэмэхэд тусална.
 											</p>
@@ -291,7 +291,7 @@ const StoreAssistant: Component = () => {
 									</div>
 									<button
 										type="button"
-										class="flex h-11 w-11 items-center justify-center rounded-sm border-3 border-black bg-white shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]"
+										class="flex h-11 w-11 items-center justify-center rounded-sm border-3 border-border bg-background shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm"
 										onClick={() => setIsOpen(false)}
 										aria-label="Close assistant"
 									>
@@ -312,7 +312,7 @@ const StoreAssistant: Component = () => {
 											{(prompt) => (
 												<button
 													type="button"
-													class="border-3 border-black bg-white px-4 py-4 text-left font-black text-sm leading-snug shadow-[5px_5px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:shadow-[3px_3px_0_0_#000]"
+													class="border-3 border-border bg-background px-4 py-4 text-left font-black text-sm leading-snug shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:shadow-hard"
 													onClick={() => handleStarterPrompt(prompt)}
 												>
 													{prompt}
@@ -340,9 +340,9 @@ const StoreAssistant: Component = () => {
 												<div class="w-full max-w-4xl">
 													<div
 														class={cn(
-															"w-full rounded-sm border-3 border-black px-4 py-4 shadow-[6px_6px_0_0_#000] sm:px-5",
+															"w-full rounded-sm border-3 border-border px-4 py-4 shadow-hard-xl sm:px-5",
 															isAssistant()
-																? "bg-white"
+																? "bg-background"
 																: "ml-auto max-w-2xl bg-[#111111] text-white",
 														)}
 													>
@@ -373,7 +373,7 @@ const StoreAssistant: Component = () => {
 																{(chip) => (
 																	<button
 																		type="button"
-																		class="rounded-sm border-2 border-black bg-white px-3 py-2 font-black text-[11px] uppercase tracking-wide shadow-[3px_3px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:shadow-[1px_1px_0_0_#000]"
+																		class="rounded-sm border-2 border-border bg-background px-3 py-2 font-black text-[11px] uppercase tracking-wide shadow-hard transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:shadow-none"
 																		onClick={() => void submitMessage(chip)}
 																	>
 																		{chip}
@@ -390,7 +390,7 @@ const StoreAssistant: Component = () => {
 
 								<Show when={mutation.isPending}>
 									<div class="flex justify-start">
-										<div class="rounded-sm border-3 border-black bg-white px-4 py-4 shadow-[6px_6px_0_0_#000]">
+										<div class="rounded-sm border-3 border-border bg-background px-4 py-4 shadow-hard-xl">
 											<div class="flex items-center gap-2 font-black text-sm uppercase">
 												<span class="h-2.5 w-2.5 animate-bounce rounded-full bg-black" />
 												<span
@@ -408,7 +408,7 @@ const StoreAssistant: Component = () => {
 							</div>
 						</div>
 
-						<div class="border-black border-t-3 bg-white px-4 py-4 sm:px-6">
+						<div class="border-border border-t-3 bg-background px-4 py-4 sm:px-6">
 							<div class="mx-auto max-w-5xl">
 								<form
 									class="space-y-3"
@@ -417,22 +417,22 @@ const StoreAssistant: Component = () => {
 										void submitMessage(input());
 									}}
 								>
-									<div class="overflow-hidden rounded-sm border-3 border-black bg-[#F8F3E8] shadow-[6px_6px_0_0_#000]">
+									<div class="overflow-hidden rounded-sm border-3 border-border bg-[#F8F3E8] shadow-hard-xl">
 										<textarea
 											ref={textareaRef}
 											value={input()}
 											rows={3}
 											placeholder="Жишээ нь: 30-аад насны эмэгтэйд өдөр тутмын эрч хүч дэмжих нэг сайн бүтээгдэхүүн санал болго"
-											class="min-h-24 w-full resize-none border-0 bg-transparent px-4 py-4 text-sm outline-none placeholder:text-black/40 sm:text-base"
+											class="min-h-24 w-full resize-none border-0 bg-transparent px-4 py-4 text-sm outline-none placeholder:text-muted-foreground/40 sm:text-base"
 											onInput={(event) => setInput(event.currentTarget.value)}
 										/>
-										<div class="flex items-center justify-between border-black border-t-3 px-3 py-3">
-											<p class="font-bold text-black/45 text-xs uppercase tracking-wide">
+										<div class="flex items-center justify-between border-border border-t-3 px-3 py-3">
+											<p class="font-bold text-muted-foreground/45 text-xs uppercase tracking-wide">
 												Шаардлагатай бол би эхлээд 1-2 тодруулах асуулт асууна.
 											</p>
 											<button
 												type="submit"
-												class="flex h-12 w-12 items-center justify-center rounded-sm border-3 border-black bg-primary shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:shadow-none"
+												class="flex h-12 w-12 items-center justify-center rounded-sm border-3 border-border bg-primary shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm disabled:cursor-not-allowed disabled:bg-muted disabled:shadow-none"
 												disabled={
 													mutation.isPending || input().trim().length === 0
 												}

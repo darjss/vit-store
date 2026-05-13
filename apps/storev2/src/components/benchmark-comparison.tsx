@@ -65,18 +65,18 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 	return (
 		<>
 			{/* Control Panel */}
-			<div class="rounded-lg bg-white p-6 shadow-md">
+			<div class="bg-background p-6 shadow-hard">
 				<button
 					type="button"
 					onClick={refetch}
 					disabled={data.loading}
-					class="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-400"
+					class="w-full bg-foreground px-6 py-3 font-semibold text-white transition-colors hover:bg-foreground/80 disabled:bg-muted-foreground"
 				>
 					{data.loading ? "Fetching..." : "Run Client-Side Benchmark"}
 				</button>
 
 				<Show when={data.error}>
-					<div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+					<div class="mt-4 border border-border bg-error/10 p-4 text-destructive">
 						Error:{" "}
 						{data.error instanceof Error
 							? data.error.message
@@ -86,10 +86,10 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			</div>
 
 			{/* Client-Side Results */}
-			<div class="rounded-lg border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-md">
+			<div class="border-2 border-border bg-card p-6 shadow-hard">
 				<div class="mb-4 flex items-center gap-2">
-					<IconComputer class="h-6 w-6 text-blue-600" />
-					<h2 class="font-bold text-2xl text-blue-800">Client-Side (CSR)</h2>
+					<IconComputer class="h-6 w-6 text-primary" />
+					<h2 class="font-bold text-2xl text-foreground">Client-Side (CSR)</h2>
 				</div>
 
 				<Show
@@ -100,47 +100,47 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 								<Show
 									when={data.loading}
 									fallback={
-										<p class="text-gray-500">
+										<p class="text-muted-foreground">
 											Click the button to run benchmark
 										</p>
 									}
 								>
-									<div class="mx-auto h-12 w-12 animate-spin rounded-full border-blue-600 border-b-2" />
-									<p class="mt-4 text-blue-600">Fetching data...</p>
+									<div class="mx-auto h-12 w-12 animate-spin rounded-full border-foreground border-b-2" />
+									<p class="mt-4 text-primary">Fetching data...</p>
 								</Show>
 							</div>
 						</div>
 					}
 				>
 					<div class="space-y-3">
-						<div class="rounded-lg bg-white p-4">
-							<p class="mb-1 text-gray-600 text-sm">Total Fetch Time</p>
-							<p class="font-bold text-3xl text-blue-700">
+						<div class="bg-background p-4">
+							<p class="mb-1 text-muted-foreground text-sm">Total Fetch Time</p>
+							<p class="font-bold text-3xl text-foreground">
 								{formatTime(data()?.fetchTime ?? 0)}
 							</p>
 						</div>
 
-						<div class="rounded-lg bg-white p-4">
-							<p class="mb-1 text-gray-600 text-sm">Database Query Time</p>
-							<p class="font-semibold text-2xl text-blue-600">
+						<div class="bg-background p-4">
+							<p class="mb-1 text-muted-foreground text-sm">Database Query Time</p>
+							<p class="font-semibold text-2xl text-primary">
 								{formatTime(data()?.dbElapsed ?? 0)}
 							</p>
 						</div>
 
-						<div class="rounded-lg bg-white p-4">
-							<p class="mb-1 text-gray-600 text-sm">Products Fetched</p>
-							<p class="font-semibold text-2xl text-blue-600">
+						<div class="bg-background p-4">
+							<p class="mb-1 text-muted-foreground text-sm">Products Fetched</p>
+							<p class="font-semibold text-2xl text-primary">
 								{data()?.productCount}
 							</p>
 						</div>
 
 						<Show when={data()?.kvReadElapsed}>
 							{(elapsed) => (
-								<div class="rounded-lg bg-white p-4">
-									<p class="mb-1 text-gray-600 text-sm">
+								<div class="bg-background p-4">
+									<p class="mb-1 text-muted-foreground text-sm">
 										KV Read Time (Client)
 									</p>
-									<p class="font-semibold text-2xl text-purple-600">
+									<p class="font-semibold text-2xl text-foreground">
 										{formatTime(elapsed())}
 									</p>
 								</div>
@@ -149,11 +149,11 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 						<Show when={data()?.redisReadElapsed}>
 							{(elapsed) => (
-								<div class="rounded-lg bg-white p-4">
-									<p class="mb-1 text-gray-600 text-sm">
+								<div class="bg-background p-4">
+									<p class="mb-1 text-muted-foreground text-sm">
 										Redis Read Time (Client)
 									</p>
-									<p class="font-semibold text-2xl text-orange-600">
+									<p class="font-semibold text-2xl text-foreground">
 										{formatTime(elapsed())}
 									</p>
 								</div>
@@ -161,11 +161,11 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 						</Show>
 					</div>
 
-					<div class="mt-4 rounded-lg bg-blue-200 p-3">
-						<p class="flex items-center gap-1 font-medium text-blue-800 text-sm">
+					<div class="mt-4 bg-primary/20 p-3">
+						<p class="flex items-center gap-1 font-medium text-foreground text-sm">
 							<IconCheck class="h-4 w-4" /> Rendered in browser
 						</p>
-						<p class="mt-1 text-blue-700 text-xs">
+						<p class="mt-1 text-foreground text-xs">
 							Includes network latency + processing time
 						</p>
 					</div>
@@ -175,15 +175,15 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			{/* Comparison Summary */}
 			<Show when={data() && difference()}>
 				{(diff) => (
-					<div class="rounded-lg bg-white p-6 shadow-md">
+					<div class="bg-background p-6 shadow-hard">
 						<h3 class="mb-4 font-bold text-xl">Performance Analysis</h3>
 
 						<div class="grid gap-4 md:grid-cols-3">
-							<div class="rounded-lg bg-gray-50 p-4">
-								<p class="mb-1 text-gray-600 text-sm">Time Difference</p>
+							<div class="bg-muted/30 p-4">
+								<p class="mb-1 text-muted-foreground text-sm">Time Difference</p>
 								<p
 									class={`font-bold text-2xl ${
-										diff().isFaster ? "text-green-600" : "text-red-600"
+										diff().isFaster ? "text-foreground" : "text-destructive"
 									}`}
 								>
 									{diff().isFaster ? "-" : "+"}
@@ -191,20 +191,20 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 								</p>
 							</div>
 
-							<div class="rounded-lg bg-gray-50 p-4">
-								<p class="mb-1 text-gray-600 text-sm">Percentage Difference</p>
+							<div class="bg-muted/30 p-4">
+								<p class="mb-1 text-muted-foreground text-sm">Percentage Difference</p>
 								<p
 									class={`font-bold text-2xl ${
-										diff().isFaster ? "text-green-600" : "text-red-600"
+										diff().isFaster ? "text-foreground" : "text-destructive"
 									}`}
 								>
 									{diff().percentage}% {diff().isFaster ? "faster" : "slower"}
 								</p>
 							</div>
 
-							<div class="rounded-lg bg-gray-50 p-4">
-								<p class="mb-1 text-gray-600 text-sm">Network Overhead</p>
-								<p class="font-bold text-2xl text-purple-600">
+							<div class="bg-muted/30 p-4">
+								<p class="mb-1 text-muted-foreground text-sm">Network Overhead</p>
+								<p class="font-bold text-2xl text-foreground">
 									{formatTime(
 										(data()?.fetchTime ?? 0) -
 											(data()?.dbElapsed ?? 0) -
@@ -214,9 +214,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</div>
 						</div>
 
-						<div class="mt-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-							<h4 class="mb-2 font-semibold text-yellow-800">Key Insights:</h4>
-							<ul class="space-y-2 text-sm text-yellow-900">
+						<div class="mt-6 border border-border bg-primary/10 p-4">
+							<h4 class="mb-2 font-semibold text-foreground">Key Insights:</h4>
+							<ul class="space-y-2 text-sm text-foreground">
 								<li>
 									• Server-side rendering delivers content immediately with the
 									initial HTML

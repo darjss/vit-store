@@ -24,14 +24,15 @@ const ProductCard = (props: ProductCardProps) => {
 
 	return (
 		<div
-			class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-black bg-white shadow-[3px_3px_0_0_#000] transition-all duration-200 hover:shadow-[4px_4px_0_0_#000] sm:border-3 sm:shadow-[5px_5px_0_0_#000] sm:hover:shadow-[6px_6px_0_0_#000]"
+			class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-border bg-card shadow-hard transition-all duration-200 hover:shadow-hard-lg sm:border-3 sm:shadow-hard-lg sm:hover:shadow-hard-xl"
 			data-product-id={product.id}
 		>
-			{/* Image Section */}
+			{/* Image Section — decorative link, primary link is heading below */}
 			<a
 				href={productUrl}
-				class="relative block overflow-hidden border-black border-b-2 sm:border-b-3"
-				aria-label={`${product.name}${brandName() ? ` by ${brandName()}` : ""}`}
+				class="relative block overflow-hidden border-border border-b-2 sm:border-b-3"
+				aria-hidden="true"
+				tabIndex={-1}
 			>
 				<div
 					class="relative aspect-4/5 sm:aspect-4/3"
@@ -60,7 +61,7 @@ const ProductCard = (props: ProductCardProps) => {
 
 					{/* Brand Badge */}
 					<Show when={brandName()}>
-						<div class="absolute right-1.5 bottom-1.5 rounded-sm border-2 border-black bg-white px-1.5 py-0.5 font-black text-[8px] uppercase tracking-tight shadow-[2px_2px_0_0_#000] sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
+						<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[8px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[10px]">
 							{brandName()}
 						</div>
 					</Show>
@@ -72,12 +73,13 @@ const ProductCard = (props: ProductCardProps) => {
 				<a href={productUrl} class="block">
 					<h3 class="line-clamp-2 font-bold text-[11px] leading-tight tracking-tight group-hover:underline sm:text-sm sm:leading-snug">
 						{product.name}
+						{brandName() ? <span class="sr-only">, {brandName()}</span> : null}
 					</h3>
 				</a>
 			</div>
 
 			{/* Price & CTA Bar */}
-			<div class="flex items-center justify-between gap-1.5 border-black border-t-2 bg-primary/10 px-2 py-1.5 sm:gap-2 sm:border-t-3 sm:px-3 sm:py-2">
+			<div class="flex items-center justify-between gap-1.5 border-border border-t-2 bg-primary/10 px-2 py-1.5 sm:gap-2 sm:border-t-3 sm:px-3 sm:py-2">
 				<div class="font-black text-sm tracking-tight sm:text-lg">
 					{formatCurrency(product.price)}
 				</div>
@@ -89,6 +91,7 @@ const ProductCard = (props: ProductCardProps) => {
 						name: product.name,
 						price: product.price,
 						image: productImage() || "",
+						slug: product.slug,
 					}}
 				/>
 			</div>

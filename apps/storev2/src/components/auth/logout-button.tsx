@@ -28,7 +28,7 @@ const LogoutButton = (props: { class?: string }) => {
 				onClick={handleLogout}
 				disabled={logoutMutation.isPending}
 				class={cn(
-					"flex w-full items-center justify-center gap-2 border-[3px] border-black bg-destructive px-4 py-2 font-bold text-destructive-foreground uppercase tracking-wide shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:pointer-events-none disabled:opacity-50",
+					"flex w-full items-center justify-center gap-2 border-[3px] border-border bg-destructive px-4 py-2 font-bold text-destructive-foreground uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[4px] active:translate-y-[4px] active:shadow-none disabled:pointer-events-none disabled:opacity-50",
 					props.class,
 				)}
 			>

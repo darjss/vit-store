@@ -60,18 +60,18 @@ const SearchOverlay: Component = () => {
 				as="button"
 				type="button"
 				aria-label="Хайх"
-				class="flex items-center justify-center border-[3px] border-black bg-white p-2 shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-[1px_1px_0_0_rgba(0,0,0,1)]"
+				class="flex items-center justify-center border-3 border-border bg-background p-2 shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-none"
 			>
 				<IconSearch class="h-5 w-5" aria-hidden="true" />
 			</SheetTrigger>
 
 			<SheetContent
 				position="top"
-				class="h-[90vh] w-full max-w-none border-black border-b-4 p-0 sm:h-[85vh]"
+				class="h-[90vh] w-full max-w-none border-border border-b-4 p-0 sm:h-[85vh]"
 			>
 				<div class="flex h-full flex-col">
 					{/* Header */}
-					<div class="border-black border-b-3 bg-primary/10 px-4 py-4 sm:px-6">
+					<div class="border-border border-b-3 bg-primary/10 px-4 py-4 sm:px-6">
 						<SheetHeader class="mb-4">
 							<SheetTitle class="flex items-center gap-2 font-black text-xl uppercase tracking-tight sm:text-2xl">
 								<IconSearch class="h-6 w-6 text-primary" />
@@ -107,16 +107,16 @@ const SearchOverlay: Component = () => {
 					</div>
 
 					{/* Footer */}
-					<div class="border-black border-t-3 bg-muted/50 px-4 py-3 sm:px-6">
+					<div class="border-border border-t-3 bg-muted/50 px-4 py-3 sm:px-6">
 						<div class="flex items-center justify-between">
-							<p class="text-black/50 text-xs sm:text-sm">
-								<kbd class="mr-1 rounded border border-black/20 bg-white px-1.5 py-0.5 font-mono text-xs">
+							<p class="text-muted-foreground/60 text-xs sm:text-sm">
+								<kbd class="mr-1 rounded border border-border/20 bg-background px-1.5 py-0.5 font-mono text-xs">
 									ESC
 								</kbd>
 								хаах
 							</p>
-							<p class="text-black/50 text-xs sm:text-sm">
-								<kbd class="mr-1 rounded border border-black/20 bg-white px-1.5 py-0.5 font-mono text-xs">
+							<p class="text-muted-foreground/60 text-xs sm:text-sm">
+								<kbd class="mr-1 rounded border border-border/20 bg-background px-1.5 py-0.5 font-mono text-xs">
 									Enter
 								</kbd>
 								хайх

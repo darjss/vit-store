@@ -29,6 +29,7 @@ interface Props {
 	product: {
 		id: number;
 		name: string;
+		slug: string;
 		price: number;
 		brand: { name: string };
 		category: { name: string };
@@ -102,15 +103,16 @@ const { product, primaryImage } = Astro.props;
 				name: product.name,
 				price: product.price,
 				image: primaryImage,
+				slug: product.slug,
 			}}
 		>
 			<div slot="fallback" class="space-y-4">
 				<div class="flex items-center gap-3">
-					<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
-					<div class="h-14 flex-1 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
-					<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+					<div class="h-14 w-14 sm:h-16 sm:w-16 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
+					<div class="h-14 flex-1 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
+					<div class="h-14 w-14 sm:h-16 sm:w-16 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
 				</div>
-				<div class="h-14 sm:h-16 w-full rounded-sm border-3 border-black bg-muted/30 shadow-[4px_4px_0_0_#000] animate-pulse"></div>
+				<div class="h-14 sm:h-16 w-full border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
 			</div>
 		</ProductQuantitySelector>
 	</div>

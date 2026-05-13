@@ -31,14 +31,13 @@ let user = null;
 try {
 	user = await serverApi.auth.check.query();
 } catch (error) {
-	console.log(error)
 }
 ---
 
 <Dropdown class="user-profile-dropdown">
 	<DropdownTrigger
 		aria-label="Профайл"
-		class="relative flex items-center justify-center w-9 h-9 border-2 border-border bg-background shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#000] hover:bg-primary active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+		class="relative flex items-center justify-center w-9 h-9 border-2 border-border bg-background shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none hover:bg-primary active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
 	>
 		<svg
 			class="w-4 h-4"

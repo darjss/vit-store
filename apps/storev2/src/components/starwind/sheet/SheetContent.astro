@@ -29,7 +29,7 @@ const { side = "right", class: className, ...rest } = Astro.props;
 
 export const dialogBackdrop = tv({
   base: [
-    "starwind-dialog-backdrop fixed inset-0 top-0 left-0 z-50 hidden h-screen w-screen bg-black/80",
+    "starwind-dialog-backdrop fixed inset-0 top-0 left-0 z-50 hidden h-screen w-screen bg-foreground/80",
     "data-[state=open]:animate-in fade-in",
     "data-[state=closed]:animate-out data-[state=closed]:fill-mode-forwards fade-out",
     "data-[state=closed]:duration-300 data-[state=open]:duration-500",

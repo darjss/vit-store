@@ -110,17 +110,17 @@ export default function ProductQuantitySelector(
 								<button
 									type="button"
 									onClick={decrement}
-									class="flex size-14 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-16 sm:text-3xl"
+									class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
 								>
 									−
 								</button>
-								<div class="flex flex-1 items-center justify-center rounded-sm border-3 border-black bg-white px-6 py-4 font-black text-2xl shadow-[4px_4px_0_0_#000] sm:text-3xl">
+								<div class="flex flex-1 items-center justify-center border-3 border-border bg-background px-6 py-4 font-black text-2xl shadow-hard sm:text-3xl">
 									{quantity()}
 								</div>
 								<button
 									type="button"
 									onClick={increment}
-									class="flex size-14 items-center justify-center rounded-sm border-3 border-black bg-white font-black text-2xl shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#000] active:scale-95 sm:size-16 sm:text-3xl"
+									class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
 								>
 									+
 								</button>
@@ -135,7 +135,7 @@ export default function ProductQuantitySelector(
 				<Match when={!isInStock()}>
 					<div class="space-y-4">
 						{/* Out of Stock Alert */}
-						<div class="animate-float-slow rounded-sm border-4 border-black bg-destructive/10 p-4 shadow-[6px_6px_0_0_#000] sm:p-6">
+						<div class="animate-float-slow border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
 							<div class="mb-3 flex items-center gap-3">
 								<IconAlertTriangle class="text-2xl text-yellow-500" />
 								<h3 class="font-black text-destructive text-lg sm:text-xl">
@@ -158,7 +158,7 @@ export default function ProductQuantitySelector(
 						</Button>
 
 						<Show when={showNotifyForm()}>
-							<div class="space-y-3 rounded-sm border-4 border-black bg-background p-4 shadow-[6px_6px_0_0_#000]">
+							<div class="space-y-3 border-4 border-border bg-background p-4 shadow-hard-lg">
 								<p class="font-black text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
 								<div class="grid grid-cols-2 gap-2">
 									<Button
@@ -192,7 +192,7 @@ export default function ProductQuantitySelector(
 									placeholder={
 										notifyChannel() === "sms" ? "88889999" : "ner@example.com"
 									}
-									class="h-12 w-full rounded-sm border-3 border-black bg-white px-4 font-bold text-base shadow-[4px_4px_0_0_#000] focus:outline-none"
+									class="h-12 w-full border-3 border-border bg-background px-4 font-bold text-base shadow-hard transition-all focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring"
 								/>
 
 								<Button

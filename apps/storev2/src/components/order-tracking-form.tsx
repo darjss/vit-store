@@ -195,7 +195,7 @@ const OrderTrackingForm = () => {
 											value={orderNumber()}
 											onInput={(e) => setOrderNumber(e.currentTarget.value)}
 											placeholder="Жишээ: ORD12345"
-											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus:outline-none focus:border-primary transition-colors"
+											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
 										/>
 									</div>
 
@@ -209,7 +209,7 @@ const OrderTrackingForm = () => {
 											onInput={(e) => setPhone(e.currentTarget.value)}
 											placeholder="88889999"
 											maxLength={8}
-											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus:outline-none focus:border-primary transition-colors"
+											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
 										/>
 									</div>
 								</div>
@@ -218,7 +218,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleSearch}
 									disabled={sendOtpMutation.isPending}
-									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{sendOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -268,7 +268,7 @@ const OrderTrackingForm = () => {
 										onInput={(e) => setOtp(e.currentTarget.value)}
 										placeholder="XXXX"
 										maxLength={6}
-										class="w-full border-3 border-border bg-background px-3 py-2.5 font-black text-lg tracking-[0.5em] text-center focus:outline-none focus:border-primary transition-colors"
+										class="w-full border-3 border-border bg-background px-3 py-2.5 font-black text-lg tracking-[0.5em] text-center focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
 									/>
 								</div>
 
@@ -276,7 +276,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleVerifyOtp}
 									disabled={verifyOtpMutation.isPending}
-									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{verifyOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -326,7 +326,7 @@ const OrderTrackingForm = () => {
 										setStep("input");
 										trackMutation.reset();
 									}}
-									class="border-3 border-border bg-primary px-6 py-2.5 font-black text-sm uppercase tracking-wider shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]"
+									class="border-3 border-border bg-primary px-6 py-2.5 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm"
 								>
 									Дахин оролдох
 								</button>
@@ -439,7 +439,7 @@ const OrderTrackingForm = () => {
 									setPhone("");
 									setOtp("");
 								}}
-								class="w-full border-3 border-border bg-muted px-4 py-3 font-bold text-sm uppercase tracking-wider shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+								class="w-full border-3 border-border bg-muted px-4 py-3 font-bold text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
 							>
 								Өөр захиалга хайх
 							</button>

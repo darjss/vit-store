@@ -24,9 +24,9 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 ---
 
 <div
-	class={`group border-2 border-border bg-card active:shadow-hard-sm transition-all ${className}`}
+	class={`group border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg active:shadow-hard-sm ${className}`}
 >
-	<a href={productUrl} class="block">
+	<a href={productUrl} class="block" aria-hidden="true" tabindex="-1">
 		<div
 			class={`relative overflow-hidden border-b-2 border-border ${aspectRatio}`}
 			style={`background: ${bgColor}`}
@@ -35,7 +35,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 				product.image && (
 					<img
 						src={toProductImageUrl(product.image, imageSize) || product.image}
-						alt={product.name}
+						alt=""
 						class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5"
 						width="480"
 						height="480"
@@ -53,6 +53,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 		<a href={productUrl}>
 			<h3 class="text-[11px] md:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">
 				{product.name}
+				{product.brand ? <span class="sr-only">, {product.brand}</span> : null}
 			</h3>
 		</a>
 		<div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
@@ -68,6 +69,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 					name: product.name,
 					price: product.price,
 					image: product.image,
+					slug: product.slug,
 				}}
 			/>
 		</div>

@@ -55,6 +55,18 @@
         @apply bg-background text-foreground;
     }
 
+    /* Respect user motion preferences globally */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
     @keyframes float {
         0%,
         100% {
@@ -269,7 +281,21 @@
     .shadow-hard-reverse {
         box-shadow: -4px 4px 0px 0px var(--color-border);
     }
-    
+
+    /* Light shadows for use on dark (secondary) backgrounds */
+    .shadow-hard-light {
+        box-shadow: 4px 4px 0px 0px var(--color-background);
+    }
+    .shadow-hard-light-sm {
+        box-shadow: 2px 2px 0px 0px var(--color-background);
+    }
+    .shadow-hard-light-lg {
+        box-shadow: 8px 8px 0px 0px var(--color-background);
+    }
+    .shadow-hard-light-xl {
+        box-shadow: 12px 12px 0px 0px var(--color-background);
+    }
+
     .text-stroke {
         -webkit-text-stroke: 1px var(--color-foreground);
     }
@@ -277,7 +303,7 @@
         -webkit-text-stroke: 2px var(--color-foreground);
     }
     .text-stroke-white {
-        -webkit-text-stroke: 2px white;
+        -webkit-text-stroke: 2px var(--color-background);
     }
 
     .bg-grid-pattern {

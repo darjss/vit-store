@@ -50,7 +50,7 @@ const visiblePages = getVisiblePages();
 	{page > 1 && (
 		<a
 			href={getPageUrl(page - 1)}
-			class="flex h-9 items-center justify-center border-2 border-black bg-white px-3 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:px-4 sm:text-sm"
+			class="flex h-11 min-w-[44px] items-center justify-center border-2 border-border bg-card px-3 font-bold text-xs uppercase shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:px-4 sm:text-sm"
 			rel="prev"
 		>
 			← Өмнөх
@@ -59,17 +59,17 @@ const visiblePages = getVisiblePages();
 
 	{visiblePages.map((p) => (
 		p === "..." ? (
-			<span class="flex h-9 w-9 items-center justify-center font-bold text-muted-foreground text-xs sm:h-10 sm:w-10 sm:text-sm">
+			<span class="flex h-11 w-11 items-center justify-center font-bold text-muted-foreground text-xs sm:h-11 sm:w-11 sm:text-sm">
 				...
 			</span>
 		) : p === page ? (
-			<span class="flex h-9 w-9 items-center justify-center border-2 border-black bg-primary font-black text-xs text-primary-foreground shadow-[2px_2px_0_0_#000] sm:h-10 sm:w-10 sm:text-sm">
+			<span class="flex h-11 w-11 items-center justify-center border-2 border-border bg-primary font-black text-xs text-primary-foreground shadow-hard-sm sm:h-11 sm:w-11 sm:text-sm" aria-current="page">
 				{p}
 			</span>
 		) : (
 			<a
 				href={getPageUrl(p as number)}
-				class="flex h-9 w-9 items-center justify-center border-2 border-black bg-white font-bold text-xs shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:w-10 sm:text-sm"
+				class="flex h-11 w-11 items-center justify-center border-2 border-border bg-card font-bold text-xs shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:w-11 sm:text-sm"
 			>
 				{p}
 			</a>
@@ -79,7 +79,7 @@ const visiblePages = getVisiblePages();
 	{page < totalPages && (
 		<a
 			href={getPageUrl(page + 1)}
-			class="flex h-9 items-center justify-center border-2 border-black bg-white px-3 font-bold text-xs uppercase shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-10 sm:px-4 sm:text-sm"
+			class="flex h-11 min-w-[44px] items-center justify-center border-2 border-border bg-card px-3 font-bold text-xs uppercase shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:px-4 sm:text-sm"
 			rel="next"
 		>
 			Дараах →

@@ -8,6 +8,25 @@ import {
 	trackRemoveFromCart,
 } from "@/lib/analytics";
 
+/**
+ * Announce a message to screen readers via the live region.
+ * Safe to call from any cart operation.
+ */
+function announceCart(message: string) {
+	if (typeof document !== "undefined") {
+		const region = document.getElementById("cart-live-region");
+		if (region) {
+			region.textContent = message;
+			// Clear after announcement to avoid stale text
+			setTimeout(() => {
+				if (region.textContent === message) {
+					region.textContent = "";
+				}
+			}, 2000);
+		}
+	}
+}
+
 const safeStorage: Storage = {
 	getItem: (key: string) => {
 		if (typeof window === "undefined") {
@@ -118,8 +137,10 @@ export const cart = createRoot(() => {
 
 			if (index !== -1) {
 				setCart("items", index, "quantity", (q) => q + 1);
+				announceCart(`${product.name} сагсанд нэмэгдлээ`);
 			} else {
 				setCart("items", cartStore.items.length, product);
+				announceCart(`${product.name} сагсанд нэмэгдлээ`);
 			}
 
 			trackAddToCart({
@@ -134,10 +155,14 @@ export const cart = createRoot(() => {
 			}
 		},
 		remove: (productId: number) => {
+			const item = cartStore.items.find((i) => i.productId === productId);
 			trackRemoveFromCart(productId);
 			setCart("items", (items) =>
 				items.filter((item) => item.productId !== productId),
 			);
+			if (item) {
+				announceCart(`${item.name} сагснаас хасагдлаа`);
+			}
 		},
 		updateQuantity: (productId: number, quantityChange: number) => {
 			setCart(

@@ -55,7 +55,7 @@ const LoginForm = () => {
 			<div class="w-full max-w-md">
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
-					<div class="mb-4 inline-block rotate-[-2deg] border-4 border-black bg-primary px-4 py-2 shadow-[6px_6px_0_0_#000]">
+					<div class="mb-4 inline-block rotate-[-2deg] border-4 border-border bg-primary px-4 py-2 shadow-hard-xl">
 						<h1 class="font-black text-2xl uppercase md:text-3xl">
 							{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
 						</h1>

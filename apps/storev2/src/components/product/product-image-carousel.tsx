@@ -23,7 +23,7 @@ export default function ProductImageCarousel(props: Props) {
 
 	const imageColors = () => {
 		return sortedImages().map(
-			() => productColors[Math.floor(Math.random() * productColors.length)],
+			(_, index) => productColors[(props.productId + index) % productColors.length],
 		);
 	};
 

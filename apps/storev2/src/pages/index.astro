@@ -71,7 +71,8 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
         </p>
 
         <!-- Trust row — compact on mobile -->
-        <div class="flex gap-3 mb-6 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
+        <div class="relative flex gap-3 mb-6 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
+          <div class="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
           {[
             { val: "Хямд", label: "Үнэ" },
             { val: "Өргөн", label: "Сонголт" },
@@ -100,7 +101,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
             </div>
             <!-- Always-visible label on mobile (no hover state needed) -->
             <div class="absolute bottom-0 inset-x-0 bg-card/95 backdrop-blur-sm border-t-2 border-border p-2 md:p-3">
-              <div class="text-[7px] md:text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
+              <div class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
               <div class="flex items-center justify-between mt-0.5">
                 <span class="font-black text-xs md:text-sm">{formatCurrency(p.price)}</span>
               </div>
@@ -113,13 +114,15 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
 
   <!-- ==================== BRAND MARQUEE ==================== -->
   <section class="border-b-2 border-border bg-foreground overflow-hidden">
-    <div class="py-3.5 lg:py-4 flex items-center gap-8 whitespace-nowrap" style="animation: brand-scroll-4 25s linear infinite;">
-      {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
-        <a href={`/products/brand/${brand.slug}/1`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
-          {brand.name}
-          <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
-        </a>
-      )))}
+    <div class="group/marquee">
+      <div class="py-3.5 lg:py-4 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 25s linear infinite;">
+        {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
+          <a href={`/products/brand/${brand.slug}/1`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
+            {brand.name}
+            <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
+          </a>
+        )))}
+      </div>
     </div>
   </section>
 

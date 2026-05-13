@@ -31,7 +31,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 				{/* Product Image */}
 				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-3 border-border bg-secondary/5 shadow-hard-sm">
 					<a
-						href={`/product/${props.item.productId}`}
+						href={`/products/${props.item.slug}-${props.item.productId}`}
 						onClick={props.onNavigate}
 					>
 						<Image
@@ -49,7 +49,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 				<div class="flex flex-1 flex-col justify-between">
 					<div>
 						<a
-							href={`/product/${props.item.productId}`}
+							href={`/products/${props.item.slug}-${props.item.productId}`}
 							onClick={props.onNavigate}
 							class="line-clamp-2 font-black text-sm uppercase transition-colors hover:text-primary"
 						>
@@ -67,18 +67,18 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 							<button
 								type="button"
 								onClick={handleDecrement}
-								class="flex h-7 w-7 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
+								class="flex h-11 w-11 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
 								aria-label="Хасах"
 							>
 								−
 							</button>
-							<div class="flex h-7 min-w-[2rem] items-center justify-center border-2 border-border bg-primary px-2 font-black text-sm">
+							<div class="flex h-11 min-w-[2.75rem] items-center justify-center border-2 border-border bg-primary px-2 font-black text-sm">
 								{props.item.quantity}
 							</div>
 							<button
 								type="button"
 								onClick={handleIncrement}
-								class="flex h-7 w-7 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
+								class="flex h-11 w-11 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
 								aria-label="Нэмэх"
 							>
 								+
@@ -89,10 +89,10 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 						<button
 							type="button"
 							onClick={handleRemove}
-							class="flex h-7 w-7 items-center justify-center border-2 border-border bg-error text-error-foreground shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
+							class="flex h-11 w-11 items-center justify-center border-2 border-border bg-error text-error-foreground shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
 							aria-label="Устгах"
 						>
-							<IconClose class="h-4 w-4" />
+							<IconClose class="h-5 w-5" />
 						</button>
 					</div>
 

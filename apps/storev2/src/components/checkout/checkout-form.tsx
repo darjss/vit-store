@@ -7,7 +7,7 @@ import { deliveryFee } from "@vit/shared/constants";
 import { createEffect, createMemo, For, Match, onMount, Suspense, Switch } from "solid-js";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
-import { trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
+import { identifyUser, trackCheckoutStarted, trackOrderPlaced } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
@@ -53,7 +53,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			mutationFn: async (values: newOrderType) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
-			onSuccess: async (data) => {
+			onSuccess: async (data, variables) => {
 				const checkoutData = data as typeof data & { checkoutToken?: string };
 				const paymentNumber = checkoutData?.paymentNumber;
 				const checkoutToken = checkoutData?.checkoutToken;
@@ -62,7 +62,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					if (checkoutToken) {
 						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
 					}
-					trackOrderPlaced(paymentNumber, cart.count());
+					trackOrderPlaced(paymentNumber, cart.count(), cart.total() + deliveryFee);
+					identifyUser(variables.phoneNumber);
 					showToast({
 						title: "Амжилттай",
 						description: "Захиалга амжилттай үүслээ",
@@ -165,7 +166,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen bg-background px-4 py-6">
-						<div class="mb-6 border-4 border-border bg-primary p-4 shadow-[6px_6px_0_0_#000]">
+						<div class="mb-6 border-4 border-border bg-primary p-4 shadow-hard-xl">
 							<h1 class="font-black text-xl uppercase tracking-tight">
 								Захиалга баталгаажуулах
 							</h1>
@@ -180,8 +181,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 									<div class="space-y-3">
 										<For each={cart.items()}>
 											{(item) => (
-												<div class="flex gap-3 border-4 border-border bg-secondary/5 p-3 shadow-[4px_4px_0_0_#000]">
-													<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-4 border-border bg-card shadow-[2px_2px_0_0_#000]">
+												<div class="flex gap-3 border-4 border-border bg-secondary/5 p-3 shadow-hard-lg">
+													<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-4 border-border bg-card shadow-hard-sm">
 														<a href={`/product/${item.productId}`}>
 															<Image
 																src={item.image}
@@ -226,7 +227,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												₮{deliveryFee.toLocaleString()}
 											</p>
 										</div>
-										<div class="border-4 border-border bg-primary/10 p-3 shadow-[4px_4px_0_0_#000]">
+										<div class="border-4 border-border bg-primary/10 p-3 shadow-hard-lg">
 											<div class="flex items-center justify-between">
 												<p class="font-black text-base uppercase">Нийт дүн</p>
 												<p class="font-black text-2xl text-primary">

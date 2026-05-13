@@ -216,14 +216,14 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 				class={cn(
 					"mb-2 transition-all duration-150 sm:mb-3 lg:mb-4",
 					isSticky() &&
-						"-mx-2 sm:-mx-3 lg:-mx-6 sticky top-0 z-40 border-black border-b-2 bg-white/95 px-2 py-2 backdrop-blur-sm sm:border-b-3 sm:px-3 sm:py-2.5 lg:border-b-4 lg:px-6 lg:py-3",
+						"-mx-2 sm:-mx-3 lg:-mx-6 sticky top-0 z-40 border-border border-b-2 bg-background/95 px-2 py-2 sm:border-b-3 sm:px-3 sm:py-2.5 lg:border-b-4 lg:px-6 lg:py-3",
 				)}
 			>
 				{/* Active Filter Chips */}
 				<Show when={props.hasActiveFilters}>
 					<div class="mb-1.5 flex flex-wrap items-center gap-1 sm:mb-2 lg:mb-2.5">
 						<Show when={props.searchTerm}>
-							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+							<div class="flex items-center gap-1 border-2 border-border bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-hard-sm sm:px-2.5 sm:text-xs">
 								<IconSearch class="h-4 w-4" />
 								<span class="max-w-[120px] truncate sm:max-w-[200px]">
 									{props.searchTerm}
@@ -239,7 +239,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							</div>
 						</Show>
 						<Show when={activeCategoryName()}>
-							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+							<div class="flex items-center gap-1 border-2 border-border bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-hard-sm sm:px-2.5 sm:text-xs">
 								<IconFolder class="h-4 w-4" />
 								<span class="max-w-[100px] truncate sm:max-w-[150px]">
 									{activeCategoryName()}
@@ -255,7 +255,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							</div>
 						</Show>
 						<Show when={activeBrandName()}>
-							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+							<div class="flex items-center gap-1 border-2 border-border bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-hard-sm sm:px-2.5 sm:text-xs">
 								<IconPriceTag class="h-4 w-4" />
 								<span class="max-w-[100px] truncate sm:max-w-[150px]">
 									{activeBrandName()}
@@ -271,7 +271,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							</div>
 						</Show>
 						<Show when={activePresetFilterLabel()}>
-							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+							<div class="flex items-center gap-1 border-2 border-border bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-hard-sm sm:px-2.5 sm:text-xs">
 								<IconPriceTag class="h-4 w-4" />
 								<span>{activePresetFilterLabel()}</span>
 								<button
@@ -292,7 +292,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 									props.sortDirection === "desc")
 							}
 						>
-							<div class="flex items-center gap-1 border-2 border-black bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-[2px_2px_0_0_#000] sm:px-2.5 sm:text-xs">
+							<div class="flex items-center gap-1 border-2 border-border bg-primary/20 px-2 py-0.5 font-bold text-[10px] uppercase shadow-hard-sm sm:px-2.5 sm:text-xs">
 								<span>
 									{productSortOptions.find(
 										(o) =>
@@ -320,7 +320,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						class="relative min-w-0 flex-1 basis-full sm:basis-auto"
 						ref={searchDropdownRef}
 					>
-						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-black/40 sm:pl-2.5 lg:pl-3">
+						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-muted-foreground/40 sm:pl-2.5 lg:pl-3">
 							<IconSearch class="h-4 w-4" />
 						</div>
 						<input
@@ -334,7 +334,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							aria-autocomplete="list"
 							role="combobox"
 							aria-expanded={isSearchDropdownOpen()}
-							class="focus:-translate-x-px focus:-translate-y-px h-8 w-full min-w-0 border-2 border-black bg-white pr-7 pl-7 font-bold text-xs shadow-[2px_2px_0_0_#000] transition-all placeholder:text-black/40 focus:shadow-[3px_3px_0_0_#000] focus:outline-none sm:h-9 sm:pr-8 sm:pl-8 sm:text-sm lg:h-10 lg:border-3 lg:pr-10 lg:pl-10 lg:text-base"
+							class="focus:-translate-x-px focus:-translate-y-px h-8 w-full min-w-0 border-2 border-border bg-background pr-7 pl-7 font-bold text-xs shadow-hard-sm transition-all placeholder:text-muted-foreground/40 focus:shadow-hard focus:outline-none sm:h-9 sm:pr-8 sm:pl-8 sm:text-sm lg:h-10 lg:border-3 lg:pr-10 lg:pl-10 lg:text-base"
 						/>
 						<Show when={inputValue()}>
 							<button
@@ -343,7 +343,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 								class="absolute inset-y-0 right-0 flex items-center pr-1.5 hover:opacity-70 sm:pr-2 lg:pr-2.5"
 								aria-label="Clear search"
 							>
-								<div class="flex h-4 w-4 items-center justify-center border border-black bg-white hover:bg-destructive hover:text-white sm:h-5 sm:w-5">
+								<div class="flex h-4 w-4 items-center justify-center border border-border bg-background hover:bg-destructive hover:text-white sm:h-5 sm:w-5">
 									<IconClose class="h-3 w-3" />
 								</div>
 							</button>
@@ -356,11 +356,11 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 									searchSuggestions().trending.length > 0)
 							}
 						>
-							<div class="absolute top-full z-50 mt-1 w-full border-2 border-black bg-white shadow-[4px_4px_0_0_#000]">
+							<div class="absolute top-full z-50 mt-1 w-full border-2 border-border bg-background shadow-hard-lg">
 								<div class="max-h-64 overflow-y-auto">
 									<Show when={searchSuggestions().recent.length > 0}>
-										<div class="border-black border-b px-2 py-1.5">
-											<p class="font-bold text-[10px] text-black/50 uppercase">
+										<div class="border-border border-b px-2 py-1.5">
+											<p class="font-bold text-[10px] text-muted-foreground/50 uppercase">
 												Сүүлд хайсан
 											</p>
 										</div>
@@ -377,8 +377,8 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 										</For>
 									</Show>
 									<Show when={searchSuggestions().trending.length > 0}>
-										<div class="border-black border-b px-2 py-1.5">
-											<p class="font-bold text-[10px] text-black/50 uppercase">
+										<div class="border-border border-b px-2 py-1.5">
+											<p class="font-bold text-[10px] text-muted-foreground/50 uppercase">
 												Түгээмэл хайлт
 											</p>
 										</div>
@@ -430,18 +430,18 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						<SelectTrigger
 							aria-label="Filter by category"
 							class={cn(
-								"relative h-8 min-w-[110px] cursor-pointer border-2 border-black bg-white pr-5 pl-7 font-bold text-[10px] shadow-[2px_2px_0_0_#000] transition-all hover:bg-primary/20 focus:outline-none sm:h-9 sm:pr-6 sm:pl-8 sm:text-xs lg:h-10 lg:border-3 lg:pr-7 lg:pl-9 lg:text-sm",
+								"relative h-8 min-w-[110px] cursor-pointer border-2 border-border bg-background pr-5 pl-7 font-bold text-[10px] shadow-hard-sm transition-all hover:bg-primary/20 focus:outline-none sm:h-9 sm:pr-6 sm:pl-8 sm:text-xs lg:h-10 lg:border-3 lg:pr-7 lg:pl-9 lg:text-sm",
 								props.categoryId && "bg-primary/30",
 							)}
 						>
-							<div class="pointer-events-none absolute inset-y-0 left-1.5 flex items-center text-black/40 sm:left-2">
+							<div class="pointer-events-none absolute inset-y-0 left-1.5 flex items-center text-muted-foreground/40 sm:left-2">
 								<IconFolder class="h-4 w-4" />
 							</div>
 							<span class="max-w-[80px] truncate sm:max-w-[100px] lg:max-w-[140px]">
 								{activeCategoryName() ?? "Ангилал"}
 							</span>
 						</SelectTrigger>
-						<SelectContent class="max-h-60 overflow-y-auto border-2 border-black bg-white shadow-[4px_4px_0_0_#000]" />
+						<SelectContent class="max-h-60 overflow-y-auto border-2 border-border bg-background shadow-hard-lg" />
 					</Select>
 
 					{/* Brand - Select */}
@@ -475,22 +475,22 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						<SelectTrigger
 							aria-label="Filter by brand"
 							class={cn(
-								"relative h-8 min-w-[110px] cursor-pointer border-2 border-black bg-white pr-5 pl-6 font-bold text-[10px] shadow-[2px_2px_0_0_#000] transition-all hover:bg-primary/20 focus:outline-none sm:h-9 sm:pr-6 sm:pl-7 sm:text-xs lg:h-10 lg:border-3 lg:pr-7 lg:pl-8 lg:text-sm",
+								"relative h-8 min-w-[110px] cursor-pointer border-2 border-border bg-background pr-5 pl-6 font-bold text-[10px] shadow-hard-sm transition-all hover:bg-primary/20 focus:outline-none sm:h-9 sm:pr-6 sm:pl-7 sm:text-xs lg:h-10 lg:border-3 lg:pr-7 lg:pl-8 lg:text-sm",
 								props.brandId && "bg-primary/30",
 							)}
 						>
-							<div class="pointer-events-none absolute inset-y-0 left-1 flex items-center text-black/40 sm:left-1.5">
+							<div class="pointer-events-none absolute inset-y-0 left-1 flex items-center text-muted-foreground/40 sm:left-1.5">
 								<IconPriceTag class="h-4 w-4" />
 							</div>
 							<span class="max-w-[60px] truncate sm:max-w-[80px] lg:max-w-[120px]">
 								{activeBrandName() ?? "Брэнд"}
 							</span>
 						</SelectTrigger>
-						<SelectContent class="max-h-60 overflow-y-auto border-2 border-black bg-white shadow-[4px_4px_0_0_#000]" />
+						<SelectContent class="max-h-60 overflow-y-auto border-2 border-border bg-background shadow-hard-lg" />
 					</Select>
 
 					{/* Sort - segmented button style */}
-					<div class="flex border-2 border-black shadow-[2px_2px_0_0_#000] lg:border-3">
+					<div class="flex border-2 border-border shadow-hard-sm lg:border-3">
 						<For each={productSortOptions}>
 							{(option, index) => {
 								const isActive =
@@ -511,14 +511,14 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 										class={cn(
 											"relative h-8 px-1.5 font-bold text-[9px] uppercase tracking-wide transition-all sm:h-9 sm:px-2 sm:text-[10px] lg:h-10 lg:px-3 lg:text-xs",
 											isActive
-												? "bg-black text-white shadow-[inset_2px_2px_0_0_rgba(255,255,255,0.2)]"
-												: "bg-white hover:bg-primary/20",
-											index() > 0 && "border-black border-l-2 lg:border-l-3",
+												? "bg-secondary text-secondary-foreground shadow-[inset_2px_2px_0_0_rgba(252,252,252,0.2)]"
+												: "bg-background hover:bg-primary/20",
+											index() > 0 && "border-border border-l-2 lg:border-l-3",
 										)}
 									>
 										{option.label}
 										<Show when={isActive}>
-											<span class="-right-0.5 -top-0.5 absolute flex h-1.5 w-1.5 items-center justify-center rounded-full bg-white text-[5px] text-black sm:h-2 sm:w-2 sm:text-[6px] lg:h-2.5 lg:w-2.5">
+											<span class="-right-0.5 -top-0.5 absolute flex h-1.5 w-1.5 items-center justify-center rounded-full bg-background text-[5px] text-black sm:h-2 sm:w-2 sm:text-[6px] lg:h-2.5 lg:w-2.5">
 												●
 											</span>
 										</Show>
@@ -533,7 +533,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						<button
 							type="button"
 							onClick={props.onClearFilters}
-							class="flex h-8 items-center justify-center gap-0.5 border-2 border-black bg-destructive px-1.5 font-bold text-[9px] text-white uppercase tracking-wide shadow-[2px_2px_0_0_#000] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_0_#000] sm:h-9 sm:gap-1 sm:px-2 sm:text-[10px] lg:h-10 lg:border-3 lg:px-3 lg:text-xs"
+							class="flex h-8 items-center justify-center gap-0.5 border-2 border-border bg-destructive px-1.5 font-bold text-[9px] text-white uppercase tracking-wide shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none sm:h-9 sm:gap-1 sm:px-2 sm:text-[10px] lg:h-10 lg:border-3 lg:px-3 lg:text-xs"
 							aria-label="Clear all filters"
 						>
 							<IconClose class="h-3 w-3" />

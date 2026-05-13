@@ -64,6 +64,7 @@ const AssistantProductDisplay: Component<AssistantProductDisplayProps> = (
 				name: product.name,
 				price: product.price,
 				image: product.image,
+				slug: product.slug,
 			},
 			{ openDrawer: false },
 		);
@@ -84,7 +85,7 @@ const AssistantProductDisplay: Component<AssistantProductDisplayProps> = (
 							})}
 						>
 							{() => (
-								<div class="h-72 animate-pulse border-3 border-black bg-white shadow-[6px_6px_0_0_#000]" />
+								<div class="h-72 animate-pulse border-3 border-border bg-background shadow-hard-xl" />
 							)}
 						</For>
 					</div>
@@ -132,19 +133,19 @@ const AssistantProductDisplay: Component<AssistantProductDisplayProps> = (
 						</Show>
 
 						<Show when={addedProductIds().length > 0}>
-							<div class="flex flex-col gap-3 border-3 border-black bg-[#F4F0E8] p-4 shadow-[6px_6px_0_0_#000] sm:flex-row sm:items-center sm:justify-between">
+							<div class="flex flex-col gap-3 border-3 border-border bg-[#F4F0E8] p-4 shadow-hard-xl sm:flex-row sm:items-center sm:justify-between">
 								<div>
 									<p class="font-black text-sm uppercase tracking-wide">
 										Сагсанд нэмэгдлээ
 									</p>
-									<p class="mt-1 text-black/70 text-sm">
+									<p class="mt-1 text-muted-foreground/70 text-sm">
 										Үргэлжлүүлэн сонголтоо хийж болно, эсвэл шууд төлбөр рүү орж
 										болно.
 									</p>
 								</div>
 								<a
 									href="/checkout"
-									class="flex min-h-11 items-center justify-center rounded-sm border-3 border-black bg-black px-5 py-2 font-black text-white text-xs uppercase tracking-wide shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:text-black hover:shadow-[2px_2px_0_0_#000]"
+									class="flex min-h-11 items-center justify-center rounded-sm border-3 border-border bg-black px-5 py-2 font-black text-white text-xs uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary hover:text-black hover:shadow-hard-sm"
 									onClick={() =>
 										trackAssistantCheckoutClicked(addedProductIds())
 									}

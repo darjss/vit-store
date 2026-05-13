@@ -194,7 +194,7 @@ const CarouselPrevious: Component<CarouselButtonProps> = (rawProps) => {
       variant={local.variant}
       size={local.size}
       class={cn(
-        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-black bg-white hover:bg-black hover:text-white active:bg-black active:text-white shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black disabled:hover:shadow-[3px_3px_0_0_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0",
+        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-border bg-background hover:bg-secondary hover:text-secondary-foreground active:bg-secondary active:text-secondary-foreground shadow-hard sm:shadow-hard-lg hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background disabled:hover:text-foreground disabled:hover:shadow-hard disabled:hover:translate-x-0 disabled:hover:translate-y-0",
         orientation === "horizontal"
           ? "-left-12 top-1/2 -translate-y-1/2"
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
@@ -220,7 +220,7 @@ const CarouselNext: Component<CarouselButtonProps> = (rawProps) => {
       variant={local.variant}
       size={local.size}
       class={cn(
-        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-black bg-white hover:bg-black hover:text-white active:bg-black active:text-white shadow-[3px_3px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] hover:shadow-[2px_2px_0_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-[1px_1px_0_0_#000] active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-black disabled:hover:shadow-[3px_3px_0_0_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0",
+        "absolute size-10 sm:size-12 touch-manipulation rounded-sm border-2 sm:border-3 border-border bg-background hover:bg-secondary hover:text-secondary-foreground active:bg-secondary active:text-secondary-foreground shadow-hard sm:shadow-hard-lg hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-background disabled:hover:text-foreground disabled:hover:shadow-hard disabled:hover:translate-x-0 disabled:hover:translate-y-0",
         orientation === "horizontal"
           ? "-right-12 top-1/2 -translate-y-1/2"
           : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",

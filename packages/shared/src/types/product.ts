@@ -4,6 +4,7 @@ export interface CartItems {
 	name: string;
 	price: number;
 	image: string;
+	slug: string;
 }
 
 export interface ProductForHome {

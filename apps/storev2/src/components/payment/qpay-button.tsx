@@ -1,6 +1,7 @@
 import { navigate } from "astro:transitions/client";
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
+import { trackPaymentConfirmed, trackQpayError, trackQpayInvoiceCreated } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconErrorWarning from "~icons/ri/error-warning-line";
@@ -43,6 +44,21 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	const invoiceData = () => mutation.data;
 
+	createEffect(() => {
+		if (mutation.isSuccess) {
+			trackQpayInvoiceCreated(props.paymentNumber);
+		}
+	});
+
+	createEffect(() => {
+		if (mutation.isError) {
+			trackQpayError(
+				props.paymentNumber,
+				mutation.error?.message ?? "Unknown error",
+			);
+		}
+	});
+
 	onMount(() => {
 		if (!mutation.isSuccess && !mutation.isPending && !mutation.isError) {
 			mutation.mutate();
@@ -69,6 +85,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	createEffect(() => {
 		if (paymentStatusQuery.data?.status === "success") {
+			trackPaymentConfirmed(props.paymentNumber, "");
 			navigate(
 				props.checkoutToken
 					? `/payment/success/${props.paymentNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
@@ -103,7 +120,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					<button
 						type="button"
 						onClick={() => mutation.mutate()}
-						class="border-3 border-border bg-primary px-4 py-2 font-bold text-sm uppercase shadow-[3px_3px_0_0_rgba(0,0,0,1)] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
+						class="border-3 border-border bg-primary px-4 py-2 font-bold text-sm uppercase shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm"
 					>
 						Дахин оролдох
 					</button>
@@ -136,7 +153,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</button>
 
 						<Show when={showQr()}>
-							<div class="flex flex-col items-center gap-3 border-2 border-border bg-white p-4">
+							<div class="flex flex-col items-center gap-3 border-2 border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"
@@ -160,9 +177,9 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									{(link) => (
 										<a
 											href={link.link}
-											class="group flex flex-col items-center gap-1.5 rounded-sm p-2 transition-all hover:bg-muted/50 active:scale-95"
+											class="group flex flex-col items-center gap-1.5 p-2 transition-all hover:bg-muted/50 active:scale-95"
 										>
-											<div class="h-14 w-14 overflow-hidden rounded-xl border-2 border-border bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)] transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-[1px_1px_0_0_rgba(0,0,0,1)] sm:h-16 sm:w-16">
+											<div class="h-14 w-14 overflow-hidden rounded-xl border-2 border-border bg-background shadow-hard-sm transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none sm:h-16 sm:w-16">
 												<img
 													src={link.logo}
 													alt={link.name || link.description}

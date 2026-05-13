@@ -22,11 +22,11 @@ const CartList = () => {
 				<div class="flex w-full flex-col gap-4">
 					<For each={cart.items()}>
 						{(item) => (
-							<div class="hover:-translate-y-1 border-4 border-border bg-card p-4 shadow-[6px_6px_0_0_#000] transition-all hover:shadow-[8px_8px_0_0_#000] md:p-6">
+							<div class="hover:-translate-y-1 border-4 border-border bg-card p-4 shadow-hard-lg transition-all hover:shadow-hard-xl md:p-6">
 								<div class="hidden md:flex md:items-center md:gap-6">
 									<div class="flex w-1/2 items-center gap-5">
-										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-[4px_4px_0_0_#000]">
-											<a href={`/product/${item.productId}`}>
+										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-hard">
+											<a href={`/products/${item.slug}-${item.productId}`}>
 												<Image
 													src={item.image}
 													alt={`${item.name} `}
@@ -38,7 +38,7 @@ const CartList = () => {
 											</a>
 										</div>
 										<div class="flex-1">
-											<a href={`/product/${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}`}>
 												<h2 class="font-black text-lg uppercase transition-colors hover:text-primary">
 													{item.name}
 												</h2>
@@ -65,8 +65,8 @@ const CartList = () => {
 
 								<div class="flex flex-col md:hidden">
 									<div class="mb-4 flex gap-4">
-										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-[4px_4px_0_0_#000]">
-											<a href={`/product/${item.productId}`}>
+										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-hard">
+											<a href={`/products/${item.slug}-${item.productId}`}>
 												<Image
 													src={item.image}
 													alt={`${item.name}`}
@@ -78,7 +78,7 @@ const CartList = () => {
 											</a>
 										</div>
 										<div class="flex flex-1 flex-col justify-between">
-											<a href={`/product/${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}`}>
 												<h2 class="font-black text-base uppercase">
 													{item.name}
 												</h2>
@@ -104,7 +104,7 @@ const CartList = () => {
 						)}
 					</For>
 				</div>
-				<div class="mt-8 border-4 border-border bg-card p-6 shadow-[8px_8px_0_0_#000] md:p-8">
+				<div class="mt-8 border-4 border-border bg-card p-6 shadow-hard-xl md:p-8">
 					<div class="md:ml-auto md:w-2/3 lg:w-1/2">
 						<h2 class="mb-6 border-border border-b-4 pb-3 font-black text-2xl uppercase tracking-tight">
 							Захиалгын дүн
@@ -133,7 +133,7 @@ const CartList = () => {
 							</div>
 						</div>
 
-						<div class="mt-6 flex items-center justify-between border-4 border-border bg-primary/10 p-4 shadow-[4px_4px_0_0_#000]">
+						<div class="mt-6 flex items-center justify-between border-4 border-border bg-primary/10 p-4 shadow-hard">
 							<p class="font-black text-xl uppercase">Нийт дүн</p>
 							<p class="font-black text-3xl text-primary">
 								₮{(cart.total() + deliveryFee).toLocaleString()}
@@ -142,7 +142,7 @@ const CartList = () => {
 						<a href="/checkout">
 							<button
 								type="button"
-								class="mt-6 inline-flex h-14 w-full items-center justify-center border-4 border-border bg-primary px-8 py-4 font-black text-lg text-primary-foreground uppercase tracking-wider shadow-[8px_8px_0_0_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-[4px_4px_0_0_#000] active:scale-[0.98]"
+								class="mt-6 inline-flex h-14 w-full items-center justify-center border-4 border-border bg-primary px-8 py-4 font-black text-lg text-primary-foreground uppercase tracking-wider shadow-hard-xl transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
 							>
 								Худалдан авах
 							</button>
