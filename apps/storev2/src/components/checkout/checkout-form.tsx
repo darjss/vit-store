@@ -7,6 +7,7 @@ import { deliveryFee } from "@vit/shared/constants";
 import {
 	createEffect,
 	createMemo,
+	createSignal,
 	For,
 	Match,
 	onMount,
@@ -33,6 +34,9 @@ import IconLock from "~icons/ri/lock-line";
 import IconTruck from "~icons/ri/truck-line";
 import IconShieldCheck from "~icons/ri/shield-check-line";
 import IconSmartphone from "~icons/ri/smartphone-line";
+import IconChevronDown from "~icons/ri/arrow-down-s-line";
+import IconChevronUp from "~icons/ri/arrow-up-s-line";
+import IconPackage from "~icons/ri/archive-line";
 
 type DeliveryZone = {
 	Id: number;
@@ -49,6 +53,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			);
 		}
 	});
+
+	const [summaryOpen, setSummaryOpen] = createSignal(true);
 
 	const addressZonesQuery = useQuery(
 		() => ({
@@ -191,6 +197,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	const isEmpty = () => cart.items().length === 0;
 	const isHydrated = () => cart.isHydrated();
+	const totalWithDelivery = () => cart.total() + deliveryFee;
 
 	return (
 		<Switch>
@@ -202,114 +209,157 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</Match>
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
-					<div class="min-h-screen bg-background px-4 py-6">
-						{/* Header */}
-						<div class="mb-6 border-4 border-border bg-primary p-4 shadow-hard-xl">
-							<h1 class="font-black text-xl uppercase tracking-tight">
-								Захиалга баталгаажуулах
-							</h1>
-							<p class="mt-1 text-sm font-medium text-foreground/70">
-								2 алхам: Хүргэлтийн мэдээлэл оруулах → Төлбөр төлөх
-							</p>
+					<div class="min-h-screen bg-background">
+						{/* Sticky header with progress */}
+						<div class="sticky top-0 z-30 border-b-4 border-border bg-background">
+							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+								<div>
+									<h1 class="font-black text-lg uppercase tracking-tight">
+										Захиалга баталгаажуулах
+									</h1>
+									<p class="text-xs font-bold text-muted-foreground">
+										Алхам 1 / 2 — Хүргэлт
+									</p>
+								</div>
+								<div class="flex gap-1">
+									<div class="h-2.5 w-8 border-2 border-border bg-primary" />
+									<div class="h-2.5 w-8 border-2 border-border bg-muted" />
+								</div>
+							</div>
 						</div>
 
-						<div class="space-y-6">
-							{/* Order Summary */}
-							<Card>
-								<CardHeader>
-									<CardTitle>Таны захиалга</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div class="space-y-3">
-										<For each={cart.items()}>
-											{(item) => (
-												<div class="flex gap-3 border-4 border-border bg-secondary/5 p-3 shadow-hard-lg">
-													<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-4 border-border bg-card shadow-hard-sm">
-														<a href={`/product/${item.productId}`}>
-															<Image
-																src={item.image}
-																alt={`${item.name}`}
-																width={80}
-																height={80}
-																layout="fixed"
-																class="h-full w-full object-cover object-center transition-transform active:scale-95"
-															/>
-														</a>
-													</div>
-													<div class="flex flex-1 flex-col justify-between">
-														<a href={`/product/${item.productId}`}>
-															<h3 class="font-black text-sm uppercase leading-tight transition-colors active:text-primary">
-																{item.name}
-															</h3>
-														</a>
-														<div class="flex items-center justify-between">
-															<p class="font-bold text-muted-foreground text-xs">
-																₮{item.price.toLocaleString()} ×{" "}
-																{item.quantity}
-															</p>
-															<p class="font-black text-primary text-sm">
-																₮
-																{(
-																	item.price * item.quantity
-																).toLocaleString()}
-															</p>
-														</div>
-													</div>
-												</div>
-											)}
-										</For>
-									</div>
-
-									<div class="mt-4 space-y-3 border-border border-t-4 pt-4">
-										<div class="flex items-center justify-between">
-											<p class="font-bold text-sm uppercase">
-												Дэд дүн
-											</p>
-											<p class="font-black text-base">
-												₮{cart.total().toLocaleString()}
-											</p>
-										</div>
-										<div class="flex items-center justify-between">
-											<div class="flex items-center gap-2">
-												<IconTruck class="h-4 w-4 text-muted-foreground" />
-												<p class="font-bold text-sm uppercase">
-													Хүргэлт
-												</p>
-											</div>
-											<p class="font-black text-base">
-												₮{deliveryFee.toLocaleString()}
-											</p>
-										</div>
-										<div class="border-4 border-border bg-primary/10 p-3 shadow-hard-lg">
-											<div class="flex items-center justify-between">
-												<p class="font-black text-base uppercase">
-													Нийт дүн
-												</p>
-												<p class="font-black text-2xl text-primary">
-													₮
-													{(
-														cart.total() + deliveryFee
-													).toLocaleString()}
-												</p>
-											</div>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							{/* Delivery Form */}
-							<Card>
-								<CardHeader>
-									<div class="flex items-center justify-between">
-										<CardTitle>Хүргэлтийн мэдээлэл</CardTitle>
-										<span class="inline-flex h-7 w-7 items-center justify-center border-2 border-border bg-primary font-black text-xs">
-											1
+						<div class="mx-auto max-w-lg space-y-4 px-4 py-4">
+							{/* Collapsible Order Summary */}
+							<div class="border-4 border-border shadow-hard-lg">
+								<button
+									type="button"
+									onClick={() => setSummaryOpen((v) => !v)}
+									class="flex w-full items-center justify-between bg-card p-3"
+								>
+									<div class="flex items-center gap-2">
+										<IconPackage class="h-5 w-5" />
+										<span class="font-black text-sm uppercase">
+											Таны захиалга
+										</span>
+										<span class="border-2 border-border bg-primary px-1.5 py-0.5 font-black text-xs">
+											{cart.count()}
 										</span>
 									</div>
-								</CardHeader>
-								<CardContent>
+									<Show
+										when={summaryOpen()}
+										fallback={
+											<IconChevronDown class="h-5 w-5 text-muted-foreground" />
+										}
+									>
+										<IconChevronUp class="h-5 w-5 text-muted-foreground" />
+									</Show>
+								</button>
+
+								<Show when={summaryOpen()}>
+									<div class="border-t-4 border-border p-3">
+										<div class="space-y-2">
+											<For each={cart.items()}>
+												{(item) => (
+													<div class="flex gap-2.5">
+														<div class="h-16 w-16 flex-shrink-0 overflow-hidden border-3 border-border bg-card">
+															<a href={`/product/${item.productId}`}>
+																<Image
+																	src={item.image}
+																	alt={`${item.name}`}
+																	width={64}
+																	height={64}
+																	layout="fixed"
+																	class="h-full w-full object-cover"
+																/>
+															</a>
+														</div>
+														<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+															<a href={`/product/${item.productId}`}>
+																<h3 class="line-clamp-2 font-black text-xs uppercase leading-tight">
+																	{item.name}
+																</h3>
+															</a>
+															<div class="flex items-center justify-between">
+																<p class="font-bold text-muted-foreground text-[10px]">
+																	₮
+																	{item.price.toLocaleString()}{" "}
+																	× {item.quantity}
+																</p>
+																<p class="font-black text-xs text-primary">
+																	₮
+																	{(
+																		item.price *
+																		item.quantity
+																	).toLocaleString()}
+																</p>
+															</div>
+														</div>
+													</div>
+												)}
+											</For>
+										</div>
+
+										<div class="mt-3 space-y-2 border-t-2 border-border pt-3">
+											<div class="flex items-center justify-between">
+												<p class="font-bold text-xs uppercase text-muted-foreground">
+													Бараа
+												</p>
+												<p class="font-black text-sm">
+													₮{cart.total().toLocaleString()}
+												</p>
+											</div>
+											<div class="flex items-center justify-between">
+												<p class="font-bold text-xs uppercase text-muted-foreground">
+													Хүргэлт
+												</p>
+												<p class="font-black text-sm">
+													₮{deliveryFee.toLocaleString()}
+												</p>
+											</div>
+											<div class="flex items-center justify-between border-t-2 border-border pt-2">
+												<p class="font-black text-sm uppercase">
+													Нийт
+												</p>
+												<p class="font-black text-lg">
+													₮{totalWithDelivery().toLocaleString()}
+												</p>
+											</div>
+										</div>
+									</div>
+								</Show>
+							</div>
+
+							{/* Scroll affordance hint */}
+							<Show when={summaryOpen()}>
+								<div class="flex flex-col items-center gap-1 pb-1 pt-2">
+									<p class="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+										Доош гүйлгэж мэдээллээ оруулна уу
+									</p>
+									<IconChevronDown class="h-5 w-5 animate-bounce text-muted-foreground" />
+								</div>
+							</Show>
+
+							{/* Delivery Form */}
+							<div class="border-4 border-border bg-card shadow-hard-lg">
+								<div class="border-b-4 border-border bg-secondary p-3">
+									<div class="flex items-center gap-2">
+										<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
+											<IconTruck class="h-3.5 w-3.5" />
+										</div>
+										<div>
+											<h2 class="font-black text-sm uppercase tracking-tight">
+												Хүргэлтийн мэдээлэл
+											</h2>
+											<p class="text-[10px] font-bold text-muted-foreground">
+												Бүх талбарыг бөглөнө үү
+											</p>
+										</div>
+									</div>
+								</div>
+
+								<div class="p-3">
 									<form
-										class="space-y-5"
+										class="space-y-4"
 										onSubmit={(e) => {
 											e.preventDefault();
 											e.stopPropagation();
@@ -322,101 +372,111 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 											form.handleSubmit();
 										}}
 									>
-										<form.AppField
-											name="phoneNumber"
-											children={(field) => (
-												<field.FormTextField
-													label="Утасны дугаар"
-													placeholder="88889999"
-													type="tel"
-												/>
-											)}
-										/>
-
-										<div class="space-y-2">
+										{/* Phone */}
+										<div class="border-3 border-border p-3 shadow-hard-sm">
 											<form.AppField
-												name="addressZoneId"
+												name="phoneNumber"
 												children={(field) => (
-													<field.FormSelectField
-														label="Хаягийн бүс"
-														placeholder={
-															addressZonesQuery.isLoading
-																? "Бүсүүд уншиж байна..."
-																: "Хаягийн бүс сонгох"
-														}
-														options={addressZoneOptions()}
-														disabled={addressZonesQuery.isLoading}
+													<field.FormTextField
+														label="Утасны дугаар"
+														placeholder="88889999"
+														type="tel"
 													/>
 												)}
 											/>
-											<div class="flex justify-end">
-												<DeliveryInfoSheet />
+										</div>
+
+										{/* Zone + info */}
+										<div class="border-3 border-border p-3 shadow-hard-sm">
+											<div class="space-y-2">
+												<form.AppField
+													name="addressZoneId"
+													children={(field) => (
+														<field.FormSelectField
+															label="Хаягийн бүс"
+															placeholder={
+																addressZonesQuery.isLoading
+																	? "Бүсүүд уншиж байна..."
+																	: "Хаягийн бүс сонгох"
+															}
+															options={addressZoneOptions()}
+															disabled={addressZonesQuery.isLoading}
+														/>
+													)}
+												/>
+												<div class="flex justify-end">
+													<DeliveryInfoSheet />
+												</div>
 											</div>
 										</div>
 
-										<form.AppField
-											name="address"
-											children={(field) => (
-												<field.FormTextArea
-													label="Хаяг"
-													placeholder="Байр, тоот, давхар"
-												/>
-											)}
-										/>
-										<form.AppField
-											name="notes"
-											children={(field) => (
-												<field.FormTextArea
-													label="Нэмэлт мэдээлэл"
-													placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
-												/>
-											)}
-										/>
+										{/* Address */}
+										<div class="border-3 border-border p-3 shadow-hard-sm">
+											<form.AppField
+												name="address"
+												children={(field) => (
+													<field.FormTextArea
+														label="Хаяг"
+														placeholder="Байр, тоот, давхар"
+													/>
+												)}
+											/>
+										</div>
 
-										{/* Trust signals */}
-										<div class="grid grid-cols-2 gap-2">
-											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
-												<IconLock class="h-4 w-4 shrink-0 text-muted-foreground" />
-												<span class="text-xs font-bold text-muted-foreground">
-													Аюулгүй төлбөр
+										{/* Notes */}
+										<div class="border-3 border-border p-3 shadow-hard-sm">
+											<form.AppField
+												name="notes"
+												children={(field) => (
+													<field.FormTextArea
+														label="Нэмэлт мэдээлэл (заавал биш)"
+														placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
+													/>
+												)}
+											/>
+										</div>
+
+										{/* Trust row */}
+										<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-2 border-border bg-muted/20 p-2.5">
+											<div class="flex items-center gap-1">
+												<IconLock class="h-3 w-3 text-muted-foreground" />
+												<span class="text-[10px] font-bold uppercase text-muted-foreground">
+													Аюулгүй
 												</span>
 											</div>
-											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
-												<IconShieldCheck class="h-4 w-4 shrink-0 text-muted-foreground" />
-												<span class="text-xs font-bold text-muted-foreground">
-													Баталгаат бараа
+											<div class="flex items-center gap-1">
+												<IconShieldCheck class="h-3 w-3 text-muted-foreground" />
+												<span class="text-[10px] font-bold uppercase text-muted-foreground">
+													Баталгаат
 												</span>
 											</div>
-											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
-												<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
-												<span class="text-xs font-bold text-muted-foreground">
-													Өдөрт нь хүргэнэ
+											<div class="flex items-center gap-1">
+												<IconTruck class="h-3 w-3 text-muted-foreground" />
+												<span class="text-[10px] font-bold uppercase text-muted-foreground">
+													Шуурхай
 												</span>
 											</div>
-											<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5">
-												<IconSmartphone class="h-4 w-4 shrink-0 text-muted-foreground" />
-												<span class="text-xs font-bold text-muted-foreground">
-													QPay / Данс
+											<div class="flex items-center gap-1">
+												<IconSmartphone class="h-3 w-3 text-muted-foreground" />
+												<span class="text-[10px] font-bold uppercase text-muted-foreground">
+													QPay
 												</span>
 											</div>
 										</div>
 
 										{/* Submit */}
 										<div class="space-y-3 pt-2">
-											<div class="flex items-center justify-between border-4 border-border bg-primary/10 p-3 shadow-hard-lg">
+											<div class="flex items-center justify-between border-4 border-border bg-primary/10 p-3 shadow-hard-sm">
 												<div>
 													<p class="font-black text-sm uppercase">
 														Төлөх дүн
 													</p>
-													<p class="text-xs font-medium text-muted-foreground">
+													<p class="text-[10px] font-bold text-muted-foreground">
 														Хүргэлтийн хураамж орсон
 													</p>
 												</div>
-												<p class="font-black text-xl text-primary">
-													₮
-													{(
-														cart.total() + deliveryFee
-													).toLocaleString()}
+												<p class="font-black text-xl">
+													₮{totalWithDelivery().toLocaleString()}
 												</p>
 											</div>
 
@@ -424,17 +484,20 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												<form.SubmitButton>
 													{mutation.isPending
 														? "Уншиж байна..."
-														: "Төлбөр төлөх рүү үргэлжлүүлэх →"}
+														: "Төлбөр төлөх →"}
 												</form.SubmitButton>
 											</form.AppForm>
 
-											<p class="text-center text-xs font-medium text-muted-foreground">
-												Дараагийн алхамд төлбөрийн хуудсанд шилжих болно
+											<p class="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+												Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
 											</p>
 										</div>
 									</form>
-								</CardContent>
-							</Card>
+								</div>
+							</div>
+
+							{/* Bottom spacer so content isn't hidden */}
+							<div class="h-4" />
 						</div>
 					</div>
 				</Suspense>

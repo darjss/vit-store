@@ -172,18 +172,18 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							<p class="font-black text-muted-foreground text-xs uppercase tracking-wide">
 								Банкаа сонгоно уу
 							</p>
-							<div class="grid grid-cols-4 gap-2.5 sm:gap-3">
+							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
 								<For each={invoiceData()?.urls ?? []}>
 									{(link) => (
 										<a
 											href={link.link}
-											class="group flex flex-col items-center gap-1.5 p-2 transition-all hover:bg-muted/50 active:scale-95"
+											class="group flex flex-col items-center gap-1.5 p-1.5 transition-all hover:bg-muted/50 active:scale-95 sm:p-2"
 										>
-											<div class="h-14 w-14 overflow-hidden rounded-xl border-2 border-border bg-background shadow-hard-sm transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none sm:h-16 sm:w-16">
+											<div class="h-12 w-12 overflow-hidden border-2 border-border bg-background shadow-hard-sm transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none sm:h-16 sm:w-16">
 												<img
 													src={link.logo}
 													alt={link.name || link.description}
-													class="h-full w-full object-contain p-1.5"
+													class="h-full w-full object-contain p-1 sm:p-1.5"
 													loading="lazy"
 												/>
 											</div>

@@ -76,8 +76,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Данс
 									</p>
-									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+									<div class="flex items-stretch min-w-0">
+										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-base">
 											5011147435
 										</div>
 										<CopyButton text="5011147435" title="Данс" />
@@ -88,8 +88,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Нэр
 									</p>
-									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
+									<div class="flex items-stretch min-w-0">
+										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-sm">
 											Batdelger Jigjidsuren
 										</div>
 										<CopyButton text="Batdelger Jigjidsuren" title="Нэр" />
@@ -100,8 +100,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Дүн
 									</p>
-									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
+									<div class="flex items-stretch min-w-0">
+										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-lg">
 											{props.total.toLocaleString()}₮
 										</div>
 										<CopyButton text={props.total} title="Дүн" />
@@ -112,8 +112,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Гүйлгээний утга
 									</p>
-									<div class="flex items-stretch">
-										<div class="flex-1 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+									<div class="flex items-stretch min-w-0">
+										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-base">
 											{props.orderNumber}
 										</div>
 										<CopyButton
