@@ -1,10 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { sendDetailedOrderNotification, sendTransferNotification, } from "~/lib/integrations/messenger/messages";
+import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
+import { sendDetailedOrderNotification, sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
+import {
+	trackPaymentConfirmedServerSide,
+	trackQpayInvoiceFailedServerSide,
+} from "~/lib/integrations/posthog";
 import { assertCanAccessPayment } from "~/lib/session/checkout-access";
 import { kv } from "~/lib/kv";
-import { createQpayInvoice, type InvoiceResponse, } from "~/lib/payments/qpay";
+import { checkQpayInvoice, createQpayInvoice, type InvoiceResponse, } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
 export const payment = router({
     getPaymentByNumber: publicProcedure
@@ -63,7 +68,7 @@ export const payment = router({
             try {
                 const paymentInfo = await q.getPaymentInfoByNumber(input.paymentNumber);
                 if (paymentInfo) {
-                    await sendDetailedOrderNotification({
+                    await sendTransferClaimedNotification({
                         paymentNumber: input.paymentNumber,
                         customerPhone: paymentInfo.order.customerPhone,
                         address: paymentInfo.order.address,
@@ -75,7 +80,6 @@ export const payment = router({
                             price: detail.product.price,
                             imageUrl: detail.product.images[0]?.url,
                         })),
-                        status: "payment_confirmed",
                     });
                 }
             }
@@ -124,7 +128,30 @@ export const payment = router({
                 });
             }
             await q.updatePaymentStatus(input.paymentNumber, "customer_claimed_paid");
-            await sendTransferNotification(payment.paymentNumber, payment.amount);
+            try {
+                const paymentInfo = await q.getPaymentInfoByNumber(input.paymentNumber);
+                if (paymentInfo) {
+                    await sendTransferClaimedNotification({
+                        paymentNumber: input.paymentNumber,
+                        customerPhone: paymentInfo.order.customerPhone,
+                        address: paymentInfo.order.address,
+                        notes: paymentInfo.order.notes,
+                        total: paymentInfo.order.total,
+                        products: paymentInfo.order.orderDetails.map((detail) => ({
+                            name: detail.product.name,
+                            quantity: detail.quantity,
+                            price: detail.product.price,
+                            imageUrl: detail.product.images[0]?.url,
+                        })),
+                    });
+                }
+            }
+            catch (notificationError) {
+                ctx.log.error(notificationError instanceof Error ? notificationError : new Error(String(notificationError)), {
+                    event: "payment.transfer_notification_failed",
+                    paymentNumber: input.paymentNumber,
+                });
+            }
             ctx.log.info("payment.notification_sent", {
                 paymentNumber: payment.paymentNumber,
                 amount: payment.amount,
@@ -218,9 +245,121 @@ export const payment = router({
                 event: "payment.create_qr_failed",
                 paymentNumber: input.paymentNumber
             });
+
+            // Track QPay invoice failure server-side
+            try {
+                const paymentInfo = await paymentQueries.store.getPaymentInfoByNumber(input.paymentNumber);
+                trackQpayInvoiceFailedServerSide({
+                    phone: paymentInfo?.order.customerPhone?.toString() ?? input.paymentNumber,
+                    paymentNumber: input.paymentNumber,
+                    errorMessage: e instanceof Error ? e.message : "Failed to create QPay invoice",
+                    referrer: ctx.c.req.header("referer") ?? undefined,
+                }).catch(() => {});
+            } catch {
+                // Analytics failure should not break the error response
+            }
+
             throw new TRPCError({
                 code: "BAD_GATEWAY",
                 message: e instanceof Error ? e.message : "Failed to create QPay invoice",
+                cause: e,
+            });
+        }
+    }),
+    checkQpayPayment: publicProcedure
+        .input(v.object({ paymentNumber: v.string(), checkoutToken: v.optional(v.string()) }))
+        .mutation(async ({ input, ctx }) => {
+        try {
+            const q = paymentQueries.store;
+            const payment = await assertCanAccessPayment(ctx, input.paymentNumber, input.checkoutToken);
+            if (payment.status === "success") {
+                return { paid: true, orderNumber: payment.order.orderNumber };
+            }
+            if (payment.provider !== "qpay" || !payment.invoiceId) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Not a QPay payment",
+                });
+            }
+            const isPaid = await checkQpayInvoice(payment.invoiceId);
+            if (!isPaid) {
+                return { paid: false };
+            }
+            const confirmed = await q.confirmPaymentAndApplyStock(input.paymentNumber, "qpay");
+            if (!confirmed) {
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "Payment already confirmed or not pending",
+                });
+            }
+            try {
+                const paymentInfo = await q.getPaymentInfoByNumber(input.paymentNumber);
+                if (paymentInfo) {
+                    const notificationPayload = {
+                        paymentNumber: input.paymentNumber,
+                        customerPhone: paymentInfo.order.customerPhone,
+                        address: paymentInfo.order.address,
+                        notes: paymentInfo.order.notes,
+                        total: paymentInfo.order.total,
+                        products: paymentInfo.order.orderDetails.map((detail) => ({
+                            name: detail.product.name,
+                            quantity: detail.quantity,
+                            price: detail.product.price,
+                            imageUrl: detail.product.images[0]?.url,
+                        })),
+                        status: "payment_confirmed" as const,
+                    };
+                    try {
+                        await sendDetailedOrderNotification(notificationPayload);
+                    } catch (notificationError) {
+                        await persistMessengerNotificationFailure({
+                            paymentNumber: input.paymentNumber,
+                            payload: notificationPayload,
+                            error: notificationError,
+                        });
+                        ctx.log.warn("payment.qpay_notification_queued_for_retry", {
+                            paymentNumber: input.paymentNumber,
+                            error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+                        });
+                    }
+                }
+            }
+            catch (notificationError) {
+                ctx.log.error(notificationError instanceof Error ? notificationError : new Error(String(notificationError)), {
+                    event: "payment.qpay_notification_failed",
+                    paymentNumber: input.paymentNumber,
+                });
+            }
+            try {
+                await trackPaymentConfirmedServerSide({
+                    phone: payment.order.customerPhone?.toString() ?? input.paymentNumber,
+                    paymentNumber: input.paymentNumber,
+                    orderNumber: payment.order.orderNumber,
+                    provider: "qpay",
+                    revenue: payment.order.total,
+                    referrer: ctx.c.req.header("referer") ?? undefined,
+                });
+            } catch {
+                // Analytics failure should not break the payment flow
+            }
+
+            ctx.log.info("payment.qpay_confirmed", {
+                paymentNumber: input.paymentNumber,
+                provider: "qpay",
+            });
+            return { paid: true, orderNumber: payment.order.orderNumber };
+        }
+        catch (e) {
+            if (e instanceof TRPCError) {
+                throw e;
+            }
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "payment.qpay_check_failed",
+                paymentNumber: input.paymentNumber,
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to check QPay payment",
                 cause: e,
             });
         }
