@@ -1,4 +1,3 @@
-import { navigate } from "astro:transitions/client";
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
@@ -311,7 +310,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												{(item) => (
 													<div class="flex gap-2.5">
 														<div class="h-16 w-16 flex-shrink-0 overflow-hidden border-3 border-border bg-card">
-															<a href={`/product/${item.productId}`}>
+															<a href={`/products/${item.slug}-${item.productId}/`}>
 																<Image
 																	src={item.image}
 																	alt={`${item.name}`}
@@ -323,7 +322,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 															</a>
 														</div>
 														<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-															<a href={`/product/${item.productId}`}>
+															<a href={`/products/${item.slug}-${item.productId}/`}>
 																<h3 class="line-clamp-2 font-black text-xs uppercase leading-tight text-foreground">
 																	{item.name}
 																</h3>

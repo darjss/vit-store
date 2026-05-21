@@ -154,7 +154,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											<For each={query.data?.brands ?? []}>
 												{(brand) => (
 													<a
-														href={`/products/brand/${brand.slug}/1`}
+														href={`/products/brand/${brand.slug}/1/`}
 														onClick={props.onProductClick}
 														class="inline-flex min-h-10 items-center gap-2 border-2 border-border bg-primary px-3 py-2 font-black text-black text-xs shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none"
 													>
@@ -180,7 +180,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											<For each={query.data?.categories ?? []}>
 												{(category) => (
 													<a
-														href={`/products/category/${category.slug}/1`}
+														href={`/products/category/${category.slug}/1/`}
 														onClick={props.onProductClick}
 														class="inline-flex min-h-10 items-center gap-2 border-2 border-border bg-background px-3 py-2 font-black text-black text-xs shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary/30 hover:shadow-none"
 													>
@@ -206,7 +206,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 									{query.data?.products.length} бүтээгдэхүүн
 								</p>
 								<a
-									href={`/products?q=${encodeURIComponent(props.searchQuery)}`}
+									href={`/products/?q=${encodeURIComponent(props.searchQuery)}`}
 									class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
 									onClick={props.onProductClick}
 								>
@@ -222,7 +222,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 									<div class="group relative flex items-stretch gap-3 border-2 border-border bg-background p-2 shadow-hard transition-all hover:translate-x-px hover:translate-y-px hover:shadow-hard-sm">
 										{/* Image */}
 										<a
-											href={`/products/${product.slug}-${product.id}`}
+											href={`/products/${product.slug}-${product.id}/`}
 											onClick={() =>
 												handleProductClick(product.id, product.name, index())
 											}
@@ -246,7 +246,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 										{/* Content */}
 										<div class="flex flex-1 flex-col justify-between py-1">
 											<a
-												href={`/products/${product.slug}-${product.id}`}
+												href={`/products/${product.slug}-${product.id}/`}
 												onClick={() =>
 													handleProductClick(product.id, product.name, index())
 												}

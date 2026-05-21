@@ -26,7 +26,7 @@ const CartList = () => {
 								<div class="hidden md:flex md:items-center md:gap-6">
 									<div class="flex w-1/2 items-center gap-5">
 										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-hard">
-											<a href={`/products/${item.slug}-${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}/`}>
 												<Image
 													src={item.image}
 													alt={`${item.name} `}
@@ -38,7 +38,7 @@ const CartList = () => {
 											</a>
 										</div>
 										<div class="flex-1">
-											<a href={`/products/${item.slug}-${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}/`}>
 												<h2 class="font-black text-lg uppercase transition-colors hover:text-primary">
 													{item.name}
 												</h2>
@@ -66,7 +66,7 @@ const CartList = () => {
 								<div class="flex flex-col md:hidden">
 									<div class="mb-4 flex gap-4">
 										<div class="h-24 w-24 flex-shrink-0 overflow-hidden border-4 border-border bg-secondary/5 shadow-hard">
-											<a href={`/products/${item.slug}-${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}/`}>
 												<Image
 													src={item.image}
 													alt={`${item.name}`}
@@ -78,7 +78,7 @@ const CartList = () => {
 											</a>
 										</div>
 										<div class="flex flex-1 flex-col justify-between">
-											<a href={`/products/${item.slug}-${item.productId}`}>
+											<a href={`/products/${item.slug}-${item.productId}/`}>
 												<h2 class="font-black text-base uppercase">
 													{item.name}
 												</h2>

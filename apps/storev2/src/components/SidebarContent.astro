@@ -71,7 +71,7 @@ const remainingCategories = categories.slice(6);
                     <div class="grid grid-cols-3 gap-2">
                         {topBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                             <a
-                                href={`/products/brand/${brand.slug}/1`}
+                                href={`/products/brand/${brand.slug}/1/`}
                                 class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
                             >
                                 {brand.logoUrl ? (
@@ -111,7 +111,7 @@ const remainingCategories = categories.slice(6);
                             <div class="mt-2 grid grid-cols-3 gap-2">
                                 {remainingBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                                     <a
-                                        href={`/products/brand/${brand.slug}/1`}
+                                        href={`/products/brand/${brand.slug}/1/`}
                                         class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
                                     >
                                         {brand.logoUrl ? (
@@ -151,7 +151,7 @@ const remainingCategories = categories.slice(6);
             <div class="grid grid-cols-2 gap-2">
                 {topCategories.map((category: { id: number; name: string; slug: string }) => (
                     <a
-                        href={`/products/category/${category.slug}/1`}
+                        href={`/products/category/${category.slug}/1/`}
                         class="px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center"
                     >
                         {category.name}
@@ -172,7 +172,7 @@ const remainingCategories = categories.slice(6);
                     <div class="mt-2 grid grid-cols-2 gap-2">
                         {remainingCategories.map((category: { id: number; name: string; slug: string }) => (
                             <a
-                                href={`/products/category/${category.slug}/1`}
+                                href={`/products/category/${category.slug}/1/`}
                                 class="px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center"
                             >
                                 {category.name}

@@ -31,6 +31,8 @@ const seoTitle = page === 1
 	: (brand.seoTitle || `${brand.name} - Хуудас ${page} | Америк Витамин`);
 const seoDescription = brand.seoDescription ||
 	`${brand.name} брэндийн ${pagination.totalCount} витамин, нэмэлт тэжээл.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
+const brandIntro = brand.description ||
+	`${brand.name} брэндийн АНУ-ын витамин, нэмэлт тэжээлийг Америк Витамин дэлгүүрээс сонгон захиалаарай. Үнэ, хэмжээ, найрлага болон бүтээгдэхүүний мэдээллийг харьцуулж өөрт тохирох сонголтоо олоорой.`;
 
 const breadcrumbSchema = {
 	"@context": "https://schema.org",
@@ -112,11 +114,9 @@ const itemListSchema = {
 				</div>
 			)}
 
-			{brand.description && (
-				<div class="mb-3 border-2 border-border bg-background p-3 shadow-hard sm:mb-4 sm:border-3 sm:p-4 sm:shadow-hard-lg">
-					<p class="text-sm leading-relaxed">{brand.description}</p>
-				</div>
-			)}
+			<div class="mb-3 border-2 border-border bg-background p-3 shadow-hard sm:mb-4 sm:border-3 sm:p-4 sm:shadow-hard-lg">
+				<p class="text-sm leading-relaxed sm:text-base">{brandIntro}</p>
+			</div>
 
 			<!-- Products Grid -->
 			<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
