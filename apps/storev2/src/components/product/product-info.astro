@@ -34,6 +34,7 @@ interface Props {
 		brand: { name: string };
 		category: { name: string };
 		status: string;
+		stock: number;
 		amount?: string | null;
 		potency?: string | null;
 	};
@@ -41,6 +42,7 @@ interface Props {
 }
 
 const { product, primaryImage } = Astro.props;
+const isInStock = product.status === "active" && product.stock > 0;
 ---
 
 <div class="space-y-6 sm:space-y-8">
@@ -94,9 +96,11 @@ const { product, primaryImage } = Astro.props;
 		</div>
 	</div>
 
-	<div transition:name={`product-add-to-cart-button-${product.id}`}>
+	<div id="product-main-cta" transition:name={`product-add-to-cart-button-${product.id}`}>
 		<ProductQuantitySelector
 			client:only="solid-js"
+			isInStock={isInStock}
+			stock={product.stock}
 			cartItem={{
 				productId: product.id,
 				quantity: 1,

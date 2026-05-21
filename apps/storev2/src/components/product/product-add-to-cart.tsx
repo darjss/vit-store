@@ -1,11 +1,10 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation } from "@tanstack/solid-query";
 import type { CartItems } from "@vit/shared/types";
 import {
 	createMemo,
 	createSignal,
 	Match,
 	Show,
-	Suspense,
 	Switch,
 } from "solid-js";
 import { Button } from "@/components/ui/button";
@@ -18,27 +17,22 @@ import { showToast } from "../ui/toast";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
+	isInStock: boolean;
+	stock: number;
 }
 
 export default function ProductQuantitySelector(
 	props: ProductQuantitySelectorProps,
 ) {
 	const { productId } = props.cartItem;
-	const statusQuery = useQuery(
-		() => ({
-			queryKey: ["is-product-in-stock", productId],
-			queryFn: () => api.product.isProductInStock.query({ productId }),
-		}),
-		() => queryClient,
-	);
+	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
-	const isInStock = createMemo(() => statusQuery.data?.isInStock);
 	const [showNotifyForm, setShowNotifyForm] = createSignal(false);
 	const [notifyChannel, setNotifyChannel] = createSignal<"sms" | "email">(
 		"sms",
 	);
 	const [contact, setContact] = createSignal("");
-	const stock = createMemo(() => statusQuery?.data?.stock ?? 0);
+
 	const restockMutation = useMutation(
 		() => ({
 			mutationFn: async (input: {
@@ -71,7 +65,7 @@ export default function ProductQuantitySelector(
 	);
 
 	const increment = () => {
-		const max = Math.min(5, stock());
+		const max = Math.min(5, maxStock);
 		if (quantity() >= max) {
 			showToast({
 				title: "Нэмэх боломжгүй",
@@ -101,115 +95,113 @@ export default function ProductQuantitySelector(
 	};
 
 	return (
-		<Suspense fallback={<div>Ачааллаж байна...</div>}>
-			<Switch>
-				<Match when={isInStock()}>
-					<div class="space-y-4">
-						<div class="w-full">
-							<div class="flex items-center gap-3">
-								<button
-									type="button"
-									onClick={decrement}
-									class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
-								>
-									−
-								</button>
-								<div class="flex flex-1 items-center justify-center border-3 border-border bg-background px-6 py-4 font-black text-2xl shadow-hard sm:text-3xl">
-									{quantity()}
-								</div>
-								<button
-									type="button"
-									onClick={increment}
-									class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
-								>
-									+
-								</button>
+		<Switch>
+			<Match when={props.isInStock}>
+				<div class="space-y-4">
+					<div class="w-full">
+						<div class="flex items-center gap-3">
+							<button
+								type="button"
+								onClick={decrement}
+								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
+							>
+								−
+							</button>
+							<div class="flex flex-1 items-center justify-center border-3 border-border bg-background px-6 py-4 font-black text-2xl shadow-hard sm:text-3xl">
+								{quantity()}
 							</div>
+							<button
+								type="button"
+								onClick={increment}
+								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
+							>
+								+
+							</button>
 						</div>
-
-						<AddToCartButton
-							cartItem={{ ...props.cartItem, quantity: quantity() }}
-						/>
 					</div>
-				</Match>
-				<Match when={!isInStock()}>
-					<div class="space-y-4">
-						{/* Out of Stock Alert */}
-						<div class="animate-float-slow border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
-							<div class="mb-3 flex items-center gap-3">
-								<IconAlertTriangle class="text-2xl text-yellow-500" />
-								<h3 class="font-black text-destructive text-lg sm:text-xl">
-									Дууссан байна
-								</h3>
-							</div>
-							<p class="font-medium text-muted-foreground text-sm sm:text-base">
-								Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
-								товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
-							</p>
+
+					<AddToCartButton
+						cartItem={{ ...props.cartItem, quantity: quantity() }}
+					/>
+				</div>
+			</Match>
+			<Match when={!props.isInStock}>
+				<div class="space-y-4">
+					{/* Out of Stock Alert */}
+					<div class="animate-float-slow border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
+						<div class="mb-3 flex items-center gap-3">
+							<IconAlertTriangle class="text-2xl text-yellow-500" />
+							<h3 class="font-black text-destructive text-lg sm:text-xl">
+								Дууссан байна
+							</h3>
 						</div>
+						<p class="font-medium text-muted-foreground text-sm sm:text-base">
+							Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
+							товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
+						</p>
+					</div>
 
-						{/* Notify Button */}
-						<Button
-							class="w-full py-6 text-base sm:text-lg"
-							onClick={() => setShowNotifyForm((prev) => !prev)}
-						>
-							<IconNotification class="mr-2 text-yellow-500" />
-							Мэдэгдэл авах
-						</Button>
+					{/* Notify Button */}
+					<Button
+						class="w-full py-6 text-base sm:text-lg"
+						onClick={() => setShowNotifyForm((prev) => !prev)}
+					>
+						<IconNotification class="mr-2 text-yellow-500" />
+						Мэдэгдэл авах
+					</Button>
 
-						<Show when={showNotifyForm()}>
-							<div class="space-y-3 border-4 border-border bg-background p-4 shadow-hard-lg">
-								<p class="font-black text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
-								<div class="grid grid-cols-2 gap-2">
-									<Button
-										type="button"
-										variant={notifyChannel() === "sms" ? "default" : "outline"}
-										onClick={() => {
-											setNotifyChannel("sms");
-											setContact("");
-										}}
-									>
-										Утас
-									</Button>
-									<Button
-										type="button"
-										variant={
-											notifyChannel() === "email" ? "default" : "outline"
-										}
-										onClick={() => {
-											setNotifyChannel("email");
-											setContact("");
-										}}
-									>
-										Имэйл
-									</Button>
-								</div>
-
-								<input
-									type={notifyChannel() === "sms" ? "tel" : "email"}
-									value={contact()}
-									onInput={(e) => setContact(e.currentTarget.value)}
-									placeholder={
-										notifyChannel() === "sms" ? "88889999" : "ner@example.com"
-									}
-									class="h-12 w-full border-3 border-border bg-background px-4 font-bold text-base shadow-hard transition-all focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring"
-								/>
-
+					<Show when={showNotifyForm()}>
+						<div class="space-y-3 border-4 border-border bg-background p-4 shadow-hard-lg">
+							<p class="font-black text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
+							<div class="grid grid-cols-2 gap-2">
 								<Button
 									type="button"
-									class="w-full"
-									onClick={submitRestockSubscription}
-									disabled={!isValidContact() || restockMutation.isPending}
+									variant={notifyChannel() === "sms" ? "default" : "outline"}
+									onClick={() => {
+										setNotifyChannel("sms");
+										setContact("");
+									}}
 								>
-									{restockMutation.isPending
-										? "Илгээж байна..."
-										: "Мэдэгдэл захиалах"}
+									Утас
+								</Button>
+								<Button
+									type="button"
+									variant={
+										notifyChannel() === "email" ? "default" : "outline"
+									}
+									onClick={() => {
+										setNotifyChannel("email");
+										setContact("");
+									}}
+								>
+									Имэйл
 								</Button>
 							</div>
-						</Show>
-					</div>
-				</Match>
-			</Switch>
-		</Suspense>
+
+							<input
+								type={notifyChannel() === "sms" ? "tel" : "email"}
+								value={contact()}
+								onInput={(e) => setContact(e.currentTarget.value)}
+								placeholder={
+									notifyChannel() === "sms" ? "88889999" : "ner@example.com"
+								}
+								class="h-12 w-full border-3 border-border bg-background px-4 font-bold text-base shadow-hard transition-all focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring"
+							/>
+
+							<Button
+								type="button"
+								class="w-full"
+								onClick={submitRestockSubscription}
+								disabled={!isValidContact() || restockMutation.isPending}
+							>
+								{restockMutation.isPending
+									? "Илгээж байна..."
+									: "Мэдэгдэл захиалах"}
+							</Button>
+						</div>
+					</Show>
+				</div>
+			</Match>
+		</Switch>
 	);
 }
