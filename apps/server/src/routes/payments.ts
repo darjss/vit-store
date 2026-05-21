@@ -1,4 +1,6 @@
+import { persistMessengerNotificationFailure } from "@vit/api/lib/integrations/messenger/failed-notifications";
 import { sendDetailedOrderNotification } from "@vit/api/lib/integrations/messenger/messages";
+import { trackPaymentConfirmedServerSide } from "@vit/api/lib/integrations/posthog/capture";
 import { checkQpayInvoice } from "@vit/api/lib/payments/qpay";
 import { paymentQueries } from "@vit/api/queries";
 import type { ServerHonoEnv } from "../lib/logging";
@@ -60,30 +62,48 @@ app.get("/qpay", async (c) => {
     if (!confirmed) {
         return c.json({ success: true });
     }
+    const notificationPayload = {
+        paymentNumber,
+        customerPhone: payment.order.customerPhone,
+        address: payment.order.address,
+        notes: payment.order.notes,
+        total: payment.order.total,
+        products: payment.order.orderDetails.map((detail) => ({
+            name: detail.product.name,
+            quantity: detail.quantity,
+            price: detail.product.price,
+            imageUrl: detail.product.images[0]?.url,
+        })),
+        status: "payment_confirmed" as const,
+    };
     try {
-        await sendDetailedOrderNotification({
-            paymentNumber,
-            customerPhone: payment.order.customerPhone,
-            address: payment.order.address,
-            notes: payment.order.notes,
-            total: payment.order.total,
-            products: payment.order.orderDetails.map((detail) => ({
-                name: detail.product.name,
-                quantity: detail.quantity,
-                price: detail.product.price,
-                imageUrl: detail.product.images[0]?.url,
-            })),
-            status: "payment_confirmed",
-        });
+        await sendDetailedOrderNotification(notificationPayload);
     }
     catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "qpay.webhook_confirm_notification_failed",
+        await persistMessengerNotificationFailure({
+            paymentNumber,
+            payload: notificationPayload,
+            error,
+        });
+        log.warn("qpay.webhook_confirm_notification_queued_for_retry", {
             paymentNumber,
             invoiceId: payment.invoiceId,
-            qpayPaymentId
+            qpayPaymentId,
+            error: error instanceof Error ? error.message : String(error),
         });
     }
+    try {
+        await trackPaymentConfirmedServerSide({
+            phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+            paymentNumber,
+            orderNumber: payment.order.orderNumber,
+            provider: "qpay",
+            revenue: payment.order.total,
+        });
+    } catch {
+        // Analytics failure should not fail the webhook
+    }
+
     log.info("qpay.webhook_confirmed", {
         paymentNumber,
         invoiceId: payment.invoiceId,
