@@ -45,6 +45,7 @@ type TextFieldInputProps<T extends ValidComponent = "input"> =
       | "time"
       | "url"
       | "week"
+    autoComplete?: string | undefined
   }
  
 const TextFieldInput = <T extends ValidComponent = "input">(
@@ -65,7 +66,7 @@ const TextFieldInput = <T extends ValidComponent = "input">(
 }
  
 type TextFieldTextAreaProps<T extends ValidComponent = "textarea"> =
-  TextFieldPrimitive.TextFieldTextAreaProps<T> & { class?: string | undefined }
+  TextFieldPrimitive.TextFieldTextAreaProps<T> & { class?: string | undefined; autoComplete?: string | undefined }
  
 const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   props: PolymorphicProps<T, TextFieldTextAreaProps<T>>
@@ -74,7 +75,7 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   return (
     <TextFieldPrimitive.TextArea
       class={cn(
-        "flex min-h-[120px] w-full border-3 border-border bg-background px-4 py-3 text-sm font-medium shadow-hard transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-[120px] w-full border-3 border-border bg-background px-4 py-3 text-sm font-medium shadow-hard transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-error data-[invalid]:shadow-hard-lg data-[invalid]:focus-visible:shadow-hard-xl",
         local.class
       )}
       {...others}
