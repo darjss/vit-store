@@ -7,7 +7,9 @@ import { server } from "server/alchemy";
 import { createStoreAlchemyEnv } from "../../env";
 
 const app = await alchemy("storev2", {
-	stateStore: (scope) => new CloudflareStateStore(scope),
+	stateStore: process.env.CI
+		? (scope) => new CloudflareStateStore(scope)
+		: undefined,
 });
 const stage = app.stage;
 
