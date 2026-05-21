@@ -6,7 +6,7 @@ const MobileNavbar = () => {
 	const navItems = sideNavItems.slice(0, 4);
 
 	return (
-		<nav className="sticky inset-x-0 bottom-0 z-40 border-border border-t-2 bg-background pb-safe">
+		<nav className="fixed inset-x-0 bottom-0 z-40 border-border border-t-2 bg-background pb-[env(safe-area-inset-bottom,0px)]">
 			<div className="mx-auto max-w-screen-sm">
 				<ul className="grid grid-cols-4 gap-2 px-4 py-3">
 					{navItems.map((nav) => (
