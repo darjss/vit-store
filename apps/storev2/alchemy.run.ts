@@ -1,16 +1,11 @@
 import path from "node:path";
 import alchemy from "alchemy";
 import { Astro } from "alchemy/cloudflare";
-import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 import { server } from "server/alchemy";
 import { createStoreAlchemyEnv } from "../../env";
 
-const app = await alchemy("storev2", {
-	stateStore: process.env.CI
-		? (scope) => new CloudflareStateStore(scope)
-		: undefined,
-});
+const app = await alchemy("storev2");
 const stage = app.stage;
 
 // const images = Images({

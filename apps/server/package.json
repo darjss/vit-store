@@ -19,7 +19,7 @@
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"dev": "alchemy dev --app server --stage dev",
-		"deploy": "alchemy deploy --app server --stage prod --env-file ../../.env.prod --adopt",
+		"deploy": "alchemy deploy --app server --stage prod --env-file ../../.env.prod",
 		"destroy": "alchemy destroy --app server",
 		"db:push": "drizzle-kit push",
 		"db:migrate:local": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",

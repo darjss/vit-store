@@ -1,15 +1,10 @@
 import path from "node:path";
 import alchemy from "alchemy";
 import { Vite } from "alchemy/cloudflare";
-import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 import { createAdminAlchemyEnv } from "../../env";
 
-const app = await alchemy("admin", {
-	stateStore: process.env.CI
-		? (scope) => new CloudflareStateStore(scope)
-		: undefined,
-});
+const app = await alchemy("admin");
 const stage = app.stage;
 
 config({
