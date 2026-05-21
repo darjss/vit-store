@@ -8,6 +8,7 @@ import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, Products
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
+import { trackOrderPlacedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
@@ -178,6 +179,17 @@ export const order = router({
                     status_text: "pending",
                 });
             }
+
+            // Fire-and-forget server-side PostHog tracking
+            trackOrderPlacedServerSide({
+                phone: input.phoneNumber,
+                orderNumber,
+                paymentNumber: paymentNumber ?? undefined,
+                itemCount: normalizedProducts.length,
+                total,
+                referrer: ctx.c.req.header("referer") ?? undefined,
+            }).catch(() => {});
+
             const user = await addCustomerToDB(input.phoneNumber);
             if (!user) {
                 ctx.log.error(new Error("No user returned"), {
