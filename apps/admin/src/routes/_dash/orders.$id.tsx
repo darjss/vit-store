@@ -5,20 +5,18 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-	AlertCircle,
+	AlertTriangle,
 	ArrowLeft,
-	Calendar,
+	CalendarClock,
 	CheckCircle,
 	Copy,
-	Edit3,
-	Loader2,
-	Minus,
+	ExternalLink,
+	MapPin,
 	Package,
-	Plus,
+	Phone,
 	Receipt,
 	Truck,
 	User,
-	X,
 } from "lucide-react";
 import { Suspense, useState } from "react";
 import { toast } from "sonner";
@@ -35,12 +33,18 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+import {
 	formatCurrency,
 	getPaymentProviderIcon,
 	getPaymentStatusColor,
 } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
@@ -60,14 +64,62 @@ function RouteComponent() {
 	);
 }
 
+function paymentLabel(status: string) {
+	switch (status) {
+		case "success":
+			return "Төлсөн";
+		case "failed":
+			return "Амжилтгүй";
+		case "customer_claimed_paid":
+			return "Төлсөн гэж мэдэгдсэн";
+		default:
+			return "Хүлээгдэж буй";
+	}
+}
+
+function deliveryLabel(provider?: string | null) {
+	switch (provider) {
+		case "tu-delivery":
+			return "TU delivery";
+		case "self":
+			return "Өөрсдөө хүргэнэ";
+		case "avidaa":
+			return "Avidaa";
+		case "pick-up":
+			return "Өөрөө авна";
+		default:
+			return "Тодорхойгүй";
+	}
+}
+
 function OrderDetailContent() {
 	const { id } = Route.useParams();
 	const orderId = Number(id);
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
 	const { data: order } = useSuspenseQuery({
 		...trpc.order.getOrderById.queryOptions({ id: orderId }),
 	});
+
+	if (!order) {
+		return (
+			<div className="mx-auto max-w-3xl p-4">
+				<div className="border-2 border-border bg-card p-6 shadow-hard">
+					<h1 className="font-heading text-xl font-black">Захиалга олдсонгүй</h1>
+					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
+						Буцах
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	const invalidateOrder = () =>
+		queryClient.invalidateQueries(
+			trpc.order.getOrderById.queryOptions({ id: orderId }),
+		);
 
 	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
 		...trpc.order.deleteOrder.mutationOptions(),
@@ -76,7 +128,7 @@ function OrderDetailContent() {
 				trpc.order.getPaginatedOrders.queryOptions({}),
 			);
 			navigate({ to: "/orders" });
-			toast.success("Захиалга амжилттай устгагдлаа");
+			toast.success("Захиалга устгагдлаа");
 		},
 	});
 
@@ -84,92 +136,86 @@ function OrderDetailContent() {
 		useMutation({
 			...trpc.order.updateOrderStatus.mutationOptions(),
 			onSuccess: () => {
+				invalidateOrder();
 				queryClient.invalidateQueries(
-					trpc.order.getOrderById.queryOptions({ id: orderId }),
+					trpc.order.getPaginatedOrders.queryOptions({}),
 				);
-				toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
+				toast.success("Төлөв шинэчлэгдлээ");
 			},
 		});
 
 	const { mutate: shipOrder, isPending: isShipOrderPending } = useMutation({
 		...trpc.order.shipOrder.mutationOptions(),
 		onSuccess: () => {
+			invalidateOrder();
 			queryClient.invalidateQueries(
-				trpc.order.getOrderById.queryOptions({ id: orderId }),
+				trpc.order.getPaginatedOrders.queryOptions({}),
 			);
-			toast.success("Захиалга амжилттай илгээгдлээ");
+			toast.success("Захиалга илгээгдлээ");
 		},
-		onError: (error) => {
-			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
-		},
+		onError: (error) => toast.error(error.message),
 	});
 
 	const { mutate: updateOrderField, isPending: isUpdateFieldPending } =
 		useMutation({
 			...trpc.order.updateOrder.mutationOptions(),
 			onSuccess: () => {
-				queryClient.invalidateQueries(
-					trpc.order.getOrderById.queryOptions({ id: orderId }),
-				);
-				toast.success("Захиалгын мэдээлэл амжилттай шинэчлэгдлээ");
+				invalidateOrder();
+				toast.success("Мэдээлэл хадгалагдлаа");
 			},
 		});
 
-	const deleteHelper = async (id: number) => {
-		deleteOrder({ id });
+	const savePatch = (patch: Partial<typeof order>) =>
+		updateOrderField({
+			id: orderId,
+			customerPhone: String(patch.customerPhone ?? order.customerPhone),
+			status: patch.status ?? order.status,
+			notes: patch.notes ?? order.notes,
+			address: patch.address ?? order.address,
+			products: order.products || [],
+			paymentStatus: patch.paymentStatus ?? order.paymentStatus,
+			deliveryProvider: patch.deliveryProvider ?? order.deliveryProvider,
+			isNewCustomer: false,
+		});
+
+	const copy = async (text: string, label: string) => {
+		await navigator.clipboard.writeText(text);
+		toast.success(`${label} хуулагдлаа`);
 	};
 
-	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-	const [isProductManagementMode, setIsProductManagementMode] = useState(false);
+	const nextAction =
+		order.status === "pending"
+			? {
+				label: "TU руу илгээх",
+				icon: Truck,
+				pending: isShipOrderPending,
+				onClick: () => shipOrder({ orderId }),
+			}
+			: order.status === "shipped"
+				? {
+					label: "Хүргэсэн болгох",
+					icon: CheckCircle,
+					pending: isUpdateStatusPending,
+					onClick: () => updateOrderStatus({ id: orderId, status: "delivered" }),
+				}
+				: null;
 
-	const handleStatusChange = (newStatus: string) => {
-		if (newStatus === "shipped") {
-			shipOrder({ orderId });
-		} else {
-			updateOrderStatus({
-				id: orderId,
-				status: newStatus as
-					| "pending"
-					| "delivered"
-					| "cancelled"
-					| "refunded",
-			});
-		}
-	};
-
-	const handleCopyToClipboard = async (text: string, label: string) => {
-		try {
-			await navigator.clipboard.writeText(text);
-			toast.success(`${label} хуулагдлаа`);
-		} catch {
-			toast.error("Хуулахад алдаа гарлаа");
-		}
-	};
-
-	const getNextStatus = () => {
-		switch (order.status) {
-			case "pending":
-				return "shipped";
-			case "shipped":
-				return "delivered";
-			default:
-				return null;
-		}
-	};
-
-	const nextStatus = getNextStatus();
+	const itemCount = order.products?.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
+	const isPaid = order.paymentStatus === "success";
+	const created = new Date(order.createdAt).toLocaleString("mn-MN");
+	const updated = order.updatedAt
+		? new Date(order.updatedAt).toLocaleString("mn-MN")
+		: null;
 
 	return (
 		<>
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
 				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[900px]">
-					<DialogHeader className="border-b px-6 pt-6 pb-4">
-						<DialogTitle>Захиалгын дэлгэрэнгүй</DialogTitle>
-						<DialogDescription>
-							Захиалгын дэлгэрэнгүй мэдээлэл
-						</DialogDescription>
+					<DialogHeader className="border-border border-b-2 px-6 pt-6 pb-4">
+						<DialogTitle>Захиалга засах</DialogTitle>
+						<DialogDescription>#{order.orderNumber}</DialogDescription>
 					</DialogHeader>
-					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
+					<div className="max-h-[80vh] overflow-y-auto p-3 sm:p-6">
 						<OrderForm
 							order={{
 								...order,
@@ -178,470 +224,311 @@ function OrderDetailContent() {
 							}}
 							onSuccess={() => {
 								setIsEditDialogOpen(false);
-								queryClient.invalidateQueries(
-									trpc.order.getOrderById.queryOptions({ id: orderId }),
-								);
+								invalidateOrder();
 							}}
 						/>
 					</div>
 				</DialogContent>
 			</Dialog>
 
-			<div className="min-h-screen bg-transparent p-2 sm:p-4 md:p-6 lg:p-8">
-				<div className="mx-auto w-full max-w-none">
-					<div className="mb-4 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-						<div className="flex items-center gap-3">
-							<Button
-								type="button"
-								onClick={() => navigate({ to: "/orders" })}
-								className="rounded-lg p-2 transition-colors hover:bg-muted"
-							>
-								<ArrowLeft className="h-5 w-5" />
-							</Button>
-							<div>
-								<h1 className="font-heading text-xl sm:text-2xl md:text-3xl">
-									Захиалгын дэлгэрэнгүй
-								</h1>
-								<p className="text-muted-foreground text-xs sm:text-sm md:text-base">
-									#{order.orderNumber}
-								</p>
-							</div>
-						</div>
-						<div className="flex items-center gap-3">
-							<OrderStatusBadge status={order.status} />
-							<RowAction
-								id={orderId}
-								setIsEditDialogOpen={setIsEditDialogOpen}
-								deleteMutation={deleteHelper}
-								isDeletePending={isDeletePending}
-							/>
+			<div className="mx-auto max-w-7xl space-y-4 px-3 py-4 pb-24 sm:px-4 sm:py-6 lg:px-6">
+				<header className="flex items-center justify-between gap-3">
+					<div className="flex min-w-0 items-center gap-3">
+						<Button
+							variant="outline"
+							size="icon"
+							className="h-11 w-11 shrink-0"
+							onClick={() => navigate({ to: "/orders" })}
+							aria-label="Захиалгууд руу буцах"
+						>
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+						<div className="min-w-0">
+							<h1 className="truncate font-heading text-2xl font-black tracking-tight sm:text-3xl">
+								#{order.orderNumber}
+							</h1>
+							<p className="text-muted-foreground text-xs sm:text-sm">
+								{created}
+							</p>
 						</div>
 					</div>
+					<div className="flex items-center gap-2">
+						<OrderStatusBadge status={order.status} />
+						<RowAction
+							id={orderId}
+							setIsEditDialogOpen={setIsEditDialogOpen}
+							deleteMutation={(id) => deleteOrder({ id })}
+							isDeletePending={isDeletePending}
+						/>
+					</div>
+				</header>
 
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-						{/* Left Column */}
-						<div className="space-y-6">
-							{/* Customer Info */}
-							<div className="border-2 border-border bg-card p-6 shadow-shadow">
-								<h2 className="mb-6 flex items-center gap-2 font-heading text-xl">
-									<User className="h-5 w-5" />
-									Харилцагчийн мэдээлэл
-								</h2>
-
-								<div className="space-y-6">
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<p className="font-medium text-sm">Утасны дугаар:</p>
-											<Button
-												size="icon"
-												variant="outline"
-												className="h-8 w-8"
-												onClick={() =>
-													handleCopyToClipboard(
-														`+976${order.customerPhone}`,
-														"Утасны дугаар",
-													)
-												}
-											>
-												<Copy className="h-4 w-4" />
-											</Button>
-										</div>
-										<EditableField
-											label=""
-											value={order.customerPhone.toString()}
-											isLoading={isUpdateFieldPending}
-											onSave={(next) =>
-												updateOrderField({
-													id: orderId,
-													customerPhone: next,
-													status: order.status,
-													notes: order.notes,
-													address: order.address,
-													products: order.products || [],
-													paymentStatus: order.paymentStatus,
-													deliveryProvider: order.deliveryProvider,
-													isNewCustomer: false,
-												})
-											}
-										/>
-									</div>
-
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<p className="font-medium text-sm">Хүргэлтийн хаяг:</p>
-											{order.address && (
-												<Button
-													size="icon"
-													variant="outline"
-													className="h-8 w-8"
-													onClick={() =>
-														handleCopyToClipboard(order.address, "Хаяг")
-													}
-												>
-													<Copy className="h-4 w-4" />
-												</Button>
-											)}
-										</div>
-										<EditableField
-											label=""
-											type="textarea"
-											value={order.address || ""}
-											isLoading={isUpdateFieldPending}
-											onSave={(next) =>
-												updateOrderField({
-													id: orderId,
-													customerPhone: order.customerPhone.toString(),
-													status: order.status,
-													notes: order.notes,
-													address: next,
-													products: order.products || [],
-													paymentStatus: order.paymentStatus,
-													deliveryProvider: order.deliveryProvider,
-													isNewCustomer: false,
-												})
-											}
-										/>
-									</div>
-
-									<div className="space-y-2">
-										<p className="font-medium text-sm">Тусгай заавар:</p>
-										<EditableField
-											label=""
-											type="textarea"
-											value={order.notes || ""}
-											isLoading={isUpdateFieldPending}
-											onSave={(next) =>
-												updateOrderField({
-													id: orderId,
-													customerPhone: order.customerPhone.toString(),
-													status: order.status,
-													notes: next,
-													address: order.address,
-													products: order.products || [],
-													paymentStatus: order.paymentStatus,
-													deliveryProvider: order.deliveryProvider,
-													isNewCustomer: false,
-												})
-											}
-										/>
-									</div>
-								</div>
-							</div>
-
-							{/* Payment Info */}
-							<div className="border-2 border-border bg-card p-6 shadow-shadow">
-								<h2 className="mb-4 flex items-center gap-2 font-heading text-xl">
-									<Receipt className="h-5 w-5" />
-									Төлбөрийн мэдээлэл
-								</h2>
-
-								<div className="space-y-6">
-									<EditableField
-										label="Төлбөрийн төлөв:"
-										type="select"
-										value={order.paymentStatus}
-										options={[
-											{ value: "pending", label: "Хүлээгдэж буй" },
-											{ value: "customer_claimed_paid", label: "Хэрэглэгч төлсөн гэж мэдэгдсэн" },
-											{ value: "success", label: "Төлсөн" },
-											{ value: "failed", label: "Алдаатай" },
-										]}
-										className={`rounded-full border px-3 py-1 font-medium text-sm ${getPaymentStatusColor(order.paymentStatus)}`}
-										isLoading={isUpdateFieldPending}
-										onSave={(next) =>
-											updateOrderField({
-												id: orderId,
-												customerPhone: order.customerPhone.toString(),
-												status: order.status,
-												notes: order.notes,
-												address: order.address,
-												products: order.products || [],
-												paymentStatus: next as typeof order.paymentStatus,
-												deliveryProvider: order.deliveryProvider,
-												isNewCustomer: false,
-											})
-										}
-									/>
-
-									<div className="space-y-2">
-										<p className="font-medium text-sm">Төлбөрийн хэрэгсэл:</p>
-										<div className="flex items-center gap-2">
-											<span className="text-muted-foreground">
-												{getPaymentProviderIcon(order.paymentProvider)}
-												{order.paymentProvider === "qpay"
-													? "QPay"
-													: order.paymentProvider === "transfer"
-														? "Банкны шилжүүлэг"
-														: "Бэлэн мөнгө"}
-											</span>
-										</div>
-									</div>
-
-									<div className="space-y-2">
-										<p className="font-medium text-sm">Үүсгэсэн огноо:</p>
-										<p className="text-muted-foreground">
-											{new Date(order.createdAt).toLocaleDateString("mn-MN")}
-										</p>
-									</div>
-
-									<div className="space-y-2">
-										<p className="font-medium text-sm">Захиалгын дугаар:</p>
-										<div className="flex items-center gap-2">
-											<p className="font-mono text-muted-foreground">
-												#{order.orderNumber}
-											</p>
-											<Button
-												size="icon"
-												variant="outline"
-												className="h-8 w-8"
-												onClick={() =>
-													handleCopyToClipboard(
-														order.orderNumber,
-														"Захиалгын дугаар",
-													)
-												}
-											>
-												<Copy className="h-4 w-4" />
-											</Button>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-
-						{/* Right Column */}
-						<div className="space-y-6">
-							{/* Order Items */}
-							<div className="border-2 border-border bg-card p-6 shadow-shadow">
-								<div className="mb-4 flex items-center justify-between">
-									<h2 className="flex items-center gap-2 font-heading text-xl">
-										<Package className="h-5 w-5" />
-										Захиалгын бүтээгдэхүүн
-									</h2>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() =>
-											setIsProductManagementMode(!isProductManagementMode)
-										}
-										className="gap-2"
-									>
-										<Edit3 className="h-4 w-4" />
-										{isProductManagementMode ? "Хаах" : "Засах"}
-									</Button>
-								</div>
-
-								<div className="space-y-4">
-									{order.products?.map((product, index) => (
-										<div
-											key={`${product.productId}-${index}`}
-											className="flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm"
-										>
-											<div className="h-16 w-16 overflow-hidden rounded-lg border bg-background">
-												<img
-													src={product.imageUrl || "/placeholder.jpg"}
-													alt={product.name}
-													className="h-full w-full object-cover"
-												/>
-											</div>
-											<div className="flex-1">
-												<h3 className="font-medium text-sm">{product.name}</h3>
-												<div className="mt-1 flex items-center gap-2 text-muted-foreground text-xs">
-													<span>Тоо: {product.quantity}</span>
-													<span>•</span>
-													<span>{formatCurrency(product.price)} / ширхэг</span>
-												</div>
-											</div>
-											<div className="flex items-center gap-2">
-												{isProductManagementMode && (
-													<div className="flex items-center gap-1">
-														<Button
-															size="icon"
-															variant="outline"
-															className="h-8 w-8"
-															onClick={() => {
-																toast.info(
-																	"Тоо бууруулах функц хөгжүүлэгдэж байна",
-																);
-															}}
-														>
-															<Minus className="h-4 w-4" />
-														</Button>
-														<span className="font-medium text-sm">
-															{product.quantity}
-														</span>
-														<Button
-															size="icon"
-															variant="outline"
-															className="h-8 w-8"
-															onClick={() => {
-																toast.info(
-																	"Тоо нэмэх функц хөгжүүлэгдэж байна",
-																);
-															}}
-														>
-															<Plus className="h-4 w-4" />
-														</Button>
-													</div>
-												)}
-												<div className="text-right">
-													<p className="font-semibold text-foreground text-sm">
-														{formatCurrency(product.price * product.quantity)}
-													</p>
-													{isProductManagementMode && (
-														<Button
-															size="icon"
-															variant="destructive"
-															className="mt-2 h-8 w-8"
-															onClick={() => {
-																toast.info(
-																	"Бүтээгдэхүүн устгах функц хөгжүүлэгдэж байна",
-																);
-															}}
-														>
-															<X className="h-4 w-4" />
-														</Button>
-													)}
-												</div>
-											</div>
-										</div>
-									))}
-								</div>
-
-								{isProductManagementMode && (
-									<div className="mt-6 border-t pt-4">
-										<Button
-											variant="outline"
-											className="w-full gap-2"
-											onClick={() => {
-												toast.info(
-													"Бүтээгдэхүүн нэмэх функц хөгжүүлэгдэж байна",
-												);
-											}}
-										>
-											<Plus className="h-4 w-4" />
-											Бүтээгдэхүүн нэмэх
-										</Button>
-									</div>
+				<section className="border-2 border-border bg-card p-4 shadow-hard sm:p-5">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="space-y-2">
+							<div className="flex flex-wrap items-center gap-2">
+								<span
+									className={`inline-flex items-center gap-1 border-2 px-2 py-1 font-bold text-xs ${getPaymentStatusColor(order.paymentStatus)}`}
+								>
+									{getPaymentProviderIcon(order.paymentProvider)} {paymentLabel(order.paymentStatus)}
+								</span>
+								<span className="border-2 border-border bg-muted px-2 py-1 font-bold text-xs">
+									{deliveryLabel(order.deliveryProvider)}
+								</span>
+								{!isPaid && (
+									<span className="inline-flex items-center gap-1 border-2 border-destructive bg-error px-2 py-1 font-bold text-xs">
+										<AlertTriangle className="h-3.5 w-3.5" /> Төлбөр шалгах
+									</span>
 								)}
+							</div>
+							<p className="max-w-2xl text-muted-foreground text-sm">
+								Энэ дэлгэцийн гол ажил: хэрэглэгчтэй холбогдох, хаяг шалгах, барааг баталгаажуулах, хүргэлт рүү шилжүүлэх.
+							</p>
+						</div>
+						{nextAction && (
+							<Button
+								className="h-12 gap-2 px-5"
+								disabled={nextAction.pending}
+								onClick={nextAction.onClick}
+							>
+								<nextAction.icon className="h-4 w-4" />
+								{nextAction.pending ? "Ажиллаж байна..." : nextAction.label}
+							</Button>
+						)}
+					</div>
+				</section>
 
-								<div className="mt-6 border-t pt-4">
-									<div className="space-y-3">
-										<div className="flex items-center justify-between">
-											<span className="font-semibold text-lg">Нийт дүн:</span>
-											<span className="font-bold text-primary text-xl">
-												{formatCurrency(order.total)}
-											</span>
-										</div>
-										<div className="flex items-center justify-between text-muted-foreground text-sm">
-											<span>Бүтээгдэхүүний тоо:</span>
-											<span>{order.products?.length || 0}</span>
-										</div>
-										<div className="flex items-center justify-between text-muted-foreground text-sm">
-											<span>Нийт ширхэг:</span>
-											<span>
-												{order.products?.reduce(
-													(sum, p) => sum + p.quantity,
-													0,
-												) || 0}
-											</span>
-										</div>
-									</div>
-								</div>
+				<div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+					<main className="space-y-4">
+						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
+							<div className="mb-4 flex items-center justify-between gap-3">
+								<h2 className="flex items-center gap-2 font-heading text-lg font-black">
+									<User className="h-5 w-5" /> Харилцагч
+								</h2>
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-10 gap-2"
+									onClick={() => (window.location.href = `tel:${order.customerPhone}`)}
+								>
+									<Phone className="h-4 w-4" /> Залгах
+								</Button>
 							</div>
 
-							{/* Quick Actions */}
-							{nextStatus && (
-								<div className="border-2 border-border bg-card p-6 shadow-shadow">
-									<h2 className="mb-4 flex items-center gap-2 font-heading text-xl">
-										<Truck className="h-5 w-5" />
-										Хурдан үйлдэл
-									</h2>
+							<div className="space-y-4">
+								<InfoRow label="Утас" onCopy={() => copy(order.customerPhone.toString(), "Утас") }>
+									<EditableField
+										value={order.customerPhone.toString()}
+										isLoading={isUpdateFieldPending}
+										onSave={(next) => savePatch({ customerPhone: next })}
+									/>
+								</InfoRow>
 
-									<div className="space-y-3">
-										<Button
-											onClick={() => handleStatusChange(nextStatus)}
-											disabled={isUpdateStatusPending || (nextStatus === "shipped" && isShipOrderPending)}
-											className="w-full gap-2"
-										>
-											{nextStatus === "shipped" ? (
-												<>
-													{isShipOrderPending ? (
-														<Loader2 className="h-4 w-4 animate-spin" />
-													) : (
-														<Truck className="h-4 w-4" />
-													)}
-													{isShipOrderPending ? "Илгээж байна..." : "Илгээх"}
-												</>
-											) : (
-												<>
-													<CheckCircle className="h-4 w-4" />
-													Хүргэх
-												</>
-											)}
-										</Button>
-									</div>
-								</div>
-							)}
+								<InfoRow label="Хаяг" onCopy={() => copy(order.address || "", "Хаяг") }>
+									<EditableField
+										value={order.address || ""}
+										type="textarea"
+										isLoading={isUpdateFieldPending}
+										onSave={(next) => savePatch({ address: next })}
+									/>
+								</InfoRow>
 
-							{/* Order Timeline */}
-							<div className="border-2 border-border bg-card p-6 shadow-shadow">
-								<h2 className="mb-4 flex items-center gap-2 font-heading text-xl">
-									<Calendar className="h-5 w-5" />
-									Захиалгын түүх
+								<InfoRow label="Тэмдэглэл">
+									<EditableField
+										value={order.notes || ""}
+										type="textarea"
+										isLoading={isUpdateFieldPending}
+										onSave={(next) => savePatch({ notes: next })}
+										renderDisplay={(value) => value || <span className="text-muted-foreground">Тэмдэглэлгүй</span>}
+									/>
+								</InfoRow>
+							</div>
+						</section>
+
+						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
+							<div className="mb-4 flex items-center justify-between">
+								<h2 className="flex items-center gap-2 font-heading text-lg font-black">
+									<Package className="h-5 w-5" /> Бүтээгдэхүүн
 								</h2>
+								<span className="border-2 border-border bg-muted px-2 py-1 font-bold text-xs">
+									{order.products?.length ?? 0} төрөл, {itemCount} ширхэг
+								</span>
+							</div>
 
-								<div className="space-y-3">
-									<div className="flex items-center gap-3">
-										<div className="h-2 w-2 rounded-full bg-primary" />
-										<div className="flex-1">
-											<p className="font-medium text-sm">Захиалга үүсгэгдсэн</p>
-											<p className="text-muted-foreground text-xs">
-												{new Date(order.createdAt).toLocaleString("mn-MN")}
+							<div className="space-y-3">
+								{order.products?.map((product, index) => (
+									<div
+										key={`${product.productId}-${index}`}
+										className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 border-2 border-border bg-background p-2 sm:grid-cols-[4.5rem_minmax(0,1fr)_7rem] sm:items-center sm:p-3"
+									>
+										<div className="h-16 w-16 overflow-hidden border-2 border-border bg-muted sm:h-18 sm:w-18">
+											<img
+												src={product.imageUrl || "/placeholder.jpg"}
+												alt={product.name}
+												className="h-full w-full object-cover"
+												loading="lazy"
+											/>
+										</div>
+										<div className="min-w-0">
+											<h3 className="line-clamp-2 font-heading font-bold text-sm sm:text-base">
+												{product.name}
+											</h3>
+											<p className="mt-1 text-muted-foreground text-xs">
+												{product.quantity} × {formatCurrency(product.price)}
+											</p>
+										</div>
+										<div className="col-span-2 flex items-center justify-between border-border border-t pt-2 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
+											<span className="text-muted-foreground text-xs sm:hidden">Дүн</span>
+											<p className="font-heading font-black tabular-nums">
+												{formatCurrency(product.price * product.quantity)}
 											</p>
 										</div>
 									</div>
+								))}
+							</div>
+						</section>
+					</main>
 
-									{order.status !== "pending" && (
-										<div className="flex items-center gap-3">
-											<div className="h-2 w-2 rounded-full bg-blue-500" />
-											<div className="flex-1">
-												<p className="font-medium text-sm">
-													{order.status === "shipped"
-														? "Илгээгдсэн"
-														: order.status === "delivered"
-															? "Хүргэгдсэн"
-															: "Захиалга цуцлагдсан"}
-												</p>
-												<p className="text-muted-foreground text-xs">
-													{order.updatedAt
-														? new Date(order.updatedAt).toLocaleString("mn-MN")
-														: "Тодорхойгүй"}
-												</p>
-											</div>
-										</div>
+					<aside className="space-y-4">
+						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
+							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+								<Receipt className="h-5 w-5" /> Төлбөр ба дүн
+							</h2>
+							<div className="space-y-4">
+								<EditableField
+									label="Төлөв"
+									type="select"
+									value={order.paymentStatus}
+									options={[
+										{ value: "pending", label: "Хүлээгдэж буй" },
+										{ value: "customer_claimed_paid", label: "Төлсөн гэж мэдэгдсэн" },
+										{ value: "success", label: "Төлсөн" },
+										{ value: "failed", label: "Амжилтгүй" },
+									]}
+									isLoading={isUpdateFieldPending}
+									renderDisplay={(value) => (
+										<span className={`inline-flex border-2 px-2 py-1 text-xs ${getPaymentStatusColor(value)}`}>
+											{paymentLabel(value)}
+										</span>
 									)}
+									onSave={(next) => savePatch({ paymentStatus: next as typeof order.paymentStatus })}
+								/>
+								<div className="flex items-center justify-between border-border border-t pt-3 text-sm">
+									<span className="text-muted-foreground">Хэрэгсэл</span>
+									<span className="font-bold">{getPaymentProviderIcon(order.paymentProvider)} {order.paymentProvider}</span>
+								</div>
+								<div className="flex items-center justify-between border-border border-t pt-3 text-sm">
+									<span className="text-muted-foreground">Нийт ширхэг</span>
+									<span className="font-bold">{itemCount}</span>
+								</div>
+								<div className="flex items-end justify-between border-border border-t-2 pt-4">
+									<span className="font-heading font-black">Нийт</span>
+									<span className="font-heading text-2xl font-black tabular-nums">
+										{formatCurrency(order.total)}
+									</span>
 								</div>
 							</div>
+						</section>
 
-							{/* Status Alert */}
-							{order.status === "pending" && (
-								<div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 sm:p-4">
-									<div className="flex items-center gap-2 text-destructive">
-										<AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-										<span className="font-medium text-sm sm:text-base">
-											Захиалга хүлээгдэж буй
-										</span>
-									</div>
-									<p className="mt-1 text-destructive text-xs sm:text-sm">
-										Энэ захиалгыг илгээх эсвэл цуцлах хэрэгтэй.
-									</p>
-								</div>
-							)}
-						</div>
-					</div>
+						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
+							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+								<Truck className="h-5 w-5" /> Хүргэлт
+							</h2>
+							<EditableField
+								label="Арга"
+								type="select"
+								value={order.deliveryProvider || "tu-delivery"}
+								options={[
+									{ value: "tu-delivery", label: "TU delivery" },
+									{ value: "self", label: "Өөрсдөө хүргэнэ" },
+									{ value: "avidaa", label: "Avidaa" },
+									{ value: "pick-up", label: "Өөрөө авна" },
+								]}
+								isLoading={isUpdateFieldPending}
+								renderDisplay={(value) => deliveryLabel(value)}
+								onSave={(next) => savePatch({ deliveryProvider: next as typeof order.deliveryProvider })}
+							/>
+							<Button
+								variant="outline"
+								className="mt-4 h-11 w-full gap-2"
+								onClick={() => copy(order.address || "", "Хүргэлтийн хаяг")}
+							>
+								<MapPin className="h-4 w-4" /> Хаяг хуулах
+							</Button>
+						</section>
+
+						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
+							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+								<CalendarClock className="h-5 w-5" /> Түүх
+							</h2>
+							<div className="space-y-3 text-sm">
+								<TimelineRow label="Захиалга үүссэн" value={created} active />
+								{updated && <TimelineRow label="Сүүлд шинэчлэгдсэн" value={updated} active={order.status !== "pending"} />}
+								<TimelineRow label={`Одоогийн төлөв: ${order.status}`} value={paymentLabel(order.paymentStatus)} active={isPaid} />
+							</div>
+						</section>
+					</aside>
 				</div>
 			</div>
+
+			{nextAction && (
+				<div className="fixed inset-x-0 bottom-0 z-40 border-border border-t-2 bg-card p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:hidden">
+					<Button
+						className="h-12 w-full gap-2"
+						disabled={nextAction.pending}
+						onClick={nextAction.onClick}
+					>
+						<nextAction.icon className="h-4 w-4" />
+						{nextAction.pending ? "Ажиллаж байна..." : nextAction.label}
+					</Button>
+				</div>
+			)}
 		</>
+	);
+}
+
+function InfoRow({
+	label,
+	children,
+	onCopy,
+}: {
+	label: string;
+	children: React.ReactNode;
+	onCopy?: () => void;
+}) {
+	return (
+		<div className="border-border border-t pt-3 first:border-t-0 first:pt-0">
+			<div className="mb-1.5 flex items-center justify-between gap-2">
+				<p className="font-heading font-bold text-muted-foreground text-xs uppercase tracking-wide">
+					{label}
+				</p>
+				{onCopy && (
+					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={onCopy}>
+						<Copy className="h-3.5 w-3.5" />
+					</Button>
+				)}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+function TimelineRow({
+	label,
+	value,
+	active,
+}: {
+	label: string;
+	value: string;
+	active?: boolean;
+}) {
+	return (
+		<div className="flex gap-3">
+			<div className={`mt-1.5 h-3 w-3 shrink-0 border-2 border-border ${active ? "bg-primary" : "bg-muted"}`} />
+			<div>
+				<p className="font-bold leading-tight">{label}</p>
+				<p className="text-muted-foreground text-xs">{value}</p>
+			</div>
+		</div>
 	);
 }

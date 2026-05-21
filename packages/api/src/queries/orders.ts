@@ -37,6 +37,44 @@ import {
 type OrderStatus = (typeof orderStatus)[number];
 type DeliveryProvider = (typeof deliveryProvider)[number];
 
+function resolveDateRange(date?: string): { start: Date; end: Date } | null {
+	if (date === undefined || date === "all") return null;
+
+	const now = new Date();
+	const startOfDay = (d: Date) => {
+		const r = new Date(d);
+		r.setHours(0, 0, 0, 0);
+		return r;
+	};
+	const endOfDay = (d: Date) => {
+		const r = new Date(d);
+		r.setHours(23, 59, 59, 999);
+		return r;
+	};
+
+	if (date === "today") {
+		return { start: startOfDay(now), end: endOfDay(now) };
+	}
+	if (date === "yesterday") {
+		const yesterday = new Date(now);
+		yesterday.setDate(yesterday.getDate() - 1);
+		return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+	}
+	if (date === "last7days") {
+		const start = new Date(now);
+		start.setDate(start.getDate() - 6);
+		return { start: startOfDay(start), end: endOfDay(now) };
+	}
+	if (date === "last30days") {
+		const start = new Date(now);
+		start.setDate(start.getDate() - 29);
+		return { start: startOfDay(start), end: endOfDay(now) };
+	}
+	// specific date "YYYY-MM-DD"
+	const selectedDate = new Date(`${date}T00:00:00+08:00`);
+	return { start: startOfDay(selectedDate), end: endOfDay(selectedDate) };
+}
+
 export const orderQueries = {
 	admin: {
 		async getOrderCountForWeek() {
@@ -405,35 +443,12 @@ export const orderQueries = {
 				);
 			}
 
-			let startDate: Date;
-			let endDate: Date;
-
-			if (params.date !== undefined) {
-				const selectedDate = new Date(`${params.date}T00:00:00+08:00`);
-				startDate = new Date(selectedDate);
-				startDate.setHours(12, 0, 0, 0);
-				endDate = new Date(selectedDate);
-				endDate.setDate(endDate.getDate() + 1);
-				endDate.setHours(11, 59, 59, 999);
-			} else {
-				const now = new Date();
-				const currentHour = now.getHours();
-				if (currentHour < 12) {
-					startDate = new Date(now);
-					startDate.setDate(startDate.getDate() - 1);
-					startDate.setHours(12, 0, 0, 0);
-					endDate = new Date(now);
-					endDate.setHours(11, 59, 59, 999);
-				} else {
-					startDate = new Date(now);
-					startDate.setHours(12, 0, 0, 0);
-					endDate = new Date(now);
-					endDate.setDate(endDate.getDate() + 1);
-					endDate.setHours(11, 59, 59, 999);
-				}
+			const dateRange = resolveDateRange(params.date);
+			if (dateRange) {
+				conditions.push(
+					between(OrdersTable.createdAt, dateRange.start, dateRange.end),
+				);
 			}
-
-			conditions.push(between(OrdersTable.createdAt, startDate, endDate));
 
 			const orderByClauses: SQL<unknown>[] = [];
 			const primarySortColumn =
