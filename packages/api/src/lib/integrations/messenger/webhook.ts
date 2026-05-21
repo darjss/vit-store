@@ -5,15 +5,17 @@ import {
 } from "@warriorteam/messenger-sdk";
 import { logger } from "~/lib/logger";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
+import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {
 			const userId = event.sender.id;
+			const text = event.message.text?.trim();
 			logger.info("messengerWebhook.onMessage", {
 				userId,
-				text: event.message.text,
+				text,
 			});
 		},
 		onMessageEdit: async (event) => {
@@ -65,6 +67,13 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 								imageUrl: detail.product.images[0]?.url,
 							})),
 							status: "payment_confirmed",
+						});
+						await trackPaymentConfirmedServerSide({
+							phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
+							paymentNumber,
+							orderNumber: paymentInfo.order.orderNumber,
+							provider: "transfer",
+							revenue: paymentInfo.order.total,
 						});
 					}
 				} catch (notificationError) {

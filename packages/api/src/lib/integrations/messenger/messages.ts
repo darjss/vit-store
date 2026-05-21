@@ -4,7 +4,7 @@ import { messenger } from "~/lib/integrations/messenger/client";
 
 const RECIPIENT_ID = "25172502442390308";
 
-type DetailedOrderNotificationInput = {
+export type DetailedOrderNotificationInput = {
 	paymentNumber: string;
 	customerPhone: number;
 	address: string;
@@ -115,33 +115,77 @@ export const sendTransferNotification = async (
 	return result;
 };
 
+type TransferClaimedNotificationInput = {
+	paymentNumber: string;
+	customerPhone: number;
+	address: string;
+	notes: string | null;
+	total: number;
+	products: Array<{
+		name: string;
+		quantity: number;
+		price: number;
+		imageUrl?: string;
+	}>;
+};
+
+export const sendTransferClaimedNotification = async (
+	data: TransferClaimedNotificationInput,
+) => {
+	await messenger.send.message({
+		messaging_type: "RESPONSE",
+		recipient: { id: RECIPIENT_ID },
+		message: {
+			text: `Хэрэглэгч шилжүүлэг хийсэн гэж мэдэгдлээ. Таны дансанд ${formatMoney(data.total)} орсон уу?`,
+		},
+	});
+
+	await messenger.send.message({
+		messaging_type: "RESPONSE",
+		recipient: { id: RECIPIENT_ID },
+		message: {
+			text: [
+				`Утас: ${data.customerPhone}`,
+				`Хаяг: ${data.address}`,
+				`Тэмдэглэл: ${data.notes?.trim() || "-"}`,
+				`Нийт дүн: ${formatMoney(data.total)}`,
+				"Бүтээгдэхүүн:",
+				...data.products.map(
+					(product, index) =>
+						`${index + 1}. ${product.name} x${product.quantity} - ${formatMoney(product.price)}`,
+				),
+			].join("\n"),
+		},
+	});
+
+	await messenger.templates.button({
+		recipient: { id: RECIPIENT_ID },
+		text: "Шилжүүлэг баталгаажуулах уу?",
+		buttons: [
+			{
+				type: "postback",
+				title: "Баталгаажуулах",
+				payload: `confirm_payment:${data.paymentNumber}`,
+			},
+			{
+				type: "postback",
+				title: "Цуцлах",
+				payload: `reject_payment:${data.paymentNumber}`,
+			},
+		],
+	});
+
+	await sendProductImagesIfPossible(data.products);
+};
+
 export const sendDetailedOrderNotification = async (
 	data: DetailedOrderNotificationInput,
 ) => {
-	if (data.status === "pending_transfer") {
-		await messenger.templates.button({
-			recipient: { id: RECIPIENT_ID },
-			text: "Transfer tulbur irsen. Batalgaajuulna uu.",
-			buttons: [
-				{
-					type: "postback",
-					title: "Batalgaajuulah",
-					payload: `confirm_payment:${data.paymentNumber}`,
-				},
-				{
-					type: "postback",
-					title: "Tsutslah",
-					payload: `reject_payment:${data.paymentNumber}`,
-				},
-			],
-		});
-	}
-
 	if (data.status === "payment_confirmed") {
 		await messenger.send.message({
 			messaging_type: "RESPONSE",
 			recipient: { id: RECIPIENT_ID },
-			message: { text: "Tulbur amjilttai batalgaajlaa." },
+			message: { text: "Төлбөр амжилттай баталгаажлаа." },
 		});
 	}
 

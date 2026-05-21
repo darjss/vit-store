@@ -310,6 +310,33 @@ export const PaymentsTable = createTable(
 	],
 );
 
+export const MessengerNotificationFailuresTable = createTable(
+	"messenger_notification_failure",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		purpose: varchar("purpose", { length: 64 }).notNull(),
+		status: text("status", { enum: ["pending", "sent", "failed"] }).notNull().default("pending"),
+		payload: jsonb("payload").notNull(),
+		errorMessage: text("error_message"),
+		errorCode: varchar("error_code", { length: 64 }),
+		retryCount: integer("retry_count").notNull().default(0),
+		lastAttemptAt: timestamp("last_attempt_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("messenger_notification_payment_purpose_unique_idx").on(
+			table.paymentNumber,
+			table.purpose,
+		),
+		index("messenger_notification_status_created_idx").on(
+			table.status,
+			table.createdAt,
+		),
+	],
+);
+
 export const CartsTable = createTable(
 	"cart",
 	{

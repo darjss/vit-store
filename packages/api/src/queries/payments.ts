@@ -3,6 +3,7 @@ import { db } from "~/db/client";
 import {
 	OrderDetailsTable,
 	type PaymentInsertType,
+	MessengerNotificationFailuresTable,
 	PaymentsTable,
 	ProductImagesTable,
 	ProductsTable,
@@ -129,6 +130,24 @@ export const paymentQueries = {
 				.set({ status })
 				.where(eq(PaymentsTable.orderId, orderId));
 		},
+
+		async getPendingMessengerNotifications() {
+			return db()
+				.select({
+					id: MessengerNotificationFailuresTable.id,
+					paymentNumber: MessengerNotificationFailuresTable.paymentNumber,
+					purpose: MessengerNotificationFailuresTable.purpose,
+					status: MessengerNotificationFailuresTable.status,
+					errorMessage: MessengerNotificationFailuresTable.errorMessage,
+					errorCode: MessengerNotificationFailuresTable.errorCode,
+					retryCount: MessengerNotificationFailuresTable.retryCount,
+					lastAttemptAt: MessengerNotificationFailuresTable.lastAttemptAt,
+					createdAt: MessengerNotificationFailuresTable.createdAt,
+				})
+				.from(MessengerNotificationFailuresTable)
+				.where(eq(MessengerNotificationFailuresTable.status, "pending"));
+		},
+
 	},
 
 	store: {
