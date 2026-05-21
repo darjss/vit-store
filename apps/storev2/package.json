@@ -5,7 +5,7 @@
 	"scripts": {
 		"astro": "astro",
 		"build": "astro check && astro build",
-		"deploy": "alchemy deploy --app storev2 --stage prod --env-file ../../.env.prod --adopt",
+		"deploy": "alchemy deploy --app storev2 --stage prod --env-file ../../.env.prod",
 		"check-types": "astro check",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"destroy": "alchemy destroy",
