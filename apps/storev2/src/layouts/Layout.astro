@@ -53,6 +53,46 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
                     window.posthog.capture('$pageview');
                 }
             });
+
+            // Rich exception capture — PostHog's autocapture sometimes loses
+            // error details in Facebook/Instagram in-app browsers.
+            (function() {
+                function sendException(props) {
+                    if (window.posthog && typeof window.posthog.capture === 'function') {
+                        window.posthog.capture('$exception', props);
+                    }
+                }
+
+                window.addEventListener('error', function(event) {
+                    var err = event.error || {};
+                    sendException({
+                        $exception_message: err.message || event.message || 'Unknown error',
+                        $exception_type: err.name || 'Error',
+                        $exception_source: event.filename || '',
+                        $exception_lineno: event.lineno || 0,
+                        $exception_colno: event.colno || 0,
+                        $exception_stack_trace: err.stack || '',
+                        $current_url: window.location.href,
+                        $browser: navigator.userAgent,
+                        $device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+                        error_captured_by: 'manual_global_handler',
+                    });
+                });
+
+                window.addEventListener('unhandledrejection', function(event) {
+                    var reason = event.reason;
+                    var isErr = reason instanceof Error;
+                    sendException({
+                        $exception_message: isErr ? reason.message : String(reason),
+                        $exception_type: isErr ? (reason.name || 'UnhandledRejection') : 'UnhandledRejection',
+                        $exception_stack_trace: isErr ? (reason.stack || '') : '',
+                        $current_url: window.location.href,
+                        $browser: navigator.userAgent,
+                        $device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+                        error_captured_by: 'manual_unhandled_rejection',
+                    });
+                });
+            })();
         </script>
 
         <div id="loading-bar" class="loading-bar">
