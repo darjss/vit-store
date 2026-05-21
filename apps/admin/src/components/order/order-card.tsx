@@ -1,11 +1,18 @@
-  import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { CheckCircle, Copy, Loader2, MapPin, Package, Phone, Truck } from "lucide-react";
+import {
+	CheckCircle,
+	Copy,
+	Loader2,
+	MapPin,
+	Package,
+	Phone,
+	Truck,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import RowActions from "@/components/row-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,50 +27,62 @@ import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import OrderForm from "./order-form";
 
-const OrderCard = ({
-	order,
-	selection,
-}: {
+const statusBorderColor: Record<string, string> = {
+	pending: "border-t-[#ffa502]",
+	shipped: "border-t-[#3742fa]",
+	delivered: "border-t-[#00ff88]",
+	cancelled: "border-t-[#ff4757]",
+	refunded: "border-t-[#5f27cd]",
+};
+
+interface OrderCardProps {
 	order: OrderType;
 	selection?: {
 		checked: boolean;
 		disabled?: boolean;
 		onCheckedChange: (checked: boolean) => void;
 	};
-}) => {
+}
+
+export default function OrderCard({ order, selection }: OrderCardProps) {
 	const navigate = useNavigate();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [productsExpanded, setProductsExpanded] = useState(false);
+	const [previewImage, setPreviewImage] = useState<{
+		src: string;
+		alt: string;
+	} | null>(null);
 	const queryClient = useQueryClient();
+
 	const updateOrderStatus = useMutation({
 		...trpc.order.updateOrderStatus.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
+			queryClient.invalidateQueries(
+				trpc.order.getPaginatedOrders.queryOptions({}),
+			);
 			toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
 		},
 	});
+
 	const shipOrder = useMutation({
 		...trpc.order.shipOrder.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
+			queryClient.invalidateQueries(
+				trpc.order.getPaginatedOrders.queryOptions({}),
+			);
 			toast.success("Захиалга амжилттай илгээгдлээ");
 		},
 		onError: (error) => {
 			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
 		},
 	});
-	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
+
+	const deleteOrder = useMutation({
 		...trpc.order.deleteOrder.mutationOptions(),
 		onMutate: async (variables) => {
-			await queryClient.cancelQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
-			const previous = queryClient.getQueriesData({
-				queryKey: trpc.order.getPaginatedOrders.queryKey,
-			});
+			const qk = trpc.order.getPaginatedOrders.queryKey({});
+			await queryClient.cancelQueries({ queryKey: qk });
+			const previous = queryClient.getQueriesData({ queryKey: qk });
 			for (const [key, data] of previous) {
 				if (data && typeof data === "object" && "orders" in data) {
 					const typed = data as { orders: OrderType[]; pagination: unknown };
@@ -87,24 +106,26 @@ const OrderCard = ({
 			toast.success("Захиалга амжилттай устгагдлаа");
 		},
 		onSettled: () => {
-			void queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
+			void queryClient.invalidateQueries(
+				trpc.order.getPaginatedOrders.queryOptions({}),
+			);
 		},
 	});
-	const deleteOrderHandler = (id: number) => {
-		deleteOrder({ id });
-	};
 
-	const handleShipOrder = () => {
-		shipOrder.mutate({ orderId: order.id });
-	};
+	const products = order.products ?? [];
+	const productCount = products.length;
+	const borderColor = statusBorderColor[order.status] ?? "border-t-muted";
+	const visibleProducts = productsExpanded ? products : products.slice(0, 3);
+	const remainingCount = Math.max(0, productCount - 3);
 
-	const handleMarkDelivered = () => {
-		updateOrderStatus.mutate({ id: order.id, status: "delivered" });
+	const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+		const target = e.target as HTMLElement;
+		if (target.closest("[data-no-nav]")) return;
+		void navigate({
+			to: "/orders/$id",
+			params: { id: order.id.toString() },
+		});
 	};
-
-	const productCount = order.products?.length ?? 0;
 
 	return (
 		<>
@@ -124,29 +145,38 @@ const OrderCard = ({
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			<Dialog open={previewImage !== null} onOpenChange={(open) => !open && setPreviewImage(null)}>
+				<DialogContent data-no-nav className="max-w-[95vw] border-2 border-border bg-card p-3 shadow-hard sm:max-w-2xl">
+					<DialogHeader className="px-1">
+						<DialogTitle className="line-clamp-2 text-base">
+							{previewImage?.alt || "Бүтээгдэхүүний зураг"}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="max-h-[75vh] overflow-hidden border-2 border-border bg-muted">
+						{previewImage && (
+							<img
+								src={previewImage.src}
+								alt={previewImage.alt}
+								className="h-full max-h-[75vh] w-full object-contain"
+							/>
+						)}
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			<Card
-				className="cursor-pointer transition-all duration-150 hover:translate-y-[-2px] active:translate-y-0"
-				onClick={(e) => {
-					if ((e.target as HTMLElement).closest("[data-no-nav]")) return;
-					navigate({ to: "/orders/$id", params: { id: order.id.toString() } });
-				}}
+				className={`group cursor-pointer overflow-hidden border-2 border-border bg-card shadow-hard-sm transition-all duration-150 hover:shadow-hard ${borderColor} border-t-4`}
+				onClick={handleCardClick}
 				tabIndex={0}
 				onKeyDown={(e) => {
-					if (
-						e.key === "Enter" &&
-						!(e.target as HTMLElement).closest("[data-no-nav]")
-					) {
-						navigate({
-							to: "/orders/$id",
-							params: { id: order.id.toString() },
-						});
-					}
+					if (e.key === "Enter") handleCardClick(e);
 				}}
 			>
 				<CardContent className="flex flex-col gap-0 p-0">
-					{/* Header: Order number + status badges */}
-					<div className="flex items-start justify-between gap-2 px-3 pt-3 pb-2">
-						<div className="flex min-w-0 flex-1 items-start gap-2">
+					{/* Header */}
+					<div className="flex items-start justify-between gap-3 p-4 pb-3">
+						<div className="flex min-w-0 flex-1 items-start gap-3">
 							{selection ? (
 								<div
 									className="pt-0.5"
@@ -161,165 +191,186 @@ const OrderCard = ({
 											selection.onCheckedChange(v === true)
 										}
 										aria-label={`Сонгох #${order.orderNumber}`}
+										className="h-5 w-5"
 									/>
 								</div>
 							) : null}
 							<div className="min-w-0 flex-1">
-							<div className="flex items-center gap-1.5">
-								<span className="font-bold text-foreground text-sm tracking-tight">
-									#{order.orderNumber}
-								</span>
-								<span className="text-[11px] text-muted-foreground">
-									{new Date(order.createdAt).toLocaleDateString("mn-MN", {
-										month: "short",
-										day: "numeric",
-										hour: "2-digit",
-										minute: "2-digit",
-									})}
-								</span>
-							</div>
-							<div className="mt-1 flex items-center gap-1.5">
-								<Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
-								<span className="font-medium text-foreground text-xs tabular-nums">
-									{order.customerPhone}
-								</span>
-							</div>
+								<div className="flex items-center gap-2">
+									<span className="font-heading text-lg font-black tracking-tight">
+										#{order.orderNumber}
+									</span>
+									<span className="text-muted-foreground text-xs">
+										{new Date(order.createdAt).toLocaleDateString("mn-MN", {
+											month: "short",
+											day: "numeric",
+										})}
+									</span>
+								</div>
+								<div className="mt-1.5 flex items-center gap-1.5">
+									<Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+									<span
+										className="font-heading font-bold text-sm tabular-nums"
+										data-no-nav
+										onClick={(e) => {
+											e.stopPropagation();
+											window.location.href = `tel:${order.customerPhone}`;
+										}}
+									>
+										{order.customerPhone}
+									</span>
+								</div>
 							</div>
 						</div>
-						<div className="flex shrink-0 flex-col items-end gap-1">
+						<div className="flex shrink-0 flex-col items-end gap-1.5">
 							<OrderStatusBadge status={order.status} />
 							{order.paymentStatus && order.paymentProvider && (
-								<Badge
-									variant="outline"
-									className={`flex h-5 items-center gap-1 border-2 px-1.5 text-[10px] leading-none ${getPaymentStatusColor(order.paymentStatus)}`}
+								<span
+									className={`inline-flex items-center gap-1 border-2 px-1.5 py-0.5 font-bold text-[10px] ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
-									<span className="text-[10px] leading-none">
-										{getPaymentProviderIcon(order.paymentProvider)}
-									</span>
-									<span className="font-bold">
-										{order.paymentStatus === "success"
-											? "Paid"
-											: order.paymentStatus === "failed"
-												? "Failed"
-												: "Pending"}
-									</span>
-								</Badge>
+									{getPaymentProviderIcon(order.paymentProvider)}
+									{order.paymentStatus === "success"
+										? "Төлсөн"
+										: order.paymentStatus === "failed"
+											? "Амжилтгүй"
+											: "Хүлээгдэж буй"}
+								</span>
 							)}
 						</div>
 					</div>
 
-					{/* Address row */}
-					<div className="flex items-center gap-1.5 border-border border-t border-dashed px-3 py-1.5">
-						<MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-						<span className="min-w-0 flex-1 truncate text-muted-foreground text-xs">
+					{/* Address */}
+					<div className="flex items-center gap-2 border-border border-t px-4 py-2.5">
+						<MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+						<span className="min-w-0 flex-1 truncate text-muted-foreground text-sm">
 							{order.address || "Хаяг оруулаагүй"}
 						</span>
 						<Button
 							size="icon"
 							variant="ghost"
-							className="h-6 w-6 shrink-0"
+							className="h-8 w-8 shrink-0"
 							data-no-nav
-							onClick={async () => {
+							onClick={async (e) => {
+								e.stopPropagation();
 								await navigator.clipboard.writeText(order.address);
 								toast("Хаяг хуулагдлаа");
 							}}
 						>
-							<Copy className="h-3 w-3" />
+							<Copy className="h-3.5 w-3.5" />
 						</Button>
 					</div>
 
-					{/* Products list */}
-					<div className="border-border border-t px-3 py-2">
-						<div className="flex items-center justify-between pb-1.5">
-							<div className="flex items-center gap-1.5">
-								<Package className="h-3 w-3 text-muted-foreground" />
-								<span className="font-bold text-[11px] text-muted-foreground uppercase tracking-wider">
-									Бүтээгдэхүүн
-								</span>
-								<span className="flex h-4 min-w-4 items-center justify-center border-2 border-border bg-muted px-1 font-bold text-[10px] text-foreground">
-									{productCount}
-								</span>
-							</div>
-							<span className="font-bold text-foreground text-sm tabular-nums">
-								₮{order.total.toLocaleString()}
-							</span>
-						</div>
-
-						<div className="flex flex-col gap-1.5">
-							{order.products?.map((detail, index) => (
-								<div
-									key={order.orderNumber + detail.productId + index}
-									className="flex items-center gap-2 border-2 border-border/50 bg-muted/30 p-1.5"
-								>
-									<div className="h-10 w-10 shrink-0 overflow-hidden border-2 border-border/50 bg-muted sm:h-11 sm:w-11">
+					{/* Products */}
+					<div className="space-y-2 border-border border-t px-4 py-3" data-no-nav>
+						<div className="flex items-center gap-2 overflow-x-auto pb-1">
+							{visibleProducts.map((product, i) => {
+								const src = product.imageUrl || "/placeholder.jpg";
+								const showOverlay = !productsExpanded && i === 2 && remainingCount > 0;
+								return (
+									<button
+										key={`${order.orderNumber}-${product.productId}-${i}`}
+										type="button"
+										className="relative h-12 w-12 shrink-0 overflow-hidden border-2 border-border bg-muted transition-transform active:translate-y-0.5"
+										onClick={(e) => {
+											e.stopPropagation();
+											if (showOverlay) {
+												setProductsExpanded(true);
+												return;
+											}
+											setPreviewImage({ src, alt: product.name || "Бүтээгдэхүүн" });
+										}}
+										aria-label={
+											showOverlay
+												? `Бүх ${productCount} бүтээгдэхүүнийг харах`
+												: `${product.name || "Бүтээгдэхүүн"} зургийг томоор харах`
+										}
+									>
 										<img
-											src={detail.imageUrl || "/placeholder.jpg"}
-											alt={detail.name}
+											src={src}
+											alt={product.name || ""}
 											className="h-full w-full object-cover"
 											loading="lazy"
 										/>
-									</div>
-									<div className="min-w-0 flex-1">
-										<p className="truncate font-bold text-foreground text-xs leading-tight">
-											{detail.name}
-										</p>
-									</div>
-									<span className="shrink-0 border-2 border-border bg-background px-1.5 py-0.5 font-bold text-[11px] text-foreground tabular-nums">
-										x{detail.quantity}
-									</span>
-								</div>
-							))}
+										{showOverlay && (
+											<div className="absolute inset-0 flex items-center justify-center bg-black/60 font-heading text-xs font-bold text-white">
+												+{remainingCount}
+											</div>
+										)}
+									</button>
+								);
+							})}
+						</div>
+						<div className="flex items-center justify-between gap-2">
+							<div className="flex items-center gap-2">
+								<Package className="h-4 w-4 text-muted-foreground" />
+								<span className="text-sm text-muted-foreground">{productCount} бараа</span>
+							</div>
+							<span className="font-heading text-lg font-black tabular-nums">
+								₮{order.total.toLocaleString()}
+							</span>
 						</div>
 					</div>
 
-					{/* Footer: actions */}
+					{/* Actions */}
 					<div
-						className="flex items-center justify-end gap-2 border-border border-t px-3 py-2"
+						className="flex items-center justify-between border-border border-t px-4 py-3"
 						data-no-nav
 					>
 						{order.status === "pending" && (
 							<Button
 								variant="default"
 								size="sm"
-								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
+								className="h-10 gap-2 text-xs"
 								disabled={shipOrder.isPending}
-								onClick={handleShipOrder}
+								onClick={(e) => {
+									e.stopPropagation();
+									shipOrder.mutate({ orderId: order.id });
+								}}
 							>
 								{shipOrder.isPending ? (
-									<Loader2 className="h-3 w-3 animate-spin" />
+									<Loader2 className="h-3.5 w-3.5 animate-spin" />
 								) : (
-									<Truck className="h-3 w-3" />
+									<Truck className="h-3.5 w-3.5" />
 								)}
-								<span>{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}</span>
+								{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
 							</Button>
 						)}
 						{order.status === "shipped" && (
 							<Button
 								variant="default"
 								size="sm"
-								className="mr-auto h-7 gap-1.5 border-2 border-border px-2.5 font-bold text-xs"
+								className="h-10 gap-2 text-xs"
 								disabled={updateOrderStatus.isPending}
-								onClick={handleMarkDelivered}
+								onClick={(e) => {
+									e.stopPropagation();
+									updateOrderStatus.mutate({
+										id: order.id,
+										status: "delivered",
+									});
+								}}
 							>
 								{updateOrderStatus.isPending ? (
-									<Loader2 className="h-3 w-3 animate-spin" />
+									<Loader2 className="h-3.5 w-3.5 animate-spin" />
 								) : (
-									<CheckCircle className="h-3 w-3" />
+									<CheckCircle className="h-3.5 w-3.5" />
 								)}
-								<span>{updateOrderStatus.isPending ? "Шинэчилж байна..." : "Хүргэсэн"}</span>
+								{updateOrderStatus.isPending
+									? "Шинэчилж байна..."
+									: "Хүргэсэн"}
 							</Button>
+						)}
+						{order.status !== "pending" && order.status !== "shipped" && (
+							<div />
 						)}
 						<RowActions
 							id={order.id}
 							setIsEditDialogOpen={setIsEditDialogOpen}
-							deleteMutation={() => deleteOrderHandler(order.id)}
-							isDeletePending={isDeletePending}
+							deleteMutation={() => deleteOrder.mutate({ id: order.id })}
+							isDeletePending={deleteOrder.isPending}
 						/>
 					</div>
 				</CardContent>
 			</Card>
 		</>
 	);
-};
-
-export default OrderCard;
+}
