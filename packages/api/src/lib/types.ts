@@ -25,28 +25,6 @@ export type OrderStatusType = (typeof orderStatus)[number];
 export type PaymentProviderType = (typeof paymentProvider)[number];
 export type PaymentStatusType = (typeof paymentStatus)[number];
 export type OrderDeliveryProviderType = (typeof deliveryProvider)[number];
-export type StoreAssistantDisplayType =
-	| "none"
-	| "single-product"
-	| "product-carousel";
-
-export interface StoreAssistantMessageInput {
-	role: "user" | "assistant";
-	content: string;
-}
-
-export interface StoreAssistantPageContext {
-	path?: string;
-	productId?: number;
-	searchQuery?: string;
-}
-
-export interface StoreAssistantResponse {
-	answer: string;
-	displayType: StoreAssistantDisplayType;
-	productIds: number[];
-}
-
 export interface AddSalesType {
 	productCost: number;
 	quantitySold: number;
