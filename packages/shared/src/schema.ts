@@ -256,9 +256,9 @@ export const addCategorySchema = v.object({
 export const timeRangeSchema = v.picklist(["daily", "weekly", "monthly"]);
 export const phoneSchema = v.pipe(
 	v.string(),
-	v.minLength(8, "Phone number must be 8 digits"),
-	v.maxLength(8, "Phone number must be 8 digits"),
-	v.regex(/^[6-9]\d{7}$/, "Phone number must start with 6-9"),
+	v.minLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+	v.maxLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+	v.regex(/^[6-9]\d{7}$/, "Утасны дугаар 6-9-өөр эхлэх ёстой"),
 );
 
 export const newOrderSchema = v.object({
