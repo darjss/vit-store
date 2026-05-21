@@ -106,6 +106,50 @@ const imageSelectionSchema = z.object({
 	keepIndices: z.array(z.number().int().min(0)).max(8),
 	primaryIndex: z.number().int().min(0).nullable(),
 });
+type ImageSelectionResult = z.infer<typeof imageSelectionSchema>;
+
+const visionAnalysisSchema = z.object({
+	ingredients: z
+		.array(z.string())
+		.describe(
+			"List of ingredients with amounts, e.g. 'Vitamin D3 - 5000 IU (625%)'",
+		),
+	servingSize: z.string().nullable().describe("Serving size, e.g. '1 softgel'"),
+	dailyIntake: z.number().nullable().describe("How many to take per day"),
+	supplementFacts: z
+		.string()
+		.nullable()
+		.describe("Raw supplement facts text if visible"),
+});
+type VisionAnalysisOutput = z.infer<typeof visionAnalysisSchema>;
+
+const translationSchema = z.object({
+	name: z.string().describe("Clean product name without brand"),
+	name_mn: z.string().describe("Product name in Mongolian Cyrillic"),
+	description: z.string().describe("Product description in Mongolian Cyrillic"),
+	amount: z.string().describe("Count/quantity, e.g. '120 Softgels'"),
+	potency: z.string().describe("Strength/potency, e.g. '5000 IU', '1000mg'"),
+	dailyIntake: z.number().describe("Pills per day"),
+	weightGrams: z.number().describe("Estimated shipping weight in grams"),
+	seoTitle: z.string().describe("SEO title with Mongolian + English for search"),
+	seoDescription: z
+		.string()
+		.describe("SEO description with Mongolian + English for search"),
+	ingredients: z.array(z.string()).describe("Ingredients in Mongolian Cyrillic"),
+	brandId: z
+		.number()
+		.nullable()
+		.describe(
+			"The ID of the matching brand from the BRANDS list, or null if no match",
+		),
+	categoryId: z
+		.number()
+		.nullable()
+		.describe(
+			"The ID of the best matching category from the CATEGORIES list, or null if no match",
+		),
+});
+type TranslationOutput = z.infer<typeof translationSchema>;
 
 // Helper: Check if input is an Amazon URL
 function isAmazonUrl(input: string): boolean {
@@ -376,7 +420,7 @@ async function selectProductImagesWithGemini(
 	}
 
 	try {
-		const { output } = await generateText({
+		const { output: rawOutput } = await generateText({
 			model: opencode("kimi-k2.5"),
 			output: Output.object({ schema: imageSelectionSchema }),
 			messages: [
@@ -409,6 +453,7 @@ Be lenient - when in doubt, keep the image. Return keepIndices and primaryIndex 
 				},
 			],
 		});
+		const output = rawOutput as ImageSelectionResult;
 
 		const keepIndices = Array.from(new Set(output?.keepIndices ?? [])).filter(
 			(i) => i >= 0 && i < candidates.length,
@@ -450,7 +495,7 @@ async function refineProductOnlyImagesWithGemini(
 	}
 
 	try {
-		const { output } = await generateText({
+		const { output: rawOutput } = await generateText({
 			model: opencode("kimi-k2.5"),
 			output: Output.object({ schema: imageSelectionSchema }),
 			messages: [
@@ -473,6 +518,7 @@ Return keepIndices and primaryIndex from the given order. Keep max 8.`,
 				},
 			],
 		});
+		const output = rawOutput as ImageSelectionResult;
 
 		const keepIndices = Array.from(new Set(output?.keepIndices ?? [])).filter(
 			(i) => i >= 0 && i < candidates.length,
@@ -795,29 +841,9 @@ async function analyzeProductImages(
 	}
 
 	try {
-		const { output } = await generateText({
+		const { output: rawOutput } = await generateText({
 			model: opencode("kimi-k2.5"),
-			output: Output.object({
-				schema: z.object({
-					ingredients: z
-						.array(z.string())
-						.describe(
-							"List of ingredients with amounts, e.g. 'Vitamin D3 - 5000 IU (625%)'",
-						),
-					servingSize: z
-						.string()
-						.nullable()
-						.describe("Serving size, e.g. '1 softgel'"),
-					dailyIntake: z
-						.number()
-						.nullable()
-						.describe("How many to take per day"),
-					supplementFacts: z
-						.string()
-						.nullable()
-						.describe("Raw supplement facts text if visible"),
-				}),
-			}),
+			output: Output.object({ schema: visionAnalysisSchema }),
 			messages: [
 				{
 					role: "user",
@@ -840,6 +866,7 @@ Example: "Vitamin D3 - 5000 IU (625%)"`,
 				},
 			],
 		});
+		const output = rawOutput as VisionAnalysisOutput;
 
 		logger.info("analyzeProductImages", {
 			message: "Vision result",
@@ -886,46 +913,9 @@ async function translateAndStructureProduct(
 			.map((c) => `  ID ${c.id}: ${c.name}`)
 			.join("\n");
 
-		const { output } = await generateText({
+		const { output: rawOutput } = await generateText({
 			model: opencode("kimi-k2.5"),
-			output: Output.object({
-				schema: z.object({
-					name: z.string().describe("Clean product name without brand"),
-					name_mn: z.string().describe("Product name in Mongolian Cyrillic"),
-					description: z
-						.string()
-						.describe("Product description in Mongolian Cyrillic"),
-					amount: z.string().describe("Count/quantity, e.g. '120 Softgels'"),
-					potency: z
-						.string()
-						.describe("Strength/potency, e.g. '5000 IU', '1000mg'"),
-					dailyIntake: z.number().describe("Pills per day"),
-					weightGrams: z
-						.number()
-						.describe("Estimated shipping weight in grams"),
-					seoTitle: z
-						.string()
-						.describe("SEO title with Mongolian + English for search"),
-					seoDescription: z
-						.string()
-						.describe("SEO description with Mongolian + English for search"),
-					ingredients: z
-						.array(z.string())
-						.describe("Ingredients in Mongolian Cyrillic"),
-					brandId: z
-						.number()
-						.nullable()
-						.describe(
-							"The ID of the matching brand from the BRANDS list, or null if no match",
-						),
-					categoryId: z
-						.number()
-						.nullable()
-						.describe(
-							"The ID of the best matching category from the CATEGORIES list, or null if no match",
-						),
-				}),
-			}),
+			output: Output.object({ schema: translationSchema }),
 			prompt: `You are a product specialist for a Mongolian supplement store. Translate this product for Mongolian customers who search in both Cyrillic and Latin scripts.
 
 PRODUCT: ${extractedData.title}
@@ -962,6 +952,7 @@ INSTRUCTIONS:
 8. brandId: Match the product brand "${extractedData.brand || "Unknown"}" to one of the AVAILABLE BRANDS above. Use exact or fuzzy name matching (e.g. "NOW Foods" matches "Now Foods"). Return the brand ID or null if no match.
 9. categoryId: Based on the product type and ingredients, pick the single best matching category from AVAILABLE CATEGORIES above. Return the category ID or null if no match.`,
 		});
+		const output = rawOutput as TranslationOutput;
 
 		logger.info("translateAndStructureProduct", {
 			message: "Translation complete",

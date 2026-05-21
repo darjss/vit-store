@@ -40,6 +40,8 @@ const invoiceExtractionSchema = z.object({
     errors: z.array(z.string()),
     rawText: z.string().nullable(),
 });
+type InvoiceExtractionOutput = z.infer<typeof invoiceExtractionSchema>;
+type InvoiceLineItem = InvoiceExtractionOutput["items"][number];
 type CandidateProduct = {
     id: number;
     name: string;
@@ -56,6 +58,8 @@ const invoiceMatchRerankSchema = z.object({
         reason: z.string(),
     })),
 });
+type InvoiceMatchRerankOutput = z.infer<typeof invoiceMatchRerankSchema>;
+type InvoiceMatchRerank = InvoiceMatchRerankOutput["matches"][number];
 function normalizeText(value: string | null | undefined) {
     return (value ?? "")
         .toLowerCase()
@@ -95,7 +99,7 @@ function stringIncludesNeedle(haystack: string | null | undefined, needle: strin
         return false;
     return normalizedHaystack.includes(normalizedNeedle);
 }
-function buildSearchQueries(item: z.infer<typeof invoiceExtractionSchema>["items"][number]) {
+function buildSearchQueries(item: InvoiceLineItem) {
     const queries = [
         item.description,
         [item.brand, item.description].filter(Boolean).join(" "),
@@ -106,7 +110,7 @@ function buildSearchQueries(item: z.infer<typeof invoiceExtractionSchema>["items
         .filter(Boolean);
     return Array.from(new Set(queries)).slice(0, 4);
 }
-async function retrieveCandidateProducts(item: z.infer<typeof invoiceExtractionSchema>["items"][number]) {
+async function retrieveCandidateProducts(item: InvoiceLineItem) {
     const queries = buildSearchQueries(item);
     if (queries.length === 0)
         return [];
@@ -130,7 +134,7 @@ async function retrieveCandidateProducts(item: z.infer<typeof invoiceExtractionS
     }
     return [...merged.values()];
 }
-function scoreRetrievedCandidate(item: z.infer<typeof invoiceExtractionSchema>["items"][number], candidate: CandidateProduct) {
+function scoreRetrievedCandidate(item: InvoiceLineItem, candidate: CandidateProduct) {
     let score = scoreProductMatch(item.description, candidate.name) * 0.65 +
         candidate.retrievalScore * 0.2;
     if (stringIncludesNeedle(candidate.brand, item.brand))
@@ -147,7 +151,7 @@ function scoreRetrievedCandidate(item: z.infer<typeof invoiceExtractionSchema>["
     }
     return Math.min(score, 1);
 }
-async function rerankAmbiguousMatches(items: Array<z.infer<typeof invoiceExtractionSchema>["items"][number]>, candidatesByIndex: Map<number, CandidateProduct[]>) {
+async function rerankAmbiguousMatches(items: InvoiceLineItem[], candidatesByIndex: Map<number, CandidateProduct[]>) {
     if (candidatesByIndex.size === 0)
         return new Map<number, {
             bestCandidateId: number | null;
@@ -171,7 +175,7 @@ async function rerankAmbiguousMatches(items: Array<z.infer<typeof invoiceExtract
             retrievalScore: candidate.retrievalScore,
         })),
     }));
-    const { output } = await generateText({
+    const { output: rawOutput } = await generateText({
         model: opencode("kimi-k2.5"),
         output: Output.object({ schema: invoiceMatchRerankSchema }),
         prompt: `You are resolving invoice line items to existing catalog products.
@@ -183,7 +187,8 @@ Use provider context, brand, amount, potency, and product naming clues. Avoid fo
 Input:
 ${JSON.stringify(payload, null, 2)}`,
     });
-    return new Map((output.matches ?? []).map((match) => [
+    const output = rawOutput as InvoiceMatchRerankOutput;
+    return new Map((output.matches ?? []).map((match: InvoiceMatchRerank) => [
         match.lineIndex,
         {
             bestCandidateId: match.bestCandidateId,
@@ -198,7 +203,7 @@ function parseOrderedAt(value: string | null) {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
-function dedupeItems(items: Array<z.infer<typeof invoiceExtractionSchema>["items"][number]>) {
+function dedupeItems(items: InvoiceLineItem[]) {
     const seen = new Set<string>();
     const deduped: typeof items = [];
     for (const item of items) {
@@ -223,7 +228,7 @@ async function inferInvoiceData(input: extractPurchaseFromImagesType, brands: {
     id: number;
     name: string;
 }[]) {
-    const { output } = await generateText({
+    const { output: rawOutput } = await generateText({
         model: opencode("kimi-k2.5"),
         output: Output.object({ schema: invoiceExtractionSchema }),
         messages: [
@@ -260,6 +265,7 @@ Rules:
             },
         ],
     });
+    const output = rawOutput as InvoiceExtractionOutput;
     const dedupedItems = dedupeItems(output.items ?? []);
     const rankedCandidatesByIndex = new Map<number, Array<{
         candidate: CandidateProduct;
