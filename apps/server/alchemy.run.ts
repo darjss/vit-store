@@ -61,6 +61,7 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 		password: env.PLANETSCALE_PASSWORD,
 		database: env.PLANETSCALE_DATABASE,
 	},
+	adopt: true,
 });
 
 const directDbUrl =
