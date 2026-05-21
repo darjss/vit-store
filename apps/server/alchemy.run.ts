@@ -13,9 +13,7 @@ import { CloudflareStateStore } from "alchemy/state";
 import { createServerAlchemyEnv } from "../../env";
 
 const app = await alchemy("server", {
-	stateStore: process.env.ALCHEMY_STATE_TOKEN
-		? (scope) => new CloudflareStateStore(scope)
-		: undefined,
+	stateStore: (scope) => new CloudflareStateStore(scope),
 });
 const stage = app.stage;
 
