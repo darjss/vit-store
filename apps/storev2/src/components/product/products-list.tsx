@@ -3,6 +3,7 @@ import {
 	useInfiniteQuery,
 	useQuery,
 } from "@tanstack/solid-query";
+import type { ProductCardData } from "@vit/shared/types";
 import {
 	createEffect,
 	createMemo,
@@ -31,6 +32,23 @@ type ProductSortField = "price" | "createdAt";
 type ProductSortDirection = "asc" | "desc";
 const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
 const STORE_DEFAULT_ROW_HEIGHT = 360;
+
+type InfiniteProductsResult = {
+	items: ProductCardData[];
+	nextCursor: string | null;
+};
+
+type FilterOption = {
+	id: number;
+	name: string;
+	slug: string;
+};
+
+type ProductsListProps = {
+	initialProductsResult: InfiniteProductsResult;
+	initialCategories: FilterOption[];
+	initialBrands: FilterOption[];
+};
 
 const LIST_FILTER_LABELS: Record<ListFilter, string> = {
 	featured: "Онцлох",
@@ -66,7 +84,7 @@ const getErrorDetails = (error: unknown) => {
 	};
 };
 
-const ProductsList = () => {
+const ProductsList = (props: ProductsListProps) => {
 	// URL search params for filters
 	const [searchTerm, setSearchTerm] = useSearchParam("q", {
 		defaultValue: undefined,
@@ -106,6 +124,7 @@ const ProductsList = () => {
 		() => ({
 			queryKey: ["categories"],
 			queryFn: () => api.category.getAllCategoriesWithStock.query(),
+			initialData: props.initialCategories,
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
@@ -115,6 +134,7 @@ const ProductsList = () => {
 		() => ({
 			queryKey: ["brands"],
 			queryFn: () => api.brand.getAllBrandsWithStock.query(),
+			initialData: props.initialBrands,
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
@@ -224,6 +244,10 @@ const ProductsList = () => {
 				return result;
 			},
 			initialPageParam: undefined as string | undefined,
+			initialData: {
+				pages: [props.initialProductsResult],
+				pageParams: [undefined as string | undefined],
+			},
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
 			enabled: !isSearchMode(),
@@ -390,7 +414,7 @@ const ProductsList = () => {
 			(c: { id: number; slug: string }) => c.id === id,
 		);
 		if (category?.slug) {
-			window.location.href = `/products/category/${category.slug}/1`;
+			window.location.href = `/products/category/${category.slug}/1/`;
 		} else {
 			setCategoryIdParam(id?.toString() ?? null);
 		}
@@ -405,7 +429,7 @@ const ProductsList = () => {
 			(b: { id: number; slug: string }) => b.id === id,
 		);
 		if (brand?.slug) {
-			window.location.href = `/products/brand/${brand.slug}/1`;
+			window.location.href = `/products/brand/${brand.slug}/1/`;
 		} else {
 			setBrandIdParam(id?.toString() ?? null);
 		}
@@ -463,6 +487,7 @@ const ProductsList = () => {
 	};
 
 	onMount(() => {
+		document.getElementById("products-ssr")?.remove();
 		updateVirtualLayout();
 
 		const handleWindowChange = () => {

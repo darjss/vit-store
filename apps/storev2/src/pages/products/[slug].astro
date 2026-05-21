@@ -11,6 +11,7 @@ import ProductDetails from "@/components/product/product-details.astro";
 import ProductImageCarousel from "@/components/product/product-image-carousel.tsx";
 import ProductInfo from "@/components/product/product-info.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
+import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
 
 export const prerender = true;
@@ -53,13 +54,13 @@ const product = productData;
 const isInStock = product.status === "active" && product.stock > 0;
 
 const categoryHref = product.category?.slug
-	? `/products/category/${product.category.slug}/1`
-	: `/products?category=${product.categoryId}`;
+	? `/products/category/${product.category.slug}/1/`
+	: `/products/?category=${product.categoryId}`;
 
 const breadcrumbItems = [
 	{
 		label: "Бүтээгдэхүүн",
-		href: "/products",
+		href: "/products/",
 	},
 	{
 		label: product.category?.name || "Category",
@@ -102,7 +103,7 @@ const productSchema = {
 	sku: String(product.id),
 	offers: {
 		"@type": "Offer",
-		url: `${SITE_URL}/products/${slug}`,
+		url: `${SITE_URL}/products/${slug}/`,
 		priceCurrency: "MNT",
 		price: product.price,
 		priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -132,21 +133,21 @@ const breadcrumbSchema = {
 			"@type": "ListItem",
 			position: 2,
 			name: "Бүтээгдэхүүн",
-			item: `${SITE_URL}/products`
+			item: `${SITE_URL}/products/`
 		},
 		...(product.category ? [{
 			"@type": "ListItem",
 			position: 3,
 			name: product.category.name,
 			item: product.category?.slug
-			? `${SITE_URL}/products/category/${product.category.slug}/1`
-			: `${SITE_URL}/products?category=${product.categoryId}`
+			? `${SITE_URL}/products/category/${product.category.slug}/1/`
+			: `${SITE_URL}/products/?category=${product.categoryId}`
 		}] : []),
 		{
 			"@type": "ListItem",
 			position: product.category ? 4 : 3,
 			name: product.name,
-			item: `${SITE_URL}/products/${slug}`
+			item: `${SITE_URL}/products/${slug}/`
 		}
 	]
 };
@@ -236,6 +237,20 @@ const breadcrumbSchema = {
 		</div>
 		</div>
 	</div>
+
+	{isInStock && (
+		<StickyMobileCta
+			client:only="solid-js"
+			cartItem={{
+				productId: product.id,
+				quantity: 1,
+				name: product.name,
+				price: product.price,
+				image: primaryImage,
+				slug: product.slug,
+			}}
+		/>
+	)}
 </Layout>
 
 <style>
@@ -267,9 +282,12 @@ const breadcrumbSchema = {
 
 <script define:vars={{ productData: { product_id: product.id, product_name: product.name, product_price: product.price, product_slug: slug } }}>
 	// Track product view on page load (supports view transitions)
+	let _productViewTracked = false;
 	function trackProductView() {
+		if (_productViewTracked) return;
 		if (window.posthog && productData) {
 			window.posthog.capture("product_viewed", productData);
+			_productViewTracked = true;
 		}
 	}
 	

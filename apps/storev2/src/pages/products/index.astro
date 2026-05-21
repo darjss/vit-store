@@ -1,5 +1,6 @@
 ---
 import ProductsList from "@/components/product/products-list";
+import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { api } from "@/lib/trpc";
 
@@ -15,7 +16,7 @@ if (categoryParam) {
 			const categories = await api.category.getAllCategoriesWithStock.query();
 			const category = categories.find((c) => c.id === categoryId);
 			if (category?.slug) {
-				return Astro.redirect(`/products/category/${category.slug}`, 301);
+				return Astro.redirect(`/products/category/${category.slug}/1/`, 301);
 			}
 		} catch {
 			// fall through to normal rendering
@@ -30,7 +31,7 @@ if (brandParam) {
 			const brands = await api.brand.getAllBrandsWithStock.query();
 			const brand = brands.find((b) => b.id === brandId);
 			if (brand?.slug) {
-				return Astro.redirect(`/products/brand/${brand.slug}`, 301);
+				return Astro.redirect(`/products/brand/${brand.slug}/1/`, 301);
 			}
 		} catch {
 			// fall through to normal rendering
@@ -38,53 +39,69 @@ if (brandParam) {
 	}
 }
 
-const title = "Бүтээгдэхүүн";
-const description = "АНУ-ын шилдэг брэндүүдийн витамин, нэмэлт тэжээлийн бүрэн цуглуулга. Эрүүл мэндээ дэмжих бүтээгдэхүүнүүдийг сонгоорой.";
+const INITIAL_PAGE_SIZE = 12;
+const SITE_URL = "https://amerikvitamin.mn";
+
+const [initialProductsResult, initialCategories, initialBrands] = await Promise.all([
+	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
+	api.category.getAllCategoriesWithStock.query(),
+	api.brand.getAllBrandsWithStock.query(),
+]);
+
+const title = "АНУ-ын витамин, нэмэлт тэжээл";
+const description = "Америк Витамин дэлгүүрээс АНУ-ын витамин, эрдэс, омега, пробиотик, магни, коллаген, хүүхдийн нэмэлт тэжээлийг сонгон захиалаарай.";
+const visibleCategories = initialCategories.filter((category) => category.productCount > 0).slice(0, 12);
+const visibleBrands = initialBrands.filter((brand) => brand.productCount > 0).slice(0, 16);
+
+const breadcrumbSchema = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: [
+		{ "@type": "ListItem", position: 1, name: "Нүүр", item: SITE_URL },
+		{ "@type": "ListItem", position: 2, name: "Бүтээгдэхүүн", item: `${SITE_URL}/products/` },
+	],
+};
+
+const itemListSchema = {
+	"@context": "https://schema.org",
+	"@type": "ItemList",
+	name: "АНУ-ын витамин, нэмэлт тэжээл",
+	numberOfItems: initialProductsResult.items.length,
+	itemListElement: initialProductsResult.items.map((product, index) => ({
+		"@type": "ListItem",
+		position: index + 1,
+		url: `${SITE_URL}/products/${product.slug}-${product.id}/`,
+		name: product.name,
+	})),
+};
 ---
 
 <Layout title={title} description={description}>
-    <ProductsList client:only="solidjs">
-        <div slot="fallback">
-            <div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-                <div class="overflow-hidden border-3 border-border bg-primary/5 px-3 py-3 shadow-hard-lg sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
-                    <!-- Compact Header Skeleton -->
-                    <div class="mb-2 flex items-baseline justify-between gap-3 sm:mb-3">
-                        <div class="h-5 w-40 animate-pulse bg-muted sm:h-7 sm:w-52"></div>
-                        <div class="h-3 w-24 animate-pulse bg-muted sm:h-4 sm:w-32"></div>
-                    </div>
+	<div id="products-ssr">
+		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+			<div class="overflow-hidden border-2 border-border bg-primary/5 px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
+				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
+					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
+						Бүх бүтээгдэхүүн
+					</h1>
+					<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
+						{initialProductsResult.nextCursor ? `${initialProductsResult.items.length}+ бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
+					</span>
+				</div>
 
-                    <!-- Filter Bar Skeleton -->
-                    <div class="mb-3 flex flex-wrap items-center gap-1.5 sm:mb-4 sm:gap-2">
-                        <div class="h-9 min-w-[120px] flex-1 animate-pulse border-2 border-border bg-muted shadow-hard-sm sm:h-10 sm:border-3"></div>
-                        <div class="h-9 w-24 animate-pulse border-2 border-border bg-muted shadow-hard-sm sm:h-10 sm:w-28 sm:border-3"></div>
-                        <div class="h-9 w-20 animate-pulse border-2 border-border bg-muted shadow-hard-sm sm:h-10 sm:w-24 sm:border-3"></div>
-                        <div class="flex h-9 border-2 border-border shadow-hard-sm sm:h-10 sm:border-3">
-                            <div class="w-12 animate-pulse bg-muted sm:w-14"></div>
-                            <div class="w-12 animate-pulse border-border border-l-2 bg-muted sm:w-14 sm:border-l-3"></div>
-                            <div class="w-14 animate-pulse border-border border-l-2 bg-muted sm:w-16 sm:border-l-3"></div>
-                        </div>
-                    </div>
+				<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
+					{initialProductsResult.items.map((product) => (
+						<ServerProductCard product={product} />
+					))}
+				</div>
+			</div>
+		</div>
+	</div>
 
-                    <!-- Products Grid Skeleton -->
-                    <div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-                        {Array.from({ length: 8 }).map(() => (
-                            <div class="flex animate-pulse flex-col border-2 border-border bg-background shadow-hard sm:border-3 sm:shadow-hard-lg">
-                                <div class="relative aspect-4/5 overflow-hidden border-border border-b-2 bg-muted sm:aspect-4/3 sm:border-b-3">
-                                    <div class="absolute right-1.5 bottom-1.5 h-4 w-12 border-2 border-border bg-muted shadow-hard-sm sm:right-3 sm:bottom-3 sm:h-5 sm:w-16"></div>
-                                </div>
-                                <div class="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-3">
-                                    <div class="h-3 w-full bg-muted sm:h-4"></div>
-                                    <div class="h-3 w-3/4 bg-muted sm:h-4"></div>
-                                </div>
-                                <div class="flex items-center justify-between border-border border-t-2 bg-primary/10 px-2 py-1.5 sm:border-t-3 sm:px-3 sm:py-2">
-                                    <div class="h-4 w-16 bg-muted sm:h-5 sm:w-20"></div>
-                                    <div class="h-7 w-10 border-2 border-border bg-muted shadow-hard-sm sm:h-8 sm:w-12"></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </ProductsList>
+	<ProductsList
+		client:only="solidjs"
+		initialProductsResult={initialProductsResult}
+		initialCategories={initialCategories}
+		initialBrands={initialBrands}
+	/>
 </Layout>
