@@ -155,15 +155,6 @@ function ReviewProductCard({
 			});
 		},
 	});
-	const { mutate: updateField, isPending: isFieldPending } = useMutation({
-		...trpc.product.updateProductField.mutationOptions(),
-		onSuccess: () => {
-			setStockEditing(false);
-			void queryClient.invalidateQueries({
-				queryKey: [["product", "getReviewProducts"]],
-			});
-		},
-	});
 
 	const primaryImage =
 		product.images.find((img) => img.isPrimary)?.url ||
@@ -179,7 +170,7 @@ function ReviewProductCard({
 		setProductStock({ id: product.id, newStock: stockValue });
 	};
 
-	const isPending = isStockPending || isFieldPending;
+	const isPending = isStockPending;
 
 	return (
 		<Card className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none">

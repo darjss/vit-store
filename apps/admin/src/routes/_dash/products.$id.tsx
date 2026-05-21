@@ -580,18 +580,16 @@ function ProductDetailContent() {
 												label="Үнэ:"
 												type="number"
 												value={product.price}
-												format={(cents) => formatCurrency(Number(cents))}
+												format={(v) => formatCurrency(Number(v))}
 												parse={(raw) =>
-													Math.round(
-														Number.parseFloat(raw || "0") * 100,
-													) as unknown as string as never
+													Number.parseFloat(raw || "0") as never
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(nextCents) =>
+												onSave={(next) =>
 													updateProductField({
 														id: productId,
 														field: "price",
-														numberValue: nextCents,
+														numberValue: next,
 													})
 												}
 											/>
