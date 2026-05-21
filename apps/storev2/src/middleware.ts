@@ -8,15 +8,17 @@ export const onRequest = defineMiddleware((context, next) => {
 		return context.redirect("/robots.txt", 301);
 	}
 
-	// Product detail pages are indexed with trailing slashes in the sitemap/canonicals.
-	// Make the slash normalization permanent instead of Astro's default temporary redirect.
+	const isAssetOrFile = /\/[^/]+\.[^/]+$/.test(url.pathname);
+	const isBackendOrApiRoute =
+		url.pathname.startsWith("/api/") || url.pathname.startsWith("/trpc/");
 	if (
-		url.pathname.startsWith("/products/") &&
-		url.pathname !== "/products/" &&
+		url.pathname !== "/" &&
 		!url.pathname.endsWith("/") &&
-		!url.pathname.includes(".")
+		!isAssetOrFile &&
+		!isBackendOrApiRoute
 	) {
-		return context.redirect(`${url.pathname}/${url.search}`, 301);
+		url.pathname = `${url.pathname}/`;
+		return context.redirect(`${url.pathname}${url.search}`, 301);
 	}
 
 	return next();

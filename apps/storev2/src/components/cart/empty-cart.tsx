@@ -14,7 +14,7 @@ const EmptyCart = () => {
 					Та одоогоор ямар ч бүтээгдэхүүн нэмээгүй байна
 				</p>
 				<a
-					href="/products"
+					href="/products/"
 					class="inline-flex h-12 items-center justify-center border-4 border-border bg-primary px-8 py-3 font-black text-base text-primary-foreground uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
 				>
 					Дэлгүүр үзэх

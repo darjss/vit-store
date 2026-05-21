@@ -7,7 +7,7 @@ import posthog from "@posthog/rollup-plugin";
 import Icons from "unplugin-icons/vite";
 
 // https://astro.build/config
-const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHOG_PROJECT_ID
+const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHOG_PROJECT_ID && process.env.POSTHOG_SOURCEMAPS !== "false"
 	? posthog({
 			personalApiKey: process.env.POSTHOG_API_KEY,
 			projectId: process.env.POSTHOG_PROJECT_ID,
@@ -23,6 +23,7 @@ const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHO
 
 export default defineConfig({
 	site: "https://amerikvitamin.mn",
+	trailingSlash: "always",
 	output: "server",
 	adapter: alchemy({
 		imageService: "cloudflare",

@@ -31,7 +31,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 				{/* Product Image */}
 				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-3 border-border bg-secondary/5 shadow-hard-sm">
 					<a
-						href={`/products/${props.item.slug}-${props.item.productId}`}
+						href={`/products/${props.item.slug}-${props.item.productId}/`}
 						onClick={props.onNavigate}
 					>
 						<Image
@@ -49,7 +49,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 				<div class="flex flex-1 flex-col justify-between">
 					<div>
 						<a
-							href={`/products/${props.item.slug}-${props.item.productId}`}
+							href={`/products/${props.item.slug}-${props.item.productId}/`}
 							onClick={props.onNavigate}
 							class="line-clamp-2 font-black text-sm uppercase transition-colors hover:text-primary"
 						>

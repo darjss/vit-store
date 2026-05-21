@@ -93,7 +93,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
       <!-- Hero products: 2x2 grid, always visible -->
       <div class="grid grid-cols-2 border-t-2 lg:border-t-0 border-border">
         {featuredProducts.slice(0, 4).map((p: ProductForHome, i: number) => (
-          <a href={`/products/${p.slug}-${p.id}`} class={`group relative block overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
+          <a href={`/products/${p.slug}-${p.id}/`} class={`group relative block overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
             <div class="relative aspect-square overflow-hidden" style={`background: ${productColors[p.id % productColors.length]}`}>
               {p.image && (
                 <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-5 md:p-6 group-hover:scale-105 transition-transform duration-500" width="480" height="480" loading="eager" decoding="async" />
@@ -117,7 +117,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
     <div class="group/marquee">
       <div class="py-3.5 lg:py-4 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 25s linear infinite;">
         {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
-          <a href={`/products/brand/${brand.slug}/1`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
+          <a href={`/products/brand/${brand.slug}/1/`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
             {brand.name}
             <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
           </a>
@@ -131,7 +131,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
     <div class="px-5 py-3.5 lg:px-8">
       <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
         {categoriesForPills.map((cat) => (
-          <a href={`/products/category/${cat.slug}/1`} class="flex-none px-3.5 py-2 border-2 border-border bg-card font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
+          <a href={`/products/category/${cat.slug}/1/`} class="flex-none px-3.5 py-2 border-2 border-border bg-card font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
             {cat.name}
           </a>
         ))}

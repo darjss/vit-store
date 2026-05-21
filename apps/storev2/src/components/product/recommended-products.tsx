@@ -104,7 +104,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 
 							return (
 								<a
-									href={`/products/${product.slug}-${product.id}`}
+									href={`/products/${product.slug}-${product.id}/`}
 									class="group hover:-translate-y-1 relative block border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg"
 								>
 									{/* Image Section */}
