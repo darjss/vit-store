@@ -9,9 +9,14 @@ import {
 	RateLimit,
 	Worker,
 } from "alchemy/cloudflare";
+import { CloudflareStateStore } from "alchemy/state";
 import { createServerAlchemyEnv } from "../../env";
 
-const app = await alchemy("server");
+const app = await alchemy("server", {
+	stateStore: process.env.ALCHEMY_STATE_TOKEN
+		? (scope) => new CloudflareStateStore(scope)
+		: undefined,
+});
 const stage = app.stage;
 
 const env = createServerAlchemyEnv(process.env);

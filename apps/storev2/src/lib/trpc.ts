@@ -59,7 +59,7 @@ const getClientBackendUrl = () => {
 	// so route client tRPC traffic through the Astro app and let the server proxy
 	// it to the API worker.
 	if (typeof window !== "undefined") {
-		return "/api/trpc/";
+		return "/trpc/store";
 	}
 
 	return getBackendUrl();
@@ -137,28 +137,13 @@ export const createServerClient = (
 	});
 };
 
-const withTrailingSlashPath = (url: Parameters<typeof fetch>[0]) => {
-	if (typeof window === "undefined" || typeof url !== "string") return url;
-
-	const parsedUrl = new URL(url, window.location.origin);
-	if (
-		parsedUrl.pathname.startsWith("/api/trpc/") &&
-		!parsedUrl.pathname.endsWith("/")
-	) {
-		parsedUrl.pathname = `${parsedUrl.pathname}/`;
-		return parsedUrl.toString();
-	}
-
-	return url;
-};
-
 export const api = createTRPCClient<StoreRouter>({
 	links: [
 		httpBatchLink({
 			url: getClientBackendUrl(),
 			transformer: SuperJSON,
 			fetch: async (url, options) => {
-				const response = await fetchWithServerRetry(fetch, withTrailingSlashPath(url), {
+				const response = await fetchWithServerRetry(fetch, url, {
 					...options,
 					credentials: "include",
 					headers: options?.headers,

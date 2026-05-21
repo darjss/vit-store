@@ -23,7 +23,7 @@ const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHO
 
 export default defineConfig({
 	site: "https://amerikvitamin.mn",
-	trailingSlash: "always",
+	trailingSlash: "ignore",
 	output: "server",
 	adapter: alchemy({
 		imageService: "cloudflare",
