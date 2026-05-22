@@ -5,7 +5,7 @@ export { customerQueries } from "~/queries/customers";
 export { orderQueries } from "~/queries/orders";
 export { paymentQueries } from "~/queries/payments";
 export { productImageQueries } from "~/queries/product-images";
-export { productQueries } from "~/queries/products";
+export { productQueries } from "~/queries/products/index";
 export { purchaseQueries } from "~/queries/purchases";
 export { salesQueries } from "~/queries/sales";
 export { userQueries } from "~/queries/users";

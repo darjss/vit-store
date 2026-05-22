@@ -4,22 +4,20 @@ import {
 	categoryQueries,
 	productQueries,
 } from "@vit/api/queries";
-import { isNull } from "drizzle-orm";
 import * as v from "valibot";
-import { db } from "~/db/client";
-import { ProductImagesTable, ProductsTable } from "~/db/schema";
 import { kv } from "~/lib/kv";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
 } from "~/lib/product-search/text";
 import { redis } from "~/lib/redis";
-import { publicProcedure, router } from "~/lib/trpc";
+import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
+import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
+import { publicProcedure, adminProcedure, router } from "~/lib/trpc";
 import {
 	rebuildProductSearchIndex,
 	searchProducts,
 } from "~/lib/product-search/client";
-import { measureMs, summarizeTimings } from "~/lib/utils";
 
 export interface SearchProductResult {
 	id: number;
@@ -58,24 +56,40 @@ const mapStockStatus = (
 const performProductSearch = async (
 	query: string,
 	limit: number,
-	filters?: { brandId?: number; categoryId?: number },
+	options?: {
+		brandId?: number;
+		categoryId?: number;
+		requireStock?: boolean;
+	},
 ): Promise<SearchProductResult[]> => {
+	const requireStock = options?.requireStock ?? false;
 	const safeLimit = Math.min(limit, 10);
+	const filters =
+		options?.brandId || options?.categoryId
+			? { brandId: options.brandId, categoryId: options.categoryId }
+			: undefined;
 	const searchResults = await searchProducts(query, safeLimit, filters);
 
 	if (searchResults.length > 0) {
-		return searchResults.map((result) => ({
-			id: result.id,
-			slug: result.slug,
-			name: result.name,
-			price: result.price,
-			image: result.image,
-			brand: result.brand,
-		}));
+		return searchResults
+			.filter((result) =>
+				requireStock ? result.inStock && result.stock > 0 : true,
+			)
+			.map((result) => ({
+				id: result.id,
+				slug: result.slug,
+				name: result.name,
+				price: result.price,
+				image: result.image,
+				brand: result.brand,
+			}));
 	}
 
 	const q = productQueries.store;
-	const fallbackResults = await q.searchByName(query, safeLimit);
+	const fallbackResults = requireStock
+		? await q.searchByNameWithStock(query, safeLimit)
+		: await q.searchByName(query, safeLimit);
+
 	return fallbackResults.map((p) => ({
 		id: p.id,
 		slug: p.slug,
@@ -90,34 +104,7 @@ const performProductSearchWithStock = async (
 	query: string,
 	limit: number,
 	filters?: { brandId?: number; categoryId?: number },
-): Promise<SearchProductResult[]> => {
-	const safeLimit = Math.min(limit, 10);
-	const searchResults = await searchProducts(query, safeLimit, filters);
-
-	if (searchResults.length > 0) {
-		return searchResults
-			.filter((result) => result.inStock && result.stock > 0)
-			.map((result) => ({
-				id: result.id,
-				slug: result.slug,
-				name: result.name,
-				price: result.price,
-				image: result.image,
-				brand: result.brand,
-			}));
-	}
-
-	const q = productQueries.store;
-	const fallbackResults = await q.searchByNameWithStock(query, safeLimit);
-	return fallbackResults.map((p) => ({
-		id: p.id,
-		slug: p.slug,
-		name: p.name,
-		price: p.price,
-		image: p.images[0]?.url || "",
-		brand: p.brand?.name || "",
-	}));
-};
+) => performProductSearch(query, limit, { ...filters, requireStock: true });
 
 const GENERIC_PRODUCT_SEARCH_TERMS = new Set([
 	"vitamin",
@@ -675,70 +662,7 @@ export const product = router({
 		}),
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {
-			const kvCacheKey = "benchmark:products:5";
-			const redisCacheKey = "benchmark:products:5:redis";
-
-			const dbStartTime = performance.now();
-			const products = await db().query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					name: true,
-					slug: true,
-					price: true,
-				},
-				where: isNull(ProductsTable.deletedAt),
-				limit: 5,
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: isNull(ProductImagesTable.deletedAt),
-					},
-				},
-			});
-			const dbElapsed = performance.now() - dbStartTime;
-
-			const product = products.map((p) => ({
-				id: p.id,
-				name: p.name,
-				slug: p.slug,
-				price: p.price,
-				images: p.images.map((img) => ({ url: img.url })),
-			}));
-
-			// Cloudflare KV Benchmark
-			const kvWriteStartTime = performance.now();
-			await kv().put(kvCacheKey, JSON.stringify(product), {
-				expirationTtl: 3600,
-			});
-			const kvWriteElapsed = performance.now() - kvWriteStartTime;
-
-			const kvReadStartTime = performance.now();
-			const kvCached = await kv().get(kvCacheKey);
-			const kvReadElapsed = performance.now() - kvReadStartTime;
-
-			// Upstash Redis Benchmark
-			const redisWriteStartTime = performance.now();
-			await redis().set(redisCacheKey, JSON.stringify(product), {
-				ex: 3600,
-			});
-			const redisWriteElapsed = performance.now() - redisWriteStartTime;
-
-			const redisReadStartTime = performance.now();
-			const _redisCached = await redis().get(redisCacheKey);
-			const redisReadElapsed = performance.now() - redisReadStartTime;
-
-			const kvReadProduct = kvCached ? JSON.parse(kvCached) : null;
-
-			return {
-				dbElapsed,
-				kvWriteElapsed,
-				kvReadElapsed,
-				redisWriteElapsed,
-				redisReadElapsed,
-				product: kvReadProduct || product,
-			};
+			return await runProductBenchmark();
 		} catch (error) {
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
@@ -764,129 +688,7 @@ export const product = router({
 		)
 		.query(async ({ input }) => {
 			try {
-				const iterations = input?.iterations ?? 12;
-				const warmup = input?.warmup ?? 2;
-
-				const sourceProducts = await db().query.ProductsTable.findMany({
-					columns: {
-						id: true,
-						name: true,
-						slug: true,
-						price: true,
-					},
-					where: isNull(ProductsTable.deletedAt),
-					limit: 5,
-					with: {
-						images: {
-							columns: {
-								url: true,
-							},
-							where: isNull(ProductImagesTable.deletedAt),
-						},
-					},
-				});
-
-				const payload = JSON.stringify(
-					sourceProducts.map((product) => ({
-						id: product.id,
-						name: product.name,
-						slug: product.slug,
-						price: product.price,
-						images: product.images.map((image) => ({ url: image.url })),
-					})),
-				);
-
-				const benchmarkId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-				const kvReadKey = `benchmark:v2:${benchmarkId}:kv:read`;
-				const redisReadKey = `benchmark:v2:${benchmarkId}:redis:read`;
-
-				await kv().put(kvReadKey, payload, { expirationTtl: 3600 });
-				await redis().set(redisReadKey, payload, { ex: 3600 });
-
-				for (let i = 0; i < warmup; i++) {
-					await kv().get(kvReadKey);
-					await redis().get(redisReadKey);
-				}
-
-				const dbTimes: number[] = [];
-				const kvReadHitTimes: number[] = [];
-				const kvWriteTimes: number[] = [];
-				const redisReadHitTimes: number[] = [];
-				const redisWriteTimes: number[] = [];
-
-				for (let i = 0; i < iterations; i++) {
-					dbTimes.push(
-						await measureMs(async () => {
-							await db().query.ProductsTable.findMany({
-								columns: {
-									id: true,
-								},
-								where: isNull(ProductsTable.deletedAt),
-								limit: 5,
-							});
-						}),
-					);
-
-					kvReadHitTimes.push(
-						await measureMs(async () => {
-							await kv().get(kvReadKey);
-						}),
-					);
-
-					kvWriteTimes.push(
-						await measureMs(async () => {
-							await kv().put(
-								`benchmark:v2:${benchmarkId}:kv:write:${i}`,
-								payload,
-								{
-									expirationTtl: 3600,
-								},
-							);
-						}),
-					);
-
-					redisReadHitTimes.push(
-						await measureMs(async () => {
-							await redis().get(redisReadKey);
-						}),
-					);
-
-					redisWriteTimes.push(
-						await measureMs(async () => {
-							await redis().set(
-								`benchmark:v2:${benchmarkId}:redis:write:${i}`,
-								payload,
-								{ ex: 3600 },
-							);
-						}),
-					);
-				}
-
-				const kvCompositeMean =
-					summarizeTimings(kvReadHitTimes).mean +
-					summarizeTimings(kvWriteTimes).mean;
-				const redisCompositeMean =
-					summarizeTimings(redisReadHitTimes).mean +
-					summarizeTimings(redisWriteTimes).mean;
-
-				return {
-					iterations,
-					warmup,
-					placementHint: "Compare p95 and tail behavior over mean only",
-					db: summarizeTimings(dbTimes),
-					kv: {
-						readHit: summarizeTimings(kvReadHitTimes),
-						write: summarizeTimings(kvWriteTimes),
-						compositeMean: kvCompositeMean,
-					},
-					redis: {
-						readHit: summarizeTimings(redisReadHitTimes),
-						write: summarizeTimings(redisWriteTimes),
-						compositeMean: redisCompositeMean,
-					},
-					recommendation:
-						kvCompositeMean <= redisCompositeMean ? "kv" : "redis",
-				};
+				return await runCacheBenchmarkV2(input ?? undefined);
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -997,8 +799,7 @@ export const product = router({
 			}
 		}),
 
-	rebuildSearchIndex: publicProcedure
-		.mutation(async () => {
+	rebuildSearchIndex: adminProcedure.mutation(async () => {
 			try {
 				const status = await rebuildProductSearchIndex("manual");
 				return status;

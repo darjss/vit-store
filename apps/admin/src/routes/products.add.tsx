@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import type { AIExtractedData } from "@vit/shared";
+import type { AIExtractedData, ExtractedProductData } from "@vit/shared";
 import { ArrowLeft, Bot, PenLine, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -14,33 +14,6 @@ import { trpc } from "@/utils/trpc";
 export const Route = createFileRoute("/products/add")({
 	component: RouteComponent,
 });
-
-type ExtractedProductData = {
-	originalTitle: string;
-	originalDescription: string | null;
-	originalFeatures: string[];
-	originalIngredients: string[];
-	name: string;
-	name_mn: string;
-	description: string;
-	brand: string | null;
-	brandId: number | null;
-	categoryId: number | null;
-	amount: string;
-	potency: string;
-	dailyIntake: number;
-	weightGrams: number;
-	seoTitle: string;
-	seoDescription: string;
-	tags?: string[];
-	ingredients: string[];
-	images: { url: string }[];
-	sourceUrl: string | null;
-	amazonPriceUsd: number | null;
-	calculatedPriceMnt: number | null;
-	extractionStatus: "success" | "partial" | "failed";
-	errors: string[];
-};
 
 type AIState =
 	| { mode: "input" }
