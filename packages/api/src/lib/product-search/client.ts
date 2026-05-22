@@ -4,7 +4,6 @@ import type {
 	ProductSearchFilters,
 	ProductSearchRebuildReason,
 	ProductSearchService,
-	ProductSearchSourceDocument,
 	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
@@ -44,20 +43,21 @@ export const clearProductSearchIndex = async () => {
 	await getProductSearchService().clear();
 };
 
-export const upsertProductToSearch = async (
-	_product: ProductSearchSourceDocument,
+/** Product writes trigger a full MiniSearch rebuild rather than incremental upsert. */
+export const scheduleProductSearchRebuild = async (
+	reason: ProductSearchRebuildReason = "product_updated",
 ) => {
 	try {
-		await rebuildProductSearchIndex("product_updated");
+		await rebuildProductSearchIndex(reason);
 	} catch (error) {
-		logger.error("product_search.upsert_rebuild_failed", error);
+		logger.error("product_search.rebuild_schedule_failed", error, { reason });
 	}
 };
 
+/** @deprecated Use scheduleProductSearchRebuild */
+export const upsertProductToSearch = scheduleProductSearchRebuild;
+
+/** @deprecated Use scheduleProductSearchRebuild */
 export const deleteProductFromSearch = async (_productId: number) => {
-	try {
-		await rebuildProductSearchIndex("product_deleted");
-	} catch (error) {
-		logger.error("product_search.delete_rebuild_failed", error);
-	}
+	await scheduleProductSearchRebuild("product_deleted");
 };

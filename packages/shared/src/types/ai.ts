@@ -1,3 +1,14 @@
+export type ExtractionStepId =
+	| "searching"
+	| "extracting"
+	| "translating"
+	| "uploading";
+
+export type AiProductSessionStatus =
+	| ExtractionStepId
+	| "done"
+	| "failed";
+
 export interface FirecrawlExtractedProduct {
 	title: string;
 	brand: string | null;
@@ -7,6 +18,7 @@ export interface FirecrawlExtractedProduct {
 	servingSize: string | null;
 	servingsPerContainer: number | null;
 	ingredients: string[];
+	priceUsd: number | null;
 }
 
 export interface VisionAnalysisResult {
@@ -27,6 +39,8 @@ export interface TranslationResult {
 	seoTitle: string;
 	seoDescription: string;
 	ingredients: string[];
+	brandId: number | null;
+	categoryId: number | null;
 }
 
 export interface ExtractedProductData {
@@ -38,12 +52,15 @@ export interface ExtractedProductData {
 	name_mn: string;
 	description: string;
 	brand: string | null;
+	brandId: number | null;
+	categoryId: number | null;
 	amount: string;
 	potency: string;
 	dailyIntake: number;
 	weightGrams: number;
 	seoTitle: string;
 	seoDescription: string;
+	tags?: string[];
 	ingredients: string[];
 	images: { url: string }[];
 	sourceUrl: string | null;
@@ -51,4 +68,20 @@ export interface ExtractedProductData {
 	calculatedPriceMnt: number | null;
 	extractionStatus: "success" | "partial" | "failed";
 	errors: string[];
+	slug: string;
+}
+
+export interface AiProductSessionState {
+	query: string;
+	productUrl?: string;
+	scraped?: FirecrawlExtractedProduct;
+	filteredImages?: string[];
+	vision?: VisionAnalysisResult;
+	translation?: TranslationResult;
+	brandId?: number | null;
+	categoryId?: number | null;
+	calculatedPriceMnt?: number | null;
+	extractionStatus?: "success" | "partial" | "failed";
+	errors: string[];
+	status: AiProductSessionStatus;
 }
