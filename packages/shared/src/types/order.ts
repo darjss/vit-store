@@ -41,6 +41,7 @@ export interface OrderResult {
 	payments: Array<{
 		status: PaymentStatusType;
 		provider: PaymentProviderType;
+		paymentNumber: string;
 		createdAt: Date;
 	}>;
 }
@@ -65,4 +66,5 @@ export interface ShapedOrder {
 	}>;
 	paymentStatus: PaymentStatusType;
 	paymentProvider: PaymentProviderType;
+	paymentNumber?: string;
 }

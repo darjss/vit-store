@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -21,6 +21,7 @@ import { trpc } from "@/utils/trpc";
 import { OrdersPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import OrdersFilters from "@/components/order/orders-filters";
 import OrdersList from "@/components/order/orders-list";
+import PendingTransferWidget from "@/components/order/pending-transfer-widget";
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
@@ -51,6 +52,9 @@ export const Route = createFileRoute("/_dash/orders/")({
 					| undefined,
 				date: search.date,
 			}),
+		);
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.payment.getClaimedTransferCount.queryOptions(),
 		);
 	},
 	validateSearch: v.object({
@@ -93,19 +97,6 @@ function RouteComponent() {
 		(date !== undefined && date !== "all");
 
 	const navigate = useNavigate({ from: Route.fullPath });
-	const queryClient = useQueryClient();
-	const pendingMessenger = useQuery(
-		trpc.payment.getPendingMessengerNotifications.queryOptions(),
-	);
-	const retryMessenger = useMutation(
-		trpc.payment.retryMessengerNotification.mutationOptions({
-			onSuccess: () => {
-				void queryClient.invalidateQueries({
-					queryKey: trpc.payment.getPendingMessengerNotifications.queryKey(),
-				});
-			},
-		}),
-	);
 	const mutation = useMutation({
 		...Route.useRouteContext().trpc.order.searchOrder.mutationOptions(),
 		onSuccess: () => {},
@@ -222,44 +213,7 @@ function RouteComponent() {
 				</Button>
 			</div>
 
-			{pendingMessenger.data && pendingMessenger.data.length > 0 && (
-				<div className="border-2 border-yellow-500 bg-yellow-50 p-3 shadow-hard-sm">
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<div>
-							<p className="font-bold text-yellow-900">
-								Messenger мэдэгдэл илгээгдээгүй {pendingMessenger.data.length} төлбөр байна
-							</p>
-							<p className="text-sm text-yellow-800">
-								Төлбөр баталгаажсан; хэрэглэгчид серверийн алдаа болж харагдахгүй. Эндээс дахин илгээнэ.
-							</p>
-						</div>
-						<div className="flex flex-wrap gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() =>
-									navigate({
-										to: "/orders",
-										search: { paymentStatus: "customer_claimed_paid", page: 1 },
-									})
-								}
-							>
-								Pending transfer харах
-							</Button>
-							<Button
-								size="sm"
-								disabled={retryMessenger.isPending}
-								onClick={() => retryMessenger.mutate({ id: pendingMessenger.data[0].id })}
-							>
-								Эхнийхийг дахин илгээх
-							</Button>
-						</div>
-					</div>
-					<p className="mt-2 text-xs text-yellow-900">
-						Сүүлийн алдаа: {pendingMessenger.data[0].errorMessage ?? "unknown"}
-					</p>
-				</div>
-			)}
+			<PendingTransferWidget />
 
 			{/* Search */}
 			<div className="relative">

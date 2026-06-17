@@ -1,7 +1,10 @@
+import { useMutation } from "@tanstack/solid-query";
 import { createSignal, Show } from "solid-js";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import CopyButton from "@/components/ui/copy-button";
+import { queryClient } from "@/lib/query";
+import { api } from "@/lib/trpc";
 import IconAlert from "~icons/ri/alert-line";
 import IconBank from "~icons/ri/bank-line";
 import IconMobile from "~icons/ri/smartphone-line";
@@ -9,19 +12,38 @@ import IconMobile from "~icons/ri/smartphone-line";
 interface PaymentOptionsProps {
 	paymentNumber: string;
 	total: number;
-	orderNumber: string;
+	transferReference: string;
 	checkoutToken?: string;
 }
 
 const PaymentOptions = (props: PaymentOptionsProps) => {
 	const [tab, setTab] = createSignal<"transfer" | "qpay">("qpay");
 
+	const selectTransferMutation = useMutation(
+		() => ({
+			mutationFn: async () => {
+				return await api.payment.selectTransfer.mutate({
+					paymentNumber: props.paymentNumber,
+					checkoutToken: props.checkoutToken,
+				} as { paymentNumber: string });
+			},
+		}),
+		() => queryClient,
+	);
+
+	const selectTab = (next: "transfer" | "qpay") => {
+		setTab(next);
+		if (next === "transfer") {
+			selectTransferMutation.mutate();
+		}
+	};
+
 	return (
 		<div class="w-full">
 			<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-hard sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-hard-lg">
 				<button
 					type="button"
-					onClick={() => setTab("transfer")}
+					onClick={() => selectTab("transfer")}
 					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
 					classList={{
 						"border-2 border-border bg-primary shadow-hard-sm":
@@ -36,7 +58,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 				</button>
 				<button
 					type="button"
-					onClick={() => setTab("qpay")}
+					onClick={() => selectTab("qpay")}
 					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
 					classList={{
 						"border-2 border-border bg-primary shadow-hard-sm":
@@ -114,10 +136,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									</p>
 									<div class="flex items-stretch min-w-0">
 										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-base">
-											{props.orderNumber}
+											{props.transferReference}
 										</div>
 										<CopyButton
-											text={props.orderNumber}
+											text={props.transferReference}
 											title="Гүйлгээний утга"
 										/>
 									</div>
@@ -131,7 +153,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								<div class="flex-1">
 									<p class="font-bold text-[11px] leading-snug sm:text-xs">
 										<strong>Гүйлгээний утга</strong> хэсэгт заавал{" "}
-										<strong>{props.orderNumber}</strong> дугаарыг бичнэ үү.
+										<strong>{props.transferReference}</strong> утасны дугаарыг бичнэ үү.
 										Төлбөр 5-15 минутын дотор баталгаажна.
 									</p>
 								</div>

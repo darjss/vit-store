@@ -26,6 +26,7 @@ import type { OrderType } from "@/lib/types";
 import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import OrderForm from "./order-form";
+import { TransferPaymentActions } from "./pending-transfer-dialog";
 
 const statusBorderColor: Record<string, string> = {
 	pending: "border-t-[#ffa502]",
@@ -117,6 +118,22 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 	const borderColor = statusBorderColor[order.status] ?? "border-t-muted";
 	const visibleProducts = productsExpanded ? products : products.slice(0, 3);
 	const remainingCount = Math.max(0, productCount - 3);
+	const isPendingTransferClaim =
+		order.paymentStatus === "customer_claimed_paid" &&
+		order.paymentProvider === "transfer";
+
+	const paymentStatusLabel = (() => {
+		switch (order.paymentStatus) {
+			case "success":
+				return "Төлсөн";
+			case "failed":
+				return "Амжилтгүй";
+			case "customer_claimed_paid":
+				return "Төлсөн гэж мэдэгдсэн";
+			default:
+				return "Хүлээгдэж буй";
+		}
+	})();
 
 	const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
 		const target = e.target as HTMLElement;
@@ -229,11 +246,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 									className={`inline-flex items-center gap-1 border-2 px-1.5 py-0.5 font-bold text-[10px] ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
 									{getPaymentProviderIcon(order.paymentProvider)}
-									{order.paymentStatus === "success"
-										? "Төлсөн"
-										: order.paymentStatus === "failed"
-											? "Амжилтгүй"
-											: "Хүлээгдэж буй"}
+									{paymentStatusLabel}
 								</span>
 							)}
 						</div>
@@ -313,9 +326,13 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 
 					{/* Actions */}
 					<div
-						className="flex items-center justify-between border-border border-t px-4 py-3"
+						className="flex flex-col gap-3 border-border border-t px-4 py-3"
 						data-no-nav
 					>
+						{isPendingTransferClaim && order.paymentNumber ? (
+							<TransferPaymentActions paymentNumber={order.paymentNumber} />
+						) : null}
+						<div className="flex items-center justify-between">
 						{order.status === "pending" && (
 							<Button
 								variant="default"
@@ -368,6 +385,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 							deleteMutation={() => deleteOrder.mutate({ id: order.id })}
 							isDeletePending={deleteOrder.isPending}
 						/>
+						</div>
 					</div>
 				</CardContent>
 			</Card>

@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { EditableField } from "@/components/editable-field";
 import OrderForm from "@/components/order/order-form";
+import { TransferPaymentActions } from "@/components/order/pending-transfer-dialog";
 import RowAction from "@/components/row-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -202,6 +203,10 @@ function OrderDetailContent() {
 
 	const itemCount = order.products?.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
 	const isPaid = order.paymentStatus === "success";
+	const isPendingTransferClaim =
+		order.paymentStatus === "customer_claimed_paid" &&
+		order.paymentProvider === "transfer" &&
+		Boolean(order.paymentNumber);
 	const created = new Date(order.createdAt).toLocaleString("mn-MN");
 	const updated = order.updatedAt
 		? new Date(order.updatedAt).toLocaleString("mn-MN")
@@ -413,6 +418,22 @@ function OrderDetailContent() {
 									)}
 									onSave={(next) => savePatch({ paymentStatus: next as typeof order.paymentStatus })}
 								/>
+								{isPendingTransferClaim && order.paymentNumber ? (
+									<div className="space-y-2 border-2 border-primary/30 bg-primary/5 p-3">
+										<p className="font-bold text-sm">
+											Хэрэглэгч шилжүүлэг хийсэн гэж мэдэгдлээ
+										</p>
+										<p className="text-muted-foreground text-xs">
+											Дансны орлого шалгаад доорх товчоор баталгаажуулна уу
+										</p>
+										<TransferPaymentActions
+											paymentNumber={order.paymentNumber}
+											onSuccess={() => {
+												void invalidateOrder();
+											}}
+										/>
+									</div>
+								) : null}
 								<div className="flex items-center justify-between border-border border-t pt-3 text-sm">
 									<span className="text-muted-foreground">Хэрэгсэл</span>
 									<span className="font-bold">{getPaymentProviderIcon(order.paymentProvider)} {order.paymentProvider}</span>

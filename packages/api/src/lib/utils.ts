@@ -171,6 +171,7 @@ interface OrderResult {
 	payments: Array<{
 		status: PaymentStatusType;
 		provider: PaymentProviderType;
+		paymentNumber: string;
 		createdAt: Date;
 	}>;
 }
@@ -196,6 +197,7 @@ interface ShapedOrder {
 	}>;
 	paymentStatus: PaymentStatusType;
 	paymentProvider: PaymentProviderType;
+	paymentNumber: string | undefined;
 }
 
 export const shapeOrderResult = (result: OrderResult) => {
@@ -222,6 +224,7 @@ export const shapeOrderResult = (result: OrderResult) => {
 		deliveryProvider: result.deliveryProvider,
 		paymentStatus: latestPayment?.status ?? "pending",
 		paymentProvider: latestPayment?.provider ?? "transfer",
+		paymentNumber: latestPayment?.paymentNumber,
 	};
 };
 export const shapeOrderResults = (results: OrderResult[]) => {
@@ -251,6 +254,7 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 			})),
 			paymentStatus: latestPayment?.status ?? "pending",
 			paymentProvider: latestPayment?.provider ?? "transfer",
+			paymentNumber: latestPayment?.paymentNumber,
 		};
 	});
 };

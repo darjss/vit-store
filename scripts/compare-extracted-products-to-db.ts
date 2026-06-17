@@ -64,6 +64,44 @@ const outputDir = path.resolve(process.argv[3] ?? "vit/.vit-ai/reports");
 const reportJsonPath = path.join(outputDir, "products-vs-db.report.json");
 const reportMarkdownPath = path.join(outputDir, "products-vs-db.report.md");
 
+const brandAliases = new Map<string, string>(
+	[
+		["cflhtc", "cfilihtc"],
+		["cflihtc", "cfilihtc"],
+		["cfliihtc", "cfilihtc"],
+		["cnchef", "cfilihtc"],
+		["enchefd", "cfilihtc"],
+		["carlyle", "carlyle"],
+		["dr mercola", "mercola"],
+		["doctor best", "doctors best"],
+		["doctor s best", "doctors best"],
+		["doctors best", "doctors best"],
+		["double wood", "double wood"],
+		["double wood supplements", "double wood"],
+		["life extension", "life extension"],
+		["live wise", "livewise naturals"],
+		["live wise naturals", "livewise naturals"],
+		["livewise", "livewise naturals"],
+		["livewise naturals", "livewise naturals"],
+		["mary ruth s", "maryruths"],
+		["maryruth", "maryruths"],
+		["maryruths", "maryruths"],
+		["micro ingredients", "micro ingredients"],
+		["microingredients", "micro ingredients"],
+		["nature bell", "naturebell"],
+		["naturebell", "naturebell"],
+		["new age", "new age"],
+		["newage", "new age"],
+		["nutri vein", "nutrivein"],
+		["nutrivein", "nutrivein"],
+		["nutri flair", "nutriflair"],
+		["nutriflair", "nutriflair"],
+		["now foods", "now foods"],
+		["now", "now foods"],
+		["sports research", "sports research"],
+	].map(([from, to]) => [normalizeText(from), normalizeText(to)]),
+);
+
 await mkdir(outputDir, { recursive: true });
 
 const extractedProducts = (
@@ -211,7 +249,7 @@ function buildDiffReport(
 }
 
 function scoreCandidate(extracted: ExtractedProduct, db: DbProduct) {
-	const extractedBrand = normalizeText(extracted.brandName);
+	const extractedBrand = normalizeBrandForMatch(extracted.brandName);
 	const extractedName = normalizeText(extracted.productName);
 	const extractedDetail = normalizeText(
 		[extracted.variant, extracted.sizeOrCount].filter(Boolean).join(" "),
@@ -222,7 +260,7 @@ function scoreCandidate(extracted: ExtractedProduct, db: DbProduct) {
 		extracted.sizeOrCount ?? "",
 	]);
 
-	const dbBrand = normalizeText(db.brandName);
+	const dbBrand = normalizeBrandForMatch(db.brandName);
 	const dbName = normalizeText(db.name);
 	const dbDetail = normalizeText(
 		[db.name, db.amount, db.potency].filter(Boolean).join(" "),
@@ -385,13 +423,19 @@ function normalizeText(value: string): string {
 	return value
 		.toLowerCase()
 		.replace(/&/g, " and ")
+		.replace(/['’]/g, "")
 		.replace(/[^a-z0-9]+/g, " ")
 		.replace(
-			/\b(the|and|with|supplement|dietary|capsules|capsule|tablets|tablet|gummies|gummy|liquid|drops|softgels|softgel)\b/g,
+			/\b(the|and|with|supplement|supplements|dietary|capsules|capsule|tablets|tablet|gummies|gummy|liquid|drops|softgels|softgel)\b/g,
 			" ",
 		)
 		.replace(/\s+/g, " ")
 		.trim();
+}
+
+function normalizeBrandForMatch(value: string): string {
+	const normalized = normalizeText(value);
+	return brandAliases.get(normalized) ?? normalized;
 }
 
 function round(value: number): number {

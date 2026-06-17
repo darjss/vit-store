@@ -11,6 +11,8 @@ import IconLoader from "~icons/ri/loader-4-line";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
+const PENDING_APPROVAL_MESSAGE = "Таны захиалга удахгүй баталгаажина";
+
 const ConfirmPaymentButton = (props: {
 	paymentNumber: string;
 	checkoutToken?: string;
@@ -24,22 +26,27 @@ const ConfirmPaymentButton = (props: {
 				} as { paymentNumber: string });
 			},
 			onSuccess: async (data) => {
-				if (!data) {
-					return;
-				}
-
-				if (!data.orderNumber) return;
+				if (!data?.orderNumber) return;
 
 				trackPaymentConfirmed(props.paymentNumber, data.orderNumber);
 
 				showToast({
 					title: "Амжилттай",
-					description: "Төлбөр баталгаажуулагдлаа",
+					description: PENDING_APPROVAL_MESSAGE,
 					variant: "success",
 					duration: 5000,
 				});
 				cart.clearCart();
 				navigate(`/order/confirm/${data.orderNumber}`);
+			},
+			onError: () => {
+				showToast({
+					title: "Алдаа",
+					description:
+						"Хүсэлт илгээхэд алдаа гарлаа. Төлбөрөө шилжүүлсэн бол бид удахгүй шалгана.",
+					variant: "error",
+					duration: 5000,
+				});
 			},
 		}),
 
@@ -57,12 +64,12 @@ const ConfirmPaymentButton = (props: {
 				байна...
 			</Show>
 			<Show when={mutation.isSuccess}>
-				<IconCheckboxCircle class="mr-2 h-4 w-4 text-green-500" /> Төлбөр
-				баталгаажуулагдлаа
+				<IconCheckboxCircle class="mr-2 h-4 w-4 text-green-500" />{" "}
+				{PENDING_APPROVAL_MESSAGE}
 			</Show>
 			<Show when={mutation.isError}>
-				<IconCloseCircle class="mr-2 h-4 w-4 text-red-500" /> Төлбөр
-				баталгаажуулах үед алдаа гарлаа
+				<IconCloseCircle class="mr-2 h-4 w-4 text-red-500" /> Дахин
+				оролдоно уу
 			</Show>
 			<Show
 				when={!mutation.isPending && !mutation.isSuccess && !mutation.isError}

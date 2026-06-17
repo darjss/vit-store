@@ -29,6 +29,7 @@ export const payment = router({
                 total: payment.order.total,
                 order: {
                     orderNumber: payment.order.orderNumber,
+                    customerPhone: `${payment.order.customerPhone}`,
                     status: payment.order.status,
                     address: payment.order.address,
                     notes: payment.order.notes,
@@ -127,7 +128,17 @@ export const payment = router({
                     message: "Payment not found",
                 });
             }
-            await q.updatePaymentStatus(input.paymentNumber, "customer_claimed_paid");
+
+            const orderNumber = payment.order.orderNumber;
+
+            if (payment.provider !== "transfer") {
+                await q.changePaymentToTransfer(input.paymentNumber);
+            }
+
+            if (payment.status !== "customer_claimed_paid") {
+                await q.updatePaymentStatus(input.paymentNumber, "customer_claimed_paid");
+            }
+
             try {
                 const paymentInfo = await q.getPaymentInfoByNumber(input.paymentNumber);
                 if (paymentInfo) {
@@ -152,14 +163,19 @@ export const payment = router({
                     paymentNumber: input.paymentNumber,
                 });
             }
-            ctx.log.info("payment.notification_sent", {
-                paymentNumber: payment.paymentNumber,
-                amount: payment.amount,
-                orderNumber: payment.order.orderNumber,
-            });
-            return {
-                orderNumber: payment.order.orderNumber,
-            };
+
+            try {
+                ctx.log.info("payment.notification_sent", {
+                    paymentNumber: payment.paymentNumber,
+                    amount: payment.amount,
+                    orderNumber,
+                });
+            }
+            catch {
+                // Logging failure should not break the claim flow
+            }
+
+            return { orderNumber };
         }
         catch (e) {
             if (e instanceof TRPCError) {
@@ -202,6 +218,48 @@ export const payment = router({
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to get payment status",
+                cause: e,
+            });
+        }
+    }),
+    selectTransfer: publicProcedure
+        .input(v.object({ paymentNumber: v.string(), checkoutToken: v.optional(v.string()) }))
+        .mutation(async ({ input, ctx }) => {
+        try {
+            await assertCanAccessPayment(ctx, input.paymentNumber, input.checkoutToken);
+            const payment = await paymentQueries.store.getPaymentByNumber(input.paymentNumber);
+            if (!payment) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Payment not found",
+                });
+            }
+            if (payment.status === "success") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "ALREADY_PAID",
+                });
+            }
+            if (payment.provider !== "transfer") {
+                await paymentQueries.store.changePaymentToTransfer(input.paymentNumber);
+                ctx.log.info("payment.provider_selected", {
+                    paymentNumber: input.paymentNumber,
+                    provider: "transfer",
+                });
+            }
+            return { provider: "transfer" as const };
+        }
+        catch (e) {
+            if (e instanceof TRPCError) {
+                throw e;
+            }
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "payment.select_transfer_failed",
+                paymentNumber: input.paymentNumber,
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to select bank transfer",
                 cause: e,
             });
         }

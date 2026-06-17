@@ -1,4 +1,4 @@
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateObject } from "ai";
@@ -12,6 +12,7 @@ const opencode = createOpenAICompatible({
 	baseURL: "https://opencode.ai/zen/go/v1",
 	apiKey: process.env.OPENCODE_GO_API_KEY,
 	name: "opencode-go",
+	supportsStructuredOutputs: true,
 });
 
 type ExtractedProduct = {
@@ -51,6 +52,13 @@ type DiffReport = {
 	dbOnly: DbProduct[];
 };
 
+type CliOptions = {
+	reportPath: string;
+	manualDecisionsPath: string | null;
+	outputDir: string;
+	sourceImageDir: string;
+};
+
 const resolutionSchema = z.object({
 	same: z.boolean(),
 	dbId: z.number().int().nullable(),
@@ -58,21 +66,18 @@ const resolutionSchema = z.object({
 	rationale: z.string(),
 });
 
-const report = JSON.parse(
-	await readFile(
-		"vit/.vit-ai/reports/rebuilt/products-vs-db.report.json",
-		"utf8",
-	),
-) as DiffReport;
-const manualDecisions = JSON.parse(
-	await readFile(
-		"vit/.vit-ai/reports/rebuilt/manual-review-decisions.json",
-		"utf8",
-	),
-) as Record<string, string>;
+const options = parseCliArgs(process.argv.slice(2));
+await mkdir(options.outputDir, { recursive: true });
 
-const resultsPath = path.resolve(
-	"vit/.vit-ai/reports/rebuilt/ai-review-decisions.json",
+const report = JSON.parse(
+	await readFile(options.reportPath, "utf8"),
+) as DiffReport;
+const manualDecisions = await loadManualDecisions(options.manualDecisionsPath);
+
+const resultsPath = path.join(options.outputDir, "ai-review-decisions.json");
+const mergedPath = path.join(
+	options.outputDir,
+	"manual-review-decisions.merged.json",
 );
 
 const output: Record<
@@ -120,7 +125,7 @@ const mergedDecisions = {
 };
 
 await writeTextAtomic(
-	"vit/.vit-ai/reports/rebuilt/manual-review-decisions.merged.json",
+	mergedPath,
 	`${JSON.stringify(mergedDecisions, null, 2)}\n`,
 );
 
@@ -129,20 +134,68 @@ console.log(
 		{
 			aiMatches: Object.keys(output).length,
 			resultsPath,
-			mergedPath:
-				"vit/.vit-ai/reports/rebuilt/manual-review-decisions.merged.json",
+			mergedPath,
 		},
 		null,
 		2,
 	),
 );
 
+async function loadManualDecisions(
+	manualDecisionsPath: string | null,
+): Promise<Record<string, string>> {
+	if (!manualDecisionsPath) return {};
+	try {
+		return JSON.parse(
+			await readFile(manualDecisionsPath, "utf8"),
+		) as Record<string, string>;
+	} catch {
+		return {};
+	}
+}
+
+function parseCliArgs(argv: string[]): CliOptions {
+	let reportPath = path.resolve(
+		"vit/.vit-ai/reports/rebuilt/products-vs-db.report.json",
+	);
+	let manualDecisionsPath: string | null = path.resolve(
+		"vit/.vit-ai/reports/rebuilt/manual-review-decisions.json",
+	);
+	let outputDir = path.resolve("vit/.vit-ai/reports/rebuilt");
+	let sourceImageDir = path.resolve("vit");
+
+	for (let index = 0; index < argv.length; index += 1) {
+		const arg = argv[index];
+		if (arg === "--report") reportPath = path.resolve(argv[++index] ?? reportPath);
+		if (arg === "--manual-decisions") {
+			const value = argv[++index];
+			manualDecisionsPath = value ? path.resolve(value) : null;
+		}
+		if (arg === "--no-manual-decisions") manualDecisionsPath = null;
+		if (arg === "--output-dir") {
+			outputDir = path.resolve(argv[++index] ?? outputDir);
+		}
+		if (arg === "--source-image-dir") {
+			sourceImageDir = path.resolve(argv[++index] ?? sourceImageDir);
+		}
+	}
+
+	return {
+		reportPath,
+		manualDecisionsPath,
+		outputDir,
+		sourceImageDir,
+	};
+}
+
 async function resolveWithAi(
 	extracted: ExtractedProduct,
 	candidates: MatchRecord[],
 ) {
 	const firstImage = extracted.sourceImages[0];
-	const imagePath = firstImage ? path.resolve("vit", firstImage) : null;
+	const imagePath = firstImage
+		? path.resolve(options.sourceImageDir, firstImage)
+		: null;
 	const imageBuffer = imagePath
 		? await readFile(imagePath).catch(() => null)
 		: null;
