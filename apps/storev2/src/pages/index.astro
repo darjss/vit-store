@@ -14,7 +14,7 @@ import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
-export const prerender = false;
+export const prerender = true;
 
 const products = await api.product.getProductsForHomeWithStock.query();
 const { featuredProducts, newProducts } = products;

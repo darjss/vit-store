@@ -1,5 +1,21 @@
 ---
-export const prerender = false;
+export const prerender = true;
+
+import { api } from "@/lib/trpc";
+
+export async function getStaticPaths() {
+	try {
+		const categories = await api.category.getAllCategoriesWithStock.query();
+		return categories
+			.filter((category) => category.productCount > 0)
+			.map((category) => ({
+				params: { slug: category.slug },
+			}));
+	} catch (error) {
+		console.error("Error getting static paths for category redirect pages", error);
+		return [];
+	}
+}
 
 const { slug } = Astro.params;
 return Astro.redirect(`/products/category/${slug}/1/`, 301);
