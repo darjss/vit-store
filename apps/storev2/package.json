@@ -27,7 +27,7 @@
 		"@unpic/solid": "^1.0.0",
 		"@vit/api": "workspace:*",
 		"@vit/shared": "workspace:*",
-		"astro": "^5.10.0",
+		"astro": "^5.18.2",
 		"astro-seo": "^0.8.4",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -42,13 +42,14 @@
 		"valibot": "^1.1.0"
 	},
 	"devDependencies": {
-		"@astrojs/cloudflare": "^12.6.10",
-		"@cloudflare/workers-types": "^4.20250805.0",
+		"@astrojs/cloudflare": "^12.6.13",
+		"@cloudflare/workers-types": "^4.20260617.1",
 		"@iconify/json": "^2.2.416",
 		"@posthog/rollup-plugin": "^1.4.3",
 		"alchemy": "catalog:",
-		"miniflare": "^4.20250617.3",
+		"miniflare": "^4.20260616.0",
 		"typescript": "^5.9.3",
+		"wrangler": "^4.101.0",
 		"unplugin-icons": "^22.5.0"
 	}
 }
