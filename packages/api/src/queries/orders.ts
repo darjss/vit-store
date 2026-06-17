@@ -206,6 +206,7 @@ export const orderQueries = {
 							columns: {
 								provider: true,
 								status: true,
+								paymentNumber: true,
 								createdAt: true,
 							},
 							where: isNull(PaymentsTable.deletedAt),
@@ -289,6 +290,7 @@ export const orderQueries = {
 						columns: {
 							provider: true,
 							status: true,
+							paymentNumber: true,
 							createdAt: true,
 						},
 						where: isNull(PaymentsTable.deletedAt),
@@ -404,6 +406,7 @@ export const orderQueries = {
 						columns: {
 							provider: true,
 							status: true,
+							paymentNumber: true,
 							createdAt: true,
 						},
 						where: isNull(PaymentsTable.deletedAt),
@@ -494,7 +497,12 @@ export const orderQueries = {
 						},
 					},
 					payments: {
-						columns: { provider: true, status: true, createdAt: true },
+						columns: {
+							provider: true,
+							status: true,
+							paymentNumber: true,
+							createdAt: true,
+						},
 						where:
 							params.paymentStatus === undefined
 								? isNull(PaymentsTable.deletedAt)

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	OrderDetailsTable,
@@ -146,6 +146,75 @@ export const paymentQueries = {
 				})
 				.from(MessengerNotificationFailuresTable)
 				.where(eq(MessengerNotificationFailuresTable.status, "pending"));
+		},
+
+		async getClaimedTransferCount() {
+			const result = await db()
+				.select({ count: sql<number>`COUNT(*)` })
+				.from(PaymentsTable)
+				.where(
+					and(
+						eq(PaymentsTable.status, "customer_claimed_paid"),
+						eq(PaymentsTable.provider, "transfer"),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.limit(1);
+			return result[0]?.count ?? 0;
+		},
+
+		async getClaimedTransferPayments() {
+			const payments = await db().query.PaymentsTable.findMany({
+				where: and(
+					eq(PaymentsTable.status, "customer_claimed_paid"),
+					eq(PaymentsTable.provider, "transfer"),
+					isNull(PaymentsTable.deletedAt),
+				),
+				orderBy: desc(PaymentsTable.updatedAt),
+				columns: {
+					paymentNumber: true,
+					orderId: true,
+					amount: true,
+					createdAt: true,
+					updatedAt: true,
+				},
+				with: {
+					order: {
+						columns: {
+							id: true,
+							orderNumber: true,
+							customerPhone: true,
+							total: true,
+						},
+						with: {
+							orderDetails: {
+								columns: { quantity: true },
+								where: isNull(OrderDetailsTable.deletedAt),
+								with: {
+									product: {
+										columns: { name: true },
+									},
+								},
+							},
+						},
+					},
+				},
+			});
+
+			return payments.map((payment) => ({
+				paymentNumber: payment.paymentNumber,
+				orderId: payment.orderId,
+				orderNumber: payment.order.orderNumber,
+				customerPhone: `${payment.order.customerPhone}`,
+				total: payment.order.total,
+				amount: payment.amount,
+				createdAt: payment.createdAt,
+				updatedAt: payment.updatedAt,
+				products: payment.order.orderDetails.map((detail) => ({
+					name: detail.product.name,
+					quantity: detail.quantity,
+				})),
+			}));
 		},
 
 	},
@@ -342,6 +411,12 @@ export const paymentQueries = {
 			await db()
 				.update(PaymentsTable)
 				.set({ provider: "qpay", invoiceId: invoiceId })
+				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+		},
+		async changePaymentToTransfer(paymentNumber: string) {
+			await db()
+				.update(PaymentsTable)
+				.set({ provider: "transfer", invoiceId: null })
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 	},

@@ -20,12 +20,14 @@ const opencode = createOpenAICompatible({
 	baseURL: "https://opencode.ai/zen/go/v1",
 	apiKey: process.env.OPENCODE_GO_API_KEY,
 	name: "opencode-go",
+	supportsStructuredOutputs: true,
 });
 
 const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const defaultConcurrency = 4;
-const defaultModel = "kimi-k2.5";
+const defaultOpenCodeModel = "kimi-k2.5";
 const maxRetries = 3;
+const maxExistingProductsInPrompt = 220;
 
 const productSchema = z.object({
 	brandName: z.string().min(1),
@@ -87,12 +89,21 @@ type FinalProduct = {
 	canonicalKey: string;
 };
 
+type ManualMergeOverride = {
+	canonicalKeys: string[];
+	reason: string;
+};
+
 type CliOptions = {
 	dir: string;
 	concurrency: number;
 	model: string;
+	outputName: string;
 	limit: number | null;
 	renameImages: boolean;
+	rebuildOnly: boolean;
+	existingJsonPaths: string[];
+	mergeOverridesPath: string | null;
 };
 
 const args = parseArgs(process.argv.slice(2));
@@ -102,8 +113,12 @@ const manifestPath = path.join(workDir, "manifest.json");
 const resultsDir = path.join(workDir, "results");
 const reportsDir = path.join(workDir, "reports");
 const renameMapPath = path.join(reportsDir, "rename-map.json");
-const finalJsonPath = path.join(reportsDir, "products.final.json");
+const finalJsonPath = path.join(reportsDir, args.outputName);
 const rawMergedPath = path.join(reportsDir, "products.raw.json");
+const defaultMergeOverridesPath = path.join(
+	reportsDir,
+	"extracted-merge-overrides.json",
+);
 let manifestWriteQueue: Promise<void> = Promise.resolve();
 
 if (!process.env.OPENCODE_GO_API_KEY) {
@@ -117,7 +132,13 @@ await mkdir(reportsDir, { recursive: true });
 
 const manifest = await loadOrCreateManifest(sourceDir, manifestPath);
 await syncManifestWithDirectory(manifest, sourceDir);
+await syncManifestWithResultFiles(manifest, resultsDir);
 await saveManifest(manifest, manifestPath);
+const existingProducts = await loadExistingFinalProducts(args.existingJsonPaths);
+const existingProductContext = formatExistingProductContext(existingProducts);
+const manualMergeOverrides = await loadManualMergeOverrides(
+	args.mergeOverridesPath ?? defaultMergeOverridesPath,
+);
 
 const pendingImages = Object.values(manifest.images)
 	.filter((image) => image.status !== "done")
@@ -132,22 +153,31 @@ console.log(
 			pendingImages: pendingImages.length,
 			concurrency: args.concurrency,
 			model: args.model,
+			outputName: args.outputName,
 			renameImages: args.renameImages,
+			rebuildOnly: args.rebuildOnly,
+			existingProducts: existingProducts.length,
+			manualMergeOverrides: manualMergeOverrides.length,
 		},
 		null,
 		2,
 	),
 );
 
-await runPool(pendingImages, args.concurrency, async (image) => {
-	await processImage({
-		image,
-		manifest,
-		manifestPath,
-		model: args.model,
-		resultsDir,
+if (!args.rebuildOnly) {
+	await runPool(pendingImages, args.concurrency, async (image) => {
+		await processImage({
+			image,
+			manifest,
+			manifestPath,
+			extractor: {
+				model: args.model,
+				existingProductContext,
+			},
+			resultsDir,
+		});
 	});
-});
+}
 
 const allResults = await collectAllResults(manifest, resultsDir);
 await writeTextAtomic(
@@ -155,7 +185,18 @@ await writeTextAtomic(
 	`${JSON.stringify(allResults, null, 2)}\n`,
 );
 
-const finalProducts = dedupeProducts(allResults);
+const finalProducts = applyManualMergeOverrides(
+	consolidateNearDuplicates(dedupeProducts(allResults, existingProducts)),
+	manualMergeOverrides,
+);
+const duplicateKeys = findDuplicateCanonicalKeys(finalProducts);
+if (duplicateKeys.length > 0) {
+	throw new Error(
+		`Final product JSON still has duplicate canonical keys: ${duplicateKeys.join(
+			", ",
+		)}`,
+	);
+}
 await writeTextAtomic(
 	finalJsonPath,
 	`${JSON.stringify(finalProducts, null, 2)}\n`,
@@ -184,9 +225,13 @@ console.log(
 function parseArgs(argv: string[]): CliOptions {
 	let dir = "vit";
 	let concurrency = defaultConcurrency;
-	let model = defaultModel;
+	let model = defaultOpenCodeModel;
+	let outputName = "products.final.deduped.json";
 	let limit: number | null = null;
 	let renameImages = true;
+	let rebuildOnly = false;
+	const existingJsonPaths: string[] = [];
+	let mergeOverridesPath: string | null = null;
 
 	for (let index = 0; index < argv.length; index += 1) {
 		const value = argv[index];
@@ -212,6 +257,13 @@ function parseArgs(argv: string[]): CliOptions {
 			continue;
 		}
 
+		if (value === "--output-name") {
+			const nextOutputName = argv[index + 1];
+			if (nextOutputName) outputName = path.basename(nextOutputName);
+			index += 1;
+			continue;
+		}
+
 		if (value === "--limit") {
 			const parsed = Number.parseInt(argv[index + 1] ?? "", 10);
 			if (Number.isFinite(parsed) && parsed > 0) {
@@ -224,14 +276,36 @@ function parseArgs(argv: string[]): CliOptions {
 		if (value === "--no-rename") {
 			renameImages = false;
 		}
+
+		if (value === "--rebuild-only") {
+			rebuildOnly = true;
+			continue;
+		}
+
+		if (value === "--existing-json") {
+			const existingPath = argv[index + 1];
+			if (existingPath) existingJsonPaths.push(existingPath);
+			index += 1;
+			continue;
+		}
+
+		if (value === "--merge-overrides") {
+			mergeOverridesPath = argv[index + 1] ?? null;
+			index += 1;
+			continue;
+		}
 	}
 
 	return {
 		dir,
 		concurrency,
 		model,
+		outputName,
 		limit,
 		renameImages,
+		rebuildOnly,
+		existingJsonPaths,
+		mergeOverridesPath,
 	};
 }
 
@@ -316,6 +390,30 @@ async function syncManifestWithDirectory(
 	}
 }
 
+async function syncManifestWithResultFiles(
+	manifest: Manifest,
+	resultsDirectory: string,
+): Promise<void> {
+	for (const image of Object.values(manifest.images)) {
+		const resultFile = path.join(resultsDirectory, `${image.id}.json`);
+		if (!(await fileExists(resultFile))) continue;
+
+		image.status = "done";
+		image.resultFile = resultFile;
+		image.lastError = null;
+		image.updatedAt = new Date().toISOString();
+	}
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+	try {
+		await stat(filePath);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 async function saveManifest(
 	manifest: Manifest,
 	filePath: string,
@@ -362,10 +460,13 @@ async function processImage(input: {
 	image: ManifestImage;
 	manifest: Manifest;
 	manifestPath: string;
-	model: string;
+	extractor: {
+		model: string;
+		existingProductContext: string | null;
+	};
 	resultsDir: string;
 }): Promise<void> {
-	const { image, manifest, manifestPath, model, resultsDir } = input;
+	const { image, manifest, manifestPath, extractor, resultsDir } = input;
 	const liveRecord = manifest.images[image.id];
 	liveRecord.status = "processing";
 	liveRecord.attempts += 1;
@@ -380,7 +481,7 @@ async function processImage(input: {
 	try {
 		const extraction = await extractProductsFromImage(
 			liveRecord.absolutePath,
-			model,
+			extractor,
 		);
 		const resultPayload = {
 			imageId: liveRecord.id,
@@ -417,7 +518,10 @@ async function processImage(input: {
 
 async function extractProductsFromImage(
 	filePath: string,
-	modelName: string,
+	extractor: {
+		model: string;
+		existingProductContext: string | null;
+	},
 ): Promise<ExtractionResult> {
 	const imageBuffer = await readFile(filePath);
 	const mimeType = getMimeType(filePath);
@@ -425,64 +529,13 @@ async function extractProductsFromImage(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
 		try {
-			const { object } = await generateObject({
-				model: opencode(modelName),
-				schema: extractionSchema,
-				schemaName: "vit_collage_products",
-				schemaDescription:
-					"Distinct supplement products visible in a sales collage image with normalized integer MNT prices.",
-				system: [
-					"You analyze supplement product collage images for a store catalog.",
-					"Return only products that are clearly visible in the image.",
-					"Extract every distinct product once even if the same item appears multiple times in the same image.",
-					"Brand and product names must be based on visible label text, not guesses.",
-					"Price is the overlaid sales price text near the product. Normalize Mongolian shorthand like 90k -> 90000.",
-					"If a price is not readable, set priceText and priceValue to null.",
-					"Do not merge different sizes, counts, or formulations into one product.",
-					"Do not invent hidden ingredients or attributes.",
-					"Confidence must reflect visual certainty only.",
-				].join(" "),
-				messages: [
-					{
-						role: "user",
-						content: [
-							{
-								type: "text",
-								text: [
-									"Inspect this product collage carefully and return a strict structured object.",
-									"",
-									"Rules:",
-									"1. List distinct visible products only.",
-									"2. If the same product appears more than once in the image, keep one entry.",
-									"3. `brandName` should be the manufacturer or product brand visible on the label.",
-									"4. `productName` should be the canonical product name visible on the label, excluding the brand when possible.",
-									"5. `variant` should hold flavor/form/extra qualifier only when visible.",
-									"6. `sizeOrCount` should hold count, weight, volume, or strength if it helps distinguish variants.",
-									"7. `priceText` is the exact visible price token such as `90k` or `110k`.",
-									"8. `priceValue` must be the normalized integer MNT amount. Example: `90k` => 90000.",
-									"9. `reasoning` must be a short evidence note grounded in visible text.",
-									"10. Never output duplicate products.",
-								].join("\n"),
-							},
-							{
-								type: "file",
-								data: imageBuffer,
-								mediaType: mimeType,
-							},
-						],
-					},
-				],
-				experimental_repairText: async ({ text }) => {
-					const start = text.indexOf("{");
-					const end = text.lastIndexOf("}");
-					if (start >= 0 && end > start) {
-						return text.slice(start, end + 1);
-					}
-					return null;
-				},
-			});
-
-			return normalizeExtraction(object);
+			return normalizeExtraction(
+				await extractProductsOnce({
+					imageBuffer,
+					mimeType,
+					extractor,
+				}),
+			);
 		} catch (error) {
 			lastError = error;
 			if (attempt < maxRetries) {
@@ -492,6 +545,226 @@ async function extractProductsFromImage(
 	}
 
 	throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+async function extractProductsOnce(input: {
+	imageBuffer: Buffer;
+	mimeType: string;
+	extractor: {
+		model: string;
+		existingProductContext: string | null;
+	};
+}): Promise<ExtractionResult> {
+	const { imageBuffer, mimeType, extractor } = input;
+
+	return extractProductsWithOpenCode({
+		imageBuffer,
+		mimeType,
+		modelName: extractor.model,
+		existingProductContext: extractor.existingProductContext,
+	});
+}
+
+async function extractProductsWithOpenCode(input: {
+	imageBuffer: Buffer;
+	mimeType: string;
+	modelName: string;
+	existingProductContext: string | null;
+}): Promise<ExtractionResult> {
+	const apiKey = process.env.OPENCODE_GO_API_KEY;
+	if (!apiKey) throw new Error("Missing OPENCODE_GO_API_KEY for OpenCode extraction.");
+
+	let lastError: unknown = null;
+	for (const modelName of candidateOpenCodeModels(input.modelName)) {
+		try {
+			return await generateOpenCodeExtraction({
+				modelName,
+				imageBuffer: input.imageBuffer,
+				mimeType: input.mimeType,
+				existingProductContext: input.existingProductContext,
+			});
+		} catch (error) {
+			lastError = error;
+		}
+	}
+
+	throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+async function generateOpenCodeExtraction(input: {
+	modelName: string;
+	imageBuffer: Buffer;
+	mimeType: string;
+	existingProductContext: string | null;
+}): Promise<ExtractionResult> {
+	const { object } = await generateObject({
+		model: opencode(input.modelName),
+		schema: extractionSchema,
+		schemaName: "vit_collage_products",
+		schemaDescription:
+			"Distinct supplement products visible in a sales collage image with normalized integer MNT prices.",
+		system: buildSystemPrompt(),
+		messages: [
+			{
+				role: "user",
+				content: [
+					{
+						type: "text",
+						text: buildUserPrompt(input.existingProductContext),
+					},
+					{
+						type: "file",
+						data: input.imageBuffer,
+						mediaType: input.mimeType,
+					},
+				],
+			},
+		],
+	});
+
+	return object;
+}
+
+function buildSystemPrompt(): string {
+	return [
+		"You analyze supplement product collage images for a store catalog.",
+		"Return only products that are clearly visible in the image.",
+		"Extract every distinct product once even if the same item appears multiple times in the same image.",
+		"Brand and product names must be based on visible label text, not guesses.",
+		"Price is the overlaid black sales price text near the product. Normalize Mongolian shorthand like 90k -> 90000.",
+		"If a price is not readable, set priceText and priceValue to null.",
+		"Do not merge different sizes, counts, potencies, or formulations into one product.",
+		"Do not invent hidden ingredients or attributes.",
+		"Confidence must reflect visual certainty only.",
+	].join(" ");
+}
+
+function buildUserPrompt(existingProductContext: string | null): string {
+	return [
+		"Inspect this product collage carefully and return a strict structured object.",
+		"",
+		"Rules:",
+		"1. List distinct visible products only.",
+		"2. If the same product appears more than once in the image, keep one entry.",
+		"3. `brandName` should be the manufacturer or product brand visible on the label.",
+		"4. `productName` should be the canonical product name visible on the label, excluding the brand when possible.",
+		"5. `variant` should hold flavor/form/extra qualifier only when visible.",
+		"6. `sizeOrCount` should hold count, weight, volume, or strength if it helps distinguish variants.",
+		"7. `priceText` is the exact visible price token such as `90k` or `110k`.",
+		"8. `priceValue` must be the normalized integer MNT amount. Example: `90k` => 90000.",
+		"9. `reasoning` must be a short evidence note grounded in visible text.",
+		"10. Never output duplicate products.",
+		existingProductContext
+			? [
+					"",
+					"Existing extracted products for name normalization only:",
+					existingProductContext,
+					"If a visible product matches this existing list, still return it once; reuse the closest existing brand/name spelling when the label supports it.",
+				].join("\n")
+			: "",
+	].join("\n");
+}
+
+function candidateOpenCodeModels(modelName: string): string[] {
+	const normalized = modelName.toLowerCase().trim();
+	const candidates = [modelName];
+
+	if (normalized === "kimi") {
+		candidates.push("kimi-k2.5");
+	}
+
+	return Array.from(new Set(candidates));
+}
+
+async function loadExistingFinalProducts(paths: string[]): Promise<FinalProduct[]> {
+	const loaded: FinalProduct[] = [];
+
+	for (const inputPath of paths) {
+		const filePath = path.resolve(inputPath);
+		const text = await readFile(filePath, "utf8");
+		const parsed = JSON.parse(text) as unknown;
+		if (!Array.isArray(parsed)) {
+			throw new Error(`Existing JSON must be an array: ${filePath}`);
+		}
+
+		for (const value of parsed) {
+			loaded.push(normalizeFinalProduct(value));
+		}
+	}
+
+	return consolidateNearDuplicates(mergeFinalProducts(loaded));
+}
+
+function normalizeFinalProduct(value: unknown): FinalProduct {
+	const record = value as Partial<FinalProduct> & {
+		priceValue?: number | null;
+	};
+	const brandName = compactWhitespace(String(record.brandName ?? ""));
+	const productName = compactWhitespace(String(record.productName ?? ""));
+
+	if (!brandName || !productName) {
+		throw new Error("Existing product JSON contains an item without brand/name.");
+	}
+
+	const price =
+		typeof record.price === "number"
+			? record.price
+			: typeof record.priceValue === "number"
+				? record.priceValue
+				: normalizePriceText(record.priceText ?? undefined);
+	const normalized: FinalProduct = {
+		brandName,
+		productName,
+		price,
+		priceText:
+			typeof record.priceText === "string"
+				? compactWhitespace(record.priceText)
+				: null,
+		variant:
+			typeof record.variant === "string"
+				? compactWhitespace(record.variant)
+				: null,
+		sizeOrCount:
+			typeof record.sizeOrCount === "string"
+				? compactWhitespace(record.sizeOrCount)
+				: null,
+		sourceImages: Array.isArray(record.sourceImages)
+			? uniqueSorted(record.sourceImages.map(String).filter(Boolean))
+			: [],
+		aliases: Array.isArray(record.aliases)
+			? uniqueSorted(record.aliases.map(String).filter(Boolean))
+			: [],
+		confidence:
+			typeof record.confidence === "number"
+				? Math.max(0, Math.min(record.confidence, 1))
+				: 0.75,
+		canonicalKey: "",
+	};
+
+	normalized.aliases = uniqueSorted([
+		...normalized.aliases,
+		`${normalized.brandName} ${normalized.productName}`.trim(),
+	]);
+	normalized.canonicalKey = canonicalKeyFromFinalProduct(normalized);
+	return normalized;
+}
+
+function formatExistingProductContext(products: FinalProduct[]): string | null {
+	if (products.length === 0) return null;
+
+	return products
+		.slice(0, maxExistingProductsInPrompt)
+		.map((product) =>
+			[
+				product.brandName,
+				product.productName,
+				product.variant,
+				product.sizeOrCount,
+			]
+				.filter(Boolean)
+				.join(" | "),
+		)
+		.join("\n");
 }
 
 function normalizeExtraction(result: ExtractionResult): ExtractionResult {
@@ -595,16 +868,10 @@ function dedupeProducts(
 		currentName: string;
 		extraction: ExtractionResult;
 	}>,
+	existingProducts: FinalProduct[],
 ): FinalProduct[] {
-	const grouped = new Map<
-		string,
-		{
-			best: ExtractedProduct;
-			sourceImages: Set<string>;
-			aliases: Set<string>;
-			prices: Map<number | null, number>;
-		}
-	>();
+	const products: FinalProduct[] = [...existingProducts];
+	const grouped = new Map<string, ProductGroup>();
 
 	for (const result of allResults) {
 		for (const product of result.extraction.products) {
@@ -639,29 +906,8 @@ function dedupeProducts(
 		}
 	}
 
-	return Array.from(grouped.entries())
-		.map(([canonicalKey, group]) => {
-			const price = selectMostCommonPrice(group.prices, group.best.priceValue);
-
-			return {
-				brandName: group.best.brandName,
-				productName: group.best.productName,
-				price,
-				priceText:
-					price === group.best.priceValue ? group.best.priceText : null,
-				variant: group.best.variant,
-				sizeOrCount: group.best.sizeOrCount,
-				sourceImages: Array.from(group.sourceImages).sort(),
-				aliases: Array.from(group.aliases).sort(),
-				confidence: group.best.confidence,
-				canonicalKey,
-			};
-		})
-		.sort((a, b) =>
-			`${a.brandName} ${a.productName}`.localeCompare(
-				`${b.brandName} ${b.productName}`,
-			),
-		);
+	products.push(...Array.from(grouped.values()).map(finalProductFromGroup));
+	return mergeFinalProducts(products);
 }
 
 function selectMostCommonPrice(
@@ -679,6 +925,314 @@ function selectMostCommonPrice(
 	}
 
 	return bestPrice;
+}
+
+type ProductGroup = {
+	best: ExtractedProduct;
+	sourceImages: Set<string>;
+	aliases: Set<string>;
+	prices: Map<number | null, number>;
+};
+
+function finalProductFromGroup(group: ProductGroup): FinalProduct {
+	const price = selectMostCommonPrice(group.prices, group.best.priceValue);
+	const product: FinalProduct = {
+		brandName: group.best.brandName,
+		productName: group.best.productName,
+		price,
+		priceText: price === group.best.priceValue ? group.best.priceText : null,
+		variant: group.best.variant,
+		sizeOrCount: group.best.sizeOrCount,
+		sourceImages: Array.from(group.sourceImages).sort(),
+		aliases: Array.from(group.aliases).sort(),
+		confidence: group.best.confidence,
+		canonicalKey: "",
+	};
+	product.canonicalKey = canonicalKeyFromFinalProduct(product);
+	return product;
+}
+
+function mergeFinalProducts(products: FinalProduct[]): FinalProduct[] {
+	const grouped = new Map<
+		string,
+		{
+			best: FinalProduct;
+			sourceImages: Set<string>;
+			aliases: Set<string>;
+			prices: Map<number | null, number>;
+		}
+	>();
+
+	for (const product of products) {
+		const normalized = normalizeFinalProduct(product);
+		const key = canonicalKeyFromFinalProduct(normalized);
+		const current = grouped.get(key);
+
+		if (!current) {
+			grouped.set(key, {
+				best: normalized,
+				sourceImages: new Set(normalized.sourceImages),
+				aliases: new Set(normalized.aliases),
+				prices: new Map([[normalized.price, 1]]),
+			});
+			continue;
+		}
+
+		for (const sourceImage of normalized.sourceImages) {
+			current.sourceImages.add(sourceImage);
+		}
+		for (const alias of normalized.aliases) {
+			current.aliases.add(alias);
+		}
+		current.prices.set(
+			normalized.price,
+			(current.prices.get(normalized.price) ?? 0) + 1,
+		);
+
+		if (isPreferredFinalProduct(normalized, current.best)) {
+			current.best = normalized;
+		}
+	}
+
+	return Array.from(grouped.values())
+		.map((group) => {
+			const price = selectMostCommonPrice(group.prices, group.best.price);
+			const product: FinalProduct = {
+				...group.best,
+				price,
+				priceText: price === group.best.price ? group.best.priceText : null,
+				sourceImages: uniqueSorted(Array.from(group.sourceImages)),
+				aliases: uniqueSorted([
+					...Array.from(group.aliases),
+					`${group.best.brandName} ${group.best.productName}`.trim(),
+				]),
+				canonicalKey: "",
+			};
+			product.canonicalKey = canonicalKeyFromFinalProduct(product);
+			return product;
+		})
+		.sort((a, b) =>
+			`${a.brandName} ${a.productName}`.localeCompare(
+				`${b.brandName} ${b.productName}`,
+			),
+		);
+}
+
+function consolidateNearDuplicates(products: FinalProduct[]): FinalProduct[] {
+	const groupedByDetail = new Map<string, FinalProduct[]>();
+
+	for (const product of products.map(normalizeFinalProduct)) {
+		const groupKey = [
+			normalizeKeyPart(product.brandName),
+			normalizeKeyPart(product.productName),
+		].join("__");
+		const group = groupedByDetail.get(groupKey) ?? [];
+		group.push(product);
+		groupedByDetail.set(groupKey, group);
+	}
+
+	const consolidated: FinalProduct[] = [];
+
+	for (const group of groupedByDetail.values()) {
+		const merged: FinalProduct[] = [];
+
+		for (const product of group) {
+			const existing = merged.find((candidate) =>
+				shouldMergeProducts(candidate, product),
+			);
+
+			if (!existing) {
+				merged.push(product);
+				continue;
+			}
+
+			const preferred = isPreferredFinalProduct(product, existing)
+				? product
+				: existing;
+			existing.brandName = preferred.brandName;
+			existing.productName = preferred.productName;
+			existing.variant = preferred.variant;
+			existing.sizeOrCount = preferred.sizeOrCount;
+			existing.price = preferred.price ?? existing.price ?? product.price;
+			existing.priceText =
+				preferred.price === existing.price ? preferred.priceText : null;
+			existing.confidence = Math.max(existing.confidence, product.confidence);
+			existing.sourceImages = uniqueSorted([
+				...existing.sourceImages,
+				...product.sourceImages,
+			]);
+			existing.aliases = uniqueSorted([
+				...existing.aliases,
+				...product.aliases,
+				`${product.brandName} ${product.productName}`.trim(),
+			]);
+			existing.canonicalKey = canonicalKeyFromFinalProduct(existing);
+		}
+
+		consolidated.push(...merged);
+	}
+
+	return mergeFinalProducts(consolidated);
+}
+
+function applyManualMergeOverrides(
+	products: FinalProduct[],
+	overrides: ManualMergeOverride[],
+): FinalProduct[] {
+	if (overrides.length === 0) return products;
+
+	let nextProducts = products.map(normalizeFinalProduct);
+
+	for (const override of overrides) {
+		const overrideKeys = new Set(override.canonicalKeys);
+		const matches = nextProducts.filter((product) =>
+			overrideKeys.has(product.canonicalKey),
+		);
+		if (matches.length < 2) continue;
+
+		const merged = matches.reduce((best, current) =>
+			isPreferredFinalProduct(current, best) ? current : best,
+		);
+		const combinedPrices = new Map<number | null, number>();
+		for (const match of matches) {
+			combinedPrices.set(
+				match.price,
+				(combinedPrices.get(match.price) ?? 0) + 1,
+			);
+		}
+
+		const mergedProduct: FinalProduct = {
+			...merged,
+			price: selectMostCommonPrice(combinedPrices, merged.price),
+			priceText: merged.priceText,
+			sourceImages: uniqueSorted(
+				matches.flatMap((product) => product.sourceImages),
+			),
+			aliases: uniqueSorted(
+				matches.flatMap((product) => [
+					...product.aliases,
+					`${product.brandName} ${product.productName}`.trim(),
+				]),
+			),
+			confidence: Math.max(...matches.map((product) => product.confidence)),
+			canonicalKey: "",
+		};
+		mergedProduct.canonicalKey = canonicalKeyFromFinalProduct(mergedProduct);
+
+		const consumedKeys = new Set(
+			matches.map((product) => product.canonicalKey),
+		);
+		nextProducts = nextProducts.filter(
+			(product) => !consumedKeys.has(product.canonicalKey),
+		);
+		nextProducts.push(mergedProduct);
+	}
+
+	return mergeFinalProducts(nextProducts);
+}
+
+function shouldMergeProducts(left: FinalProduct, right: FinalProduct): boolean {
+	if (normalizeKeyPart(left.brandName) !== normalizeKeyPart(right.brandName)) {
+		return false;
+	}
+
+	if (!detailSignalsCompatible(left, right)) return false;
+
+	const leftName = normalizeComparableProductName(left.productName);
+	const rightName = normalizeComparableProductName(right.productName);
+
+	if (!leftName || !rightName) return false;
+	if (leftName === rightName) return true;
+	if (leftName.includes(rightName) || rightName.includes(leftName)) return true;
+
+	const leftTokens = new Set(leftName.split(" ").filter(Boolean));
+	const rightTokens = new Set(rightName.split(" ").filter(Boolean));
+
+	if (leftTokens.size === 0 || rightTokens.size === 0) return false;
+
+	const leftWithinRight = Array.from(leftTokens).every((token) =>
+		rightTokens.has(token),
+	);
+	const rightWithinLeft = Array.from(rightTokens).every((token) =>
+		leftTokens.has(token),
+	);
+
+	return leftWithinRight || rightWithinLeft;
+}
+
+function detailSignalsCompatible(left: FinalProduct, right: FinalProduct): boolean {
+	const leftSignals = extractDetailSignals([
+		left.productName,
+		left.variant ?? "",
+		left.sizeOrCount ?? "",
+	]);
+	const rightSignals = extractDetailSignals([
+		right.productName,
+		right.variant ?? "",
+		right.sizeOrCount ?? "",
+	]);
+
+	return (
+		!hasConflictingSignal(leftSignals.potencyKey, rightSignals.potencyKey) &&
+		!hasConflictingSignal(leftSignals.countKey, rightSignals.countKey) &&
+		!hasConflictingSignal(leftSignals.sizeKey, rightSignals.sizeKey)
+	);
+}
+
+function hasConflictingSignal(left: string, right: string): boolean {
+	if (!left || !right) return false;
+	const leftTokens = left.split("-").filter(Boolean);
+	const rightTokens = right.split("-").filter(Boolean);
+	if (leftTokens.length === 0 || rightTokens.length === 0) return false;
+	return !leftTokens.some((token) => rightTokens.includes(token));
+}
+
+function normalizeComparableName(product: FinalProduct): string {
+	return [product.productName, product.variant ?? ""]
+		.join(" ")
+		.toLowerCase()
+		.replace(/&/g, " and ")
+		.replace(/[^a-z0-9]+/g, " ")
+		.replace(
+			/\b(the|and|with|for|plus|supplement|dietary|made|highly|bioavailable|natural|flavor|flavored|unflavored|powder|liquid)\b/g,
+			" ",
+		)
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function normalizeComparableProductName(value: string): string {
+	return value
+		.toLowerCase()
+		.replace(/&/g, " and ")
+		.replace(/[^a-z0-9]+/g, " ")
+		.replace(
+			/\b(the|and|with|for|plus|supplement|dietary|made|highly|bioavailable|natural|flavor|flavored|unflavored|powder|liquid)\b/g,
+			" ",
+		)
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function isPreferredFinalProduct(
+	next: FinalProduct,
+	current: FinalProduct,
+): boolean {
+	if (next.confidence !== current.confidence) {
+		return next.confidence > current.confidence;
+	}
+
+	return finalProductRichness(next) > finalProductRichness(current);
+}
+
+function finalProductRichness(product: FinalProduct): number {
+	return [
+		product.brandName,
+		product.productName,
+		product.variant ?? "",
+		product.sizeOrCount ?? "",
+		product.aliases.join(" "),
+	].join(" ").length;
 }
 
 function isBetterProductCandidate(
@@ -722,6 +1276,31 @@ function canonicalKeyFromProduct(product: ExtractedProduct): string {
 		.join("__");
 }
 
+function canonicalKeyFromFinalProduct(product: FinalProduct): string {
+	return canonicalKeyFromProduct({
+		brandName: product.brandName,
+		productName: product.productName,
+		priceText: product.priceText,
+		priceValue: product.price,
+		variant: product.variant,
+		sizeOrCount: product.sizeOrCount,
+		confidence: product.confidence,
+		reasoning: "",
+	});
+}
+
+function findDuplicateCanonicalKeys(products: FinalProduct[]): string[] {
+	const counts = new Map<string, number>();
+	for (const product of products) {
+		counts.set(product.canonicalKey, (counts.get(product.canonicalKey) ?? 0) + 1);
+	}
+
+	return Array.from(counts.entries())
+		.filter(([, count]) => count > 1)
+		.map(([key]) => key)
+		.sort((left, right) => left.localeCompare(right));
+}
+
 function normalizeKeyPart(value: string): string {
 	return value
 		.toLowerCase()
@@ -751,19 +1330,13 @@ function extractDetailSignals(parts: string[]): DetailSignals {
 
 	const countMatches = Array.from(
 		text.matchAll(
-			/\b(\d[\d,.]*)\s*(capsules|capsule|tablets|tablet|softgels|softgel|soft gels|gummies|gummy|drops|servings|count|packs|packets|chews|caps)\b/g,
+			/\b(\d[\d,.]*)\s*(?:veggie|vegetarian|vegan|chewable)?\s*(capsules|capsule|tablets|tablet|softgels|softgel|soft gels|gummies|gummy|drops|servings|count|packs|packets|chews|caps)\b/g,
 		),
-	).map(
-		(match) =>
-			`${normalizeNumberToken(match[1])}${normalizeCountUnit(match[2])}`,
-	);
+	).map((match) => normalizeNumberToken(match[1]));
 
 	const sizeMatches = Array.from(
-		text.matchAll(/\b(\d[\d,.]*)\s*(ml|fl oz|oz|lb)\b/g),
-	).map(
-		(match) =>
-			`${normalizeNumberToken(match[1])}${match[2].replace(/\s+/g, "")}`,
-	);
+		text.matchAll(/\b(\d[\d,.]*)\s*(fl oz|ml|milliliters?|oz|g|grams?|lb)\b/g),
+	).map((match) => normalizeSizeToken(match[1], match[2]));
 
 	return {
 		potencyKey: uniqueSorted(potencyMatches).join("-"),
@@ -776,19 +1349,32 @@ function normalizeNumberToken(value: string): string {
 	return value.replace(/,/g, "").replace(/\.0+$/, "");
 }
 
-function normalizeCountUnit(value: string): string {
-	const normalized = value.replace(/\s+/g, "");
-	if (normalized === "caps" || normalized === "capsule") return "capsules";
-	if (normalized === "tablet") return "tablets";
-	if (normalized === "softgel" || normalized === "softgels") return "softgels";
-	if (normalized === "gummy") return "gummies";
-	if (normalized === "drops") return "drops";
-	if (normalized === "servings") return "servings";
-	if (normalized === "count") return "count";
-	if (normalized === "pack" || normalized === "packs") return "packs";
-	if (normalized === "packet" || normalized === "packets") return "packets";
-	if (normalized === "chew" || normalized === "chews") return "chews";
-	return normalized;
+function normalizeSizeToken(amount: string, unit: string): string {
+	const value = Number.parseFloat(amount.replace(",", "."));
+	if (!Number.isFinite(value)) return `${normalizeNumberToken(amount)}${unit}`;
+
+	const normalizedUnit = unit.toLowerCase().replace(/\s+/g, " ");
+	if (normalizedUnit === "fl oz") {
+		return `${roundToStep(value * 29.5735, 5)}ml`;
+	}
+	if (normalizedUnit === "ml" || normalizedUnit.startsWith("milliliter")) {
+		return `${roundToStep(value, 5)}ml`;
+	}
+	if (normalizedUnit === "oz") {
+		return `${roundToStep(value * 28.3495, 5)}g`;
+	}
+	if (normalizedUnit === "lb") {
+		return `${roundToStep(value * 453.592, 10)}g`;
+	}
+	if (normalizedUnit === "g" || normalizedUnit.startsWith("gram")) {
+		return `${roundToStep(value, 5)}g`;
+	}
+
+	return `${normalizeNumberToken(amount)}${normalizedUnit.replace(/\s+/g, "")}`;
+}
+
+function roundToStep(value: number, step: number): number {
+	return Math.round(value / step) * step;
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -863,6 +1449,32 @@ async function renameImagesFromResults(
 	}
 
 	return renameEntries;
+}
+
+async function loadManualMergeOverrides(
+	filePath: string,
+): Promise<ManualMergeOverride[]> {
+	try {
+		const parsed = JSON.parse(await readFile(filePath, "utf8")) as unknown;
+		if (!Array.isArray(parsed)) return [];
+
+		return parsed
+			.map((value) => {
+				const record = value as Partial<ManualMergeOverride>;
+				return {
+					canonicalKeys: Array.isArray(record.canonicalKeys)
+						? record.canonicalKeys.map(String).filter(Boolean)
+						: [],
+					reason:
+						typeof record.reason === "string"
+							? record.reason
+							: "manual merge override",
+				};
+			})
+			.filter((override) => override.canonicalKeys.length >= 2);
+	} catch {
+		return [];
+	}
 }
 
 function uniqueFilename(candidate: string, usedNames: Set<string>): string {

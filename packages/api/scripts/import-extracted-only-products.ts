@@ -7,6 +7,7 @@ import { createLogger } from "@vit/logger";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import { and, asc, eq, inArray, isNull, like, or } from "drizzle-orm";
+import postgres from "postgres";
 import { z } from "zod";
 import { createDb } from "../src/db";
 import {
@@ -35,6 +36,7 @@ type ExtractedOnlySourceRow = {
 	aliases: string[];
 	confidence: number;
 	canonicalKey: string;
+	sourceUrl?: string | null;
 };
 
 type ResolvedReport = {
@@ -199,6 +201,9 @@ type CliOptions = {
 	onlyCanonicalKey: string | null;
 	status: "active" | "draft";
 	outputDir: string;
+	stock: number;
+	sourceImageDir: string | null;
+	forceCreateNeedsReview: boolean;
 };
 
 const DEFAULT_BRAND_LOGO_URL = "https://www.placeholder.com/logo.png";
@@ -289,6 +294,11 @@ const log = createLogger({
 
 const dbUrl = getDbUrl();
 const db = createDb(dbUrl);
+const duplicateSql = postgres(dbUrl, {
+	ssl: "require",
+	max: 1,
+	fetch_types: false,
+});
 const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
 if (!firecrawlApiKey) {
 	throw new Error("FIRECRAWL_API_KEY is missing in .env");
@@ -331,6 +341,9 @@ log.info("importExtractedOnly.start", {
 	dryRun: options.dryRun,
 	resume: options.resume,
 	concurrency: options.concurrency,
+	stock: options.stock,
+	sourceImageDir: options.sourceImageDir,
+	forceCreateNeedsReview: options.forceCreateNeedsReview,
 });
 
 await runPool(pendingRows, options.concurrency, async (row) => {
@@ -414,6 +427,10 @@ log.info("importExtractedOnly.done", {
 	failed: allResults.filter((result) => result.kind === "failed").length,
 });
 
+// The script constructs SDK/DB clients that can keep sockets alive after all
+// awaited work has completed. Force a clean CLI exit after reports are written.
+process.exit(0);
+
 async function processRow(
 	row: ExtractedOnlySourceRow,
 ): Promise<ImportRowResult> {
@@ -441,9 +458,9 @@ async function processRow(
 		);
 		const deterministicCandidates = candidateProducts
 			.map((product) => scoreCandidate(row, enriched, product))
-			.filter((candidate) => candidate.score >= 0.58)
+			.filter((candidate) => candidate.score >= 0.3)
 			.sort((left, right) => right.score - left.score)
-			.slice(0, 3);
+			.slice(0, 5);
 
 		let decision: DuplicateDecision;
 		if (deterministicCandidates.length === 0) {
@@ -475,7 +492,7 @@ async function processRow(
 			};
 		}
 
-		if (decision.decision === "needs_review") {
+		if (decision.decision === "needs_review" && !options.forceCreateNeedsReview) {
 			return {
 				kind: "needs_review",
 				canonicalKey: row.canonicalKey,
@@ -537,7 +554,7 @@ async function processRow(
 					discount: 0,
 					amount: enriched.amount,
 					potency: enriched.potency,
-					stock: 1,
+					stock: options.stock,
 					price: priceResolution.price,
 					dailyIntake: enriched.dailyIntake,
 					categoryId: enriched.categoryId,
@@ -792,12 +809,116 @@ async function findDuplicateCandidates(
 		}
 	}
 
-	const directCandidates =
+	const searchCandidates =
 		candidateIds.size > 0
 			? await fetchDbProductsByIds(Array.from(candidateIds))
 			: await searchDbProductsByName(enriched.name, enriched.brand);
+	const [sourceNameCandidates, brandScopedCandidates] = await Promise.all([
+		searchDbProductsByName(_source.productName, _source.brandName),
+		searchDbProductsByBrandAndSourceTokens(_source, enriched),
+	]);
 
-	return uniqueBy(directCandidates, (candidate) => candidate.id);
+	return uniqueBy(
+		[...searchCandidates, ...sourceNameCandidates, ...brandScopedCandidates],
+		(candidate) => candidate.id,
+	);
+}
+
+async function searchDbProductsByBrandAndSourceTokens(
+	source: ExtractedOnlySourceRow,
+	enriched: EnrichedImportCandidate,
+): Promise<CandidateProduct[]> {
+	const sourceBrand = normalizeText(enriched.brand || source.brandName);
+	const sourceText = normalizeText(
+		[
+			source.productName,
+			source.variant ?? "",
+			source.sizeOrCount ?? "",
+		].join(" "),
+	);
+	const importantTokens = sourceText
+		.split(" ")
+		.filter((token) => token.length > 2)
+		.filter(
+			(token) =>
+				!new Set([
+					"with",
+					"and",
+					"plus",
+					"for",
+					"the",
+					"per",
+					"serving",
+					"high",
+					"potency",
+					"support",
+					"supports",
+					"system",
+					"capsules",
+					"capsule",
+					"softgels",
+					"softgel",
+					"tablets",
+					"tablet",
+					"count",
+				]).has(token),
+		);
+
+	if (!sourceBrand || importantTokens.length === 0) return [];
+
+	const products = await duplicateSql<
+		Array<{
+			id: number;
+			name: string;
+			slug: string;
+			description: string;
+			status: string;
+			price: number;
+			amount: string;
+			potency: string;
+			brandName: string;
+			brandId: number;
+			categoryId: number;
+			imageUrl: string | null;
+		}>
+	>`
+		select
+			p.id,
+			p.name,
+			p.slug,
+			p.description,
+			p.status,
+			p.price,
+			p.amount,
+			p.potency,
+			coalesce(b.name, '') as "brandName",
+			p.brand_id as "brandId",
+			p.category_id as "categoryId",
+			(
+				select pi.url
+				from ecom_vit_product_image pi
+				where pi.product_id = p.id
+					and pi.deleted_at is null
+				order by pi.is_primary desc, pi.id asc
+				limit 1
+			) as "imageUrl"
+		from ecom_vit_product p
+		left join ecom_vit_brand b on b.id = p.brand_id
+		where p.deleted_at is null
+	`;
+
+	return products.filter((product) => {
+		const candidateBrand = normalizeText(product.brandName);
+		if (exactOrSimilar(sourceBrand, candidateBrand) < 0.7) return false;
+
+		const candidateText = normalizeText(
+			[product.name, product.amount, product.potency].join(" "),
+		);
+		const overlap = importantTokens.filter((token) =>
+			candidateText.includes(token),
+		).length;
+		return overlap >= Math.min(2, importantTokens.length);
+	});
 }
 
 async function decideDuplicateWithAi(
@@ -807,7 +928,10 @@ async function decideDuplicateWithAi(
 ): Promise<DuplicateDecision> {
 	const firstImage = source.sourceImages[0];
 	const imagePath = firstImage
-		? path.resolve(REPO_ROOT, "vit", firstImage)
+		? path.resolve(
+				options.sourceImageDir ?? path.resolve(REPO_ROOT, "vit"),
+				firstImage,
+			)
 		: null;
 	const imageBuffer = imagePath
 		? await readFile(imagePath).catch(() => null)
@@ -1079,7 +1203,8 @@ function validateEnrichmentMatch(
 	if (
 		sourceName &&
 		enrichedName &&
-		exactOrSimilar(sourceName, enrichedName) < 0.35
+		exactOrSimilar(sourceName, enrichedName) < 0.35 &&
+		!containsRequiredSourceTokens(sourceName, enrichedName)
 	) {
 		return `Enriched source name mismatch: extracted "${source.productName}" does not sufficiently match scraped "${enriched.originalTitle}".`;
 	}
@@ -1110,6 +1235,49 @@ function validateEnrichmentMatch(
 	return null;
 }
 
+function containsRequiredSourceTokens(
+	sourceName: string,
+	enrichedName: string,
+): boolean {
+	const optionalTokens = new Set([
+		"with",
+		"and",
+		"plus",
+		"for",
+		"the",
+		"per",
+		"serving",
+		"capsules",
+		"capsule",
+		"softgels",
+		"softgel",
+		"tablets",
+		"tablet",
+		"veggie",
+		"vegetarian",
+		"veg",
+		"high",
+		"potency",
+		"support",
+		"supports",
+		"system",
+		"nervous",
+		"superior",
+	]);
+	const sourceTokens = sourceName
+		.split(" ")
+		.map((token) => token.trim())
+		.filter(
+			(token) =>
+				token.length > 2 &&
+				!optionalTokens.has(token) &&
+				!/^[0-9]+$/.test(token),
+		);
+
+	if (sourceTokens.length === 0) return false;
+	return sourceTokens.every((token) => enrichedName.includes(token));
+}
+
 function resolveCreatePrice(
 	source: ExtractedOnlySourceRow,
 	enriched: EnrichedImportCandidate,
@@ -1136,6 +1304,7 @@ function isSaneShelfPrice(value: number | null): value is number {
 }
 
 function buildExtractedSeedQuery(row: ExtractedOnlySourceRow): string {
+	if (row.sourceUrl?.trim()) return row.sourceUrl.trim();
 	return [row.brandName, row.productName, row.variant, row.sizeOrCount]
 		.filter(Boolean)
 		.join(" ")
@@ -1155,6 +1324,9 @@ function parseCliArgs(argv: string[]): CliOptions {
 	let onlyCanonicalKey: string | null = null;
 	let status: "active" | "draft" = "active";
 	let outputDir = path.resolve(REPO_ROOT, "vit/.vit-ai/import-extracted-only");
+	let stock = 3;
+	let sourceImageDir: string | null = null;
+	let forceCreateNeedsReview = false;
 
 	for (let index = 0; index < argv.length; index += 1) {
 		const arg = argv[index];
@@ -1177,6 +1349,14 @@ function parseCliArgs(argv: string[]): CliOptions {
 		if (arg === "--output-dir") {
 			outputDir = path.resolve(argv[++index] ?? outputDir);
 		}
+		if (arg === "--stock") {
+			const parsed = Number.parseInt(argv[++index] ?? `${stock}`, 10);
+			if (Number.isInteger(parsed) && parsed >= 0) stock = parsed;
+		}
+		if (arg === "--source-image-dir") {
+			sourceImageDir = path.resolve(argv[++index] ?? "");
+		}
+		if (arg === "--force-create-needs-review") forceCreateNeedsReview = true;
 	}
 
 	return {
@@ -1188,6 +1368,9 @@ function parseCliArgs(argv: string[]): CliOptions {
 		onlyCanonicalKey,
 		status,
 		outputDir,
+		stock,
+		sourceImageDir,
+		forceCreateNeedsReview,
 	};
 }
 
@@ -1392,7 +1575,22 @@ function compareTokenSets(left: string[], right: string[]): number {
 
 function hasConflict(left: string[], right: string[]): boolean {
 	if (left.length === 0 || right.length === 0) return false;
-	return !left.some((token) => right.includes(token));
+	return !left.some((leftToken) =>
+		right.some((rightToken) => detailTokensCompatible(leftToken, rightToken)),
+	);
+}
+
+function detailTokensCompatible(left: string, right: string): boolean {
+	if (left === right) return true;
+	const leftMatch = left.match(/^(\d+(?:\.\d+)?)([a-z]+)$/);
+	const rightMatch = right.match(/^(\d+(?:\.\d+)?)([a-z]+)$/);
+	if (!leftMatch || !rightMatch) return false;
+	const [, leftNumber, leftUnit] = leftMatch;
+	const [, rightNumber, rightUnit] = rightMatch;
+	return (
+		leftNumber === rightNumber &&
+		(leftUnit === "count" || rightUnit === "count")
+	);
 }
 
 function comparePrice(extractedPrice: number | null, dbPrice: number): number {

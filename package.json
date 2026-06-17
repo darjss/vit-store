@@ -57,6 +57,7 @@
 		"quality:json": "npx fallow dead-code --format json > code-issues.json && npx fallow health --format json > health-issues.json"
 	},
 	"dependencies": {
+		"@ai-sdk/google": "^3.0.80",
 		"@corvu/drawer": "^0.2.4",
 		"@t3-oss/env-core": "catalog:",
 		"dotenv": "^17.2.3",

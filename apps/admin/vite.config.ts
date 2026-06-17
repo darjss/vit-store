@@ -35,5 +35,10 @@ export default defineConfig({
 		host: true,
 		port: 3005,
 		allowedHosts: ["admin.vitstore.dev"],
+		hmr: {
+			protocol: "wss",
+			host: "admin.vitstore.dev",
+			clientPort: 443,
+		},
 	},
 });
