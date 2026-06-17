@@ -14,23 +14,11 @@ import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
 
-export const prerender = true;
+export const prerender = false;
 
 const SITE_URL = "https://amerikvitamin.mn";
 
 import { api } from "@/lib/trpc";
-
-export async function getStaticPaths() {
-	try {
-		const products = await api.product.getPrerenderProducts.query();
-		return products.map((product) => ({
-			params: { slug: `${product.slug}-${product.id}` },
-		}));
-	} catch (error) {
-		console.error("Error getting static paths", error);
-		return [];
-	}
-}
 
 const { slug } = Astro.params;
 const slugParts = slug?.split("-") ?? [];
@@ -49,8 +37,7 @@ if (!productData) {
 
 const product = productData;
 
-// Determine availability based on status and stock. This is evaluated at build
-// time for prerendered product pages.
+// Determine availability based on current status and stock at request time.
 const isInStock = product.status === "active" && product.stock > 0;
 
 const categoryHref = product.category?.slug
