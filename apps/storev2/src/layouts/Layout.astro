@@ -137,17 +137,25 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
     }
 </style>
 <script>
+    let loadingBarHideTimer: number | undefined;
+
     document.addEventListener("astro:before-preparation", () => {
+        if (loadingBarHideTimer) {
+            window.clearTimeout(loadingBarHideTimer);
+        }
+
         const loadingBar = document.getElementById("loading-bar");
         if (loadingBar) {
             loadingBar.classList.add("show");
         }
     });
 
-    document.addEventListener("astro:after-preparation", () => {
+    document.addEventListener("astro:page-load", () => {
         const loadingBar = document.getElementById("loading-bar");
         if (loadingBar) {
-            loadingBar.classList.remove("show");
+            loadingBarHideTimer = window.setTimeout(() => {
+                loadingBar.classList.remove("show");
+            }, 120);
         }
     });
 </script>
