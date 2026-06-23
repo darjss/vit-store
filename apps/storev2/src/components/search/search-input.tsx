@@ -16,6 +16,7 @@ interface SearchInputProps {
 	value?: string;
 	onValueChange?: (value: string) => void;
 	onSearch?: (value: string) => void;
+	onSubmitSearch?: (value: string) => void;
 	placeholder?: string;
 	isLoading?: boolean;
 	debounceMs?: number;
@@ -28,6 +29,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		"value",
 		"onValueChange",
 		"onSearch",
+		"onSubmitSearch",
 		"placeholder",
 		"isLoading",
 		"debounceMs",
@@ -81,7 +83,10 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
-			local.onSearch?.(inputValue());
+			local.onSubmitSearch?.(inputValue());
+			if (!local.onSubmitSearch) {
+				local.onSearch?.(inputValue());
+			}
 			// Blur input on mobile after search to hide keyboard
 			inputRef?.blur();
 		}
