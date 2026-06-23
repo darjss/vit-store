@@ -45,7 +45,7 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 					</>
 				}
 			>
-				<IconCheck class="h-4 w-4 animate-bounce text-background sm:h-5 sm:w-5" />
+				<IconCheck class="h-4 w-4 text-background transition-transform duration-200 ease-out sm:h-5 sm:w-5" />
 				<span class="hidden text-[10px] text-background sm:inline sm:text-xs">
 					Нэмэгдлээ!
 				</span>
