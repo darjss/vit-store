@@ -15,7 +15,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground shadow-hard-lg hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
         destructive: "bg-destructive text-destructive-foreground shadow-hard-lg hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
-        outline: "bg-background text-black border-3 border-border shadow-hard-lg hover:bg-black hover:text-white hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
+        outline: "bg-background text-foreground border-3 border-border shadow-hard-lg hover:bg-secondary hover:text-secondary-foreground hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
         secondary: "bg-secondary text-secondary-foreground shadow-hard-light-lg hover:shadow-hard-light hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none",
         ghost: "border-0 hover:bg-accent hover:text-accent-foreground shadow-none hover:shadow-none",
         link: "border-0 text-primary underline-offset-4 hover:underline shadow-none"
