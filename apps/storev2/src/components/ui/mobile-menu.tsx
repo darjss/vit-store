@@ -17,7 +17,7 @@ const MobileMenu: Component<MobileMenuProps> = (props) => {
         <IconMenu class="w-6 h-6" />
         <span class="sr-only">Toggle menu</span>
       </SheetTrigger>
-      <SheetContent position="left" class="w-[300px] sm:w-[400px] border-r-4 border-border p-0">
+      <SheetContent position="left" class="w-[300px] sm:w-[400px] border-r-[3px] border-border p-0">
         <div class="h-full overflow-y-auto bg-background">
             {props.children}
         </div>
