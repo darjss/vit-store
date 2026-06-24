@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import * as v from "valibot";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import { sendDetailedOrderNotification, sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
@@ -226,6 +227,12 @@ export const payment = router({
         .input(v.object({ paymentNumber: v.string(), checkoutToken: v.optional(v.string()) }))
         .mutation(async ({ input, ctx }) => {
         try {
+            if (!BANK_TRANSFER_ENABLED) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "Bank transfer is currently disabled",
+                });
+            }
             await assertCanAccessPayment(ctx, input.paymentNumber, input.checkoutToken);
             const payment = await paymentQueries.store.getPaymentByNumber(input.paymentNumber);
             if (!payment) {
