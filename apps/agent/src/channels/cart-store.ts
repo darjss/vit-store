@@ -1,9 +1,10 @@
 import {
 	addToCart,
 	applyCartCommand,
+	assistantStockStatusSchema,
 	type Cart,
-	type CartCommand,
 	type CartProductInput,
+	cartCommandSchema,
 	cartSchema,
 	EMPTY_CART,
 } from "@vit/assistant";
@@ -34,18 +35,14 @@ const addRequestSchema = v.object({
 		price: v.number(),
 		image: v.optional(v.string()),
 		brand: v.optional(v.string()),
-		stockStatus: v.optional(
-			v.picklist(["in_stock", "low_stock", "out_of_stock"]),
-		),
+		stockStatus: v.optional(assistantStockStatusSchema),
 	}),
 	quantity: v.optional(v.number()),
 });
 
 const commandRequestSchema = v.object({
 	type: v.literal("command"),
-	command: v.custom<CartCommand>(
-		(value) => typeof value === "object" && value !== null && "kind" in value,
-	),
+	command: cartCommandSchema,
 });
 
 const cartRequestSchema = v.variant("type", [

@@ -69,6 +69,24 @@ export interface CartEventDeps {
 const PRODUCT_GONE_MESSAGE =
 	"Уучлаарай, энэ бараа одоо боломжгүй байна. Өөр бараа сонгоно уу.";
 
+// The DO mutation (addProduct/applyCommand) is the commit point and the webhook
+// dedupe claim is held against it. A failure AFTER the commit must NOT propagate
+// — otherwise the webhook 500s, the claim is released, and Meta's retry of the
+// same mid re-applies the (non-idempotent) mutation, corrupting the cart. So the
+// customer-facing send is best-effort past the commit: swallow + log, exactly
+// like the typing indicator in `postMessage`. Only PRE-commit failures
+// (resolveProduct) are allowed to throw, where a retry is safe.
+const bestEffortSend = async (send: () => Promise<unknown>): Promise<void> => {
+	try {
+		await send();
+	} catch (error) {
+		console.warn(
+			"[cart] post-commit send failed (cart state is durable):",
+			error,
+		);
+	}
+};
+
 // Applies a detected cart event and sends the resulting summary. Returns the
 // new cart (handy for tests/CLIs). Drives the whole add → view → adjust →
 // confirm lifecycle deterministically.
@@ -77,17 +95,19 @@ export const handleCartEvent = async (
 	deps: CartEventDeps,
 ): Promise<Cart> => {
 	if (event.kind === "add") {
+		// Pre-commit: a resolve failure may throw so the claim is released and the
+		// retry can re-resolve (no mutation has happened yet).
 		const product = await deps.resolveProduct(event.productId);
 		if (!product) {
-			await deps.sendText(PRODUCT_GONE_MESSAGE);
+			await bestEffortSend(() => deps.sendText(PRODUCT_GONE_MESSAGE));
 			return deps.cart.getCart();
 		}
 		const cart = await deps.cart.addProduct(product);
-		await deps.sendCartSummary(cart);
+		await bestEffortSend(() => deps.sendCartSummary(cart));
 		return cart;
 	}
 
 	const cart = await deps.cart.applyCommand(event.command);
-	await deps.sendCartSummary(cart);
+	await bestEffortSend(() => deps.sendCartSummary(cart));
 	return cart;
 };
