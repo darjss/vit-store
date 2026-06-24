@@ -12,7 +12,6 @@ import { admitMessengerTextMessage } from "./messenger-admission";
 const graphVersion = "v25.0";
 
 export const client = new MessengerClient({
-	pageId: requiredEnv("MESSENGER_PAGE_ID"),
 	pageAccessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
 	graphVersion,
 });
@@ -66,9 +65,9 @@ export function postMessage(ref: MessengerConversationRef) {
 					text: input.text,
 				});
 				return {
-					...(result.messageId === undefined
+					...(result.message_id === undefined
 						? {}
-						: { messageId: result.messageId }),
+						: { messageId: result.message_id }),
 				};
 			} finally {
 				await client.senderActions.send(ref.participant, "typing_off");
