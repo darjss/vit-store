@@ -14,6 +14,7 @@
 		"@flue/runtime": "^1.0.0-beta.3",
 		"@flue/messenger": "^1.0.0-beta.1",
 		"@vit/assistant": "workspace:*",
+		"@warriorteam/messenger-sdk": "^1.5.3",
 		"agents": "^0.14.1",
 		"hono": "catalog:",
 		"valibot": "catalog:"
