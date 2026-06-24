@@ -7,17 +7,31 @@ import {
 import { defineTool, dispatch } from "@flue/runtime";
 import {
 	type AssistantProduct,
+	buildPaymentChoice,
 	type Cart,
+	type CreatedOrder,
 	cartQuickReplies,
+	claimTransferPayload,
 	formatCartSummary,
+	isTransferDoneText,
+	type PaymentRef,
 	type ProductCard,
+	parseChooseTransferPayload,
+	parseClaimTransferPayload,
+	setTransferStatus,
+	TRANSFER_CLAIM_ACK_MESSAGE,
+	TRANSFER_DONE_BUTTON_TITLE,
+	type TransferStatus,
 } from "@vit/assistant";
 import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
 import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
 import { getAssistantProductsByIds } from "../lib/catalog";
+import { stageInboundImage } from "../lib/messenger-inbound";
+import { claimTransfer, fetchPaymentSummary } from "../lib/payment";
 import { detectCartEvent, handleCartEvent } from "./cart-handler";
 import { cartSessionFor } from "./cart-session";
+import { checkoutSessionFor } from "./checkout-session";
 import {
 	admitMessengerImageMessage,
 	admitMessengerTextMessage,
@@ -25,12 +39,17 @@ import {
 	extractInboundImages,
 	releaseInboundClaim,
 } from "./messenger-admission";
-import { stageInboundImage } from "../lib/messenger-inbound";
+import {
+	handleChooseTransfer,
+	handleTransferClaim,
+	type PaymentHandlerDeps,
+} from "./payment-handler";
 
 // Worker bindings the Messenger webhook reaches through the Hono context.
 type WebhookEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
 	CART_STORE?: DurableObjectNamespace;
+	CHECKOUT_STORE?: DurableObjectNamespace;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
@@ -72,6 +91,12 @@ export const channel: MessengerChannel = createMessengerChannel({
 				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
 				// run under local miniflare where `env.AI` is unavailable).
 				if (await tryHandleCartEvent(event, env)) continue;
+				// Post-order payment surface (#25): the QPay/transfer button taps, a
+				// "Шилжүүлсэн" claim, and (within the transfer context) a "хийсэн"
+				// text or a screenshot are handled deterministically here, ahead of
+				// the photo/text paths, so a transfer claim never reaches the model
+				// and never touches a payment-confirmation API.
+				if (await tryHandlePaymentEvent(event, env)) continue;
 				// Photo turns: trusted channel code fetches the Meta image, stages it
 				// under messenger-inbound/ in R2, and dispatches ONLY the key (#20).
 				if (await dispatchInboundImage(event, env)) continue;
@@ -231,6 +256,212 @@ async function tryHandleCartEvent(
 	} catch (error) {
 		// Release the claim so Meta's retry can re-apply the dropped event.
 		if (cartEvent.mid.length > 0) await releaseInboundClaim(claimKey, env);
+		throw error;
+	}
+	return true;
+}
+
+// Public storefront origin the QPay-only page (#24) lives on. The store tRPC
+// router and the storefront share one origin (storev2 mounts `/trpc/store`), so
+// this defaults to the store API base; `STORE_PUBLIC_URL` overrides it when they
+// diverge.
+const storePublicUrl = (): string => {
+	const base =
+		process.env.STORE_PUBLIC_URL ??
+		process.env.STORE_API_URL ??
+		"http://localhost:3000";
+	return base.replace(/\/+$/, "");
+};
+
+// Maps the channel-neutral payment-choice buttons to the Messenger SDK button
+// shape (web_url needs `url`, postback needs `payload`).
+const toMessengerButtons = (
+	buttons: ReturnType<typeof buildPaymentChoice>["buttons"],
+) =>
+	buttons.map((b) =>
+		b.type === "web_url"
+			? { type: "web_url" as const, title: b.title, url: b.url as string }
+			: {
+					type: "postback" as const,
+					title: b.title,
+					payload: b.payload as string,
+				},
+	);
+
+// Post-order payment choices (#25): a button template offering QPay (url button
+// to the QPay-only page) and bank transfer (postback). Bound to one
+// conversation; injected into the checkout tools' `place_order` so the offer is
+// sent right after the order confirmation.
+export function sendPaymentChoices(ref: MessengerConversationRef) {
+	return async (order: CreatedOrder) => {
+		if (!order.paymentNumber) return undefined;
+		const choice = buildPaymentChoice(storePublicUrl(), {
+			paymentNumber: order.paymentNumber,
+			checkoutToken: order.checkoutToken,
+		});
+		const result = await messenger.templates.button({
+			recipient: toRecipient(ref.participant),
+			text: choice.text,
+			buttons: toMessengerButtons(choice.buttons),
+			messaging_type: "RESPONSE",
+		});
+		return { messageId: result.message_id };
+	};
+}
+
+// Bank-transfer details (#25): the account/amount/reference text plus a single
+// `Шилжүүлсэн` postback button the customer taps to lodge a transfer claim.
+export function sendBankTransferDetails(ref: MessengerConversationRef) {
+	return async (text: string, paymentRef: PaymentRef) => {
+		const result = await messenger.templates.button({
+			recipient: toRecipient(ref.participant),
+			text,
+			buttons: [
+				{
+					type: "postback" as const,
+					title: TRANSFER_DONE_BUTTON_TITLE,
+					payload: claimTransferPayload(paymentRef),
+				},
+			],
+			messaging_type: "RESPONSE",
+		});
+		return { messageId: result.message_id };
+	};
+}
+
+// Binds the post-order payment handler dependencies to one conversation: the
+// store-API boundary (summary + claim), the two channel senders, and best-effort
+// transfer-status persistence on the per-session checkout record.
+function paymentDepsFor(
+	conversation: MessengerConversationRef,
+	checkout: ReturnType<typeof checkoutSessionFor>,
+): PaymentHandlerDeps {
+	return {
+		fetchPaymentSummary: async (ref) => {
+			const summary = await fetchPaymentSummary(
+				ref.paymentNumber,
+				ref.checkoutToken,
+			);
+			return { amount: summary.total, reference: summary.order.customerPhone };
+		},
+		// The ONLY payment write a claim performs — records the claim, never
+		// confirms (ADR 0004).
+		claimTransfer: (ref) => claimTransfer(ref.paymentNumber, ref.checkoutToken),
+		sendBankDetails: sendBankTransferDetails(conversation),
+		sendText: sendTextReply(conversation),
+		setTransferStatus: checkout
+			? async (status: TransferStatus) => {
+					const current = await checkout.getCheckout();
+					if (current) {
+						await checkout.saveCheckout(setTransferStatus(current, status));
+					}
+				}
+			: undefined,
+	};
+}
+
+// Handles a post-order payment event deterministically (no model). Returns true
+// when consumed. Covers: the `Дансаар шилжүүлэх` choice (postback), and a
+// transfer CLAIM via the `Шилжүүлсэн` button, a "хийсэн"/"hiisen" text, or a
+// screenshot — but the latter two only inside the transfer context recorded on
+// the checkout session. A claim records `customer_claimed_paid` and NEVER calls
+// a payment-confirmation API.
+async function tryHandlePaymentEvent(
+	event: Parameters<typeof detectCartEvent>[0],
+	env: WebhookEnv,
+): Promise<boolean> {
+	if (event.message?.is_echo) return false;
+	const conversation = channel.conversationRef(event);
+	if (conversation === undefined) return false;
+	const sessionId = channel.conversationKey(conversation);
+	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
+	const mid = event.postback?.mid ?? event.message?.mid ?? "";
+	const deps = () => paymentDepsFor(conversation, checkout);
+
+	// 1. Button taps carry the payment ref in the payload — fully self-contained.
+	const postback = detectPaymentPostback(event);
+	if (postback) {
+		const run =
+			postback.kind === "choose"
+				? () => handleChooseTransfer(postback.ref, deps())
+				: () => handleTransferClaim(postback.ref, deps());
+		return runPaymentTransition(env, mid, sessionId, run);
+	}
+
+	// 2. Free-text "хийсэн"/"hiisen" or a screenshot — a claim ONLY inside the
+	// transfer context recorded on the checkout session. Without a payment
+	// context (or store binding) fall through to the normal paths.
+	if (checkout === undefined) return false;
+	const claim = await resolveContextualClaim(event, checkout);
+	if (claim === undefined) return false;
+	const d = deps();
+	// Already claimed: just re-acknowledge, do not re-record (avoid re-notifying
+	// admin on a repeated "хийсэн").
+	const run = claim.alreadyClaimed
+		? () => d.sendText(TRANSFER_CLAIM_ACK_MESSAGE).then(() => undefined)
+		: () => handleTransferClaim(claim.ref, d);
+	return runPaymentTransition(env, mid, sessionId, run);
+}
+
+// Decodes a payment button tap from a postback/quick-reply payload into the
+// transition kind + its payment ref, or undefined when it is not one.
+function detectPaymentPostback(
+	event: Parameters<typeof detectCartEvent>[0],
+): { kind: "choose" | "claim"; ref: PaymentRef } | undefined {
+	const payload =
+		event.postback?.payload ?? event.message?.quick_reply?.payload;
+	if (!payload) return undefined;
+	const choose = parseChooseTransferPayload(payload);
+	if (choose) return { kind: "choose", ref: choose };
+	const claim = parseClaimTransferPayload(payload);
+	if (claim) return { kind: "claim", ref: claim };
+	return undefined;
+}
+
+// Resolves a contextual (non-button) transfer claim — a "хийсэн" text or a
+// screenshot — against the persisted transfer context. A screenshot claims only
+// on the bank-details screen (`transfer_pending`); a text claims from the moment
+// the choices were offered. Returns undefined when this is not a claim.
+async function resolveContextualClaim(
+	event: Parameters<typeof detectCartEvent>[0],
+	checkout: NonNullable<ReturnType<typeof checkoutSessionFor>>,
+): Promise<{ ref: PaymentRef; alreadyClaimed: boolean } | undefined> {
+	const isClaimText = isTransferDoneText(event.message?.text);
+	const hasImage = extractInboundImages(event).length > 0;
+	if (!isClaimText && !hasImage) return undefined;
+
+	const payment = (await checkout.getCheckout())?.payment;
+	if (!payment) return undefined;
+	const inImageContext =
+		hasImage && payment.transferStatus === "transfer_pending";
+	// A "хийсэн" text is a claim at any post-order transfer status (offered /
+	// pending / already-claimed).
+	if (!inImageContext && !isClaimText) return undefined;
+
+	return {
+		ref: {
+			paymentNumber: payment.paymentNumber,
+			checkoutToken: payment.checkoutToken ?? null,
+		},
+		alreadyClaimed: payment.transferStatus === "transfer_claimed",
+	};
+}
+
+// Runs a payment transition under the same mid-dedupe discipline as the cart
+// path: claim the mid first (idempotent on a Meta retry), release it on failure
+// so the retry is honored. Always returns true (the event is consumed).
+async function runPaymentTransition(
+	env: WebhookEnv,
+	mid: string,
+	sessionId: string,
+	run: () => Promise<unknown>,
+): Promise<boolean> {
+	const claimKey = `messenger:payment:v1:${sessionId}:mid:${mid}`;
+	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) return true;
+	try {
+		await run();
+	} catch (error) {
+		if (mid.length > 0) await releaseInboundClaim(claimKey, env);
 		throw error;
 	}
 	return true;

@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
+import { bankTransfer } from "@vit/shared/constants";
 import { createSignal, Show } from "solid-js";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
@@ -88,7 +89,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								<div class="mb-0.5 font-bold text-[10px] text-muted-foreground sm:text-xs">
 									БАНК
 								</div>
-								<div class="font-black text-sm sm:text-base">Хаан банк</div>
+								<div class="font-black text-sm sm:text-base">
+									{bankTransfer.bankName}
+								</div>
 							</div>
 						</div>
 
@@ -98,11 +101,14 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Данс
 									</p>
-									<div class="flex items-stretch min-w-0">
-										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-base">
-											5011147435
+									<div class="flex min-w-0 items-stretch">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+											{bankTransfer.accountNumber}
 										</div>
-										<CopyButton text="5011147435" title="Данс" />
+										<CopyButton
+											text={bankTransfer.accountNumber}
+											title="Данс"
+										/>
 									</div>
 								</div>
 
@@ -110,11 +116,11 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Нэр
 									</p>
-									<div class="flex items-stretch min-w-0">
-										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-sm">
-											Batdelger Jigjidsuren
+									<div class="flex min-w-0 items-stretch">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
+											{bankTransfer.accountName}
 										</div>
-										<CopyButton text="Batdelger Jigjidsuren" title="Нэр" />
+										<CopyButton text={bankTransfer.accountName} title="Нэр" />
 									</div>
 								</div>
 
@@ -122,8 +128,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Дүн
 									</p>
-									<div class="flex items-stretch min-w-0">
-										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-lg">
+									<div class="flex min-w-0 items-stretch">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
 											{props.total.toLocaleString()}₮
 										</div>
 										<CopyButton text={props.total} title="Дүн" />
@@ -134,8 +140,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
 										Гүйлгээний утга
 									</p>
-									<div class="flex items-stretch min-w-0">
-										<div class="flex-1 min-w-0 rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm overflow-hidden text-ellipsis sm:px-3 sm:py-2.5 sm:text-base">
+									<div class="flex min-w-0 items-stretch">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{props.transferReference}
 										</div>
 										<CopyButton
@@ -153,8 +159,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								<div class="flex-1">
 									<p class="font-bold text-[11px] leading-snug sm:text-xs">
 										<strong>Гүйлгээний утга</strong> хэсэгт заавал{" "}
-										<strong>{props.transferReference}</strong> утасны дугаарыг бичнэ үү.
-										Төлбөр 5-15 минутын дотор баталгаажна.
+										<strong>{props.transferReference}</strong> утасны дугаарыг
+										бичнэ үү. Төлбөр 5-15 минутын дотор баталгаажна.
 									</p>
 								</div>
 							</div>
