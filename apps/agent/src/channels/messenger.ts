@@ -54,7 +54,11 @@ export const channel: MessengerChannel = createMessengerChannel({
 							messageId: admission.messageId,
 							text: admission.text,
 							attachmentTypes: admission.attachmentTypes,
-							quickReplyPayload: admission.quickReplyPayload,
+							// dispatch() input must be JSON-clean: omit the key entirely
+							// when there is no quick reply rather than passing undefined.
+							...(admission.quickReplyPayload !== undefined
+								? { quickReplyPayload: admission.quickReplyPayload }
+								: {}),
 						},
 					});
 				} catch (error) {
