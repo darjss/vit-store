@@ -1,3 +1,4 @@
+import { navigate } from "astro:transitions/client";
 import type { Component } from "solid-js";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
@@ -8,7 +9,6 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
-import { navigate } from "astro:transitions/client";
 import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
@@ -98,6 +98,7 @@ const SearchOverlay: Component = () => {
 							onSubmitSearch={handleSubmitSearch}
 							isLoading={isSearching() && searchQuery().length >= 2}
 							autofocus
+							focusKey={isOpen()}
 							placeholder="Витамин, нэмэлт тэжээл хайх..."
 						/>
 					</div>

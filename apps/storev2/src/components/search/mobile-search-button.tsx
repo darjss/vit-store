@@ -1,3 +1,4 @@
+import { navigate } from "astro:transitions/client";
 import type { Component } from "solid-js";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
@@ -5,9 +6,9 @@ import {
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
+	SheetTrigger,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
-import { navigate } from "astro:transitions/client";
 import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
@@ -67,11 +68,11 @@ const MobileSearchButton: Component = () => {
 	};
 
 	return (
-		<>
+		<Sheet open={isOpen()} onOpenChange={setIsOpen}>
 			{/* Trigger Button */}
-			<button
+			<SheetTrigger
+				as="button"
 				type="button"
-				onClick={() => setIsOpen(true)}
 				class="group block w-full px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 				aria-label="Хайх"
 			>
@@ -82,54 +83,53 @@ const MobileSearchButton: Component = () => {
 					/>
 					<p class="font-bold text-[11px] leading-none">Хайх</p>
 				</div>
-			</button>
+			</SheetTrigger>
 
 			{/* Search Sheet */}
-			<Sheet open={isOpen()} onOpenChange={setIsOpen}>
-				<SheetContent
-					position="bottom"
-					class="h-[85vh] w-full max-w-none border-border border-t-4 p-0"
-				>
-					<div class="flex h-full flex-col">
-						{/* Header */}
-						<div class="border-border border-b-3 bg-primary/10 px-4 py-4">
-							<SheetHeader class="mb-4">
-								<SheetTitle class="flex items-center gap-2 font-black text-lg uppercase tracking-tight">
-									<IconSearch class="h-5 w-5 text-primary" />
-									Бүтээгдэхүүн хайх
-								</SheetTitle>
-							</SheetHeader>
+			<SheetContent
+				position="bottom"
+				class="h-[85vh] w-full max-w-none border-border border-t-4 p-0"
+			>
+				<div class="flex h-full flex-col">
+					{/* Header */}
+					<div class="border-border border-b-3 bg-primary/10 px-4 py-4">
+						<SheetHeader class="mb-4">
+							<SheetTitle class="flex items-center gap-2 font-black text-lg uppercase tracking-tight">
+								<IconSearch class="h-5 w-5 text-primary" />
+								Бүтээгдэхүүн хайх
+							</SheetTitle>
+						</SheetHeader>
 
-							<SearchInput
-								value={searchQuery()}
-								onValueChange={setSearchQuery}
-								onSearch={handleSearch}
-								onSubmitSearch={handleSubmitSearch}
-								isLoading={isSearching() && searchQuery().length >= 2}
-								autofocus
-								placeholder="Витамин, нэмэлт тэжээл..."
-							/>
-						</div>
-
-						{/* Content */}
-						<div class="flex-1 overflow-y-auto px-4 py-4">
-							<Show
-								when={searchQuery().length >= 2}
-								fallback={
-									<SearchSuggestions onSelectSearch={handleSelectSuggestion} />
-								}
-							>
-								<SearchResults
-									searchQuery={searchQuery()}
-									onProductClick={handleClose}
-									onLoadingChange={setIsSearching}
-								/>
-							</Show>
-						</div>
+						<SearchInput
+							value={searchQuery()}
+							onValueChange={setSearchQuery}
+							onSearch={handleSearch}
+							onSubmitSearch={handleSubmitSearch}
+							isLoading={isSearching() && searchQuery().length >= 2}
+							autofocus
+							focusKey={isOpen()}
+							placeholder="Витамин, нэмэлт тэжээл..."
+						/>
 					</div>
-				</SheetContent>
-			</Sheet>
-		</>
+
+					{/* Content */}
+					<div class="flex-1 overflow-y-auto px-4 py-4">
+						<Show
+							when={searchQuery().length >= 2}
+							fallback={
+								<SearchSuggestions onSelectSearch={handleSelectSuggestion} />
+							}
+						>
+							<SearchResults
+								searchQuery={searchQuery()}
+								onProductClick={handleClose}
+								onLoadingChange={setIsSearching}
+							/>
+						</Show>
+					</div>
+				</div>
+			</SheetContent>
+		</Sheet>
 	);
 };
 

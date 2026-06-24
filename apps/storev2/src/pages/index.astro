@@ -1,11 +1,4 @@
 ---
-
-
-
-
-
-
-
 import HomeProductCard from "@/components/product/home-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { productColors } from "@/lib/constant";
@@ -71,7 +64,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
         </p>
 
         <!-- Trust row — compact on mobile -->
-        <div class="relative flex gap-3 mb-6 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
+        <div class="relative flex gap-3 mb-5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
           <div class="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
           {[
             { val: "Хямд", label: "Үнэ" },
@@ -85,9 +78,14 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
           ))}
         </div>
 
-        <a href="/products" class="self-start px-7 py-3 bg-foreground text-background font-bold text-[13px] uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform">
-          Бүтээгдэхүүн үзэх
-        </a>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <a href="/products" class="px-7 py-3 bg-foreground text-background font-black text-[13px] uppercase tracking-wider border-2 border-foreground shadow-hard-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+            Бүтээгдэхүүн үзэх
+          </a>
+          <a href="#featured-products" class="px-4 py-3 bg-card text-foreground font-black text-[12px] uppercase tracking-wider border-2 border-border active:bg-primary transition-colors">
+            Онцлох сонголт
+          </a>
+        </div>
       </div>
 
       <!-- Hero products: 2x2 grid, always visible -->
@@ -100,9 +98,10 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
               )}
             </div>
             <!-- Always-visible label on mobile (no hover state needed) -->
-            <div class="absolute bottom-0 inset-x-0 bg-card/95 backdrop-blur-sm border-t-2 border-border p-2 md:p-3">
+            <div class="absolute bottom-0 inset-x-0 bg-card/95 border-t-2 border-border p-2 md:p-3">
               <div class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
-              <div class="flex items-center justify-between mt-0.5">
+              <div class="line-clamp-1 font-bold text-[10px] leading-tight md:text-xs">{p.name}</div>
+              <div class="flex items-center justify-between mt-1">
                 <span class="font-black text-xs md:text-sm">{formatCurrency(p.price)}</span>
               </div>
             </div>
@@ -113,11 +112,11 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== BRAND MARQUEE ==================== -->
-  <section class="border-b-2 border-border bg-foreground overflow-hidden">
+  <section class="border-b-2 border-border bg-muted overflow-hidden">
     <div class="group/marquee">
-      <div class="py-3.5 lg:py-4 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 25s linear infinite;">
+      <div class="py-3 lg:py-3.5 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 35s linear infinite;">
         {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
-          <a href={`/products/brand/${brand.slug}/1/`} class="text-lg lg:text-xl font-black uppercase tracking-wider text-background/30 flex items-center gap-8 hover:text-background/50 transition-colors">
+          <a href={`/products/brand/${brand.slug}/1/`} class="text-sm lg:text-base font-black uppercase tracking-wider text-foreground/45 flex items-center gap-8 hover:text-foreground transition-colors">
             {brand.name}
             <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
           </a>
@@ -140,7 +139,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== FEATURED ==================== -->
-  <section class="border-b-2 border-border">
+  <section id="featured-products" class="border-b-2 border-border scroll-mt-20">
     <div class="px-5 pt-8 pb-10 lg:px-8 lg:py-16">
       <!-- Section header -->
       <div class="mb-6">

@@ -25,18 +25,18 @@ import {
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
+import IconPackage from "~icons/ri/archive-line";
+import IconChevronDown from "~icons/ri/arrow-down-s-line";
+import IconChevronUp from "~icons/ri/arrow-up-s-line";
+import IconBankCard from "~icons/ri/bank-card-line";
+import IconLock from "~icons/ri/lock-line";
+import IconShieldCheck from "~icons/ri/shield-check-line";
+import IconSmartphone from "~icons/ri/smartphone-line";
+import IconTruck from "~icons/ri/truck-line";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
 import DeliveryInfoSheet from "./delivery-info-sheet";
-import IconLock from "~icons/ri/lock-line";
-import IconTruck from "~icons/ri/truck-line";
-import IconShieldCheck from "~icons/ri/shield-check-line";
-import IconSmartphone from "~icons/ri/smartphone-line";
-import IconChevronDown from "~icons/ri/arrow-down-s-line";
-import IconChevronUp from "~icons/ri/arrow-up-s-line";
-import IconPackage from "~icons/ri/archive-line";
-import IconBankCard from "~icons/ri/bank-card-line";
 
 type DeliveryZone = {
 	Id: number;
@@ -66,7 +66,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	const [step, setStep] = createSignal<Step>("delivery");
 	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
-	const [summaryOpen, setSummaryOpen] = createSignal(true);
+	const [summaryOpen, setSummaryOpen] = createSignal(false);
 
 	const addressZonesQuery = useQuery(
 		() => ({
@@ -100,10 +100,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 				if (paymentNumber) {
 					if (checkoutToken) {
-						sessionStorage.setItem(
-							`checkout:${paymentNumber}`,
-							checkoutToken,
-						);
+						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
 					}
 					trackOrderPlaced(
 						paymentNumber,
@@ -147,8 +144,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				} else {
 					showToast({
 						title: "Алдаа",
-						description:
-							"Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 						variant: "error",
 						duration: 5000,
 					});
@@ -157,8 +153,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			onError: () => {
 				showToast({
 					title: "Алдаа",
-					description:
-						"Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 					variant: "error",
 					duration: 5000,
 				});
@@ -179,10 +174,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(
-						15,
-						"Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой",
-					),
+					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -195,10 +187,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(
-						15,
-						"Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой",
-					),
+					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -228,6 +217,99 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const isEmpty = () => cart.items().length === 0;
 	const isHydrated = () => cart.isHydrated();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
+	const OrderSummary = () => (
+		<div class="border-4 border-border bg-card shadow-hard-lg">
+			<button
+				type="button"
+				onClick={() => setSummaryOpen((v) => !v)}
+				class="flex w-full items-center justify-between gap-3 bg-card p-3 text-left"
+			>
+				<div class="flex min-w-0 items-center gap-2">
+					<IconPackage class="h-5 w-5 shrink-0" />
+					<span class="font-black text-sm uppercase">Таны захиалга</span>
+					<span class="border-2 border-border bg-primary px-1.5 py-0.5 font-black text-foreground text-xs">
+						{cart.count()}
+					</span>
+				</div>
+				<div class="flex shrink-0 items-center gap-2">
+					<span class="font-black text-foreground text-sm">
+						₮{totalWithDelivery().toLocaleString()}
+					</span>
+					<Show
+						when={summaryOpen()}
+						fallback={<IconChevronDown class="h-5 w-5 text-muted-foreground" />}
+					>
+						<IconChevronUp class="h-5 w-5 text-muted-foreground" />
+					</Show>
+				</div>
+			</button>
+
+			<Show when={summaryOpen()}>
+				<div class="border-border border-t-4 p-3">
+					<div class="max-h-56 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-280px)]">
+						<For each={cart.items()}>
+							{(item) => (
+								<div class="flex gap-2.5">
+									<div class="h-14 w-14 flex-shrink-0 overflow-hidden border-3 border-border bg-card">
+										<a href={`/products/${item.slug}-${item.productId}/`}>
+											<Image
+												src={item.image}
+												alt={`${item.name}`}
+												width={56}
+												height={56}
+												layout="fixed"
+												class="h-full w-full object-cover"
+											/>
+										</a>
+									</div>
+									<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+										<a href={`/products/${item.slug}-${item.productId}/`}>
+											<h3 class="line-clamp-2 font-black text-foreground text-xs uppercase leading-tight">
+												{item.name}
+											</h3>
+										</a>
+										<div class="flex items-center justify-between gap-2">
+											<p class="font-bold text-[10px] text-muted-foreground">
+												₮{item.price.toLocaleString()} × {item.quantity}
+											</p>
+											<p class="font-black text-primary text-xs">
+												₮{(item.price * item.quantity).toLocaleString()}
+											</p>
+										</div>
+									</div>
+								</div>
+							)}
+						</For>
+					</div>
+
+					<div class="mt-3 space-y-2 border-border border-t-2 pt-3">
+						<div class="flex items-center justify-between">
+							<p class="font-bold text-muted-foreground text-xs uppercase">
+								Бараа
+							</p>
+							<p class="font-black text-foreground text-sm">
+								₮{cart.total().toLocaleString()}
+							</p>
+						</div>
+						<div class="flex items-center justify-between">
+							<p class="font-bold text-muted-foreground text-xs uppercase">
+								Хүргэлт
+							</p>
+							<p class="font-black text-foreground text-sm">
+								₮{deliveryFee.toLocaleString()}
+							</p>
+						</div>
+						<div class="flex items-center justify-between border-border border-t-2 pt-2">
+							<p class="font-black text-foreground text-sm uppercase">Нийт</p>
+							<p class="font-black text-foreground text-lg">
+								₮{totalWithDelivery().toLocaleString()}
+							</p>
+						</div>
+					</div>
+				</div>
+			</Show>
+		</div>
+	);
 
 	return (
 		<Switch>
@@ -241,7 +323,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen bg-background">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-b-4 border-border bg-background">
+						<div class="sticky top-0 z-30 border-border border-b-4 bg-background">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
 									<h1 class="font-black text-lg uppercase tracking-tight">
@@ -252,7 +334,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 											Төлбөр төлөх
 										</Show>
 									</h1>
-									<p class="text-xs font-bold text-muted-foreground">
+									<p class="font-bold text-muted-foreground text-xs">
 										<Show
 											when={step() === "payment"}
 											fallback={"Алхам 1 / 2 — Хүргэлт"}
@@ -280,309 +362,201 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 							</div>
 						</div>
 
-						<div class="mx-auto max-w-lg space-y-4 px-4 py-4">
-							{/* Collapsible Order Summary */}
-							<div class="border-4 border-border shadow-hard-lg">
-								<button
-									type="button"
-									onClick={() => setSummaryOpen((v) => !v)}
-									class="flex w-full items-center justify-between bg-card p-3"
-								>
-									<div class="flex items-center gap-2">
-										<IconPackage class="h-5 w-5" />
-										<span class="font-black text-sm uppercase">
-											Таны захиалга
-										</span>
-										<span class="border-2 border-border bg-primary px-1.5 py-0.5 font-black text-xs text-foreground">
-											{cart.count()}
-										</span>
-									</div>
-									<Show
-										when={summaryOpen()}
-										fallback={
-											<IconChevronDown class="h-5 w-5 text-muted-foreground" />
-										}
-									>
-										<IconChevronUp class="h-5 w-5 text-muted-foreground" />
-									</Show>
-								</button>
-
-								<Show when={summaryOpen()}>
-									<div class="border-t-4 border-border p-3">
-										<div class="space-y-2">
-											<For each={cart.items()}>
-												{(item) => (
-													<div class="flex gap-2.5">
-														<div class="h-16 w-16 flex-shrink-0 overflow-hidden border-3 border-border bg-card">
-															<a href={`/products/${item.slug}-${item.productId}/`}>
-																<Image
-																	src={item.image}
-																	alt={`${item.name}`}
-																	width={64}
-																	height={64}
-																	layout="fixed"
-																	class="h-full w-full object-cover"
-																/>
-															</a>
-														</div>
-														<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-															<a href={`/products/${item.slug}-${item.productId}/`}>
-																<h3 class="line-clamp-2 font-black text-xs uppercase leading-tight text-foreground">
-																	{item.name}
-																</h3>
-															</a>
-															<div class="flex items-center justify-between">
-																<p class="font-bold text-muted-foreground text-[10px]">
-																	₮
-																	{item.price.toLocaleString()}{" "}
-																	× {item.quantity}
-																</p>
-																<p class="font-black text-xs text-primary">
-																	₮
-																	{(
-																		item.price *
-																		item.quantity
-																	).toLocaleString()}
-																</p>
-															</div>
-														</div>
+						<div class="mx-auto grid max-w-5xl gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+							<div class="order-1 space-y-4">
+								{/* Step content */}
+								<Switch>
+									{/* DELIVERY STEP */}
+									<Match when={step() === "delivery"}>
+										<div class="border-4 border-border bg-card shadow-hard-lg">
+											<div class="border-border border-b-4 bg-secondary p-3">
+												<div class="flex items-center gap-2">
+													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
+														<IconTruck class="h-3.5 w-3.5 text-foreground" />
 													</div>
-												)}
-											</For>
-										</div>
-
-										<div class="mt-3 space-y-2 border-t-2 border-border pt-3">
-											<div class="flex items-center justify-between">
-												<p class="font-bold text-xs uppercase text-muted-foreground">
-													Бараа
-												</p>
-												<p class="font-black text-sm text-foreground">
-													₮{cart.total().toLocaleString()}
-												</p>
-											</div>
-											<div class="flex items-center justify-between">
-												<p class="font-bold text-xs uppercase text-muted-foreground">
-													Хүргэлт
-												</p>
-												<p class="font-black text-sm text-foreground">
-													₮{deliveryFee.toLocaleString()}
-												</p>
-											</div>
-											<div class="flex items-center justify-between border-t-2 border-border pt-2">
-												<p class="font-black text-sm uppercase text-foreground">
-													Нийт
-												</p>
-												<p class="font-black text-lg text-foreground">
-													₮{totalWithDelivery().toLocaleString()}
-												</p>
-											</div>
-										</div>
-									</div>
-								</Show>
-							</div>
-
-							{/* Delivery step starts immediately below the summary. Keep the page self-evident without animated scroll prompts. */}
-							<Show when={step() === "delivery" && summaryOpen()}>
-								<div class="flex flex-col items-center gap-1 pb-1 pt-2">
-									<p class="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-										Хүргэлтийн мэдээллээ бөглөнө үү
-									</p>
-								</div>
-							</Show>
-
-							{/* Step content */}
-							<Switch>
-								{/* DELIVERY STEP */}
-								<Match when={step() === "delivery"}>
-									<div class="border-4 border-border bg-card shadow-hard-lg">
-										<div class="border-b-4 border-border bg-secondary p-3">
-											<div class="flex items-center gap-2">
-												<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
-													<IconTruck class="h-3.5 w-3.5 text-foreground" />
-												</div>
-												<div>
-													<h2 class="font-black text-sm uppercase tracking-tight text-secondary-foreground">
-														Хүргэлтийн мэдээлэл
-													</h2>
-													<p class="text-[10px] font-bold text-secondary-foreground/70">
-														Бүх талбарыг бөглөнө үү
-													</p>
+													<div>
+														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
+															Хүргэлтийн мэдээлэл
+														</h2>
+														<p class="font-bold text-[10px] text-secondary-foreground/70">
+															Бүх талбарыг бөглөнө үү
+														</p>
+													</div>
 												</div>
 											</div>
-										</div>
 
-										<div class="p-3">
-											<form
-												class="space-y-4"
-												onSubmit={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													if (
-														document.activeElement instanceof
-														HTMLElement
-													) {
-														document.activeElement.blur();
-													}
-													form.handleSubmit();
-												}}
-											>
-												{/* Phone */}
-												<div class="border-3 border-border p-3 shadow-hard-sm">
-													<form.AppField
-														name="phoneNumber"
-														children={(field) => (
-															<field.FormTextField
-																label="Утасны дугаар"
-																placeholder="88889999"
-																type="tel"
-															/>
-														)}
-													/>
-												</div>
-
-												{/* Zone + info */}
-												<div class="border-3 border-border p-3 shadow-hard-sm">
-													<div class="space-y-2">
+											<div class="p-3">
+												<form
+													class="space-y-4"
+													onSubmit={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														if (document.activeElement instanceof HTMLElement) {
+															document.activeElement.blur();
+														}
+														form.handleSubmit();
+													}}
+												>
+													{/* Phone */}
+													<div class="border-3 border-border p-3 shadow-hard-sm">
 														<form.AppField
-															name="addressZoneId"
+															name="phoneNumber"
 															children={(field) => (
-																<field.FormSelectField
-																	label="Хаягийн бүс"
-																	placeholder={
-																		addressZonesQuery.isLoading
-																			? "Бүсүүд уншиж байна..."
-																			: "Хаягийн бүс сонгох"
-																	}
-																	options={addressZoneOptions()}
-																	disabled={addressZonesQuery.isLoading}
+																<field.FormTextField
+																	label="Утасны дугаар"
+																	placeholder="88889999"
+																	type="tel"
 																/>
 															)}
 														/>
-														<div class="flex justify-end">
-															<DeliveryInfoSheet />
+													</div>
+
+													{/* Zone + info */}
+													<div class="border-3 border-border p-3 shadow-hard-sm">
+														<div class="space-y-2">
+															<form.AppField
+																name="addressZoneId"
+																children={(field) => (
+																	<field.FormSelectField
+																		label="Хаягийн бүс"
+																		placeholder={
+																			addressZonesQuery.isLoading
+																				? "Бүсүүд уншиж байна..."
+																				: "Хаягийн бүс сонгох"
+																		}
+																		options={addressZoneOptions()}
+																		disabled={addressZonesQuery.isLoading}
+																	/>
+																)}
+															/>
+															<div class="flex justify-end">
+																<DeliveryInfoSheet />
+															</div>
 														</div>
 													</div>
-												</div>
 
-												{/* Address */}
-												<div class="border-3 border-border p-3 shadow-hard-sm">
-													<form.AppField
-														name="address"
-														children={(field) => (
-															<field.FormTextArea
-																label="Хаяг"
-																placeholder="Байр, тоот, давхар"
-															/>
-														)}
-													/>
-												</div>
+													{/* Address */}
+													<div class="border-3 border-border p-3 shadow-hard-sm">
+														<form.AppField
+															name="address"
+															children={(field) => (
+																<field.FormTextArea
+																	label="Хаяг"
+																	placeholder="Байр, тоот, давхар"
+																/>
+															)}
+														/>
+													</div>
 
-												{/* Notes */}
-												<div class="border-3 border-border p-3 shadow-hard-sm">
-													<form.AppField
-														name="notes"
-														children={(field) => (
-															<field.FormTextArea
-																label="Нэмэлт мэдээлэл (заавал биш)"
-																placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
-															/>
-														)}
-													/>
-												</div>
+													{/* Notes */}
+													<div class="border-3 border-border p-3 shadow-hard-sm">
+														<form.AppField
+															name="notes"
+															children={(field) => (
+																<field.FormTextArea
+																	label="Нэмэлт мэдээлэл (заавал биш)"
+																	placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
+																/>
+															)}
+														/>
+													</div>
 
-												{/* Trust badges */}
-												<div class="grid grid-cols-2 gap-2">
-													<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
-														<IconLock class="h-4 w-4 shrink-0 text-foreground" />
-														<span class="text-[10px] font-black uppercase leading-tight text-foreground">
-															Аюулгүй төлбөр
-														</span>
-													</div>
-													<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
-														<IconShieldCheck class="h-4 w-4 shrink-0 text-foreground" />
-														<span class="text-[10px] font-black uppercase leading-tight text-foreground">
-															Баталгаат бараа
-														</span>
-													</div>
-													<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
-														<IconTruck class="h-4 w-4 shrink-0 text-secondary-foreground" />
-														<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
-															Өдөрт нь хүргэнэ
-														</span>
-													</div>
-													<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
-														<IconSmartphone class="h-4 w-4 shrink-0 text-secondary-foreground" />
-														<span class="text-[10px] font-black uppercase leading-tight text-secondary-foreground">
-															QPay / Данс
-														</span>
-													</div>
-												</div>
-
-												{/* Submit */}
-												<div class="space-y-3 pt-2">
-													<div class="flex items-center justify-between border-4 border-border bg-primary p-3 shadow-hard-sm">
-														<div>
-															<p class="font-black text-sm uppercase text-foreground">
-																Төлөх дүн
-															</p>
-															<p class="text-[10px] font-bold text-muted-foreground">
-																Хүргэлтийн хураамж орсон
-															</p>
+													{/* Trust badges */}
+													<div class="grid grid-cols-2 gap-2">
+														<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
+															<IconLock class="h-4 w-4 shrink-0 text-foreground" />
+															<span class="font-black text-[10px] text-foreground uppercase leading-tight">
+																Аюулгүй төлбөр
+															</span>
 														</div>
-														<p class="font-black text-xl text-foreground">
+														<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
+															<IconShieldCheck class="h-4 w-4 shrink-0 text-foreground" />
+															<span class="font-black text-[10px] text-foreground uppercase leading-tight">
+																Баталгаат бараа
+															</span>
+														</div>
+														<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
+															<IconTruck class="h-4 w-4 shrink-0 text-secondary-foreground" />
+															<span class="font-black text-[10px] text-secondary-foreground uppercase leading-tight">
+																Өдөрт нь хүргэнэ
+															</span>
+														</div>
+														<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
+															<IconSmartphone class="h-4 w-4 shrink-0 text-secondary-foreground" />
+															<span class="font-black text-[10px] text-secondary-foreground uppercase leading-tight">
+																QPay / Данс
+															</span>
+														</div>
+													</div>
+
+													{/* Submit */}
+													<div class="space-y-3 pt-2">
+														<div class="flex items-center justify-between border-4 border-border bg-primary p-3 shadow-hard-sm">
+															<div>
+																<p class="font-black text-foreground text-sm uppercase">
+																	Төлөх дүн
+																</p>
+																<p class="font-bold text-[10px] text-muted-foreground">
+																	Хүргэлтийн хураамж орсон
+																</p>
+															</div>
+															<p class="font-black text-foreground text-xl">
 																₮{totalWithDelivery().toLocaleString()}
 															</p>
-													</div>
+														</div>
 
-													<form.AppForm>
-														<form.SubmitButton size="lg">
-															{mutation.isPending
-																? "Уншиж байна..."
-																: "Төлбөр төлөх →"}
-														</form.SubmitButton>
-													</form.AppForm>
+														<form.AppForm>
+															<form.SubmitButton size="lg">
+																{mutation.isPending
+																	? "Уншиж байна..."
+																	: "Төлбөр төлөх →"}
+															</form.SubmitButton>
+														</form.AppForm>
 
-													<p class="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+														<p class="text-center font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
 															Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
 														</p>
 													</div>
-											</form>
-										</div>
-									</div>
-								</Match>
-
-								{/* PAYMENT STEP */}
-								<Match when={step() === "payment" && paymentInfo()}>
-									<div class="border-4 border-border bg-card shadow-hard-lg">
-										<div class="border-b-4 border-border bg-secondary p-3">
-											<div class="flex items-center gap-2">
-												<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
-													<IconBankCard class="h-3.5 w-3.5 text-foreground" />
-												</div>
-												<div>
-													<h2 class="font-black text-sm uppercase tracking-tight text-secondary-foreground">
-														Төлбөр төлөх
-													</h2>
-													<p class="text-[10px] font-bold text-secondary-foreground/70">
-														Төлбөрийн хэлбэрээ сонгоно уу
-													</p>
-												</div>
+												</form>
 											</div>
 										</div>
+									</Match>
 
-										<div class="p-3">
-											<PaymentOptions
-												paymentNumber={paymentInfo()!.paymentNumber}
-												total={paymentInfo()!.total}
-												transferReference={paymentInfo()!.transferReference}
-												checkoutToken={paymentInfo()!.checkoutToken}
-											/>
+									{/* PAYMENT STEP */}
+									<Match when={step() === "payment" && paymentInfo()}>
+										<div class="border-4 border-border bg-card shadow-hard-lg">
+											<div class="border-border border-b-4 bg-secondary p-3">
+												<div class="flex items-center gap-2">
+													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
+														<IconBankCard class="h-3.5 w-3.5 text-foreground" />
+													</div>
+													<div>
+														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
+															Төлбөр төлөх
+														</h2>
+														<p class="font-bold text-[10px] text-secondary-foreground/70">
+															Төлбөрийн хэлбэрээ сонгоно уу
+														</p>
+													</div>
+												</div>
+											</div>
+
+											<div class="p-3">
+												<PaymentOptions
+													paymentNumber={paymentInfo()!.paymentNumber}
+													total={paymentInfo()!.total}
+													transferReference={paymentInfo()!.transferReference}
+													checkoutToken={paymentInfo()!.checkoutToken}
+												/>
+											</div>
 										</div>
-									</div>
-								</Match>
-							</Switch>
+									</Match>
+								</Switch>
+							</div>
 
-							<div class="h-4" />
+							<aside class="order-2 lg:sticky lg:top-24">
+								<OrderSummary />
+							</aside>
 						</div>
 					</div>
 				</Suspense>

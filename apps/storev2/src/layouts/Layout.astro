@@ -138,24 +138,74 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
 </style>
 <script>
     let loadingBarHideTimer: number | undefined;
+    let loadingBarFallbackTimer: number | undefined;
+    const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+    );
+
+    function getLoadingBar() {
+        return document.getElementById("loading-bar");
+    }
+
+    function hideLoadingBar() {
+        const loadingBar = getLoadingBar();
+        if (!loadingBar) {
+            return;
+        }
+
+        loadingBar.classList.add("is-complete");
+        loadingBarHideTimer = window.setTimeout(() => {
+            loadingBar.classList.remove("show", "is-complete");
+        }, 120);
+    }
+
+    function closeOpenDialogs() {
+        document
+            .querySelectorAll<HTMLDialogElement>("dialog[open]")
+            .forEach((dialog) => {
+                dialog.close();
+                dialog.dataset.state = "closed";
+            });
+
+        document
+            .querySelectorAll<HTMLElement>(".starwind-dialog-backdrop")
+            .forEach((backdrop) => {
+                backdrop.classList.add("hidden");
+                backdrop.dataset.state = "closed";
+            });
+
+        document.body.classList.remove("overflow-hidden");
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+    }
 
     document.addEventListener("astro:before-preparation", () => {
         if (loadingBarHideTimer) {
             window.clearTimeout(loadingBarHideTimer);
         }
+        if (loadingBarFallbackTimer) {
+            window.clearTimeout(loadingBarFallbackTimer);
+        }
 
-        const loadingBar = document.getElementById("loading-bar");
+        closeOpenDialogs();
+
+        if (prefersReducedMotion.matches) {
+            return;
+        }
+
+        const loadingBar = getLoadingBar();
         if (loadingBar) {
+            loadingBar.classList.remove("is-complete");
             loadingBar.classList.add("show");
+            loadingBarFallbackTimer = window.setTimeout(hideLoadingBar, 8000);
         }
     });
 
     document.addEventListener("astro:page-load", () => {
-        const loadingBar = document.getElementById("loading-bar");
-        if (loadingBar) {
-            loadingBarHideTimer = window.setTimeout(() => {
-                loadingBar.classList.remove("show");
-            }, 120);
+        if (loadingBarFallbackTimer) {
+            window.clearTimeout(loadingBarFallbackTimer);
         }
+        hideLoadingBar();
     });
 </script>

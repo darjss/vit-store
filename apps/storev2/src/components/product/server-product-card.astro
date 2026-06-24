@@ -30,7 +30,11 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 		aria-hidden="true"
 		tabindex="-1"
 	>
-		<div class="relative aspect-4/5 sm:aspect-4/3" style={`background: ${bgColor}`}>
+		<div
+			class="relative aspect-4/5 sm:aspect-4/3"
+			style={`background: ${bgColor}`}
+			transition:name={`product-image-${product.id}`}
+		>
 			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
 			{imageUrl && (
 				<img

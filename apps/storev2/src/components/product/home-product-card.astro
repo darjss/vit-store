@@ -30,6 +30,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 		<div
 			class={`relative overflow-hidden border-b-2 border-border ${aspectRatio}`}
 			style={`background: ${bgColor}`}
+			transition:name={`product-image-${product.id}`}
 		>
 			{
 				product.image && (

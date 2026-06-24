@@ -1,5 +1,4 @@
 ---
-
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { getStaticNavigationData } from "@/lib/static-navigation";
 import IconArrowRight from "~icons/ri/arrow-right-s-line";
@@ -68,26 +67,29 @@ const remainingCategories = categories.slice(6);
             </h3>
             {brands.length > 0 ? (
                 <>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-2 gap-2">
                         {topBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                             <a
                                 href={`/products/brand/${brand.slug}/1/`}
-                                class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
+                                class="flex min-h-[88px] items-center gap-2.5 p-2.5 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group"
                             >
                                 {brand.logoUrl ? (
                                     <img 
                                         src={brand.logoUrl} 
                                         alt={brand.name} 
-                                        class="w-10 h-10 object-contain group-hover:scale-110 transition-transform" 
+                                        class="w-11 h-11 shrink-0 object-contain group-hover:scale-110 transition-transform" 
                                         loading="lazy"
                                     />
                                 ) : (
-                                    <div class="w-10 h-10 bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                    <div class="w-11 h-11 shrink-0 bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
                                         {brand.name.substring(0, 2).toUpperCase()}
                                     </div>
                                 )}
-                                <span class="text-[10px] font-bold text-center leading-tight truncate w-full mt-2 uppercase">
-                                    {brand.name}
+                                <span class="min-w-0">
+                                    <span class="line-clamp-2 text-[11px] font-black leading-tight uppercase">{brand.name}</span>
+                                    {brand.productCount && (
+                                        <span class="mt-1 block text-[9px] font-bold text-muted-foreground uppercase tracking-wide">{brand.productCount} бүтээгдэхүүн</span>
+                                    )}
                                 </span>
                             </a>
                         ))}
@@ -108,26 +110,29 @@ const remainingCategories = categories.slice(6);
                                 <span>Илүү харах</span>
                                 <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
                             </summary>
-                            <div class="mt-2 grid grid-cols-3 gap-2">
+                            <div class="mt-2 grid grid-cols-2 gap-2">
                                 {remainingBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                                     <a
                                         href={`/products/brand/${brand.slug}/1/`}
-                                        class="flex flex-col items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group aspect-square"
+                                        class="flex min-h-[88px] items-center gap-2.5 p-2.5 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group"
                                     >
                                         {brand.logoUrl ? (
                                             <img 
                                                 src={brand.logoUrl} 
                                                 alt={brand.name} 
-                                                class="w-10 h-10 object-contain group-hover:scale-110 transition-transform" 
+                                                class="w-11 h-11 shrink-0 object-contain group-hover:scale-110 transition-transform" 
                                                 loading="lazy"
                                             />
                                         ) : (
-                                            <div class="w-10 h-10 bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                            <div class="w-11 h-11 shrink-0 bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
                                                 {brand.name.substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
-                                        <span class="text-[10px] font-bold text-center leading-tight truncate w-full mt-2 uppercase">
-                                            {brand.name}
+                                        <span class="min-w-0">
+                                            <span class="line-clamp-2 text-[11px] font-black leading-tight uppercase">{brand.name}</span>
+                                            {brand.productCount && (
+                                                <span class="mt-1 block text-[9px] font-bold text-muted-foreground uppercase tracking-wide">{brand.productCount} бүтээгдэхүүн</span>
+                                            )}
                                         </span>
                                     </a>
                                 ))}
@@ -152,7 +157,7 @@ const remainingCategories = categories.slice(6);
                 {topCategories.map((category: { id: number; name: string; slug: string }) => (
                     <a
                         href={`/products/category/${category.slug}/1/`}
-                        class="px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center"
+                        class="flex min-h-12 items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
                     >
                         {category.name}
                     </a>
@@ -173,7 +178,7 @@ const remainingCategories = categories.slice(6);
                         {remainingCategories.map((category: { id: number; name: string; slug: string }) => (
                             <a
                                 href={`/products/category/${category.slug}/1/`}
-                                class="px-4 py-2.5 bg-background border-3 border-border font-bold text-sm shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center"
+                                class="flex min-h-12 items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
                             >
                                 {category.name}
                             </a>

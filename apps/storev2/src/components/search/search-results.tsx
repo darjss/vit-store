@@ -13,8 +13,8 @@ import { api } from "@/lib/trpc";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconEmotionSad from "~icons/ri/emotion-sad-line";
 import IconFolder from "~icons/ri/folder-line";
-import IconStore from "~icons/ri/store-2-line";
 import IconSearch from "~icons/ri/search-line";
+import IconStore from "~icons/ri/store-2-line";
 
 interface SearchResultsProps {
 	searchQuery: string;
@@ -147,7 +147,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							<div class="mb-4 space-y-3">
 								<Show when={(query.data?.brands.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-muted-foreground/60 text-[11px] uppercase tracking-wide">
+										<p class="mb-2 font-bold text-[11px] text-muted-foreground/60 uppercase tracking-wide">
 											Брэнд
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 								</Show>
 								<Show when={(query.data?.categories.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-muted-foreground/60 text-[11px] uppercase tracking-wide">
+										<p class="mb-2 font-bold text-[11px] text-muted-foreground/60 uppercase tracking-wide">
 											Ангилал
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -252,7 +252,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 												}
 												class="flex flex-col gap-1.5"
 											>
-												<h3 class="line-clamp-3 font-bold text-base text-black leading-snug group-hover:underline sm:text-lg">
+												<h3 class="line-clamp-2 font-black text-black text-sm leading-tight group-hover:underline sm:text-base">
 													{product.name}
 												</h3>
 												<Show when={product.brand}>
@@ -263,8 +263,23 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											</a>
 
 											<div class="mt-3 flex items-end justify-between gap-2">
-												<div class="font-black text-lg tracking-tight sm:text-xl">
-													{formatCurrency(product.price)}
+												<div>
+													<div class="font-black text-lg tracking-tight sm:text-xl">
+														{formatCurrency(product.price)}
+													</div>
+													<a
+														href={`/products/${product.slug}-${product.id}/`}
+														onClick={() =>
+															handleProductClick(
+																product.id,
+																product.name,
+																index(),
+															)
+														}
+														class="mt-1 inline-flex min-h-8 items-center border-2 border-border bg-card px-2.5 font-black text-[10px] uppercase tracking-wider transition-colors hover:bg-primary"
+													>
+														Дэлгэрэнгүй
+													</a>
 												</div>
 												<div class="origin-bottom-right">
 													<AddToCartButton

@@ -1,19 +1,22 @@
 ---
 // Server-rendered: full HTML generated at request time for maximum reliability
 
-import Layout from "@/layouts/Layout.astro";
-import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
+import ServerProductCard from "@/components/product/server-product-card.astro";
+import Layout from "@/layouts/Layout.astro";
 import { api } from "@/lib/trpc";
 
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
 
-
 const { slug, page: pageParam } = Astro.params;
-const page = Number.parseInt(pageParam!, 10);
+if (!slug || !pageParam) {
+	throw Astro.redirect("/404");
+}
 
-const brand = await api.brand.getBrandBySlug.query({ slug: slug! });
+const page = Number.parseInt(pageParam, 10);
+
+const brand = await api.brand.getBrandBySlug.query({ slug });
 if (!brand) {
 	throw Astro.redirect("/404");
 }
@@ -23,6 +26,9 @@ const { items: products, pagination } = await api.product.getPaginatedProductsWi
 	pageSize: PAGE_SIZE,
 	brandId: brand.id,
 });
+if (pagination.totalCount <= 0) {
+	throw Astro.redirect("/404");
+}
 
 const baseUrl = `/products/brand/${slug}`;
 
