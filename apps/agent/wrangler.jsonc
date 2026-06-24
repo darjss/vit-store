@@ -22,6 +22,10 @@
 			{
 				"name": "FLUE_CUSTOMER_ASSISTANT_AGENT",
 				"class_name": "FlueCustomerAssistantAgent"
+			},
+			{
+				"name": "MESSENGER_ADMISSION_STORE",
+				"class_name": "MessengerAdmissionStore"
 			}
 		]
 	},
@@ -29,6 +33,10 @@
 		{
 			"tag": "v1_flue_customer_assistant",
 			"new_sqlite_classes": ["FlueRegistry", "FlueCustomerAssistantAgent"]
+		},
+		{
+			"tag": "v2_messenger_admission_store",
+			"new_sqlite_classes": ["MessengerAdmissionStore"]
 		}
 	]
 }
