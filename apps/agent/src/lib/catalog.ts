@@ -23,15 +23,19 @@ const CATALOG_FETCH_TIMEOUT_MS = 10_000;
 
 const assistantProductsSchema = v.array(assistantProductSchema);
 
-export const searchAssistantProducts = async (
-	query: string,
-	limit: number,
+// Shared tRPC GET against the store product router. Validates the untyped wire
+// payload against `schema` so api-side shape drift fails loudly here instead of
+// producing a dead order button or a cart line with an undefined price.
+const trpcGet = async <T>(
+	procedure: string,
+	payload: unknown,
+	schema: v.GenericSchema<unknown, T>,
 	signal?: AbortSignal,
-): Promise<AssistantProduct[]> => {
+): Promise<T> => {
 	const input = encodeURIComponent(
-		JSON.stringify(SuperJSON.serialize({ query, limit })),
+		JSON.stringify(SuperJSON.serialize(payload)),
 	);
-	const url = `${storeApiUrl()}/product.searchProductsForAssistant?input=${input}`;
+	const url = `${storeApiUrl()}/${procedure}?input=${input}`;
 
 	// Honor the tool turn's cancellation if present, and always enforce our own
 	// timeout, whichever fires first.
@@ -44,18 +48,46 @@ export const searchAssistantProducts = async (
 		signal: fetchSignal,
 	});
 	if (!response.ok) {
-		throw new Error(`product search request failed (${response.status})`);
+		throw new Error(`${procedure} request failed (${response.status})`);
 	}
 
 	const body = (await response.json()) as TrpcQueryResponse;
 	if (body.error || !body.result) {
-		throw new Error(body.error?.message ?? "product search returned an error");
+		throw new Error(body.error?.message ?? `${procedure} returned an error`);
 	}
 
-	// Validate the untyped wire payload against the shared contract so api-side
-	// shape drift fails loudly here instead of producing a dead order button.
 	const deserialized = SuperJSON.deserialize(
 		body.result.data as Parameters<typeof SuperJSON.deserialize>[0],
 	);
-	return v.parse(assistantProductsSchema, deserialized);
+	return v.parse(schema, deserialized);
+};
+
+export const searchAssistantProducts = async (
+	query: string,
+	limit: number,
+	signal?: AbortSignal,
+): Promise<AssistantProduct[]> =>
+	trpcGet(
+		"product.searchProductsForAssistant",
+		{ query, limit },
+		assistantProductsSchema,
+		signal,
+	);
+
+// Resolves products by id using the existing storefront projection
+// (`getProductsByIdsForAssistant`, #19) so the cart never duplicates catalog
+// logic. Used when a Захиалах postback carries a product id and the cart needs
+// the name/price/image snapshot for that line. Returns only the ids that still
+// resolve, in catalog order.
+export const getAssistantProductsByIds = async (
+	ids: number[],
+	signal?: AbortSignal,
+): Promise<AssistantProduct[]> => {
+	if (ids.length === 0) return [];
+	return trpcGet(
+		"product.getProductsByIdsForAssistant",
+		{ ids },
+		assistantProductsSchema,
+		signal,
+	);
 };

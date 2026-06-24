@@ -61,6 +61,24 @@ export async function admitMessengerTextMessage(input: {
 	};
 }
 
+// Generic single-claim primitive shared by the text path and the cart-event
+// path (postback/quick-reply). Returns true exactly once per key within the
+// dedupe window so a Meta webhook retry of the same mid is not applied twice
+// (e.g. a duplicate Захиалах add). Callers namespace their own keys.
+export async function claimInboundOnce(
+	key: string,
+	env?: AdmissionEnv,
+): Promise<boolean> {
+	return claimOnce(key, env);
+}
+
+export async function releaseInboundClaim(
+	key: string,
+	env?: AdmissionEnv,
+): Promise<void> {
+	return releaseClaim(key, env);
+}
+
 async function claimOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
 	const store = env?.MESSENGER_ADMISSION_STORE;
 	// In the production webhook path `env` is always present; a missing binding

@@ -5,11 +5,30 @@ import {
 	type MessengerParticipantRef,
 } from "@flue/messenger";
 import { defineTool, dispatch } from "@flue/runtime";
-import type { ProductCard } from "@vit/assistant";
+import {
+	type AssistantProduct,
+	type Cart,
+	cartQuickReplies,
+	formatCartSummary,
+	type ProductCard,
+} from "@vit/assistant";
 import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
 import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
-import { admitMessengerTextMessage } from "./messenger-admission";
+import { getAssistantProductsByIds } from "../lib/catalog";
+import { detectCartEvent, handleCartEvent } from "./cart-handler";
+import { cartSessionFor } from "./cart-session";
+import {
+	admitMessengerTextMessage,
+	claimInboundOnce,
+	releaseInboundClaim,
+} from "./messenger-admission";
+
+// Worker bindings the Messenger webhook reaches through the Hono context.
+type WebhookEnv = {
+	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
+	CART_STORE?: DurableObjectNamespace;
+};
 
 const graphVersion = "v25.0";
 
@@ -35,42 +54,99 @@ export const channel: MessengerChannel = createMessengerChannel({
 
 	// Mounted at GET/POST /channels/messenger/webhook.
 	async webhook({ c, payload }) {
+		const env = c.env as WebhookEnv;
 		for (const entry of payload.entry) {
 			for (const event of entry.messaging ?? []) {
-				const admission = await admitMessengerTextMessage({
-					channel,
-					event,
-					env: c.env,
-				});
-				if (admission === undefined) continue;
-
-				// dispatch() is the durable commit point. If it throws before the
-				// turn is durably enqueued, release the dedupe claim and rethrow so
-				// Meta's retry can re-deliver instead of being swallowed by dedupe.
-				try {
-					await dispatch(assistant, {
-						id: admission.sessionId,
-						input: {
-							type: "messenger.message",
-							messageId: admission.messageId,
-							text: admission.text,
-							attachmentTypes: admission.attachmentTypes,
-							// dispatch() input must be JSON-clean: omit the key entirely
-							// when there is no quick reply rather than passing undefined.
-							...(admission.quickReplyPayload !== undefined
-								? { quickReplyPayload: admission.quickReplyPayload }
-								: {}),
-						},
-					});
-				} catch (error) {
-					await admission.release();
-					throw error;
-				}
+				// Cart buttons (Захиалах postback + cart_* controls) are handled
+				// deterministically ahead of the text path, so they never reach the
+				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
+				// run under local miniflare where `env.AI` is unavailable).
+				if (await tryHandleCartEvent(event, env)) continue;
+				await dispatchInboundText(event, env);
 			}
 		}
 		return undefined;
 	},
 });
+
+// Admits a plain inbound text turn and dispatches it to the assistant. Pulled
+// out of the webhook loop so each ingress concern (cart vs text) stays small.
+async function dispatchInboundText(
+	event: Parameters<typeof admitMessengerTextMessage>[0]["event"],
+	env: WebhookEnv,
+): Promise<void> {
+	const admission = await admitMessengerTextMessage({ channel, event, env });
+	if (admission === undefined) return;
+
+	// dispatch() is the durable commit point. If it throws before the turn is
+	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
+	// re-deliver instead of being swallowed by dedupe.
+	try {
+		await dispatch(assistant, {
+			id: admission.sessionId,
+			input: {
+				type: "messenger.message",
+				messageId: admission.messageId,
+				text: admission.text,
+				attachmentTypes: admission.attachmentTypes,
+				// dispatch() input must be JSON-clean: omit the key entirely when
+				// there is no quick reply rather than passing undefined.
+				...(admission.quickReplyPayload !== undefined
+					? { quickReplyPayload: admission.quickReplyPayload }
+					: {}),
+			},
+		});
+	} catch (error) {
+		await admission.release();
+		throw error;
+	}
+}
+
+// Handles a Messenger event if it is a cart button/quick-reply, returning true
+// when consumed (so the webhook skips the text path). Returns false for plain
+// turns. Extracted from the webhook loop to keep that loop simple. Dedupe on the
+// event mid (when present) makes a Meta retry idempotent for an add.
+async function tryHandleCartEvent(
+	event: Parameters<typeof detectCartEvent>[0],
+	env: WebhookEnv,
+): Promise<boolean> {
+	const cartEvent = detectCartEvent(event);
+	if (cartEvent === undefined) return false;
+
+	const conversation = channel.conversationRef(event);
+	if (conversation === undefined) return true;
+	const sessionId = channel.conversationKey(conversation);
+
+	// Resolve the cart store BEFORE claiming the mid: a missing binding is a
+	// production misconfig that must fail loud (like the admission store does),
+	// not silently swallow the customer's tap and burn the mid. Throwing here —
+	// ahead of the claim — leaves the mid unclaimed so Meta's retry is honored.
+	const cart = cartSessionFor(env.CART_STORE, sessionId);
+	if (cart === undefined) {
+		throw new Error(
+			"CART_STORE binding is required for Messenger cart events.",
+		);
+	}
+
+	const claimKey = `messenger:cart:v1:${sessionId}:mid:${cartEvent.mid}`;
+	if (cartEvent.mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
+		return true;
+	}
+
+	try {
+		await handleCartEvent(cartEvent, {
+			cart,
+			resolveProduct: resolveProductById,
+			sendCartSummary: sendCartSummary(conversation),
+			sendText: sendTextReply(conversation),
+		});
+	} catch (error) {
+		// Release the claim so Meta's retry can re-apply the dropped event.
+		if (cartEvent.mid.length > 0) await releaseInboundClaim(claimKey, env);
+		throw error;
+	}
+	return true;
+}
 
 export function postMessage(ref: MessengerConversationRef) {
 	const recipientId = ref.participant.id;
@@ -118,6 +194,38 @@ export function sendTextReply(ref: MessengerConversationRef) {
 		});
 		return { messageId: result.message_id };
 	};
+}
+
+// Sends the cart summary as a text message carrying the cart-control quick
+// replies (✅ confirm / 🗑 clear and per-item ➕ ➖ ✖). Tapping a quick reply
+// delivers its payload back on the webhook, where `detectCartEvent` routes it
+// straight to the cart reducer — no model turn. Bound to one conversation.
+export function sendCartSummary(ref: MessengerConversationRef) {
+	return async (cart: Cart) => {
+		const quickReplies = cartQuickReplies(cart).map((qr) => ({
+			content_type: "text" as const,
+			title: qr.title,
+			payload: qr.payload,
+		}));
+		const result = await messenger.send.message({
+			recipient: toRecipient(ref.participant),
+			messaging_type: "RESPONSE",
+			message: {
+				text: formatCartSummary(cart),
+				...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
+			},
+		});
+		return { messageId: result.message_id };
+	};
+}
+
+// Resolves a single product id to the shared assistant projection for cart
+// lines. Reuses the by-id catalog boundary (no duplicated catalog logic).
+export async function resolveProductById(
+	id: number,
+): Promise<AssistantProduct | undefined> {
+	const [product] = await getAssistantProductsByIds([id]);
+	return product;
 }
 
 // Sends channel-neutral product cards as a Messenger generic template. Each
