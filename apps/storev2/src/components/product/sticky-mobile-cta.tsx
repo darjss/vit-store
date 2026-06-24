@@ -39,7 +39,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 						<p class="truncate font-black text-sm text-foreground">
 							{props.cartItem.name}
 						</p>
-						<p class="font-black text-base text-primary">
+						<p class="font-black text-base text-foreground">
 							{formatCurrency(props.cartItem.price)}
 						</p>
 					</div>
