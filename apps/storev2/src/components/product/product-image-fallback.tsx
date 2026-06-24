@@ -46,7 +46,7 @@ export function getProductMonogram(name: string): string {
 	]);
 
 	const words = name
-		.replace(/[^a-zA-Z0-9\s]/g, " ")
+		.replace(/[^\p{L}\p{N}\s]/gu, " ")
 		.split(/\s+/)
 		.map((w) => w.trim())
 		.filter((w) => w.length > 0 && !FILLER.has(w.toLowerCase()));
@@ -54,7 +54,7 @@ export function getProductMonogram(name: string): string {
 	const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
 	if (letters.length > 0) return letters.join("");
 
-	const firstAlpha = name.match(/[a-zA-Z0-9]/);
+	const firstAlpha = name.match(/\p{L}|\p{N}/u);
 	return firstAlpha ? firstAlpha[0]!.toUpperCase() : "?";
 }
 

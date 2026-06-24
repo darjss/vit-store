@@ -26,19 +26,17 @@ const serverApi = createServerClient(
 	Astro.redirect, // Pass redirect function - will automatically redirect on unauthorized
 );
 
-// Auth guard: profile is auth-gated. If the session is invalid (or any
-// server fetch fails with an unauthorized/redirect response from the tRPC
-// link), redirect to login instead of letting the error surface as a 500.
+// Auth guard: profile is auth-gated. createServerClient already issues
+// Astro.redirect("/login") on 401, which throws a Response — re-throw it
+// so Astro commits the redirect. Let all other errors propagate as 500s.
 let user;
 let orders;
 try {
 	user = await serverApi.auth.check.query();
 	orders = await serverApi.order.getOrdersByCustomerId.query();
-} catch {
-	// createServerClient already invoked Astro.redirect("/login") on 401;
-	// re-throw it so Astro commits the redirect response. Any other fetch
-	// failure here is also session-related in practice for this page.
-	throw Astro.redirect("/login");
+} catch (err) {
+	if (err instanceof Response && err.status >= 300 && err.status < 400) throw err;
+	throw err;
 }
 
 const title = "Миний профайл";
