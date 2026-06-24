@@ -1,6 +1,6 @@
 import { makePersisted } from "@solid-primitives/storage";
 import type { CartItems } from "@vit/shared/types";
-import { createMemo, createRoot, createSignal, onMount } from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import {
 	trackAddToCart,
@@ -99,7 +99,11 @@ export const cart = createRoot(() => {
 		},
 	);
 
-	onMount(() => {
+	// `onMount` does not fire inside a detached `createRoot` (no component
+	// lifecycle), so the cart page gated on `isHydrated()` would stay on the
+	// loading skeleton forever. `createEffect` runs in a detached root and is
+	// a no-op during SSR, matching the intended client-only hydration signal.
+	createEffect(() => {
 		queueMicrotask(() => {
 			setIsHydrated(true);
 		});
