@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import { createSignal, Show } from "solid-js";
+import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import CopyButton from "@/components/ui/copy-button";
@@ -40,40 +41,42 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 
 	return (
 		<div class="w-full">
-			<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-hard sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-hard-lg">
-				<button
-					type="button"
-					onClick={() => selectTab("transfer")}
-					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
-					classList={{
-						"border-2 border-border bg-primary shadow-hard-sm":
-							tab() === "transfer",
-						"hover:bg-primary/30": tab() !== "transfer",
-					}}
-				>
-					<span class="flex items-center justify-center gap-1.5 sm:gap-2">
-						<IconBank class="h-4 w-4 sm:h-5 sm:w-5" />
-						<span>Данс</span>
-					</span>
-				</button>
-				<button
-					type="button"
-					onClick={() => selectTab("qpay")}
-					class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
-					classList={{
-						"border-2 border-border bg-primary shadow-hard-sm":
-							tab() === "qpay",
-						"hover:bg-primary/30": tab() !== "qpay",
-					}}
-				>
-					<span class="flex items-center justify-center gap-1.5 sm:gap-2">
-						<IconMobile class="h-4 w-4 sm:h-5 sm:w-5" />
-						<span>QPay</span>
-					</span>
-				</button>
-			</div>
+			<Show when={BANK_TRANSFER_ENABLED}>
+				<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-hard sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-hard-lg">
+					<button
+						type="button"
+						onClick={() => selectTab("transfer")}
+						class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+						classList={{
+							"border-2 border-border bg-primary shadow-hard-sm":
+								tab() === "transfer",
+							"hover:bg-primary/30": tab() !== "transfer",
+						}}
+					>
+						<span class="flex items-center justify-center gap-1.5 sm:gap-2">
+							<IconBank class="h-4 w-4 sm:h-5 sm:w-5" />
+							<span>Данс</span>
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => selectTab("qpay")}
+						class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+						classList={{
+							"border-2 border-border bg-primary shadow-hard-sm":
+								tab() === "qpay",
+							"hover:bg-primary/30": tab() !== "qpay",
+						}}
+					>
+						<span class="flex items-center justify-center gap-1.5 sm:gap-2">
+							<IconMobile class="h-4 w-4 sm:h-5 sm:w-5" />
+							<span>QPay</span>
+						</span>
+					</button>
+				</div>
+			</Show>
 
-			<Show when={tab() === "transfer"}>
+			<Show when={BANK_TRANSFER_ENABLED && tab() === "transfer"}>
 				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
 					<div class="space-y-4 p-3 sm:space-y-5 sm:p-4">
 						<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5 sm:gap-3 sm:p-3">
@@ -168,7 +171,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 				</div>
 			</Show>
 
-			<Show when={tab() === "qpay"}>
+			<Show when={!BANK_TRANSFER_ENABLED || tab() === "qpay"}>
 				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
 					<div class="p-3 sm:p-5">
 						<QpayPaymentPanel
