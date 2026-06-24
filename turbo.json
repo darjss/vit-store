@@ -28,6 +28,10 @@
 			"dependsOn": ["server#deploy"],
 			"cache": false
 		},
+		"agent#deploy": {
+			"dependsOn": ["server#deploy"],
+			"cache": false
+		},
 		"server#destroy": {
 			"dependsOn": ["admin#destroy", "storev2#destroy"],
 			"cache": false
