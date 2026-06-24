@@ -9,6 +9,7 @@
 		"check-types": "tsgo --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"checkout:sim": "bun scripts/checkout-sim.ts",
+		"payment:proof": "bun cli/payment-proof.ts",
 		"mock:messenger-text": "bun scripts/mock-messenger-text.ts",
 		"mock:product-cards": "bun scripts/mock-product-cards.ts",
 		"dev:messenger": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts",

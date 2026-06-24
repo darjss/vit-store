@@ -15,10 +15,14 @@ import {
 	channel,
 	postMessage,
 	sendCartSummary,
+	sendPaymentChoices,
 	sendProductCards,
 	sendTextReply,
 } from "../channels/messenger";
-import { getAdviceProductsByIds, searchAssistantProducts } from "../lib/catalog";
+import {
+	getAdviceProductsByIds,
+	searchAssistantProducts,
+} from "../lib/catalog";
 import { loadInboundImage } from "../lib/messenger-inbound";
 import { createOrder, fetchDeliveryZones } from "../lib/order";
 import { buildKimiVision } from "../lib/vision";
@@ -48,10 +52,7 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			? [
 					buildPhotoIdentifyTool({
 						loadImage: (key) =>
-							loadInboundImage(
-								env.MESSENGER_INBOUND_BUCKET as R2Bucket,
-								key,
-							),
+							loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
 						runVision: buildKimiVision(env.AI),
 					}),
 				]
@@ -98,6 +99,9 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 							rankZoneCandidates(addressText, await fetchDeliveryZones()),
 						createOrder,
 						sendText: sendTextReply(conversation),
+						// After the order is created, offer the QPay/transfer payment
+						// choices (#25) on the same conversation.
+						sendPaymentChoices: sendPaymentChoices(conversation),
 					})
 				: []),
 			postMessage(conversation),
