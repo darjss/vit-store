@@ -18,6 +18,8 @@
 		"photo:proof": "bun scripts/with-worker.ts -- bun cli/photo-identify.ts",
 		"advice:proof": "bun scripts/with-worker.ts -- bun cli/advice.ts",
 		"advice:assemble": "bun cli/advice.ts --assemble",
+		"export:replay": "bun scripts/with-worker.ts -- bun cli/export-replay.ts",
+		"export:replay:local": "bun scripts/with-worker.ts --local -- bun cli/export-replay.ts --no-model",
 		"r2:lifecycle:inbound": "wrangler r2 bucket lifecycle set vit-store-bucket-prod --config wrangler.jsonc --file r2-lifecycle.messenger-inbound.json -y",
 		"r2:lifecycle:assert": "bun scripts/assert-r2-lifecycle.ts",
 		"r2:lifecycle:apply": "bun run r2:lifecycle:inbound && bun run r2:lifecycle:assert"
