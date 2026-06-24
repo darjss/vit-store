@@ -5,6 +5,7 @@ import {
 	type MessengerParticipantRef,
 } from "@flue/messenger";
 import { defineTool, dispatch } from "@flue/runtime";
+import type { ProductCard } from "@vit/assistant";
 import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
 import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
@@ -94,6 +95,46 @@ export function postMessage(ref: MessengerConversationRef) {
 			// Typing indicators are cosmetic; never fail a reply over one.
 		}
 	}
+}
+
+// Plain text sender bound to a conversation. Used by the product-search tool's
+// no-match path; mirrors the send shape of post_messenger_message.
+export function sendTextReply(ref: MessengerConversationRef) {
+	return async (text: string) => {
+		const result = await messenger.send.message({
+			recipient: toRecipient(ref.participant),
+			messaging_type: "RESPONSE",
+			message: { text },
+		});
+		return { messageId: result.message_id };
+	};
+}
+
+// Sends channel-neutral product cards as a Messenger generic template. Each
+// element carries the product's Захиалах postback button whose payload holds
+// the product id. Generic templates allow at most 10 elements.
+export function sendProductCards(ref: MessengerConversationRef) {
+	return async (cards: ProductCard[]) => {
+		const elements = cards.slice(0, 10).map((card) => ({
+			title: card.title,
+			subtitle: card.subtitle,
+			...(card.imageUrl ? { image_url: card.imageUrl } : {}),
+			buttons: [
+				{
+					type: "postback" as const,
+					title: card.button.label,
+					payload: card.button.payload,
+				},
+			],
+		}));
+
+		const result = await messenger.templates.generic({
+			recipient: toRecipient(ref.participant),
+			elements,
+			messaging_type: "RESPONSE",
+		});
+		return { messageId: result.message_id, cardCount: elements.length };
+	};
 }
 
 function requiredEnv(name: string): string {
