@@ -3,9 +3,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "flue dev --target cloudflare",
-		"build": "flue build --target cloudflare",
-		"deploy": "wrangler deploy --config dist/vit_store_agent/wrangler.json",
+		"dev": "bun run build && wrangler dev --config dist/vit_store_agent/wrangler.json",
+		"build": "flue build --target cloudflare && bun scripts/patch-flue-worker.ts",
+		"deploy": "bun run build && wrangler deploy --config dist/vit_store_agent/wrangler.json",
 		"check-types": "tsgo --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"mock:messenger-text": "bun scripts/mock-messenger-text.ts",
