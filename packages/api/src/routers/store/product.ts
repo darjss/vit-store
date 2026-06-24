@@ -603,6 +603,33 @@ export const product = router({
 					stockStatus: mapStockStatus(product.status, product.stock),
 				}));
 		}),
+	getProductsByIdsForAdvice: publicProcedure
+		.input(
+			v.object({
+				ids: v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			const q = productQueries.store;
+			const results = await q.getProductsByIdsForAdvice(input.ids);
+			const byId = new Map(results.map((product) => [product.id, product]));
+
+			return input.ids
+				.map((id) => byId.get(id))
+				.filter((product): product is NonNullable<typeof product> => !!product)
+				.map((product) => ({
+					id: product.id,
+					name: product.name,
+					brand: product.brand?.name ?? "",
+					category: product.category?.name ?? "",
+					description: product.description ?? "",
+					ingredients: product.ingredients ?? [],
+					amount: product.amount ?? "",
+					potency: product.potency ?? "",
+					dailyIntake: product.dailyIntake ?? 0,
+					price: product.price,
+				}));
+		}),
 	getRecommendedProducts: publicProcedure
 		.input(
 			v.object({
