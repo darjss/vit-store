@@ -67,7 +67,7 @@ const remainingCategories = categories.slice(6);
             </h3>
             {brands.length > 0 ? (
                 <>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 gap-2">
                         {topBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                             <a
                                 href={`/products/brand/${brand.slug}/1/`}
@@ -93,16 +93,6 @@ const remainingCategories = categories.slice(6);
                                 </span>
                             </a>
                         ))}
-                        {Array.from({ length: Math.max(0, 6 - topBrands.length) }).map(() => (
-                            <div class="flex flex-col items-center justify-center p-3 bg-muted/30 border-3 border-border border-dashed aspect-square opacity-50">
-                                <div class="w-10 h-10 bg-muted border-2 border-border flex items-center justify-center text-sm font-black">
-                                    --
-                                </div>
-                                <span class="text-[10px] font-bold text-center leading-tight truncate w-full mt-2 uppercase text-muted-foreground">
-                                    -
-                                </span>
-                            </div>
-                        ))}
                     </div>
                     {remainingBrands.length > 0 && (
                         <details class="mt-3 group">
@@ -110,7 +100,7 @@ const remainingCategories = categories.slice(6);
                                 <span>Илүү харах</span>
                                 <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
                             </summary>
-                            <div class="mt-2 grid grid-cols-2 gap-2">
+                            <div class="mt-2 grid grid-cols-1 gap-2">
                                 {remainingBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => (
                                     <a
                                         href={`/products/brand/${brand.slug}/1/`}
@@ -157,15 +147,10 @@ const remainingCategories = categories.slice(6);
                 {topCategories.map((category: { id: number; name: string; slug: string }) => (
                     <a
                         href={`/products/category/${category.slug}/1/`}
-                        class="flex min-h-12 items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
+                        class="flex min-h-[60px] items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
                     >
-                        {category.name}
+                        <span class="line-clamp-2">{category.name}</span>
                     </a>
-                ))}
-                {Array.from({ length: Math.max(0, 6 - topCategories.length) }).map(() => (
-                    <div class="px-4 py-2.5 bg-muted/30 border-3 border-border border-dashed font-bold text-sm text-muted-foreground text-center opacity-50">
-                        -
-                    </div>
                 ))}
             </div>
             {remainingCategories.length > 0 && (
@@ -178,9 +163,9 @@ const remainingCategories = categories.slice(6);
                         {remainingCategories.map((category: { id: number; name: string; slug: string }) => (
                             <a
                                 href={`/products/category/${category.slug}/1/`}
-                                class="flex min-h-12 items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
+                                class="flex min-h-[60px] items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
                             >
-                                {category.name}
+                                <span class="line-clamp-2">{category.name}</span>
                             </a>
                         ))}
                     </div>
