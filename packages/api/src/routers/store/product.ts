@@ -53,7 +53,22 @@ const mapStockStatus = (
 	return "in_stock";
 };
 
-const performProductSearch = async (
+// Rich catalog row carrying the real stock state from whichever source served
+// the query (MiniSearch index or the DB name fallback). Both call sites below
+// project this down — the storefront drops stock, the assistant maps it — so
+// the two-phase search control flow lives in exactly one place.
+interface CatalogSearchRow {
+	id: number;
+	slug: string;
+	name: string;
+	price: number;
+	image: string;
+	brand: string;
+	status: string;
+	stock: number;
+}
+
+const performCatalogSearch = async (
 	query: string,
 	limit: number,
 	options?: {
@@ -61,7 +76,7 @@ const performProductSearch = async (
 		categoryId?: number;
 		requireStock?: boolean;
 	},
-): Promise<SearchProductResult[]> => {
+): Promise<CatalogSearchRow[]> => {
 	const requireStock = options?.requireStock ?? false;
 	const safeLimit = Math.min(limit, 10);
 	const filters =
@@ -82,6 +97,8 @@ const performProductSearch = async (
 				price: result.price,
 				image: result.image,
 				brand: result.brand,
+				status: result.status,
+				stock: result.stock,
 			}));
 	}
 
@@ -97,8 +114,28 @@ const performProductSearch = async (
 		price: p.price,
 		image: p.images[0]?.url || "",
 		brand: p.brand?.name || "",
+		status: p.status,
+		stock: p.stock,
 	}));
 };
+
+const performProductSearch = async (
+	query: string,
+	limit: number,
+	options?: {
+		brandId?: number;
+		categoryId?: number;
+		requireStock?: boolean;
+	},
+): Promise<SearchProductResult[]> =>
+	(await performCatalogSearch(query, limit, options)).map((row) => ({
+		id: row.id,
+		slug: row.slug,
+		name: row.name,
+		price: row.price,
+		image: row.image,
+		brand: row.brand,
+	}));
 
 const performProductSearchWithStock = async (
 	query: string,
@@ -107,45 +144,23 @@ const performProductSearchWithStock = async (
 ) => performProductSearch(query, limit, { ...filters, requireStock: true });
 
 // Assistant-facing search: same catalog search as the storefront, but keeps
-// the stock state so the Messenger assistant can render it on product cards and
-// surface out-of-stock items as alternatives instead of dropping them.
+// the real stock state (mapped via mapStockStatus, including the DB fallback)
+// so the Messenger assistant renders accurate stock on product cards and
+// surfaces out-of-stock items as alternatives instead of mislabeling them.
 const performAssistantProductSearch = async (
 	query: string,
 	limit: number,
 	filters?: { brandId?: number; categoryId?: number },
-): Promise<AssistantProductResult[]> => {
-	const safeLimit = Math.min(limit, 10);
-	const searchResults = await searchProducts(query, safeLimit, filters);
-
-	if (searchResults.length > 0) {
-		return searchResults.map((result) => ({
-			id: result.id,
-			slug: result.slug,
-			name: result.name,
-			price: result.price,
-			image: result.image,
-			brand: result.brand,
-			stockStatus: mapStockStatus(result.status, result.stock),
-		}));
-	}
-
-	const fallbackResults = await productQueries.store.searchByName(
-		query,
-		safeLimit,
-	);
-
-	return fallbackResults.map((p) => ({
-		id: p.id,
-		slug: p.slug,
-		name: p.name,
-		price: p.price,
-		image: p.images[0]?.url || "",
-		brand: p.brand?.name || "",
-		// Fallback rows are already filtered to active products; treat as in
-		// stock since the lightweight fallback projection omits stock columns.
-		stockStatus: "in_stock" as const,
+): Promise<AssistantProductResult[]> =>
+	(await performCatalogSearch(query, limit, filters)).map((row) => ({
+		id: row.id,
+		slug: row.slug,
+		name: row.name,
+		price: row.price,
+		image: row.image,
+		brand: row.brand,
+		stockStatus: mapStockStatus(row.status, row.stock),
 	}));
-};
 
 const GENERIC_PRODUCT_SEARCH_TERMS = new Set([
 	"vitamin",
