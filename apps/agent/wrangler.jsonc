@@ -26,6 +26,10 @@
 			{
 				"name": "MESSENGER_ADMISSION_STORE",
 				"class_name": "MessengerAdmissionStore"
+			},
+			{
+				"name": "CART_STORE",
+				"class_name": "CartStore"
 			}
 		]
 	},
@@ -37,6 +41,10 @@
 		{
 			"tag": "v2_messenger_admission_store",
 			"new_sqlite_classes": ["MessengerAdmissionStore"]
+		},
+		{
+			"tag": "v3_cart_store",
+			"new_sqlite_classes": ["CartStore"]
 		}
 	]
 }
