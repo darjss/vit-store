@@ -5,7 +5,7 @@
 	"scripts": {
 		"dev": "bun run build && wrangler dev --config dist/vit_store_agent/wrangler.json",
 		"build": "flue build --target cloudflare && bun scripts/patch-flue-worker.ts",
-		"deploy": "bun run build && wrangler deploy --config dist/vit_store_agent/wrangler.json",
+		"deploy": "bun run build && wrangler deploy --config dist/vit_store_agent/wrangler.json && bun run r2:lifecycle:apply",
 		"check-types": "tsgo --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"checkout:sim": "bun scripts/checkout-sim.ts",
@@ -13,7 +13,11 @@
 		"mock:product-cards": "bun scripts/mock-product-cards.ts",
 		"dev:messenger": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts",
 		"smoke": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts --smoke",
-		"smoke:local": "bun scripts/with-worker.ts --local -- bun cli/messenger-dev.ts --smoke"
+		"smoke:local": "bun scripts/with-worker.ts --local -- bun cli/messenger-dev.ts --smoke",
+		"photo:proof": "bun scripts/with-worker.ts -- bun cli/photo-identify.ts",
+		"r2:lifecycle:inbound": "wrangler r2 bucket lifecycle set vit-store-bucket-prod --config wrangler.jsonc --file r2-lifecycle.messenger-inbound.json -y",
+		"r2:lifecycle:assert": "bun scripts/assert-r2-lifecycle.ts",
+		"r2:lifecycle:apply": "bun run r2:lifecycle:inbound && bun run r2:lifecycle:assert"
 	},
 	"dependencies": {
 		"@flue/runtime": "^1.0.0-beta.3",

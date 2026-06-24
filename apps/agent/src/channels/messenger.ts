@@ -19,16 +19,26 @@ import { getAssistantProductsByIds } from "../lib/catalog";
 import { detectCartEvent, handleCartEvent } from "./cart-handler";
 import { cartSessionFor } from "./cart-session";
 import {
+	admitMessengerImageMessage,
 	admitMessengerTextMessage,
 	claimInboundOnce,
+	extractInboundImages,
 	releaseInboundClaim,
 } from "./messenger-admission";
+import { stageInboundImage } from "../lib/messenger-inbound";
 
 // Worker bindings the Messenger webhook reaches through the Hono context.
 type WebhookEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
 	CART_STORE?: DurableObjectNamespace;
+	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
+
+// Mongolian apology when an inbound photo can't be fetched from Meta (expired
+// CDN url / oversized). Keeps the customer in the conversation instead of
+// silently dropping their picture.
+const PHOTO_FETCH_FAILED_MESSAGE =
+	"Уучлаарай, таны илгээсэн зургийг боловсруулж чадсангүй. Барааны нэрийг бичих эсвэл зургаа дахин илгээнэ үү.";
 
 const graphVersion = "v25.0";
 
@@ -62,6 +72,9 @@ export const channel: MessengerChannel = createMessengerChannel({
 				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
 				// run under local miniflare where `env.AI` is unavailable).
 				if (await tryHandleCartEvent(event, env)) continue;
+				// Photo turns: trusted channel code fetches the Meta image, stages it
+				// under messenger-inbound/ in R2, and dispatches ONLY the key (#20).
+				if (await dispatchInboundImage(event, env)) continue;
 				await dispatchInboundText(event, env);
 			}
 		}
@@ -100,6 +113,81 @@ async function dispatchInboundText(
 		await admission.release();
 		throw error;
 	}
+}
+
+// Admits an inbound photo turn: fetches each Meta CDN attachment server-side,
+// stages it under the short-lived messenger-inbound/ R2 prefix, and dispatches
+// the assistant turn carrying ONLY the R2 key(s) — never a CDN url or base64
+// (ADR 0003, #20). Returns true when the event was an image message (consumed),
+// false for non-image messages so the webhook falls through to the text path.
+async function dispatchInboundImage(
+	event: Parameters<typeof admitMessengerImageMessage>[0]["event"],
+	env: WebhookEnv,
+): Promise<boolean> {
+	// Extract once and pass the array through to admission so the webhook loop
+	// doesn't scan attachments twice per event.
+	const images = extractInboundImages(event);
+	if (images.length === 0) return false;
+
+	// Resolve the bucket BEFORE claiming the mid: a missing binding is a
+	// production misconfig that must fail loud (like the cart/admission stores),
+	// leaving the mid unclaimed so Meta's retry is honored.
+	const bucket = env.MESSENGER_INBOUND_BUCKET;
+	if (bucket === undefined) {
+		throw new Error(
+			"MESSENGER_INBOUND_BUCKET binding is required for inbound Messenger photos.",
+		);
+	}
+
+	const admission = await admitMessengerImageMessage({
+		channel,
+		event,
+		env,
+		images,
+	});
+	if (admission === undefined) return true;
+
+	try {
+		const imageKeys: string[] = [];
+		for (const image of admission.images) {
+			const staged = await stageInboundImage(
+				bucket,
+				{
+					sessionId: admission.sessionId,
+					messageId: admission.messageId,
+					index: image.index,
+				},
+				image.url,
+			);
+			if (staged !== undefined) imageKeys.push(staged.key);
+		}
+
+		// Nothing staged (expired/oversized url). Keep the claim so a Meta retry
+		// of the same dead url doesn't re-apologize, and tell the customer.
+		if (imageKeys.length === 0) {
+			await sendTextReply(admission.conversation)(PHOTO_FETCH_FAILED_MESSAGE);
+			return true;
+		}
+
+		await dispatch(assistant, {
+			id: admission.sessionId,
+			input: {
+				type: "messenger.message",
+				messageId: admission.messageId,
+				text: admission.caption,
+				// Derive from the STAGED keys, not every attempted attachment, so the
+				// reported type count can't diverge from imageKeys.
+				attachmentTypes: imageKeys.map(() => "image"),
+				// The dispatch input carries R2 KEYS, never the Meta CDN url or any
+				// base64 payload (#20 acceptance criterion).
+				imageKeys,
+			},
+		});
+	} catch (error) {
+		await admission.release();
+		throw error;
+	}
+	return true;
 }
 
 // Handles a Messenger event if it is a cart button/quick-reply, returning true

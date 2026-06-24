@@ -224,6 +224,18 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 	printAbovePrompt(C.dim(`  saved → ${savedPath.replace(`${AGENT_ROOT}/`, "")}`));
 }
 
+// Holds the most recent /image attachment so the worker can fetch it from the
+// capture server, standing in for the Meta CDN attachment url (#20).
+let pendingImage: { bytes: Uint8Array; contentType: string } | null = null;
+
+const IMAGE_CONTENT_TYPE_BY_EXT: Record<string, string> = {
+	jpg: "image/jpeg",
+	jpeg: "image/jpeg",
+	png: "image/png",
+	webp: "image/webp",
+	gif: "image/gif",
+};
+
 function startCaptureServer(): void {
 	mkdirSync(SENT_DIR, { recursive: true });
 	Bun.serve({
@@ -232,6 +244,13 @@ function startCaptureServer(): void {
 		async fetch(req) {
 			const url = new URL(req.url);
 			if (req.method !== "POST") {
+				// Serve the staged /image attachment so the worker's webhook can fetch
+				// it server-side (the production path fetches a Meta CDN url).
+				if (url.pathname === "/inbound-image" && pendingImage) {
+					return new Response(pendingImage.bytes, {
+						headers: { "content-type": pendingImage.contentType },
+					});
+				}
 				// e.g. profile GET — return an empty-ish profile so the SDK is happy.
 				return Response.json({ id: psid() });
 			}
@@ -327,6 +346,35 @@ async function sendText(text: string): Promise<void> {
 		recipient: { id: PAGE_ID },
 		timestamp: Date.now(),
 		message: { mid: nextMid(), text },
+	});
+}
+
+// Attaches a local image to a real signed webhook image event (#20). The worker
+// fetches it from the capture server's /inbound-image route, stages it under the
+// messenger-inbound/ R2 prefix, and dispatches only the key; the assistant then
+// identifies it with Kimi vision and runs the same product-card search as text.
+// Needs the worker booted with real Workers AI (env.AI is unavailable under
+// --local); product cards also need a reachable STORE_API_URL catalog.
+async function sendImage(path: string): Promise<void> {
+	if (!existsSync(path)) {
+		printAbovePrompt(C.red(`  ✗ no such image: ${path}`));
+		return;
+	}
+	const ext = path.split(".").pop()?.toLowerCase() ?? "";
+	const contentType = IMAGE_CONTENT_TYPE_BY_EXT[ext] ?? "image/jpeg";
+	pendingImage = { bytes: new Uint8Array(readFileSync(path)), contentType };
+	const imageUrl = `http://127.0.0.1:${CAPTURE_PORT}/inbound-image`;
+	printAbovePrompt(
+		`${C.cyan("you ›")} ${C.dim(`[image ${path} (${contentType}, ${pendingImage.bytes.byteLength} bytes)]`)}`,
+	);
+	await postWebhook({
+		sender: { id: psid() },
+		recipient: { id: PAGE_ID },
+		timestamp: Date.now(),
+		message: {
+			mid: nextMid(),
+			attachments: [{ type: "image", payload: { url: imageUrl } }],
+		},
 	});
 }
 
@@ -465,7 +513,7 @@ function help(): void {
 		"/fire <n>             fire button n's payload (postback / quick reply)",
 		"/payloads             list saved outgoing Send API JSON files",
 		"/seed [list|<file>]   replay a private messenger-chat-history example",
-		"/image                image input — placeholder until #20",
+		"/image <path>         attach a photo → R2 key → Kimi vision → product cards (#20)",
 		"/quit                 exit",
 	])
 		printAbovePrompt(C.dim(`  ${line}`));
@@ -551,16 +599,22 @@ async function handleCommand(line: string): Promise<void> {
 		case "seed":
 			await seed(arg || undefined);
 			return;
-		case "image":
-			printAbovePrompt(
-				C.yellow(
-					"  image input is a placeholder until #20 (photo identification) lands.",
-				),
-			);
-			printAbovePrompt(
-				C.dim("  TODO(#20): attach an image → R2 key → message.attachments[]."),
-			);
+		case "image": {
+			if (!arg) {
+				printAbovePrompt(C.red("  usage: /image <path-to-photo>"));
+				printAbovePrompt(
+					C.dim(
+						"  sends a real image webhook → R2 key → Kimi vision → product cards (#20).",
+					),
+				);
+				printAbovePrompt(
+					C.dim("  needs the worker booted with real Workers AI (not --local)."),
+				);
+				return;
+			}
+			await sendImage(arg);
 			return;
+		}
 		default:
 			printAbovePrompt(C.red(`  unknown command /${cmd} (try /help)`));
 	}
