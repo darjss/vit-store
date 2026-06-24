@@ -8,6 +8,7 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
+import { navigate } from "astro:transitions/client";
 import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
@@ -43,6 +44,16 @@ const SearchOverlay: Component = () => {
 	const handleSelectSuggestion = (term: string) => {
 		setSearchQuery(term);
 		handleSearch(term);
+	};
+
+	const handleSubmitSearch = (query: string) => {
+		const trimmedQuery = query.trim();
+		if (trimmedQuery.length < 2) {
+			return;
+		}
+		addSearch(trimmedQuery);
+		setIsOpen(false);
+		navigate(`/search/?q=${encodeURIComponent(trimmedQuery)}`);
 	};
 
 	const handleClose = () => {
@@ -84,6 +95,7 @@ const SearchOverlay: Component = () => {
 							value={searchQuery()}
 							onValueChange={setSearchQuery}
 							onSearch={handleSearch}
+							onSubmitSearch={handleSubmitSearch}
 							isLoading={isSearching() && searchQuery().length >= 2}
 							autofocus
 							placeholder="Витамин, нэмэлт тэжээл хайх..."

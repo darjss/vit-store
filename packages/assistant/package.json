@@ -1,0 +1,25 @@
+{
+	"name": "@vit/assistant",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"@flue/runtime": "^1.0.0-beta.3",
+		"valibot": "catalog:"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

@@ -381,13 +381,12 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								</Show>
 							</div>
 
-							{/* Scroll affordance — only on delivery step */}
+							{/* Delivery step starts immediately below the summary. Keep the page self-evident without animated scroll prompts. */}
 							<Show when={step() === "delivery" && summaryOpen()}>
 								<div class="flex flex-col items-center gap-1 pb-1 pt-2">
 									<p class="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-										Доош гүйлгэж мэдээллээ оруулна уу
+										Хүргэлтийн мэдээллээ бөглөнө үү
 									</p>
-									<IconChevronDown class="h-5 w-5 animate-bounce text-muted-foreground" />
 								</div>
 							</Show>
 

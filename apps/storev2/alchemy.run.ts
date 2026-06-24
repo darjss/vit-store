@@ -1,8 +1,7 @@
 import path from "node:path";
 import alchemy from "alchemy";
-import { Astro } from "alchemy/cloudflare";
+import { Astro, WorkerRef } from "alchemy/cloudflare";
 import { config } from "dotenv";
-import { server } from "server/alchemy";
 import { createStoreAlchemyEnv } from "../../env";
 
 const app = await alchemy("storev2");
@@ -24,8 +23,10 @@ console.log("stage", stage, env.PUBLIC_API_URL);
 
 export const storev2 = await Astro("front", {
 	bindings: {
-		// images: images
-		server: server,
+		// Reference the already-deployed server Worker by physical service name.
+		// Importing server/alchemy here causes store deploys to evaluate/deploy the
+		// server app first, which can hang when Cloudflare's API is degraded.
+		server: WorkerRef({ service: `server-api-${stage}` }),
 		PUBLIC_API_URL: env.PUBLIC_API_URL,
 	},
 	adopt: true,

@@ -1,0 +1,25 @@
+{
+	"name": "agent",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "flue dev --target cloudflare",
+		"build": "flue build --target cloudflare",
+		"deploy": "wrangler deploy --config dist/vit_store_agent/wrangler.json",
+		"check-types": "tsgo --noEmit",
+		"cf-typegen": "wrangler types --env-interface CloudflareBindings"
+	},
+	"dependencies": {
+		"@flue/runtime": "^1.0.0-beta.3",
+		"@vit/assistant": "workspace:*",
+		"agents": "^0.14.1",
+		"hono": "catalog:",
+		"valibot": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260617.1",
+		"@flue/cli": "^1.0.0-beta.3",
+		"typescript": "catalog:",
+		"wrangler": "^4.101.0"
+	}
+}
