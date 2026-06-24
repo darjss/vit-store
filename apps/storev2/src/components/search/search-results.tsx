@@ -207,7 +207,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 								</p>
 								<a
 									href={`/products/?q=${encodeURIComponent(props.searchQuery)}`}
-									class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-primary"
+									class="flex items-center gap-1 font-black text-black text-xs uppercase tracking-wide transition-colors hover:text-foreground"
 									onClick={props.onProductClick}
 								>
 									Бүгдийг үзэх <IconArrowRight class="h-3 w-3" />
