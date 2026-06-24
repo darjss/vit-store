@@ -185,14 +185,27 @@ export const buildCartDecPayload = (id: number): string =>
 export const buildCartRemovePayload = (id: number): string =>
 	`${CART_REMOVE_PREFIX}:${id}`;
 
-export type CartCommand =
-	| { kind: "view" }
-	| { kind: "confirm" }
-	| { kind: "clear" }
-	| { kind: "inc"; productId: number }
-	| { kind: "dec"; productId: number }
-	| { kind: "set"; productId: number; quantity: number }
-	| { kind: "remove"; productId: number };
+const productIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+
+// Discriminated schema for cart commands, so a malformed command (e.g.
+// `{kind:"set"}` with no productId) is rejected at the DO boundary instead of
+// degrading to a silent no-op in the reducer. The `CartCommand` type is derived
+// from it, so grammar and type can't drift.
+export const cartCommandSchema = v.variant("kind", [
+	v.object({ kind: v.literal("view") }),
+	v.object({ kind: v.literal("confirm") }),
+	v.object({ kind: v.literal("clear") }),
+	v.object({ kind: v.literal("inc"), productId: productIdSchema }),
+	v.object({ kind: v.literal("dec"), productId: productIdSchema }),
+	v.object({
+		kind: v.literal("set"),
+		productId: productIdSchema,
+		quantity: v.pipe(v.number(), v.integer(), v.minValue(0)),
+	}),
+	v.object({ kind: v.literal("remove"), productId: productIdSchema }),
+]);
+
+export type CartCommand = v.InferOutput<typeof cartCommandSchema>;
 
 const parseIdSuffix = (payload: string, prefix: string): number | undefined => {
 	if (!payload.startsWith(`${prefix}:`)) return undefined;
@@ -251,10 +264,16 @@ export interface CartQuickReply {
 const QUICK_REPLY_TITLE_MAX = 20;
 const MAX_CART_QUICK_REPLIES = 13;
 
-const truncateTitle = (text: string): string =>
-	text.length <= QUICK_REPLY_TITLE_MAX
-		? text
-		: `${text.slice(0, QUICK_REPLY_TITLE_MAX - 1).trimEnd()}…`;
+// Caps the FULL assembled title (emoji prefix included) at 20 chars. Budgeting
+// the prefix is the whole point: truncating a bare label and *then* prepending
+// "➕ " would push the result past 20 and risk Meta rejecting the send.
+const qr = (title: string, payload: string): CartQuickReply => ({
+	title:
+		title.length <= QUICK_REPLY_TITLE_MAX
+			? title
+			: `${title.slice(0, QUICK_REPLY_TITLE_MAX - 1).trimEnd()}…`,
+	payload,
+});
 
 // Builds the cart-control quick replies for the current cart: per-item +/−/✖
 // adjusters plus the global confirm/clear actions, bounded to Messenger's 13
@@ -262,19 +281,18 @@ const truncateTitle = (text: string): string =>
 // the always-visible confirm/clear keep the customer able to act).
 export const cartQuickReplies = (cart: Cart): CartQuickReply[] => {
 	if (isCartEmpty(cart)) return [];
-	const global: CartQuickReply[] = [
-		{ title: "✅ Захиалга баталгаажуулах", payload: CART_CONFIRM_PAYLOAD },
-		{ title: "🗑 Сагс хоослох", payload: CART_CLEAR_PAYLOAD },
+	const global = [
+		qr("✅ Баталгаажуулах", CART_CONFIRM_PAYLOAD),
+		qr("🗑 Сагс хоослох", CART_CLEAR_PAYLOAD),
 	];
 	const perItemBudget = MAX_CART_QUICK_REPLIES - global.length;
 	const perItem: CartQuickReply[] = [];
 	for (const item of cart.items) {
 		if (perItem.length + 3 > perItemBudget) break;
-		const label = truncateTitle(item.name);
 		perItem.push(
-			{ title: `➕ ${label}`, payload: buildCartIncPayload(item.productId) },
-			{ title: `➖ ${label}`, payload: buildCartDecPayload(item.productId) },
-			{ title: `✖ ${label}`, payload: buildCartRemovePayload(item.productId) },
+			qr(`➕ ${item.name}`, buildCartIncPayload(item.productId)),
+			qr(`➖ ${item.name}`, buildCartDecPayload(item.productId)),
+			qr(`✖ ${item.name}`, buildCartRemovePayload(item.productId)),
 		);
 	}
 	return [...perItem, ...global];

@@ -117,13 +117,22 @@ async function tryHandleCartEvent(
 	if (conversation === undefined) return true;
 	const sessionId = channel.conversationKey(conversation);
 
+	// Resolve the cart store BEFORE claiming the mid: a missing binding is a
+	// production misconfig that must fail loud (like the admission store does),
+	// not silently swallow the customer's tap and burn the mid. Throwing here —
+	// ahead of the claim — leaves the mid unclaimed so Meta's retry is honored.
+	const cart = cartSessionFor(env.CART_STORE, sessionId);
+	if (cart === undefined) {
+		throw new Error(
+			"CART_STORE binding is required for Messenger cart events.",
+		);
+	}
+
 	const claimKey = `messenger:cart:v1:${sessionId}:mid:${cartEvent.mid}`;
 	if (cartEvent.mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
 		return true;
 	}
 
-	const cart = cartSessionFor(env.CART_STORE, sessionId);
-	if (cart === undefined) return true;
 	try {
 		await handleCartEvent(cartEvent, {
 			cart,

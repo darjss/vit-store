@@ -47,20 +47,35 @@ const storeApi = Bun.serve({
 });
 
 let lastText: string | undefined;
+// When true, the next real message send (the cart summary) is rejected with a
+// 400 — simulating Meta's Send API failing AFTER the DO mutation has committed.
+let failNextSend = false;
 const capture = Bun.serve({
 	port: 8788,
 	hostname: "127.0.0.1",
 	async fetch(req) {
 		if (req.method !== "POST") return Response.json({ id: PSID });
 		const body = (await req.json()) as Record<string, unknown>;
-		if (!body.sender_action) {
-			lastText = (body.message as Record<string, unknown>)?.text as string;
+		if (body.sender_action) {
+			return Response.json({ recipient_id: PSID, message_id: "cap" });
 		}
+		if (failNextSend) {
+			failNextSend = false;
+			// 4xx → messenger-sdk throws immediately (no retry) → sendCartSummary
+			// throws inside handleCartEvent.
+			return Response.json(
+				{ error: { message: "simulated send failure", code: 400 } },
+				{ status: 400 },
+			);
+		}
+		lastText = (body.message as Record<string, unknown>)?.text as string;
 		return Response.json({ recipient_id: PSID, message_id: "cap" });
 	},
 });
 
-async function fire(event: MessengerMessagingEvent): Promise<void> {
+// Returns the webhook HTTP status (does not throw) so we can assert the worker
+// stays 200 even when the post-commit send fails.
+async function fire(event: MessengerMessagingEvent): Promise<number> {
 	const payload: MessengerWebhookPayload = {
 		object: "page",
 		entry: [{ id: PAGE_ID, time: Date.now(), messaging: [event] }],
@@ -76,24 +91,49 @@ async function fire(event: MessengerMessagingEvent): Promise<void> {
 		},
 		body: bodyText,
 	});
-	if (!res.ok) throw new Error(`webhook ${res.status}`);
+	return res.status;
 }
 
-const postback = () => ({
+const addPostback = () => ({
 	sender: { id: PSID },
 	recipient: { id: PAGE_ID },
 	timestamp: Date.now(),
 	postback: { mid: FIXED_MID, title: "Захиалах", payload: "order_product:101" },
 });
 
-await fire(postback());
-console.log("delivery 1 →", lastText?.split("\n")[2] ?? lastText);
-await fire(postback());
+const viewQuickReply = () => ({
+	sender: { id: PSID },
+	recipient: { id: PAGE_ID },
+	timestamp: Date.now(),
+	message: {
+		mid: `view-${Date.now().toString(36)}`,
+		text: "view",
+		quick_reply: { payload: "cart_view" },
+	},
+});
+
+const qtyOf = (summary: string | undefined): string =>
+	summary?.match(/×\s*(\d+)/)?.[1] ?? "?";
+
+// HIGH-1 scenario: the add commits, then the summary send FAILS, then Meta
+// re-delivers the SAME mid. The add must be applied exactly once.
+failNextSend = true;
+const status1 = await fire(addPostback());
 console.log(
-	"delivery 2 (same mid) →",
-	lastText === undefined
-		? "(no outbound — deduped, add NOT re-applied)"
-		: lastText,
+	`delivery 1 (add, send FAILS post-commit) → webhook HTTP ${status1}` +
+		(status1 === 200 ? "  ✓ no 500, claim NOT released" : "  ✗ 500!"),
+);
+
+const status2 = await fire(addPostback());
+console.log(
+	`delivery 2 (Meta retry, same mid)        → webhook HTTP ${status2}  (deduped, no second add)`,
+);
+
+await fire(viewQuickReply());
+console.log(`cart_view → ${lastText?.split("\n")[1] ?? lastText}`);
+const qty = qtyOf(lastText);
+console.log(
+	`\nRESULT: qty = ${qty} → ${qty === "1" ? "PASS (applied once)" : "FAIL (double-applied)"}`,
 );
 
 storeApi.stop();
