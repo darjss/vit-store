@@ -5,19 +5,19 @@ import {
 	productQueries,
 } from "@vit/api/queries";
 import * as v from "valibot";
+import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
+import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { kv } from "~/lib/kv";
+import {
+	rebuildProductSearchIndex,
+	searchProducts,
+} from "~/lib/product-search/client";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
 } from "~/lib/product-search/text";
 import { redis } from "~/lib/redis";
-import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
-import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
-import { publicProcedure, adminProcedure, router } from "~/lib/trpc";
-import {
-	rebuildProductSearchIndex,
-	searchProducts,
-} from "~/lib/product-search/client";
+import { adminProcedure, publicProcedure, router } from "~/lib/trpc";
 
 export interface SearchProductResult {
 	id: number;
@@ -28,7 +28,7 @@ export interface SearchProductResult {
 	brand: string;
 }
 
-interface AssistantProductResult {
+export interface AssistantProductResult {
 	id: number;
 	slug: string;
 	name: string;
@@ -53,7 +53,22 @@ const mapStockStatus = (
 	return "in_stock";
 };
 
-const performProductSearch = async (
+// Rich catalog row carrying the real stock state from whichever source served
+// the query (MiniSearch index or the DB name fallback). Both call sites below
+// project this down — the storefront drops stock, the assistant maps it — so
+// the two-phase search control flow lives in exactly one place.
+interface CatalogSearchRow {
+	id: number;
+	slug: string;
+	name: string;
+	price: number;
+	image: string;
+	brand: string;
+	status: string;
+	stock: number;
+}
+
+const performCatalogSearch = async (
 	query: string,
 	limit: number,
 	options?: {
@@ -61,7 +76,7 @@ const performProductSearch = async (
 		categoryId?: number;
 		requireStock?: boolean;
 	},
-): Promise<SearchProductResult[]> => {
+): Promise<CatalogSearchRow[]> => {
 	const requireStock = options?.requireStock ?? false;
 	const safeLimit = Math.min(limit, 10);
 	const filters =
@@ -82,6 +97,8 @@ const performProductSearch = async (
 				price: result.price,
 				image: result.image,
 				brand: result.brand,
+				status: result.status,
+				stock: result.stock,
 			}));
 	}
 
@@ -97,14 +114,53 @@ const performProductSearch = async (
 		price: p.price,
 		image: p.images[0]?.url || "",
 		brand: p.brand?.name || "",
+		status: p.status,
+		stock: p.stock,
 	}));
 };
+
+const performProductSearch = async (
+	query: string,
+	limit: number,
+	options?: {
+		brandId?: number;
+		categoryId?: number;
+		requireStock?: boolean;
+	},
+): Promise<SearchProductResult[]> =>
+	(await performCatalogSearch(query, limit, options)).map((row) => ({
+		id: row.id,
+		slug: row.slug,
+		name: row.name,
+		price: row.price,
+		image: row.image,
+		brand: row.brand,
+	}));
 
 const performProductSearchWithStock = async (
 	query: string,
 	limit: number,
 	filters?: { brandId?: number; categoryId?: number },
 ) => performProductSearch(query, limit, { ...filters, requireStock: true });
+
+// Assistant-facing search: same catalog search as the storefront, but keeps
+// the real stock state (mapped via mapStockStatus, including the DB fallback)
+// so the Messenger assistant renders accurate stock on product cards and
+// surfaces out-of-stock items as alternatives instead of mislabeling them.
+const performAssistantProductSearch = async (
+	query: string,
+	limit: number,
+	filters?: { brandId?: number; categoryId?: number },
+): Promise<AssistantProductResult[]> =>
+	(await performCatalogSearch(query, limit, filters)).map((row) => ({
+		id: row.id,
+		slug: row.slug,
+		name: row.name,
+		price: row.price,
+		image: row.image,
+		brand: row.brand,
+		stockStatus: mapStockStatus(row.status, row.stock),
+	}));
 
 const GENERIC_PRODUCT_SEARCH_TERMS = new Set([
 	"vitamin",
@@ -500,6 +556,29 @@ export const product = router({
 				image: product.images[0]?.url,
 			}));
 		}),
+	searchProductsForAssistant: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				return await performAssistantProductSearch(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
 	getProductsByIdsForAssistant: publicProcedure
 		.input(
 			v.object({
@@ -728,7 +807,10 @@ export const product = router({
 		.input(
 			v.object({
 				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				pageSize: v.optional(
+					v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+					24,
+				),
 				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
@@ -779,7 +861,10 @@ export const product = router({
 		.input(
 			v.object({
 				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				pageSize: v.optional(
+					v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+					24,
+				),
 				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
@@ -800,15 +885,15 @@ export const product = router({
 		}),
 
 	rebuildSearchIndex: adminProcedure.mutation(async () => {
-			try {
-				const status = await rebuildProductSearchIndex("manual");
-				return status;
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to rebuild search index",
-					cause: error,
-				});
-			}
-		}),
+		try {
+			const status = await rebuildProductSearchIndex("manual");
+			return status;
+		} catch (error) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to rebuild search index",
+				cause: error,
+			});
+		}
+	}),
 });

@@ -9,6 +9,7 @@
 		"check-types": "tsgo --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"mock:messenger-text": "bun scripts/mock-messenger-text.ts",
+		"mock:product-cards": "bun scripts/mock-product-cards.ts",
 		"dev:messenger": "bun cli/messenger-dev.ts"
 	},
 	"dependencies": {
@@ -18,6 +19,7 @@
 		"@warriorteam/messenger-sdk": "^1.5.3",
 		"agents": "^0.14.1",
 		"hono": "catalog:",
+		"superjson": "^2.2.3",
 		"valibot": "catalog:"
 	},
 	"devDependencies": {
