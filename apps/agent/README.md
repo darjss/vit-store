@@ -79,12 +79,33 @@ unaffected and still pass under `--local` (`bun run smoke:local`).
 storage. R2 lifecycle rules are **not** expressible inline in `wrangler.jsonc`
 (no `lifecycle` key in the config schema), so the rule is applied out-of-band
 from `r2-lifecycle.messenger-inbound.json` (expire objects with that prefix at
-the R2 minimum age of 1 day):
+the R2 minimum age of 1 day).
+
+The cleanup is **not optional and not a one-time manual step** — ADR 0003 makes
+"short-lived" load-bearing for these customer-PII photos, so the staging code
+must never ship without the cleanup also being live. The agent's `deploy` script
+therefore re-applies and then verifies the rule on every deploy:
+
+```jsonc
+"deploy": "… && wrangler deploy … && bun run r2:lifecycle:apply"
+"r2:lifecycle:apply":  "bun run r2:lifecycle:inbound && bun run r2:lifecycle:assert"
+"r2:lifecycle:inbound": "wrangler r2 bucket lifecycle set … --file r2-lifecycle.messenger-inbound.json -y"
+"r2:lifecycle:assert":  "bun scripts/assert-r2-lifecycle.ts"
+```
+
+- `r2:lifecycle:inbound` (re)applies the rule via `wrangler r2 bucket lifecycle
+  set --file`. `set` replaces the rule set, so it is **idempotent** — running it
+  on every deploy is safe.
+- `r2:lifecycle:assert` lists the live rules on the bucket and **fails the deploy
+  loud** (non-zero exit) if the `messenger-inbound-cleanup` rule is absent, so a
+  deploy can't ship the staging code while the cleanup is missing. The bucket
+  name and expected rule id are read from `wrangler.jsonc` and
+  `r2-lifecycle.messenger-inbound.json` so the check can't drift from the source.
+
+To apply + verify by hand against prod (e.g. first rollout):
 
 ```bash
-bun run r2:lifecycle:inbound        # wrangler r2 bucket lifecycle set …
-# or, equivalently:
-wrangler r2 bucket lifecycle add vit-store-bucket-prod messenger-inbound-cleanup messenger-inbound/ --expire-days 1
+bun run r2:lifecycle:apply          # set rule, then assert it is live
 ```
 
 ### Proof CLI
@@ -231,10 +252,13 @@ patches before publishing:
 ```bash
 bun run build            # flue build --target cloudflare && patch-flue-worker.ts
 wrangler deploy --config dist/vit_store_agent/wrangler.json
+bun run r2:lifecycle:apply   # (re)apply + assert the messenger-inbound/ cleanup rule
 ```
 
 The `patch-flue-worker.ts` postbuild step is part of `build`, so build-before-deploy
-and the createRequire boot patch always run. To deploy just this app:
+and the createRequire boot patch always run. The trailing `r2:lifecycle:apply` step
+guarantees the short-lived photo cleanup rule is live on every deploy and fails the
+deploy if it isn't (see "R2 lifecycle cleanup" above). To deploy just this app:
 
 ```bash
 bun run --filter agent deploy

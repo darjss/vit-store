@@ -124,7 +124,10 @@ async function dispatchInboundImage(
 	event: Parameters<typeof admitMessengerImageMessage>[0]["event"],
 	env: WebhookEnv,
 ): Promise<boolean> {
-	if (extractInboundImages(event).length === 0) return false;
+	// Extract once and pass the array through to admission so the webhook loop
+	// doesn't scan attachments twice per event.
+	const images = extractInboundImages(event);
+	if (images.length === 0) return false;
 
 	// Resolve the bucket BEFORE claiming the mid: a missing binding is a
 	// production misconfig that must fail loud (like the cart/admission stores),
@@ -136,7 +139,12 @@ async function dispatchInboundImage(
 		);
 	}
 
-	const admission = await admitMessengerImageMessage({ channel, event, env });
+	const admission = await admitMessengerImageMessage({
+		channel,
+		event,
+		env,
+		images,
+	});
 	if (admission === undefined) return true;
 
 	try {
@@ -167,7 +175,9 @@ async function dispatchInboundImage(
 				type: "messenger.message",
 				messageId: admission.messageId,
 				text: admission.caption,
-				attachmentTypes: admission.images.map(() => "image"),
+				// Derive from the STAGED keys, not every attempted attachment, so the
+				// reported type count can't diverge from imageKeys.
+				attachmentTypes: imageKeys.map(() => "image"),
 				// The dispatch input carries R2 KEYS, never the Meta CDN url or any
 				// base64 payload (#20 acceptance criterion).
 				imageKeys,

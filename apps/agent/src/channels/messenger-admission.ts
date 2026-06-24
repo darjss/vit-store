@@ -105,11 +105,13 @@ export async function admitMessengerImageMessage(input: {
 	channel: MessengerChannel;
 	event: MessengerMessagingEvent;
 	env?: AdmissionEnv;
+	/** Pre-extracted images from the webhook, to avoid re-scanning attachments. */
+	images?: MessengerInboundImage[];
 }): Promise<MessengerImageAdmission | undefined> {
 	const { channel, event, env } = input;
 	if (event.message === undefined || event.message.is_echo) return undefined;
 
-	const images = extractInboundImages(event);
+	const images = input.images ?? extractInboundImages(event);
 	if (images.length === 0) return undefined;
 
 	const conversation = channel.conversationRef(event);
