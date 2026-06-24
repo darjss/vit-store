@@ -1,7 +1,24 @@
+import type { ChannelRoute } from "@flue/messenger";
 import { flue } from "@flue/runtime/routing";
 import { Hono } from "hono";
+import { channel as messengerChannel } from "../src/channels/messenger";
+export { MessengerAdmissionStore } from "../src/channels/messenger-admission-store";
 
 const app = new Hono();
+
+function mountChannel(
+	hono: Hono,
+	prefix: string,
+	channel: { routes: readonly ChannelRoute[] },
+): void {
+	for (const route of channel.routes) {
+		// Single bridge cast: the channel ships its own pinned Hono copy, so its
+		// Handler is structurally distinct from this app's Hono Handler.
+		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
+	}
+}
+
+mountChannel(app, "/channels/messenger", messengerChannel);
 
 app.get("/health", (c) =>
 	c.json({
@@ -19,6 +36,6 @@ app.get("/messenger/inbound-r2-shape", (c) =>
 	}),
 );
 
-app.route("/", flue());
+app.route("/", flue() as never);
 
 export default app;
