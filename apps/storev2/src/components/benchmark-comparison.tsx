@@ -105,7 +105,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 										</p>
 									}
 								>
-									<div class="mx-auto h-12 w-12 animate-spin rounded-full border-foreground border-b-2" />
+									<div class="mx-auto size-12 animate-spin border-[3px] border-border border-t-primary" />
 									<p class="mt-4 text-primary">Fetching data...</p>
 								</Show>
 							</div>
