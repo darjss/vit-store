@@ -3,6 +3,7 @@ import { productColors } from "@vit/shared";
 import { createSignal, For, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import { cn } from "@/lib/utils";
+import ProductImageFallback from "./product-image-fallback";
 
 interface ProductImage {
 	url: string;
@@ -50,9 +51,10 @@ export default function ProductImageCarousel(props: Props) {
 				<Show
 					when={images[selectedIndex()]}
 					fallback={
-						<div class="flex h-full items-center justify-center text-6xl opacity-20">
-							💊
-						</div>
+						<ProductImageFallback
+							name={props.productName}
+							class="relative z-10"
+						/>
 					}
 				>
 					<Image

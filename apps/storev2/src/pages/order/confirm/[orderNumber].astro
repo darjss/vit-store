@@ -17,6 +17,7 @@
 import PaymentStatus from "@/components/payment/payment-status";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
+import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import IconHome from "~icons/ri/home-4-line";
 import IconMail from "~icons/ri/mail-line";
 import IconMapPin from "~icons/ri/map-pin-line";
@@ -110,12 +111,16 @@ if(!order){
                     {order.orderDetails.map((detail) => (
                         <div class="border-4 border-border bg-card shadow-hard-xl transition-all hover:shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px]">
                             <div class="p-6 flex flex-col md:flex-row gap-6">
-                                <div class="flex-shrink-0">
-                                    <img 
-                                        src={detail.product.images[0]?.url || '/placeholder-product.png'} 
-                                        alt={detail.product.name}
-                                        class="w-24 h-24 object-cover border-2 border-border"
-                                    />
+                                <div class="flex-shrink-0 w-24 h-24 border-2 border-border overflow-hidden relative bg-primary/5">
+                                    {detail.product.images[0]?.url ? (
+                                        <img
+                                            src={detail.product.images[0].url}
+                                            alt={detail.product.name}
+                                            class="w-24 h-24 object-cover"
+                                        />
+                                    ) : (
+                                        <ProductImageFallback name={detail.product.name} brand={detail.product.brand?.name ?? null} />
+                                    )}
                                 </div>
                                 <div class="flex-grow">
                                     <h3 class="font-black text-lg uppercase tracking-tight mb-1">{detail.product.name}</h3>
