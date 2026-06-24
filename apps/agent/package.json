@@ -12,7 +12,9 @@
 		"mock:product-cards": "bun scripts/mock-product-cards.ts",
 		"dev:messenger": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts",
 		"smoke": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts --smoke",
-		"smoke:local": "bun scripts/with-worker.ts --local -- bun cli/messenger-dev.ts --smoke"
+		"smoke:local": "bun scripts/with-worker.ts --local -- bun cli/messenger-dev.ts --smoke",
+		"photo:proof": "bun scripts/with-worker.ts -- bun cli/photo-identify.ts",
+		"r2:lifecycle:inbound": "wrangler r2 bucket lifecycle set vit-store-bucket-prod --config wrangler.jsonc --file r2-lifecycle.messenger-inbound.json"
 	},
 	"dependencies": {
 		"@flue/runtime": "^1.0.0-beta.3",
