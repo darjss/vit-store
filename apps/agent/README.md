@@ -28,8 +28,9 @@ Required secrets/vars:
 - `MESSENGER_VERIFY_TOKEN` — Meta GET webhook handshake token.
 - `MESSENGER_PAGE_ID` — fixed test Page id accepted by the channel.
 - `MESSENGER_PAGE_ACCESS_TOKEN` — Page token used for typing indicators and text replies.
+- `MESSENGER_ADMISSION_STORE` — Durable Object binding used to dedupe inbound Messenger message ids before dispatch.
 
-The channel ignores echoes/non-text events in this slice, keys the customer assistant session with `messenger:v1:page:<PAGE_ID>:page-scoped-id:<PSID>`, sends `typing_on` while the assistant runs, and replies with one simple text message via Graph `messages`.
+The channel ignores echoes/non-text events in this slice, dedupes admission by Page + conversation + `message.mid`, keys the customer assistant session with `messenger:v1:page:<PAGE_ID>:page-scoped-id:<PSID>`, sends `typing_on` before dispatch, and only clears typing in the reply tool after the assistant sends one simple text message via Graph `messages`.
 
 ## Tracer-bullet scope
 

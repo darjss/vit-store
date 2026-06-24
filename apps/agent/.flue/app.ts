@@ -1,6 +1,7 @@
 import { flue } from "@flue/runtime/routing";
 import { Hono } from "hono";
 import { channel as messengerChannel } from "../src/channels/messenger";
+export { MessengerAdmissionStore } from "../src/channels/messenger-admission-store";
 
 const app = new Hono();
 

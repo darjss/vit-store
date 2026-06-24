@@ -7,6 +7,7 @@ import { defineTool, dispatch } from "@flue/runtime";
 import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
 import { MessengerClient } from "../messenger-client";
+import { admitMessengerTextMessage } from "./messenger-admission";
 
 const graphVersion = "v25.0";
 
@@ -22,41 +23,29 @@ export const channel: MessengerChannel = createMessengerChannel({
 	pageId: requiredEnv("MESSENGER_PAGE_ID"),
 
 	// Mounted at GET/POST /channels/messenger/webhook.
-	async webhook({ payload }) {
+	async webhook({ c, payload }) {
 		for (const entry of payload.entry) {
 			for (const event of entry.messaging ?? []) {
-				if (event.message === undefined || event.message.is_echo) continue;
-				const conversation = channel.conversationRef(event);
-				const text = event.message.text?.trim();
-				if (
-					conversation === undefined ||
-					text === undefined ||
-					text.length === 0
-				) {
-					continue;
-				}
+				const admission = await admitMessengerTextMessage({
+					channel,
+					event,
+					env: c.env,
+				});
+				if (admission === undefined) continue;
 
-				await client.senderActions.send(conversation.participant, {
+				await client.senderActions.send(admission.conversation.participant, {
 					type: "typing_on",
 				});
-				try {
-					await dispatch(assistant, {
-						id: channel.conversationKey(conversation),
-						input: {
-							type: "messenger.message",
-							messageId: event.message.mid,
-							text,
-							attachmentTypes: (event.message.attachments ?? []).map(
-								(attachment) => attachment.type,
-							),
-							quickReplyPayload: event.message.quick_reply?.payload,
-						},
-					});
-				} finally {
-					await client.senderActions.send(conversation.participant, {
-						type: "typing_off",
-					});
-				}
+				await dispatch(assistant, {
+					id: admission.sessionId,
+					input: {
+						type: "messenger.message",
+						messageId: admission.messageId,
+						text: admission.text,
+						attachmentTypes: admission.attachmentTypes,
+						quickReplyPayload: admission.quickReplyPayload,
+					},
+				});
 			}
 		}
 		return undefined;
@@ -70,16 +59,22 @@ export function postMessage(ref: MessengerConversationRef) {
 			"Post a simple text reply to the bound Messenger customer conversation.",
 		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
 		async run({ input }) {
-			const result = await client.messages.sendText({
-				to: ref.participant,
-				text: input.text,
-				messagingType: "RESPONSE",
-			});
-			return {
-				...(result.messageId === undefined
-					? {}
-					: { messageId: result.messageId }),
-			};
+			try {
+				const result = await client.messages.sendText({
+					to: ref.participant,
+					text: input.text,
+					messagingType: "RESPONSE",
+				});
+				return {
+					...(result.messageId === undefined
+						? {}
+						: { messageId: result.messageId }),
+				};
+			} finally {
+				await client.senderActions.send(ref.participant, {
+					type: "typing_off",
+				});
+			}
 		},
 	});
 }
