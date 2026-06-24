@@ -47,6 +47,10 @@ if (!existsSync(DEV_VARS)) {
 			"MESSENGER_PAGE_ID=DEV_PAGE_ID",
 			"MESSENGER_PAGE_ACCESS_TOKEN=DEV_PAGE_TOKEN",
 			`MESSENGER_GRAPH_BASE_URL=http://127.0.0.1:${CAPTURE_PORT}`,
+			// Catalog boundary for the photo-identify proof CLI: points the worker's
+			// product search at the fixture server in cli/photo-identify.ts. Harmless
+			// for the text smoke (which never searches the catalog).
+			"STORE_API_URL=http://127.0.0.1:8799",
 			"",
 		].join("\n"),
 	);
