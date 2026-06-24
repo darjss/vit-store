@@ -56,7 +56,7 @@ process.env.STORE_PUBLIC_URL = STORE_BASE;
 // ── Simulated order/payment record the stub serves ───────────────────────────
 const PAYMENT = {
 	paymentNumber: "PMT-7K2QX",
-	checkoutToken: "ct_live_9f3ab21c",
+	checkoutToken: "ct_test_9f3ab21c",
 	customerPhone: "99112233",
 	total: 145_800,
 	orderNumber: "ORD-5521",
