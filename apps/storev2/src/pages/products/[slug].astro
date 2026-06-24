@@ -72,7 +72,7 @@ const breadcrumbItems = [
 	},
 ];
 
-const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "/placeholder-product.png";
+const primaryImage = product.images.find((img) => img.isPrimary)?.url || product.images[0]?.url || "";
 const ogImage = `/og/products/${slug}.svg`;
 
 function truncateAtWord(text: string, maxLength: number) {

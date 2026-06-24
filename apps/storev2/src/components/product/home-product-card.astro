@@ -4,6 +4,7 @@ import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 
 interface Props {
 	product: ProductForHome;
@@ -32,19 +33,19 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 			style={`background: ${bgColor}`}
 			transition:name={`product-image-${product.id}`}
 		>
-			{
-				product.image && (
-					<img
-						src={toProductImageUrl(product.image, imageSize) || product.image}
-						alt=""
-						class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5"
-						width="480"
-						height="480"
-						loading="lazy"
-						decoding="async"
-					/>
-				)
-			}
+			{product.image ? (
+				<img
+					src={toProductImageUrl(product.image, imageSize) || product.image}
+					alt=""
+					class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5"
+					width="480"
+					height="480"
+					loading="lazy"
+					decoding="async"
+				/>
+			) : (
+				<ProductImageFallback name={product.name} brand={product.brand} />
+			)}
 		</div>
 	</a>
 	<div class="p-2.5">
