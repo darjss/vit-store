@@ -1,4 +1,9 @@
-import { type AssistantProduct, assistantProductSchema } from "@vit/assistant";
+import {
+	type AssistantAdviceProduct,
+	assistantAdviceProductSchema,
+	type AssistantProduct,
+	assistantProductSchema,
+} from "@vit/assistant";
 import { SuperJSON } from "superjson";
 import * as v from "valibot";
 
@@ -22,6 +27,7 @@ interface TrpcQueryResponse {
 const CATALOG_FETCH_TIMEOUT_MS = 10_000;
 
 const assistantProductsSchema = v.array(assistantProductSchema);
+const assistantAdviceProductsSchema = v.array(assistantAdviceProductSchema);
 
 // Shared tRPC GET against the store product router. Validates the untyped wire
 // payload against `schema` so api-side shape drift fails loudly here instead of
@@ -88,6 +94,23 @@ export const getAssistantProductsByIds = async (
 		"product.getProductsByIdsForAssistant",
 		{ ids },
 		assistantProductsSchema,
+		signal,
+	);
+};
+
+// Resolves the label-data projection for the customer assistant's advice tool
+// (#22) via the existing storefront catalog (`getProductsByIdsForAdvice`), so
+// the advice answers come from real catalog data and never duplicate catalog
+// logic here. Returns only the ids that still resolve, in request order.
+export const getAdviceProductsByIds = async (
+	ids: number[],
+	signal?: AbortSignal,
+): Promise<AssistantAdviceProduct[]> => {
+	if (ids.length === 0) return [];
+	return trpcGet(
+		"product.getProductsByIdsForAdvice",
+		{ ids },
+		assistantAdviceProductsSchema,
 		signal,
 	);
 };

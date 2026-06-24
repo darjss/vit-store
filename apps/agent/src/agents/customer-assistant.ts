@@ -3,6 +3,7 @@ import {
 	buildCartTools,
 	buildCheckoutTools,
 	buildPhotoIdentifyTool,
+	buildProductAdviceTool,
 	buildProductSearchTool,
 	CUSTOMER_ASSISTANT_MODEL,
 	customerAssistantInstructions,
@@ -17,7 +18,7 @@ import {
 	sendProductCards,
 	sendTextReply,
 } from "../channels/messenger";
-import { searchAssistantProducts } from "../lib/catalog";
+import { getAdviceProductsByIds, searchAssistantProducts } from "../lib/catalog";
 import { loadInboundImage } from "../lib/messenger-inbound";
 import { createOrder, fetchDeliveryZones } from "../lib/order";
 import { buildKimiVision } from "../lib/vision";
@@ -62,6 +63,15 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			buildProductSearchTool({
 				searchProducts: searchAssistantProducts,
 				sendProductCards: sendProductCards(conversation),
+				sendText: sendTextReply(conversation),
+			}),
+			// Advice/comparison (#22): reads real catalog label data so the model
+			// can answer "энэ юунд сайн бэ" / "али нь сайн бэ" / ingredients / usage
+			// from the same catalog the search tool uses. Channel-neutral; no env
+			// gating needed since it only needs the store API the search already
+			// depends on.
+			buildProductAdviceTool({
+				getAdviceProducts: getAdviceProductsByIds,
 				sendText: sendTextReply(conversation),
 			}),
 			...photoTools,
