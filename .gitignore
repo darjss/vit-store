@@ -31,3 +31,5 @@ delivery-zone.png
 !.env.example
 .alchemy/
 .wrangler/
+# private real customer Messenger export data — never commit (see AGENTS.md)
+messenger-chat-history/
