@@ -233,6 +233,7 @@
         opacity: 0;
         transition: opacity 0.2s ease;
         pointer-events: none;
+        contain: paint;
     }
 
     .loading-bar.show {
@@ -245,24 +246,38 @@
         width: 100%;
         transform: scaleX(0);
         transform-origin: left center;
-        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform 0.16s ease-out;
         box-shadow: 0 0 10px var(--color-primary);
         border: 2px solid var(--color-border);
+        will-change: transform;
     }
 
     .loading-bar.show .loading-bar-progress {
-        animation: loading-progress 2s ease-in-out;
+        animation: loading-progress 8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .loading-bar.is-complete .loading-bar-progress {
+        animation: none;
+        transform: scaleX(1);
     }
 
     @keyframes loading-progress {
         0% {
             transform: scaleX(0);
         }
-        50% {
-            transform: scaleX(0.7);
+        45% {
+            transform: scaleX(0.72);
         }
         100% {
-            transform: scaleX(1);
+            transform: scaleX(0.92);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .loading-bar,
+        .loading-bar-progress {
+            transition: none !important;
+            animation: none !important;
         }
     }
 }

@@ -21,6 +21,7 @@ interface SearchInputProps {
 	isLoading?: boolean;
 	debounceMs?: number;
 	autofocus?: boolean;
+	focusKey?: unknown;
 	class?: string;
 }
 
@@ -34,6 +35,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		"isLoading",
 		"debounceMs",
 		"autofocus",
+		"focusKey",
 		"class",
 	]);
 
@@ -49,9 +51,20 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		}
 	});
 
-	onMount(() => {
-		if (local.autofocus && inputRef) {
-			setTimeout(() => inputRef?.focus(), 100);
+	const focusInput = () => {
+		if (!local.autofocus || !inputRef) {
+			return;
+		}
+
+		inputRef.focus();
+		requestAnimationFrame(() => inputRef?.focus());
+	};
+
+	onMount(focusInput);
+
+	createEffect(() => {
+		if (local.focusKey) {
+			focusInput();
 		}
 	});
 
@@ -83,9 +96,12 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
-			local.onSubmitSearch?.(inputValue());
+			const submittedValue = e.currentTarget.value;
+			setInputValue(submittedValue);
+			local.onValueChange?.(submittedValue);
+			local.onSubmitSearch?.(submittedValue);
 			if (!local.onSubmitSearch) {
-				local.onSearch?.(inputValue());
+				local.onSearch?.(submittedValue);
 			}
 			// Blur input on mobile after search to hide keyboard
 			inputRef?.blur();
@@ -99,7 +115,10 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 		<TextField class={cn("relative w-full flex-row gap-0", local.class)}>
 			{/* Search Icon */}
 			<div class="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-4">
-				<IconSearch class="h-5 w-5 text-muted-foreground/60" aria-hidden="true" />
+				<IconSearch
+					class="h-5 w-5 text-muted-foreground/60"
+					aria-hidden="true"
+				/>
 			</div>
 
 			<TextFieldInput

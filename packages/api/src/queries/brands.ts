@@ -104,44 +104,103 @@ export const brandQueries = {
 					and(
 						eq(ProductsTable.brandId, BrandsTable.id),
 						eq(ProductsTable.status, "active"),
+						gt(ProductsTable.stock, 0),
 						isNull(ProductsTable.deletedAt),
 					),
 				)
 				.where(isNull(BrandsTable.deletedAt))
-				.groupBy(BrandsTable.id, BrandsTable.name, BrandsTable.slug, BrandsTable.logoUrl)
+				.groupBy(
+					BrandsTable.id,
+					BrandsTable.name,
+					BrandsTable.slug,
+					BrandsTable.logoUrl,
+				)
+				.having(sql`count(${ProductsTable.id}) > 0`)
 				.orderBy(desc(productCount), asc(BrandsTable.name));
 		},
 
 		async getBrandById(id: number) {
-			return db().query.BrandsTable.findFirst({
-				columns: {
-					id: true,
-					name: true,
-					slug: true,
-					logoUrl: true,
-					description: true,
-					bannerImage: true,
-					seoTitle: true,
-					seoDescription: true,
-				},
-				where: eq(BrandsTable.id, id),
-			});
+			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
+			const result = await db()
+				.select({
+					id: BrandsTable.id,
+					name: BrandsTable.name,
+					slug: BrandsTable.slug,
+					logoUrl: BrandsTable.logoUrl,
+					description: BrandsTable.description,
+					bannerImage: BrandsTable.bannerImage,
+					seoTitle: BrandsTable.seoTitle,
+					seoDescription: BrandsTable.seoDescription,
+					productCount,
+				})
+				.from(BrandsTable)
+				.leftJoin(
+					ProductsTable,
+					and(
+						eq(ProductsTable.brandId, BrandsTable.id),
+						eq(ProductsTable.status, "active"),
+						gt(ProductsTable.stock, 0),
+						isNull(ProductsTable.deletedAt),
+					),
+				)
+				.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)))
+				.groupBy(
+					BrandsTable.id,
+					BrandsTable.name,
+					BrandsTable.slug,
+					BrandsTable.logoUrl,
+					BrandsTable.description,
+					BrandsTable.bannerImage,
+					BrandsTable.seoTitle,
+					BrandsTable.seoDescription,
+				)
+				.having(sql`count(${ProductsTable.id}) > 0`)
+				.limit(1);
+
+			return result[0] || null;
 		},
 
 		async getBrandBySlug(slug: string) {
-			return db().query.BrandsTable.findFirst({
-				columns: {
-					id: true,
-					name: true,
-					slug: true,
-					logoUrl: true,
-					description: true,
-					bannerImage: true,
-					seoTitle: true,
-					seoDescription: true,
-				},
-				where: and(eq(BrandsTable.slug, slug), isNull(BrandsTable.deletedAt)),
-			});
+			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
+			const result = await db()
+				.select({
+					id: BrandsTable.id,
+					name: BrandsTable.name,
+					slug: BrandsTable.slug,
+					logoUrl: BrandsTable.logoUrl,
+					description: BrandsTable.description,
+					bannerImage: BrandsTable.bannerImage,
+					seoTitle: BrandsTable.seoTitle,
+					seoDescription: BrandsTable.seoDescription,
+					productCount,
+				})
+				.from(BrandsTable)
+				.leftJoin(
+					ProductsTable,
+					and(
+						eq(ProductsTable.brandId, BrandsTable.id),
+						eq(ProductsTable.status, "active"),
+						gt(ProductsTable.stock, 0),
+						isNull(ProductsTable.deletedAt),
+					),
+				)
+				.where(and(eq(BrandsTable.slug, slug), isNull(BrandsTable.deletedAt)))
+				.groupBy(
+					BrandsTable.id,
+					BrandsTable.name,
+					BrandsTable.slug,
+					BrandsTable.logoUrl,
+					BrandsTable.description,
+					BrandsTable.bannerImage,
+					BrandsTable.seoTitle,
+					BrandsTable.seoDescription,
+				)
+				.having(sql`count(${ProductsTable.id}) > 0`)
+				.limit(1);
+
+			return result[0] || null;
 		},
 
 		async getAllBrandsWithStock() {
@@ -166,7 +225,13 @@ export const brandQueries = {
 					),
 				)
 				.where(isNull(BrandsTable.deletedAt))
-				.groupBy(BrandsTable.id, BrandsTable.name, BrandsTable.slug, BrandsTable.logoUrl)
+				.groupBy(
+					BrandsTable.id,
+					BrandsTable.name,
+					BrandsTable.slug,
+					BrandsTable.logoUrl,
+				)
+				.having(sql`count(${ProductsTable.id}) > 0`)
 				.orderBy(desc(productCount), asc(BrandsTable.name));
 		},
 	},
