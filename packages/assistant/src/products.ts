@@ -1,20 +1,35 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
 
-export type AssistantStockStatus = "in_stock" | "low_stock" | "out_of_stock";
+export const assistantStockStatusSchema = v.picklist([
+	"in_stock",
+	"low_stock",
+	"out_of_stock",
+]);
 
-// Catalog result shape the assistant operates on. Mirrors the api
-// `AssistantProductResult` projection returned by the storefront product
-// search procedure, so the agent app can hand search results straight through.
-export interface AssistantProduct {
-	id: number;
-	slug: string;
-	name: string;
-	price: number;
-	image: string;
-	brand: string;
-	stockStatus: AssistantStockStatus;
-}
+export type AssistantStockStatus = v.InferOutput<
+	typeof assistantStockStatusSchema
+>;
+
+// Runtime contract for the catalog result shape the assistant operates on.
+// Mirrors the api `AssistantProductResult` projection returned by the
+// storefront product search procedure. The hand-rolled tRPC transport
+// (`apps/agent/src/lib/catalog.ts`) deserializes an untyped wire payload, so it
+// MUST `v.parse(assistantProductSchema, ...)` at the boundary: that turns any
+// api-side shape drift (renamed/removed field) into a loud parse error instead
+// of an `undefined` id silently producing a dead `order_product:undefined`
+// button. The exported type is derived from the schema so they cannot diverge.
+export const assistantProductSchema = v.object({
+	id: v.number(),
+	slug: v.string(),
+	name: v.string(),
+	price: v.number(),
+	image: v.string(),
+	brand: v.string(),
+	stockStatus: assistantStockStatusSchema,
+});
+
+export type AssistantProduct = v.InferOutput<typeof assistantProductSchema>;
 
 export interface ProductCardButton {
 	label: string;
@@ -35,12 +50,13 @@ export interface ProductCard {
 export const ORDER_BUTTON_LABEL = "Захиалах";
 
 const ORDER_PAYLOAD_PREFIX = "order_product";
+const ORDER_PAYLOAD_RE = /^order_product:(\d+)$/;
 
 export const buildOrderPayload = (productId: number): string =>
 	`${ORDER_PAYLOAD_PREFIX}:${productId}`;
 
 export const parseOrderPayload = (payload: string): number | undefined => {
-	const match = new RegExp(`^${ORDER_PAYLOAD_PREFIX}:(\\d+)$`).exec(payload);
+	const match = ORDER_PAYLOAD_RE.exec(payload);
 	if (!match) return undefined;
 	const id = Number(match[1]);
 	return Number.isSafeInteger(id) ? id : undefined;
@@ -55,12 +71,24 @@ const STOCK_LABELS: Record<AssistantStockStatus, string> = {
 const formatPrice = (price: number): string =>
 	`${Math.round(price).toLocaleString("en-US")}₮`;
 
+// Messenger generic-template elements cap title/subtitle at 80 chars each, and
+// the whole element array fails if one field is over. Truncate defensively so a
+// single long product name can't sink the entire card batch.
+const MESSENGER_TITLE_MAX = 80;
+const MESSENGER_SUBTITLE_MAX = 80;
+
+const truncate = (text: string, max: number): string =>
+	text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
+
 export const formatProductCard = (product: AssistantProduct): ProductCard => {
 	const brandPart = product.brand ? `${product.brand} · ` : "";
 	return {
 		productId: product.id,
-		title: product.name,
-		subtitle: `${brandPart}${formatPrice(product.price)} · ${STOCK_LABELS[product.stockStatus]}`,
+		title: truncate(product.name, MESSENGER_TITLE_MAX),
+		subtitle: truncate(
+			`${brandPart}${formatPrice(product.price)} · ${STOCK_LABELS[product.stockStatus]}`,
+			MESSENGER_SUBTITLE_MAX,
+		),
 		imageUrl: product.image || undefined,
 		button: {
 			label: ORDER_BUTTON_LABEL,
@@ -76,12 +104,24 @@ export const formatProductCards = (
 export const NO_MATCH_MESSAGE =
 	"Уучлаарай, таны хайсан бараа олдсонгүй. Барааны нэр, брэнд эсвэл найрлагыг өөрөөр бичээд дахин оролдоно уу.";
 
+// Soft reply when the catalog transport itself fails (timeout, network, tRPC
+// error). Keeps the customer in the conversation instead of throwing the turn
+// out with nothing user-facing.
+export const SEARCH_ERROR_MESSAGE =
+	"Уучлаарай, яг одоо барааны мэдээлэл авахад түр алдаа гарлаа. Хэсэг хүлээгээд дахин оролдоно уу.";
+
 export const PRODUCT_SEARCH_TOOL_NAME = "search_products";
 
 export interface ProductSearchToolDeps {
 	// Calls the existing storefront catalog search (do not duplicate catalog
-	// logic). Returns the assistant projection, ordered by relevance.
-	searchProducts: (query: string, limit: number) => Promise<AssistantProduct[]>;
+	// logic). Returns the assistant projection, ordered by relevance. The
+	// optional signal carries the tool turn's cancellation/timeout deadline
+	// through to the underlying fetch.
+	searchProducts: (
+		query: string,
+		limit: number,
+		signal?: AbortSignal,
+	) => Promise<AssistantProduct[]>;
 	// Sends the formatted cards out on the bound channel.
 	sendProductCards: (cards: ProductCard[]) => Promise<unknown>;
 	// Sends a plain text reply (used for the no-match path).
@@ -107,8 +147,21 @@ export const buildProductSearchTool = (deps: ProductSearchToolDeps) => {
 				),
 			),
 		}),
-		async run({ input }) {
-			const products = await deps.searchProducts(input.query, limit);
+		async run({ input, signal }) {
+			let products: AssistantProduct[];
+			try {
+				products = await deps.searchProducts(input.query, limit, signal);
+			} catch {
+				await deps.sendText(SEARCH_ERROR_MESSAGE);
+				return {
+					query: input.query,
+					matchCount: 0,
+					inStockCount: 0,
+					outOfStockCount: 0,
+					sent: "search_error_text",
+					products: [],
+				};
+			}
 
 			if (products.length === 0) {
 				await deps.sendText(NO_MATCH_MESSAGE);
