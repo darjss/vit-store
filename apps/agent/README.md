@@ -40,7 +40,33 @@ The channel ignores echoes/non-text events in this slice, dedupes admission by P
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.
 - Declares the existing R2 bucket binding as `MESSENGER_INBOUND_BUCKET`; later Messenger photo slices should store objects under `messenger-inbound/` and pass only R2 keys into agent history.
 
-Product search, photo identification, cart, order, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+Photo identification, order creation, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+
+## Conversational cart (#21)
+
+`Захиалах` (postback `order_product:<id>`) and the cart-control payloads
+(`cart_inc:<id>`, `cart_dec:<id>`, `cart_remove:<id>`, `cart_confirm`,
+`cart_clear`, `cart_view`) drive a per-session cart deterministically — handled
+in the webhook ahead of the text path, so the whole add → summary → adjust →
+remove → confirm lifecycle runs with **no model turn** (and thus under local
+miniflare where `env.AI` is unsupported). The cart lives in the `CartStore`
+Durable Object keyed by the assistant session id (ADR 0006), so it survives
+across turns and is shared with the model's conversational cart tools
+(`view_cart` / `update_cart_item` / `remove_cart_item` / `confirm_cart`).
+Cart domain logic (reducers, subtotal, summary, payload grammar, confirm gate)
+is channel-neutral in `@vit/assistant` (`packages/assistant/src/cart.ts`); the
+subtotal reuses the #19 catalog projection (`getProductsByIdsForAssistant`) for
+the price snapshot — no catalog logic is duplicated. Checkout does not begin
+here: this slice ends at a confirmed cart (order creation is #23).
+
+Real end-to-end proof against a running worker (stub store API + Send API
+capture, signed webhooks):
+
+```bash
+bun run dev                       # worker on :3583
+bun scripts/cart-demo.ts          # add → merge → add → inc → dec → remove → confirm
+bun scripts/cart-dedupe-probe.ts  # same mid twice → add applied once
+```
 
 For a no-secret local proof of the text path/payload shape:
 
@@ -131,3 +157,55 @@ commits, or derives payloads from that data.
 
 > Note: `apps/agent/.dev/` and `.dev.vars*` are gitignored. Captured Send API
 > payloads and the private export must never be committed.
+
+## Production deploy
+
+This app is wired into the root turborepo deploy pipeline. From the repo root:
+
+```bash
+bun run deploy            # turbo deploy: server → (admin, storev2, agent) in parallel
+```
+
+`agent#deploy` is defined in the root `turbo.json` and depends on `server#deploy`
+(the agent calls the storefront API via `STORE_API_URL` at runtime, so the server
+must be up first). Turbo runs the agent's own `deploy` script, which builds and
+patches before publishing:
+
+```bash
+bun run build            # flue build --target cloudflare && patch-flue-worker.ts
+wrangler deploy --config dist/vit_store_agent/wrangler.json
+```
+
+The `patch-flue-worker.ts` postbuild step is part of `build`, so build-before-deploy
+and the createRequire boot patch always run. To deploy just this app:
+
+```bash
+bun run --filter agent deploy
+```
+
+Validate the pipeline without publishing (no creds needed):
+
+```bash
+bun run build --filter agent                                          # build + patch via turbo graph
+cd apps/agent && wrangler deploy --dry-run --config dist/vit_store_agent/wrangler.json
+```
+
+### Required production secrets / vars
+
+Unlike the alchemy-managed apps, the agent worker is published with `wrangler`, so
+bindings come from `wrangler.jsonc` (AI, R2 `MESSENGER_INBOUND_BUCKET`, and the three
+Durable Objects) and secrets must be set on the deployed Worker. Set them once with
+`wrangler secret put <NAME> --config dist/vit_store_agent/wrangler.json` (never commit
+real values):
+
+- `MESSENGER_APP_SECRET` — verifies `X-Hub-Signature-256` on inbound webhook POSTs.
+- `MESSENGER_VERIFY_TOKEN` — Meta GET webhook handshake token.
+- `MESSENGER_PAGE_ID` — fixed test Page id accepted by the channel.
+- `MESSENGER_PAGE_ACCESS_TOKEN` — Page token for typing indicators and replies.
+- `STORE_API_URL` — storefront/server API base URL (defaults to `http://localhost:3000`
+  in dev; set to the deployed server origin in prod).
+
+The R2 bucket (`vit-store-bucket-prod`) and Workers AI binding already exist on the
+account; no secret is needed for those. Teardown is manual via
+`wrangler delete --config dist/vit_store_agent/wrangler.json` (the agent is not part of
+the alchemy `destroy` graph).
