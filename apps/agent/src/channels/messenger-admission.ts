@@ -61,6 +61,77 @@ export async function admitMessengerTextMessage(input: {
 	};
 }
 
+export type MessengerInboundImage = {
+	/** Meta CDN attachment URL — fetched server-side, never dispatched. */
+	url: string;
+	index: number;
+};
+
+export type MessengerImageAdmission = {
+	conversation: MessengerConversationRef;
+	sessionId: string;
+	messageId: string;
+	/** Optional caption text the customer sent alongside the photo(s). */
+	caption: string;
+	images: MessengerInboundImage[];
+	/** Drop the dedupe claim so a failed turn can be re-delivered. */
+	release(): Promise<void>;
+};
+
+// Pull image attachments (with a usable Meta CDN url) out of a message event.
+// Exported so the webhook can branch to the photo path before admission.
+export function extractInboundImages(
+	event: MessengerMessagingEvent,
+): MessengerInboundImage[] {
+	const attachments = event.message?.attachments ?? [];
+	const images: MessengerInboundImage[] = [];
+	for (const attachment of attachments) {
+		if (attachment.type !== "image") continue;
+		const url = attachment.payload?.url;
+		if (typeof url === "string" && url.length > 0) {
+			images.push({ url, index: images.length });
+		}
+	}
+	return images;
+}
+
+// Admits an inbound image turn and claims its mid for dedupe, mirroring
+// `admitMessengerTextMessage` for the text path. Returns undefined when the
+// event is not a fresh image message (echo, no usable image, already claimed),
+// so the caller can fall through to the text path. The dedupe key shares the
+// text namespace (one claim per mid), so a Meta retry of the same photo mid is
+// applied at most once.
+export async function admitMessengerImageMessage(input: {
+	channel: MessengerChannel;
+	event: MessengerMessagingEvent;
+	env?: AdmissionEnv;
+	/** Pre-extracted images from the webhook, to avoid re-scanning attachments. */
+	images?: MessengerInboundImage[];
+}): Promise<MessengerImageAdmission | undefined> {
+	const { channel, event, env } = input;
+	if (event.message === undefined || event.message.is_echo) return undefined;
+
+	const images = input.images ?? extractInboundImages(event);
+	if (images.length === 0) return undefined;
+
+	const conversation = channel.conversationRef(event);
+	const messageId = event.message.mid;
+	if (conversation === undefined || messageId.length === 0) return undefined;
+
+	const sessionId = channel.conversationKey(conversation);
+	const dedupeKey = `messenger:inbound:v1:${sessionId}:mid:${messageId}`;
+	if (!(await claimOnce(dedupeKey, env))) return undefined;
+
+	return {
+		conversation,
+		sessionId,
+		messageId,
+		caption: event.message.text?.trim() ?? "",
+		images,
+		release: () => releaseClaim(dedupeKey, env),
+	};
+}
+
 // Generic single-claim primitive shared by the text path and the cart-event
 // path (postback/quick-reply). Returns true exactly once per key within the
 // dedupe window so a Meta webhook retry of the same mid is not applied twice

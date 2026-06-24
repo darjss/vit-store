@@ -1,0 +1,12 @@
+{
+  "rules": [
+    {
+      "id": "messenger-inbound-cleanup",
+      "enabled": true,
+      "conditions": { "prefix": "messenger-inbound/" },
+      "deleteObjectsTransition": {
+        "condition": { "maxAge": 86400, "type": "Age" }
+      }
+    }
+  ]
+}
