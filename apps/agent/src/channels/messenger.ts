@@ -33,9 +33,10 @@ export const channel: MessengerChannel = createMessengerChannel({
 				});
 				if (admission === undefined) continue;
 
-				await client.senderActions.send(admission.conversation.participant, {
-					type: "typing_on",
-				});
+				await client.senderActions.send(
+					admission.conversation.participant,
+					"typing_on",
+				);
 				await dispatch(assistant, {
 					id: admission.sessionId,
 					input: {
@@ -63,7 +64,6 @@ export function postMessage(ref: MessengerConversationRef) {
 				const result = await client.messages.sendText({
 					to: ref.participant,
 					text: input.text,
-					messagingType: "RESPONSE",
 				});
 				return {
 					...(result.messageId === undefined
@@ -71,9 +71,7 @@ export function postMessage(ref: MessengerConversationRef) {
 						: { messageId: result.messageId }),
 				};
 			} finally {
-				await client.senderActions.send(ref.participant, {
-					type: "typing_off",
-				});
+				await client.senderActions.send(ref.participant, "typing_off");
 			}
 		},
 	});
