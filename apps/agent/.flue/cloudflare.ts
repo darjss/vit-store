@@ -3,3 +3,4 @@
 // live here (not app.ts, whose named exports are not forwarded) so workerd can
 // resolve the class_name declared in wrangler.jsonc.
 export { MessengerAdmissionStore } from "../src/channels/messenger-admission-store";
+export { CartStore } from "../src/channels/cart-store";

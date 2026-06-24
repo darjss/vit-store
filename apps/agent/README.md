@@ -40,7 +40,33 @@ The channel ignores echoes/non-text events in this slice, dedupes admission by P
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.
 - Declares the existing R2 bucket binding as `MESSENGER_INBOUND_BUCKET`; later Messenger photo slices should store objects under `messenger-inbound/` and pass only R2 keys into agent history.
 
-Product search, photo identification, cart, order, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+Photo identification, order creation, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+
+## Conversational cart (#21)
+
+`Захиалах` (postback `order_product:<id>`) and the cart-control payloads
+(`cart_inc:<id>`, `cart_dec:<id>`, `cart_remove:<id>`, `cart_confirm`,
+`cart_clear`, `cart_view`) drive a per-session cart deterministically — handled
+in the webhook ahead of the text path, so the whole add → summary → adjust →
+remove → confirm lifecycle runs with **no model turn** (and thus under local
+miniflare where `env.AI` is unsupported). The cart lives in the `CartStore`
+Durable Object keyed by the assistant session id (ADR 0006), so it survives
+across turns and is shared with the model's conversational cart tools
+(`view_cart` / `update_cart_item` / `remove_cart_item` / `confirm_cart`).
+Cart domain logic (reducers, subtotal, summary, payload grammar, confirm gate)
+is channel-neutral in `@vit/assistant` (`packages/assistant/src/cart.ts`); the
+subtotal reuses the #19 catalog projection (`getProductsByIdsForAssistant`) for
+the price snapshot — no catalog logic is duplicated. Checkout does not begin
+here: this slice ends at a confirmed cart (order creation is #23).
+
+Real end-to-end proof against a running worker (stub store API + Send API
+capture, signed webhooks):
+
+```bash
+bun run dev                       # worker on :3583
+bun scripts/cart-demo.ts          # add → merge → add → inc → dec → remove → confirm
+bun scripts/cart-dedupe-probe.ts  # same mid twice → add applied once
+```
 
 For a no-secret local proof of the text path/payload shape:
 
