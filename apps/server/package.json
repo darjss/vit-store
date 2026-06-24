@@ -35,12 +35,13 @@
 		"@trpc/server": "catalog:",
 		"@upstash/redis": "^1.36.1",
 		"@vit/api": "workspace:*",
-		"evlog": "^2.11.0",
 		"@vit/shared": "workspace:*",
 		"arctic": "^3.7.0",
 		"drizzle-orm": "catalog:",
+		"evlog": "^2.11.0",
 		"hono": "catalog:",
-		"nanoid": "^5.1.5"
+		"nanoid": "^5.1.5",
+		"posthog-node": "^5.38.4"
 	},
 	"devDependencies": {
 		"alchemy": "catalog:",

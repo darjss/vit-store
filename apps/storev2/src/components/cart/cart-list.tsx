@@ -12,13 +12,13 @@ const CartList = () => {
 
 	return (
 		<Switch>
-			<Match when={!isHydrated() && isEmpty()}>
+			<Match when={!isHydrated()}>
 				<Loading />
 			</Match>
 			<Match when={isHydrated() && isEmpty()}>
 				<EmptyCart />
 			</Match>
-			<Match when={!isEmpty()}>
+			<Match when={isHydrated() && !isEmpty()}>
 				<div class="flex w-full flex-col gap-4">
 					<For each={cart.items()}>
 						{(item) => (
