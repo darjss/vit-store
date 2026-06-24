@@ -6,6 +6,7 @@ import {
 	applyNotes,
 	applyPhone,
 	applyZoneSelection,
+	attachPayment,
 	buildCheckoutOrderPayload,
 	CHECKOUT_ADDRESS_PROMPT,
 	CHECKOUT_NOTES_PROMPT,
@@ -56,6 +57,11 @@ export interface CheckoutToolDeps {
 	createOrder: (payload: CheckoutOrderPayload) => Promise<CreatedOrder>;
 	// Sends a plain text reply on the bound channel.
 	sendText: (text: string) => Promise<unknown>;
+	// Optional post-order hook (#25): once the order exists and has a payment
+	// number, offer the QPay/transfer payment choices on the channel. Injected so
+	// the channel-neutral tools never build a Messenger button template. Omitted
+	// in unit/sim contexts that only exercise order creation.
+	sendPaymentChoices?: (order: CreatedOrder) => Promise<unknown>;
 }
 
 const facts = (state: CheckoutState) => ({
@@ -73,6 +79,39 @@ const facts = (state: CheckoutState) => ({
 
 const CHECKOUT_NOT_STARTED_MESSAGE =
 	"Эхлээд захиалга баталгаажуулъя. Сагсаа баталгаажуулсны дараа утасны дугаараа өгнө үү.";
+
+// Finishes a just-created order: persists the created checkout (recording the
+// payment identifiers so the post-order payment surface — #25 — can build the
+// QPay link and later recognise a bank-transfer claim), sends the confirmation,
+// and offers the QPay/transfer choices. The choice-send is best-effort: the
+// order is already durably created, so a failed send must not throw or undo it.
+const finalizeCreatedOrder = async (
+	deps: CheckoutToolDeps,
+	claimed: CheckoutState,
+	created: CreatedOrder,
+): Promise<CheckoutState> => {
+	const done = created.paymentNumber
+		? attachPayment(markCreated(claimed), {
+				paymentNumber: created.paymentNumber,
+				checkoutToken: created.checkoutToken,
+			})
+		: markCreated(claimed);
+	await deps.saveCheckout(done);
+	await deps.sendText(
+		formatOrderCreated(created.orderNumber, created.paymentNumber),
+	);
+	if (created.paymentNumber && deps.sendPaymentChoices) {
+		try {
+			await deps.sendPaymentChoices(created);
+		} catch (error) {
+			console.warn(
+				"[checkout] post-order payment-choice send failed (order is durable):",
+				error,
+			);
+		}
+	}
+	return done;
+};
 
 export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	// Sends the customer-facing prompt, then reports the new state to the model.
@@ -218,7 +257,11 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				}
 				const cart = await deps.getCart();
 				await deps.sendText(formatOrderSummary(state, cart));
-				return { ok: false as const, error: "summary_not_confirmed", ...facts(state) };
+				return {
+					ok: false as const,
+					error: "summary_not_confirmed",
+					...facts(state),
+				};
 			}
 			const cart = await deps.getCart();
 			// Re-assert the cart is still the confirmed, non-empty cart. A button tap
@@ -235,11 +278,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 			const claimed = markCreating(state);
 			await deps.saveCheckout(claimed);
 			const created = await deps.createOrder(payload);
-			const done = markCreated(claimed);
-			await deps.saveCheckout(done);
-			await deps.sendText(
-				formatOrderCreated(created.orderNumber, created.paymentNumber),
-			);
+			const done = await finalizeCreatedOrder(deps, claimed, created);
 			return {
 				ok: true,
 				orderNumber: created.orderNumber,

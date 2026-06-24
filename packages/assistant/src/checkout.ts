@@ -45,6 +45,30 @@ export const zoneCandidateSchema = v.object({
 
 export type ZoneCandidate = v.InferOutput<typeof zoneCandidateSchema>;
 
+// Post-order payment surface state (#25). Once the order exists, the checkout
+// record also tracks where the customer is in the Messenger payment flow so the
+// deterministic webhook path can recognise a bank-transfer claim by free text
+// ("хийсэн") or a screenshot, not only by the explicit button. `offered` = the
+// QPay/transfer choice was sent; `transfer_pending` = the customer picked bank
+// transfer and saw the account; `transfer_claimed` = they reported paying. NONE
+// of these is a confirmed payment — that is owned by admin/bank tooling (ADR
+// 0004), and the checkout layer never advances the payment to success.
+export const transferStatusSchema = v.picklist([
+	"offered",
+	"transfer_pending",
+	"transfer_claimed",
+]);
+
+export type TransferStatus = v.InferOutput<typeof transferStatusSchema>;
+
+export const paymentContextSchema = v.object({
+	paymentNumber: v.string(),
+	checkoutToken: v.optional(v.string()),
+	transferStatus: transferStatusSchema,
+});
+
+export type PaymentContext = v.InferOutput<typeof paymentContextSchema>;
+
 // The whole checkout's collected state. Persisted verbatim by the per-session
 // CheckoutStore DO, so it is a plain valibot-validatable record.
 export const checkoutStateSchema = v.object({
@@ -55,6 +79,7 @@ export const checkoutStateSchema = v.object({
 	selectedZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	selectedZoneName: v.optional(v.string()),
 	notes: v.optional(v.string()),
+	payment: v.optional(paymentContextSchema),
 });
 
 export type CheckoutState = v.InferOutput<typeof checkoutStateSchema>;
@@ -215,6 +240,34 @@ export const markCreated = (state: CheckoutState): CheckoutState => ({
 	...state,
 	phase: "created",
 });
+
+// Records the order's payment identifiers on the created checkout so the
+// post-order Messenger payment surface (#25) can build the QPay link and, later,
+// recognise a bank-transfer claim for this exact payment. Starts at `offered`.
+export const attachPayment = (
+	state: CheckoutState,
+	payment: { paymentNumber: string; checkoutToken: string | null },
+): CheckoutState => ({
+	...state,
+	payment: {
+		paymentNumber: payment.paymentNumber,
+		...(payment.checkoutToken ? { checkoutToken: payment.checkoutToken } : {}),
+		transferStatus: "offered",
+	},
+});
+
+// Advances the bank-transfer status WITHOUT ever touching payment confirmation:
+// the checkout layer only records that the customer entered the transfer flow
+// (`transfer_pending`) or reported paying (`transfer_claimed`). Real payment
+// confirmation stays with admin/bank tooling (ADR 0004). No-op when no payment
+// context exists.
+export const setTransferStatus = (
+	state: CheckoutState,
+	transferStatus: TransferStatus,
+): CheckoutState =>
+	state.payment
+		? { ...state, payment: { ...state.payment, transferStatus } }
+		: state;
 
 // Whether every field the order API requires is present. Used as the guard
 // before building the payload / creating the order.

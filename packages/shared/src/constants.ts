@@ -103,6 +103,16 @@ export const badgeIconNames = {
 
 export const deliveryFee = 6000;
 
+// Single source of truth for the bank-transfer destination shown to customers
+// (storefront payment page AND the Messenger payment surface, #25). The transfer
+// reference is the customer's own phone number, supplied per order — never part
+// of this static account record.
+export const bankTransfer = {
+	bankName: "Хаан банк",
+	accountNumber: "5011147435",
+	accountName: "Batdelger Jigjidsuren",
+} as const;
+
 export const productTagSuggestions = [
 	"витамин",
 	"эрүүл мэнд",
