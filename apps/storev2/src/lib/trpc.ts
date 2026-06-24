@@ -1,6 +1,7 @@
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
+import { safeNavigate } from "@/lib/safe-navigate";
 
 class UnauthorizedError extends Error {
 	constructor(message = "Unauthorized") {
@@ -154,8 +155,12 @@ export const api = createTRPCClient<StoreRouter>({
 						typeof window !== "undefined" &&
 						window.location.pathname !== "/login"
 					) {
-						const { navigate } = await import("astro:transitions/client");
-						navigate("/login", { history: "replace" });
+						// Batched tRPC requests can resolve 401s concurrently; each
+						// would otherwise kick off its own view transition and the
+						// second throws InvalidStateError. safeNavigate coalesces
+						// them and falls back to location.assign when the tab is
+						// hidden.
+						void safeNavigate("/login", { history: "replace" });
 					}
 				}
 
