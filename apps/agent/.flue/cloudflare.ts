@@ -4,3 +4,4 @@
 // resolve the class_name declared in wrangler.jsonc.
 export { MessengerAdmissionStore } from "../src/channels/messenger-admission-store";
 export { CartStore } from "../src/channels/cart-store";
+export { CheckoutStore } from "../src/channels/checkout-store";
