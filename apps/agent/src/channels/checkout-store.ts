@@ -1,8 +1,4 @@
-import {
-	type CheckoutState,
-	checkoutStateSchema,
-	initialCheckoutState,
-} from "@vit/assistant";
+import { type CheckoutState, checkoutStateSchema } from "@vit/assistant";
 import * as v from "valibot";
 
 // Per-session checkout persistence (ADR 0006: pre-order Messenger conversations
@@ -19,11 +15,13 @@ import * as v from "valibot";
 
 const STORAGE_KEY = "checkout";
 
-// Wire payloads accepted on POST. `begin` resets to a fresh checkout; `put`
-// stores a full channel-neutral CheckoutState. Parsed in two steps (discriminator
-// then state) so the nested `checkoutStateSchema` keeps its precise type.
+// Wire payload accepted on POST: `put` stores a full channel-neutral
+// CheckoutState (the only mutation the channel client issues — a fresh checkout
+// is just a `put` of `initialCheckoutState()`). Parsed in two steps
+// (discriminator then state) so the nested `checkoutStateSchema` keeps its
+// precise type.
 const checkoutRequestSchema = v.object({
-	type: v.picklist(["put", "begin"]),
+	type: v.picklist(["put"]),
 	state: v.optional(checkoutStateSchema),
 });
 
@@ -67,11 +65,6 @@ export class CheckoutStore implements DurableObject {
 			return new Response("Invalid checkout request", { status: 400 });
 		}
 
-		if (parsed.output.type === "begin") {
-			return Response.json({
-				checkout: await this.write(initialCheckoutState()),
-			});
-		}
 		if (!parsed.output.state) {
 			return new Response("Invalid checkout request", { status: 400 });
 		}

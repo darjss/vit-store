@@ -25,15 +25,21 @@ import {
 	applyPhone,
 	applyZoneSelection,
 	buildCheckoutOrderPayload,
+	buildCheckoutTools,
 	type Cart,
 	canBeginCheckout,
+	type CheckoutState,
+	type CheckoutToolDeps,
 	confirmCart,
+	type CreatedOrder,
 	EMPTY_CART,
 	formatOrderCreated,
 	formatOrderSummary,
 	formatZoneCandidates,
 	initialCheckoutState,
+	markCreating,
 	rankZoneCandidates,
+	removeFromCart,
 	setZoneCandidates,
 	validatePhone,
 } from "@vit/assistant";
@@ -116,6 +122,180 @@ const storeApi = Bun.serve({
 });
 
 const hr = () => console.log("─".repeat(64));
+
+// ── Guard proofs (the #23 review fixes) ──────────────────────────────────────
+//
+// These drive the REAL `buildCheckoutTools` (the production place_order logic)
+// against in-memory deps with a createOrder CALL COUNTER, so we can assert the
+// exact number of orders minted under adversarial conditions: a cart re-opened
+// mid-checkout, place_order before the summary, and a durable replay.
+const ZONE_INPUTS = ZONES.map((z) => ({ zoneId: z.Id, zoneName: z.zoneName }));
+
+type Tool = ReturnType<typeof buildCheckoutTools>[number];
+
+interface Harness {
+	cart: { current: Cart };
+	tool: (name: string) => (input?: Record<string, unknown>) => Promise<unknown>;
+	orderCalls: () => number;
+	lastSent: () => string | undefined;
+	checkout: () => CheckoutState | undefined;
+	setCheckout: (state: CheckoutState) => void;
+}
+
+const makeHarness = (initialCart: Cart): Harness => {
+	const cart = { current: initialCart };
+	let checkout: CheckoutState | undefined;
+	let orderCalls = 0;
+	const sent: string[] = [];
+	const deps: CheckoutToolDeps = {
+		getCart: async () => cart.current,
+		getCheckout: async () => checkout,
+		saveCheckout: async (state) => {
+			checkout = state;
+			return state;
+		},
+		resolveZoneCandidates: async (addressText) =>
+			rankZoneCandidates(addressText, ZONE_INPUTS),
+		createOrder: async (): Promise<CreatedOrder> => {
+			orderCalls += 1;
+			return {
+				orderNumber: `ORD-${orderCalls}`,
+				paymentNumber: `PAY-${orderCalls}`,
+				checkoutToken: `ct_${orderCalls}`,
+			};
+		},
+		sendText: async (text) => {
+			sent.push(text);
+			return undefined;
+		},
+	};
+	const byName = new Map<string, Tool>(
+		buildCheckoutTools(deps).map((t) => [t.name, t]),
+	);
+	return {
+		cart,
+		tool: (name) => (input = {}) => {
+			const t = byName.get(name);
+			if (!t) throw new Error(`no such tool: ${name}`);
+			return (t.run as (ctx: { input: Record<string, unknown> }) => Promise<unknown>)(
+				{ input },
+			);
+		},
+		orderCalls: () => orderCalls,
+		lastSent: () => sent[sent.length - 1],
+		checkout: () => checkout,
+		setCheckout: (state) => {
+			checkout = state;
+		},
+	};
+};
+
+// Drives a confirmed cart through the real tools to the `confirming` phase
+// (final summary shown), ready for place_order.
+const driveToConfirming = async (h: Harness): Promise<void> => {
+	await h.tool("begin_checkout")();
+	await h.tool("provide_phone")({ phone: "9911-2233" });
+	await h.tool("provide_address")({
+		address: "Баянзүрх дүүрэг, 26-р хороо, 45-р байр",
+	});
+	const candidates = h.checkout()?.candidates ?? [];
+	if (candidates.length === 0) throw new Error("no zone candidates resolved");
+	await h.tool("confirm_delivery_zone")({ zoneId: candidates[0].zoneId });
+	await h.tool("provide_notes")({ notes: "" });
+};
+
+const confirmedCart = (): Cart => {
+	let cart: Cart = { ...EMPTY_CART };
+	cart = addToCart(cart, { id: 101, ...CATALOG[101] }, 2);
+	cart = addToCart(cart, { id: 202, ...CATALOG[202] }, 1);
+	return confirmCart(cart);
+};
+
+let guardFailures = 0;
+const check = (label: string, ok: boolean): void => {
+	console.log(`  ${ok ? "✓" : "✗ FAIL"} ${label}`);
+	if (!ok) guardFailures += 1;
+};
+
+async function runGuardProofs(): Promise<void> {
+	hr();
+	console.log("GUARD PROOFS — real place_order under adversarial conditions\n");
+
+	// A) HIGH — cart re-opened mid-checkout (button tap) must REFUSE to create.
+	console.log("A) confirmed → reach summary → cart re-opened (mutation) → place_order:");
+	{
+		const h = makeHarness(confirmedCart());
+		await driveToConfirming(h);
+		check("phase is 'confirming' after summary", h.checkout()?.phase === "confirming");
+		// Simulate a webhook cart button tap: any mutation re-opens (confirmed=false).
+		h.cart.current = removeFromCart(h.cart.current, 202);
+		check("cart re-opened (confirmed=false)", h.cart.current.confirmed === false);
+		const result = (await h.tool("place_order")()) as { ok: boolean };
+		check("place_order REFUSED (ok=false)", result.ok === false);
+		check("NO order created (createOrder calls = 0)", h.orderCalls() === 0);
+		check(
+			"re-confirm nudge sent",
+			(h.lastSent() ?? "").includes("баталгаажуул"),
+		);
+	}
+
+	// B) Normal confirmed flow still creates EXACTLY ONE order.
+	console.log("\nB) confirmed → summary → place_order (happy path):");
+	const happy = makeHarness(confirmedCart());
+	{
+		await driveToConfirming(happy);
+		const result = (await happy.tool("place_order")()) as { ok: boolean };
+		check("place_order succeeded (ok=true)", result.ok === true);
+		check("exactly ONE order created", happy.orderCalls() === 1);
+		check("phase advanced to 'created'", happy.checkout()?.phase === "created");
+	}
+
+	// C) Idempotency — a post-success replay must NOT mint a second order.
+	console.log("\nC) replay place_order after success (phase 'created'):");
+	{
+		const result = (await happy.tool("place_order")()) as { ok: boolean };
+		check("replay REFUSED (ok=false)", result.ok === false);
+		check("still exactly ONE order (no double-create)", happy.orderCalls() === 1);
+	}
+
+	// C2) Durable replay AFTER the claim but BEFORE 'created' was committed:
+	// the persisted `creating` marker must block a second createOrder.
+	console.log("\nC2) durable replay at the 'creating' claim (created not yet persisted):");
+	{
+		const h = makeHarness(confirmedCart());
+		await driveToConfirming(h);
+		const claimed = markCreating(h.checkout() as CheckoutState);
+		h.setCheckout(claimed); // as if the turn died right after the claim was saved
+		const result = (await h.tool("place_order")()) as { ok: boolean };
+		check("place_order REFUSED at 'creating'", result.ok === false);
+		check("NO order created on replay (calls = 0)", h.orderCalls() === 0);
+	}
+
+	// D) MED — place_order before the summary (phase 'collecting_notes') re-shows
+	// the summary instead of creating.
+	console.log("\nD) place_order before summary confirmed (phase 'collecting_notes'):");
+	{
+		const h = makeHarness(confirmedCart());
+		await h.tool("begin_checkout")();
+		await h.tool("provide_phone")({ phone: "9911-2233" });
+		await h.tool("provide_address")({
+			address: "Баянзүрх дүүрэг, 26-р хороо, 45-р байр",
+		});
+		const candidates = h.checkout()?.candidates ?? [];
+		await h.tool("confirm_delivery_zone")({ zoneId: candidates[0].zoneId });
+		check("phase is 'collecting_notes' (ready, not confirmed)", h.checkout()?.phase === "collecting_notes");
+		const result = (await h.tool("place_order")()) as { ok: boolean };
+		check("place_order REFUSED (ok=false)", result.ok === false);
+		check("NO order created (calls = 0)", h.orderCalls() === 0);
+		check("summary re-shown", (h.lastSent() ?? "").includes("баталгаажуулалт"));
+	}
+
+	hr();
+	if (guardFailures > 0) {
+		throw new Error(`${guardFailures} guard assertion(s) FAILED`);
+	}
+	console.log("✓ ALL GUARD PROOFS PASSED");
+}
 
 async function main(): Promise<void> {
 	console.log("CHECKOUT SIMULATION (issue #23)\n");
@@ -233,6 +413,8 @@ async function main(): Promise<void> {
 	console.log(
 		"\n✓ SIMULATION PASSED — confirmed cart → phone → address → zone → notes → summary → order created.",
 	);
+
+	await runGuardProofs();
 	storeApi.stop();
 }
 
