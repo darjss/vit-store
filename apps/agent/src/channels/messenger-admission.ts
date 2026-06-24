@@ -15,9 +15,14 @@ export type MessengerTextAdmission = {
 	text: string;
 	attachmentTypes: string[];
 	quickReplyPayload?: string;
+	/** Drop the dedupe claim so a failed turn can be re-delivered. */
+	release(): Promise<void>;
 };
 
-const admittedInProcess = new Set<string>();
+// Bounded fast-path in front of the durable store: an optimization that skips a
+// DO round-trip for mids this isolate already saw, never a fallback for it.
+const IN_PROCESS_LIMIT = 1024;
+const admittedInProcess = new Map<string, true>();
 
 export async function admitMessengerTextMessage(input: {
 	channel: MessengerChannel;
@@ -52,27 +57,55 @@ export async function admitMessengerTextMessage(input: {
 			(attachment) => attachment.type,
 		),
 		quickReplyPayload: event.message.quick_reply?.payload,
+		release: () => releaseClaim(dedupeKey, env),
 	};
 }
 
 async function claimOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
-	if (admittedInProcess.has(key)) return false;
-
 	const store = env?.MESSENGER_ADMISSION_STORE;
-	if (store !== undefined) {
-		const id = store.idFromName(key);
-		const response = await store
-			.get(id)
-			.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
-				method: "POST",
-			});
-		const result = (await response.json()) as { admitted?: boolean };
-		if (result.admitted !== true) {
-			admittedInProcess.add(key);
-			return false;
-		}
+	// In the production webhook path `env` is always present; a missing binding
+	// there would silently degrade dedupe to per-isolate, so fail loudly instead.
+	if (env !== undefined && store === undefined) {
+		throw new Error(
+			"MESSENGER_ADMISSION_STORE binding is required for Messenger admission.",
+		);
 	}
 
-	admittedInProcess.add(key);
-	return true;
+	if (admittedInProcess.has(key)) return false;
+
+	// No durable store wired (mock/tests): in-process dedupe is the whole story.
+	if (store === undefined) {
+		rememberInProcess(key);
+		return true;
+	}
+
+	const id = store.idFromName(key);
+	const response = await store
+		.get(id)
+		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
+			method: "POST",
+		});
+	const result = (await response.json()) as { admitted?: boolean };
+	rememberInProcess(key);
+	return result.admitted === true;
+}
+
+async function releaseClaim(key: string, env?: AdmissionEnv): Promise<void> {
+	admittedInProcess.delete(key);
+	const store = env?.MESSENGER_ADMISSION_STORE;
+	if (store === undefined) return;
+	const id = store.idFromName(key);
+	await store
+		.get(id)
+		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
+			method: "DELETE",
+		});
+}
+
+function rememberInProcess(key: string): void {
+	admittedInProcess.set(key, true);
+	if (admittedInProcess.size > IN_PROCESS_LIMIT) {
+		const oldest = admittedInProcess.keys().next().value;
+		if (oldest !== undefined) admittedInProcess.delete(oldest);
+	}
 }
