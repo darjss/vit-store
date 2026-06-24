@@ -91,7 +91,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
       <!-- Hero products: 2x2 grid, always visible -->
       <div class="grid grid-cols-2 border-t-2 lg:border-t-0 border-border">
         {featuredProducts.slice(0, 4).map((p: ProductForHome, i: number) => (
-          <a href={`/products/${p.slug}-${p.id}/`} class={`group relative block overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
+          <a href={`/products/${p.slug}-${p.id}/`} class={`group relative block min-w-0 overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
             <div class="relative aspect-square overflow-hidden" style={`background: ${productColors[p.id % productColors.length]}`}>
               {p.image && (
                 <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-5 md:p-6 group-hover:scale-105 transition-transform duration-500" width="480" height="480" loading="eager" decoding="async" />
