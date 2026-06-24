@@ -26,6 +26,7 @@ export const checkoutPhaseSchema = v.picklist([
 	"confirming_zone",
 	"collecting_notes",
 	"confirming",
+	"creating",
 	"created",
 ]);
 
@@ -199,6 +200,16 @@ export const applyNotes = (
 		phase: "confirming",
 	};
 };
+
+// Claims the irreversible order-creation step BEFORE `createOrder` runs. The
+// claim is persisted first so any in-turn/durable replay after `createOrder`
+// but before `created` is committed observes `creating` and refuses to mint a
+// second order (order creation has no idempotency key). Non-retryable: a stuck
+// `creating` is the safe failure mode versus a duplicate order.
+export const markCreating = (state: CheckoutState): CheckoutState => ({
+	...state,
+	phase: "creating",
+});
 
 export const markCreated = (state: CheckoutState): CheckoutState => ({
 	...state,

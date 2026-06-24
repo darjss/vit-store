@@ -19,6 +19,7 @@ import {
 	initialCheckoutState,
 	isReadyToCreate,
 	markCreated,
+	markCreating,
 	setZoneCandidates,
 	type ZoneCandidate,
 } from "./checkout";
@@ -195,16 +196,46 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run() {
 			const state = await requireCheckout();
 			if (!state) return notStarted();
-			if (!isReadyToCreate(state)) {
-				const error =
-					"Захиалга үүсгэхэд утас, хаяг, хүргэлтийн бүс бүрэн биш байна.";
-				await deps.sendText(error);
-				return { ok: false, error, ...facts(state) };
+			// Idempotency: a checkout already past `confirming` has claimed the
+			// irreversible commit (or finished it). Refuse rather than risk a second
+			// order on an in-turn/durable replay — `addOrder` has no idempotency key.
+			if (state.phase === "creating") {
+				return {
+					ok: false as const,
+					error: "checkout_already_creating",
+					...facts(state),
+				};
+			}
+			// The final summary (provide_notes → `confirming`) must have been shown
+			// and confirmed before creation. `isReadyToCreate` is already true at
+			// `collecting_notes`, so guard on the phase too; otherwise re-show it.
+			if (state.phase !== "confirming") {
+				if (!isReadyToCreate(state)) {
+					const error =
+						"Захиалга үүсгэхэд утас, хаяг, хүргэлтийн бүс бүрэн биш байна.";
+					await deps.sendText(error);
+					return { ok: false, error, ...facts(state) };
+				}
+				const cart = await deps.getCart();
+				await deps.sendText(formatOrderSummary(state, cart));
+				return { ok: false as const, error: "summary_not_confirmed", ...facts(state) };
 			}
 			const cart = await deps.getCart();
+			// Re-assert the cart is still the confirmed, non-empty cart. A button tap
+			// (Захиалах / inc / dec / remove) handled in the webhook, independent of
+			// this agent turn, re-opens the cart (`confirmed=false`); creating from
+			// that would place an order the customer never confirmed.
+			const guard = canBeginCheckout(cart);
+			if (!guard.ok) {
+				await deps.sendText(guard.error);
+				return { ok: false as const, error: guard.error, ...facts(state) };
+			}
 			const payload = buildCheckoutOrderPayload(state, cart);
+			// Claim BEFORE the irreversible commit (see `markCreating`).
+			const claimed = markCreating(state);
+			await deps.saveCheckout(claimed);
 			const created = await deps.createOrder(payload);
-			const done = markCreated(state);
+			const done = markCreated(claimed);
 			await deps.saveCheckout(done);
 			await deps.sendText(
 				formatOrderCreated(created.orderNumber, created.paymentNumber),

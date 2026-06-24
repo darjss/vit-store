@@ -55,6 +55,12 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 						getCart: cart.getCart,
 						getCheckout: checkout.getCheckout,
 						saveCheckout: checkout.saveCheckout,
+						// No `knowledge` arg by design: the offline alias artifact (#26)
+						// is not yet at a confidence threshold (delivery-zones.ts header,
+						// ADR 0005), so ranking degrades to zone-NAME token overlap and
+						// the suggestion order is best-effort. Safe because the customer
+						// always explicitly confirms one candidate — the bot never
+						// auto-picks. Pass the mined aliases here once #26 ships.
 						resolveZoneCandidates: async (addressText) =>
 							rankZoneCandidates(addressText, await fetchDeliveryZones()),
 						createOrder,
