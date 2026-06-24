@@ -48,3 +48,72 @@ For a no-secret local proof of the text path/payload shape:
 cd apps/agent
 bun run mock:messenger-text -- "sain baina uu"
 ```
+
+## Interactive Messenger dev console
+
+`cli/messenger-dev.ts` is an interactive REPL for testing the customer
+assistant during development. It drives the **real** local HTTP webhook path:
+it builds Meta-shaped events, signs them with `MESSENGER_APP_SECRET`
+(`X-Hub-Signature-256`, exactly as Meta does), and POSTs them to the running
+worker at `POST /channels/messenger/webhook`. It never forks the webhook or
+admission logic — the worker verifies the signature and shapes admission the
+same way it does in production.
+
+Outbound Graph **Send API** calls are redirected to a small in-CLI capture
+server via `MESSENGER_GRAPH_BASE_URL`, so the assistant's real reply path runs
+without touching Meta. Every outgoing Send API JSON payload is saved to the
+gitignored `apps/agent/.dev/sent/` directory for inspection; the bot's output
+is also rendered as a terminal chat transcript.
+
+### Setup
+
+1. Create `apps/agent/.dev.vars` (gitignored). Values can be any non-empty dev
+   strings — they are **not** real Meta credentials:
+
+   ```dotenv
+   MESSENGER_APP_SECRET=dev-app-secret
+   MESSENGER_VERIFY_TOKEN=dev-verify-token
+   MESSENGER_PAGE_ID=DEV_PAGE_ID
+   MESSENGER_PAGE_ACCESS_TOKEN=dev-page-token
+   # Redirect outbound Graph Send API to the CLI capture server:
+   MESSENGER_GRAPH_BASE_URL=http://127.0.0.1:8788
+   ```
+
+2. Start the worker in one terminal:
+
+   ```bash
+   cd apps/agent
+   bun run dev          # flue dev --target cloudflare, serves http://127.0.0.1:3583
+   ```
+
+3. Start the console in another terminal:
+
+   ```bash
+   cd apps/agent
+   bun run dev:messenger
+   ```
+
+   Point at a different worker with `MESSENGER_DEV_WORKER_URL` if needed.
+
+### Commands
+
+- type any text — sends it through the signed webhook as a customer message
+- `/session [name]` — list sessions, or switch/create one
+- `/reset` — reset the current session (new PSID → fresh bot memory)
+- `/psid` — show the current session id + persistent PSID
+- `/buttons` — list the buttons from the last bot message
+- `/fire <n>` — fire button *n*'s payload (postback event, or quick-reply message)
+- `/payloads` — list saved outgoing Send API JSON files
+- `/seed [list|<file>]` — replay a private `messenger-chat-history/` example
+- `/image` — placeholder until #20 (photo identification) lands
+- `/quit`
+
+The fake PSID/session persists across runs in `apps/agent/.dev/state.json`
+(gitignored), so conversations survive restarts until you `/reset`.
+
+The private `messenger-chat-history/` export (gitignored) is optional and
+read-only: `/seed` replays selected customer texts from it but never writes,
+commits, or derives payloads from that data.
+
+> Note: `apps/agent/.dev/` and `.dev.vars*` are gitignored. Captured Send API
+> payloads and the private export must never be committed.
