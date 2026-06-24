@@ -1,0 +1,34 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "vit-store-agent",
+	"compatibility_date": "2026-06-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"ai": {
+		"binding": "AI"
+	},
+	"r2_buckets": [
+		{
+			"binding": "MESSENGER_INBOUND_BUCKET",
+			"bucket_name": "vit-store-bucket-prod",
+			"preview_bucket_name": "vit-store-bucket-prod"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "FLUE_REGISTRY",
+				"class_name": "FlueRegistry"
+			},
+			{
+				"name": "FLUE_CUSTOMER_ASSISTANT_AGENT",
+				"class_name": "FlueCustomerAssistantAgent"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1_flue_customer_assistant",
+			"new_sqlite_classes": ["FlueRegistry", "FlueCustomerAssistantAgent"]
+		}
+	]
+}
