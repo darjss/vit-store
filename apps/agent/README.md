@@ -38,9 +38,87 @@ The channel ignores echoes/non-text events in this slice, dedupes admission by P
 - Mounts verified Messenger ingress at `GET/POST /channels/messenger/webhook`.
 - Imports prompts/tools from `@vit/assistant` to prove the app/package boundary.
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.
-- Declares the existing R2 bucket binding as `MESSENGER_INBOUND_BUCKET`; later Messenger photo slices should store objects under `messenger-inbound/` and pass only R2 keys into agent history.
+- Declares the existing R2 bucket binding as `MESSENGER_INBOUND_BUCKET`; inbound photos are staged under `messenger-inbound/` and only R2 keys reach the agent (#20, below).
 
-Photo identification, order creation, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+Order creation, payment, and delivery-zone resolver logic are intentionally TODOs for later issues.
+
+## Inbound photo identification (#20)
+
+When a customer sends a photo, trusted channel code fetches the Meta CDN
+attachment **server-side in the webhook**, stages it under the short-lived
+`messenger-inbound/` R2 prefix, and dispatches an agent turn carrying **only the
+R2 key** — never a Meta CDN url and never a base64 payload (ADR 0003). The
+dispatch input gains an `imageKeys` field the model reads.
+
+The assistant then calls the `identify_product_photo` tool, which reads the R2
+object by key and runs **Kimi vision** (`@cf/moonshotai/kimi-k2.6`, which
+advertises image input) through the Workers AI binding. The tool returns plain
+text facts plus suggested catalog queries; the model feeds the best query into
+the **same `search_products` tool and card formatter as #19 text search** — no
+catalog or card logic is duplicated. The channel-neutral identification domain
+(prompt, result shape, parsing) lives in `@vit/assistant`
+(`packages/assistant/src/photo.ts`); the R2 fetch/put (`src/lib/messenger-inbound.ts`)
+and the AI-binding call (`src/lib/vision.ts`) are app concerns.
+
+Kimi is a reasoning model, so the vision call is given a generous token budget —
+too small a budget is consumed entirely by `reasoning_content`, leaving an empty
+answer.
+
+### Remote-AI split
+
+`env.AI` is only available on the **remote** Workers AI binding; local miniflare
+(`wrangler dev --local`) does not provide it. The webhook staging + dispatch
+(fetch → R2 → key) runs anywhere, but the vision call needs real Workers AI.
+`scripts/with-worker.ts` boots the worker with the experimental remote AI binding
+(Durable Objects stay local) for exactly this reason. The text/cart paths are
+unaffected and still pass under `--local` (`bun run smoke:local`).
+
+### R2 lifecycle cleanup
+
+`messenger-inbound/` objects are a short debug/processing window, never durable
+storage. R2 lifecycle rules are **not** expressible inline in `wrangler.jsonc`
+(no `lifecycle` key in the config schema), so the rule is applied out-of-band
+from `r2-lifecycle.messenger-inbound.json` (expire objects with that prefix at
+the R2 minimum age of 1 day).
+
+The cleanup is **not optional and not a one-time manual step** — ADR 0003 makes
+"short-lived" load-bearing for these customer-PII photos, so the staging code
+must never ship without the cleanup also being live. The agent's `deploy` script
+therefore re-applies and then verifies the rule on every deploy:
+
+```jsonc
+"deploy": "… && wrangler deploy … && bun run r2:lifecycle:apply"
+"r2:lifecycle:apply":  "bun run r2:lifecycle:inbound && bun run r2:lifecycle:assert"
+"r2:lifecycle:inbound": "wrangler r2 bucket lifecycle set … --file r2-lifecycle.messenger-inbound.json -y"
+"r2:lifecycle:assert":  "bun scripts/assert-r2-lifecycle.ts"
+```
+
+- `r2:lifecycle:inbound` (re)applies the rule via `wrangler r2 bucket lifecycle
+  set --file`. `set` replaces the rule set, so it is **idempotent** — running it
+  on every deploy is safe.
+- `r2:lifecycle:assert` lists the live rules on the bucket and **fails the deploy
+  loud** (non-zero exit) if the `messenger-inbound-cleanup` rule is absent, so a
+  deploy can't ship the staging code while the cleanup is missing. The bucket
+  name and expected rule id are read from `wrangler.jsonc` and
+  `r2-lifecycle.messenger-inbound.json` so the check can't drift from the source.
+
+To apply + verify by hand against prod (e.g. first rollout):
+
+```bash
+bun run r2:lifecycle:apply          # set rule, then assert it is live
+```
+
+### Proof CLI
+
+`bun run photo:proof [imagePath]` boots the worker with real Workers AI and runs
+`cli/photo-identify.ts`, which serves a sample photo + an in-memory catalog
+fixture and POSTs to the worker's `/messenger/photo-probe` route. The probe runs
+the **same units** as the dispatch path (R2 stage → `identify_product_photo`
+tool → #19 search + card formatter) and returns the intermediate artifacts the
+production path hides inside the agent session, so the CLI can print the R2 key
+used, the Kimi vision facts + suggested queries, and the resulting card payloads.
+Interactively, `bun run dev:messenger` then `/image <path>` drives the real
+signed webhook → R2 → vision path.
 
 ## Conversational cart (#21)
 
@@ -174,10 +252,13 @@ patches before publishing:
 ```bash
 bun run build            # flue build --target cloudflare && patch-flue-worker.ts
 wrangler deploy --config dist/vit_store_agent/wrangler.json
+bun run r2:lifecycle:apply   # (re)apply + assert the messenger-inbound/ cleanup rule
 ```
 
 The `patch-flue-worker.ts` postbuild step is part of `build`, so build-before-deploy
-and the createRequire boot patch always run. To deploy just this app:
+and the createRequire boot patch always run. The trailing `r2:lifecycle:apply` step
+guarantees the short-lived photo cleanup rule is live on every deploy and fails the
+deploy if it isn't (see "R2 lifecycle cleanup" above). To deploy just this app:
 
 ```bash
 bun run --filter agent deploy

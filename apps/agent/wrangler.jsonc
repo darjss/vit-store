@@ -6,6 +6,11 @@
 	"ai": {
 		"binding": "AI"
 	},
+	// Inbound Messenger photos are staged under the `messenger-inbound/` prefix
+	// (#20). R2 lifecycle rules are not expressible here (no `lifecycle` key in
+	// the wrangler config schema); the short-lived cleanup rule for that prefix
+	// is applied out-of-band — see `r2-lifecycle.messenger-inbound.json` and
+	// `bun run r2:lifecycle:inbound`.
 	"r2_buckets": [
 		{
 			"binding": "MESSENGER_INBOUND_BUCKET",
