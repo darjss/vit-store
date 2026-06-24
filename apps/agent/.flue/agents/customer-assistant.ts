@@ -1,7 +1,7 @@
 import type { AgentRouteHandler } from "@flue/runtime";
 
 export const description =
-	"Vit Store customer-facing Messenger assistant tracer bullet.";
+	"Vit Store customer-facing Messenger assistant: text product search and replies.";
 
 export const route: AgentRouteHandler = async (_c, next) => next();
 
