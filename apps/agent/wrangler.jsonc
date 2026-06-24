@@ -35,6 +35,10 @@
 			{
 				"name": "CART_STORE",
 				"class_name": "CartStore"
+			},
+			{
+				"name": "CHECKOUT_STORE",
+				"class_name": "CheckoutStore"
 			}
 		]
 	},
@@ -50,6 +54,10 @@
 		{
 			"tag": "v3_cart_store",
 			"new_sqlite_classes": ["CartStore"]
+		},
+		{
+			"tag": "v4_checkout_store",
+			"new_sqlite_classes": ["CheckoutStore"]
 		}
 	]
 }

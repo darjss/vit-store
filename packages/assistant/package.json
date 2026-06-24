@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@flue/runtime": "^1.0.0-beta.3",
+		"@vit/shared": "workspace:*",
 		"valibot": "catalog:"
 	},
 	"devDependencies": {
