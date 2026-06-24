@@ -8,7 +8,8 @@
 		"deploy": "wrangler deploy --config dist/vit_store_agent/wrangler.json",
 		"check-types": "tsgo --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		"mock:messenger-text": "bun scripts/mock-messenger-text.ts"
+		"mock:messenger-text": "bun scripts/mock-messenger-text.ts",
+		"mock:product-cards": "bun scripts/mock-product-cards.ts"
 	},
 	"dependencies": {
 		"@flue/runtime": "^1.0.0-beta.3",
@@ -17,6 +18,7 @@
 		"@warriorteam/messenger-sdk": "^1.5.3",
 		"agents": "^0.14.1",
 		"hono": "catalog:",
+		"superjson": "^2.2.3",
 		"valibot": "catalog:"
 	},
 	"devDependencies": {

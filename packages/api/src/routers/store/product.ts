@@ -5,19 +5,19 @@ import {
 	productQueries,
 } from "@vit/api/queries";
 import * as v from "valibot";
+import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
+import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { kv } from "~/lib/kv";
+import {
+	rebuildProductSearchIndex,
+	searchProducts,
+} from "~/lib/product-search/client";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
 } from "~/lib/product-search/text";
 import { redis } from "~/lib/redis";
-import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
-import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
-import { publicProcedure, adminProcedure, router } from "~/lib/trpc";
-import {
-	rebuildProductSearchIndex,
-	searchProducts,
-} from "~/lib/product-search/client";
+import { adminProcedure, publicProcedure, router } from "~/lib/trpc";
 
 export interface SearchProductResult {
 	id: number;
@@ -28,7 +28,7 @@ export interface SearchProductResult {
 	brand: string;
 }
 
-interface AssistantProductResult {
+export interface AssistantProductResult {
 	id: number;
 	slug: string;
 	name: string;
@@ -105,6 +105,47 @@ const performProductSearchWithStock = async (
 	limit: number,
 	filters?: { brandId?: number; categoryId?: number },
 ) => performProductSearch(query, limit, { ...filters, requireStock: true });
+
+// Assistant-facing search: same catalog search as the storefront, but keeps
+// the stock state so the Messenger assistant can render it on product cards and
+// surface out-of-stock items as alternatives instead of dropping them.
+const performAssistantProductSearch = async (
+	query: string,
+	limit: number,
+	filters?: { brandId?: number; categoryId?: number },
+): Promise<AssistantProductResult[]> => {
+	const safeLimit = Math.min(limit, 10);
+	const searchResults = await searchProducts(query, safeLimit, filters);
+
+	if (searchResults.length > 0) {
+		return searchResults.map((result) => ({
+			id: result.id,
+			slug: result.slug,
+			name: result.name,
+			price: result.price,
+			image: result.image,
+			brand: result.brand,
+			stockStatus: mapStockStatus(result.status, result.stock),
+		}));
+	}
+
+	const fallbackResults = await productQueries.store.searchByName(
+		query,
+		safeLimit,
+	);
+
+	return fallbackResults.map((p) => ({
+		id: p.id,
+		slug: p.slug,
+		name: p.name,
+		price: p.price,
+		image: p.images[0]?.url || "",
+		brand: p.brand?.name || "",
+		// Fallback rows are already filtered to active products; treat as in
+		// stock since the lightweight fallback projection omits stock columns.
+		stockStatus: "in_stock" as const,
+	}));
+};
 
 const GENERIC_PRODUCT_SEARCH_TERMS = new Set([
 	"vitamin",
@@ -500,6 +541,29 @@ export const product = router({
 				image: product.images[0]?.url,
 			}));
 		}),
+	searchProductsForAssistant: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+			}),
+		)
+		.query(async ({ input }) => {
+			try {
+				return await performAssistantProductSearch(input.query, input.limit, {
+					brandId: input.brandId,
+					categoryId: input.categoryId,
+				});
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to search products",
+					cause: error,
+				});
+			}
+		}),
 	getProductsByIdsForAssistant: publicProcedure
 		.input(
 			v.object({
@@ -728,7 +792,10 @@ export const product = router({
 		.input(
 			v.object({
 				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				pageSize: v.optional(
+					v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+					24,
+				),
 				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
@@ -779,7 +846,10 @@ export const product = router({
 		.input(
 			v.object({
 				page: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)), 24),
+				pageSize: v.optional(
+					v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+					24,
+				),
 				brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
@@ -800,15 +870,15 @@ export const product = router({
 		}),
 
 	rebuildSearchIndex: adminProcedure.mutation(async () => {
-			try {
-				const status = await rebuildProductSearchIndex("manual");
-				return status;
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to rebuild search index",
-					cause: error,
-				});
-			}
-		}),
+		try {
+			const status = await rebuildProductSearchIndex("manual");
+			return status;
+		} catch (error) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to rebuild search index",
+				cause: error,
+			});
+		}
+	}),
 });
