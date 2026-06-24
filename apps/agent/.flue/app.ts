@@ -3,7 +3,10 @@ import { flue } from "@flue/runtime/routing";
 import { Hono } from "hono";
 import { channel as messengerChannel } from "../src/channels/messenger";
 
-const app = new Hono();
+// Explicit annotation: the isolated package layout makes Hono's inferred type
+// reference a non-portable store path (TS2742), so name it with the imported
+// base type to keep the default export portable.
+const app: Hono = new Hono();
 
 function mountChannel(
 	hono: Hono,
