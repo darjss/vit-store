@@ -1,7 +1,17 @@
 import { flue } from "@flue/runtime/routing";
 import { Hono } from "hono";
+import { channel as messengerChannel } from "../src/channels/messenger";
 
 const app = new Hono();
+
+for (const route of messengerChannel.routes) {
+	if (route.method === "GET") {
+		app.get(`/channels/messenger${route.path}`, route.handler as never);
+	}
+	if (route.method === "POST") {
+		app.post(`/channels/messenger${route.path}`, route.handler as never);
+	}
+}
 
 app.get("/health", (c) =>
 	c.json({
@@ -19,6 +29,6 @@ app.get("/messenger/inbound-r2-shape", (c) =>
 	}),
 );
 
-app.route("/", flue());
+app.route("/", flue() as never);
 
 export default app;
