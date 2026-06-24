@@ -15,6 +15,12 @@ const graphVersion = "v25.0";
 export const messenger = new Messenger({
 	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
 	version: graphVersion,
+	// Local dev seam: when set, outbound Graph Send API calls are redirected to
+	// a capture endpoint (see apps/agent/cli/messenger-dev.ts) so the real send
+	// path runs without touching Meta. Unset in production -> real Graph host.
+	...(process.env.MESSENGER_GRAPH_BASE_URL
+		? { baseUrl: process.env.MESSENGER_GRAPH_BASE_URL }
+		: {}),
 });
 
 export function toRecipient(ref: MessengerParticipantRef): Recipient {
