@@ -1,4 +1,3 @@
-import { navigate } from "astro:transitions/client";
 import { useMutation } from "@tanstack/solid-query";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/otp";
 import { identifyUser } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import IconCloseCircle from "~icons/ri/close-circle-fill";
 import { Button } from "../ui/button";
@@ -65,7 +65,7 @@ const OtpForm = (props: {
 					duration: 3000,
 				});
 				props.setStep("phone");
-				navigate("/profile", { history: "push" });
+				void safeNavigate("/profile", { history: "push" });
 			},
 		}),
 		() => queryClient,
