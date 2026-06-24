@@ -188,6 +188,10 @@ function extractButtons(message: Record<string, unknown>): Button[] {
 	return buttons;
 }
 
+// Smoke-mode signals, populated by the real webhook + capture path below.
+let lastWebhookStatus = 0;
+let lastBotReply: string | null = null;
+
 function renderOutbound(body: Record<string, unknown>, savedPath: string): void {
 	const message = body.message as Record<string, unknown> | undefined;
 	if (body.sender_action) {
@@ -197,6 +201,7 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 	if (!message) return;
 	const buttons = extractButtons(message);
 	if (typeof message.text === "string") {
+		lastBotReply = message.text;
 		printAbovePrompt(`${C.green("bot ›")} ${message.text}`);
 	}
 	const attachment = message.attachment as Record<string, unknown> | undefined;
@@ -290,6 +295,7 @@ async function postWebhook(event: MessengerMessagingEvent): Promise<void> {
 			body: bodyText,
 		});
 	} catch (err) {
+		lastWebhookStatus = 0;
 		printAbovePrompt(
 			C.red(
 				`  ✗ could not reach worker at ${WEBHOOK_URL} — is \`bun run dev\` running?`,
@@ -298,6 +304,7 @@ async function postWebhook(event: MessengerMessagingEvent): Promise<void> {
 		printAbovePrompt(C.dim(`  ${err instanceof Error ? err.message : String(err)}`));
 		return;
 	}
+	lastWebhookStatus = res.status;
 	if (!res.ok) {
 		printAbovePrompt(
 			C.red(`  ✗ webhook ${res.status} ${res.statusText}`),
@@ -559,7 +566,50 @@ async function handleCommand(line: string): Promise<void> {
 	}
 }
 
+// Non-interactive smoke test: drives the SAME real signed path as the REPL
+// (one canned text turn) and asserts the agent dispatched and replied. Used by
+// `bun run smoke` so any agent/reviewer can verify after adding a feature.
+// SMOKE_EXPECT_REPLY=0 skips the bot-reply assertion (e.g. no Workers AI / --local).
+async function runSmoke(): Promise<void> {
+	const expectReply = process.env.SMOKE_EXPECT_REPLY !== "0";
+	const replyTimeoutMs = Number(process.env.SMOKE_REPLY_TIMEOUT_MS ?? "45000");
+	const checks: { name: string; ok: boolean; detail: string }[] = [];
+	startCaptureServer();
+	console.log(`\n  Messenger agent smoke (worker ${WEBHOOK_URL})\n`);
+
+	// Fresh session so the turn is clean.
+	state.sessions[state.current] = { psid: freshPsid(state.current) };
+	saveState(state);
+
+	await sendText("Сайн байна уу");
+	checks.push({
+		name: "signed text dispatches (no 500)",
+		ok: lastWebhookStatus === 200,
+		detail: `webhook → ${lastWebhookStatus || "unreachable"}`,
+	});
+
+	if (expectReply) {
+		const deadline = Date.now() + replyTimeoutMs;
+		while (Date.now() < deadline && lastBotReply === null) await Bun.sleep(500);
+		checks.push({
+			name: "bot reply received",
+			ok: lastBotReply !== null,
+			detail: lastBotReply ? `bot › ${lastBotReply.slice(0, 60)}…` : "no reply in time",
+		});
+	}
+
+	console.log("");
+	for (const c of checks) console.log(`  ${c.ok ? "✓" : "✗"} ${c.name} — ${c.detail}`);
+	const failed = checks.some((c) => !c.ok);
+	console.log(`\n  ${failed ? "✗ SMOKE FAILED" : "✓ SMOKE PASSED"}\n`);
+	process.exit(failed ? 1 : 0);
+}
+
 function main(): void {
+	if (process.argv.includes("--smoke")) {
+		void runSmoke();
+		return;
+	}
 	startCaptureServer();
 	banner();
 	rl = createInterface({ input: process.stdin, output: process.stdout });

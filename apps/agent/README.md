@@ -105,21 +105,35 @@ is also rendered as a terminal chat transcript.
    MESSENGER_GRAPH_BASE_URL=http://127.0.0.1:8788
    ```
 
-2. Start the worker in one terminal:
+   The `.dev.vars` is created for you on first run if it's missing.
 
-   ```bash
-   cd apps/agent
-   bun run dev          # flue dev --target cloudflare, serves http://127.0.0.1:3583
-   ```
-
-3. Start the console in another terminal:
+2. Start the console (one command — builds + boots the worker, opens the REPL,
+   and tears the worker down on exit):
 
    ```bash
    cd apps/agent
    bun run dev:messenger
    ```
 
-   Point at a different worker with `MESSENGER_DEV_WORKER_URL` if needed.
+   The worker's `AI` binding is pointed at real Cloudflare Workers AI (Durable
+   Objects stay local) so the bot actually replies — this needs `wrangler`
+   logged in and may incur small Workers AI usage. If you already have a worker
+   running, run the REPL directly with `bun cli/messenger-dev.ts`, pointing it
+   with `MESSENGER_DEV_WORKER_URL` if needed.
+
+### Smoke test (for agents/reviewers after a change)
+
+One command builds, boots the worker, drives the real signed webhook path
+through this same CLI, and exits non-zero on failure:
+
+```bash
+bun run smoke         # full: real Workers AI turn — asserts dispatch + a bot reply
+bun run smoke:local   # fast: --local, no Workers AI — asserts dispatch only (no 500)
+```
+
+`smoke:local` needs no Cloudflare auth and catches dispatch-time regressions
+(e.g. a 500 before the model). `smoke` additionally proves a real Kimi reply
+comes back through the Send API.
 
 ### Commands
 
