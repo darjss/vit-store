@@ -423,6 +423,41 @@ export const storeQueries = {
 			});
 		},
 
+		// Label-data projection for the customer assistant's advice/comparison
+		// tool (#22). Reuses the same active+non-deleted gate as the other
+		// assistant projections but additionally pulls the descriptive label
+		// fields (description, ingredients, amount/potency/dailyIntake, category)
+		// the advice tool answers from. Kept separate from
+		// getProductsByIdsWithDetails so the cart/order snapshot shape (#19/#23)
+		// is untouched.
+		async getProductsByIdsForAdvice(ids: number[]) {
+			if (ids.length === 0) return [];
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					name: true,
+					slug: true,
+					price: true,
+					status: true,
+					stock: true,
+					description: true,
+					amount: true,
+					potency: true,
+					dailyIntake: true,
+					ingredients: true,
+				},
+				where: and(
+					inArray(ProductsTable.id, ids),
+					isNull(ProductsTable.deletedAt),
+					eq(ProductsTable.status, "active"),
+				),
+				with: {
+					brand: { columns: { name: true } },
+					category: { columns: { name: true } },
+				},
+			});
+		},
+
 		async getInfiniteProducts(params: {
 			requireStock?: boolean;
 			cursor?: string | undefined;

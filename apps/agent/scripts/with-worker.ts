@@ -59,7 +59,20 @@ if (!existsSync(DEV_VARS)) {
 
 if (process.env.WITH_WORKER_SKIP_BUILD !== "1") {
 	console.log("• building agent…");
-	if (Bun.spawnSync(["bun", "run", "build"], { cwd: AGENT_ROOT, stdout: "inherit", stderr: "inherit" }).exitCode !== 0) {
+	// FLUE_BOOT_PATCH_OPTIONAL: the patch-flue-worker boot workaround hard-fails
+	// when its needle (`createRequire(import.meta.url)`) is absent. Newer Flue
+	// emits the guarded form already, so the needle is gone and the patch is a
+	// no-op; the script's own sanctioned escape hatch is to treat that as a
+	// clean pass instead of a build failure. Pass it through here so the
+	// one-command smoke keeps working across Flue versions.
+	if (
+		Bun.spawnSync(["bun", "run", "build"], {
+			cwd: AGENT_ROOT,
+			stdout: "inherit",
+			stderr: "inherit",
+			env: { ...process.env, FLUE_BOOT_PATCH_OPTIONAL: "1" },
+		}).exitCode !== 0
+	) {
 		console.error("✗ build failed");
 		process.exit(1);
 	}
@@ -67,6 +80,14 @@ if (process.env.WITH_WORKER_SKIP_BUILD !== "1") {
 if (!existsSync(DIST_WRANGLER)) {
 	console.error(`✗ no build at ${DIST_WRANGLER}`);
 	process.exit(1);
+}
+
+// wrangler resolves `.dev.vars` relative to the --config file's directory, not
+// the cwd, so the apps/agent/.dev.vars above is invisible to the dist worker
+// and it boots without MESSENGER_* secrets ("… is required"). Mirror it next to
+// the built config so the local secrets actually load.
+if (existsSync(DEV_VARS)) {
+	writeFileSync(join(dirname(DIST_WRANGLER), ".dev.vars"), readFileSync(DEV_VARS));
 }
 
 // Real Workers AI (Kimi) while DOs stay local: experimental remote AI binding.
