@@ -28,16 +28,23 @@ const serverApi = createServerClient(
 
 // Auth guard: profile is auth-gated. On 401, the tRPC link calls
 // redirectFn("/login") but the client still throws TRPCClientError.
-// Redirect on unauthorized; let all other errors propagate as 500s.
+// Redirect ONLY on UNAUTHORIZED; any other auth.check error is fatal.
 let user;
-let orders;
 try {
 	user = await serverApi.auth.check.query();
-	orders = await serverApi.order.getOrdersByCustomerId.query();
 } catch (err) {
 	const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
 	if (code === "UNAUTHORIZED") throw Astro.redirect("/login");
 	throw err;
+}
+
+// Orders query is non-fatal: degrade gracefully (empty orders) instead of 500
+// if order.getOrdersByCustomerId throws (e.g. INTERNAL_SERVER_ERROR).
+let orders: Awaited<ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>> = [];
+try {
+	orders = await serverApi.order.getOrdersByCustomerId.query();
+} catch (err) {
+	console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", err);
 }
 
 const title = "Миний профайл";
