@@ -5,7 +5,14 @@
 		"rootDir": "../..",
 		"outDir": "dist",
 		"rootDirs": [".", "../.."],
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types"],
+		"paths": {
+			"@vit/shared": ["../../packages/shared/dist/index.js"],
+			"@vit/shared/*": ["../../packages/shared/dist/*"],
+			"@vit/api": ["../../packages/api/dist/index.d.ts"],
+			"@vit/api/*": ["../../packages/api/dist/*"],
+			"~/*": ["../../packages/api/src/*"]
+		}
 	},
 	"include": [".flue/**/*.ts", "src/**/*.ts", "worker-configuration.d.ts"]
 }
