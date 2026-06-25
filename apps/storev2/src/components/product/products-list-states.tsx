@@ -80,7 +80,7 @@ export function ProductErrorState(props: { onRetry?: () => void }) {
 export function ProductListEnd(props: { count: number }) {
 	return (
 		<div class="mt-4 py-4 text-center sm:mt-6 sm:py-5 lg:mt-8 lg:py-6">
-			<span class="flex items-center justify-center gap-2 font-bold text-muted-foreground/60 text-xs uppercase tracking-wide sm:text-sm lg:text-base">
+			<span class="flex items-center justify-center gap-2 font-bold text-muted-foreground/80 text-xs uppercase tracking-wide sm:text-sm lg:text-base">
 				<IconSparkle class="text-yellow-500" /> Нийт {props.count} бүтээгдэхүүн
 			</span>
 		</div>

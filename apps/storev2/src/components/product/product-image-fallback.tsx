@@ -74,7 +74,7 @@ export default function ProductImageFallback(props: ProductImageFallbackProps) {
 				{monogram()}
 			</span>
 			<Show when={label()}>
-				<span class="line-clamp-1 max-w-full text-[9px] font-bold uppercase tracking-widest text-foreground/50 sm:text-[10px]">
+				<span class="line-clamp-1 max-w-full text-[11px] font-bold uppercase tracking-widest text-foreground/80 sm:text-[11px]">
 					{label()}
 				</span>
 			</Show>

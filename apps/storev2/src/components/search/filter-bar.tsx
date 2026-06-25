@@ -360,7 +360,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 								<div class="max-h-64 overflow-y-auto">
 									<Show when={searchSuggestions().recent.length > 0}>
 										<div class="border-border border-b px-2 py-1.5">
-											<p class="font-bold text-[10px] text-muted-foreground/50 uppercase">
+											<p class="font-bold text-[10px] text-muted-foreground/80 uppercase">
 												Сүүлд хайсан
 											</p>
 										</div>
@@ -378,7 +378,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 									</Show>
 									<Show when={searchSuggestions().trending.length > 0}>
 										<div class="border-border border-b px-2 py-1.5">
-											<p class="font-bold text-[10px] text-muted-foreground/50 uppercase">
+											<p class="font-bold text-[10px] text-muted-foreground/80 uppercase">
 												Түгээмэл хайлт
 											</p>
 										</div>
@@ -509,7 +509,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 										aria-label={`Sort by ${option.label}`}
 										aria-pressed={isActive}
 										class={cn(
-											"relative h-8 px-1.5 font-bold text-[9px] uppercase tracking-wide transition-all sm:h-9 sm:px-2 sm:text-[10px] lg:h-10 lg:px-3 lg:text-xs",
+											"relative h-8 px-1.5 font-bold text-[11px] uppercase tracking-wide transition-all sm:h-9 sm:px-2 sm:text-[11px] lg:h-10 lg:px-3 lg:text-xs",
 											isActive
 												? "bg-secondary text-secondary-foreground shadow-[inset_2px_2px_0_0_rgba(252,252,252,0.2)]"
 												: "bg-background hover:bg-primary/20",
@@ -533,7 +533,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 						<button
 							type="button"
 							onClick={props.onClearFilters}
-							class="flex h-8 items-center justify-center gap-0.5 border-2 border-border bg-destructive px-1.5 font-bold text-[9px] text-white uppercase tracking-wide shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none sm:h-9 sm:gap-1 sm:px-2 sm:text-[10px] lg:h-10 lg:border-3 lg:px-3 lg:text-xs"
+							class="flex h-8 items-center justify-center gap-0.5 border-2 border-border bg-destructive px-1.5 font-bold text-[11px] text-white uppercase tracking-wide shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none sm:h-9 sm:gap-1 sm:px-2 sm:text-[11px] lg:h-10 lg:border-3 lg:px-3 lg:text-xs"
 							aria-label="Clear all filters"
 						>
 							<IconClose class="h-3 w-3" />
