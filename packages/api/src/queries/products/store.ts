@@ -150,6 +150,7 @@ export const storeQueries = {
 					id: true,
 					slug: true,
 					stock: true,
+					oldSlugs: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
