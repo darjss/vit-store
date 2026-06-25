@@ -52,6 +52,10 @@ observe((event) => {
 			console.log(
 				`[flue.tool] ✓ ${e.toolName} ${e.durationMs ?? "?"}ms result≈${size(e.result)}ch${e.isError ? " ERROR" : ""}${tag(e)}`,
 			);
+			if (e.isError)
+				console.error(
+					`[flue.err] tool ${e.toolName}: ${JSON.stringify(e.result ?? e.error).slice(0, 400)}${tag(e)}`,
+				);
 			break;
 		// The whole user-message → reply operation: wall-clock + aggregate usage.
 		case "operation":
