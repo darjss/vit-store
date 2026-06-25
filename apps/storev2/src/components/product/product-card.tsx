@@ -79,7 +79,7 @@ const ProductCard = (props: ProductCardProps) => {
 				tabIndex={-1}
 			>
 				<div
-					class="relative aspect-4/5 sm:aspect-4/3"
+					class="relative aspect-4/5"
 					style={{ background: bgColor() }}
 				>
 					{/* Dot Pattern Overlay */}
