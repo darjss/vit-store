@@ -3,6 +3,9 @@
 	"name": "vit-store-agent",
 	"compatibility_date": "2026-06-24",
 	"compatibility_flags": ["nodejs_compat"],
+	// Custom domain so the Messenger webhook has a stable URL on the same root as
+	// admin/api: https://agent.amerikvitamin.mn/channels/messenger/webhook
+	"routes": [{ "pattern": "agent.amerikvitamin.mn", "custom_domain": true }],
 	"ai": {
 		"binding": "AI"
 	},
