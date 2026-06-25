@@ -42,12 +42,13 @@ if (brandParam) {
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
 
-// Only await the product grid (first paint priority). Categories/brands feed
+// Only await the product grid + total count (first paint priority). Categories/brands feed
 // the client-side FilterBar and are fetched by the hydrated ProductsList via
 // tanstack-query, so they no longer block SSR first paint.
-const initialProductsResult = await api.product.getInfiniteProductsWithStock.query({
-	limit: INITIAL_PAGE_SIZE,
-});
+const [initialProductsResult, totalProductCount] = await Promise.all([
+	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
+	api.product.getTotalActiveProductCount.query(),
+]);
 
 const title = "АНУ-ын витамин, нэмэлт тэжээл";
 const description = "Америк Витамин дэлгүүрээс АНУ-ын витамин, эрдэс, омега, пробиотик, магни, коллаген, хүүхдийн нэмэлт тэжээлийг сонгон захиалаарай.";
@@ -65,7 +66,7 @@ const itemListSchema = {
 	"@context": "https://schema.org",
 	"@type": "ItemList",
 	name: "АНУ-ын витамин, нэмэлт тэжээл",
-	numberOfItems: initialProductsResult.items.length,
+	numberOfItems: totalProductCount,
 	itemListElement: initialProductsResult.items.map((product, index) => ({
 		"@type": "ListItem",
 		position: index + 1,
@@ -84,7 +85,7 @@ const itemListSchema = {
 						Бүх бүтээгдэхүүн
 					</h1>
 					<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
-						{initialProductsResult.nextCursor ? `${initialProductsResult.items.length}+ бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
+						{totalProductCount > 0 ? `${totalProductCount} бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
 					</span>
 				</div>
 
