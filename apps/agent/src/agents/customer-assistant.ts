@@ -1,3 +1,4 @@
+import "../lib/observability";
 import { defineAgent } from "@flue/runtime";
 import {
 	buildCartTools,
