@@ -43,7 +43,7 @@ async function fetchRecommendedProducts(
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
 		const filteredMatches = upstashMatches
-			.filter((p) => p.id !== productId)
+			.filter((p) => p.id !== productId && p.slug)
 			.slice(0, 5)
 			.map((p) => ({
 				id: p.id,
@@ -54,7 +54,9 @@ async function fetchRecommendedProducts(
 				brand: p.brand,
 			}));
 
-		if (filteredMatches.length > 0) {
+		// Only use search results if we have enough for a decent grid (>=3).
+		// Otherwise fall back to category/brand-based recommendations.
+		if (filteredMatches.length >= 3) {
 			return filteredMatches;
 		}
 
@@ -66,7 +68,13 @@ async function fetchRecommendedProducts(
 			}),
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
-		return products;
+		// Merge search matches with recommended, dedupe by id, cap at 4
+		const seen = new Set(filteredMatches.map((p) => p.id));
+		const merged = [
+			...filteredMatches,
+			...products.filter((p) => !seen.has(p.id) && p.slug),
+				].slice(0, 4);
+		return merged;
 	} catch {
 		try {
 			const fallbackProducts = await withTimeout(

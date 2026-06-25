@@ -22,7 +22,7 @@ export function ProductsVirtualGrid(props: ProductsVirtualGridProps) {
 						return (
 							<div
 								ref={rowIndex() === 0 ? props.setFirstRowRef : undefined}
-								class="absolute top-0 left-0 grid w-full grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
+								class="absolute top-0 left-0 grid w-full grid-cols-2 gap-2 pb-2 sm:gap-3 sm:pb-3 lg:grid-cols-3 lg:gap-4 lg:pb-4 xl:grid-cols-4"
 								style={{
 									transform: `translateY(${actualRowIndex() * props.rowHeight}px)`,
 								}}
