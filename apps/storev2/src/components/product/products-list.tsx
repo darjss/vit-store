@@ -48,6 +48,7 @@ type ProductsListProps = {
 	initialProductsResult: InfiniteProductsResult;
 	initialCategories?: FilterOption[];
 	initialBrands?: FilterOption[];
+	totalProductCount?: number;
 };
 
 const LIST_FILTER_LABELS: Record<ListFilter, string> = {
@@ -387,6 +388,17 @@ const ProductsList = (props: ProductsListProps) => {
 		return allBrowseProducts().length;
 	});
 
+	// True when browsing the full catalog with no filter/search/category/brand
+	// active — in that case the SSR totalProductCount is the authoritative count.
+	const isBrowsingAll = createMemo(
+		() =>
+			!isSearchMode() &&
+			!categoryId() &&
+			!brandId() &&
+			!listFilter() &&
+			!sortField(),
+	);
+
 	const handleSearch = (term: string) => {
 		setLocalSearchTerm(term);
 		setSearchTerm(term || null);
@@ -577,9 +589,11 @@ const ProductsList = (props: ProductsListProps) => {
 								<Show
 									when={isSearchMode()}
 									fallback={
-										productsQuery.hasNextPage
-											? `${productCount()}+ бүтээгдэхүүн`
-											: `${productCount()} бүтээгдэхүүн`
+										isBrowsingAll() && props.totalProductCount != null
+											? `${props.totalProductCount} бүтээгдэхүүн`
+											: productsQuery.hasNextPage
+												? `${productCount()}+ бүтээгдэхүүн`
+												: `${productCount()} бүтээгдэхүүн`
 									}
 								>
 									{`${productCount()} бүтээгдэхүүн`}
