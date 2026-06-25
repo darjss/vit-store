@@ -3,29 +3,37 @@ name: Amerik Vitamin Storefront
 description: Mongolian e-commerce storefront for US-imported vitamins and supplements. Neo-brutalist, mobile-first, conversion-obsessed.
 colors:
   background: "#fcfcfc"
-  foreground: "#262626"
+  foreground: "#0b0b0b"
   card: "#ffffff"
-  card-foreground: "#262626"
-  primary: "#ffe066"
-  primary-foreground: "#262626"
-  secondary: "#262626"
+  card-foreground: "#0b0b0b"
+  popover: "#ffffff"
+  popover-foreground: "#0b0b0b"
+  primary: "#ffe362"
+  primary-foreground: "#0b0b0b"
+  secondary: "#0b0b0b"
   secondary-foreground: "#fcfcfc"
-  muted: "#f2f2f2"
-  muted-foreground: "#737373"
-  accent: "#ffe066"
-  accent-foreground: "#262626"
-  destructive: "#c9372d"
+  muted: "#eeeeee"
+  muted-foreground: "#555555"
+  accent: "#ffe362"
+  accent-foreground: "#0b0b0b"
+  destructive: "#e7000b"
   destructive-foreground: "#fcfcfc"
-  error: "#ff9999"
-  error-foreground: "#262626"
-  border: "#262626"
-  input: "#ececec"
-  ring: "#262626"
-  chart-1: "#ffe066"
-  chart-2: "#f5d76e"
-  chart-3: "#e8c547"
-  chart-4: "#fff5ba"
-  chart-5: "#d4a017"
+  error: "#ffaebe"
+  error-foreground: "#0b0b0b"
+  success: "#bcfc73"
+  success-foreground: "#0b0b0b"
+  info: "#30ffff"
+  info-foreground: "#0b0b0b"
+  warning: "#ffd92c"
+  warning-foreground: "#0b0b0b"
+  border: "#0b0b0b"
+  input: "#e5e5e5"
+  ring: "#0b0b0b"
+  chart-1: "#ffe362"
+  chart-2: "#d1a84b"
+  chart-3: "#a19200"
+  chart-4: "#e7cb80"
+  chart-5: "#877100"
 typography:
   display:
     fontFamily: '"Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif'
@@ -163,27 +171,33 @@ The design system is implemented in Tailwind CSS v4 with OKLCH color tokens, tho
 | Token | OKLCH | Hex | Usage |
 |-------|-------|-----|-------|
 | **Background** | `oklch(0.99 0 0)` | `#fcfcfc` | Page background, lightest surface |
-| **Foreground** | `oklch(0.15 0 0)` | `#262626` | Primary text, borders, icons |
-| **Primary** | `oklch(0.92 0.15 95)` | `#ffe066` | CTAs, hero accents, brand highlight, active states |
-| **Primary Foreground** | `oklch(0.15 0 0)` | `#262626` | Text on primary backgrounds |
-| **Secondary** | `oklch(0.15 0 0)` | `#262626` | Inverse surfaces (dark buttons, footer bands) |
+| **Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Primary text, borders, icons |
+| **Primary** | `oklch(0.92 0.15 95)` | `#ffe362` | CTAs, hero accents, brand highlight, active states |
+| **Primary Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on primary backgrounds |
+| **Secondary** | `oklch(0.15 0 0)` | `#0b0b0b` | Inverse surfaces (dark buttons, footer bands) |
 | **Secondary Foreground** | `oklch(0.99 0 0)` | `#fcfcfc` | Text on secondary backgrounds |
 
 ### Supporting Palette
 
 | Token | OKLCH | Hex | Usage |
 |-------|-------|-----|-------|
-| **Muted** | `oklch(0.95 0 0)` | `#f2f2f2` | Subtle backgrounds, disabled states |
-| **Muted Foreground** | `oklch(0.45 0 0)` | `#737373` | Secondary text, labels, captions |
-| **Accent** | `oklch(0.92 0.15 95)` | `#ffe066` | Same as primary; used for hover highlights, focus rings |
-| **Accent Foreground** | `oklch(0.15 0 0)` | `#262626` | Text on accent backgrounds |
-| **Destructive** | `oklch(0.577 0.245 27.325)` | `#c9372d` | Errors, remove actions, stock-out badges |
+| **Muted** | `oklch(0.95 0 0)` | `#eeeeee` | Subtle backgrounds, disabled states |
+| **Muted Foreground** | `oklch(0.45 0 0)` | `#555555` | Secondary text, labels, captions |
+| **Accent** | `oklch(0.92 0.15 95)` | `#ffe362` | Same as primary; used for hover highlights, focus rings |
+| **Accent Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on accent backgrounds |
+| **Destructive** | `oklch(0.577 0.245 27.325)` | `#e7000b` | Errors, remove actions, stock-out badges |
 | **Destructive Foreground** | `oklch(0.99 0 0)` | `#fcfcfc` | Text on destructive backgrounds |
-| **Error** | `oklch(0.92 0.18 15)` | `#ff9999` | Soft error backgrounds, invalid input states |
-| **Error Foreground** | `oklch(0.15 0 0)` | `#262626` | Text on error backgrounds |
-| **Border** | `oklch(0.15 0 0)` | `#262626` | All structural borders (cards, inputs, sections) |
-| **Input** | `oklch(0.922 0 0)` | `#ececec` | Form field backgrounds |
-| **Ring** | `oklch(0.15 0 0)` | `#262626` | Focus outlines |
+| **Error** | `oklch(0.92 0.18 15)` | `#ffaebe` | Soft error backgrounds, invalid input states |
+| **Error Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on error backgrounds |
+| **Success** | `oklch(0.92 0.18 130)` | `#bcfc73` | Success states, restock confirmations |
+| **Success Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on success backgrounds |
+| **Info** | `oklch(0.92 0.15 200)` | `#30ffff` | Informational accents |
+| **Info Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on info backgrounds |
+| **Warning** | `oklch(0.92 0.18 85)` | `#ffd92c` | Warning accents |
+| **Warning Foreground** | `oklch(0.15 0 0)` | `#0b0b0b` | Text on warning backgrounds |
+| **Border** | `oklch(0.15 0 0)` | `#0b0b0b` | All structural borders (cards, inputs, sections) |
+| **Input** | `oklch(0.922 0 0)` | `#e5e5e5` | Form field backgrounds |
+| **Ring** | `oklch(0.15 0 0)` | `#0b0b0b` | Focus outlines |
 
 ### Product Card Backgrounds
 
@@ -232,7 +246,7 @@ Space Grotesk is loaded via Google Fonts. The "Fallback" fonts are auto-generate
 
 ## Elevation
 
-No soft shadows. Elevation is expressed through **hard offset box-shadows** that simulate a physical stamp or cut-paper layer. All shadows use the border color (`#262626`) as the offset color.
+No soft shadows. Elevation is expressed through **hard offset box-shadows** that simulate a physical stamp or cut-paper layer. All shadows use the border color (`#0b0b0b`) as the offset color.
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -374,6 +388,6 @@ Mobile navigation and cart drawer. Slides from left or bottom with a `border-r-2
 
 1. **Select component uses `rounded-md`.** Refactor to `rounded-none` for system consistency.
 2. **Select uses `border border-input` instead of `border-2 border-black` or `border-3 border-black`.**
-3. **Some components hardcode `#000` for shadows while others use `var(--color-border)`** (`#262626`). Unify to `var(--color-border)` so theme changes propagate.
+3. **Some components hardcode `#000` for shadows while others use `var(--color-border)`** (`#0b0b0b`). Unify to `var(--color-border)` so theme changes propagate.
 4. **Starwind CSS config exists but its CSS file is entirely commented out.** The active token system lives in `global.css` only.
 5. **Button uses `border-3` while Card uses `border-4` and product cards use `border-2`.** This is intentional hierarchy (buttons = 3px, cards = 4px, cells = 2px), but should be documented in component specs to avoid drift.

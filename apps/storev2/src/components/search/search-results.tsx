@@ -129,7 +129,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						<p class="font-bold text-muted-foreground/70">
 							"{props.searchQuery}" хайлтаар үр дүн олдсонгүй
 						</p>
-						<p class="mt-1 text-muted-foreground/50 text-sm">
+						<p class="mt-1 text-muted-foreground/80 text-sm">
 							Өөр түлхүүр үгээр хайж үзнэ үү
 						</p>
 					</div>
@@ -147,7 +147,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							<div class="mb-4 space-y-3">
 								<Show when={(query.data?.brands.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-[11px] text-muted-foreground/60 uppercase tracking-wide">
+										<p class="mb-2 font-bold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Брэнд
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 								</Show>
 								<Show when={(query.data?.categories.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-[11px] text-muted-foreground/60 uppercase tracking-wide">
+										<p class="mb-2 font-bold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Ангилал
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -256,7 +256,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 													{product.name}
 												</h3>
 												<Show when={product.brand}>
-													<span class="font-bold text-muted-foreground/50 text-xs uppercase tracking-wider">
+													<span class="font-bold text-muted-foreground/80 text-xs uppercase tracking-wider">
 														{product.brand}
 													</span>
 												</Show>

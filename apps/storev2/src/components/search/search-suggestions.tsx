@@ -57,7 +57,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 						<button
 							type="button"
 							onClick={handleClearAll}
-							class="font-bold text-muted-foreground/50 text-xs uppercase tracking-wide transition-colors hover:text-destructive"
+							class="font-bold text-muted-foreground/80 text-xs uppercase tracking-wide transition-colors hover:text-destructive"
 						>
 							Арилгах
 						</button>
@@ -76,7 +76,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 									<button
 										type="button"
 										onClick={(e) => handleRemoveSearch(item.term, e)}
-										class="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10 text-muted-foreground/60 opacity-0 transition-all hover:bg-destructive hover:text-white group-hover:opacity-100"
+										class="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10 text-muted-foreground/80 opacity-0 transition-all hover:bg-destructive hover:text-white group-hover:opacity-100"
 										aria-label={`${item.term} хайлтыг арилгах`}
 									>
 										<IconClose class="h-3 w-3" />

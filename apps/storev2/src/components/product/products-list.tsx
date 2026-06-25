@@ -25,7 +25,7 @@ import {
 	ProductSkeletonGrid,
 } from "./products-list-states";
 import { ProductsVirtualGrid } from "./products-virtual-grid";
-import SearchProductCard from "./search-product-card";
+import ProductCard from "./product-card";
 
 type ListFilter = "featured" | "recent";
 type ProductSortField = "price" | "createdAt";
@@ -653,7 +653,7 @@ const ProductsList = (props: ProductsListProps) => {
 							<Show when={isSearchMode()}>
 								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 									<For each={searchResults()}>
-										{(product) => <SearchProductCard product={product} />}
+										{(product) => <ProductCard product={product} />}
 									</For>
 								</div>
 							</Show>
