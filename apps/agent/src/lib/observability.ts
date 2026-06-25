@@ -15,8 +15,12 @@ const size = (value: unknown): number =>
 observe((event) => {
 	const e = event as Record<string, any>;
 	if (e.usage) {
+		const u = e.usage;
+		const fresh = u.input ?? 0;
+		const cached = u.cacheRead ?? 0;
+		const hit = fresh + cached > 0 ? Math.round((cached / (fresh + cached)) * 100) : 0;
 		console.log(
-			`[flue.usage] ${e.type}${e.purpose ? `:${e.purpose}` : ""} in=${e.usage.input ?? "?"} out=${e.usage.output ?? "?"} total=${e.usage.totalTokens ?? "?"}`,
+			`[flue.usage] ${e.type}${e.purpose ? `:${e.purpose}` : ""} fresh_in=${fresh} cacheRead=${cached} cacheWrite=${u.cacheWrite ?? 0} out=${u.output ?? "?"} total=${u.totalTokens ?? "?"} cacheHit=${hit}%`,
 		);
 	}
 	if (event.type === "tool_start") {
