@@ -16,13 +16,29 @@ const getProductSearchService = () =>
 		}
 	).PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
 
+const PRODUCT_SEARCH_TIMEOUT_MS = 4000;
+
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+	Promise.race([
+		promise,
+		new Promise<T>((_resolve, reject) =>
+			setTimeout(
+				() => reject(new Error(`product_search timed out after ${ms}ms`)),
+				ms,
+			),
+		),
+	]);
+
 export const searchProducts = async (
 	query: string,
 	limit = 10,
 	filters?: ProductSearchFilters,
 ): Promise<SearchProductResult[]> => {
 	try {
-		return await getProductSearchService().search({ query, limit, filters });
+		return await withTimeout(
+			getProductSearchService().search({ query, limit, filters }),
+			PRODUCT_SEARCH_TIMEOUT_MS,
+		);
 	} catch (error) {
 		logger.error("product_search.search_failed", error);
 		return [];
