@@ -64,6 +64,13 @@ const graphVersion = "v25.0";
 export const messenger = new Messenger({
 	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
 	version: graphVersion,
+	// Graph's Send API has NO idempotency key, and the SDK defaults to maxRetries:3
+	// on timeout/network/5xx. A slow send (client aborts at 30s) is often ALREADY
+	// delivered by Meta, so a blind retry posts a DUPLICATE message to the customer
+	// — the root of the "same reply 3×" reports. Every outbound send here (text,
+	// cards, typing) is non-idempotent and best-effort, so never auto-retry: one
+	// attempt, and the caller's bestEffort wrappers tolerate a rare dropped send.
+	maxRetries: 0,
 	// Local dev seam: when set, outbound Graph Send API calls are redirected to
 	// a capture endpoint (see apps/agent/cli/messenger-dev.ts) so the real send
 	// path runs without touching Meta. Unset in production -> real Graph host.
@@ -305,7 +312,7 @@ export function sendPaymentChoices(ref: MessengerConversationRef) {
 			buttons: toMessengerButtons(choice.buttons),
 			messaging_type: "RESPONSE",
 		});
-		return { messageId: result.message_id };
+		return { ok: true, messageId: result?.message_id ?? null };
 	};
 }
 
@@ -325,7 +332,7 @@ export function sendBankTransferDetails(ref: MessengerConversationRef) {
 			],
 			messaging_type: "RESPONSE",
 		});
-		return { messageId: result.message_id };
+		return { ok: true, messageId: result?.message_id ?? null };
 	};
 }
 
@@ -495,7 +502,7 @@ export function postMessage(ref: MessengerConversationRef) {
 					messaging_type: "RESPONSE",
 					message: { text: input.text },
 				});
-				return { messageId: result.message_id };
+				return { ok: true, messageId: result?.message_id ?? null };
 			} finally {
 				await bestEffortTyping("off");
 			}
@@ -521,7 +528,7 @@ export function sendTextReply(ref: MessengerConversationRef) {
 			messaging_type: "RESPONSE",
 			message: { text },
 		});
-		return { messageId: result.message_id };
+		return { ok: true, messageId: result?.message_id ?? null };
 	};
 }
 
@@ -544,7 +551,7 @@ export function sendCartSummary(ref: MessengerConversationRef) {
 				...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
 			},
 		});
-		return { messageId: result.message_id };
+		return { ok: true, messageId: result?.message_id ?? null };
 	};
 }
 
@@ -580,7 +587,7 @@ export function sendProductCards(ref: MessengerConversationRef) {
 			elements,
 			messaging_type: "RESPONSE",
 		});
-		return { messageId: result.message_id, cardCount: elements.length };
+		return { ok: true, messageId: result?.message_id ?? null, cardCount: elements.length };
 	};
 }
 
