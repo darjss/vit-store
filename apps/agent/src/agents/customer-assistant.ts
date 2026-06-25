@@ -60,6 +60,9 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			: [];
 	return {
 		model: CUSTOMER_ASSISTANT_MODEL,
+		// Kimi is a reasoning model; "low" cuts the ~5.7k reasoning tokens/turn
+		// that dominate input cost (default is "medium").
+		thinkingLevel: "low" as const,
 		instructions: customerAssistantInstructions,
 		tools: [
 			buildProductSearchTool({
