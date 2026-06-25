@@ -68,10 +68,16 @@ const GRAPH = "https://graph.facebook.com/v23.0";
 const argv = process.argv.slice(2);
 let psid = PSID;
 let postback: string | undefined;
+// --send-only: POST the signed webhook and exit WITHOUT reading the Graph
+// conversation back. Use with a non-deliverable test PSID so the bot's real send
+// goes nowhere; read its replies from the worker log ([bot.say] in `wrangler
+// tail`) instead. Keeps dogfooding out of any real Messenger inbox.
+let sendOnly = false;
 const words: string[] = [];
 for (let i = 0; i < argv.length; i++) {
 	if (argv[i] === "--psid") psid = argv[++i] ?? psid;
 	else if (argv[i] === "--postback") postback = argv[++i];
+	else if (argv[i] === "--send-only") sendOnly = true;
 	else words.push(argv[i]!);
 }
 const text = words.join(" ");
@@ -101,6 +107,10 @@ const res = await fetch(WEBHOOK, {
 });
 console.log(`  · webhook ${res.status} ${(await res.text()).trim()}`);
 if (!res.ok) process.exit(1);
+if (sendOnly) {
+	console.log("  (send-only — read the reply from `wrangler tail` [bot.say])\n");
+	process.exit(0);
+}
 
 // ─── read the bot's reply back from the Graph conversations API ──────────────
 async function readReplies(sinceUnix: number): Promise<{ time: string; text: string }[]> {
