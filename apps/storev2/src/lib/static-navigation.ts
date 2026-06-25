@@ -11,6 +11,7 @@ export interface StaticNavigationBrand {
 	id: number;
 	name: string;
 	slug: string;
+	logoUrl?: string | null;
 	productCount?: number;
 }
 
