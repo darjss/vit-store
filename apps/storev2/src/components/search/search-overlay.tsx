@@ -122,13 +122,13 @@ const SearchOverlay: Component = () => {
 					{/* Footer */}
 					<div class="border-border border-t-3 bg-muted/50 px-4 py-3 sm:px-6">
 						<div class="flex items-center justify-between">
-							<p class="text-muted-foreground/60 text-xs sm:text-sm">
+							<p class="text-muted-foreground/80 text-xs sm:text-sm">
 								<kbd class="mr-1 rounded border border-border/20 bg-background px-1.5 py-0.5 font-mono text-xs">
 									ESC
 								</kbd>
 								хаах
 							</p>
-							<p class="text-muted-foreground/60 text-xs sm:text-sm">
+							<p class="text-muted-foreground/80 text-xs sm:text-sm">
 								<kbd class="mr-1 rounded border border-border/20 bg-background px-1.5 py-0.5 font-mono text-xs">
 									Enter
 								</kbd>

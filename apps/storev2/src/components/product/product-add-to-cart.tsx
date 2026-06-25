@@ -128,7 +128,7 @@ export default function ProductQuantitySelector(
 			<Match when={!props.isInStock}>
 				<div class="space-y-4">
 					{/* Out of Stock Alert */}
-					<div class="animate-float-slow border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
+					<div class="border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
 						<div class="mb-3 flex items-center gap-3">
 							<IconAlertTriangle class="text-2xl text-yellow-500" />
 							<h3 class="font-black text-destructive text-lg sm:text-xl">
