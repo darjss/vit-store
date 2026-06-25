@@ -1,45 +1,17 @@
-import { SuperJSON } from "superjson";
 import * as v from "valibot";
+import { storeClient, withTimeout } from "./store-client";
 
 // Boundary to the EXISTING store payment API for the post-order Messenger
-// payment surface (#25). Mirrors `src/lib/order.ts`: a thin hand-rolled tRPC
-// transport (no heavy api/tRPC type graph in the worker) over the SAME store
-// router the storefront uses.
+// payment surface (#25). Rides the SHARED typed tRPC client (`storeClient()` in
+// ./store-client) the storefront pattern uses, so the agent (Cloudflare Worker)
+// calls the SAME store router the storefront uses — payment logic is never
+// duplicated here and only @trpc/client + superjson reach the worker bundle.
 //
 // CRITICAL (ADR 0004): a bank-transfer claim records `payment.claimTransferPaid`
 // only — which sets the payment to `customer_claimed_paid` and notifies admin.
 // It NEVER calls a payment-CONFIRMATION procedure (`payment.confirmPayment` /
 // `confirmPaymentAndApplyStock` / the QPay invoice check), so a customer can
 // never auto-confirm their own payment. Confirmation stays with admin/bank.
-const storeApiUrl = (): string => {
-	const base = process.env.STORE_API_URL ?? "http://localhost:3000";
-	return `${base.replace(/\/+$/, "")}/trpc/store`;
-};
-
-interface TrpcResponse {
-	result?: { data?: unknown };
-	error?: { message?: string };
-}
-
-const PAYMENT_FETCH_TIMEOUT_MS = 10_000;
-
-const readTrpc = async <T>(
-	procedure: string,
-	response: Response,
-	schema: v.GenericSchema<unknown, T>,
-): Promise<T> => {
-	if (!response.ok) {
-		throw new Error(`${procedure} request failed (${response.status})`);
-	}
-	const body = (await response.json()) as TrpcResponse;
-	if (body.error || !body.result) {
-		throw new Error(body.error?.message ?? `${procedure} returned an error`);
-	}
-	const deserialized = SuperJSON.deserialize(
-		body.result.data as Parameters<typeof SuperJSON.deserialize>[0],
-	);
-	return v.parse(schema, deserialized);
-};
 
 // Only the fields the transfer message needs: the authoritative total (the
 // transfer amount) and the customer phone (the transfer reference). Validated at
@@ -56,27 +28,22 @@ const paymentSummarySchema = v.object({
 
 export type PaymentSummary = v.InferOutput<typeof paymentSummarySchema>;
 
-// `payment.getPaymentByNumber` (a tRPC query) over the catalog-style GET path.
+// `payment.getPaymentByNumber` (a tRPC query): looks up the payment summary.
 export const fetchPaymentSummary = async (
 	paymentNumber: string,
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<PaymentSummary> => {
-	const input = encodeURIComponent(
-		JSON.stringify(
-			SuperJSON.serialize({
-				paymentNumber,
-				...(checkoutToken ? { checkoutToken } : {}),
-			}),
-		),
+	const data = await storeClient().payment.getPaymentByNumber.query(
+		{
+			paymentNumber,
+			...(checkoutToken ? { checkoutToken } : {}),
+		},
+		{ signal: withTimeout(outerSignal) },
 	);
-	const url = `${storeApiUrl()}/payment.getPaymentByNumber?input=${input}`;
-	const response = await fetch(url, {
-		method: "GET",
-		headers: { "content-type": "application/json" },
-		signal: signal(PAYMENT_FETCH_TIMEOUT_MS, outerSignal),
-	});
-	return readTrpc("payment.getPaymentByNumber", response, paymentSummarySchema);
+	// Defense-in-depth: the typed client gives compile-time safety, but the
+	// valibot guard still fails loudly on RUNTIME api-side shape drift.
+	return v.parse(paymentSummarySchema, data);
 };
 
 const claimResultSchema = v.object({
@@ -91,22 +58,12 @@ export const claimTransfer = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<{ orderNumber?: string | null }> => {
-	const url = `${storeApiUrl()}/payment.claimTransferPaid`;
-	const response = await fetch(url, {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify(
-			SuperJSON.serialize({
-				paymentNumber,
-				...(checkoutToken ? { checkoutToken } : {}),
-			}),
-		),
-		signal: signal(PAYMENT_FETCH_TIMEOUT_MS, outerSignal),
-	});
-	return readTrpc("payment.claimTransferPaid", response, claimResultSchema);
-};
-
-const signal = (ms: number, outer?: AbortSignal): AbortSignal => {
-	const timeout = AbortSignal.timeout(ms);
-	return outer ? AbortSignal.any([outer, timeout]) : timeout;
+	const data = await storeClient().payment.claimTransferPaid.mutate(
+		{
+			paymentNumber,
+			...(checkoutToken ? { checkoutToken } : {}),
+		},
+		{ signal: withTimeout(outerSignal) },
+	);
+	return v.parse(claimResultSchema, data);
 };
