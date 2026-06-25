@@ -345,7 +345,7 @@ const OrderTrackingForm = () => {
 												<IconPackage class="w-5 h-5" />
 											</div>
 											<div>
-												<div class="text-[10px] font-black uppercase tracking-widest text-foreground/60">ЗАХИАЛГА №</div>
+												<div class="text-[10px] font-black uppercase tracking-widest text-foreground/80">ЗАХИАЛГА №</div>
 												<div class="font-black text-lg">{trackMutation.data?.orderNumber}</div>
 											</div>
 										</div>

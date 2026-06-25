@@ -27,7 +27,7 @@ const MobileCartButton = () => {
 						aria-hidden="true"
 					/>
 					<Show when={isHydrated() && cart.count() > 0}>
-						<span class="-top-2 -right-2 absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-border bg-secondary font-black text-[9px] text-secondary-foreground">
+						<span class="-top-2 -right-2 absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-border bg-secondary font-black text-[11px] text-secondary-foreground">
 							{cart.count()}
 						</span>
 					</Show>

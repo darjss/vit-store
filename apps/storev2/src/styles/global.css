@@ -44,6 +44,26 @@
     --radius-md: 0rem;
     --radius-lg: 0rem;
     --radius-xl: 0rem;
+
+    /* Motion curve tokens — single source for easing curves. */
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Heading type scale tokens — canonical page heading sizes. */
+    --text-h1: clamp(2rem, 8vw, 4rem);
+    --text-h1--line-height: 0.95;
+    --text-h1--letter-spacing: -0.04em;
+    --text-h2: clamp(1.5rem, 4vw, 2.5rem);
+    --text-h2--line-height: 1.1;
+    --text-h2--letter-spacing: -0.02em;
+    --text-h3: 1.25rem;
+    --text-h3--line-height: 1.2;
+    --text-h3--letter-spacing: -0.01em;
+
+    /* Section spacing scale — vertical rhythm between page sections. */
+    --space-section-sm: 1.5rem;
+    --space-section-md: 2.5rem;
+    --space-section-lg: 4rem;
 }
 
 @layer base {
@@ -94,19 +114,19 @@
     }
 
     .animate-float {
-        animation: float 3s ease-in-out infinite;
+        animation: float 3s var(--ease-out-quart) infinite;
     }
 
     .animate-float-delayed {
-        animation: float 3.5s ease-in-out infinite;
+        animation: float 3.5s var(--ease-out-quart) infinite;
     }
 
     .animate-float-slow {
-        animation: float 4s ease-in-out infinite;
+        animation: float 4s var(--ease-out-quart) infinite;
     }
 
     .animate-wiggle {
-        animation: wiggle 2s ease-in-out infinite;
+        animation: wiggle 2s var(--ease-out-quart) infinite;
     }
 
     @keyframes float-1 {
@@ -167,15 +187,15 @@
     }
 
     .animate-float-1 {
-        animation: float-1 6s ease-in-out infinite;
+        animation: float-1 6s var(--ease-out-quart) infinite;
     }
 
     .animate-float-2 {
-        animation: float-2 7s ease-in-out infinite;
+        animation: float-2 7s var(--ease-out-quart) infinite;
     }
 
     .animate-float-3 {
-        animation: float-3 8s ease-in-out infinite;
+        animation: float-3 8s var(--ease-out-quart) infinite;
     }
 
     @keyframes caret-blink {
@@ -191,7 +211,7 @@
     }
 
     .animate-caret-blink {
-        animation: caret-blink 1.25s ease-out infinite;
+        animation: caret-blink 1.25s var(--ease-out-quart) infinite;
     }
 
     @keyframes shake {
@@ -215,7 +235,7 @@
     }
 
     .animate-shake {
-        animation: shake 0.5s ease-in-out;
+        animation: shake 0.5s var(--ease-out-quart);
     }
 
     /* Hide scrollbar but keep functionality */
@@ -252,14 +272,14 @@
         width: 100%;
         transform: scaleX(0);
         transform-origin: left center;
-        transition: transform 0.16s ease-out;
+        transition: transform 0.16s var(--ease-out-quart);
         box-shadow: 0 0 10px var(--color-primary);
         border: 2px solid var(--color-border);
         will-change: transform;
     }
 
     .loading-bar.show .loading-bar-progress {
-        animation: loading-progress 8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: loading-progress 8s var(--ease-out-expo) forwards;
     }
 
     .loading-bar.is-complete .loading-bar-progress {
@@ -338,17 +358,5 @@
     .bg-dots-pattern {
         background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
         background-size: 20px 20px;
-    }
-}
-
-@layer components {
-    .brutal-btn {
-        @apply px-6 py-3 bg-background border-2 border-border font-bold uppercase tracking-wider hover:translate-y-1 hover:shadow-none transition-all active:translate-y-1 active:shadow-none;
-        box-shadow: 4px 4px 0px 0px var(--color-border);
-    }
-    
-    .brutal-card {
-        @apply bg-background border-2 border-border p-4;
-        box-shadow: 4px 4px 0px 0px var(--color-border);
     }
 }
