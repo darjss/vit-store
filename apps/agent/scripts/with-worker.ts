@@ -59,18 +59,11 @@ if (!existsSync(DEV_VARS)) {
 
 if (process.env.WITH_WORKER_SKIP_BUILD !== "1") {
 	console.log("• building agent…");
-	// FLUE_BOOT_PATCH_OPTIONAL: the patch-flue-worker boot workaround hard-fails
-	// when its needle (`createRequire(import.meta.url)`) is absent. Newer Flue
-	// emits the guarded form already, so the needle is gone and the patch is a
-	// no-op; the script's own sanctioned escape hatch is to treat that as a
-	// clean pass instead of a build failure. Pass it through here so the
-	// one-command smoke keeps working across Flue versions.
 	if (
 		Bun.spawnSync(["bun", "run", "build"], {
 			cwd: AGENT_ROOT,
 			stdout: "inherit",
 			stderr: "inherit",
-			env: { ...process.env, FLUE_BOOT_PATCH_OPTIONAL: "1" },
 		}).exitCode !== 0
 	) {
 		console.error("✗ build failed");
