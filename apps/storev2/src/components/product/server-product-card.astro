@@ -2,6 +2,7 @@
 import { formatCurrency, productColors } from "@vit/shared";
 import { toProductImageUrl } from "@/lib/image";
 import AddToCartButton from "@/components/cart/add-to-cart-button";
+import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 
 interface Props {
 	product: {
@@ -36,7 +37,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 			transition:name={`product-image-${product.id}`}
 		>
 			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
-			{imageUrl && (
+			{imageUrl ? (
 				<img
 					src={toProductImageUrl(imageUrl, "card") || imageUrl}
 					alt={product.name}
@@ -46,6 +47,8 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 					decoding="async"
 					class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
 				/>
+			) : (
+				<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
 			)}
 			{product.brand && (
 				<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[8px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[10px]">

@@ -10,7 +10,6 @@ import MobileNavbar from "@/layouts/MobileNavbar.astro";
 import PostHog from "../components/posthog.astro";
 
 import "../styles/global.css";
-import "../styles/starwind.css"
 
 export interface Props {
 	title?: string;
@@ -112,7 +111,7 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
         <Header />
         
 
-        <main id="main" class="relative z-10 flex-1">
+        <main id="main" class="relative z-10 flex-1 overflow-x-hidden">
             <slot />
             <Toaster client:idle />
         </main>

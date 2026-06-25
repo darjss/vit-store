@@ -10,6 +10,14 @@ export const orderStatus = [
 
 export const paymentProvider = ["qpay", "transfer", "cash"] as const;
 
+/**
+ * Bank transfer (Данс) payment option toggle.
+ * Set to true to re-enable the transfer tab at checkout and the
+ * `payment.selectTransfer` tRPC mutation. Disabled 2026-06-24 to reduce
+ * checkout friction while the transfer confirmation flow is being revised.
+ */
+export const BANK_TRANSFER_ENABLED = false;
+
 export const deliveryProvider = [
 	"tu-delivery",
 	"self",

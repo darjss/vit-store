@@ -1,8 +1,8 @@
-import { navigate } from "astro:transitions/client";
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
 import { trackPaymentConfirmed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
 import IconCheckboxCircle from "~icons/ri/checkbox-circle-fill";
@@ -37,7 +37,7 @@ const ConfirmPaymentButton = (props: {
 					duration: 5000,
 				});
 				cart.clearCart();
-				navigate(`/order/confirm/${data.orderNumber}`);
+				void safeNavigate(`/order/confirm/${data.orderNumber}`);
 			},
 			onError: () => {
 				showToast({

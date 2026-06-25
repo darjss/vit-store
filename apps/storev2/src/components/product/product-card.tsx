@@ -4,6 +4,7 @@ import type { ProductCardData } from "@vit/shared/types";
 import { createMemo, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
+import ProductImageFallback from "./product-image-fallback";
 
 interface ProductCardProps {
 	product: ProductCardData;
@@ -42,7 +43,15 @@ const ProductCard = (props: ProductCardProps) => {
 					<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
 
 					{/* Product Image */}
-					<Show when={productImage()}>
+					<Show
+						when={productImage()}
+						fallback={
+							<ProductImageFallback
+								name={product.name}
+								brand={brandName()}
+							/>
+						}
+					>
 						{(img) => (
 							<Image
 								src={productImageProps().src || img()}
