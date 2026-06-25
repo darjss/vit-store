@@ -30,7 +30,7 @@ export default defineConfig({
 	}),
 
 	prefetch: {
-		strategy: "tap",
+		strategy: "hover",
 	},
 	vite: {
 		build: {

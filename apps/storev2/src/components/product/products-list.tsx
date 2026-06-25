@@ -46,8 +46,8 @@ type FilterOption = {
 
 type ProductsListProps = {
 	initialProductsResult: InfiniteProductsResult;
-	initialCategories: FilterOption[];
-	initialBrands: FilterOption[];
+	initialCategories?: FilterOption[];
+	initialBrands?: FilterOption[];
 };
 
 const LIST_FILTER_LABELS: Record<ListFilter, string> = {
