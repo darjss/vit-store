@@ -80,6 +80,7 @@
       "dependencies": {
         "@flue/messenger": "^1.0.0-beta.1",
         "@flue/runtime": "^1.0.0-beta.3",
+        "@trpc/client": "catalog:",
         "@vit/assistant": "workspace:*",
         "@vit/shared": "workspace:*",
         "@warriorteam/messenger-sdk": "^1.5.3",
@@ -91,6 +92,7 @@
       "devDependencies": {
         "@cloudflare/workers-types": "^4.20260617.1",
         "@flue/cli": "^1.0.0-beta.3",
+        "@vit/api": "workspace:*",
         "typescript": "catalog:",
         "wrangler": "^4.101.0",
       },
