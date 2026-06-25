@@ -87,6 +87,7 @@ const performCatalogSearch = async (
 
 	if (searchResults.length > 0) {
 		return searchResults
+			.filter((result) => result.status === "active")
 			.filter((result) =>
 				requireStock ? result.inStock && result.stock > 0 : true,
 			)
