@@ -3,6 +3,7 @@ import { formatCurrency, productColors } from "@vit/shared";
 import { createMemo, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import AddToCartButton from "../cart/add-to-cart-button";
+import ProductImageFallback from "./product-image-fallback";
 
 // Search result format from Upstash
 interface SearchProductData {
@@ -49,7 +50,15 @@ const SearchProductCard = (props: SearchProductCardProps) => {
 					<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
 
 					{/* Product Image */}
-					<Show when={product.image}>
+					<Show
+						when={product.image}
+						fallback={
+							<ProductImageFallback
+								name={product.name}
+								brand={product.brand}
+							/>
+						}
+					>
 						<Image
 							src={productImageProps().src || product.image}
 							alt={product.name}

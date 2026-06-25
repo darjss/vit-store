@@ -1,8 +1,8 @@
-import { navigate } from "astro:transitions/client";
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { trackPaymentConfirmed, trackQpayError, trackQpayInvoiceCreated } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconLoader from "~icons/ri/loader-4-line";
@@ -16,6 +16,11 @@ interface QpayPaymentPanelProps {
 
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
+	// Guards the success redirect so the polling effect only fires it once.
+	// Without this, the 5s refetchInterval re-runs the effect while the
+	// previous view transition is still in-flight (or while the tab is hidden
+	// after the user switched to a bank app), which throws InvalidStateError.
+	const [navigated, setNavigated] = createSignal(false);
 
 	const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
 
@@ -84,9 +89,11 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	);
 
 	createEffect(() => {
+		if (navigated()) return;
 		if (paymentStatusQuery.data?.status === "success") {
+			setNavigated(true);
 			trackPaymentConfirmed(props.paymentNumber, "");
-			navigate(
+			void safeNavigate(
 				props.checkoutToken
 					? `/payment/success/${props.paymentNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
 					: `/payment/success/${props.paymentNumber}`,
