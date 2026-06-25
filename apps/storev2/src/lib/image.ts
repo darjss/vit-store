@@ -87,3 +87,26 @@ export function getProductImageProps(
 		sizes: config.sizes,
 	};
 }
+
+// Known-bad brand logo URLs that resolve to non-image content (e.g. parked
+// domains returning 200 text/html). Treated as "no logo" so the storefront
+// renders the designed text fallback instead of a broken image.
+// See GitHub issue #11.
+const INVALID_BRAND_LOGO_URLS = new Set([
+	"https://www.placeholder.com/logo.png",
+	"https://placeholder.com/logo.png",
+]);
+
+/**
+ * Returns a usable brand logo URL, or `null` when the logo is missing or points
+ * to a known placeholder/non-image URL. Use this in storefront brand rendering
+ * to decide between an <img> and the brand-initial monogram fallback.
+ */
+export function getBrandLogoUrl(
+	url: string | null | undefined,
+): string | null {
+	if (!url) return null;
+	const trimmed = url.trim();
+	if (!trimmed || INVALID_BRAND_LOGO_URLS.has(trimmed)) return null;
+	return trimmed;
+}

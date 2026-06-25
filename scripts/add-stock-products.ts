@@ -505,7 +505,7 @@ async function resolveOrCreateBrandId(
 	try {
 		const result = await sql<{ id: number }[]>`
 			insert into ecom_vit_brand (name, logo_url, created_at)
-			values (${cleanBrandName}, 'https://www.placeholder.com/logo.png', now())
+			values (${cleanBrandName}, '', now())
 			returning id
 		`;
 		const newId = result[0]?.id ?? null;

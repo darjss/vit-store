@@ -100,7 +100,9 @@ const categoryIds = {
 	men: 507,
 };
 
-const defaultBrandLogoUrl = "https://www.placeholder.com/logo.png";
+// Empty string = no logo. Storefront renders a monogram fallback.
+// Never use an external placeholder URL — see GitHub issue #11.
+const defaultBrandLogoUrl = "";
 
 await mkdir(outputDir, { recursive: true });
 

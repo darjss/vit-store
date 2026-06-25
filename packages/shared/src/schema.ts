@@ -236,7 +236,7 @@ export const addBrandSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
 	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
-	logoUrl: v.pipe(v.string(), v.url()),
+	logoUrl: v.union([v.literal(""), v.pipe(v.string(), v.url())]),
 	description: v.optional(v.nullable(v.string())),
 	bannerImage: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
 	seoTitle: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(256)))),
