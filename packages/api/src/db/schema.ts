@@ -137,6 +137,14 @@ export const ProductsTable = createTable(
 		name_mn: varchar("name_mn", { length: 256 }),
 		weightGrams: integer("weight_grams").default(0).notNull(),
 		expirationDate: varchar("expiration_date", { length: 7 }),
+		// Slugs previously used by this product. When a product name is
+		// cleaned (e.g. dedup of a duplicated brand prefix) and the slug is
+		// regenerated, the prior slug is appended here so the storefront can
+		// 301-redirect old URLs to the canonical one. See issue #78.
+		oldSlugs: jsonb("old_slugs")
+			.$type<string[]>()
+			.default(sql`'[]'::jsonb`)
+			.notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
