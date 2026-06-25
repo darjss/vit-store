@@ -618,6 +618,24 @@ export const storeQueries = {
 			return storeQueries.getInfiniteProducts({ ...params, requireStock: true });
 		},
 
+		// Lightweight COUNT(*) for the storefront catalog header. Mirrors the
+		// active+non-deleted+in-stock gate used by getInfiniteProductsWithStock
+		// so the displayed total matches what the infinite list can actually
+		// paginate through. Returns 0 if the table is empty.
+		async getTotalActiveProductCount() {
+			const result = await db()
+				.select({ count: sql<number>`count(*)::int` })
+				.from(ProductsTable)
+				.where(
+					and(
+						isNull(ProductsTable.deletedAt),
+						eq(ProductsTable.status, "active"),
+						gt(ProductsTable.stock, 0),
+					),
+				);
+			return result[0]?.count ?? 0;
+		},
+
 		async getPaginatedProducts(params: {
 			requireStock?: boolean;
 			page: number;
