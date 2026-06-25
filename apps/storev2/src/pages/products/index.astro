@@ -42,10 +42,11 @@ if (brandParam) {
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
 
-const [initialProductsResult, initialCategories, initialBrands] = await Promise.all([
+const [initialProductsResult, initialCategories, initialBrands, totalProductCount] = await Promise.all([
 	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
 	api.category.getAllCategoriesWithStock.query(),
 	api.brand.getAllBrandsWithStock.query(),
+	api.product.getTotalActiveProductCount.query(),
 ]);
 
 const title = "АНУ-ын витамин, нэмэлт тэжээл";
@@ -66,7 +67,7 @@ const itemListSchema = {
 	"@context": "https://schema.org",
 	"@type": "ItemList",
 	name: "АНУ-ын витамин, нэмэлт тэжээл",
-	numberOfItems: initialProductsResult.items.length,
+	numberOfItems: totalProductCount,
 	itemListElement: initialProductsResult.items.map((product, index) => ({
 		"@type": "ListItem",
 		position: index + 1,
@@ -85,7 +86,7 @@ const itemListSchema = {
 						Бүх бүтээгдэхүүн
 					</h1>
 					<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
-						{initialProductsResult.nextCursor ? `${initialProductsResult.items.length}+ бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
+						{totalProductCount > 0 ? `${totalProductCount} бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
 					</span>
 				</div>
 
