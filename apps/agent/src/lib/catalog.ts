@@ -1,56 +1,27 @@
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { StoreRouter } from "@vit/api";
 import {
 	type AssistantAdviceProduct,
 	assistantAdviceProductSchema,
 	type AssistantProduct,
 	assistantProductSchema,
 } from "@vit/assistant";
-import { SuperJSON } from "superjson";
 import * as v from "valibot";
+import { storeClient, withTimeout } from "./store-client";
 
 // Boundary to the existing storefront catalog search. The search itself lives
 // in the api package (store product router, `searchProductsForAssistant`); the
 // agent only calls it over the same tRPC surface the storefront uses, so the
-// catalog logic is never duplicated here. This now rides the SAME typed tRPC
-// client the storefront uses (`createTRPCClient<StoreRouter>`); `StoreRouter` is
-// a TYPE-ONLY import (`import type`), so it is erased at build and pulls zero
-// api/server/db runtime code into the worker — only @trpc/client + superjson.
-const storeApiUrl = (): string => {
-	const base = process.env.STORE_API_URL ?? "http://localhost:3000";
-	return `${base.replace(/\/+$/, "")}/trpc/store`;
-};
-
-// Deadline for the catalog round-trip. A hung/slow store API must not hold the
-// whole agent turn open until the Worker platform kills it.
-const CATALOG_FETCH_TIMEOUT_MS = 10_000;
-
+// catalog logic is never duplicated here. This rides the SHARED typed tRPC
+// client (`storeClient()` in ./store-client) the storefront pattern uses, so
+// only @trpc/client + superjson reach the worker bundle — zero server/db code.
 const assistantProductsSchema = v.array(assistantProductSchema);
 const assistantAdviceProductsSchema = v.array(assistantAdviceProductSchema);
-
-// Lazily constructed so STORE_API_URL is read at call time (mirrors the prior
-// hand-rolled boundary), not at module load.
-let cachedClient: ReturnType<typeof createTRPCClient<StoreRouter>> | undefined;
-const client = () => {
-	cachedClient ??= createTRPCClient<StoreRouter>({
-		links: [httpLink({ url: storeApiUrl(), transformer: SuperJSON })],
-	});
-	return cachedClient;
-};
-
-// Honor the tool turn's cancellation if present, and always enforce our own
-// timeout, whichever fires first.
-const withTimeout = (signal?: AbortSignal): AbortSignal => {
-	const timeout = AbortSignal.timeout(CATALOG_FETCH_TIMEOUT_MS);
-	return signal ? AbortSignal.any([signal, timeout]) : timeout;
-};
 
 export const searchAssistantProducts = async (
 	query: string,
 	limit: number,
 	signal?: AbortSignal,
 ): Promise<AssistantProduct[]> => {
-	const data = await client().product.searchProductsForAssistant.query(
+	const data = await storeClient().product.searchProductsForAssistant.query(
 		{ query, limit },
 		{ signal: withTimeout(signal) },
 	);
@@ -69,7 +40,7 @@ export const getAssistantProductsByIds = async (
 	signal?: AbortSignal,
 ): Promise<AssistantProduct[]> => {
 	if (ids.length === 0) return [];
-	const data = await client().product.getProductsByIdsForAssistant.query(
+	const data = await storeClient().product.getProductsByIdsForAssistant.query(
 		{ ids },
 		{ signal: withTimeout(signal) },
 	);
@@ -85,7 +56,7 @@ export const getAdviceProductsByIds = async (
 	signal?: AbortSignal,
 ): Promise<AssistantAdviceProduct[]> => {
 	if (ids.length === 0) return [];
-	const data = await client().product.getProductsByIdsForAdvice.query(
+	const data = await storeClient().product.getProductsByIdsForAdvice.query(
 		{ ids },
 		{ signal: withTimeout(signal) },
 	);
