@@ -13,6 +13,8 @@ const { categories, brands } = await getStaticNavigationData();
 // stale KV cache can still serve 0-product brands. Drop them at the nav level so
 // the mobile menu never lists dead-end brand pages.
 const navBrands = brands.filter((brand) => (brand.productCount ?? 0) > 0);
+const topBrands = navBrands.slice(0, 6);
+const remainingBrands = navBrands.slice(6);
 const topCategories = categories.slice(0, 6);
 const remainingCategories = categories.slice(6);
 
@@ -78,7 +80,7 @@ const brandLogoOnError =
             {navBrands.length > 0 ? (
                 <>
                     <div class="grid grid-cols-3 gap-2">
-                        {navBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => {
+                        {topBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => {
                             const logoUrl = getBrandLogoUrl(brand.logoUrl);
                             return (
                             <a
@@ -103,6 +105,40 @@ const brandLogoOnError =
                             );
                         })}
                     </div>
+                    {remainingBrands.length > 0 && (
+                        <details class="mt-3 group">
+                            <summary class="list-none flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors cursor-pointer select-none">
+                                <span>Илүү харах</span>
+                                <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
+                            </summary>
+                            <div class="mt-2 grid grid-cols-3 gap-2">
+                                {remainingBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => {
+                                    const logoUrl = getBrandLogoUrl(brand.logoUrl);
+                                    return (
+                                    <a
+                                        href={`/products/brand/${brand.slug}/1/`}
+                                        class="flex aspect-square items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group"
+                                        title={brand.name}
+                                    >
+                                        {logoUrl ? (
+                                            <img
+                                                src={logoUrl}
+                                                alt={brand.name}
+                                                class="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
+                                                loading="lazy"
+                                                onerror={brandLogoOnError}
+                                            />
+                                        ) : (
+                                            <div class="w-full h-full bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                                {brand.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </a>
+                                    );
+                                })}
+                            </div>
+                        </details>
+                    )}
                 </>
             ) : (
                 <div class="text-center py-8 text-muted-foreground">
