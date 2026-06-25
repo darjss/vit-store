@@ -42,16 +42,15 @@ if (brandParam) {
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
 
-const [initialProductsResult, initialCategories, initialBrands] = await Promise.all([
-	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
-	api.category.getAllCategoriesWithStock.query(),
-	api.brand.getAllBrandsWithStock.query(),
-]);
+// Only await the product grid (first paint priority). Categories/brands feed
+// the client-side FilterBar and are fetched by the hydrated ProductsList via
+// tanstack-query, so they no longer block SSR first paint.
+const initialProductsResult = await api.product.getInfiniteProductsWithStock.query({
+	limit: INITIAL_PAGE_SIZE,
+});
 
 const title = "АНУ-ын витамин, нэмэлт тэжээл";
 const description = "Америк Витамин дэлгүүрээс АНУ-ын витамин, эрдэс, омега, пробиотик, магни, коллаген, хүүхдийн нэмэлт тэжээлийг сонгон захиалаарай.";
-const visibleCategories = initialCategories.filter((category) => category.productCount > 0).slice(0, 12);
-const visibleBrands = initialBrands.filter((brand) => brand.productCount > 0).slice(0, 16);
 
 const breadcrumbSchema = {
 	"@context": "https://schema.org",
@@ -101,7 +100,5 @@ const itemListSchema = {
 	<ProductsList
 		client:only="solid-js"
 		initialProductsResult={initialProductsResult}
-		initialCategories={initialCategories}
-		initialBrands={initialBrands}
 	/>
 </Layout>
