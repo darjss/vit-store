@@ -8,8 +8,6 @@ import {
 	applyZoneSelection,
 	attachPayment,
 	buildCheckoutOrderPayload,
-	CHECKOUT_ADDRESS_PROMPT,
-	CHECKOUT_NOTES_PROMPT,
 	CHECKOUT_PHONE_PROMPT,
 	type CheckoutOrderPayload,
 	type CheckoutState,
@@ -157,7 +155,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	const providePhone = defineTool({
 		name: "provide_phone",
 		description:
-			"Record the phone number the customer gave for delivery. Pass exactly what they typed; it is normalized and validated (Mongolian 8-digit, starts 6-9). On an invalid number the customer is asked to re-enter; on success they are asked for their address.",
+			"Record the phone number the customer gave for delivery. Pass exactly what they typed; it is normalized and validated (Mongolian 8-digit, starts 6-9). On an invalid number the customer is asked to re-enter. We ask for phone AND address together, so on success this does NOT re-prompt — immediately call provide_address with the address from the same message. If the customer gave only a phone, ask once for the address yourself.",
 		input: v.object({ phone: v.pipe(v.string(), v.minLength(1)) }),
 		async run({ input }) {
 			const state = await requireCheckout();
@@ -167,14 +165,18 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				await deps.sendText(result.error);
 				return { ok: false, error: result.error, ...facts(state) };
 			}
-			return advance(result.state, CHECKOUT_ADDRESS_PROMPT);
+			// Phone + address are asked together up front, so don't re-prompt for
+			// the address here; the model calls provide_address next from the same
+			// customer turn (it sends the order summary).
+			const saved = await deps.saveCheckout(result.state);
+			return { ok: true, ...facts(saved) };
 		},
 	});
 
 	const provideAddress = defineTool({
 		name: "provide_address",
 		description:
-			"Record the customer's natural-language delivery address (district, khoroo, building/unit, nearby landmark). After saving it, delivery-zone candidates are resolved and the customer is asked to confirm which zone is correct. Never choose a zone yourself.",
+			"Record the customer's natural-language delivery address (district, khoroo, building/unit, nearby landmark). The delivery zone is resolved and auto-selected, then the short order summary is sent for a single confirm — you do NOT ask the customer to pick a zone, and you do NOT ask for notes. If no zone matches, the customer is asked to give a clearer address.",
 		input: v.object({ address: v.pipe(v.string(), v.minLength(1)) }),
 		async run({ input }) {
 			const state = await requireCheckout();
@@ -188,14 +190,29 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				result.state.address as string,
 			);
 			const withCandidates = setZoneCandidates(result.state, candidates);
-			return advance(withCandidates, formatZoneCandidates(candidates));
+			// Short admin-style flow: auto-select the top-ranked zone rather than
+			// making the customer pick one, then jump straight to the summary for a
+			// single confirm. The chosen zone is shown in the summary, so the
+			// customer can still object before the order is placed.
+			if (candidates.length === 0) {
+				return advance(withCandidates, formatZoneCandidates(candidates));
+			}
+			const zoned = applyZoneSelection(withCandidates, candidates[0]!.zoneId);
+			if (!zoned.ok) {
+				return advance(withCandidates, formatZoneCandidates(candidates));
+			}
+			const confirming = applyNotes(zoned.state, undefined);
+			const saved = await deps.saveCheckout(confirming);
+			const cart = await deps.getCart();
+			await deps.sendText(formatOrderSummary(saved, cart));
+			return { ok: true, ...facts(saved) };
 		},
 	});
 
 	const confirmDeliveryZone = defineTool({
 		name: "confirm_delivery_zone",
 		description:
-			"Confirm the delivery zone the customer picked from the candidate list. Pass the zoneId of the candidate they chose (it must be one of the offered candidates). After confirmation the customer is asked for optional order notes.",
+			"Fallback for when a clear zone could not be auto-selected and the customer picked one from the offered list. Pass the zoneId they chose (must be one of the offered candidates). After this the order summary is shown for a single confirm — notes are not asked.",
 		input: v.object({
 			zoneId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 		}),
@@ -207,7 +224,11 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				await deps.sendText(result.error);
 				return { ok: false, error: result.error, ...facts(state) };
 			}
-			return advance(result.state, CHECKOUT_NOTES_PROMPT);
+			const confirming = applyNotes(result.state, undefined);
+			const saved = await deps.saveCheckout(confirming);
+			const cart = await deps.getCart();
+			await deps.sendText(formatOrderSummary(saved, cart));
+			return { ok: true, ...facts(saved) };
 		},
 	});
 
