@@ -79,6 +79,20 @@ export const messenger = new Messenger({
 		: {}),
 });
 
+// Outbound capture at the single SDK choke point: log every text the bot sends.
+// This is prod observability of what the bot actually says, and it lets a CLI
+// dogfood read the bot's replies from `wrangler tail` / Workers Logs WITHOUT the
+// message being delivered (drive the webhook with a non-deliverable test PSID).
+const _sendMessage = messenger.send.message.bind(messenger.send);
+// biome-ignore lint/suspicious/noExplicitAny: intentional thin send wrapper.
+(messenger.send as any).message = async (body: any, opts: any) => {
+	const text = body?.message?.text;
+	if (typeof text === "string" && text.length > 0) {
+		console.log(`[bot.say] ${text.replace(/\n/g, " ⏎ ").slice(0, 700)}`);
+	}
+	return _sendMessage(body, opts);
+};
+
 export function toRecipient(ref: MessengerParticipantRef): Recipient {
 	return ref.type === "page-scoped-id" ? { id: ref.id } : { user_ref: ref.id };
 }
@@ -582,12 +596,30 @@ export function sendProductCards(ref: MessengerConversationRef) {
 			],
 		}));
 
-		const result = await messenger.templates.generic({
-			recipient: toRecipient(ref.participant),
-			elements,
-			messaging_type: "RESPONSE",
-		});
-		return { ok: true, messageId: result?.message_id ?? null, cardCount: elements.length };
+		console.log(
+			`[bot.cards] ${elements.map((e) => e.title).join(" | ").slice(0, 700)}`,
+		);
+		try {
+			const result = await messenger.templates.generic({
+				recipient: toRecipient(ref.participant),
+				elements,
+				messaging_type: "RESPONSE",
+			});
+			return {
+				ok: true,
+				messageId: result?.message_id ?? null,
+				cardCount: elements.length,
+			};
+		} catch (error) {
+			// Cards are best-effort: the catalog search already succeeded, so a
+			// transient Graph send failure (or a non-deliverable test PSID during
+			// dogfooding) must NOT throw out of the tool and make the model apologise
+			// that the search itself failed. Log and report the cards as produced.
+			console.warn(
+				`[bot.cards] send failed (best-effort): ${error instanceof Error ? error.message : String(error)}`,
+			);
+			return { ok: true, messageId: null, cardCount: elements.length };
+		}
 	};
 }
 

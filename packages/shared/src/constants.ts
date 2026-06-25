@@ -110,10 +110,9 @@ export const badgeIconNames = {
 };
 
 // Flat delivery fee added to every order (storefront cart, the order API total,
-// and the Messenger order summary). 5,000₮ matches the shop admin's standing
-// "+5" in the Messenger history (said hundreds of times); the zone is recorded
+// and the Messenger order summary). 6,000₮ going forward; the zone is recorded
 // for routing but does not change the fee.
-export const deliveryFee = 5000;
+export const deliveryFee = 6000;
 
 // Single source of truth for the bank-transfer destination shown to customers
 // (storefront payment page AND the Messenger payment surface, #25). The transfer

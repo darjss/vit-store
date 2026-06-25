@@ -1,24 +1,24 @@
-// Operational FAQ distilled from the shop's real Messenger history (the most
-// frequently asked customer questions and the admin's actual answers). These are
-// fixed business facts the agent should answer DIRECTLY and briefly — without a
-// search/advice tool call — which is both accurate and fast (a single model
-// turn, no extra round-trips). Update here when shop policy changes.
+// Operational FAQ for the customer assistant — the most frequently asked
+// customer questions (distilled from the shop's real Messenger history) and the
+// shop's current answers. These are fixed business facts the agent answers
+// DIRECTLY and briefly (no search/advice tool call — accurate and fast, a single
+// model turn). Update here when policy changes.
 //
-// Evidence from history (occurrence counts): "Маргааш хүргэнэ" / next-day
-// delivery ~495×; delivery fee "+5" / "Hurgelt 5" = 5,000₮; bank transfer to
-// Khan Bank (Batdelger) is the dominant payment, paid after delivery; products
-// affirmed as genuine/original. Rural delivery, same-day cutoff time, and bulk
-// discounts were inconsistent/rare — the agent must NOT invent those.
+// NOTE on policy vs history: the history shows the admin often took payment AFTER
+// delivery and a "+5" (5,000₮) fee, but going forward the shop's policy is
+// 6,000₮ delivery and payment BEFORE delivery — encoded below. Rural ("орон
+// нутаг") orders are shipped via inter-city transport ("унаанд тавьж явуулдаг").
 
 export const customerFaq = `
-ҮЙЛ АЖИЛЛАГААНЫ ТҮГЭЭМЭЛ АСУУЛТ (доорхыг ШУУД, товч хариул — багаж дуудах шаардлагагүй):
+ҮЙЛ АЖИЛЛАГААНЫ ТҮГЭЭМЭЛ АСУУЛТ (доорхыг ШУУД, товч хариул, дараа нь post_messenger_message-ээр илгээ — search/advice багаж бүү дууд):
 
-• Хэзээ хүргэх вэ? Улаанбаатар хотод ихэвчлэн МАРГААШ нь хүргэдэг. Тухайн өдрийн хүргэлт гараагүй байвал өнөөдөртөө хүрэх боломжтой.
-• Хүргэлтийн төлбөр хэд вэ? 5,000₮ (захиалгын дүн дээр нэмэгдэнэ). Хүргэлт үнэгүй биш.
-• Яаж төлөх вэ? Хаан банкны данс руу шилжүүлгээр төлдөг. Ихэвчлэн бараагаа хүлээн авсны дараа шилжүүлдэг; захиалга баталгаажсаны дараа дансны мэдээллийг илгээнэ.
+• Хэзээ хүргэх вэ? Хүргэлт өглөө 11 цагт явдаг. Тиймээс ихэнх захиалга МАРГААШИЙН 11 цагийн хүргэлтэд ордог (өнөөдрийн 11 цагийн хүргэлт гараагүй байвал өнөөдөртөө багтаж магадгүй).
+• Орон нутаг руу хүргэдэг үү? Тийм — орон нутаг руу унаанд тавьж явуулдаг. Хаашаа явуулахыг хэлэхэд тохирно.
+• Хүргэлтийн төлбөр хэд вэ? 6,000₮ (захиалгын дүн дээр нэмэгдэнэ). Хүргэлт үнэгүй биш.
+• Яаж төлөх вэ? Хаан банкны данс руу шилжүүлгээр. Төлбөрөө хүргэлтээс ӨМНӨ шилжүүлдэг — захиалга баталгаажсаны дараа дансны мэдээллийг илгээх тул түрүүлж төлнө, дараа нь хүргэнэ.
 • Бараа жинхэнэ үү / найдвартай юу? Тийм — бүх бараа жинхэнэ, баталгаатай (original) бараа.
 • Яаж уух вэ / тун хэд вэ? Бараа бүрийн шошгоны зааврын дагуу. Тодорхой бараагаар асуувал get_product_advice ашиглаж хариул.
 • Хадгалах хугацаа? Ихэвчлэн урт хугацаатай. Тодорхой огноог мэдэхгүй бол "шалгаад хэлье" гэж хариул.
 
-Мэдэхгүй зүйлийг таамаглаж болохгүй: тухайн өдрийн яг хүргэх цаг, орон нутаг (хот хооронд) хүргэлт, тусгай хямдрал/урамшуулал зэргийг асуувал — "шалгаад хэлье" гэж эелдэг хариул, бүү зохио.
+Мэдэхгүй зүйлийг таамаглаж болохгүй: орон нутгийн яг хүргэх хугацаа/нэмэлт төлбөр, тусгай хямдрал/урамшуулал зэргийг асуувал "шалгаад хэлье" гэж эелдэг хариул, бүү зохио.
 `;
