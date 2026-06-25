@@ -119,10 +119,11 @@ async function readReplies(sinceUnix: number): Promise<{ time: string; text: str
 	return out.sort((a, b) => a.time.localeCompare(b.time));
 }
 
-console.log("  … waiting for bot reply (Kimi ~10-30s)");
-const deadline = Date.now() + 50_000;
+console.log("  … waiting for bot reply (Kimi can take 30-60s for search/advice)");
+const deadline = Date.now() + 95_000;
 const seen = new Set<string>();
 let got = 0;
+let lastReplyAt = 0;
 while (Date.now() < deadline) {
 	await Bun.sleep(3000);
 	let replies: { time: string; text: string }[] = [];
@@ -137,9 +138,11 @@ while (Date.now() < deadline) {
 		if (seen.has(k)) continue;
 		seen.add(k);
 		got++;
+		lastReplyAt = Date.now();
 		console.log(`bot › ${r.text}`);
 	}
-	if (got > 0 && Date.now() > deadline - 35_000) break; // got something, brief grace then stop
+	// Once a reply lands, wait ~10s more for follow-up messages, then stop.
+	if (got > 0 && Date.now() - lastReplyAt > 10_000) break;
 }
-if (got === 0) console.log("  (no bot reply seen in time — check `wrangler tail`)");
+if (got === 0) console.log("  (no text reply seen in time — may be product cards only; check `wrangler tail`)");
 console.log("");
