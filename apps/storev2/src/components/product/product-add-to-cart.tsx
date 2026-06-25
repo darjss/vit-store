@@ -103,7 +103,8 @@ export default function ProductQuantitySelector(
 							<button
 								type="button"
 								onClick={decrement}
-								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
+								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
+								disabled={quantity() <= 1}
 							>
 								−
 							</button>
@@ -113,7 +114,7 @@ export default function ProductQuantitySelector(
 							<button
 								type="button"
 								onClick={increment}
-								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 sm:size-16 sm:text-3xl"
+								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
 							>
 								+
 							</button>

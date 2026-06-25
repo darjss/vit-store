@@ -73,7 +73,7 @@ export default function ProductImageCarousel(props: Props) {
 
 			{/* Thumbnail Navigation - Centered */}
 			<Show when={hasMultipleImages}>
-				<div class="scrollbar-hide flex justify-center gap-3 overflow-x-auto pb-4 sm:gap-4">
+				<div class="scrollbar-hide flex justify-start gap-3 overflow-x-auto pb-4 sm:justify-center sm:gap-4">
 					<For each={images}>
 						{(image, index) => {
 							const imageProps = getProductImageProps(image.url, "thumb");

@@ -33,7 +33,7 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 			size={props.compact ? "compact" : "default"}
 			onClick={handleAddToCart}
 			disabled={isAdded()}
-			aria-label={props.compact ? "Сагслах" : undefined}
+			aria-label="Сагслах"
 		>
 			<Show
 				when={isAdded()}

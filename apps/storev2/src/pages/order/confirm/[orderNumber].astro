@@ -25,12 +25,22 @@ import IconPhone from "~icons/ri/phone-line";
 import IconUser from "~icons/ri/user-line";
 
 const { orderNumber } = Astro.params;
+const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
 if(!orderNumber || orderNumber===undefined){
     throw Astro.redirect("/404");
 }
-const order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber });
+let order;
+try {
+    order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber, checkoutToken });
+} catch (err) {
+    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
+    if (code === "UNAUTHORIZED") {
+        throw Astro.redirect("/order-tracking");
+    }
+    throw err;
+}
 if(!order){
     throw Astro.redirect("/404");
 }
@@ -183,14 +193,14 @@ if(!order){
                 <p class="text-muted-foreground mb-6">Хэрэв таны захиалгатай холбоотой асуулт байвал бидэнтэй холбогдоорой.</p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
                     <a 
-                        href="tel:+97600000000"
+                        href="tel:+97699993950"
                         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
                     >
                         <IconPhone class="w-4 h-4" />
                         Утсаар залгах
                     </a>
                     <a 
-                        href="mailto:support@example.com"
+                        href="mailto:info@amerikvitamin.mn"
                         class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
                     >
                         <IconMail class="w-4 h-4" />
