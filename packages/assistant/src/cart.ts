@@ -295,5 +295,7 @@ export const cartQuickReplies = (cart: Cart): CartQuickReply[] => {
 			qr(`✖ ${item.name}`, buildCartRemovePayload(item.productId)),
 		);
 	}
-	return [...perItem, ...global];
+	// Confirm/clear FIRST so "✅ Баталгаажуулах" is the first visible chip — the
+	// per-item +/−/✖ controls would otherwise push it off-screen on mobile.
+	return [...global, ...perItem];
 };

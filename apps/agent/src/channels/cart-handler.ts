@@ -22,15 +22,25 @@ export type CartEvent =
 const payloadFromEvent = (
 	event: MessengerMessagingEvent,
 ): { payload: string; mid: string } | undefined => {
+	// Postbacks (the Захиалах card button) carry NO message id, so a mid-only
+	// dedup key is empty and Meta's webhook retries bypass dedup → the cart
+	// summary double-sends. Meta re-delivers the SAME payload + timestamp on a
+	// retry, so synthesize a stable id from them when there's no mid; two
+	// intentional taps have different timestamps and stay distinct.
+	const stableMid = (payload: string, mid?: string): string =>
+		mid && mid.length > 0 ? mid : `syn:${event.timestamp ?? 0}:${payload}`;
 	if (event.postback?.payload) {
 		return {
 			payload: event.postback.payload,
-			mid: event.postback.mid ?? "",
+			mid: stableMid(event.postback.payload, event.postback.mid),
 		};
 	}
 	const quickReply = event.message?.quick_reply?.payload;
 	if (quickReply) {
-		return { payload: quickReply, mid: event.message?.mid ?? "" };
+		return {
+			payload: quickReply,
+			mid: stableMid(quickReply, event.message?.mid),
+		};
 	}
 	return undefined;
 };

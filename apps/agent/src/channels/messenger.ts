@@ -375,7 +375,17 @@ async function tryHandlePaymentEvent(
 	if (conversation === undefined) return false;
 	const sessionId = channel.conversationKey(conversation);
 	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
-	const mid = event.postback?.mid ?? event.message?.mid ?? "";
+	// Postbacks carry no message id; synthesize a stable dedup id from the
+	// payload + timestamp so Meta's webhook retries don't re-run the transition.
+	const rawMid = event.postback?.mid ?? event.message?.mid;
+	const payPayload =
+		event.postback?.payload ?? event.message?.quick_reply?.payload;
+	const mid =
+		rawMid && rawMid.length > 0
+			? rawMid
+			: payPayload
+				? `syn:${event.timestamp ?? 0}:${payPayload}`
+				: "";
 	const deps = () => paymentDepsFor(conversation, checkout);
 
 	// 1. Button taps carry the payment ref in the payload — fully self-contained.
