@@ -12,6 +12,7 @@
 		"payment:proof": "bun cli/payment-proof.ts",
 		"mock:messenger-text": "bun scripts/mock-messenger-text.ts",
 		"mock:product-cards": "bun scripts/mock-product-cards.ts",
+		"probe": "bun cli/remote-probe.ts",
 		"dev:messenger": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts",
 		"smoke": "bun scripts/with-worker.ts -- bun cli/messenger-dev.ts --smoke",
 		"smoke:local": "bun scripts/with-worker.ts --local -- bun cli/messenger-dev.ts --smoke",
