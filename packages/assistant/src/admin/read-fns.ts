@@ -10,6 +10,23 @@ interface ResolvedProvider {
 	prelude?: string;
 }
 
+// tRPC + SuperJSON can return values with Date, Map, Set, or class instances
+// that the Codemode RPC boundary (structured clone) cannot serialize. This
+// wrapper JSON-round-trips every fn result so only JSON-safe values cross
+// the sandbox → host boundary.
+const jsonSafe =
+	<T extends (...args: unknown[]) => Promise<unknown>>(fn: T): T =>
+	(async (...args: unknown[]) =>
+		JSON.parse(JSON.stringify(await fn(...args)))) as T;
+
+// Wraps every fn in a provider to be JSON-safe before crossing the RPC boundary.
+const safeProvider = (provider: ResolvedProvider): ResolvedProvider => ({
+	...provider,
+	fns: Object.fromEntries(
+		Object.entries(provider.fns).map(([key, fn]) => [key, jsonSafe(fn)]),
+	),
+});
+
 // Builds the full fn registry for the Codemode sandbox, grouped by namespace.
 // Each fn is a thin wrapper over a typed tRPC client targeting the bot-facing
 // /trpc/bot endpoint, authed by the shared X-Admin-Bot-Token header.
@@ -39,7 +56,7 @@ export function buildReadFns({
 	});
 
 	return [
-		{
+		safeProvider({
 			name: "order",
 			fns: {
 				getPendingOrders: async () => botClient.order.getPendingOrders.query(),
@@ -57,8 +74,8 @@ export function buildReadFns({
 				deleteOrder: async (input: unknown) => botClient.order.deleteOrder.mutate(input as never),
 				restoreOrder: async (input: unknown) => botClient.order.restoreOrder.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "product",
 			fns: {
 				getAllProducts: async () => botClient.product.getAllProducts.query(),
@@ -75,8 +92,8 @@ export function buildReadFns({
 				updateProductField: async (input: unknown) => botClient.product.updateProductField.mutate(input as never),
 				deleteProduct: async (input: unknown) => botClient.product.deleteProduct.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "customer",
 			fns: {
 				getAllCustomers: async () => botClient.customer.getAllCustomers.query(),
@@ -87,8 +104,8 @@ export function buildReadFns({
 				updateCustomer: async (input: unknown) => botClient.customer.updateCustomer.mutate(input as never),
 				deleteCustomer: async (input: unknown) => botClient.customer.deleteCustomer.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "payment",
 			fns: {
 				getPayments: async (input: unknown) => botClient.payment.getPayments.query(input as never),
@@ -100,8 +117,8 @@ export function buildReadFns({
 				confirmTransferPayment: async (input: unknown) => botClient.payment.confirmTransferPayment.mutate(input as never),
 				rejectTransferPayment: async (input: unknown) => botClient.payment.rejectTransferPayment.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "sales",
 			fns: {
 				analytics: async () => botClient.sales.analytics.query(),
@@ -112,8 +129,8 @@ export function buildReadFns({
 				pendingOrders: async () => botClient.sales.pendingOrders.query(),
 				dashboard: async () => botClient.sales.dashboard.query(),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "analytics",
 			fns: {
 				getAverageOrderValue: async (input: unknown) => botClient.analytics.getAverageOrderValue.query(input as never),
@@ -135,8 +152,8 @@ export function buildReadFns({
 				getProductBehavior: async (input: unknown) => botClient.analytics.getProductBehavior.query(input as never),
 				getDailyVisitorTrend: async (input: unknown) => botClient.analytics.getDailyVisitorTrend.query(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "purchase",
 			fns: {
 				getAllPurchases: async () => botClient.purchase.getAllPurchases.query(),
@@ -152,8 +169,8 @@ export function buildReadFns({
 				markPurchaseShipped: async (input: unknown) => botClient.purchase.markPurchaseShipped.mutate(input as never),
 				markPurchaseForwarderReceived: async (input: unknown) => botClient.purchase.markPurchaseForwarderReceived.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "brand",
 			fns: {
 				getAllBrands: async () => botClient.brands.getAllBrands.query(),
@@ -161,8 +178,8 @@ export function buildReadFns({
 				updateBrand: async (input: unknown) => botClient.brands.updateBrand.mutate(input as never),
 				deleteBrand: async (input: unknown) => botClient.brands.deleteBrand.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "category",
 			fns: {
 				getAllCategories: async () => botClient.category.getAllCategories.query(),
@@ -171,16 +188,16 @@ export function buildReadFns({
 				updateCategory: async (input: unknown) => botClient.category.updateCategory.mutate(input as never),
 				deleteCategory: async (input: unknown) => botClient.category.deleteCategory.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "image",
 			fns: {
 				addImage: async (input: unknown) => botClient.image.addImage.mutate(input as never),
 				deleteImage: async (input: unknown) => botClient.image.deleteImage.mutate(input as never),
 				setPrimaryImage: async (input: unknown) => botClient.image.setPrimaryImage.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "productImage",
 			fns: {
 				getAllImages: async () => botClient.productImages.getAllImages.query(),
@@ -191,8 +208,8 @@ export function buildReadFns({
 				setPrimaryImage: async (input: unknown) => botClient.productImages.setPrimaryImage.mutate(input as never),
 				uploadImagesFromUrl: async (input: unknown) => botClient.productImages.uploadImagesFromUrl.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			// AI ingestion flows (#110). The primary chat path is the all-in-one
 			// `extractProduct` (scrape + translate + draft) and
 			// `extractPurchaseFromImageKeys` (invoice screenshots staged to R2 by
@@ -208,8 +225,8 @@ export function buildReadFns({
 				batchCreateProducts: async (input: unknown) => botClient.aiProduct.batchCreateProducts.mutate(input as never),
 				regenerateProductImages: async (input: unknown) => botClient.aiProduct.regenerateProductImages.mutate(input as never),
 			},
-		},
-		{
+		}),
+		safeProvider({
 			name: "aiPurchase",
 			fns: {
 				// Dashboard path: takes fetchable image urls. Prefer
@@ -221,6 +238,6 @@ export function buildReadFns({
 				extractPurchaseFromImageKeys: async (input: unknown) => botClient.aiPurchase.extractPurchaseFromImageKeys.mutate(input as never),
 				saveExtractedPurchase: async (input: unknown) => botClient.aiPurchase.saveExtractedPurchase.mutate(input as never),
 			},
-		},
+		}),
 	];
 }
