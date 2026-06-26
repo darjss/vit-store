@@ -11,8 +11,9 @@ type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 // A Flue tool that lets the admin agent write TypeScript which calls the
 // read-fns registry through Codemode's isolated Dynamic Worker sandbox. The
-// LLM writes `async () => { const orders = await codemode.getPendingOrders(); return orders; }`
-// and the executor runs it with the fns exposed as `codemode.*`.
+// LLM writes `async () => { const orders = await order.getPendingOrders(); return orders; }`
+// and the executor runs it with the fns exposed as namespaced providers
+// (order.*, product.*, customer.*, etc.).
 //
 // `loader` is the Worker Loader binding (env.LOADER) — required by
 // DynamicWorkerExecutor to spin up the sandbox Worker. Network access is fully
@@ -30,13 +31,13 @@ export function buildAdminQueryTool({
 	return defineTool({
 		name: "query",
 		description:
-			"Run TypeScript code that queries store data via codemode.* functions. Write an async arrow function that calls codemode.getPendingOrders() (and other read fns) and returns the result. The return value is shown to you as the tool result.",
+			"Run TypeScript code that queries and mutates store data via namespaced functions. Write an async arrow function that calls order.getPendingOrders(), product.getProductById({ id: 42 }), product.updateStock({ productId: 42, numberToUpdate: 10, type: 'add' }), etc. and returns the result. The return value is shown to you as the tool result.",
 		input: v.object({
 			code: v.pipe(
 				v.string(),
 				v.minLength(1),
 				v.description(
-					"TypeScript code: an async arrow function, e.g. `async () => { const orders = await codemode.getPendingOrders(); return orders; }`",
+					"TypeScript code: an async arrow function, e.g. `async () => { const orders = await order.getPendingOrders(); return orders; }`",
 				),
 			),
 		}),

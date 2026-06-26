@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
 import { rebuildProductSearchIndex } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 const scheduleProductSearchRebuild = (ctx: {
     c: {
         executionCtx: ExecutionContext;
@@ -19,8 +19,9 @@ const scheduleProductSearchRebuild = (ctx: {
         });
     }));
 };
-export const category = router({
-    getAllCategories: adminProcedure.query(async ({ ctx }) => {
+export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    getAllCategories: proc.query(async ({ ctx }) => {
         try {
             const categories = await categoryQueries.admin.getAllCategories();
             return categories;
@@ -36,7 +37,7 @@ export const category = router({
             });
         }
     }),
-    addCategory: adminProcedure
+    addCategory: proc
         .input(addCategorySchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -61,7 +62,7 @@ export const category = router({
             });
         }
     }),
-    updateCategory: adminProcedure
+    updateCategory: proc
         .input(addCategorySchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -92,7 +93,7 @@ export const category = router({
             });
         }
     }),
-    deleteCategory: adminProcedure
+    deleteCategory: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }))
@@ -115,7 +116,7 @@ export const category = router({
             });
         }
     }),
-    getCategoryById: adminProcedure
+    getCategoryById: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }))
@@ -143,3 +144,6 @@ export const category = router({
         }
     }),
 });
+}
+export const category = buildCategoryRouter(adminProcedure);
+export const categoryBot = buildCategoryRouter(botProcedure);

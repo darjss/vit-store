@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { adminProcedure, router } from "~/lib/trpc";
-export const productImages = router({
-    addImage: adminProcedure
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    addImage: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         url: v.pipe(v.string(), v.url()),
@@ -25,7 +26,7 @@ export const productImages = router({
             });
         }
     }),
-    uploadImagesFromUrl: adminProcedure
+    uploadImagesFromUrl: proc
         .input(v.object({
         images: v.array(v.object({
             productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -82,7 +83,7 @@ export const productImages = router({
             });
         }
     }),
-    updateImage: adminProcedure
+    updateImage: proc
         .input(v.object({
         newImages: v.array(v.object({
             url: v.pipe(v.string(), v.url()),
@@ -131,7 +132,7 @@ export const productImages = router({
             });
         }
     }),
-    getImagesByProductId: adminProcedure
+    getImagesByProductId: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }))
@@ -152,7 +153,7 @@ export const productImages = router({
             });
         }
     }),
-    deleteImage: adminProcedure
+    deleteImage: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }))
@@ -173,7 +174,7 @@ export const productImages = router({
             });
         }
     }),
-    setPrimaryImage: adminProcedure
+    setPrimaryImage: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -195,7 +196,7 @@ export const productImages = router({
             });
         }
     }),
-    getAllImages: adminProcedure.query(async ({ ctx }) => {
+    getAllImages: proc.query(async ({ ctx }) => {
         try {
             const images = await productImageQueries.admin.getAllImages();
             return images;
@@ -212,3 +213,6 @@ export const productImages = router({
         }
     }),
 });
+}
+export const productImages = buildProductImagesRouter(adminProcedure);
+export const productImagesBot = buildProductImagesRouter(botProcedure);

@@ -6,7 +6,7 @@ import * as v from "valibot";
 import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
 import { rebuildProductSearchIndex } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 const scheduleProductSearchRebuild = (ctx: {
     c: {
         executionCtx: ExecutionContext;
@@ -19,8 +19,9 @@ const scheduleProductSearchRebuild = (ctx: {
         });
     }));
 };
-export const brands = router({
-    getAllBrands: adminProcedure.query(async ({ ctx }) => {
+export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    getAllBrands: proc.query(async ({ ctx }) => {
         try {
             const brands = await brandQueries.admin.getAllBrands();
             ctx.log.info("getAllBrands", { count: brands.length });
@@ -37,7 +38,7 @@ export const brands = router({
             });
         }
     }),
-    addBrand: adminProcedure
+    addBrand: proc
         .input(addBrandSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -62,7 +63,7 @@ export const brands = router({
             });
         }
     }),
-    updateBrand: adminProcedure
+    updateBrand: proc
         .input(addBrandSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -93,7 +94,7 @@ export const brands = router({
             });
         }
     }),
-    deleteBrand: adminProcedure
+    deleteBrand: proc
         .input(v.object({ id: v.number() }))
         .mutation(async ({ ctx, input }) => {
         try {
@@ -113,3 +114,6 @@ export const brands = router({
         }
     }),
 });
+}
+export const brands = buildBrandsRouter(adminProcedure);
+export const brandsBot = buildBrandsRouter(botProcedure);

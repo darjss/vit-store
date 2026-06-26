@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
-import { adminProcedure, router } from "~/lib/trpc";
-export const image = router({
-    addImage: adminProcedure
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+export function buildImageRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    addImage: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         url: v.pipe(v.string(), v.url()),
@@ -25,7 +26,7 @@ export const image = router({
             });
         }
     }),
-    deleteImage: adminProcedure
+    deleteImage: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
     }))
@@ -46,7 +47,7 @@ export const image = router({
             });
         }
     }),
-    setPrimaryImage: adminProcedure
+    setPrimaryImage: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         imageId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -69,3 +70,6 @@ export const image = router({
         }
     }),
 });
+}
+export const image = buildImageRouter(adminProcedure);
+export const imageBot = buildImageRouter(botProcedure);

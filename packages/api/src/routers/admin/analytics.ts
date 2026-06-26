@@ -3,7 +3,7 @@ import { analyticsQueries, orderQueries, salesQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
 import { createPostHogClient } from "~/lib/integrations/posthog";
-import { adminCachedProcedure, adminProcedure, router } from "~/lib/trpc";
+import { adminCachedProcedure, adminProcedure, baseProcedure, botCachedProcedure, botProcedure, router } from "~/lib/trpc";
 /** Convert timeRange to days for PostHog queries */
 function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {
     switch (timeRange) {
@@ -15,8 +15,9 @@ function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {
             return 30;
     }
 }
-export const analytics = router({
-    getAverageOrderValue: adminCachedProcedure
+export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, cachedProc: P) {
+    return router({
+    getAverageOrderValue: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -36,7 +37,7 @@ export const analytics = router({
             });
         }
     }),
-    getTotalProfit: adminCachedProcedure
+    getTotalProfit: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -56,7 +57,7 @@ export const analytics = router({
             });
         }
     }),
-    getSalesByCategory: adminCachedProcedure
+    getSalesByCategory: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -76,7 +77,7 @@ export const analytics = router({
             });
         }
     }),
-    getCustomerLifetimeValue: adminCachedProcedure.query(async ({ ctx }) => {
+    getCustomerLifetimeValue: cachedProc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getCustomerLifetimeValue();
             return result;
@@ -92,7 +93,7 @@ export const analytics = router({
             });
         }
     }),
-    getRepeatCustomersCount: adminCachedProcedure
+    getRepeatCustomersCount: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -112,7 +113,7 @@ export const analytics = router({
             });
         }
     }),
-    getInventoryStatus: adminCachedProcedure.query(async ({ ctx }) => {
+    getInventoryStatus: cachedProc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getInventoryStatus();
             return result;
@@ -128,7 +129,7 @@ export const analytics = router({
             });
         }
     }),
-    getFailedPayments: adminCachedProcedure
+    getFailedPayments: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -148,7 +149,7 @@ export const analytics = router({
             });
         }
     }),
-    getLowInventoryProducts: adminCachedProcedure.query(async ({ ctx }) => {
+    getLowInventoryProducts: cachedProc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getLowInventoryProducts();
             return result;
@@ -164,7 +165,7 @@ export const analytics = router({
             });
         }
     }),
-    getTopBrandsBySales: adminCachedProcedure
+    getTopBrandsBySales: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -184,7 +185,7 @@ export const analytics = router({
             });
         }
     }),
-    getCurrentProductsValue: adminCachedProcedure.query(async ({ ctx }) => {
+    getCurrentProductsValue: cachedProc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getCurrentProductsValue();
             return result;
@@ -200,7 +201,7 @@ export const analytics = router({
             });
         }
     }),
-    getAnalyticsData: adminCachedProcedure
+    getAnalyticsData: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -220,7 +221,7 @@ export const analytics = router({
             });
         }
     }),
-    getHomePageData: adminCachedProcedure
+    getHomePageData: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -251,7 +252,7 @@ export const analytics = router({
     /**
      * Web analytics overview: visitors, pageviews, funnel counts, and comparison with previous period.
      */
-    getWebAnalytics: adminProcedure
+    getWebAnalytics: proc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -309,7 +310,7 @@ export const analytics = router({
     /**
      * Conversion funnel: unique users at each step.
      */
-    getConversionFunnel: adminProcedure
+    getConversionFunnel: proc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -336,7 +337,7 @@ export const analytics = router({
     /**
      * Top search queries with result counts and no-result searches.
      */
-    getTopSearches: adminProcedure
+    getTopSearches: proc
         .input(v.object({
         timeRange: timeRangeSchema,
         limit: v.optional(v.number(), 20),
@@ -357,7 +358,7 @@ export const analytics = router({
     /**
      * Most viewed products from PostHog events.
      */
-    getMostViewedProducts: adminProcedure
+    getMostViewedProducts: proc
         .input(v.object({
         timeRange: timeRangeSchema,
         limit: v.optional(v.number(), 20),
@@ -378,7 +379,7 @@ export const analytics = router({
     /**
      * Per-product behavior analytics (views, add-to-cart, daily trend).
      */
-    getProductBehavior: adminProcedure
+    getProductBehavior: proc
         .input(v.object({
         productId: v.number(),
         timeRange: timeRangeSchema,
@@ -405,7 +406,7 @@ export const analytics = router({
     /**
      * Daily visitor trend for chart display.
      */
-    getDailyVisitorTrend: adminProcedure
+    getDailyVisitorTrend: proc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -423,3 +424,6 @@ export const analytics = router({
         }
     }),
 });
+}
+export const analytics = buildAnalyticsRouter(adminProcedure, adminCachedProcedure);
+export const analyticsBot = buildAnalyticsRouter(botProcedure, botCachedProcedure);
