@@ -3,9 +3,10 @@ import { purchaseQueries } from "@vit/api/queries";
 import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "@vit/shared/schema";
 import * as v from "valibot";
 import { db } from "~/db/client";
-import { adminProcedure, router } from "~/lib/trpc";
-export const purchase = router({
-    addPurchase: adminProcedure
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    addPurchase: proc
         .input(addPurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -28,7 +29,7 @@ export const purchase = router({
             });
         }
     }),
-    getAllPurchases: adminProcedure.query(async ({ ctx }) => {
+    getAllPurchases: proc.query(async ({ ctx }) => {
         try {
             return await purchaseQueries.admin.getAllPurchases();
         }
@@ -43,7 +44,7 @@ export const purchase = router({
             });
         }
     }),
-    getPurchaseById: adminProcedure
+    getPurchaseById: proc
         .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
         .query(async ({ ctx, input }) => {
         try {
@@ -60,7 +61,7 @@ export const purchase = router({
             });
         }
     }),
-    getPaginatedPurchases: adminProcedure
+    getPaginatedPurchases: proc
         .input(listPurchasesSchema)
         .query(async ({ ctx, input }) => {
         try {
@@ -77,7 +78,7 @@ export const purchase = router({
             });
         }
     }),
-    searchPurchases: adminProcedure
+    searchPurchases: proc
         .input(v.object({ query: v.string() }))
         .query(async ({ ctx, input }) => {
         try {
@@ -94,7 +95,7 @@ export const purchase = router({
             });
         }
     }),
-    updatePurchase: adminProcedure
+    updatePurchase: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
         data: addPurchaseSchema,
@@ -119,7 +120,7 @@ export const purchase = router({
             });
         }
     }),
-    receivePurchase: adminProcedure
+    receivePurchase: proc
         .input(receivePurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -139,7 +140,7 @@ export const purchase = router({
             });
         }
     }),
-    deletePurchase: adminProcedure
+    deletePurchase: proc
         .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
         .mutation(async ({ ctx, input }) => {
         try {
@@ -161,7 +162,7 @@ export const purchase = router({
             });
         }
     }),
-    cancelPurchase: adminProcedure
+    cancelPurchase: proc
         .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
         .mutation(async ({ ctx, input }) => {
         try {
@@ -183,7 +184,7 @@ export const purchase = router({
             });
         }
     }),
-    markPurchaseShipped: adminProcedure
+    markPurchaseShipped: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
         shippedAt: v.date(),
@@ -206,7 +207,7 @@ export const purchase = router({
             });
         }
     }),
-    markPurchaseForwarderReceived: adminProcedure
+    markPurchaseForwarderReceived: proc
         .input(v.object({
         id: v.pipe(v.number(), v.integer(), v.minValue(1)),
         forwarderReceivedAt: v.date(),
@@ -229,7 +230,7 @@ export const purchase = router({
             });
         }
     }),
-    getAverageCostOfProduct: adminProcedure
+    getAverageCostOfProduct: proc
         .input(v.object({
         productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         createdAt: v.date(),
@@ -246,3 +247,6 @@ export const purchase = router({
         }
     }),
 });
+}
+export const purchase = buildPurchaseRouter(adminProcedure);
+export const purchaseBot = buildPurchaseRouter(botProcedure);

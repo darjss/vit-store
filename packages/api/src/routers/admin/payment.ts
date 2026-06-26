@@ -4,11 +4,12 @@ import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generatePaymentNumber } from "~/lib/utils";
 
-export const payment = router({
-    createPayment: adminProcedure
+export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    createPayment: proc
         .input(v.object({
         orderId: v.pipe(v.number(), v.integer(), v.minValue(1)),
         status: v.picklist(paymentStatus),
@@ -37,7 +38,7 @@ export const payment = router({
             });
         }
     }),
-    getPayments: adminProcedure.query(async ({ ctx }) => {
+    getPayments: proc.query(async ({ ctx }) => {
         try {
             const result = await paymentQueries.admin.getPayments();
             return result;
@@ -53,7 +54,7 @@ export const payment = router({
             });
         }
     }),
-    getPendingPayments: adminProcedure.query(async ({ ctx }) => {
+    getPendingPayments: proc.query(async ({ ctx }) => {
         try {
             const result = await paymentQueries.admin.getPendingPayments();
             return result;
@@ -69,7 +70,7 @@ export const payment = router({
             });
         }
     }),
-    getPendingMessengerNotifications: adminProcedure.query(async ({ ctx }) => {
+    getPendingMessengerNotifications: proc.query(async ({ ctx }) => {
         try {
             return await paymentQueries.admin.getPendingMessengerNotifications();
         }
@@ -84,7 +85,7 @@ export const payment = router({
             });
         }
     }),
-    getClaimedTransferCount: adminProcedure.query(async ({ ctx }) => {
+    getClaimedTransferCount: proc.query(async ({ ctx }) => {
         try {
             return await paymentQueries.admin.getClaimedTransferCount();
         }
@@ -99,7 +100,7 @@ export const payment = router({
             });
         }
     }),
-    getClaimedTransferPayments: adminProcedure.query(async ({ ctx }) => {
+    getClaimedTransferPayments: proc.query(async ({ ctx }) => {
         try {
             return await paymentQueries.admin.getClaimedTransferPayments();
         }
@@ -114,7 +115,7 @@ export const payment = router({
             });
         }
     }),
-    confirmTransferPayment: adminProcedure
+    confirmTransferPayment: proc
         .input(v.object({ paymentNumber: v.string() }))
         .mutation(async ({ ctx, input }) => {
             try {
@@ -186,7 +187,7 @@ export const payment = router({
                 });
             }
         }),
-    rejectTransferPayment: adminProcedure
+    rejectTransferPayment: proc
         .input(v.object({ paymentNumber: v.string() }))
         .mutation(async ({ ctx, input }) => {
             try {
@@ -208,3 +209,6 @@ export const payment = router({
             }
         }),
 });
+}
+export const payment = buildPaymentRouter(adminProcedure);
+export const paymentBot = buildPaymentRouter(botProcedure);

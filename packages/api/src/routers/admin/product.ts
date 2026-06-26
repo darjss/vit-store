@@ -7,7 +7,7 @@ import * as v from "valibot";
 import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
 import { rebuildProductSearchIndex, searchProducts, } from "~/lib/product-search/client";
 import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 const normalizeExpirationDate = (value?: string | null) => {
     if (!value)
         return null;
@@ -37,8 +37,9 @@ const scheduleProductSearchRebuild = (ctx: {
         });
     }));
 };
-export const product = router({
-    searchProductByName: adminProcedure
+export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    searchProductByName: proc
         .input(v.object({ searchTerm: v.string() }))
         .query(async ({ ctx, input }) => {
         try {
@@ -56,7 +57,7 @@ export const product = router({
             });
         }
     }),
-    searchProductByNameForOrder: adminProcedure
+    searchProductByNameForOrder: proc
         .input(v.object({ searchTerm: v.string() }))
         .query(async ({ ctx, input }) => {
         try {
@@ -74,7 +75,7 @@ export const product = router({
             });
         }
     }),
-    searchProductsInstant: adminProcedure
+    searchProductsInstant: proc
         .input(v.object({
         query: v.pipe(v.string(), v.minLength(1)),
         limit: v.optional(v.number(), 10),
@@ -114,7 +115,7 @@ export const product = router({
             });
         }
     }),
-    addProduct: adminProcedure
+    addProduct: proc
         .input(addProductSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -196,7 +197,7 @@ export const product = router({
             });
         }
     }),
-    getProductBenchmark: adminProcedure.query(async ({ ctx }) => {
+    getProductBenchmark: proc.query(async ({ ctx }) => {
         try {
             const startTime = performance.now();
             await productQueries.admin.getProductBenchmark();
@@ -213,7 +214,7 @@ export const product = router({
             });
         }
     }),
-    getProductById: adminProcedure
+    getProductById: proc
         .input(v.object({ id: v.number() }))
         .query(async ({ ctx, input }) => {
         try {
@@ -238,7 +239,7 @@ export const product = router({
             });
         }
     }),
-    updateProduct: adminProcedure
+    updateProduct: proc
         .input(updateProductSchema)
         .mutation(async ({ ctx, input }) => {
         try {
@@ -317,7 +318,7 @@ export const product = router({
             });
         }
     }),
-    updateStock: adminProcedure
+    updateStock: proc
         .input(v.object({
         productId: v.number(),
         numberToUpdate: v.number(),
@@ -348,7 +349,7 @@ export const product = router({
             });
         }
     }),
-    deleteProduct: adminProcedure
+    deleteProduct: proc
         .input(v.object({ id: v.number() }))
         .mutation(async ({ ctx, input }) => {
         try {
@@ -375,7 +376,7 @@ export const product = router({
             });
         }
     }),
-    getAllProducts: adminProcedure.query(async ({ ctx }) => {
+    getAllProducts: proc.query(async ({ ctx }) => {
         try {
             const products = await productQueries.admin.getAllProducts();
             return products;
@@ -391,7 +392,7 @@ export const product = router({
             });
         }
     }),
-    getPaginatedProducts: adminProcedure
+    getPaginatedProducts: proc
         .input(v.object({
         page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
         pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
@@ -426,7 +427,7 @@ export const product = router({
             });
         }
     }),
-    setProductStock: adminProcedure
+    setProductStock: proc
         .input(v.object({ id: v.number(), newStock: v.number() }))
         .mutation(async ({ ctx, input }) => {
         try {
@@ -445,7 +446,7 @@ export const product = router({
             });
         }
     }),
-    getAllProductValue: adminProcedure.query(async ({ ctx }) => {
+    getAllProductValue: proc.query(async ({ ctx }) => {
         try {
             const result = await productQueries.admin.getAllProductValue();
             return result;
@@ -461,7 +462,7 @@ export const product = router({
             });
         }
     }),
-    getReviewProducts: adminProcedure.query(async ({ ctx }) => {
+    getReviewProducts: proc.query(async ({ ctx }) => {
         try {
             return await productQueries.admin.getReviewProducts();
         }
@@ -476,7 +477,7 @@ export const product = router({
             });
         }
     }),
-    updateProductField: adminProcedure
+    updateProductField: proc
         .input(v.object({
         id: v.number(),
         field: v.picklist(productFields),
@@ -504,3 +505,6 @@ export const product = router({
         }
     }),
 });
+}
+export const product = buildProductRouter(adminProcedure);
+export const productBot = buildProductRouter(botProcedure);
