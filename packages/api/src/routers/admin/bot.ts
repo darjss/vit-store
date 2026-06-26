@@ -1,4 +1,6 @@
 import { router } from "~/lib/trpc";
+import { aiProductBot } from "~/routers/admin/ai-product";
+import { aiPurchaseBot } from "~/routers/admin/ai-purchase";
 import { analyticsBot } from "~/routers/admin/analytics";
 import { brandsBot } from "~/routers/admin/brands";
 import { categoryBot } from "~/routers/admin/category";
@@ -14,9 +16,14 @@ import { salesBot } from "~/routers/admin/sales";
 // Bot-facing router: token-authed (X-Admin-Bot-Token) surface for the admin
 // Messenger agent Worker. Same resolvers as the admin dashboard router, just a
 // different auth gate. Excludes the auth router (admin users/sessions are
-// dashboard-only). Also excludes aiProduct and aiPurchase (heavy AI ingestion
-// flows — issue #110).
+// dashboard-only). AI ingestion flows (aiProduct, aiPurchase) are exposed to
+// the bot so the admin agent can extract products from URLs/names and import
+// purchases from invoice screenshots (#110). aiPurchase also exposes a
+// chat-only `extractPurchaseFromImageKeys` that resolves R2-staged inbound
+// image keys server-side.
 export const botRouter = router({
+	aiProduct: aiProductBot,
+	aiPurchase: aiPurchaseBot,
 	analytics: analyticsBot,
 	brands: brandsBot,
 	category: categoryBot,

@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { brandQueries, categoryQueries, purchaseQueries } from "@vit/api/queries";
+import { purchaseProvider } from "@vit/shared";
 import {
 	type addPurchaseType,
 	extractPurchaseFromImagesSchema,
@@ -9,9 +10,11 @@ import {
 } from "@vit/shared/schema";
 import { generateText, Output } from "ai";
 import { and, eq, isNull } from "drizzle-orm";
+import * as v from "valibot";
 import { z } from "zod";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
+import type { Context } from "~/lib/context";
 import { parseLlmOutput } from "~/lib/ai/llm-output";
 import {
 	normalizeText,
@@ -20,7 +23,7 @@ import {
 } from "~/lib/ai/product-match";
 import { createSlug } from "~/lib/ai-product/brand-resolve";
 import { DEFAULT_BRAND_LOGO_URL } from "~/lib/ai-product/constants";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { opencode } from "~/lib/opencode-provider";
 
 const invoiceExtractionSchema = z.object({
@@ -317,72 +320,169 @@ async function createProductFromDraft(
 	return productId;
 }
 
-export const aiPurchase = router({
-	extractPurchaseFromImages: adminProcedure
-		.input(extractPurchaseFromImagesSchema)
+// Resolve R2 object keys (staged by the Messenger webhook under
+// messenger-inbound/) into data: URLs the vision model can ingest. The chat
+// path receives R2 keys, not fetchable CDN urls — the dashboard path passes
+// real urls. Server-side resolution keeps the agent sandbox network-isolated.
+async function resolveR2ImageKeysToUrls(
+	ctx: Context,
+	keys: string[],
+): Promise<{ url: string }[]> {
+	const out: { url: string }[] = [];
+	for (const key of keys) {
+		try {
+			const object = await ctx.r2.get(key);
+			if (object === null) continue;
+			const bytes = new Uint8Array(await object.arrayBuffer());
+			const contentType =
+				object.httpMetadata?.contentType?.startsWith("image/")
+					? object.httpMetadata.contentType
+					: "image/jpeg";
+			out.push({ url: `data:${contentType};base64,${bytesToBase64(bytes)}` });
+		} catch (error) {
+			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+				event: "aiPurchase.resolveR2ImageKeysToUrls",
+				key,
+			});
+		}
+	}
+	return out;
+}
+
+// Chunked base64 encoder: String.fromCharCode(...bytes) stack-overflows on
+// large screenshots, so encode in 32KB slices.
+function bytesToBase64(bytes: Uint8Array): string {
+	let binary = "";
+	const chunk = 0x8000;
+	for (let i = 0; i < bytes.length; i += chunk) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+	}
+	return btoa(binary);
+}
+
+function commonPurchaseProcedures<P extends typeof baseProcedure>(proc: P) {
+	return {
+		extractPurchaseFromImages: proc
+			.input(extractPurchaseFromImagesSchema)
+			.mutation(async ({ ctx, input }) => {
+				try {
+					const [brands, categories] = await Promise.all([
+						brandQueries.admin.getAllBrands(),
+						categoryQueries.admin.getAllCategories(),
+					]);
+					return await inferInvoiceData(input, brands, categories);
+				} catch (error) {
+					ctx.log.error(
+						error instanceof Error ? error : new Error(String(error)),
+						{ event: "aiPurchase.extractPurchaseFromImages" },
+					);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to extract purchase invoice",
+						cause: error,
+					});
+				}
+			}),
+
+		saveExtractedPurchase: proc
+			.input(saveExtractedPurchaseSchema)
+			.mutation(async ({ ctx, input }) => {
+				try {
+					return await db().transaction(async (tx) => {
+						const resolvedItems: addPurchaseType["items"] = [];
+						for (const item of input.items) {
+							const productId = await createProductFromDraft(tx, item);
+							resolvedItems.push({
+								productId,
+								quantityOrdered: item.quantity,
+								unitCost: item.unitPrice,
+							});
+						}
+
+						const created = await purchaseQueries.admin.createPurchase(tx, {
+							provider: input.provider,
+							externalOrderNumber: input.externalOrderNumber,
+							trackingNumber: input.trackingNumber ?? null,
+							shippingCost: input.shippingCost,
+							notes: input.notes ?? null,
+							orderedAt: input.orderedAt ?? null,
+							shippedAt: input.shippedAt ?? null,
+							forwarderReceivedAt: input.forwarderReceivedAt ?? null,
+							receivedAt: null,
+							cancelledAt: null,
+							items: resolvedItems,
+						});
+
+						return {
+							id: created.id,
+							message: "Purchase imported successfully",
+						};
+					});
+				} catch (error) {
+					ctx.log.error(
+						error instanceof Error ? error : new Error(String(error)),
+						{ event: "aiPurchase.saveExtractedPurchase" },
+					);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message:
+							error instanceof Error
+								? error.message
+								: "Failed to save extracted purchase",
+						cause: error,
+					});
+				}
+			}),
+	};
+}
+
+export function buildAiPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
+	return router(commonPurchaseProcedures(proc));
+}
+
+export const aiPurchase = buildAiPurchaseRouter(adminProcedure);
+
+// Bot variant: the two common procedures plus a chat-only
+// `extractPurchaseFromImageKeys` that resolves R2-staged inbound image keys
+// server-side. The dashboard path keeps using `extractPurchaseFromImages`
+// with real urls; the chat path receives R2 keys from the webhook staging.
+export const aiPurchaseBot = router({
+	...commonPurchaseProcedures(botProcedure),
+	extractPurchaseFromImageKeys: botProcedure
+		.input(
+			v.object({
+				provider: v.picklist(purchaseProvider),
+				imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const images = await resolveR2ImageKeysToUrls(ctx, input.imageKeys);
+				if (images.length === 0) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message:
+							"No staged images could be resolved from the provided keys. They may have expired.",
+					});
+				}
 				const [brands, categories] = await Promise.all([
 					brandQueries.admin.getAllBrands(),
 					categoryQueries.admin.getAllCategories(),
 				]);
-				return await inferInvoiceData(input, brands, categories);
+				return await inferInvoiceData(
+					{ provider: input.provider, images },
+					brands,
+					categories,
+				);
 			} catch (error) {
-				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-					event: "aiPurchase.extractPurchaseFromImages",
-				});
+				if (error instanceof TRPCError) throw error;
+				ctx.log.error(
+					error instanceof Error ? error : new Error(String(error)),
+					{ event: "aiPurchase.extractPurchaseFromImageKeys" },
+				);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to extract purchase invoice",
-					cause: error,
-				});
-			}
-		}),
-
-	saveExtractedPurchase: adminProcedure
-		.input(saveExtractedPurchaseSchema)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				return await db().transaction(async (tx) => {
-					const resolvedItems: addPurchaseType["items"] = [];
-					for (const item of input.items) {
-						const productId = await createProductFromDraft(tx, item);
-						resolvedItems.push({
-							productId,
-							quantityOrdered: item.quantity,
-							unitCost: item.unitPrice,
-						});
-					}
-
-					const created = await purchaseQueries.admin.createPurchase(tx, {
-						provider: input.provider,
-						externalOrderNumber: input.externalOrderNumber,
-						trackingNumber: input.trackingNumber ?? null,
-						shippingCost: input.shippingCost,
-						notes: input.notes ?? null,
-						orderedAt: input.orderedAt ?? null,
-						shippedAt: input.shippedAt ?? null,
-						forwarderReceivedAt: input.forwarderReceivedAt ?? null,
-						receivedAt: null,
-						cancelledAt: null,
-						items: resolvedItems,
-					});
-
-					return {
-						id: created.id,
-						message: "Purchase imported successfully",
-					};
-				});
-			} catch (error) {
-				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-					event: "aiPurchase.saveExtractedPurchase",
-				});
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message:
-						error instanceof Error
-							? error.message
-							: "Failed to save extracted purchase",
+					message: "Failed to extract purchase invoice from images",
 					cause: error,
 				});
 			}
