@@ -129,7 +129,7 @@ const ProductCard = (props: ProductCardProps) => {
 			</div>
 
 			{/* Price & CTA Bar */}
-			<div class="flex items-center justify-between gap-1.5 border-border border-t-2 bg-primary/10 px-2 py-2 sm:gap-2 sm:border-t-3 sm:px-3 sm:py-2.5">
+			<div class="flex items-center justify-between gap-2 border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t-3 sm:px-4 sm:py-3">
 				<div class="font-black text-sm tracking-tight sm:text-lg">
 					{formatCurrency(product().price)}
 				</div>

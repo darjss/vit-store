@@ -18,6 +18,7 @@ function SubmitButton(props: {
 	disabled?: boolean;
 	type?: ComponentProps<typeof Button>["type"];
 	size?: ComponentProps<typeof Button>["size"];
+	class?: string;
 }) {
 	const form = useFormContext();
 	return (
@@ -32,6 +33,7 @@ function SubmitButton(props: {
 					type={props.type || "submit"}
 					disabled={props.disabled || !state().canSubmit}
 					size={props.size}
+					class={props.class}
 				>
 					{state().isSubmitting ? "..." : props.children || "Submit"}
 				</Button>

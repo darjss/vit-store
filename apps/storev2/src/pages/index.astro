@@ -49,17 +49,17 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   <!-- 99% mobile traffic. Every section designed for thumb-scrolling first. -->
 
   <!-- ==================== HERO ==================== -->
-  <section class="border-b-2 border-border">
+  <section class="border-b-2 border-border bg-dots-subtle">
     <!-- Mobile: stacked. Desktop: split -->
     <div class="grid lg:grid-cols-2">
       <!-- Text -->
-      <div class="px-5 pt-8 pb-6 lg:px-14 lg:py-28 lg:border-r-2 border-border flex flex-col justify-center">
-        <span class="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground mb-3">amerikvitamin.mn</span>
-        <h1 class="text-h1 font-black uppercase tracking-tighter mb-4">
+      <div class="px-5 pt-8 pb-6 lg:px-14 lg:py-28 lg:border-r-2 border-border flex flex-col justify-center min-w-0 overflow-hidden">
+        <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">amerikvitamin.mn</span>
+        <h1 class="text-[26px] leading-[1.05] sm:text-h1 font-black uppercase tracking-tighter mb-4 break-words">
           Өргөн сонголттой<br/>
           <span class="text-primary">витамин, боломжийн үнээр.</span>
         </h1>
-        <p class="text-[13px] md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md">
+        <p class="text-[13px] md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
           Өдөр тутам авдаг витамин, нэмэлт тэжээлийг нэг дороос. Үнэ нь боломжийн, сонголт нь өргөн, хүргэлт нь шуурхай.
         </p>
 
@@ -112,7 +112,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== BRAND MARQUEE ==================== -->
-  <section class="border-b-2 border-border bg-muted overflow-hidden">
+  <section class="border-b-2 border-border bg-muted bg-stripes-diagonal overflow-hidden">
     <div class="group/marquee">
       <div class="py-3 lg:py-3.5 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 35s linear infinite;">
         {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
@@ -126,7 +126,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== CATEGORIES — Swipeable pills ==================== -->
-  <section class="border-b-2 border-border">
+  <section class="border-b-2 border-border bg-dots-subtle">
     <div class="px-5 py-3.5 lg:px-8">
       <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
         {categoriesForPills.map((cat) => (
@@ -139,7 +139,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== FEATURED ==================== -->
-  <section id="featured-products" class="border-b-2 border-border scroll-mt-20">
+  <section id="featured-products" class="border-b-2 border-border bg-grid-subtle scroll-mt-20">
     <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
       <!-- Section header -->
       <div class="mb-6">
@@ -159,7 +159,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== WHY US — Horizontal scroll cards on mobile ==================== -->
-  <section class="border-b-2 border-border bg-muted/20">
+  <section class="border-b-2 border-border bg-muted/20 bg-stripes-diagonal">
     <div class="px-5 py-8 lg:px-8 lg:py-14">
       <h2 class="text-h3 font-black uppercase tracking-tight mb-1">Яагаад манайх гэж</h2>
       <p class="text-[12px] text-muted-foreground font-medium mb-5">Хэрэгтэйгээ төвөггүй олохын тулд</p>
@@ -182,7 +182,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== NEW ARRIVALS — Swipeable row ==================== -->
-  <section class="border-b-2 border-border">
+  <section class="border-b-2 border-border bg-dots-subtle">
     <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
       <div class="flex items-center justify-between mb-1">
         <h2 class="text-h2 font-black uppercase tracking-tight">Шинэ ирсэн</h2>
@@ -199,7 +199,7 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
   </section>
 
   <!-- ==================== TRUST & CERTIFICATIONS ==================== -->
-  <section class="border-b-2 border-border bg-muted/30">
+  <section class="border-b-2 border-border bg-muted/30 bg-grid-subtle">
     <div class="px-5 py-8 lg:px-8 lg:py-12">
       <div class="text-center mb-6">
         <h2 class="text-h3 font-black uppercase tracking-tight">Баталгаат чанар</h2>

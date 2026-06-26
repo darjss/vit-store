@@ -67,6 +67,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const [step, setStep] = createSignal<Step>("delivery");
 	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
 	const [summaryOpen, setSummaryOpen] = createSignal(false);
+	let checkoutFormEl: HTMLFormElement | undefined;
 
 	const addressZonesQuery = useQuery(
 		() => ({
@@ -174,7 +175,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+					v.minLength(15, "Бүх хаягаа бичнэ үү"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -187,7 +188,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Хаяг хамгийн багадаа 15 тэмдэгт байх ёстой"),
+					v.minLength(15, "Бүх хаягаа бичнэ үү"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -218,7 +219,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const isHydrated = () => cart.isHydrated();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
 	const OrderSummary = () => (
-		<div class="border-4 border-border bg-card shadow-hard-lg">
+		<div class="border-4 border-border shadow-hard-lg">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
@@ -321,9 +322,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</Match>
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
-					<div class="min-h-screen bg-background pb-24 md:pb-0">
+					<div class="min-h-screen pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b-4 bg-background">
+						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/90 backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
 									<h1 class="font-black text-lg uppercase tracking-tight">
@@ -368,7 +369,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<Switch>
 									{/* DELIVERY STEP */}
 									<Match when={step() === "delivery"}>
-										<div class="border-4 border-border bg-card shadow-hard-lg">
+										<div class="border-4 border-border shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
@@ -387,14 +388,24 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 											<div class="p-3">
 												<form
+													ref={(el) => (checkoutFormEl = el)}
 													class="space-y-4"
-													onSubmit={(e) => {
+													onSubmit={async (e) => {
 														e.preventDefault();
 														e.stopPropagation();
 														if (document.activeElement instanceof HTMLElement) {
 															document.activeElement.blur();
 														}
-														form.handleSubmit();
+														await form.handleSubmit();
+														// Focus the first invalid field so the user can fix it.
+														// setTimeout (macrotask) lets Solid flush the aria-invalid
+														// attributes before we query them.
+														setTimeout(() => {
+															const invalid = checkoutFormEl?.querySelector<HTMLElement>(
+																'[aria-invalid="true"]',
+															);
+															invalid?.focus();
+														}, 0);
 													}}
 												>
 													{/* Phone */}
@@ -406,6 +417,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																	label="Утасны дугаар"
 																	placeholder="88889999"
 																	type="tel"
+																	autoComplete="tel"
+																	inputMode="numeric"
 																/>
 															)}
 														/>
@@ -443,6 +456,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																<field.FormTextArea
 																	label="Хаяг"
 																	placeholder="Байр, тоот, давхар"
+																	autoComplete="street-address"
 																/>
 															)}
 														/>
@@ -507,7 +521,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 														<form.AppForm>
 															<div class="w-full">
-																<form.SubmitButton size="lg">
+																<form.SubmitButton size="lg" class="w-full" disabled={mutation.isPending}>
 																	{mutation.isPending
 																		? "Уншиж байна..."
 																		: "Төлбөр төлөх →"}
@@ -526,7 +540,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									{/* PAYMENT STEP */}
 									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-4 border-border bg-card shadow-hard-lg">
+										<div class="border-4 border-border shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
