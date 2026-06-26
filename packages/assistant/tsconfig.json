@@ -2,7 +2,13 @@
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
 		"composite": true,
-		"outDir": "dist"
+		"outDir": "dist",
+		"paths": {
+			"@vit/shared": ["../../packages/shared/dist/index.js"],
+			"@vit/shared/*": ["../../packages/shared/dist/*"],
+			"@vit/api": ["../../packages/api/dist/index.d.ts"],
+			"@vit/api/*": ["../../packages/api/dist/*"]
+		}
 	},
 	"include": ["src/**/*.ts"]
 }
