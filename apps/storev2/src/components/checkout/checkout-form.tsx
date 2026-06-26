@@ -507,7 +507,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 														<form.AppForm>
 															<div class="w-full">
-																<form.SubmitButton size="lg">
+																<form.SubmitButton size="lg" class="w-full">
 																	{mutation.isPending
 																		? "Уншиж байна..."
 																		: "Төлбөр төлөх →"}

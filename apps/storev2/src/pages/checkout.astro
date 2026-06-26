@@ -6,7 +6,14 @@ import { createServerClient } from "@/lib/trpc";
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
-const user = await serverApi.auth.check.query();
+let user = null;
+try {
+	user = await serverApi.auth.check.query();
+} catch {
+	// Not logged in or session expired — render checkout with null user
+	// so the client-side form can redirect to /login
+	user = null;
+}
 
 const title = "Захиалга";
 const description = "Захиалгаа баталгаажуулж, төлбөрөө хийгээрэй.";
