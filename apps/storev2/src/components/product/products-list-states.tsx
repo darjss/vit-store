@@ -13,7 +13,7 @@ const ProductCardSkeleton = () => (
 			<div class="h-3 w-full rounded bg-muted sm:h-3.5 lg:h-4" />
 			<div class="h-3 w-3/4 rounded bg-muted sm:h-3.5 lg:h-4" />
 		</div>
-		<div class="flex items-center justify-between border-border border-t-2 bg-primary/10 px-2 py-1.5 sm:border-t-3 sm:px-2.5 sm:py-2 lg:px-3 lg:py-2.5">
+		<div class="flex items-center justify-between border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:border-t-3 sm:px-4 sm:py-3">
 			<div class="h-3.5 w-14 rounded bg-muted sm:h-4 sm:w-16 lg:h-5 lg:w-20" />
 			<div class="h-7 w-9 border-2 border-border bg-muted shadow-hard-sm sm:h-8 sm:w-11 lg:h-9 lg:w-14" />
 		</div>

@@ -359,4 +359,61 @@
         background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
         background-size: 20px 20px;
     }
+
+    /* Subtle texture utilities — low-opacity patterns that layer on top of any
+       light background without needing an opacity wrapper. Designed for the
+       neo-brutalist storefront: they add depth, never distract. */
+    .bg-dots-subtle {
+        background-image: radial-gradient(circle, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+
+    .bg-grid-subtle {
+        background-image:
+            linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    .bg-stripes-diagonal {
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 10px,
+            rgba(0, 0, 0, 0.025) 10px,
+            rgba(0, 0, 0, 0.025) 20px
+        );
+    }
+
+    .bg-stripes-diagonal-lg {
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 18px,
+            rgba(0, 0, 0, 0.03) 18px,
+            rgba(0, 0, 0, 0.03) 36px
+        );
+    }
+
+    /* SVG fractal-noise grain — cheapest perceptual texture, tiles at 120px. */
+    .bg-noise-subtle {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+        background-size: 120px 120px;
+    }
+
+    /* Checkout-only background — a soft warm radial glow that fades to a
+       warm off-white. Calm, premium feel without distracting from the form.
+       Unique to the checkout page so it doesn't clash with the rest of the
+       site. Uses a warm base color (not pure white) so the gradient is
+       actually visible against the site's white body background. */
+    .bg-checkout {
+        background-color: oklch(0.98 0.012 85);
+        background-image:
+            radial-gradient(ellipse 90% 60% at 50% 0%, oklch(0.93 0.06 85 / 0.8), transparent),
+            radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.92 0.05 200 / 0.5), transparent),
+            radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 24px 24px;
+        background-position: top, bottom right, center;
+        background-repeat: no-repeat, no-repeat, repeat;
+    }
 }
