@@ -78,9 +78,11 @@ const isInStock = product.status === "active" && product.stock > 0;
 					{formatCurrency(product.price)}
 				</div>
 			</div>
-			<div class={`border-2 border-border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${isInStock ? "bg-primary" : "bg-destructive text-destructive-foreground"}`}>
-				{isInStock ? "Бээлгээтэй" : "Дууссан"}
-			</div>
+			{!isInStock && (
+				<div class="border-2 border-border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-destructive text-destructive-foreground">
+					Дууссан
+				</div>
+			)}
 		</div>
 
 		<div id="product-main-cta" transition:name={`product-add-to-cart-button-${product.id}`}>
