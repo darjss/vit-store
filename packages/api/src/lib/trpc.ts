@@ -279,10 +279,27 @@ export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
 // machine access from the admin Messenger agent Worker to the store API. No
 // admin session — the token IS the credential. Used by the bot router so the
 // agent can read admin data (e.g. pending orders) without a browser session.
+// Token comparison is constant-time (SHA-256 both sides, compare digests) to
+// prevent timing side-channel attacks on the shared secret.
+const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
+	const encoder = new TextEncoder();
+	const [hashA, hashB] = await Promise.all([
+		crypto.subtle.digest("SHA-256", encoder.encode(a)),
+		crypto.subtle.digest("SHA-256", encoder.encode(b)),
+	]);
+	const arrA = new Uint8Array(hashA);
+	const arrB = new Uint8Array(hashB);
+	let diff = 0;
+	for (let i = 0; i < arrA.length; i++) {
+		diff |= arrA[i] ^ arrB[i];
+	}
+	return diff === 0;
+};
+
 const botAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	const token = ctx.c.env.ADMIN_BOT_TOKEN;
 	const provided = ctx.c.req.header("X-Admin-Bot-Token");
-	if (!token || !provided || token !== provided) {
+	if (!token || !provided || !(await timingSafeEqual(token, provided))) {
 		ctx.log.warn("auth.login_failed", { failure_reason: "bad_bot_token" });
 		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
 	}

@@ -8,7 +8,6 @@ import {
 import {
 	channel,
 	postMessage,
-	sendTextReply,
 } from "../channels/messenger";
 
 // Admin agent env: the Worker Loader binding (Codemode sandbox), the bot token
