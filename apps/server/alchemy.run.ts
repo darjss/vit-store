@@ -109,7 +109,7 @@ export const server = await Worker("api", {
 		DELIVERY_USERNAME: env.DELIVERY_USERNAME,
 		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
 		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
-		ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN,
+		...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
 	},
 
 	observability: {
