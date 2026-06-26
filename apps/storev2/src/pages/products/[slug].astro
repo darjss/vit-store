@@ -199,7 +199,7 @@ const breadcrumbSchema = {
 			>
 				<div class="w-full" transition:name={`product-image-${product.id}`} >
 					<ProductImageCarousel
-						client:load
+						client:visible
 						images={product.images}
 						productName={product.name}
 						productId={product.id}
@@ -236,7 +236,7 @@ const breadcrumbSchema = {
 
 		<div class="border-t-4 border-border pb-8 pt-10">
 			<RecommendedProducts
-				client:load
+				client:only="solid-js"
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}
