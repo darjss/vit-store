@@ -493,24 +493,24 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 					<div class="flex border-2 border-border shadow-hard-sm lg:border-3">
 						<For each={productSortOptions}>
 							{(option, index) => {
-								const isActive =
+								const isActive = () =>
 									props.sortField === option.field &&
 									props.sortDirection === option.direction;
 								return (
 									<button
 										type="button"
 										onClick={() => {
-											if (isActive) {
+											if (isActive()) {
 												props.onSortChange(null, null);
 											} else {
 												props.onSortChange(option.field, option.direction);
 											}
 										}}
 										aria-label={`Sort by ${option.label}`}
-										aria-pressed={isActive}
+										aria-pressed={isActive()}
 										class={cn(
 											"relative h-8 px-1.5 font-bold text-[11px] uppercase tracking-wide transition-all sm:h-9 sm:px-2 sm:text-[11px] lg:h-10 lg:px-3 lg:text-xs",
-											isActive
+											isActive()
 												? "bg-secondary text-secondary-foreground shadow-[inset_2px_2px_0_0_rgba(252,252,252,0.2)]"
 												: "bg-background hover:bg-primary/20",
 											index() > 0 && "border-border border-l-2 lg:border-l-3",

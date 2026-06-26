@@ -1,4 +1,4 @@
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink, httpLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -140,7 +140,7 @@ export const createServerClient = (
 
 export const api = createTRPCClient<StoreRouter>({
 	links: [
-		httpBatchLink({
+		httpLink({
 			url: getClientBackendUrl(),
 			transformer: SuperJSON,
 			fetch: async (url, options) => {

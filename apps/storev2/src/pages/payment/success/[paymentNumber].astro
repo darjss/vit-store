@@ -118,8 +118,8 @@ if (payment.status !== "success") {
         <!-- Action Buttons -->
         <div class="max-w-2xl mx-auto">
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                    href={`/order/confirm/${payment.order.orderNumber}`}
+                <a
+                    href={checkoutToken ? `/order/confirm/${payment.order.orderNumber}?ct=${encodeURIComponent(checkoutToken)}` : `/order/confirm/${payment.order.orderNumber}`}
                     class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 border-3 border-border bg-primary text-primary-foreground shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
                 >
                     <IconReceipt class="w-5 h-5" />

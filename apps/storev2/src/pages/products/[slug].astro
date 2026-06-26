@@ -23,9 +23,24 @@ import { api } from "@/lib/trpc";
 export async function getStaticPaths() {
 	try {
 		const products = await api.product.getPrerenderProducts.query();
-		return products.map((product) => ({
-			params: { slug: `${product.slug}-${product.id}` },
-		}));
+		const paths: Array<{
+			params: { slug: string };
+			props: { redirectTo: string | null };
+		}> = [];
+		for (const product of products) {
+			const canonicalSlug = `${product.slug}-${product.id}`;
+			paths.push({ params: { slug: canonicalSlug }, props: { redirectTo: null } });
+			// Emit one redirect path per previously-used slug so old URLs 301
+			// to the canonical one. See issue #78.
+			for (const oldSlug of product.oldSlugs ?? []) {
+				if (!oldSlug || oldSlug === product.slug) continue;
+				paths.push({
+					params: { slug: `${oldSlug}-${product.id}` },
+					props: { redirectTo: canonicalSlug },
+				});
+			}
+		}
+		return paths;
 	} catch (error) {
 		console.error("Error getting static paths", error);
 		return [];
@@ -33,6 +48,14 @@ export async function getStaticPaths() {
 }
 
 const { slug } = Astro.params;
+const { redirectTo } = Astro.props as { redirectTo: string | null };
+
+// Old-slug redirect: a prerendered path whose slug no longer matches the
+// product's canonical slug. 301 preserves SEO link equity. See issue #78.
+if (redirectTo) {
+	return Astro.redirect(`/products/${redirectTo}/`, 301);
+}
+
 const slugParts = slug?.split("-") ?? [];
 const productId = Number(slugParts[slugParts.length - 1]);
 
@@ -176,7 +199,7 @@ const breadcrumbSchema = {
 			>
 				<div class="w-full" transition:name={`product-image-${product.id}`} >
 					<ProductImageCarousel
-						client:load
+						client:visible
 						images={product.images}
 						productName={product.name}
 						productId={product.id}
@@ -213,7 +236,7 @@ const breadcrumbSchema = {
 
 		<div class="border-t-4 border-border pb-8 pt-10">
 			<RecommendedProducts
-				client:load
+				client:only="solid-js"
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}

@@ -4,7 +4,7 @@
 @theme {
     --color-background: oklch(0.99 0 0);
     --color-foreground: oklch(0.15 0 0);
-    --color-card: oklch(1 0 0);
+    --color-card: oklch(0.99 0 0);
     --color-card-foreground: oklch(0.15 0 0);
     --color-popover: oklch(1 0 0);
     --color-popover-foreground: oklch(0.15 0 0);

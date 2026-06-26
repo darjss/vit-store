@@ -40,11 +40,39 @@ export default function ProductImageCarousel(props: Props) {
 	const selectedImageProps = () =>
 		getProductImageProps(images[selectedIndex()]?.url, "hero");
 
+	// Swipe detection (pointer events: works for touch + mouse).
+	// touch-action: pan-y keeps vertical page scroll; we only claim horizontal swipes.
+	const SWIPE_THRESHOLD = 50;
+	let pointerStart: { x: number; y: number } | null = null;
+
+	const handlePointerDown = (e: PointerEvent) => {
+		pointerStart = { x: e.clientX, y: e.clientY };
+	};
+
+	const handlePointerUp = (e: PointerEvent) => {
+		const start = pointerStart;
+		pointerStart = null;
+		if (!start || images.length <= 1) return;
+		const dx = e.clientX - start.x;
+		const dy = e.clientY - start.y;
+		// Ignore if mostly vertical (let page scroll handle it) or too small.
+		if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dy) > Math.abs(dx)) return;
+		setSelectedIndex((prev) => {
+			const next = dx < 0 ? prev + 1 : prev - 1;
+			return (next + images.length) % images.length;
+		});
+	};
+
 	return (
 		<div class="w-full space-y-6">
 			<div
 				class="relative aspect-square w-full overflow-hidden border-2 border-border shadow-hard transition-all duration-300 sm:shadow-hard-lg"
-				style={{ background: colors[selectedIndex()] }}
+				style={{
+					background: colors[selectedIndex()],
+					"touch-action": "pan-y",
+				}}
+				onPointerDown={handlePointerDown}
+				onPointerUp={handlePointerUp}
 			>
 				<div class="absolute inset-0 bg-dots-pattern opacity-20" />
 
@@ -73,7 +101,7 @@ export default function ProductImageCarousel(props: Props) {
 
 			{/* Thumbnail Navigation - Centered */}
 			<Show when={hasMultipleImages}>
-				<div class="scrollbar-hide flex justify-center gap-3 overflow-x-auto pb-4 sm:gap-4">
+				<div class="scrollbar-hide flex justify-start gap-3 overflow-x-auto pb-4 sm:justify-center sm:gap-4">
 					<For each={images}>
 						{(image, index) => {
 							const imageProps = getProductImageProps(image.url, "thumb");

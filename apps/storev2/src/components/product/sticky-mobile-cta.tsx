@@ -33,6 +33,8 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	return (
 		<Show when={visible()}>
+			{/* Spacer prevents the fixed bar from overlapping footer/content at scroll bottom */}
+			<div class="h-[70px] sm:hidden" aria-hidden="true" />
 			<div class="fixed bottom-0 left-0 right-0 z-50 border-t-4 border-border bg-background px-3 py-2.5 shadow-[0_-4px_0_rgba(0,0,0,0.15)] sm:hidden">
 				<div class="flex items-center justify-between gap-3">
 					<div class="min-w-0">

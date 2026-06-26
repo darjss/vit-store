@@ -36,7 +36,7 @@ export function FormSelectField(props: FormSelectFieldProps) {
 				disabled={props.disabled}
 				onBlur={field().handleBlur}
 				onChange={(e) => field().handleChange(Number(e.currentTarget.value) || 0)}
-				class="h-12 w-full border-4 border-border bg-background px-3 font-bold text-sm shadow-hard outline-none transition-all focus:translate-x-1 focus:translate-y-1 focus:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+				class="h-12 w-full border-4 border-border bg-background px-3 font-bold text-base shadow-hard outline-none transition-all focus:translate-x-1 focus:translate-y-1 focus:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<option value="">{props.placeholder || props.label}</option>
 				<For each={props.options || []}>

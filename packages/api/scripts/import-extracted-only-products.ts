@@ -206,7 +206,9 @@ type CliOptions = {
 	forceCreateNeedsReview: boolean;
 };
 
-const DEFAULT_BRAND_LOGO_URL = "https://www.placeholder.com/logo.png";
+// Empty string = no logo. Storefront renders a monogram fallback.
+// Never use an external placeholder URL — see GitHub issue #11.
+const DEFAULT_BRAND_LOGO_URL = "";
 const SCRIPT_VERSION = "1";
 const PRICING_FORMULA = {
 	slope: 4587,

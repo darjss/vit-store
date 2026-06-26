@@ -4,6 +4,7 @@
 import Pagination from "@/components/product/pagination.astro";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
+import { getBrandLogoUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 
 const PAGE_SIZE = 24;
@@ -20,6 +21,13 @@ const brand = await api.brand.getBrandBySlug.query({ slug });
 if (!brand) {
 	throw Astro.redirect("/404");
 }
+
+// Treat known placeholder/non-image logo URLs as missing so we render the
+// designed brand-initial monogram fallback instead of a broken image.
+// See GitHub issue #11.
+const brandLogoUrl = getBrandLogoUrl(brand.logoUrl);
+const brandLogoOnError =
+	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border-2 border-border bg-muted flex items-center justify-center font-black text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 
 const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
 	page,
@@ -88,14 +96,19 @@ const itemListSchema = {
 
 			<!-- Header -->
 			<div class="mb-3 flex items-center gap-3 sm:mb-4">
-				{brand.logoUrl && (
+				{brandLogoUrl ? (
 					<img
-						src={brand.logoUrl}
+						src={brandLogoUrl}
 						alt={brand.name}
 						class="h-12 w-12 border-2 border-border bg-background object-contain p-1 shadow-hard-sm sm:h-16 sm:w-16 sm:p-2"
 						width="64"
 						height="64"
+						onerror={brandLogoOnError}
 					/>
+				) : (
+					<div class="h-12 w-12 shrink-0 border-2 border-border bg-muted flex items-center justify-center font-black text-sm shadow-hard-sm sm:h-16 sm:w-16 sm:text-lg">
+						{brand.name.substring(0, 2).toUpperCase()}
+					</div>
 				)}
 				<div>
 					<h1 class="font-black text-xl tracking-tight uppercase sm:text-2xl lg:text-3xl">

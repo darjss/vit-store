@@ -11,7 +11,11 @@ export const PRICING_FORMULA = {
 	roundingStep: 5000,
 } as const;
 
-export const DEFAULT_BRAND_LOGO_URL = "https://www.placeholder.com/logo.png";
+// Empty string = "no logo yet". The storefront renders a brand-initial
+// monogram fallback for brands without a logo URL. Never use an external
+// placeholder URL here — those resolve to non-image content and render as
+// broken images. See GitHub issue #11.
+export const DEFAULT_BRAND_LOGO_URL = "";
 
 export const AI_PRODUCT_SESSION_TTL = 60 * 60;
 
