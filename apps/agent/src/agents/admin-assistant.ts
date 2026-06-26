@@ -18,7 +18,11 @@ type AgentEnv = {
 };
 
 export default defineAgent<AgentEnv>(({ id, env }) => {
-	const conversation = channel.parseConversationKey(id);
+	// Strip optional session-version suffix (e.g. ":v2") appended by the webhook
+	// to rotate the DO instance. The conversation key must match the canonical
+	// messenger:v1:page:...:page-scoped-id:... format for parseConversationKey.
+	const conversationKey = id.replace(/:v\d+$/, "");
+	const conversation = channel.parseConversationKey(conversationKey);
 	const storeApiUrl =
 		process.env.STORE_API_URL ?? "http://localhost:3000";
 	const queryTool =
@@ -33,6 +37,13 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 		model: ADMIN_ASSISTANT_MODEL,
 		thinkingLevel: "medium" as const,
 		instructions: adminAssistantInstructions,
+		// Auto-compact conversation history when context grows large.
+		// Tool results (order lists, product catalogs) can bloat context;
+		// compaction summarizes older turns while keeping recent ones verbatim.
+		compaction: {
+			reserveTokens: 20_000,
+			keepRecentTokens: 8_000,
+		},
 		tools: [
 			...(queryTool ? [queryTool] : []),
 			postMessage(conversation),
