@@ -261,25 +261,37 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 	return result;
 });
 
-export const publicProcedure = t.procedure
+// Shared base: error handling + request logging. Every authenticated
+// procedure composes from this so the cross-cutting middlewares are applied
+// once and in a consistent order.
+export const baseProcedure = t.procedure
 	.use(errorHandlingMiddleware)
 	.use(loggingMiddleware);
-export const customerProcedure = t.procedure
-	.use(errorHandlingMiddleware)
-	.use(loggingMiddleware)
-	.use(customerAuthMiddleware);
-export const verifiedCustomerProcedure = t.procedure
-	.use(errorHandlingMiddleware)
-	.use(loggingMiddleware)
-	.use(verifiedCustomerAuthMiddleware);
-export const adminProcedure = t.procedure
-	.use(errorHandlingMiddleware)
-	.use(loggingMiddleware)
-	.use(adminAuthMiddleware);
 
-export const cachedProcedure = t.procedure
-	.use(errorHandlingMiddleware)
-	.use(loggingMiddleware)
-	.use(cacheMiddleware);
+export const publicProcedure = baseProcedure;
+export const customerProcedure = baseProcedure.use(customerAuthMiddleware);
+export const verifiedCustomerProcedure = baseProcedure.use(
+	verifiedCustomerAuthMiddleware,
+);
+export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
+
+// Bot auth: a shared-secret header (`X-Admin-Bot-Token`) gates machine-to-
+// machine access from the admin Messenger agent Worker to the store API. No
+// admin session — the token IS the credential. Used by the bot router so the
+// agent can read admin data (e.g. pending orders) without a browser session.
+const botAuthMiddleware = t.middleware(async ({ ctx, next }) => {
+	const token = ctx.c.env.ADMIN_BOT_TOKEN;
+	const provided = ctx.c.req.header("X-Admin-Bot-Token");
+	if (!token || !provided || token !== provided) {
+		ctx.log.warn("auth.login_failed", { failure_reason: "bad_bot_token" });
+		throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+	}
+	ctx.log.set({ user_type: "bot" });
+	return next();
+});
+export const botProcedure = baseProcedure.use(botAuthMiddleware);
+
+export const cachedProcedure = baseProcedure.use(cacheMiddleware);
 export const customerCachedProcedure = customerProcedure.use(cacheMiddleware);
 export const adminCachedProcedure = adminProcedure.use(cacheMiddleware);
+export const botCachedProcedure = botProcedure.use(cacheMiddleware);
