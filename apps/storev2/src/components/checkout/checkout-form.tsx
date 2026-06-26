@@ -322,9 +322,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</Match>
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
-					<div class="min-h-screen bg-background pb-24 md:pb-0">
+					<div class="min-h-screen bg-dots-subtle pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b-4 bg-background">
+						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/80 backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
 									<h1 class="font-black text-lg uppercase tracking-tight">
