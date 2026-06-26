@@ -219,11 +219,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const isHydrated = () => cart.isHydrated();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
 	const OrderSummary = () => (
-		<div class="border-4 border-border bg-card shadow-hard-lg">
+		<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
-				class="flex w-full items-center justify-between gap-3 bg-card p-3 text-left"
+				class="flex w-full items-center justify-between gap-3 bg-card/60 p-3 text-left"
 			>
 				<div class="flex min-w-0 items-center gap-2">
 					<IconPackage class="h-5 w-5 shrink-0" />
@@ -369,7 +369,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<Switch>
 									{/* DELIVERY STEP */}
 									<Match when={step() === "delivery"}>
-										<div class="border-4 border-border bg-card shadow-hard-lg">
+										<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
@@ -540,7 +540,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									{/* PAYMENT STEP */}
 									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-4 border-border bg-card shadow-hard-lg">
+										<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
