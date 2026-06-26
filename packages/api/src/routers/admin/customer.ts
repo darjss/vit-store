@@ -2,10 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { customerQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { getDaysFromTimeRange } from "~/lib/utils";
-export const customer = router({
-    addUser: adminProcedure
+export function buildCustomerRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    addUser: proc
         .input(v.object({
         phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
         address: v.optional(v.string()),
@@ -27,7 +28,7 @@ export const customer = router({
             });
         }
     }),
-    getCustomerByPhone: adminProcedure
+    getCustomerByPhone: proc
         .input(v.object({
         phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
     }))
@@ -55,7 +56,7 @@ export const customer = router({
             });
         }
     }),
-    getCustomerCount: adminProcedure.query(async ({ ctx }) => {
+    getCustomerCount: proc.query(async ({ ctx }) => {
         try {
             const count = await customerQueries.admin.getCustomerCount();
             return count;
@@ -71,7 +72,7 @@ export const customer = router({
             });
         }
     }),
-    getNewCustomersCount: adminProcedure
+    getNewCustomersCount: proc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -93,7 +94,7 @@ export const customer = router({
             });
         }
     }),
-    getAllCustomers: adminProcedure.query(async ({ ctx }) => {
+    getAllCustomers: proc.query(async ({ ctx }) => {
         try {
             const customers = await customerQueries.admin.getAllCustomers();
             return customers;
@@ -109,7 +110,7 @@ export const customer = router({
             });
         }
     }),
-    updateCustomer: adminProcedure
+    updateCustomer: proc
         .input(v.object({
         phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
         address: v.optional(v.string()),
@@ -141,7 +142,7 @@ export const customer = router({
             });
         }
     }),
-    deleteCustomer: adminProcedure
+    deleteCustomer: proc
         .input(v.object({
         phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
     }))
@@ -163,3 +164,6 @@ export const customer = router({
         }
     }),
 });
+}
+export const customer = buildCustomerRouter(adminProcedure);
+export const customerBot = buildCustomerRouter(botProcedure);
