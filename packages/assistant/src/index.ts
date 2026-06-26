@@ -56,3 +56,4 @@ export * from "./delivery-zones";
 export * from "./payment";
 export * from "./photo";
 export * from "./products";
+export * from "./admin/index";

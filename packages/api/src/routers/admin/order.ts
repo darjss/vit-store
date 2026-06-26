@@ -3,11 +3,16 @@ import { customerQueries, orderQueries, paymentQueries, productQueries, purchase
 import { addOrderSchema, timeRangeSchema, updateOrderSchema, } from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
-import { adminProcedure, router } from "~/lib/trpc";
+import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
-export const order = router({
-    addOrder: adminProcedure
+
+// Factory: the order router is identical for every caller — only the procedure
+// wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
+// exactly as-is; `proc` is the only thing that varies.
+export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
+    return router({
+    addOrder: proc
         .input(addOrderSchema)
         .mutation(async ({ input, ctx }) => {
         try {
@@ -104,7 +109,7 @@ export const order = router({
             });
         }
     }),
-    updateOrder: adminProcedure
+    updateOrder: proc
         .input(updateOrderSchema)
         .mutation(async ({ input, ctx }) => {
         try {
@@ -185,7 +190,7 @@ export const order = router({
             });
         }
     }),
-    deleteOrder: adminProcedure
+    deleteOrder: proc
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
@@ -210,7 +215,7 @@ export const order = router({
             });
         }
     }),
-    restoreOrder: adminProcedure
+    restoreOrder: proc
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
@@ -239,7 +244,7 @@ export const order = router({
             });
         }
     }),
-    searchOrder: adminProcedure
+    searchOrder: proc
         .input(v.object({ searchTerm: v.string() }))
         .mutation(async ({ input, ctx }) => {
         try {
@@ -258,7 +263,7 @@ export const order = router({
             });
         }
     }),
-    searchOrderQuick: adminProcedure
+    searchOrderQuick: proc
         .input(v.object({
         query: v.pipe(v.string(), v.minLength(1)),
         limit: v.optional(v.number(), 5),
@@ -279,7 +284,7 @@ export const order = router({
             });
         }
     }),
-    getAllOrders: adminProcedure.query(async ({ ctx }) => {
+    getAllOrders: proc.query(async ({ ctx }) => {
         try {
             const orders = await orderQueries.admin.getAllOrders();
             return orders;
@@ -295,7 +300,7 @@ export const order = router({
             });
         }
     }),
-    getOrderById: adminProcedure
+    getOrderById: proc
         .input(v.object({ id: v.number() }))
         .query(async ({ input, ctx }) => {
         try {
@@ -322,7 +327,7 @@ export const order = router({
             });
         }
     }),
-    getPaginatedOrders: adminProcedure
+    getPaginatedOrders: proc
         .input(v.object({
         page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
         pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
@@ -363,15 +368,15 @@ export const order = router({
             });
         }
     }),
-    getOrderCount: adminProcedure
+    getOrderCount: proc
         .input(v.object({ timeRange: timeRangeSchema }))
         .query(async ({ input }) => {
         return await orderQueries.admin.getOrderCount(input.timeRange);
     }),
-    getPendingOrders: adminProcedure.query(async () => {
+    getPendingOrders: proc.query(async () => {
         return await orderQueries.admin.getPendingOrders();
     }),
-    updateOrderStatus: adminProcedure
+    updateOrderStatus: proc
         .input(v.object({
         id: v.number(),
         status: v.picklist([
@@ -406,7 +411,7 @@ export const order = router({
             });
         }
     }),
-    getRecentOrdersByProductId: adminProcedure
+    getRecentOrdersByProductId: proc
         .input(v.object({ productId: v.number() }))
         .query(async ({ input, ctx }) => {
         try {
@@ -425,7 +430,7 @@ export const order = router({
             });
         }
     }),
-    shipOrder: adminProcedure
+    shipOrder: proc
         .input(v.object({ orderId: v.number() }))
         .mutation(async ({ input, ctx }) => {
         const order = await orderQueries.admin.getOrderById(input.orderId);
@@ -472,7 +477,7 @@ export const order = router({
             });
         }
     }),
-    sendDeliveryTU: adminProcedure
+    sendDeliveryTU: proc
         .input(v.object({ orderId: v.number() }))
         .mutation(async ({ input, ctx }) => {
         const order = await orderQueries.admin.getOrderById(input.orderId);
@@ -519,7 +524,7 @@ export const order = router({
             });
         }
     }),
-    getDeliveryAddressZones: adminProcedure.query(async ({ ctx }) => {
+    getDeliveryAddressZones: proc.query(async ({ ctx }) => {
         try {
             return await getDeliveryAddressZones();
         }
@@ -535,3 +540,9 @@ export const order = router({
         }
     }),
 });
+}
+
+// Existing export — unchanged behavior (admin session auth).
+export const order = buildOrderRouter(adminProcedure);
+// Bot-facing twin — same resolvers, token-authed procedure for the admin agent.
+export const orderBot = buildOrderRouter(botProcedure);

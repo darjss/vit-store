@@ -3,6 +3,10 @@
 	"name": "vit-store-agent",
 	"compatibility_date": "2026-06-24",
 	"compatibility_flags": ["nodejs_compat"],
+	// Codemode (admin agent): the Worker Loader binding spins up the isolated
+	// Dynamic Worker sandbox where the LLM-generated TypeScript runs. Required
+	// by DynamicWorkerExecutor (env.LOADER).
+	"worker_loaders": [{ "binding": "LOADER" }],
 	// Workers Logs: persistent, queryable logs in the CF dashboard for this worker
 	// AND every Durable Object it hosts (FlueRegistry, the agent, admission, cart,
 	// checkout). head_sampling_rate 1 = capture every request (low volume; the
@@ -37,6 +41,10 @@
 				"class_name": "FlueCustomerAssistantAgent"
 			},
 			{
+				"name": "FLUE_ADMIN_ASSISTANT_AGENT",
+				"class_name": "FlueAdminAssistantAgent"
+			},
+			{
 				"name": "MESSENGER_ADMISSION_STORE",
 				"class_name": "MessengerAdmissionStore"
 			},
@@ -66,6 +74,10 @@
 		{
 			"tag": "v4_checkout_store",
 			"new_sqlite_classes": ["CheckoutStore"]
+		},
+		{
+			"tag": "v5_flue_admin_assistant",
+			"new_sqlite_classes": ["FlueAdminAssistantAgent"]
 		}
 	]
 }

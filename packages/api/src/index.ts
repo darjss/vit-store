@@ -52,6 +52,9 @@ export {
 export {
 	adminCachedProcedure,
 	adminProcedure,
+	baseProcedure,
+	botCachedProcedure,
+	botProcedure,
 	cachedProcedure,
 	customerCachedProcedure,
 	customerProcedure,

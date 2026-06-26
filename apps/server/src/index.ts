@@ -1,5 +1,5 @@
 import { trpcServer } from "@hono/trpc-server";
-import { adminRouter, storeRouter } from "@vit/api";
+import { adminRouter, botRouter, storeRouter } from "@vit/api";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -73,6 +73,25 @@ app.use(
 			ctx?.log.error(error, {
 				event: "trpc.store_error",
 				trpc: { path, code: error.code, user_type: "customer" },
+			});
+		},
+	}),
+);
+
+// Bot-facing tRPC surface: token-authed (X-Admin-Bot-Token) for the admin
+// Messenger agent Worker. Same resolvers as /trpc/admin, different auth gate.
+app.use(
+	"/trpc/bot/*",
+	trpcServer({
+		endpoint: "/trpc/bot",
+		router: botRouter,
+		createContext: (_opts, context) => {
+			return createContext({ context });
+		},
+		onError({ path, error, ctx }) {
+			ctx?.log.error(error, {
+				event: "trpc.bot_error",
+				trpc: { path, code: error.code, user_type: "bot" },
 			});
 		},
 	}),
