@@ -565,7 +565,7 @@ const ProductsList = (props: ProductsListProps) => {
 
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<div class="overflow-hidden border-2 border-border bg-primary/5 px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
+			<div class="overflow-hidden border-2 border-border bg-primary/5 bg-dots-subtle px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
 				{/* Compact Header */}
 				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
 					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
