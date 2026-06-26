@@ -115,7 +115,7 @@ const BrandForm = ({
 															onClick={() =>
 																form.setValue(
 																	"logoUrl",
-																	"https://www.placeholder.com/logo.png",
+																	"",
 																)
 															}
 															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"

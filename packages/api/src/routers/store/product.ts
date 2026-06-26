@@ -87,6 +87,7 @@ const performCatalogSearch = async (
 
 	if (searchResults.length > 0) {
 		return searchResults
+			.filter((result) => result.status === "active")
 			.filter((result) =>
 				requireStock ? result.inStock && result.stock > 0 : true,
 			)
@@ -910,6 +911,19 @@ export const product = router({
 				});
 			}
 		}),
+
+	getTotalActiveProductCount: publicProcedure.query(async () => {
+		try {
+			const q = productQueries.store;
+			return await q.getTotalActiveProductCount();
+		} catch (error) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to get total product count",
+				cause: error,
+			});
+		}
+	}),
 
 	rebuildSearchIndex: adminProcedure.mutation(async () => {
 		try {
