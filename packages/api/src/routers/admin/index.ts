@@ -14,6 +14,8 @@ import { productImages } from "~/routers/admin/product-images";
 import { purchase } from "~/routers/admin/purchase";
 import { sales } from "~/routers/admin/sales";
 
+export { type BotRouter, botRouter } from "~/routers/admin/bot";
+
 export const adminRouter = router({
 	healthCheck: publicProcedure.query(() => {
 		return "OK";

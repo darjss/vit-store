@@ -60,6 +60,11 @@ const APP_SECRET = req("MESSENGER_APP_SECRET");
 const PAGE_TOKEN = req("MESSENGER_ACCESS_TOKEN");
 const PAGE_ID = req("MESSENGER_PAGE_ID");
 const PSID = vars.MESSENGER_TEST_PSID ?? "";
+// Admin PSIDs (comma-separated in .dev.vars). --admin uses the first entry.
+const ADMIN_PSIDS = (vars.ADMIN_PSIDS ?? "")
+	.split(",")
+	.map((s) => s.trim())
+	.filter((s) => s.length > 0);
 const WORKER = (vars.MESSENGER_PROBE_URL ?? "https://agent.amerikvitamin.mn").replace(/\/$/, "");
 const WEBHOOK = `${WORKER}/channels/messenger/webhook`;
 const GRAPH = "https://graph.facebook.com/v23.0";
@@ -73,12 +78,21 @@ let postback: string | undefined;
 // goes nowhere; read its replies from the worker log ([bot.say] in `wrangler
 // tail`) instead. Keeps dogfooding out of any real Messenger inbox.
 let sendOnly = false;
+let useAdmin = false;
 const words: string[] = [];
 for (let i = 0; i < argv.length; i++) {
 	if (argv[i] === "--psid") psid = argv[++i] ?? psid;
 	else if (argv[i] === "--postback") postback = argv[++i];
 	else if (argv[i] === "--send-only") sendOnly = true;
+	else if (argv[i] === "--admin") useAdmin = true;
 	else words.push(argv[i]!);
+}
+if (useAdmin) {
+	if (ADMIN_PSIDS.length === 0) {
+		console.error("--admin requires ADMIN_PSIDS in .dev.vars or env.");
+		process.exit(1);
+	}
+	psid = ADMIN_PSIDS[0]!;
 }
 const text = words.join(" ");
 if (!psid) {
