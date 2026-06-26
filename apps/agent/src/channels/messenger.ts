@@ -104,6 +104,13 @@ export function toRecipient(ref: MessengerParticipantRef): Recipient {
 	return ref.type === "page-scoped-id" ? { id: ref.id } : { user_ref: ref.id };
 }
 
+// Session version suffix for the admin agent. The v1 session accumulated
+// 79k+ chars of tool results that overwhelmed the model. This suffix routes
+// admin messages to a fresh DO instance (:v2) while the admin agent strips
+// it before parsing the conversation key for postMessage. Bump to :v3 etc.
+// if the session ever needs rotating again.
+const ADMIN_SESSION_SUFFIX = ":v2";
+
 export const channel: MessengerChannel = createMessengerChannel({
 	appSecret: requiredEnv("MESSENGER_APP_SECRET"),
 	verifyToken: requiredEnv("MESSENGER_VERIFY_TOKEN"),
@@ -124,8 +131,8 @@ export const channel: MessengerChannel = createMessengerChannel({
 					adminConversation &&
 					isAdminPsid(adminConversation.participant.id, env)
 				) {
-					if (await dispatchInboundImage(event, env, adminAssistant)) continue;
-					await dispatchInboundText(event, env, adminAssistant);
+					if (await dispatchInboundImage(event, env, adminAssistant, ADMIN_SESSION_SUFFIX)) continue;
+					await dispatchInboundText(event, env, adminAssistant, ADMIN_SESSION_SUFFIX);
 					continue;
 				}
 				// Cart buttons (Захиалах postback + cart_* controls) are handled
@@ -166,10 +173,14 @@ function isAdminPsid(psid: string, env: WebhookEnv): boolean {
 // `target` defaults to the customer assistant; the admin gate passes
 // `adminAssistant` to route admin PSIDs to the admin agent without duplicating
 // the admission/dispatch logic.
+// `sessionIdSuffix` appends a version tag to the dispatch id, creating a fresh
+// DO instance (and thus a fresh session) without affecting the conversation key
+// parsing in the agent. Used to rotate the admin session after context bloat.
 async function dispatchInboundText(
 	event: Parameters<typeof admitMessengerTextMessage>[0]["event"],
 	env: WebhookEnv,
 	target: AgentDefinition = assistant,
+	sessionIdSuffix = "",
 ): Promise<void> {
 	const admission = await admitMessengerTextMessage({ channel, event, env });
 	if (admission === undefined) return;
@@ -179,7 +190,7 @@ async function dispatchInboundText(
 	// re-deliver instead of being swallowed by dedupe.
 	try {
 		await dispatch(target, {
-			id: admission.sessionId,
+			id: admission.sessionId + sessionIdSuffix,
 			input: {
 				type: "messenger.message",
 				messageId: admission.messageId,
@@ -209,6 +220,7 @@ async function dispatchInboundImage(
 	event: Parameters<typeof admitMessengerImageMessage>[0]["event"],
 	env: WebhookEnv,
 	target: AgentDefinition = assistant,
+	sessionIdSuffix = "",
 ): Promise<boolean> {
 	// Extract once and pass the array through to admission so the webhook loop
 	// doesn't scan attachments twice per event.
@@ -256,7 +268,7 @@ async function dispatchInboundImage(
 		}
 
 		await dispatch(target, {
-			id: admission.sessionId,
+			id: admission.sessionId + sessionIdSuffix,
 			input: {
 				type: "messenger.message",
 				messageId: admission.messageId,
