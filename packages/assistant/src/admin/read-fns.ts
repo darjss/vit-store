@@ -192,5 +192,35 @@ export function buildReadFns({
 				uploadImagesFromUrl: async (input: unknown) => botClient.productImages.uploadImagesFromUrl.mutate(input as never),
 			},
 		},
+		{
+			// AI ingestion flows (#110). The primary chat path is the all-in-one
+			// `extractProduct` (scrape + translate + draft) and
+			// `extractPurchaseFromImageKeys` (invoice screenshots staged to R2 by
+			// the webhook). The staged ai-product procedures are exposed in case
+			// the model needs finer control, but `extractProduct` is preferred.
+			name: "aiProduct",
+			fns: {
+				startExtraction: async (input: unknown) => botClient.aiProduct.startExtraction.mutate(input as never),
+				scrapeAndAnalyze: async (input: unknown) => botClient.aiProduct.scrapeAndAnalyze.mutate(input as never),
+				translateProduct: async (input: unknown) => botClient.aiProduct.translateProduct.mutate(input as never),
+				finalizeExtraction: async (input: unknown) => botClient.aiProduct.finalizeExtraction.mutate(input as never),
+				extractProduct: async (input: unknown) => botClient.aiProduct.extractProduct.mutate(input as never),
+				batchCreateProducts: async (input: unknown) => botClient.aiProduct.batchCreateProducts.mutate(input as never),
+				regenerateProductImages: async (input: unknown) => botClient.aiProduct.regenerateProductImages.mutate(input as never),
+			},
+		},
+		{
+			name: "aiPurchase",
+			fns: {
+				// Dashboard path: takes fetchable image urls. Prefer
+				// `extractPurchaseFromImageKeys` from chat — the webhook stages
+				// inbound screenshots to R2 and dispatches only the keys.
+				extractPurchaseFromImages: async (input: unknown) => botClient.aiPurchase.extractPurchaseFromImages.mutate(input as never),
+				// Chat path: takes R2 keys (messenger-inbound/...) the webhook
+				// staged. The server resolves them to image bytes server-side.
+				extractPurchaseFromImageKeys: async (input: unknown) => botClient.aiPurchase.extractPurchaseFromImageKeys.mutate(input as never),
+				saveExtractedPurchase: async (input: unknown) => botClient.aiPurchase.saveExtractedPurchase.mutate(input as never),
+			},
+		},
 	];
 }
