@@ -1,6 +1,5 @@
 import { useStore } from "@tanstack/solid-form";
-import type { ComponentProps } from "solid-js";
-import { For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import {
 	TextField,
 	TextFieldErrorMessage,
@@ -12,7 +11,7 @@ import { useFieldContext } from "./form-context";
 interface FormTextAreaProps {
 	label: string;
 	placeholder?: string;
-	type?: ComponentProps<typeof TextFieldTextArea>["type"];
+	autoComplete?: string;
 }
 
 export function FormTextArea(props: FormTextAreaProps) {
@@ -24,8 +23,19 @@ export function FormTextArea(props: FormTextAreaProps) {
 		(state) => state.submissionAttempts,
 	);
 	const showErrors = () => isTouched() || submissionAttempts() > 0;
+	// `meta.errors` can contain duplicates when the same field is validated by
+	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
+	const uniqueErrors = createMemo(() => {
+		const seen = new Set<string>();
+		return errors().filter((e) => {
+			const key = e.message ?? "";
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
 	const validationState = () =>
-		showErrors() && errors().length > 0 ? "invalid" : "valid";
+		showErrors() && uniqueErrors().length > 0 ? "invalid" : "valid";
 
 	return (
 		<TextField validationState={validationState()}>
@@ -33,12 +43,13 @@ export function FormTextArea(props: FormTextAreaProps) {
 			<TextFieldTextArea
 				name={field().name}
 				value={field().state.value}
+				autoComplete={props.autoComplete}
 				placeholder={props.placeholder || props.label}
 				onBlur={field().handleBlur}
 				onInput={(e) => field().handleChange(e.currentTarget.value)}
 			/>
-			<Show when={showErrors()}>
-				<For each={errors()}>
+			<Show when={showErrors() && uniqueErrors().length > 0}>
+				<For each={uniqueErrors()}>
 					{(error) => (
 						<TextFieldErrorMessage>{error.message}</TextFieldErrorMessage>
 					)}

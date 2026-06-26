@@ -1,5 +1,5 @@
 import { useStore } from "@tanstack/solid-form";
-import { For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { useFieldContext } from "./form-context";
 
 interface FormSelectOption {
@@ -23,29 +23,53 @@ export function FormSelectField(props: FormSelectFieldProps) {
 		(state) => state.submissionAttempts,
 	);
 	const showErrors = () => isTouched() || submissionAttempts() > 0;
+	// `meta.errors` can contain duplicates when the same field is validated by
+	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
+	const uniqueErrors = createMemo(() => {
+		const seen = new Set<string>();
+		return errors().filter((e) => {
+			const key = e.message ?? "";
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
+	const isInvalid = () => showErrors() && uniqueErrors().length > 0;
 
 	return (
 		<div class="space-y-2">
-			<label class="font-bold text-sm uppercase" for={field().name}>
+			<label
+				class="font-bold text-sm uppercase data-[invalid]:text-destructive"
+				for={field().name}
+				data-invalid={isInvalid() ? "" : undefined}
+			>
 				{props.label}
 			</label>
 			<select
 				id={field().name}
 				name={field().name}
 				value={field().state.value ? String(field().state.value) : ""}
+				aria-invalid={isInvalid() || undefined}
 				disabled={props.disabled}
 				onBlur={field().handleBlur}
 				onChange={(e) => field().handleChange(Number(e.currentTarget.value) || 0)}
-				class="h-12 w-full border-4 border-border bg-background px-3 font-bold text-base shadow-hard outline-none transition-all focus:translate-x-1 focus:translate-y-1 focus:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+				class="h-12 w-full border-3 border-border bg-background px-3 font-bold text-base shadow-hard-lg outline-none transition-all focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-lg data-[invalid]:focus-visible:ring-destructive"
+				classList={{
+					"border-destructive shadow-hard-lg": isInvalid(),
+				}}
 			>
 				<option value="">{props.placeholder || props.label}</option>
 				<For each={props.options || []}>
 					{(option) => <option value={option.value}>{option.label}</option>}
 				</For>
 			</select>
-			<Show when={showErrors()}>
-				<For each={errors()}>
-					{(error) => <p class="text-destructive text-xs">{error.message}</p>}
+			<Show when={isInvalid()}>
+				<For each={uniqueErrors()}>
+					{(error) => (
+						<p class="text-xs md:text-sm text-destructive font-black uppercase">
+							{error.message}
+						</p>
+					)}
 				</For>
 			</Show>
 		</div>

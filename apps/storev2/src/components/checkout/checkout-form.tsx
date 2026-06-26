@@ -67,6 +67,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const [step, setStep] = createSignal<Step>("delivery");
 	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
 	const [summaryOpen, setSummaryOpen] = createSignal(false);
+	let checkoutFormEl: HTMLFormElement | undefined;
 
 	const addressZonesQuery = useQuery(
 		() => ({
@@ -387,14 +388,24 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 											<div class="p-3">
 												<form
+													ref={(el) => (checkoutFormEl = el)}
 													class="space-y-4"
-													onSubmit={(e) => {
+													onSubmit={async (e) => {
 														e.preventDefault();
 														e.stopPropagation();
 														if (document.activeElement instanceof HTMLElement) {
 															document.activeElement.blur();
 														}
-														form.handleSubmit();
+														await form.handleSubmit();
+														// Focus the first invalid field so the user can fix it.
+														// setTimeout (macrotask) lets Solid flush the aria-invalid
+														// attributes before we query them.
+														setTimeout(() => {
+															const invalid = checkoutFormEl?.querySelector<HTMLElement>(
+																'[aria-invalid="true"]',
+															);
+															invalid?.focus();
+														}, 0);
 													}}
 												>
 													{/* Phone */}
@@ -406,6 +417,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																	label="Утасны дугаар"
 																	placeholder="88889999"
 																	type="tel"
+																	autoComplete="tel"
+																	inputMode="numeric"
 																/>
 															)}
 														/>
@@ -443,6 +456,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																<field.FormTextArea
 																	label="Хаяг"
 																	placeholder="Байр, тоот, давхар"
+																	autoComplete="street-address"
 																/>
 															)}
 														/>
@@ -507,7 +521,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 														<form.AppForm>
 															<div class="w-full">
-																<form.SubmitButton size="lg" class="w-full">
+																<form.SubmitButton size="lg" class="w-full" disabled={mutation.isPending}>
 																	{mutation.isPending
 																		? "Уншиж байна..."
 																		: "Төлбөр төлөх →"}
