@@ -45,7 +45,7 @@ export const createServerAlchemyEnv = (
 			DELIVERY_USERNAME: requiredString(),
 			DELIVERY_PASSWORD: requiredString(),
 			DELIVERY_SENDERID: requiredString(),
-			ADMIN_BOT_TOKEN: requiredString(),
+			ADMIN_BOT_TOKEN: v.optional(v.string()),
 		},
 		runtimeEnvStrict: {
 			PLANETSCALE_HOST: runtimeEnv.PLANETSCALE_HOST,

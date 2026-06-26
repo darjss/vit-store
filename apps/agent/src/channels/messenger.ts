@@ -4,7 +4,7 @@ import {
 	type MessengerConversationRef,
 	type MessengerParticipantRef,
 } from "@flue/messenger";
-import { defineTool, dispatch } from "@flue/runtime";
+import { defineTool, dispatch, type AgentDefinition } from "@flue/runtime";
 import {
 	type AssistantProduct,
 	buildPaymentChoice,
@@ -117,13 +117,15 @@ export const channel: MessengerChannel = createMessengerChannel({
 				// Admin PSID gate: an authorized admin's messages route to the
 				// admin agent (Codemode query tool) BEFORE any customer-path
 				// logic. Non-admin PSIDs fall through to the customer agent
-				// unchanged.
+				// unchanged. Reuses the same image/text dispatch helpers with
+				// `adminAssistant` as the target — no duplicated logic.
 				const adminConversation = channel.conversationRef(event);
 				if (
 					adminConversation &&
 					isAdminPsid(adminConversation.participant.id, env)
 				) {
-					await dispatchAdminEvent(event, env, adminConversation);
+					if (await dispatchInboundImage(event, env, adminAssistant)) continue;
+					await dispatchInboundText(event, env, adminAssistant);
 					continue;
 				}
 				// Cart buttons (Захиалах postback + cart_* controls) are handled
@@ -160,95 +162,14 @@ function isAdminPsid(psid: string, env: WebhookEnv): boolean {
 		.includes(psid);
 }
 
-// Dispatches an inbound Messenger event to the admin agent. Mirrors the
-// customer text/image admission + staging path but targets `adminAssistant`
-// instead of `assistant`. Reuses the same dedupe + R2 staging so admin turns
-// are idempotent on Meta retries and admin photos follow the same key-only
-// dispatch contract (#20).
-async function dispatchAdminEvent(
-	event: Parameters<typeof admitMessengerTextMessage>[0]["event"],
-	env: WebhookEnv,
-	conversation: MessengerConversationRef,
-): Promise<void> {
-	const images = extractInboundImages(event);
-	if (images.length > 0) {
-		const bucket = env.MESSENGER_INBOUND_BUCKET;
-		if (bucket === undefined) {
-			throw new Error(
-				"MESSENGER_INBOUND_BUCKET binding is required for inbound Messenger photos.",
-			);
-		}
-		const admission = await admitMessengerImageMessage({
-			channel,
-			event,
-			env,
-			images,
-		});
-		if (admission === undefined) return;
-		try {
-			const imageKeys: string[] = [];
-			for (const image of admission.images) {
-				const staged = await stageInboundImage(
-					bucket,
-					{
-						sessionId: admission.sessionId,
-						messageId: admission.messageId,
-						index: image.index,
-					},
-					image.url,
-				);
-				if (staged !== undefined) imageKeys.push(staged.key);
-			}
-			if (imageKeys.length === 0) {
-				await sendTextReply(admission.conversation)(
-					PHOTO_FETCH_FAILED_MESSAGE,
-				);
-				return;
-			}
-			await dispatch(adminAssistant, {
-				id: admission.sessionId,
-				input: {
-					type: "messenger.message",
-					messageId: admission.messageId,
-					text: admission.caption,
-					attachmentTypes: imageKeys.map(() => "image"),
-					imageKeys,
-				},
-			});
-		} catch (error) {
-			await admission.release();
-			throw error;
-		}
-		return;
-	}
-
-	// Text path
-	const admission = await admitMessengerTextMessage({ channel, event, env });
-	if (admission === undefined) return;
-	try {
-		await dispatch(adminAssistant, {
-			id: admission.sessionId,
-			input: {
-				type: "messenger.message",
-				messageId: admission.messageId,
-				text: admission.text,
-				attachmentTypes: admission.attachmentTypes,
-				...(admission.quickReplyPayload !== undefined
-					? { quickReplyPayload: admission.quickReplyPayload }
-					: {}),
-			},
-		});
-	} catch (error) {
-		await admission.release();
-		throw error;
-	}
-}
-
-// Admits a plain inbound text turn and dispatches it to the assistant. Pulled
-// out of the webhook loop so each ingress concern (cart vs text) stays small.
+// Admits a plain inbound text turn and dispatches it to the target agent.
+// `target` defaults to the customer assistant; the admin gate passes
+// `adminAssistant` to route admin PSIDs to the admin agent without duplicating
+// the admission/dispatch logic.
 async function dispatchInboundText(
 	event: Parameters<typeof admitMessengerTextMessage>[0]["event"],
 	env: WebhookEnv,
+	target: AgentDefinition = assistant,
 ): Promise<void> {
 	const admission = await admitMessengerTextMessage({ channel, event, env });
 	if (admission === undefined) return;
@@ -257,7 +178,7 @@ async function dispatchInboundText(
 	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
 	// re-deliver instead of being swallowed by dedupe.
 	try {
-		await dispatch(assistant, {
+		await dispatch(target, {
 			id: admission.sessionId,
 			input: {
 				type: "messenger.message",
@@ -279,12 +200,15 @@ async function dispatchInboundText(
 
 // Admits an inbound photo turn: fetches each Meta CDN attachment server-side,
 // stages it under the short-lived messenger-inbound/ R2 prefix, and dispatches
-// the assistant turn carrying ONLY the R2 key(s) — never a CDN url or base64
+// the target agent turn carrying ONLY the R2 key(s) — never a CDN url or base64
 // (ADR 0003, #20). Returns true when the event was an image message (consumed),
 // false for non-image messages so the webhook falls through to the text path.
+// `target` defaults to the customer assistant; the admin gate passes
+// `adminAssistant`.
 async function dispatchInboundImage(
 	event: Parameters<typeof admitMessengerImageMessage>[0]["event"],
 	env: WebhookEnv,
+	target: AgentDefinition = assistant,
 ): Promise<boolean> {
 	// Extract once and pass the array through to admission so the webhook loop
 	// doesn't scan attachments twice per event.
@@ -331,7 +255,7 @@ async function dispatchInboundImage(
 			return true;
 		}
 
-		await dispatch(assistant, {
+		await dispatch(target, {
 			id: admission.sessionId,
 			input: {
 				type: "messenger.message",
