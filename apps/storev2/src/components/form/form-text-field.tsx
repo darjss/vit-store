@@ -51,7 +51,17 @@ export function FormTextField(props: FormTextFieldProps) {
 				inputMode={props.inputMode}
 				placeholder={props.placeholder || props.label}
 				onBlur={field().handleBlur}
-				onInput={(e) => field().handleChange(e.currentTarget.value)}
+				onInput={(e) => {
+					field().handleChange(e.currentTarget.value);
+					// Clear stale errors from onBlur/onSubmit so the field
+					// immediately looks valid while the user is editing.
+					if (showErrors()) {
+						field().setMeta((prev) => ({
+							...prev,
+							errorMap: { ...prev.errorMap, onBlur: undefined, onSubmit: undefined },
+						}));
+					}
+				}}
 			/>
 			<Show when={showErrors() && uniqueErrors().length > 0}>
 				<For each={uniqueErrors()}>

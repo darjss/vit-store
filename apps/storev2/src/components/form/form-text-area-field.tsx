@@ -46,7 +46,15 @@ export function FormTextArea(props: FormTextAreaProps) {
 				autoComplete={props.autoComplete}
 				placeholder={props.placeholder || props.label}
 				onBlur={field().handleBlur}
-				onInput={(e) => field().handleChange(e.currentTarget.value)}
+				onInput={(e) => {
+					field().handleChange(e.currentTarget.value);
+					if (showErrors()) {
+						field().setMeta((prev) => ({
+							...prev,
+							errorMap: { ...prev.errorMap, onBlur: undefined, onSubmit: undefined },
+						}));
+					}
+				}}
 			/>
 			<Show when={showErrors() && uniqueErrors().length > 0}>
 				<For each={uniqueErrors()}>

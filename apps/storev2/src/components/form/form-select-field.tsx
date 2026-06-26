@@ -52,7 +52,15 @@ export function FormSelectField(props: FormSelectFieldProps) {
 				aria-invalid={isInvalid() || undefined}
 				disabled={props.disabled}
 				onBlur={field().handleBlur}
-				onChange={(e) => field().handleChange(Number(e.currentTarget.value) || 0)}
+				onChange={(e) => {
+					field().handleChange(Number(e.currentTarget.value) || 0);
+					if (showErrors()) {
+						field().setMeta((prev) => ({
+							...prev,
+							errorMap: { ...prev.errorMap, onBlur: undefined, onSubmit: undefined },
+						}));
+					}
+				}}
 				class="h-12 w-full border-3 border-border bg-background px-3 font-bold text-base shadow-hard-lg outline-none transition-all focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-lg data-[invalid]:focus-visible:ring-destructive"
 				classList={{
 					"border-destructive shadow-hard-lg": isInvalid(),
