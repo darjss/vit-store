@@ -400,4 +400,18 @@
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
         background-size: 120px 120px;
     }
+
+    /* Checkout-only background — a soft warm radial glow that fades to white.
+       Calm, premium feel without distracting from the form. Unique to the
+       checkout page so it doesn't clash with the rest of the site. */
+    .bg-checkout {
+        background-color: var(--color-background);
+        background-image:
+            radial-gradient(ellipse 80% 50% at 50% 0%, oklch(0.97 0.02 80 / 0.6), transparent),
+            radial-gradient(ellipse 60% 40% at 100% 100%, oklch(0.96 0.03 200 / 0.4), transparent),
+            radial-gradient(circle, rgba(0, 0, 0, 0.025) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 24px 24px;
+        background-position: top, bottom right, center;
+        background-repeat: no-repeat, no-repeat, repeat;
+    }
 }

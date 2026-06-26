@@ -219,11 +219,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const isHydrated = () => cart.isHydrated();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
 	const OrderSummary = () => (
-		<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
+		<div class="border-4 border-border shadow-hard-lg">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
-				class="flex w-full items-center justify-between gap-3 bg-card/60 p-3 text-left"
+				class="flex w-full items-center justify-between gap-3 bg-card p-3 text-left"
 			>
 				<div class="flex min-w-0 items-center gap-2">
 					<IconPackage class="h-5 w-5 shrink-0" />
@@ -322,9 +322,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</Match>
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
-					<div class="min-h-screen bg-dots-subtle pb-24 md:pb-0">
+					<div class="min-h-screen bg-checkout pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/80 backdrop-blur-sm">
+						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/90 backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
 									<h1 class="font-black text-lg uppercase tracking-tight">
@@ -369,7 +369,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<Switch>
 									{/* DELIVERY STEP */}
 									<Match when={step() === "delivery"}>
-										<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
+										<div class="border-4 border-border shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
@@ -540,7 +540,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									{/* PAYMENT STEP */}
 									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-4 border-border bg-card/80 backdrop-blur-sm shadow-hard-lg">
+										<div class="border-4 border-border shadow-hard-lg">
 											<div class="border-border border-b-4 bg-secondary p-3">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
