@@ -1,0 +1,1 @@
+ALTER TABLE "ecom_vit_product" ADD COLUMN "old_slugs" jsonb DEFAULT '[]'::jsonb NOT NULL;

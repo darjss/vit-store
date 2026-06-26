@@ -102,7 +102,9 @@ const categoryIds = {
 	men: 507,
 };
 
-const defaultBrandLogoUrl = "https://www.placeholder.com/logo.png";
+// Empty string = no logo. Storefront renders a monogram fallback.
+// Never use an external placeholder URL — see GitHub issue #11.
+const defaultBrandLogoUrl = "";
 
 await mkdir(outputDir, { recursive: true });
 
@@ -406,10 +408,25 @@ function fullName(
 	details: Array<string | null>,
 ): string {
 	return compact(
-		[brandName, productName, ...details]
+		[brandName, stripLeadingBrand(productName, brandName), ...details]
 			.filter((part): part is string => !!part && part.trim().length > 0)
 			.join(" "),
 	).slice(0, 256);
+}
+
+// The extracted productName sometimes already starts with the brand
+// (e.g. "Micro Ingredients Vitamin D3 ..."). Stripping a single leading
+// brand prefix before we prepend the brand prevents the duplicated-brand
+// name bug (issue #78).
+function stripLeadingBrand(productName: string, brandName: string): string {
+	const productNorm = productName.replace(/\s+/g, " ").trim();
+	const brandNorm = brandName.replace(/\s+/g, " ").trim();
+	if (!brandNorm) return productName;
+	const prefix = `${brandNorm} `;
+	if (productNorm.toLowerCase().startsWith(prefix.toLowerCase())) {
+		return productNorm.slice(prefix.length);
+	}
+	return productName;
 }
 
 function cleanAmount(value: string | null): string {

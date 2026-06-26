@@ -5,7 +5,7 @@ import IconSparkle from "~icons/ri/sparkling-fill";
 
 const ProductCardSkeleton = () => (
 	<div class="flex animate-pulse flex-col border-2 border-border bg-card shadow-hard-sm transition-all sm:border-3 sm:shadow-hard lg:shadow-hard-lg">
-		<div class="relative aspect-4/5 overflow-hidden border-border border-b-2 bg-muted sm:aspect-4/3 sm:border-b-3">
+		<div class="relative aspect-4/5 overflow-hidden border-border border-b-2 bg-muted sm:border-b-3">
 			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.05)_2px,transparent_0)] bg-size-[14px_14px]" />
 			<div class="absolute right-1.5 bottom-1.5 h-3 w-10 border-2 border-border bg-muted shadow-hard-sm sm:right-2 sm:bottom-2 sm:h-4 sm:w-12 lg:right-3 lg:bottom-3 lg:h-5 lg:w-16" />
 		</div>

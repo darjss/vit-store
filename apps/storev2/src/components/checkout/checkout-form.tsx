@@ -321,7 +321,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</Match>
 			<Match when={!isEmpty()}>
 				<Suspense fallback={<Loading />}>
-					<div class="min-h-screen bg-background">
+					<div class="min-h-screen bg-background pb-24 md:pb-0">
 						{/* Sticky header */}
 						<div class="sticky top-0 z-30 border-border border-b-4 bg-background">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
@@ -506,11 +506,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 														</div>
 
 														<form.AppForm>
-															<form.SubmitButton size="lg">
-																{mutation.isPending
-																	? "Уншиж байна..."
-																	: "Төлбөр төлөх →"}
-															</form.SubmitButton>
+															<div class="w-full">
+																<form.SubmitButton size="lg">
+																	{mutation.isPending
+																		? "Уншиж байна..."
+																		: "Төлбөр төлөх →"}
+																</form.SubmitButton>
+															</div>
 														</form.AppForm>
 
 														<p class="text-center font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
