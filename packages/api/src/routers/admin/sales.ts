@@ -2,9 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { orderQueries, salesQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
 import * as v from "valibot";
-import { adminCachedProcedure, router } from "~/lib/trpc";
-export const sales = router({
-    analytics: adminCachedProcedure.query(async ({ ctx }) => {
+import { adminCachedProcedure, baseProcedure, botCachedProcedure, router } from "~/lib/trpc";
+export function buildSalesRouter<P extends typeof baseProcedure>(cachedProc: P) {
+    return router({
+    analytics: cachedProc.query(async ({ ctx }) => {
         try {
             const analyticsDaily = salesQueries.admin.getAnalyticsForHome("daily");
             const analyticsWeekly = salesQueries.admin.getAnalyticsForHome("weekly");
@@ -32,7 +33,7 @@ export const sales = router({
             });
         }
     }),
-    topProducts: adminCachedProcedure
+    topProducts: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
         productCount: v.number(),
@@ -53,7 +54,7 @@ export const sales = router({
             });
         }
     }),
-    weeklyOrders: adminCachedProcedure.query(async ({ ctx }) => {
+    weeklyOrders: cachedProc.query(async ({ ctx }) => {
         try {
             return await orderQueries.admin.getOrderCountForWeek();
         }
@@ -68,7 +69,7 @@ export const sales = router({
             });
         }
     }),
-    avgOrderValue: adminCachedProcedure
+    avgOrderValue: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -87,7 +88,7 @@ export const sales = router({
             });
         }
     }),
-    orderCount: adminCachedProcedure
+    orderCount: cachedProc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
@@ -106,7 +107,7 @@ export const sales = router({
             });
         }
     }),
-    pendingOrders: adminCachedProcedure.query(async ({ ctx }) => {
+    pendingOrders: cachedProc.query(async ({ ctx }) => {
         try {
             return await orderQueries.admin.getPendingOrders();
         }
@@ -121,7 +122,7 @@ export const sales = router({
             });
         }
     }),
-    dashboard: adminCachedProcedure.query(async ({ ctx }) => {
+    dashboard: cachedProc.query(async ({ ctx }) => {
         try {
             const [salesDaily, salesWeekly, salesMonthly, mostSoldProductsDaily, mostSoldProductsWeekly, mostSoldProductsMonthly, dailyOrders, weeklyOrders, monthlyOrders, pendingOrders,] = await Promise.all([
                 salesQueries.admin.getAnalyticsForHome("daily"),
@@ -167,3 +168,6 @@ export const sales = router({
         }
     }),
 });
+}
+export const sales = buildSalesRouter(adminCachedProcedure);
+export const salesBot = buildSalesRouter(botCachedProcedure);
