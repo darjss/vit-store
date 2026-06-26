@@ -20,11 +20,11 @@ const description = "Захиалгаа баталгаажуулж, төлбөр
 ---
 
 <Layout title={title} description={description} noindex nofollow>
-    <div class="container mx-auto min-h-screen px-4 py-8">
+    <div class="container mx-auto min-h-screen bg-checkout px-4 py-8">
         <CheckoutForm user={user} client:only="solid-js">
             <div slot="fallback" class="mx-auto min-h-[calc(100vh-200px)] max-w-5xl">
                 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-                    <div class="border-4 border-border bg-card p-4 shadow-hard-lg">
+                    <div class="border-4 border-border p-4 shadow-hard-lg">
                         <div class="mb-4 h-6 w-48 animate-pulse bg-foreground/10"></div>
                         <div class="space-y-3">
                             <div class="h-12 animate-pulse border-3 border-border bg-foreground/5"></div>
@@ -33,7 +33,7 @@ const description = "Захиалгаа баталгаажуулж, төлбөр
                             <div class="h-16 animate-pulse border-3 border-border bg-primary/20 shadow-hard-sm"></div>
                         </div>
                     </div>
-                    <div class="border-4 border-border bg-card p-3 shadow-hard-lg">
+                    <div class="border-4 border-border p-3 shadow-hard-lg">
                         <div class="flex items-center justify-between">
                             <div class="h-5 w-32 animate-pulse bg-foreground/10"></div>
                             <div class="h-5 w-20 animate-pulse bg-foreground/10"></div>
