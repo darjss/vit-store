@@ -1,74 +1,150 @@
-# vit2
+# Amerik Vitamin — vit-store
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Start, Hono, TRPC, and more.
+Mongolia-based ecommerce store ([amerikvitamin.mn](https://amerikvitamin.mn)) selling
+US-imported vitamins and supplements (NatureBell, MicroIngredients, Nutricost, and more).
+Shopping is in Mongolian; prices in MNT (₮). 99% of traffic is mobile.
 
-## Features
+The monorepo contains four apps — a storefront, an admin dashboard, an API server, and a
+Facebook Messenger AI shopping agent — plus shared packages, all deployed to Cloudflare via
+[Alchemy](https://alchemy.run) (TypeScript IaC).
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Start** - SSR framework with TanStack Router
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **shadcn/ui** - Reusable UI components
-- **Hono** - Lightweight, performant server framework
-- **tRPC** - End-to-end type-safe APIs
-- **Node.js** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **SQLite/Turso** - Database engine
-- **Turborepo** - Optimized monorepo build system
-- **Biome** - Linting and formatting
+## What's in here
 
-## Getting Started
+### Apps (`apps/`)
 
-First, install the dependencies:
+| App | Stack | What it does |
+|-----|-------|--------------|
+| **`storev2`** | Astro 5 + SolidJS islands, Tailwind v4, tRPC | Customer-facing storefront. Catalog with brand/category filtering, search, product detail pages, SolidJS cart, checkout (phone → address → delivery zone → confirmation), order tracking, QPay payment, OTP phone login. Neo-brutalist, mobile-first design (see `DESIGN.md`). |
+| **`admin`** | React 19 + Vite + TanStack Router/Query, tRPC, shadcn/ui | Internal dashboard. Product CRUD with AI-assisted extraction from Amazon URLs, order management, customer records (phone-based), brand/category management, purchase/inventory tracking (Amazon/iHerb imports), payment confirmation (QPay + bank transfer), analytics (sales, top products, PostHog web analytics). |
+| **`server`** | Hono + tRPC + Drizzle, Cloudflare Workers | Central API gateway. Three tRPC routers: `/trpc/admin` (dashboard), `/trpc/store` (storefront), `/trpc/bot` (Messenger admin agent). REST routes for Google OAuth, QPay webhook, Messenger webhook, image uploads. PostgreSQL via Hyperdrive, R2 for images, KV for sessions, a `ProductSearchObject` Durable Object for edge search, rate limiting, structured logging. |
+| **`agent`** | Flue (`@flue/runtime`, `@flue/messenger`) + Cloudflare Workers AI | Facebook Messenger bot. **Customer agent** (`@cf/moonshotai/kimi-k2.6`): product search, photo identification (vision model + R2-staged images), advice/comparison, conversational cart, checkout, QPay/transfer payment choices. **Admin agent**: Codemode query tool, PSID-gated. Inbound photos are fetched from Meta's CDN, staged to R2 under `messenger-inbound/` (auto-expired after 3 days), and only the R2 key enters session history. Dedup via Durable Objects (admission, cart, checkout stores). |
+
+### Packages (`packages/`)
+
+| Package | Purpose |
+|---------|---------|
+| **`@vit/api`** | tRPC routers (admin/store/bot), Drizzle DB queries, integrations (Messenger, QPay, PostHog, Resend, SMS gateway), AI product-extraction pipeline, payment logic. |
+| **`@vit/assistant`** | Shared tools and instructions for the Messenger agents — product search, advice, photo identification, cart/checkout, payment choices, delivery-zone ranking, admin Codemode tool. |
+| **`@vit/shared`** | Domain types, Valibot schemas, constants (delivery fee 6,000₮, bank transfer details, status enums). |
+| **`@vit/logger`** | Structured logging middleware for Hono. |
+
+## Tech stack
+
+- **Runtime/dep manager**: Bun, Turborepo
+- **Storefront**: Astro 5 (SSR via `@astrojs/cloudflare`), SolidJS islands, Tailwind v4
+- **Admin**: React 19, Vite, TanStack Router/Query, shadcn/ui
+- **Server**: Hono, tRPC v11, Drizzle ORM
+- **Agent**: Flue framework, Cloudflare Workers AI (`@cf/moonshotai/kimi-k2.6`)
+- **Database**: PostgreSQL 16 (Drizzle ORM, Hyperdrive connection pooling in prod)
+- **Storage**: Cloudflare R2 (product + inbound images), KV (sessions/cache)
+- **State**: Durable Objects (product search, Flue agent sessions, Messenger dedup/cart/checkout)
+- **IaC/deploy**: Alchemy → Cloudflare Workers (server, agent) and Pages (storev2, admin)
+- **Lint/format**: Biome, oxlint; type checks via `tsc`
+
+## Getting started
+
+Install dependencies:
 
 ```bash
 bun install
 ```
-## Database Setup
 
-This project uses SQLite with Drizzle ORM.
+### Database
 
-1. Start the local SQLite database:
+PostgreSQL via Docker (port 5433):
+
 ```bash
-cd apps/server && bun db:local
+bun db:docker:up        # docker-compose up -d
+bun db:push             # push Drizzle schema
 ```
 
-2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
+### Local dev with Caddy
 
-3. Apply the schema to your database:
-```bash
-bun db:push
-```
+A `Caddyfile` provides local TLS domains so OAuth/cookies behave like prod:
 
+| Local domain | Proxies | App |
+|--------------|---------|-----|
+| `https://vitstore.dev` | `localhost:4321` | storev2 |
+| `https://api.vitstore.dev` | `localhost:3006` | server |
+| `https://admin.vitstore.dev` | `localhost:3005` | admin |
 
-Then, run the development server:
+Run everything in dev (Turborepo):
 
 ```bash
 bun dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
+Or run a single app:
 
-The API is running at [http://localhost:3000](http://localhost:3000).
+```bash
+bun dev:web      # storev2
+bun dev:server   # server
+bun dev:native   # admin
+```
 
+The agent runs via Wrangler locally:
 
+```bash
+cd apps/agent && bun dev   # builds then wrangler dev
+```
 
-## Project Structure
+### Deploy
+
+Each app deploys via Alchemy to Cloudflare (prod stage reads `../../.env.prod`):
+
+```bash
+bun deploy          # turbo deploy (server first, then frontends)
+```
+
+## Available scripts
+
+| Script | Description |
+|--------|-------------|
+| `bun dev` | Start all apps in dev mode |
+| `bun build` | Build all apps |
+| `bun check-types` | TypeScript checks across all apps |
+| `bun deploy` / `bun destroy` | Deploy/teardown all apps via Alchemy |
+| `bun db:push` | Push Drizzle schema to the database |
+| `bun db:migrate` / `bun db:migrate:local` | Run migrations (prod/local) |
+| `bun db:studio` / `bun db:studio:local` | Open Drizzle Studio |
+| `bun db:seed` | Seed the database |
+| `bun db:docker:up` / `bun db:docker:down` | Start/stop the Postgres container |
+| `bun lint` / `bun lint:fix` | Biome lint / autofix |
+| `bun format` | Biome format |
+| `bun check` | oxlint |
+| `bun knip` | Dead-code/dependency analysis |
+| `bun quality` | `check-types` + `fallow dead-code` + `fallow health` |
+| `bun vit:extract` / `bun vit:compare` | Scrape/compare vit product catalog |
+| `bun brand-logos:scrape` | Scrape missing brand logos |
+
+## Project structure
 
 ```
-vit2/
+vit-store/
 ├── apps/
-│   ├── web/         # Frontend application (React + TanStack Start)
-│   └── server/      # Backend API (Hono, TRPC)
+│   ├── storev2/   # Storefront (Astro + SolidJS)
+│   ├── admin/     # Admin dashboard (React + TanStack Router)
+│   ├── server/    # API gateway (Hono + tRPC, Cloudflare Workers)
+│   └── agent/     # Messenger AI bot (Flue + Workers AI)
+├── packages/
+│   ├── api/       # @vit/api — routers, DB queries, integrations
+│   ├── assistant/ # @vit/assistant — agent tools & instructions
+│   ├── shared/    # @vit/shared — types, schemas, constants
+│   └── logger/    # @vit/logger — Hono logging middleware
+├── docs/
+│   ├── adr/       # Architecture decision records
+│   └── agents/    # Agent workflow docs (issue tracker, triage, domain)
+├── CONTEXT.md     # Product + domain language (customers, orders, payments, agent surfaces)
+├── PRODUCT.md     # Product register, users, brand personality, design principles
+├── DESIGN.md      # Storefront design system (colors, type, components)
+├── Caddyfile      # Local dev reverse proxy (vitstore.dev / api / admin)
+└── docker-compose.yml  # Local PostgreSQL 16
 ```
 
-## Available Scripts
+## Further reading
 
-- `bun dev`: Start all applications in development mode
-- `bun build`: Build all applications
-- `bun dev:web`: Start only the web application
-- `bun dev:server`: Start only the server
-- `bun check-types`: Check TypeScript types across all apps
-- `bun db:push`: Push schema changes to database
-- `bun db:studio`: Open database studio UI
-- `cd apps/server && bun db:local`: Start the local SQLite database
-- `bun check`: Run Biome formatting and linting
+- `CONTEXT.md` — product context, domain language (Customer, Order, Payment, PSID, delivery zones), and agent surfaces.
+- `PRODUCT.md` — product register, users, brand personality, design principles.
+- `DESIGN.md` — storefront design system (neo-brutalist, color tokens, typography, components).
+- `docs/adr/` — architecture decision records (Messenger agent, R2 photo pipeline, payment surface, delivery-zone resolution, admin Codemode agent, etc.).
+- `AGENTS.md` — agent workflow conventions (issue tracker, triage labels, domain docs, browser automation rules).
