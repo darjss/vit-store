@@ -82,7 +82,7 @@ if (payment.status === "success") {
         <PaymentOptions
             paymentNumber={id}
             total={payment.total}
-            transferReference={payment.order.customerPhone}
+            transferReference={payment.paymentNumber}
             checkoutToken={checkoutToken}
             client:only="solid-js"
         >

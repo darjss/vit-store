@@ -4,8 +4,7 @@ import {
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
 import { logger } from "~/lib/logger";
-import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
-import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
+import { confirmTransferPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;
@@ -41,46 +40,15 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					});
 					return;
 				}
-				const confirmed = await q.confirmPaymentAndApplyStock(
+				const result = await confirmTransferPaymentAndNotify({
 					paymentNumber,
-					"transfer",
-				);
-				if (!confirmed) {
+					source: "messenger",
+				});
+				if (!result.confirmed) {
 					logger.info("messengerWebhook.paymentAlreadyConfirmedOrNotPending", {
 						paymentNumber,
 					});
 					return;
-				}
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(paymentNumber);
-					if (paymentInfo) {
-						await sendDetailedOrderNotification({
-							paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
-							status: "payment_confirmed",
-						});
-						await trackPaymentConfirmedServerSide({
-							phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
-							paymentNumber,
-							orderNumber: paymentInfo.order.orderNumber,
-							provider: "transfer",
-							revenue: paymentInfo.order.total,
-						});
-					}
-				} catch (notificationError) {
-					logger.error(
-						"messengerWebhook.sendNotificationFailed",
-						notificationError,
-					);
 				}
 			} else if (event.postback.payload.startsWith("reject_payment")) {
 				logger.info("messengerWebhook.rejectPayment", { paymentNumber });

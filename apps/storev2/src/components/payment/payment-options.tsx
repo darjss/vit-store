@@ -141,7 +141,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 
 								<div class="space-y-1.5">
 									<p class="font-bold text-[10px] text-muted-foreground uppercase sm:text-xs">
-										Гүйлгээний утга
+										Төлбөрийн дугаар
 									</p>
 									<div class="flex min-w-0 items-stretch">
 										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
@@ -149,7 +149,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										</div>
 										<CopyButton
 											text={props.transferReference}
-											title="Гүйлгээний утга"
+											title="Төлбөрийн дугаар"
 										/>
 									</div>
 								</div>
@@ -162,8 +162,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								<div class="flex-1">
 									<p class="font-bold text-[11px] leading-snug sm:text-xs">
 										<strong>Гүйлгээний утга</strong> хэсэгт заавал{" "}
-										<strong>{props.transferReference}</strong> утасны дугаарыг
-										бичнэ үү. Төлбөр 5-15 минутын дотор баталгаажна.
+										<strong>{props.transferReference}</strong> төлбөрийн дугаарыг бичнэ үү.
+										Төлбөр автоматаар шалгагдах ба шаардлагатай үед бид гараар баталгаажуулна.
 									</p>
 								</div>
 							</div>

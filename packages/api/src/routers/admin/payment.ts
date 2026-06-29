@@ -4,8 +4,22 @@ import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
+import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generatePaymentNumber } from "~/lib/utils";
+
+type TransferReconciliationStub = {
+	getStatus(): Promise<TransferReconciliationState | null>;
+};
+
+const getTransferReconciliationStub = (
+	env: Env,
+	paymentNumber: string,
+): TransferReconciliationStub => {
+	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
+	const id = namespace.idFromName(paymentNumber);
+	return namespace.get(id) as TransferReconciliationStub;
+};
 
 export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -115,6 +129,30 @@ export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
             });
         }
     }),
+    getTransferReconciliationStatus: proc
+        .input(v.object({ paymentNumber: v.string() }))
+        .query(async ({ ctx, input }) => {
+            try {
+                const reconciler = getTransferReconciliationStub(
+                    ctx.c.env,
+                    input.paymentNumber,
+                );
+                return await reconciler.getStatus();
+            } catch (error) {
+                ctx.log.error(
+                    error instanceof Error ? error : new Error(String(error)),
+                    {
+                        event: "admin.transfer_reconciliation_status_failed",
+                        paymentNumber: input.paymentNumber,
+                    },
+                );
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to get transfer reconciliation status",
+                    cause: error,
+                });
+            }
+        }),
     confirmTransferPayment: proc
         .input(v.object({ paymentNumber: v.string() }))
         .mutation(async ({ ctx, input }) => {

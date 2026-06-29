@@ -22,6 +22,14 @@ const env = createStoreAlchemyEnv(process.env);
 console.log("stage", stage, env.PUBLIC_API_URL);
 
 export const storev2 = await Astro("front", {
+	// The Cloudflare adapter generates a Pages-style _routes.json. This app is
+	// deployed as a Worker with static assets via Alchemy, where assets are
+	// already served before the Worker. Keeping _routes.json has caused
+	// prerendered clean-slash routes like /, /login/, and /cart/ to be routed
+	// to Astro's stripped prerender modules and hang with no bytes.
+	build: {
+		command: "bun run build && rm -f dist/_routes.json",
+	},
 	bindings: {
 		// Reference the already-deployed server Worker by physical service name.
 		// Importing server/alchemy here causes store deploys to evaluate/deploy the

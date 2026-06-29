@@ -48,6 +48,14 @@ const productSearch = DurableObjectNamespace("product-search", {
 	sqlite: true,
 });
 
+const transferReconciliation = DurableObjectNamespace(
+	"transfer-reconciliation",
+	{
+		className: "TransferReconciliationObject",
+		sqlite: true,
+	},
+);
+
 const hyperdriveDB = await Hyperdrive("pscale-db", {
 	origin: {
 		host: env.PLANETSCALE_HOST,
@@ -73,6 +81,7 @@ export const server = await Worker("api", {
 	adopt: true,
 	bindings: {
 		PRODUCT_SEARCH: productSearch,
+		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 		RATE_LIMITER: rateLimit,
 		DB: hyperdriveDB,
 		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
@@ -101,6 +110,12 @@ export const server = await Worker("api", {
 		QPAY_USERNAME: env.QPAY_USERNAME,
 		QPAY_PASSWORD: env.QPAY_PASSWORD,
 		QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
+		KHAAN_USERNAME: env.KHAAN_USERNAME,
+		KHAAN_PASSWORD: env.KHAAN_PASSWORD,
+		KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
+		...(env.KHAAN_USER_AGENT ? { KHAAN_USER_AGENT: env.KHAAN_USER_AGENT } : {}),
+		KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
+		KHAAN_BRANCH_CODE: env.KHAAN_BRANCH_CODE,
 		POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
 		POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
 		POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
