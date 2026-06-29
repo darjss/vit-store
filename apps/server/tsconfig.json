@@ -12,5 +12,6 @@
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx"
 	},
-	"include": ["**/*.ts", "../../env.ts"]
+	"include": ["**/*.ts", "../../env.ts"],
+	"exclude": ["**/*.test.ts", "**/*.spec.ts"]
 }
