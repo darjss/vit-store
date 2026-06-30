@@ -30,6 +30,15 @@ import {
 import { Textarea } from "../ui/textarea";
 import SelectProductForm from "./select-product-form";
 
+const orderStatusLabels: Record<string, string> = {
+	created: "Төлөөгүй",
+	pending: "Хүлээгдэж буй",
+	shipped: "Илгээгдсэн",
+	delivered: "Хүргэгдсэн",
+	cancelled: "Цуцлагдсан",
+	refunded: "Буцаагдсан",
+};
+
 const OrderForm = ({
 	order,
 	onSuccess,
@@ -277,7 +286,7 @@ const OrderForm = ({
 												<SelectContent>
 													{orderStatus.map((status, index) => (
 														<SelectItem key={index} value={status}>
-															{status.charAt(0).toUpperCase() + status.slice(1)}
+															{orderStatusLabels[status] ?? status}
 														</SelectItem>
 													))}
 												</SelectContent>

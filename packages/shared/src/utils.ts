@@ -47,6 +47,11 @@ export function formatCurrency(amount: number): string {
 
 export const getOrderStatusStyles = (status: string) => {
 	switch (status.toLowerCase()) {
+		case "created":
+			return {
+				badge: "border-black bg-[#778ca3] text-white",
+				border: "border-l-[#778ca3]",
+			};
 		case "delivered":
 			return {
 				badge: "border-black bg-[#00ff88] text-black",

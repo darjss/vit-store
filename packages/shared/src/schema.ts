@@ -141,6 +141,7 @@ export const addOrderSchema = v.object({
 	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	notes: v.optional(v.nullable(v.string())),
 	status: v.picklist([
+		"created",
 		"pending",
 		"shipped",
 		"delivered",

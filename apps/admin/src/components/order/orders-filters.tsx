@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 
 const primaryStatuses = [undefined, "pending", "shipped", "delivered"] as const;
-const issueStatuses = ["cancelled", "refunded"] as const;
+const issueStatuses = ["created", "cancelled", "refunded"] as const;
 
 const datePresets = [
 	{ value: "all", label: "Бүгд" },
@@ -44,6 +44,7 @@ const datePresets = [
 function formatStatusLabel(status?: string) {
 	if (!status) return "Бүгд";
 	const labels: Record<string, string> = {
+		created: "Төлөөгүй",
 		pending: "Хүлээгдэж буй",
 		shipped: "Илгээгдсэн",
 		delivered: "Хүргэгдсэн",
@@ -94,7 +95,9 @@ export default function OrdersFilters({
 		: undefined;
 
 	const isIssueActive =
-		orderStatus === "cancelled" || orderStatus === "refunded";
+		orderStatus === "created" ||
+		orderStatus === "cancelled" ||
+		orderStatus === "refunded";
 
 	const handleDatePreset = (preset: string) => {
 		navigate({

@@ -333,6 +333,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
         paymentStatus: v.optional(v.picklist(paymentStatus)),
         orderStatus: v.optional(v.picklist([
+            "created",
             "pending",
             "shipped",
             "delivered",
@@ -380,6 +381,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({
         id: v.number(),
         status: v.picklist([
+            "created",
             "pending",
             "shipped",
             "delivered",

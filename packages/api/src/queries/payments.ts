@@ -4,6 +4,7 @@ import {
 	OrderDetailsTable,
 	type PaymentInsertType,
 	MessengerNotificationFailuresTable,
+	OrdersTable,
 	PaymentsTable,
 	ProductImagesTable,
 	ProductsTable,
@@ -370,6 +371,13 @@ export const paymentQueries = {
 						sellingPrice: detail.product.price,
 					});
 				}
+
+				// Payment confirmed — promote the order from "created" (unpaid)
+				// to "pending" (paid, awaiting shipment).
+				await tx
+					.update(OrdersTable)
+					.set({ status: "pending" })
+					.where(eq(OrdersTable.id, claimedPayment.orderId));
 
 				return true;
 			});

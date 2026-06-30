@@ -12,6 +12,7 @@ import {
 	inArray,
 	isNull,
 	like,
+	ne,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -431,6 +432,9 @@ export const orderQueries = {
 
 			if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
+			} else {
+				// Default: hide "created" (unpaid) orders from the admin list
+				conditions.push(ne(OrdersTable.status, "created"));
 			}
 
 			if (params.searchTerm !== undefined) {

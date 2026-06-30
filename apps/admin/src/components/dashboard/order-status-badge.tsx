@@ -8,6 +8,12 @@ interface OrderStatusBadgeProps {
 export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
 	const getStatusConfig = (status: string) => {
 		switch (status) {
+			case "created":
+				return {
+					label: "Төлөөгүй",
+					className: "border-border bg-[#778ca3] text-white",
+					icon: Clock,
+				};
 			case "pending":
 				return {
 					label: "Хүлээгдэж буй",
