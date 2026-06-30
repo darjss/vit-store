@@ -625,7 +625,7 @@ export const storeQueries = {
 		// paginate through. Returns 0 if the table is empty.
 		async getTotalActiveProductCount() {
 			const result = await db()
-				.select({ count: sql<number>`count(*)::int` })
+				.select({ count: sql<number>`count(*)` })
 				.from(ProductsTable)
 				.where(
 					and(
@@ -720,7 +720,7 @@ export const storeQueries = {
 					},
 				}),
 				db()
-					.select({ count: sql<number>`count(*)::int` })
+					.select({ count: sql<number>`count(*)` })
 					.from(ProductsTable)
 					.where(
 						and(

@@ -5,7 +5,7 @@ import { BrandsTable, ProductsTable } from "~/db/schema";
 export const brandQueries = {
 	admin: {
 		async getAllBrands() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			return db()
 				.select({
@@ -88,7 +88,7 @@ export const brandQueries = {
 
 	store: {
 		async getAllBrands() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			return db()
 				.select({
@@ -120,7 +120,7 @@ export const brandQueries = {
 		},
 
 		async getBrandById(id: number) {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			const result = await db()
 				.select({
@@ -162,7 +162,7 @@ export const brandQueries = {
 		},
 
 		async getBrandBySlug(slug: string) {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			const result = await db()
 				.select({
@@ -204,7 +204,7 @@ export const brandQueries = {
 		},
 
 		async getAllBrandsWithStock() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			return db()
 				.select({

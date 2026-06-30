@@ -1,1 +1,0 @@
-ALTER TABLE "ecom_vit_payment" ADD COLUMN "invoice_id" varchar(64);

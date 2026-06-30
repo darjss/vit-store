@@ -292,8 +292,12 @@ export const paymentQueries = {
 			paymentNumber: string,
 			provider: PaymentProviderType,
 		) {
-			return await db().transaction(async (tx) => {
-				const [claimedPayment] = await tx
+			// D1 has no interactive transactions. This reads order details and
+			// per-item average cost between dependent writes, so it cannot be a
+			// single batch() and runs sequentially on one db handle.
+			const dbi = db();
+			return await (async () => {
+				const [claimedPayment] = await dbi
 					.update(PaymentsTable)
 					.set({ status: "success", provider })
 					.where(
@@ -309,7 +313,7 @@ export const paymentQueries = {
 					return false;
 				}
 
-				const orderDetails = await tx.query.OrderDetailsTable.findMany({
+				const orderDetails = await dbi.query.OrderDetailsTable.findMany({
 					where: and(
 						eq(OrderDetailsTable.orderId, claimedPayment.orderId),
 						isNull(OrderDetailsTable.deletedAt),
@@ -339,7 +343,7 @@ export const paymentQueries = {
 				}
 
 				for (const detail of orderDetails) {
-					const [updatedProduct] = await tx
+					const [updatedProduct] = await dbi
 						.update(ProductsTable)
 						.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
 						.where(
@@ -358,12 +362,12 @@ export const paymentQueries = {
 					}
 
 					const productCost = await getAverageCostOfProduct(
-						tx,
+						dbi,
 						detail.product.id,
 						new Date(),
 					);
 
-					await tx.insert(SalesTable).values({
+					await dbi.insert(SalesTable).values({
 						orderId: claimedPayment.orderId,
 						productId: detail.product.id,
 						quantitySold: detail.quantity,
@@ -376,7 +380,7 @@ export const paymentQueries = {
 				// to "pending" (paid, awaiting shipment). Guard on current status
 				// = "created" so this is a no-op for legacy "pending" orders and
 				// never accidentally demotes a shipped/delivered order.
-				await tx
+				await dbi
 					.update(OrdersTable)
 					.set({ status: "pending" })
 					.where(
@@ -387,7 +391,7 @@ export const paymentQueries = {
 					);
 
 				return true;
-			});
+			})();
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {

@@ -8,7 +8,6 @@ import {
 	desc,
 	eq,
 	gte,
-	ilike,
 	inArray,
 	isNull,
 	like,
@@ -253,8 +252,8 @@ export const orderQueries = {
 				where: and(
 					isNull(OrdersTable.deletedAt),
 					or(
-						ilike(OrdersTable.orderNumber, `%${searchTerm}%`),
-						ilike(OrdersTable.address, `%${searchTerm}%`),
+						like(OrdersTable.orderNumber, `%${searchTerm}%`),
+						like(OrdersTable.address, `%${searchTerm}%`),
 						like(
 							sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
 							`%${searchTerm}%`,
@@ -309,7 +308,7 @@ export const orderQueries = {
 				where: and(
 					isNull(OrdersTable.deletedAt),
 					or(
-						ilike(OrdersTable.orderNumber, `%${term}%`),
+						like(OrdersTable.orderNumber, `%${term}%`),
 						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
 					),
 				),
