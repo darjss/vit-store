@@ -10,7 +10,6 @@ import IconTruck from "~icons/ri/truck-line";
 import IconMapPin from "~icons/ri/map-pin-line";
 import IconTime from "~icons/ri/time-line";
 import IconAlert from "~icons/ri/alert-line";
-import IconInfo from "~icons/ri/information-line";
 
 const deliveryInfo = [
 	{
@@ -38,12 +37,11 @@ export default function DeliveryInfoSheet() {
 			<SheetTrigger
 				as="button"
 				type="button"
-				class="inline-flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide text-primary underline-offset-2 transition-colors hover:underline"
+				class="inline-flex items-center gap-1 font-bold text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
 			>
-				<IconInfo class="h-3.5 w-3.5" />
-				<span>Хүргэлтийн мэдээлэл харах</span>
+				<span>Дэлгэрэнгүй</span>
 			</SheetTrigger>
-			<SheetContent position="bottom" class="border-t-4 border-border">
+			<SheetContent position="bottom" class="border-t-2 border-border">
 				<SheetHeader class="text-left">
 					<SheetTitle class="font-black text-lg uppercase tracking-tight">
 						Хүргэлтийн мэдээлэл
@@ -52,11 +50,11 @@ export default function DeliveryInfoSheet() {
 
 				<div class="mt-4 space-y-5 pb-6">
 					{/* Delivery Zone Map */}
-					<div class="border-3 border-border bg-card p-3 shadow-hard-sm">
+					<div class="border border-border bg-card p-3">
 						<h3 class="mb-2 font-black text-xs uppercase tracking-wider">
 							Улаанбаатар хотын хүргэлтийн бүс
 						</h3>
-						<div class="border-2 border-border bg-muted/30 overflow-hidden">
+						<div class="border border-border bg-muted/30 overflow-hidden">
 							<img
 								src="/delivery-zone.png"
 								alt="Улаанбаатар хотын хүргэлтийн бүсийн зураг"
@@ -73,9 +71,9 @@ export default function DeliveryInfoSheet() {
 					{/* Delivery Info Cards */}
 					<div class="grid gap-3">
 						{deliveryInfo.map((item) => (
-							<div class="border-3 border-border bg-card p-4 shadow-hard-sm">
+							<div class="border border-border bg-card p-4">
 								<div class="mb-2 flex items-center gap-2">
-									<div class="flex h-8 w-8 items-center justify-center border-2 border-border bg-primary">
+									<div class="flex h-8 w-8 items-center justify-center border border-border bg-primary">
 										<item.icon class="h-4 w-4" />
 									</div>
 									<h3 class="font-black text-xs uppercase tracking-wider">
@@ -90,9 +88,9 @@ export default function DeliveryInfoSheet() {
 					</div>
 
 					{/* Important Notice */}
-					<div class="border-3 border-border bg-yellow-50 p-4 shadow-hard-sm">
+					<div class="border border-border bg-yellow-50 p-4">
 						<div class="flex items-start gap-2.5">
-							<div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border-2 border-border bg-primary">
+							<div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border border-border bg-primary">
 								<IconAlert class="h-3.5 w-3.5" />
 							</div>
 							<div>

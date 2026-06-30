@@ -57,7 +57,7 @@ const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       type={local.type}
       class={cn(
-        "flex h-12 md:h-14 w-full border-3 border-border bg-transparent px-4 md:px-5 py-3 text-base md:text-lg font-bold shadow-hard-lg transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground placeholder:font-medium focus-visible:outline-none focus-visible:shadow-hard-xl focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] focus-visible:ring-4 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-lg data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-hard-xl",
+        "flex h-12 md:h-14 w-full border-2 border-border bg-transparent px-4 md:px-5 py-3 text-base md:text-lg font-bold shadow-hard-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground placeholder:font-medium focus-visible:outline-none focus-visible:shadow-hard focus-visible:translate-x-[-1px] focus-visible:translate-y-[-1px] focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-sm data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-hard",
         local.class
       )}
       {...others}
@@ -75,7 +75,7 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   return (
     <TextFieldPrimitive.TextArea
       class={cn(
-        "flex min-h-[120px] w-full border-3 border-border bg-transparent px-4 py-3 text-base md:text-lg font-medium shadow-hard transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px] disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-lg data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-hard-xl",
+        "flex min-h-[100px] w-full border-2 border-border bg-transparent px-4 py-3 text-base md:text-lg font-medium shadow-hard-sm transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-hard focus-visible:translate-x-[-1px] focus-visible:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-sm data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-hard",
         local.class
       )}
       {...others}
@@ -84,13 +84,13 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
 }
  
 const labelVariants = cva(
-  "text-sm md:text-base font-black uppercase tracking-wider leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "text-sm md:text-base font-bold uppercase tracking-wide leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
   {
     variants: {
       variant: {
         label: "data-[invalid]:text-destructive",
         description: "font-normal normal-case text-muted-foreground text-xs md:text-sm",
-        error: "text-xs md:text-sm text-destructive font-black uppercase"
+        error: "text-xs md:text-sm text-destructive font-bold"
       }
     },
     defaultVariants: {
