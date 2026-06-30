@@ -25,7 +25,7 @@ export function FormTextField(props: FormTextFieldProps) {
 		field().form.store,
 		(state) => state.submissionAttempts,
 	);
-	const showErrors = () => isTouched() || submissionAttempts() > 0;
+	const showErrors = () => isTouched() || submissionAttempts() > 0 || errors().length > 0;
 	// `meta.errors` can contain duplicates when the same field is validated by
 	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
 	const uniqueErrors = createMemo(() => {

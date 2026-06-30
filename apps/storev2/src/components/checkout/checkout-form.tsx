@@ -28,9 +28,6 @@ import IconPackage from "~icons/ri/archive-line";
 import IconChevronDown from "~icons/ri/arrow-down-s-line";
 import IconChevronUp from "~icons/ri/arrow-up-s-line";
 import IconBankCard from "~icons/ri/bank-card-line";
-import IconLock from "~icons/ri/lock-line";
-import IconShieldCheck from "~icons/ri/shield-check-line";
-import IconSmartphone from "~icons/ri/smartphone-line";
 import IconTruck from "~icons/ri/truck-line";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
@@ -168,7 +165,26 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			addressZoneId: props.user?.addressZoneId || 0,
 			notes: "",
 		},
+		// Keep the submit button enabled even when fields have validation errors.
+		// This prevents the silent-button-disabling bug where canSubmit goes false
+		// on blur validation but error messages aren't shown yet. Users can always
+		// tap submit; invalid attempts trigger onSubmitInvalid which focuses the
+		// first invalid field and reveals all errors.
+		canSubmitWhenInvalid: true,
 		validators: {
+			onChange: v.object({
+				phoneNumber: phoneSchema,
+				address: v.pipe(
+					v.string(),
+					v.minLength(5, "Хаягаа бичнэ үү"),
+				),
+				addressZoneId: v.pipe(
+					v.number(),
+					v.integer(),
+					v.minValue(1, "Хаягийн бүс сонгоно уу"),
+				),
+				notes: v.string(),
+			}),
 			onBlur: v.object({
 				phoneNumber: phoneSchema,
 				address: v.pipe(
@@ -203,6 +219,16 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			}));
 			mutation.mutate({ ...values.value, products });
 		},
+		onSubmitInvalid: () => {
+			// Focus the first invalid field so the user can fix it.
+			// queueMicrotask lets Solid flush aria-invalid attributes before we query.
+			queueMicrotask(() => {
+				const invalid = checkoutFormEl?.querySelector<HTMLElement>(
+					'[aria-invalid="true"]',
+				);
+				invalid?.focus();
+			});
+		},
 	}));
 
 	createEffect(() => {
@@ -216,8 +242,18 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const isEmpty = () => cart.items().length === 0;
 	const isHydrated = () => cart.isHydrated();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
+
+	// Delivery estimate: orders before 10:30 Ulaanbaatar time deliver today,
+	// otherwise tomorrow. ULAST is UTC+8.
+	const deliveryEstimate = createMemo(() => {
+		const now = new Date();
+		const ulaanbaatarHour = (now.getUTCHours() + 8) % 24;
+		const ulaanbaatarMin = now.getUTCMinutes() + ulaanbaatarHour * 60;
+		const isBeforeCutoff = ulaanbaatarMin < 10 * 60 + 30;
+		return isBeforeCutoff ? "today" : "tomorrow";
+	});
 	const OrderSummary = () => (
-		<div class="border-4 border-border shadow-hard-lg">
+		<div class="border-2 border-border shadow-hard-sm">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
@@ -244,12 +280,12 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</button>
 
 			<Show when={summaryOpen()}>
-				<div class="border-border border-t-4 p-3">
+				<div class="border-border border-t-2 p-3">
 					<div class="max-h-56 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-280px)]">
 						<For each={cart.items()}>
 							{(item) => (
 								<div class="flex gap-2.5">
-									<div class="h-14 w-14 flex-shrink-0 overflow-hidden border-3 border-border bg-card">
+									<div class="h-14 w-14 flex-shrink-0 overflow-hidden border border-border bg-card">
 										<a href={`/products/${item.slug}-${item.productId}/`}>
 											<Image
 												src={item.image}
@@ -342,16 +378,16 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 										</Show>
 									</p>
 								</div>
-								<div class="flex gap-1">
+								<div class="flex gap-1.5">
 									<div
-										class="h-2.5 w-8 border-2 border-border"
+										class="h-2 w-8 border border-border"
 										classList={{
 											"bg-primary": step() === "delivery",
 											"bg-muted": step() === "payment",
 										}}
 									/>
 									<div
-										class="h-2.5 w-8 border-2 border-border"
+										class="h-2 w-8 border border-border"
 										classList={{
 											"bg-primary": step() === "payment",
 											"bg-muted": step() === "delivery",
@@ -367,10 +403,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<Switch>
 									{/* DELIVERY STEP */}
 									<Match when={step() === "delivery"}>
-										<div class="border-4 border-border shadow-hard-lg">
-											<div class="border-border border-b-4 bg-secondary p-3">
+										<div class="border-2 border-border shadow-hard-sm">
+											<div class="border-border border-b-2 bg-secondary p-3.5">
 												<div class="flex items-center gap-2">
-													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
+													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
 														<IconTruck class="h-3.5 w-3.5 text-foreground" />
 													</div>
 													<div>
@@ -384,10 +420,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												</div>
 											</div>
 
-											<div class="p-3">
+											<div class="p-4">
 												<form
 													ref={(el) => (checkoutFormEl = el)}
-													class="space-y-4"
+													class="space-y-5"
 													onSubmit={async (e) => {
 														e.preventDefault();
 														e.stopPropagation();
@@ -395,115 +431,79 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 															document.activeElement.blur();
 														}
 														await form.handleSubmit();
-														// Focus the first invalid field so the user can fix it.
-														// setTimeout (macrotask) lets Solid flush the aria-invalid
-														// attributes before we query them.
-														setTimeout(() => {
-															const invalid = checkoutFormEl?.querySelector<HTMLElement>(
-																'[aria-invalid="true"]',
-															);
-															invalid?.focus();
-														}, 0);
 													}}
 												>
 													{/* Phone */}
-													<div class="border-3 border-border p-3 shadow-hard-sm">
+													<form.AppField
+														name="phoneNumber"
+														children={(field) => (
+															<field.FormTextField
+																label="Утасны дугаар"
+																placeholder="88889999"
+																type="tel"
+																autoComplete="tel"
+																inputMode="numeric"
+															/>
+														)}
+													/>
+
+													{/* Zone + info */}
+													<div class="space-y-2">
 														<form.AppField
-															name="phoneNumber"
+															name="addressZoneId"
 															children={(field) => (
-																<field.FormTextField
-																	label="Утасны дугаар"
-																	placeholder="88889999"
-																	type="tel"
-																	autoComplete="tel"
-																	inputMode="numeric"
+																<field.FormSelectField
+																	label="Хаягийн бүс"
+																	placeholder={
+																		addressZonesQuery.isLoading
+																			? "Бүсүүд уншиж байна..."
+																			: "Хаягийн бүс сонгох"
+																	}
+																	options={addressZoneOptions()}
+																	disabled={addressZonesQuery.isLoading}
 																/>
 															)}
 														/>
-													</div>
-
-													{/* Zone + info */}
-													<div class="border-3 border-border p-3 shadow-hard-sm">
-														<div class="space-y-2">
-															<form.AppField
-																name="addressZoneId"
-																children={(field) => (
-																	<field.FormSelectField
-																		label="Хаягийн бүс"
-																		placeholder={
-																			addressZonesQuery.isLoading
-																				? "Бүсүүд уншиж байна..."
-																				: "Хаягийн бүс сонгох"
-																		}
-																		options={addressZoneOptions()}
-																		disabled={addressZonesQuery.isLoading}
-																	/>
-																)}
-															/>
-															<div class="flex justify-end">
-																<DeliveryInfoSheet />
-															</div>
-														</div>
 													</div>
 
 													{/* Address */}
-													<div class="border-3 border-border p-3 shadow-hard-sm">
-														<form.AppField
-															name="address"
-															children={(field) => (
-																<field.FormTextArea
-																	label="Хаяг"
-																	placeholder="Байр, тоот, давхар"
-																	autoComplete="street-address"
-																/>
-															)}
-														/>
-													</div>
+													<form.AppField
+														name="address"
+														children={(field) => (
+															<field.FormTextArea
+																label="Хаяг"
+																placeholder="Байр, тоот, давхар"
+																autoComplete="street-address"
+															/>
+														)}
+													/>
 
 													{/* Notes */}
-													<div class="border-3 border-border p-3 shadow-hard-sm">
-														<form.AppField
-															name="notes"
-															children={(field) => (
-																<field.FormTextArea
-																	label="Нэмэлт мэдээлэл (заавал биш)"
-																	placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
-																/>
-															)}
-														/>
-													</div>
+													<form.AppField
+														name="notes"
+														children={(field) => (
+															<field.FormTextArea
+																label="Нэмэлт мэдээлэл (заавал биш)"
+																placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
+															/>
+														)}
+													/>
 
-													{/* Trust badges */}
-													<div class="grid grid-cols-2 gap-2">
-														<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
-															<IconLock class="h-4 w-4 shrink-0 text-foreground" />
-															<span class="font-black text-[10px] text-foreground uppercase leading-tight">
-																Аюулгүй төлбөр
-															</span>
-														</div>
-														<div class="flex items-center gap-2 border-3 border-border bg-primary p-2.5 shadow-hard-sm">
-															<IconShieldCheck class="h-4 w-4 shrink-0 text-foreground" />
-															<span class="font-black text-[10px] text-foreground uppercase leading-tight">
-																Баталгаат бараа
-															</span>
-														</div>
-														<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
-															<IconTruck class="h-4 w-4 shrink-0 text-secondary-foreground" />
-															<span class="font-black text-[10px] text-secondary-foreground uppercase leading-tight">
-																Өдөрт нь хүргэнэ
-															</span>
-														</div>
-														<div class="flex items-center gap-2 border-3 border-border bg-secondary p-2.5 shadow-hard-sm">
-															<IconSmartphone class="h-4 w-4 shrink-0 text-secondary-foreground" />
-															<span class="font-black text-[10px] text-secondary-foreground uppercase leading-tight">
-																QPay / Данс
-															</span>
-														</div>
+													{/* Delivery estimate */}
+													<div class="flex items-center gap-2.5 rounded-sm bg-muted/50 px-3.5 py-2.5">
+														<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
+														<p class="text-xs font-medium leading-snug text-muted-foreground">
+															<Show when={deliveryEstimate() === "today"} fallback={<>Хүргэлт маргааш</>}>
+																Хүргэлт өнөөдөр
+															</Show>
+															<span class="text-foreground/40"> · </span>
+															<DeliveryInfoSheet />
+														</p>
 													</div>
 
 													{/* Submit */}
-													<div class="space-y-3 pt-2">
-														<div class="flex items-center justify-between border-4 border-border bg-primary p-3 shadow-hard-sm">
+													<div class="space-y-3 pt-1">
+														<div class="flex items-center justify-between border-2 border-border bg-primary p-3.5">
 															<div>
 																<p class="font-black text-foreground text-sm uppercase">
 																	Төлөх дүн
@@ -538,10 +538,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									{/* PAYMENT STEP */}
 									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-4 border-border shadow-hard-lg">
-											<div class="border-border border-b-4 bg-secondary p-3">
+										<div class="border-2 border-border shadow-hard-sm">
+											<div class="border-border border-b-2 bg-secondary p-3.5">
 												<div class="flex items-center gap-2">
-													<div class="flex h-7 w-7 items-center justify-center border-2 border-border bg-primary">
+													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
 														<IconBankCard class="h-3.5 w-3.5 text-foreground" />
 													</div>
 													<div>
@@ -555,7 +555,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												</div>
 											</div>
 
-											<div class="p-3">
+											<div class="p-4">
 												<PaymentOptions
 													paymentNumber={paymentInfo()!.paymentNumber}
 													total={paymentInfo()!.total}
