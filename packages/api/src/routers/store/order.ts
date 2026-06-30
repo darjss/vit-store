@@ -8,7 +8,7 @@ import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, Products
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
-import { trackOrderPlacedServerSide } from "~/lib/integrations/posthog";
+import { trackOrderCreatedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
@@ -181,7 +181,7 @@ export const order = router({
             }
 
             // Fire-and-forget server-side PostHog tracking
-            trackOrderPlacedServerSide({
+            trackOrderCreatedServerSide({
                 phone: input.phoneNumber,
                 orderNumber,
                 paymentNumber: paymentNumber ?? undefined,

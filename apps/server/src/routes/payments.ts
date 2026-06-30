@@ -1,6 +1,6 @@
 import { persistMessengerNotificationFailure } from "@vit/api/lib/integrations/messenger/failed-notifications";
 import { sendDetailedOrderNotification } from "@vit/api/lib/integrations/messenger/messages";
-import { trackPaymentConfirmedServerSide } from "@vit/api/lib/integrations/posthog/capture";
+import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "@vit/api/lib/integrations/posthog/capture";
 import { checkQpayInvoice } from "@vit/api/lib/payments/qpay";
 import { paymentQueries } from "@vit/api/queries";
 import type { ServerHonoEnv } from "../lib/logging";
@@ -92,17 +92,20 @@ app.get("/qpay", async (c) => {
             error: error instanceof Error ? error.message : String(error),
         });
     }
-    try {
-        await trackPaymentConfirmedServerSide({
-            phone: payment.order.customerPhone?.toString() ?? paymentNumber,
-            paymentNumber,
-            orderNumber: payment.order.orderNumber,
-            provider: "qpay",
-            revenue: payment.order.total,
-        });
-    } catch {
-        // Analytics failure should not fail the webhook
-    }
+    trackPaymentConfirmedServerSide({
+        phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+        paymentNumber,
+        orderNumber: payment.order.orderNumber,
+        provider: "qpay",
+        revenue: payment.order.total,
+    }).catch(() => {});
+    trackOrderPlacedServerSide({
+        phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+        orderNumber: payment.order.orderNumber,
+        paymentNumber,
+        total: payment.order.total,
+        provider: "qpay",
+    }).catch(() => {});
 
     log.info("qpay.webhook_confirmed", {
         paymentNumber,
