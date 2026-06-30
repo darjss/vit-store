@@ -66,24 +66,21 @@ export async function confirmTransferPaymentAndNotify({
 		}
 	}
 
-	await trackPaymentConfirmedServerSide({
+	trackPaymentConfirmedServerSide({
 		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
 		paymentNumber,
 		orderNumber: paymentInfo.order.orderNumber,
 		provider: "transfer",
 		revenue: paymentInfo.order.total,
 		referrer,
-	});
-
-	try {
-		await trackOrderPlacedServerSide({
-			phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
-			orderNumber: paymentInfo.order.orderNumber,
-			paymentNumber,
-			total: paymentInfo.order.total,
-			provider: "transfer",
-		});
-	} catch {}
+	}).catch(() => {});
+	trackOrderPlacedServerSide({
+		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
+		orderNumber: paymentInfo.order.orderNumber,
+		paymentNumber,
+		total: paymentInfo.order.total,
+		provider: "transfer",
+	}).catch(() => {});
 
 	return {
 		confirmed: true,

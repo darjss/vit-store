@@ -93,7 +93,6 @@ export class PostHogClient {
 		addToCarts: number;
 		checkouts: number;
 		orders: number;
-		paidOrders: number;
 		payments: number;
 		searches: number;
 	}> {
@@ -105,7 +104,6 @@ export class PostHogClient {
 				countIf(event = 'add_to_cart') AS add_to_carts,
 				countIf(event = 'checkout_started') AS checkouts,
 				countIf(event = 'order_created') AS orders,
-				countIf(event = 'order_placed') AS paid_orders,
 				countIf(event = 'payment_confirmed') AS payments,
 				countIf(event = 'search_performed') AS searches
 			FROM events
@@ -123,9 +121,8 @@ export class PostHogClient {
 			addToCarts: Number(row[3]) || 0,
 			checkouts: Number(row[4]) || 0,
 			orders: Number(row[5]) || 0,
-			paidOrders: Number(row[6]) || 0,
-			payments: Number(row[7]) || 0,
-			searches: Number(row[8]) || 0,
+			payments: Number(row[6]) || 0,
+			searches: Number(row[7]) || 0,
 		};
 	}
 
@@ -166,7 +163,6 @@ export class PostHogClient {
 		cartAdders: number;
 		checkoutStarters: number;
 		orderPlacers: number;
-		paidOrderPlacers: number;
 		paymentConfirmers: number;
 	}> {
 		const hogql = `
@@ -176,7 +172,6 @@ export class PostHogClient {
 				uniqExactIf(person_id, event = 'add_to_cart') AS cart_adders,
 				uniqExactIf(person_id, event = 'checkout_started') AS checkout_starters,
 				uniqExactIf(person_id, event = 'order_created') AS order_placers,
-				uniqExactIf(person_id, event = 'order_placed') AS paid_order_placers,
 				uniqExactIf(person_id, event = 'payment_confirmed') AS payment_confirmers
 			FROM events
 			WHERE timestamp >= now() - interval ${daysBack} day
@@ -192,8 +187,7 @@ export class PostHogClient {
 			cartAdders: Number(row[2]) || 0,
 			checkoutStarters: Number(row[3]) || 0,
 			orderPlacers: Number(row[4]) || 0,
-			paidOrderPlacers: Number(row[5]) || 0,
-			paymentConfirmers: Number(row[6]) || 0,
+			paymentConfirmers: Number(row[5]) || 0,
 		};
 	}
 

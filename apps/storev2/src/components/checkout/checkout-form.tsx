@@ -20,7 +20,6 @@ import PaymentOptions from "@/components/payment/payment-options";
 import {
 	identifyUser,
 	trackCheckoutStarted,
-	trackOrderCreated,
 } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -107,11 +106,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					if (checkoutToken) {
 						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
 					}
-					trackOrderCreated(
-						paymentNumber,
-						cart.count(),
-						cart.total() + deliveryFee,
-					);
 					identifyUser(variables.phoneNumber);
 					showToast({
 						title: "Амжилттай",

@@ -291,7 +291,6 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
                     addToCarts: 0,
                     checkouts: 0,
                     orders: 0,
-                    paidOrders: 0,
                     payments: 0,
                     searches: 0,
                 },
@@ -331,7 +330,6 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
                 cartAdders: 0,
                 checkoutStarters: 0,
                 orderPlacers: 0,
-                paidOrderPlacers: 0,
                 paymentConfirmers: 0,
             };
         }

@@ -92,26 +92,20 @@ app.get("/qpay", async (c) => {
             error: error instanceof Error ? error.message : String(error),
         });
     }
-    try {
-        await trackPaymentConfirmedServerSide({
-            phone: payment.order.customerPhone?.toString() ?? paymentNumber,
-            paymentNumber,
-            orderNumber: payment.order.orderNumber,
-            provider: "qpay",
-            revenue: payment.order.total,
-        });
-    } catch {
-        // Analytics failure should not fail the webhook
-    }
-    try {
-        await trackOrderPlacedServerSide({
-            phone: payment.order.customerPhone?.toString() ?? paymentNumber,
-            orderNumber: payment.order.orderNumber,
-            paymentNumber,
-            total: payment.order.total,
-            provider: "qpay",
-        });
-    } catch {}
+    trackPaymentConfirmedServerSide({
+        phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+        paymentNumber,
+        orderNumber: payment.order.orderNumber,
+        provider: "qpay",
+        revenue: payment.order.total,
+    }).catch(() => {});
+    trackOrderPlacedServerSide({
+        phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+        orderNumber: payment.order.orderNumber,
+        paymentNumber,
+        total: payment.order.total,
+        provider: "qpay",
+    }).catch(() => {});
 
     log.info("qpay.webhook_confirmed", {
         paymentNumber,

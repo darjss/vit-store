@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
-import { trackPaymentConfirmed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -27,8 +26,6 @@ const ConfirmPaymentButton = (props: {
 			},
 			onSuccess: async (data) => {
 				if (!data?.orderNumber) return;
-
-				trackPaymentConfirmed(props.paymentNumber, data.orderNumber);
 
 				showToast({
 					title: "Амжилттай",
