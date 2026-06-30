@@ -493,8 +493,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 													<div class="flex items-center gap-2.5 rounded-sm bg-muted/50 px-3.5 py-2.5">
 														<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
 														<p class="text-xs font-medium leading-snug text-muted-foreground">
-															<Show when={deliveryEstimate() === "today"} fallback={<>Хүргэлт маргааш</>}>
-																Хүргэлт өнөөдөр
+															<Show when={deliveryEstimate() === "today"} fallback={<>Хүргэлт маргааш 12:00-аас хойш</>}>
+																Хүргэлт өнөөдөр 12:00-аас хойш
 															</Show>
 															<span class="text-foreground/40"> · </span>
 															<DeliveryInfoSheet />
