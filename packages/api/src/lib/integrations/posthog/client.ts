@@ -103,7 +103,7 @@ export class PostHogClient {
 				countIf(event = 'product_viewed') AS product_views,
 				countIf(event = 'add_to_cart') AS add_to_carts,
 				countIf(event = 'checkout_started') AS checkouts,
-				countIf(event = 'order_placed') AS orders,
+				countIf(event = 'order_created') AS orders,
 				countIf(event = 'payment_confirmed') AS payments,
 				countIf(event = 'search_performed') AS searches
 			FROM events
@@ -138,7 +138,7 @@ export class PostHogClient {
 			SELECT
 				uniqExact(person_id) AS unique_visitors,
 				countIf(event = '$pageview') AS pageviews,
-				countIf(event = 'order_placed') AS orders
+				countIf(event = 'order_created') AS orders
 			FROM events
 			WHERE timestamp >= now() - interval ${daysBack * 2} day
 				AND timestamp < now() - interval ${daysBack} day
@@ -171,7 +171,7 @@ export class PostHogClient {
 				uniqExactIf(person_id, event = 'product_viewed') AS product_viewers,
 				uniqExactIf(person_id, event = 'add_to_cart') AS cart_adders,
 				uniqExactIf(person_id, event = 'checkout_started') AS checkout_starters,
-				uniqExactIf(person_id, event = 'order_placed') AS order_placers,
+				uniqExactIf(person_id, event = 'order_created') AS order_placers,
 				uniqExactIf(person_id, event = 'payment_confirmed') AS payment_confirmers
 			FROM events
 			WHERE timestamp >= now() - interval ${daysBack} day
@@ -374,7 +374,7 @@ export class PostHogClient {
 				toDate(timestamp) AS day,
 				uniqExact(person_id) AS visitors,
 				countIf(event = '$pageview') AS pageviews,
-				countIf(event = 'order_placed') AS orders
+				countIf(event = 'order_created') AS orders
 			FROM events
 			WHERE timestamp >= now() - interval ${daysBack} day
 				AND timestamp <= now()

@@ -84,39 +84,6 @@ export function trackCheckoutStarted(
 }
 
 /**
- * Track when order is successfully placed
- */
-export function trackOrderPlaced(
-	orderNumber: string,
-	itemCount: number,
-	total: number,
-) {
-	if (typeof window !== "undefined" && window.posthog) {
-		window.posthog.capture("order_placed", {
-			order_number: orderNumber,
-			item_count: itemCount,
-			$revenue: total,
-			currency: "MNT",
-		});
-	}
-}
-
-/**
- * Track when payment is confirmed
- */
-export function trackPaymentConfirmed(
-	paymentNumber: string,
-	orderNumber: string,
-) {
-	if (typeof window !== "undefined" && window.posthog) {
-		window.posthog.capture("payment_confirmed", {
-			payment_number: paymentNumber,
-			order_number: orderNumber,
-		});
-	}
-}
-
-/**
  * Track QPay invoice creation errors
  */
 export function trackQpayError(
@@ -127,17 +94,6 @@ export function trackQpayError(
 		window.posthog.capture("qpay_error", {
 			payment_number: paymentNumber,
 			error_message: errorMessage,
-		});
-	}
-}
-
-/**
- * Track when QPay invoice is created successfully
- */
-export function trackQpayInvoiceCreated(paymentNumber: string) {
-	if (typeof window !== "undefined" && window.posthog) {
-		window.posthog.capture("qpay_invoice_created", {
-			payment_number: paymentNumber,
 		});
 	}
 }

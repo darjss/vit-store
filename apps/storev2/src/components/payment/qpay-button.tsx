@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
-import { trackPaymentConfirmed, trackQpayError, trackQpayInvoiceCreated } from "@/lib/analytics";
+import { trackQpayError } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -50,12 +50,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const invoiceData = () => mutation.data;
 
 	createEffect(() => {
-		if (mutation.isSuccess) {
-			trackQpayInvoiceCreated(props.paymentNumber);
-		}
-	});
-
-	createEffect(() => {
 		if (mutation.isError) {
 			trackQpayError(
 				props.paymentNumber,
@@ -92,7 +86,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		if (navigated()) return;
 		if (paymentStatusQuery.data?.status === "success") {
 			setNavigated(true);
-			trackPaymentConfirmed(props.paymentNumber, "");
 			void safeNavigate(
 				props.checkoutToken
 					? `/payment/success/${props.paymentNumber}?ct=${encodeURIComponent(props.checkoutToken)}`

@@ -78,7 +78,7 @@ app.post("/products", async (c) => {
         const carouselResponse = carouselImage.response();
         const carouselArrayBuffer = await carouselResponse.arrayBuffer();
         await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-            httpMetadata: { contentType: "image/webp" },
+            httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
         });
         const carouselUrl = `https://cdn.darjs.dev/${carouselKey}`;
         let thumbnailUrl: string | undefined;
@@ -96,7 +96,7 @@ app.post("/products", async (c) => {
             const thumbnailResponse = thumbnailImage.response();
             const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
             await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
-                httpMetadata: { contentType: "image/webp" },
+                httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
             });
             thumbnailUrl = `${R2_PUBLIC_URL}/${thumbnailKey}`;
         }
@@ -142,7 +142,7 @@ app.post("/brands", async (c) => {
             .replace(/[^a-z0-9-]/g, "");
         if (isSvg) {
             const svgArrayBuffer = await image.arrayBuffer();
-            await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.svg`, svgArrayBuffer, { httpMetadata: { contentType: "image/svg+xml" } });
+            await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.svg`, svgArrayBuffer, { httpMetadata: { contentType: "image/svg+xml", cacheControl: "public, max-age=31536000, immutable" } });
             log.info("upload.brand_success", {
                 brandName: sanitizedBrandName,
                 format: "svg",
@@ -164,7 +164,7 @@ app.post("/brands", async (c) => {
         const brandImage = await imageResult;
         const brandImageResponse = brandImage.response();
         const brandImageArrayBuffer = await brandImageResponse.arrayBuffer();
-        await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.webp`, brandImageArrayBuffer, { httpMetadata: { contentType: "image/webp" } });
+        await c.env.r2Bucket.put(`brands/${sanitizedBrandName}.webp`, brandImageArrayBuffer, { httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" } });
         log.info("upload.brand_success", {
             brandName: sanitizedBrandName,
             format: "webp",
@@ -245,7 +245,7 @@ app.post("/images/urls", async (c) => {
                     const carouselResponse = carouselImage.response();
                     const carouselArrayBuffer = await carouselResponse.arrayBuffer();
                     await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-                        httpMetadata: { contentType: "image/webp" },
+                        httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
                     });
                     wrotePrimaryWithTransform = true;
                 }
@@ -258,7 +258,7 @@ app.post("/images/urls", async (c) => {
                     });
                     carouselKey = `${uploadPrefix}/${generatedId}.${rawExt}`;
                     await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
-                        httpMetadata: { contentType },
+                        httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" },
                     });
                 }
                 const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
@@ -279,7 +279,7 @@ app.post("/images/urls", async (c) => {
                     const thumbnailResponse = thumbnailImage.response();
                     const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
                     await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
-                        httpMetadata: { contentType: "image/webp" },
+                        httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
                     });
                 }
                 uploadedImages.push({ url: carouselUrl });

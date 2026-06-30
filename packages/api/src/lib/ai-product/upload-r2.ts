@@ -65,12 +65,12 @@ export async function uploadImagesToR2(
 
 				const transformedBuffer = await transformed.response().arrayBuffer();
 				await ctx.c.env.r2Bucket.put(key, transformedBuffer, {
-					httpMetadata: { contentType: "image/webp" },
+					httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
 				});
 			} catch {
 				key = `${PRODUCT_IMAGE_UPLOAD_PREFIX}/${generatedId}.${rawExt}`;
 				await ctx.c.env.r2Bucket.put(key, imageArrayBuffer, {
-					httpMetadata: { contentType },
+					httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" },
 				});
 			}
 

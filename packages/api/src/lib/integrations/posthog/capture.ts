@@ -20,7 +20,7 @@ async function hashPhone(phone: string): Promise<string> {
 	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-interface TrackOrderPlacedProps {
+interface TrackOrderCreatedProps {
 	phone: string;
 	orderNumber: string;
 	paymentNumber?: string;
@@ -33,13 +33,13 @@ interface TrackOrderPlacedProps {
 	utmCampaign?: string;
 }
 
-export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
+export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
 		await posthog.captureImmediate({
 			distinctId,
-			event: "order_placed",
+			event: "order_created",
 			properties: {
 				order_number: props.orderNumber,
 				payment_number: props.paymentNumber,
@@ -54,6 +54,35 @@ export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
 		});
 	} catch {
 		// Silently fail — analytics should never break the order flow
+	}
+}
+
+interface TrackOrderPlacedProps {
+	phone: string;
+	orderNumber: string;
+	paymentNumber: string;
+	total: number;
+	provider: "qpay" | "transfer";
+	currency?: string;
+}
+
+export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
+	try {
+		const distinctId = await hashPhone(props.phone);
+		const posthog = getClient();
+		await posthog.captureImmediate({
+			distinctId,
+			event: "order_placed",
+			properties: {
+				order_number: props.orderNumber,
+				payment_number: props.paymentNumber,
+				$revenue: props.total,
+				currency: props.currency ?? "MNT",
+				provider: props.provider,
+			},
+		});
+	} catch {
+		// Silently fail — analytics should never break the flow
 	}
 }
 
@@ -110,6 +139,29 @@ export async function trackQpayInvoiceFailedServerSide(
 				payment_number: props.paymentNumber,
 				error_message: props.errorMessage,
 				$referrer: props.referrer,
+			},
+		});
+	} catch {
+		// Silently fail
+	}
+}
+
+interface TrackQpayInvoiceCreatedProps {
+	phone: string;
+	paymentNumber: string;
+}
+
+export async function trackQpayInvoiceCreatedServerSide(
+	props: TrackQpayInvoiceCreatedProps,
+) {
+	try {
+		const distinctId = await hashPhone(props.phone);
+		const posthog = getClient();
+		await posthog.captureImmediate({
+			distinctId,
+			event: "qpay_invoice_created",
+			properties: {
+				payment_number: props.paymentNumber,
 			},
 		});
 	} catch {
