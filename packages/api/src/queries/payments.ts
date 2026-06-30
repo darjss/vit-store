@@ -373,11 +373,18 @@ export const paymentQueries = {
 				}
 
 				// Payment confirmed — promote the order from "created" (unpaid)
-				// to "pending" (paid, awaiting shipment).
+				// to "pending" (paid, awaiting shipment). Guard on current status
+				// = "created" so this is a no-op for legacy "pending" orders and
+				// never accidentally demotes a shipped/delivered order.
 				await tx
 					.update(OrdersTable)
 					.set({ status: "pending" })
-					.where(eq(OrdersTable.id, claimedPayment.orderId));
+					.where(
+						and(
+							eq(OrdersTable.id, claimedPayment.orderId),
+							eq(OrdersTable.status, "created"),
+						),
+					);
 
 				return true;
 			});

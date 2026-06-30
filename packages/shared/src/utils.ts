@@ -1,3 +1,5 @@
+import { orderStatusStyles } from "./order-status";
+
 export const getStatusColor = (status: string) => {
 	switch (status) {
 		case "ACTIVE":
@@ -46,39 +48,14 @@ export function formatCurrency(amount: number): string {
 }
 
 export const getOrderStatusStyles = (status: string) => {
-	switch (status.toLowerCase()) {
-		case "created":
-			return {
-				badge: "border-black bg-[#778ca3] text-white",
-				border: "border-l-[#778ca3]",
-			};
-		case "delivered":
-			return {
-				badge: "border-black bg-[#00ff88] text-black",
-				border: "border-l-[#00ff88]",
-			};
-		case "shipped":
-			return {
-				badge: "border-black bg-[#3742fa] text-white",
-				border: "border-l-[#3742fa]",
-			};
-		case "pending":
-			return {
-				badge: "border-black bg-[#ffa502] text-black",
-				border: "border-l-[#ffa502]",
-			};
-		case "cancelled":
-		case "canceled":
-			return {
-				badge: "border-black bg-[#ff4757] text-white",
-				border: "border-l-[#ff4757]",
-			};
-		default:
-			return {
-				badge: "border-black bg-[#5f27cd] text-white",
-				border: "border-l-[#5f27cd]",
-			};
-	}
+	const key = status.toLowerCase() === "canceled" ? "cancelled" : status.toLowerCase();
+	const styles = orderStatusStyles[key as keyof typeof orderStatusStyles];
+	return (
+		styles ?? {
+			badge: "border-black bg-[#5f27cd] text-white",
+			border: "border-l-[#5f27cd]",
+		}
+	);
 };
 
 export function findBrandId(

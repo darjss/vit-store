@@ -1,6 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addOrderSchema, type addOrderType } from "@vit/shared";
+import { addOrderSchema, orderStatusLabels, type addOrderType } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
 import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -29,15 +29,6 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import SelectProductForm from "./select-product-form";
-
-const orderStatusLabels: Record<string, string> = {
-	created: "Төлөөгүй",
-	pending: "Хүлээгдэж буй",
-	shipped: "Илгээгдсэн",
-	delivered: "Хүргэгдсэн",
-	cancelled: "Цуцлагдсан",
-	refunded: "Буцаагдсан",
-};
 
 const OrderForm = ({
 	order,

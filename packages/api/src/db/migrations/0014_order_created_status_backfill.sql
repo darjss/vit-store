@@ -1,4 +1,6 @@
 -- Backfill unpaid orders to the new "created" status.
+-- Deploy new code FIRST, then run this migration. The migration is idempotent
+-- and safe to re-run.
 -- Orders start as "created" (payment not yet confirmed). When payment is
 -- confirmed they move to "pending" (paid, awaiting shipment). Existing orders
 -- without a successful payment are reclassified from "pending" to "created";

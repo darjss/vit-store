@@ -381,7 +381,6 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({
         id: v.number(),
         status: v.picklist([
-            "created",
             "pending",
             "shipped",
             "delivered",
