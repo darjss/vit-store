@@ -12,6 +12,7 @@ import {
 	inArray,
 	isNull,
 	like,
+	ne,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -431,6 +432,12 @@ export const orderQueries = {
 
 			if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
+			} else if (params.paymentStatus === undefined) {
+				// Default: hide "created" (unpaid) orders from the admin list.
+				// When a paymentStatus filter is set, drop the exclusion so admins
+				// filtering by pending payments can still see "created" orders
+				// (which are exactly the orders with pending payments).
+				conditions.push(ne(OrdersTable.status, "created"));
 			}
 
 			if (params.searchTerm !== undefined) {

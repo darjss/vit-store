@@ -1,5 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createSignal, Match, Show, Switch } from "solid-js";
+import { orderStatusLabels } from "@vit/shared";
+import type { OrderStatusType } from "@vit/shared/types";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { showToast } from "@/components/ui/toast";
@@ -11,20 +13,14 @@ import IconCheck from "~icons/ri/check-double-line";
 import IconAlert from "~icons/ri/error-warning-line";
 import IconLoader from "~icons/ri/loader-4-line";
 
+// Storefront-specific badge colors (theme tokens, not the admin hex palette).
 const statusColors: Record<string, string> = {
+	created: "bg-muted text-muted-foreground",
 	pending: "bg-primary text-foreground",
 	shipped: "bg-chart-2 text-foreground",
 	delivered: "bg-chart-4 text-foreground",
 	cancelled: "bg-destructive text-destructive-foreground",
 	refunded: "bg-muted text-muted-foreground",
-};
-
-const statusLabels: Record<string, string> = {
-	pending: "Хүлээгдэж буй",
-	shipped: "Илгээгдсэн",
-	delivered: "Хүргэгдсэн",
-	cancelled: "Цуцлагдсан",
-	refunded: "Буцаан олгосон",
 };
 
 const paymentStatusLabels: Record<string, string> = {
@@ -352,7 +348,7 @@ const OrderTrackingForm = () => {
 										<span
 											class={`px-3 py-1.5 border-2 border-border font-bold text-xs uppercase ${statusColors[trackMutation.data?.status || "pending"]}`}
 										>
-											{statusLabels[trackMutation.data?.status || "pending"]}
+											{orderStatusLabels[trackMutation.data?.status as OrderStatusType] ?? trackMutation.data?.status ?? "Хүлээгдэж буй"}
 										</span>
 									</div>
 								</div>

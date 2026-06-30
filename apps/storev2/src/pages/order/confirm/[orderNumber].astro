@@ -23,6 +23,8 @@ import IconMail from "~icons/ri/mail-line";
 import IconMapPin from "~icons/ri/map-pin-line";
 import IconPhone from "~icons/ri/phone-line";
 import IconUser from "~icons/ri/user-line";
+import { orderStatusLabels } from "@vit/shared";
+import type { OrderStatusType } from "@vit/shared/types";
 
 const { orderNumber } = Astro.params;
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
@@ -63,7 +65,7 @@ if(!order){
                     </div>
                     <div class="mt-4 md:mt-0">
                         <div class="inline-flex items-center border-2 border-border px-3 py-1 text-xs font-black uppercase tracking-wide shadow-hard-sm bg-success text-success-foreground">
-                            {order?.status === 'pending' ? 'Хүлээгдэж буй' : order?.status === 'shipped' ? 'Илгээгдсэн' : order?.status === 'delivered' ? 'Хүргэгдсэн' : order?.status || 'Хүлээгдэж буй'}
+                            {orderStatusLabels[order?.status as OrderStatusType] ?? order?.status ?? 'Хүлээгдэж буй'}
                         </div>
                     </div>
                 </div>
