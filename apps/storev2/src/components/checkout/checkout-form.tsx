@@ -173,7 +173,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Бүх хаягаа бичнэ үү"),
+					v.minLength(5, "Хаягаа бичнэ үү"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
@@ -186,7 +186,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				phoneNumber: phoneSchema,
 				address: v.pipe(
 					v.string(),
-					v.minLength(15, "Бүх хаягаа бичнэ үү"),
+					v.minLength(5, "Хаягаа бичнэ үү"),
 				),
 				addressZoneId: v.pipe(
 					v.number(),
