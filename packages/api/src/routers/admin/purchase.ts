@@ -10,13 +10,11 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(addPurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            return await db().transaction(async (tx) => {
-                const result = await purchaseQueries.admin.createPurchase(tx, input);
-                return {
-                    id: result.id,
-                    message: "Purchase added successfully",
-                };
-            });
+            const result = await purchaseQueries.admin.createPurchase(db(), input);
+            return {
+                id: result.id,
+                message: "Purchase added successfully",
+            };
         }
         catch (e) {
             ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
@@ -102,9 +100,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.updatePurchase(tx, input.id, input.data);
-            });
+            await purchaseQueries.admin.updatePurchase(db(), input.id, input.data);
             return { message: "Purchase updated successfully" };
         }
         catch (e) {
@@ -124,9 +120,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(receivePurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.receivePurchase(tx, input);
-            });
+            await purchaseQueries.admin.receivePurchase(db(), input);
             return { message: "Purchase received successfully" };
         }
         catch (e) {
@@ -144,9 +138,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.deletePurchase(tx, input.id);
-            });
+            await purchaseQueries.admin.deletePurchase(db(), input.id);
             return { message: "Purchase deleted successfully" };
         }
         catch (e) {
@@ -166,9 +158,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.cancelPurchase(tx, input.id);
-            });
+            await purchaseQueries.admin.cancelPurchase(db(), input.id);
             return { message: "Purchase cancelled successfully" };
         }
         catch (e) {
@@ -191,9 +181,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.markPurchaseShipped(tx, input.id, input.shippedAt);
-            });
+            await purchaseQueries.admin.markPurchaseShipped(db(), input.id, input.shippedAt);
             return { message: "Purchase marked as shipped" };
         }
         catch (e) {
@@ -214,9 +202,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.markPurchaseForwarderReceived(tx, input.id, input.forwarderReceivedAt);
-            });
+            await purchaseQueries.admin.markPurchaseForwarderReceived(db(), input.id, input.forwarderReceivedAt);
             return { message: "Purchase marked as received by forwarder" };
         }
         catch (e) {

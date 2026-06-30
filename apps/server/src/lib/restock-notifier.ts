@@ -8,8 +8,6 @@ import { and, eq, isNull } from "drizzle-orm";
 
 const RESTOCK_WATCH_PRODUCTS_KEY = "restock:watch:products";
 
-type EnvWithDirectDbUrl = Env & { DIRECT_DB_URL?: string };
-
 function createRedisClient(env: Env) {
 	return new Redis({
 		url: env.UPSTASH_REDIS_REST_URL,
@@ -26,10 +24,7 @@ function createRestockLogger() {
 }
 
 function createDatabase(env: Env) {
-	const directDbUrl = (env as EnvWithDirectDbUrl).DIRECT_DB_URL;
-	return directDbUrl && directDbUrl.length > 0
-		? createDb(directDbUrl)
-		: createDb(env.DB);
+	return createDb(env.DB);
 }
 
 async function removeInvalidWatchedProduct(redis: Redis, productIdRaw: string) {

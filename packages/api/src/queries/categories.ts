@@ -93,7 +93,7 @@ export const categoryQueries = {
 		},
 
 		async getAllCategories() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			return db()
 				.select({
@@ -135,7 +135,7 @@ export const categoryQueries = {
 		},
 
 		async getAllCategoriesWithStock() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			const productCount = sql<number>`count(${ProductsTable.id})`;
 
 			return db()
 				.select({

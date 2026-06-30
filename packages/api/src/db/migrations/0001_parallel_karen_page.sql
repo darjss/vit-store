@@ -1,1 +1,0 @@
-ALTER TABLE "ecom_vit_product" ALTER COLUMN "amount" SET DATA TYPE varchar(256);

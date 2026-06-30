@@ -1,103 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1763345549490,
-      "tag": "0000_empty_joystick",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1763345615841,
-      "tag": "0001_parallel_karen_page",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1763447695221,
-      "tag": "0002_cold_roughhouse",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1765960628093,
-      "tag": "0003_loose_puff_adder",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1769148185361,
-      "tag": "0004_flippant_mentor",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1771766400000,
-      "tag": "0005_friendly_steel_serpent",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1775606400000,
-      "tag": "0006_curious_purchase_rebuild",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1777440201276,
-      "tag": "0007_friendly_vapor",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1777441506833,
-      "tag": "0008_first_hiroim",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1777875034405,
-      "tag": "0009_illegal_morgan_stark",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1777876435227,
-      "tag": "0010_clammy_puppet_master",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1779371141275,
-      "tag": "0013_messenger_notification_failures",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1782379703717,
-      "tag": "0012_striped_whirlwind",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1782500000000,
-      "tag": "0014_order_created_status_backfill",
+      "version": "6",
+      "when": 1782813376304,
+      "tag": "0000_d1_baseline",
       "breakpoints": true
     }
   ]

@@ -1,4 +1,3 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { RequestLogger } from "evlog";
 import type { Context } from "hono";
 import type {
@@ -34,8 +33,6 @@ export interface AddSalesType {
 	createdAt?: Date;
 }
 
-export type TransactionType = Parameters<
-	Parameters<
-		PostgresJsDatabase<typeof import("~/db/schema")>["transaction"]
-	>[0]
->[0];
+// D1 has no interactive transactions; helpers that previously received a
+// transaction handle now receive the D1 database directly.
+export type TransactionType = import("~/db/index").DB;

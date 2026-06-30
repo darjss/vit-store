@@ -140,24 +140,26 @@ export const order = router({
             const orderNumber = generateOrderNumber();
             const paymentNumberGenerated = generatePaymentNumber();
             const customerPhone = Number(input.phoneNumber);
-            const txResult = await ctx.db.transaction(async (tx) => {
-                const existingCustomer = await tx.query.CustomersTable.findFirst({
-                    where: eq(CustomersTable.phone, customerPhone),
-                });
-                if (!existingCustomer) {
-                    await tx.insert(CustomersTable).values({
+            // D1 has no interactive transactions. The order insert returns an
+            // auto-incremented id that the order-details and payment inserts
+            // depend on, so this cannot be a single batch() and runs
+            // sequentially instead.
+            const txResult = await (async () => {
+                await ctx.db
+                    .insert(CustomersTable)
+                    .values({
                         phone: customerPhone,
                         address: input.address,
                         addressZoneId: input.addressZoneId,
+                    })
+                    .onConflictDoUpdate({
+                        target: CustomersTable.phone,
+                        set: {
+                            address: input.address,
+                            addressZoneId: input.addressZoneId,
+                        },
                     });
-                }
-                else {
-                    await tx
-                        .update(CustomersTable)
-                        .set({ address: input.address, addressZoneId: input.addressZoneId })
-                        .where(eq(CustomersTable.phone, customerPhone));
-                }
-                const [createdOrder] = await tx
+                const [createdOrder] = await ctx.db
                     .insert(OrdersTable)
                     .values({
                     orderNumber,
@@ -172,12 +174,12 @@ export const order = router({
                     .returning({ orderId: OrdersTable.id });
                 if (!createdOrder)
                     throw new Error("No order ID returned");
-                await tx.insert(OrderDetailsTable).values(normalizedProducts.map((p) => ({
+                await ctx.db.insert(OrderDetailsTable).values(normalizedProducts.map((p) => ({
                     orderId: createdOrder.orderId,
                     productId: p.productId,
                     quantity: p.quantity,
                 })));
-                const [payment] = await tx
+                const [payment] = await ctx.db
                     .insert(PaymentsTable)
                     .values({
                     paymentNumber: paymentNumberGenerated,
@@ -188,7 +190,7 @@ export const order = router({
                 })
                     .returning({ paymentNumber: PaymentsTable.paymentNumber });
                 return { orderId: createdOrder.orderId, paymentNumber: payment?.paymentNumber ?? null };
-            });
+            })();
             const orderId = txResult.orderId;
             ctx.log.info("order.created", {
                 orderId,

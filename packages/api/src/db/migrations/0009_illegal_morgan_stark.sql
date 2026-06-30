@@ -1,1 +1,0 @@
-CREATE INDEX "product_admin_list_idx" ON "ecom_vit_product" USING btree ("deleted_at","brand_id","status","created_at");

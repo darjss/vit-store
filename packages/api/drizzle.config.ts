@@ -1,19 +1,9 @@
-import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-config({
-	path: "../../.env",
-});
-
+// D1 is SQLite. Migrations are generated here with drizzle-kit and applied to
+// the D1 database by Alchemy (see apps/server/alchemy.run.ts `migrationsDir`).
 export default defineConfig({
 	schema: "../../packages/api/src/db/schema.ts",
 	out: "../../packages/api/src/db/migrations",
-	// DOCS: https://orm.drizzle.team/docs/guides/d1-http-with-drizzle-kit
-	dialect: "postgresql",
-	dbCredentials: {
-		url: `postgres://${process.env.PLANETSCALE_USER}:${process.env.PLANETSCALE_PASSWORD}@${process.env.PLANETSCALE_HOST}/${process.env.PLANETSCALE_DATABASE}?sslmode=require`,
-	},
-	migrations: {
-		schema: "public",
-	},
+	dialect: "sqlite",
 });
