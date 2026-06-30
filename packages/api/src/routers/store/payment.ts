@@ -7,7 +7,9 @@ import {
 	sendTransferClaimedNotification,
 } from "~/lib/integrations/messenger/messages";
 import {
+	trackOrderPlacedServerSide,
 	trackPaymentConfirmedServerSide,
+	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog";
 import { assertCanAccessPayment } from "~/lib/session/checkout-access";
@@ -448,6 +450,10 @@ export const payment = router({
 					qpayResponse.invoice_id,
 				);
 				await Promise.all([kvPromise, dbPromise]);
+				trackQpayInvoiceCreatedServerSide({
+					phone: payment.order.customerPhone?.toString() ?? input.paymentNumber,
+					paymentNumber: input.paymentNumber,
+				}).catch(() => {});
 				return qpayResponse;
 			} catch (e) {
 				if (e instanceof TRPCError) {
@@ -582,6 +588,16 @@ export const payment = router({
 				} catch {
 					// Analytics failure should not break the payment flow
 				}
+				try {
+					await trackOrderPlacedServerSide({
+						phone:
+							payment.order.customerPhone?.toString() ?? input.paymentNumber,
+						orderNumber: payment.order.orderNumber,
+						paymentNumber: input.paymentNumber,
+						total: payment.order.total,
+						provider: "qpay",
+					});
+				} catch {}
 
 				ctx.log.info("payment.qpay_confirmed", {
 					paymentNumber: input.paymentNumber,

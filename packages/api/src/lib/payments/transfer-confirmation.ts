@@ -4,7 +4,7 @@ import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
-import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
+import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
 
 type TransferConfirmationSource = "admin" | "auto_reconciliation" | "messenger";
 
@@ -74,6 +74,16 @@ export async function confirmTransferPaymentAndNotify({
 		revenue: paymentInfo.order.total,
 		referrer,
 	});
+
+	try {
+		await trackOrderPlacedServerSide({
+			phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
+			orderNumber: paymentInfo.order.orderNumber,
+			paymentNumber,
+			total: paymentInfo.order.total,
+			provider: "transfer",
+		});
+	} catch {}
 
 	return {
 		confirmed: true,

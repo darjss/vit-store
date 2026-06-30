@@ -86,13 +86,13 @@ export function trackCheckoutStarted(
 /**
  * Track when order is successfully placed
  */
-export function trackOrderPlaced(
+export function trackOrderCreated(
 	orderNumber: string,
 	itemCount: number,
 	total: number,
 ) {
 	if (typeof window !== "undefined" && window.posthog) {
-		window.posthog.capture("order_placed", {
+		window.posthog.capture("order_created", {
 			order_number: orderNumber,
 			item_count: itemCount,
 			$revenue: total,

@@ -20,7 +20,7 @@ import PaymentOptions from "@/components/payment/payment-options";
 import {
 	identifyUser,
 	trackCheckoutStarted,
-	trackOrderPlaced,
+	trackOrderCreated,
 } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -55,13 +55,17 @@ type PaymentInfo = {
 
 const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
-		if (cart.items().length > 0) {
-			trackCheckoutStarted(
-				cart.total(),
-				cart.count(),
-				cart.items().map((item) => item.productId),
-			);
-		}
+		if (cart.items().length === 0) return;
+		// Only fire once per browser session per cart signature
+		const cartSignature = cart.items().map((i) => i.productId).sort().join(",");
+		const key = `checkout_started:${cartSignature}`;
+		if (sessionStorage.getItem(key)) return;
+		sessionStorage.setItem(key, "1");
+		trackCheckoutStarted(
+			cart.total(),
+			cart.count(),
+			cart.items().map((item) => item.productId),
+		);
 	});
 
 	const [step, setStep] = createSignal<Step>("delivery");
@@ -103,7 +107,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					if (checkoutToken) {
 						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
 					}
-					trackOrderPlaced(
+					trackOrderCreated(
 						paymentNumber,
 						cart.count(),
 						cart.total() + deliveryFee,
