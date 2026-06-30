@@ -8,12 +8,41 @@ import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, Products
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
-import { trackOrderCreatedServerSide } from "~/lib/integrations/posthog";
+import { trackOrderCreatedServerSide, trackQpayInvoiceCreatedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
+import { createQpayInvoice } from "~/lib/payments/qpay";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { addCustomerToDB } from "~/routers/store/auth";
+
+/**
+ * Fire-and-forget: pre-create the QPay invoice so the QR is ready in KV
+ * before the user reaches the payment page. `createQr` is the fallback
+ * when this misses (invoice expired, pre-create failed, >1h delay).
+ * Mirrors the createQr procedure in payment.ts — same dev `/10000` amount
+ * hack, same KV key + 1h TTL, same provider/invoiceId write, same tracking.
+ */
+async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
+    const payment = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+    if (!payment || payment.status === "success") {
+        return;
+    }
+    const isDev = process.env.NODE_ENV === "development";
+    const qpayResponse = await createQpayInvoice(
+        isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
+        paymentNumber,
+    );
+    await kv().put(`QPAY:${paymentNumber}`, JSON.stringify(qpayResponse), {
+        expirationTtl: 3600,
+    });
+    await paymentQueries.store.changePaymentToQpay(paymentNumber, qpayResponse.invoice_id);
+    trackQpayInvoiceCreatedServerSide({
+        phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+        paymentNumber,
+    }).catch(() => {});
+}
+
 export const order = router({
     getOrdersByCustomerId: verifiedCustomerProcedure.query(async ({ ctx }) => {
         try {
@@ -178,6 +207,13 @@ export const order = router({
                     provider: "transfer",
                     status_text: "pending",
                 });
+            }
+
+            // Fire-and-forget: pre-create QPay invoice so the QR is ready before the
+            // user reaches the payment page. Failure is non-fatal — createQr is the
+            // fallback. KV caches the invoice for 1h.
+            if (paymentNumber) {
+                precreateQpayInvoice(paymentNumber).catch(() => {});
             }
 
             // Fire-and-forget server-side PostHog tracking
