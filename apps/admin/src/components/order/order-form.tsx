@@ -1,6 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addOrderSchema, type addOrderType } from "@vit/shared";
+import { addOrderSchema, orderStatusLabels, type addOrderType } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
 import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -277,7 +277,7 @@ const OrderForm = ({
 												<SelectContent>
 													{orderStatus.map((status, index) => (
 														<SelectItem key={index} value={status}>
-															{status.charAt(0).toUpperCase() + status.slice(1)}
+															{orderStatusLabels[status] ?? status}
 														</SelectItem>
 													))}
 												</SelectContent>

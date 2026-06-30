@@ -137,7 +137,7 @@ export const order = router({
                     addressZoneId: input.addressZoneId,
                     notes: input.notes ?? null,
                     total,
-                    status: "pending",
+                    status: "created",
                     deliveryProvider: "tu-delivery",
                 })
                     .returning({ orderId: OrdersTable.id });
@@ -167,7 +167,7 @@ export const order = router({
                 customerPhone: Number(input.phoneNumber),
                 total,
                 itemCount: normalizedProducts.length,
-                status_text: "pending",
+                status_text: "created",
             });
             const paymentNumber = txResult.paymentNumber;
             if (paymentNumber) {

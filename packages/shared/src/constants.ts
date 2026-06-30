@@ -1,6 +1,7 @@
 export const status = ["active", "draft", "out_of_stock"] as const;
 
 export const orderStatus = [
+	"created",
 	"pending",
 	"shipped",
 	"delivered",

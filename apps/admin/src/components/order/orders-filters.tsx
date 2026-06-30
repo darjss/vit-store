@@ -5,10 +5,9 @@ import {
 	RotateCcw,
 } from "lucide-react";
 import { useState } from "react";
-import {
-	orderStatus as orderStatusConstants,
-	paymentStatus as paymentStatusConstants,
-} from "@vit/shared/constants";
+import { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
+import { orderStatusLabels } from "@vit/shared";
+import type { OrderStatusType } from "@vit/shared/types";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import {
@@ -31,7 +30,7 @@ import {
 } from "@/components/ui/select";
 
 const primaryStatuses = [undefined, "pending", "shipped", "delivered"] as const;
-const issueStatuses = ["cancelled", "refunded"] as const;
+const issueStatuses = ["created", "cancelled", "refunded"] as const;
 
 const datePresets = [
 	{ value: "all", label: "Бүгд" },
@@ -42,15 +41,8 @@ const datePresets = [
 ] as const;
 
 function formatStatusLabel(status?: string) {
-	if (!status) return "Бүгд";
-	const labels: Record<string, string> = {
-		pending: "Хүлээгдэж буй",
-		shipped: "Илгээгдсэн",
-		delivered: "Хүргэгдсэн",
-		cancelled: "Цуцлагдсан",
-		refunded: "Буцаагдсан",
-	};
-	return labels[status] ?? status;
+	if (!status) return "Идэвхтэй";
+	return orderStatusLabels[status as OrderStatusType] ?? status;
 }
 
 interface OrdersFiltersProps {
@@ -94,7 +86,9 @@ export default function OrdersFilters({
 		: undefined;
 
 	const isIssueActive =
-		orderStatus === "cancelled" || orderStatus === "refunded";
+		orderStatus === "created" ||
+		orderStatus === "cancelled" ||
+		orderStatus === "refunded";
 
 	const handleDatePreset = (preset: string) => {
 		navigate({
