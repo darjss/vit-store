@@ -120,7 +120,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					<button
 						type="button"
 						onClick={() => mutation.mutate()}
-						class="border-3 border-border bg-primary px-4 py-2 font-bold text-sm uppercase shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm"
+						class="rounded-lg border border-border bg-primary px-4 py-2 font-bold text-sm uppercase shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-soft-lg active:scale-[0.97]"
 					>
 						Дахин оролдох
 					</button>
@@ -131,7 +131,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				<div class="w-full space-y-4">
 					{/* Amount display */}
 					<Show when={amountLabel()}>
-						<div class="flex items-center justify-between border-2 border-border bg-secondary/20 px-3 py-2.5">
+						<div class="flex items-center justify-between rounded-md border border-border bg-secondary/20 px-3 py-2.5">
 							<span class="font-bold text-muted-foreground text-xs uppercase">
 								Төлөх дүн
 							</span>
@@ -146,14 +146,14 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						<button
 							type="button"
 							onClick={() => setShowQr((v) => !v)}
-							class="flex w-full items-center justify-center gap-2 border-2 border-border bg-muted/30 px-3 py-2.5 font-bold text-xs uppercase tracking-wide transition-all hover:bg-muted/50"
+							class="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2.5 font-bold text-xs uppercase tracking-wide transition-all hover:bg-muted/50 active:scale-[0.98]"
 						>
 							<IconQrCode class="h-4 w-4" />
 							{showQr() ? "QR код хаах" : "QR код харах"}
 						</button>
 
 						<Show when={showQr()}>
-							<div class="flex flex-col items-center gap-3 border-2 border-border bg-background p-4">
+							<div class="flex flex-col items-center gap-3 rounded-md border border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"
@@ -177,9 +177,9 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									{(link) => (
 										<a
 											href={link.link}
-											class="group flex flex-col items-center gap-1.5 p-1.5 transition-all hover:bg-muted/50 active:scale-95 sm:p-2"
+											class="group flex flex-col items-center gap-1.5 rounded-md p-1.5 transition-all hover:bg-muted/50 active:scale-[0.97] sm:p-2"
 										>
-											<div class="h-12 w-12 overflow-hidden border-2 border-border bg-background shadow-hard-sm transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none sm:h-16 sm:w-16">
+											<div class="h-12 w-12 overflow-hidden rounded-md border border-border bg-background shadow-soft-sm transition-all group-hover:-translate-y-0.5 group-hover:shadow-soft sm:h-16 sm:w-16">
 												<img
 													src={link.logo}
 													alt={link.name || link.description}

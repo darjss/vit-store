@@ -59,8 +59,8 @@ const PaymentStatus = (props: {
 	return (
 		<Switch>
 			<Match when={currentData()?.status === "success"}>
-				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-success text-success-foreground shadow-hard-xl">
+				<div class="mb-12 text-center opacity-0 animate-[scaleIn_400ms_ease-out_forwards]">
+					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border border-border bg-success text-success-foreground shadow-soft-lg">
 						<IconCheck class="h-10 w-10" />
 					</div>
 					<h1 class="mb-4 font-black text-4xl uppercase tracking-tight md:text-5xl">
@@ -78,7 +78,7 @@ const PaymentStatus = (props: {
 				}
 			>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-4 border-border bg-yellow-400 text-foreground shadow-hard-xl">
+					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border border-border bg-yellow-400 text-foreground shadow-soft-lg">
 						<IconTime class="h-10 w-10 animate-spin" />
 					</div>
 					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
@@ -95,7 +95,7 @@ const PaymentStatus = (props: {
 			</Match>
 			<Match when={currentData()?.status === "failed"}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-destructive text-destructive-foreground shadow-hard-xl">
+					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border border-border bg-destructive text-destructive-foreground shadow-soft-lg">
 						<IconClose class="h-10 w-10" />
 					</div>
 					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
@@ -106,7 +106,7 @@ const PaymentStatus = (props: {
 					</p>
 					<a
 						href={`/payment/${props.payment.paymentNumber}`}
-						class="inline-flex h-12 items-center gap-2 whitespace-nowrap border-3 border-border bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-hard focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 active:shadow-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-12 items-center gap-2 whitespace-nowrap rounded-lg border border-border bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft-xl active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<IconRefresh class="h-4 w-4" />
 						Дахин оролдох
@@ -115,7 +115,7 @@ const PaymentStatus = (props: {
 			</Match>
 			<Match when={data.loading && !data.latest}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-muted-foreground text-muted-foreground shadow-hard-xl">
+					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted-foreground text-muted-foreground shadow-soft-lg">
 						<IconTime class="h-10 w-10" />
 					</div>
 				</div>

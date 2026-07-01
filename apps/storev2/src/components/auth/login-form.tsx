@@ -52,10 +52,10 @@ const LoginForm = () => {
 
 	return (
 		<div class="flex min-h-[80vh] w-full items-center justify-center px-4 py-8 md:py-12">
-			<div class="w-full max-w-md">
+			<div class="w-full max-w-md opacity-0 animate-[fadeIn_400ms_ease-out_forwards]">
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
-					<div class="mb-4 inline-block rotate-[-2deg] border-4 border-border bg-primary px-4 py-2 shadow-hard-xl">
+					<div class="mb-4 inline-block rotate-[-2deg] rounded-lg border border-border bg-primary px-4 py-2 shadow-soft">
 						<h1 class="font-black text-2xl uppercase md:text-3xl">
 							{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
 						</h1>

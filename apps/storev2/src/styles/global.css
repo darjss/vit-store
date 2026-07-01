@@ -337,17 +337,6 @@
         box-shadow: -4px 4px 0px 0px var(--color-border);
     }
 
-    /* Soft (blurred) shadows — the softened system replacement for hard offsets. */
-    .shadow-soft-sm {
-        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.08);
-    }
-    .shadow-soft {
-        box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.06), 0 4px 8px 0 rgb(0 0 0 / 0.08);
-    }
-    .shadow-soft-lg {
-        box-shadow: 0 4px 8px 0 rgb(0 0 0 / 0.08), 0 8px 16px 0 rgb(0 0 0 / 0.10);
-    }
-
     /* Light shadows for use on dark (secondary) backgrounds */
     .shadow-hard-light {
         box-shadow: 4px 4px 0px 0px var(--color-background);
@@ -362,15 +351,42 @@
         box-shadow: 12px 12px 0px 0px var(--color-background);
     }
 
-    /* Soft shadows — blurred, calm elevation (replaces hard offsets). */
+    /* Soft (blurred) shadows — the softened counterpart to the hard offset
+       shadows above. Used by the softened UI system for cards, buttons,
+       and elevated surfaces that should feel calm rather than brutalist. */
     .shadow-soft-sm {
-        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.05);
     }
     .shadow-soft {
-        box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05), 0 4px 8px -1px rgb(0 0 0 / 0.07);
+        box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
     }
     .shadow-soft-lg {
-        box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.08), 0 10px 20px -4px rgb(0 0 0 / 0.10);
+        box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.04);
+    }
+    .shadow-soft-xl {
+        box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.10), 0 4px 8px -2px rgb(0 0 0 / 0.06);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes scaleIn {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
     .text-stroke {
