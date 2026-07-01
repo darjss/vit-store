@@ -117,16 +117,16 @@ const OtpForm = (props: {
 				>
 					<OTPFieldInput autofocus />
 					<OTPFieldGroup>
-						<OTPFieldSlot index={0} />
-						<OTPFieldSlot index={1} />
-						<OTPFieldSlot index={2} />
-						<OTPFieldSlot index={3} />
+						<OTPFieldSlot index={0} class="transition-[box-shadow] duration-150 ease-out" />
+						<OTPFieldSlot index={1} class="transition-[box-shadow] duration-150 ease-out" />
+						<OTPFieldSlot index={2} class="transition-[box-shadow] duration-150 ease-out" />
+						<OTPFieldSlot index={3} class="transition-[box-shadow] duration-150 ease-out" />
 					</OTPFieldGroup>
 				</OTPField>
 			</div>
 
 			{loginMutation.isError && (
-				<div class="animate-shake border-4 border-destructive bg-destructive/10 p-4 shadow-[4px_4px_0_0_oklch(0.577_0.245_27.325)]">
+				<div class="animate-shake rounded-lg border border-destructive bg-destructive/10 p-4 shadow-soft-sm">
 					<div class="flex items-center gap-3">
 						<IconCloseCircle class="h-5 w-5 flex-shrink-0 text-destructive" />
 						<p class="font-black text-destructive text-sm uppercase">
