@@ -36,16 +36,16 @@ const categoryItem = items.length > 1 ? items[0] : null;
 	<div class="flex sm:hidden items-center gap-2 text-xs">
 		<a
 			href="/"
-			class="inline-flex items-center border-2 border-border bg-card px-2 py-1 hover:bg-primary transition-colors shadow-hard-sm active:shadow-none active:translate-x-px active:translate-y-px"
+			class="inline-flex items-center rounded-md border border-border bg-card px-2 py-1 hover:bg-primary transition-colors duration-150 shadow-soft-sm active:scale-[0.97]"
 		>
 			<IconHome class="h-4 w-4" />
 		</a>
-		<IconArrowRight class="h-5 w-5 font-black" aria-hidden="true" />
+		<IconArrowRight class="h-5 w-5 font-bold" aria-hidden="true" />
 		{categoryItem && (
 			<>
 				<a
 					href={categoryItem.href}
-					class="inline-flex items-center border-2 border-border bg-card px-2 py-1 hover:bg-primary transition-colors shadow-hard-sm active:shadow-none active:translate-x-px active:translate-y-px font-bold truncate max-w-[120px]"
+					class="inline-flex items-center rounded-md border border-border bg-card px-2 py-1 hover:bg-primary transition-colors duration-150 shadow-soft-sm active:scale-[0.97] font-bold truncate max-w-[120px]"
 				>
 					{categoryItem.label}
 				</a>
@@ -58,7 +58,7 @@ const categoryItem = items.length > 1 ? items[0] : null;
 		<li>
 			<a
 				href="/"
-				class="inline-flex items-center gap-1.5 border-2 border-border bg-card px-3 py-1.5 hover:bg-primary transition-colors shadow-hard-sm hover:shadow-none hover:translate-x-px hover:translate-y-px"
+				class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 hover:bg-primary transition-colors duration-150 shadow-soft-sm hover:shadow-soft hover:-translate-y-0.5"
 			>
 				<IconHome class="h-4 w-4" /> Нүүр
 			</a>
@@ -71,13 +71,13 @@ const categoryItem = items.length > 1 ? items[0] : null;
 					</li>
 					<li>
 						{index === items.length - 1 ? (
-							<span aria-current="page" class="inline-flex items-center gap-1.5 border-2 border-border bg-primary px-3 py-1.5 shadow-hard-sm font-black truncate max-w-[200px]">
+							<span aria-current="page" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-primary px-3 py-1.5 shadow-soft font-bold truncate max-w-[200px]">
 								{item.label}
 							</span>
 						) : (
 							<a
 								href={item.href}
-								class="inline-flex items-center gap-1.5 border-2 border-border bg-card px-3 py-1.5 hover:bg-primary transition-colors shadow-hard-sm hover:shadow-none hover:translate-x-px hover:translate-y-px"
+								class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 hover:bg-primary transition-colors duration-150 shadow-soft-sm hover:shadow-soft hover:-translate-y-0.5"
 							>
 								{item.label}
 							</a>

@@ -33,7 +33,7 @@ const isInStock = product.status === "active" && product.stock > 0;
 <div class="space-y-4 sm:space-y-6">
 	<div
 		transition:name={`product-brand-${product.id}`}
-		class="inline-flex items-center gap-2 border-2 border-border bg-background px-3 py-1.5 sm:px-4 sm:py-2 font-black text-xs sm:text-sm uppercase shadow-hard-sm"
+		class="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm uppercase shadow-soft-sm"
 	>
 		<IconPriceTag class="w-4 h-4 text-amber-500" />
 		<span>{product.brand.name}</span>
@@ -48,30 +48,30 @@ const isInStock = product.status === "active" && product.stock > 0;
 
 	<div class="flex flex-wrap gap-2">
 		<div
-			class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide"
+			class="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide"
 		>
 			<IconBox class="w-4 h-4 text-blue-500" /> {product.category.name}
 		</div>
 		{
 			product.amount && (
-				<div class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
+				<div class="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
 					<IconFlask class="w-4 h-4 text-purple-500" /> {product.amount}
 				</div>
 			)
 		}
 		{
 			product.potency && (
-				<div class="flex items-center gap-2 border-2 border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
+				<div class="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wide">
 					<IconMuscle class="w-4 h-4 text-green-500" /> {product.potency}
 				</div>
 			)
 		}
 	</div>
 
-	<div class="border-3 border-border bg-card p-4 shadow-hard sm:p-6">
-		<div class="mb-4 flex items-end justify-between gap-3 border-b-2 border-border pb-3">
+	<div class="rounded-lg border border-border bg-card p-4 shadow-soft sm:p-6">
+		<div class="mb-4 flex items-end justify-between gap-3 border-b border-border pb-3">
 			<div>
-				<div class="text-xs font-black text-muted-foreground uppercase tracking-wider">
+				<div class="text-xs font-bold text-muted-foreground uppercase tracking-wider">
 					Үнэ
 				</div>
 				<div class="text-3xl sm:text-5xl font-black text-foreground tracking-tight" transition:name={`product-price-${product.id}`}>
@@ -79,7 +79,7 @@ const isInStock = product.status === "active" && product.stock > 0;
 				</div>
 			</div>
 			{!isInStock && (
-				<div class="border-2 border-border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider bg-destructive text-destructive-foreground">
+				<div class="rounded-md border border-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-destructive text-destructive-foreground">
 					Дууссан
 				</div>
 			)}
@@ -101,17 +101,17 @@ const isInStock = product.status === "active" && product.stock > 0;
 			>
 				<div slot="fallback" class="space-y-4">
 					<div class="flex items-center gap-3">
-						<div class="h-14 w-14 sm:h-16 sm:w-16 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
-						<div class="h-14 flex-1 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
-						<div class="h-14 w-14 sm:h-16 sm:w-16 border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
+						<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-lg border border-border bg-muted/30 shadow-soft animate-pulse"></div>
+						<div class="h-14 flex-1 rounded-lg border border-border bg-muted/30 shadow-soft animate-pulse"></div>
+						<div class="h-14 w-14 sm:h-16 sm:w-16 rounded-lg border border-border bg-muted/30 shadow-soft animate-pulse"></div>
 					</div>
-					<div class="h-14 sm:h-16 w-full border-3 border-border bg-muted/30 shadow-hard animate-pulse"></div>
+					<div class="h-14 sm:h-16 w-full rounded-lg border border-border bg-muted/30 shadow-soft animate-pulse"></div>
 				</div>
 			</ProductQuantitySelector>
 		</div>
 	</div>
 
-	<div class="border-2 border-border bg-background p-4 sm:p-6 shadow-hard">
+	<div class="rounded-lg border border-border bg-background p-4 sm:p-6 shadow-soft">
 		<div class="grid grid-cols-2 gap-4">
 			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
 				<IconCheck class="w-5 h-5 text-green-500" />

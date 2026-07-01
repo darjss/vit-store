@@ -66,7 +66,7 @@ export default function ProductImageCarousel(props: Props) {
 	return (
 		<div class="w-full space-y-6">
 			<div
-				class="relative aspect-square w-full overflow-hidden border-2 border-border shadow-hard transition-all duration-300 sm:shadow-hard-lg"
+				class="relative aspect-square w-full overflow-hidden rounded-lg border border-border shadow-soft transition-all duration-300 ease-out-quart sm:shadow-soft-lg"
 				style={{
 					background: colors[selectedIndex()],
 					"touch-action": "pan-y",
@@ -110,10 +110,10 @@ export default function ProductImageCarousel(props: Props) {
 									type="button"
 									onClick={() => handleThumbnailClick(index())}
 									class={cn(
-										"relative aspect-square w-16 shrink-0 overflow-hidden border-2 border-border transition-all sm:w-20 md:w-24",
+										"relative aspect-square w-16 shrink-0 overflow-hidden rounded-md border border-border transition-all duration-200 ease-out-quart sm:w-20 md:w-24",
 										selectedIndex() === index()
-											? "scale-105 shadow-hard ring-2 ring-primary ring-offset-2"
-											: "opacity-60 shadow-sm hover:scale-105 hover:opacity-100 hover:shadow-hard-sm",
+											? "scale-105 shadow-soft ring-2 ring-primary ring-offset-2"
+											: "opacity-60 shadow-sm hover:scale-105 hover:opacity-100 hover:shadow-soft-sm",
 									)}
 									style={{ background: colors[index()] }}
 								>
@@ -130,7 +130,7 @@ export default function ProductImageCarousel(props: Props) {
 										decoding="async"
 									/>
 									<Show when={selectedIndex() === index()}>
-										<div class="absolute inset-0 border-2 border-primary bg-primary/10" />
+										<div class="absolute inset-0 border border-primary bg-primary/10" />
 									</Show>
 								</button>
 							);
