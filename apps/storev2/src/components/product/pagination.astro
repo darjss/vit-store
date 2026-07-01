@@ -50,7 +50,7 @@ const visiblePages = getVisiblePages();
 	{page > 1 && (
 		<a
 			href={getPageUrl(page - 1)}
-			class="flex h-11 min-w-[44px] items-center justify-center border-2 border-border bg-card px-3 font-bold text-xs uppercase shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:px-4 sm:text-sm"
+			class="flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-card px-3 font-bold text-xs uppercase shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] sm:h-11 sm:px-4 sm:text-sm"
 			rel="prev"
 		>
 			← Өмнөх
@@ -63,13 +63,13 @@ const visiblePages = getVisiblePages();
 				...
 			</span>
 		) : p === page ? (
-			<span class="flex h-11 w-11 items-center justify-center border-2 border-border bg-primary font-black text-xs text-primary-foreground shadow-hard-sm sm:h-11 sm:w-11 sm:text-sm" aria-current="page">
+			<span class="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-primary font-bold text-xs text-primary-foreground shadow-soft sm:h-11 sm:w-11 sm:text-sm" aria-current="page">
 				{p}
 			</span>
 		) : (
 			<a
 				href={getPageUrl(p as number)}
-				class="flex h-11 w-11 items-center justify-center border-2 border-border bg-card font-bold text-xs shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:w-11 sm:text-sm"
+				class="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-card font-bold text-xs shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] sm:h-11 sm:w-11 sm:text-sm"
 			>
 				{p}
 			</a>
@@ -79,7 +79,7 @@ const visiblePages = getVisiblePages();
 	{page < totalPages && (
 		<a
 			href={getPageUrl(page + 1)}
-			class="flex h-11 min-w-[44px] items-center justify-center border-2 border-border bg-card px-3 font-bold text-xs uppercase shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none sm:h-11 sm:px-4 sm:text-sm"
+			class="flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-card px-3 font-bold text-xs uppercase shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] sm:h-11 sm:px-4 sm:text-sm"
 			rel="next"
 		>
 			Дараах →

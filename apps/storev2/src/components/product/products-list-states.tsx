@@ -4,18 +4,18 @@ import IconSearch from "~icons/ri/search-line";
 import IconSparkle from "~icons/ri/sparkling-fill";
 
 const ProductCardSkeleton = () => (
-	<div class="flex animate-pulse flex-col border-2 border-border bg-card shadow-hard-sm transition-all sm:border-3 sm:shadow-hard lg:shadow-hard-lg">
-		<div class="relative aspect-4/5 overflow-hidden border-border border-b-2 bg-muted sm:border-b-3">
+	<div class="flex animate-pulse flex-col rounded-lg border border-border bg-card shadow-soft-sm transition-all sm:shadow-soft lg:shadow-soft-lg">
+		<div class="relative aspect-4/5 overflow-hidden border-border border-b bg-muted">
 			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.05)_2px,transparent_0)] bg-size-[14px_14px]" />
-			<div class="absolute right-1.5 bottom-1.5 h-3 w-10 border-2 border-border bg-muted shadow-hard-sm sm:right-2 sm:bottom-2 sm:h-4 sm:w-12 lg:right-3 lg:bottom-3 lg:h-5 lg:w-16" />
+			<div class="absolute right-1.5 bottom-1.5 h-3 w-10 rounded-md border border-border bg-muted shadow-soft-sm sm:right-2 sm:bottom-2 sm:h-4 sm:w-12 lg:right-3 lg:bottom-3 lg:h-5 lg:w-16" />
 		</div>
 		<div class="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-2.5 lg:gap-2 lg:p-3">
 			<div class="h-3 w-full rounded bg-muted sm:h-3.5 lg:h-4" />
 			<div class="h-3 w-3/4 rounded bg-muted sm:h-3.5 lg:h-4" />
 		</div>
-		<div class="flex items-center justify-between border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:border-t-3 sm:px-4 sm:py-3">
+		<div class="flex items-center justify-between border-border border-t bg-primary/10 px-3 py-2.5 sm:px-4 sm:py-3">
 			<div class="h-3.5 w-14 rounded bg-muted sm:h-4 sm:w-16 lg:h-5 lg:w-20" />
-			<div class="h-7 w-9 border-2 border-border bg-muted shadow-hard-sm sm:h-8 sm:w-11 lg:h-9 lg:w-14" />
+			<div class="h-7 w-9 rounded-md border border-border bg-muted shadow-soft-sm sm:h-8 sm:w-11 lg:h-9 lg:w-14" />
 		</div>
 	</div>
 );
@@ -48,7 +48,7 @@ export function ProductEmptyState(props: {
 			>
 				<h3 class="mb-2 font-black text-base sm:mb-2.5 sm:text-lg lg:text-xl">Үр дүн олдсонгүй</h3>
 				<p class="mb-4 px-4 text-muted-foreground/70 text-xs sm:mb-5 sm:text-sm lg:mb-6 lg:text-base">Таны шүүлтүүрт тохирох бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилж үзнэ үү.</p>
-				<button type="button" onClick={props.onClearFilters} class="mx-auto min-h-[44px] border-2 border-border bg-primary px-4 py-2.5 font-bold text-xs uppercase shadow-hard-sm transition-all active:translate-x-px active:translate-y-px active:shadow-none sm:px-5 sm:py-3 sm:text-sm lg:px-6 lg:py-3.5 lg:text-base">
+				<button type="button" onClick={props.onClearFilters} class="mx-auto min-h-[44px] rounded-md border border-border bg-primary px-4 py-2.5 font-bold text-xs uppercase shadow-soft-sm transition-all duration-200 ease-out-quart hover:shadow-soft active:scale-[0.97] sm:px-5 sm:py-3 sm:text-sm lg:px-6 lg:py-3.5 lg:text-base">
 					Бүх шүүлтүүр цэвэрлэх
 				</button>
 			</Show>
@@ -68,7 +68,7 @@ export function ProductErrorState(props: { onRetry?: () => void }) {
 				<button
 					type="button"
 					onClick={props.onRetry}
-					class="mt-4 inline-flex h-11 min-w-[44px] items-center justify-center border-2 border-border bg-card px-5 font-bold text-xs uppercase shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
+					class="mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-card px-5 font-bold text-xs uppercase shadow-soft-sm transition-all duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
 				>
 					Дахин оролдох
 				</button>

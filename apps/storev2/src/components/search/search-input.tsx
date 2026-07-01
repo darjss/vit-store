@@ -141,7 +141,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 							<button
 								type="button"
 								onClick={handleClear}
-								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-background transition-all hover:bg-primary active:scale-95"
+								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background transition-all duration-200 ease-out-quart hover:bg-primary active:scale-[0.97]"
 								aria-label="Clear search"
 							>
 								<IconClose class="h-4 w-4" aria-hidden="true" />

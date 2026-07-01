@@ -65,7 +65,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 					<div class="flex flex-wrap gap-2">
 						<For each={recentSearches()}>
 							{(item) => (
-								<div class="group flex items-center gap-2 rounded-full border-2 border-border bg-background px-4 py-2 font-bold text-sm shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+								<div class="group flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 font-bold text-sm shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:bg-primary hover:shadow-soft active:scale-[0.97]">
 									<button
 										type="button"
 										onClick={() => props.onSelectSearch(item.term)}
@@ -100,7 +100,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 							<button
 								type="button"
 								onClick={() => props.onSelectSearch(term)}
-								class="rounded-full border-2 border-border bg-secondary px-4 py-2 font-bold text-secondary-foreground text-sm shadow-hard-light-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+								class="rounded-full border border-border bg-secondary px-4 py-2 font-bold text-secondary-foreground text-sm shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft active:scale-[0.97]"
 							>
 								{term}
 							</button>

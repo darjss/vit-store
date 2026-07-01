@@ -126,15 +126,15 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 									return (
 										<a
 											href={`/products/${product.slug}-${product.id}/`}
-											class="group hover:-translate-y-1 relative block border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg"
+											class="group hover:-translate-y-1 relative block rounded-lg border border-border bg-card shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-lg"
 										>
 											{/* Image Section */}
-											<div class="relative aspect-[4/5] overflow-hidden border-border border-b-2 bg-muted/20">
+											<div class="relative aspect-[4/5] overflow-hidden border-border border-b bg-muted/20">
 												<div class="absolute inset-0 bg-dots-pattern opacity-30" />
 
 												{/* Brand Badge */}
 												<div class="absolute top-3 left-3 z-10">
-													<span class="border-2 border-border bg-background px-2 py-1 font-bold text-[10px] uppercase shadow-hard-sm sm:text-xs">
+													<span class="rounded-md border border-border bg-background px-2 py-1 font-bold text-[10px] uppercase shadow-soft-sm sm:text-xs">
 														{product.brand}
 													</span>
 												</div>
@@ -148,7 +148,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														sizes={imageProps.sizes}
 														layout="constrained"
 														objectFit="contain"
-														class="relative z-10 h-full w-full p-6 drop-shadow-md transition-transform duration-500 group-hover:scale-110"
+														class="relative z-10 h-full w-full p-6 drop-shadow-md transition-transform duration-500 ease-out-quart group-hover:scale-105"
 														loading="lazy"
 														decoding="async"
 													/>
@@ -165,7 +165,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 
 												{/* Price Section */}
 												<div class="mt-auto flex flex-col">
-													<span class="font-black text-lg tracking-tight sm:text-xl">
+													<span class="font-bold text-lg tracking-tight sm:text-xl">
 														{formatCurrency(product.price)}
 													</span>
 												</div>
@@ -192,7 +192,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 					{Array(4)
 						.fill(0)
 						.map((_v, _i) => (
-							<div class="h-[300px] animate-pulse border-2 border-border bg-muted/30 shadow-hard sm:h-[400px]" />
+							<div class="h-[300px] animate-pulse rounded-lg border border-border bg-muted/30 shadow-soft sm:h-[400px]" />
 						))}
 				</div>
 			</Show>
