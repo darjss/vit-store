@@ -12,7 +12,7 @@ const CartActions = ({
 }) => {
 	return (
 		<div class="flex items-center gap-3">
-			<div class="inline-flex items-center border-4 border-border bg-background shadow-hard-lg">
+			<div class="inline-flex items-center border border-border bg-background shadow-soft-lg">
 				<button
 					type="button"
 					class="flex h-10 w-10 items-center justify-center bg-background transition-all hover:bg-primary/20 active:bg-primary/30"
@@ -39,7 +39,7 @@ const CartActions = ({
 			</div>
 			<button
 				type="button"
-				class="flex h-10 w-10 items-center justify-center border-4 border-border bg-destructive shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-destructive/90 hover:shadow-hard-sm active:scale-95"
+				class="flex h-10 w-10 items-center justify-center border border-border bg-destructive shadow-soft-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-destructive/90 hover:shadow-soft-sm active:scale-95"
 				onClick={() => cart.remove(productId)}
 				aria-label="Remove item"
 			>

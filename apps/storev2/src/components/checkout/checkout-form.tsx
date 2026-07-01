@@ -253,7 +253,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		return isBeforeCutoff ? "today" : "tomorrow";
 	});
 	const OrderSummary = () => (
-		<div class="border-2 border-border shadow-hard-sm">
+		<div class="border border-border shadow-soft-sm">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
@@ -261,13 +261,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			>
 				<div class="flex min-w-0 items-center gap-2">
 					<IconPackage class="h-5 w-5 shrink-0" />
-					<span class="font-black text-sm uppercase">Таны захиалга</span>
-					<span class="border-2 border-border bg-primary px-1.5 py-0.5 font-black text-foreground text-xs">
+					<span class="font-extrabold text-sm uppercase">Таны захиалга</span>
+					<span class="border border-border bg-primary px-1.5 py-0.5 font-extrabold text-foreground text-xs">
 						{cart.count()}
 					</span>
 				</div>
 				<div class="flex shrink-0 items-center gap-2">
-					<span class="font-black text-foreground text-sm">
+					<span class="font-extrabold text-foreground text-sm">
 						₮{totalWithDelivery().toLocaleString()}
 					</span>
 					<Show
@@ -280,7 +280,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</button>
 
 			<Show when={summaryOpen()}>
-				<div class="border-border border-t-2 p-3">
+				<div class="border-border border-t p-3">
 					<div class="max-h-56 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-280px)]">
 						<For each={cart.items()}>
 							{(item) => (
@@ -299,7 +299,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 									</div>
 									<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
 										<a href={`/products/${item.slug}-${item.productId}/`}>
-											<h3 class="line-clamp-2 font-black text-foreground text-xs uppercase leading-tight">
+											<h3 class="line-clamp-2 font-extrabold text-foreground text-xs uppercase leading-tight">
 												{item.name}
 											</h3>
 										</a>
@@ -307,7 +307,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 											<p class="font-bold text-[10px] text-muted-foreground">
 												₮{item.price.toLocaleString()} × {item.quantity}
 											</p>
-											<p class="font-black text-primary text-xs">
+											<p class="font-extrabold text-primary text-xs">
 												₮{(item.price * item.quantity).toLocaleString()}
 											</p>
 										</div>
@@ -317,12 +317,12 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						</For>
 					</div>
 
-					<div class="mt-3 space-y-2 border-border border-t-2 pt-3">
+					<div class="mt-3 space-y-2 border-border border-t pt-3">
 						<div class="flex items-center justify-between">
 							<p class="font-bold text-muted-foreground text-xs uppercase">
 								Бараа
 							</p>
-							<p class="font-black text-foreground text-sm">
+							<p class="font-extrabold text-foreground text-sm">
 								₮{cart.total().toLocaleString()}
 							</p>
 						</div>
@@ -330,13 +330,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 							<p class="font-bold text-muted-foreground text-xs uppercase">
 								Хүргэлт
 							</p>
-							<p class="font-black text-foreground text-sm">
+							<p class="font-extrabold text-foreground text-sm">
 								₮{deliveryFee.toLocaleString()}
 							</p>
 						</div>
-						<div class="flex items-center justify-between border-border border-t-2 pt-2">
-							<p class="font-black text-foreground text-sm uppercase">Нийт</p>
-							<p class="font-black text-foreground text-lg">
+						<div class="flex items-center justify-between border-border border-t pt-2">
+							<p class="font-extrabold text-foreground text-sm uppercase">Нийт</p>
+							<p class="font-extrabold text-foreground text-lg">
 								₮{totalWithDelivery().toLocaleString()}
 							</p>
 						</div>
@@ -358,10 +358,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/90 backdrop-blur-sm">
+						<div class="sticky top-0 z-30 border-border border-b bg-background/90 backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
-									<h1 class="font-black text-lg uppercase tracking-tight">
+									<h1 class="font-extrabold text-lg uppercase tracking-tight">
 										<Show
 											when={step() === "payment"}
 											fallback={"Захиалга баталгаажуулах"}
@@ -403,14 +403,14 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 								<Switch>
 									{/* DELIVERY STEP */}
 									<Match when={step() === "delivery"}>
-										<div class="border-2 border-border shadow-hard-sm">
-											<div class="border-border border-b-2 bg-secondary p-3.5">
+										<div class="border border-border shadow-soft-sm">
+											<div class="border-border border-b bg-secondary p-3.5">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
 														<IconTruck class="h-3.5 w-3.5 text-foreground" />
 													</div>
 													<div>
-														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
+														<h2 class="font-extrabold text-secondary-foreground text-sm uppercase tracking-tight">
 															Хүргэлтийн мэдээлэл
 														</h2>
 														<p class="font-bold text-[10px] text-secondary-foreground/70">
@@ -503,16 +503,16 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 													{/* Submit */}
 													<div class="space-y-3 pt-1">
-														<div class="flex items-center justify-between border-2 border-border bg-primary p-3.5">
+														<div class="flex items-center justify-between border border-border bg-primary p-3.5">
 															<div>
-																<p class="font-black text-foreground text-sm uppercase">
+																<p class="font-extrabold text-foreground text-sm uppercase">
 																	Төлөх дүн
 																</p>
 																<p class="font-bold text-[10px] text-muted-foreground">
 																	Хүргэлтийн хураамж орсон
 																</p>
 															</div>
-															<p class="font-black text-foreground text-xl">
+															<p class="font-extrabold text-foreground text-xl">
 																₮{totalWithDelivery().toLocaleString()}
 															</p>
 														</div>
@@ -538,14 +538,14 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 									{/* PAYMENT STEP */}
 									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-2 border-border shadow-hard-sm">
-											<div class="border-border border-b-2 bg-secondary p-3.5">
+										<div class="border border-border shadow-soft-sm">
+											<div class="border-border border-b bg-secondary p-3.5">
 												<div class="flex items-center gap-2">
 													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
 														<IconBankCard class="h-3.5 w-3.5 text-foreground" />
 													</div>
 													<div>
-														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
+														<h2 class="font-extrabold text-secondary-foreground text-sm uppercase tracking-tight">
 															Төлбөр төлөх
 														</h2>
 														<p class="font-bold text-[10px] text-secondary-foreground/70">

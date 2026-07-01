@@ -56,7 +56,7 @@ const LoginForm = () => {
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
 					<div class="mb-4 inline-block rotate-[-2deg] rounded-lg border border-border bg-primary px-4 py-2 shadow-soft">
-						<h1 class="font-black text-2xl uppercase md:text-3xl">
+						<h1 class="font-extrabold text-2xl uppercase md:text-3xl">
 							{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
 						</h1>
 					</div>
@@ -85,7 +85,7 @@ const LoginForm = () => {
 				<div class="mt-6 text-center">
 					<p class="text-muted-foreground text-xs md:text-sm">
 						Нэвтрэх товчийг дарснаар та манай{" "}
-						<span class="font-black text-foreground underline decoration-2 underline-offset-4">
+						<span class="font-extrabold text-foreground underline decoration-2 underline-offset-4">
 							үйлчилгээний нөхцөл
 						</span>
 						-тэй зөвшөөрч байна

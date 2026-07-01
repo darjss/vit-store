@@ -5,7 +5,7 @@ const Loading = () => {
 				<div class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-lg border border-border bg-muted">
 					<div class="h-8 w-8 animate-spin rounded-full border border-border border-t-primary" style="animation-duration: 0.8s;" />
 				</div>
-				<h2 class="mb-3 font-black text-2xl uppercase md:text-3xl">
+				<h2 class="mb-3 font-extrabold text-2xl uppercase md:text-3xl">
 					Уншиж байна...
 				</h2>
 			</div>

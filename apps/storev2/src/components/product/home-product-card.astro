@@ -25,11 +25,11 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 ---
 
 <div
-	class={`group min-w-0 border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg active:shadow-hard-sm ${className}`}
+	class={`group min-w-0 border border-border bg-card shadow-soft transition-all hover:shadow-soft-lg active:shadow-soft-sm ${className}`}
 >
 	<a href={productUrl} class="block" aria-hidden="true" tabindex="-1">
 		<div
-			class={`relative overflow-hidden border-b-2 border-border ${aspectRatio}`}
+			class={`relative overflow-hidden border-b border-border ${aspectRatio}`}
 			style={`background: ${bgColor}`}
 			transition:name={`product-image-${product.id}`}
 		>
@@ -58,8 +58,8 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 				{product.brand ? <span class="sr-only">, {product.brand}</span> : null}
 			</h3>
 		</a>
-		<div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
-			<span class="font-black text-[13px] md:text-sm">
+		<div class="flex items-center justify-between mt-2 pt-2 border-t border-border">
+			<span class="font-extrabold text-[13px] md:text-sm">
 				{formatCurrency(product.price)}
 			</span>
 			<AddToCartButton

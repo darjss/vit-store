@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils"
 import IconClose from "~icons/ri/close-line"
  
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden border-3 border-border p-6 pr-8 shadow-hard-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--kb-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--kb-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[opened]:animate-in data-[closed]:animate-out data-[swipe=end]:animate-out data-[closed]:fade-out-80 data-[closed]:slide-out-to-right-full data-[opened]:slide-in-from-top-full data-[opened]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden border border-border p-6 pr-8 shadow-soft-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--kb-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--kb-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[opened]:animate-in data-[closed]:animate-out data-[swipe=end]:animate-out data-[closed]:fade-out-80 data-[closed]:slide-out-to-right-full data-[opened]:slide-in-from-top-full data-[opened]:sm:slide-in-from-bottom-full",
   {
     variants: {
       variant: {
         default: "bg-card text-card-foreground",
         destructive:
-          "destructive group bg-destructive text-destructive-foreground shadow-hard-lg",
-        success: "success bg-primary text-primary-foreground shadow-hard-lg",
-        error: "error bg-error text-error-foreground shadow-hard-lg"
+          "destructive group bg-destructive text-destructive-foreground shadow-soft-lg",
+        success: "success bg-primary text-primary-foreground shadow-soft-lg",
+        error: "error bg-error text-error-foreground shadow-soft-lg"
       }
     },
     defaultVariants: {
@@ -75,7 +75,7 @@ const ToastClose = <T extends ValidComponent = "button">(
   return (
     <ToastPrimitive.CloseButton
       class={cn(
-        "absolute right-2 top-2 p-1 border-2 border-border bg-background text-foreground opacity-0 transition-all hover:bg-foreground hover:text-background focus:opacity-100 focus:outline-none shadow-hard-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] group-hover:opacity-100 group-[.destructive]:bg-destructive-foreground group-[.destructive]:text-destructive group-[.error]:bg-error-foreground group-[.error]:text-error group-[.success]:bg-primary-foreground group-[.success]:text-primary",
+        "absolute right-2 top-2 p-1 border border-border bg-background text-foreground opacity-0 transition-all hover:bg-foreground hover:text-background focus:opacity-100 focus:outline-none shadow-soft-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] group-hover:opacity-100 group-[.destructive]:bg-destructive-foreground group-[.destructive]:text-destructive group-[.error]:bg-error-foreground group-[.error]:text-error group-[.success]:bg-primary-foreground group-[.success]:text-primary",
         local.class
       )}
       {...others}
@@ -93,7 +93,7 @@ const ToastTitle = <T extends ValidComponent = "div">(
   props: PolymorphicProps<T, ToastTitleProps<T>>
 ) => {
   const [local, others] = splitProps(props as ToastTitleProps, ["class"])
-  return <ToastPrimitive.Title class={cn("text-base font-black uppercase tracking-wide", local.class)} {...others} />
+  return <ToastPrimitive.Title class={cn("text-base font-extrabold uppercase tracking-wide", local.class)} {...others} />
 }
  
 type ToastDescriptionProps<T extends ValidComponent = "div"> =

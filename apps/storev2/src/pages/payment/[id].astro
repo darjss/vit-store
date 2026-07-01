@@ -44,7 +44,7 @@ if (payment.status === "success") {
                         <IconCreditCard class="h-6 w-6" />
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h1 class="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tight">
+                        <h1 class="text-lg sm:text-xl md:text-2xl font-extrabold uppercase tracking-tight">
                             Төлбөр төлөх
                         </h1>
                         <p class="text-xs sm:text-sm font-bold text-muted-foreground mt-0.5">
@@ -58,7 +58,7 @@ if (payment.status === "success") {
                 <div class="p-3 sm:p-4 space-y-3">
                     <div class="flex items-center justify-between rounded-md p-2.5 sm:p-3 border border-border bg-muted/30">
                         <span class="text-xs sm:text-sm font-bold text-muted-foreground">НИЙТ ДҮН</span>
-                        <span class="text-lg sm:text-xl font-black text-primary">{payment.total.toLocaleString()}₮</span>
+                        <span class="text-lg sm:text-xl font-extrabold text-primary">{payment.total.toLocaleString()}₮</span>
                     </div>
                     <div class="space-y-2">
                         {payment.order.products.map((product) => (

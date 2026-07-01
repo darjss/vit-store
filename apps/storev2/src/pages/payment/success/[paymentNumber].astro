@@ -48,7 +48,7 @@ if (payment.status !== "success") {
             <div class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-full border border-border bg-success text-success-foreground shadow-soft-lg">
                 <IconCheck class="h-12 w-12" />
             </div>
-            <h1 class="mb-4 font-black text-3xl uppercase tracking-tight md:text-5xl">
+            <h1 class="mb-4 font-extrabold text-3xl uppercase tracking-tight md:text-5xl">
                 Төлбөр амжилттай!
             </h1>
             <p class="text-lg text-muted-foreground max-w-md mx-auto">
@@ -63,11 +63,11 @@ if (payment.status !== "success") {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm text-muted-foreground font-bold uppercase">Төлбөрийн дугаар</p>
-                            <p class="font-mono font-black text-lg">{paymentNumber}</p>
+                            <p class="font-mono font-extrabold text-lg">{paymentNumber}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-sm text-muted-foreground font-bold uppercase">Захиалгын дугаар</p>
-                            <p class="font-mono font-black text-lg">{payment.order.orderNumber}</p>
+                            <p class="font-mono font-extrabold text-lg">{payment.order.orderNumber}</p>
                         </div>
                     </div>
                 </div>
@@ -75,7 +75,7 @@ if (payment.status !== "success") {
                 <div class="p-6 space-y-4">
                     <!-- Products -->
                     <div>
-                        <h3 class="font-black uppercase tracking-tight mb-3 text-sm text-muted-foreground">Бүтээгдэхүүнүүд</h3>
+                        <h3 class="font-extrabold uppercase tracking-tight mb-3 text-sm text-muted-foreground">Бүтээгдэхүүнүүд</h3>
                         <div class="space-y-2">
                             {payment.order.products.map((product) => (
                                 <div class="flex items-center gap-3 rounded-md p-3 border border-border bg-background">
@@ -90,7 +90,7 @@ if (payment.status !== "success") {
                                         <p class="font-bold text-sm truncate">{product.name}</p>
                                         <p class="text-xs text-muted-foreground">{product.quantity}x</p>
                                     </div>
-                                    <p class="font-black text-sm shrink-0">
+                                    <p class="font-extrabold text-sm shrink-0">
                                         {(product.price * product.quantity).toLocaleString()}₮
                                     </p>
                                 </div>
@@ -100,15 +100,15 @@ if (payment.status !== "success") {
 
                     <!-- Delivery Address -->
                     <div class="pt-4 border-t border-border">
-                        <h3 class="font-black uppercase tracking-tight mb-2 text-sm text-muted-foreground">Хүргэлтийн хаяг</h3>
+                        <h3 class="font-extrabold uppercase tracking-tight mb-2 text-sm text-muted-foreground">Хүргэлтийн хаяг</h3>
                         <p class="font-medium">{payment.order.address}</p>
                     </div>
 
                     <!-- Total -->
                     <div class="pt-4 border-t border-border">
                         <div class="flex items-center justify-between">
-                            <span class="font-black uppercase">Нийт төлсөн</span>
-                            <span class="font-black text-2xl text-primary">{payment.total.toLocaleString()}₮</span>
+                            <span class="font-extrabold uppercase">Нийт төлсөн</span>
+                            <span class="font-extrabold text-2xl text-primary">{payment.total.toLocaleString()}₮</span>
                         </div>
                     </div>
                 </div>
@@ -120,14 +120,14 @@ if (payment.status !== "success") {
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                 <a
                     href={checkoutToken ? `/order/confirm/${payment.order.orderNumber}?ct=${encodeURIComponent(checkoutToken)}` : `/order/confirm/${payment.order.orderNumber}`}
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-primary text-primary-foreground shadow-soft-lg hover:-translate-y-0.5 hover:shadow-soft-xl active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-extrabold uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-primary text-primary-foreground shadow-soft-lg hover:-translate-y-0.5 hover:shadow-soft-xl active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
                 >
                     <IconReceipt class="w-5 h-5" />
                     Захиалга харах
                 </a>
                 <a
                     href="/"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-background text-black shadow-soft-lg hover:-translate-y-0.5 hover:shadow-soft-xl active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-extrabold uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-border bg-background text-black shadow-soft-lg hover:-translate-y-0.5 hover:shadow-soft-xl active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
                 >
                     <IconHome class="w-5 h-5" />
                     Нүүр хуудас

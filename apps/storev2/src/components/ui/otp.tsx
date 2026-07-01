@@ -42,7 +42,7 @@ const OTPFieldSlot: Component<ComponentProps<"div"> & { index: number }> = (prop
   return (
     <div
       class={cn(
-        "group relative flex size-14 md:size-16 items-center justify-center border-4 border-border bg-background text-xl md:text-2xl font-black shadow-hard-lg transition-all hover:shadow-hard-xl hover:translate-x-[-2px] hover:translate-y-[-2px]",
+        "group relative flex size-14 md:size-16 items-center justify-center border border-border bg-background text-xl md:text-2xl font-extrabold shadow-soft-lg transition-all hover:shadow-soft-lg hover:translate-x-[-2px] hover:translate-y-[-2px]",
         local.class
       )}
       {...others}

@@ -22,12 +22,12 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 ---
 
 <div
-	class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-border bg-card shadow-hard transition-all duration-200 hover:shadow-hard-lg sm:border-3 sm:shadow-hard-lg sm:hover:shadow-hard-xl"
+	class="group hover:-translate-y-0.5 relative flex flex-col border border-border bg-card shadow-soft transition-all duration-200 hover:shadow-soft-lg sm:border sm:shadow-soft-lg sm:hover:shadow-soft-lg"
 	data-product-id={product.id}
 >
 	<a
 		href={productUrl}
-		class="relative block overflow-hidden border-border border-b-2 sm:border-b-3"
+		class="relative block overflow-hidden border-border border-b sm:border-b-3"
 		aria-hidden="true"
 		tabindex="-1"
 	>
@@ -51,7 +51,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 				<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
 			)}
 			{product.brand && (
-				<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[11px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[11px]">
+				<div class="absolute right-1.5 bottom-1.5 border border-border bg-card px-1.5 py-0.5 font-extrabold text-[11px] uppercase tracking-tight shadow-soft-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[11px]">
 					{product.brand.name}
 				</div>
 			)}
@@ -67,8 +67,8 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 		</a>
 	</div>
 
-	<div class="flex items-center justify-between gap-2 border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t-3 sm:px-4 sm:py-3">
-		<div class="font-black text-sm tracking-tight sm:text-lg">
+	<div class="flex items-center justify-between gap-2 border-border border-t bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t sm:px-4 sm:py-3">
+		<div class="font-extrabold text-sm tracking-tight sm:text-lg">
 			{formatCurrency(product.price)}
 		</div>
 		<AddToCartButton

@@ -68,7 +68,7 @@ const ProductCard = (props: ProductCardProps) => {
 
 	return (
 		<div
-			class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-border bg-card shadow-hard transition-all duration-200 ease-out-quart hover:shadow-hard-lg"
+			class="group hover:-translate-y-0.5 relative flex flex-col border border-border bg-card shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-lg"
 			data-product-id={product().id}
 		>
 			{/* Image Section — decorative link, primary link is heading below */}
@@ -111,7 +111,7 @@ const ProductCard = (props: ProductCardProps) => {
 
 					{/* Brand Badge */}
 					<Show when={brandName()}>
-						<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[11px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1">
+						<div class="absolute right-1.5 bottom-1.5 border border-border bg-card px-1.5 py-0.5 font-extrabold text-[11px] uppercase tracking-tight shadow-soft-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1">
 							{brandName()}
 						</div>
 					</Show>
@@ -129,8 +129,8 @@ const ProductCard = (props: ProductCardProps) => {
 			</div>
 
 			{/* Price & CTA Bar */}
-			<div class="flex items-center justify-between gap-2 border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t-3 sm:px-4 sm:py-3">
-				<div class="font-black text-sm tracking-tight sm:text-lg">
+			<div class="flex items-center justify-between gap-2 border-border border-t bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t sm:px-4 sm:py-3">
+				<div class="font-extrabold text-sm tracking-tight sm:text-lg">
 					{formatCurrency(product().price)}
 				</div>
 				<AddToCartButton

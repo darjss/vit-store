@@ -26,7 +26,7 @@ const SelectTrigger = <T extends ValidComponent = "button">(
   return (
     <SelectPrimitive.Trigger
       class={cn(
-        "flex h-10 w-full items-center justify-between border-[3px] border-border bg-background px-3 py-2 text-sm shadow-hard-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full items-center justify-between border-[3px] border-border bg-background px-3 py-2 text-sm shadow-soft-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         local.class
       )}
       {...others}
@@ -48,7 +48,7 @@ const SelectContent = <T extends ValidComponent = "div">(
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         class={cn(
-          "relative z-50 min-w-32 overflow-hidden border-[3px] border-border bg-popover text-popover-foreground shadow-hard-lg animate-in fade-in-80",
+          "relative z-50 min-w-32 overflow-hidden border-[3px] border-border bg-popover text-popover-foreground shadow-soft-lg animate-in fade-in-80",
           local.class
         )}
         {...others}

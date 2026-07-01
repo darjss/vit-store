@@ -129,7 +129,7 @@ const OtpForm = (props: {
 				<div class="animate-shake rounded-lg border border-destructive bg-destructive/10 p-4 shadow-soft-sm">
 					<div class="flex items-center gap-3">
 						<IconCloseCircle class="h-5 w-5 flex-shrink-0 text-destructive" />
-						<p class="font-black text-destructive text-sm uppercase">
+						<p class="font-extrabold text-destructive text-sm uppercase">
 							Код буруу байна. Дахин оролдоно уу.
 						</p>
 					</div>

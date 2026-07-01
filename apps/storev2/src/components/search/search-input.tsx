@@ -149,7 +149,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 						</Show>
 					}
 				>
-					<div class="h-5 w-5 animate-spin rounded-full border-2 border-border/20 border-t-black" />
+					<div class="h-5 w-5 animate-spin rounded-full border border-border/20 border-t-black" />
 				</Show>
 			</div>
 		</TextField>
