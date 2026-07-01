@@ -79,7 +79,7 @@ const itemListSchema = {
 <Layout title={title} description={description}>
 	<div id="products-ssr">
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<div class="overflow-hidden border-2 border-border bg-primary/5 bg-dots-subtle px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
+			<div class="overflow-hidden border border-border bg-primary/5 bg-dots-subtle px-3 py-3 rounded-lg shadow-soft sm:px-5 sm:py-4 sm:shadow-soft-lg">
 				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
 					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
 						Бүх бүтээгдэхүүн
@@ -90,8 +90,13 @@ const itemListSchema = {
 				</div>
 
 				<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
-					{initialProductsResult.items.map((product) => (
-						<ServerProductCard product={product} />
+					{initialProductsResult.items.map((product, index) => (
+						<div
+							class="stagger-fade-in"
+							style={`animation-delay:${Math.min(index, 8) * 30}ms`}
+						>
+							<ServerProductCard product={product} />
+						</div>
 					))}
 				</div>
 			</div>
@@ -104,3 +109,21 @@ const itemListSchema = {
 		totalProductCount={totalProductCount}
 	/>
 </Layout>
+
+<style is:global>
+	@keyframes fadeIn {
+		from { opacity: 0; transform: translateY(8px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.stagger-fade-in {
+		opacity: 0;
+		animation: fadeIn 300ms var(--ease-out-quart) forwards;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stagger-fade-in {
+			opacity: 1 !important;
+			animation: none !important;
+			transform: none !important;
+		}
+	}
+</style>

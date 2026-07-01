@@ -337,6 +337,17 @@
         box-shadow: -4px 4px 0px 0px var(--color-border);
     }
 
+    /* Soft (blurred) shadows — the softened system replacement for hard offsets. */
+    .shadow-soft-sm {
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.08);
+    }
+    .shadow-soft {
+        box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.06), 0 4px 8px 0 rgb(0 0 0 / 0.08);
+    }
+    .shadow-soft-lg {
+        box-shadow: 0 4px 8px 0 rgb(0 0 0 / 0.08), 0 8px 16px 0 rgb(0 0 0 / 0.10);
+    }
+
     /* Light shadows for use on dark (secondary) backgrounds */
     .shadow-hard-light {
         box-shadow: 4px 4px 0px 0px var(--color-background);

@@ -54,8 +54,8 @@ if(!order){
         <PaymentStatus payment={order.payments[0]} client:load />
 
         <div class="max-w-4xl mx-auto mb-8">
-            <div class="border-4 border-border bg-card shadow-hard-xl transition-all">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 border-b-4 border-border">
+            <div class="border border-border bg-card rounded-lg shadow-soft-lg transition-all">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 border-b border-border rounded-t-lg">
                     <div>
                         <h2 class="text-2xl font-black uppercase tracking-tight mb-2">Захиалгын мэдээлэл</h2>
                         <div class="flex items-center gap-4">
@@ -64,7 +64,7 @@ if(!order){
                         </div>
                     </div>
                     <div class="mt-4 md:mt-0">
-                        <div class="inline-flex items-center border-2 border-border px-3 py-1 text-xs font-black uppercase tracking-wide shadow-hard-sm bg-success text-success-foreground">
+                        <div class="inline-flex items-center border border-border px-3 py-1 text-xs font-black uppercase tracking-wide rounded-md shadow-soft-sm bg-success text-success-foreground scale-in">
                             {orderStatusLabels[order?.status as OrderStatusType] ?? order?.status ?? 'Хүлээгдэж буй'}
                         </div>
                     </div>
@@ -121,9 +121,9 @@ if(!order){
                 <h2 class="text-2xl font-black uppercase tracking-tight mb-6">Захиалсан бүтээгдэхүүн</h2>
                 <div class="space-y-4">
                     {order.orderDetails.map((detail) => (
-                        <div class="border-4 border-border bg-card shadow-hard-xl transition-all hover:shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px]">
+                        <div class="border border-border bg-card rounded-lg shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft-lg hover:-translate-y-0.5">
                             <div class="p-6 flex flex-col md:flex-row gap-6">
-                                <div class="flex-shrink-0 w-24 h-24 border-2 border-border overflow-hidden relative bg-primary/5">
+                                <div class="flex-shrink-0 w-24 h-24 border border-border overflow-hidden relative bg-primary/5 rounded-lg">
                                     {detail.product.images[0]?.url ? (
                                         <img
                                             src={detail.product.images[0].url}
@@ -156,7 +156,7 @@ if(!order){
         )}
 
         <div class="max-w-4xl mx-auto mb-12">
-            <div class="border-4 border-border bg-primary text-primary-foreground shadow-hard-xl p-6 md:p-8">
+            <div class="border border-border bg-primary text-primary-foreground rounded-lg shadow-soft-lg p-6 md:p-8">
                 <div class="flex justify-between items-center">
                     <div>
                         <h3 class="text-xl font-black uppercase tracking-tight">Нийт дүн</h3>
@@ -171,16 +171,16 @@ if(!order){
 
         <div class="max-w-4xl mx-auto">
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
+                <a
                     href="/"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wide transition-[box-shadow,transform] duration-200 ease-out-quart focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border border-border bg-background text-black rounded-lg shadow-soft hover:-translate-y-0.5 hover:shadow-soft-lg active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
                 >
                     <IconHome class="w-4 h-4" />
                     Худалдан авалтыг үргэлжлүүлэх
                 </a>
-                <a 
+                <a
                     href="/profile"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-primary text-primary-foreground shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wide transition-[box-shadow,transform] duration-200 ease-out-quart focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border border-border bg-primary text-primary-foreground rounded-lg shadow-soft hover:-translate-y-0.5 hover:shadow-soft-lg active:scale-[0.97] h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
                 >
                     <IconUser class="w-4 h-4" />
                     Миний захиалгууд
@@ -190,20 +190,20 @@ if(!order){
 
         <!-- Help Section -->
         <div class="max-w-4xl mx-auto mt-16 text-center">
-            <div class="border-4 border-border bg-secondary p-8 shadow-hard-light-lg">
+            <div class="border border-border bg-secondary p-8 rounded-lg shadow-soft-lg">
                 <h3 class="text-xl font-black uppercase tracking-tight mb-4">Тусламж хэрэгтэй юу?</h3>
                 <p class="text-muted-foreground mb-6">Хэрэв таны захиалгатай холбоотой асуулт байвал бидэнтэй холбогдоорой.</p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a 
+                    <a
                         href="tel:+97699993950"
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
+                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wide transition-[box-shadow,transform] duration-200 ease-out-quart focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border border-border bg-background text-black rounded-lg shadow-soft hover:-translate-y-0.5 hover:shadow-soft-lg active:scale-[0.97] h-12 px-6 py-3 text-sm"
                     >
                         <IconPhone class="w-4 h-4" />
                         Утсаар залгах
                     </a>
-                    <a 
+                    <a
                         href="mailto:info@amerikvitamin.mn"
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
+                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wide transition-[box-shadow,transform] duration-200 ease-out-quart focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border border-border bg-background text-black rounded-lg shadow-soft hover:-translate-y-0.5 hover:shadow-soft-lg active:scale-[0.97] h-12 px-6 py-3 text-sm"
                     >
                         <IconMail class="w-4 h-4" />
                         Имэйл илгээх
@@ -213,3 +213,21 @@ if(!order){
         </div>
     </div>
 </Layout>
+
+<style is:global>
+    @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .scale-in {
+        opacity: 0;
+        animation: scaleIn 400ms var(--ease-out-quart) forwards;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .scale-in {
+            opacity: 1 !important;
+            animation: none !important;
+            transform: none !important;
+        }
+    }
+</style>
