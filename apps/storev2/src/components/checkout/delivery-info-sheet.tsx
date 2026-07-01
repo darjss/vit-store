@@ -41,9 +41,9 @@ export default function DeliveryInfoSheet() {
 			>
 				<span>Дэлгэрэнгүй</span>
 			</SheetTrigger>
-			<SheetContent position="bottom" class="border-t-2 border-border">
+			<SheetContent position="bottom" class="border-t border-border">
 				<SheetHeader class="text-left">
-					<SheetTitle class="font-black text-lg uppercase tracking-tight">
+					<SheetTitle class="font-extrabold text-lg uppercase tracking-tight">
 						Хүргэлтийн мэдээлэл
 					</SheetTitle>
 				</SheetHeader>
@@ -51,7 +51,7 @@ export default function DeliveryInfoSheet() {
 				<div class="mt-4 space-y-5 pb-6">
 					{/* Delivery Zone Map */}
 					<div class="border border-border bg-card p-3">
-						<h3 class="mb-2 font-black text-xs uppercase tracking-wider">
+						<h3 class="mb-2 font-extrabold text-xs uppercase tracking-wider">
 							Улаанбаатар хотын хүргэлтийн бүс
 						</h3>
 						<div class="border border-border bg-muted/30 overflow-hidden">
@@ -76,7 +76,7 @@ export default function DeliveryInfoSheet() {
 									<div class="flex h-8 w-8 items-center justify-center border border-border bg-primary">
 										<item.icon class="h-4 w-4" />
 									</div>
-									<h3 class="font-black text-xs uppercase tracking-wider">
+									<h3 class="font-extrabold text-xs uppercase tracking-wider">
 										{item.title}
 									</h3>
 								</div>
@@ -94,7 +94,7 @@ export default function DeliveryInfoSheet() {
 								<IconAlert class="h-3.5 w-3.5" />
 							</div>
 							<div>
-								<h3 class="mb-1.5 font-black text-xs uppercase tracking-wider">
+								<h3 class="mb-1.5 font-extrabold text-xs uppercase tracking-wider">
 									Чухал анхааруулга
 								</h3>
 								<ul class="space-y-1 text-xs font-medium leading-relaxed">

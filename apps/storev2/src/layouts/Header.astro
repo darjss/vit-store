@@ -40,16 +40,16 @@ import IconUser from "~icons/ri/user-line";
 ---
 
 <header
-    class="sticky top-0 z-50 border-b-2 border-border bg-background/95 bg-dots-subtle" transition:persist transition:name="header"
+    class="sticky top-0 z-50 border-b border-border bg-background/95 bg-dots-subtle" transition:persist transition:name="header"
 >
     <div class="mx-auto max-w-screen-2xl px-5 py-3 lg:px-8 lg:py-4">
         <div class="flex items-center justify-between gap-3 lg:gap-4">
             <Sheet>
-                <SheetTrigger class="p-2 border-2 border-border bg-card shadow-hard-sm active:translate-x-px active:translate-y-px active:shadow-none transition-all">
+                <SheetTrigger class="p-2 border border-border bg-card shadow-soft-sm active:scale-[0.97] transition-transform duration-200 ease-out-quart">
                     <IconMenu class="w-6 h-6" />
                     <span class="sr-only">Toggle menu</span>
                 </SheetTrigger>
-                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r-2 border-border p-0">
+                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r border-border p-0">
                     <div class="h-full overflow-y-auto bg-background">
                         <SidebarContent />
                     </div>
@@ -57,11 +57,11 @@ import IconUser from "~icons/ri/user-line";
             </Sheet>
             <div class="flex min-w-0 items-center gap-2 w-full">
                 <a href="/" class="flex min-w-0 items-center gap-2.5">
-                    <div class="h-10 w-10 shrink-0 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">
+                    <div class="h-10 w-10 shrink-0 border border-border bg-primary flex items-center justify-center font-extrabold text-[11px] uppercase tracking-wider shadow-soft-sm">
                         AV
                     </div>
                     <div class="min-w-0">
-                        <span class="block truncate font-black text-sm uppercase tracking-wider sm:text-base">Amerik Vitamin</span>
+                        <span class="block truncate font-extrabold text-sm uppercase tracking-wider sm:text-base">Amerik Vitamin</span>
                         <span class="hidden sm:block text-[10px] font-semibold text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
                     </div>
                 </a>
@@ -77,7 +77,7 @@ import IconUser from "~icons/ri/user-line";
                     <div
                         slot="fallback"
                         aria-label="Профайл"
-                        class="flex items-center justify-center w-11 h-11 border-2 border-border bg-card shadow-hard-sm"
+                        class="flex items-center justify-center w-11 h-11 border border-border bg-card shadow-soft-sm"
                     >
                         <IconUser class="w-4 h-4" />
                     </div>

@@ -47,7 +47,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 					<button
 						type="button"
 						onClick={() => selectTab("transfer")}
-						class="rounded-md px-3 py-2.5 font-black text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
+						class="rounded-md px-3 py-2.5 font-extrabold text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
 						classList={{
 							"border border-border bg-primary shadow-soft":
 								tab() === "transfer",
@@ -62,7 +62,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 					<button
 						type="button"
 						onClick={() => selectTab("qpay")}
-						class="rounded-md px-3 py-2.5 font-black text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
+						class="rounded-md px-3 py-2.5 font-extrabold text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
 						classList={{
 							"border border-border bg-primary shadow-soft":
 								tab() === "qpay",
@@ -92,7 +92,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								<div class="mb-0.5 font-bold text-[10px] text-muted-foreground sm:text-xs">
 									БАНК
 								</div>
-								<div class="font-black text-sm sm:text-base">
+								<div class="font-extrabold text-sm sm:text-base">
 									{bankTransfer.bankName}
 								</div>
 							</div>
@@ -105,7 +105,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Данс
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-extrabold text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{bankTransfer.accountNumber}
 										</div>
 										<CopyButton
@@ -132,7 +132,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Дүн
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-primary/20 px-2.5 py-2 font-extrabold text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
 											{props.total.toLocaleString()}₮
 										</div>
 										<CopyButton text={props.total} title="Дүн" />
@@ -144,7 +144,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Төлбөрийн дугаар
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-extrabold text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{props.transferReference}
 										</div>
 										<CopyButton

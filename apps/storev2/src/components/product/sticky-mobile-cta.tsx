@@ -35,20 +35,20 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 		<Show when={visible()}>
 			{/* Spacer prevents the fixed bar from overlapping footer/content at scroll bottom */}
 			<div class="h-[70px] sm:hidden" aria-hidden="true" />
-			<div class="fixed bottom-0 left-0 right-0 z-50 border-t-4 border-border bg-background px-3 py-2.5 shadow-[0_-4px_0_rgba(0,0,0,0.15)] sm:hidden">
+			<div class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-3 py-2.5 shadow-[0_-4px_0_rgba(0,0,0,0.15)] sm:hidden">
 				<div class="flex items-center justify-between gap-3">
 					<div class="min-w-0">
-						<p class="truncate font-black text-sm text-foreground">
+						<p class="truncate font-extrabold text-sm text-foreground">
 							{props.cartItem.name}
 						</p>
-						<p class="font-black text-base text-foreground">
+						<p class="font-extrabold text-base text-foreground">
 							{formatCurrency(props.cartItem.price)}
 						</p>
 					</div>
 					<button
 						type="button"
 						onClick={handleAdd}
-						class="flex shrink-0 items-center gap-2 border-3 border-border bg-primary px-5 py-2.5 font-black text-sm uppercase tracking-tight shadow-hard transition-all active:scale-[0.98]"
+						class="flex shrink-0 items-center gap-2 border border-border bg-primary px-5 py-2.5 font-extrabold text-sm uppercase tracking-tight shadow-soft transition-all active:scale-[0.98]"
 					>
 						<IconShoppingCart class="h-4 w-4" />
 						Сагслах

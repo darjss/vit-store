@@ -41,12 +41,12 @@ export function ProductEmptyState(props: {
 				when={props.hasActiveFilters}
 				fallback={
 					<>
-						<h3 class="mb-2 font-black text-base sm:mb-2.5 sm:text-lg lg:text-xl">Бүтээгдэхүүн олдсонгүй</h3>
+						<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">Бүтээгдэхүүн олдсонгүй</h3>
 						<p class="px-4 text-muted-foreground/70 text-xs sm:text-sm lg:text-base">Одоогоор бүтээгдэхүүн байхгүй байна</p>
 					</>
 				}
 			>
-				<h3 class="mb-2 font-black text-base sm:mb-2.5 sm:text-lg lg:text-xl">Үр дүн олдсонгүй</h3>
+				<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">Үр дүн олдсонгүй</h3>
 				<p class="mb-4 px-4 text-muted-foreground/70 text-xs sm:mb-5 sm:text-sm lg:mb-6 lg:text-base">Таны шүүлтүүрт тохирох бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилж үзнэ үү.</p>
 				<button type="button" onClick={props.onClearFilters} class="mx-auto min-h-[44px] rounded-md border border-border bg-primary px-4 py-2.5 font-bold text-xs uppercase shadow-soft-sm transition-all duration-200 ease-out-quart hover:shadow-soft active:scale-[0.97] sm:px-5 sm:py-3 sm:text-sm lg:px-6 lg:py-3.5 lg:text-base">
 					Бүх шүүлтүүр цэвэрлэх

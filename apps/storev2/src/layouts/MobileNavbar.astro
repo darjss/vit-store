@@ -22,7 +22,7 @@ import IconStore from "~icons/ri/store-2-line";
 
 <nav
     data-mobile-navbar
-    class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t-4 border-border bg-background h-[73px] transition-opacity duration-200 data-[overlay-open=true]:pointer-events-none data-[overlay-open=true]:opacity-40" transition:persist transition:name="mobile-navbar"
+    class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background h-[73px] transition-opacity duration-200 data-[overlay-open=true]:pointer-events-none data-[overlay-open=true]:opacity-40" transition:persist transition:name="mobile-navbar"
     aria-label="Гар утасны үндсэн цэс"
 >
     <div class="mx-auto max-w-screen-sm">
@@ -77,7 +77,7 @@ import IconStore from "~icons/ri/store-2-line";
                 link.classList.remove(
                     "bg-primary",
                     "text-primary-foreground",
-                    "shadow-hard-sm",
+                    "shadow-soft-sm",
                 );
                 link.classList.add("text-foreground/70");
                 link.removeAttribute("aria-current");
@@ -89,7 +89,7 @@ import IconStore from "~icons/ri/store-2-line";
                     link.classList.add(
                         "bg-primary",
                         "text-primary-foreground",
-                        "shadow-hard-sm",
+                        "shadow-soft-sm",
                     );
                     link.classList.remove("text-foreground/70");
                     link.setAttribute("aria-current", "page");

@@ -26,10 +26,10 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 	};
 
 	return (
-		<div class="hover:-translate-y-1 border-4 border-border bg-card p-3 shadow-hard transition-all hover:shadow-hard-lg">
+		<div class="hover:-translate-y-1 border border-border bg-card p-3 shadow-soft transition-all hover:shadow-soft-lg">
 			<div class="flex gap-3">
 				{/* Product Image */}
-				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border-3 border-border bg-secondary/5 shadow-hard-sm">
+				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border border-border bg-secondary/5 shadow-soft-sm">
 					<a
 						href={`/products/${props.item.slug}-${props.item.productId}/`}
 						onClick={props.onNavigate}
@@ -51,7 +51,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 						<a
 							href={`/products/${props.item.slug}-${props.item.productId}/`}
 							onClick={props.onNavigate}
-							class="line-clamp-2 font-black text-sm uppercase transition-colors hover:text-primary"
+							class="line-clamp-2 font-extrabold text-sm uppercase transition-colors hover:text-primary"
 						>
 							{props.item.name}
 						</a>
@@ -67,18 +67,18 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 							<button
 								type="button"
 								onClick={handleDecrement}
-								class="flex h-11 w-11 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
+								class="flex h-11 w-11 items-center justify-center border border-border bg-background font-extrabold shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
 								aria-label="Хасах"
 							>
 								−
 							</button>
-							<div class="flex h-11 min-w-[2.75rem] items-center justify-center border-2 border-border bg-primary px-2 font-black text-sm">
+							<div class="flex h-11 min-w-[2.75rem] items-center justify-center border border-border bg-primary px-2 font-extrabold text-sm">
 								{props.item.quantity}
 							</div>
 							<button
 								type="button"
 								onClick={handleIncrement}
-								class="flex h-11 w-11 items-center justify-center border-2 border-border bg-background font-black shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
+								class="flex h-11 w-11 items-center justify-center border border-border bg-background font-extrabold shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
 								aria-label="Нэмэх"
 							>
 								+
@@ -89,7 +89,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 						<button
 							type="button"
 							onClick={handleRemove}
-							class="flex h-11 w-11 items-center justify-center border-2 border-border bg-error text-error-foreground shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
+							class="flex h-11 w-11 items-center justify-center border border-border bg-error text-error-foreground shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
 							aria-label="Устгах"
 						>
 							<IconClose class="h-5 w-5" />
@@ -97,7 +97,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 					</div>
 
 					{/* Item Total */}
-					<div class="mt-2 border-border border-t-2 pt-2 font-black text-primary text-sm">
+					<div class="mt-2 border-border border-t pt-2 font-extrabold text-primary text-sm">
 						₮{(props.item.price * props.item.quantity).toLocaleString()}
 					</div>
 				</div>

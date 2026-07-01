@@ -50,7 +50,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 			<Show when={recentSearches().length > 0}>
 				<div>
 					<div class="mb-3 flex items-center justify-between">
-						<h3 class="font-black text-muted-foreground/70 text-sm uppercase tracking-wider">
+						<h3 class="font-extrabold text-muted-foreground/70 text-sm uppercase tracking-wider">
 							<IconTime class="mr-2 inline-block h-4 w-4 text-blue-500" />
 							Сүүлд хайсан
 						</h3>
@@ -90,7 +90,7 @@ const SearchSuggestions: Component<SearchSuggestionsProps> = (props) => {
 
 			{/* Trending Searches */}
 			<div>
-				<h3 class="mb-3 font-black text-muted-foreground/70 text-sm uppercase tracking-wider">
+				<h3 class="mb-3 font-extrabold text-muted-foreground/70 text-sm uppercase tracking-wider">
 					<IconFire class="mr-2 inline-block h-4 w-4 text-orange-500" />
 					Түгээмэл хайлт
 				</h3>

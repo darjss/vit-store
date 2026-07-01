@@ -132,7 +132,7 @@ export default function ProductQuantitySelector(
 					<div class="rounded-lg border border-border bg-destructive/10 p-4 shadow-soft-lg sm:p-6">
 						<div class="mb-3 flex items-center gap-3">
 							<IconAlertTriangle class="text-2xl text-yellow-500" />
-							<h3 class="font-black text-destructive text-lg sm:text-xl">
+							<h3 class="font-extrabold text-destructive text-lg sm:text-xl">
 								Дууссан байна
 							</h3>
 						</div>

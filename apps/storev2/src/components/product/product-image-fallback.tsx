@@ -70,7 +70,7 @@ export default function ProductImageFallback(props: ProductImageFallbackProps) {
 			)}
 			aria-hidden="true"
 		>
-			<span class="select-none font-black uppercase leading-none tracking-tight text-foreground/70 text-4xl sm:text-5xl md:text-6xl">
+			<span class="select-none font-extrabold uppercase leading-none tracking-tight text-foreground/70 text-4xl sm:text-5xl md:text-6xl">
 				{monogram()}
 			</span>
 			<Show when={label()}>

@@ -51,7 +51,7 @@ const PhoneForm = (props: {
 
 	return (
 		<div class="space-y-6">
-			<div class="border-3 border-border bg-muted/50 p-4 shadow-hard-lg">
+			<div class="border border-border bg-muted/50 p-4 shadow-soft-lg">
 				<div class="flex items-start gap-3">
 					<div class="mt-1 flex-shrink-0">
 						<IconInformation class="h-5 w-5 md:h-6 md:w-6" />

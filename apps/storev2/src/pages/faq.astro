@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     q: "Захиалгаа хэрхэн хянах вэ?",
-    a: 'Та <a href="/order-tracking" class="font-black underline decoration-2 underline-offset-4">Захиалга хянах</a> хуудас руу ороод захиалгын дугаар, утасны дугаараа оруулан захиалгынхаа төлөвийг хянах боломжтой.',
+    a: 'Та <a href="/order-tracking" class="font-extrabold underline decoration-2 underline-offset-4">Захиалга хянах</a> хуудас руу ороод захиалгын дугаар, утасны дугаараа оруулан захиалгынхаа төлөвийг хянах боломжтой.',
   },
   {
     q: "Хүргэлтийн хураамж хэд вэ?",
@@ -68,8 +68,8 @@ const faqSchema = {
   <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
     <!-- Header -->
     <div class="mb-8 lg:mb-10">
-      <div class="border-4 border-border bg-primary p-4 lg:p-6 shadow-hard-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight">
+      <div class="border border-border bg-primary p-4 lg:p-6 shadow-soft-lg mb-4">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
           Түгээмэл асуулт хариулт
         </h1>
         <p class="text-sm font-medium text-foreground/70 mt-2">
@@ -81,14 +81,14 @@ const faqSchema = {
     <!-- FAQ List -->
     <div class="space-y-4">
       {faqs.map((faq, i) => (
-        <div class="border-3 border-border bg-card shadow-hard-sm">
+        <div class="border border-border bg-card shadow-soft-sm">
           <div class="p-4 lg:p-5">
             <div class="flex items-start gap-3">
-              <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
+              <div class="w-8 h-8 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
                 <IconQuestion class="w-4 h-4" />
               </div>
               <div class="flex-1">
-                <h3 class="font-black text-sm uppercase tracking-wider mb-2">{faq.q}</h3>
+                <h3 class="font-extrabold text-sm uppercase tracking-wider mb-2">{faq.q}</h3>
                 <p class="text-sm font-medium text-muted-foreground leading-relaxed" set:html={faq.a} />
               </div>
             </div>
@@ -98,17 +98,17 @@ const faqSchema = {
     </div>
 
     <!-- Still have questions -->
-    <div class="mt-8 border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
+    <div class="mt-8 border border-border bg-card p-5 lg:p-6 shadow-soft-sm">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 class="text-lg font-black uppercase tracking-tight">Асуулт байна уу?</h2>
+          <h2 class="text-lg font-extrabold uppercase tracking-tight">Асуулт байна уу?</h2>
           <p class="text-sm font-medium text-muted-foreground mt-1">
             Бидэнтэй шууд холбогдож асуултаа асууна уу
           </p>
         </div>
         <a
           href="/contact"
-          class="inline-flex items-center justify-center px-6 py-3 bg-foreground text-background font-black text-sm uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform"
+          class="inline-flex items-center justify-center px-6 py-3 bg-foreground text-background font-extrabold text-sm uppercase tracking-wider border border-foreground active:scale-[0.97] transition-transform"
         >
           Холбогдох
         </a>

@@ -176,14 +176,14 @@ const OrderTrackingForm = () => {
 										<IconSearch class="w-5 h-5" />
 									</div>
 									<div>
-										<h2 class="font-black text-sm uppercase tracking-wider">Захиалга хайх</h2>
+										<h2 class="font-extrabold text-sm uppercase tracking-wider">Захиалга хайх</h2>
 										<p class="text-xs font-medium text-muted-foreground">Захиалгын дугаар, утасны дугаараа оруулна уу</p>
 									</div>
 								</div>
 
 								<div class="space-y-3">
 									<div>
-										<label class="block text-[11px] font-black uppercase tracking-wider text-muted-foreground mb-1.5">
+										<label class="block text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground mb-1.5">
 											Захиалгын дугаар
 										</label>
 										<input
@@ -196,7 +196,7 @@ const OrderTrackingForm = () => {
 									</div>
 
 									<div>
-										<label class="block text-[11px] font-black uppercase tracking-wider text-muted-foreground mb-1.5">
+										<label class="block text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground mb-1.5">
 											Утасны дугаар
 										</label>
 										<input
@@ -214,7 +214,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleSearch}
 									disabled={sendOtpMutation.isPending}
-									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-extrabold text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{sendOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -249,13 +249,13 @@ const OrderTrackingForm = () => {
 										<IconLock class="w-5 h-5" />
 									</div>
 									<div>
-										<h2 class="font-black text-sm uppercase tracking-wider">Баталгаажуулалт</h2>
+										<h2 class="font-extrabold text-sm uppercase tracking-wider">Баталгаажуулалт</h2>
 										<p class="text-xs font-medium text-muted-foreground">{phone()} дугаарт илгээгдсэн кодыг оруулна уу</p>
 									</div>
 								</div>
 
 								<div>
-									<label class="block text-[11px] font-black uppercase tracking-wider text-muted-foreground mb-1.5">
+									<label class="block text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground mb-1.5">
 										Баталгаажуулах код
 									</label>
 									<input
@@ -264,7 +264,7 @@ const OrderTrackingForm = () => {
 										onInput={(e) => setOtp(e.currentTarget.value)}
 										placeholder="XXXX"
 										maxLength={6}
-										class="w-full rounded-md border border-border bg-background px-3 py-2.5 font-black text-lg tracking-[0.5em] text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+										class="w-full rounded-md border border-border bg-background px-3 py-2.5 font-extrabold text-lg tracking-[0.5em] text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									/>
 								</div>
 
@@ -272,7 +272,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleVerifyOtp}
 									disabled={verifyOtpMutation.isPending}
-									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-extrabold text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{verifyOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -301,7 +301,7 @@ const OrderTrackingForm = () => {
 						<Card class="bg-card border border-border shadow-soft-sm">
 							<CardContent class="p-8 text-center">
 								<IconLoader class="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-								<p class="font-black text-sm uppercase tracking-wide">Захиалгыг хайж байна...</p>
+								<p class="font-extrabold text-sm uppercase tracking-wide">Захиалгыг хайж байна...</p>
 							</CardContent>
 						</Card>
 					</Show>
@@ -312,7 +312,7 @@ const OrderTrackingForm = () => {
 								<div class="w-16 h-16 rounded-md border border-border bg-destructive flex items-center justify-center mx-auto mb-4">
 									<IconAlert class="w-8 h-8 text-destructive-foreground" />
 								</div>
-								<h3 class="font-black text-lg uppercase tracking-tight mb-2">Захиалга олдсонгүй</h3>
+								<h3 class="font-extrabold text-lg uppercase tracking-tight mb-2">Захиалга олдсонгүй</h3>
 								<p class="text-sm font-medium text-muted-foreground mb-4">
 									Захиалгын дугаар эсвэл утасны дугаар буруу байж магадгүй.
 								</p>
@@ -322,7 +322,7 @@ const OrderTrackingForm = () => {
 										setStep("input");
 										trackMutation.reset();
 									}}
-									class="rounded-lg border border-border bg-primary px-6 py-2.5 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft"
+									class="rounded-lg border border-border bg-primary px-6 py-2.5 font-extrabold text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft"
 								>
 									Дахин оролдох
 								</button>
@@ -341,8 +341,8 @@ const OrderTrackingForm = () => {
 												<IconPackage class="w-5 h-5" />
 											</div>
 											<div>
-												<div class="text-[10px] font-black uppercase tracking-widest text-foreground/80">ЗАХИАЛГА №</div>
-												<div class="font-black text-lg">{trackMutation.data?.orderNumber}</div>
+												<div class="text-[10px] font-extrabold uppercase tracking-widest text-foreground/80">ЗАХИАЛГА №</div>
+												<div class="font-extrabold text-lg">{trackMutation.data?.orderNumber}</div>
 											</div>
 										</div>
 										<span
@@ -355,30 +355,30 @@ const OrderTrackingForm = () => {
 								<CardContent class="p-4 lg:p-5 space-y-4">
 									<div class="grid grid-cols-2 gap-3">
 										<div class="rounded-md border border-border bg-muted/30 p-3">
-											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ОГНОО</div>
+											<div class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">ОГНОО</div>
 											<div class="font-bold text-sm">{formatDate(trackMutation.data?.createdAt || new Date())}</div>
 										</div>
 										<div class="rounded-md border border-border bg-muted/30 p-3">
-											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">НИЙТ ДҮН</div>
-											<div class="font-black text-sm text-primary">{trackMutation.data?.total?.toLocaleString()}₮</div>
+											<div class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">НИЙТ ДҮН</div>
+											<div class="font-extrabold text-sm text-primary">{trackMutation.data?.total?.toLocaleString()}₮</div>
 										</div>
 									</div>
 
 									<div class="rounded-md border border-border bg-muted/30 p-3">
-										<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ХҮРГЭЛТИЙН ХАЯГ</div>
+										<div class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">ХҮРГЭЛТИЙН ХАЯГ</div>
 										<div class="font-bold text-sm">{trackMutation.data?.address}</div>
 									</div>
 
 									{trackMutation.data?.notes && (
 										<div class="rounded-md border border-border bg-primary/10 p-3">
-											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ТЭМДЭГЛЭЛ</div>
+											<div class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">ТЭМДЭГЛЭЛ</div>
 											<div class="font-medium text-sm">{trackMutation.data?.notes}</div>
 										</div>
 									)}
 
 									{/* Payment Status */}
 									<div class="rounded-md border border-border bg-muted/30 p-3">
-										<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ТӨЛБӨРИЙН ТӨЛӨВ</div>
+										<div class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">ТӨЛБӨРИЙН ТӨЛӨВ</div>
 										<div class="flex items-center gap-2 flex-wrap">
 											{trackMutation.data?.payments?.map((payment: { provider: string; status: string }) => (
 												<span
@@ -398,7 +398,7 @@ const OrderTrackingForm = () => {
 							{/* Products */}
 							<Card class="bg-card border border-border shadow-soft-sm">
 								<div class="p-4 lg:p-5 border-b border-border">
-									<h3 class="font-black text-sm uppercase tracking-wider">Захиалсан бүтээгдэхүүнүүд</h3>
+									<h3 class="font-extrabold text-sm uppercase tracking-wider">Захиалсан бүтээгдэхүүнүүд</h3>
 								</div>
 								<CardContent class="p-4 lg:p-5 space-y-3">
 									{trackMutation.data?.orderDetails?.map((detail: { product: { name: string; images?: Array<{ url: string }>; brand?: { name: string } }; quantity: number }) => (
@@ -417,7 +417,7 @@ const OrderTrackingForm = () => {
 													<div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{detail.product.brand.name}</div>
 												)}
 											</div>
-											<div class="px-2.5 py-1 rounded border border-border bg-muted font-black text-xs shrink-0">
+											<div class="px-2.5 py-1 rounded border border-border bg-muted font-extrabold text-xs shrink-0">
 												{detail.quantity}x
 											</div>
 										</div>
