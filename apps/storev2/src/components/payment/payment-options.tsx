@@ -43,13 +43,13 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 	return (
 		<div class="w-full">
 			<Show when={BANK_TRANSFER_ENABLED}>
-				<div class="mb-4 grid grid-cols-2 gap-1.5 border-3 border-border bg-muted/50 p-1.5 shadow-hard sm:mb-6 sm:gap-2 sm:border-4 sm:p-2 sm:shadow-hard-lg">
+				<div class="mb-4 grid grid-cols-2 gap-1.5 rounded-lg border border-border bg-muted/50 p-1.5 shadow-soft-sm sm:mb-6 sm:gap-2 sm:p-2">
 					<button
 						type="button"
 						onClick={() => selectTab("transfer")}
-						class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+						class="rounded-md px-3 py-2.5 font-black text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
 						classList={{
-							"border-2 border-border bg-primary shadow-hard-sm":
+							"border border-border bg-primary shadow-soft":
 								tab() === "transfer",
 							"hover:bg-primary/30": tab() !== "transfer",
 						}}
@@ -62,9 +62,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 					<button
 						type="button"
 						onClick={() => selectTab("qpay")}
-						class="px-3 py-2.5 font-black text-xs transition-all sm:px-4 sm:py-3 sm:text-sm"
+						class="rounded-md px-3 py-2.5 font-black text-xs transition-[background-color,box-shadow,border-color] duration-200 ease-out-quart sm:px-4 sm:py-3 sm:text-sm"
 						classList={{
-							"border-2 border-border bg-primary shadow-hard-sm":
+							"border border-border bg-primary shadow-soft":
 								tab() === "qpay",
 							"hover:bg-primary/30": tab() !== "qpay",
 						}}
@@ -78,10 +78,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</Show>
 
 			<Show when={BANK_TRANSFER_ENABLED && tab() === "transfer"}>
-				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
+				<div class="rounded-lg border border-border bg-card shadow-soft-lg">
 					<div class="space-y-4 p-3 sm:space-y-5 sm:p-4">
-						<div class="flex items-center gap-2 border-2 border-border bg-muted/30 p-2.5 sm:gap-3 sm:p-3">
-							<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-border bg-background sm:h-12 sm:w-12">
+						<div class="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2.5 sm:gap-3 sm:p-3">
+							<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background sm:h-12 sm:w-12">
 								<img
 									src="/khaan.png"
 									alt="Khaan logo"
@@ -105,7 +105,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Данс
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{bankTransfer.accountNumber}
 										</div>
 										<CopyButton
@@ -120,7 +120,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Нэр
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-bold text-xs leading-tight sm:px-3 sm:py-2.5 sm:text-sm">
 											{bankTransfer.accountName}
 										</div>
 										<CopyButton text={bankTransfer.accountName} title="Нэр" />
@@ -132,7 +132,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Дүн
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-primary/20 px-2.5 py-2 font-black text-base text-primary sm:px-3 sm:py-2.5 sm:text-lg">
 											{props.total.toLocaleString()}₮
 										</div>
 										<CopyButton text={props.total} title="Дүн" />
@@ -144,7 +144,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 										Төлбөрийн дугаар
 									</p>
 									<div class="flex min-w-0 items-stretch">
-										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-sm border-2 border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
+										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-md border border-border bg-background px-2.5 py-2 font-black text-sm sm:px-3 sm:py-2.5 sm:text-base">
 											{props.transferReference}
 										</div>
 										<CopyButton
@@ -156,7 +156,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							</div>
 						</div>
 
-						<div class="border-2 border-border bg-yellow-50 p-2.5 sm:p-3">
+						<div class="rounded-md border border-border bg-yellow-50 p-2.5 sm:p-3">
 							<div class="flex items-start gap-2 sm:gap-2.5">
 								<IconAlert class="h-5 w-5 shrink-0 text-yellow-700" />
 								<div class="flex-1">
@@ -178,7 +178,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</Show>
 
 			<Show when={!BANK_TRANSFER_ENABLED || tab() === "qpay"}>
-				<div class="border-3 border-border bg-card shadow-hard-lg sm:border-4 sm:shadow-hard-xl">
+				<div class="rounded-lg border border-border bg-card shadow-soft-lg">
 					<div class="p-3 sm:p-5">
 						<QpayPaymentPanel
 							paymentNumber={props.paymentNumber}

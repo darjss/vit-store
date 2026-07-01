@@ -168,11 +168,11 @@ const OrderTrackingForm = () => {
 		<div class="space-y-6">
 			<Switch>
 				<Match when={step() === "input"}>
-					<Card class="bg-card border-3 border-border shadow-hard-sm">
+					<Card class="bg-card border border-border shadow-soft-sm">
 						<CardContent class="p-5 lg:p-6">
 							<div class="space-y-4">
 								<div class="flex items-center gap-3 mb-2">
-									<div class="w-10 h-10 border-2 border-border bg-primary flex items-center justify-center">
+									<div class="w-10 h-10 rounded-md border border-border bg-primary flex items-center justify-center">
 										<IconSearch class="w-5 h-5" />
 									</div>
 									<div>
@@ -191,7 +191,7 @@ const OrderTrackingForm = () => {
 											value={orderNumber()}
 											onInput={(e) => setOrderNumber(e.currentTarget.value)}
 											placeholder="Жишээ: ORD12345"
-											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
+											class="w-full rounded-md border border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 										/>
 									</div>
 
@@ -205,7 +205,7 @@ const OrderTrackingForm = () => {
 											onInput={(e) => setPhone(e.currentTarget.value)}
 											placeholder="88889999"
 											maxLength={8}
-											class="w-full border-3 border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
+											class="w-full rounded-md border border-border bg-background px-3 py-2.5 font-bold text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 										/>
 									</div>
 								</div>
@@ -214,7 +214,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleSearch}
 									disabled={sendOtpMutation.isPending}
-									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{sendOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -230,7 +230,7 @@ const OrderTrackingForm = () => {
 								</button>
 
 								<Show when={authQuery.data}>
-									<div class="flex items-center gap-2 text-xs font-medium text-muted-foreground border-2 border-border bg-muted/30 p-3">
+									<div class="flex items-center gap-2 rounded-md text-xs font-medium text-muted-foreground border border-border bg-muted/30 p-3">
 										<IconCheck class="w-4 h-4 text-primary shrink-0" />
 										<span>Та нэвтэрсэн байна. Захиалгын дугаараа оруулан шууд хайна уу.</span>
 									</div>
@@ -241,11 +241,11 @@ const OrderTrackingForm = () => {
 				</Match>
 
 				<Match when={step() === "otp"}>
-					<Card class="bg-card border-3 border-border shadow-hard-sm">
+					<Card class="bg-card border border-border shadow-soft-sm">
 						<CardContent class="p-5 lg:p-6">
 							<div class="space-y-4">
 								<div class="flex items-center gap-3 mb-2">
-									<div class="w-10 h-10 border-2 border-border bg-primary flex items-center justify-center">
+									<div class="w-10 h-10 rounded-md border border-border bg-primary flex items-center justify-center">
 										<IconLock class="w-5 h-5" />
 									</div>
 									<div>
@@ -264,7 +264,7 @@ const OrderTrackingForm = () => {
 										onInput={(e) => setOtp(e.currentTarget.value)}
 										placeholder="XXXX"
 										maxLength={6}
-										class="w-full border-3 border-border bg-background px-3 py-2.5 font-black text-lg tracking-[0.5em] text-center focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring focus-visible:translate-x-[-2px] focus-visible:translate-y-[-2px]"
+										class="w-full rounded-md border border-border bg-background px-3 py-2.5 font-black text-lg tracking-[0.5em] text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									/>
 								</div>
 
@@ -272,7 +272,7 @@ const OrderTrackingForm = () => {
 									type="button"
 									onClick={handleVerifyOtp}
 									disabled={verifyOtpMutation.isPending}
-									class="w-full border-3 border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+									class="w-full rounded-lg border border-border bg-primary px-4 py-3 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									{verifyOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -287,7 +287,7 @@ const OrderTrackingForm = () => {
 								<button
 									type="button"
 									onClick={() => setStep("input")}
-									class="w-full border-2 border-border bg-muted px-4 py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-primary transition-colors"
+									class="w-full rounded-md border border-border bg-muted px-4 py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-primary transition-colors"
 								>
 									Буцах
 								</button>
@@ -298,7 +298,7 @@ const OrderTrackingForm = () => {
 
 				<Match when={step() === "result"}>
 					<Show when={trackMutation.isPending}>
-						<Card class="bg-card border-3 border-border shadow-hard-sm">
+						<Card class="bg-card border border-border shadow-soft-sm">
 							<CardContent class="p-8 text-center">
 								<IconLoader class="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
 								<p class="font-black text-sm uppercase tracking-wide">Захиалгыг хайж байна...</p>
@@ -307,9 +307,9 @@ const OrderTrackingForm = () => {
 					</Show>
 
 					<Show when={trackMutation.isError}>
-						<Card class="bg-card border-3 border-border shadow-hard-sm">
+						<Card class="bg-card border border-border shadow-soft-sm">
 							<CardContent class="p-6 text-center">
-								<div class="w-16 h-16 border-3 border-border bg-destructive flex items-center justify-center mx-auto mb-4">
+								<div class="w-16 h-16 rounded-md border border-border bg-destructive flex items-center justify-center mx-auto mb-4">
 									<IconAlert class="w-8 h-8 text-destructive-foreground" />
 								</div>
 								<h3 class="font-black text-lg uppercase tracking-tight mb-2">Захиалга олдсонгүй</h3>
@@ -322,7 +322,7 @@ const OrderTrackingForm = () => {
 										setStep("input");
 										trackMutation.reset();
 									}}
-									class="border-3 border-border bg-primary px-6 py-2.5 font-black text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm"
+									class="rounded-lg border border-border bg-primary px-6 py-2.5 font-black text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft"
 								>
 									Дахин оролдох
 								</button>
@@ -333,11 +333,11 @@ const OrderTrackingForm = () => {
 					<Show when={trackMutation.isSuccess && trackMutation.data}>
 						<div class="space-y-4">
 							{/* Order Header */}
-							<Card class="bg-card border-3 border-border shadow-hard-sm overflow-hidden">
-								<div class="bg-primary p-4 lg:p-5 border-b-3 border-border">
+							<Card class="bg-card border border-border shadow-soft-sm overflow-hidden">
+								<div class="bg-primary p-4 lg:p-5 border-b border-border">
 									<div class="flex items-center justify-between flex-wrap gap-3">
 										<div class="flex items-center gap-3">
-											<div class="w-10 h-10 border-2 border-border bg-card flex items-center justify-center">
+											<div class="w-10 h-10 rounded-md border border-border bg-card flex items-center justify-center">
 												<IconPackage class="w-5 h-5" />
 											</div>
 											<div>
@@ -346,7 +346,7 @@ const OrderTrackingForm = () => {
 											</div>
 										</div>
 										<span
-											class={`px-3 py-1.5 border-2 border-border font-bold text-xs uppercase ${statusColors[trackMutation.data?.status || "pending"]}`}
+											class={`px-3 py-1.5 rounded border border-border font-bold text-xs uppercase ${statusColors[trackMutation.data?.status || "pending"]}`}
 										>
 											{orderStatusLabels[trackMutation.data?.status as OrderStatusType] ?? trackMutation.data?.status ?? "Хүлээгдэж буй"}
 										</span>
@@ -354,35 +354,35 @@ const OrderTrackingForm = () => {
 								</div>
 								<CardContent class="p-4 lg:p-5 space-y-4">
 									<div class="grid grid-cols-2 gap-3">
-										<div class="border-2 border-border bg-muted/30 p-3">
+										<div class="rounded-md border border-border bg-muted/30 p-3">
 											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ОГНОО</div>
 											<div class="font-bold text-sm">{formatDate(trackMutation.data?.createdAt || new Date())}</div>
 										</div>
-										<div class="border-2 border-border bg-muted/30 p-3">
+										<div class="rounded-md border border-border bg-muted/30 p-3">
 											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">НИЙТ ДҮН</div>
 											<div class="font-black text-sm text-primary">{trackMutation.data?.total?.toLocaleString()}₮</div>
 										</div>
 									</div>
 
-									<div class="border-2 border-border bg-muted/30 p-3">
+									<div class="rounded-md border border-border bg-muted/30 p-3">
 										<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ХҮРГЭЛТИЙН ХАЯГ</div>
 										<div class="font-bold text-sm">{trackMutation.data?.address}</div>
 									</div>
 
 									{trackMutation.data?.notes && (
-										<div class="border-2 border-border bg-primary/10 p-3">
+										<div class="rounded-md border border-border bg-primary/10 p-3">
 											<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ТЭМДЭГЛЭЛ</div>
 											<div class="font-medium text-sm">{trackMutation.data?.notes}</div>
 										</div>
 									)}
 
 									{/* Payment Status */}
-									<div class="border-2 border-border bg-muted/30 p-3">
+									<div class="rounded-md border border-border bg-muted/30 p-3">
 										<div class="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">ТӨЛБӨРИЙН ТӨЛӨВ</div>
 										<div class="flex items-center gap-2 flex-wrap">
 											{trackMutation.data?.payments?.map((payment: { provider: string; status: string }) => (
 												<span
-													class={`px-2 py-1 border-2 border-border font-bold text-[11px] uppercase ${payment.status === "success" ? "bg-chart-4 text-foreground" : "bg-primary text-foreground"}`}
+													class={`px-2 py-1 rounded border border-border font-bold text-[11px] uppercase ${payment.status === "success" ? "bg-chart-4 text-foreground" : "bg-primary text-foreground"}`}
 												>
 													{payment.provider === "qpay" ? "QPay" : payment.provider === "transfer" ? "Данс" : payment.provider} — {paymentStatusLabels[payment.status] || payment.status}
 												</span>
@@ -396,18 +396,18 @@ const OrderTrackingForm = () => {
 							</Card>
 
 							{/* Products */}
-							<Card class="bg-card border-3 border-border shadow-hard-sm">
-								<div class="p-4 lg:p-5 border-b-2 border-border">
+							<Card class="bg-card border border-border shadow-soft-sm">
+								<div class="p-4 lg:p-5 border-b border-border">
 									<h3 class="font-black text-sm uppercase tracking-wider">Захиалсан бүтээгдэхүүнүүд</h3>
 								</div>
 								<CardContent class="p-4 lg:p-5 space-y-3">
 									{trackMutation.data?.orderDetails?.map((detail: { product: { name: string; images?: Array<{ url: string }>; brand?: { name: string } }; quantity: number }) => (
-										<div class="flex items-center gap-3 border-2 border-border bg-background p-3">
+										<div class="flex items-center gap-3 rounded-md border border-border bg-background p-3">
 											{detail.product?.images?.[0]?.url && (
 												<img
 													src={detail.product.images[0].url}
 													alt={detail.product.name}
-													class="w-14 h-14 object-cover border-2 border-border shrink-0"
+													class="w-14 h-14 object-cover rounded border border-border shrink-0"
 													loading="lazy"
 												/>
 											)}
@@ -417,7 +417,7 @@ const OrderTrackingForm = () => {
 													<div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{detail.product.brand.name}</div>
 												)}
 											</div>
-											<div class="px-2.5 py-1 border-2 border-border bg-muted font-black text-xs shrink-0">
+											<div class="px-2.5 py-1 rounded border border-border bg-muted font-black text-xs shrink-0">
 												{detail.quantity}x
 											</div>
 										</div>
@@ -435,7 +435,7 @@ const OrderTrackingForm = () => {
 									setPhone("");
 									setOtp("");
 								}}
-								class="w-full border-3 border-border bg-muted px-4 py-3 font-bold text-sm uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+								class="w-full rounded-lg border border-border bg-muted px-4 py-3 font-bold text-sm uppercase tracking-wider shadow-soft-lg transition-all hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
 							>
 								Өөр захиалга хайх
 							</button>
