@@ -89,8 +89,8 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
     .bar-track { background: #f3f4f6; border-radius: 4px; overflow: hidden; height: 28px; position: relative; }
     .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 12px; font-weight: 600; color: white; min-width: 40px; }
     .api-row:nth-child(even) { background: #f9fafb; }
-    .rec-card { transition: transform 0.15s; }
-    .rec-card:hover { transform: translateY(-2px); }
+    .rec-card { transition: transform 0.2s var(--ease-out-quart), box-shadow 0.2s var(--ease-out-quart); }
+    .rec-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px oklch(0.30 0.012 95 / 0.12); }
     .tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
     .tooltip-parent:hover .tooltip { opacity: 1; }
   </style>
@@ -135,7 +135,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
           <thead>
-            <tr class="border-b-2 border-border">
+            <tr class="border-b border-border">
               <th class="text-left py-2 px-3 text-muted-foreground font-medium">Page</th>
               {Object.keys(metricNames).map(k => (
                 <th class="text-right py-2 px-3 text-muted-foreground font-medium">{metricNames[k]}<br/><span class="text-xs font-normal">({metricUnits[k] || ''})</span></th>
@@ -148,7 +148,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
               const c = (base: string, val: number, good: number, ok: number) => `${base} ${val === 0 ? 'text-gray-400' : val <= good ? 'text-green-600' : val <= ok ? 'text-orange-600' : 'text-red-600'}`;
               const clsColor = m.cls === 0 ? 'text-green-600' : 'text-red-600';
               return (
-                <tr class="border-b border-border hover:bg-muted/50">
+                <tr class="border-b border-border hover:bg-muted/50 transition-colors duration-200 ease-out-quart">
                   <td class="py-2 px-3 font-medium text-foreground">{pageLabels[key]}</td>
                   <td class={c('text-right py-2 px-3 font-mono', m.lcp, 2500, 4000)}>{m.lcp || '–'}</td>
                   <td class={c('text-right py-2 px-3 font-mono', m.fcp, 1800, 3000)}>{m.fcp || '–'}</td>
@@ -199,7 +199,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
           <thead>
-            <tr class="border-b-2 border-border">
+            <tr class="border-b border-border">
               <th class="text-left py-2 px-3 text-muted-foreground font-medium">Endpoint</th>
               <th class="text-right py-2 px-3 text-muted-foreground font-medium">TTFB</th>
               <th class="text-right py-2 px-3 text-muted-foreground font-medium">Total</th>
@@ -231,7 +231,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <h2 class="text-xl font-semibold text-foreground mb-4">Recommendations</h2>
       <div class="space-y-3">
         {data.recommendations.map((rec: any) => (
-          <div class={`rec-card rounded-lg border-2 p-4 ${rec.impact === 'high' ? 'border-red-300 bg-red-50' : rec.impact === 'medium' ? 'border-orange-300 bg-orange-50' : 'border-blue-300 bg-blue-50'}`}>
+          <div class={`rec-card rounded-lg border p-4 ${rec.impact === 'high' ? 'border-red-300 bg-red-50' : rec.impact === 'medium' ? 'border-orange-300 bg-orange-50' : 'border-blue-300 bg-blue-50'}`}>
             <div class="flex items-start gap-3">
               <span class={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-bold shrink-0 ${priorityBadge(rec.priority)}`}>
                 {rec.priority}

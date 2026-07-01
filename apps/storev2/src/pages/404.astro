@@ -27,9 +27,9 @@ const description = "Таны хайсан хуудас байхгүй байн�
 
 <Layout title={title} description={description} noindex>
     <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
-        <div class="max-w-2xl w-full">
+        <div class="max-w-2xl w-full opacity-0 animate-[fadeIn_400ms_ease-out_forwards]">
             <div
-                class="bg-[oklch(0.92_0.18_15)] border-4 border-border shadow-hard-xl p-8 md:p-12 relative overflow-hidden"
+                class="bg-[oklch(0.92_0.18_15)] border border-border shadow-soft-xl p-8 md:p-12 relative overflow-hidden rounded-lg"
             >
                 <div
                     class="absolute inset-0 opacity-10"
@@ -41,17 +41,17 @@ const description = "Таны хайсан хуудас байхгүй байн�
                     <!-- 404  -->
                     <div class="mb-6">
                         <h1
-                            class="text-8xl md:text-9xl font-black leading-none inline-block"
+                            class="text-8xl md:text-9xl font-bold leading-none inline-block"
                         >
                             404
                         </h1>
                         <div
-                            class="mt-4 h-2 w-32 bg-foreground shadow-hard-lg"
+                            class="mt-4 h-2 w-32 bg-foreground shadow-soft-lg"
                         >
                         </div>
                     </div>
 
-                    <h2 class="text-h2 font-black mb-4">
+                    <h2 class="text-h2 font-bold mb-4">
                         Ийм хуудас байхгүй байна
                     </h2>
                     <p class="text-lg md:text-xl font-bold mb-8 max-w-md">
@@ -60,17 +60,17 @@ const description = "Таны хайсан хуудас байхгүй байн�
 
                     <div class="my-8 flex gap-4 flex-wrap">
                         <div
-                            class="bg-background border-[3px] border-border p-4 shadow-hard-lg inline-block"
+                            class="bg-background border border-border p-4 shadow-soft-lg inline-block rounded-lg"
                         >
                             <IconInfoCircle class="h-8 w-8" />
                         </div>
                         <div
-                            class="border-3 border-border bg-foreground text-background p-4 shadow-hard-lg inline-block font-black text-xl"
+                            class="border border-border bg-foreground text-background p-4 shadow-soft-lg inline-block font-bold text-xl rounded-lg"
                         >
                             ?
                         </div>
                         <div
-                            class="bg-primary border-[3px] border-border p-4 shadow-hard-lg inline-block"
+                            class="bg-primary border border-border p-4 shadow-soft-lg inline-block rounded-lg"
                         >
                             <IconQuestion class="h-8 w-8" />
                         </div>
@@ -81,7 +81,7 @@ const description = "Таны хайсан хуудас байхгүй байн�
                         <a href="/">
                             <button
                                 type="button"
-                                class="border-3 border-border bg-foreground text-background px-8 py-4 font-black text-lg shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm transition-all"
+                                class="border border-border bg-foreground text-background px-8 py-4 font-bold text-lg shadow-soft-lg hover:shadow-soft-xl hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart rounded-lg"
                             >
                                 ← Нүүр хуудас руу
                             </button>
@@ -89,7 +89,7 @@ const description = "Таны хайсан хуудас байхгүй байн�
                         <a href="/products/">
                             <button
                                 type="button"
-                                class="bg-background border-[3px] border-border px-8 py-4 font-black text-lg shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm transition-all"
+                                class="bg-background border border-border px-8 py-4 font-bold text-lg shadow-soft-lg hover:shadow-soft-xl hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart rounded-lg"
                             >
                                 Бүтээгдэхүүн үзэх
                             </button>
@@ -97,7 +97,7 @@ const description = "Таны хайсан хуудас байхгүй байн�
                     </div>
 
                     <!-- Help Text -->
-                    <div class="mt-8 pt-6 border-t-4 border-border/20">
+                    <div class="mt-8 pt-6 border-t border-border/20">
                         <p class="font-bold text-sm flex items-center gap-2">
                             <IconLightbulb class="h-5 w-5" /> <strong>Зөвлөмж:</strong> Хаягаа дахин шалгах эсвэл доорх товчоор нүүр хуудас руу буцна уу.
                         </p>

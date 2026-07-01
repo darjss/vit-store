@@ -53,8 +53,8 @@ const socials = [
   <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
     <!-- Header -->
     <div class="mb-8 lg:mb-10">
-      <div class="border-4 border-border bg-primary p-4 lg:p-6 shadow-hard-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight">
+      <div class="border border-border bg-primary p-4 lg:p-6 shadow-soft-lg mb-4 rounded-lg">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-tight">
           Бидэнтэй холбогдох
         </h1>
         <p class="text-sm font-medium text-foreground/70 mt-2">
@@ -68,28 +68,28 @@ const socials = [
       {contactMethods.map((method) => (
         <a
           href={method.href}
-          class="group border-3 border-border bg-card p-5 shadow-hard-sm hover:shadow-hard hover:-translate-y-1 transition-all"
+          class="group border border-border bg-card p-5 shadow-soft-sm hover:shadow-soft hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart rounded-lg"
         >
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 border-2 border-border bg-primary flex items-center justify-center">
+            <div class="w-10 h-10 border border-border bg-primary flex items-center justify-center rounded-lg">
               <method.icon class="w-5 h-5" />
             </div>
-            <span class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{method.label}</span>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{method.label}</span>
           </div>
-          <div class="font-black text-lg uppercase tracking-tight">{method.value}</div>
+          <div class="font-bold text-lg uppercase tracking-tight">{method.value}</div>
           <p class="text-xs font-medium text-muted-foreground mt-1">{method.desc}</p>
         </a>
       ))}
     </div>
 
     <!-- Important Notice -->
-    <div class="border-3 border-border bg-yellow-50 p-5 lg:p-6 shadow-hard-sm mb-10">
+    <div class="border border-border bg-yellow-50 p-5 lg:p-6 shadow-soft-sm mb-10 rounded-lg">
       <div class="flex items-start gap-3">
-        <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
-          <span class="font-black text-xs">!</span>
+        <div class="w-8 h-8 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5 rounded-lg">
+          <span class="font-bold text-xs">!</span>
         </div>
         <div>
-          <h3 class="font-black text-sm uppercase tracking-wider mb-2">Чухал мэдэгдэл</h3>
+          <h3 class="font-bold text-sm uppercase tracking-wider mb-2">Чухал мэдэгдэл</h3>
           <p class="text-sm font-medium leading-relaxed">
             Бид <strong>зөвхөн Монгол улсын дотоодод</strong> хүргэлт хийдэг. Олон улсын хүргэлт хийдэггүй.
             Бараа буцаах, эсвэл мөнгө буцаан олгох боломжгүй тул бүтээгдэхүүнээ сайтар сонгоно уу.
@@ -99,8 +99,8 @@ const socials = [
     </div>
 
     <!-- Social Media -->
-    <div class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-      <h2 class="text-xl font-black uppercase tracking-tight mb-4">Сошиал медиа</h2>
+    <div class="border border-border bg-card p-5 lg:p-6 shadow-soft-sm rounded-lg">
+      <h2 class="text-xl font-bold uppercase tracking-tight mb-4">Сошиал медиа</h2>
       <p class="text-sm font-medium text-muted-foreground mb-5">
         Шинэ бараа, мэдээллийг сошиал хуудсаасаа хүлээн авна уу
       </p>
@@ -110,13 +110,13 @@ const socials = [
             href={social.href}
             target="_blank"
             rel="noopener noreferrer"
-            class="group flex items-center gap-4 border-3 border-border bg-background p-4 shadow-hard-sm hover:shadow-hard hover:-translate-y-1 transition-all"
+            class="group flex items-center gap-4 border border-border bg-background p-4 shadow-soft-sm hover:shadow-soft hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart rounded-lg"
           >
-            <div class="w-12 h-12 border-2 border-border bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+            <div class="w-12 h-12 border border-border bg-primary flex items-center justify-center group-hover:scale-105 transition-transform rounded-lg">
               <social.icon class="w-6 h-6" />
             </div>
             <div>
-              <div class="font-black text-sm uppercase tracking-wider">{social.label}</div>
+              <div class="font-bold text-sm uppercase tracking-wider">{social.label}</div>
               <div class="text-xs font-bold text-muted-foreground">{social.handle}</div>
             </div>
           </a>
