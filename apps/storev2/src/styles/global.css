@@ -2,33 +2,46 @@
 @import "tw-animate-css";
 
 @theme {
-    --color-background: oklch(0.99 0 0);
-    --color-foreground: oklch(0.15 0 0);
-    --color-card: oklch(0.99 0 0);
-    --color-card-foreground: oklch(0.15 0 0);
-    --color-popover: oklch(1 0 0);
-    --color-popover-foreground: oklch(0.15 0 0);
+    /* ============================================================
+       COLOR — warm tinted neutrals (hue 95, brand yellow neighborhood)
+       Pure gray is dead. Every neutral leans toward the brand hue.
+       ============================================================ */
+    --color-background: oklch(0.99 0.006 95);
+    --color-foreground: oklch(0.22 0.012 95);
+    --color-card: oklch(0.995 0.004 95);
+    --color-card-foreground: oklch(0.22 0.012 95);
+    --color-popover: oklch(0.995 0.004 95);
+    --color-popover-foreground: oklch(0.22 0.012 95);
     --color-primary: oklch(0.92 0.15 95);
-    --color-primary-foreground: oklch(0.15 0 0);
-    --color-secondary: oklch(0.15 0 0);
-    --color-secondary-foreground: oklch(0.99 0 0);
-    --color-muted: oklch(0.95 0 0);
-    --color-muted-foreground: oklch(0.45 0 0);
+    --color-primary-foreground: oklch(0.22 0.012 95);
+    --color-secondary: oklch(0.22 0.012 95);
+    --color-secondary-foreground: oklch(0.99 0.006 95);
+    --color-muted: oklch(0.965 0.008 95);
+    --color-muted-foreground: oklch(0.50 0.012 95);
     --color-accent: oklch(0.92 0.15 95);
-    --color-accent-foreground: oklch(0.15 0 0);
-    --color-destructive: oklch(0.577 0.245 27.325);
-    --color-destructive-foreground: oklch(0.99 0 0);
-    --color-error: oklch(0.92 0.18 15);
-    --color-error-foreground: oklch(0.15 0 0);
-    --color-success: oklch(0.92 0.18 130);
-    --color-success-foreground: oklch(0.15 0 0);
-    --color-info: oklch(0.92 0.15 200);
-    --color-info-foreground: oklch(0.15 0 0);
-    --color-warning: oklch(0.92 0.18 85);
-    --color-warning-foreground: oklch(0.15 0 0);
-    --color-border: oklch(0.15 0 0);
-    --color-input: oklch(0.922 0 0);
-    --color-ring: oklch(0.15 0 0);
+    --color-accent-foreground: oklch(0.22 0.012 95);
+    --color-destructive: oklch(0.58 0.22 25);
+    --color-destructive-foreground: oklch(0.99 0.006 95);
+    --color-error: oklch(0.93 0.04 15);
+    --color-error-foreground: oklch(0.22 0.012 95);
+    --color-success: oklch(0.90 0.13 145);
+    --color-success-foreground: oklch(0.22 0.012 95);
+    --color-info: oklch(0.93 0.06 220);
+    --color-info-foreground: oklch(0.22 0.012 95);
+    --color-warning: oklch(0.92 0.14 80);
+    --color-warning-foreground: oklch(0.22 0.012 95);
+
+    /* Structural border — warm dark neutral, NOT black.
+       Black is reserved for the hero contrast pop via --color-hero-border. */
+    --color-border: oklch(0.30 0.012 95);
+    --color-input: oklch(0.92 0.008 95);
+    --color-ring: oklch(0.55 0.13 95);
+
+    /* Hero-only contrast tokens — the one place black + hard shadows live. */
+    --color-hero-border: oklch(0.16 0.02 95);
+    --color-hero-foreground: oklch(0.16 0.02 95);
+    --color-hero-shadow: oklch(0.16 0.02 95);
+
     --color-chart-1: oklch(0.92 0.15 95);
     --color-chart-2: oklch(0.75 0.12 85);
     --color-chart-3: oklch(0.65 0.18 105);
@@ -36,18 +49,27 @@
     --color-chart-5: oklch(0.55 0.15 100);
 
     --font-sans:
-        "Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif;
+        "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", system-ui, sans-serif;
     --font-mono: "Geist Mono", "Geist Mono Fallback";
 
-    --radius: 0rem;
-    --radius-sm: 0rem;
-    --radius-md: 0rem;
-    --radius-lg: 0rem;
-    --radius-xl: 0rem;
+    /* ============================================================
+       RADIUS — soft, not pillowy. Friendly retail.
+       ============================================================ */
+    --radius: 0.5rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
 
-    /* Motion curve tokens — single source for easing curves. */
+    /* ============================================================
+       MOTION — Emil Kowalski curves. Strong, intentional easing.
+       Built-in CSS easings are too weak; these have punch.
+       ============================================================ */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
     /* Heading type scale tokens — canonical page heading sizes. */
     --text-h1: clamp(2rem, 8vw, 4rem);
@@ -78,10 +100,11 @@
         @apply bg-background text-foreground;
     }
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-medium;
     }
 
-    /* Respect user motion preferences globally */
+    /* Respect user motion preferences globally.
+       Keep opacity/color transitions; remove transform-based motion. */
     @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -274,7 +297,6 @@
         transform-origin: left center;
         transition: transform 0.16s var(--ease-out-quart);
         box-shadow: 0 0 10px var(--color-primary);
-        border: 2px solid var(--color-border);
         will-change: transform;
     }
 
@@ -309,20 +331,41 @@
 }
 
 @layer utilities {
+    /* ============================================================
+       SOFT SHADOWS — the default elevation system.
+       Subtle. If you can clearly see it, it's too strong.
+       ============================================================ */
+    .shadow-soft-sm {
+        box-shadow: 0 1px 2px oklch(0.30 0.012 95 / 0.08);
+    }
+    .shadow-soft {
+        box-shadow: 0 2px 6px oklch(0.30 0.012 95 / 0.10);
+    }
+    .shadow-soft-lg {
+        box-shadow: 0 8px 24px oklch(0.30 0.012 95 / 0.12);
+    }
+    .shadow-soft-xl {
+        box-shadow: 0 16px 40px oklch(0.30 0.012 95 / 0.14);
+    }
+
+    /* ============================================================
+       HARD SHADOWS — reserved for the hero contrast pop only.
+       Use via .hero-surface or explicit hero elements.
+       ============================================================ */
     .shadow-hard {
-        box-shadow: 4px 4px 0px 0px var(--color-border);
+        box-shadow: 4px 4px 0px 0px var(--color-hero-shadow);
     }
     .shadow-hard-sm {
-        box-shadow: 2px 2px 0px 0px var(--color-border);
+        box-shadow: 2px 2px 0px 0px var(--color-hero-shadow);
     }
     .shadow-hard-lg {
-        box-shadow: 8px 8px 0px 0px var(--color-border);
+        box-shadow: 8px 8px 0px 0px var(--color-hero-shadow);
     }
     .shadow-hard-xl {
-        box-shadow: 12px 12px 0px 0px var(--color-border);
+        box-shadow: 12px 12px 0px 0px var(--color-hero-shadow);
     }
     .shadow-hard-reverse {
-        box-shadow: -4px 4px 0px 0px var(--color-border);
+        box-shadow: -4px 4px 0px 0px var(--color-hero-shadow);
     }
 
     /* Light shadows for use on dark (secondary) backgrounds */
@@ -349,53 +392,15 @@
         -webkit-text-stroke: 2px var(--color-background);
     }
 
+    /* Hero-only texture — the one place a grid pattern earns its place. */
     .bg-grid-pattern {
         background-size: 40px 40px;
-        background-image: linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-                          linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-    }
-    
-    .bg-dots-pattern {
-        background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
-        background-size: 20px 20px;
+        background-image: linear-gradient(to right, var(--color-hero-shadow) 1px, transparent 1px),
+                          linear-gradient(to bottom, var(--color-hero-shadow) 1px, transparent 1px);
     }
 
-    /* Subtle texture utilities — low-opacity patterns that layer on top of any
-       light background without needing an opacity wrapper. Designed for the
-       neo-brutalist storefront: they add depth, never distract. */
-    .bg-dots-subtle {
-        background-image: radial-gradient(circle, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
-        background-size: 20px 20px;
-    }
-
-    .bg-grid-subtle {
-        background-image:
-            linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
-        background-size: 24px 24px;
-    }
-
-    .bg-stripes-diagonal {
-        background-image: repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 10px,
-            rgba(0, 0, 0, 0.025) 10px,
-            rgba(0, 0, 0, 0.025) 20px
-        );
-    }
-
-    .bg-stripes-diagonal-lg {
-        background-image: repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 18px,
-            rgba(0, 0, 0, 0.03) 18px,
-            rgba(0, 0, 0, 0.03) 36px
-        );
-    }
-
-    /* SVG fractal-noise grain — cheapest perceptual texture, tiles at 120px. */
+    /* SVG fractal-noise grain — cheapest perceptual texture, tiles at 120px.
+       Reserved for hero only. */
     .bg-noise-subtle {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
         background-size: 120px 120px;
@@ -415,5 +420,112 @@
         background-size: 100% 100%, 100% 100%, 24px 24px;
         background-position: top, bottom right, center;
         background-repeat: no-repeat, no-repeat, repeat;
+    }
+
+    /* ============================================================
+       HERO BACKGROUND — layered warm gradient mesh.
+       Multiple radial gradients in brand hues (yellow, peach, mint,
+       coral) create a rich, alive surface. A conic gradient adds
+       directional energy. Dot pattern ties it to the product cards.
+       ============================================================ */
+    .bg-hero-warm {
+        background-color: oklch(0.98 0.02 95);
+        background-image:
+            radial-gradient(ellipse 70% 50% at 15% 20%, oklch(0.90 0.15 95 / 0.45), transparent 60%),
+            radial-gradient(ellipse 50% 40% at 85% 80%, oklch(0.88 0.12 130 / 0.25), transparent 55%),
+            radial-gradient(ellipse 40% 30% at 60% 50%, oklch(0.90 0.10 60 / 0.20), transparent 50%),
+            radial-gradient(ellipse 35% 25% at 90% 15%, oklch(0.88 0.14 25 / 0.15), transparent 50%),
+            conic-gradient(from 180deg at 50% 50%, transparent 0deg, oklch(0.92 0.10 95 / 0.08) 60deg, transparent 120deg, oklch(0.88 0.08 130 / 0.06) 240deg, transparent 360deg),
+            radial-gradient(circle, oklch(0.30 0.012 95 / 0.05) 1px, transparent 1.5px);
+        background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 18px 18px;
+        background-position: top left, bottom right, center, top right, center, center;
+        background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    }
+
+    /* ============================================================
+       PRODUCT CARD PATTERNS — subtle non-distracting textures
+       applied via inline style using --pattern-color CSS var.
+       Each pattern is a different geometric treatment that adds
+       visual interest without competing with product imagery.
+       ============================================================ */
+
+    /* Dot grid — the default, works behind any product */
+    .bg-pattern-dots {
+        background-image: radial-gradient(circle, var(--pattern-color, rgba(0,0,0,0.08)) 1.5px, transparent 1.5px);
+        background-size: 16px 16px;
+    }
+
+    /* Diagonal lines — adds energy, good for supplements/energy products */
+    .bg-pattern-diagonal {
+        background-image: repeating-linear-gradient(
+            45deg,
+            var(--pattern-color, rgba(0,0,0,0.06)),
+            var(--pattern-color, rgba(0,0,0,0.06)) 1px,
+            transparent 1px,
+            transparent 8px
+        );
+    }
+
+    /* Organic blobs — soft, rounded shapes. Good for beauty/skincare */
+    .bg-pattern-blobs {
+        background-image:
+            radial-gradient(ellipse 30% 40% at 20% 30%, var(--pattern-color, rgba(0,0,0,0.06)), transparent),
+            radial-gradient(ellipse 25% 35% at 75% 60%, var(--pattern-color, rgba(0,0,0,0.05)), transparent),
+            radial-gradient(ellipse 20% 30% at 50% 85%, var(--pattern-color, rgba(0,0,0,0.04)), transparent);
+    }
+
+    /* Crosshatch — subtle grid texture, good for structural/health products */
+    .bg-pattern-cross {
+        background-image:
+            linear-gradient(var(--pattern-color, rgba(0,0,0,0.05)) 1px, transparent 1px),
+            linear-gradient(90deg, var(--pattern-color, rgba(0,0,0,0.05)) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
+
+    /* Concentric rings — radial, good for immunity/heart products */
+    .bg-pattern-rings {
+        background-image: radial-gradient(
+            circle at 50% 50%,
+            transparent 0,
+            transparent 8px,
+            var(--pattern-color, rgba(0,0,0,0.04)) 8px,
+            var(--pattern-color, rgba(0,0,0,0.04)) 9px,
+            transparent 9px,
+            transparent 16px,
+            var(--pattern-color, rgba(0,0,0,0.03)) 16px,
+            var(--pattern-color, rgba(0,0,0,0.03)) 17px,
+            transparent 17px
+        );
+        background-size: 32px 32px;
+    }
+
+    /* Wave pattern — organic, good for sleep/stress products */
+    .bg-pattern-wave {
+        background-image: repeating-linear-gradient(
+            0deg,
+            transparent 0,
+            transparent 6px,
+            var(--pattern-color, rgba(0,0,0,0.04)) 6px,
+            var(--pattern-color, rgba(0,0,0,0.04)) 7px,
+            transparent 7px,
+            transparent 12px,
+            var(--pattern-color, rgba(0,0,0,0.03)) 12px,
+            var(--pattern-color, rgba(0,0,0,0.03)) 13px
+        );
+    }
+
+    /* ============================================================
+       ENTRANCE ANIMATIONS — subtle fade-in for error/info pages.
+       ============================================================ */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-fade-in {
+            animation: none;
+            opacity: 1;
+        }
     }
 }

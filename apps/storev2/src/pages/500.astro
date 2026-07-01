@@ -28,9 +28,9 @@ const description = "Системд түр зуурын алдаа гарлаа.
 
 <Layout title={title} description={description} noindex>
     <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
-        <div class="max-w-2xl w-full">
+        <div class="max-w-2xl w-full opacity-0 animate-[fadeIn_400ms_ease-out_forwards]">
             <div
-                class="bg-[oklch(0.92_0.18_15)] border-4 border-border shadow-hard-xl p-8 md:p-12 relative overflow-hidden"
+                class="bg-[oklch(0.92_0.18_15)] border border-border shadow-soft-xl p-8 md:p-12 relative overflow-hidden rounded-lg"
             >
                 <div
                     class="absolute inset-0 opacity-10"
@@ -45,17 +45,17 @@ const description = "Системд түр зуурын алдаа гарлаа.
                 <div class="relative z-10">
                     <div class="mb-6">
                         <h1
-                            class="text-8xl md:text-9xl font-black leading-none animate-glitch inline-block"
+                            class="text-8xl md:text-9xl font-bold leading-none animate-glitch inline-block"
                         >
                             500
                         </h1>
                         <div
-                            class="mt-4 h-2 w-32 bg-foreground shadow-hard-lg"
+                            class="mt-4 h-2 w-32 bg-foreground shadow-soft-lg"
                         >
                         </div>
                     </div>
 
-                    <h2 class="text-3xl md:text-4xl font-black mb-4">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">
                         Ямар нэг зүйл буруу боллоо
                     </h2>
                     <p class="text-lg md:text-xl font-bold mb-8 max-w-md">
@@ -64,24 +64,24 @@ const description = "Системд түр зуурын алдаа гарлаа.
 
                     <div class="my-8 flex gap-4 flex-wrap">
                         <div
-                            class="border-3 border-border bg-foreground text-background p-4 shadow-hard-lg animate-float-1 inline-block"
+                            class="border border-border bg-foreground text-background p-4 shadow-soft-lg animate-float-1 inline-block rounded-lg"
                         >
                             <IconCloseCircle class="h-8 w-8" />
                         </div>
                         <div
-                            class="bg-background border-[3px] border-border p-4 shadow-hard-lg animate-float-2 inline-block"
+                            class="bg-background border border-border p-4 shadow-soft-lg animate-float-2 inline-block rounded-lg"
                         >
                             <IconAlertTriangle class="h-8 w-8" />
                         </div>
                         <div
-                            class="bg-primary border-[3px] border-border p-4 shadow-hard-lg animate-float-3 inline-block font-black text-2xl"
+                            class="bg-primary border border-border p-4 shadow-soft-lg animate-float-3 inline-block font-bold text-2xl rounded-lg"
                         >
                             !
                         </div>
                     </div>
 
                     <div
-                        class="bg-background/60 border-[3px] border-border p-4 mb-6 font-mono text-sm"
+                        class="bg-background/60 border border-border p-4 mb-6 font-mono text-sm rounded-lg"
                     >
                         <div class="font-bold mb-2 flex items-center gap-2"><IconAlertTriangle class="h-4 w-4" /> Алдааны мэдээлэл:</div>
                         <div class="space-y-1 opacity-70">
@@ -102,14 +102,14 @@ const description = "Системд түр зуурын алдаа гарлаа.
                         <button
                             type="button"
                             onclick="location.reload()"
-                            class="border-3 border-border bg-foreground text-background px-8 py-4 font-black text-lg shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm transition-all flex items-center gap-2"
+                            class="border border-border bg-foreground text-background px-8 py-4 font-bold text-lg shadow-soft-lg hover:shadow-soft-xl hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart flex items-center gap-2 rounded-lg"
                         >
                             <IconRefresh class="h-5 w-5" /> Дахин оролдох
                         </button>
                         <a href="/">
                             <button
                                 type="button"
-                                class="bg-background border-[3px] border-border px-8 py-4 font-black text-lg shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm transition-all"
+                                class="bg-background border border-border px-8 py-4 font-bold text-lg shadow-soft-lg hover:shadow-soft-xl hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart rounded-lg"
                             >
                                 ← Нүүр хуудас руу
                             </button>
@@ -117,7 +117,7 @@ const description = "Системд түр зуурын алдаа гарлаа.
                     </div>
 
                     <!-- Help Text -->
-                    <div class="mt-8 pt-6 border-t-4 border-border/20">
+                    <div class="mt-8 pt-6 border-t border-border/20">
                         <p class="font-bold text-sm flex items-center gap-2">
                             <IconLightbulb class="h-5 w-5" /> <strong>Зөвлөмж:</strong> Хуудсыг дахин ачааллаж үзэх эсвэл хэсэг хугацааны дараа эргэн ирээрэй.
                         </p>

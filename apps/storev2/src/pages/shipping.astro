@@ -31,8 +31,8 @@ const deliveryInfo = [
   <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
     <!-- Header -->
     <div class="mb-8 lg:mb-10">
-      <div class="border-4 border-border bg-primary p-4 lg:p-6 shadow-hard-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight">
+      <div class="border border-border bg-primary p-4 lg:p-6 shadow-soft-lg mb-4 rounded-lg">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-tight">
           Хүргэлтийн мэдээлэл
         </h1>
         <p class="text-sm font-medium text-foreground/70 mt-2">
@@ -42,9 +42,9 @@ const deliveryInfo = [
     </div>
 
     <!-- Delivery Zone Map -->
-    <div class="border-3 border-border bg-card p-4 lg:p-6 shadow-hard-sm mb-8">
-      <h2 class="text-lg font-black uppercase tracking-tight mb-4">Улаанбаатар хотын хүргэлтийн бүс</h2>
-      <div class="border-2 border-border bg-muted/30 overflow-hidden">
+    <div class="border border-border bg-card p-4 lg:p-6 shadow-soft-sm mb-8 rounded-lg">
+      <h2 class="text-lg font-bold uppercase tracking-tight mb-4">Улаанбаатар хотын хүргэлтийн бүс</h2>
+      <div class="border border-border bg-muted/30 overflow-hidden rounded-lg">
         <img
           src="/delivery-zone.png"
           alt="Улаанбаатар хотын хүргэлтийн бүсийн зураг"
@@ -60,24 +60,24 @@ const deliveryInfo = [
     <!-- Delivery Info Cards -->
     <div class="grid gap-4 md:grid-cols-3 mb-8">
       {deliveryInfo.map((item) => (
-        <div class="border-3 border-border bg-card p-5 shadow-hard-sm">
-          <div class="w-10 h-10 border-2 border-border bg-primary flex items-center justify-center mb-3">
+        <div class="border border-border bg-card p-5 shadow-soft-sm rounded-lg hover:shadow-soft hover:-translate-y-0.5 transition-[box-shadow,transform] duration-200 ease-out-quart">
+          <div class="w-10 h-10 border border-border bg-primary flex items-center justify-center mb-3 rounded-lg">
             <item.icon class="w-5 h-5" />
           </div>
-          <h3 class="font-black text-sm uppercase tracking-wider mb-2">{item.title}</h3>
+          <h3 class="font-bold text-sm uppercase tracking-wider mb-2">{item.title}</h3>
           <p class="text-xs font-medium text-muted-foreground leading-relaxed">{item.desc}</p>
         </div>
       ))}
     </div>
 
     <!-- Important Notice -->
-    <div class="border-3 border-border bg-yellow-50 p-5 lg:p-6 shadow-hard-sm">
+    <div class="border border-border bg-yellow-50 p-5 lg:p-6 shadow-soft-sm rounded-lg">
       <div class="flex items-start gap-3">
-        <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
+        <div class="w-8 h-8 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5 rounded-lg">
           <IconAlert class="w-4 h-4" />
         </div>
         <div>
-          <h3 class="font-black text-sm uppercase tracking-wider mb-2">Чухал анхааруулга</h3>
+          <h3 class="font-bold text-sm uppercase tracking-wider mb-2">Чухал анхааруулга</h3>
           <ul class="text-sm font-medium leading-relaxed space-y-1.5">
             <li>• Хүргэлт <strong>зөвхөн Монгол улсын дотоодод</strong> хийгдэнэ.</li>
             <li>• Олон улсын хүргэлт хийдэггүй.</li>
