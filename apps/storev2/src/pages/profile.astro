@@ -92,10 +92,10 @@ const statusLabels: Record<string, string> = {
 					</div>
 
 					<!-- User Info Card -->
-					<div class="mb-8 border-4 border-border bg-card shadow-hard-xl">
-						<div class="bg-primary p-6 border-b-4 border-border">
+					<div class="mb-8 border border-border bg-card rounded-lg shadow-soft-lg transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft hover:-translate-y-0.5">
+						<div class="bg-primary p-6 border-b border-border rounded-t-lg">
 							<div class="flex items-center gap-4">
-								<div class="w-16 h-16 bg-secondary text-secondary-foreground flex items-center justify-center text-2xl font-bold border-4 border-border">
+								<div class="w-16 h-16 bg-secondary text-secondary-foreground flex items-center justify-center text-2xl font-bold border border-border rounded-lg">
 									{user?.phone.toString().slice(-2)}
 								</div>
 								<div class="flex-1">
@@ -111,7 +111,7 @@ const statusLabels: Record<string, string> = {
 						</div>
 
 						{user?.address && (
-							<div class="p-6 border-b-4 border-border bg-background">
+							<div class="p-6 border-b border-border bg-background">
 								<div class="text-sm font-bold text-muted-foreground mb-2">
 									ХҮРГЭЛТИЙН ХАЯГ
 								</div>
@@ -121,15 +121,15 @@ const statusLabels: Record<string, string> = {
 					</div>
 
 					<!-- Orders Section -->
-					<div class="border-4 border-border bg-card shadow-hard-xl">
-						<div class="bg-secondary text-secondary-foreground p-6 border-b-4 border-border">
+					<div class="border border-border bg-card rounded-lg shadow-soft-lg">
+						<div class="bg-secondary text-secondary-foreground p-6 border-b border-border rounded-t-lg">
 							<h2 class="text-2xl font-bold">Захиалгын түүх</h2>
 						</div>
 
 						<div class="p-6">
 							{orders.length === 0 ? (
 								<div class="text-center py-12">
-									<div class="w-20 h-20 mx-auto mb-6 border-4 border-border bg-muted flex items-center justify-center">
+									<div class="w-20 h-20 mx-auto mb-6 border border-border bg-muted flex items-center justify-center rounded-lg">
 										<IconShoppingBag class="w-10 h-10" />
 									</div>
 									<h3 class="text-xl font-bold mb-2">
@@ -140,7 +140,7 @@ const statusLabels: Record<string, string> = {
 									</p>
 									<a
 										href="/products"
-										class="inline-block px-6 py-3 bg-primary text-foreground border-2 border-border font-bold shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-hard-sm transition-all"
+										class="inline-block px-6 py-3 bg-primary text-foreground border border-border font-bold rounded-lg shadow-soft hover:-translate-y-0.5 hover:shadow-soft-lg transition-[box-shadow,transform] duration-200 ease-out-quart active:scale-[0.97]"
 									>
 										Бүтээгдэхүүн үзэх
 									</a>
@@ -148,9 +148,9 @@ const statusLabels: Record<string, string> = {
 							) : (
 								<div class="space-y-4">
 									{orders.map((order) => (
-										<div class="border-4 border-border shadow-hard-lg bg-background">
+										<div class="border border-border rounded-lg shadow-soft bg-background transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft hover:-translate-y-0.5">
 											<!-- Order header -->
-											<div class="p-4 bg-muted/30 border-b-4 border-border flex flex-wrap items-center justify-between gap-4">
+											<div class="p-4 bg-muted/30 border-b border-border flex flex-wrap items-center justify-between gap-4 rounded-t-lg">
 												<div class="flex items-center gap-4">
 													<div>
 														<div class="text-xs font-bold text-muted-foreground mb-1">
@@ -173,7 +173,7 @@ const statusLabels: Record<string, string> = {
 
 												<div class="flex items-center gap-4">
 													<span
-														class={`px-4 py-2 border-2 border-border font-bold text-sm ${statusColors[order.status]}`}
+														class={`px-4 py-2 border border-border font-bold text-sm rounded-md ${statusColors[order.status]}`}
 													>
 														{statusLabels[order.status]}
 													</span>
@@ -193,12 +193,12 @@ const statusLabels: Record<string, string> = {
 												<!-- Products -->
 												<div class="space-y-2 mb-4">
 													{order.products.map((product) => (
-														<div class="flex items-center gap-4 p-3 border-2 border-border bg-card">
+														<div class="flex items-center gap-4 p-3 border border-border bg-card rounded-lg">
 															{product.imageUrl && (
 																<img
 																	src={product.imageUrl}
 																	alt={product.name}
-																	class="w-14 h-14 object-cover border-2 border-border"
+																	class="w-14 h-14 object-cover border border-border rounded-md"
 																/>
 															)}
 															<div class="flex-1 min-w-0">
@@ -222,7 +222,7 @@ const statusLabels: Record<string, string> = {
 												</div>
 
 												<!-- Address -->
-												<div class="p-3 border-2 border-border bg-muted/20">
+												<div class="p-3 border border-border bg-muted/20 rounded-lg">
 													<div class="text-xs font-bold text-muted-foreground mb-1">
 														ХҮРГЭЛТИЙН ХАЯГ
 													</div>
@@ -231,7 +231,7 @@ const statusLabels: Record<string, string> = {
 
 												<!-- Notes -->
 												{order.notes && (
-													<div class="mt-2 p-3 border-2 border-border bg-primary/10">
+													<div class="mt-2 p-3 border border-border bg-primary/10 rounded-lg">
 														<div class="text-xs font-bold text-muted-foreground mb-1">
 															ТЭМДЭГЛЭЛ
 														</div>

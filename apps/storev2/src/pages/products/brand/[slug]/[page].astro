@@ -27,7 +27,7 @@ if (!brand) {
 // See GitHub issue #11.
 const brandLogoUrl = getBrandLogoUrl(brand.logoUrl);
 const brandLogoOnError =
-	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border-2 border-border bg-muted flex items-center justify-center font-black text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
+	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border border-border bg-muted rounded-lg flex items-center justify-center font-black text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 
 const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
 	page,
@@ -78,7 +78,7 @@ const itemListSchema = {
 	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
 
 	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-		<div class="overflow-hidden border-3 border-border bg-primary/5 px-3 py-3 shadow-hard-lg sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
+		<div class="overflow-hidden border border-border bg-primary/5 px-3 py-3 rounded-lg shadow-soft sm:px-5 sm:py-4 sm:shadow-soft-lg">
 			<!-- Breadcrumb -->
 			<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground sm:mb-4 sm:text-sm">
 				<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
@@ -100,13 +100,13 @@ const itemListSchema = {
 					<img
 						src={brandLogoUrl}
 						alt={brand.name}
-						class="h-12 w-12 border-2 border-border bg-background object-contain p-1 shadow-hard-sm sm:h-16 sm:w-16 sm:p-2"
+						class="h-12 w-12 border border-border bg-background object-contain p-1 rounded-lg shadow-soft-sm sm:h-16 sm:w-16 sm:p-2"
 						width="64"
 						height="64"
 						onerror={brandLogoOnError}
 					/>
 				) : (
-					<div class="h-12 w-12 shrink-0 border-2 border-border bg-muted flex items-center justify-center font-black text-sm shadow-hard-sm sm:h-16 sm:w-16 sm:text-lg">
+					<div class="h-12 w-12 shrink-0 border border-border bg-muted flex items-center justify-center font-black text-sm rounded-lg shadow-soft-sm sm:h-16 sm:w-16 sm:text-lg">
 						{brand.name.substring(0, 2).toUpperCase()}
 					</div>
 				)}
@@ -122,7 +122,7 @@ const itemListSchema = {
 
 			<!-- Banner -->
 			{brand.bannerImage && (
-				<div class="mb-3 overflow-hidden border-2 border-border shadow-hard sm:mb-4 sm:border-3 sm:shadow-hard-lg">
+				<div class="mb-3 overflow-hidden border border-border rounded-lg shadow-soft sm:mb-4">
 					<img
 						src={brand.bannerImage}
 						alt={brand.name}
@@ -133,14 +133,19 @@ const itemListSchema = {
 				</div>
 			)}
 
-			<div class="mb-3 border-2 border-border bg-background p-3 shadow-hard sm:mb-4 sm:border-3 sm:p-4 sm:shadow-hard-lg">
+			<div class="mb-3 border border-border bg-background p-3 rounded-lg shadow-soft sm:mb-4 sm:p-4">
 				<p class="text-sm leading-relaxed sm:text-base">{brandIntro}</p>
 			</div>
 
 			<!-- Products Grid -->
 			<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-				{products.map((product) => (
-					<ServerProductCard product={product} />
+				{products.map((product, index) => (
+					<div
+						class="stagger-fade-in"
+						style={`animation-delay:${Math.min(index, 8) * 30}ms`}
+					>
+						<ServerProductCard product={product} />
+					</div>
 				))}
 			</div>
 
@@ -151,3 +156,21 @@ const itemListSchema = {
 		</div>
 	</div>
 </Layout>
+
+<style is:global>
+	@keyframes fadeIn {
+		from { opacity: 0; transform: translateY(8px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.stagger-fade-in {
+		opacity: 0;
+		animation: fadeIn 300ms var(--ease-out-quart) forwards;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stagger-fade-in {
+			opacity: 1 !important;
+			animation: none !important;
+			transform: none !important;
+		}
+	}
+</style>
