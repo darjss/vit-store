@@ -23,21 +23,39 @@ const description = "Америк Витамин дэлгүүрт нэвтрэх
 
 <Layout title={title} description={description} noindex>
     <div class="relative min-h-screen bg-background">
-        <div class="absolute top-10 left-10 w-20 h-20 border-4 border-border bg-primary shadow-hard-xl rotate-12 hidden md:block" aria-hidden="true"></div>
-        <div class="absolute bottom-20 right-20 w-16 h-16 border-4 border-border bg-accent shadow-hard-xl -rotate-12 hidden md:block" aria-hidden="true"></div>
-        <div class="absolute top-1/3 right-10 w-12 h-12 border-4 border-border bg-secondary shadow-hard-lg rotate-45 hidden lg:block" aria-hidden="true"></div>
-        
+        <div class="absolute top-10 left-10 w-20 h-20 border border-border bg-primary shadow-soft-lg rounded-lg rotate-12 hidden md:block" aria-hidden="true"></div>
+        <div class="absolute bottom-20 right-20 w-16 h-16 border border-border bg-accent shadow-soft-lg rounded-lg -rotate-12 hidden md:block" aria-hidden="true"></div>
+        <div class="absolute top-1/3 right-10 w-12 h-12 border border-border bg-secondary shadow-soft rounded-lg rotate-45 hidden lg:block" aria-hidden="true"></div>
+
         <LoginForm client:only="solid-js">
             <div slot="fallback" class="container mx-auto px-4 py-16 flex items-center justify-center min-h-[70vh]">
-                <div class="w-full max-w-md border-4 border-border bg-background p-8 shadow-hard-xl">
+                <div class="w-full max-w-md border border-border bg-background p-8 rounded-lg shadow-soft-lg fade-in-up">
                     <div class="h-12 bg-foreground/10 w-48 mx-auto mb-8 animate-pulse"></div>
                     <div class="space-y-4">
-                        <div class="h-12 border-3 border-border bg-foreground/5 animate-pulse"></div>
-                        <div class="h-12 border-3 border-border bg-foreground/5 animate-pulse"></div>
-                        <div class="h-14 bg-primary/20 border-3 border-border shadow-hard-lg animate-pulse"></div>
+                        <div class="h-12 border border-border bg-foreground/5 animate-pulse rounded-lg"></div>
+                        <div class="h-12 border border-border bg-foreground/5 animate-pulse rounded-lg"></div>
+                        <div class="h-14 bg-primary/20 border border-border shadow-soft animate-pulse rounded-lg"></div>
                     </div>
                 </div>
             </div>
         </LoginForm>
     </div>
 </Layout>
+
+<style is:global>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up {
+        opacity: 0;
+        animation: fadeIn 400ms var(--ease-out-quart) forwards;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .fade-in-up {
+            opacity: 1 !important;
+            animation: none !important;
+            transform: none !important;
+        }
+    }
+</style>
