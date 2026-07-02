@@ -1,13 +1,31 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { washBg } from "@/lib/wash";
+import IconTruck from "~icons/ri/truck-line";
+import IconShield from "~icons/ri/shield-check-line";
+import IconPhone from "~icons/ri/phone-line";
 
 export const prerender = true;
+
+type CategoryTile = {
+  id: number;
+  name: string;
+  slug: string;
+  productCount: number;
+};
+
+type BrandRow = {
+  id: number;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  productCount: number;
+};
 
 const products = await api.product.getProductsForHomeWithStock.query();
 const { featuredProducts, newProducts } = products;
@@ -27,126 +45,83 @@ const preferredCategoryNames = [
 
 const orderedCategories = [
   ...preferredCategoryNames
-    .map((name) => allCategories.find((c: { id: number; name: string }) => c.name === name))
-    .filter(Boolean),
+    .map((name) => allCategories.find((c: CategoryTile) => c.name === name))
+    .filter((c: CategoryTile | undefined): c is CategoryTile => Boolean(c)),
   ...allCategories.filter(
-    (c: { id: number; name: string }) => !preferredCategoryNames.includes(c.name),
+    (c: CategoryTile) => !preferredCategoryNames.includes(c.name),
   ),
 ];
 
-const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
-  id: number;
-  name: string;
-  slug: string;
-}>;
-
-const heroPatterns = ["bg-pattern-dots", "bg-pattern-blobs", "bg-pattern-diagonal", "bg-pattern-rings"];
-const heroPatternColors = ["#E8C94A", "#D4A5A5", "#C4D89E", "#A8C8E0"];
+const categoryTiles = orderedCategories.slice(0, 8);
+const heroProduct: ProductForHome | undefined = featuredProducts[0];
+const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
+const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
+const brandRow: BrandRow[] = brands.slice(0, 10);
 ---
 
 <Layout
   image="/og-landing.png"
   imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
 >
-  <!-- ==================== HERO ==================== -->
-  <section class="border-b border-border bg-hero-warm">
-    <!-- Mobile: stacked. Desktop: split -->
-    <div class="grid lg:grid-cols-2">
+  <!-- ==================== 1. HERO ==================== -->
+  <section class="bg-hero-warm">
+    <div class="mx-auto grid max-w-6xl gap-8 px-5 pt-9 pb-12 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-16 lg:pb-20">
       <!-- Text -->
-      <div class="px-5 pt-8 pb-6 lg:px-14 lg:py-28 lg:border-r border-border flex flex-col justify-center min-w-0 overflow-hidden">
-        <h1 class="text-[28px] leading-[1.05] sm:text-h1 font-extrabold tracking-tighter mb-4 break-words">
-          Өргөн сонголттой<br/>
-          <span class="relative inline-block text-foreground">
-            витам<span class="relative">ин<span class="absolute -bottom-1 left-0 right-0 h-2 bg-primary/40 -z-10"></span></span>, боломжийн үнээр.
-          </span>
+      <div class="min-w-0">
+        <h1 class="enter-rise font-display text-h1 font-semibold mb-4 break-words">
+          Өргөн сонголттой витамин, боломжийн үнээр
         </h1>
-        <p class="text-[13px] md:text-base font-semibold text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
+        <p class="enter-rise stagger-1 text-sm md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
           Өдөр тутам авдаг витамин, нэмэлт тэжээлийг нэг дороос. Үнэ нь боломжийн, сонголт нь өргөн, хүргэлт нь шуурхай.
         </p>
-
-        <!-- Trust row — compact on mobile -->
-        <div class="relative flex gap-3 mb-5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
-          <div class="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
-          {[
-            { val: "Хямд", label: "Үнэ" },
-            { val: "Өргөн", label: "Сонголт" },
-            { val: "Шуурхай", label: "Хүргэлт" },
-          ].map((s) => (
-            <div class="flex-none flex items-center gap-1.5 rounded-full px-3.5 py-2 border border-border bg-card shadow-soft-sm">
-              <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-              <span class="font-bold text-sm">{s.val}</span>
-              <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <a href="/products" class="px-7 py-3.5 rounded-lg bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-wider border border-primary shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart">
+        <div class="enter-rise stagger-2 mb-4">
+          <a
+            href="/products"
+            class="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm md:text-base font-semibold text-primary-foreground shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none"
+          >
             Бүтээгдэхүүн үзэх
           </a>
-          <a href="#featured-products" class="px-5 py-3.5 rounded-lg bg-card text-foreground font-bold text-xs uppercase tracking-wider border border-border shadow-soft-sm hover:bg-muted hover:shadow-soft hover:border-primary active:scale-[0.97] transition-[background-color,box-shadow,transform,border-color] duration-200 ease-out-quart">
-            Онцлох сонголт
-          </a>
         </div>
+        <p class="enter-rise stagger-3 text-[13px] font-semibold text-muted-foreground">
+          АНУ-аас албан ёсоор ирдэг жинхэнэ бүтээгдэхүүн · 10:30-аас өмнө захиалбал өдөртөө хүргэнэ
+        </p>
       </div>
 
-      <!-- Hero product showcase — rotating crossfade, one product at a time.
-           CSS-only, no JS. Each product floats gently while visible.
-           Pauses on hover/touch. Respects reduced-motion. -->
-      <div class="hero-showcase relative border-t lg:border-t-0 border-border bg-hero-warm overflow-hidden h-[300px] lg:h-[520px]">
-        {featuredProducts.slice(0, 4).map((p: ProductForHome, i: number) => {
-          const heroPattern = heroPatterns[i % heroPatterns.length];
-          const colorIdx = p.id % productColors.length;
-          const cycleDelay = `${-i * 3.5}s`;
-          return (
+      <!-- Static product moment -->
+      {heroProduct && (
+        <div class="enter-scale stagger-2 relative">
           <a
-            href={`/products/${p.slug}-${p.id}/`}
-            class="hero-product absolute inset-0 block active:scale-[0.97] transition-transform duration-200 ease-out-quart"
-            style={`animation-delay: ${cycleDelay};`}
+            href={`/products/${heroProduct.slug}-${heroProduct.id}/`}
+            class="group block active:scale-[0.98] transition-transform duration-200 ease-out-quart"
           >
-            <div
-              class={`relative h-full overflow-hidden ${heroPattern}`}
-              style={`background-color: ${productColors[colorIdx]}; --pattern-color: ${heroPatternColors[i % heroPatternColors.length]}50;`}
-            >
-              {p.image && (
-                <img
-                  src={toProductImageUrl(p.image, "feature") || p.image}
-                  alt={p.name}
-                  class="absolute inset-0 w-full h-full object-contain p-8 md:p-12 lg:p-16 hero-product-img"
-                  style={`animation-delay: ${cycleDelay};`}
-                  width="480"
-                  height="480"
-                  loading="eager"
-                  decoding="async"
-                />
-              )}
-              <!-- Brand chip — top left -->
-              <div class="absolute top-3 left-3 md:top-5 md:left-5">
-                <span class="rounded-full bg-card/90 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
-                  {p.brand}
+            <div class="relative overflow-hidden rounded-3xl bg-wash-peach shadow-soft-lg aspect-[4/3] lg:aspect-square">
+              <img
+                src={toProductImageUrl(heroProduct.image, "feature") || heroProduct.image}
+                alt={heroProduct.name}
+                class="absolute inset-0 h-full w-full object-contain p-8 lg:p-14 transition-transform duration-300 ease-out-quart group-hover:scale-[1.03]"
+                width="480"
+                height="480"
+                loading="eager"
+                decoding="async"
+              />
+              <span class="absolute top-4 left-4 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
+                {heroProduct.brand}
+              </span>
+              <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                <span class="line-clamp-2 max-w-[60%] text-sm font-semibold leading-snug text-foreground/80">
+                  {heroProduct.name}
                 </span>
-              </div>
-              <!-- Product name + price — bottom left, stacked -->
-              <div class="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5">
-                <div class="line-clamp-1 font-bold text-sm md:text-base text-foreground/80 mb-1.5">{p.name}</div>
-                <span class="inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-sm font-bold text-secondary-foreground shadow-soft">
-                  {formatCurrency(p.price)}
+                <span class="inline-flex items-center rounded-full bg-card px-3.5 py-1.5 font-display text-sm font-semibold shadow-soft">
+                  {formatCurrency(heroProduct.price)}
                 </span>
               </div>
             </div>
           </a>
-          );
-        })}
-        <!-- Dot indicators -->
-        <div class="absolute top-3 right-3 md:top-5 md:right-5 flex gap-1.5 z-10">
-          {featuredProducts.slice(0, 4).map((_: ProductForHome, i: number) => (
-            <span
-              class="hero-dot w-1.5 h-1.5 rounded-full bg-foreground/20"
-              style={`animation-delay: ${-i * 3.5}s;`}
-            />
-          ))}
+          <span class="hero-sticker absolute -top-3 right-5 inline-flex -rotate-3 items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 text-xs font-bold text-foreground shadow-pop-sm">
+            100% жинхэнэ
+          </span>
         </div>
-      </div>
+      )}
     </div>
   </section>
 
@@ -168,7 +143,7 @@ const heroPatternColors = ["#E8C94A", "#D4A5A5", "#C4D89E", "#A8C8E0"];
   <section class="border-b border-border">
     <div class="px-5 py-3.5 lg:px-8">
       <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
-        {categoriesForPills.map((cat) => (
+        {categoryTiles.map((cat) => (
           <a href={`/products/category/${cat.slug}/1/`} class="flex-none rounded-full px-4 py-2 border border-border bg-card font-bold text-xs uppercase tracking-wider shadow-soft-sm hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-soft active:scale-[0.97] transition-[box-shadow,transform,background-color,border-color] duration-200 ease-out-quart">
             {cat.name}
           </a>
@@ -308,60 +283,24 @@ const heroPatternColors = ["#E8C94A", "#D4A5A5", "#C4D89E", "#A8C8E0"];
     100% { transform: translateX(-50%); }
   }
 
-  /* === Hero rotating product showcase ===
-     4 products, 14s total cycle, each visible 3.5s.
-     Crossfade with slight scale. Negative animation-delay
-     offsets each product to its slot in the cycle.
-     Pauses on hover/touch via .hero-showcase:hover. */
-  @keyframes hero-product-cycle {
-    0% { opacity: 0; transform: scale(1.02); pointer-events: none; }
-    3%, 22% { opacity: 1; transform: scale(1); pointer-events: auto; }
-    25%, 100% { opacity: 0; transform: scale(0.98); pointer-events: none; }
+  /* Sticker pops last: small spring overshoot after the staggered hero entrance. */
+  @keyframes sticker-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.8) rotate(4deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(-3deg);
+    }
   }
 
-  .hero-product {
-    animation: hero-product-cycle 14s var(--ease-in-out) infinite;
-  }
-
-  /* Image breathes gently while its parent is visible */
-  @keyframes hero-img-breathe {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-8px) scale(1.04); }
-  }
-
-  .hero-product-img {
-    animation: hero-img-breathe 5s var(--ease-in-out) infinite;
-  }
-
-  /* Dot indicators — active dot fills dark */
-  @keyframes hero-dot-active {
-    0%, 3% { background-color: oklch(0.30 0.012 95 / 0.2); transform: scale(1); }
-    5%, 22% { background-color: oklch(0.22 0.012 95); transform: scale(1.3); }
-    25%, 100% { background-color: oklch(0.30 0.012 95 / 0.2); transform: scale(1); }
-  }
-
-  .hero-dot {
-    animation: hero-dot-active 14s var(--ease-in-out) infinite;
-  }
-
-  /* Pause on hover/touch */
-  .hero-showcase:hover .hero-product,
-  .hero-showcase:hover .hero-product-img,
-  .hero-showcase:hover .hero-dot {
-    animation-play-state: paused;
+  .hero-sticker {
+    animation: sticker-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) 380ms backwards;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero-product {
-      animation: none;
-      opacity: 1;
-      position: relative;
-    }
-    .hero-product:not(:first-child) {
-      display: none;
-    }
-    .hero-product-img,
-    .hero-dot {
+    .hero-sticker {
       animation: none;
     }
   }
