@@ -1,35 +1,4 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import UserProfile from "@/components/auth/UserProfile.astro";
 import CartButton from "@/components/cart/cart-button";
 import SidebarContent from "@/components/SidebarContent.astro";
@@ -40,12 +9,12 @@ import IconUser from "~icons/ri/user-line";
 ---
 
 <header
-    class="sticky top-0 z-50 border-b border-border bg-background/95 bg-dots-subtle" transition:persist transition:name="header"
+    class="sticky top-0 z-50 border-b border-border bg-background supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-md" transition:persist transition:name="header"
 >
-    <div class="mx-auto max-w-screen-2xl px-5 py-3 lg:px-8 lg:py-4">
-        <div class="flex items-center justify-between gap-3 lg:gap-4">
+    <div class="mx-auto max-w-screen-2xl px-4 py-2.5 lg:px-8 lg:py-3">
+        <div class="flex items-center justify-between gap-2 lg:gap-4">
             <Sheet>
-                <SheetTrigger class="p-2 border border-border bg-card shadow-soft-sm active:scale-[0.97] transition-transform duration-200 ease-out-quart">
+                <SheetTrigger class="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-[background-color,transform] duration-200 ease-out-quart hover:bg-muted active:scale-[0.94]">
                     <IconMenu class="w-6 h-6" />
                     <span class="sr-only">Toggle menu</span>
                 </SheetTrigger>
@@ -56,18 +25,18 @@ import IconUser from "~icons/ri/user-line";
                 </SheetContent>
             </Sheet>
             <div class="flex min-w-0 items-center gap-2 w-full">
-                <a href="/" class="flex min-w-0 items-center gap-2.5">
-                    <div class="h-10 w-10 shrink-0 border border-border bg-primary flex items-center justify-center font-extrabold text-[11px] uppercase tracking-wider shadow-soft-sm">
+                <a href="/" class="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <div class="h-10 w-10 shrink-0 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs shadow-soft-sm">
                         AV
                     </div>
                     <div class="min-w-0">
-                        <span class="block truncate font-extrabold text-sm uppercase tracking-wider sm:text-base">Amerik Vitamin</span>
-                        <span class="hidden sm:block text-[10px] font-semibold text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
+                        <span class="block truncate font-display font-semibold text-[13px] sm:text-[15px] leading-tight">Amerik Vitamin</span>
+                        <span class="hidden sm:block text-[11px] font-medium text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
                     </div>
                 </a>
             </div>
 
-            <div class="flex items-center gap-2.5 lg:gap-3">
+            <div class="flex items-center gap-1.5 lg:gap-2.5">
                 <!-- Search Button - triggers SearchOverlay -->
                 <div class="hidden sm:block">
                     <SearchOverlay client:idle />
@@ -77,13 +46,13 @@ import IconUser from "~icons/ri/user-line";
                     <div
                         slot="fallback"
                         aria-label="Профайл"
-                        class="flex items-center justify-center w-11 h-11 border border-border bg-card shadow-soft-sm"
+                        class="flex items-center justify-center w-11 h-11 rounded-full border border-border bg-card shadow-soft-sm"
                     >
                         <IconUser class="w-4 h-4" />
                     </div>
                 </UserProfile>
-                
-                
+
+
                 <div class="hidden md:block">
                     <CartButton client:idle />
                 </div>
