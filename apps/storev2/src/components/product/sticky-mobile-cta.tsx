@@ -1,8 +1,10 @@
-import { createSignal, onMount, onCleanup, Show } from "solid-js";
-import { cart } from "@/store/cart";
 import { formatCurrency } from "@vit/shared";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import type { CartItems } from "@vit/shared/types";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { Motion, Presence } from "solid-motionone";
+import { Button } from "@/components/ui/button";
+import { cart } from "@/store/cart";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
@@ -32,29 +34,42 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	};
 
 	return (
-		<Show when={visible()}>
-			{/* Spacer prevents the fixed bar from overlapping footer/content at scroll bottom */}
-			<div class="h-[70px] sm:hidden" aria-hidden="true" />
-			<div class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background px-3 py-2.5 shadow-[0_-4px_0_rgba(0,0,0,0.15)] sm:hidden">
-				<div class="flex items-center justify-between gap-3">
-					<div class="min-w-0">
-						<p class="truncate font-extrabold text-sm text-foreground">
-							{props.cartItem.name}
-						</p>
-						<p class="font-extrabold text-base text-foreground">
-							{formatCurrency(props.cartItem.price)}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={handleAdd}
-						class="flex shrink-0 items-center gap-2 border border-border bg-primary px-5 py-2.5 font-extrabold text-sm uppercase tracking-tight shadow-soft transition-all active:scale-[0.98]"
+		<>
+			<Show when={visible()}>
+				{/* Spacer prevents the floating bar from overlapping footer/content at scroll bottom */}
+				<div class="h-20 sm:hidden" aria-hidden="true" />
+			</Show>
+			<Presence>
+				<Show when={visible()}>
+					<Motion.div
+						initial={{ opacity: 0, y: 24 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: 24 }}
+						transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
+						class="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg sm:hidden"
 					>
-						<IconShoppingCart class="h-4 w-4" />
-						Сагслах
-					</button>
-				</div>
-			</div>
-		</Show>
+						<div class="flex items-center justify-between gap-3">
+							<div class="min-w-0 pl-1">
+								<p class="truncate text-xs text-muted-foreground">
+									{props.cartItem.name}
+								</p>
+								<p class="font-display text-base text-foreground">
+									{formatCurrency(props.cartItem.price)}
+								</p>
+							</div>
+							<Button
+								type="button"
+								size="default"
+								class="shrink-0"
+								onClick={handleAdd}
+							>
+								<IconShoppingCart class="h-4 w-4" />
+								Сагслах
+							</Button>
+						</div>
+					</Motion.div>
+				</Show>
+			</Presence>
+		</>
 	);
 }
