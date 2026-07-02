@@ -15,6 +15,7 @@ import { z } from "zod";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import type { Context } from "~/lib/context";
+import type { TransactionType } from "~/lib/types";
 import { parseLlmOutput } from "~/lib/ai/llm-output";
 import {
 	normalizeText,
@@ -234,7 +235,7 @@ async function inferInvoiceData(
 }
 
 async function ensureBrandId(
-	tx: Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0],
+	tx: TransactionType,
 	brandId: number | null | undefined,
 	brandName: string | null | undefined,
 ) {
@@ -263,7 +264,7 @@ async function ensureBrandId(
 }
 
 async function createProductFromDraft(
-	tx: Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0],
+	tx: TransactionType,
 	item: saveExtractedPurchaseType["items"][number],
 ) {
 	if (item.productId) return item.productId;
@@ -388,36 +389,38 @@ function commonPurchaseProcedures<P extends typeof baseProcedure>(proc: P) {
 			.input(saveExtractedPurchaseSchema)
 			.mutation(async ({ ctx, input }) => {
 				try {
-					return await db().transaction(async (tx) => {
-						const resolvedItems: addPurchaseType["items"] = [];
-						for (const item of input.items) {
-							const productId = await createProductFromDraft(tx, item);
-							resolvedItems.push({
-								productId,
-								quantityOrdered: item.quantity,
-								unitCost: item.unitPrice,
-							});
-						}
-
-						const created = await purchaseQueries.admin.createPurchase(tx, {
-							provider: input.provider,
-							externalOrderNumber: input.externalOrderNumber,
-							trackingNumber: input.trackingNumber ?? null,
-							shippingCost: input.shippingCost,
-							notes: input.notes ?? null,
-							orderedAt: input.orderedAt ?? null,
-							shippedAt: input.shippedAt ?? null,
-							forwarderReceivedAt: input.forwarderReceivedAt ?? null,
-							receivedAt: null,
-							cancelledAt: null,
-							items: resolvedItems,
+					// D1 has no interactive transactions; product drafts must be
+					// created first so their ids can be referenced by the purchase
+					// items, so these run sequentially on the same db handle.
+					const dbi = db();
+					const resolvedItems: addPurchaseType["items"] = [];
+					for (const item of input.items) {
+						const productId = await createProductFromDraft(dbi, item);
+						resolvedItems.push({
+							productId,
+							quantityOrdered: item.quantity,
+							unitCost: item.unitPrice,
 						});
+					}
 
-						return {
-							id: created.id,
-							message: "Purchase imported successfully",
-						};
+					const created = await purchaseQueries.admin.createPurchase(dbi, {
+						provider: input.provider,
+						externalOrderNumber: input.externalOrderNumber,
+						trackingNumber: input.trackingNumber ?? null,
+						shippingCost: input.shippingCost,
+						notes: input.notes ?? null,
+						orderedAt: input.orderedAt ?? null,
+						shippedAt: input.shippedAt ?? null,
+						forwarderReceivedAt: input.forwarderReceivedAt ?? null,
+						receivedAt: null,
+						cancelledAt: null,
+						items: resolvedItems,
 					});
+
+					return {
+						id: created.id,
+						message: "Purchase imported successfully",
+					};
 				} catch (error) {
 					ctx.log.error(
 						error instanceof Error ? error : new Error(String(error)),

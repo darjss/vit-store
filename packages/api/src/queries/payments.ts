@@ -292,24 +292,47 @@ export const paymentQueries = {
 			paymentNumber: string,
 			provider: PaymentProviderType,
 		) {
-			return await db().transaction(async (tx) => {
-				const [claimedPayment] = await tx
-					.update(PaymentsTable)
-					.set({ status: "success", provider })
-					.where(
-						and(
-							eq(PaymentsTable.paymentNumber, paymentNumber),
-							inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
-							isNull(PaymentsTable.deletedAt),
-						),
-					)
-					.returning({ id: PaymentsTable.id, orderId: PaymentsTable.orderId });
+			// D1 has no interactive transactions. To keep confirmation atomic
+			// we (1) atomically claim the payment, (2) read + validate stock and
+			// compute costs, then (3) apply every stock/sales/order write in a
+			// single db.batch() (an implicit transaction that rolls back fully on
+			// failure). If the batch throws we compensate by reverting the claim,
+			// so a failed run never leaves a payment marked "success" with stock
+			// unadjusted.
+			const dbi = db();
 
-				if (!claimedPayment) {
-					return false;
-				}
+			const existing = await dbi.query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.paymentNumber, paymentNumber),
+					inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+					isNull(PaymentsTable.deletedAt),
+				),
+				columns: { status: true, provider: true },
+			});
 
-				const orderDetails = await tx.query.OrderDetailsTable.findMany({
+			if (!existing) {
+				return false;
+			}
+
+			const [claimedPayment] = await dbi
+				.update(PaymentsTable)
+				.set({ status: "success", provider })
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ id: PaymentsTable.id, orderId: PaymentsTable.orderId });
+
+			if (!claimedPayment) {
+				// Lost the race to a concurrent confirmation.
+				return false;
+			}
+
+			try {
+				const orderDetails = await dbi.query.OrderDetailsTable.findMany({
 					where: and(
 						eq(OrderDetailsTable.orderId, claimedPayment.orderId),
 						isNull(OrderDetailsTable.deletedAt),
@@ -338,56 +361,57 @@ export const paymentQueries = {
 					}
 				}
 
-				for (const detail of orderDetails) {
-					const [updatedProduct] = await tx
-						.update(ProductsTable)
-						.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
+				const productCosts = await Promise.all(
+					orderDetails.map((detail) =>
+						getAverageCostOfProduct(dbi, detail.product.id, new Date()),
+					),
+				);
+
+				await dbi.batch([
+					// Promote the order from "created" (unpaid) to "pending" (paid,
+					// awaiting shipment). Guard on status = "created" so this is a
+					// no-op for legacy "pending" orders and never demotes a
+					// shipped/delivered order.
+					dbi
+						.update(OrdersTable)
+						.set({ status: "pending" })
 						.where(
 							and(
-								eq(ProductsTable.id, detail.product.id),
-								eq(ProductsTable.status, "active"),
-								sql`${ProductsTable.stock} >= ${detail.quantity}`,
+								eq(OrdersTable.id, claimedPayment.orderId),
+								eq(OrdersTable.status, "created"),
 							),
-						)
-						.returning({ id: ProductsTable.id });
-
-					if (!updatedProduct) {
-						throw new Error(
-							`Insufficient stock for product ${detail.product.id}`,
-						);
-					}
-
-					const productCost = await getAverageCostOfProduct(
-						tx,
-						detail.product.id,
-						new Date(),
-					);
-
-					await tx.insert(SalesTable).values({
-						orderId: claimedPayment.orderId,
-						productId: detail.product.id,
-						quantitySold: detail.quantity,
-						productCost,
-						sellingPrice: detail.product.price,
-					});
-				}
-
-				// Payment confirmed — promote the order from "created" (unpaid)
-				// to "pending" (paid, awaiting shipment). Guard on current status
-				// = "created" so this is a no-op for legacy "pending" orders and
-				// never accidentally demotes a shipped/delivered order.
-				await tx
-					.update(OrdersTable)
-					.set({ status: "pending" })
-					.where(
-						and(
-							eq(OrdersTable.id, claimedPayment.orderId),
-							eq(OrdersTable.status, "created"),
 						),
-					);
+					...orderDetails.flatMap((detail, index) => [
+						dbi
+							.update(ProductsTable)
+							.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
+							.where(
+								and(
+									eq(ProductsTable.id, detail.product.id),
+									eq(ProductsTable.status, "active"),
+									sql`${ProductsTable.stock} >= ${detail.quantity}`,
+								),
+							),
+						dbi.insert(SalesTable).values({
+							orderId: claimedPayment.orderId,
+							productId: detail.product.id,
+							quantitySold: detail.quantity,
+							productCost: productCosts[index],
+							sellingPrice: detail.product.price,
+						}),
+					]),
+				]);
 
 				return true;
-			});
+			} catch (error) {
+				// Compensate: undo the claim so the payment isn't stranded as
+				// "success" with stock/sales not applied.
+				await dbi
+					.update(PaymentsTable)
+					.set({ status: existing.status, provider: existing.provider })
+					.where(eq(PaymentsTable.id, claimedPayment.id));
+				throw error;
+			}
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {

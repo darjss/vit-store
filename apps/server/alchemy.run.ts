@@ -1,8 +1,8 @@
 import path from "node:path";
 import alchemy from "alchemy";
 import {
+	D1Database,
 	DurableObjectNamespace,
-	Hyperdrive,
 	Images,
 	KVNamespace,
 	R2Bucket,
@@ -56,20 +56,25 @@ const transferReconciliation = DurableObjectNamespace(
 	},
 );
 
-const hyperdriveDB = await Hyperdrive("pscale-db", {
-	origin: {
-		host: env.PLANETSCALE_HOST,
-		port: 5432,
-		user: env.PLANETSCALE_USER,
-		password: env.PLANETSCALE_PASSWORD,
-		database: env.PLANETSCALE_DATABASE,
-	},
+const db = await D1Database("db", {
+	name: `vit-d1-${stage}`,
+	adopt: true,
+	// Read replicas serve queries from the POP nearest the user instead of a
+	// single origin; combined with dropping Worker `placement` below this is the
+	// core latency win over Hyperdrive/Planetscale.
+	readReplication: { mode: "auto" },
+	primaryLocationHint: "apac",
+	migrationsDir: path.join(
+		import.meta.dirname,
+		"..",
+		"..",
+		"packages",
+		"api",
+		"src",
+		"db",
+		"migrations",
+	),
 });
-
-const directDbUrl =
-	stage === "dev"
-		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
-		: "";
 
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
@@ -83,8 +88,7 @@ export const server = await Worker("api", {
 		PRODUCT_SEARCH: productSearch,
 		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 		RATE_LIMITER: rateLimit,
-		DB: hyperdriveDB,
-		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
+		DB: db,
 		vitStoreKV: kv,
 		r2Bucket: r2,
 		images: images,
@@ -135,9 +139,8 @@ export const server = await Worker("api", {
 			destinations: ["axiom-logs"],
 		},
 	},
-	placement: {
-		region: "aws:ap-southeast-1",
-	},
+	// No `placement` pin: with D1 read replicas the Worker runs at the edge POP
+	// nearest the user (was pinned to aws:ap-southeast-1 for Hyperdrive).
 	dev: {
 		port: 3006,
 	},

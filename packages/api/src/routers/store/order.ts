@@ -140,24 +140,28 @@ export const order = router({
             const orderNumber = generateOrderNumber();
             const paymentNumberGenerated = generatePaymentNumber();
             const customerPhone = Number(input.phoneNumber);
-            const txResult = await ctx.db.transaction(async (tx) => {
-                const existingCustomer = await tx.query.CustomersTable.findFirst({
-                    where: eq(CustomersTable.phone, customerPhone),
-                });
-                if (!existingCustomer) {
-                    await tx.insert(CustomersTable).values({
+            // D1 has no interactive transactions. The order insert returns the
+            // auto-incremented id that order-details and payment depend on, so
+            // it runs first; the dependent order-details + payment inserts then
+            // run together in a single db.batch() (an implicit transaction). If
+            // that batch fails we delete the just-created order so a failed
+            // checkout never leaves an orphaned order with no details/payment.
+            const txResult = await (async () => {
+                await ctx.db
+                    .insert(CustomersTable)
+                    .values({
                         phone: customerPhone,
                         address: input.address,
                         addressZoneId: input.addressZoneId,
+                    })
+                    .onConflictDoUpdate({
+                        target: CustomersTable.phone,
+                        set: {
+                            address: input.address,
+                            addressZoneId: input.addressZoneId,
+                        },
                     });
-                }
-                else {
-                    await tx
-                        .update(CustomersTable)
-                        .set({ address: input.address, addressZoneId: input.addressZoneId })
-                        .where(eq(CustomersTable.phone, customerPhone));
-                }
-                const [createdOrder] = await tx
+                const [createdOrder] = await ctx.db
                     .insert(OrdersTable)
                     .values({
                     orderNumber,
@@ -172,23 +176,30 @@ export const order = router({
                     .returning({ orderId: OrdersTable.id });
                 if (!createdOrder)
                     throw new Error("No order ID returned");
-                await tx.insert(OrderDetailsTable).values(normalizedProducts.map((p) => ({
-                    orderId: createdOrder.orderId,
-                    productId: p.productId,
-                    quantity: p.quantity,
-                })));
-                const [payment] = await tx
-                    .insert(PaymentsTable)
-                    .values({
-                    paymentNumber: paymentNumberGenerated,
-                    orderId: createdOrder.orderId,
-                    provider: "transfer",
-                    status: "pending",
-                    amount: total,
-                })
-                    .returning({ paymentNumber: PaymentsTable.paymentNumber });
-                return { orderId: createdOrder.orderId, paymentNumber: payment?.paymentNumber ?? null };
-            });
+                try {
+                    const [, [payment]] = await ctx.db.batch([
+                        ctx.db.insert(OrderDetailsTable).values(normalizedProducts.map((p) => ({
+                            orderId: createdOrder.orderId,
+                            productId: p.productId,
+                            quantity: p.quantity,
+                        }))),
+                        ctx.db
+                            .insert(PaymentsTable)
+                            .values({
+                            paymentNumber: paymentNumberGenerated,
+                            orderId: createdOrder.orderId,
+                            provider: "transfer",
+                            status: "pending",
+                            amount: total,
+                        })
+                            .returning({ paymentNumber: PaymentsTable.paymentNumber }),
+                    ]);
+                    return { orderId: createdOrder.orderId, paymentNumber: payment?.paymentNumber ?? null };
+                } catch (error) {
+                    await ctx.db.delete(OrdersTable).where(eq(OrdersTable.id, createdOrder.orderId));
+                    throw error;
+                }
+            })();
             const orderId = txResult.orderId;
             ctx.log.info("order.created", {
                 orderId,

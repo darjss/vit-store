@@ -33,3 +33,6 @@ delivery-zone.png
 .wrangler/
 # private real customer Messenger export data — never commit (see AGENTS.md)
 messenger-chat-history/
+
+# Phase 2 D1 data-migration dumps (contain real customer data)
+scripts/migrate-d1/out/

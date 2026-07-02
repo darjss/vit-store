@@ -141,12 +141,7 @@ export class ProductSearchObject extends DurableObject<Env> {
 		});
 
 		try {
-			const directDbUrl = (this.appEnv as Env & { DIRECT_DB_URL?: string })
-				.DIRECT_DB_URL;
-			const db =
-				directDbUrl && directDbUrl.length > 0
-					? createDb(directDbUrl)
-					: createDb(this.appEnv.DB);
+			const db = createDb(this.appEnv.DB);
 			const documents = await loadProductSearchDocumentsFromDb(db);
 			const snapshot = buildProductSearchSnapshot(documents);
 			const hydrated = hydrateProductSearchSnapshot(snapshot);

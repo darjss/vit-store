@@ -9,9 +9,9 @@ import {
 	asc,
 	desc,
 	eq,
-	ilike,
 	inArray,
 	isNull,
+	like,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -304,7 +304,7 @@ async function updatePurchaseReceivedAt(tx: Transaction, purchaseId: number) {
 		.update(PurchasesTable)
 		.set({
 			receivedAt: allReceived
-				? sql`COALESCE(${PurchasesTable.receivedAt}, NOW())`
+				? sql`COALESCE(${PurchasesTable.receivedAt}, unixepoch())`
 				: null,
 		})
 		.where(eq(PurchasesTable.id, purchaseId));
@@ -352,11 +352,11 @@ export const purchaseQueries = {
 			if (params.searchTerm) {
 				conditions.push(
 					or(
-						ilike(
+						like(
 							PurchasesTable.externalOrderNumber,
 							`%${params.searchTerm.trim()}%`,
 						),
-						ilike(
+						like(
 							PurchasesTable.trackingNumber,
 							`%${params.searchTerm.trim()}%`,
 						),
@@ -421,8 +421,8 @@ export const purchaseQueries = {
 				and(
 					isNull(PurchasesTable.deletedAt),
 					or(
-						ilike(PurchasesTable.externalOrderNumber, `%${trimmed}%`),
-						ilike(PurchasesTable.trackingNumber, `%${trimmed}%`),
+						like(PurchasesTable.externalOrderNumber, `%${trimmed}%`),
+						like(PurchasesTable.trackingNumber, `%${trimmed}%`),
 					),
 				),
 			);
