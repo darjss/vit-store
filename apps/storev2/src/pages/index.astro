@@ -139,13 +139,19 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     </div>
   </section>
 
-  <!-- ==================== CATEGORIES — Swipeable pills ==================== -->
-  <section class="border-b border-border">
-    <div class="px-5 py-3.5 lg:px-8">
-      <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
+  <!-- ==================== 2. CATEGORY TILES ==================== -->
+  <section>
+    <div class="mx-auto max-w-6xl px-5 pt-10 pb-8 lg:px-8 lg:pt-16 lg:pb-12">
+      <h2 data-reveal class="font-display text-h2 font-semibold mb-1">Хэрэгцээгээрээ сонго</h2>
+      <p data-reveal class="text-sm font-medium text-muted-foreground mb-5">Өөрийн хэрэгцээнд тохирох төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
         {categoryTiles.map((cat) => (
-          <a href={`/products/category/${cat.slug}/1/`} class="flex-none rounded-full px-4 py-2 border border-border bg-card font-bold text-xs uppercase tracking-wider shadow-soft-sm hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-soft active:scale-[0.97] transition-[box-shadow,transform,background-color,border-color] duration-200 ease-out-quart">
-            {cat.name}
+          <a
+            href={`/products/category/${cat.slug}/1/`}
+            class={`${washBg(cat.slug)} group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
+          >
+            <h3 class="text-sm font-bold leading-snug lg:text-base">{cat.name}</h3>
+            <span class="text-xs font-semibold text-foreground/60">{cat.productCount} бүтээгдэхүүн</span>
           </a>
         ))}
       </div>
@@ -211,48 +217,6 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
       <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-4">
         {newProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} class="flex-none w-[165px] lg:w-auto snap-start" />
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ==================== SHOP BY NEED — Visual category grid ==================== -->
-  <section class="border-b border-border bg-muted/40">
-    <div class="px-5 py-8 lg:px-8 lg:py-14">
-      <div class="flex items-center gap-2.5 mb-1">
-        <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-        <h2 class="text-h2 font-extrabold tracking-tight">Хэрэгцээгээрээ сонго</h2>
-      </div>
-      <p class="text-sm text-muted-foreground font-semibold mb-5">Өөрийн хэрэгцээнд тохирох төрлүүд</p>
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3">
-        {[
-          { name: "Дархлаа", slug: "darhlaa", color: "#F5DC7A", pattern: "#E8C94A", patternClass: "bg-pattern-dots", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
-          { name: "Гоо сайхан", slug: "goo-saihan", color: "#F4B0C4", pattern: "#E298AD", patternClass: "bg-pattern-blobs", icon: "M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z" },
-          { name: "Энерги", slug: "energi", color: "#F5D05E", pattern: "#E8B53A", patternClass: "bg-pattern-diagonal", icon: "M13 2L3 14h9l-1 8 10-12h-9z" },
-          { name: "Яс үе мөч", slug: "yas-uye-moch", color: "#B8DCA0", pattern: "#9CC870", patternClass: "bg-pattern-cross", icon: "M12 2a7 7 0 0 0-7 7c0 3 2 5 2 7v5h10v-5c0-2 2-4 2-7a7 7 0 0 0-7-7z" },
-          { name: "Зүрх судас", slug: "zurh-sudas", color: "#F2A0A8", pattern: "#E0858E", patternClass: "bg-pattern-rings", icon: "M12 21s-7-4.5-9.5-9C0 8 2 4 6 4c2 0 4 1 6 3 2-2 4-3 6-3 4 0 6 4 3.5 8C19 16.5 12 21 12 21z" },
-          { name: "Ходоод гэдэс", slug: "hodoog-gedes", color: "#A8D098", pattern: "#8CB860", patternClass: "bg-pattern-wave", icon: "M3 12c0-5 4-9 9-9s9 4 9 9c0 3-2 5-4 6l-2 3h-6l-2-3c-2-1-4-3-4-6z" },
-          { name: "Нойр", slug: "noir", color: "#A0C4E0", pattern: "#84A8C8", patternClass: "bg-pattern-wave", icon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" },
-          { name: "Тархи мэдрэл", slug: "tarhi-mydrel", color: "#9CD0C4", pattern: "#80B8A8", patternClass: "bg-pattern-rings", icon: "M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0v-3a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 7 6.5v-2A2.5 2.5 0 0 1 9.5 2z" },
-        ].map((cat) => (
-          <a
-            href={`/products/category/${cat.slug}/1/`}
-            class={`group relative overflow-hidden rounded-xl border border-border p-4 lg:p-5 ${cat.patternClass} shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart`}
-            style={`background-color: ${cat.color}; --pattern-color: ${cat.pattern}60;`}
-          >
-            <div class="relative z-10 flex flex-col items-start gap-3">
-              <div class="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border shadow-soft-sm">
-                <svg class="w-5 h-5 text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d={cat.icon}/>
-                </svg>
-              </div>
-              <div>
-                <h3 class="font-extrabold text-sm lg:text-base leading-tight">{cat.name}</h3>
-                <span class="text-xs font-bold uppercase tracking-wider text-foreground/60 mt-0.5 inline-block">Сонгох →</span>
-              </div>
-            </div>
-          </a>
         ))}
       </div>
     </div>
