@@ -104,7 +104,9 @@ const OtpForm = (props: {
 	return (
 		<div class="space-y-6">
 			<div class="space-y-2 text-center">
-				<h2 class="font-bold text-lg md:text-xl">Баталгаажуулах код</h2>
+				<h2 class="font-display text-foreground text-lg md:text-xl">
+					Баталгаажуулах код
+				</h2>
 				<p class="text-muted-foreground text-sm">4 оронтой кодоо оруулна уу</p>
 			</div>
 
@@ -117,19 +119,21 @@ const OtpForm = (props: {
 				>
 					<OTPFieldInput autofocus />
 					<OTPFieldGroup>
-						<OTPFieldSlot index={0} class="transition-[box-shadow] duration-150 ease-out" />
-						<OTPFieldSlot index={1} class="transition-[box-shadow] duration-150 ease-out" />
-						<OTPFieldSlot index={2} class="transition-[box-shadow] duration-150 ease-out" />
-						<OTPFieldSlot index={3} class="transition-[box-shadow] duration-150 ease-out" />
+						{[0, 1, 2, 3].map((index) => (
+							<OTPFieldSlot
+								index={index}
+								class="rounded-xl bg-card shadow-soft-sm transition-[box-shadow] duration-150 ease-out hover:translate-x-0 hover:translate-y-0 hover:shadow-soft-sm [&>div]:rounded-xl [&>div]:ring-2"
+							/>
+						))}
 					</OTPFieldGroup>
 				</OTPField>
 			</div>
 
 			{loginMutation.isError && (
-				<div class="animate-shake rounded-lg border border-destructive bg-destructive/10 p-4 shadow-soft-sm">
+				<div class="animate-shake rounded-xl border border-destructive/30 bg-error p-4">
 					<div class="flex items-center gap-3">
 						<IconCloseCircle class="h-5 w-5 flex-shrink-0 text-destructive" />
-						<p class="font-extrabold text-destructive text-sm uppercase">
+						<p class="font-semibold text-error-foreground text-sm">
 							Код буруу байна. Дахин оролдоно уу.
 						</p>
 					</div>
@@ -168,7 +172,7 @@ const OtpForm = (props: {
 						onClick={handleResend}
 						type="button"
 						disabled={sendOptMutation.isPending}
-						class="font-semibold text-primary text-sm underline decoration-2 underline-offset-4 transition-colors hover:text-primary/80 disabled:opacity-50"
+						class="font-semibold text-foreground text-sm underline underline-offset-4 transition-colors duration-150 hover:text-cocoa disabled:opacity-50"
 					>
 						{sendOptMutation.isPending ? "Илгээж байна..." : "Код дахин илгээх"}
 					</button>

@@ -52,15 +52,13 @@ const LoginForm = () => {
 
 	return (
 		<div class="flex min-h-[80vh] w-full items-center justify-center px-4 py-8 md:py-12">
-			<div class="w-full max-w-md opacity-0 animate-[fadeIn_400ms_ease-out_forwards]">
+			<div class="enter-scale w-full max-w-md">
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
-					<div class="mb-4 inline-block rotate-[-2deg] rounded-lg border border-border bg-primary px-4 py-2 shadow-soft">
-						<h1 class="font-extrabold text-2xl uppercase md:text-3xl">
-							{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
-						</h1>
-					</div>
-					<p class="font-medium text-muted-foreground text-sm md:text-base">
+					<h1 class="mb-2 font-display text-2xl text-foreground md:text-3xl">
+						{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
+					</h1>
+					<p class="text-muted-foreground text-sm md:text-base">
 						{step() === "phone"
 							? "Таны аюулгүй нэвтрэлт"
 							: `Код илгээгдсэн: ${phone()}`}
@@ -85,9 +83,12 @@ const LoginForm = () => {
 				<div class="mt-6 text-center">
 					<p class="text-muted-foreground text-xs md:text-sm">
 						Нэвтрэх товчийг дарснаар та манай{" "}
-						<span class="font-extrabold text-foreground underline decoration-2 underline-offset-4">
+						<a
+							href="/terms-of-service"
+							class="font-semibold text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-cocoa"
+						>
 							үйлчилгээний нөхцөл
-						</span>
+						</a>
 						-тэй зөвшөөрч байна
 					</p>
 				</div>
