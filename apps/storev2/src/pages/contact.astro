@@ -5,6 +5,7 @@ import IconMail from "~icons/ri/mail-line";
 import IconMapPin from "~icons/ri/map-pin-line";
 import IconFacebook from "~icons/ri/facebook-fill";
 import IconInstagram from "~icons/ri/instagram-line";
+import IconArrowRight from "~icons/ri/arrow-right-s-line";
 
 const title = "Бидэнтэй холбогдох";
 const description = "Amerik Vitamin - бидэнтэй холбогдох мэдээлэл. Утас, и-мэйл, сошиал медиа.";
@@ -16,6 +17,7 @@ const contactMethods = [
     value: "9999-3950",
     href: "tel:+97699993950",
     desc: "Даваа-Баасан 10:00-18:00",
+    wash: "bg-wash-peach",
   },
   {
     icon: IconMail,
@@ -23,6 +25,7 @@ const contactMethods = [
     value: "info@amerikvitamin.mn",
     href: "mailto:info@amerikvitamin.mn",
     desc: "24/7 хариу өгнө",
+    wash: "bg-wash-sky",
   },
   {
     icon: IconMapPin,
@@ -30,6 +33,7 @@ const contactMethods = [
     value: "Улаанбаатар + Хөдөө",
     href: "/shipping",
     desc: "Өдөр бүр 12:00-с хойш",
+    wash: "bg-wash-mint",
   },
 ];
 
@@ -39,69 +43,61 @@ const socials = [
     label: "Facebook",
     href: "https://www.facebook.com/profile.php?id=100057596651892",
     handle: "Amerik Vitamin",
+    wash: "bg-wash-lilac",
   },
   {
     icon: IconInstagram,
     label: "Instagram",
     href: "https://www.instagram.com/amerikhunsbaraa/",
     handle: "@amerikhunsbaraa",
+    wash: "bg-wash-blush",
   },
 ];
 ---
 
 <Layout title={title} description={description}>
-  <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
+  <div class="container mx-auto max-w-2xl px-5 py-8 lg:px-8 lg:py-14">
     <!-- Header -->
-    <div class="mb-8 lg:mb-10">
-      <div class="border border-border bg-primary p-4 lg:p-6 shadow-soft-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
-          Бидэнтэй холбогдох
-        </h1>
-        <p class="text-sm font-medium text-foreground/70 mt-2">
-          Асуулт, санал, захиалгын талаар холбогдоно уу
-        </p>
-      </div>
+    <div class="enter-rise mb-8 lg:mb-10">
+      <h1 class="mb-2 font-display text-foreground text-h2">Бидэнтэй холбогдох</h1>
+      <p class="text-muted-foreground text-sm md:text-base">
+        Асуулт, санал, захиалгын талаар холбогдоно уу
+      </p>
     </div>
 
     <!-- Contact Methods -->
-    <div class="grid gap-4 md:grid-cols-3 mb-10">
+    <div class="enter-rise stagger-1 mb-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       {contactMethods.map((method) => (
         <a
           href={method.href}
-          class="group border border-border bg-card p-5 shadow-soft-sm hover:shadow-soft hover:-translate-y-1 transition-all"
+          class="group flex min-h-[44px] items-center gap-4 p-4 transition-[background-color] duration-150 ease-out hover:bg-muted/60 md:p-5"
         >
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 border border-border bg-primary flex items-center justify-center">
-              <method.icon class="w-5 h-5" />
-            </div>
-            <span class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">{method.label}</span>
+          <div class={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-foreground ${method.wash}`}>
+            <method.icon class="h-5 w-5" />
           </div>
-          <div class="font-extrabold text-lg uppercase tracking-tight">{method.value}</div>
-          <p class="text-xs font-medium text-muted-foreground mt-1">{method.desc}</p>
+          <div class="min-w-0 flex-1">
+            <div class="text-muted-foreground text-xs uppercase tracking-wide">{method.label}</div>
+            <div class="truncate font-semibold text-foreground text-sm md:text-base">{method.value}</div>
+            <p class="text-muted-foreground text-xs">{method.desc}</p>
+          </div>
+          <IconArrowRight class="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
         </a>
       ))}
     </div>
 
     <!-- Important Notice -->
-    <div class="border border-border bg-yellow-50 p-5 lg:p-6 shadow-soft-sm mb-10">
-      <div class="flex items-start gap-3">
-        <div class="w-8 h-8 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
-          <span class="font-extrabold text-xs">!</span>
-        </div>
-        <div>
-          <h3 class="font-extrabold text-sm uppercase tracking-wider mb-2">Чухал мэдэгдэл</h3>
-          <p class="text-sm font-medium leading-relaxed">
-            Бид <strong>зөвхөн Монгол улсын дотоодод</strong> хүргэлт хийдэг. Олон улсын хүргэлт хийдэггүй.
-            Бараа буцаах, эсвэл мөнгө буцаан олгох боломжгүй тул бүтээгдэхүүнээ сайтар сонгоно уу.
-          </p>
-        </div>
-      </div>
+    <div class="enter-rise stagger-2 mb-6 rounded-2xl bg-wash-lemon/70 p-5 md:p-6">
+      <h3 class="mb-2 font-display text-foreground text-sm">Чухал мэдэгдэл</h3>
+      <p class="text-foreground text-sm leading-relaxed">
+        Бид <strong>зөвхөн Монгол улсын дотоодод</strong> хүргэлт хийдэг. Олон улсын хүргэлт хийдэггүй.
+        Бараа буцаах, эсвэл мөнгө буцаан олгох боломжгүй тул бүтээгдэхүүнээ сайтар сонгоно уу.
+      </p>
     </div>
 
     <!-- Social Media -->
-    <div class="border border-border bg-card p-5 lg:p-6 shadow-soft-sm">
-      <h2 class="text-xl font-extrabold uppercase tracking-tight mb-4">Сошиал медиа</h2>
-      <p class="text-sm font-medium text-muted-foreground mb-5">
+    <div class="enter-rise stagger-3 rounded-2xl border border-border bg-card p-5 shadow-soft md:p-6">
+      <h2 class="mb-1 font-display text-foreground text-lg">Сошиал медиа</h2>
+      <p class="mb-5 text-muted-foreground text-sm">
         Шинэ бараа, мэдээллийг сошиал хуудсаасаа хүлээн авна уу
       </p>
       <div class="grid gap-3 md:grid-cols-2">
@@ -110,14 +106,14 @@ const socials = [
             href={social.href}
             target="_blank"
             rel="noopener noreferrer"
-            class="group flex items-center gap-4 border border-border bg-background p-4 shadow-soft-sm hover:shadow-soft hover:-translate-y-1 transition-all"
+            class="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.98]"
           >
-            <div class="w-12 h-12 border border-border bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <social.icon class="w-6 h-6" />
+            <div class={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-foreground ${social.wash}`}>
+              <social.icon class="h-6 w-6" />
             </div>
             <div>
-              <div class="font-extrabold text-sm uppercase tracking-wider">{social.label}</div>
-              <div class="text-xs font-bold text-muted-foreground">{social.handle}</div>
+              <div class="font-semibold text-foreground text-sm">{social.label}</div>
+              <div class="text-muted-foreground text-xs">{social.handle}</div>
             </div>
           </a>
         ))}
