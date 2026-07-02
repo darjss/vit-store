@@ -1,10 +1,15 @@
 import { Image } from "@unpic/solid";
-import { formatCurrency, productColors } from "@vit/shared";
+import { formatCurrency } from "@vit/shared";
 import type { ProductCardData } from "@vit/shared/types";
 import { createMemo, Show } from "solid-js";
+import { Badge } from "@/components/ui/badge";
 import { getProductImageProps } from "@/lib/image";
-import AddToCartButton from "../cart/add-to-cart-button";
+import { WASH_BG, washFor } from "@/lib/wash";
+import CardAddButton from "./card-add-button";
 import ProductImageFallback from "./product-image-fallback";
+
+/** Stock at or below this shows the low-stock warning badge. */
+export const LOW_STOCK_THRESHOLD = 5;
 
 /**
  * Normalized product shape shared by the catalog card and the search card.
@@ -18,6 +23,9 @@ export interface NormalizedProduct {
 	price: number;
 	image: string;
 	brand: string | null;
+	stock?: number;
+	discount?: number;
+	categoryId?: number;
 }
 
 /**
@@ -31,6 +39,9 @@ export interface SearchProductInput {
 	price: number;
 	image: string;
 	brand: string;
+	stock?: number;
+	discount?: number;
+	categoryId?: number;
 }
 
 /** Collapse either upstream product shape into the normalized card shape. */
@@ -45,6 +56,9 @@ export function normalizeProduct(
 			price: product.price,
 			image: product.images?.[0]?.url ?? "",
 			brand: product.brand?.name ?? null,
+			stock: product.stock,
+			discount: product.discount,
+			categoryId: product.categoryId,
 		};
 	}
 	return { ...product, brand: product.brand ?? null };
@@ -57,35 +71,31 @@ interface ProductCardProps {
 const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
 
-	const bgColor = createMemo(
-		() => productColors[product().id % productColors.length],
+	const washClass = createMemo(
+		() => WASH_BG[washFor(product().categoryId ?? "uncategorized")],
 	);
 	const productImageProps = createMemo(() =>
 		getProductImageProps(product().image, "card"),
 	);
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
+	const isOutOfStock = createMemo(() => product().stock === 0);
+	const isLowStock = createMemo(() => {
+		const stock = product().stock;
+		return stock !== undefined && stock > 0 && stock <= LOW_STOCK_THRESHOLD;
+	});
+	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
 
 	return (
 		<div
-			class="group hover:-translate-y-0.5 relative flex flex-col border border-border bg-card shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-lg"
+			class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
 			data-product-id={product().id}
 		>
 			{/* Image Section — decorative link, primary link is heading below */}
-			<a
-				href={productUrl}
-				class="relative block overflow-hidden border-border border-b-2"
-				aria-hidden="true"
-				tabIndex={-1}
-			>
+			<a href={productUrl} class="relative block" aria-hidden="true" tabIndex={-1}>
 				<div
-					class="relative aspect-4/5"
-					style={{ background: bgColor() }}
+					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 				>
-					{/* Dot Pattern Overlay */}
-					<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
-
-					{/* Product Image */}
 					<Show
 						when={product().image}
 						fallback={
@@ -103,47 +113,71 @@ const ProductCard = (props: ProductCardProps) => {
 							sizes={productImageProps().sizes}
 							layout="constrained"
 							objectFit="contain"
-							class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4"
+							class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
 							loading="lazy"
 							decoding="async"
 						/>
 					</Show>
 
-					{/* Brand Badge */}
-					<Show when={brandName()}>
-						<div class="absolute right-1.5 bottom-1.5 border border-border bg-card px-1.5 py-0.5 font-extrabold text-[11px] uppercase tracking-tight shadow-soft-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1">
-							{brandName()}
-						</div>
+					<Show when={hasSale() && !isOutOfStock()}>
+						<Badge
+							variant="sale"
+							class="-rotate-2 absolute top-2 left-2 px-2 py-0.5 text-[11px]"
+						>
+							-{product().discount}%
+						</Badge>
+					</Show>
+
+					<Show when={isLowStock()}>
+						<Badge
+							variant="warning"
+							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
+						>
+							Цөөн үлдсэн
+						</Badge>
+					</Show>
+
+					<Show when={isOutOfStock()}>
+						<Badge
+							variant="outline"
+							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
+						>
+							Дууссан
+						</Badge>
 					</Show>
 				</div>
 			</a>
 
 			{/* Content Section */}
-			<div class="flex flex-1 flex-col p-2 sm:p-3">
+			<div class="flex flex-1 flex-col gap-1 p-3">
+				<Show when={brandName()}>
+					<p class="font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+						{brandName()}
+					</p>
+				</Show>
 				<a href={productUrl} class="block">
-					<h3 class="line-clamp-2 font-bold text-[11px] leading-tight tracking-tight group-hover:underline sm:text-sm sm:leading-snug">
+					<h3 class="line-clamp-2 font-medium text-foreground text-sm leading-snug group-hover:underline">
 						{product().name}
 						{brandName() ? <span class="sr-only">, {brandName()}</span> : null}
 					</h3>
 				</a>
-			</div>
 
-			{/* Price & CTA Bar */}
-			<div class="flex items-center justify-between gap-2 border-border border-t bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t sm:px-4 sm:py-3">
-				<div class="font-extrabold text-sm tracking-tight sm:text-lg">
-					{formatCurrency(product().price)}
+				<div class="mt-auto flex items-end justify-between gap-2 pt-2">
+					<div class="font-bold font-display text-base tracking-tight">
+						{formatCurrency(product().price)}
+					</div>
+					<CardAddButton
+						disabled={isOutOfStock()}
+						cartItem={{
+							productId: product().id,
+							quantity: 1,
+							name: product().name,
+							price: product().price,
+							image: product().image,
+							slug: product().slug,
+						}}
+					/>
 				</div>
-				<AddToCartButton
-					compact
-					cartItem={{
-						productId: product().id,
-						quantity: 1,
-						name: product().name,
-						price: product().price,
-						image: product().image,
-						slug: product().slug,
-					}}
-				/>
 			</div>
 		</div>
 	);
