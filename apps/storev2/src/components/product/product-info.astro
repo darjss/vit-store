@@ -113,24 +113,22 @@ const isInStock = product.status === "active" && product.stock > 0;
 		</div>
 	</div>
 
-	<div class="rounded-lg border border-border bg-background p-4 sm:p-6 shadow-soft">
-		<div class="grid grid-cols-2 gap-4">
-			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<IconCheck class="w-5 h-5 text-green-500" />
-				<span>Баталгаатай</span>
-			</div>
-			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<IconTruck class="w-5 h-5 text-blue-500" />
-				<span>Хурдан хүргэлт</span>
-			</div>
-			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<IconShield class="w-5 h-5 text-purple-500" />
-				<span>Найдвартай</span>
-			</div>
-			<div class="flex items-center gap-3 text-xs sm:text-sm font-bold text-foreground/80 uppercase tracking-wide">
-				<IconRefund class="w-5 h-5 text-orange-500" />
-				<span>Буцаалт</span>
-			</div>
-		</div>
+	<div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-1 text-xs text-muted-foreground sm:text-sm">
+		<span class="inline-flex items-center gap-1.5">
+			<IconCheck class="h-4 w-4 text-cocoa/70" aria-hidden="true" />
+			Баталгаатай
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<IconTruck class="h-4 w-4 text-cocoa/70" aria-hidden="true" />
+			Хурдан хүргэлт
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<IconShield class="h-4 w-4 text-cocoa/70" aria-hidden="true" />
+			Найдвартай
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<IconRefund class="h-4 w-4 text-cocoa/70" aria-hidden="true" />
+			Буцаалт
+		</span>
 	</div>
 </div>
