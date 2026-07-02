@@ -74,27 +74,20 @@ const socials = [
   },
 ];
 
-const certifications = [
-  { label: "GMP", sub: "Certified" },
-  { label: "FDA", sub: "Registered" },
-  { label: "NSF", sub: "Certified" },
-  { label: "USP", sub: "Verified" },
-  { label: "Non-GMO", sub: "Project" },
-  { label: "USDA", sub: "Organic" },
-];
+const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
 ---
 
-<footer class="relative z-10 border-t border-border bg-muted/20 bg-stripes-diagonal pb-16 md:pb-0">
-  <div class="mx-auto max-w-screen-2xl px-5 py-8 lg:px-8 lg:py-12">
+<footer class="relative z-10 bg-secondary text-secondary-foreground pb-24 md:pb-0">
+  <div class="mx-auto max-w-screen-2xl px-5 py-10 lg:px-8 lg:py-14">
     <!-- Main footer grid -->
-    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-12 lg:gap-6">
+    <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
       <!-- Brand column -->
-      <div class="lg:col-span-3">
+      <div class="lg:col-span-4">
         <div class="mb-4 flex items-center gap-2.5">
-          <div class="h-10 w-10 border border-border bg-primary flex items-center justify-center font-extrabold text-[11px] uppercase tracking-wider shadow-soft-sm">AV</div>
-          <span class="font-extrabold text-base uppercase tracking-wider">Amerik Vitamin</span>
+          <div class="h-10 w-10 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs text-primary-foreground shadow-soft-sm">AV</div>
+          <span class="font-display font-semibold text-base">Amerik Vitamin</span>
         </div>
-        <p class="max-w-xs text-xs font-medium leading-relaxed text-muted-foreground mb-5">
+        <p class="max-w-xs text-sm font-medium leading-relaxed text-secondary-foreground/70 mb-6">
           АНУ-аас шууд импортлогдсон жинхэнэ витамин, нэмэлт тэжээлийг Монгол улсын дотоодод хүргэлттэй борлуулж байна.
         </p>
 
@@ -105,7 +98,7 @@ const certifications = [
               href={social.href}
               target="_blank"
               rel="noopener noreferrer"
-              class="flex items-center justify-center w-9 h-9 border border-border bg-card shadow-soft-sm hover:shadow-none hover:translate-x-px hover:translate-y-px hover:bg-primary transition-all"
+              class="flex items-center justify-center w-11 h-11 rounded-full border border-secondary-foreground/15 bg-secondary-foreground/5 transition-[background-color,transform] duration-200 ease-out-quart hover:bg-secondary-foreground/15 active:scale-[0.94]"
               aria-label={social.label}
             >
               <social.icon class="w-4 h-4" />
@@ -116,95 +109,94 @@ const certifications = [
 
       <!-- Shop links -->
       <div class="lg:col-span-2">
-        <h3 class="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">Үндсэн цэс</h3>
-        <div class="flex flex-col gap-2">
+        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үндсэн цэс</h3>
+        <ul class="flex flex-col gap-1">
           {shopLinks.map((link) => (
-            <a href={link.href} class="font-bold text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
-              {link.label}
-            </a>
+            <li>
+              <a href={link.href} class="inline-block py-1.5 font-medium text-sm text-secondary-foreground/75 hover:text-secondary-foreground transition-colors duration-150">
+                {link.label}
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       <!-- Service links -->
       <div class="lg:col-span-3">
-        <h3 class="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">Үйлчилгээ</h3>
-        <div class="flex flex-col gap-2">
+        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үйлчилгээ</h3>
+        <ul class="flex flex-col gap-1">
           {serviceLinks.map((link) => (
-            <a href={link.href} class="group flex items-center gap-2 font-bold text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
-              <link.icon class="w-3.5 h-3.5 shrink-0" />
-              <span>{link.label}</span>
-            </a>
+            <li>
+              <a href={link.href} class="inline-flex items-center gap-2 py-1.5 font-medium text-sm text-secondary-foreground/75 hover:text-secondary-foreground transition-colors duration-150">
+                <link.icon class="w-3.5 h-3.5 shrink-0 opacity-60" />
+                <span>{link.label}</span>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       <!-- Contact -->
-      <div class="lg:col-span-4">
-        <h3 class="mb-3 text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground">Холбоо барих</h3>
-        <div class="space-y-2.5">
+      <div class="lg:col-span-3">
+        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Холбоо барих</h3>
+        <ul class="flex flex-col gap-3">
           {contactInfo.map((item) => (
-            <div class="flex items-start gap-2.5">
-              <div class="w-7 h-7 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                <item.icon class="w-3.5 h-3.5" />
+            <li class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-secondary-foreground/8 flex items-center justify-center shrink-0">
+                <item.icon class="w-3.5 h-3.5 opacity-80" />
               </div>
-              <div>
-                <div class="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">{item.label}</div>
+              <div class="min-w-0">
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-secondary-foreground/50">{item.label}</div>
                 {item.href ? (
-                  <a href={item.href} class="text-sm font-bold hover:text-foreground text-muted-foreground transition-colors">
+                  <a href={item.href} class="text-sm font-medium text-secondary-foreground/85 hover:text-secondary-foreground transition-colors duration-150">
                     {item.value}
                   </a>
                 ) : (
-                  <span class="text-sm font-bold text-muted-foreground">{item.value}</span>
+                  <span class="text-sm font-medium text-secondary-foreground/85">{item.value}</span>
                 )}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
 
-    <!-- Certifications & Trust -->
-    <div class="mt-8 pt-6 border-t border-border/30">
+    <!-- Certifications & payment -->
+    <div class="mt-10 pt-6 border-t border-secondary-foreground/10">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-        <!-- Cert badges -->
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground mr-1">Баталгаа:</span>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span class="text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Баталгаа</span>
           {certifications.map((cert) => (
-            <div class="flex items-center gap-1 px-2 py-1 border border-border bg-card shadow-soft-sm">
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-secondary-foreground/15 px-3 py-1 text-xs font-semibold text-secondary-foreground/75">
               <IconShield class="w-3 h-3 text-primary" />
-              <span class="text-[10px] font-extrabold uppercase tracking-wider">{cert.label}</span>
-              <span class="text-[11px] font-bold text-muted-foreground uppercase">{cert.sub}</span>
-            </div>
+              {cert}
+            </span>
           ))}
         </div>
 
-        <!-- Payment methods -->
         <div class="flex items-center gap-3">
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">Төлбөр:</span>
+          <span class="text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Төлбөр</span>
           <div class="flex items-center gap-2">
-            <div class="h-8 px-2 border border-border bg-background flex items-center justify-center">
-              <img src="/qpay.png" alt="QPay" class="h-5 w-auto object-contain" loading="lazy" />
-            </div>
-            <div class="h-8 px-2 border border-border bg-background flex items-center justify-center">
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-foreground">Банкны шилжүүлэг</span>
-            </div>
+            <span class="inline-flex h-8 items-center rounded-full bg-secondary-foreground/90 px-3">
+              <img src="/qpay.png" alt="QPay" class="h-4 w-auto object-contain" loading="lazy" />
+            </span>
+            <span class="inline-flex h-8 items-center rounded-full border border-secondary-foreground/15 px-3 text-xs font-semibold text-secondary-foreground/75">Банкны шилжүүлэг</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Bottom bar -->
-    <div class="mt-6 pt-4 border-t border-border/30 flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <p class="font-semibold text-muted-foreground">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
+    <div class="mt-6 pt-5 border-t border-secondary-foreground/10 flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <p class="font-medium text-secondary-foreground/60">Хүнсний нэмэлт нь эмийн орлогч биш.</p>
         {legalLinks.map((link) => (
-          <a href={link.href} class="font-bold text-muted-foreground hover:text-foreground transition-colors underline decoration-1 underline-offset-2">
+          <a href={link.href} class="font-medium text-secondary-foreground/60 hover:text-secondary-foreground transition-colors duration-150 underline decoration-secondary-foreground/30 decoration-1 underline-offset-2">
             {link.label}
           </a>
         ))}
       </div>
-      <p class="font-extrabold uppercase tracking-wider text-muted-foreground">© {currentYear} Amerik Vitamin</p>
+      <p class="font-semibold text-secondary-foreground/60">© {currentYear} Amerik Vitamin</p>
     </div>
   </div>
 </footer>

@@ -1,13 +1,31 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { washBg } from "@/lib/wash";
+import IconTruck from "~icons/ri/truck-line";
+import IconShield from "~icons/ri/shield-check-line";
+import IconPhone from "~icons/ri/phone-line";
 
 export const prerender = true;
+
+type CategoryTile = {
+  id: number;
+  name: string;
+  slug: string;
+  productCount: number;
+};
+
+type BrandRow = {
+  id: number;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  productCount: number;
+};
 
 const products = await api.product.getProductsForHomeWithStock.query();
 const { featuredProducts, newProducts } = products;
@@ -27,274 +45,202 @@ const preferredCategoryNames = [
 
 const orderedCategories = [
   ...preferredCategoryNames
-    .map((name) => allCategories.find((c: { id: number; name: string }) => c.name === name))
-    .filter(Boolean),
+    .map((name) => allCategories.find((c: CategoryTile) => c.name === name))
+    .filter((c: CategoryTile | undefined): c is CategoryTile => Boolean(c)),
   ...allCategories.filter(
-    (c: { id: number; name: string }) => !preferredCategoryNames.includes(c.name),
+    (c: CategoryTile) => !preferredCategoryNames.includes(c.name),
   ),
 ];
 
-const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
-  id: number;
-  name: string;
-  slug: string;
-}>;
-
-const heroPatterns = ["bg-pattern-dots", "bg-pattern-blobs", "bg-pattern-diagonal", "bg-pattern-rings"];
-const heroPatternColors = ["#E8C94A", "#D4A5A5", "#C4D89E", "#A8C8E0"];
+const categoryTiles = orderedCategories.slice(0, 8);
+const heroProduct: ProductForHome | undefined = featuredProducts[0];
+const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
+const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
+const brandRow: BrandRow[] = brands.slice(0, 10);
 ---
 
 <Layout
   image="/og-landing.png"
   imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
 >
-  <!-- ==================== HERO ==================== -->
-  <section class="border-b border-border bg-hero-warm">
-    <!-- Mobile: stacked. Desktop: split -->
-    <div class="grid lg:grid-cols-2">
+  <!-- ==================== 1. HERO ==================== -->
+  <section class="bg-hero-warm">
+    <div class="mx-auto grid max-w-6xl gap-8 px-5 pt-9 pb-12 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-16 lg:pb-20">
       <!-- Text -->
-      <div class="px-5 pt-8 pb-6 lg:px-14 lg:py-28 lg:border-r border-border flex flex-col justify-center min-w-0 overflow-hidden">
-        <h1 class="text-[28px] leading-[1.05] sm:text-h1 font-extrabold tracking-tighter mb-4 break-words">
-          Өргөн сонголттой<br/>
-          <span class="relative inline-block text-foreground">
-            витам<span class="relative">ин<span class="absolute -bottom-1 left-0 right-0 h-2 bg-primary/40 -z-10"></span></span>, боломжийн үнээр.
-          </span>
+      <div class="min-w-0">
+        <h1 class="enter-rise font-display text-h1 font-semibold mb-4 break-words">
+          Өргөн сонголттой витамин, боломжийн үнээр
         </h1>
-        <p class="text-[13px] md:text-base font-semibold text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
+        <p class="enter-rise stagger-1 text-sm md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
           Өдөр тутам авдаг витамин, нэмэлт тэжээлийг нэг дороос. Үнэ нь боломжийн, сонголт нь өргөн, хүргэлт нь шуурхай.
         </p>
-
-        <!-- Trust row — compact on mobile -->
-        <div class="relative flex gap-3 mb-5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
-          <div class="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
-          {[
-            { val: "Хямд", label: "Үнэ" },
-            { val: "Өргөн", label: "Сонголт" },
-            { val: "Шуурхай", label: "Хүргэлт" },
-          ].map((s) => (
-            <div class="flex-none flex items-center gap-1.5 rounded-full px-3.5 py-2 border border-border bg-card shadow-soft-sm">
-              <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-              <span class="font-bold text-sm">{s.val}</span>
-              <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <a href="/products" class="px-7 py-3.5 rounded-lg bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-wider border border-primary shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart">
+        <div class="enter-rise stagger-2 mb-4">
+          <a
+            href="/products"
+            class="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm md:text-base font-semibold text-primary-foreground shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none"
+          >
             Бүтээгдэхүүн үзэх
           </a>
-          <a href="#featured-products" class="px-5 py-3.5 rounded-lg bg-card text-foreground font-bold text-xs uppercase tracking-wider border border-border shadow-soft-sm hover:bg-muted hover:shadow-soft hover:border-primary active:scale-[0.97] transition-[background-color,box-shadow,transform,border-color] duration-200 ease-out-quart">
-            Онцлох сонголт
-          </a>
         </div>
+        <p class="enter-rise stagger-3 text-[13px] font-semibold text-muted-foreground">
+          АНУ-аас албан ёсоор ирдэг жинхэнэ бүтээгдэхүүн · 10:30-аас өмнө захиалбал өдөртөө хүргэнэ
+        </p>
       </div>
 
-      <!-- Hero product showcase — rotating crossfade, one product at a time.
-           CSS-only, no JS. Each product floats gently while visible.
-           Pauses on hover/touch. Respects reduced-motion. -->
-      <div class="hero-showcase relative border-t lg:border-t-0 border-border bg-hero-warm overflow-hidden h-[300px] lg:h-[520px]">
-        {featuredProducts.slice(0, 4).map((p: ProductForHome, i: number) => {
-          const heroPattern = heroPatterns[i % heroPatterns.length];
-          const colorIdx = p.id % productColors.length;
-          const cycleDelay = `${-i * 3.5}s`;
-          return (
+      <!-- Static product moment -->
+      {heroProduct && (
+        <div class="enter-scale stagger-2 relative">
           <a
-            href={`/products/${p.slug}-${p.id}/`}
-            class="hero-product absolute inset-0 block active:scale-[0.97] transition-transform duration-200 ease-out-quart"
-            style={`animation-delay: ${cycleDelay};`}
+            href={`/products/${heroProduct.slug}-${heroProduct.id}/`}
+            class="group block active:scale-[0.98] transition-transform duration-200 ease-out-quart"
           >
-            <div
-              class={`relative h-full overflow-hidden ${heroPattern}`}
-              style={`background-color: ${productColors[colorIdx]}; --pattern-color: ${heroPatternColors[i % heroPatternColors.length]}50;`}
-            >
-              {p.image && (
-                <img
-                  src={toProductImageUrl(p.image, "feature") || p.image}
-                  alt={p.name}
-                  class="absolute inset-0 w-full h-full object-contain p-8 md:p-12 lg:p-16 hero-product-img"
-                  style={`animation-delay: ${cycleDelay};`}
-                  width="480"
-                  height="480"
-                  loading="eager"
-                  decoding="async"
-                />
-              )}
-              <!-- Brand chip — top left -->
-              <div class="absolute top-3 left-3 md:top-5 md:left-5">
-                <span class="rounded-full bg-card/90 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
-                  {p.brand}
+            <div class="relative overflow-hidden rounded-3xl bg-wash-peach shadow-soft-lg aspect-[4/3] lg:aspect-square">
+              <img
+                src={toProductImageUrl(heroProduct.image, "feature") || heroProduct.image}
+                alt={heroProduct.name}
+                class="absolute inset-0 h-full w-full object-contain p-8 lg:p-14 transition-transform duration-300 ease-out-quart group-hover:scale-[1.03]"
+                width="480"
+                height="480"
+                loading="eager"
+                decoding="async"
+              />
+              <span class="absolute top-4 left-4 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
+                {heroProduct.brand}
+              </span>
+              <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                <span class="line-clamp-2 max-w-[60%] text-sm font-semibold leading-snug text-foreground/80">
+                  {heroProduct.name}
                 </span>
-              </div>
-              <!-- Product name + price — bottom left, stacked -->
-              <div class="absolute bottom-3 left-3 right-3 md:bottom-5 md:left-5 md:right-5">
-                <div class="line-clamp-1 font-bold text-sm md:text-base text-foreground/80 mb-1.5">{p.name}</div>
-                <span class="inline-flex items-center rounded-full bg-secondary px-3 py-1.5 text-sm font-bold text-secondary-foreground shadow-soft">
-                  {formatCurrency(p.price)}
+                <span class="inline-flex items-center rounded-full bg-card px-3.5 py-1.5 font-display text-sm font-semibold shadow-soft">
+                  {formatCurrency(heroProduct.price)}
                 </span>
               </div>
             </div>
           </a>
-          );
-        })}
-        <!-- Dot indicators -->
-        <div class="absolute top-3 right-3 md:top-5 md:right-5 flex gap-1.5 z-10">
-          {featuredProducts.slice(0, 4).map((_: ProductForHome, i: number) => (
-            <span
-              class="hero-dot w-1.5 h-1.5 rounded-full bg-foreground/20"
-              style={`animation-delay: ${-i * 3.5}s;`}
-            />
-          ))}
+          <span class="hero-sticker absolute -top-3 right-5 inline-flex -rotate-3 items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 text-xs font-bold text-foreground shadow-pop-sm">
+            100% жинхэнэ
+          </span>
         </div>
-      </div>
+      )}
     </div>
   </section>
 
-  <!-- ==================== BRAND MARQUEE ==================== -->
-  <section class="border-b border-border bg-muted overflow-hidden">
-    <div class="group/marquee">
-      <div class="py-3 lg:py-3.5 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 35s linear infinite;">
-        {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
-          <a href={`/products/brand/${brand.slug}/1/`} class="text-sm lg:text-base font-extrabold uppercase tracking-wider text-foreground/80 flex items-center gap-8 hover:text-foreground transition-colors">
-            {brand.name}
-            <span class="w-2 h-2 bg-primary rotate-45 block"></span>
-          </a>
-        )))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ==================== CATEGORIES — Swipeable pills ==================== -->
-  <section class="border-b border-border">
-    <div class="px-5 py-3.5 lg:px-8">
-      <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
-        {categoriesForPills.map((cat) => (
-          <a href={`/products/category/${cat.slug}/1/`} class="flex-none rounded-full px-4 py-2 border border-border bg-card font-bold text-xs uppercase tracking-wider shadow-soft-sm hover:bg-primary hover:text-primary-foreground hover:border-primary hover:shadow-soft active:scale-[0.97] transition-[box-shadow,transform,background-color,border-color] duration-200 ease-out-quart">
-            {cat.name}
+  <!-- ==================== 2. CATEGORY TILES ==================== -->
+  <section>
+    <div class="mx-auto max-w-6xl px-5 pt-10 pb-8 lg:px-8 lg:pt-16 lg:pb-12">
+      <h2 data-reveal class="font-display text-h2 font-semibold mb-1">Хэрэгцээгээрээ сонго</h2>
+      <p data-reveal class="text-sm font-medium text-muted-foreground mb-5">Өөрийн хэрэгцээнд тохирох төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
+        {categoryTiles.map((cat) => (
+          <a
+            href={`/products/category/${cat.slug}/1/`}
+            class={`${washBg(cat.slug)} group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
+          >
+            <h3 class="text-sm font-bold leading-snug lg:text-base">{cat.name}</h3>
+            <span class="text-xs font-semibold text-foreground/60">{cat.productCount} бүтээгдэхүүн</span>
           </a>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- ==================== FEATURED ==================== -->
-  <section id="featured-products" class="border-b border-border scroll-mt-20">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <!-- Section header -->
-      <div class="mb-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-            <h2 class="text-h2 font-extrabold tracking-tight">Онцлох</h2>
-          </div>
-          <a href="/products?filter=featured" class="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors">Бүгд →</a>
-        </div>
-        <p class="text-sm text-muted-foreground font-semibold mt-1.5">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+  <!-- ==================== 3. FEATURED PRODUCTS ==================== -->
+  <section id="featured-products" class="scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5 py-8 lg:px-8 lg:py-14">
+      <!-- Snap shelf -->
+      <div class="mb-1 flex items-center justify-between">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Онцлох</h2>
+        <a href="/products?filter=featured" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
+      </div>
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+      <div data-reveal-group class="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2 lg:-mx-8 lg:gap-4 lg:px-8">
+        {shelfProducts.map((p: ProductForHome) => (
+          <HomeProductCard product={p} class="w-[165px] flex-none snap-start lg:w-[220px]" />
+        ))}
       </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
-        {featuredProducts.map((p: ProductForHome) => (
+      <!-- Small new-arrivals grid -->
+      <div class="mt-9 mb-1 flex items-center justify-between lg:mt-12">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Шинэ ирсэн</h2>
+        <a href="/products?filter=recent" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
+      </div>
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
+        {gridProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} />
         ))}
       </div>
     </div>
   </section>
 
-  <!-- ==================== DELIVERY PROMO STRIP ==================== -->
-  <section class="border-b border-border bg-secondary text-secondary-foreground">
-    <div class="px-5 py-5 lg:px-8 lg:py-6 flex items-center gap-4 overflow-hidden">
-      <div class="flex-1 min-w-0">
-        <div class="flex items-baseline gap-2 flex-wrap">
-          <span class="text-lg lg:text-xl font-extrabold tracking-tight">Захиалга өгсөн</span>
-          <span class="text-lg lg:text-xl font-extrabold tracking-tight text-primary">маргааш хүргэгдэнэ</span>
+  <!-- ==================== 4. TRUST / DELIVERY STRIP ==================== -->
+  <section class="bg-secondary text-secondary-foreground">
+    <div class="mx-auto grid max-w-6xl gap-4 px-5 py-7 sm:grid-cols-3 lg:gap-6 lg:px-8 lg:py-9">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconTruck class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Өдөртөө хүргэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">10:30-аас өмнөх захиалгыг Улаанбаатар хотоор</p>
         </div>
-        <p class="text-sm font-semibold text-secondary-foreground/70 mt-0.5">Улаанбаатар хотоор, 6,000₮ шуурхай хүргэлт</p>
       </div>
-      <div class="shrink-0 w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-primary flex items-center justify-center">
-        <svg class="w-6 h-6 lg:w-7 lg:h-7 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 18a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
-          <path d="M15 18a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
-          <path d="M3 7l2 8h12l2 -8"/>
-          <path d="M3 7l1.5 -4h15l1.5 4"/>
-        </svg>
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconShield class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">100% жинхэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">АНУ-аас албан ёсоор оруулж ирдэг</p>
+        </div>
       </div>
+      <a href="tel:+97699993950" class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconPhone class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Тусламж хэрэгтэй юу?</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">9999-3950 · Даваа-Баасан 10:00-18:00</p>
+        </div>
+      </a>
     </div>
   </section>
 
-  <!-- ==================== NEW ARRIVALS — Swipeable row ==================== -->
-  <section class="border-b border-border">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <div class="flex items-center justify-between mb-1">
-        <div class="flex items-center gap-2.5">
-          <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-          <h2 class="text-h2 font-extrabold tracking-tight">Шинэ ирсэн</h2>
-        </div>
-        <a href="/products?filter=recent" class="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors">Бүгд →</a>
-      </div>
-      <p class="text-sm text-muted-foreground font-semibold mb-5">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
-
-      <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-4">
-        {newProducts.map((p: ProductForHome) => (
-          <HomeProductCard product={p} class="flex-none w-[165px] lg:w-auto snap-start" />
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ==================== SHOP BY NEED — Visual category grid ==================== -->
-  <section class="border-b border-border bg-muted/40">
-    <div class="px-5 py-8 lg:px-8 lg:py-14">
-      <div class="flex items-center gap-2.5 mb-1">
-        <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-        <h2 class="text-h2 font-extrabold tracking-tight">Хэрэгцээгээрээ сонго</h2>
-      </div>
-      <p class="text-sm text-muted-foreground font-semibold mb-5">Өөрийн хэрэгцээнд тохирох төрлүүд</p>
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3">
-        {[
-          { name: "Дархлаа", slug: "darhlaa", color: "#F5DC7A", pattern: "#E8C94A", patternClass: "bg-pattern-dots", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
-          { name: "Гоо сайхан", slug: "goo-saihan", color: "#F4B0C4", pattern: "#E298AD", patternClass: "bg-pattern-blobs", icon: "M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z" },
-          { name: "Энерги", slug: "energi", color: "#F5D05E", pattern: "#E8B53A", patternClass: "bg-pattern-diagonal", icon: "M13 2L3 14h9l-1 8 10-12h-9z" },
-          { name: "Яс үе мөч", slug: "yas-uye-moch", color: "#B8DCA0", pattern: "#9CC870", patternClass: "bg-pattern-cross", icon: "M12 2a7 7 0 0 0-7 7c0 3 2 5 2 7v5h10v-5c0-2 2-4 2-7a7 7 0 0 0-7-7z" },
-          { name: "Зүрх судас", slug: "zurh-sudas", color: "#F2A0A8", pattern: "#E0858E", patternClass: "bg-pattern-rings", icon: "M12 21s-7-4.5-9.5-9C0 8 2 4 6 4c2 0 4 1 6 3 2-2 4-3 6-3 4 0 6 4 3.5 8C19 16.5 12 21 12 21z" },
-          { name: "Ходоод гэдэс", slug: "hodoog-gedes", color: "#A8D098", pattern: "#8CB860", patternClass: "bg-pattern-wave", icon: "M3 12c0-5 4-9 9-9s9 4 9 9c0 3-2 5-4 6l-2 3h-6l-2-3c-2-1-4-3-4-6z" },
-          { name: "Нойр", slug: "noir", color: "#A0C4E0", pattern: "#84A8C8", patternClass: "bg-pattern-wave", icon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" },
-          { name: "Тархи мэдрэл", slug: "tarhi-mydrel", color: "#9CD0C4", pattern: "#80B8A8", patternClass: "bg-pattern-rings", icon: "M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0v-3a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 7 6.5v-2A2.5 2.5 0 0 1 9.5 2z" },
-        ].map((cat) => (
+  <!-- ==================== 5. BRANDS + FINAL CTA ==================== -->
+  <section>
+    <div class="mx-auto max-w-6xl px-5 pt-10 pb-12 lg:px-8 lg:pt-14 lg:pb-20">
+      <p data-reveal class="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Брэндүүд</p>
+      <div data-reveal-group class="flex flex-wrap gap-2">
+        {brandRow.map((brand: BrandRow) => (
           <a
-            href={`/products/category/${cat.slug}/1/`}
-            class={`group relative overflow-hidden rounded-xl border border-border p-4 lg:p-5 ${cat.patternClass} shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart`}
-            style={`background-color: ${cat.color}; --pattern-color: ${cat.pattern}60;`}
+            href={`/products/brand/${brand.slug}/1/`}
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-bold shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 active:scale-[0.97]"
           >
-            <div class="relative z-10 flex flex-col items-start gap-3">
-              <div class="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border shadow-soft-sm">
-                <svg class="w-5 h-5 text-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d={cat.icon}/>
-                </svg>
-              </div>
-              <div>
-                <h3 class="font-extrabold text-sm lg:text-base leading-tight">{cat.name}</h3>
-                <span class="text-xs font-bold uppercase tracking-wider text-foreground/60 mt-0.5 inline-block">Сонгох →</span>
-              </div>
-            </div>
+            {brand.logoUrl && (
+              <img
+                src={brand.logoUrl}
+                alt=""
+                class="h-5 w-5 rounded-full object-contain"
+                width="20"
+                height="20"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+            {brand.name}
           </a>
         ))}
       </div>
-    </div>
-  </section>
 
-  <!-- ==================== FINAL CTA ==================== -->
-  <section class="px-5 py-10 lg:px-8 lg:py-16">
-    <div class="rounded-2xl border border-primary bg-primary p-6 lg:p-14 shadow-soft-lg relative overflow-hidden bg-pattern-dots" style="--pattern-color: oklch(0.22 0.012 95 / 0.08);">
-      <!-- Decorative yellow glow -->
-      <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary-foreground/10 blur-2xl" aria-hidden="true"></div>
-      <div class="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true"></div>
-      <div class="relative z-10 max-w-lg mx-auto text-center">
-        <h2 class="text-h2 font-extrabold tracking-tight mb-3">Хэрэгтэйгээ нэг дороос сонго</h2>
-        <p class="text-sm md:text-base font-semibold mb-6 text-primary-foreground/70">
+      <div data-reveal class="mt-10 rounded-3xl bg-wash-lilac p-7 text-center shadow-soft lg:mt-14 lg:p-14">
+        <h2 class="font-display text-h2 font-semibold mb-3">Хэрэгтэйгээ нэг дороос сонго</h2>
+        <p class="mx-auto mb-6 max-w-md text-sm font-medium text-foreground/70 md:text-base">
           Боломжийн үнэтэй витамин, нэмэлт тэжээлийг ангилал бүрээр нь харьцуулж үзээд, захиалгаа хурдан өг.
         </p>
-        <a href="/products" class="inline-flex px-8 py-3.5 rounded-lg bg-primary-foreground text-primary font-bold text-sm uppercase tracking-wider border border-primary-foreground shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 active:scale-[0.97] transition-[box-shadow,transform] duration-200 ease-out-quart">
+        <a
+          href="/products"
+          class="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm md:text-base font-semibold text-primary-foreground shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none"
+        >
           Бүх бүтээгдэхүүн үзэх
         </a>
       </div>
@@ -303,66 +249,80 @@ const heroPatternColors = ["#E8C94A", "#D4A5A5", "#C4D89E", "#A8C8E0"];
 </Layout>
 
 <style>
-  @keyframes brand-scroll-4 {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  /* Sticker pops last: small spring overshoot after the staggered hero entrance. */
+  @keyframes sticker-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.8) rotate(4deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(-3deg);
+    }
   }
 
-  /* === Hero rotating product showcase ===
-     4 products, 14s total cycle, each visible 3.5s.
-     Crossfade with slight scale. Negative animation-delay
-     offsets each product to its slot in the cycle.
-     Pauses on hover/touch via .hero-showcase:hover. */
-  @keyframes hero-product-cycle {
-    0% { opacity: 0; transform: scale(1.02); pointer-events: none; }
-    3%, 22% { opacity: 1; transform: scale(1); pointer-events: auto; }
-    25%, 100% { opacity: 0; transform: scale(0.98); pointer-events: none; }
-  }
-
-  .hero-product {
-    animation: hero-product-cycle 14s var(--ease-in-out) infinite;
-  }
-
-  /* Image breathes gently while its parent is visible */
-  @keyframes hero-img-breathe {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-8px) scale(1.04); }
-  }
-
-  .hero-product-img {
-    animation: hero-img-breathe 5s var(--ease-in-out) infinite;
-  }
-
-  /* Dot indicators — active dot fills dark */
-  @keyframes hero-dot-active {
-    0%, 3% { background-color: oklch(0.30 0.012 95 / 0.2); transform: scale(1); }
-    5%, 22% { background-color: oklch(0.22 0.012 95); transform: scale(1.3); }
-    25%, 100% { background-color: oklch(0.30 0.012 95 / 0.2); transform: scale(1); }
-  }
-
-  .hero-dot {
-    animation: hero-dot-active 14s var(--ease-in-out) infinite;
-  }
-
-  /* Pause on hover/touch */
-  .hero-showcase:hover .hero-product,
-  .hero-showcase:hover .hero-product-img,
-  .hero-showcase:hover .hero-dot {
-    animation-play-state: paused;
+  .hero-sticker {
+    animation: sticker-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) 380ms backwards;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero-product {
-      animation: none;
-      opacity: 1;
-      position: relative;
-    }
-    .hero-product:not(:first-child) {
-      display: none;
-    }
-    .hero-product-img,
-    .hero-dot {
+    .hero-sticker {
       animation: none;
     }
   }
 </style>
+
+<script>
+  import { animate, inView } from "motion";
+
+  const EASE: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+  function revealOnScroll() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    for (const el of document.querySelectorAll<HTMLElement>("[data-reveal]")) {
+      if (el.dataset.revealed) continue;
+      el.dataset.revealed = "true";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(10px)";
+      inView(
+        el,
+        () => {
+          animate(
+            el,
+            { opacity: 1, transform: "translateY(0px)" },
+            { duration: 0.35, ease: EASE },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+
+    for (const group of document.querySelectorAll<HTMLElement>("[data-reveal-group]")) {
+      if (group.dataset.revealed) continue;
+      group.dataset.revealed = "true";
+      const items = Array.from(group.children) as HTMLElement[];
+      for (const item of items) {
+        item.style.opacity = "0";
+        item.style.transform = "translateY(12px)";
+      }
+      inView(
+        group,
+        () => {
+          animate(
+            items,
+            { opacity: 1, transform: "translateY(0px)" },
+            {
+              duration: 0.35,
+              ease: EASE,
+              delay: (i: number) => Math.min(i, 7) * 0.04,
+            },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+  }
+
+  document.addEventListener("astro:page-load", revealOnScroll);
+</script>
