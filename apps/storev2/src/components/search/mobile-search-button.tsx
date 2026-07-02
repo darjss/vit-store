@@ -88,13 +88,13 @@ const MobileSearchButton: Component = () => {
 			{/* Search Sheet */}
 			<SheetContent
 				position="bottom"
-				class="h-[85vh] w-full max-w-none border-border border-t-2 p-0"
+				class="h-[85vh] w-full max-w-none border-border border-t p-0"
 			>
 				<div class="flex h-full flex-col">
 					{/* Header */}
 					<div class="border-border border-b bg-primary/10 px-4 py-4">
 						<SheetHeader class="mb-4">
-							<SheetTitle class="flex items-center gap-2 font-black text-lg uppercase tracking-tight">
+							<SheetTitle class="flex items-center gap-2 font-bold font-display text-xl tracking-tight">
 								<IconSearch class="h-5 w-5 text-primary" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
