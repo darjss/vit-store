@@ -53,7 +53,7 @@ const orderedCategories = [
 ];
 
 const categoryTiles = orderedCategories.slice(0, 8);
-const heroProduct: ProductForHome | undefined = featuredProducts[0];
+const heroProducts: ProductForHome[] = featuredProducts.slice(0, 4);
 const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
 const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
 const brandRow: BrandRow[] = brands.slice(0, 10);
@@ -87,39 +87,58 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
         </p>
       </div>
 
-      <!-- Static product moment -->
-      {heroProduct && (
-        <div class="enter-scale stagger-2 relative">
-          <a
-            href={`/products/${heroProduct.slug}-${heroProduct.id}/`}
-            class="group block active:scale-[0.98] transition-transform duration-200 ease-out-quart"
-          >
-            <div class="relative overflow-hidden rounded-3xl bg-wash-peach shadow-soft-lg aspect-[4/3] lg:aspect-square">
-              <img
-                src={toProductImageUrl(heroProduct.image, "feature") || heroProduct.image}
-                alt={heroProduct.name}
-                class="absolute inset-0 h-full w-full object-contain p-8 lg:p-14 transition-transform duration-300 ease-out-quart group-hover:scale-[1.03]"
-                width="480"
-                height="480"
-                loading="eager"
-                decoding="async"
-              />
-              <span class="absolute top-4 left-4 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
-                {heroProduct.brand}
-              </span>
-              <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
-                <span class="line-clamp-2 max-w-[60%] text-sm font-semibold leading-snug text-foreground/80">
-                  {heroProduct.name}
+      <!-- Rotating product showcase -->
+      {heroProducts.length > 0 && (
+        <div class="enter-scale stagger-2 relative" data-hero-rotator>
+          <div class="hero-frame relative overflow-hidden rounded-3xl bg-wash-peach shadow-soft-lg aspect-[4/3] lg:aspect-square">
+            {heroProducts.map((p, i) => (
+              <a
+                href={`/products/${p.slug}-${p.id}/`}
+                class:list={["hero-slide group absolute inset-0 block", { "is-active": i === 0 }]}
+                aria-hidden={i === 0 ? "false" : "true"}
+                tabindex={i === 0 ? undefined : -1}
+              >
+                <img
+                  src={toProductImageUrl(p.image, "feature") || p.image}
+                  alt={p.name}
+                  class="absolute inset-0 h-full w-full object-contain p-8 lg:p-14 transition-transform duration-300 ease-out-quart group-hover:scale-[1.03]"
+                  width="480"
+                  height="480"
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+                <span class="absolute top-4 left-4 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
+                  {p.brand}
                 </span>
-                <span class="inline-flex items-center rounded-full bg-card px-3.5 py-1.5 font-display text-sm font-semibold shadow-soft">
-                  {formatCurrency(heroProduct.price)}
-                </span>
-              </div>
-            </div>
-          </a>
+                <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                  <span class="line-clamp-2 max-w-[60%] text-sm font-semibold leading-snug text-foreground/80">
+                    {p.name}
+                  </span>
+                  <span class="inline-flex items-center rounded-full bg-card px-3.5 py-1.5 font-display text-sm font-semibold shadow-soft">
+                    {formatCurrency(p.price)}
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
           <span class="hero-sticker absolute -top-3 right-5 inline-flex -rotate-3 items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 text-xs font-bold text-foreground shadow-pop-sm">
             100% жинхэнэ
           </span>
+          {heroProducts.length > 1 && (
+            <div class="hero-dots mt-4 flex items-center justify-center gap-1" role="tablist" aria-label="Онцлох бүтээгдэхүүн">
+              {heroProducts.map((p, i) => (
+                <button
+                  type="button"
+                  class:list={["hero-dot grid place-items-center p-2.5", { "is-active": i === 0 }]}
+                  role="tab"
+                  aria-selected={i === 0 ? "true" : "false"}
+                  aria-label={p.name}
+                >
+                  <span class="block h-2 w-2 rounded-full bg-foreground/25"></span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -270,6 +289,36 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
       animation: none;
     }
   }
+
+  /* Rotating hero showcase: slides crossfade in place, no layout shift. */
+  .hero-slide {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+  .hero-slide.is-active {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+    pointer-events: auto;
+  }
+  .hero-dot > span {
+    transition: background-color 300ms var(--ease-out), transform 300ms var(--ease-out);
+  }
+  .hero-dot.is-active > span {
+    background-color: color-mix(in oklch, var(--color-foreground) 70%, transparent);
+    transform: scale(1.35);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-slide {
+      transition:
+        opacity 500ms var(--ease-out),
+        transform 500ms var(--ease-out),
+        filter 500ms var(--ease-out);
+    }
+  }
 </style>
 
 <script>
@@ -325,4 +374,105 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
   }
 
   document.addEventListener("astro:page-load", revealOnScroll);
+
+  function initHeroRotator() {
+    const rotator = document.querySelector<HTMLElement>("[data-hero-rotator]");
+    if (!rotator || rotator.dataset.init) return;
+
+    const slides = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-slide"));
+    const dots = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-dot"));
+    const count = slides.length;
+    if (count <= 1) return;
+    rotator.dataset.init = "true";
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let idx = Math.max(0, slides.findIndex((s) => s.classList.contains("is-active")));
+    let paused = false;
+    let stopped = reduce;
+    let timer: number | null = null;
+
+    function show(n: number) {
+      idx = (n + count) % count;
+      slides.forEach((s, i) => {
+        const on = i === idx;
+        s.classList.toggle("is-active", on);
+        s.setAttribute("aria-hidden", on ? "false" : "true");
+        if (on) s.removeAttribute("tabindex");
+        else s.setAttribute("tabindex", "-1");
+      });
+      dots.forEach((d, i) => {
+        const on = i === idx;
+        d.classList.toggle("is-active", on);
+        d.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+
+    function start() {
+      if (stopped || timer !== null) return;
+      timer = window.setInterval(() => {
+        if (!paused) show(idx + 1);
+      }, 5000);
+    }
+
+    function stopAuto() {
+      stopped = true;
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    rotator.addEventListener("pointerenter", () => (paused = true));
+    rotator.addEventListener("pointerleave", () => (paused = false));
+    rotator.addEventListener("focusin", () => (paused = true));
+    rotator.addEventListener("focusout", () => (paused = false));
+
+    dots.forEach((d, i) =>
+      d.addEventListener("click", () => {
+        stopAuto();
+        show(i);
+      }),
+    );
+
+    const frame = rotator.querySelector<HTMLElement>(".hero-frame") ?? rotator;
+    let sx = 0;
+    let sy = 0;
+    let swiped = false;
+    frame.addEventListener(
+      "touchstart",
+      (e) => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      },
+      { passive: true },
+    );
+    frame.addEventListener(
+      "touchend",
+      (e) => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          swiped = true;
+          stopAuto();
+          show(idx + (dx < 0 ? 1 : -1));
+        }
+      },
+      { passive: true },
+    );
+    frame.addEventListener(
+      "click",
+      (e) => {
+        if (swiped) {
+          e.preventDefault();
+          e.stopPropagation();
+          swiped = false;
+        }
+      },
+      true,
+    );
+
+    if (!reduce) start();
+  }
+
+  document.addEventListener("astro:page-load", initHeroRotator);
 </script>
