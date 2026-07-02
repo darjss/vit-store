@@ -13,6 +13,7 @@ import ProductInfo from "@/components/product/product-info.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
+import { washBg } from "@/lib/wash";
 
 export const prerender = true;
 
@@ -79,6 +80,9 @@ const isInStock = product.status === "active" && product.stock > 0;
 const categoryHref = product.category?.slug
 	? `/products/category/${product.category.slug}/1/`
 	: `/products/?category=${product.categoryId}`;
+
+const washKey = product.category?.slug ?? product.categoryId;
+const productWashBg = washBg(washKey);
 
 const breadcrumbItems = [
 	{
@@ -185,10 +189,7 @@ const breadcrumbSchema = {
 	<script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
 	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
-	<div class="product-page-bg relative min-h-screen">
-		<div class="bg-pattern"></div>
-		<div class="bg-gradient"></div>
-
+	<div class="relative min-h-screen bg-hero-warm">
 		<div
 			class="relative z-10 mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8"
 		>
@@ -203,11 +204,10 @@ const breadcrumbSchema = {
 						images={product.images}
 						productName={product.name}
 						productId={product.id}
+						washKey={washKey}
 					>
-						<div slot="fallback" class="aspect-square min-h-[400px] border border-border bg-background rounded-lg shadow-soft-lg transition-transform duration-500 ease-out-quart">
-							<div class="flex h-full w-full animate-pulse items-center justify-center bg-foreground/5">
-								<div class="h-32 w-32 animate-spin rounded-full border border-border/20 border-t-black"></div>
-							</div>
+						<div slot="fallback" class={`aspect-square min-h-[400px] rounded-2xl shadow-soft ${productWashBg}`}>
+							<div class="h-full w-full animate-pulse rounded-2xl bg-dots-subtle"></div>
 						</div>
 					</ProductImageCarousel>
 				</div>
@@ -275,33 +275,6 @@ const breadcrumbSchema = {
 		/>
 	)}
 </Layout>
-
-<style>
-	.product-page-bg {
-		--pattern-opacity: 0.4;
-		--gradient-opacity: 0.5;
-		--color-accent-yellow: #FFF991;
-		--color-accent-pink: #FFB6C1;
-	}
-
-	.bg-pattern {
-		position: absolute;
-		inset: 0;
-		opacity: var(--pattern-opacity);
-		background: var(--color-background);
-		background-image: radial-gradient(circle at 2px 2px, var(--color-foreground) 1.5px, transparent 0);
-		background-size: 30px 30px;
-	}
-
-	.bg-gradient {
-		position: absolute;
-		inset: 0;
-		opacity: var(--gradient-opacity);
-		background-image: 
-			radial-gradient(ellipse at 30% 20%, var(--color-accent-yellow) 0%, transparent 50%),
-			radial-gradient(ellipse at 70% 80%, var(--color-accent-pink) 0%, transparent 50%);
-	}
-</style>
 
 <script define:vars={{ productData: { product_id: product.id, product_name: product.name, product_price: product.price, product_slug: slug } }}>
 	// Track product view on page load (supports view transitions)
