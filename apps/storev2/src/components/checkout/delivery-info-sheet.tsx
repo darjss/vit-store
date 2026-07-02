@@ -14,16 +14,19 @@ import IconAlert from "~icons/ri/alert-line";
 const deliveryInfo = [
 	{
 		icon: IconMapPin,
+		wash: "bg-wash-sky",
 		title: "Улаанбаатар",
 		desc: "Улаанбаатар хотын бүх дүүрэгт хүргэлт хийнэ. Доорх газрын зураг дээр хүргэлтийн бүсийг харна уу.",
 	},
 	{
 		icon: IconTruck,
+		wash: "bg-wash-mint",
 		title: "Хөдөө орон нутаг",
 		desc: 'Улаанбаатарын бусад аймаг, сумдад "Замын Унаа"-ар хүргэлт хийнэ. Тээврийн зардал харилцагчийн өөрийн зөөлөг болно.',
 	},
 	{
 		icon: IconTime,
+		wash: "bg-wash-peach",
 		title: "Хүргэлтийн хугацаа",
 		desc: "Захиалгыг өдөр бүр 12:00 цагаас хойш хүргэнэ. Өглөөний захиалгыг өдөрт нь, оройн захиалгыг маргааш хүргэнэ.",
 	},
@@ -37,24 +40,27 @@ export default function DeliveryInfoSheet() {
 			<SheetTrigger
 				as="button"
 				type="button"
-				class="inline-flex items-center gap-1 font-bold text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+				class="inline-flex items-center gap-1 font-semibold text-muted-foreground text-xs underline-offset-2 transition-colors duration-[140ms] ease-out hover:text-foreground hover:underline"
 			>
 				<span>Дэлгэрэнгүй</span>
 			</SheetTrigger>
-			<SheetContent position="bottom" class="border-t border-border">
+			<SheetContent
+				position="bottom"
+				class="rounded-t-3xl border-border border-t bg-background ease-(--ease-drawer) data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+			>
 				<SheetHeader class="text-left">
-					<SheetTitle class="font-extrabold text-lg uppercase tracking-tight">
+					<SheetTitle class="font-display text-foreground text-lg">
 						Хүргэлтийн мэдээлэл
 					</SheetTitle>
 				</SheetHeader>
 
-				<div class="mt-4 space-y-5 pb-6">
+				<div class="mt-4 space-y-4 pb-6">
 					{/* Delivery Zone Map */}
-					<div class="border border-border bg-card p-3">
-						<h3 class="mb-2 font-extrabold text-xs uppercase tracking-wider">
+					<div class="rounded-2xl border border-border bg-card p-3 shadow-soft-sm">
+						<h3 class="mb-2 font-semibold text-foreground text-xs uppercase tracking-wider">
 							Улаанбаатар хотын хүргэлтийн бүс
 						</h3>
-						<div class="border border-border bg-muted/30 overflow-hidden">
+						<div class="overflow-hidden rounded-xl bg-muted/30">
 							<img
 								src="/delivery-zone.png"
 								alt="Улаанбаатар хотын хүргэлтийн бүсийн зураг"
@@ -62,7 +68,7 @@ export default function DeliveryInfoSheet() {
 								loading="lazy"
 							/>
 						</div>
-						<p class="mt-2 text-xs font-medium text-muted-foreground">
+						<p class="mt-2 text-muted-foreground text-xs">
 							Дээрх зураг дээрх бүсүүдэд стандарт хүргэлтийн хураамж
 							тооцогдоно.
 						</p>
@@ -71,16 +77,18 @@ export default function DeliveryInfoSheet() {
 					{/* Delivery Info Cards */}
 					<div class="grid gap-3">
 						{deliveryInfo.map((item) => (
-							<div class="border border-border bg-card p-4">
-								<div class="mb-2 flex items-center gap-2">
-									<div class="flex h-8 w-8 items-center justify-center border border-border bg-primary">
-										<item.icon class="h-4 w-4" />
+							<div class="rounded-2xl border border-border bg-card p-4 shadow-soft-sm">
+								<div class="mb-2 flex items-center gap-2.5">
+									<div
+										class={`flex size-8 items-center justify-center rounded-full ${item.wash}`}
+									>
+										<item.icon class="h-4 w-4" aria-hidden="true" />
 									</div>
-									<h3 class="font-extrabold text-xs uppercase tracking-wider">
+									<h3 class="font-semibold text-foreground text-sm">
 										{item.title}
 									</h3>
 								</div>
-								<p class="text-xs font-medium leading-relaxed text-muted-foreground">
+								<p class="text-muted-foreground text-xs leading-relaxed">
 									{item.desc}
 								</p>
 							</div>
@@ -88,16 +96,19 @@ export default function DeliveryInfoSheet() {
 					</div>
 
 					{/* Important Notice */}
-					<div class="border border-border bg-yellow-50 p-4">
+					<div class="rounded-2xl bg-warning/40 p-4">
 						<div class="flex items-start gap-2.5">
-							<div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border border-border bg-primary">
-								<IconAlert class="h-3.5 w-3.5" />
+							<div class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-warning">
+								<IconAlert
+									class="h-3.5 w-3.5 text-warning-foreground"
+									aria-hidden="true"
+								/>
 							</div>
 							<div>
-								<h3 class="mb-1.5 font-extrabold text-xs uppercase tracking-wider">
+								<h3 class="mb-1.5 font-semibold text-foreground text-sm">
 									Чухал анхааруулга
 								</h3>
-								<ul class="space-y-1 text-xs font-medium leading-relaxed">
+								<ul class="space-y-1 text-foreground/80 text-xs leading-relaxed">
 									<li>
 										• Хүргэлт{" "}
 										<strong>зөвхөн Монгол улсын дотоодод</strong>{" "}
