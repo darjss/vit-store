@@ -333,6 +333,8 @@ export const storeQueries = {
 					price: true,
 					status: true,
 					stock: true,
+					discount: true,
+					categoryId: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
@@ -367,6 +369,8 @@ export const storeQueries = {
 					price: true,
 					status: true,
 					stock: true,
+					discount: true,
+					categoryId: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
@@ -561,6 +565,8 @@ export const storeQueries = {
 					slug: true,
 					createdAt: true,
 					stock: true,
+					discount: true,
+					categoryId: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
@@ -693,6 +699,7 @@ export const storeQueries = {
 						createdAt: true,
 						stock: true,
 						discount: true,
+						categoryId: true,
 					},
 					where: and(
 						isNull(ProductsTable.deletedAt),

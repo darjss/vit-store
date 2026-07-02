@@ -83,10 +83,10 @@ const SearchOverlay: Component = () => {
 			>
 				<div class="flex h-full flex-col">
 					{/* Header */}
-					<div class="border-border border-b bg-primary/10 px-4 py-4 sm:px-6">
+					<div class="border-border border-b bg-wash-lemon px-4 py-4 sm:px-6">
 						<SheetHeader class="mb-4">
-							<SheetTitle class="flex items-center gap-2 font-extrabold text-xl uppercase tracking-tight sm:text-2xl">
-								<IconSearch class="h-6 w-6 text-primary" />
+							<SheetTitle class="flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
+								<IconSearch class="h-6 w-6 text-foreground/60" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
 						</SheetHeader>
