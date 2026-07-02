@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/solid-query";
-import { formatCurrency, productColors } from "@vit/shared";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
-import AddToCartButton from "@/components/cart/add-to-cart-button";
+import ProductCard from "@/components/product/product-card";
 import {
 	trackSearchPerformed,
 	trackSearchResultClicked,
 } from "@/lib/analytics";
-import { toProductImageUrl } from "@/lib/image";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconArrowRight from "~icons/ri/arrow-right-line";
@@ -40,9 +38,6 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 		}),
 		() => queryClient,
 	);
-
-	const getProductColor = (id: number) =>
-		productColors[id % productColors.length];
 
 	createEffect(() => {
 		props.onLoadingChange?.(query.isFetching);
@@ -78,19 +73,17 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 			<Switch>
 				{/* Loading State */}
 				<Match when={query.isLoading}>
-					<div class="flex flex-col gap-3">
+					<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
 						<For each={Array(4)}>
 							{() => (
-								<div class="flex animate-pulse items-stretch gap-4 rounded-lg border border-border bg-background p-2 shadow-soft">
-									<div class="h-28 w-28 shrink-0 rounded-md border border-border bg-muted sm:h-32 sm:w-32" />
-									<div class="flex flex-1 flex-col justify-between py-1">
-										<div class="space-y-3">
-											<div class="h-5 w-3/4 rounded bg-muted" />
-											<div class="h-4 w-1/2 rounded bg-muted" />
-										</div>
-										<div class="flex items-end justify-between">
-											<div class="h-6 w-1/3 rounded bg-muted" />
-											<div class="h-10 w-10 rounded bg-muted" />
+								<div class="animate-pulse overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+									<div class="aspect-4/5 bg-muted" />
+									<div class="space-y-2 p-3">
+										<div class="h-3 w-1/3 rounded bg-muted" />
+										<div class="h-4 w-3/4 rounded bg-muted" />
+										<div class="flex items-end justify-between pt-2">
+											<div class="h-5 w-1/3 rounded bg-muted" />
+											<div class="h-11 w-11 rounded-full bg-muted" />
 										</div>
 									</div>
 								</div>
@@ -101,15 +94,15 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 
 				{/* Error State */}
 				<Match when={query.isError}>
-					<div class="flex flex-col items-center justify-center py-8 text-center">
-						<IconEmotionSad class="mb-3 h-10 w-10 text-amber-500" />
-						<p class="font-bold text-muted-foreground/70">
+					<div class="enter-fade flex flex-col items-center justify-center py-8 text-center">
+						<IconEmotionSad class="mb-3 h-10 w-10 text-muted-foreground" />
+						<p class="font-semibold text-muted-foreground/70">
 							Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.
 						</p>
 						<button
 							type="button"
 							onClick={() => query.refetch()}
-							class="mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-card px-5 font-bold text-xs uppercase shadow-soft-sm transition-all duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
+							class="mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
 						>
 							Дахин хайх
 						</button>
@@ -124,9 +117,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						!hasNavigationResults()
 					}
 				>
-					<div class="flex flex-col items-center justify-center py-8 text-center">
+					<div class="enter-fade flex flex-col items-center justify-center py-8 text-center">
 						<IconSearch class="mb-3 h-10 w-10 text-muted-foreground" />
-						<p class="font-bold text-muted-foreground/70">
+						<p class="font-semibold text-muted-foreground/70">
 							"{props.searchQuery}" хайлтаар үр дүн олдсонгүй
 						</p>
 						<p class="mt-1 text-muted-foreground/80 text-sm">
@@ -144,10 +137,10 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				>
 					<div>
 						<Show when={hasNavigationResults()}>
-							<div class="mb-4 space-y-3">
+							<div class="enter-fade mb-4 space-y-3" style={{ "transition-duration": "250ms" }}>
 								<Show when={(query.data?.brands.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
+										<p class="mb-2 font-semibold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Брэнд
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -156,12 +149,12 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 													<a
 														href={`/products/brand/${brand.slug}/1/`}
 														onClick={props.onProductClick}
-														class="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-primary px-3 py-2 font-bold text-black text-xs shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft active:scale-[0.97]"
+														class="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-semibold text-foreground text-xs shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 													>
 														<IconStore class="h-4 w-4 shrink-0" />
 														<span>{brand.name}</span>
 														<Show when={brand.productCount !== undefined}>
-															<span class="font-bold text-muted-foreground/55">
+															<span class="font-semibold text-muted-foreground/55">
 																{brand.productCount}
 															</span>
 														</Show>
@@ -173,7 +166,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 								</Show>
 								<Show when={(query.data?.categories.length ?? 0) > 0}>
 									<div>
-										<p class="mb-2 font-bold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
+										<p class="mb-2 font-semibold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Ангилал
 										</p>
 										<div class="flex flex-wrap gap-2">
@@ -182,12 +175,12 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 													<a
 														href={`/products/category/${category.slug}/1/`}
 														onClick={props.onProductClick}
-														class="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 py-2 font-bold text-black text-xs shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:bg-primary/30 hover:shadow-soft active:scale-[0.97]"
+														class="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 font-semibold text-foreground text-xs shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 													>
 														<IconFolder class="h-4 w-4 shrink-0" />
 														<span>{category.name}</span>
 														<Show when={category.productCount !== undefined}>
-															<span class="font-bold text-muted-foreground/55">
+															<span class="font-semibold text-muted-foreground/55">
 																{category.productCount}
 															</span>
 														</Show>
@@ -202,12 +195,12 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						{/* Results Header */}
 						<Show when={(query.data?.products.length ?? 0) > 0}>
 							<div class="mb-3 flex items-center justify-between px-1">
-								<p class="font-bold text-muted-foreground/70 text-xs uppercase tracking-wide">
+								<p class="font-semibold text-muted-foreground/70 text-xs uppercase tracking-wide">
 									{query.data?.products.length} бүтээгдэхүүн
 								</p>
 								<a
 									href={`/products/?q=${encodeURIComponent(props.searchQuery)}`}
-									class="flex items-center gap-1 font-bold text-black text-xs uppercase tracking-wide transition-colors duration-150 hover:text-foreground"
+									class="flex items-center gap-1 font-semibold text-foreground text-xs transition-colors duration-150 hover:text-muted-foreground"
 									onClick={props.onProductClick}
 								>
 									Бүгдийг үзэх <IconArrowRight class="h-3 w-3" />
@@ -215,90 +208,21 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							</div>
 						</Show>
 
-						{/* Products List */}
-						<div class="flex flex-col gap-3">
+						{/* Products Grid — same card as the catalog */}
+						<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
 							<For each={query.data?.products ?? []}>
 								{(product, index) => (
 									<div
-									class="group relative flex items-stretch gap-3 rounded-lg border border-border bg-background p-2 shadow-soft transition-all duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg opacity-0 animate-[fadeIn_300ms_ease-out_forwards]"
-									style={{ "animation-delay": `${Math.min(index() * 40, 320)}ms` }}
-								>
-										{/* Image */}
-										<a
-											href={`/products/${product.slug}-${product.id}/`}
-											onClick={() =>
-												handleProductClick(product.id, product.name, index())
-											}
-											class="relative h-28 w-28 shrink-0 overflow-hidden rounded-md border border-border sm:h-32 sm:w-32"
-											style={`background: ${getProductColor(product.id)}`}
-										>
-											<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
-											<Show when={product.image}>
-												<img
-													src={
-														toProductImageUrl(product.image, "sm") ||
-														product.image
-													}
-													alt={product.name}
-													class="absolute inset-0 h-full w-full object-contain p-2"
-													loading="lazy"
-												/>
-											</Show>
-										</a>
-
-										{/* Content */}
-										<div class="flex flex-1 flex-col justify-between py-1">
-											<a
-												href={`/products/${product.slug}-${product.id}/`}
-												onClick={() =>
-													handleProductClick(product.id, product.name, index())
-												}
-												class="flex flex-col gap-1.5"
-											>
-												<h3 class="line-clamp-2 font-bold text-black text-sm leading-tight group-hover:underline sm:text-base">
-													{product.name}
-												</h3>
-												<Show when={product.brand}>
-													<span class="font-bold text-muted-foreground/80 text-xs uppercase tracking-wider">
-														{product.brand}
-													</span>
-												</Show>
-											</a>
-
-											<div class="mt-3 flex items-end justify-between gap-2">
-												<div>
-													<div class="font-bold text-lg tracking-tight sm:text-xl">
-														{formatCurrency(product.price)}
-													</div>
-													<a
-														href={`/products/${product.slug}-${product.id}/`}
-														onClick={() =>
-															handleProductClick(
-																product.id,
-																product.name,
-																index(),
-															)
-														}
-														class="mt-1 inline-flex min-h-8 items-center rounded-md border border-border bg-card px-2.5 font-bold text-[10px] uppercase tracking-wider transition-colors duration-150 hover:bg-primary"
-													>
-														Дэлгэрэнгүй
-													</a>
-												</div>
-												<div class="origin-bottom-right">
-													<AddToCartButton
-														compact
-														cartItem={{
-															productId: product.id,
-															quantity: 1,
-															name: product.name,
-															price: product.price,
-															image: product.image || "",
-															slug: product.slug,
-														}}
-													/>
-												</div>
-											</div>
-										</div>
+										class="enter-rise"
+										style={{
+											"--enter-delay": `${Math.min(index(), 8) * 40}ms`,
+											"transition-duration": "250ms",
+										}}
+										onClick={() =>
+											handleProductClick(product.id, product.name, index())
+										}
+									>
+										<ProductCard product={product} />
 									</div>
 								)}
 							</For>
