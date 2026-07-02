@@ -1,37 +1,16 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import Tabs from "@/components/starwind/tabs/Tabs.astro";
-import TabsContent from "@/components/starwind/tabs/TabsContent.astro";
-import TabsList from "@/components/starwind/tabs/TabsList.astro";
-import TabsTrigger from "@/components/starwind/tabs/TabsTrigger.astro";
-import IconAlertTriangle from "~icons/ri/alert-line";
+import IconArrowDown from "~icons/ri/arrow-down-s-line";
 import IconBarChart from "~icons/ri/bar-chart-line";
 import IconCalendar from "~icons/ri/calendar-line";
 import IconCapsule from "~icons/ri/capsule-line";
 import IconCheck from "~icons/ri/check-line";
-// Icons for tabs
-import IconClipboard from "~icons/ri/clipboard-line";
 import IconFileText from "~icons/ri/file-text-line";
 import IconStrong from "~icons/ri/heart-pulse-line";
+import IconInfo from "~icons/ri/information-line";
 import IconMoon from "~icons/ri/moon-line";
 import IconScale from "~icons/ri/scales-line";
 import IconSunrise from "~icons/ri/sun-line";
 import IconTestTube from "~icons/ri/test-tube-line";
-import IconTime from "~icons/ri/time-line";
 
 interface Props {
 	product: {
@@ -68,217 +47,159 @@ const expirationDisplay = product.expirationDate
 		return year && month ? `${month}/${year}` : product.expirationDate;
 	})()
 	: null;
+
+const specRows = [
+	product.amount && { icon: IconScale, label: "Тоо ширхэг", value: product.amount },
+	product.potency && { icon: IconStrong, label: "Идэвхтэй бодис", value: product.potency },
+	product.dailyIntake && { icon: IconCalendar, label: "Өдрийн тун", value: `${product.dailyIntake} ширхэг` },
+	product.weightGrams && { icon: IconScale, label: "Жин", value: `${product.weightGrams}г` },
+	expirationDisplay && { icon: IconCalendar, label: "Дуусах хугацаа", value: expirationDisplay },
+].filter(Boolean) as Array<{ icon: any; label: string; value: string }>;
 ---
 
-<div class="w-full space-y-8">
-	<div class="border-t border-border pt-8">
-		<h2 class="text-2xl sm:text-3xl font-extrabold mb-6 uppercase tracking-tight flex items-center gap-2"><IconClipboard class="h-7 w-7" /> Дэлгэрэнгүй мэдээлэл</h2>
-	</div>
+<div class="w-full space-y-6">
+	<h2 class="font-display text-h3 sm:text-h2">Дэлгэрэнгүй мэдээлэл</h2>
 
-	<Tabs defaultValue="description" class="w-full">
-		<TabsList class="w-full grid grid-cols-4 gap-2 p-2 bg-muted/50 rounded-lg border border-border shadow-soft mb-8">
-			<TabsTrigger
-				value="description"
-				class="text-xs sm:text-sm font-bold px-2 py-3 sm:px-4 sm:py-3 transition-all duration-200 ease-out-quart uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-soft-sm hover:bg-primary/20"
-			>
-				<span class="block sm:inline"><IconFileText class="h-4 w-4" /></span>
-				<span class="hidden sm:inline ml-2">Тайлбар</span>
-			</TabsTrigger>
-			<TabsTrigger
-				value="usage"
-				class="text-xs sm:text-sm font-bold px-2 py-3 sm:px-4 sm:py-3 transition-all duration-200 ease-out-quart uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-soft-sm hover:bg-primary/20"
-			>
-				<span class="block sm:inline"><IconCapsule class="h-4 w-4" /></span>
-				<span class="hidden sm:inline ml-2">Хэрэглээ</span>
-			</TabsTrigger>
-			<TabsTrigger
-				value="ingredients"
-				class="text-xs sm:text-sm font-bold px-2 py-3 sm:px-4 sm:py-3 transition-all duration-200 ease-out-quart uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-soft-sm hover:bg-primary/20"
-			>
-				<span class="block sm:inline"><IconTestTube class="h-4 w-4" /></span>
-				<span class="hidden sm:inline ml-2">Найрлага</span>
-			</TabsTrigger>
-			<TabsTrigger
-				value="specs"
-				class="text-xs sm:text-sm font-bold px-2 py-3 sm:px-4 sm:py-3 transition-all duration-200 ease-out-quart uppercase tracking-wide data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-soft-sm hover:bg-primary/20"
-			>
-				<span class="block sm:inline"><IconBarChart class="h-4 w-4" /></span>
-				<span class="hidden sm:inline ml-2">Үзүүлэлт</span>
-			</TabsTrigger>
-		</TabsList>
+	<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft divide-y divide-border">
+		{hasDescription && (
+			<details name="product-details" class="group" open>
+				<summary class="flex min-h-14 cursor-pointer select-none items-center gap-3 px-4 py-4 sm:px-6">
+					<IconFileText class="h-5 w-5 shrink-0 text-cocoa/70" aria-hidden="true" />
+					<span class="flex-1 font-semibold text-base">Тайлбар</span>
+					<IconArrowDown class="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" aria-hidden="true" />
+				</summary>
+				<div class="acc-body px-4 pb-5 sm:px-6">
+					<p class="whitespace-pre-line text-sm leading-relaxed text-foreground/80 sm:text-base">
+						{product.description}
+					</p>
+				</div>
+			</details>
+		)}
 
-		<TabsContent value="description">
-			<div class="rounded-lg border border-border bg-background p-6 sm:p-8 shadow-soft min-h-[200px]">
-				{hasDescription ? (
-					<div class="prose prose-sm sm:prose max-w-none prose-headings:font-extrabold prose-p:text-foreground/80">
-						<p class="text-sm sm:text-base leading-relaxed font-medium whitespace-pre-line">
-							{product.description}
+		<details name="product-details" class="group" open={!hasDescription}>
+			<summary class="flex min-h-14 cursor-pointer select-none items-center gap-3 px-4 py-4 sm:px-6">
+				<IconCapsule class="h-5 w-5 shrink-0 text-cocoa/70" aria-hidden="true" />
+				<span class="flex-1 font-semibold text-base">Хэрэглээ</span>
+				<IconArrowDown class="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" aria-hidden="true" />
+			</summary>
+			<div class="acc-body space-y-5 px-4 pb-5 sm:px-6">
+				<div>
+					<h3 class="mb-1.5 font-semibold text-sm sm:text-base">Тун болон хэрэглэх арга</h3>
+					{product.dailyIntake ? (
+						<p class="text-sm leading-relaxed text-foreground/80 sm:text-base">
+							Өдөрт <span class="font-semibold text-foreground">{product.dailyIntake}</span> ширхэг, хоолны дараа усаар хамт уух.
 						</p>
-					</div>
-				) : (
-					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20"><IconFileText class="h-12 w-12" /></div>
-						<p class="text-base sm:text-lg text-muted-foreground font-bold uppercase tracking-wide">
-							Тайлбар одоогоор байхгүй байна
+					) : (
+						<p class="text-sm leading-relaxed text-foreground/80 sm:text-base">
+							Багцын заавар эсвэл эмчийн зааварчилгааг дагана уу
 						</p>
-					</div>
-				)}
-			</div>
-		</TabsContent>
+					)}
+				</div>
 
-		<TabsContent value="usage">
-			<div class="rounded-lg border border-border bg-background p-6 sm:p-8 shadow-soft">
-				<div class="space-y-8">
-					<div class="space-y-4">
-						<h3 class="text-lg sm:text-xl font-extrabold flex items-center gap-3 uppercase">
-							<IconCapsule class="h-5 w-5" />
-							<span>Тун болон хэрэглэх арга</span>
-						</h3>
-						<div class="rounded-md border border-border bg-muted/30 p-6">
-							{product.dailyIntake ? (
-								<div class="space-y-2">
-									<p class="text-sm sm:text-base font-bold uppercase tracking-wide">
-										Өдөрт: <span class="text-xl font-extrabold text-primary">{product.dailyIntake}</span> ширхэг
-									</p>
-									<p class="text-xs sm:text-sm text-muted-foreground font-medium">
-										Хоолны дараа усаар хамт уух
-									</p>
-								</div>
-							) : (
-								<p class="text-sm text-muted-foreground font-medium">
-									Багцын заавар эсвэл эмчийн зааварчилгааг дагана уу
-								</p>
-							)}
+				<div>
+					<h3 class="mb-2 font-semibold text-sm sm:text-base">Хэзээ уух вэ?</h3>
+					<div class="space-y-2">
+						<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
+							<IconSunrise class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+							<span><span class="font-medium text-foreground">Өглөө</span> - өглөөний цайны дараа</span>
 						</div>
-					</div>
-
-					<div class="space-y-4">
-						<h3 class="text-lg sm:text-xl font-extrabold flex items-center gap-3 uppercase">
-							<IconTime class="h-5 w-5" />
-							<span>Хэзээ уух вэ?</span>
-						</h3>
-						<div class="grid gap-4 sm:grid-cols-2">
-							<div class="flex items-start gap-4 p-4 rounded-md border border-border bg-background hover:shadow-soft-sm transition-shadow">
-								<IconSunrise class="h-8 w-8 text-primary" />
-								<div>
-									<div class="font-bold text-sm sm:text-base uppercase">Өглөө</div>
-									<div class="text-xs sm:text-sm text-muted-foreground font-medium">Өглөөний цайны дараа</div>
-								</div>
-							</div>
-							<div class="flex items-start gap-4 p-4 rounded-md border border-border bg-background hover:shadow-soft-sm transition-shadow">
-								<IconMoon class="h-8 w-8 text-primary" />
-								<div>
-									<div class="font-bold text-sm sm:text-base uppercase">Орой</div>
-									<div class="text-xs sm:text-sm text-muted-foreground font-medium">Оройн хоолны дараа</div>
-								</div>
-							</div>
+						<div class="flex items-center gap-3 text-sm text-foreground/80 sm:text-base">
+							<IconMoon class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+							<span><span class="font-medium text-foreground">Орой</span> - оройн хоолны дараа</span>
 						</div>
-					</div>
-
-					<div class="rounded-md border border-border bg-yellow-50 p-6">
-						<h4 class="font-bold text-sm sm:text-base mb-4 flex items-center gap-2 uppercase text-yellow-900">
-							<IconAlertTriangle class="h-5 w-5" />
-							<span>Анхаарах зүйлс</span>
-						</h4>
-						<ul class="space-y-3 text-xs sm:text-sm text-yellow-900/80 font-medium">
-							<li class="flex gap-3">
-								<span class="font-bold">•</span>
-								<span>Зааврын дагуу хэрэглэнэ үү</span>
-							</li>
-							<li class="flex gap-3">
-								<span class="font-bold">•</span>
-								<span>Жирэмсэн, хөхүүл эх эмчтэй зөвлөлдөнө үү</span>
-							</li>
-							<li class="flex gap-3">
-								<span class="font-bold">•</span>
-								<span>Хадгалах: Сэрүүн, хуурай газарт</span>
-							</li>
-						</ul>
 					</div>
 				</div>
-			</div>
-		</TabsContent>
 
-		<TabsContent value="ingredients">
-			<div class="rounded-lg border border-border bg-background p-6 sm:p-8 shadow-soft min-h-[200px]">
-				{hasIngredients ? (
-					<div class="space-y-6">
-						<h3 class="text-lg sm:text-xl font-extrabold mb-4 uppercase">Идэвхтэй найрлага</h3>
-						<ul class="grid gap-3 sm:grid-cols-2">
-							{product.ingredients?.map((ingredient) => (
-								<li class="flex items-center gap-3 p-4 rounded-md border border-border bg-muted/20 hover:bg-muted/40 transition-colors">
-									<IconCheck class="h-5 w-5 text-primary" />
-									<span class="text-sm sm:text-base font-bold uppercase tracking-wide">{ingredient}</span>
-								</li>
-							))}
-						</ul>
-					</div>
-				) : (
-					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20"><IconTestTube class="h-12 w-12" /></div>
-						<p class="text-sm sm:text-base text-muted-foreground font-bold uppercase tracking-wide">
-							Найрлагын мэдээлэл одоогоор байхгүй байна
-						</p>
-					</div>
-				)}
+				<div class="rounded-xl bg-sand/40 p-4">
+					<h4 class="mb-2 flex items-center gap-2 font-semibold text-sm">
+						<IconInfo class="h-4 w-4 text-cocoa/80" aria-hidden="true" />
+						Анхаарах зүйлс
+					</h4>
+					<ul class="space-y-1.5 text-xs leading-relaxed text-foreground/75 sm:text-sm">
+						<li>Зааврын дагуу хэрэглэнэ үү</li>
+						<li>Жирэмсэн, хөхүүл эх эмчтэй зөвлөлдөнө үү</li>
+						<li>Хадгалах: Сэрүүн, хуурай газарт</li>
+					</ul>
+				</div>
 			</div>
-		</TabsContent>
+		</details>
 
-		<TabsContent value="specs">
-			<div class="rounded-lg border border-border bg-background p-6 sm:p-8 shadow-soft min-h-[200px]">
-				{hasSpecs ? (
-					<div class="space-y-6">
-						<h3 class="text-lg sm:text-xl font-extrabold mb-4 uppercase">Техникийн үзүүлэлт</h3>
-						<div class="grid gap-4 sm:grid-cols-2">
-							{product.amount && (
-								<div class="flex items-center justify-between p-4 rounded-md border border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconScale class="h-4 w-4" /> Тоо ширхэг</span>
-									<span class="text-base sm:text-lg font-extrabold">{product.amount}</span>
-								</div>
-							)}
-							{product.potency && (
-								<div class="flex items-center justify-between p-4 rounded-md border border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconStrong class="h-4 w-4" /> Идэвхтэй бодис</span>
-									<span class="text-base sm:text-lg font-extrabold">{product.potency}</span>
-								</div>
-							)}
-							{product.dailyIntake && (
-								<div class="flex items-center justify-between p-4 rounded-md border border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconCalendar class="h-4 w-4" /> Өдрийн тун</span>
-									<span class="text-base sm:text-lg font-extrabold">{product.dailyIntake} ширхэг</span>
-								</div>
-							)}
-							{product.weightGrams && (
-								<div class="flex items-center justify-between p-4 rounded-md border border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconScale class="h-4 w-4" /> Жин</span>
-									<span class="text-base sm:text-lg font-extrabold">{product.weightGrams}г</span>
-								</div>
-							)}
-							{expirationDisplay && (
-								<div class="flex items-center justify-between p-4 rounded-md border border-border bg-muted/20">
-									<span class="text-sm sm:text-base font-bold text-muted-foreground uppercase flex items-center gap-2"><IconCalendar class="h-4 w-4" /> Дуусах хугацаа</span>
-									<span class="text-base sm:text-lg font-extrabold">{expirationDisplay}</span>
-								</div>
-							)}
-						</div>
-					</div>
-				) : (
-					<div class="flex flex-col items-center justify-center py-16 text-center">
-						<div class="text-5xl mb-4 opacity-20"><IconBarChart class="h-12 w-12" /></div>
-						<p class="text-sm sm:text-base text-muted-foreground font-bold uppercase tracking-wide">
-							Техникийн үзүүлэлт одоогоор байхгүй байна
-						</p>
-					</div>
-				)}
-			</div>
-		</TabsContent>
-	</Tabs>
+		{hasIngredients && (
+			<details name="product-details" class="group">
+				<summary class="flex min-h-14 cursor-pointer select-none items-center gap-3 px-4 py-4 sm:px-6">
+					<IconTestTube class="h-5 w-5 shrink-0 text-cocoa/70" aria-hidden="true" />
+					<span class="flex-1 font-semibold text-base">Найрлага</span>
+					<IconArrowDown class="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" aria-hidden="true" />
+				</summary>
+				<div class="acc-body px-4 pb-5 sm:px-6">
+					<ul class="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+						{product.ingredients?.map((ingredient) => (
+							<li class="flex items-center gap-2.5 text-sm text-foreground/80 sm:text-base">
+								<IconCheck class="h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+								<span>{ingredient}</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			</details>
+		)}
 
-	<!-- Disclaimer -->
-	<div class="rounded-md border border-border bg-destructive/10 p-6 shadow-soft-sm">
-		<p class="text-xs sm:text-sm font-bold text-center text-destructive flex items-center justify-center gap-3 flex-wrap uppercase tracking-wide">
-			<IconAlertTriangle class="h-5 w-5" />
-			<span>Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу.</span>
+		{hasSpecs && (
+			<details name="product-details" class="group">
+				<summary class="flex min-h-14 cursor-pointer select-none items-center gap-3 px-4 py-4 sm:px-6">
+					<IconBarChart class="h-5 w-5 shrink-0 text-cocoa/70" aria-hidden="true" />
+					<span class="flex-1 font-semibold text-base">Үзүүлэлт</span>
+					<IconArrowDown class="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" aria-hidden="true" />
+				</summary>
+				<div class="acc-body px-4 pb-5 sm:px-6">
+					<dl class="divide-y divide-border/70">
+						{specRows.map(({ icon: Icon, label, value }) => (
+							<div class="flex items-center justify-between gap-4 py-2.5 text-sm sm:text-base">
+								<dt class="flex items-center gap-2 text-muted-foreground">
+									<Icon class="h-4 w-4 shrink-0 text-cocoa/60" aria-hidden="true" />
+									{label}
+								</dt>
+								<dd class="text-right font-semibold">{value}</dd>
+							</div>
+						))}
+					</dl>
+				</div>
+			</details>
+		)}
+	</div>
+
+	<!-- Medical note - quiet and informative, never an alarm -->
+	<div class="flex items-start gap-2.5 rounded-xl bg-muted p-4">
+		<IconInfo class="mt-0.5 h-4 w-4 shrink-0 text-cocoa/70" aria-hidden="true" />
+		<p class="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+			Эмнэлгийн зөвлөгөө биш. Мэргэжлийн эмчид хандана уу.
 		</p>
 	</div>
 </div>
+
+<style>
+	summary {
+		list-style: none;
+	}
+	summary::-webkit-details-marker {
+		display: none;
+	}
+	details[open] .acc-body {
+		animation: acc-in 250ms var(--ease-out);
+	}
+	@keyframes acc-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		details[open] .acc-body {
+			animation: none;
+		}
+	}
+</style>
