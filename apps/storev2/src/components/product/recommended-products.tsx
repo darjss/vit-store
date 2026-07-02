@@ -171,7 +171,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										<a
 											href={`/products/${product.slug}-${product.id}/`}
 											data-shelf-card
-											class="group hover:-translate-y-1 block w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
+											class="group hover:-translate-y-1 block w-[144px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
 											<div
 												class={`relative aspect-square overflow-hidden ${washClass()}`}
@@ -219,7 +219,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 					{Array(4)
 						.fill(0)
 						.map(() => (
-							<div class="w-[160px] shrink-0 sm:w-[200px] lg:w-[220px]">
+							<div class="w-[144px] shrink-0 sm:w-[200px] lg:w-[220px]">
 								<div class="animate-pulse overflow-hidden rounded-2xl bg-card shadow-soft">
 									<div class="aspect-square bg-muted/40" />
 									<div class="space-y-2 p-3 sm:p-4">
