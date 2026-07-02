@@ -7,17 +7,12 @@ const description = "Amerik Vitamin - захиалгынхаа төлөвийг 
 ---
 
 <Layout title={title} description={description}>
-  <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-2xl">
-    <!-- Header -->
-    <div class="mb-8">
-      <div class="border border-border bg-primary p-4 lg:p-6 rounded-lg shadow-soft mb-4 text-center">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
-          Захиалга хянах
-        </h1>
-        <p class="text-sm font-medium text-foreground/70 mt-2">
-          Захиалгын дугаар, утасны дугаараа оруулан мэдээлэл авах
-        </p>
-      </div>
+  <div class="container mx-auto max-w-2xl px-5 py-8 lg:px-8 lg:py-14">
+    <div class="enter-rise mb-8 text-center">
+      <h1 class="mb-2 font-display text-foreground text-h2">Захиалга хянах</h1>
+      <p class="text-muted-foreground text-sm md:text-base">
+        Захиалгын дугаар, утасны дугаараа оруулан мэдээлэл авах
+      </p>
     </div>
 
     <OrderTrackingForm client:load />
