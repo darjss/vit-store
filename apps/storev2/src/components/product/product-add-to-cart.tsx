@@ -1,12 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import type { CartItems } from "@vit/shared/types";
-import {
-	createMemo,
-	createSignal,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createMemo, createSignal, Match, Show, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -98,15 +92,14 @@ export default function ProductQuantitySelector(
 		<Switch>
 			<Match when={props.isInStock}>
 				<div class="flex items-center gap-3">
-					<div
+					<fieldset
 						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
-						role="group"
 						aria-label="Тоо хэмжээ"
 					>
 						<button
 							type="button"
 							onClick={decrement}
-							class="flex h-12 w-11 items-center justify-center rounded-l-full text-xl font-semibold text-foreground transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							class="flex h-12 w-11 items-center justify-center rounded-l-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
 							disabled={quantity() <= 1}
 							aria-label="Хасах"
 						>
@@ -118,12 +111,12 @@ export default function ProductQuantitySelector(
 						<button
 							type="button"
 							onClick={increment}
-							class="flex h-12 w-11 items-center justify-center rounded-r-full text-xl font-semibold text-foreground transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							class="flex h-12 w-11 items-center justify-center rounded-r-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
 							aria-label="Нэмэх"
 						>
 							+
 						</button>
-					</div>
+					</fieldset>
 
 					<div class="min-w-0 flex-1">
 						<AddToCartButton
@@ -174,9 +167,7 @@ export default function ProductQuantitySelector(
 								</Button>
 								<Button
 									type="button"
-									variant={
-										notifyChannel() === "email" ? "default" : "outline"
-									}
+									variant={notifyChannel() === "email" ? "default" : "outline"}
 									onClick={() => {
 										setNotifyChannel("email");
 										setContact("");
@@ -193,7 +184,7 @@ export default function ProductQuantitySelector(
 								placeholder={
 									notifyChannel() === "sms" ? "88889999" : "ner@example.com"
 								}
-								class="h-12 w-full rounded-xl border border-border bg-background px-4 text-base font-medium shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								class="h-12 w-full rounded-xl border border-border bg-background px-4 font-medium text-base shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							/>
 
 							<Button

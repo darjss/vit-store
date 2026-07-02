@@ -93,10 +93,8 @@ async function fetchRecommendedProducts(
 function ShelfHeading() {
 	return (
 		<div class="mb-5 sm:mb-6">
-			<h2 class="font-display text-h3 sm:text-h2">
-				Таньд таалагдаж магадгүй
-			</h2>
-			<p class="mt-1 text-sm text-muted-foreground sm:text-base">
+			<h2 class="font-display text-h3 sm:text-h2">Таньд таалагдаж магадгүй</h2>
+			<p class="mt-1 text-muted-foreground text-sm sm:text-base">
 				Таны сонголтод тулгуурлан санал болгож байна
 			</p>
 		</div>
@@ -120,13 +118,11 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 			),
 	);
 
-	const washClass = () =>
-		WASH_BG[washFor(props.washKey ?? props.categoryId)];
+	const washClass = () => WASH_BG[washFor(props.washKey ?? props.categoryId)];
 
 	const setupReveal = (el: HTMLElement) => {
 		queueMicrotask(() => {
-			if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-				return;
+			if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 			const cards = Array.from(
 				el.querySelectorAll<HTMLElement>("[data-shelf-card]"),
 			);
@@ -144,7 +140,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 						{
 							duration: 0.35,
 							delay: stagger(0.04),
-							easing: [0.23, 1, 0.32, 1],
+							ease: [0.23, 1, 0.32, 1],
 						},
 					);
 				},
@@ -175,7 +171,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										<a
 											href={`/products/${product.slug}-${product.id}/`}
 											data-shelf-card
-											class="group block w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:-translate-y-1 hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
+											class="group hover:-translate-y-1 block w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
 											<div
 												class={`relative aspect-square overflow-hidden ${washClass()}`}
@@ -198,10 +194,10 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 											</div>
 
 											<div class="flex flex-col gap-1.5 p-3 sm:p-4">
-												<span class="text-[11px] font-medium text-muted-foreground">
+												<span class="font-medium text-[11px] text-muted-foreground">
 													{product.brand}
 												</span>
-												<h3 class="line-clamp-2 min-h-[2.5em] text-sm font-medium leading-snug">
+												<h3 class="line-clamp-2 min-h-[2.5em] font-medium text-sm leading-snug">
 													{product.name}
 												</h3>
 												<span class="font-display text-base">

@@ -50,7 +50,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 					>
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 pl-1">
-								<p class="truncate text-xs text-muted-foreground">
+								<p class="truncate text-muted-foreground text-xs">
 									{props.cartItem.name}
 								</p>
 								<p class="font-display text-base text-foreground">
