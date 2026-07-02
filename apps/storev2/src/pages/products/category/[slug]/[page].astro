@@ -5,6 +5,7 @@ import Layout from "@/layouts/Layout.astro";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
 import { api } from "@/lib/trpc";
+import { WASH_BG, washFor } from "@/lib/wash";
 
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
@@ -25,6 +26,7 @@ const { items: products, pagination } = await api.product.getPaginatedProductsWi
 });
 
 const baseUrl = `/products/category/${slug}`;
+const washClass = WASH_BG[washFor(category.id)];
 
 const seoTitle = page === 1
 	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл | Америк Витамин`)
@@ -64,83 +66,63 @@ const itemListSchema = {
 	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
 
 	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-		<div class="overflow-hidden border border-border bg-primary/5 px-3 py-3 rounded-lg shadow-soft sm:px-5 sm:py-4 sm:shadow-soft-lg">
-			<!-- Breadcrumb -->
-			<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground sm:mb-4 sm:text-sm">
-				<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
-				<span>/</span>
-				<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
-				<span>/</span>
-				<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
-				{page > 1 && (
-					<>
-						<span>/</span>
-						<span class="text-foreground">Хуудас {page}</span>
-					</>
-				)}
-			</nav>
-
-			<!-- Header -->
-			<div class="mb-3 sm:mb-4">
-				<h1 class="font-extrabold text-xl tracking-tight uppercase sm:text-2xl lg:text-3xl">
-					{category.name}
-				</h1>
-				<p class="mt-1 font-bold text-muted-foreground text-xs sm:text-sm">
-					Нийт {pagination.totalCount} бүтээгдэхүүн{page > 1 ? ` — Хуудас ${page}/${pagination.totalPages}` : ""}
-				</p>
-			</div>
-
-			<!-- Banner -->
-			{category.bannerImage && (
-				<div class="mb-3 overflow-hidden border border-border rounded-lg shadow-soft sm:mb-4">
-					<img
-						src={category.bannerImage}
-						alt={category.name}
-						class="h-32 w-full object-cover sm:h-48"
-						width="1200"
-						height="300"
-					/>
-				</div>
+		<!-- Breadcrumb -->
+		<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 font-medium text-muted-foreground text-xs sm:mb-4 sm:text-sm">
+			<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
+			<span>/</span>
+			<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
+			<span>/</span>
+			<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
+			{page > 1 && (
+				<>
+					<span>/</span>
+					<span class="text-foreground">Хуудас {page}</span>
+				</>
 			)}
+		</nav>
 
-			<div class="mb-3 border border-border bg-background p-3 rounded-lg shadow-soft sm:mb-4 sm:p-4">
-				<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
+		<!-- Header on category-keyed wash tint -->
+		<header class={`enter-rise mb-3 rounded-2xl border border-border ${washClass} px-4 py-4 sm:mb-4 sm:px-6 sm:py-5`}>
+			<h1 class="font-bold font-display text-xl tracking-tight sm:text-2xl lg:text-3xl">
+				{category.name}
+			</h1>
+			<p class="mt-1 font-medium text-foreground/70 text-xs sm:text-sm">
+				Нийт {pagination.totalCount} бүтээгдэхүүн{page > 1 ? ` — Хуудас ${page}/${pagination.totalPages}` : ""}
+			</p>
+		</header>
+
+		<!-- Banner -->
+		{category.bannerImage && (
+			<div class="mb-3 overflow-hidden rounded-2xl border border-border shadow-soft sm:mb-4">
+				<img
+					src={category.bannerImage}
+					alt={category.name}
+					class="h-32 w-full object-cover sm:h-48"
+					width="1200"
+					height="300"
+				/>
 			</div>
+		)}
 
-			<!-- Products Grid -->
-			<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-				{products.map((product, index) => (
-					<div
-						class="stagger-fade-in"
-						style={`animation-delay:${Math.min(index, 8) * 30}ms`}
-					>
-						<ServerProductCard product={product} />
-					</div>
-				))}
-			</div>
-
-			<!-- Pagination -->
-			{pagination.totalPages > 1 && (
-				<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} />
-			)}
+		<div class="mb-4 rounded-2xl border border-border bg-card p-3 shadow-soft-sm sm:mb-5 sm:p-4">
+			<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
 		</div>
+
+		<!-- Products Grid -->
+		<div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+			{products.map((product, index) => (
+				<div
+					class="enter-rise"
+					style={`--enter-delay:${Math.min(index, 8) * 40}ms`}
+				>
+					<ServerProductCard product={product} />
+				</div>
+			))}
+		</div>
+
+		<!-- Pagination -->
+		{pagination.totalPages > 1 && (
+			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} />
+		)}
 	</div>
 </Layout>
-
-<style is:global>
-	@keyframes fadeIn {
-		from { opacity: 0; transform: translateY(8px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
-	.stagger-fade-in {
-		opacity: 0;
-		animation: fadeIn 300ms var(--ease-out-quart) forwards;
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.stagger-fade-in {
-			opacity: 1 !important;
-			animation: none !important;
-			transform: none !important;
-		}
-	}
-</style>
