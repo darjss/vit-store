@@ -71,9 +71,10 @@ const SearchOverlay: Component = () => {
 				as="button"
 				type="button"
 				aria-label="Хайх"
-				class="flex items-center justify-center border border-border bg-background p-2 shadow-soft-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-none"
+				class="flex h-11 min-w-44 items-center gap-2.5 rounded-full border border-border bg-muted/70 px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:bg-muted hover:shadow-soft active:scale-[0.98] lg:min-w-56"
 			>
-				<IconSearch class="h-5 w-5" aria-hidden="true" />
+				<IconSearch class="h-4 w-4 shrink-0" aria-hidden="true" />
+				<span class="truncate text-sm font-medium">Витамин хайх...</span>
 			</SheetTrigger>
 
 			<SheetContent
