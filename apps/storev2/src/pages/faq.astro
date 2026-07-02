@@ -1,7 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import IconQuestion from "~icons/ri/question-line";
-import IconCheck from "~icons/ri/check-line";
+import IconArrowDown from "~icons/ri/arrow-down-s-line";
 
 const title = "Түгээмэл асуулт хариулт";
 const description = "Amerik Vitamin-ийн тухай түгээмэл асуулт, хариулт. Бүтээгдэхүүн, хүргэлт, төлбөрийн талаар.";
@@ -37,7 +36,7 @@ const faqs = [
   },
   {
     q: "Захиалгаа хэрхэн хянах вэ?",
-    a: 'Та <a href="/order-tracking" class="font-extrabold underline decoration-2 underline-offset-4">Захиалга хянах</a> хуудас руу ороод захиалгын дугаар, утасны дугаараа оруулан захиалгынхаа төлөвийг хянах боломжтой.',
+    a: 'Та <a href="/order-tracking" class="font-semibold text-foreground underline underline-offset-4">Захиалга хянах</a> хуудас руу ороод захиалгын дугаар, утасны дугаараа оруулан захиалгынхаа төлөвийг хянах боломжтой.',
   },
   {
     q: "Хүргэлтийн хураамж хэд вэ?",
@@ -65,50 +64,42 @@ const faqSchema = {
 
 <Layout title={title} description={description}>
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
-  <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
+  <div class="container mx-auto max-w-2xl px-5 py-8 lg:px-8 lg:py-14">
     <!-- Header -->
-    <div class="mb-8 lg:mb-10">
-      <div class="border border-border bg-primary p-4 lg:p-6 shadow-soft-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-extrabold uppercase tracking-tight">
-          Түгээмэл асуулт хариулт
-        </h1>
-        <p class="text-sm font-medium text-foreground/70 mt-2">
-          Таны мэдэхийг хүссэн бүх зүйл
-        </p>
-      </div>
+    <div class="enter-rise mb-8 lg:mb-10">
+      <h1 class="mb-2 font-display text-foreground text-h2">Түгээмэл асуулт хариулт</h1>
+      <p class="text-muted-foreground text-sm md:text-base">
+        Таны мэдэхийг хүссэн бүх зүйл
+      </p>
     </div>
 
     <!-- FAQ List -->
-    <div class="space-y-4">
-      {faqs.map((faq, i) => (
-        <div class="border border-border bg-card shadow-soft-sm">
-          <div class="p-4 lg:p-5">
-            <div class="flex items-start gap-3">
-              <div class="w-8 h-8 border border-border bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                <IconQuestion class="w-4 h-4" />
-              </div>
-              <div class="flex-1">
-                <h3 class="font-extrabold text-sm uppercase tracking-wider mb-2">{faq.q}</h3>
-                <p class="text-sm font-medium text-muted-foreground leading-relaxed" set:html={faq.a} />
-              </div>
-            </div>
+    <div class="enter-rise stagger-1 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      {faqs.map((faq) => (
+        <details class="group">
+          <summary class="flex min-h-[44px] cursor-pointer select-none list-none items-center justify-between gap-4 p-4 transition-[background-color] duration-150 ease-out hover:bg-muted/60 md:p-5 [&::-webkit-details-marker]:hidden">
+            <h3 class="font-semibold text-foreground text-sm leading-snug md:text-base">{faq.q}</h3>
+            <IconArrowDown class="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-open:rotate-180" />
+          </summary>
+          <div class="max-w-[65ch] px-4 pb-5 md:px-5">
+            <p class="text-muted-foreground text-sm leading-relaxed" set:html={faq.a} />
           </div>
-        </div>
+        </details>
       ))}
     </div>
 
     <!-- Still have questions -->
-    <div class="mt-8 border border-border bg-card p-5 lg:p-6 shadow-soft-sm">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="enter-rise stagger-2 mt-6 rounded-2xl bg-wash-peach/60 p-5 md:p-6">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 class="text-lg font-extrabold uppercase tracking-tight">Асуулт байна уу?</h2>
-          <p class="text-sm font-medium text-muted-foreground mt-1">
+          <h2 class="font-display text-foreground text-lg">Асуулт байна уу?</h2>
+          <p class="mt-1 text-muted-foreground text-sm">
             Бидэнтэй шууд холбогдож асуултаа асууна уу
           </p>
         </div>
         <a
           href="/contact"
-          class="inline-flex items-center justify-center px-6 py-3 bg-foreground text-background font-extrabold text-sm uppercase tracking-wider border border-foreground active:scale-[0.97] transition-transform"
+          class="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-6 py-2.5 font-semibold text-primary-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97]"
         >
           Холбогдох
         </a>
