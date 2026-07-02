@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 interface AddToCartButtonProps {
 	cartItem: CartItems;
 	compact?: boolean;
+	openDrawer?: boolean;
 }
 
 const stateClass =
@@ -18,7 +19,7 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 
 	const handleAddToCart = () => {
-		cart.add(props.cartItem);
+		cart.add(props.cartItem, { openDrawer: props.openDrawer ?? true });
 		setIsAdded(true);
 		setTimeout(() => setIsAdded(false), 1500);
 	};

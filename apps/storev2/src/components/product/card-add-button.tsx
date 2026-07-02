@@ -23,7 +23,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 
 	const handleAdd = () => {
 		if (props.disabled || isAdded()) return;
-		cart.add(props.cartItem);
+		cart.add(props.cartItem, { openDrawer: false });
 		setIsAdded(true);
 		setTimeout(() => setIsAdded(false), 1500);
 	};
