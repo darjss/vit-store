@@ -20,9 +20,16 @@ import {
 	SelectItem,
 	SelectTrigger,
 } from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { addSearch, getRecentSearches } from "@/lib/search-history";
 import { cn } from "@/lib/utils";
 import IconClose from "~icons/ri/close-line";
+import IconEqualizer from "~icons/ri/equalizer-line";
 import IconFolder from "~icons/ri/folder-line";
 import IconPriceTag from "~icons/ri/price-tag-3-line";
 import IconSearch from "~icons/ri/search-line";
@@ -61,6 +68,7 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 	const [inputValue, setInputValue] = createSignal(props.searchTerm);
 	const [isSticky, setIsSticky] = createSignal(false);
 	const [isSearchDropdownOpen, setIsSearchDropdownOpen] = createSignal(false);
+	const [isSheetOpen, setIsSheetOpen] = createSignal(false);
 	const [recentSearches, setRecentSearches] = createSignal(getRecentSearches());
 	let sentinelRef: HTMLDivElement | undefined;
 	let searchDropdownRef: HTMLDivElement | undefined;
@@ -108,6 +116,23 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 	const activePresetFilterLabel = createMemo(() => {
 		if (!props.presetFilter) return null;
 		return productPresetFilterLabels[props.presetFilter];
+	});
+
+	const activeSort = createMemo(() =>
+		productSortOptions.find(
+			(option) =>
+				option.field === props.sortField &&
+				option.direction === props.sortDirection,
+		),
+	);
+
+	const mobileFilterCount = createMemo(() => {
+		let count = 0;
+		if (props.categoryId) count += 1;
+		if (props.brandId) count += 1;
+		if (activeSort()) count += 1;
+		if (props.presetFilter) count += 1;
+		return count;
 	});
 
 	const categoryOptions = createMemo<FilterOption[]>(() => [
@@ -314,10 +339,10 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 				</Show>
 
 				{/* All filters in one compact row */}
-				<div class="flex flex-wrap items-center gap-1 sm:gap-1.5 lg:gap-2">
+				<div class="flex flex-wrap items-center gap-1.5 sm:gap-1.5 lg:gap-2">
 					{/* Search - takes available space */}
 					<div
-						class="relative min-w-0 flex-1 basis-full sm:basis-auto"
+						class="relative min-w-0 flex-1"
 						ref={searchDropdownRef}
 					>
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-muted-foreground/40 sm:pl-2.5 lg:pl-3">
@@ -398,6 +423,25 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							</div>
 						</Show>
 					</div>
+
+					{/* Mobile: filter sheet trigger */}
+					<button
+						type="button"
+						onClick={() => setIsSheetOpen(true)}
+						aria-label="Шүүлтүүр нээх"
+						class="relative flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 font-semibold text-xs shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97] sm:hidden"
+					>
+						<IconEqualizer class="h-4 w-4" />
+						<span>Шүүлтүүр</span>
+						<Show when={mobileFilterCount() > 0}>
+							<span class="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-bold text-[10px] text-primary-foreground">
+								{mobileFilterCount()}
+							</span>
+						</Show>
+					</button>
+
+					{/* Desktop: inline filter controls */}
+					<div class="hidden items-center gap-1.5 sm:flex sm:flex-wrap lg:gap-2">
 
 					{/* Category - compact Select */}
 					<Select
@@ -540,8 +584,155 @@ const FilterBar: Component<FilterBarProps> = (props) => {
 							<span class="hidden sm:inline">Цэвэрлэх</span>
 						</button>
 					</Show>
+					</div>
 				</div>
 			</div>
+
+			{/* Mobile filter bottom sheet */}
+			<Sheet open={isSheetOpen()} onOpenChange={setIsSheetOpen}>
+				<SheetContent
+					position="bottom"
+					class="max-h-[85vh] overflow-y-auto rounded-t-2xl border-border border-t bg-card p-4 pb-8 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms] sm:hidden"
+				>
+					<SheetHeader class="text-left">
+						<SheetTitle class="font-bold font-display text-lg tracking-tight">
+							Шүүлтүүр
+						</SheetTitle>
+					</SheetHeader>
+
+					<div class="mt-4 space-y-5">
+						{/* Sort */}
+						<div>
+							<p class="mb-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wide">
+								Эрэмбэлэх
+							</p>
+							<div class="flex flex-wrap gap-2">
+								<For each={productSortOptions}>
+									{(option) => {
+										const isActive = () =>
+											props.sortField === option.field &&
+											props.sortDirection === option.direction;
+										return (
+											<button
+												type="button"
+												aria-pressed={isActive()}
+												onClick={() =>
+													isActive()
+														? props.onSortChange(null, null)
+														: props.onSortChange(
+																option.field,
+																option.direction,
+															)
+												}
+												class={cn(
+													"min-h-11 rounded-full border px-4 py-2 font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.97]",
+													isActive()
+														? "border-cocoa bg-primary text-primary-foreground"
+														: "border-border bg-background",
+												)}
+											>
+												{option.label}
+											</button>
+										);
+									}}
+								</For>
+							</div>
+						</div>
+
+						{/* Category */}
+						<Show when={props.categories.length > 0}>
+							<div>
+								<p class="mb-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wide">
+									Ангилал
+								</p>
+								<div class="flex max-h-44 flex-wrap gap-2 overflow-y-auto">
+									<For each={props.categories}>
+										{(category) => {
+											const isActive = () => props.categoryId === category.id;
+											return (
+												<button
+													type="button"
+													aria-pressed={isActive()}
+													onClick={() => {
+														props.onCategoryChange(
+															isActive() ? null : category.id,
+														);
+														setIsSheetOpen(false);
+													}}
+													class={cn(
+														"min-h-11 rounded-full border px-4 py-2 font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.97]",
+														isActive()
+															? "border-cocoa bg-primary text-primary-foreground"
+															: "border-border bg-background",
+													)}
+												>
+													{category.name}
+												</button>
+											);
+										}}
+									</For>
+								</div>
+							</div>
+						</Show>
+
+						{/* Brand */}
+						<Show when={props.brands.length > 0}>
+							<div>
+								<p class="mb-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wide">
+									Брэнд
+								</p>
+								<div class="flex max-h-44 flex-wrap gap-2 overflow-y-auto">
+									<For each={props.brands}>
+										{(brand) => {
+											const isActive = () => props.brandId === brand.id;
+											return (
+												<button
+													type="button"
+													aria-pressed={isActive()}
+													onClick={() => {
+														props.onBrandChange(isActive() ? null : brand.id);
+														setIsSheetOpen(false);
+													}}
+													class={cn(
+														"min-h-11 rounded-full border px-4 py-2 font-semibold text-sm transition-colors duration-150 ease-out active:scale-[0.97]",
+														isActive()
+															? "border-cocoa bg-primary text-primary-foreground"
+															: "border-border bg-background",
+													)}
+												>
+													{brand.name}
+												</button>
+											);
+										}}
+									</For>
+								</div>
+							</div>
+						</Show>
+					</div>
+
+					<div class="mt-6 flex items-center gap-2">
+						<Show when={props.hasActiveFilters}>
+							<button
+								type="button"
+								onClick={() => {
+									props.onClearFilters();
+									setIsSheetOpen(false);
+								}}
+								class="flex h-11 items-center justify-center rounded-full border border-border bg-background px-4 font-semibold text-sm transition-transform duration-150 ease-out active:scale-[0.97]"
+							>
+								Цэвэрлэх
+							</button>
+						</Show>
+						<button
+							type="button"
+							onClick={() => setIsSheetOpen(false)}
+							class="flex h-11 flex-1 items-center justify-center rounded-full bg-primary px-4 font-bold text-primary-foreground text-sm shadow-lift transition-transform duration-150 ease-out active:scale-[0.97]"
+						>
+							Болсон
+						</button>
+					</div>
+				</SheetContent>
+			</Sheet>
 		</>
 	);
 };
