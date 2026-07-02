@@ -54,7 +54,11 @@ const specRows = [
 	product.dailyIntake && { icon: IconCalendar, label: "Өдрийн тун", value: `${product.dailyIntake} ширхэг` },
 	product.weightGrams && { icon: IconScale, label: "Жин", value: `${product.weightGrams}г` },
 	expirationDisplay && { icon: IconCalendar, label: "Дуусах хугацаа", value: expirationDisplay },
-].filter(Boolean) as Array<{ icon: any; label: string; value: string }>;
+].filter(Boolean) as Array<{
+	icon: typeof IconScale;
+	label: string;
+	value: string;
+}>;
 ---
 
 <div class="w-full space-y-6">

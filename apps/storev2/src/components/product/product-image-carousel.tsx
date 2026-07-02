@@ -2,8 +2,8 @@ import { Image } from "@unpic/solid";
 import { createSignal, For, Show } from "solid-js";
 import { Motion } from "solid-motionone";
 import { getProductImageProps } from "@/lib/image";
-import { WASH_BG, type Wash, washFor } from "@/lib/wash";
 import { cn } from "@/lib/utils";
+import { WASH_BG, type Wash, washFor } from "@/lib/wash";
 import ProductImageFallback from "./product-image-fallback";
 
 interface ProductImage {
