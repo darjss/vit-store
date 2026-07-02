@@ -158,23 +158,29 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     </div>
   </section>
 
-  <!-- ==================== FEATURED ==================== -->
-  <section id="featured-products" class="border-b border-border scroll-mt-20">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <!-- Section header -->
-      <div class="mb-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-            <h2 class="text-h2 font-extrabold tracking-tight">Онцлох</h2>
-          </div>
-          <a href="/products?filter=featured" class="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors">Бүгд →</a>
-        </div>
-        <p class="text-sm text-muted-foreground font-semibold mt-1.5">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+  <!-- ==================== 3. FEATURED PRODUCTS ==================== -->
+  <section id="featured-products" class="scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5 py-8 lg:px-8 lg:py-14">
+      <!-- Snap shelf -->
+      <div class="mb-1 flex items-center justify-between">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Онцлох</h2>
+        <a href="/products?filter=featured" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
+      </div>
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+      <div data-reveal-group class="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2 lg:-mx-8 lg:gap-4 lg:px-8">
+        {shelfProducts.map((p: ProductForHome) => (
+          <HomeProductCard product={p} class="w-[165px] flex-none snap-start lg:w-[220px]" />
+        ))}
       </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
-        {featuredProducts.map((p: ProductForHome) => (
+      <!-- Small new-arrivals grid -->
+      <div class="mt-9 mb-1 flex items-center justify-between lg:mt-12">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Шинэ ирсэн</h2>
+        <a href="/products?filter=recent" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
+      </div>
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
+        {gridProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} />
         ))}
       </div>
@@ -198,26 +204,6 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
           <path d="M3 7l2 8h12l2 -8"/>
           <path d="M3 7l1.5 -4h15l1.5 4"/>
         </svg>
-      </div>
-    </div>
-  </section>
-
-  <!-- ==================== NEW ARRIVALS — Swipeable row ==================== -->
-  <section class="border-b border-border">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <div class="flex items-center justify-between mb-1">
-        <div class="flex items-center gap-2.5">
-          <span class="w-1.5 h-7 rounded-full bg-primary"></span>
-          <h2 class="text-h2 font-extrabold tracking-tight">Шинэ ирсэн</h2>
-        </div>
-        <a href="/products?filter=recent" class="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors">Бүгд →</a>
-      </div>
-      <p class="text-sm text-muted-foreground font-semibold mb-5">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
-
-      <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-4">
-        {newProducts.map((p: ProductForHome) => (
-          <HomeProductCard product={p} class="flex-none w-[165px] lg:w-auto snap-start" />
-        ))}
       </div>
     </div>
   </section>
@@ -269,3 +255,58 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     }
   }
 </style>
+
+<script>
+  import { animate, inView } from "motion";
+
+  const EASE: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+  function revealOnScroll() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    for (const el of document.querySelectorAll<HTMLElement>("[data-reveal]")) {
+      if (el.dataset.revealed) continue;
+      el.dataset.revealed = "true";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(10px)";
+      inView(
+        el,
+        () => {
+          animate(
+            el,
+            { opacity: 1, transform: "translateY(0px)" },
+            { duration: 0.35, ease: EASE },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+
+    for (const group of document.querySelectorAll<HTMLElement>("[data-reveal-group]")) {
+      if (group.dataset.revealed) continue;
+      group.dataset.revealed = "true";
+      const items = Array.from(group.children) as HTMLElement[];
+      for (const item of items) {
+        item.style.opacity = "0";
+        item.style.transform = "translateY(12px)";
+      }
+      inView(
+        group,
+        () => {
+          animate(
+            items,
+            { opacity: 1, transform: "translateY(0px)" },
+            {
+              duration: 0.35,
+              ease: EASE,
+              delay: (i: number) => Math.min(i, 7) * 0.04,
+            },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+  }
+
+  document.addEventListener("astro:page-load", revealOnScroll);
+</script>
