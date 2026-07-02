@@ -8,7 +8,7 @@ const CartButton = () => {
 			type="button"
 			onClick={() => cart.toggleDrawer()}
 			aria-label="Сагс"
-			class="relative flex items-center justify-center border-[3px] border-border bg-background p-2 shadow-hard-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none"
+			class="relative flex size-11 items-center justify-center rounded-full border border-border bg-card shadow-soft-sm transition-[transform,box-shadow,background-color] duration-[140ms] ease-out hover:bg-primary hover:shadow-soft active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
 		>
 			<IconShoppingCart class="h-5 w-5" aria-hidden="true" />
 

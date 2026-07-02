@@ -1,5 +1,5 @@
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, Show } from "solid-js";
+import { createSignal } from "solid-js";
 import { cart } from "@/store/cart";
 import { cn } from "@/lib/utils";
 import IconCheck from "~icons/ri/check-line";
@@ -11,22 +11,23 @@ interface AddToCartButtonProps {
 	compact?: boolean;
 }
 
+const stateClass =
+	"col-start-1 row-start-1 flex items-center justify-center gap-2 transition-[opacity,filter] duration-200 ease-out";
+
 const AddToCartButton = (props: AddToCartButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 
 	const handleAddToCart = () => {
 		cart.add(props.cartItem);
 		setIsAdded(true);
-		// Reset after animation
 		setTimeout(() => setIsAdded(false), 1500);
 	};
 
 	return (
 		<Button
 			class={cn(
-				// Product-page CTA uses the hero/CTA border token (4px).
-				props.compact ? "" : "w-full border-4 sm:shadow-hard-lg",
-				isAdded() ? "bg-success hover:bg-success" : "bg-primary hover:bg-primary/90",
+				props.compact ? "" : "w-full",
+				isAdded() && "bg-success text-success-foreground shadow-none",
 			)}
 			type="button"
 			variant="default"
@@ -35,20 +36,30 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 			disabled={isAdded()}
 			aria-label="Сагслах"
 		>
-			<Show
-				when={isAdded()}
-				fallback={
-					<>
-						<IconShoppingCart class="h-4 w-4 text-primary-foreground sm:h-5 sm:w-5" />
-						<span class="hidden text-[11px] sm:inline sm:text-xs">Сагслах</span>
-					</>
-				}
-			>
-				<IconCheck class="h-4 w-4 text-background transition-transform duration-200 ease-out-quart sm:h-5 sm:w-5" />
-				<span class="hidden text-[11px] text-background sm:inline sm:text-xs">
-					Нэмэгдлээ!
+			<span class="grid place-items-center">
+				<span
+					class={cn(
+						stateClass,
+						isAdded() && "opacity-0 blur-[2px]",
+					)}
+					aria-hidden={isAdded()}
+				>
+					<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5" />
+					<span class="hidden text-[11px] sm:inline sm:text-xs">Сагслах</span>
 				</span>
-			</Show>
+				<span
+					class={cn(
+						stateClass,
+						!isAdded() && "opacity-0 blur-[2px]",
+					)}
+					aria-hidden={!isAdded()}
+				>
+					<IconCheck class="h-4 w-4 sm:h-5 sm:w-5" />
+					<span class="hidden text-[11px] sm:inline sm:text-xs">
+						Нэмэгдлээ!
+					</span>
+				</span>
+			</span>
 		</Button>
 	);
 };
