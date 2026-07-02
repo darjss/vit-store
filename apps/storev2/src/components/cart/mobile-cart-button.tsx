@@ -17,22 +17,19 @@ const MobileCartButton = () => {
 		<button
 			type="button"
 			onClick={() => cart.toggleDrawer()}
-			class="group block w-full px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+			class="block w-full rounded-xl px-3 py-2 text-foreground/70 transition-colors duration-[140ms] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:text-foreground active:text-foreground"
 			aria-label="Сагс"
 		>
 			<div class="flex flex-col items-center gap-1">
 				<div class="relative">
-					<IconShoppingCart
-						class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-						aria-hidden="true"
-					/>
+					<IconShoppingCart class="h-5 w-5" aria-hidden="true" />
 					<Show when={isHydrated() && cart.count() > 0}>
-						<span class="-top-2 -right-2 absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-border bg-secondary font-black text-[11px] text-secondary-foreground">
+						<span class="-top-2 -right-2 absolute flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-background bg-secondary px-0.5 font-bold text-[10px] text-secondary-foreground tabular-nums">
 							{cart.count()}
 						</span>
 					</Show>
 				</div>
-				<p class="font-bold text-[11px] leading-none">Сагс</p>
+				<p class="font-semibold text-[11px] leading-none">Сагс</p>
 			</div>
 		</button>
 	);
