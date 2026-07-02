@@ -1,25 +1,37 @@
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import IconShoppingBag from "~icons/ri/shopping-bag-3-line";
 
 const EmptyCart = () => {
 	return (
-		<div class="flex flex-col items-center justify-center py-16 md:py-24">
-			<div class="max-w-md border border-border bg-card p-8 text-center shadow-soft-lg md:p-12">
-				<div class="mb-6 inline-flex h-24 w-24 items-center justify-center border border-border bg-muted">
-					<IconShoppingBag class="h-12 w-12 text-muted-foreground" />
+		<div class="enter-rise flex flex-col items-center justify-center px-6 py-14 text-center md:py-20">
+			<div class="relative mb-6">
+				<div class="flex size-24 items-center justify-center rounded-full bg-wash-peach">
+					<IconShoppingBag
+						class="h-10 w-10 text-cocoa"
+						aria-hidden="true"
+					/>
 				</div>
-				<h2 class="mb-3 font-extrabold text-2xl uppercase md:text-3xl">
-					Сагс хоосон байна
-				</h2>
-				<p class="mb-6 font-bold text-muted-foreground">
-					Та одоогоор ямар ч бүтээгдэхүүн нэмээгүй байна
-				</p>
-				<a
-					href="/products/"
-					class="inline-flex h-12 items-center justify-center border border-border bg-primary px-8 py-3 font-extrabold text-base text-primary-foreground uppercase tracking-wider shadow-soft-lg transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:bg-primary/90 hover:shadow-soft active:scale-[0.98]"
+				<Badge
+					variant="sticker"
+					class="-rotate-6 -top-2 -right-6 absolute"
 				>
-					Дэлгүүр үзэх
-				</a>
+					Хоосон!
+				</Badge>
 			</div>
+
+			<h2 class="mb-2 font-display text-foreground text-xl md:text-2xl">
+				Сагс хоосон байна
+			</h2>
+			<p class="mb-6 max-w-xs text-muted-foreground text-sm leading-relaxed">
+				Танд хэрэгтэй витаминууд дэлгүүрт хүлээж байна. Эрүүл өдрөө эндээс
+				эхлүүлээрэй.
+			</p>
+
+			<a href="/products/" class={cn(buttonVariants({ size: "lg" }))}>
+				Дэлгүүр үзэх
+			</a>
 		</div>
 	);
 };
