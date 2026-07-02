@@ -1,11 +1,13 @@
 import { deliveryFee } from "@vit/shared/constants";
 import { For, Show } from "solid-js";
+import { buttonVariants } from "@/components/ui/button";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
@@ -19,19 +21,21 @@ const CartDrawer = () => {
 		<Sheet open={cart.isDrawerOpen()} onOpenChange={cart.closeDrawer}>
 			<SheetContent
 				position="right"
-				class="flex w-full flex-col border-4 border-l-border bg-background p-0 shadow-hard-xl sm:max-w-md"
+				class="flex w-full flex-col gap-0 border-border border-l bg-background p-0 shadow-soft-xl ease-(--ease-drawer) data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms] sm:max-w-md"
 			>
-				{/* Header */}
-				<SheetHeader class="border-border border-b-4 bg-primary p-4">
-					<SheetTitle class="flex items-center gap-2 font-black text-2xl uppercase tracking-tighter">
-						<IconShoppingCart class="h-6 w-6" /> Таны сагс
+				<SheetHeader class="space-y-0.5 border-border border-b px-5 pt-5 pb-4 text-left sm:text-left">
+					<SheetTitle class="flex items-center gap-2.5 font-display text-foreground text-xl">
+						<span class="flex size-9 items-center justify-center rounded-full bg-wash-lemon">
+							<IconShoppingCart class="h-5 w-5" aria-hidden="true" />
+						</span>
+						Таны сагс
 					</SheetTitle>
-					<p class="font-bold text-foreground text-sm">
+					<p class="font-medium text-muted-foreground text-sm">
 						{cart.count()} бүтээгдэхүүн
 					</p>
 				</SheetHeader>
 
-				<div class="flex flex-1 flex-col overflow-hidden">
+				<div class="flex min-h-0 flex-1 flex-col">
 					<Show
 						when={!isEmpty()}
 						fallback={
@@ -40,8 +44,7 @@ const CartDrawer = () => {
 							</div>
 						}
 					>
-						{/* Cart Items - Scrollable */}
-						<div class="scrollbar-hide flex-[2] space-y-3 overflow-y-auto p-4">
+						<div class="scrollbar-hide min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
 							<For each={cart.items()}>
 								{(item) => (
 									<CartDrawerItem
@@ -52,30 +55,23 @@ const CartDrawer = () => {
 							</For>
 						</div>
 
-						{/* Footer - Summary & Checkout */}
-						<div class="border-border border-t-4 bg-card p-3">
-							{/* Summary */}
-							<div class="space-y-3">
-								{/* Subtotal */}
-								<div class="flex items-center justify-between">
-									<span class="font-bold uppercase">Дэд дүн</span>
-									<span class="font-black text-lg">
+						<div class="border-border border-t bg-card px-5 pt-4 pb-5">
+							<div class="space-y-2">
+								<div class="flex items-center justify-between text-sm">
+									<span class="text-muted-foreground">Дэд дүн</span>
+									<span class="font-medium text-foreground">
 										₮{cart.total().toLocaleString()}
 									</span>
 								</div>
-
-								{/* Delivery */}
-								<div class="flex items-center justify-between border-border border-b-2 pb-3">
-									<span class="font-bold uppercase">Хүргэлт</span>
-									<span class="font-black text-lg">
+								<div class="flex items-center justify-between text-sm">
+									<span class="text-muted-foreground">Хүргэлт</span>
+									<span class="font-medium text-foreground">
 										₮{deliveryFee.toLocaleString()}
 									</span>
 								</div>
-
-								{/* Total */}
-								<div class="flex items-center justify-between border-4 border-border bg-primary/10 p-3 shadow-hard">
-									<span class="font-black text-xl uppercase">Нийт дүн</span>
-									<span class="font-black text-2xl text-primary">
+								<div class="flex items-baseline justify-between border-border border-t pt-3">
+									<span class="font-semibold text-foreground">Нийт дүн</span>
+									<span class="font-display text-2xl text-foreground">
 										₮{(cart.total() + deliveryFee).toLocaleString()}
 									</span>
 								</div>
@@ -83,16 +79,16 @@ const CartDrawer = () => {
 
 							<a
 								href="/checkout"
-								class="mt-4 flex w-full items-center justify-center gap-2 border-4 border-border bg-primary px-6 py-4 font-black text-lg uppercase tracking-wider shadow-hard-lg transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary/90 hover:shadow-hard active:scale-[0.98]"
+								class={cn(buttonVariants({ size: "lg" }), "mt-4 w-full")}
 								onClick={() => cart.closeDrawer()}
 							>
-								Худалдан авах <IconArrowRight class="h-5 w-5" />
+								Худалдан авах <IconArrowRight aria-hidden="true" />
 							</a>
 
 							<button
 								type="button"
 								onClick={() => cart.closeDrawer()}
-								class="mt-3 w-full border-2 border-border bg-background px-6 py-3 font-bold uppercase tracking-wider shadow-hard transition-all hover:translate-x-px hover:translate-y-px hover:bg-muted hover:shadow-none active:scale-[0.98]"
+								class={cn(buttonVariants({ variant: "ghost" }), "mt-2 w-full")}
 							>
 								Үргэлжлүүлэх
 							</button>

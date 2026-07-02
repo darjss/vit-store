@@ -17,6 +17,7 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
+import { WASH_BG, washFor } from "@/lib/wash";
 import FilterBar from "../search/filter-bar";
 import {
 	ProductEmptyState,
@@ -565,10 +566,15 @@ const ProductsList = (props: ProductsListProps) => {
 
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<div class="overflow-hidden border-2 border-border bg-primary/5 bg-dots-subtle px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
-				{/* Compact Header */}
-				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
-					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
+			<div>
+				{/* Compact Header on wash tint */}
+				<div
+					class={cn(
+						"mb-3 flex flex-col gap-1 rounded-2xl border border-border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
+						WASH_BG[washFor("all-products")],
+					)}
+				>
+					<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
 						{getPageTitle()}
 					</h1>
 					<Show
@@ -577,7 +583,7 @@ const ProductsList = (props: ProductsListProps) => {
 							<div class="h-3.5 w-20 animate-pulse rounded bg-muted sm:h-4 sm:w-24 lg:h-5 lg:w-28" />
 						}
 					>
-						<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
+						<span class="font-medium text-foreground/70 text-xs sm:text-sm lg:text-base">
 							<Show
 								when={hasProducts()}
 								fallback={
@@ -649,8 +655,8 @@ const ProductsList = (props: ProductsListProps) => {
 						{/* Loading indicator for initial load */}
 						<Show when={isInitialLoading()}>
 							<div class="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-								<div class="flex flex-col items-center gap-3 border-2 border-border bg-card px-5 py-4 shadow-hard sm:gap-3.5 sm:border-3 sm:px-6 sm:py-5 sm:shadow-hard-lg lg:px-8 lg:py-6">
-									<div class="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-transparent sm:h-7 sm:w-7 sm:border-3 lg:h-8 lg:w-8" />
+								<div class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-5 py-4 shadow-soft sm:gap-3.5 sm:px-6 sm:py-5 sm:shadow-soft-lg lg:px-8 lg:py-6">
+									<div class="h-6 w-6 animate-spin rounded-full border border-border border-t-transparent sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
 									<p class="font-bold text-xs sm:text-sm lg:text-base">
 										Ачааллаж байна...
 									</p>

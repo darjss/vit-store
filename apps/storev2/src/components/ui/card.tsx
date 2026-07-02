@@ -7,7 +7,7 @@ const Card: Component<ComponentProps<"div">> = (props) => {
   const [local, others] = splitProps(props, ["class"])
   return (
     <div
-      class={cn("border-4 border-border bg-card text-card-foreground shadow-hard-xl transition-all", local.class)}
+      class={cn("rounded-2xl border border-border bg-card text-card-foreground shadow-soft transition-[box-shadow] duration-200 ease-out", local.class)}
       {...others}
     />
   )
@@ -15,13 +15,13 @@ const Card: Component<ComponentProps<"div">> = (props) => {
 
 const CardHeader: Component<ComponentProps<"div">> = (props) => {
   const [local, others] = splitProps(props, ["class"])
-  return <div class={cn("flex flex-col space-y-2 p-6 md:p-8 border-b-4 border-border", local.class)} {...others} />
+  return <div class={cn("flex flex-col space-y-2 p-6 md:p-8 border-b border-border", local.class)} {...others} />
 }
 
 const CardTitle: Component<ComponentProps<"h3">> = (props) => {
   const [local, others] = splitProps(props, ["class"])
   return (
-    <h3 class={cn("text-xl font-black uppercase tracking-tight", local.class)} {...others} />
+    <h3 class={cn("text-xl font-bold tracking-tight", local.class)} {...others} />
   )
 }
 

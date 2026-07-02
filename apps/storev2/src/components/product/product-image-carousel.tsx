@@ -1,8 +1,9 @@
 import { Image } from "@unpic/solid";
-import { productColors } from "@vit/shared";
 import { createSignal, For, Show } from "solid-js";
+import { Motion } from "solid-motionone";
 import { getProductImageProps } from "@/lib/image";
 import { cn } from "@/lib/utils";
+import { WASH_BG, type Wash, washFor } from "@/lib/wash";
 import ProductImageFallback from "./product-image-fallback";
 
 interface ProductImage {
@@ -14,6 +15,7 @@ interface Props {
 	images: ProductImage[];
 	productName: string;
 	productId: number;
+	washKey?: string | number;
 }
 
 export default function ProductImageCarousel(props: Props) {
@@ -22,14 +24,10 @@ export default function ProductImageCarousel(props: Props) {
 		return imgs.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
 	};
 
-	const imageColors = () => {
-		return sortedImages().map(
-			(_, index) => productColors[(props.productId + index) % productColors.length],
-		);
-	};
+	const wash = (): Wash => washFor(props.washKey ?? props.productId);
+	const washClass = () => WASH_BG[wash()];
 
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
-	const colors = imageColors();
 
 	const handleThumbnailClick = (index: number) => {
 		setSelectedIndex(index);
@@ -64,20 +62,21 @@ export default function ProductImageCarousel(props: Props) {
 	};
 
 	return (
-		<div class="w-full space-y-6">
+		<div class="w-full space-y-4">
 			<div
-				class="relative aspect-square w-full overflow-hidden border-2 border-border shadow-hard transition-all duration-300 sm:shadow-hard-lg"
-				style={{
-					background: colors[selectedIndex()],
-					"touch-action": "pan-y",
-				}}
+				class={cn(
+					"relative aspect-square w-full overflow-hidden rounded-2xl shadow-soft sm:shadow-soft-lg",
+					washClass(),
+				)}
+				style={{ "touch-action": "pan-y" }}
 				onPointerDown={handlePointerDown}
 				onPointerUp={handlePointerUp}
 			>
-				<div class="absolute inset-0 bg-dots-pattern opacity-20" />
+				<div class="absolute inset-0 bg-dots-subtle" />
 
 				<Show
 					when={images[selectedIndex()]}
+					keyed
 					fallback={
 						<ProductImageFallback
 							name={props.productName}
@@ -85,23 +84,62 @@ export default function ProductImageCarousel(props: Props) {
 						/>
 					}
 				>
-					<Image
-						src={selectedImageProps().src || images[selectedIndex()].url}
-						alt={props.productName}
-						width={selectedImageProps().width}
-						height={selectedImageProps().height}
-						sizes={selectedImageProps().sizes}
-						layout="constrained"
-						objectFit="contain"
-						priority={true}
-						class="relative z-10 h-full w-full p-8 transition-transform duration-500 hover:scale-105 sm:p-12"
-					/>
+					{(image) => (
+						<Motion.div
+							class="relative z-10 h-full w-full"
+							initial={{
+								opacity: 0,
+								scale: 0.96,
+								filter: "blur(2px)",
+							}}
+							animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+							transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
+						>
+							<Image
+								src={selectedImageProps().src || image.url}
+								alt={props.productName}
+								width={selectedImageProps().width}
+								height={selectedImageProps().height}
+								sizes={selectedImageProps().sizes}
+								layout="constrained"
+								objectFit="contain"
+								priority={true}
+								class="h-full w-full p-8 sm:p-12"
+							/>
+						</Motion.div>
+					)}
 				</Show>
 			</div>
 
-			{/* Thumbnail Navigation - Centered */}
+			{/* Soft dot indicators - mobile-first navigation */}
 			<Show when={hasMultipleImages}>
-				<div class="scrollbar-hide flex justify-start gap-3 overflow-x-auto pb-4 sm:justify-center sm:gap-4">
+				<div class="flex justify-center gap-1 sm:hidden">
+					<For each={images}>
+						{(_, index) => (
+							<button
+								type="button"
+								onClick={() => handleThumbnailClick(index())}
+								class="flex h-8 w-8 items-center justify-center"
+								aria-label={`${props.productName} зураг ${index() + 1}`}
+								aria-current={selectedIndex() === index()}
+							>
+								<span
+									class={cn(
+										"block size-2 rounded-full transition-[background-color,transform] duration-200 ease-out",
+										selectedIndex() === index()
+											? "scale-110 bg-cocoa/70"
+											: "bg-cocoa/20",
+									)}
+								/>
+							</button>
+						)}
+					</For>
+				</div>
+			</Show>
+
+			{/* Thumbnail navigation - larger screens */}
+			<Show when={hasMultipleImages}>
+				<div class="scrollbar-hide hidden gap-3 overflow-x-auto pb-2 sm:flex sm:justify-center sm:gap-4">
 					<For each={images}>
 						{(image, index) => {
 							const imageProps = getProductImageProps(image.url, "thumb");
@@ -110,14 +148,14 @@ export default function ProductImageCarousel(props: Props) {
 									type="button"
 									onClick={() => handleThumbnailClick(index())}
 									class={cn(
-										"relative aspect-square w-16 shrink-0 overflow-hidden border-2 border-border transition-all sm:w-20 md:w-24",
+										"relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl transition-[opacity,transform,box-shadow] duration-200 ease-out-quart sm:w-20 md:w-24",
+										washClass(),
 										selectedIndex() === index()
-											? "scale-105 shadow-hard ring-2 ring-primary ring-offset-2"
-											: "opacity-60 shadow-sm hover:scale-105 hover:opacity-100 hover:shadow-hard-sm",
+											? "shadow-soft ring-2 ring-cocoa/40 ring-offset-2 ring-offset-background"
+											: "opacity-60 hover:opacity-100 hover:shadow-soft-sm",
 									)}
-									style={{ background: colors[index()] }}
 								>
-									<div class="absolute inset-0 bg-dots-pattern opacity-20" />
+									<div class="absolute inset-0 bg-dots-subtle" />
 									<Image
 										src={imageProps.src || image.url}
 										alt={`${props.productName} харагдац ${index() + 1}`}
@@ -129,9 +167,6 @@ export default function ProductImageCarousel(props: Props) {
 										class="relative z-10 h-full w-full p-2 sm:p-3"
 										decoding="async"
 									/>
-									<Show when={selectedIndex() === index()}>
-										<div class="absolute inset-0 border-2 border-primary bg-primary/10" />
-									</Show>
 								</button>
 							);
 						}}

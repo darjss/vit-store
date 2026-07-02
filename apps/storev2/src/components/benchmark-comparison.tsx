@@ -65,7 +65,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 	return (
 		<>
 			{/* Control Panel */}
-			<div class="bg-background p-6 shadow-hard">
+			<div class="bg-background p-6 rounded-lg shadow-soft">
 				<button
 					type="button"
 					onClick={refetch}
@@ -86,7 +86,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			</div>
 
 			{/* Client-Side Results */}
-			<div class="border-2 border-border bg-card p-6 shadow-hard">
+			<div class="rounded-lg border border-border bg-card p-6 shadow-soft">
 				<div class="mb-4 flex items-center gap-2">
 					<IconComputer class="h-6 w-6 text-primary" />
 					<h2 class="font-bold text-2xl text-foreground">Client-Side (CSR)</h2>
@@ -175,7 +175,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			{/* Comparison Summary */}
 			<Show when={data() && difference()}>
 				{(diff) => (
-					<div class="bg-background p-6 shadow-hard">
+					<div class="bg-background p-6 rounded-lg shadow-soft">
 						<h3 class="mb-4 font-bold text-xl">Performance Analysis</h3>
 
 						<div class="grid gap-4 md:grid-cols-3">

@@ -39,7 +39,7 @@ export function FormSelectField(props: FormSelectFieldProps) {
 	return (
 		<div class="space-y-2">
 			<label
-				class="font-bold text-sm uppercase data-[invalid]:text-destructive"
+				class="font-semibold text-xs leading-none tracking-wide data-[invalid]:text-destructive"
 				for={field().name}
 				data-invalid={isInvalid() ? "" : undefined}
 			>
@@ -61,9 +61,10 @@ export function FormSelectField(props: FormSelectFieldProps) {
 						}));
 					}
 				}}
-				class="h-12 w-full border-2 border-border bg-transparent px-3 font-bold text-base shadow-hard-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-sm data-[invalid]:focus-visible:ring-destructive"
+				class="h-12 w-full rounded-xl border border-border bg-card px-4 text-base font-medium outline-none transition-[border-color,box-shadow,background-color] duration-[140ms] ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-cocoa/50 disabled:cursor-not-allowed disabled:opacity-50"
 				classList={{
-					"border-destructive shadow-hard-sm": isInvalid(),
+					"border-destructive bg-error/60 text-destructive focus-visible:ring-destructive/40":
+						isInvalid(),
 				}}
 			>
 				<option value="">{props.placeholder || props.label}</option>

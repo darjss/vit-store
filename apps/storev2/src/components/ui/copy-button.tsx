@@ -33,7 +33,7 @@ const CopyButton = (props: CopyButtonProps) => {
   return (
     <button
       onClick={handleCopy}
-      class={`p-2 sm:p-3 md:p-4 bg-[hsl(var(--primary))] border-2 border-l-0 border-border rounded-r-md hover:bg-[hsl(var(--primary))] transition-all ${props.class || ""}`}
+      class={`p-2 sm:p-3 md:p-4 bg-[hsl(var(--primary))] border border-l-0 border-border rounded-r-md hover:bg-[hsl(var(--primary))] transition-[transform] duration-150 ease-out active:scale-[0.97] ${props.class || ""}`}
     >
       <Show when={copied()} fallback={<IconFileCopy class="w-[18px] h-[18px] md:w-6 md:h-6" />}>
         <IconCheck class="w-[18px] h-[18px] md:w-6 md:h-6" />

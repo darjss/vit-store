@@ -1,8 +1,10 @@
 ---
-import { formatCurrency, productColors } from "@vit/shared";
-import { toProductImageUrl } from "@/lib/image";
-import AddToCartButton from "@/components/cart/add-to-cart-button";
+import { formatCurrency } from "@vit/shared";
+import CardAddButton from "@/components/product/card-add-button.tsx";
+import { LOW_STOCK_THRESHOLD } from "@/components/product/product-card";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
+import { toProductImageUrl } from "@/lib/image";
+import { WASH_BG, washFor } from "@/lib/wash";
 
 interface Props {
 	product: {
@@ -11,32 +13,34 @@ interface Props {
 		slug: string;
 		price: number;
 		brand: { name: string } | null;
-		images: { url: string }[];
+		images: { url: string | null }[];
+		stock?: number;
+		discount?: number;
+		categoryId?: number;
 	};
 }
 
 const { product } = Astro.props;
-const bgColor = productColors[product.id % productColors.length];
+const washClass = WASH_BG[washFor(product.categoryId ?? "uncategorized")];
 const imageUrl = product.images[0]?.url || "";
 const productUrl = `/products/${product.slug}-${product.id}`;
+const isOutOfStock = product.stock === 0;
+const isLowStock =
+	product.stock !== undefined &&
+	product.stock > 0 &&
+	product.stock <= LOW_STOCK_THRESHOLD;
+const hasSale = (product.discount ?? 0) > 0;
 ---
 
 <div
-	class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-border bg-card shadow-hard transition-all duration-200 hover:shadow-hard-lg sm:border-3 sm:shadow-hard-lg sm:hover:shadow-hard-xl"
+	class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
 	data-product-id={product.id}
 >
-	<a
-		href={productUrl}
-		class="relative block overflow-hidden border-border border-b-2 sm:border-b-3"
-		aria-hidden="true"
-		tabindex="-1"
-	>
+	<a href={productUrl} class="relative block" aria-hidden="true" tabindex="-1">
 		<div
-			class="relative aspect-4/5"
-			style={`background: ${bgColor}`}
+			class={`relative aspect-4/5 ${washClass} ${isOutOfStock ? "saturate-[0.35]" : ""}`}
 			transition:name={`product-image-${product.id}`}
 		>
-			<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
 			{imageUrl ? (
 				<img
 					src={toProductImageUrl(imageUrl, "card") || imageUrl}
@@ -45,43 +49,58 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 					height="500"
 					loading="lazy"
 					decoding="async"
-					class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4"
+					class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
 				/>
 			) : (
 				<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
 			)}
-			{product.brand && (
-				<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[11px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1 sm:text-[11px]">
-					{product.brand.name}
-				</div>
+			{hasSale && !isOutOfStock && (
+				<span class="-rotate-2 absolute top-2 left-2 inline-flex items-center rounded-full bg-sale px-2 py-0.5 font-semibold text-[11px] text-sale-foreground">
+					-{product.discount}%
+				</span>
+			)}
+			{isLowStock && (
+				<span class="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-warning px-2 py-0.5 font-semibold text-[10px] text-warning-foreground">
+					Цөөн үлдсэн
+				</span>
+			)}
+			{isOutOfStock && (
+				<span class="absolute bottom-2 left-2 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
+					Дууссан
+				</span>
 			)}
 		</div>
 	</a>
 
-	<div class="flex flex-1 flex-col p-2 sm:p-3">
+	<div class="flex flex-1 flex-col gap-1 p-3">
+		{product.brand && (
+			<p class="font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+				{product.brand.name}
+			</p>
+		)}
 		<a href={productUrl} class="block">
-			<h3 class="line-clamp-2 font-bold text-[11px] leading-tight tracking-tight group-hover:underline sm:text-sm sm:leading-snug">
+			<h3 class="line-clamp-2 font-medium text-foreground text-sm leading-snug group-hover:underline">
 				{product.name}
 				{product.brand ? <span class="sr-only">, {product.brand.name}</span> : null}
 			</h3>
 		</a>
-	</div>
 
-	<div class="flex items-center justify-between gap-2 border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t-3 sm:px-4 sm:py-3">
-		<div class="font-black text-sm tracking-tight sm:text-lg">
-			{formatCurrency(product.price)}
+		<div class="mt-auto flex items-end justify-between gap-2 pt-2">
+			<div class="font-bold font-display text-base tracking-tight">
+				{formatCurrency(product.price)}
+			</div>
+			<CardAddButton
+				client:load
+				disabled={isOutOfStock}
+				cartItem={{
+					productId: product.id,
+					quantity: 1,
+					name: product.name,
+					price: product.price,
+					image: imageUrl || "",
+					slug: product.slug,
+				}}
+			/>
 		</div>
-		<AddToCartButton
-			client:load
-			compact
-			cartItem={{
-				productId: product.id,
-				quantity: 1,
-				name: product.name,
-				price: product.price,
-				image: imageUrl || "",
-				slug: product.slug,
-			}}
-		/>
 	</div>
 </div>

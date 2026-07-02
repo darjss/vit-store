@@ -2,7 +2,7 @@
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { getStaticNavigationData } from "@/lib/static-navigation";
-import IconArrowRight from "~icons/ri/arrow-right-s-line";
+import IconArrowDown from "~icons/ri/arrow-down-s-line";
 import IconGrid from "~icons/ri/grid-line";
 import IconHome from "~icons/ri/home-4-line";
 import IconCart from "~icons/ri/shopping-cart-2-line";
@@ -23,58 +23,57 @@ const remainingCategories = categories.slice(6);
 // brand-initial monogram used for missing logos. Self-contained — no sibling
 // DOM needed. See GitHub issue #11.
 const brandLogoOnError =
-	"this.outerHTML='<div class=&quot;w-11 h-11 shrink-0 bg-muted border-2 border-border flex items-center justify-center text-sm font-black&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
+	"this.outerHTML='<div class=&quot;w-11 h-11 shrink-0 bg-muted rounded-lg flex items-center justify-center text-sm font-semibold&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 ---
 
 <div class="flex flex-col h-full bg-background">
     <!-- User Section at Top - Most Important -->
-    <div class="p-4 pr-20 bg-secondary text-secondary-foreground relative">
+    <div class="border-border border-b bg-wash-lemon/70 p-4 pr-20 relative">
         <SidebarUserSection server:defer>
-            <div slot="fallback" class="h-12 bg-secondary-foreground/10 animate-pulse"></div>
+            <div slot="fallback" class="h-12 animate-pulse rounded-xl bg-foreground/5"></div>
         </SidebarUserSection>
     </div>
 
     <!-- Main Scrollable Area -->
-    <div class="flex-1 overflow-y-auto bg-dots-subtle">
+    <div class="flex-1 overflow-y-auto">
         <!-- Quick Actions -->
-        <div class="p-4 grid grid-cols-2 gap-3">
-            <a 
-                href="/" 
-                class="flex flex-col items-center justify-center gap-2 p-4 bg-primary border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-primary/80"
+        <div class="grid grid-cols-2 gap-3 p-4">
+            <a
+                href="/"
+                class="flex flex-col items-center justify-center gap-2 rounded-xl bg-primary p-4 text-primary-foreground shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
             >
                 <IconHome class="w-6 h-6" />
-                <span class="font-black text-xs uppercase tracking-wide">Нүүр</span>
+                <span class="font-semibold text-xs">Нүүр</span>
             </a>
-            
-            <a 
-                href="/products" 
-                class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
+
+            <a
+                href="/products"
+                class="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-4 text-foreground shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
             >
                 <IconGrid class="w-6 h-6" />
-                <span class="font-black text-xs uppercase tracking-wide">Бүтээгдэхүүн</span>
+                <span class="font-semibold text-xs">Бүтээгдэхүүн</span>
             </a>
-            
-            <a 
-                href="/cart" 
-                class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
+
+            <a
+                href="/cart"
+                class="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-4 text-foreground shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
             >
                 <IconCart class="w-6 h-6" />
-                <span class="font-black text-xs uppercase tracking-wide">Сагс</span>
+                <span class="font-semibold text-xs">Сагс</span>
             </a>
-            
-            <a 
-                href="/profile" 
-                class="flex flex-col items-center justify-center gap-2 p-4 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all active:bg-muted"
+
+            <a
+                href="/profile"
+                class="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-4 text-foreground shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
             >
                 <IconUser class="w-6 h-6" />
-                <span class="font-black text-xs uppercase tracking-wide">Профайл</span>
+                <span class="font-semibold text-xs">Профайл</span>
             </a>
         </div>
 
         <!-- Brands - Logo Grid -->
         <div class="px-4 pb-4">
-            <h3 class="font-black text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-4 bg-accent"></span>
+            <h3 class="mb-3 text-muted-foreground text-xs uppercase tracking-wide">
                 Брэндүүд
             </h3>
             {navBrands.length > 0 ? (
@@ -85,19 +84,19 @@ const brandLogoOnError =
                             return (
                             <a
                                 href={`/products/brand/${brand.slug}/1/`}
-                                class="flex aspect-square items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group"
+                                class="group flex aspect-square items-center justify-center rounded-xl border border-border bg-card p-3 shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
                                 title={brand.name}
                             >
                                 {logoUrl ? (
                                     <img
                                         src={logoUrl}
                                         alt={brand.name}
-                                        class="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
+                                        class="max-h-full max-w-full object-contain transition-transform duration-150 ease-out group-hover:scale-105"
                                         loading="lazy"
                                         onerror={brandLogoOnError}
                                     />
                                 ) : (
-                                    <div class="w-full h-full bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                    <div class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
                                         {brand.name.substring(0, 2).toUpperCase()}
                                     </div>
                                 )}
@@ -106,10 +105,10 @@ const brandLogoOnError =
                         })}
                     </div>
                     {remainingBrands.length > 0 && (
-                        <details class="mt-3 group">
-                            <summary class="list-none flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors cursor-pointer select-none">
+                        <details class="group mt-3">
+                            <summary class="flex min-h-11 w-full cursor-pointer select-none list-none items-center justify-center gap-2 rounded-full border border-border bg-card p-3 font-semibold text-sm shadow-soft-sm transition-[background-color] duration-150 ease-out hover:bg-muted [&::-webkit-details-marker]:hidden">
                                 <span>Илүү харах</span>
-                                <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
+                                <IconArrowDown class="h-4 w-4 transition-transform duration-200 ease-out group-open:rotate-180" />
                             </summary>
                             <div class="mt-2 grid grid-cols-3 gap-2">
                                 {remainingBrands.map((brand: { id: number; name: string; slug: string; logoUrl?: string | null; productCount?: number }) => {
@@ -117,19 +116,19 @@ const brandLogoOnError =
                                     return (
                                     <a
                                         href={`/products/brand/${brand.slug}/1/`}
-                                        class="flex aspect-square items-center justify-center p-3 bg-background border-3 border-border shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-muted transition-all group"
+                                        class="group flex aspect-square items-center justify-center rounded-xl border border-border bg-card p-3 shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
                                         title={brand.name}
                                     >
                                         {logoUrl ? (
                                             <img
                                                 src={logoUrl}
                                                 alt={brand.name}
-                                                class="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform"
+                                                class="max-h-full max-w-full object-contain transition-transform duration-150 ease-out group-hover:scale-105"
                                                 loading="lazy"
                                                 onerror={brandLogoOnError}
                                             />
                                         ) : (
-                                            <div class="w-full h-full bg-muted border-2 border-border flex items-center justify-center text-sm font-black group-hover:bg-primary transition-colors">
+                                            <div class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
                                                 {brand.name.substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
@@ -141,39 +140,38 @@ const brandLogoOnError =
                     )}
                 </>
             ) : (
-                <div class="text-center py-8 text-muted-foreground">
-                    <p class="text-sm font-medium">Брэнд олдсонгүй</p>
+                <div class="py-8 text-center text-muted-foreground">
+                    <p class="text-sm">Брэнд олдсонгүй</p>
                 </div>
             )}
         </div>
 
         <!-- Categories -->
         <div class="px-4 pb-4">
-            <h3 class="font-black text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-4 bg-primary"></span>
+            <h3 class="mb-3 text-muted-foreground text-xs uppercase tracking-wide">
                 Ангилал
             </h3>
             <div class="grid grid-cols-2 gap-2">
                 {topCategories.map((category: { id: number; name: string; slug: string }) => (
                     <a
                         href={`/products/category/${category.slug}/1/`}
-                        class="flex min-h-[60px] items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
+                        class="flex min-h-[60px] items-center justify-center rounded-xl border border-border bg-card px-3 py-2.5 text-center font-semibold text-xs leading-tight shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                     >
                         <span class="line-clamp-2">{category.name}</span>
                     </a>
                 ))}
             </div>
             {remainingCategories.length > 0 && (
-                <details class="mt-3 group">
-                    <summary class="list-none flex items-center justify-center gap-2 w-full p-3 bg-muted border-3 border-border font-bold text-sm hover:bg-primary transition-colors cursor-pointer select-none">
+                <details class="group mt-3">
+                    <summary class="flex min-h-11 w-full cursor-pointer select-none list-none items-center justify-center gap-2 rounded-full border border-border bg-card p-3 font-semibold text-sm shadow-soft-sm transition-[background-color] duration-150 ease-out hover:bg-muted [&::-webkit-details-marker]:hidden">
                         <span>Илүү харах</span>
-                        <IconArrowRight class="w-4 h-4 transition-transform group-open:rotate-90" />
+                        <IconArrowDown class="h-4 w-4 transition-transform duration-200 ease-out group-open:rotate-180" />
                     </summary>
                     <div class="mt-2 grid grid-cols-2 gap-2">
                         {remainingCategories.map((category: { id: number; name: string; slug: string }) => (
                             <a
                                 href={`/products/category/${category.slug}/1/`}
-                                class="flex min-h-[60px] items-center justify-center px-3 py-2.5 bg-background border-3 border-border font-black text-xs leading-tight shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all text-center uppercase"
+                                class="flex min-h-[60px] items-center justify-center rounded-xl border border-border bg-card px-3 py-2.5 text-center font-semibold text-xs leading-tight shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                             >
                                 <span class="line-clamp-2">{category.name}</span>
                             </a>
@@ -184,20 +182,19 @@ const brandLogoOnError =
         </div>
 
         <div class="px-4 pb-4">
-            <h3 class="font-black text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-4 bg-primary"></span>
+            <h3 class="mb-3 text-muted-foreground text-xs uppercase tracking-wide">
                 Онцлох хэсэг
             </h3>
             <div class="grid grid-cols-2 gap-2">
                 <a
                     href="/products?filter=featured"
-                    class="flex items-center justify-center p-2.5 bg-background border-3 border-border text-[11px] font-bold uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                    class="flex min-h-11 items-center justify-center rounded-full border border-border bg-card p-2.5 font-semibold text-xs shadow-soft-sm transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                 >
                     Онцлох
                 </a>
                 <a
                     href="/products?filter=recent"
-                    class="flex items-center justify-center p-2.5 bg-background border-3 border-border text-[11px] font-bold uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                    class="flex min-h-11 items-center justify-center rounded-full border border-border bg-card p-2.5 font-semibold text-xs shadow-soft-sm transition-[background-color,box-shadow] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                 >
                     Шинэ
                 </a>
@@ -206,14 +203,14 @@ const brandLogoOnError =
     </div>
 
     <!-- Bottom Branding -->
-    <div class="p-4 border-t-3 border-border bg-muted/50">
+    <div class="border-border border-t bg-muted/50 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-primary border-3 border-border flex items-center justify-center font-black text-xs uppercase tracking-wider shadow-hard-sm">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-display text-primary-foreground text-xs">
                 AV
             </div>
             <div>
-                <span class="font-black text-sm block uppercase tracking-wider">Amerik Vitamin</span>
-                <span class="text-[10px] text-muted-foreground font-medium">Баталгаатай импорт</span>
+                <span class="block font-display text-foreground text-sm">Amerik Vitamin</span>
+                <span class="text-[10px] text-muted-foreground">Баталгаатай импорт</span>
             </div>
         </div>
     </div>
@@ -243,7 +240,7 @@ const brandLogoOnError =
     const handleLinkClick = (e: Event) => {
       const target = e.target as HTMLElement;
       const link = target.closest('a[href]') as HTMLAnchorElement;
-      
+
       if (link && sidebarContainer.contains(link)) {
         // Find the close button and click it to trigger proper close animation
         const closeButton = sidebarContainer.querySelector('[data-slot="sheet-close"], .starwind-dialog-close') as HTMLButtonElement;

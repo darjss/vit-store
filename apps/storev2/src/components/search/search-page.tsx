@@ -68,10 +68,10 @@ const SearchPage: Component = () => {
 	return (
 		<div class="flex flex-col">
 			{/* Header */}
-			<div class="border-border border-b-3 bg-primary/10 px-4 py-4 sm:px-6 sm:py-6">
+			<div class="border-border border-b bg-wash-lemon px-4 py-4 sm:px-6 sm:py-6">
 				<div class="mx-auto max-w-screen-2xl">
-					<h1 class="mb-4 flex items-center gap-2 font-black text-xl uppercase tracking-tight sm:text-2xl">
-						<IconSearch class="h-6 w-6 text-primary" />
+					<h1 class="mb-4 flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
+						<IconSearch class="h-6 w-6 text-foreground/60" />
 						Бүтээгдэхүүн хайх
 					</h1>
 					<SearchInput

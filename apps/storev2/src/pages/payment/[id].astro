@@ -1,11 +1,4 @@
 ---
-
-
-
-
-
-
-
 import PaymentOptions from "@/components/payment/payment-options";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
@@ -38,40 +31,40 @@ if (payment.status === "success") {
 <Layout>
     <div class="container mx-auto px-3 py-4 sm:px-4 sm:py-6 max-w-3xl min-h-screen">
         <div class="mb-4 sm:mb-6">
-            <div class="border-3 sm:border-4 border-border bg-primary p-3 sm:p-4 shadow-hard-lg sm:shadow-hard-xl mb-3 sm:mb-4">
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 border-3 border-border bg-card flex items-center justify-center">
-                        <IconCreditCard class="h-6 w-6" />
+            <div class="enter-rise rounded-2xl border border-border bg-card p-4 shadow-soft mb-3 sm:mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex size-11 shrink-0 items-center justify-center rounded-full bg-wash-lemon">
+                        <IconCreditCard class="h-5 w-5" aria-hidden="true" />
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h1 class="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-tight">
+                        <h1 class="font-display text-lg text-foreground sm:text-xl">
                             Төлбөр төлөх
                         </h1>
-                        <p class="text-xs sm:text-sm font-bold text-muted-foreground mt-0.5">
+                        <p class="text-xs sm:text-sm text-muted-foreground mt-0.5">
                             #{payment.order.orderNumber}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="border-3 sm:border-4 border-border bg-card shadow-hard-lg sm:shadow-hard-xl mb-4 sm:mb-6">
+            <div class="enter-rise stagger-1 rounded-2xl border border-border bg-card shadow-soft mb-4 sm:mb-6">
                 <div class="p-3 sm:p-4 space-y-3">
-                    <div class="flex items-center justify-between p-2.5 sm:p-3 border-2 border-border bg-muted/30">
-                        <span class="text-xs sm:text-sm font-bold text-muted-foreground">НИЙТ ДҮН</span>
-                        <span class="text-lg sm:text-xl font-black text-primary">{payment.total.toLocaleString()}₮</span>
+                    <div class="flex items-center justify-between rounded-xl bg-wash-lemon px-3.5 py-2.5">
+                        <span class="text-xs sm:text-sm font-semibold text-foreground/70">Нийт дүн</span>
+                        <span class="font-display text-lg sm:text-xl text-foreground">{payment.total.toLocaleString()}₮</span>
                     </div>
                     <div class="space-y-2">
                         {payment.order.products.map((product) => (
-                            <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 border-2 border-border bg-background">
+                            <div class="flex items-center gap-2.5 sm:gap-3 rounded-xl p-2 sm:p-2.5 bg-muted/30">
                                 {product.imageUrl && (
                                     <img
                                         src={product.imageUrl}
                                         alt={product.name}
-                                        class="w-10 h-10 sm:w-12 sm:h-12 object-cover border-2 border-border shrink-0"
+                                        class="size-10 sm:size-12 object-cover rounded-lg shrink-0"
                                     />
                                 )}
-                                <span class="text-xs sm:text-sm font-bold flex-1 line-clamp-2">{product.name}</span>
-                                <span class="text-xs font-bold text-muted-foreground px-1.5 py-0.5 sm:px-2 sm:py-1 border-2 border-border bg-muted shrink-0">{product.quantity}x</span>
+                                <span class="text-xs sm:text-sm font-medium text-foreground flex-1 line-clamp-2">{product.name}</span>
+                                <span class="text-xs font-semibold text-muted-foreground px-2 py-0.5 rounded-full bg-muted shrink-0 tabular-nums">{product.quantity}x</span>
                             </div>
                         ))}
                     </div>
@@ -79,16 +72,18 @@ if (payment.status === "success") {
             </div>
         </div>
 
-        <PaymentOptions
-            paymentNumber={id}
-            total={payment.total}
-            transferReference={payment.paymentNumber}
-            checkoutToken={checkoutToken}
-            client:only="solid-js"
-        >
-            <div slot="fallback" class="w-full border-3 border-border bg-card p-4 shadow-hard-lg">
-                <div class="h-10 w-full animate-pulse border-2 border-border bg-muted/40"></div>
-            </div>
-        </PaymentOptions>
+        <div class="enter-rise stagger-2">
+            <PaymentOptions
+                paymentNumber={id}
+                total={payment.total}
+                transferReference={payment.paymentNumber}
+                checkoutToken={checkoutToken}
+                client:only="solid-js"
+            >
+                <div slot="fallback" class="w-full rounded-2xl border border-border bg-card p-4 shadow-soft">
+                    <div class="h-10 w-full animate-pulse rounded-xl bg-muted/40"></div>
+                </div>
+            </PaymentOptions>
+        </div>
     </div>
 </Layout>

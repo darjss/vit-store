@@ -71,21 +71,22 @@ const SearchOverlay: Component = () => {
 				as="button"
 				type="button"
 				aria-label="Хайх"
-				class="flex items-center justify-center border-3 border-border bg-background p-2 shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-none"
+				class="flex h-11 min-w-44 items-center gap-2.5 rounded-full border border-border bg-muted/70 px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:bg-muted hover:shadow-soft active:scale-[0.98] lg:min-w-56"
 			>
-				<IconSearch class="h-5 w-5" aria-hidden="true" />
+				<IconSearch class="h-4 w-4 shrink-0" aria-hidden="true" />
+				<span class="truncate text-sm font-medium">Витамин хайх...</span>
 			</SheetTrigger>
 
 			<SheetContent
 				position="top"
-				class="h-[90vh] w-full max-w-none border-border border-b-4 p-0 sm:h-[85vh]"
+				class="h-[90vh] w-full max-w-none border-border border-b p-0 sm:h-[85vh]"
 			>
 				<div class="flex h-full flex-col">
 					{/* Header */}
-					<div class="border-border border-b-3 bg-primary/10 px-4 py-4 sm:px-6">
+					<div class="border-border border-b bg-wash-lemon px-4 py-4 sm:px-6">
 						<SheetHeader class="mb-4">
-							<SheetTitle class="flex items-center gap-2 font-black text-xl uppercase tracking-tight sm:text-2xl">
-								<IconSearch class="h-6 w-6 text-primary" />
+							<SheetTitle class="flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
+								<IconSearch class="h-6 w-6 text-foreground/60" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
 						</SheetHeader>
@@ -120,7 +121,7 @@ const SearchOverlay: Component = () => {
 					</div>
 
 					{/* Footer */}
-					<div class="border-border border-t-3 bg-muted/50 px-4 py-3 sm:px-6">
+					<div class="border-border border-t bg-muted/50 px-4 py-3 sm:px-6">
 						<div class="flex items-center justify-between">
 							<p class="text-muted-foreground/80 text-xs sm:text-sm">
 								<kbd class="mr-1 rounded border border-border/20 bg-background px-1.5 py-0.5 font-mono text-xs">

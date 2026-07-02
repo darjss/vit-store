@@ -1,13 +1,31 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
-import { productColors } from "@/lib/constant";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { washBg } from "@/lib/wash";
+import IconTruck from "~icons/ri/truck-line";
+import IconShield from "~icons/ri/shield-check-line";
+import IconPhone from "~icons/ri/phone-line";
 
 export const prerender = true;
+
+type CategoryTile = {
+  id: number;
+  name: string;
+  slug: string;
+  productCount: number;
+};
+
+type BrandRow = {
+  id: number;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  productCount: number;
+};
 
 const products = await api.product.getProductsForHomeWithStock.query();
 const { featuredProducts, newProducts } = products;
@@ -27,223 +45,221 @@ const preferredCategoryNames = [
 
 const orderedCategories = [
   ...preferredCategoryNames
-    .map((name) => allCategories.find((c: { id: number; name: string }) => c.name === name))
-    .filter(Boolean),
+    .map((name) => allCategories.find((c: CategoryTile) => c.name === name))
+    .filter((c: CategoryTile | undefined): c is CategoryTile => Boolean(c)),
   ...allCategories.filter(
-    (c: { id: number; name: string }) => !preferredCategoryNames.includes(c.name),
+    (c: CategoryTile) => !preferredCategoryNames.includes(c.name),
   ),
 ];
 
-const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
-  id: number;
-  name: string;
-  slug: string;
-}>;
+const categoryTiles = orderedCategories.slice(0, 8);
+const heroProducts: ProductForHome[] = featuredProducts.slice(0, 4);
+const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
+const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
+const brandRow: BrandRow[] = brands.slice(0, 10);
 ---
 
 <Layout
   image="/og-landing.png"
   imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
 >
-  <!-- DESIGN 4 v2: "SPLIT EDITORIAL" — Mobile-first rewrite -->
-  <!-- 99% mobile traffic. Every section designed for thumb-scrolling first. -->
-
-  <!-- ==================== HERO ==================== -->
-  <section class="border-b-2 border-border bg-dots-subtle">
-    <!-- Mobile: stacked. Desktop: split -->
-    <div class="grid lg:grid-cols-2">
+  <!-- ==================== 1. HERO ==================== -->
+  <section class="bg-hero-warm">
+    <div class="mx-auto grid max-w-6xl gap-8 px-5 pt-9 pb-12 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-16 lg:pb-20">
       <!-- Text -->
-      <div class="px-5 pt-8 pb-6 lg:px-14 lg:py-28 lg:border-r-2 border-border flex flex-col justify-center min-w-0 overflow-hidden">
-        <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">amerikvitamin.mn</span>
-        <h1 class="text-[26px] leading-[1.05] sm:text-h1 font-black uppercase tracking-tighter mb-4 break-words">
-          Өргөн сонголттой<br/>
-          <span class="text-primary">витамин, боломжийн үнээр.</span>
+      <div class="min-w-0">
+        <h1 class="enter-rise font-display text-h1 font-semibold mb-4 break-words">
+          Өргөн сонголттой витамин, боломжийн үнээр
         </h1>
-        <p class="text-[13px] md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
+        <p class="enter-rise stagger-1 text-sm md:text-base font-medium text-muted-foreground leading-relaxed mb-6 max-w-md break-words">
           Өдөр тутам авдаг витамин, нэмэлт тэжээлийг нэг дороос. Үнэ нь боломжийн, сонголт нь өргөн, хүргэлт нь шуурхай.
         </p>
-
-        <!-- Trust row — compact on mobile -->
-        <div class="relative flex gap-3 mb-5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-1">
-          <div class="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent z-10" aria-hidden="true" />
-          {[
-            { val: "Хямд", label: "Үнэ" },
-            { val: "Өргөн", label: "Сонголт" },
-            { val: "Шуурхай", label: "Хүргэлт" },
-          ].map((s) => (
-            <div class="flex-none flex items-center gap-1.5 px-3 py-1.5 border-2 border-border bg-muted/30">
-              <span class="font-black text-sm">{s.val}</span>
-              <span class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{s.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2.5">
-          <a href="/products" class="px-7 py-3 bg-foreground text-background font-black text-[13px] uppercase tracking-wider border-2 border-foreground shadow-hard-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all">
+        <div class="enter-rise stagger-2 mb-4">
+          <a
+            href="/products"
+            class="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm md:text-base font-semibold text-primary-foreground shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none"
+          >
             Бүтээгдэхүүн үзэх
           </a>
-          <a href="#featured-products" class="px-4 py-3 bg-card text-foreground font-black text-[12px] uppercase tracking-wider border-2 border-border active:bg-primary transition-colors">
-            Онцлох сонголт
-          </a>
         </div>
+        <p class="enter-rise stagger-3 text-[13px] font-semibold text-muted-foreground">
+          АНУ-аас албан ёсоор ирдэг жинхэнэ бүтээгдэхүүн · 10:30-аас өмнө захиалбал өдөртөө хүргэнэ
+        </p>
       </div>
 
-      <!-- Hero products: 2x2 grid, always visible -->
-      <div class="grid grid-cols-2 border-t-2 lg:border-t-0 border-border">
-        {featuredProducts.slice(0, 4).map((p: ProductForHome, i: number) => (
-          <a href={`/products/${p.slug}-${p.id}/`} class={`group relative block min-w-0 overflow-hidden ${i < 2 ? 'border-b-2 border-border' : ''} ${i % 2 === 0 ? 'border-r-2 border-border' : ''}`}>
-            <div class="relative aspect-square overflow-hidden" style={`background: ${productColors[p.id % productColors.length]}`}>
-              {p.image && (
-                <img src={toProductImageUrl(p.image, "feature") || p.image} alt={p.name} class="absolute inset-0 w-full h-full object-contain p-5 md:p-6 group-hover:scale-105 transition-transform duration-500" width="480" height="480" loading="eager" decoding="async" />
-              )}
+      <!-- Rotating product showcase -->
+      {heroProducts.length > 0 && (
+        <div class="enter-scale stagger-2 relative" data-hero-rotator>
+          <div class="hero-frame relative overflow-hidden rounded-3xl bg-wash-peach shadow-soft-lg aspect-[4/3] lg:aspect-square">
+            {heroProducts.map((p, i) => (
+              <a
+                href={`/products/${p.slug}-${p.id}/`}
+                class:list={["hero-slide group absolute inset-0 block", { "is-active": i === 0 }]}
+                aria-hidden={i === 0 ? "false" : "true"}
+                tabindex={i === 0 ? undefined : -1}
+              >
+                <img
+                  src={toProductImageUrl(p.image, "feature") || p.image}
+                  alt={p.name}
+                  class="absolute inset-0 h-full w-full object-contain p-8 lg:p-14 transition-transform duration-300 ease-out-quart group-hover:scale-[1.03]"
+                  width="480"
+                  height="480"
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+                <span class="absolute top-4 left-4 rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground shadow-soft-sm">
+                  {p.brand}
+                </span>
+                <div class="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                  <span class="line-clamp-2 max-w-[60%] text-sm font-semibold leading-snug text-foreground/80">
+                    {p.name}
+                  </span>
+                  <span class="inline-flex items-center rounded-full bg-card px-3.5 py-1.5 font-display text-sm font-semibold shadow-soft">
+                    {formatCurrency(p.price)}
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+          <span class="hero-sticker absolute -top-3 right-5 inline-flex -rotate-3 items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 text-xs font-bold text-foreground shadow-pop-sm">
+            100% жинхэнэ
+          </span>
+          {heroProducts.length > 1 && (
+            <div class="hero-dots mt-4 flex items-center justify-center gap-1" role="tablist" aria-label="Онцлох бүтээгдэхүүн">
+              {heroProducts.map((p, i) => (
+                <button
+                  type="button"
+                  class:list={["hero-dot grid place-items-center p-2.5", { "is-active": i === 0 }]}
+                  role="tab"
+                  aria-selected={i === 0 ? "true" : "false"}
+                  aria-label={p.name}
+                >
+                  <span class="block h-2 w-2 rounded-full bg-foreground/25"></span>
+                </button>
+              ))}
             </div>
-            <!-- Always-visible label on mobile (no hover state needed) -->
-            <div class="absolute bottom-0 inset-x-0 bg-card/95 border-t-2 border-border p-2 md:p-3">
-              <div class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{p.brand}</div>
-              <div class="line-clamp-1 font-bold text-[10px] leading-tight md:text-xs">{p.name}</div>
-              <div class="flex items-center justify-between mt-1">
-                <span class="font-black text-xs md:text-sm">{formatCurrency(p.price)}</span>
-              </div>
-            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- ==================== 2. CATEGORY TILES ==================== -->
+  <section>
+    <div class="mx-auto max-w-6xl px-5 pt-10 pb-8 lg:px-8 lg:pt-16 lg:pb-12">
+      <h2 data-reveal class="font-display text-h2 font-semibold mb-1">Хэрэгцээгээрээ сонго</h2>
+      <p data-reveal class="text-sm font-medium text-muted-foreground mb-5">Өөрийн хэрэгцээнд тохирох төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
+        {categoryTiles.map((cat) => (
+          <a
+            href={`/products/category/${cat.slug}/1/`}
+            class={`${washBg(cat.slug)} group flex min-h-[96px] flex-col justify-between rounded-2xl p-4 shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft-lg active:translate-y-0 active:scale-[0.98] lg:min-h-[112px] lg:p-5`}
+          >
+            <h3 class="text-sm font-bold leading-snug lg:text-base">{cat.name}</h3>
+            <span class="text-xs font-semibold text-foreground/60">{cat.productCount} бүтээгдэхүүн</span>
           </a>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- ==================== BRAND MARQUEE ==================== -->
-  <section class="border-b-2 border-border bg-muted bg-stripes-diagonal overflow-hidden">
-    <div class="group/marquee">
-      <div class="py-3 lg:py-3.5 flex items-center gap-8 whitespace-nowrap group-hover/marquee:[animation-play-state:paused] group-focus-within/marquee:[animation-play-state:paused]" style="animation: brand-scroll-4 35s linear infinite;">
-        {[...Array(4)].map(() => brands.map((brand: {name: string; slug: string}) => (
-          <a href={`/products/brand/${brand.slug}/1/`} class="text-sm lg:text-base font-black uppercase tracking-wider text-foreground/80 flex items-center gap-8 hover:text-foreground transition-colors">
-            {brand.name}
-            <span class="w-1.5 h-1.5 bg-primary rotate-45 block"></span>
-          </a>
-        )))}
+  <!-- ==================== 3. FEATURED PRODUCTS ==================== -->
+  <section id="featured-products" class="scroll-mt-20">
+    <div class="mx-auto max-w-6xl px-5 py-8 lg:px-8 lg:py-14">
+      <!-- Snap shelf -->
+      <div class="mb-1 flex items-center justify-between">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Онцлох</h2>
+        <a href="/products?filter=featured" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
       </div>
-    </div>
-  </section>
-
-  <!-- ==================== CATEGORIES — Swipeable pills ==================== -->
-  <section class="border-b-2 border-border bg-dots-subtle">
-    <div class="px-5 py-3.5 lg:px-8">
-      <div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-5 px-5">
-        {categoriesForPills.map((cat) => (
-          <a href={`/products/category/${cat.slug}/1/`} class="flex-none px-3.5 py-2 border-2 border-border bg-card font-bold text-[11px] uppercase tracking-wider active:bg-foreground active:text-background transition-colors">
-            {cat.name}
-          </a>
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+      <div data-reveal-group class="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto scrollbar-hide px-5 pb-2 lg:-mx-8 lg:gap-4 lg:px-8">
+        {shelfProducts.map((p: ProductForHome) => (
+          <HomeProductCard product={p} class="w-[140px] flex-none snap-start lg:w-[220px]" />
         ))}
       </div>
-    </div>
-  </section>
 
-  <!-- ==================== FEATURED ==================== -->
-  <section id="featured-products" class="border-b-2 border-border bg-grid-subtle scroll-mt-20">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <!-- Section header -->
-      <div class="mb-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-h2 font-black uppercase tracking-tight">Онцлох</h2>
-          <a href="/products?filter=featured" class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
-        </div>
-        <p class="text-[12px] text-muted-foreground font-medium mt-1">Үнэ, эрэлт хоёроороо хамгийн их сонгогддог бүтээгдэхүүнүүд</p>
+      <!-- Small new-arrivals grid -->
+      <div class="mt-9 mb-1 flex items-center justify-between lg:mt-12">
+        <h2 data-reveal class="font-display text-h2 font-semibold">Шинэ ирсэн</h2>
+        <a href="/products?filter=recent" class="py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground">Бүгд →</a>
       </div>
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4">
-        {featuredProducts.map((p: ProductForHome) => (
+      <p data-reveal class="mb-5 text-sm font-medium text-muted-foreground">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
+      <div data-reveal-group class="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
+        {gridProducts.map((p: ProductForHome) => (
           <HomeProductCard product={p} />
         ))}
       </div>
     </div>
   </section>
 
-  <!-- ==================== WHY US — Horizontal scroll cards on mobile ==================== -->
-  <section class="border-b-2 border-border bg-muted/20 bg-stripes-diagonal">
-    <div class="px-5 py-8 lg:px-8 lg:py-14">
-      <h2 class="text-h3 font-black uppercase tracking-tight mb-1">Яагаад манайх гэж</h2>
-      <p class="text-[12px] text-muted-foreground font-medium mb-5">Хэрэгтэйгээ төвөггүй олохын тулд</p>
-
-      <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-3">
-        {[
-          { num: "01", title: "Боломжийн үнэ", desc: "Өдөр бүр хэрэгтэй бүтээгдэхүүнээ хэт өндөр үнээр авахгүй. Боломжийн үнийг барихыг хичээдэг." },
-          { num: "02", title: "Өргөн сонголт", desc: "Витамин, эрдэс, нэмэлт тэжээлээ нэг дороос харьцуулж сонгох боломжтой." },
-          { num: "03", title: "Шуурхай хүргэлт", desc: "Захиалгыг удаалалгүй, аль болох хурдан хүргэхэд анхаардаг." },
-          { num: "04", title: "Хэрэгцээний төрлүүд", desc: "Дархлаа, гоо сайхан, яс үе, ходоод гэдэс гээд түгээмэл хэрэгцээний төрлүүд бий." },
-        ].map((item) => (
-          <div class="flex-none w-[240px] lg:w-auto border-2 border-border bg-card p-4 lg:p-5">
-            <span class="text-[10px] font-black text-primary tracking-widest">{item.num}</span>
-            <h3 class="font-black text-[13px] md:text-sm uppercase tracking-wider mt-1 mb-1.5">{item.title}</h3>
-            <p class="text-[11px] md:text-xs font-medium text-muted-foreground leading-relaxed">{item.desc}</p>
-          </div>
-        ))}
+  <!-- ==================== 4. TRUST / DELIVERY STRIP ==================== -->
+  <section class="bg-secondary text-secondary-foreground">
+    <div class="mx-auto grid max-w-6xl gap-4 px-5 py-7 sm:grid-cols-3 lg:gap-6 lg:px-8 lg:py-9">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconTruck class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Өдөртөө хүргэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">10:30-аас өмнөх захиалгыг Улаанбаатар хотоор</p>
+        </div>
       </div>
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconShield class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">100% жинхэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">АНУ-аас албан ёсоор оруулж ирдэг</p>
+        </div>
+      </div>
+      <a href="tel:+97699993950" class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconPhone class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Тусламж хэрэгтэй юу?</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">9999-3950 · Даваа-Баасан 10:00-18:00</p>
+        </div>
+      </a>
     </div>
   </section>
 
-  <!-- ==================== NEW ARRIVALS — Swipeable row ==================== -->
-  <section class="border-b-2 border-border bg-dots-subtle">
-    <div class="px-5 pt-[var(--space-section-sm)] pb-[var(--space-section-md)] lg:px-8 lg:py-[var(--space-section-lg)]">
-      <div class="flex items-center justify-between mb-1">
-        <h2 class="text-h2 font-black uppercase tracking-tight">Шинэ ирсэн</h2>
-        <a href="/products?filter=recent" class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground active:text-foreground">Бүгд →</a>
-      </div>
-      <p class="text-[12px] text-muted-foreground font-medium mb-5">Шинээр орж ирсэн болон шинээр нэмэгдсэн төрлүүд</p>
-
-      <div class="flex gap-2.5 overflow-x-auto scrollbar-hide -mx-5 px-5 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-4 lg:mx-0 lg:px-0 lg:pb-0 lg:gap-4">
-        {newProducts.map((p: ProductForHome) => (
-          <HomeProductCard product={p} class="flex-none w-[165px] lg:w-auto snap-start" />
+  <!-- ==================== 5. BRANDS + FINAL CTA ==================== -->
+  <section>
+    <div class="mx-auto max-w-6xl px-5 pt-10 pb-12 lg:px-8 lg:pt-14 lg:pb-20">
+      <p data-reveal class="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Брэндүүд</p>
+      <div data-reveal-group class="flex flex-wrap gap-2">
+        {brandRow.map((brand: BrandRow) => (
+          <a
+            href={`/products/brand/${brand.slug}/1/`}
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-bold shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out-quart hover:-translate-y-0.5 hover:shadow-soft active:translate-y-0 active:scale-[0.97]"
+          >
+            {brand.logoUrl && (
+              <img
+                src={brand.logoUrl}
+                alt=""
+                class="h-5 w-5 rounded-full object-contain"
+                width="20"
+                height="20"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+            {brand.name}
+          </a>
         ))}
       </div>
-    </div>
-  </section>
 
-  <!-- ==================== TRUST & CERTIFICATIONS ==================== -->
-  <section class="border-b-2 border-border bg-muted/30 bg-grid-subtle">
-    <div class="px-5 py-8 lg:px-8 lg:py-12">
-      <div class="text-center mb-6">
-        <h2 class="text-h3 font-black uppercase tracking-tight">Баталгаат чанар</h2>
-        <p class="text-xs font-medium text-muted-foreground mt-1">АНУ-ын стандартын дагуу үйлдвэрлэгдсэн бүтээгдэхүүн</p>
-      </div>
-      <div class="flex flex-wrap items-center justify-center gap-3">
-        {[
-          { label: "GMP", sub: "Certified", desc: "Good Manufacturing Practice" },
-          { label: "FDA", sub: "Registered", desc: "Food & Drug Administration" },
-          { label: "NSF", sub: "Certified", desc: "National Sanitation Foundation" },
-          { label: "USP", sub: "Verified", desc: "United States Pharmacopeia" },
-          { label: "Non-GMO", sub: "Project", desc: "Non-GMO Project Verified" },
-          { label: "USDA", sub: "Organic", desc: "USDA Certified Organic" },
-        ].map((cert) => (
-          <div class="group flex items-center gap-2 px-3 py-2 border-3 border-border bg-card shadow-hard-sm hover:shadow-hard hover:-translate-y-0.5 transition-all">
-            <div class="w-8 h-8 border-2 border-border bg-primary flex items-center justify-center shrink-0">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="M9 12l2 2 4-4"/>
-              </svg>
-            </div>
-            <div>
-              <div class="font-black text-xs uppercase tracking-wider leading-none">{cert.label}</div>
-              <div class="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{cert.sub}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p class="text-center text-[10px] font-semibold text-muted-foreground mt-5 max-w-lg mx-auto leading-relaxed">
-        Бидний борлуулж буй бүтээгдэхүүнүүд АНУ-ын GMP баталгаат үйлдвэрүүдэд үйлдвэрлэгдсэн, FDA бүртгэлтэй, чанарын өндөр стандарт хангасан жинхэнэ бүтээгдэхүүнүүд юм.
-      </p>
-    </div>
-  </section>
-
-  <!-- ==================== FINAL CTA ==================== -->
-  <section class="px-5 py-10 lg:px-8 lg:py-16">
-    <div class="border-3 border-border bg-primary p-6 lg:p-14 shadow-hard-lg relative overflow-hidden">
-      <div class="absolute inset-0 bg-grid-pattern opacity-[0.08] pointer-events-none"></div>
-      <div class="relative z-10 max-w-lg mx-auto text-center">
-        <h2 class="text-h2 font-black uppercase tracking-tight mb-3">Хэрэгтэйгээ нэг дороос сонго</h2>
-        <p class="text-[12px] md:text-sm font-medium mb-6 text-foreground/70">
+      <div data-reveal class="mt-10 rounded-3xl bg-wash-lilac p-7 text-center shadow-soft lg:mt-14 lg:p-14">
+        <h2 class="font-display text-h2 font-semibold mb-3">Хэрэгтэйгээ нэг дороос сонго</h2>
+        <p class="mx-auto mb-6 max-w-md text-sm font-medium text-foreground/70 md:text-base">
           Боломжийн үнэтэй витамин, нэмэлт тэжээлийг ангилал бүрээр нь харьцуулж үзээд, захиалгаа хурдан өг.
         </p>
-        <a href="/products" class="inline-flex px-8 py-3.5 bg-foreground text-background font-black text-[13px] uppercase tracking-wider border-2 border-foreground active:scale-[0.97] transition-transform">
+        <a
+          href="/products"
+          class="inline-flex h-12 items-center justify-center rounded-full bg-primary px-7 text-sm md:text-base font-semibold text-primary-foreground shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none"
+        >
           Бүх бүтээгдэхүүн үзэх
         </a>
       </div>
@@ -252,8 +268,211 @@ const categoriesForPills = orderedCategories.slice(0, 10) as Array<{
 </Layout>
 
 <style>
-  @keyframes brand-scroll-4 {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  /* Sticker pops last: small spring overshoot after the staggered hero entrance. */
+  @keyframes sticker-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.8) rotate(4deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(-3deg);
+    }
+  }
+
+  .hero-sticker {
+    animation: sticker-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1) 380ms backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-sticker {
+      animation: none;
+    }
+  }
+
+  /* Rotating hero showcase: slides crossfade in place, no layout shift. */
+  .hero-slide {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(2px);
+    pointer-events: none;
+  }
+  .hero-slide.is-active {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+    pointer-events: auto;
+  }
+  .hero-dot > span {
+    transition: background-color 300ms var(--ease-out), transform 300ms var(--ease-out);
+  }
+  .hero-dot.is-active > span {
+    background-color: color-mix(in oklch, var(--color-foreground) 70%, transparent);
+    transform: scale(1.35);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-slide {
+      transition:
+        opacity 500ms var(--ease-out),
+        transform 500ms var(--ease-out),
+        filter 500ms var(--ease-out);
+    }
   }
 </style>
+
+<script>
+  import { animate, inView } from "motion";
+
+  const EASE: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+  function revealOnScroll() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    for (const el of document.querySelectorAll<HTMLElement>("[data-reveal]")) {
+      if (el.dataset.revealed) continue;
+      el.dataset.revealed = "true";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(10px)";
+      inView(
+        el,
+        () => {
+          animate(
+            el,
+            { opacity: 1, transform: "translateY(0px)" },
+            { duration: 0.35, ease: EASE },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+
+    for (const group of document.querySelectorAll<HTMLElement>("[data-reveal-group]")) {
+      if (group.dataset.revealed) continue;
+      group.dataset.revealed = "true";
+      const items = Array.from(group.children) as HTMLElement[];
+      for (const item of items) {
+        item.style.opacity = "0";
+        item.style.transform = "translateY(12px)";
+      }
+      inView(
+        group,
+        () => {
+          animate(
+            items,
+            { opacity: 1, transform: "translateY(0px)" },
+            {
+              duration: 0.35,
+              ease: EASE,
+              delay: (i: number) => Math.min(i, 7) * 0.04,
+            },
+          );
+        },
+        { margin: "0px 0px -10% 0px" },
+      );
+    }
+  }
+
+  document.addEventListener("astro:page-load", revealOnScroll);
+
+  function initHeroRotator() {
+    const rotator = document.querySelector<HTMLElement>("[data-hero-rotator]");
+    if (!rotator || rotator.dataset.init) return;
+
+    const slides = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-slide"));
+    const dots = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-dot"));
+    const count = slides.length;
+    if (count <= 1) return;
+    rotator.dataset.init = "true";
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let idx = Math.max(0, slides.findIndex((s) => s.classList.contains("is-active")));
+    let paused = false;
+    let stopped = reduce;
+    let timer: number | null = null;
+
+    function show(n: number) {
+      idx = (n + count) % count;
+      slides.forEach((s, i) => {
+        const on = i === idx;
+        s.classList.toggle("is-active", on);
+        s.setAttribute("aria-hidden", on ? "false" : "true");
+        if (on) s.removeAttribute("tabindex");
+        else s.setAttribute("tabindex", "-1");
+      });
+      dots.forEach((d, i) => {
+        const on = i === idx;
+        d.classList.toggle("is-active", on);
+        d.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+
+    function start() {
+      if (stopped || timer !== null) return;
+      timer = window.setInterval(() => {
+        if (!paused) show(idx + 1);
+      }, 5000);
+    }
+
+    function stopAuto() {
+      stopped = true;
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    rotator.addEventListener("pointerenter", () => (paused = true));
+    rotator.addEventListener("pointerleave", () => (paused = false));
+    rotator.addEventListener("focusin", () => (paused = true));
+    rotator.addEventListener("focusout", () => (paused = false));
+
+    dots.forEach((d, i) =>
+      d.addEventListener("click", () => {
+        stopAuto();
+        show(i);
+      }),
+    );
+
+    const frame = rotator.querySelector<HTMLElement>(".hero-frame") ?? rotator;
+    let sx = 0;
+    let sy = 0;
+    let swiped = false;
+    frame.addEventListener(
+      "touchstart",
+      (e) => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      },
+      { passive: true },
+    );
+    frame.addEventListener(
+      "touchend",
+      (e) => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          swiped = true;
+          stopAuto();
+          show(idx + (dx < 0 ? 1 : -1));
+        }
+      },
+      { passive: true },
+    );
+    frame.addEventListener(
+      "click",
+      (e) => {
+        if (swiped) {
+          e.preventDefault();
+          e.stopPropagation();
+          swiped = false;
+        }
+      },
+      true,
+    );
+
+    if (!reduce) start();
+  }
+
+  document.addEventListener("astro:page-load", initHeroRotator);
+</script>

@@ -32,7 +32,7 @@ const DropdownMenuContent = <T extends ValidComponent = "div">(
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         class={cn(
-          "z-50 min-w-56 origin-[var(--kb-menu-content-transform-origin)] animate-content-hide overflow-hidden border-[3px] border-border bg-background shadow-hard-lg data-[expanded]:animate-content-show",
+          "z-50 min-w-56 origin-[var(--kb-menu-content-transform-origin)] animate-content-hide overflow-hidden rounded-xl border border-border bg-card p-1 shadow-soft-lg data-[expanded]:animate-content-show",
           props.class
         )}
         {...rest}
@@ -53,7 +53,7 @@ const DropdownMenuItem = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.Item
       class={cn(
-        "relative flex cursor-default select-none items-center gap-2 border-border border-b-[3px] px-4 py-3 font-bold outline-none transition-colors hover:bg-primary focus:bg-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 last:border-b-0",
+        "relative flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-2.5 font-medium outline-none transition-colors hover:bg-muted focus:bg-muted data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         props.class
       )}
       {...rest}
@@ -70,7 +70,7 @@ const DropdownMenuLabel: Component<ComponentProps<"div"> & { inset?: boolean }> 
   const [, rest] = splitProps(props, ["class", "inset"])
   return (
     <div
-      class={cn("border-border border-b-[3px] bg-primary p-4 truncate font-bold text-sm", props.inset && "pl-8", props.class)}
+      class={cn("truncate px-3 py-2 font-semibold text-muted-foreground text-xs", props.inset && "pl-8", props.class)}
       {...rest}
     />
   )
@@ -87,7 +87,7 @@ const DropdownMenuSeparator = <T extends ValidComponent = "hr">(
   const [, rest] = splitProps(props as DropdownMenuSeparatorProps, ["class"])
   return (
     <DropdownMenuPrimitive.Separator
-      class={cn("h-[3px] bg-border", props.class)}
+      class={cn("-mx-1 my-1 h-px bg-border", props.class)}
       {...rest}
     />
   )
@@ -129,7 +129,7 @@ const DropdownMenuSubContent = <T extends ValidComponent = "div">(
   return (
     <DropdownMenuPrimitive.SubContent
       class={cn(
-        "z-50 min-w-32 origin-[var(--kb-menu-content-transform-origin)] overflow-hidden border-[3px] border-border bg-popover p-1 text-popover-foreground shadow-hard-lg animate-in",
+        "z-50 min-w-32 origin-[var(--kb-menu-content-transform-origin)] overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-soft-lg animate-in",
         props.class
       )}
       {...rest}

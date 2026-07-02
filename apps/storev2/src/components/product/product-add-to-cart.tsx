@@ -1,12 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import type { CartItems } from "@vit/shared/types";
-import {
-	createMemo,
-	createSignal,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createMemo, createSignal, Match, Show, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -65,7 +59,7 @@ export default function ProductQuantitySelector(
 	);
 
 	const increment = () => {
-		const max = Math.min(5, maxStock);
+		const max = Math.min(10, maxStock);
 		if (quantity() >= max) {
 			showToast({
 				title: "Нэмэх боломжгүй",
@@ -97,46 +91,51 @@ export default function ProductQuantitySelector(
 	return (
 		<Switch>
 			<Match when={props.isInStock}>
-				<div class="space-y-4">
-					<div class="w-full">
-						<div class="flex items-center gap-3">
-							<button
-								type="button"
-								onClick={decrement}
-								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
-								disabled={quantity() <= 1}
-							>
-								−
-							</button>
-							<div class="flex flex-1 items-center justify-center border-3 border-border bg-background px-6 py-4 font-black text-2xl shadow-hard sm:text-3xl">
-								{quantity()}
-							</div>
-							<button
-								type="button"
-								onClick={increment}
-								class="flex size-14 items-center justify-center border-3 border-border bg-background font-black text-2xl shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
-							>
-								+
-							</button>
-						</div>
-					</div>
+				<div class="flex items-center gap-3">
+					<fieldset
+						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
+						aria-label="Тоо хэмжээ"
+					>
+						<button
+							type="button"
+							onClick={decrement}
+							class="flex h-12 w-11 items-center justify-center rounded-l-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							disabled={quantity() <= 1}
+							aria-label="Хасах"
+						>
+							−
+						</button>
+						<span class="w-8 text-center font-display text-base tabular-nums">
+							{quantity()}
+						</span>
+						<button
+							type="button"
+							onClick={increment}
+							class="flex h-12 w-11 items-center justify-center rounded-r-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							aria-label="Нэмэх"
+						>
+							+
+						</button>
+					</fieldset>
 
-					<AddToCartButton
-						cartItem={{ ...props.cartItem, quantity: quantity() }}
-					/>
+					<div class="min-w-0 flex-1">
+						<AddToCartButton
+							cartItem={{ ...props.cartItem, quantity: quantity() }}
+						/>
+					</div>
 				</div>
 			</Match>
 			<Match when={!props.isInStock}>
 				<div class="space-y-4">
-					{/* Out of Stock Alert */}
-					<div class="border-4 border-border bg-destructive/10 p-4 shadow-hard-lg sm:p-6">
-						<div class="mb-3 flex items-center gap-3">
-							<IconAlertTriangle class="text-2xl text-yellow-500" />
-							<h3 class="font-black text-destructive text-lg sm:text-xl">
+					{/* Out of stock note - calm, never alarming */}
+					<div class="rounded-2xl bg-sand/40 p-4 sm:p-5">
+						<div class="mb-2 flex items-center gap-2.5">
+							<IconAlertTriangle class="h-5 w-5 text-cocoa/80" />
+							<h3 class="font-semibold text-base text-foreground sm:text-lg">
 								Дууссан байна
 							</h3>
 						</div>
-						<p class="font-medium text-muted-foreground text-sm sm:text-base">
+						<p class="text-muted-foreground text-sm leading-relaxed sm:text-base">
 							Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
 							товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
 						</p>
@@ -144,16 +143,17 @@ export default function ProductQuantitySelector(
 
 					{/* Notify Button */}
 					<Button
-						class="w-full py-6 text-base sm:text-lg"
+						class="w-full"
+						size="lg"
 						onClick={() => setShowNotifyForm((prev) => !prev)}
 					>
-						<IconNotification class="mr-2 text-yellow-500" />
+						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
 					</Button>
 
 					<Show when={showNotifyForm()}>
-						<div class="space-y-3 border-4 border-border bg-background p-4 shadow-hard-lg">
-							<p class="font-black text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
+						<div class="enter-rise space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+							<p class="font-semibold text-sm">Мэдэгдэл авах хэлбэр</p>
 							<div class="grid grid-cols-2 gap-2">
 								<Button
 									type="button"
@@ -167,9 +167,7 @@ export default function ProductQuantitySelector(
 								</Button>
 								<Button
 									type="button"
-									variant={
-										notifyChannel() === "email" ? "default" : "outline"
-									}
+									variant={notifyChannel() === "email" ? "default" : "outline"}
 									onClick={() => {
 										setNotifyChannel("email");
 										setContact("");
@@ -186,7 +184,7 @@ export default function ProductQuantitySelector(
 								placeholder={
 									notifyChannel() === "sms" ? "88889999" : "ner@example.com"
 								}
-								class="h-12 w-full border-3 border-border bg-background px-4 font-bold text-base shadow-hard transition-all focus-visible:outline-none focus-visible:shadow-hard-lg focus-visible:ring-4 focus-visible:ring-ring"
+								class="h-12 w-full rounded-xl border border-border bg-background px-4 font-medium text-base shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							/>
 
 							<Button

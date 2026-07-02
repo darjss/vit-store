@@ -7,6 +7,8 @@ import {
 	onCleanup,
 	Switch,
 } from "solid-js";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/trpc";
 import IconCheck from "~icons/ri/check-line";
 import IconClose from "~icons/ri/close-line";
@@ -59,11 +61,11 @@ const PaymentStatus = (props: {
 	return (
 		<Switch>
 			<Match when={currentData()?.status === "success"}>
-				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-success text-success-foreground shadow-hard-xl">
-						<IconCheck class="h-10 w-10" />
+				<div class="enter-scale mb-12 text-center">
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-success text-success-foreground shadow-soft-lg">
+						<IconCheck class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h1 class="mb-4 font-black text-4xl uppercase tracking-tight md:text-5xl">
+					<h1 class="mb-3 font-display text-3xl text-foreground md:text-4xl">
 						Захиалга баталгаажлаа!
 					</h1>
 					<p class="text-lg text-muted-foreground">
@@ -78,27 +80,27 @@ const PaymentStatus = (props: {
 				}
 			>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-4 border-border bg-yellow-400 text-foreground shadow-hard-xl">
-						<IconTime class="h-10 w-10 animate-spin" />
+					<div class="mb-6 inline-flex size-20 animate-pulse items-center justify-center rounded-full bg-warning text-warning-foreground shadow-soft-lg">
+						<IconTime class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
+					<h2 class="mb-3 font-display text-2xl text-foreground">
 						Төлбөр боловсруулж байна
 					</h2>
 					<p class="mb-4 text-lg text-muted-foreground">
 						Таны төлбөр шалгагдаж байна. Түр хүлээнэ үү.
 					</p>
 					<div class="inline-flex items-center gap-2 text-muted-foreground text-sm">
-						<IconRefresh class="h-4 w-4 animate-spin" />
+						<IconRefresh class="h-4 w-4 animate-spin" aria-hidden="true" />
 						Автоматаар шалгаж байна...
 					</div>
 				</div>
 			</Match>
 			<Match when={currentData()?.status === "failed"}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-destructive text-destructive-foreground shadow-hard-xl">
-						<IconClose class="h-10 w-10" />
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-soft-lg">
+						<IconClose class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
+					<h2 class="mb-3 font-display text-2xl text-foreground">
 						Төлбөр амжилтгүй боллоо
 					</h2>
 					<p class="mb-6 text-lg text-muted-foreground">
@@ -106,17 +108,17 @@ const PaymentStatus = (props: {
 					</p>
 					<a
 						href={`/payment/${props.payment.paymentNumber}`}
-						class="inline-flex h-12 items-center gap-2 whitespace-nowrap border-3 border-border bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-hard focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 active:shadow-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+						class={cn(buttonVariants())}
 					>
-						<IconRefresh class="h-4 w-4" />
+						<IconRefresh class="h-4 w-4" aria-hidden="true" />
 						Дахин оролдох
 					</a>
 				</div>
 			</Match>
 			<Match when={data.loading && !data.latest}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-muted-foreground text-muted-foreground shadow-hard-xl">
-						<IconTime class="h-10 w-10" />
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-soft-lg">
+						<IconTime class="h-10 w-10" aria-hidden="true" />
 					</div>
 				</div>
 			</Match>

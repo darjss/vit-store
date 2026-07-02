@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
+import { buttonVariants } from "@/components/ui/button";
 import { trackQpayError } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
+import { cn } from "@/lib/utils";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import IconErrorWarning from "~icons/ri/error-warning-line";
@@ -98,8 +100,8 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		<div class="flex w-full flex-col items-center gap-4">
 			<Show when={mutation.isPending}>
 				<div class="flex flex-col items-center gap-3 py-8 text-center">
-					<IconLoader class="h-10 w-10 animate-spin text-primary" />
-					<p class="font-black text-sm uppercase tracking-wide">
+					<IconLoader class="h-10 w-10 animate-spin text-cocoa" />
+					<p class="font-semibold text-foreground text-sm">
 						QPay холболт үүсгэж байна...
 					</p>
 					<p class="text-muted-foreground text-xs">Түр хүлээнэ үү</p>
@@ -110,7 +112,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				<div class="flex flex-col items-center gap-3 py-6">
 					<IconErrorWarning class="h-10 w-10 text-destructive" />
 					<div class="text-center">
-						<p class="font-black text-destructive text-sm uppercase">
+						<p class="font-semibold text-destructive text-sm">
 							Алдаа гарлаа
 						</p>
 						<p class="mt-1 text-muted-foreground text-xs">
@@ -120,7 +122,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					<button
 						type="button"
 						onClick={() => mutation.mutate()}
-						class="border-3 border-border bg-primary px-4 py-2 font-bold text-sm uppercase shadow-hard transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-hard-sm"
+						class={cn(buttonVariants({ size: "sm" }))}
 					>
 						Дахин оролдох
 					</button>
@@ -131,11 +133,11 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				<div class="w-full space-y-4">
 					{/* Amount display */}
 					<Show when={amountLabel()}>
-						<div class="flex items-center justify-between border-2 border-border bg-secondary/20 px-3 py-2.5">
-							<span class="font-bold text-muted-foreground text-xs uppercase">
+						<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-3.5 py-2.5">
+							<span class="font-semibold text-foreground/70 text-xs">
 								Төлөх дүн
 							</span>
-							<span class="font-black text-lg text-primary">
+							<span class="font-display text-foreground text-lg">
 								{amountLabel()}
 							</span>
 						</div>
@@ -146,18 +148,18 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						<button
 							type="button"
 							onClick={() => setShowQr((v) => !v)}
-							class="flex w-full items-center justify-center gap-2 border-2 border-border bg-muted/30 px-3 py-2.5 font-bold text-xs uppercase tracking-wide transition-all hover:bg-muted/50"
+							class="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border bg-muted/30 px-3 font-semibold text-xs transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/60 active:scale-[0.98]"
 						>
-							<IconQrCode class="h-4 w-4" />
+							<IconQrCode class="h-4 w-4" aria-hidden="true" />
 							{showQr() ? "QR код хаах" : "QR код харах"}
 						</button>
 
 						<Show when={showQr()}>
-							<div class="flex flex-col items-center gap-3 border-2 border-border bg-background p-4">
+							<div class="enter-scale flex flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"
-									class="h-48 w-48 object-contain sm:h-56 sm:w-56"
+									class="h-48 w-48 rounded-lg object-contain sm:h-56 sm:w-56"
 								/>
 								<p class="text-center text-[11px] text-muted-foreground">
 									QPay апп эсвэл мобайл банк ашиглан QR кодыг уншуулна уу
@@ -169,7 +171,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					{/* Bank deeplinks grid */}
 					<Show when={(invoiceData()?.urls?.length ?? 0) > 0}>
 						<div class="space-y-3">
-							<p class="font-black text-muted-foreground text-xs uppercase tracking-wide">
+							<p class="font-semibold text-muted-foreground text-xs">
 								Банкаа сонгоно уу
 							</p>
 							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
@@ -177,9 +179,9 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									{(link) => (
 										<a
 											href={link.link}
-											class="group flex flex-col items-center gap-1.5 p-1.5 transition-all hover:bg-muted/50 active:scale-95 sm:p-2"
+											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
 										>
-											<div class="h-12 w-12 overflow-hidden border-2 border-border bg-background shadow-hard-sm transition-all group-hover:translate-x-[1px] group-hover:translate-y-[1px] group-hover:shadow-none sm:h-16 sm:w-16">
+											<div class="size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:-translate-y-0.5 group-hover:shadow-soft sm:size-16">
 												<img
 													src={link.logo}
 													alt={link.name || link.description}
@@ -187,7 +189,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 													loading="lazy"
 												/>
 											</div>
-											<span class="line-clamp-2 text-center font-bold text-[10px] leading-tight sm:text-xs">
+											<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
 												{link.name || link.description || "Банк"}
 											</span>
 										</a>
