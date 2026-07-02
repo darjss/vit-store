@@ -57,7 +57,7 @@ const TextFieldInput = <T extends ValidComponent = "input">(
     <TextFieldPrimitive.Input
       type={local.type}
       class={cn(
-        "flex h-12 md:h-14 w-full border border-border bg-transparent px-4 md:px-5 py-3 text-base md:text-lg font-bold shadow-soft-sm transition-all file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground placeholder:font-medium focus-visible:outline-none focus-visible:shadow-soft focus-visible:translate-x-[-1px] focus-visible:translate-y-[-1px] focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-soft-sm data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-soft",
+        "flex h-12 w-full rounded-xl border border-border bg-card px-4 py-3 text-base font-medium transition-[border-color,box-shadow,background-color] duration-[140ms] ease-out file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-cocoa/50 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:bg-error/60 data-[invalid]:text-destructive data-[invalid]:focus-visible:ring-destructive/40",
         local.class
       )}
       {...others}
@@ -75,7 +75,7 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
   return (
     <TextFieldPrimitive.TextArea
       class={cn(
-        "flex min-h-[100px] w-full border border-border bg-transparent px-4 py-3 text-base md:text-lg font-medium shadow-soft-sm transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:shadow-soft focus-visible:translate-x-[-1px] focus-visible:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-soft-sm data-[invalid]:focus-visible:ring-destructive data-[invalid]:focus-visible:shadow-soft",
+        "flex min-h-[100px] w-full rounded-xl border border-border bg-card px-4 py-3 text-base font-medium transition-[border-color,box-shadow,background-color] duration-[140ms] ease-out placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-cocoa/50 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:bg-error/60 data-[invalid]:text-destructive data-[invalid]:focus-visible:ring-destructive/40",
         local.class
       )}
       {...others}
@@ -84,13 +84,13 @@ const TextFieldTextArea = <T extends ValidComponent = "textarea">(
 }
  
 const labelVariants = cva(
-  "text-sm md:text-base font-bold uppercase tracking-wide leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "text-xs font-semibold tracking-wide leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
   {
     variants: {
       variant: {
         label: "data-[invalid]:text-destructive",
-        description: "font-normal normal-case text-muted-foreground text-xs md:text-sm",
-        error: "text-xs md:text-sm text-destructive font-bold"
+        description: "font-normal tracking-normal text-muted-foreground text-xs md:text-sm",
+        error: "text-xs md:text-sm text-destructive font-semibold"
       }
     },
     defaultVariants: {
