@@ -65,7 +65,7 @@ export default function ProductQuantitySelector(
 	);
 
 	const increment = () => {
-		const max = Math.min(5, maxStock);
+		const max = Math.min(10, maxStock);
 		if (quantity() >= max) {
 			showToast({
 				title: "Нэмэх боломжгүй",
@@ -97,46 +97,52 @@ export default function ProductQuantitySelector(
 	return (
 		<Switch>
 			<Match when={props.isInStock}>
-				<div class="space-y-4">
-					<div class="w-full">
-						<div class="flex items-center gap-3">
-							<button
-								type="button"
-								onClick={decrement}
-								class="flex size-14 items-center justify-center rounded-lg border border-border bg-background font-bold text-2xl shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-sm active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
-								disabled={quantity() <= 1}
-							>
-								−
-							</button>
-							<div class="flex flex-1 items-center justify-center rounded-lg border border-border bg-background px-6 py-4 font-bold text-2xl shadow-soft sm:text-3xl">
-								{quantity()}
-							</div>
-							<button
-								type="button"
-								onClick={increment}
-								class="flex size-14 items-center justify-center rounded-lg border border-border bg-background font-bold text-2xl shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-sm active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 sm:size-16 sm:text-3xl"
-							>
-								+
-							</button>
-						</div>
+				<div class="flex items-center gap-3">
+					<div
+						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
+						role="group"
+						aria-label="Тоо хэмжээ"
+					>
+						<button
+							type="button"
+							onClick={decrement}
+							class="flex h-12 w-11 items-center justify-center rounded-l-full text-xl font-semibold text-foreground transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							disabled={quantity() <= 1}
+							aria-label="Хасах"
+						>
+							−
+						</button>
+						<span class="w-8 text-center font-display text-base tabular-nums">
+							{quantity()}
+						</span>
+						<button
+							type="button"
+							onClick={increment}
+							class="flex h-12 w-11 items-center justify-center rounded-r-full text-xl font-semibold text-foreground transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							aria-label="Нэмэх"
+						>
+							+
+						</button>
 					</div>
 
-					<AddToCartButton
-						cartItem={{ ...props.cartItem, quantity: quantity() }}
-					/>
+					<div class="min-w-0 flex-1">
+						<AddToCartButton
+							cartItem={{ ...props.cartItem, quantity: quantity() }}
+						/>
+					</div>
 				</div>
 			</Match>
 			<Match when={!props.isInStock}>
 				<div class="space-y-4">
-					{/* Out of Stock Alert */}
-					<div class="rounded-lg border border-border bg-destructive/10 p-4 shadow-soft-lg sm:p-6">
-						<div class="mb-3 flex items-center gap-3">
-							<IconAlertTriangle class="text-2xl text-yellow-500" />
-							<h3 class="font-extrabold text-destructive text-lg sm:text-xl">
+					{/* Out of stock note - calm, never alarming */}
+					<div class="rounded-2xl bg-sand/40 p-4 sm:p-5">
+						<div class="mb-2 flex items-center gap-2.5">
+							<IconAlertTriangle class="h-5 w-5 text-cocoa/80" />
+							<h3 class="font-semibold text-base text-foreground sm:text-lg">
 								Дууссан байна
 							</h3>
 						</div>
-						<p class="font-medium text-muted-foreground text-sm sm:text-base">
+						<p class="text-muted-foreground text-sm leading-relaxed sm:text-base">
 							Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
 							товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
 						</p>
@@ -144,16 +150,17 @@ export default function ProductQuantitySelector(
 
 					{/* Notify Button */}
 					<Button
-						class="w-full py-6 text-base sm:text-lg"
+						class="w-full"
+						size="lg"
 						onClick={() => setShowNotifyForm((prev) => !prev)}
 					>
-						<IconNotification class="mr-2 text-yellow-500" />
+						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
 					</Button>
 
 					<Show when={showNotifyForm()}>
-						<div class="space-y-3 rounded-lg border border-border bg-background p-4 shadow-soft-lg">
-							<p class="font-bold text-sm uppercase">Мэдэгдэл авах хэлбэр</p>
+						<div class="enter-rise space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+							<p class="font-semibold text-sm">Мэдэгдэл авах хэлбэр</p>
 							<div class="grid grid-cols-2 gap-2">
 								<Button
 									type="button"
@@ -186,7 +193,7 @@ export default function ProductQuantitySelector(
 								placeholder={
 									notifyChannel() === "sms" ? "88889999" : "ner@example.com"
 								}
-								class="h-12 w-full rounded-md border border-border bg-background px-4 font-bold text-base shadow-soft-sm transition-all duration-200 ease-out-quart focus-visible:outline-none focus-visible:shadow-soft focus-visible:ring-4 focus-visible:ring-ring"
+								class="h-12 w-full rounded-xl border border-border bg-background px-4 text-base font-medium shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							/>
 
 							<Button
