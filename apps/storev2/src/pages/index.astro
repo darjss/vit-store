@@ -187,24 +187,36 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     </div>
   </section>
 
-  <!-- ==================== DELIVERY PROMO STRIP ==================== -->
-  <section class="border-b border-border bg-secondary text-secondary-foreground">
-    <div class="px-5 py-5 lg:px-8 lg:py-6 flex items-center gap-4 overflow-hidden">
-      <div class="flex-1 min-w-0">
-        <div class="flex items-baseline gap-2 flex-wrap">
-          <span class="text-lg lg:text-xl font-extrabold tracking-tight">Захиалга өгсөн</span>
-          <span class="text-lg lg:text-xl font-extrabold tracking-tight text-primary">маргааш хүргэгдэнэ</span>
+  <!-- ==================== 4. TRUST / DELIVERY STRIP ==================== -->
+  <section class="bg-secondary text-secondary-foreground">
+    <div class="mx-auto grid max-w-6xl gap-4 px-5 py-7 sm:grid-cols-3 lg:gap-6 lg:px-8 lg:py-9">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconTruck class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Өдөртөө хүргэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">10:30-аас өмнөх захиалгыг Улаанбаатар хотоор</p>
         </div>
-        <p class="text-sm font-semibold text-secondary-foreground/70 mt-0.5">Улаанбаатар хотоор, 6,000₮ шуурхай хүргэлт</p>
       </div>
-      <div class="shrink-0 w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-primary flex items-center justify-center">
-        <svg class="w-6 h-6 lg:w-7 lg:h-7 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 18a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
-          <path d="M15 18a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/>
-          <path d="M3 7l2 8h12l2 -8"/>
-          <path d="M3 7l1.5 -4h15l1.5 4"/>
-        </svg>
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconShield class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">100% жинхэнэ</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">АНУ-аас албан ёсоор оруулж ирдэг</p>
+        </div>
       </div>
+      <a href="tel:+97699993950" class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary-foreground/10">
+          <IconPhone class="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-bold leading-snug">Тусламж хэрэгтэй юу?</p>
+          <p class="text-[13px] font-medium text-secondary-foreground/70">9999-3950 · Даваа-Баасан 10:00-18:00</p>
+        </div>
+      </a>
     </div>
   </section>
 
