@@ -2,63 +2,86 @@
 @import "tw-animate-css";
 
 @theme {
-    --color-background: oklch(0.99 0 0);
-    --color-foreground: oklch(0.15 0 0);
-    --color-card: oklch(0.99 0 0);
-    --color-card-foreground: oklch(0.15 0 0);
-    --color-popover: oklch(1 0 0);
-    --color-popover-foreground: oklch(0.15 0 0);
-    --color-primary: oklch(0.92 0.15 95);
-    --color-primary-foreground: oklch(0.15 0 0);
-    --color-secondary: oklch(0.15 0 0);
-    --color-secondary-foreground: oklch(0.99 0 0);
-    --color-muted: oklch(0.95 0 0);
-    --color-muted-foreground: oklch(0.45 0 0);
-    --color-accent: oklch(0.92 0.15 95);
-    --color-accent-foreground: oklch(0.15 0 0);
-    --color-destructive: oklch(0.577 0.245 27.325);
-    --color-destructive-foreground: oklch(0.99 0 0);
-    --color-error: oklch(0.92 0.18 15);
-    --color-error-foreground: oklch(0.15 0 0);
-    --color-success: oklch(0.92 0.18 130);
-    --color-success-foreground: oklch(0.15 0 0);
-    --color-info: oklch(0.92 0.15 200);
-    --color-info-foreground: oklch(0.15 0 0);
-    --color-warning: oklch(0.92 0.18 85);
-    --color-warning-foreground: oklch(0.15 0 0);
-    --color-border: oklch(0.15 0 0);
-    --color-input: oklch(0.922 0 0);
-    --color-ring: oklch(0.15 0 0);
-    --color-chart-1: oklch(0.92 0.15 95);
-    --color-chart-2: oklch(0.75 0.12 85);
-    --color-chart-3: oklch(0.65 0.18 105);
-    --color-chart-4: oklch(0.85 0.1 90);
-    --color-chart-5: oklch(0.55 0.15 100);
+    --color-background: oklch(0.98 0.012 90);
+    --color-foreground: oklch(0.28 0.02 60);
+    --color-card: oklch(0.995 0.008 95);
+    --color-card-foreground: oklch(0.28 0.02 60);
+    --color-popover: oklch(0.995 0.008 95);
+    --color-popover-foreground: oklch(0.28 0.02 60);
+    --color-primary: oklch(0.9 0.14 95);
+    --color-primary-deep: oklch(0.8 0.13 92);
+    --color-primary-foreground: oklch(0.28 0.02 60);
+    --color-secondary: oklch(0.28 0.02 60);
+    --color-secondary-foreground: oklch(0.98 0.012 90);
+    --color-muted: oklch(0.955 0.01 90);
+    --color-muted-foreground: oklch(0.48 0.025 70);
+    --color-accent: oklch(0.9 0.14 95);
+    --color-accent-foreground: oklch(0.28 0.02 60);
+    --color-destructive: oklch(0.68 0.14 30);
+    --color-destructive-foreground: oklch(0.98 0.012 90);
+    --color-sale: oklch(0.68 0.14 30);
+    --color-sale-foreground: oklch(0.98 0.012 90);
+    --color-error: oklch(0.93 0.04 15);
+    --color-error-foreground: oklch(0.28 0.02 60);
+    --color-success: oklch(0.88 0.1 150);
+    --color-success-foreground: oklch(0.28 0.02 60);
+    --color-info: oklch(0.9 0.06 235);
+    --color-info-foreground: oklch(0.28 0.02 60);
+    --color-warning: oklch(0.9 0.12 85);
+    --color-warning-foreground: oklch(0.28 0.02 60);
+    --color-border: oklch(0.88 0.02 85);
+    --color-input: oklch(0.93 0.012 88);
+    --color-ring: oklch(0.75 0.12 95);
+    --color-cocoa: oklch(0.35 0.05 50);
+    --color-sand: oklch(0.88 0.03 60);
+
+    --color-wash-peach: oklch(0.9 0.06 45);
+    --color-wash-blush: oklch(0.91 0.05 10);
+    --color-wash-mint: oklch(0.93 0.06 160);
+    --color-wash-sky: oklch(0.92 0.05 230);
+    --color-wash-lilac: oklch(0.9 0.05 300);
+    --color-wash-lemon: oklch(0.95 0.08 100);
+    --color-wash-sage: oklch(0.92 0.04 130);
+    --color-wash-apricot: oklch(0.92 0.07 70);
+
+    --color-chart-1: oklch(0.9 0.14 95);
+    --color-chart-2: oklch(0.9 0.06 45);
+    --color-chart-3: oklch(0.93 0.06 160);
+    --color-chart-4: oklch(0.92 0.05 230);
+    --color-chart-5: oklch(0.9 0.05 300);
 
     --font-sans:
-        "Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif;
-    --font-mono: "Geist Mono", "Geist Mono Fallback";
+        "Onest Variable", "Onest", system-ui, -apple-system, "Segoe UI",
+        sans-serif;
+    --font-display:
+        "Unbounded Variable", "Unbounded", "Onest Variable", system-ui,
+        sans-serif;
+    --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 
-    --radius: 0rem;
-    --radius-sm: 0rem;
-    --radius-md: 0rem;
-    --radius-lg: 0rem;
-    --radius-xl: 0rem;
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
 
     /* Motion curve tokens — single source for easing curves. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
     /* Heading type scale tokens — canonical page heading sizes. */
-    --text-h1: clamp(2rem, 8vw, 4rem);
-    --text-h1--line-height: 0.95;
-    --text-h1--letter-spacing: -0.04em;
-    --text-h2: clamp(1.5rem, 4vw, 2.5rem);
-    --text-h2--line-height: 1.1;
-    --text-h2--letter-spacing: -0.02em;
+    --text-h1: clamp(1.9rem, 6vw, 3.2rem);
+    --text-h1--line-height: 1.1;
+    --text-h1--letter-spacing: -0.01em;
+    --text-h2: clamp(1.4rem, 4vw, 2.1rem);
+    --text-h2--line-height: 1.15;
+    --text-h2--letter-spacing: -0.01em;
     --text-h3: 1.25rem;
-    --text-h3--line-height: 1.2;
-    --text-h3--letter-spacing: -0.01em;
+    --text-h3--line-height: 1.25;
+    --text-h3--letter-spacing: -0.005em;
 
     /* Section spacing scale — vertical rhythm between page sections. */
     --space-section-sm: 1.5rem;
@@ -78,10 +101,10 @@
         @apply bg-background text-foreground;
     }
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans;
     }
 
-    /* Respect user motion preferences globally */
+    /* Respect user motion preferences globally; opacity fades stay, transforms go. */
     @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -90,6 +113,14 @@
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
             scroll-behavior: auto !important;
+        }
+
+        .enter-fade,
+        .enter-rise,
+        .enter-scale {
+            transform: none !important;
+            transition-property: opacity !important;
+            transition-duration: 200ms !important;
         }
     }
 
@@ -238,26 +269,30 @@
         animation: shake 0.5s var(--ease-out-quart);
     }
 
-    /* Subtle entrance for staggered list items (Emil-style). */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(8px);
+    @keyframes count-pop {
+        0% {
+            transform: scale(1);
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+        40% {
+            transform: scale(1.35);
         }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .animate-count-pop {
+        animation: count-pop 350ms var(--ease-out);
     }
 
     /* Hide scrollbar but keep functionality */
     .scrollbar-hide {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
     .scrollbar-hide::-webkit-scrollbar {
-        display: none; /* Chrome, Safari and Opera */
+        display: none;
     }
 
     /* Loading bar for view transitions */
@@ -266,10 +301,10 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 6px;
+        height: 4px;
         z-index: 9999;
         opacity: 0;
-        transition: opacity 0.2s ease;
+        transition: opacity 0.2s var(--ease-out);
         pointer-events: none;
         contain: paint;
     }
@@ -280,13 +315,11 @@
 
     .loading-bar-progress {
         height: 100%;
-        background: var(--color-primary);
+        background: var(--color-primary-deep);
         width: 100%;
         transform: scaleX(0);
         transform-origin: left center;
         transition: transform 0.16s var(--ease-out-quart);
-        box-shadow: 0 0 10px var(--color-primary);
-        border: 2px solid var(--color-border);
         will-change: transform;
     }
 
@@ -321,50 +354,129 @@
 }
 
 @layer utilities {
-    .shadow-hard {
-        box-shadow: 4px 4px 0px 0px var(--color-border);
-    }
-    .shadow-hard-sm {
-        box-shadow: 2px 2px 0px 0px var(--color-border);
-    }
-    .shadow-hard-lg {
-        box-shadow: 8px 8px 0px 0px var(--color-border);
-    }
-    .shadow-hard-xl {
-        box-shadow: 12px 12px 0px 0px var(--color-border);
-    }
-    .shadow-hard-reverse {
-        box-shadow: -4px 4px 0px 0px var(--color-border);
-    }
-
-    /* Light shadows for use on dark (secondary) backgrounds */
-    .shadow-hard-light {
-        box-shadow: 4px 4px 0px 0px var(--color-background);
-    }
-    .shadow-hard-light-sm {
-        box-shadow: 2px 2px 0px 0px var(--color-background);
-    }
-    .shadow-hard-light-lg {
-        box-shadow: 8px 8px 0px 0px var(--color-background);
-    }
-    .shadow-hard-light-xl {
-        box-shadow: 12px 12px 0px 0px var(--color-background);
-    }
-
-    /* Soft (blurred) shadows — the softened counterpart to the hard offset
-       shadows above. Used by the softened UI system for cards, buttons,
-       and elevated surfaces that should feel calm rather than brutalist. */
+    /* Soft blurred shadows — the default elevation language. */
     .shadow-soft-sm {
-        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.05);
+        box-shadow: 0 1px 2px oklch(0.3 0.02 60 / 0.08);
     }
     .shadow-soft {
-        box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+        box-shadow: 0 2px 6px oklch(0.3 0.02 60 / 0.1);
     }
     .shadow-soft-lg {
-        box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.04);
+        box-shadow: 0 8px 24px oklch(0.3 0.02 60 / 0.12);
     }
     .shadow-soft-xl {
-        box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.10), 0 4px 8px -2px rgb(0 0 0 / 0.06);
+        box-shadow: 0 12px 32px oklch(0.3 0.02 60 / 0.14);
+    }
+
+    /* Lift shadows — solid underline lift for butter CTAs. */
+    .shadow-lift {
+        box-shadow: 0 2px 0 0 var(--color-primary-deep);
+    }
+    .shadow-lift-lg {
+        box-shadow: 0 4px 0 0 var(--color-primary-deep);
+    }
+
+    /* Neopop offset shadows — stickers, sale chips, card "+" buttons only. */
+    .shadow-pop-sm {
+        box-shadow: 2px 2px 0 0 var(--color-cocoa);
+    }
+    .shadow-pop {
+        box-shadow: 3px 3px 0 0 var(--color-cocoa);
+    }
+    .shadow-pop-sand {
+        box-shadow: 4px 4px 0 0 var(--color-sand);
+    }
+
+    /* Legacy aliases — Phase 1 removes usages. */
+    .shadow-hard-sm {
+        box-shadow: 0 1px 2px oklch(0.3 0.02 60 / 0.08);
+    }
+    .shadow-hard {
+        box-shadow: 0 2px 6px oklch(0.3 0.02 60 / 0.1);
+    }
+    .shadow-hard-lg {
+        box-shadow: 0 8px 24px oklch(0.3 0.02 60 / 0.12);
+    }
+    .shadow-hard-xl {
+        box-shadow: 0 8px 24px oklch(0.3 0.02 60 / 0.12);
+    }
+    .shadow-hard-reverse {
+        box-shadow: 0 2px 6px oklch(0.3 0.02 60 / 0.1);
+    }
+    .shadow-hard-light,
+    .shadow-hard-light-sm,
+    .shadow-hard-light-lg,
+    .shadow-hard-light-xl {
+        box-shadow: 0 2px 8px oklch(0.2 0.02 60 / 0.25);
+    }
+
+    /* Entrance utilities — @starting-style based, transform/opacity only. */
+    .enter-fade {
+        opacity: 1;
+        transition: opacity 300ms var(--ease-out);
+        transition-delay: var(--enter-delay, 0ms);
+        @starting-style {
+            opacity: 0;
+        }
+    }
+
+    .enter-rise {
+        opacity: 1;
+        transform: translateY(0);
+        transition:
+            opacity 350ms var(--ease-out),
+            transform 350ms var(--ease-out);
+        transition-delay: var(--enter-delay, 0ms);
+        @starting-style {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+    }
+
+    .enter-scale {
+        opacity: 1;
+        transform: scale(1);
+        transition:
+            opacity 300ms var(--ease-out),
+            transform 300ms var(--ease-out);
+        transition-delay: var(--enter-delay, 0ms);
+        @starting-style {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+    }
+
+    .stagger-1 {
+        transition-delay: 40ms;
+        animation-delay: 40ms;
+    }
+    .stagger-2 {
+        transition-delay: 80ms;
+        animation-delay: 80ms;
+    }
+    .stagger-3 {
+        transition-delay: 120ms;
+        animation-delay: 120ms;
+    }
+    .stagger-4 {
+        transition-delay: 160ms;
+        animation-delay: 160ms;
+    }
+    .stagger-5 {
+        transition-delay: 200ms;
+        animation-delay: 200ms;
+    }
+    .stagger-6 {
+        transition-delay: 240ms;
+        animation-delay: 240ms;
+    }
+    .stagger-7 {
+        transition-delay: 280ms;
+        animation-delay: 280ms;
+    }
+    .stagger-8 {
+        transition-delay: 320ms;
+        animation-delay: 320ms;
     }
 
     @keyframes fadeIn {
@@ -381,7 +493,7 @@
     @keyframes scaleIn {
         from {
             opacity: 0;
-            transform: scale(0.9);
+            transform: scale(0.95);
         }
         to {
             opacity: 1;
@@ -389,40 +501,22 @@
         }
     }
 
-    .text-stroke {
-        -webkit-text-stroke: 1px var(--color-foreground);
-    }
-    .text-stroke-2 {
-        -webkit-text-stroke: 2px var(--color-foreground);
-    }
-    .text-stroke-white {
-        -webkit-text-stroke: 2px var(--color-background);
-    }
-
-    .bg-grid-pattern {
-        background-size: 40px 40px;
-        background-image: linear-gradient(to right, var(--color-border) 1px, transparent 1px),
-                          linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
-    }
-    
-    .bg-dots-pattern {
-        background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
-        background-size: 20px 20px;
-    }
-
-    /* Subtle texture utilities — low-opacity patterns that layer on top of any
-       light background without needing an opacity wrapper. Designed for the
-       neo-brutalist storefront: they add depth, never distract. */
+    /* Subtle textures — quiet sorbet patterns keyed off --pattern-color. */
     .bg-dots-subtle {
-        background-image: radial-gradient(circle, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+        background-image: radial-gradient(
+            circle,
+            oklch(0.35 0.05 50 / 0.05) 1px,
+            transparent 1px
+        );
         background-size: 20px 20px;
     }
 
-    .bg-grid-subtle {
-        background-image:
-            linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
-        background-size: 24px 24px;
+    .bg-dots-pattern {
+        background-image: radial-gradient(
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.08)) 1px,
+            transparent 1px
+        );
+        background-size: 20px 20px;
     }
 
     .bg-stripes-diagonal {
@@ -430,40 +524,112 @@
             45deg,
             transparent,
             transparent 10px,
-            rgba(0, 0, 0, 0.025) 10px,
-            rgba(0, 0, 0, 0.025) 20px
+            oklch(0.35 0.05 50 / 0.03) 10px,
+            oklch(0.35 0.05 50 / 0.03) 20px
         );
     }
 
-    .bg-stripes-diagonal-lg {
+    .bg-pattern-dots {
+        background-image: radial-gradient(
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.1)) 1.5px,
+            transparent 1.5px
+        );
+        background-size: 18px 18px;
+    }
+
+    .bg-pattern-diagonal {
         background-image: repeating-linear-gradient(
             45deg,
             transparent,
-            transparent 18px,
-            rgba(0, 0, 0, 0.03) 18px,
-            rgba(0, 0, 0, 0.03) 36px
+            transparent 12px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 12px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 14px
         );
     }
 
-    /* SVG fractal-noise grain — cheapest perceptual texture, tiles at 120px. */
-    .bg-noise-subtle {
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-        background-size: 120px 120px;
+    .bg-pattern-rings {
+        background-image: radial-gradient(
+            circle at center,
+            transparent 6px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.08)) 6px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.08)) 7.5px,
+            transparent 7.5px
+        );
+        background-size: 36px 36px;
     }
 
-    /* Checkout-only background — a soft warm radial glow that fades to a
-       warm off-white. Calm, premium feel without distracting from the form.
-       Unique to the checkout page so it doesn't clash with the rest of the
-       site. Uses a warm base color (not pure white) so the gradient is
-       actually visible against the site's white body background. */
-    .bg-checkout {
-        background-color: oklch(0.98 0.012 85);
+    .bg-pattern-cross {
         background-image:
-            radial-gradient(ellipse 90% 60% at 50% 0%, oklch(0.93 0.06 85 / 0.8), transparent),
-            radial-gradient(ellipse 70% 50% at 100% 100%, oklch(0.92 0.05 200 / 0.5), transparent),
-            radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-        background-size: 100% 100%, 100% 100%, 24px 24px;
-        background-position: top, bottom right, center;
-        background-repeat: no-repeat, no-repeat, repeat;
+            linear-gradient(
+                var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 1.5px,
+                transparent 1.5px
+            ),
+            linear-gradient(
+                90deg,
+                var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 1.5px,
+                transparent 1.5px
+            );
+        background-size: 26px 26px;
+        background-position: center;
+    }
+
+    .bg-pattern-wave {
+        background-image: repeating-radial-gradient(
+            circle at 0 120%,
+            transparent 0,
+            transparent 22px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 22px,
+            var(--pattern-color, oklch(0.35 0.05 50 / 0.07)) 24px
+        );
+    }
+
+    .bg-pattern-blobs {
+        background-image:
+            radial-gradient(
+                circle at 25% 30%,
+                var(--pattern-color, oklch(0.35 0.05 50 / 0.08)) 7px,
+                transparent 7.5px
+            ),
+            radial-gradient(
+                circle at 70% 65%,
+                var(--pattern-color, oklch(0.35 0.05 50 / 0.08)) 10px,
+                transparent 10.5px
+            );
+        background-size: 64px 64px;
+    }
+
+    /* Hero canvas — quiet warm cream-to-peach radial. */
+    .bg-hero-warm {
+        background-color: var(--color-background);
+        background-image:
+            radial-gradient(
+                ellipse 85% 70% at 75% 10%,
+                oklch(0.94 0.045 60 / 0.55),
+                transparent
+            ),
+            radial-gradient(
+                ellipse 70% 55% at 10% 95%,
+                oklch(0.95 0.05 100 / 0.4),
+                transparent
+            );
+        background-repeat: no-repeat;
+    }
+
+    /* Checkout-only background — calm warm glow over the cream canvas. */
+    .bg-checkout {
+        background-color: oklch(0.98 0.012 90);
+        background-image:
+            radial-gradient(
+                ellipse 90% 60% at 50% 0%,
+                oklch(0.95 0.05 95 / 0.7),
+                transparent
+            ),
+            radial-gradient(
+                ellipse 70% 50% at 100% 100%,
+                oklch(0.92 0.05 230 / 0.35),
+                transparent
+            );
+        background-position: top, bottom right;
+        background-repeat: no-repeat;
     }
 }
