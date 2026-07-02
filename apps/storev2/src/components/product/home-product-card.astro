@@ -1,10 +1,10 @@
 ---
 import AddToCartButton from "@/components/cart/add-to-cart-button";
-import { productColors } from "@/lib/constant";
+import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import { toProductImageUrl } from "@/lib/image";
 import type { ProductForHome } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
+import { washBg } from "@/lib/wash";
 
 interface Props {
 	product: ProductForHome;
@@ -20,17 +20,16 @@ const {
 	class: className = "",
 } = Astro.props;
 
-const bgColor = productColors[product.id % productColors.length];
+const wash = washBg(product.brand || product.id);
 const productUrl = `/products/${product.slug}-${product.id}`;
 ---
 
 <div
-	class={`group min-w-0 border border-border bg-card shadow-soft transition-all hover:shadow-soft-lg active:shadow-soft-sm ${className}`}
+	class={`group min-w-0 rounded-2xl border border-border bg-card shadow-soft transition-[box-shadow,transform] duration-200 ease-out-quart hover:shadow-soft-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-soft-sm ${className}`}
 >
 	<a href={productUrl} class="block" aria-hidden="true" tabindex="-1">
 		<div
-			class={`relative overflow-hidden border-b border-border ${aspectRatio}`}
-			style={`background: ${bgColor}`}
+			class={`relative overflow-hidden rounded-t-2xl ${wash} ${aspectRatio}`}
 			transition:name={`product-image-${product.id}`}
 		>
 			{product.image ? (
@@ -46,20 +45,25 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 			) : (
 				<ProductImageFallback name={product.name} brand={product.brand} />
 			)}
+			{product.discount ? (
+				<span class="absolute top-2.5 left-2.5 inline-flex items-center rounded-full bg-sale px-2.5 py-0.5 text-[11px] font-bold text-sale-foreground shadow-pop-sm -rotate-2">
+					-{product.discount}%
+				</span>
+			) : null}
 		</div>
 	</a>
-	<div class="p-2.5">
-		<div class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+	<div class="p-3">
+		<div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground truncate">
 			{product.brand}
 		</div>
 		<a href={productUrl}>
-			<h3 class="text-[11px] md:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">
+			<h3 class="text-xs font-semibold line-clamp-2 mt-0.5 leading-snug">
 				{product.name}
 				{product.brand ? <span class="sr-only">, {product.brand}</span> : null}
 			</h3>
 		</a>
-		<div class="flex items-center justify-between mt-2 pt-2 border-t border-border">
-			<span class="font-extrabold text-[13px] md:text-sm">
+		<div class="flex items-center justify-between gap-2 mt-2.5">
+			<span class="font-display font-semibold text-[13px] md:text-sm">
 				{formatCurrency(product.price)}
 			</span>
 			<AddToCartButton
