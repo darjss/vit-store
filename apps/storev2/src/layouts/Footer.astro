@@ -11,6 +11,7 @@ import IconShield from "~icons/ri/shield-check-line";
 import IconFile from "~icons/ri/file-list-line";
 import IconSearch from "~icons/ri/search-line";
 import IconClose from "~icons/ri/close-circle-line";
+import IconChevronDown from "~icons/ri/arrow-down-s-line";
 
 const currentYear = new Date().getFullYear();
 
@@ -78,16 +79,16 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
 ---
 
 <footer class="relative z-10 bg-secondary text-secondary-foreground pb-24 md:pb-0">
-  <div class="mx-auto max-w-screen-2xl px-5 py-10 lg:px-8 lg:py-14">
+  <div class="mx-auto max-w-screen-2xl px-5 py-8 lg:px-8 lg:py-14">
     <!-- Main footer grid -->
-    <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+    <div class="grid gap-y-1 md:grid-cols-2 md:gap-8 lg:grid-cols-12 lg:gap-8">
       <!-- Brand column -->
-      <div class="lg:col-span-4">
-        <div class="mb-4 flex items-center gap-2.5">
+      <div class="lg:col-span-4 pb-4 md:pb-0">
+        <div class="mb-3.5 flex items-center gap-2.5">
           <div class="h-10 w-10 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs text-primary-foreground shadow-soft-sm">AV</div>
           <span class="font-display font-semibold text-base">Amerik Vitamin</span>
         </div>
-        <p class="max-w-xs text-sm font-medium leading-relaxed text-secondary-foreground/70 mb-6">
+        <p class="max-w-xs text-sm font-medium leading-relaxed text-secondary-foreground/70 mb-4">
           АНУ-аас шууд импортлогдсон жинхэнэ витамин, нэмэлт тэжээлийг Монгол улсын дотоодод хүргэлттэй борлуулж байна.
         </p>
 
@@ -107,10 +108,13 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
         </div>
       </div>
 
-      <!-- Shop links -->
-      <div class="lg:col-span-2">
-        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үндсэн цэс</h3>
-        <ul class="flex flex-col gap-1">
+      <!-- Shop links (accordion on mobile, expanded md+) -->
+      <details class="footer-acc lg:col-span-2 border-t border-secondary-foreground/10 md:border-t-0">
+        <summary class="footer-summary flex items-center justify-between py-3.5 md:py-0 md:mb-3.5">
+          <h3 class="text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үндсэн цэс</h3>
+          <IconChevronDown class="footer-chevron w-5 h-5 text-secondary-foreground/40 transition-transform duration-200 md:hidden" />
+        </summary>
+        <ul class="flex flex-col gap-0.5 pb-3 md:pb-0">
           {shopLinks.map((link) => (
             <li>
               <a href={link.href} class="inline-block py-1.5 font-medium text-sm text-secondary-foreground/75 hover:text-secondary-foreground transition-colors duration-150">
@@ -119,12 +123,15 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
             </li>
           ))}
         </ul>
-      </div>
+      </details>
 
-      <!-- Service links -->
-      <div class="lg:col-span-3">
-        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үйлчилгээ</h3>
-        <ul class="flex flex-col gap-1">
+      <!-- Service links (accordion on mobile, expanded md+) -->
+      <details class="footer-acc lg:col-span-3 border-t border-secondary-foreground/10 md:border-t-0">
+        <summary class="footer-summary flex items-center justify-between py-3.5 md:py-0 md:mb-3.5">
+          <h3 class="text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Үйлчилгээ</h3>
+          <IconChevronDown class="footer-chevron w-5 h-5 text-secondary-foreground/40 transition-transform duration-200 md:hidden" />
+        </summary>
+        <ul class="flex flex-col gap-0.5 pb-3 md:pb-0">
           {serviceLinks.map((link) => (
             <li>
               <a href={link.href} class="inline-flex items-center gap-2 py-1.5 font-medium text-sm text-secondary-foreground/75 hover:text-secondary-foreground transition-colors duration-150">
@@ -134,21 +141,21 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
             </li>
           ))}
         </ul>
-      </div>
+      </details>
 
-      <!-- Contact -->
-      <div class="lg:col-span-3">
-        <h3 class="mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Холбоо барих</h3>
-        <ul class="flex flex-col gap-3">
+      <!-- Contact (always visible) -->
+      <div class="lg:col-span-3 border-t border-secondary-foreground/10 md:border-t-0 pt-4 md:pt-0">
+        <h3 class="mb-3 md:mb-3.5 text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Холбоо барих</h3>
+        <ul class="grid grid-cols-2 gap-x-3 gap-y-3 md:flex md:flex-col md:gap-3">
           {contactInfo.map((item) => (
-            <li class="flex items-start gap-3">
+            <li class="flex items-start gap-2.5 md:gap-3">
               <div class="w-8 h-8 rounded-full bg-secondary-foreground/8 flex items-center justify-center shrink-0">
                 <item.icon class="w-3.5 h-3.5 opacity-80" />
               </div>
               <div class="min-w-0">
                 <div class="text-[11px] font-semibold uppercase tracking-wider text-secondary-foreground/50">{item.label}</div>
                 {item.href ? (
-                  <a href={item.href} class="text-sm font-medium text-secondary-foreground/85 hover:text-secondary-foreground transition-colors duration-150">
+                  <a href={item.href} class="text-sm font-medium text-secondary-foreground/85 hover:text-secondary-foreground transition-colors duration-150 break-words">
                     {item.value}
                   </a>
                 ) : (
@@ -162,8 +169,8 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
     </div>
 
     <!-- Certifications & payment -->
-    <div class="mt-10 pt-6 border-t border-secondary-foreground/10">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+    <div class="mt-6 pt-5 border-t border-secondary-foreground/10 lg:mt-10 lg:pt-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-5">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span class="text-[11px] font-bold uppercase tracking-[0.12em] text-secondary-foreground/50">Баталгаа</span>
           {certifications.map((cert) => (
@@ -200,3 +207,34 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
     </div>
   </div>
 </footer>
+
+<style>
+  /* Mobile: link columns are native <details> accordions. */
+  .footer-acc > summary {
+    list-style: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .footer-acc > summary::-webkit-details-marker {
+    display: none;
+  }
+  .footer-acc[open] .footer-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* md+: force columns permanently expanded, drop the accordion affordance. */
+  @media (min-width: 768px) {
+    .footer-acc > summary {
+      cursor: default;
+      pointer-events: none;
+    }
+    /* Reveal for legacy engines that hide closed content via display:none. */
+    .footer-acc > *:not(summary) {
+      display: block !important;
+    }
+    /* Reveal for modern engines that clip closed content via ::details-content. */
+    .footer-acc::details-content {
+      content-visibility: visible;
+    }
+  }
+</style>
