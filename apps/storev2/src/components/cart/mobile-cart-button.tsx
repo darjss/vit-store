@@ -17,7 +17,7 @@ const MobileCartButton = () => {
 		<button
 			type="button"
 			onClick={() => cart.toggleDrawer()}
-			class="group block w-full px-3 py-2 text-foreground/70 transition-colors duration-200 hover:bg-primary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+			class="group flex w-full min-h-[48px] items-center justify-center rounded-full px-2 py-1.5 text-foreground/70 transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 			aria-label="Сагс"
 		>
 			<div class="flex flex-col items-center gap-1">
