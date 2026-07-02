@@ -26,6 +26,9 @@ export interface SearchProductResult {
 	price: number;
 	image: string;
 	brand: string;
+	stock: number;
+	discount: number;
+	categoryId?: number;
 }
 
 export interface AssistantProductResult {
@@ -66,6 +69,8 @@ interface CatalogSearchRow {
 	brand: string;
 	status: string;
 	stock: number;
+	discount: number;
+	categoryId?: number;
 }
 
 const performCatalogSearch = async (
@@ -100,6 +105,8 @@ const performCatalogSearch = async (
 				brand: result.brand,
 				status: result.status,
 				stock: result.stock,
+				discount: result.discount,
+				categoryId: result.categoryId,
 			}));
 	}
 
@@ -117,6 +124,8 @@ const performCatalogSearch = async (
 		brand: p.brand?.name || "",
 		status: p.status,
 		stock: p.stock,
+		discount: p.discount,
+		categoryId: p.categoryId,
 	}));
 };
 
@@ -136,6 +145,9 @@ const performProductSearch = async (
 		price: row.price,
 		image: row.image,
 		brand: row.brand,
+		stock: row.stock,
+		discount: row.discount,
+		categoryId: row.categoryId,
 	}));
 
 const performProductSearchWithStock = async (
