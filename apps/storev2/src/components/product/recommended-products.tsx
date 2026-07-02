@@ -1,16 +1,18 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
+import { animate, inView, stagger } from "motion";
 import { createResource, For, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
-import IconLightbulb from "~icons/ri/lightbulb-flash-fill";
+import { WASH_BG, washFor } from "@/lib/wash";
 
 interface RecommendedProductsProps {
 	currentProductId: number;
 	categoryId: number;
 	brandId: number;
 	productName: string;
+	washKey?: string | number;
 }
 
 const RECOMMENDED_FETCH_TIMEOUT_MS = 6000;
@@ -54,7 +56,7 @@ async function fetchRecommendedProducts(
 				brand: p.brand,
 			}));
 
-		// Only use search results if we have enough for a decent grid (>=3).
+		// Only use search results if we have enough for a decent shelf (>=3).
 		// Otherwise fall back to category/brand-based recommendations.
 		if (filteredMatches.length >= 3) {
 			return filteredMatches;
@@ -73,7 +75,7 @@ async function fetchRecommendedProducts(
 		const merged = [
 			...filteredMatches,
 			...products.filter((p) => !seen.has(p.id) && p.slug),
-				].slice(0, 4);
+		].slice(0, 4);
 		return merged;
 	} catch {
 		try {
@@ -86,6 +88,19 @@ async function fetchRecommendedProducts(
 			return [];
 		}
 	}
+}
+
+function ShelfHeading() {
+	return (
+		<div class="mb-5 sm:mb-6">
+			<h2 class="font-display text-h3 sm:text-h2">
+				Таньд таалагдаж магадгүй
+			</h2>
+			<p class="mt-1 text-sm text-muted-foreground sm:text-base">
+				Таны сонголтод тулгуурлан санал болгож байна
+			</p>
+		</div>
+	);
 }
 
 export default function RecommendedProducts(props: RecommendedProductsProps) {
@@ -104,41 +119,68 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 				params.productName,
 			),
 	);
+
+	const washClass = () =>
+		WASH_BG[washFor(props.washKey ?? props.categoryId)];
+
+	const setupReveal = (el: HTMLElement) => {
+		queueMicrotask(() => {
+			if (window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+				return;
+			const cards = Array.from(
+				el.querySelectorAll<HTMLElement>("[data-shelf-card]"),
+			);
+			if (cards.length === 0) return;
+			for (const card of cards) {
+				card.style.opacity = "0";
+				card.style.transform = "translateY(12px)";
+			}
+			inView(
+				el,
+				() => {
+					animate(
+						cards,
+						{ opacity: 1, transform: "translateY(0px)" },
+						{
+							duration: 0.35,
+							delay: stagger(0.04),
+							easing: [0.23, 1, 0.32, 1],
+						},
+					);
+				},
+				{ amount: 0.15 },
+			);
+		});
+	};
+
 	return (
-		<section class="w-full py-8 sm:py-12">
+		<section class="w-full py-6 sm:py-10">
 			<Show when={!products.loading && products()} keyed>
 				{(list) => (
 					<Show when={list.length > 0}>
-						<div class="mb-8 sm:mb-10">
-							<h2 class="mb-2 flex items-center gap-2 font-extrabold text-2xl uppercase tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
-								<IconLightbulb class="text-yellow-500" /> Таньд таалагдаж магадгүй
-							</h2>
-							<p class="font-bold text-muted-foreground text-sm uppercase tracking-wide sm:text-base">
-								Таны сонголтод тулгуурлан санал болгож байна
-							</p>
-						</div>
+						<ShelfHeading />
 
-						<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+						<div
+							ref={setupReveal}
+							class="scrollbar-hide -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:gap-4 sm:px-0"
+						>
 							<For each={list}>
 								{(product) => {
-									const imageProps = getProductImageProps(product.image, "card");
+									const imageProps = getProductImageProps(
+										product.image,
+										"card",
+									);
 
 									return (
 										<a
 											href={`/products/${product.slug}-${product.id}/`}
-											class="group hover:-translate-y-1 relative block rounded-lg border border-border bg-card shadow-soft transition-all duration-200 ease-out-quart hover:shadow-soft-lg"
+											data-shelf-card
+											class="group block w-[160px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:-translate-y-1 hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
-											{/* Image Section */}
-											<div class="relative aspect-[4/5] overflow-hidden border-border border-b bg-muted/20">
-												<div class="absolute inset-0 bg-dots-pattern opacity-30" />
-
-												{/* Brand Badge */}
-												<div class="absolute top-3 left-3 z-10">
-													<span class="rounded-md border border-border bg-background px-2 py-1 font-bold text-[10px] uppercase shadow-soft-sm sm:text-xs">
-														{product.brand}
-													</span>
-												</div>
-
+											<div
+												class={`relative aspect-square overflow-hidden ${washClass()}`}
+											>
+												<div class="absolute inset-0 bg-dots-subtle" />
 												<Show when={product.image}>
 													<Image
 														src={imageProps.src || product.image}
@@ -148,27 +190,23 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														sizes={imageProps.sizes}
 														layout="constrained"
 														objectFit="contain"
-														class="relative z-10 h-full w-full p-6 drop-shadow-md transition-transform duration-500 ease-out-quart group-hover:scale-105"
+														class="relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04]"
 														loading="lazy"
 														decoding="async"
 													/>
 												</Show>
-
 											</div>
 
-											{/* Content Section */}
-											<div class="flex flex-col gap-3 p-4">
-												{/* Product Name */}
-												<h3 class="line-clamp-2 min-h-[2.5em] font-bold text-sm leading-tight transition-colors group-hover:text-primary sm:text-base">
+											<div class="flex flex-col gap-1.5 p-3 sm:p-4">
+												<span class="text-[11px] font-medium text-muted-foreground">
+													{product.brand}
+												</span>
+												<h3 class="line-clamp-2 min-h-[2.5em] text-sm font-medium leading-snug">
 													{product.name}
 												</h3>
-
-												{/* Price Section */}
-												<div class="mt-auto flex flex-col">
-													<span class="font-bold text-lg tracking-tight sm:text-xl">
-														{formatCurrency(product.price)}
-													</span>
-												</div>
+												<span class="font-display text-base">
+													{formatCurrency(product.price)}
+												</span>
 											</div>
 										</a>
 									);
@@ -180,19 +218,21 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 			</Show>
 
 			<Show when={products.loading}>
-				<div class="mb-8 sm:mb-10">
-					<h2 class="mb-2 flex items-center gap-2 font-extrabold text-2xl uppercase tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
-						<IconLightbulb class="text-yellow-500" /> Таньд таалагдаж магадгүй
-					</h2>
-					<p class="font-bold text-muted-foreground text-sm uppercase tracking-wide sm:text-base">
-						Таны сонголтод тулгуурлан санал болгож байна
-					</p>
-				</div>
-				<div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+				<ShelfHeading />
+				<div class="scrollbar-hide -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:gap-4 sm:px-0">
 					{Array(4)
 						.fill(0)
-						.map((_v, _i) => (
-							<div class="h-[300px] animate-pulse rounded-lg border border-border bg-muted/30 shadow-soft sm:h-[400px]" />
+						.map(() => (
+							<div class="w-[160px] shrink-0 sm:w-[200px] lg:w-[220px]">
+								<div class="animate-pulse overflow-hidden rounded-2xl bg-card shadow-soft">
+									<div class="aspect-square bg-muted/40" />
+									<div class="space-y-2 p-3 sm:p-4">
+										<div class="h-3 w-1/3 rounded bg-muted/60" />
+										<div class="h-4 w-3/4 rounded bg-muted/60" />
+										<div class="h-4 w-1/2 rounded bg-muted/60" />
+									</div>
+								</div>
+							</div>
 						))}
 				</div>
 			</Show>
