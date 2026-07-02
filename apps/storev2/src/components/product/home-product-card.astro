@@ -69,6 +69,7 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 			<AddToCartButton
 				client:load
 				compact
+				openDrawer={false}
 				cartItem={{
 					productId: product.id,
 					quantity: 1,
