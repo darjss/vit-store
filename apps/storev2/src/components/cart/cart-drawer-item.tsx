@@ -1,5 +1,9 @@
 import { Image } from "@unpic/solid";
 import type { CartItems } from "@vit/shared/types";
+import { createSignal, Show } from "solid-js";
+import { Motion, Presence } from "solid-motionone";
+import { cn } from "@/lib/utils";
+import { washBg } from "@/lib/wash";
 import { cart } from "@/store/cart";
 import IconClose from "~icons/ri/close-line";
 
@@ -8,9 +12,23 @@ interface CartDrawerItemProps {
 	onNavigate?: () => void;
 }
 
+const EXIT_MS = 220;
+
 const CartDrawerItem = (props: CartDrawerItemProps) => {
-	const handleRemove = () => {
-		cart.remove(props.item.productId);
+	const [removing, setRemoving] = createSignal(false);
+	const [measuredHeight, setMeasuredHeight] = createSignal<number | null>(null);
+	let rootEl: HTMLDivElement | undefined;
+
+	const productUrl = () =>
+		`/products/${props.item.slug}-${props.item.productId}/`;
+
+	const startRemove = () => {
+		if (removing()) return;
+		if (rootEl) {
+			setMeasuredHeight(rootEl.offsetHeight);
+		}
+		setRemoving(true);
+		window.setTimeout(() => cart.remove(props.item.productId), EXIT_MS);
 	};
 
 	const handleIncrement = () => {
@@ -21,88 +39,104 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 		if (props.item.quantity > 1) {
 			cart.updateQuantity(props.item.productId, -1);
 		} else {
-			cart.remove(props.item.productId);
+			startRemove();
 		}
 	};
 
 	return (
-		<div class="hover:-translate-y-1 border border-border bg-card p-3 shadow-soft transition-all hover:shadow-soft-lg">
-			<div class="flex gap-3">
-				{/* Product Image */}
-				<div class="h-20 w-20 flex-shrink-0 overflow-hidden border border-border bg-secondary/5 shadow-soft-sm">
-					<a
-						href={`/products/${props.item.slug}-${props.item.productId}/`}
-						onClick={props.onNavigate}
-					>
-						<Image
-							src={props.item.image}
-							alt={props.item.name}
-							width={80}
-							height={80}
-							layout="fixed"
-							class="h-full w-full object-cover object-center transition-transform hover:scale-110"
-						/>
-					</a>
-				</div>
-
-				{/* Product Info */}
-				<div class="flex flex-1 flex-col justify-between">
-					<div>
+		<Presence>
+			<Show when={!removing()}>
+				<Motion.div
+					ref={rootEl}
+					initial={{ opacity: 0, y: 8 }}
+					animate={{ opacity: 1, y: 0 }}
+					exit={{
+						opacity: 0,
+						x: 16,
+						...(measuredHeight() !== null
+							? { height: [`${measuredHeight()}px`, "0px"] }
+							: {}),
+						transition: { duration: EXIT_MS / 1000, easing: [0.65, 0, 0.35, 1] },
+					}}
+					transition={{ duration: 0.25, easing: [0.25, 1, 0.5, 1] }}
+					class={cn(
+						"rounded-2xl border border-border bg-card p-3 shadow-soft-sm",
+						removing() && "overflow-hidden",
+					)}
+				>
+					<div class="flex gap-3">
 						<a
-							href={`/products/${props.item.slug}-${props.item.productId}/`}
+							href={productUrl()}
 							onClick={props.onNavigate}
-							class="line-clamp-2 font-extrabold text-sm uppercase transition-colors hover:text-primary"
+							class={cn(
+								"block size-20 shrink-0 overflow-hidden rounded-xl",
+								washBg(props.item.productId),
+							)}
 						>
-							{props.item.name}
+							<Image
+								src={props.item.image}
+								alt={props.item.name}
+								width={80}
+								height={80}
+								layout="fixed"
+								class="h-full w-full object-cover object-center"
+							/>
 						</a>
-						<p class="mt-1 font-bold text-muted-foreground text-xs">
-							₮{props.item.price.toLocaleString()}
-						</p>
-					</div>
 
-					{/* Quantity Controls & Remove */}
-					<div class="mt-2 flex items-center justify-between">
-						{/* Quantity Controls */}
-						<div class="flex items-center gap-1">
-							<button
-								type="button"
-								onClick={handleDecrement}
-								class="flex h-11 w-11 items-center justify-center border border-border bg-background font-extrabold shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
-								aria-label="Хасах"
-							>
-								−
-							</button>
-							<div class="flex h-11 min-w-[2.75rem] items-center justify-center border border-border bg-primary px-2 font-extrabold text-sm">
-								{props.item.quantity}
+						<div class="flex min-w-0 flex-1 flex-col">
+							<div class="flex items-start justify-between gap-1">
+								<a
+									href={productUrl()}
+									onClick={props.onNavigate}
+									class="line-clamp-2 pt-0.5 font-semibold text-foreground text-sm leading-snug transition-colors duration-[140ms] ease-out hover:text-cocoa"
+								>
+									{props.item.name}
+								</a>
+								<button
+									type="button"
+									onClick={startRemove}
+									class="-mt-1.5 -mr-1.5 flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-[140ms] ease-out hover:bg-error hover:text-error-foreground active:scale-95"
+									aria-label="Устгах"
+								>
+									<IconClose class="h-4 w-4" aria-hidden="true" />
+								</button>
 							</div>
-							<button
-								type="button"
-								onClick={handleIncrement}
-								class="flex h-11 w-11 items-center justify-center border border-border bg-background font-extrabold shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:bg-primary hover:shadow-none active:scale-95"
-								aria-label="Нэмэх"
-							>
-								+
-							</button>
+							<p class="text-muted-foreground text-xs">
+								₮{props.item.price.toLocaleString()} / ширхэг
+							</p>
+
+							<div class="mt-auto flex items-center justify-between pt-2">
+								<div class="flex items-center rounded-full border border-border bg-background">
+									<button
+										type="button"
+										onClick={handleDecrement}
+										class="flex size-11 items-center justify-center rounded-full font-semibold text-base transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted active:scale-95"
+										aria-label="Хасах"
+									>
+										−
+									</button>
+									<span class="min-w-6 text-center font-semibold text-sm tabular-nums">
+										{props.item.quantity}
+									</span>
+									<button
+										type="button"
+										onClick={handleIncrement}
+										class="flex size-11 items-center justify-center rounded-full font-semibold text-base transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted active:scale-95"
+										aria-label="Нэмэх"
+									>
+										+
+									</button>
+								</div>
+
+								<span class="font-display text-foreground text-sm">
+									₮{(props.item.price * props.item.quantity).toLocaleString()}
+								</span>
+							</div>
 						</div>
-
-						{/* Remove Button */}
-						<button
-							type="button"
-							onClick={handleRemove}
-							class="flex h-11 w-11 items-center justify-center border border-border bg-error text-error-foreground shadow-soft-sm transition-all hover:translate-x-px hover:translate-y-px hover:shadow-none active:scale-95"
-							aria-label="Устгах"
-						>
-							<IconClose class="h-5 w-5" />
-						</button>
 					</div>
-
-					{/* Item Total */}
-					<div class="mt-2 border-border border-t pt-2 font-extrabold text-primary text-sm">
-						₮{(props.item.price * props.item.quantity).toLocaleString()}
-					</div>
-				</div>
-			</div>
-		</div>
+				</Motion.div>
+			</Show>
+		</Presence>
 	);
 };
 
