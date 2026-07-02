@@ -1,22 +1,5 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import Layout from "@/layouts/Layout.astro";
-import IconAlertTriangle from "~icons/ri/alert-line";
-import IconCloseCircle from "~icons/ri/close-circle-line";
 import IconLightbulb from "~icons/ri/lightbulb-line";
 import IconRefresh from "~icons/ri/refresh-line";
 
@@ -27,139 +10,55 @@ const description = "Системд түр зуурын алдаа гарлаа.
 ---
 
 <Layout title={title} description={description} noindex>
-    <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
-        <div class="max-w-2xl w-full">
-            <div
-                class="bg-[oklch(0.92_0.18_15)] border border-border shadow-soft-lg p-8 md:p-12 relative overflow-hidden"
-            >
-                <div
-                    class="absolute inset-0 opacity-10"
-                    style="background-image: repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px);"
+    <div class="flex min-h-[75vh] items-center justify-center px-4 py-16">
+        <div class="w-full max-w-md text-center">
+            <div class="enter-rise relative mx-auto mb-6 inline-block">
+                <span
+                    aria-hidden="true"
+                    class="absolute -top-4 -left-10 h-10 w-10 animate-float-1 rounded-full bg-wash-apricot md:-left-14 md:h-12 md:w-12"
+                ></span>
+                <span
+                    aria-hidden="true"
+                    class="absolute -bottom-2 -right-8 h-7 w-7 animate-float-3 rounded-full bg-wash-lilac md:-right-12"
+                ></span>
+                <h1 class="relative font-display text-[7rem] leading-none text-foreground md:text-[9rem]">
+                    500
+                </h1>
+                <span
+                    class="absolute -top-3 -right-6 inline-flex -rotate-2 animate-float-2 items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 font-bold text-foreground text-xs shadow-pop-sm md:-right-10"
                 >
-                </div>
-
-                <div class="absolute top-4 right-4 opacity-30 animate-pulse">
-                    <IconAlertTriangle class="h-20 w-20" />
-                </div>
-
-                <div class="relative z-10">
-                    <div class="mb-6">
-                        <h1
-                            class="text-8xl md:text-9xl font-extrabold leading-none animate-glitch inline-block"
-                        >
-                            500
-                        </h1>
-                        <div
-                            class="mt-4 h-2 w-32 bg-foreground shadow-soft-lg"
-                        >
-                        </div>
-                    </div>
-
-                    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">
-                        Ямар нэг зүйл буруу боллоо
-                    </h2>
-                    <p class="text-lg md:text-xl font-bold mb-8 max-w-md">
-                        Системд гэнэтийн алдаа гарлаа. Бид шууд засаж байгаа тул хэсэг хугацааны дараа дахин оролдоно уу.
-                    </p>
-
-                    <div class="my-8 flex gap-4 flex-wrap">
-                        <div
-                            class="border border-border bg-foreground text-background p-4 shadow-soft-lg animate-float-1 inline-block"
-                        >
-                            <IconCloseCircle class="h-8 w-8" />
-                        </div>
-                        <div
-                            class="bg-background border-[3px] border-border p-4 shadow-soft-lg animate-float-2 inline-block"
-                        >
-                            <IconAlertTriangle class="h-8 w-8" />
-                        </div>
-                        <div
-                            class="bg-primary border-[3px] border-border p-4 shadow-soft-lg animate-float-3 inline-block font-extrabold text-2xl"
-                        >
-                            !
-                        </div>
-                    </div>
-
-                    <div
-                        class="bg-background/60 border-[3px] border-border p-4 mb-6 font-mono text-sm"
-                    >
-                        <div class="font-bold mb-2 flex items-center gap-2"><IconAlertTriangle class="h-4 w-4" /> Алдааны мэдээлэл:</div>
-                        <div class="space-y-1 opacity-70">
-                            <div>→ Статус: Internal Server Error</div>
-                            <div>→ Код: HTTP 500</div>
-                            <div>
-                                → Огноо: {
-                                    new Date().toLocaleString("mn-MN", {
-                                        timeZone: "Asia/Ulaanbaatar",
-                                    })
-                                }
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex flex-wrap gap-4 mt-8">
-                        <button
-                            type="button"
-                            onclick="location.reload()"
-                            class="border border-border bg-foreground text-background px-8 py-4 font-extrabold text-lg shadow-soft-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-soft-sm transition-all flex items-center gap-2"
-                        >
-                            <IconRefresh class="h-5 w-5" /> Дахин оролдох
-                        </button>
-                        <a href="/">
-                            <button
-                                type="button"
-                                class="bg-background border-[3px] border-border px-8 py-4 font-extrabold text-lg shadow-soft-lg hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-soft-sm transition-all"
-                            >
-                                ← Нүүр хуудас руу
-                            </button>
-                        </a>
-                    </div>
-
-                    <!-- Help Text -->
-                    <div class="mt-8 pt-6 border-t border-border/20">
-                        <p class="font-bold text-sm flex items-center gap-2">
-                            <IconLightbulb class="h-5 w-5" /> <strong>Зөвлөмж:</strong> Хуудсыг дахин ачааллаж үзэх эсвэл хэсэг хугацааны дараа эргэн ирээрэй.
-                        </p>
-                    </div>
-                </div>
+                    Түр зуурын алдаа
+                </span>
             </div>
 
-            <!-- Shadow Element -->
-            <div class="mt-2 ml-2 h-full w-full bg-foreground/10 -z-10"></div>
+            <h2 class="enter-rise stagger-1 mb-3 font-display text-foreground text-h3">
+                Ямар нэг зүйл буруу боллоо
+            </h2>
+            <p class="enter-rise stagger-2 mx-auto mb-8 max-w-sm text-muted-foreground text-sm leading-relaxed md:text-base">
+                Системд гэнэтийн алдаа гарлаа. Бид шууд засаж байгаа тул хэсэг хугацааны дараа дахин оролдоно уу.
+            </p>
+
+            <div class="enter-rise stagger-3 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <button
+                    type="button"
+                    onclick="location.reload()"
+                    class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-8 py-3 font-semibold text-primary-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97] md:text-base"
+                >
+                    <IconRefresh class="h-4 w-4" />
+                    Дахин оролдох
+                </button>
+                <a
+                    href="/"
+                    class="inline-flex min-h-12 items-center justify-center rounded-full border border-border bg-card px-8 py-3 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97] md:text-base"
+                >
+                    Нүүр хуудас руу
+                </a>
+            </div>
+
+            <p class="enter-rise stagger-4 mt-8 inline-flex items-center gap-2 text-muted-foreground text-xs">
+                <IconLightbulb class="h-4 w-4" />
+                Зөвлөмж: Хуудсыг дахин ачааллаж үзэх эсвэл хэсэг хугацааны дараа эргэн ирээрэй.
+            </p>
         </div>
     </div>
 </Layout>
-
-<style>
-    @keyframes glitch {
-        0% {
-            transform: translate(0);
-        }
-        20% {
-            transform: translate(-2px, 2px);
-        }
-        40% {
-            transform: translate(-2px, -2px);
-        }
-        60% {
-            transform: translate(2px, 2px);
-        }
-        80% {
-            transform: translate(2px, -2px);
-        }
-        100% {
-            transform: translate(0);
-        }
-    }
-
-    .animate-glitch {
-        animation: glitch 0.3s infinite;
-    }
-
-    @media (prefers-reduced-motion) {
-        .animate-glitch {
-            animation: none;
-        }
-    }
-</style>
