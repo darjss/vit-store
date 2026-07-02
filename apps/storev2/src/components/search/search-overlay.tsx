@@ -71,7 +71,7 @@ const SearchOverlay: Component = () => {
 				as="button"
 				type="button"
 				aria-label="Хайх"
-				class="flex items-center justify-center border border-border bg-background p-2 shadow-soft-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:bg-primary hover:shadow-none"
+				class="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
 			>
 				<IconSearch class="h-5 w-5" aria-hidden="true" />
 			</SheetTrigger>
@@ -82,10 +82,10 @@ const SearchOverlay: Component = () => {
 			>
 				<div class="flex h-full flex-col">
 					{/* Header */}
-					<div class="border-border border-b bg-primary/10 px-4 py-4 sm:px-6">
+					<div class="border-border border-b bg-wash-lemon px-4 py-4 sm:px-6">
 						<SheetHeader class="mb-4">
-							<SheetTitle class="flex items-center gap-2 font-extrabold text-xl uppercase tracking-tight sm:text-2xl">
-								<IconSearch class="h-6 w-6 text-primary" />
+							<SheetTitle class="flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
+								<IconSearch class="h-6 w-6 text-foreground/60" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
 						</SheetHeader>
