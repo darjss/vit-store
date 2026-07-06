@@ -65,6 +65,19 @@ const JSON_TARGET_COLUMNS = new Set<string>([
 // individual statements a reasonable size.
 const ROWS_PER_INSERT = 200;
 
+// Upper bound on the character length of a single multi-row INSERT statement.
+// D1 rejects oversized statements with SQLITE_TOOBIG (~100KB limit); product
+// rows carry large (multi-KB) descriptions, so batches are flushed before
+// crossing this budget.
+const MAX_INSERT_CHARS = 60_000;
+
+// A single row whose text value exceeds this is inserted with an empty
+// placeholder and then appended in chunks via `UPDATE ... col = col || '...'`,
+// because even a one-row INSERT of a huge literal would blow the statement
+// limit (one product description is ~117KB). Kept well under the limit even
+// after single-quote escaping doubles some characters.
+const MAX_CELL_CHARS = 40_000;
+
 let jsonNormalizations = 0;
 
 const OUT_DIR = path.join(import.meta.dirname, "out");
@@ -72,6 +85,7 @@ const SQL_OUT = path.join(OUT_DIR, "d1-data.sql");
 const COUNTS_OUT = path.join(OUT_DIR, "row-counts.json");
 
 type ColumnMeta = { name: string; dataType: string };
+type Row = Record<string, unknown>;
 
 function parseEnvFile(filePath: string): Map<string, string> {
 	const parsed = new Map<string, string>();
@@ -137,6 +151,46 @@ function loadPlanetscaleEnv(): {
 /** Escape a JS string as a SQLite single-quoted literal. */
 function sqlString(value: string): string {
 	return `'${value.replace(/'/g, "''")}'`;
+}
+
+interface BuiltRow {
+	/** The single-row VALUES tuple, with oversized cells emitted empty. */
+	tuple: string;
+	/** Chunked `UPDATE ... col = col || '...'` statements to run after INSERT. */
+	appends: string[];
+}
+
+/**
+ * Build a row's VALUES tuple. Any string cell longer than MAX_CELL_CHARS is
+ * inserted as an empty literal and its real value is appended in chunks via
+ * follow-up UPDATE statements, keeping every statement under D1's size limit.
+ */
+function buildRowTuple(
+	table: string,
+	meta: ColumnMeta[],
+	row: Record<string, unknown>,
+): BuiltRow {
+	const appends: string[] = [];
+	const id = row.id;
+	const values = meta.map((col) => {
+		const raw = row[col.name];
+		if (typeof raw === "string" && raw.length > MAX_CELL_CHARS) {
+			if (id === undefined || id === null) {
+				throw new Error(
+					`Oversized cell ${table}.${col.name} on a row without an id; cannot chunk.`,
+				);
+			}
+			for (let i = 0; i < raw.length; i += MAX_CELL_CHARS) {
+				const piece = raw.slice(i, i + MAX_CELL_CHARS);
+				appends.push(
+					`UPDATE "${table}" SET "${col.name}" = "${col.name}" || ${sqlString(piece)} WHERE "id" = ${id};`,
+				);
+			}
+			return "''";
+		}
+		return formatValue(raw, col.dataType, `${table}.${col.name}`);
+	});
+	return { tuple: `(${values.join(", ")})`, appends };
 }
 
 /** Convert a Postgres timestamp/date value to epoch SECONDS. */
@@ -228,6 +282,108 @@ function formatValue(
 	return sqlString(String(value));
 }
 
+async function queryTableColumns(
+	sql: postgres.Sql,
+	table: string,
+): Promise<ColumnMeta[]> {
+	const columns = (await sql`
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = ${table}
+                ORDER BY ordinal_position
+        `) as unknown as Array<{ column_name: string; data_type: string }>;
+
+	if (columns.length === 0) {
+		throw new Error(
+			`Table ${table} not found in Planetscale (no columns). Aborting.`,
+		);
+	}
+
+	return columns.map((column) => ({
+		name: column.column_name,
+		dataType: column.data_type,
+	}));
+}
+
+async function queryTableRows(
+	sql: postgres.Sql,
+	table: string,
+): Promise<Row[]> {
+	return (await sql`
+                SELECT * FROM ${sql(table)} ORDER BY 1
+        `) as unknown as Row[];
+}
+
+function emitInsertBatch(
+	parts: string[],
+	table: string,
+	columnList: string,
+	batch: string[],
+) {
+	if (batch.length === 0) return;
+	parts.push(`INSERT INTO "${table}" (${columnList}) VALUES
+${batch.join(",\n")};`);
+}
+
+function emitTableDump(
+	parts: string[],
+	table: string,
+	meta: ColumnMeta[],
+	rows: Row[],
+) {
+	const columnList = meta.map((column) => `"${column.name}"`).join(", ");
+	parts.push(`-- ${table}: ${rows.length} rows`);
+
+	let batch: string[] = [];
+	let batchChars = 0;
+	const flush = () => {
+		emitInsertBatch(parts, table, columnList, batch);
+		batch = [];
+		batchChars = 0;
+	};
+
+	for (const row of rows) {
+		const built = buildRowTuple(table, meta, row);
+		const tuple = built.tuple;
+		if (
+			batch.length > 0 &&
+			(batch.length >= ROWS_PER_INSERT ||
+				batchChars + tuple.length > MAX_INSERT_CHARS)
+		) {
+			flush();
+		}
+		batch.push(tuple);
+		batchChars += tuple.length + 2;
+		if (built.appends.length > 0) {
+			flush();
+			parts.push(...built.appends);
+		}
+	}
+
+	flush();
+
+	if (rows.length > 0 && meta.some((column) => column.name === "id")) {
+		parts.push(
+			`DELETE FROM sqlite_sequence WHERE name = ${sqlString(table)};`,
+			`INSERT INTO sqlite_sequence (name, seq) VALUES (${sqlString(table)}, (SELECT MAX("id") FROM "${table}"));`,
+		);
+	}
+	parts.push("");
+}
+
+async function dumpAllTables(
+	sql: postgres.Sql,
+	parts: string[],
+	counts: Record<string, number>,
+) {
+	for (const table of TABLES) {
+		const meta = await queryTableColumns(sql, table);
+		const rows = await queryTableRows(sql, table);
+		counts[table] = rows.length;
+		emitTableDump(parts, table, meta, rows);
+	}
+}
+
 async function main() {
 	const creds = loadPlanetscaleEnv();
 	const sql = postgres({
@@ -251,71 +407,30 @@ async function main() {
 	parts.push(`-- Generated at: ${new Date().toISOString()}`);
 	parts.push("PRAGMA defer_foreign_keys = ON;");
 	parts.push("");
+	parts.push("-- Reset: clear all tables so this dump can be re-run safely");
+	for (const table of [...TABLES].reverse()) {
+		parts.push(`DELETE FROM "${table}";`);
+	}
+	parts.push("");
 
 	try {
-		for (const table of TABLES) {
-			const columns = (await sql`
-				SELECT column_name, data_type
-				FROM information_schema.columns
-				WHERE table_schema = 'public' AND table_name = ${table}
-				ORDER BY ordinal_position
-			`) as unknown as Array<{ column_name: string; data_type: string }>;
-
-			if (columns.length === 0) {
-				throw new Error(
-					`Table ${table} not found in Planetscale (no columns). Aborting.`,
-				);
-			}
-
-			const meta: ColumnMeta[] = columns.map((c) => ({
-				name: c.column_name,
-				dataType: c.data_type,
-			}));
-			const columnList = meta.map((c) => `"${c.name}"`).join(", ");
-
-			const rows = (await sql`
-				SELECT * FROM ${sql(table)} ORDER BY 1
-			`) as unknown as Array<Record<string, unknown>>;
-
-			counts[table] = rows.length;
-			parts.push(`-- ${table}: ${rows.length} rows`);
-
-			for (let i = 0; i < rows.length; i += ROWS_PER_INSERT) {
-				const chunk = rows.slice(i, i + ROWS_PER_INSERT);
-				const valueTuples = chunk
-					.map((row) => {
-						const values = meta
-							.map((col) =>
-								formatValue(
-									row[col.name],
-									col.dataType,
-									`${table}.${col.name}`,
-								),
-							)
-							.join(", ");
-						return `(${values})`;
-					})
-					.join(",\n");
-				parts.push(
-					`INSERT INTO "${table}" (${columnList}) VALUES\n${valueTuples};`,
-				);
-			}
-
-			// Reset AUTOINCREMENT high-water mark so future inserts don't reuse ids.
-			if (rows.length > 0 && meta.some((c) => c.name === "id")) {
-				parts.push(
-					`DELETE FROM sqlite_sequence WHERE name = '${table}';`,
-					`INSERT INTO sqlite_sequence (name, seq) VALUES ('${table}', (SELECT MAX("id") FROM "${table}"));`,
-				);
-			}
-			parts.push("");
-		}
+		await dumpAllTables(sql, parts, counts);
 	} finally {
 		await sql.end({ timeout: 5 });
 	}
 
-	writeFileSync(SQL_OUT, `${parts.join("\n")}\n`, "utf8");
-	writeFileSync(COUNTS_OUT, `${JSON.stringify(counts, null, 2)}\n`, "utf8");
+	writeFileSync(
+		SQL_OUT,
+		`${parts.join("\n")}
+`,
+		"utf8",
+	);
+	writeFileSync(
+		COUNTS_OUT,
+		`${JSON.stringify(counts, null, 2)}
+`,
+		"utf8",
+	);
 
 	const total = Object.values(counts).reduce((a, b) => a + b, 0);
 	console.log(`Wrote ${SQL_OUT}`);
