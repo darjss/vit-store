@@ -17,7 +17,7 @@ const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
 if(!orderNumber || orderNumber===undefined){
-    throw Astro.redirect("/404");
+    return Astro.redirect("/404");
 }
 let order;
 try {
@@ -25,15 +25,15 @@ try {
 } catch (err) {
     const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
     if (code === "UNAUTHORIZED") {
-        throw Astro.redirect("/order-tracking");
+        return Astro.redirect("/order-tracking");
     }
     if (code === "NOT_FOUND") {
-        throw Astro.redirect("/404");
+        return Astro.redirect("/404");
     }
     throw err;
 }
 if(!order){
-    throw Astro.redirect("/404");
+    return Astro.redirect("/404");
 }
 
 const timelineSteps: OrderStatusType[] = ["pending", "shipped", "delivered"];

@@ -62,13 +62,13 @@ const productId = Number(slugParts[slugParts.length - 1]);
 
 if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const productData = await api.product.getProductById.query({ id: productId });
 if (!productData) {
 	console.error("Product not found");
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const product = productData;
