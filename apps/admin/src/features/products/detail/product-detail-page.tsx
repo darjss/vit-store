@@ -99,6 +99,10 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 									}}
 									onSuccess={() => {
 										setIsEditDialogOpen(false);
+										queryClient.invalidateQueries({
+											queryKey: ["admin-products-infinite"],
+											type: "all",
+										});
 										queryClient.invalidateQueries(
 											trpc.product.getAllProducts.queryOptions(),
 										);
@@ -150,13 +154,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 									]}
 									className={`rounded-full border px-3 py-1 font-medium text-sm ${getStatusColor(product.status)}`}
 									isLoading={isUpdateProductFieldPending}
-									onSave={(next) =>
-										updateProductField({
+									onSave={async (next) => {
+										await updateProductField({
 											id: productId,
 											field: "status",
 											stringValue: next,
-										})
-									}
+										});
+									}}
 								/>
 								<RowAction
 									id={productId}
@@ -279,13 +283,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 											label="Нэр:"
 											value={product.name}
 											isLoading={isUpdateProductFieldPending}
-											onSave={(next) =>
-												updateProductField({
+											onSave={async (next) => {
+												await updateProductField({
 													id: productId,
 													field: "name",
 													stringValue: next,
-												})
-											}
+												});
+											}}
 										/>
 									</div>
 
@@ -295,13 +299,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 											type="textarea"
 											value={product.description}
 											isLoading={isUpdateProductFieldPending}
-											onSave={(next) =>
-												updateProductField({
+											onSave={async (next) => {
+												await updateProductField({
 													id: productId,
 													field: "description",
 													stringValue: next,
-												})
-											}
+												});
+											}}
 										/>
 									</div>
 
@@ -347,13 +351,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 													Number.parseFloat(raw || "0") as never
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "price",
 														numberValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 										<div className="px-4 py-4 sm:px-6">
@@ -368,13 +372,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 													) as unknown as string as never
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "stock",
 														numberValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 									</div>
@@ -396,13 +400,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												label="Хэмжээ:"
 												value={product.amount}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "amount",
 														stringValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 										<div className="px-4 py-4 sm:px-6">
@@ -410,13 +414,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												label="Идэмхий чанар:"
 												value={product.potency}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "potency",
 														stringValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 									</div>
@@ -430,13 +434,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 													formatExpirationMonthYear(value || null)
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "expirationDate" as never,
 														stringValue: next || undefined,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 										<div className="px-4 py-4 sm:px-6">
@@ -450,13 +454,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 													) as unknown as string as never
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "dailyIntake",
 														numberValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 										<div className="px-4 py-4 sm:px-6">
@@ -472,13 +476,13 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 													) as unknown as string as never
 												}
 												isLoading={isUpdateProductFieldPending}
-												onSave={(next) =>
-													updateProductField({
+												onSave={async (next) => {
+													await updateProductField({
 														id: productId,
 														field: "discount",
 														numberValue: next,
-													})
-												}
+													});
+												}}
 											/>
 										</div>
 									</div>
