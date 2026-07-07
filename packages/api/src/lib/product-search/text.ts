@@ -103,6 +103,11 @@ const VITAMIN_LETTER_ALIASES: Record<string, string> = {
 	b: "vitamin b",
 	e: "vitamin e",
 	k: "k2",
+	д: "d3",
+	с: "vitamin c",
+	б: "vitamin b",
+	е: "vitamin e",
+	к: "k2",
 };
 
 const SYMPTOM_INGREDIENT_ALIASES: Record<string, string[]> = {
@@ -246,6 +251,7 @@ export const createSearchQueries = (query: string) => {
 	const transliterated = transliterateCyrillicToLatin(query);
 	const expanded = expandLatinAliases(query).join(" ");
 	const vitaminExpanded = expandVitaminLetters(query);
+	const vitaminExpandedTranslit = expandVitaminLetters(transliterated);
 	const brandExpanded = expandBrandAliases(query);
 	const symptomExpanded = expandSymptomIngredients(query);
 
@@ -257,6 +263,7 @@ export const createSearchQueries = (query: string) => {
 				transliterated,
 				expanded,
 				vitaminExpanded,
+				vitaminExpandedTranslit,
 				brandExpanded,
 				...symptomExpanded,
 			].filter(Boolean),
