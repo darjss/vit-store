@@ -160,6 +160,7 @@ interface OrderResult {
 	updatedAt: Date | null;
 	orderDetails: Array<{
 		quantity: number;
+		price: number | null;
 		product: {
 			name: string;
 			price: number;
@@ -218,7 +219,7 @@ export const shapeOrderResult = (result: OrderResult) => {
 		products: result.orderDetails.map((orderDetail) => ({
 			quantity: orderDetail.quantity,
 			name: orderDetail.product.name,
-			price: orderDetail.product.price,
+			price: orderDetail.price ?? orderDetail.product.price,
 			productId: orderDetail.product.id,
 			imageUrl: orderDetail.product.images[0]?.url,
 		})),
@@ -250,7 +251,7 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 				quantity: orderDetail.quantity,
 				name: orderDetail.product.name,
 				productId: orderDetail.product.id,
-				price: orderDetail.product.price,
+				price: orderDetail.price ?? orderDetail.product.price,
 				imageUrl: orderDetail.product.images[0]?.url,
 			})),
 			paymentStatus: latestPayment?.status ?? "pending",

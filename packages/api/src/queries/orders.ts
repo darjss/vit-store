@@ -182,6 +182,7 @@ export const orderQueries = {
 						orderDetails: {
 							columns: {
 								quantity: true,
+								price: true,
 							},
 							with: {
 								product: {
@@ -239,12 +240,13 @@ export const orderQueries = {
 
 		async createOrderDetails(
 			orderId: number,
-			products: Array<{ productId: number; quantity: number }>,
+			products: Array<{ productId: number; quantity: number; price: number }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
 				productId: p.productId,
 				quantity: p.quantity,
+				price: p.price,
 			}));
 			await db().insert(OrderDetailsTable).values(values);
 		},
@@ -252,12 +254,13 @@ export const orderQueries = {
 		async createOrderDetailsTx(
 			tx: TransactionType,
 			orderId: number,
-			products: Array<{ productId: number; quantity: number }>,
+			products: Array<{ productId: number; quantity: number; price: number }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
 				productId: p.productId,
 				quantity: p.quantity,
+				price: p.price,
 			}));
 			await tx.insert(OrderDetailsTable).values(values);
 		},
@@ -279,6 +282,7 @@ export const orderQueries = {
 					orderDetails: {
 						columns: {
 							quantity: true,
+							price: true,
 						},
 						with: {
 							product: {
@@ -395,6 +399,7 @@ export const orderQueries = {
 					orderDetails: {
 						columns: {
 							quantity: true,
+							price: true,
 						},
 						with: {
 							product: {
@@ -501,7 +506,7 @@ export const orderQueries = {
 				where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 				with: {
 					orderDetails: {
-						columns: { quantity: true },
+						columns: { quantity: true, price: true },
 						with: {
 							product: {
 								columns: { name: true, id: true, price: true },

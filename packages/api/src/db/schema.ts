@@ -275,6 +275,7 @@ export const OrderDetailsTable = createTable(
 			.references(() => ProductsTable.id)
 			.notNull(),
 		quantity: integer("quantity").notNull(),
+		price: integer("price"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
