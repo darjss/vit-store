@@ -1,6 +1,6 @@
 {
-  "id": "1c39a059-cb96-4be1-a700-3d73ee56b2ce",
-  "prevId": "8d91925e-c9a0-4b1b-92f1-da0f08346055",
+  "id": "24b5ed5a-7643-470b-a6ab-c5762f1899f2",
+  "prevId": "1c39a059-cb96-4be1-a700-3d73ee56b2ce",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -900,6 +900,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

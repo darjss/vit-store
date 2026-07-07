@@ -4,7 +4,11 @@ import { CustomersTable } from "~/db/schema";
 
 export const customerQueries = {
 	admin: {
-		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
+		async createCustomer(data: {
+			phone: number;
+			address?: string;
+			addressZoneId?: number;
+		}) {
 			const result = await db()
 				.insert(CustomersTable)
 				.values(data)
@@ -42,7 +46,12 @@ export const customerQueries = {
 					count: sql<number>`COUNT(*)`,
 				})
 				.from(CustomersTable)
-				.where(gte(CustomersTable.createdAt, startDate))
+				.where(
+					and(
+						gte(CustomersTable.createdAt, startDate),
+						isNull(CustomersTable.deletedAt),
+					),
+				)
 				.limit(1);
 			return result[0]?.count ?? 0;
 		},
@@ -89,7 +98,11 @@ export const customerQueries = {
 			});
 		},
 
-		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
+		async createCustomer(data: {
+			phone: number;
+			address?: string;
+			addressZoneId?: number;
+		}) {
 			const result = await db().insert(CustomersTable).values(data).returning();
 			return result[0];
 		},

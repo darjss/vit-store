@@ -432,7 +432,7 @@ export const paymentQueries = {
 						productId: detail.product.id,
 						quantitySold: detail.quantity,
 						productCost,
-						sellingPrice: detail.product.price,
+						sellingPrice: detail.price ?? detail.product.price,
 					});
 				}
 

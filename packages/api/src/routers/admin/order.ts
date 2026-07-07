@@ -48,6 +48,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             const orderDetails = input.products.map((product) => ({
                 productId: product.productId,
                 quantity: product.quantity,
+                price: product.price,
             }));
             await orderQueries.admin.createOrderDetails(orderId, orderDetails);
             if (input.paymentStatus === "success") {
@@ -150,12 +151,14 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     total: orderTotal,
                     address: input.address,
                     addressZoneId: input.addressZoneId ?? null,
+                    deliveryProvider: input.deliveryProvider,
                 });
                 const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 await orderQueries.admin.deleteOrderDetailsTx(tx, input.id);
                 await orderQueries.admin.createOrderDetailsTx(tx, input.id, input.products.map((product) => ({
                     productId: product.productId,
                     quantity: product.quantity,
+                    price: product.price,
                 })));
                 const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const prevPaymentStatus = prevPayment?.status ?? "pending";

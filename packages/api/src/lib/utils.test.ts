@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { getDaysAgo, getStartAndEndofDayAgo, getStartOfDay } from "./utils";
+import {
+	getDaysAgo,
+	getStartAndEndofDayAgo,
+	getStartOfDay,
+	shapeOrderResult,
+} from "./utils";
 
 const UB_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -43,5 +48,45 @@ describe("day boundaries use Asia/Ulaanbaatar (UTC+8) midnight", () => {
 		expect(endDate.getTime()).toBe(startDate.getTime() + DAY_MS - 1);
 		expect((startDate.getTime() + UB_OFFSET_MS) % DAY_MS).toBe(0);
 		expect((endDate.getTime() + 1 + UB_OFFSET_MS) % DAY_MS).toBe(0);
+	});
+});
+
+describe("shapeOrderResult prefers stored order-detail price", () => {
+	const buildOrder = (detailPrice: number | null) =>
+		({
+			id: 1,
+			orderNumber: "AB123456",
+			customerPhone: 99112233,
+			status: "pending",
+			total: 50000,
+			notes: null,
+			address: "somewhere",
+			addressZoneId: null,
+			deliveryProvider: "tu-delivery",
+			createdAt: new Date(),
+			updatedAt: null,
+			orderDetails: [
+				{
+					quantity: 2,
+					price: detailPrice,
+					product: {
+						name: "Product",
+						price: 99999,
+						id: 7,
+						images: [],
+					},
+				},
+			],
+			payments: [],
+		}) as Parameters<typeof shapeOrderResult>[0];
+
+	test("uses stored price when present", () => {
+		const shaped = shapeOrderResult(buildOrder(30000));
+		expect(shaped.products[0]?.price).toBe(30000);
+	});
+
+	test("falls back to catalog price when stored price is null", () => {
+		const shaped = shapeOrderResult(buildOrder(null));
+		expect(shaped.products[0]?.price).toBe(99999);
 	});
 });
