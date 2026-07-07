@@ -212,6 +212,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			status: patch.status ?? order.status,
 			notes: patch.notes ?? order.notes,
 			address: patch.address ?? order.address,
+			addressZoneId: patch.addressZoneId ?? order.addressZoneId,
 			products: order.products || [],
 			paymentStatus: patch.paymentStatus ?? order.paymentStatus,
 			deliveryProvider: patch.deliveryProvider ?? order.deliveryProvider,
