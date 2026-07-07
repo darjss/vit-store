@@ -67,6 +67,17 @@ describe("matchKhaanTransfer", () => {
 		expect(result).toEqual({ status: "none", matches: [] });
 	});
 
+	test("never matches on empty phone or payment number tokens", () => {
+		const result = matchKhaanTransfer({
+			transactions: [transaction({ description: "anything at all" })],
+			paymentNumber: " ",
+			phone: "",
+			expectedAmount: 125000,
+		});
+
+		expect(result).toEqual({ status: "none", matches: [] });
+	});
+
 	test("marks multiple plausible transfers as ambiguous", () => {
 		const result = matchKhaanTransfer({
 			transactions: [
