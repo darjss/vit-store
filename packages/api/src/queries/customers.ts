@@ -42,7 +42,12 @@ export const customerQueries = {
 					count: sql<number>`COUNT(*)`,
 				})
 				.from(CustomersTable)
-				.where(gte(CustomersTable.createdAt, startDate))
+				.where(
+					and(
+						gte(CustomersTable.createdAt, startDate),
+						isNull(CustomersTable.deletedAt),
+					),
+				)
 				.limit(1);
 			return result[0]?.count ?? 0;
 		},
