@@ -5,16 +5,15 @@ import type {
 	Session,
 	UserSelectType,
 } from "@vit/api";
-import { createDb } from "@vit/api/db";
+import { db } from "@vit/api/db/client";
 import type { AppRequestLogger } from "./logging";
-
 
 export async function createContext({
 	context,
 }: CreateContextOptions): Promise<ApiContext> {
 	const kv = context.env.vitStoreKV;
 	const r2 = context.env.r2Bucket;
-	const db = createDb(context.env.DB);
+	const database = db();
 
 	const log = context.get("log") as AppRequestLogger;
 	log.set({ user_type: "anonymous" });
@@ -22,7 +21,7 @@ export async function createContext({
 	return {
 		c: context,
 		session: null as Session<CustomerSelectType | UserSelectType> | null,
-		db: db,
+		db: database,
 		kv,
 		r2,
 		log,
