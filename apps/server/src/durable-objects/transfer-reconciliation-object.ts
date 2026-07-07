@@ -4,6 +4,7 @@ import { DurableObject } from "cloudflare:workers";
 import {
 	KhaanAuthError,
 	KhaanClient,
+	KhaanRateLimitError,
 	type MatchedKhaanTransaction,
 	type TransferReconciliationStatus,
 } from "khaan-client";
@@ -11,6 +12,7 @@ import { matchKhaanTransfer } from "../lib/khaan/match-transfer";
 
 const STATE_KEY = "transfer-reconciliation:state:v1";
 const POLL_INTERVAL_MS = 25_000;
+const RATE_LIMIT_BACKOFF_MS = 90_000;
 const MAX_POLL_MS = 5 * 60_000;
 
 export type TransferReconciliationState = {
@@ -38,6 +40,11 @@ const terminalStatuses = new Set<TransferReconciliationStatus>([
 
 const errorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : String(error);
+
+const retryDelayMs = (error: unknown) =>
+	error instanceof KhaanRateLimitError
+		? RATE_LIMIT_BACKOFF_MS
+		: POLL_INTERVAL_MS;
 
 const isConfirmablePaymentStatus = (status: string) =>
 	status === "pending" || status === "customer_claimed_paid";
@@ -97,6 +104,9 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		return await this.getStoredState();
 	}
 
+	// khaan-client's reconcileTransfer async iterator is intentionally not used:
+	// it cannot survive DO hibernation between alarms, so alarm-driven polling
+	// reproduces its contract instead.
 	async alarm(): Promise<void> {
 		const state = await this.getStoredState();
 		if (!state || state.status !== "polling") {
@@ -230,16 +240,22 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				});
 				return;
 			}
-			await this.scheduleNext({
-				...state,
-				attempts,
-				lastError: errorMessage(error),
-			});
+			await this.scheduleNext(
+				{
+					...state,
+					attempts,
+					lastError: errorMessage(error),
+				},
+				retryDelayMs(error),
+			);
 		}
 	}
 
-	private async scheduleNext(state: TransferReconciliationState) {
-		const nextPollAt = Date.now() + POLL_INTERVAL_MS;
+	private async scheduleNext(
+		state: TransferReconciliationState,
+		delayMs = POLL_INTERVAL_MS,
+	) {
+		const nextPollAt = Date.now() + delayMs;
 		if (nextPollAt >= Date.parse(state.expiresAt)) {
 			await this.writeState({
 				...state,
