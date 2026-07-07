@@ -234,9 +234,13 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ input, ctx }) => {
         try {
             const orderDetails = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
-            const restoreStockPromises = orderDetails
-                .filter((detail) => !detail.deletedAt)
-                .map((detail) => productQueries.admin.updateStock(detail.productId, detail.quantity, "add"));
+            const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
+            const stockWasDeducted = latestPayment?.status === "success";
+            const restoreStockPromises = stockWasDeducted
+                ? orderDetails
+                    .filter((detail) => !detail.deletedAt)
+                    .map((detail) => productQueries.admin.updateStock(detail.productId, detail.quantity, "add"))
+                : [];
             await orderQueries.admin.softDeleteOrder(input.id);
             await Promise.allSettled(restoreStockPromises);
             ctx.log.warn("order.cancelled", { orderId: input.id });
@@ -259,9 +263,13 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ input, ctx }) => {
         try {
             const details = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
-            const deductPromises = details
-                .filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
-                .map((d) => productQueries.admin.updateStock(d.productId, d.quantity, "minus"));
+            const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
+            const stockWasDeducted = latestPayment?.status === "success";
+            const deductPromises = stockWasDeducted
+                ? details
+                    .filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
+                    .map((d) => productQueries.admin.updateStock(d.productId, d.quantity, "minus"))
+                : [];
             await Promise.allSettled(deductPromises);
             await orderQueries.admin.restoreOrder(input.id);
             ctx.log.info("admin.action", {
