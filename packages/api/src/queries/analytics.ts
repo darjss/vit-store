@@ -1,5 +1,5 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -13,6 +13,10 @@ import {
 import { logger } from "~/lib/logger";
 import { getDaysFromTimeRange } from "~/lib/utils";
 
+// Order statuses that should be excluded from revenue / order-count aggregations
+// derived from OrdersTable (cancelled and refunded orders never realized revenue).
+export const EXCLUDED_ORDER_STATUSES = ["cancelled", "refunded"] as const;
+
 export const analyticsQueries = {
 	admin: {
 		async getAverageOrderValue(timeRange: timeRangeType) {
@@ -22,7 +26,15 @@ export const analyticsQueries = {
 					avg: sql<number>`AVG(${OrdersTable.total})`,
 				})
 				.from(OrdersTable)
-				.where(gte(OrdersTable.createdAt, startDate));
+				.where(
+					and(
+						gte(OrdersTable.createdAt, startDate),
+						notInArray(
+							OrdersTable.status,
+							[...EXCLUDED_ORDER_STATUSES],
+						),
+					),
+				);
 			return orders[0]?.avg || 0;
 		},
 
@@ -88,6 +100,11 @@ export const analyticsQueries = {
 							),
 						})
 						.from(OrdersTable)
+						.where(
+							notInArray(OrdersTable.status, [
+								...EXCLUDED_ORDER_STATUSES,
+							]),
+						)
 						.groupBy(OrdersTable.customerPhone)
 						.as("customer_totals"),
 				);
@@ -120,7 +137,14 @@ export const analyticsQueries = {
 							orderCount: sql<number>`COUNT(*)`.as("order_count"),
 						})
 						.from(OrdersTable)
-						.where(gte(OrdersTable.createdAt, startDate))
+						.where(
+							and(
+								gte(OrdersTable.createdAt, startDate),
+								notInArray(OrdersTable.status, [
+									...EXCLUDED_ORDER_STATUSES,
+								]),
+							),
+						)
 						.groupBy(OrdersTable.customerPhone)
 						.having(sql`COUNT(*) > 1`)
 						.as("customer_orders"),
@@ -246,7 +270,14 @@ export const analyticsQueries = {
 						avg: sql<number>`AVG(${OrdersTable.total})`,
 					})
 					.from(OrdersTable)
-					.where(gte(OrdersTable.createdAt, startDate))
+					.where(
+						and(
+							gte(OrdersTable.createdAt, startDate),
+							notInArray(OrdersTable.status, [
+								...EXCLUDED_ORDER_STATUSES,
+							]),
+						),
+					)
 					.then((orders) => orders[0]?.avg || 0)
 					.catch(() => 0),
 
@@ -312,6 +343,11 @@ export const analyticsQueries = {
 								),
 							})
 							.from(OrdersTable)
+							.where(
+								notInArray(OrdersTable.status, [
+									...EXCLUDED_ORDER_STATUSES,
+								]),
+							)
 							.groupBy(OrdersTable.customerPhone)
 							.as("customer_totals"),
 					)
@@ -350,7 +386,14 @@ export const analyticsQueries = {
 								orderCount: sql<number>`COUNT(*)`.as("order_count"),
 							})
 							.from(OrdersTable)
-							.where(gte(OrdersTable.createdAt, startDate))
+							.where(
+								and(
+									gte(OrdersTable.createdAt, startDate),
+									notInArray(OrdersTable.status, [
+										...EXCLUDED_ORDER_STATUSES,
+									]),
+								),
+							)
 							.groupBy(OrdersTable.customerPhone)
 							.having(sql`COUNT(*) > 1`)
 							.as("customer_orders"),
