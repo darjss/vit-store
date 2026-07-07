@@ -51,8 +51,11 @@ export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
 	pendingComponent: FormPageSkeleton,
 	loader: ({ context: ctx, params }) => {
-		const numericId = Number(params.id);
-		if (Number.isNaN(numericId)) {
+		// Order numbers are always 8 chars (generateOrderNumber → nanoId(8)).
+		// Numeric ids are auto-increment integers. An 8-char param — even all
+		// digits — is treated as an order number; only non-8-char numeric params
+		// go to getOrderById.
+		if (params.id.length === 8) {
 			void ctx.queryClient.prefetchQuery(
 				ctx.trpc.order.getOrderIdByOrderNumber.queryOptions({
 					orderNumber: params.id,
@@ -60,7 +63,7 @@ export const Route = createFileRoute("/_dash/orders/$id")({
 			);
 		} else {
 			void ctx.queryClient.prefetchQuery(
-				ctx.trpc.order.getOrderById.queryOptions({ id: numericId }),
+				ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
 			);
 		}
 	},
@@ -104,12 +107,12 @@ function deliveryLabel(provider?: string | null) {
 
 function OrderDetailContent() {
 	const { id } = Route.useParams();
-	const numericId = Number(id);
 
-	if (Number.isNaN(numericId)) {
+	// 8-char param → order number lookup; else numeric id.
+	if (id.length === 8) {
 		return <ResolveOrderNumber orderNumber={id} />;
 	}
-	return <OrderDetail orderId={numericId} />;
+	return <OrderDetail orderId={Number(id)} />;
 }
 
 function ResolveOrderNumber({ orderNumber }: { orderNumber: string }) {
