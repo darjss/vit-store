@@ -76,7 +76,7 @@ export function AIProductPreview({
 								>
 									<Image
 										src={img.url}
-										alt={`Product ${i + 1}`}
+										alt={`Бүтээгдэхүүн ${i + 1}`}
 										width={80}
 										height={80}
 										className="h-full w-full object-cover"
@@ -126,7 +126,7 @@ export function AIProductPreview({
 							</p>
 							<p className="truncate font-medium text-sm">
 								{data.categoryId ? (
-									<span className="text-green-600">auto ✓</span>
+									<span className="text-green-600">авто ✓</span>
 								) : (
 									<span className="text-muted-foreground">—</span>
 								)}
