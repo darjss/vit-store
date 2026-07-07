@@ -55,6 +55,7 @@ export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")
 		.normalize("NFKD")
 		.toLowerCase()
+		.replace(/(?<=\d),(?=\d)/g, "")
 		.replace(/[^\p{L}\p{N}\s]+/gu, " ")
 		.replace(/\s+/g, " ")
 		.trim();
