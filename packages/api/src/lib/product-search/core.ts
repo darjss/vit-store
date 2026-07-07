@@ -2,6 +2,7 @@ import MiniSearch, { type Options, type SearchResult } from "minisearch";
 import {
 	buildProductAliases,
 	createSearchQueries,
+	expandBrandAliases,
 	normalizeSearchText,
 } from "~/lib/product-search/text";
 import type {
@@ -220,7 +221,9 @@ const scoreSearchResult = (
 	const name = normalizeSearchText(
 		[document.name, document.nameMn, brandName, brandNameMn].join(" "),
 	);
-	const productName = normalizeSearchText(`${document.name} ${document.nameMn}`);
+	const productName = normalizeSearchText(
+		`${document.name} ${document.nameMn}`,
+	);
 	const aliases = normalizeSearchText(
 		`${document.aliases} ${document.normalized}`,
 	);
@@ -255,6 +258,11 @@ const scoreSearchResult = (
 	const dosageExact =
 		dosageTerms.length > 0 &&
 		dosageTerms.every((term) => dosageHaystack.includes(term));
+	const canonicalBrand = expandBrandAliases(query);
+	const brandCanonical =
+		canonicalBrand.length > 0 &&
+		normalizeSearchText(document.brand).length > 0 &&
+		canonicalBrand.split(" ").includes(normalizeSearchText(document.brand));
 	const stockScore = document.inStock
 		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 60)
 		: -500;
@@ -267,6 +275,7 @@ const scoreSearchResult = (
 	if (allTermsInName) score += 800;
 	if (allTermsInHaystack) score += 400;
 	if (dosageExact) score += 1800;
+	if (brandCanonical) score += 2200;
 	if (productIntentIndex === 0) score += 2400;
 	else if (productIntentIndex > 0 && productIntentIndex <= 2) score += 2000;
 	else if (productIntentIndex > 2 && productIntentIndex <= 5) score += 900;

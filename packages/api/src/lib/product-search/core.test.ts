@@ -127,6 +127,12 @@ describe("short vitamin-letter tokens (handoff §6.4)", () => {
 	});
 });
 
+describe("brand canonicalization (handoff §6.5)", () => {
+	test("'nature bell' ranks Naturebell #1 above Nature's Plus", () => {
+		expect(topIds("nature bell")[0]).toBe(1);
+	});
+});
+
 describe("min relevance floor / honest empty", () => {
 	test("'creatine' returns honest empty, not Height Growth", () => {
 		expect(topIds("creatine")).not.toContain(6);
