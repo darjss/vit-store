@@ -1,5 +1,6 @@
 import { makePersisted } from "@solid-primitives/storage";
 import { createSignal, Match, onMount, Switch } from "solid-js";
+import { safeStorage } from "@/lib/safe-storage";
 import { Card, CardContent } from "../ui/card";
 import OtpForm from "./otp-form";
 import PhoneForm from "./phone-form";
@@ -12,14 +13,14 @@ const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const LoginForm = () => {
 	const [phone, setPhone] = makePersisted(createSignal(""), {
 		name: "login-phone",
-		storage: localStorage,
+		storage: safeStorage,
 		deferInit: true,
 	});
 	const [step, setStepRaw] = makePersisted(
 		createSignal<"phone" | "otp">("phone"),
 		{
 			name: "login-step",
-			storage: localStorage,
+			storage: safeStorage,
 			deferInit: true,
 		},
 	);
