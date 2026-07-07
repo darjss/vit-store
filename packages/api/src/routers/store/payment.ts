@@ -392,6 +392,21 @@ export const payment = router({
 						provider: "transfer",
 					});
 				}
+				try {
+					const reconciler = getTransferReconciliationStub(
+						ctx.c.env,
+						input.paymentNumber,
+					);
+					await reconciler.start({ paymentNumber: input.paymentNumber });
+				} catch (reconciliationError) {
+					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
+						paymentNumber: input.paymentNumber,
+						error:
+							reconciliationError instanceof Error
+								? reconciliationError.message
+								: String(reconciliationError),
+					});
+				}
 				return { provider: "transfer" as const };
 			} catch (e) {
 				if (e instanceof TRPCError) {

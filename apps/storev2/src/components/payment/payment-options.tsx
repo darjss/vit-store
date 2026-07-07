@@ -1,17 +1,20 @@
-import { useMutation } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { bankTransfer } from "@vit/shared/constants";
-import { createSignal, type JSX, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, Show } from "solid-js";
 import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
+import { cart } from "@/store/cart";
 import IconBank from "~icons/ri/bank-line";
 import IconMobile from "~icons/ri/smartphone-line";
 
 interface PaymentOptionsProps {
 	paymentNumber: string;
+	orderNumber: string;
 	total: number;
 	customerPhone: string;
 	accountNumber?: string;
@@ -64,6 +67,36 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			selectTransferMutation.mutate();
 		}
 	};
+
+	const [advanced, setAdvanced] = createSignal(false);
+	const transferStatusQuery = useQuery(
+		() => ({
+			queryKey: ["transfer-payment-status", props.paymentNumber],
+			queryFn: async () => {
+				return await api.payment.getPaymentStatus.query({
+					paymentNumber: props.paymentNumber,
+					checkoutToken: props.checkoutToken,
+				} as { paymentNumber: string });
+			},
+			refetchInterval: 5000,
+			staleTime: 0,
+			enabled: BANK_TRANSFER_ENABLED && tab() === "transfer" && !advanced(),
+		}),
+		() => queryClient,
+	);
+
+	createEffect(() => {
+		if (advanced() || transferStatusQuery.data?.status !== "success") {
+			return;
+		}
+		setAdvanced(true);
+		cart.clearCart();
+		void safeNavigate(
+			props.checkoutToken
+				? `/order/confirm/${props.orderNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
+				: `/order/confirm/${props.orderNumber}`,
+		);
+	});
 
 	return (
 		<div class="w-full">

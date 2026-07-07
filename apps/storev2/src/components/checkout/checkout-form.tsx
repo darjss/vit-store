@@ -625,6 +625,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 													<div class="p-4">
 														<PaymentOptions
 															paymentNumber={paymentInfo()!.paymentNumber}
+															orderNumber={paymentInfo()!.orderNumber}
 															total={paymentInfo()!.total}
 															customerPhone={paymentInfo()!.customerPhone}
 															accountNumber={paymentInfo()!.accountNumber}

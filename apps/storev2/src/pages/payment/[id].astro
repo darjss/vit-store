@@ -75,6 +75,7 @@ if (payment.status === "success") {
         <div class="enter-rise stagger-2">
             <PaymentOptions
                 paymentNumber={id}
+                orderNumber={payment.order.orderNumber}
                 total={payment.total}
                 customerPhone={payment.order.customerPhone}
                 accountNumber={payment.transferAccount.accountNumber}
