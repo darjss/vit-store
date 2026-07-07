@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { customerQueries, orderQueries, paymentQueries, productQueries, purchaseQueries, salesQueries, } from "@vit/api/queries";
 import { addOrderSchema, timeRangeSchema, updateOrderSchema, } from "@vit/shared";
 import * as v from "valibot";
@@ -7,6 +8,9 @@ import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc"
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { planPaymentTransition } from "./order-transition";
+import { db } from "~/db/client";
+import { ProductsTable, SalesTable, } from "~/db/schema";
+import { getAverageCostOfProduct } from "~/queries/payments";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -115,9 +119,6 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ input, ctx }) => {
         try {
             const orderTotal = input.products.reduce((acc, currentProduct) => acc + currentProduct.price * currentProduct.quantity, 0);
-            const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
-            const prevPaymentStatus = prevPayment?.status ?? "pending";
-            const { transitionedToSuccess } = planPaymentTransition(prevPaymentStatus, input.paymentStatus);
             if (input.isNewCustomer) {
                 const existingCustomer = await customerQueries.admin.getCustomerByPhone(Number(input.customerPhone));
                 if (!existingCustomer) {
@@ -140,47 +141,79 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             });
             const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
             await orderQueries.admin.deleteOrderDetails(input.id);
-            const orderDetailsPromise = input.products.map(async (product) => {
-                await orderQueries.admin.createOrderDetails(input.id, [
+            await Promise.all(input.products.map((product) =>
+                orderQueries.admin.createOrderDetails(input.id, [
                     {
                         productId: product.productId,
                         quantity: product.quantity,
                     },
-                ]);
-                const existingDetail = currentOrderDetails.find((detail) => detail.productId === product.productId);
-                if (transitionedToSuccess) {
-                    const productCost = await purchaseQueries.admin.getAverageCostOfProduct(product.productId, new Date());
-                    await salesQueries.admin.addSale({
-                        productCost: productCost,
-                        quantitySold: product.quantity,
-                        orderId: input.id,
-                        sellingPrice: product.price,
-                        productId: product.productId,
-                    });
-                    await productQueries.admin.updateStock(product.productId, product.quantity, "minus");
+                ])
+            ));
+            // Critical section: prev-status read, sales insert, stock changes,
+            // and payment update in one transaction so concurrent saves can't
+            // both observe prev=pending and double-book.
+            //
+            // Invariant: each order line's stock is deducted EXACTLY ONCE,
+            // when payment transitions to success. This matches addOrder
+            // (deducts on creation with paymentStatus==="success") and
+            // confirmPaymentAndApplyStock (deducts on transition to success).
+            // Pending orders never touch stock.
+            await db().transaction(async (tx) => {
+                const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
+                const prevPaymentStatus = prevPayment?.status ?? "pending";
+                const { transitionedToSuccess } = planPaymentTransition(prevPaymentStatus, input.paymentStatus);
+                const wasSuccess = prevPaymentStatus === "success";
+                for (const product of input.products) {
+                    const existingDetail = currentOrderDetails.find((detail) => detail.productId === product.productId);
+                    if (transitionedToSuccess) {
+                        const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
+                        await tx.insert(SalesTable).values({
+                            productCost: productCost,
+                            quantitySold: product.quantity,
+                            orderId: input.id,
+                            sellingPrice: product.price,
+                            productId: product.productId,
+                        });
+                        await tx
+                            .update(ProductsTable)
+                            .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
+                            .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                    }
+                    else if (wasSuccess) {
+                        if (existingDetail) {
+                            const quantityDiff = product.quantity - existingDetail.quantity;
+                            if (quantityDiff !== 0) {
+                                await tx
+                                    .update(ProductsTable)
+                                    .set({ stock: sql`${ProductsTable.stock} ${quantityDiff > 0 ? sql`-` : sql`+`} ${Math.abs(quantityDiff)}` })
+                                    .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                            }
+                        }
+                        else {
+                            await tx
+                                .update(ProductsTable)
+                                .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
+                                .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                        }
+                    }
+                    // else: pending/other — no stock changes (deducted on transition)
                 }
-                else if (existingDetail) {
-                    const quantityDiff = product.quantity - existingDetail.quantity;
-                    if (quantityDiff !== 0) {
-                        await productQueries.admin.updateStock(product.productId, Math.abs(quantityDiff), quantityDiff > 0 ? "minus" : "add");
+                if (wasSuccess && !transitionedToSuccess) {
+                    const removedProducts = currentOrderDetails.filter((detail) => !input.products.some((p) => p.productId === detail.productId));
+                    for (const detail of removedProducts) {
+                        await tx
+                            .update(ProductsTable)
+                            .set({ stock: sql`${ProductsTable.stock} + ${detail.quantity}` })
+                            .where(and(eq(ProductsTable.id, detail.productId), isNull(ProductsTable.deletedAt)));
                     }
                 }
-                else {
-                    await productQueries.admin.updateStock(product.productId, product.quantity, "minus");
-                }
-            });
-            const removedProducts = currentOrderDetails.filter((detail) => !input.products.some((p) => p.productId === detail.productId));
-            const restoreStockPromises = removedProducts.map((detail) => productQueries.admin.updateStock(detail.productId, detail.quantity, "add"));
-            await paymentQueries.admin.updatePaymentStatus(input.id, input.paymentStatus);
-            await Promise.allSettled([
-                ...orderDetailsPromise,
-                ...restoreStockPromises,
-            ]);
-            ctx.log.info("order.updated", {
-                orderId: input.id,
-                total: orderTotal,
-                order_status: input.status,
-                payment_transitioned: transitionedToSuccess,
+                await paymentQueries.admin.updatePaymentStatusTx(tx, input.id, input.paymentStatus);
+                ctx.log.info("order.updated", {
+                    orderId: input.id,
+                    total: orderTotal,
+                    order_status: input.status,
+                    payment_transitioned: transitionedToSuccess,
+                });
             });
             return { message: "Order updated successfully" };
         }

@@ -18,7 +18,7 @@ import type { paymentProvider, paymentStatus } from "~/lib/utils";
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];
 
-async function getAverageCostOfProduct(
+export async function getAverageCostOfProduct(
 	tx: TransactionType,
 	productId: number,
 	createdAt: Date,
@@ -155,6 +155,45 @@ export const paymentQueries = {
 					provider: true,
 				},
 			});
+		},
+
+		async getLatestPaymentByOrderIdTx(
+			tx: TransactionType,
+			orderId: number,
+		) {
+			return tx.query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.orderId, orderId),
+					isNull(PaymentsTable.deletedAt),
+				),
+				orderBy: desc(PaymentsTable.createdAt),
+				columns: {
+					id: true,
+					status: true,
+					paymentNumber: true,
+					provider: true,
+				},
+			});
+		},
+
+		async updatePaymentStatusTx(
+			tx: TransactionType,
+			orderId: number,
+			status: PaymentStatusType,
+		) {
+			const latest = await tx.query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.orderId, orderId),
+					isNull(PaymentsTable.deletedAt),
+				),
+				orderBy: desc(PaymentsTable.createdAt),
+				columns: { id: true },
+			});
+			if (!latest) return;
+			await tx
+				.update(PaymentsTable)
+				.set({ status })
+				.where(eq(PaymentsTable.id, latest.id));
 		},
 
 		async getPendingMessengerNotifications() {
