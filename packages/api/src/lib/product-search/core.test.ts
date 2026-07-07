@@ -82,6 +82,17 @@ const source: ProductSearchSourceDocument[] = [
 		status: "active",
 		stock: 10,
 	},
+	{
+		id: 7,
+		name: "Doctor's Best, Collagen Types 1 and 3, 200 Tablets",
+		nameMn: "коллаген",
+		slug: "doctors-best-collagen",
+		price: 55,
+		brand: "Doctor's Best",
+		category: "Supplements",
+		status: "active",
+		stock: 12,
+	},
 ];
 
 const buildIndex = () => {
@@ -133,8 +144,22 @@ describe("brand canonicalization (handoff §6.5)", () => {
 	});
 });
 
-describe("min relevance floor / honest empty", () => {
+describe("min relevance floor / honest empty (handoff Phase A)", () => {
 	test("'creatine' returns honest empty, not Height Growth", () => {
 		expect(topIds("creatine")).not.toContain(6);
+	});
+
+	test("nonsense query returns nothing rather than a stock-ranked product", () => {
+		expect(topIds("zzzxqwlk")).toHaveLength(0);
+	});
+
+	test("a close typo still corrects (fuzzy survives the floor)", () => {
+		expect(topIds("collagen")).toContain(7);
+		expect(topIds("colagen")).toContain(7);
+	});
+
+	test("GOOD exact terms still return", () => {
+		expect(topIds("vitamin d3")).toContain(1);
+		expect(topIds("коллаген")).toContain(7);
 	});
 });
