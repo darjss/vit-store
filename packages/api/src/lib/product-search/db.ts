@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DB } from "~/db";
 import {
 	BrandsTable,
@@ -34,11 +34,7 @@ export const loadProductSearchDocumentsFromDb = async (
 		})
 		.from(ProductsTable)
 		.where(
-			and(
-				isNull(ProductsTable.deletedAt),
-				eq(ProductsTable.status, "active"),
-				gt(ProductsTable.stock, 0),
-			),
+			and(isNull(ProductsTable.deletedAt), eq(ProductsTable.status, "active")),
 		);
 
 	if (products.length === 0) return [];
@@ -61,9 +57,7 @@ export const loadProductSearchDocumentsFromDb = async (
 				url: ProductImagesTable.url,
 			})
 			.from(ProductImagesTable)
-			.where(
-				eq(ProductImagesTable.isPrimary, true),
-			),
+			.where(eq(ProductImagesTable.isPrimary, true)),
 	]);
 
 	const brandMap = new Map(brands.map((b) => [b.id, b.name]));
