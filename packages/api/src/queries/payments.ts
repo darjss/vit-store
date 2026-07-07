@@ -126,10 +126,35 @@ export const paymentQueries = {
 		},
 
 		async updatePaymentStatus(orderId: number, status: PaymentStatusType) {
+			const latest = await db().query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.orderId, orderId),
+					isNull(PaymentsTable.deletedAt),
+				),
+				orderBy: desc(PaymentsTable.createdAt),
+				columns: { id: true },
+			});
+			if (!latest) return;
 			await db()
 				.update(PaymentsTable)
 				.set({ status })
-				.where(eq(PaymentsTable.orderId, orderId));
+				.where(eq(PaymentsTable.id, latest.id));
+		},
+
+		async getLatestPaymentByOrderId(orderId: number) {
+			return db().query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.orderId, orderId),
+					isNull(PaymentsTable.deletedAt),
+				),
+				orderBy: desc(PaymentsTable.createdAt),
+				columns: {
+					id: true,
+					status: true,
+					paymentNumber: true,
+					provider: true,
+				},
+			});
 		},
 
 		async getPendingMessengerNotifications() {

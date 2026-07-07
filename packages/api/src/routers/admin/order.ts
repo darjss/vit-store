@@ -6,6 +6,7 @@ import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
+import { planPaymentTransition } from "./order-transition";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -114,6 +115,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ input, ctx }) => {
         try {
             const orderTotal = input.products.reduce((acc, currentProduct) => acc + currentProduct.price * currentProduct.quantity, 0);
+            const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
+            const prevPaymentStatus = prevPayment?.status ?? "pending";
+            const { transitionedToSuccess } = planPaymentTransition(prevPaymentStatus, input.paymentStatus);
             if (input.isNewCustomer) {
                 const existingCustomer = await customerQueries.admin.getCustomerByPhone(Number(input.customerPhone));
                 if (!existingCustomer) {
@@ -144,7 +148,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     },
                 ]);
                 const existingDetail = currentOrderDetails.find((detail) => detail.productId === product.productId);
-                if (input.paymentStatus === "success") {
+                if (transitionedToSuccess) {
                     const productCost = await purchaseQueries.admin.getAverageCostOfProduct(product.productId, new Date());
                     await salesQueries.admin.addSale({
                         productCost: productCost,
@@ -153,8 +157,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                         sellingPrice: product.price,
                         productId: product.productId,
                     });
+                    await productQueries.admin.updateStock(product.productId, product.quantity, "minus");
                 }
-                if (existingDetail) {
+                else if (existingDetail) {
                     const quantityDiff = product.quantity - existingDetail.quantity;
                     if (quantityDiff !== 0) {
                         await productQueries.admin.updateStock(product.productId, Math.abs(quantityDiff), quantityDiff > 0 ? "minus" : "add");
@@ -175,6 +180,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 orderId: input.id,
                 total: orderTotal,
                 order_status: input.status,
+                payment_transitioned: transitionedToSuccess,
             });
             return { message: "Order updated successfully" };
         }
@@ -323,6 +329,25 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to fetch order",
+                cause: e,
+            });
+        }
+    }),
+    getOrderIdByOrderNumber: proc
+        .input(v.object({ orderNumber: v.pipe(v.string(), v.minLength(1)) }))
+        .query(async ({ input, ctx }) => {
+        try {
+            const order = await orderQueries.store.getOrderByOrderNumber(input.orderNumber);
+            return order?.id ?? null;
+        }
+        catch (e) {
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "admin.order_number_lookup_failed",
+                orderNumber: input.orderNumber,
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to resolve order number",
                 cause: e,
             });
         }
