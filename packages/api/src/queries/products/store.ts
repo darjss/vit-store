@@ -6,16 +6,42 @@ import {
 	desc,
 	eq,
 	gt,
+	ilike,
 	inArray,
 	isNull,
-	like,
 	lt,
 	or,
+	type SQLWrapper,
 	sql,
 } from "drizzle-orm";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
+import { normalizeSearchText } from "~/lib/product-search/text";
+
+const buildNameFallbackCondition = (searchTerm: string): SQLWrapper => {
+	const tokens = normalizeSearchText(searchTerm).split(" ").filter(Boolean);
+	if (tokens.length === 0) {
+		return or(
+			ilike(ProductsTable.name, `%${searchTerm}%`),
+			ilike(ProductsTable.name_mn, `%${searchTerm}%`),
+		) as SQLWrapper;
+	}
+
+	const nameNoComma = sql`replace(${ProductsTable.name}, ',', '')`;
+	const nameMnNoComma = sql`replace(${ProductsTable.name_mn}, ',', '')`;
+
+	return and(
+		...tokens
+			.slice(0, 6)
+			.map((token) =>
+				or(
+					ilike(nameNoComma, `%${token}%`),
+					ilike(nameMnNoComma, `%${token}%`),
+				),
+			),
+	) as SQLWrapper;
+};
 
 type ProductStatus = (typeof status)[number];
 
@@ -339,10 +365,7 @@ export const storeQueries = {
 				where: and(
 					isNull(ProductsTable.deletedAt),
 					eq(ProductsTable.status, "active"),
-					or(
-						like(ProductsTable.name, `%${searchTerm}%`),
-						like(ProductsTable.name_mn, `%${searchTerm}%`),
-					),
+					buildNameFallbackCondition(searchTerm),
 				),
 				limit,
 				with: {
@@ -376,10 +399,7 @@ export const storeQueries = {
 					isNull(ProductsTable.deletedAt),
 					eq(ProductsTable.status, "active"),
 					gt(ProductsTable.stock, 0),
-					or(
-						like(ProductsTable.name, `%${searchTerm}%`),
-						like(ProductsTable.name_mn, `%${searchTerm}%`),
-					),
+					buildNameFallbackCondition(searchTerm),
 				),
 				limit,
 				with: {

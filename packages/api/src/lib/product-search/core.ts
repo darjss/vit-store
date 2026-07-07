@@ -2,6 +2,7 @@ import MiniSearch, { type Options, type SearchResult } from "minisearch";
 import {
 	buildProductAliases,
 	createSearchQueries,
+	expandBrandAliases,
 	normalizeSearchText,
 } from "~/lib/product-search/text";
 import type {
@@ -79,8 +80,8 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 			tags: 1.5,
 			description: 0.5,
 		},
-		prefix: true,
-		fuzzy: (term: string) => (term.length >= 4 ? 0.2 : false),
+		prefix: (term: string) => term.length >= 2,
+		fuzzy: (term: string) => (term.length >= 5 ? 0.15 : false),
 	},
 };
 
@@ -171,6 +172,25 @@ const resultMatchesFilters = (
 const tokenizeSearchText = (value: string) =>
 	normalizeSearchText(value).split(" ").filter(Boolean);
 
+const RELEVANCE_ANCHOR_PREFIX = 3;
+
+const sharedPrefixLength = (a: string, b: string) => {
+	const max = Math.min(a.length, b.length);
+	let index = 0;
+	while (index < max && a[index] === b[index]) index++;
+	return index;
+};
+
+const hasRelevanceAnchor = (result: SearchResult, queryTokens: string[]) =>
+	((result.terms as string[] | undefined) ?? []).some((matched) =>
+		queryTokens.some(
+			(token) =>
+				matched.includes(token) ||
+				token.includes(matched) ||
+				sharedPrefixLength(matched, token) >= RELEVANCE_ANCHOR_PREFIX,
+		),
+	);
+
 const withoutTerms = (terms: string[], termsToRemove: string[]) => {
 	const remove = new Set(termsToRemove);
 	return terms.filter((term) => !remove.has(term)).join(" ");
@@ -220,7 +240,9 @@ const scoreSearchResult = (
 	const name = normalizeSearchText(
 		[document.name, document.nameMn, brandName, brandNameMn].join(" "),
 	);
-	const productName = normalizeSearchText(`${document.name} ${document.nameMn}`);
+	const productName = normalizeSearchText(
+		`${document.name} ${document.nameMn}`,
+	);
 	const aliases = normalizeSearchText(
 		`${document.aliases} ${document.normalized}`,
 	);
@@ -248,8 +270,20 @@ const scoreSearchResult = (
 	const productIntentIndex = productIntent
 		? getPhraseTokenIndex(productName, productIntent)
 		: -1;
+	const dosageTerms = terms.filter((term) => /^\d+$/.test(term));
+	const dosageHaystack = normalizeSearchText(
+		`${document.amount} ${document.potency} ${document.aliases}`,
+	).split(" ");
+	const dosageExact =
+		dosageTerms.length > 0 &&
+		dosageTerms.every((term) => dosageHaystack.includes(term));
+	const canonicalBrand = expandBrandAliases(query);
+	const brandCanonical =
+		canonicalBrand.length > 0 &&
+		normalizeSearchText(document.brand).length > 0 &&
+		canonicalBrand.split(" ").includes(normalizeSearchText(document.brand));
 	const stockScore = document.inStock
-		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 240)
+		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 60)
 		: -500;
 
 	let score = result.score ?? 0;
@@ -259,6 +293,8 @@ const scoreSearchResult = (
 	if (aliases.includes(normalizedQuery)) score += 1000;
 	if (allTermsInName) score += 800;
 	if (allTermsInHaystack) score += 400;
+	if (dosageExact) score += 1800;
+	if (brandCanonical) score += 2200;
 	if (productIntentIndex === 0) score += 2400;
 	else if (productIntentIndex > 0 && productIntentIndex <= 2) score += 2000;
 	else if (productIntentIndex > 2 && productIntentIndex <= 5) score += 900;
@@ -313,19 +349,28 @@ export const searchMiniSearchIndex = (
 
 	const safeLimit = Math.min(Math.max(limit, 1), 1000);
 	const rankedResults = new Map<string, SearchResult>();
+	const queryTokens = new Set<string>();
 	for (const searchQuery of createSearchQueries(trimmed)) {
 		const searchOptions = {
 			...PRODUCT_SEARCH_OPTIONS.searchOptions,
 			filter: (result: SearchResult) => resultMatchesFilters(result, filters),
 		};
-		const andResults = miniSearch.search(searchQuery, {
+		const tokens = tokenizeSearchText(searchQuery);
+		for (const token of tokens) queryTokens.add(token);
+		const matchableQuery =
+			tokens.length > 1
+				? tokens
+						.filter(
+							(token) => miniSearch.search(token, searchOptions).length > 0,
+						)
+						.join(" ")
+				: searchQuery;
+		if (!matchableQuery) continue;
+
+		const results = miniSearch.search(matchableQuery, {
 			...searchOptions,
 			combineWith: "AND",
 		});
-		const results =
-			andResults.length > 0
-				? andResults
-				: miniSearch.search(searchQuery, searchOptions);
 
 		for (const result of results) {
 			const existing = rankedResults.get(String(result.id));
@@ -335,12 +380,14 @@ export const searchMiniSearchIndex = (
 		}
 	}
 
+	const anchorTokens = [...queryTokens];
 	return Array.from(rankedResults.values())
-		.sort(
-			(a, b) =>
-				scoreSearchResult(b, documentsById, trimmed) -
-				scoreSearchResult(a, documentsById, trimmed),
-		)
+		.filter((result) => hasRelevanceAnchor(result, anchorTokens))
+		.map((result) => ({
+			result,
+			rank: scoreSearchResult(result, documentsById, trimmed),
+		}))
+		.sort((a, b) => b.rank - a.rank)
 		.slice(0, safeLimit)
-		.map((result) => mapMiniSearchResult(result, documentsById));
+		.map(({ result }) => mapMiniSearchResult(result, documentsById));
 };
