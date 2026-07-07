@@ -348,10 +348,7 @@ export const PaymentsTable = createTable(
 		uniqueIndex("payment_number_unique_idx").on(table.paymentNumber),
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_status_created_idx").on(table.status, table.createdAt),
-		index("payment_number_status_idx").on(
-			table.paymentNumber,
-			table.status,
-		),
+		index("payment_number_status_idx").on(table.paymentNumber, table.status),
 	],
 );
 
@@ -385,6 +382,33 @@ export const MessengerNotificationFailuresTable = createTable(
 			table.status,
 			table.createdAt,
 		),
+	],
+);
+
+export const RestockSubscriptionsTable = createTable(
+	"restock_subscription",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		productId: integer("product_id")
+			.references(() => ProductsTable.id, { onDelete: "cascade" })
+			.notNull(),
+		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
+		contact: text("contact").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.default(sql`(unixepoch())`)
+			.notNull(),
+		expiresAt: integer("expires_at", { mode: "timestamp" })
+			.default(sql`(unixepoch() + 2592000)`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("restock_subscription_unique_idx").on(
+			table.productId,
+			table.channel,
+			table.contact,
+		),
+		index("restock_subscription_product_idx").on(table.productId),
+		index("restock_subscription_expires_idx").on(table.expiresAt),
 	],
 );
 
@@ -706,6 +730,9 @@ export type OrderDetailSelectType = InferSelectModel<typeof OrderDetailsTable>;
 export type PaymentSelectType = InferSelectModel<typeof PaymentsTable>;
 export type CartSelectType = InferSelectModel<typeof CartsTable>;
 export type CartItemSelectType = InferSelectModel<typeof CartItemsTable>;
+export type RestockSubscriptionSelectType = InferSelectModel<
+	typeof RestockSubscriptionsTable
+>;
 
 export type PurchaseSelectType = InferSelectModel<typeof PurchasesTable>;
 export type PurchaseItemSelectType = InferSelectModel<
@@ -732,6 +759,9 @@ export type OrderDetailInsertType = InferInsertModel<typeof OrderDetailsTable>;
 export type PaymentInsertType = InferInsertModel<typeof PaymentsTable>;
 export type CartInsertType = InferInsertModel<typeof CartsTable>;
 export type CartItemInsertType = InferInsertModel<typeof CartItemsTable>;
+export type RestockSubscriptionInsertType = InferInsertModel<
+	typeof RestockSubscriptionsTable
+>;
 
 export type PurchaseInsertType = InferInsertModel<typeof PurchasesTable>;
 export type PurchaseItemInsertType = InferInsertModel<
