@@ -9,6 +9,7 @@ import {
 	type TransferReconciliationStatus,
 } from "khaan-client";
 import {
+	collectMatchingKhaanFingerprints,
 	filterTransactionsWithinPaymentWindow,
 	khaanTransactionFingerprint,
 	matchKhaanTransfer,
@@ -106,6 +107,44 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 
 	async getStatus(): Promise<TransferReconciliationState | null> {
 		return await this.getStoredState();
+	}
+
+	// Used by the admin manual-confirm path to find ALL Khaan transactions
+	// matching this payment and return their fingerprints, so the admin
+	// confirm can record them as consumed (P0-1). Returns null on any failure
+	// (Khaan auth, fetch, payment not found) — the caller must NOT block the
+	// admin confirm on a null return. Returns [] when no matching transactions
+	// are found (tx scrolled out of the recent list, or a cash/override).
+	async collectMatchingKhaanFingerprints(
+		paymentNumber: string,
+	): Promise<string[] | null> {
+		try {
+			const payment = await paymentQueries.store.getPaymentInfoByNumber(
+				paymentNumber,
+			);
+			if (!payment || payment.provider !== "transfer") {
+				return null;
+			}
+			const client = await this.ensureClient();
+			const transactions = await client.fetchTransactions();
+			const allFingerprints = await Promise.all(
+				transactions.map(khaanTransactionFingerprint),
+			);
+			const consumed =
+				await paymentQueries.store.getConsumedKhaanFingerprints(allFingerprints);
+			return await collectMatchingKhaanFingerprints({
+				transactions,
+				paymentNumber,
+				phone: String(payment.order.customerPhone),
+				expectedAmount: payment.amount,
+				paymentCreatedAtMs: payment.createdAt.getTime(),
+				consumedFingerprints: consumed,
+			});
+		} catch {
+			// Khaan fetch/auth failure or payment lookup failure — do not block
+			// the admin confirm. The caller logs and proceeds.
+			return null;
+		}
 	}
 
 	// khaan-client's reconcileTransfer async iterator is intentionally not used:

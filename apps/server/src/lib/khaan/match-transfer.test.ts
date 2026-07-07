@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { KhaanTransaction } from "khaan-client";
 import {
+	collectMatchingKhaanFingerprints,
 	filterTransactionsWithinPaymentWindow,
 	isTransactionWithinPaymentWindow,
 	khaanTransactionFingerprint,
@@ -265,5 +266,122 @@ describe("khaanTransactionFingerprint", () => {
 		expect(await khaanTransactionFingerprint(base)).not.toBe(
 			await khaanTransactionFingerprint(dup),
 		);
+	});
+});
+
+describe("collectMatchingKhaanFingerprints (admin-confirm path, P0-1)", () => {
+	// Payment created 18:00 UB Jun 28 = 10:00 UTC Jun 28.
+	const paymentCreatedAtMs = Date.parse("2026-06-28T10:00:00Z");
+
+	test("returns fingerprints for ALL matching transactions (paymentNumber + phone union)", async () => {
+		const txByPaymentNumber = transaction({
+			description: `paid ${PAYMENT_NUMBER}`,
+		});
+		const txByPhone = transaction({
+			description: `transfer ${PHONE}`,
+			balance: 99999.0,
+		});
+		const unrelated = transaction({ description: "other" });
+
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [txByPaymentNumber, txByPhone, unrelated],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set(),
+		});
+
+		expect(fingerprints).toHaveLength(2);
+		expect(fingerprints).toContain(
+			await khaanTransactionFingerprint(txByPaymentNumber),
+		);
+		expect(fingerprints).toContain(
+			await khaanTransactionFingerprint(txByPhone),
+		);
+	});
+
+	test("dedupes a transaction that matches both paymentNumber and phone", async () => {
+		// Same tx has both the payment number and the phone in its description.
+		const txBoth = transaction({
+			description: `${PAYMENT_NUMBER} ${PHONE}`,
+		});
+
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [txBoth],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set(),
+		});
+
+		expect(fingerprints).toHaveLength(1);
+	});
+
+	test("excludes already-consumed transactions", async () => {
+		const tx = transaction({ description: `transfer ${PHONE}` });
+		const fp = await khaanTransactionFingerprint(tx);
+
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [tx],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set([fp]),
+		});
+
+		expect(fingerprints).toEqual([]);
+	});
+
+	test("excludes stale transactions outside the payment window", async () => {
+		const stale = transaction({
+			tranDate: "2026-06-20T00:00:00Z",
+			description: `transfer ${PHONE}`,
+		});
+		const fresh = transaction({ description: `transfer ${PHONE}` });
+
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [stale, fresh],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set(),
+		});
+
+		expect(fingerprints).toHaveLength(1);
+		expect(fingerprints).toContain(
+			await khaanTransactionFingerprint(fresh),
+		);
+	});
+
+	test("returns [] when no transactions match (admin proceeds without fingerprints)", async () => {
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [
+				transaction({ description: "unrelated", amount: 999 }),
+			],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set(),
+		});
+
+		expect(fingerprints).toEqual([]);
+	});
+
+	test("returns [] when the transaction list is empty", async () => {
+		const fingerprints = await collectMatchingKhaanFingerprints({
+			transactions: [],
+			paymentNumber: PAYMENT_NUMBER,
+			phone: PHONE,
+			expectedAmount: 125000,
+			paymentCreatedAtMs,
+			consumedFingerprints: new Set(),
+		});
+
+		expect(fingerprints).toEqual([]);
 	});
 });
