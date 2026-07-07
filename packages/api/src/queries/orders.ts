@@ -34,6 +34,7 @@ import {
 	type orderStatus,
 	shapeOrderResult,
 	shapeOrderResults,
+	UB_OFFSET_MS,
 } from "~/lib/utils";
 
 type OrderStatus = (typeof orderStatus)[number];
@@ -83,8 +84,11 @@ export const orderQueries = {
 			try {
 				const orderPromises: Promise<Array<{ orderCount: number }>>[] = [];
 				const salesPromises: Promise<Array<{ salesCount: number }>>[] = [];
+				const dayLabels: string[] = [];
 				for (let i = 0; i < 7; i++) {
 					const { startDate, endDate } = getStartAndEndofDayAgo(i);
+					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
+					dayLabels.push(`${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`);
 					const dayOrderPromise = db()
 						.select({
 							orderCount: sql<number>`COUNT(*)`,
@@ -116,11 +120,10 @@ export const orderQueries = {
 				const salesResults = await Promise.all(salesPromises);
 				return orderResults.map((orderResult, i) => {
 					const salesResult = salesResults[i];
-					const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
 					return {
 						orderCount: orderResult[0]?.orderCount ?? 0,
 						salesCount: salesResult[0]?.salesCount ?? 0,
-						date: `${date.getMonth() + 1}/${date.getDate()}`,
+						date: dayLabels[i],
 					};
 				});
 			} catch {

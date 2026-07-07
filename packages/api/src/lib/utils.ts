@@ -73,7 +73,7 @@ export const generatePaymentNumber = () => {
 
 // Asia/Ulaanbaatar is UTC+8 with no DST. Compute day boundaries at UB midnight
 // without relying on runtime-local time (Workers run in UTC).
-const UB_OFFSET_MS = 8 * 60 * 60 * 1000;
+export const UB_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Returns the UTC Date corresponding to midnight (00:00:00) at the start of the
