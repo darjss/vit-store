@@ -3,6 +3,7 @@ import {
 	buildProductAliases,
 	createSearchQueries,
 	expandBrandAliases,
+	expandLatinAliases,
 	normalizeSearchText,
 } from "~/lib/product-search/text";
 import type {
@@ -171,6 +172,17 @@ const resultMatchesFilters = (
 
 const tokenizeSearchText = (value: string) =>
 	normalizeSearchText(value).split(" ").filter(Boolean);
+
+const selectMatchableTokens = (
+	miniSearch: MiniSearch<ProductSearchDocument>,
+	tokens: string[],
+	searchOptions: Parameters<MiniSearch<ProductSearchDocument>["search"]>[1],
+) =>
+	tokens.filter(
+		(token) =>
+			miniSearch.search(token, searchOptions).length > 0 ||
+			expandLatinAliases(token).length > 1,
+	);
 
 const RELEVANCE_ANCHOR_PREFIX = 3;
 
@@ -359,11 +371,7 @@ export const searchMiniSearchIndex = (
 		for (const token of tokens) queryTokens.add(token);
 		const matchableQuery =
 			tokens.length > 1
-				? tokens
-						.filter(
-							(token) => miniSearch.search(token, searchOptions).length > 0,
-						)
-						.join(" ")
+				? selectMatchableTokens(miniSearch, tokens, searchOptions).join(" ")
 				: searchQuery;
 		if (!matchableQuery) continue;
 
