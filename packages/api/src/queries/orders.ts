@@ -606,6 +606,7 @@ export const orderQueries = {
 				total?: number;
 				address?: string;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
 			},
 		) {
 			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));

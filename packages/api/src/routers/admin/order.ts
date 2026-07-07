@@ -151,6 +151,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     total: orderTotal,
                     address: input.address,
                     addressZoneId: input.addressZoneId ?? null,
+                    deliveryProvider: input.deliveryProvider,
                 });
                 const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 await orderQueries.admin.deleteOrderDetailsTx(tx, input.id);

@@ -147,6 +147,7 @@ describe("updateOrder — order-detail replacement is atomic with the update", (
 			total: 60000,
 			address: "ulaanbaatar city",
 			addressZoneId: null,
+			deliveryProvider: "tu-delivery",
 		});
 		expect(deleteOrderDetailsTx).toHaveBeenCalledWith(tx, 1);
 		expect(createOrderDetailsTx).toHaveBeenCalledWith(tx, 1, [
