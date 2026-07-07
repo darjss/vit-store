@@ -28,9 +28,9 @@ const LoginForm = () => {
 	// Wrapper to also track timestamp when entering OTP step
 	const setStep = (newStep: "phone" | "otp") => {
 		if (newStep === "otp") {
-			localStorage.setItem(OTP_TIMESTAMP_KEY, Date.now().toString());
+			safeStorage.setItem(OTP_TIMESTAMP_KEY, Date.now().toString());
 		} else {
-			localStorage.removeItem(OTP_TIMESTAMP_KEY);
+			safeStorage.removeItem(OTP_TIMESTAMP_KEY);
 		}
 		setStepRaw(newStep);
 	};
@@ -38,7 +38,7 @@ const LoginForm = () => {
 	onMount(() => {
 		const currentStep = step();
 		if (currentStep === "otp") {
-			const timestamp = localStorage.getItem(OTP_TIMESTAMP_KEY);
+			const timestamp = safeStorage.getItem(OTP_TIMESTAMP_KEY);
 			if (timestamp) {
 				const elapsed = Date.now() - Number.parseInt(timestamp, 10);
 				if (elapsed > OTP_EXPIRY_MS) {
