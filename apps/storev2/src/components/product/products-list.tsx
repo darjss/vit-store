@@ -5,6 +5,7 @@ import {
 } from "@tanstack/solid-query";
 import type { ProductCardData } from "@vit/shared/types";
 import {
+	batch,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -414,12 +415,16 @@ const ProductsList = (props: ProductsListProps) => {
 			(field === "price" || field === "createdAt") &&
 			(direction === "asc" || direction === "desc")
 		) {
-			setSortField(field);
-			setSortDirection(direction);
+			batch(() => {
+				setSortField(field);
+				setSortDirection(direction);
+			});
 			return;
 		}
-		setSortField(null);
-		setSortDirection(null);
+		batch(() => {
+			setSortField(null);
+			setSortDirection(null);
+		});
 	};
 
 	const handleCategoryChange = (id: number | null) => {
@@ -453,13 +458,15 @@ const ProductsList = (props: ProductsListProps) => {
 	};
 
 	const handleClearFilters = () => {
-		setSearchTerm(null);
-		setSortField(null);
-		setSortDirection(null);
-		setCategoryIdParam(null);
-		setBrandIdParam(null);
-		setListFilterParam(null);
-		setLocalSearchTerm("");
+		batch(() => {
+			setSearchTerm(null);
+			setSortField(null);
+			setSortDirection(null);
+			setCategoryIdParam(null);
+			setBrandIdParam(null);
+			setListFilterParam(null);
+			setLocalSearchTerm("");
+		});
 	};
 
 	const hasActiveFilters = () =>
