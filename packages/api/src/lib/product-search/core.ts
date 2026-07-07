@@ -290,10 +290,11 @@ const scoreSearchResult = (
 		dosageTerms.length > 0 &&
 		dosageTerms.every((term) => dosageHaystack.includes(term));
 	const canonicalBrand = expandBrandAliases(query);
+	const normalizedBrand = normalizeSearchText(document.brand);
 	const brandCanonical =
 		canonicalBrand.length > 0 &&
-		normalizeSearchText(document.brand).length > 0 &&
-		canonicalBrand.split(" ").includes(normalizeSearchText(document.brand));
+		normalizedBrand.length > 0 &&
+		getPhraseTokenIndex(canonicalBrand, normalizedBrand) >= 0;
 	const stockScore = document.inStock
 		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 60)
 		: -500;
