@@ -176,6 +176,7 @@ export const order = router({
                     orderId: createdOrder.orderId,
                     productId: p.productId,
                     quantity: p.quantity,
+                    price: productById.get(p.productId)?.price ?? null,
                 })));
                 const [payment] = await tx
                     .insert(PaymentsTable)

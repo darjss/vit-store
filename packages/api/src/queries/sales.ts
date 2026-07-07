@@ -92,7 +92,12 @@ export const salesQueries = {
 						revenue: sql<number>`SUM(${SalesTable.sellingPrice}*${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
-					.where(gte(SalesTable.createdAt, startDate));
+					.where(
+						and(
+							gte(SalesTable.createdAt, startDate),
+							isNull(SalesTable.deletedAt),
+						),
+					);
 				return result[0]?.revenue ?? 0;
 			} catch (e) {
 				logger.error("getRevenue", e);

@@ -73,14 +73,15 @@ export const generatePaymentNumber = () => {
 
 // Asia/Ulaanbaatar is UTC+8 with no DST. Compute day boundaries at UB midnight
 // without relying on runtime-local time (Workers run in UTC).
-const UB_OFFSET_MS = 8 * 60 * 60 * 1000;
+export const UB_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Returns the UTC Date corresponding to midnight (00:00:00) at the start of the
 // current day in Asia/Ulaanbaatar.
 export const getStartOfDay = () => {
 	const nowMs = Date.now();
-	const ubDayStartMs = Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
+	const ubDayStartMs =
+		Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
 	return new Date(ubDayStartMs);
 };
 
@@ -160,6 +161,7 @@ interface OrderResult {
 	updatedAt: Date | null;
 	orderDetails: Array<{
 		quantity: number;
+		price: number | null;
 		product: {
 			name: string;
 			price: number;
@@ -218,7 +220,7 @@ export const shapeOrderResult = (result: OrderResult) => {
 		products: result.orderDetails.map((orderDetail) => ({
 			quantity: orderDetail.quantity,
 			name: orderDetail.product.name,
-			price: orderDetail.product.price,
+			price: orderDetail.price ?? orderDetail.product.price,
 			productId: orderDetail.product.id,
 			imageUrl: orderDetail.product.images[0]?.url,
 		})),
@@ -250,7 +252,7 @@ export const shapeOrderResults = (results: OrderResult[]) => {
 				quantity: orderDetail.quantity,
 				name: orderDetail.product.name,
 				productId: orderDetail.product.id,
-				price: orderDetail.product.price,
+				price: orderDetail.price ?? orderDetail.product.price,
 				imageUrl: orderDetail.product.images[0]?.url,
 			})),
 			paymentStatus: latestPayment?.status ?? "pending",
