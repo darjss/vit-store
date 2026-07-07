@@ -17,24 +17,17 @@ interface FormSelectFieldProps {
 export function FormSelectField(props: FormSelectFieldProps) {
 	const field = useFieldContext<number>();
 	const errors = useStore(field().store, (state) => state.meta.errors);
-	const isTouched = useStore(field().store, (state) => state.meta.isTouched);
+	const isBlurred = useStore(field().store, (state) => state.meta.isBlurred);
 	const submissionAttempts = useStore(
 		field().form.store,
 		(state) => state.submissionAttempts,
 	);
-	const showErrors = () => isTouched() || submissionAttempts() > 0 || errors().length > 0;
-	// `meta.errors` can contain duplicates when the same field is validated by
-	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
-	const uniqueErrors = createMemo(() => {
-		const seen = new Set<string>();
-		return errors().filter((e) => {
-			const key = e.message ?? "";
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		});
-	});
-	const isInvalid = () => showErrors() && uniqueErrors().length > 0;
+	// Lazy to flag, eager to clear: errors stay hidden until the field is
+	// blurred or a submit was attempted; once shown, onChange validation
+	// keeps them refreshing live as the user picks a correction.
+	const showErrors = () => isBlurred() || submissionAttempts() > 0;
+	const firstError = createMemo(() => errors()[0]?.message ?? null);
+	const isInvalid = () => showErrors() && firstError() != null;
 
 	return (
 		<div class="space-y-2">
@@ -73,13 +66,9 @@ export function FormSelectField(props: FormSelectFieldProps) {
 				</For>
 			</select>
 			<Show when={isInvalid()}>
-				<For each={uniqueErrors()}>
-					{(error) => (
-						<p class="text-xs md:text-sm text-destructive font-bold">
-							{error.message}
-						</p>
-					)}
-				</For>
+				<p class="text-xs md:text-sm text-destructive font-bold">
+					{firstError()}
+				</p>
 			</Show>
 		</div>
 	);
