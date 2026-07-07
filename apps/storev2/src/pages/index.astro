@@ -26,7 +26,7 @@ type BrandRow = {
   productCount: number;
 };
 
-const products = await api.product.getProductsForHomeWithStock.query();
+const products = await api.product.getProductsForHome.query();
 const { featuredProducts, newProducts } = products;
 const brands = await api.brand.getAllBrandsWithStock.query();
 const allCategories = await api.category.getAllCategoriesWithStock.query();

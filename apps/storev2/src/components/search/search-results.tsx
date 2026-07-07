@@ -29,7 +29,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				if (!props.searchQuery || props.searchQuery.length < 2) {
 					return { products: [], brands: [], categories: [] };
 				}
-				return await api.product.searchStorefrontWithStock.query({
+				return await api.product.searchStorefront.query({
 					query: props.searchQuery,
 					limit: 8,
 				});
@@ -103,7 +103,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						<button
 							type="button"
 							onClick={() => query.refetch()}
-							class="mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
+							class="hover:-translate-y-0.5 mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 						>
 							Дахин хайх
 						</button>
