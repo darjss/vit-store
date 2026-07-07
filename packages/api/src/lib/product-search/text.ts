@@ -51,6 +51,14 @@ const LATIN_SEARCH_ALIASES: Record<string, string[]> = {
 	oil: ["тос"],
 };
 
+const VITAMIN_LETTER_ALIASES: Record<string, string> = {
+	d: "d3",
+	c: "vitamin c",
+	b: "vitamin b",
+	e: "vitamin e",
+	k: "k2",
+};
+
 export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")
 		.normalize("NFKD")
@@ -116,14 +124,36 @@ export const buildProductAliases = (product: ProductSearchSourceDocument) => {
 	return Array.from(new Set([...aliases, ...transliterated, ...latinExpanded]));
 };
 
+export const expandVitaminLetters = (value: string | null | undefined) => {
+	const tokens = normalizeSearchText(value).split(" ").filter(Boolean);
+	let changed = false;
+	const expanded = tokens.map((token) => {
+		const alias = VITAMIN_LETTER_ALIASES[token];
+		if (alias) {
+			changed = true;
+			return alias;
+		}
+		return token;
+	});
+
+	return changed ? expanded.join(" ") : "";
+};
+
 export const createSearchQueries = (query: string) => {
 	const normalized = normalizeSearchText(query);
 	const transliterated = transliterateCyrillicToLatin(query);
 	const expanded = expandLatinAliases(query).join(" ");
+	const vitaminExpanded = expandVitaminLetters(query);
 
 	return Array.from(
 		new Set(
-			[query.trim(), normalized, transliterated, expanded].filter(Boolean),
+			[
+				query.trim(),
+				normalized,
+				transliterated,
+				expanded,
+				vitaminExpanded,
+			].filter(Boolean),
 		),
 	);
 };

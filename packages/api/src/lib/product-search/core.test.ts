@@ -117,6 +117,16 @@ describe("dosage queries (handoff §6/§8 acceptance)", () => {
 	});
 });
 
+describe("short vitamin-letter tokens (handoff §6.4)", () => {
+	test("'d 10000' expands to d3 and finds the target", () => {
+		expect(topIds("d 10000")).toContain(1);
+	});
+
+	test("'c 1000' finds the vitamin C product", () => {
+		expect(topIds("c 1000")).toContain(5);
+	});
+});
+
 describe("min relevance floor / honest empty", () => {
 	test("'creatine' returns honest empty, not Height Growth", () => {
 		expect(topIds("creatine")).not.toContain(6);
