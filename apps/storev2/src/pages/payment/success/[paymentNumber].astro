@@ -9,7 +9,7 @@ import IconHome from "~icons/ri/home-4-line";
 const { paymentNumber } = Astro.params;
 
 if (!paymentNumber) {
-    throw Astro.redirect("/404");
+    return Astro.redirect("/404");
 }
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
@@ -21,11 +21,11 @@ const payment = await serverApi.payment.getPaymentByNumber.query({
 } as { paymentNumber: string });
 
 if (!payment) {
-    throw Astro.redirect("/404");
+    return Astro.redirect("/404");
 }
 
 if (payment.status !== "success") {
-	throw Astro.redirect(
+	return Astro.redirect(
         checkoutToken
             ? `/payment/${paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
             : `/payment/${paymentNumber}`,
