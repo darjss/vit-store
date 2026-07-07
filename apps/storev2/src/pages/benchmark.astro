@@ -57,21 +57,21 @@ const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
 
 					<div class="rounded-xl bg-muted/50 p-4">
 						<p class="mb-1 text-muted-foreground text-sm">Database Query Time</p>
-						<p class="font-semibold text-2xl text-primary">
+						<p class="font-semibold text-2xl text-foreground">
 							{formatTime(serverData.dbElapsed)}
 						</p>
 					</div>
 
 					<div class="rounded-xl bg-muted/50 p-4">
 						<p class="mb-1 text-muted-foreground text-sm">KV Write Time</p>
-						<p class="font-semibold text-2xl text-primary">
+						<p class="font-semibold text-2xl text-foreground">
 							{formatTime(serverData.kvWriteElapsed)}
 						</p>
 					</div>
 
 					<div class="rounded-xl bg-muted/50 p-4">
 						<p class="mb-1 text-muted-foreground text-sm">KV Read Time</p>
-						<p class="font-semibold text-2xl text-primary">
+						<p class="font-semibold text-2xl text-foreground">
 							{formatTime(serverData.kvReadElapsed)}
 						</p>
 					</div>
@@ -92,7 +92,7 @@ const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
 
 					<div class="rounded-xl bg-muted/50 p-4">
 						<p class="mb-1 text-muted-foreground text-sm">Products Fetched</p>
-						<p class="font-semibold text-2xl text-primary">
+						<p class="font-semibold text-2xl text-foreground">
 							{serverData.product.length}
 						</p>
 					</div>

@@ -106,7 +106,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 									}
 								>
 									<div class="mx-auto size-12 animate-spin border-[3px] border-border border-t-primary" />
-									<p class="mt-4 text-primary">Fetching data...</p>
+									<p class="mt-4 text-muted-foreground">Fetching data...</p>
 								</Show>
 							</div>
 						</div>
@@ -122,14 +122,14 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 						<div class="bg-background p-4">
 							<p class="mb-1 text-muted-foreground text-sm">Database Query Time</p>
-							<p class="font-semibold text-2xl text-primary">
+							<p class="font-semibold text-2xl text-foreground">
 								{formatTime(data()?.dbElapsed ?? 0)}
 							</p>
 						</div>
 
 						<div class="bg-background p-4">
 							<p class="mb-1 text-muted-foreground text-sm">Products Fetched</p>
-							<p class="font-semibold text-2xl text-primary">
+							<p class="font-semibold text-2xl text-foreground">
 								{data()?.productCount}
 							</p>
 						</div>
