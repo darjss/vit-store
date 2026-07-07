@@ -34,7 +34,7 @@ try {
 	user = await serverApi.auth.check.query();
 } catch (err) {
 	const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-	if (code === "UNAUTHORIZED") throw Astro.redirect("/login");
+	if (code === "UNAUTHORIZED") return Astro.redirect("/login");
 	throw err;
 }
 
