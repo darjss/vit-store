@@ -605,13 +605,6 @@ export const orderQueries = {
 			await db().update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 		},
 
-		async getOrderDetailsByOrderId(orderId: number) {
-			return db()
-				.select()
-				.from(OrderDetailsTable)
-				.where(eq(OrderDetailsTable.orderId, orderId));
-		},
-
 		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {
 			return tx
 				.select()
@@ -619,39 +612,10 @@ export const orderQueries = {
 				.where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
-		async deleteOrderDetails(orderId: number) {
-			await db()
-				.delete(OrderDetailsTable)
-				.where(eq(OrderDetailsTable.orderId, orderId));
-		},
-
 		async deleteOrderDetailsTx(tx: TransactionType, orderId: number) {
 			await tx
 				.delete(OrderDetailsTable)
 				.where(eq(OrderDetailsTable.orderId, orderId));
-		},
-
-		async softDeleteOrder(id: number) {
-			const now = new Date();
-			await db()
-				.update(OrderDetailsTable)
-				.set({ deletedAt: now })
-				.where(eq(OrderDetailsTable.orderId, id));
-
-			await db()
-				.update(SalesTable)
-				.set({ deletedAt: now })
-				.where(eq(SalesTable.orderId, id));
-
-			await db()
-				.update(PaymentsTable)
-				.set({ deletedAt: now })
-				.where(eq(PaymentsTable.orderId, id));
-
-			await db()
-				.update(OrdersTable)
-				.set({ deletedAt: now })
-				.where(eq(OrdersTable.id, id));
 		},
 
 		async softDeleteOrderTx(tx: TransactionType, id: number) {
@@ -674,28 +638,6 @@ export const orderQueries = {
 			await tx
 				.update(OrdersTable)
 				.set({ deletedAt: now })
-				.where(eq(OrdersTable.id, id));
-		},
-
-		async restoreOrder(id: number) {
-			await db()
-				.update(OrderDetailsTable)
-				.set({ deletedAt: null })
-				.where(eq(OrderDetailsTable.orderId, id));
-
-			await db()
-				.update(SalesTable)
-				.set({ deletedAt: null })
-				.where(eq(SalesTable.orderId, id));
-
-			await db()
-				.update(PaymentsTable)
-				.set({ deletedAt: null })
-				.where(eq(PaymentsTable.orderId, id));
-
-			await db()
-				.update(OrdersTable)
-				.set({ deletedAt: null })
 				.where(eq(OrdersTable.id, id));
 		},
 
