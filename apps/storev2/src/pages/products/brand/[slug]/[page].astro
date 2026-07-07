@@ -43,7 +43,7 @@ const brandLogoUrl = getBrandLogoUrl(brand.logoUrl);
 const brandLogoOnError =
 	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border border-border bg-card rounded-xl flex items-center justify-center font-bold font-display text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 
-const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
+const { items: products, pagination } = await api.product.getPaginatedProducts.query({
 	page,
 	pageSize: PAGE_SIZE,
 	brandId: brand.id,
