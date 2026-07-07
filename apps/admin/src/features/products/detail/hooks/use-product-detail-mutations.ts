@@ -11,19 +11,28 @@ export function useProductDetailMutations(
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
+				type: "all",
+			});
 			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 		},
 	});
 
-	const { mutate: updateProductField, isPending: isUpdateProductFieldPending } =
-		useMutation({
-			...trpc.product.updateProductField.mutationOptions(),
-			onSuccess: () => {
-				queryClient.invalidateQueries(
-					trpc.product.getProductById.queryOptions({ id: productId }),
-				);
-			},
-		});
+	const {
+		mutateAsync: updateProductField,
+		isPending: isUpdateProductFieldPending,
+	} = useMutation({
+		...trpc.product.updateProductField.mutationOptions(),
+		onSuccess: () => {
+			queryClient.invalidateQueries(
+				trpc.product.getProductById.queryOptions({ id: productId }),
+			);
+		},
+		onError: (error) => {
+			toast.error(error.message || "Талбар шинэчлэхэд алдаа гарлаа");
+		},
+	});
 
 	const { mutate: deleteImage, isPending: isDeleteImagePending } = useMutation({
 		...trpc.image.deleteImage.mutationOptions(),

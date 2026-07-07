@@ -4,7 +4,6 @@ import { Hono } from "hono";
 import { nanoid } from "nanoid";
 const app = new Hono<ServerHonoEnv>();
 const CDN_BASE_URL = "https://cdn.darjs.dev";
-const R2_PUBLIC_URL = "https://pub-b7dba2c2817f4a82971b1c3a86e3dafa.r2.dev";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
 function extensionFromContentType(contentType: string): string {
@@ -98,7 +97,7 @@ app.post("/products", async (c) => {
             await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
                 httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
             });
-            thumbnailUrl = `${R2_PUBLIC_URL}/${thumbnailKey}`;
+            thumbnailUrl = `${CDN_BASE_URL}/${thumbnailKey}`;
         }
         const durationMs = Date.now() - startTime;
         log.info("upload.success", {

@@ -16,6 +16,9 @@ import {
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
+import type { TransactionType } from "~/lib/types";
+
+type DbOrTx = ReturnType<typeof db> | TransactionType;
 
 type ProductStatus = (typeof status)[number];
 
@@ -85,42 +88,52 @@ export const adminQueries = {
 			});
 		},
 
-		async createProduct(data: {
-			name: string;
-			slug: string;
-			description: string;
-			discount: number;
-			amount: string;
-			potency: string;
-			stock: number;
-			price: number;
-			dailyIntake: number;
-			categoryId: number;
-			brandId: number;
-			status: ProductStatus;
-			// Optional AI-extracted fields
-			name_mn?: string | null;
-			ingredients?: string[];
-			tags?: string[];
-			seoTitle?: string | null;
-			seoDescription?: string | null;
-			weightGrams?: number;
-			expirationDate?: string | null;
-		}) {
-			const result = await db().insert(ProductsTable).values(data).returning();
+		async createProduct(
+			data: {
+				name: string;
+				slug: string;
+				description: string;
+				discount: number;
+				amount: string;
+				potency: string;
+				stock: number;
+				price: number;
+				dailyIntake: number;
+				categoryId: number;
+				brandId: number;
+				status: ProductStatus;
+				// Optional AI-extracted fields
+				name_mn?: string | null;
+				ingredients?: string[];
+				tags?: string[];
+				seoTitle?: string | null;
+				seoDescription?: string | null;
+				weightGrams?: number;
+				expirationDate?: string | null;
+			},
+			tx?: DbOrTx,
+		) {
+			const conn = tx ?? db();
+			const result = await conn
+				.insert(ProductsTable)
+				.values(data)
+				.returning();
 			return result[0];
 		},
 
 		async createProductImages(
 			productId: number,
 			images: Array<{ url: string; isPrimary: boolean }>,
+			tx?: DbOrTx,
 		) {
+			if (images.length === 0) return;
+			const conn = tx ?? db();
 			const values = images.map((img) => ({
 				productId,
 				url: img.url,
 				isPrimary: img.isPrimary,
 			}));
-			await db().insert(ProductImagesTable).values(values);
+			await conn.insert(ProductImagesTable).values(values);
 		},
 
 		async getProductBenchmark() {
