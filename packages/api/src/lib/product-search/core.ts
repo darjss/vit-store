@@ -81,7 +81,7 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 			description: 0.5,
 		},
 		prefix: (term: string) => term.length >= 2,
-		fuzzy: (term: string) => (term.length >= 4 ? 0.2 : false),
+		fuzzy: (term: string) => (term.length >= 5 ? 0.15 : false),
 	},
 };
 
@@ -171,6 +171,25 @@ const resultMatchesFilters = (
 
 const tokenizeSearchText = (value: string) =>
 	normalizeSearchText(value).split(" ").filter(Boolean);
+
+const RELEVANCE_ANCHOR_PREFIX = 3;
+
+const sharedPrefixLength = (a: string, b: string) => {
+	const max = Math.min(a.length, b.length);
+	let index = 0;
+	while (index < max && a[index] === b[index]) index++;
+	return index;
+};
+
+const hasRelevanceAnchor = (result: SearchResult, queryTokens: string[]) =>
+	((result.terms as string[] | undefined) ?? []).some((matched) =>
+		queryTokens.some(
+			(token) =>
+				matched.includes(token) ||
+				token.includes(matched) ||
+				sharedPrefixLength(matched, token) >= RELEVANCE_ANCHOR_PREFIX,
+		),
+	);
 
 const withoutTerms = (terms: string[], termsToRemove: string[]) => {
 	const remove = new Set(termsToRemove);
@@ -330,12 +349,14 @@ export const searchMiniSearchIndex = (
 
 	const safeLimit = Math.min(Math.max(limit, 1), 1000);
 	const rankedResults = new Map<string, SearchResult>();
+	const queryTokens = new Set<string>();
 	for (const searchQuery of createSearchQueries(trimmed)) {
 		const searchOptions = {
 			...PRODUCT_SEARCH_OPTIONS.searchOptions,
 			filter: (result: SearchResult) => resultMatchesFilters(result, filters),
 		};
 		const tokens = tokenizeSearchText(searchQuery);
+		for (const token of tokens) queryTokens.add(token);
 		const matchableQuery =
 			tokens.length > 1
 				? tokens
@@ -359,7 +380,9 @@ export const searchMiniSearchIndex = (
 		}
 	}
 
+	const anchorTokens = [...queryTokens];
 	return Array.from(rankedResults.values())
+		.filter((result) => hasRelevanceAnchor(result, anchorTokens))
 		.sort(
 			(a, b) =>
 				scoreSearchResult(b, documentsById, trimmed) -
