@@ -3,8 +3,10 @@ import {
 	type CatalogCacheAccumulator,
 	cacheControlHeader,
 } from "@vit/shared";
+import * as cloudflareWorkers from "cloudflare:workers";
 import type { Context as HonoContext } from "hono";
 import type { Context, ServerHonoVariables } from "~/lib/context";
+import { logger } from "~/lib/logger";
 
 type CacheHonoContext = HonoContext<{
 	Bindings: Env;
@@ -56,6 +58,20 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	);
 	if (accumulated.tags.size > 0) {
 		c.res.headers.set("Cache-Tag", Array.from(accumulated.tags).join(","));
+	}
+}
+
+export async function purgeTagsGlobal(tags: string[]): Promise<void> {
+	const globalCache: typeof cloudflareWorkers.cache | undefined =
+		cloudflareWorkers.cache;
+	if (!globalCache || tags.length === 0) {
+		return;
+	}
+
+	try {
+		await globalCache.purge({ tags });
+	} catch (error) {
+		logger.error("workers_cache.purge_failed", error, { cache_tags: tags });
 	}
 }
 
