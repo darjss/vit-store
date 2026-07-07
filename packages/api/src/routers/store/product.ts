@@ -5,9 +5,9 @@ import {
 	productQueries,
 } from "@vit/api/queries";
 import * as v from "valibot";
+import { RestockSubscriptionsTable } from "~/db/schema";
 import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
-import { kv } from "~/lib/kv";
 import {
 	rebuildProductSearchIndex,
 	searchProducts,
@@ -16,7 +16,6 @@ import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
 } from "~/lib/product-search/text";
-import { redis } from "~/lib/redis";
 import { adminProcedure, publicProcedure, router } from "~/lib/trpc";
 
 export interface SearchProductResult {
@@ -704,7 +703,7 @@ export const product = router({
 				contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 
@@ -744,23 +743,29 @@ export const product = router({
 				});
 			}
 
-			const subscriberId = `${input.channel}:${normalizedContact}`;
-			const productSubscribersKey = `restock:subs:${input.productId}`;
-			const subscriberDataKey = `restock:sub:${input.productId}:${subscriberId}`;
+			const now = new Date();
+			const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-			await redis().sadd(productSubscribersKey, subscriberId);
-			await redis().set(
-				subscriberDataKey,
-				JSON.stringify({
+			await ctx.db
+				.insert(RestockSubscriptionsTable)
+				.values({
 					productId: input.productId,
 					channel: input.channel,
 					contact: normalizedContact,
-					createdAt: new Date().toISOString(),
-				}),
-				{ ex: 60 * 60 * 24 * 30 },
-			);
-
-			await redis().sadd("restock:watch:products", String(input.productId));
+					createdAt: now,
+					expiresAt,
+				})
+				.onConflictDoUpdate({
+					target: [
+						RestockSubscriptionsTable.productId,
+						RestockSubscriptionsTable.channel,
+						RestockSubscriptionsTable.contact,
+					],
+					set: {
+						createdAt: now,
+						expiresAt,
+					},
+				});
 
 			return {
 				success: true,

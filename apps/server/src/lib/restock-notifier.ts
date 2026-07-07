@@ -1,19 +1,12 @@
-import { Redis } from "@upstash/redis";
 import { createDb } from "@vit/api/db";
-import { ProductsTable } from "@vit/api/db/schema";
+import {
+	ProductsTable,
+	type RestockSubscriptionSelectType,
+	RestockSubscriptionsTable,
+} from "@vit/api/db/schema";
 import { sendEmail, smsGateway } from "@vit/api/integrations";
+import { and, eq, gt, isNull, lte } from "drizzle-orm";
 import { createLogger } from "evlog";
-import type { RestockSubscription } from "@vit/shared";
-import { and, eq, isNull } from "drizzle-orm";
-
-const RESTOCK_WATCH_PRODUCTS_KEY = "restock:watch:products";
-
-function createRedisClient(env: Env) {
-	return new Redis({
-		url: env.UPSTASH_REDIS_REST_URL,
-		token: env.UPSTASH_REDIS_REST_TOKEN,
-	});
-}
 
 function createRestockLogger() {
 	return createLogger({
@@ -27,20 +20,25 @@ function createDatabase(env: Env) {
 	return createDb(env.DB);
 }
 
-async function removeInvalidWatchedProduct(redis: Redis, productIdRaw: string) {
-	await redis.srem(RESTOCK_WATCH_PRODUCTS_KEY, productIdRaw);
+async function pruneExpiredSubscriptions(db: ReturnType<typeof createDb>) {
+	await db
+		.delete(RestockSubscriptionsTable)
+		.where(lte(RestockSubscriptionsTable.expiresAt, new Date()));
 }
 
-async function fetchWatchedProducts(redis: Redis) {
-	return ((await redis.smembers(RESTOCK_WATCH_PRODUCTS_KEY)) as string[]) ?? [];
+async function fetchWatchedProducts(db: ReturnType<typeof createDb>) {
+	const rows = await db
+		.selectDistinct({ productId: RestockSubscriptionsTable.productId })
+		.from(RestockSubscriptionsTable)
+		.where(gt(RestockSubscriptionsTable.expiresAt, new Date()));
+
+	return rows.map((row) => row.productId);
 }
 
-async function fetchSubscribers(redis: Redis, productId: number) {
-	return ((await redis.smembers(`restock:subs:${productId}`)) as string[]) ?? [];
-}
-
-async function fetchAvailableProduct(env: Env, productId: number) {
-	const db = createDatabase(env);
+async function fetchAvailableProduct(
+	db: ReturnType<typeof createDb>,
+	productId: number,
+) {
 	return db.query.ProductsTable.findFirst({
 		columns: {
 			id: true,
@@ -48,25 +46,33 @@ async function fetchAvailableProduct(env: Env, productId: number) {
 			stock: true,
 			status: true,
 		},
-		where: and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
+		where: and(
+			eq(ProductsTable.id, productId),
+			isNull(ProductsTable.deletedAt),
+		),
 	});
 }
 
-async function cleanupSubscriber(redis: Redis, productId: number, subscriberId: string) {
-	const subscriberDataKey = `restock:sub:${productId}:${subscriberId}`;
-	const productSubscribersKey = `restock:subs:${productId}`;
-	await redis.del(subscriberDataKey);
-	await redis.srem(productSubscribersKey, subscriberId);
+async function fetchSubscribers(
+	db: ReturnType<typeof createDb>,
+	productId: number,
+): Promise<RestockSubscriptionSelectType[]> {
+	return db.query.RestockSubscriptionsTable.findMany({
+		where: and(
+			eq(RestockSubscriptionsTable.productId, productId),
+			gt(RestockSubscriptionsTable.expiresAt, new Date()),
+		),
+	});
 }
 
 async function notifySubscriber(
 	productName: string,
-	payload: RestockSubscription,
+	subscriber: RestockSubscriptionSelectType,
 ) {
-	if (payload.channel === "sms") {
+	if (subscriber.channel === "sms") {
 		const smsFinalState = await smsGateway.sendSmsAndWait({
 			message: `${productName} бараа дахин орлоо. Та vitstore-д захиалах боломжтой.`,
-			phoneNumbers: [`+976${payload.contact}`],
+			phoneNumbers: [`+976${subscriber.contact}`],
 		});
 
 		if (smsFinalState.state === "Failed") {
@@ -77,58 +83,50 @@ async function notifySubscriber(
 	}
 
 	await sendEmail({
-		to: payload.contact,
+		to: subscriber.contact,
 		subject: `${productName} is back in stock`,
 		text: `${productName} is back in stock at Vit Store. You can place your order now.`,
 	});
 }
 
+async function removeSubscribersForProduct(
+	db: ReturnType<typeof createDb>,
+	productId: number,
+) {
+	await db
+		.delete(RestockSubscriptionsTable)
+		.where(eq(RestockSubscriptionsTable.productId, productId));
+}
+
 async function processSubscriber(
-	redis: Redis,
+	db: ReturnType<typeof createDb>,
 	productId: number,
 	productName: string,
-	subscriberId: string,
+	subscriber: RestockSubscriptionSelectType,
 ) {
-	const subscriberDataKey = `restock:sub:${productId}:${subscriberId}`;
-	const payloadRaw = await redis.get<string>(subscriberDataKey);
-
-	if (!payloadRaw) {
-		await redis.srem(`restock:subs:${productId}`, subscriberId);
-		return;
-	}
-
-	let payload: RestockSubscription;
 	try {
-		payload = JSON.parse(payloadRaw) as RestockSubscription;
-	} catch {
-		await cleanupSubscriber(redis, productId, subscriberId);
-		return;
-	}
-
-	try {
-		await notifySubscriber(productName, payload);
-		await cleanupSubscriber(redis, productId, subscriberId);
+		await notifySubscriber(productName, subscriber);
+		await db
+			.delete(RestockSubscriptionsTable)
+			.where(eq(RestockSubscriptionsTable.id, subscriber.id));
 	} catch (error) {
 		const log = createRestockLogger();
 		log.error(error instanceof Error ? error : new Error(String(error)), {
 			event: "restock.notify_failed",
 			product_id: productId,
-			subscriber_id: subscriberId,
+			subscriber_id: subscriber.id,
 		});
 		log.emit();
 	}
 }
 
-async function processWatchedProduct(redis: Redis, env: Env, productIdRaw: string) {
-	const productId = Number.parseInt(productIdRaw, 10);
-	if (!Number.isFinite(productId) || productId <= 0) {
-		await removeInvalidWatchedProduct(redis, productIdRaw);
-		return;
-	}
-
-	const product = await fetchAvailableProduct(env, productId);
+async function processWatchedProduct(
+	db: ReturnType<typeof createDb>,
+	productId: number,
+) {
+	const product = await fetchAvailableProduct(db, productId);
 	if (!product) {
-		await removeInvalidWatchedProduct(redis, String(productId));
+		await removeSubscribersForProduct(db, productId);
 		return;
 	}
 
@@ -136,30 +134,22 @@ async function processWatchedProduct(redis: Redis, env: Env, productIdRaw: strin
 		return;
 	}
 
-	const subscriberIds = await fetchSubscribers(redis, productId);
-	if (subscriberIds.length === 0) {
-		await removeInvalidWatchedProduct(redis, String(productId));
+	const subscribers = await fetchSubscribers(db, productId);
+	if (subscribers.length === 0) {
 		return;
 	}
 
-	for (const subscriberId of subscriberIds) {
-		await processSubscriber(redis, productId, product.name, subscriberId);
+	for (const subscriber of subscribers) {
+		await processSubscriber(db, productId, product.name, subscriber);
 	}
-
-	const remainingSubscribers = await fetchSubscribers(redis, productId);
-	if (remainingSubscribers.length > 0) {
-		return;
-	}
-
-	await redis.del(`restock:subs:${productId}`);
-	await removeInvalidWatchedProduct(redis, String(productId));
 }
 
 export async function runRestockNotifier(env: Env) {
-	const redis = createRedisClient(env);
-	const watchedProducts = await fetchWatchedProducts(redis);
+	const db = createDatabase(env);
+	await pruneExpiredSubscriptions(db);
+	const watchedProducts = await fetchWatchedProducts(db);
 
-	for (const productIdRaw of watchedProducts) {
-		await processWatchedProduct(redis, env, productIdRaw);
+	for (const productId of watchedProducts) {
+		await processWatchedProduct(db, productId);
 	}
 }
