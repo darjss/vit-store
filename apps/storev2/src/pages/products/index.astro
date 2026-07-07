@@ -2,6 +2,7 @@
 import ProductsList from "@/components/product/products-list";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
+import { dehydrateSeeds } from "@/lib/hydration";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
 
@@ -49,6 +50,23 @@ const SITE_URL = "https://amerikvitamin.mn";
 const [initialProductsResult, totalProductCount] = await Promise.all([
 	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
 	api.product.getTotalActiveProductCount.query(),
+]);
+
+const dehydratedState = dehydrateSeeds([
+	{
+		queryKey: [
+			"products-browse",
+			undefined,
+			undefined,
+			null,
+			null,
+			null,
+		],
+		data: {
+			pages: [initialProductsResult],
+			pageParams: [undefined],
+		},
+	},
 ]);
 
 const title = "АНУ-ын витамин, нэмэлт тэжээл";
@@ -104,7 +122,7 @@ const itemListSchema = {
 
 	<ProductsList
 		client:only="solid-js"
-		initialProductsResult={initialProductsResult}
+		dehydratedState={dehydratedState}
 		totalProductCount={totalProductCount}
 	/>
 </Layout>
