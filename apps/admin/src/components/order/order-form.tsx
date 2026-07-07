@@ -2,7 +2,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addOrderSchema, orderStatusLabels, type addOrderType } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
@@ -42,7 +42,7 @@ const OrderForm = ({
 		defaultValues: {
 			customerPhone: order?.customerPhone || "",
       address: order?.address || "",
-			addressZoneId: order?.addressZoneId ? Number(order.addressZoneId) : 0,
+			addressZoneId: order?.addressZoneId ? Number(order.addressZoneId) : undefined,
 			notes: order?.notes || "",
       status: order?.status || "pending",
 			paymentStatus: order?.paymentStatus || "pending",
@@ -62,6 +62,8 @@ const OrderForm = ({
   })
 
 	const isEditing = !!order;
+
+	const prevPhoneRef = useRef(order?.customerPhone ?? "");
 
 	const shipOrder = useMutation({
 		...trpc.order.shipOrder.mutationOptions(),
@@ -125,7 +127,7 @@ const OrderForm = ({
 				shouldDirty: true,
 				shouldTouch: true,
 			});
-			form.setValue("addressZoneId", result.addressZoneId ? Number(result.addressZoneId) : 0, {
+			form.setValue("addressZoneId", result.addressZoneId ? Number(result.addressZoneId) : undefined, {
 				shouldValidate: true,
 				shouldDirty: true,
 				shouldTouch: true,
@@ -136,7 +138,10 @@ const OrderForm = ({
 		form.setValue("isNewCustomer", true);
 	}, [customerInfo, form, isSuccess]);
 
+	const isMutating = addMutation.isPending || updateMutation.isPending;
+
 	const onSubmit = async (values: addOrderType) => {
+		if (isMutating) return;
 		if (isEditing && order?.id) {
 			updateMutation.mutate({ ...values, id: order.id });
 		} else {
@@ -145,15 +150,16 @@ const OrderForm = ({
 	};
 
 	useEffect(() => {
-		if (isValidPhone) {
-			handlePhoneChange();
-		}
-	}, [handlePhoneChange, isValidPhone]);
+		if (!isValidPhone) return;
+		if (isEditing && phone === prevPhoneRef.current) return;
+		prevPhoneRef.current = phone;
+		handlePhoneChange();
+	}, [handlePhoneChange, isValidPhone, isEditing, phone]);
 
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
-				<FormLoadingOverlay isLoading={form.formState.isSubmitting} />
+				<FormLoadingOverlay isLoading={isMutating} />
 				<div className="grid grid-cols-1 gap-4">
 					<Card className="border-2 border-border bg-transparent shadow-none">
 						<CardContent className="space-y-4 p-3 sm:p-4">
@@ -341,7 +347,7 @@ const OrderForm = ({
 					)}
 					<div className="flex-1" />
 					<SubmitButton
-						isPending={form.formState.isSubmitting}
+						isPending={isMutating}
 						className="border-2 border-border px-6 py-2.5 font-bold text-sm uppercase tracking-wider transition-colors duration-300 hover:bg-primary/90"
 					>
 						{order ? "Захиалга шинэчлэх" : "Захиалга баталгаажуулах"}

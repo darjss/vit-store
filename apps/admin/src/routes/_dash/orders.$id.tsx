@@ -51,9 +51,21 @@ export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
 	pendingComponent: FormPageSkeleton,
 	loader: ({ context: ctx, params }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
-		);
+		// Order numbers are always 8 chars (generateOrderNumber → nanoId(8)).
+		// Numeric ids are auto-increment integers. An 8-char param — even all
+		// digits — is treated as an order number; only non-8-char numeric params
+		// go to getOrderById.
+		if (params.id.length === 8) {
+			void ctx.queryClient.prefetchQuery(
+				ctx.trpc.order.getOrderIdByOrderNumber.queryOptions({
+					orderNumber: params.id,
+				}),
+			);
+		} else {
+			void ctx.queryClient.prefetchQuery(
+				ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
+			);
+		}
 	},
 });
 
@@ -95,7 +107,37 @@ function deliveryLabel(provider?: string | null) {
 
 function OrderDetailContent() {
 	const { id } = Route.useParams();
-	const orderId = Number(id);
+
+	// 8-char param → order number lookup; else numeric id.
+	if (id.length === 8) {
+		return <ResolveOrderNumber orderNumber={id} />;
+	}
+	return <OrderDetail orderId={Number(id)} />;
+}
+
+function ResolveOrderNumber({ orderNumber }: { orderNumber: string }) {
+	const navigate = useNavigate();
+	const { data: resolvedId } = useSuspenseQuery({
+		...trpc.order.getOrderIdByOrderNumber.queryOptions({ orderNumber }),
+	});
+
+	if (resolvedId == null) {
+		return (
+			<div className="mx-auto max-w-3xl p-4">
+				<div className="border-2 border-border bg-card p-6 shadow-hard">
+					<h1 className="font-heading text-xl font-black">Захиалга олдсонгүй</h1>
+					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
+						Буцах
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	return <OrderDetail orderId={resolvedId} />;
+}
+
+function OrderDetail({ orderId }: { orderId: number }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
