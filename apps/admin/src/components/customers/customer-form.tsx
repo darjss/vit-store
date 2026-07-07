@@ -79,6 +79,7 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 	});
 
 	const onSubmit = (values: AddCustomerFormValues) => {
+		if (addMutation.isPending || updateMutation.isPending) return;
 		if (customer) {
 			updateMutation.mutate({
 				phone: Number(customer.phone),
