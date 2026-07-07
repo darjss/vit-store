@@ -105,6 +105,33 @@ const VITAMIN_LETTER_ALIASES: Record<string, string> = {
 	k: "k2",
 };
 
+const SYMPTOM_INGREDIENT_ALIASES: Record<string, string[]> = {
+	ядаргаа: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
+	fatigue: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
+	tiredness: ["b complex", "b12", "iron", "coq10"],
+	менструац: ["magnesium", "b6", "iron", "evening primrose"],
+	менст: ["magnesium", "b6", "iron", "evening primrose"],
+	menstrual: ["magnesium", "b6", "iron", "evening primrose"],
+	period: ["magnesium", "b6", "iron", "evening primrose"],
+	нойргүйдэл: ["melatonin", "5 htp", "magnesium"],
+	нойр: ["melatonin", "5 htp", "magnesium"],
+	sleep: ["melatonin", "5 htp", "magnesium"],
+	insomnia: ["melatonin", "5 htp"],
+	дархлаа: ["zinc", "vitamin c", "probiotic", "vitamin d3"],
+	immunity: ["zinc", "vitamin c", "probiotic", "vitamin d3"],
+	immune: ["zinc", "vitamin c", "probiotic"],
+	"үе мөч": ["glucosamine", "collagen", "omega 3"],
+	joint: ["glucosamine", "collagen", "omega 3"],
+	joints: ["glucosamine", "collagen", "omega 3"],
+	стресс: ["ashwagandha", "magnesium", "l theanine"],
+	stress: ["ashwagandha", "magnesium", "l theanine"],
+	anxiety: ["ashwagandha", "l theanine", "magnesium"],
+	үс: ["biotin", "collagen", "zinc"],
+	hair: ["biotin", "collagen", "zinc"],
+	skin: ["collagen", "hyaluronic", "vitamin c"],
+	арьс: ["collagen", "hyaluronic", "vitamin c"],
+};
+
 export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")
 		.normalize("NFKD")
@@ -200,12 +227,27 @@ export const expandVitaminLetters = (value: string | null | undefined) => {
 	return changed ? expanded.join(" ") : "";
 };
 
+export const expandSymptomIngredients = (value: string | null | undefined) => {
+	const normalized = normalizeSearchText(value);
+	if (!normalized) return [];
+
+	const ingredients: string[] = [];
+	for (const [symptom, terms] of Object.entries(SYMPTOM_INGREDIENT_ALIASES)) {
+		if (normalized.includes(normalizeSearchText(symptom))) {
+			ingredients.push(...terms);
+		}
+	}
+
+	return ingredients;
+};
+
 export const createSearchQueries = (query: string) => {
 	const normalized = normalizeSearchText(query);
 	const transliterated = transliterateCyrillicToLatin(query);
 	const expanded = expandLatinAliases(query).join(" ");
 	const vitaminExpanded = expandVitaminLetters(query);
 	const brandExpanded = expandBrandAliases(query);
+	const symptomExpanded = expandSymptomIngredients(query);
 
 	return Array.from(
 		new Set(
@@ -216,6 +258,7 @@ export const createSearchQueries = (query: string) => {
 				expanded,
 				vitaminExpanded,
 				brandExpanded,
+				...symptomExpanded,
 			].filter(Boolean),
 		),
 	);
