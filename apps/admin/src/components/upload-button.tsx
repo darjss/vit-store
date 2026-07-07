@@ -2,28 +2,37 @@ import { useMutation } from "@tanstack/react-query";
 import type { ImageUrlArray } from "@vit/shared";
 import { nanoid } from "nanoid";
 import { useRef } from "react";
+import { toast } from "sonner";
 import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
 
-const uploadImage = async (image: File, category: string) => {
-	try {
-		const key = `${category}/${nanoid()}.${image.type.split("/")[1]}`;
-		const formData = new FormData();
-		formData.append("image", image);
-		formData.append("key", key);
-		const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`, {
-			method: "POST",
-			body: formData,
-		});
-		const data = (await response.json()) as { url?: string; message: string };
-		if (response.status === 200 && data.url) {
-			return data.url;
-		}
-		throw new Error(data.message || "Failed to upload image");
-	} catch (_error) {
-		throw new Error("Failed to upload image");
+const deriveExtension = (image: File): string => {
+	const mimeSub = image.type.split("/")[1];
+	if (mimeSub) {
+		return mimeSub;
 	}
+	const nameMatch = image.name.match(/\.([a-zA-Z0-9]+)$/);
+	if (nameMatch) {
+		return nameMatch[1].toLowerCase();
+	}
+	return "jpg";
+};
+
+const uploadImage = async (image: File, category: string) => {
+	const key = `${category}/${nanoid()}.${deriveExtension(image)}`;
+	const formData = new FormData();
+	formData.append("image", image);
+	formData.append("key", key);
+	const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`, {
+		method: "POST",
+		body: formData,
+	});
+	const data = (await response.json()) as { url?: string; message: string };
+	if (response.ok && data.url) {
+		return data.url;
+	}
+	throw new Error(data.message || `Upload failed (${response.status})`);
 };
 
 export const UploadButton = ({
@@ -45,7 +54,7 @@ export const UploadButton = ({
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = e.target.files;
 		if (!files || files.length === 0) {
-			throw new Error("Select a file");
+			return;
 		}
 
 		Array.from(files).forEach((file) => {
@@ -56,10 +65,14 @@ export const UploadButton = ({
 						append?.({ url });
 						onSuccess(url);
 					},
-					onError: (_error) => {},
+					onError: (error) => {
+						toast.error(error.message || "Зураг оруулахад алдаа гарлаа");
+					},
 				},
 			);
 		});
+		// Reset input so re-selecting the same file fires onChange again
+		e.target.value = "";
 	};
 	return (
 		<div>

@@ -239,7 +239,9 @@ export const addBrandSchema = v.object({
 	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
 	logoUrl: v.union([v.literal(""), v.pipe(v.string(), v.url())]),
 	description: v.optional(v.nullable(v.string())),
-	bannerImage: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
+	bannerImage: v.optional(
+		v.nullable(v.union([v.literal(""), v.pipe(v.string(), v.url())])),
+	),
 	seoTitle: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(256)))),
 	seoDescription: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(512)))),
 });
@@ -249,7 +251,9 @@ export const addCategorySchema = v.object({
 	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
 	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
 	description: v.optional(v.nullable(v.string())),
-	bannerImage: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
+	bannerImage: v.optional(
+		v.nullable(v.union([v.literal(""), v.pipe(v.string(), v.url())])),
+	),
 	seoTitle: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(256)))),
 	seoDescription: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(512)))),
 });
