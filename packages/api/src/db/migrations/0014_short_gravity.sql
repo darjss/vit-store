@@ -1,0 +1,1 @@
+ALTER TABLE "ecom_vit_order_detail" ADD COLUMN "price" integer;

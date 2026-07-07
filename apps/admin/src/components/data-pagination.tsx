@@ -72,7 +72,7 @@ export function DataPagination({
 		<div className={`space-y-4 ${className}`}>
 			{showTotalCount && (
 				<p className="text-center text-muted-foreground text-xs">
-					{totalCountText || `Page ${currentPage} of ${totalPages}`}
+					{totalCountText || `${totalPages} хуудаснаас ${currentPage}-р хуудас`}
 				</p>
 			)}
 

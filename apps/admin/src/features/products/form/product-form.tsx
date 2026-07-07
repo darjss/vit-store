@@ -66,6 +66,10 @@ const ProductForm = ({
 		...trpc.product.addProduct.mutationOptions(),
 		onSuccess: async () => {
 			form.reset();
+			await queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
+				type: "all",
+			});
 			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 			onSuccess();
 		},
@@ -77,6 +81,10 @@ const ProductForm = ({
 	const updateMutation = useMutation({
 		...trpc.product.updateProduct.mutationOptions(),
 		onSuccess: async () => {
+			await queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
+				type: "all",
+			});
 			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 			queryClient.invalidateQueries(
 				trpc.product.getProductById.queryOptions({ id: productId! }),

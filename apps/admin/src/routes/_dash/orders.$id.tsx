@@ -4,6 +4,7 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { PaymentStatusType } from "@vit/shared/types";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -25,6 +26,7 @@ import { EditableField } from "@/components/editable-field";
 import OrderForm from "@/components/order/order-form";
 import { TransferPaymentActions } from "@/components/order/pending-transfer-dialog";
 import RowAction from "@/components/row-actions";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -39,7 +41,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+import {
+	orderStatusLabel,
+	paymentProviderLabel,
+	paymentStatusLabel,
+} from "@/lib/enum-labels";
 import {
 	formatCurrency,
 	getPaymentProviderIcon,
@@ -51,9 +57,21 @@ export const Route = createFileRoute("/_dash/orders/$id")({
 	component: RouteComponent,
 	pendingComponent: FormPageSkeleton,
 	loader: ({ context: ctx, params }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
-		);
+		// Order numbers are always 8 chars (generateOrderNumber → nanoId(8)).
+		// Numeric ids are auto-increment integers. An 8-char param — even all
+		// digits — is treated as an order number; only non-8-char numeric params
+		// go to getOrderById.
+		if (params.id.length === 8) {
+			void ctx.queryClient.prefetchQuery(
+				ctx.trpc.order.getOrderIdByOrderNumber.queryOptions({
+					orderNumber: params.id,
+				}),
+			);
+		} else {
+			void ctx.queryClient.prefetchQuery(
+				ctx.trpc.order.getOrderById.queryOptions({ id: Number(params.id) }),
+			);
+		}
 	},
 });
 
@@ -63,19 +81,6 @@ function RouteComponent() {
 			<OrderDetailContent />
 		</Suspense>
 	);
-}
-
-function paymentLabel(status: string) {
-	switch (status) {
-		case "success":
-			return "Төлсөн";
-		case "failed":
-			return "Амжилтгүй";
-		case "customer_claimed_paid":
-			return "Төлсөн гэж мэдэгдсэн";
-		default:
-			return "Хүлээгдэж буй";
-	}
 }
 
 function deliveryLabel(provider?: string | null) {
@@ -95,7 +100,39 @@ function deliveryLabel(provider?: string | null) {
 
 function OrderDetailContent() {
 	const { id } = Route.useParams();
-	const orderId = Number(id);
+
+	// 8-char param → order number lookup; else numeric id.
+	if (id.length === 8) {
+		return <ResolveOrderNumber orderNumber={id} />;
+	}
+	return <OrderDetail orderId={Number(id)} />;
+}
+
+function ResolveOrderNumber({ orderNumber }: { orderNumber: string }) {
+	const navigate = useNavigate();
+	const { data: resolvedId } = useSuspenseQuery({
+		...trpc.order.getOrderIdByOrderNumber.queryOptions({ orderNumber }),
+	});
+
+	if (resolvedId == null) {
+		return (
+			<div className="mx-auto max-w-3xl p-4">
+				<div className="border-2 border-border bg-card p-6 shadow-hard">
+					<h1 className="font-black font-heading text-xl">
+						Захиалга олдсонгүй
+					</h1>
+					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
+						Буцах
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	return <OrderDetail orderId={resolvedId} />;
+}
+
+function OrderDetail({ orderId }: { orderId: number }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -108,7 +145,9 @@ function OrderDetailContent() {
 		return (
 			<div className="mx-auto max-w-3xl p-4">
 				<div className="border-2 border-border bg-card p-6 shadow-hard">
-					<h1 className="font-heading text-xl font-black">Захиалга олдсонгүй</h1>
+					<h1 className="font-black font-heading text-xl">
+						Захиалга олдсонгүй
+					</h1>
 					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
 						Буцах
 					</Button>
@@ -173,6 +212,7 @@ function OrderDetailContent() {
 			status: patch.status ?? order.status,
 			notes: patch.notes ?? order.notes,
 			address: patch.address ?? order.address,
+			addressZoneId: patch.addressZoneId ?? order.addressZoneId,
 			products: order.products || [],
 			paymentStatus: patch.paymentStatus ?? order.paymentStatus,
 			deliveryProvider: patch.deliveryProvider ?? order.deliveryProvider,
@@ -187,21 +227,23 @@ function OrderDetailContent() {
 	const nextAction =
 		order.status === "pending"
 			? {
-				label: "TU руу илгээх",
-				icon: Truck,
-				pending: isShipOrderPending,
-				onClick: () => shipOrder({ orderId }),
-			}
+					label: "TU руу илгээх",
+					icon: Truck,
+					pending: isShipOrderPending,
+					onClick: () => shipOrder({ orderId }),
+				}
 			: order.status === "shipped"
 				? {
-					label: "Хүргэсэн болгох",
-					icon: CheckCircle,
-					pending: isUpdateStatusPending,
-					onClick: () => updateOrderStatus({ id: orderId, status: "delivered" }),
-				}
+						label: "Хүргэсэн болгох",
+						icon: CheckCircle,
+						pending: isUpdateStatusPending,
+						onClick: () =>
+							updateOrderStatus({ id: orderId, status: "delivered" }),
+					}
 				: null;
 
-	const itemCount = order.products?.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
+	const itemCount =
+		order.products?.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
 	const isPaid = order.paymentStatus === "success";
 	const isPendingTransferClaim =
 		order.paymentStatus === "customer_claimed_paid" &&
@@ -249,7 +291,7 @@ function OrderDetailContent() {
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
 						<div className="min-w-0">
-							<h1 className="truncate font-heading text-2xl font-black tracking-tight sm:text-3xl">
+							<h1 className="truncate font-black font-heading text-2xl tracking-tight sm:text-3xl">
 								#{order.orderNumber}
 							</h1>
 							<p className="text-muted-foreground text-xs sm:text-sm">
@@ -275,7 +317,8 @@ function OrderDetailContent() {
 								<span
 									className={`inline-flex items-center gap-1 border-2 px-2 py-1 font-bold text-xs ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
-									{getPaymentProviderIcon(order.paymentProvider)} {paymentLabel(order.paymentStatus)}
+									{getPaymentProviderIcon(order.paymentProvider)}{" "}
+									{paymentStatusLabel[order.paymentStatus]}
 								</span>
 								<span className="border-2 border-border bg-muted px-2 py-1 font-bold text-xs">
 									{deliveryLabel(order.deliveryProvider)}
@@ -287,7 +330,8 @@ function OrderDetailContent() {
 								)}
 							</div>
 							<p className="max-w-2xl text-muted-foreground text-sm">
-								Энэ дэлгэцийн гол ажил: хэрэглэгчтэй холбогдох, хаяг шалгах, барааг баталгаажуулах, хүргэлт рүү шилжүүлэх.
+								Энэ дэлгэцийн гол ажил: хэрэглэгчтэй холбогдох, хаяг шалгах,
+								барааг баталгаажуулах, хүргэлт рүү шилжүүлэх.
 							</p>
 						</div>
 						{nextAction && (
@@ -307,21 +351,26 @@ function OrderDetailContent() {
 					<main className="space-y-4">
 						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
 							<div className="mb-4 flex items-center justify-between gap-3">
-								<h2 className="flex items-center gap-2 font-heading text-lg font-black">
+								<h2 className="flex items-center gap-2 font-black font-heading text-lg">
 									<User className="h-5 w-5" /> Харилцагч
 								</h2>
 								<Button
 									variant="outline"
 									size="sm"
 									className="h-10 gap-2"
-									onClick={() => (window.location.href = `tel:${order.customerPhone}`)}
+									onClick={() =>
+										(window.location.href = `tel:${order.customerPhone}`)
+									}
 								>
 									<Phone className="h-4 w-4" /> Залгах
 								</Button>
 							</div>
 
 							<div className="space-y-4">
-								<InfoRow label="Утас" onCopy={() => copy(order.customerPhone.toString(), "Утас") }>
+								<InfoRow
+									label="Утас"
+									onCopy={() => copy(order.customerPhone.toString(), "Утас")}
+								>
 									<EditableField
 										value={order.customerPhone.toString()}
 										isLoading={isUpdateFieldPending}
@@ -329,7 +378,10 @@ function OrderDetailContent() {
 									/>
 								</InfoRow>
 
-								<InfoRow label="Хаяг" onCopy={() => copy(order.address || "", "Хаяг") }>
+								<InfoRow
+									label="Хаяг"
+									onCopy={() => copy(order.address || "", "Хаяг")}
+								>
 									<EditableField
 										value={order.address || ""}
 										type="textarea"
@@ -344,7 +396,13 @@ function OrderDetailContent() {
 										type="textarea"
 										isLoading={isUpdateFieldPending}
 										onSave={(next) => savePatch({ notes: next })}
-										renderDisplay={(value) => value || <span className="text-muted-foreground">Тэмдэглэлгүй</span>}
+										renderDisplay={(value) =>
+											value || (
+												<span className="text-muted-foreground">
+													Тэмдэглэлгүй
+												</span>
+											)
+										}
 									/>
 								</InfoRow>
 							</div>
@@ -352,7 +410,7 @@ function OrderDetailContent() {
 
 						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
 							<div className="mb-4 flex items-center justify-between">
-								<h2 className="flex items-center gap-2 font-heading text-lg font-black">
+								<h2 className="flex items-center gap-2 font-black font-heading text-lg">
 									<Package className="h-5 w-5" /> Бүтээгдэхүүн
 								</h2>
 								<span className="border-2 border-border bg-muted px-2 py-1 font-bold text-xs">
@@ -375,7 +433,7 @@ function OrderDetailContent() {
 											/>
 										</div>
 										<div className="min-w-0">
-											<h3 className="line-clamp-2 font-heading font-bold text-sm sm:text-base">
+											<h3 className="line-clamp-2 font-bold font-heading text-sm sm:text-base">
 												{product.name}
 											</h3>
 											<p className="mt-1 text-muted-foreground text-xs">
@@ -383,8 +441,10 @@ function OrderDetailContent() {
 											</p>
 										</div>
 										<div className="col-span-2 flex items-center justify-between border-border border-t pt-2 sm:col-span-1 sm:block sm:border-t-0 sm:pt-0 sm:text-right">
-											<span className="text-muted-foreground text-xs sm:hidden">Дүн</span>
-											<p className="font-heading font-black tabular-nums">
+											<span className="text-muted-foreground text-xs sm:hidden">
+												Дүн
+											</span>
+											<p className="font-black font-heading tabular-nums">
 												{formatCurrency(product.price * product.quantity)}
 											</p>
 										</div>
@@ -396,7 +456,7 @@ function OrderDetailContent() {
 
 					<aside className="space-y-4">
 						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
-							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+							<h2 className="mb-4 flex items-center gap-2 font-black font-heading text-lg">
 								<Receipt className="h-5 w-5" /> Төлбөр ба дүн
 							</h2>
 							<div className="space-y-4">
@@ -406,17 +466,26 @@ function OrderDetailContent() {
 									value={order.paymentStatus}
 									options={[
 										{ value: "pending", label: "Хүлээгдэж буй" },
-										{ value: "customer_claimed_paid", label: "Төлсөн гэж мэдэгдсэн" },
+										{
+											value: "customer_claimed_paid",
+											label: "Төлсөн гэж мэдэгдсэн",
+										},
 										{ value: "success", label: "Төлсөн" },
 										{ value: "failed", label: "Амжилтгүй" },
 									]}
 									isLoading={isUpdateFieldPending}
 									renderDisplay={(value) => (
-										<span className={`inline-flex border-2 px-2 py-1 text-xs ${getPaymentStatusColor(value)}`}>
-											{paymentLabel(value)}
+										<span
+											className={`inline-flex border-2 px-2 py-1 text-xs ${getPaymentStatusColor(value)}`}
+										>
+											{paymentStatusLabel[value as PaymentStatusType]}
 										</span>
 									)}
-									onSave={(next) => savePatch({ paymentStatus: next as typeof order.paymentStatus })}
+									onSave={(next) =>
+										savePatch({
+											paymentStatus: next as typeof order.paymentStatus,
+										})
+									}
 								/>
 								{isPendingTransferClaim && order.paymentNumber ? (
 									<div className="space-y-2 border-2 border-primary/30 bg-primary/5 p-3">
@@ -436,15 +505,20 @@ function OrderDetailContent() {
 								) : null}
 								<div className="flex items-center justify-between border-border border-t pt-3 text-sm">
 									<span className="text-muted-foreground">Хэрэгсэл</span>
-									<span className="font-bold">{getPaymentProviderIcon(order.paymentProvider)} {order.paymentProvider}</span>
+									<span className="font-bold">
+										{getPaymentProviderIcon(order.paymentProvider)}{" "}
+										{order.paymentProvider
+											? paymentProviderLabel[order.paymentProvider]
+											: "Тодорхойгүй"}
+									</span>
 								</div>
 								<div className="flex items-center justify-between border-border border-t pt-3 text-sm">
 									<span className="text-muted-foreground">Нийт ширхэг</span>
 									<span className="font-bold">{itemCount}</span>
 								</div>
 								<div className="flex items-end justify-between border-border border-t-2 pt-4">
-									<span className="font-heading font-black">Нийт</span>
-									<span className="font-heading text-2xl font-black tabular-nums">
+									<span className="font-black font-heading">Нийт</span>
+									<span className="font-black font-heading text-2xl tabular-nums">
 										{formatCurrency(order.total)}
 									</span>
 								</div>
@@ -452,7 +526,7 @@ function OrderDetailContent() {
 						</section>
 
 						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
-							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+							<h2 className="mb-4 flex items-center gap-2 font-black font-heading text-lg">
 								<Truck className="h-5 w-5" /> Хүргэлт
 							</h2>
 							<EditableField
@@ -467,7 +541,11 @@ function OrderDetailContent() {
 								]}
 								isLoading={isUpdateFieldPending}
 								renderDisplay={(value) => deliveryLabel(value)}
-								onSave={(next) => savePatch({ deliveryProvider: next as typeof order.deliveryProvider })}
+								onSave={(next) =>
+									savePatch({
+										deliveryProvider: next as typeof order.deliveryProvider,
+									})
+								}
 							/>
 							<Button
 								variant="outline"
@@ -479,13 +557,23 @@ function OrderDetailContent() {
 						</section>
 
 						<section className="border-2 border-border bg-card p-4 shadow-hard-sm sm:p-5">
-							<h2 className="mb-4 flex items-center gap-2 font-heading text-lg font-black">
+							<h2 className="mb-4 flex items-center gap-2 font-black font-heading text-lg">
 								<CalendarClock className="h-5 w-5" /> Түүх
 							</h2>
 							<div className="space-y-3 text-sm">
 								<TimelineRow label="Захиалга үүссэн" value={created} active />
-								{updated && <TimelineRow label="Сүүлд шинэчлэгдсэн" value={updated} active={order.status !== "pending"} />}
-								<TimelineRow label={`Одоогийн төлөв: ${order.status}`} value={paymentLabel(order.paymentStatus)} active={isPaid} />
+								{updated && (
+									<TimelineRow
+										label="Сүүлд шинэчлэгдсэн"
+										value={updated}
+										active={order.status !== "pending"}
+									/>
+								)}
+								<TimelineRow
+									label={`Одоогийн төлөв: ${orderStatusLabel[order.status]}`}
+									value={paymentStatusLabel[order.paymentStatus]}
+									active={isPaid}
+								/>
 							</div>
 						</section>
 					</aside>
@@ -520,11 +608,16 @@ function InfoRow({
 	return (
 		<div className="border-border border-t pt-3 first:border-t-0 first:pt-0">
 			<div className="mb-1.5 flex items-center justify-between gap-2">
-				<p className="font-heading font-bold text-muted-foreground text-xs uppercase tracking-wide">
+				<p className="font-bold font-heading text-muted-foreground text-xs uppercase tracking-wide">
 					{label}
 				</p>
 				{onCopy && (
-					<Button variant="ghost" size="icon" className="h-8 w-8" onClick={onCopy}>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-8 w-8"
+						onClick={onCopy}
+					>
 						<Copy className="h-3.5 w-3.5" />
 					</Button>
 				)}
@@ -545,7 +638,9 @@ function TimelineRow({
 }) {
 	return (
 		<div className="flex gap-3">
-			<div className={`mt-1.5 h-3 w-3 shrink-0 border-2 border-border ${active ? "bg-primary" : "bg-muted"}`} />
+			<div
+				className={`mt-1.5 h-3 w-3 shrink-0 border-2 border-border ${active ? "bg-primary" : "bg-muted"}`}
+			/>
 			<div>
 				<p className="font-bold leading-tight">{label}</p>
 				<p className="text-muted-foreground text-xs">{value}</p>
