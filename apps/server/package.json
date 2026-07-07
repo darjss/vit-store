@@ -40,6 +40,7 @@
 		"drizzle-orm": "catalog:",
 		"evlog": "^2.11.0",
 		"hono": "catalog:",
+		"khaan-client": "github:darjss/khaan-client",
 		"nanoid": "^5.1.5",
 		"posthog-node": "^5.38.4"
 	},

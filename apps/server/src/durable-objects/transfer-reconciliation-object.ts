@@ -1,17 +1,17 @@
 import { paymentQueries } from "@vit/api/queries";
 import { confirmTransferPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { DurableObject } from "cloudflare:workers";
-import { KhaanClient } from "../lib/khaan/client";
 import {
+	KhaanAuthError,
+	KhaanClient,
 	type MatchedKhaanTransaction,
 	type TransferReconciliationStatus,
-	findMatchingKhaanTransfer,
-} from "../lib/khaan/reconciliation";
+} from "khaan-client";
+import { matchKhaanTransfer } from "../lib/khaan/match-transfer";
 
 const STATE_KEY = "transfer-reconciliation:state:v1";
 const POLL_INTERVAL_MS = 25_000;
 const MAX_POLL_MS = 5 * 60_000;
-const LOOKBACK_MS = 10 * 60_000;
 
 export type TransferReconciliationState = {
 	paymentNumber: string;
@@ -44,10 +44,28 @@ const isConfirmablePaymentStatus = (status: string) =>
 
 export class TransferReconciliationObject extends DurableObject<Env> {
 	private readonly appEnv: Env;
+	private client: KhaanClient | null = null;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		this.appEnv = env;
+	}
+
+	private async ensureClient(): Promise<KhaanClient> {
+		if (this.client) {
+			return this.client;
+		}
+		const client = new KhaanClient({
+			username: this.appEnv.KHAAN_USERNAME,
+			password: this.appEnv.KHAAN_PASSWORD,
+			deviceId: this.appEnv.KHAAN_DEVICE_ID,
+			userAgent: this.appEnv.KHAAN_USER_AGENT,
+			accountNumber: this.appEnv.KHAAN_ACCOUNT_NUMBER,
+			branchCode: this.appEnv.KHAAN_BRANCH_CODE,
+		});
+		await client.login();
+		this.client = client;
+		return client;
 	}
 
 	async start(input: StartInput): Promise<TransferReconciliationState> {
@@ -140,40 +158,12 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				return;
 			}
 
-			const client = new KhaanClient({
-				username: this.appEnv.KHAAN_USERNAME,
-				password: this.appEnv.KHAAN_PASSWORD,
-				deviceId: this.appEnv.KHAAN_DEVICE_ID,
-				userAgent: this.appEnv.KHAAN_USER_AGENT,
-				accountNumber: this.appEnv.KHAAN_ACCOUNT_NUMBER,
-				branchCode: this.appEnv.KHAAN_BRANCH_CODE,
-			});
-			const login = await client.loginInitial();
-			if (login.status === "mfa_required") {
-				await this.writeState({
-					...state,
-					status: "auth_required",
-					attempts,
-					nextPollAt: null,
-					lastError: "Khaan MFA required",
-				});
-				return;
-			}
-			if (login.status === "failed") {
-				await this.scheduleNext({
-					...state,
-					attempts,
-					lastError: login.error,
-				});
-				return;
-			}
-
-			const transactions = await client.fetchTransactions({
-				accessToken: login.accessToken,
-			});
-			const matchResult = findMatchingKhaanTransfer({
+			const client = await this.ensureClient();
+			const transactions = await client.fetchTransactions();
+			const matchResult = matchKhaanTransfer({
 				transactions,
 				paymentNumber: state.paymentNumber,
+				phone: String(payment.order.customerPhone),
 				expectedAmount: payment.amount,
 			});
 
@@ -229,6 +219,17 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				matchedTransaction: matchResult.match,
 			});
 		} catch (error) {
+			if (error instanceof KhaanAuthError) {
+				this.client = null;
+				await this.writeState({
+					...state,
+					status: "auth_required",
+					attempts,
+					nextPollAt: null,
+					lastError: errorMessage(error),
+				});
+				return;
+			}
 			await this.scheduleNext({
 				...state,
 				attempts,
