@@ -5,6 +5,10 @@ on:
   push:
     branches: [main, v2]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   install:
     runs-on: ubuntu-latest
