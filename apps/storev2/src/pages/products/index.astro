@@ -1,46 +1,11 @@
 ---
+
 import ProductsList from "@/components/product/products-list";
 import ServerProductCard from "@/components/product/server-product-card.astro";
-import MobileSearchBar from "@/components/search/mobile-search-bar";
 import Layout from "@/layouts/Layout.astro";
 import { dehydrateSeeds } from "@/lib/hydration";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
-
-// Redirect old query-param URLs to new slug-based URLs
-const url = new URL(Astro.request.url);
-const categoryParam = url.searchParams.get("category");
-const brandParam = url.searchParams.get("brand");
-
-if (categoryParam) {
-	const categoryId = Number.parseInt(categoryParam, 10);
-	if (!Number.isNaN(categoryId)) {
-		try {
-			const categories = await api.category.getAllCategoriesWithStock.query();
-			const category = categories.find((c) => c.id === categoryId);
-			if (category?.slug) {
-				return Astro.redirect(`/products/category/${category.slug}/1/`, 301);
-			}
-		} catch {
-			// fall through to normal rendering
-		}
-	}
-}
-
-if (brandParam) {
-	const brandId = Number.parseInt(brandParam, 10);
-	if (!Number.isNaN(brandId)) {
-		try {
-			const brands = await api.brand.getAllBrandsWithStock.query();
-			const brand = brands.find((b) => b.id === brandId);
-			if (brand?.slug) {
-				return Astro.redirect(`/products/brand/${brand.slug}/1/`, 301);
-			}
-		} catch {
-			// fall through to normal rendering
-		}
-	}
-}
 
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
@@ -62,6 +27,9 @@ const dehydratedState = dehydrateSeeds([
 			null,
 			null,
 			null,
+			undefined,
+			undefined,
+			true,
 		],
 		data: {
 			pages: [initialProductsResult],
@@ -97,10 +65,6 @@ const itemListSchema = {
 ---
 
 <Layout title={title} description={description}>
-	<div class="md:hidden sticky top-14 z-30 border-b border-border bg-background/95 px-3 py-2.5 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md">
-		<MobileSearchBar client:idle />
-	</div>
-
 	<div id="products-ssr">
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 			<header class={`enter-rise mb-3 flex flex-col gap-1 rounded-2xl border border-border ${WASH_BG[washFor("all-products")]} px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5`}>
