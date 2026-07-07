@@ -16,11 +16,11 @@ export type TransferReconciliationState = {
 	nextPollAt: string | null;
 	lastError: string | null;
 	matchedTransaction?: {
-		transactionDate?: string;
-		txnTime?: string;
+		tranDate?: string;
+		time?: string;
 		amount: number;
-		currency: string;
-		transactionRemarks: string;
-		txnBranchId?: string;
+		description: string;
+		relatedAccount?: string;
+		balance?: number;
 	};
 };
