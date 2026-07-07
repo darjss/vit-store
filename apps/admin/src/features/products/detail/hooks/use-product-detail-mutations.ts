@@ -28,6 +28,10 @@ export function useProductDetailMutations(
 			queryClient.invalidateQueries(
 				trpc.product.getProductById.queryOptions({ id: productId }),
 			);
+			queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
+				type: "all",
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message || "Талбар шинэчлэхэд алдаа гарлаа");
