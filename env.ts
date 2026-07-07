@@ -116,9 +116,11 @@ export const createStoreAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => {
 	return createEnv({
 		server: {
 			PUBLIC_API_URL: requiredUrl(),
+			ASTRO_KEY: requiredString(),
 		},
 		runtimeEnvStrict: {
 			PUBLIC_API_URL: runtimeEnv.PUBLIC_API_URL,
+			ASTRO_KEY: runtimeEnv.ASTRO_KEY,
 		},
 	});
 };
