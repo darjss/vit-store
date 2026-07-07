@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
 import {
+	KhaanConsumedTransactionsTable,
 	OrderDetailsTable,
 	type PaymentInsertType,
 	MessengerNotificationFailuresTable,
@@ -14,6 +15,7 @@ import {
 	PurchaseReceiptItemsTable,
 	SalesTable,
 } from "~/db/schema";
+import { recordConsumedKhaanTransaction } from "~/lib/payments/consumed-transaction";
 import type { TransactionType } from "~/lib/types";
 import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
@@ -337,6 +339,21 @@ export const paymentQueries = {
 			});
 		},
 
+		async getConsumedKhaanFingerprints(
+			fingerprints: string[],
+		): Promise<Set<string>> {
+			if (fingerprints.length === 0) {
+				return new Set();
+			}
+			const rows = await db()
+				.select({ fingerprint: KhaanConsumedTransactionsTable.fingerprint })
+				.from(KhaanConsumedTransactionsTable)
+				.where(
+					inArray(KhaanConsumedTransactionsTable.fingerprint, fingerprints),
+				);
+			return new Set(rows.map((row) => row.fingerprint));
+		},
+
 		async confirmPayment(
 			paymentNumber: string,
 			provider: PaymentProviderType | undefined,
@@ -357,6 +374,7 @@ export const paymentQueries = {
 		async confirmPaymentAndApplyStock(
 			paymentNumber: string,
 			provider: PaymentProviderType,
+			consumedKhaanTransaction?: { fingerprint: string },
 		) {
 			let stockedProductIds: number[] = [];
 			const confirmed = await db().transaction(async (tx) => {
@@ -374,6 +392,13 @@ export const paymentQueries = {
 
 				if (!claimedPayment) {
 					return false;
+				}
+
+				if (consumedKhaanTransaction) {
+					await recordConsumedKhaanTransaction(tx, {
+						fingerprint: consumedKhaanTransaction.fingerprint,
+						paymentNumber,
+					});
 				}
 
 				const orderDetails = await tx.query.OrderDetailsTable.findMany({

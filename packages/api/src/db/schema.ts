@@ -346,6 +346,19 @@ export const MessengerNotificationFailuresTable = createTable(
 	],
 );
 
+export const KhaanConsumedTransactionsTable = createTable(
+	"khaan_consumed_transaction",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		confirmedAt: timestamp("confirmed_at").defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("khaan_consumed_fingerprint_unique_idx").on(table.fingerprint),
+	],
+);
+
 export const CartsTable = createTable(
 	"cart",
 	{

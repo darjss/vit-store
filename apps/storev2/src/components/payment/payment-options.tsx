@@ -1,19 +1,24 @@
-import { useMutation } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { bankTransfer } from "@vit/shared/constants";
-import { createSignal, type JSX, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, Show } from "solid-js";
 import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
+import { cart } from "@/store/cart";
 import IconBank from "~icons/ri/bank-line";
 import IconMobile from "~icons/ri/smartphone-line";
 
 interface PaymentOptionsProps {
 	paymentNumber: string;
+	orderNumber: string;
 	total: number;
 	customerPhone: string;
+	accountNumber?: string;
+	accountName?: string;
 	checkoutToken?: string;
 }
 
@@ -62,6 +67,36 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			selectTransferMutation.mutate();
 		}
 	};
+
+	const [advanced, setAdvanced] = createSignal(false);
+	const transferStatusQuery = useQuery(
+		() => ({
+			queryKey: ["transfer-payment-status", props.paymentNumber],
+			queryFn: async () => {
+				return await api.payment.getPaymentStatus.query({
+					paymentNumber: props.paymentNumber,
+					checkoutToken: props.checkoutToken,
+				} as { paymentNumber: string });
+			},
+			refetchInterval: 5000,
+			staleTime: 0,
+			enabled: BANK_TRANSFER_ENABLED && tab() === "transfer" && !advanced(),
+		}),
+		() => queryClient,
+	);
+
+	createEffect(() => {
+		if (advanced() || transferStatusQuery.data?.status !== "success") {
+			return;
+		}
+		setAdvanced(true);
+		cart.clearCart();
+		void safeNavigate(
+			props.checkoutToken
+				? `/order/confirm/${props.orderNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
+				: `/order/confirm/${props.orderNumber}`,
+		);
+	});
 
 	return (
 		<div class="w-full">
@@ -126,10 +161,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<FieldLabel>Дансны дугаар</FieldLabel>
 									<div class="flex min-w-0 items-stretch">
 										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-xl border border-border bg-background px-2.5 py-2.5 font-mono text-sm tracking-wide sm:px-3 sm:text-base">
-											{bankTransfer.accountNumber}
+											{props.accountNumber ?? bankTransfer.accountNumber}
 										</div>
 										<CopyFieldButton
-											text={bankTransfer.accountNumber}
+											text={props.accountNumber ?? bankTransfer.accountNumber}
 											label="Дансны дугаар"
 										/>
 									</div>
@@ -149,7 +184,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							<div class="space-y-1.5">
 								<FieldLabel>Дансны нэр</FieldLabel>
 								<div class="rounded-xl border border-border bg-background px-2.5 py-2.5 font-medium text-xs leading-tight sm:px-3 sm:text-sm">
-									{bankTransfer.accountName}
+									{props.accountName ?? bankTransfer.accountName}
 								</div>
 							</div>
 						</TransferStep>
