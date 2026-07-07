@@ -318,14 +318,21 @@ export const searchMiniSearchIndex = (
 			...PRODUCT_SEARCH_OPTIONS.searchOptions,
 			filter: (result: SearchResult) => resultMatchesFilters(result, filters),
 		};
-		const andResults = miniSearch.search(searchQuery, {
+		const tokens = tokenizeSearchText(searchQuery);
+		const matchableQuery =
+			tokens.length > 1
+				? tokens
+						.filter(
+							(token) => miniSearch.search(token, searchOptions).length > 0,
+						)
+						.join(" ")
+				: searchQuery;
+		if (!matchableQuery) continue;
+
+		const results = miniSearch.search(matchableQuery, {
 			...searchOptions,
 			combineWith: "AND",
 		});
-		const results =
-			andResults.length > 0
-				? andResults
-				: miniSearch.search(searchQuery, searchOptions);
 
 		for (const result of results) {
 			const existing = rankedResults.get(String(result.id));
