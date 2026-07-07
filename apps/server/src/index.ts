@@ -1,5 +1,6 @@
 import { trpcServer } from "@hono/trpc-server";
 import { adminRouter, botRouter, storeRouter } from "@vit/api";
+import { withDbSession } from "@vit/api/db/client";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -23,6 +24,8 @@ const DEFAULT_CORS_ORIGINS = [
 ];
 
 const app = new Hono<ServerHonoEnv>();
+
+app.use("/*", (c, next) => withDbSession(c.env.DB, next));
 
 app.use(evlogMiddleware());
 
