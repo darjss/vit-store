@@ -80,7 +80,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // current day in Asia/Ulaanbaatar.
 export const getStartOfDay = () => {
 	const nowMs = Date.now();
-	const ubDayStartMs = Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
+	const ubDayStartMs =
+		Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
 	return new Date(ubDayStartMs);
 };
 

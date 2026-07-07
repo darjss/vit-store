@@ -4,7 +4,11 @@ import { CustomersTable } from "~/db/schema";
 
 export const customerQueries = {
 	admin: {
-		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
+		async createCustomer(data: {
+			phone: number;
+			address?: string;
+			addressZoneId?: number;
+		}) {
 			const result = await db()
 				.insert(CustomersTable)
 				.values(data)
@@ -94,7 +98,11 @@ export const customerQueries = {
 			});
 		},
 
-		async createCustomer(data: { phone: number; address?: string; addressZoneId?: number }) {
+		async createCustomer(data: {
+			phone: number;
+			address?: string;
+			addressZoneId?: number;
+		}) {
 			const result = await db().insert(CustomersTable).values(data).returning();
 			return result[0];
 		},
