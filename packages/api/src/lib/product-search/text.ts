@@ -51,6 +51,15 @@ const LATIN_SEARCH_ALIASES: Record<string, string[]> = {
 	oil: ["тос"],
 };
 
+const BRAND_ALIASES: Record<string, string> = {
+	"nature bell": "naturebell",
+	"natures bell": "naturebell",
+	naturbell: "naturebell",
+	"black mores": "blackmores",
+	"black more": "blackmores",
+	"jarrow formula": "jarrow formulas",
+};
+
 const VITAMIN_LETTER_ALIASES: Record<string, string> = {
 	d: "d3",
 	c: "vitamin c",
@@ -124,6 +133,21 @@ export const buildProductAliases = (product: ProductSearchSourceDocument) => {
 	return Array.from(new Set([...aliases, ...transliterated, ...latinExpanded]));
 };
 
+export const expandBrandAliases = (value: string | null | undefined) => {
+	let normalized = normalizeSearchText(value);
+	if (!normalized) return "";
+
+	let changed = false;
+	for (const [phrase, canonical] of Object.entries(BRAND_ALIASES)) {
+		if (normalized.includes(phrase)) {
+			normalized = normalized.replaceAll(phrase, canonical);
+			changed = true;
+		}
+	}
+
+	return changed ? normalized : "";
+};
+
 export const expandVitaminLetters = (value: string | null | undefined) => {
 	const tokens = normalizeSearchText(value).split(" ").filter(Boolean);
 	let changed = false;
@@ -144,6 +168,7 @@ export const createSearchQueries = (query: string) => {
 	const transliterated = transliterateCyrillicToLatin(query);
 	const expanded = expandLatinAliases(query).join(" ");
 	const vitaminExpanded = expandVitaminLetters(query);
+	const brandExpanded = expandBrandAliases(query);
 
 	return Array.from(
 		new Set(
@@ -153,6 +178,7 @@ export const createSearchQueries = (query: string) => {
 				transliterated,
 				expanded,
 				vitaminExpanded,
+				brandExpanded,
 			].filter(Boolean),
 		),
 	);
