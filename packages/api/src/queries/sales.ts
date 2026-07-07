@@ -93,10 +93,10 @@ export const salesQueries = {
 					})
 					.from(SalesTable)
 					.where(gte(SalesTable.createdAt, startDate));
-				return result;
+				return result[0]?.revenue ?? 0;
 			} catch (e) {
 				logger.error("getRevenue", e);
-				return [];
+				return 0;
 			}
 		},
 	},
