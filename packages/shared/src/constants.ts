@@ -122,7 +122,7 @@ export const deliveryFee = 6000;
 export const bankTransfer = {
 	bankName: "Хаан банк",
 	accountNumber: "5011147435",
-	accountName: "Batdelger Jigjidsuren",
+	accountName: "Aviddaram Bazarragchaa",
 } as const;
 
 export const productTagSuggestions = [

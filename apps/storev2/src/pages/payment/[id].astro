@@ -77,6 +77,8 @@ if (payment.status === "success") {
                 paymentNumber={id}
                 total={payment.total}
                 customerPhone={payment.order.customerPhone}
+                accountNumber={payment.transferAccount.accountNumber}
+                accountName={payment.transferAccount.accountName}
                 checkoutToken={checkoutToken}
                 client:only="solid-js"
             >
