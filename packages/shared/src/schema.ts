@@ -7,7 +7,10 @@ export const orderSchema = v.object({
 		v.transform(Number),
 		v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
 	),
-	address: v.pipe(v.string(), v.minLength(10)),
+	address: v.pipe(
+		v.string(),
+		v.minLength(10, "Хаяг хамгийн багадаа 10 тэмдэгт байх ёстой"),
+	),
 	total: v.number(),
 	notes: v.optional(v.string()),
 	items: v.array(
@@ -19,7 +22,7 @@ export const orderSchema = v.object({
 });
 
 export const imageSchema = v.object({
-	url: v.pipe(v.string(), v.url()),
+	url: v.pipe(v.string(), v.url("Зөв холбоос оруулна уу")),
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 });
 
@@ -95,16 +98,49 @@ const matchedPurchaseLineSchema = v.object({
 
 export const addProductSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
-	name: v.pipe(v.string(), v.minLength(1), v.maxLength(100)),
-	description: v.pipe(v.string(), v.minLength(5)),
-	dailyIntake: v.pipe(v.number(), v.integer(), v.minValue(1)),
-	brandId: v.pipe(v.string(), v.transform(Number.parseInt), v.minValue(1)),
-	categoryId: v.pipe(v.string(), v.transform(Number.parseInt), v.minValue(1)),
-	amount: v.pipe(v.string(), v.minLength(3)),
-	potency: v.pipe(v.string(), v.minLength(2)),
+	name: v.pipe(
+		v.string(),
+		v.minLength(1, "Нэр оруулна уу"),
+		v.maxLength(100, "Нэр 100 тэмдэгтээс хэтрэхгүй байх ёстой"),
+	),
+	description: v.pipe(
+		v.string(),
+		v.minLength(5, "Тайлбар хамгийн багадаа 5 тэмдэгт байх ёстой"),
+	),
+	dailyIntake: v.pipe(
+		v.number(),
+		v.integer(),
+		v.minValue(1, "Өдрийн тунг оруулна уу"),
+	),
+	brandId: v.pipe(
+		v.string(),
+		v.transform(Number.parseInt),
+		v.minValue(1, "Брэнд сонгоно уу"),
+	),
+	categoryId: v.pipe(
+		v.string(),
+		v.transform(Number.parseInt),
+		v.minValue(1, "Ангилал сонгоно уу"),
+	),
+	amount: v.pipe(
+		v.string(),
+		v.minLength(3, "Хэмжээ хамгийн багадаа 3 тэмдэгт байх ёстой"),
+	),
+	potency: v.pipe(
+		v.string(),
+		v.minLength(2, "Агууламж хамгийн багадаа 2 тэмдэгт байх ёстой"),
+	),
 	status: v.picklist(["active", "draft", "out_of_stock"] as const),
-	stock: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
-	price: v.pipe(v.number(), v.integer(), v.minValue(20000)),
+	stock: v.pipe(
+		v.number(),
+		v.integer(),
+		v.minValue(1, "Нөөц хамгийн багадаа 1 байх ёстой"),
+	),
+	price: v.pipe(
+		v.number(),
+		v.integer(),
+		v.minValue(20000, "Үнэ хамгийн багадаа 20,000₮ байх ёстой"),
+	),
 	images: v.array(imageSchema),
 	// Optional AI-extracted fields
 	name_mn: v.optional(v.pipe(v.string(), v.maxLength(256))),
@@ -132,12 +168,15 @@ export const addOrderSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	customerPhone: v.pipe(
 		v.string(),
-		v.minLength(8),
-		v.maxLength(8),
-		v.regex(/^[6-9]\d{7}$/),
+		v.minLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+		v.maxLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+		v.regex(/^[6-9]\d{7}$/, "Утасны дугаар 6-9-өөр эхлэх ёстой"),
 	),
 
-  address: v.pipe(v.string(), v.minLength(10)),
+	address: v.pipe(
+		v.string(),
+		v.minLength(10, "Хаяг хамгийн багадаа 10 тэмдэгт байх ёстой"),
+	),
 	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	notes: v.optional(v.nullable(v.string())),
 	status: v.picklist([
@@ -162,7 +201,11 @@ export const updateOrderSchema = v.object({
 export const addPurchaseSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	provider: v.picklist(purchaseProvider),
-	externalOrderNumber: v.pipe(v.string(), v.minLength(1), v.maxLength(128)),
+	externalOrderNumber: v.pipe(
+		v.string(),
+		v.minLength(1, "Захиалгын дугаар оруулна уу"),
+		v.maxLength(128, "Захиалгын дугаар 128 тэмдэгтээс хэтрэхгүй байх ёстой"),
+	),
 	trackingNumber: v.optional(v.nullable(v.pipe(v.string(), v.maxLength(128)))),
 	shippingCost: v.pipe(v.number(), v.integer(), v.minValue(0), v.finite()),
 	notes: v.optional(v.nullable(v.string())),
@@ -171,7 +214,10 @@ export const addPurchaseSchema = v.object({
 	forwarderReceivedAt: v.optional(v.nullable(v.date())),
 	receivedAt: v.optional(v.nullable(v.date())),
 	cancelledAt: v.optional(v.nullable(v.date())),
-	items: v.pipe(v.array(purchaseProductSchema), v.minLength(1)),
+	items: v.pipe(
+		v.array(purchaseProductSchema),
+		v.minLength(1, "Хамгийн багадаа нэг бүтээгдэхүүн нэмнэ үү"),
+	),
 });
 
 export const editPurchaseSchema = addPurchaseSchema;
@@ -235,9 +281,16 @@ export const saveExtractedPurchaseSchema = v.object({
 
 export const addBrandSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
-	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+	name: v.pipe(
+		v.string(),
+		v.minLength(1, "Нэр оруулна уу"),
+		v.maxLength(256, "Нэр 256 тэмдэгтээс хэтрэхгүй байх ёстой"),
+	),
 	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
-	logoUrl: v.union([v.literal(""), v.pipe(v.string(), v.url())]),
+	logoUrl: v.union([
+		v.literal(""),
+		v.pipe(v.string(), v.url("Зөв холбоос оруулна уу")),
+	]),
 	description: v.optional(v.nullable(v.string())),
 	bannerImage: v.optional(
 		v.nullable(v.union([v.literal(""), v.pipe(v.string(), v.url())])),
@@ -248,7 +301,11 @@ export const addBrandSchema = v.object({
 
 export const addCategorySchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
-	name: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+	name: v.pipe(
+		v.string(),
+		v.minLength(1, "Нэр оруулна уу"),
+		v.maxLength(256, "Нэр 256 тэмдэгтээс хэтрэхгүй байх ёстой"),
+	),
 	slug: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(256))),
 	description: v.optional(v.nullable(v.string())),
 	bannerImage: v.optional(
@@ -269,9 +326,9 @@ export const phoneSchema = v.pipe(
 export const newOrderSchema = v.object({
 	phoneNumber: v.pipe(
 		v.string(),
-		v.minLength(8),
-		v.maxLength(8),
-		v.regex(/^[6-9]\d{7}$/),
+		v.minLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+		v.maxLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+		v.regex(/^[6-9]\d{7}$/, "Утасны дугаар 6-9-өөр эхлэх ёстой"),
 	),
 	address: v.string(),
 	addressZoneId: v.pipe(v.number(), v.integer(), v.minValue(1)),

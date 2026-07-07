@@ -33,7 +33,7 @@ const Header = () => {
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<SidebarTrigger
-						aria-label="Open sidebar"
+						aria-label="Хажуугийн цэс нээх"
 						className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground/70 shadow-shadow ring-offset-background transition-transform hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 					/>
 
@@ -56,7 +56,7 @@ const Header = () => {
 					<Popover>
 						<PopoverTrigger asChild className="md:hidden">
 							<Button
-								aria-label="Search"
+								aria-label="Хайх"
 								variant="secondary"
 								size="icon"
 								className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
@@ -69,7 +69,7 @@ const Header = () => {
 							className="w-screen max-w-sm rounded-base border-2 border-border bg-background p-3 text-foreground shadow-shadow sm:p-4"
 							sideOffset={8}
 						>
-							<h4 className="mb-3 font-medium text-base">Search</h4>
+							<h4 className="mb-3 font-medium text-base">Хайх</h4>
 							<SearchBar
 								autoFocus
 								placeholder="Бүтээгдэхүүн, захиалга хайх..."
@@ -82,7 +82,7 @@ const Header = () => {
 					<Popover>
 						<PopoverTrigger asChild>
 							<Button
-								aria-label="Open user menu"
+								aria-label="Хэрэглэгчийн цэс нээх"
 								className="hover:-translate-x-0.5 hover:-translate-y-0.5 flex h-12 w-12 items-center justify-center rounded-base border-2 border-border bg-background shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 							>
 								<UserRound className="h-7 w-7 text-foreground" />

@@ -59,7 +59,7 @@ const RowAction = ({
 					}
 				>
 					<MoreVertical className="h-4 w-4" />
-					<span className="sr-only">Open menu</span>
+					<span className="sr-only">Цэс нээх</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -84,7 +84,7 @@ const RowAction = ({
 					}}
 				>
 					<Edit2 className="h-4 w-4" />
-					<span>Edit</span>
+					<span>Засах</span>
 				</DropdownMenuItem>
 
 				{extraActions ? <DropdownMenuSeparator className="bg-border" /> : null}
@@ -107,23 +107,23 @@ const RowAction = ({
 							}}
 						>
 							<Trash2 className="h-4 w-4" />
-							<span>Delete</span>
+							<span>Устгах</span>
 						</DropdownMenuItem>
 					</AlertDialogTrigger>
 					<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
 						<AlertDialogHeader>
 							<AlertDialogTitle className="font-heading text-lg">
-								Confirm Delete
+								Устгахыг баталгаажуулах
 							</AlertDialogTitle>
 							<p className="mt-2 text-foreground/70 text-sm">
-								Are you sure you want to delete this item? This action cannot be
-								undone.
+								Та энэ зүйлийг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах
+								боломжгүй.
 							</p>
 						</AlertDialogHeader>
 						<AlertDialogFooter className="mt-6 flex gap-3">
 							<AlertDialogCancel asChild>
 								<Button variant="destructive" className="flex-1">
-									Cancel
+									Болих
 								</Button>
 							</AlertDialogCancel>
 							<AlertDialogAction asChild>
@@ -133,7 +133,7 @@ const RowAction = ({
 									onClick={() => deleteMutation(id)}
 									isPending={isDeletePending}
 								>
-									Delete
+									Устгах
 								</SubmitButton>
 							</AlertDialogAction>
 						</AlertDialogFooter>

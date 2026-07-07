@@ -156,7 +156,7 @@ const BrandForm = ({
 
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">SEO & Banner</h3>
+							<h3 className="font-semibold text-xl">SEO ба баннер</h3>
 
 							<FormField
 								control={form.control}
@@ -181,7 +181,7 @@ const BrandForm = ({
 								name="bannerImage"
 								render={() => (
 									<FormItem>
-										<FormLabel>Banner зураг</FormLabel>
+										<FormLabel>Баннер зураг</FormLabel>
 										<FormControl>
 											<div className="flex flex-col items-center space-y-4">
 												{bannerImageUrl ? (
@@ -197,7 +197,7 @@ const BrandForm = ({
 															</Button>
 														<Image
 																src={bannerImageUrl}
-																alt="Banner"
+																alt="Баннер"
 																width={400}
 																height={120}
 																layout="constrained"
@@ -209,7 +209,7 @@ const BrandForm = ({
 														<div className="text-center">
 															<ImagePlaceholderIcon className="mx-auto h-10 w-10 text-muted-foreground" />
 															<p className="mt-2 text-muted-foreground text-xs">
-																Banner байршуулах
+																Баннер байршуулах
 															</p>
 														</div>
 													</div>
@@ -230,7 +230,7 @@ const BrandForm = ({
 								name="seoTitle"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>SEO Title</FormLabel>
+										<FormLabel>SEO гарчиг</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="SEO гарчиг..."
@@ -248,7 +248,7 @@ const BrandForm = ({
 								name="seoDescription"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>SEO Description</FormLabel>
+										<FormLabel>SEO тайлбар</FormLabel>
 										<FormControl>
 											<Textarea
 												placeholder="SEO тайлбар..."

@@ -34,13 +34,13 @@ export function ProductImagesSection({
 									size="icon"
 									onClick={() => onRemove(i)}
 									className="absolute top-2 right-2 z-10 opacity-0 transition-opacity hover:opacity-100 group-hover:opacity-100"
-									aria-label="Remove image"
+									aria-label="Зураг устгах"
 								>
 									<X className="h-4 w-4" />
 								</Button>
 								<Image
 									src={image.url}
-									alt={`product image ${i + 1}`}
+									alt={`Бүтээгдэхүүний зураг ${i + 1}`}
 									width={400}
 									height={400}
 									className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"

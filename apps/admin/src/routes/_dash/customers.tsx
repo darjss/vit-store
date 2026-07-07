@@ -142,7 +142,7 @@ function RouteComponent() {
 						variant="secondary"
 						className="-translate-y-1/2 absolute top-1/2 right-14 h-8 w-8 rounded-base border-2 border-border hover:bg-muted"
 						onClick={handleClearSearch}
-						aria-label="Clear search"
+						aria-label="Хайлт цэвэрлэх"
 					>
 						<X className="h-4 w-4" />
 					</Button>
@@ -151,7 +151,7 @@ function RouteComponent() {
 					onClick={handleSearch}
 					className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border shadow-shadow transition-shadow hover:shadow-md"
 					disabled={!inputValue.trim()}
-					aria-label="Search"
+					aria-label="Хайх"
 				>
 					<Search className="h-5 w-5" />
 				</Button>

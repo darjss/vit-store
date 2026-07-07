@@ -22,6 +22,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { paymentStatusLabel } from "@/lib/enum-labels";
 import type { OrderType } from "@/lib/types";
 import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -122,19 +123,6 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 		order.paymentStatus === "customer_claimed_paid" &&
 		order.paymentProvider === "transfer";
 
-	const paymentStatusLabel = (() => {
-		switch (order.paymentStatus) {
-			case "success":
-				return "Төлсөн";
-			case "failed":
-				return "Амжилтгүй";
-			case "customer_claimed_paid":
-				return "Төлсөн гэж мэдэгдсэн";
-			default:
-				return "Хүлээгдэж буй";
-		}
-	})();
-
 	const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
 		const target = e.target as HTMLElement;
 		if (target.closest("[data-no-nav]")) return;
@@ -163,8 +151,14 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 				</DialogContent>
 			</Dialog>
 
-			<Dialog open={previewImage !== null} onOpenChange={(open) => !open && setPreviewImage(null)}>
-				<DialogContent data-no-nav className="max-w-[95vw] border-2 border-border bg-card p-3 shadow-hard sm:max-w-2xl">
+			<Dialog
+				open={previewImage !== null}
+				onOpenChange={(open) => !open && setPreviewImage(null)}
+			>
+				<DialogContent
+					data-no-nav
+					className="max-w-[95vw] border-2 border-border bg-card p-3 shadow-hard sm:max-w-2xl"
+				>
 					<DialogHeader className="px-1">
 						<DialogTitle className="line-clamp-2 text-base">
 							{previewImage?.alt || "Бүтээгдэхүүний зураг"}
@@ -214,7 +208,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 							) : null}
 							<div className="min-w-0 flex-1">
 								<div className="flex items-center gap-2">
-									<span className="font-heading text-lg font-black tracking-tight">
+									<span className="font-black font-heading text-lg tracking-tight">
 										#{order.orderNumber}
 									</span>
 									<span className="text-muted-foreground text-xs">
@@ -227,7 +221,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 								<div className="mt-1.5 flex items-center gap-1.5">
 									<Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 									<span
-										className="font-heading font-bold text-sm tabular-nums"
+										className="font-bold font-heading text-sm tabular-nums"
 										data-no-nav
 										onClick={(e) => {
 											e.stopPropagation();
@@ -246,7 +240,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 									className={`inline-flex items-center gap-1 border-2 px-1.5 py-0.5 font-bold text-[10px] ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
 									{getPaymentProviderIcon(order.paymentProvider)}
-									{paymentStatusLabel}
+									{paymentStatusLabel[order.paymentStatus]}
 								</span>
 							)}
 						</div>
@@ -274,11 +268,15 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 					</div>
 
 					{/* Products */}
-					<div className="space-y-2 border-border border-t px-4 py-3" data-no-nav>
+					<div
+						className="space-y-2 border-border border-t px-4 py-3"
+						data-no-nav
+					>
 						<div className="flex items-center gap-2 overflow-x-auto pb-1">
 							{visibleProducts.map((product, i) => {
 								const src = product.imageUrl || "/placeholder.jpg";
-								const showOverlay = !productsExpanded && i === 2 && remainingCount > 0;
+								const showOverlay =
+									!productsExpanded && i === 2 && remainingCount > 0;
 								return (
 									<button
 										key={`${order.orderNumber}-${product.productId}-${i}`}
@@ -290,7 +288,10 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 												setProductsExpanded(true);
 												return;
 											}
-											setPreviewImage({ src, alt: product.name || "Бүтээгдэхүүн" });
+											setPreviewImage({
+												src,
+												alt: product.name || "Бүтээгдэхүүн",
+											});
 										}}
 										aria-label={
 											showOverlay
@@ -305,7 +306,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 											loading="lazy"
 										/>
 										{showOverlay && (
-											<div className="absolute inset-0 flex items-center justify-center bg-black/60 font-heading text-xs font-bold text-white">
+											<div className="absolute inset-0 flex items-center justify-center bg-black/60 font-bold font-heading text-white text-xs">
 												+{remainingCount}
 											</div>
 										)}
@@ -316,9 +317,11 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 						<div className="flex items-center justify-between gap-2">
 							<div className="flex items-center gap-2">
 								<Package className="h-4 w-4 text-muted-foreground" />
-								<span className="text-sm text-muted-foreground">{productCount} бараа</span>
+								<span className="text-muted-foreground text-sm">
+									{productCount} бараа
+								</span>
 							</div>
-							<span className="font-heading text-lg font-black tabular-nums">
+							<span className="font-black font-heading text-lg tabular-nums">
 								₮{order.total.toLocaleString()}
 							</span>
 						</div>
@@ -333,58 +336,58 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 							<TransferPaymentActions paymentNumber={order.paymentNumber} />
 						) : null}
 						<div className="flex items-center justify-between">
-						{order.status === "pending" && (
-							<Button
-								variant="default"
-								size="sm"
-								className="h-10 gap-2 text-xs"
-								disabled={shipOrder.isPending}
-								onClick={(e) => {
-									e.stopPropagation();
-									shipOrder.mutate({ orderId: order.id });
-								}}
-							>
-								{shipOrder.isPending ? (
-									<Loader2 className="h-3.5 w-3.5 animate-spin" />
-								) : (
-									<Truck className="h-3.5 w-3.5" />
-								)}
-								{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
-							</Button>
-						)}
-						{order.status === "shipped" && (
-							<Button
-								variant="default"
-								size="sm"
-								className="h-10 gap-2 text-xs"
-								disabled={updateOrderStatus.isPending}
-								onClick={(e) => {
-									e.stopPropagation();
-									updateOrderStatus.mutate({
-										id: order.id,
-										status: "delivered",
-									});
-								}}
-							>
-								{updateOrderStatus.isPending ? (
-									<Loader2 className="h-3.5 w-3.5 animate-spin" />
-								) : (
-									<CheckCircle className="h-3.5 w-3.5" />
-								)}
-								{updateOrderStatus.isPending
-									? "Шинэчилж байна..."
-									: "Хүргэсэн"}
-							</Button>
-						)}
-						{order.status !== "pending" && order.status !== "shipped" && (
-							<div />
-						)}
-						<RowActions
-							id={order.id}
-							setIsEditDialogOpen={setIsEditDialogOpen}
-							deleteMutation={() => deleteOrder.mutate({ id: order.id })}
-							isDeletePending={deleteOrder.isPending}
-						/>
+							{order.status === "pending" && (
+								<Button
+									variant="default"
+									size="sm"
+									className="h-10 gap-2 text-xs"
+									disabled={shipOrder.isPending}
+									onClick={(e) => {
+										e.stopPropagation();
+										shipOrder.mutate({ orderId: order.id });
+									}}
+								>
+									{shipOrder.isPending ? (
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+									) : (
+										<Truck className="h-3.5 w-3.5" />
+									)}
+									{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
+								</Button>
+							)}
+							{order.status === "shipped" && (
+								<Button
+									variant="default"
+									size="sm"
+									className="h-10 gap-2 text-xs"
+									disabled={updateOrderStatus.isPending}
+									onClick={(e) => {
+										e.stopPropagation();
+										updateOrderStatus.mutate({
+											id: order.id,
+											status: "delivered",
+										});
+									}}
+								>
+									{updateOrderStatus.isPending ? (
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+									) : (
+										<CheckCircle className="h-3.5 w-3.5" />
+									)}
+									{updateOrderStatus.isPending
+										? "Шинэчилж байна..."
+										: "Хүргэсэн"}
+								</Button>
+							)}
+							{order.status !== "pending" && order.status !== "shipped" && (
+								<div />
+							)}
+							<RowActions
+								id={order.id}
+								setIsEditDialogOpen={setIsEditDialogOpen}
+								deleteMutation={() => deleteOrder.mutate({ id: order.id })}
+								isDeletePending={deleteOrder.isPending}
+							/>
 						</div>
 					</div>
 				</CardContent>

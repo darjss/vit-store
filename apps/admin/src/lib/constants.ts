@@ -57,3 +57,15 @@ export const sideNavItems = [
 		icon: Users,
 	},
 ];
+
+export const breadcrumbLabels: Record<string, string> = {
+	orders: "Захиалгууд",
+	products: "Бүтээгдэхүүнүүд",
+	"review-products": "Харьцуулалт",
+	analytics: "Аналитик",
+	purchases: "Худалдан авалт",
+	brands: "Брэндүүд",
+	categories: "Ангиллууд",
+	customers: "Хэрэглэгчид",
+	add: "Нэмэх",
+};

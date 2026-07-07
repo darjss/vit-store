@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { productStatusLabel } from "@/lib/enum-labels";
 import {
 	addedProducts,
 	priceChangedProducts,
@@ -48,7 +49,7 @@ function RouteComponent() {
 			<div className="flex flex-col gap-3 border-2 border-border bg-card p-4 md:flex-row md:items-end md:justify-between">
 				<div>
 					<p className="mb-1 font-black text-muted-foreground text-xs uppercase tracking-[0.16em]">
-						VIT import audit
+						VIT импортын хяналт
 					</p>
 					<h1 className="font-heading text-2xl font-black">
 						Хянах бүтээгдэхүүнүүд
@@ -71,7 +72,7 @@ function RouteComponent() {
 			<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
 				<StatusPanel
 					icon={<CheckCircle2 className="h-4 w-4" />}
-					label="Оруулсан draft"
+					label="Оруулсан ноорог"
 					value={`${addedProducts.length} бүтээгдэхүүн`}
 					tone="primary"
 				/>
@@ -82,14 +83,14 @@ function RouteComponent() {
 				/>
 				<StatusPanel
 					icon={<Boxes className="h-4 w-4" />}
-					label="Үлдсэн review"
-					value={`${remainingWork.priceMismatches} price, ${remainingWork.extractedOnly} add`}
+					label="Үлдсэн хяналт"
+					value={`${remainingWork.priceMismatches} үнэ, ${remainingWork.extractedOnly} нэмэлт`}
 				/>
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 				<ReviewColumn
-					title="Нэмсэн draft products"
+					title="Нэмсэн ноорог"
 					count={addedProducts.length}
 					icon={<PackagePlus className="h-4 w-4" />}
 				>
@@ -223,9 +224,9 @@ function AddedProductRow({
 					<div className="font-black text-sm leading-snug">{product.name}</div>
 					<div className="mt-1 flex flex-wrap gap-1.5 text-muted-foreground text-xs">
 						<span>{product.brandName}</span>
-						{product.amount && <span>amount: {product.amount}</span>}
+						{product.amount && <span>хэмжээ: {product.amount}</span>}
 						{product.potency && product.potency !== "N/A" && (
-							<span>potency: {product.potency}</span>
+							<span>хүч: {product.potency}</span>
 						)}
 					</div>
 				</div>
@@ -234,7 +235,7 @@ function AddedProductRow({
 						{formatMoney(product.price)}
 					</div>
 					<div className="truncate text-muted-foreground text-xs">
-						{product.source ?? "no source"}
+						{product.source ?? "эх сурвалж алга"}
 					</div>
 				</div>
 			</div>
@@ -277,7 +278,7 @@ function PriceChangedRow({
 						+{formatMoney(delta)}
 					</span>
 					<span className="truncate text-muted-foreground">
-						{product.sourceImage ?? "no source image"}
+						{product.sourceImage ?? "эх зураг алга"}
 					</span>
 				</div>
 			</div>
@@ -320,7 +321,8 @@ function RowTopline({
 					#{id}
 				</span>
 				<span className="border-2 border-border bg-muted px-1.5 py-0.5 font-black text-[10px] uppercase">
-					{status}
+					{productStatusLabel[status as keyof typeof productStatusLabel] ??
+						status}
 				</span>
 				{score !== null && (
 					<span className="border-2 border-border bg-background px-1.5 py-0.5 font-black text-[10px] uppercase">
