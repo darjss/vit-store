@@ -17,6 +17,16 @@ function isCacheablePath(pathname: string): boolean {
   );
 }
 
+function edgeCacheControl(pathname: string): string {
+  const isCatalogSurface =
+    pathname === "/" ||
+    pathname === "/products" ||
+    pathname.startsWith("/products/");
+  return isCatalogSurface
+    ? "public, s-maxage=21600, stale-while-revalidate=86400"
+    : "public, s-maxage=60, stale-while-revalidate=300";
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 
@@ -41,7 +51,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			// MISS — render, then cache the result.
 			const response = await next();
 			if (response.status === 200) {
-				response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+				response.headers.set("Cache-Control", edgeCacheControl(url.pathname));
 				response.headers.set("X-Edge-Cache", "MISS");
 				(context as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil(
 					cache.put(cacheKey, response.clone()),
