@@ -36,7 +36,7 @@ export async function confirmTransferPaymentAndNotify({
 		confirmed = await q.confirmPaymentAndApplyStock(
 			paymentNumber,
 			"transfer",
-			consumedKhaanTransaction,
+			consumedKhaanTransaction ? [consumedKhaanTransaction] : undefined,
 		);
 	} catch (error) {
 		if (error instanceof KhaanTransactionAlreadyConsumedError) {
