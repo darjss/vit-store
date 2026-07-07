@@ -300,6 +300,8 @@ const ProductsList = (props: ProductsListProps) => {
 	const visibleBrowseRange = createMemo(() => {
 		if (browseRows().length === 0) return { start: 0, end: 0 };
 
+		if (gridWidth() === 0) return { start: 0, end: browseRows().length };
+
 		const overscan = rowHeight() * STORE_VIRTUAL_OVERSCAN_ROWS;
 		const start = Math.max(
 			0,
