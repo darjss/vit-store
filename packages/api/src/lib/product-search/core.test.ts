@@ -111,6 +111,10 @@ describe("dosage queries (handoff §6/§8 acceptance)", () => {
 	test("'naturebell d 10000' ranks target in top 3", () => {
 		expect(topIds("naturebell d 10000").slice(0, 3)).toContain(1);
 	});
+
+	test("exact dosage outranks higher-stock other dosages", () => {
+		expect(topIds("d3 10000 iu")[0]).toBe(1);
+	});
 });
 
 describe("min relevance floor / honest empty", () => {

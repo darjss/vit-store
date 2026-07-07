@@ -248,8 +248,15 @@ const scoreSearchResult = (
 	const productIntentIndex = productIntent
 		? getPhraseTokenIndex(productName, productIntent)
 		: -1;
+	const dosageTerms = terms.filter((term) => /^\d+$/.test(term));
+	const dosageHaystack = normalizeSearchText(
+		`${document.amount} ${document.potency} ${document.aliases}`,
+	).split(" ");
+	const dosageExact =
+		dosageTerms.length > 0 &&
+		dosageTerms.every((term) => dosageHaystack.includes(term));
 	const stockScore = document.inStock
-		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 240)
+		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 60)
 		: -500;
 
 	let score = result.score ?? 0;
@@ -259,6 +266,7 @@ const scoreSearchResult = (
 	if (aliases.includes(normalizedQuery)) score += 1000;
 	if (allTermsInName) score += 800;
 	if (allTermsInHaystack) score += 400;
+	if (dosageExact) score += 1800;
 	if (productIntentIndex === 0) score += 2400;
 	else if (productIntentIndex > 0 && productIntentIndex <= 2) score += 2000;
 	else if (productIntentIndex > 2 && productIntentIndex <= 5) score += 900;
