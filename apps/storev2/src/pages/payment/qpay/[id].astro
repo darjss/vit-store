@@ -11,10 +11,22 @@ if (id === undefined) {
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
 const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
-const payment = await serverApi.payment.getPaymentByNumber.query({
-    paymentNumber: id,
-    checkoutToken,
-} as { paymentNumber: string });
+let payment;
+try {
+    payment = await serverApi.payment.getPaymentByNumber.query({
+        paymentNumber: id,
+        checkoutToken,
+    } as { paymentNumber: string });
+} catch (err) {
+    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
+    if (code === "UNAUTHORIZED") {
+        return Astro.redirect("/order-tracking");
+    }
+    if (code === "NOT_FOUND") {
+        return Astro.redirect("/404");
+    }
+    throw err;
+}
 if (!payment) {
     return Astro.redirect("/404");
 }
