@@ -49,7 +49,7 @@ const SITE_URL = "https://amerikvitamin.mn";
 // the client-side FilterBar and are fetched by the hydrated ProductsList via
 // tanstack-query, so they no longer block SSR first paint.
 const [initialProductsResult, totalProductCount] = await Promise.all([
-	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
+	api.product.getInfiniteProducts.query({ limit: INITIAL_PAGE_SIZE }),
 	api.product.getTotalActiveProductCount.query(),
 ]);
 

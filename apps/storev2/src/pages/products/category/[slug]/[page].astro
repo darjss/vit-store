@@ -32,7 +32,7 @@ if (!category) {
 	return Astro.redirect("/404");
 }
 
-const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
+const { items: products, pagination } = await api.product.getPaginatedProducts.query({
 	page,
 	pageSize: PAGE_SIZE,
 	categoryId: category.id,

@@ -1,8 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { purchaseQueries } from "@vit/api/queries";
+import { PRODUCTS_TAG, productTag } from "@vit/shared";
 import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "@vit/shared/schema";
 import * as v from "valibot";
 import { db } from "~/db/client";
+import { purgeTags } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -124,9 +127,16 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(receivePurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.receivePurchase(tx, input);
+            const { affectedProductIds } = await db().transaction(async (tx) => {
+                return await purchaseQueries.admin.receivePurchase(tx, input);
             });
+            if (affectedProductIds.length > 0) {
+                await purgeTags(ctx, [
+                    PRODUCTS_TAG,
+                    ...affectedProductIds.map((id) => productTag(id)),
+                ]);
+                await scheduleProductSearchRebuild("product_stock_updated");
+            }
             return { message: "Purchase received successfully" };
         }
         catch (e) {
