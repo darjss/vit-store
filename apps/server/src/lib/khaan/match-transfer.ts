@@ -146,3 +146,55 @@ export async function khaanTransactionFingerprint(transaction: {
 		.map((byte) => byte.toString(16).padStart(2, "0"))
 		.join("");
 }
+
+// Finds ALL Khaan transactions matching a payment (by paymentNumber-in-memo OR
+// customer phone, AND exact amount, AND within the payment date window, AND
+// not already consumed), and returns their fingerprints. Used by the admin
+// manual-confirm path to record consumed transactions — the admin doesn't know
+// which specific bank transaction corresponds to the payment, so we mark ALL
+// plausible matches as consumed. This is conservative: a false-positive block
+// routes a future legit transfer to manual review, while a false-negative
+// allows a replay (money loss). Over-consumption is the safe direction.
+//
+// Unlike matchKhaanTransfer (which returns the first branch that matches),
+// this unions paymentNumber and phone matches and dedupes by fingerprint.
+export async function collectMatchingKhaanFingerprints(input: {
+	transactions: KhaanTransaction[];
+	paymentNumber: string;
+	phone: string;
+	expectedAmount: number;
+	paymentCreatedAtMs: number;
+	consumedFingerprints: Set<string>;
+}): Promise<string[]> {
+	const withinWindow = filterTransactionsWithinPaymentWindow(
+		input.transactions,
+		input.paymentCreatedAtMs,
+	);
+	const fingerprints = await Promise.all(
+		withinWindow.map(khaanTransactionFingerprint),
+	);
+	const eligible = withinWindow.filter(
+		(_, index) => !input.consumedFingerprints.has(fingerprints[index]),
+	);
+	const paymentNumber = input.paymentNumber.trim();
+	const phone = input.phone.trim();
+	const byPaymentNumber = paymentNumber
+		? findMatchingKhaanTransfer({
+				transactions: eligible,
+				paymentNumber,
+				expectedAmount: input.expectedAmount,
+			}).matches
+		: [];
+	const byPhone = phone
+		? findMatchingKhaanTransfer({
+				transactions: eligible,
+				paymentNumber: phone,
+				expectedAmount: input.expectedAmount,
+			}).matches
+		: [];
+	const result = new Set<string>();
+	for (const match of [...byPaymentNumber, ...byPhone]) {
+		result.add(await khaanTransactionFingerprint(match));
+	}
+	return [...result];
+}

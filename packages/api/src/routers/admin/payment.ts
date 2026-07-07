@@ -10,6 +10,9 @@ import { generatePaymentNumber } from "~/lib/utils";
 
 type TransferReconciliationStub = {
 	getStatus(): Promise<TransferReconciliationState | null>;
+	collectMatchingKhaanFingerprints(
+		paymentNumber: string,
+	): Promise<string[] | null>;
 };
 
 const getTransferReconciliationStub = (
@@ -158,9 +161,54 @@ export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ ctx, input }) => {
             try {
                 const q = paymentQueries.store;
+
+                // Fetch matching Khaan transactions and record their
+                // fingerprints as consumed alongside the confirm, so the
+                // admin-verified transfer can't be replayed against a later
+                // order via the phone fallback (P0-1). The admin doesn't know
+                // which specific bank transaction corresponds to the payment,
+                // so we mark ALL plausible matches as consumed. Do NOT block
+                // the admin confirm on the Khaan fetch failing — catch/log
+                // and proceed (admin override is authoritative; an un-findable
+                // tx can't be replayed anyway).
+                let consumedKhaanTransactions:
+                    | { fingerprint: string }[]
+                    | undefined;
+                try {
+                    const reconciler = getTransferReconciliationStub(
+                        ctx.c.env,
+                        input.paymentNumber,
+                    );
+                    const fingerprints =
+                        await reconciler.collectMatchingKhaanFingerprints(
+                            input.paymentNumber,
+                        );
+                    if (fingerprints && fingerprints.length > 0) {
+                        consumedKhaanTransactions = fingerprints.map(
+                            (fingerprint) => ({ fingerprint }),
+                        );
+                    } else if (fingerprints && fingerprints.length === 0) {
+                        ctx.log.warn(
+                            "admin.confirm_transfer_no_matching_khaan_tx",
+                            { paymentNumber: input.paymentNumber },
+                        );
+                    }
+                } catch (error) {
+                    ctx.log.error(
+                        error instanceof Error
+                            ? error
+                            : new Error(String(error)),
+                        {
+                            event: "admin.confirm_transfer_khaan_fetch_failed",
+                            paymentNumber: input.paymentNumber,
+                        },
+                    );
+                }
+
                 const confirmed = await q.confirmPaymentAndApplyStock(
                     input.paymentNumber,
                     "transfer",
+                    consumedKhaanTransactions,
                 );
                 if (!confirmed) {
                     throw new TRPCError({
