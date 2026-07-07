@@ -168,7 +168,11 @@ const PaymentStatus = (props: {
 						Төлбөрийн явцад алдаа гарлаа. Дахин оролдоно уу.
 					</p>
 					<a
-						href={`/payment/${props.payment.paymentNumber}`}
+						href={
+							props.payment.checkoutToken
+								? `/payment/${props.payment.paymentNumber}?ct=${encodeURIComponent(props.payment.checkoutToken)}`
+								: `/payment/${props.payment.paymentNumber}`
+						}
 						class={cn(buttonVariants())}
 					>
 						<IconRefresh class="h-4 w-4" aria-hidden="true" />
