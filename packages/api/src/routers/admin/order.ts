@@ -139,18 +139,10 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 address: input.address,
                 addressZoneId: input.addressZoneId ?? null,
             });
-            const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
-            await orderQueries.admin.deleteOrderDetails(input.id);
-            await Promise.all(input.products.map((product) =>
-                orderQueries.admin.createOrderDetails(input.id, [
-                    {
-                        productId: product.productId,
-                        quantity: product.quantity,
-                    },
-                ])
-            ));
-            // Critical section: prev-status read, sales insert, stock changes,
-            // and payment update in one transaction so concurrent saves can't
+            // Critical section: order-detail replacement, prev-status read,
+            // sales insert, stock changes, and payment update in one
+            // transaction so a rollback can't leave lines replaced while
+            // sales/stock/payment stay untouched, and concurrent saves can't
             // both observe prev=pending and double-book.
             //
             // Invariant: each order line's stock is deducted EXACTLY ONCE,
@@ -159,6 +151,12 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             // confirmPaymentAndApplyStock (deducts on transition to success).
             // Pending orders never touch stock.
             await db().transaction(async (tx) => {
+                const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
+                await orderQueries.admin.deleteOrderDetailsTx(tx, input.id);
+                await orderQueries.admin.createOrderDetailsTx(tx, input.id, input.products.map((product) => ({
+                    productId: product.productId,
+                    quantity: product.quantity,
+                })));
                 const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const prevPaymentStatus = prevPayment?.status ?? "pending";
                 const { transitionedToSuccess } = planPaymentTransition(prevPaymentStatus, input.paymentStatus);
@@ -233,16 +231,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            const orderDetails = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
-            const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
-            const stockWasDeducted = latestPayment?.status === "success";
-            const restoreStockPromises = stockWasDeducted
-                ? orderDetails
-                    .filter((detail) => !detail.deletedAt)
-                    .map((detail) => productQueries.admin.updateStock(detail.productId, detail.quantity, "add"))
-                : [];
-            await orderQueries.admin.softDeleteOrder(input.id);
-            await Promise.allSettled(restoreStockPromises);
+            await db().transaction(async (tx) => {
+                const orderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
+                const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
+                const stockWasDeducted = latestPayment?.status === "success";
+                if (stockWasDeducted) {
+                    for (const detail of orderDetails.filter((detail) => !detail.deletedAt)) {
+                        await productQueries.admin.updateStockTx(tx, detail.productId, detail.quantity, "add");
+                    }
+                }
+                await orderQueries.admin.softDeleteOrderTx(tx, input.id);
+            });
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
         }
@@ -262,16 +261,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            const details = await orderQueries.admin.getOrderDetailsByOrderId(input.id);
-            const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderId(input.id);
-            const stockWasDeducted = latestPayment?.status === "success";
-            const deductPromises = stockWasDeducted
-                ? details
-                    .filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)
-                    .map((d) => productQueries.admin.updateStock(d.productId, d.quantity, "minus"))
-                : [];
-            await Promise.allSettled(deductPromises);
-            await orderQueries.admin.restoreOrder(input.id);
+            await db().transaction(async (tx) => {
+                const details = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
+                const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
+                const stockWasDeducted = latestPayment?.status === "success";
+                if (stockWasDeducted) {
+                    for (const d of details.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)) {
+                        await productQueries.admin.updateStockTx(tx, d.productId, d.quantity, "minus");
+                    }
+                }
+                await orderQueries.admin.restoreOrderTx(tx, input.id);
+            });
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",

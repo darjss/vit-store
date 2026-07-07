@@ -2,33 +2,64 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 mock.module("cloudflare:workers", () => ({ env: {} }));
 
+const tx = {} as never;
+mock.module("~/db/client", () => ({
+	db: () => ({
+		transaction: async (cb: (t: never) => unknown) => cb(tx),
+	}),
+}));
+
 let latestPaymentStatus: string | undefined = "pending";
-const updateStock =
-	mock<(productId: number, quantity: number, type: "add" | "minus") => Promise<void>>(
-		async () => {},
-	);
+let orderDetails: Array<{
+	productId: number;
+	quantity: number;
+	deletedAt: Date | null;
+}> = [
+	{ productId: 1, quantity: 3, deletedAt: null },
+	{ productId: 2, quantity: 5, deletedAt: null },
+];
+const updateStockTx =
+	mock<
+		(
+			tx: unknown,
+			productId: number,
+			quantity: number,
+			type: "add" | "minus",
+		) => Promise<void>
+	>(async () => {});
+const deleteOrderDetailsTx =
+	mock<(tx: unknown, orderId: number) => Promise<void>>(async () => {});
+const createOrderDetailsTx =
+	mock<
+		(
+			tx: unknown,
+			orderId: number,
+			products: Array<{ productId: number; quantity: number }>,
+		) => Promise<void>
+	>(async () => {});
 
 mock.module("@vit/api/queries", () => ({
 	customerQueries: { admin: {} },
 	orderQueries: {
 		admin: {
-			getOrderDetailsByOrderId: async () => [
-				{ productId: 1, quantity: 3, deletedAt: null },
-				{ productId: 2, quantity: 5, deletedAt: null },
-			],
-			softDeleteOrder: async () => {},
-			restoreOrder: async () => {},
+			getOrderDetailsByOrderIdTx: async () => orderDetails,
+			deleteOrderDetailsTx,
+			createOrderDetailsTx,
+			updateOrder: async () => {},
+			softDeleteOrderTx: async () => {},
+			restoreOrderTx: async () => {},
 		},
 	},
 	paymentQueries: {
 		admin: {
-			getLatestPaymentByOrderId: async () =>
+			getLatestPaymentByOrderIdTx: async () =>
 				latestPaymentStatus === undefined
 					? undefined
 					: { status: latestPaymentStatus },
+			updatePaymentStatusTx: async () => {},
 		},
 	},
-	productQueries: { admin: { updateStock } },
+	productQueries: { admin: { updateStockTx } },
 	purchaseQueries: { admin: {} },
 	salesQueries: { admin: {} },
 }));
@@ -45,20 +76,68 @@ const caller = buildOrderRouter(publicProcedure).createCaller(ctx);
 
 describe("deleteOrder — stock restored only when payment was successful", () => {
 	beforeEach(() => {
-		updateStock.mockClear();
+		updateStockTx.mockClear();
+		orderDetails = [
+			{ productId: 1, quantity: 3, deletedAt: null },
+			{ productId: 2, quantity: 5, deletedAt: null },
+		];
 	});
 
 	test("pending order: deleting restores no stock", async () => {
 		latestPaymentStatus = "pending";
 		await caller.deleteOrder({ id: 1 });
-		expect(updateStock).not.toHaveBeenCalled();
+		expect(updateStockTx).not.toHaveBeenCalled();
 	});
 
-	test("paid order: deleting restores stock for every line", async () => {
+	test("paid order: deleting restores stock for every line inside the transaction", async () => {
 		latestPaymentStatus = "success";
 		await caller.deleteOrder({ id: 1 });
-		expect(updateStock).toHaveBeenCalledTimes(2);
-		expect(updateStock).toHaveBeenCalledWith(1, 3, "add");
-		expect(updateStock).toHaveBeenCalledWith(2, 5, "add");
+		expect(updateStockTx).toHaveBeenCalledTimes(2);
+		expect(updateStockTx).toHaveBeenCalledWith(tx, 1, 3, "add");
+		expect(updateStockTx).toHaveBeenCalledWith(tx, 2, 5, "add");
+	});
+});
+
+describe("restoreOrder — stock re-deducted only when payment was successful", () => {
+	beforeEach(() => {
+		updateStockTx.mockClear();
+		orderDetails = [
+			{ productId: 1, quantity: 3, deletedAt: new Date() },
+			{ productId: 2, quantity: 5, deletedAt: new Date() },
+		];
+	});
+
+	test("paid order: restoring re-deducts stock for every line inside the transaction", async () => {
+		latestPaymentStatus = "success";
+		await caller.restoreOrder({ id: 1 });
+		expect(updateStockTx).toHaveBeenCalledTimes(2);
+		expect(updateStockTx).toHaveBeenCalledWith(tx, 1, 3, "minus");
+		expect(updateStockTx).toHaveBeenCalledWith(tx, 2, 5, "minus");
+	});
+});
+
+describe("updateOrder — order-detail replacement is atomic with the update", () => {
+	beforeEach(() => {
+		deleteOrderDetailsTx.mockClear();
+		createOrderDetailsTx.mockClear();
+		orderDetails = [{ productId: 1, quantity: 3, deletedAt: null }];
+	});
+
+	test("details are deleted and recreated on the transaction handle", async () => {
+		latestPaymentStatus = "pending";
+		await caller.updateOrder({
+			id: 1,
+			customerPhone: "99112233",
+			address: "ulaanbaatar city",
+			status: "pending",
+			paymentStatus: "pending",
+			deliveryProvider: "tu-delivery",
+			isNewCustomer: false,
+			products: [{ productId: 1, quantity: 3, price: 20000 }],
+		});
+		expect(deleteOrderDetailsTx).toHaveBeenCalledWith(tx, 1);
+		expect(createOrderDetailsTx).toHaveBeenCalledWith(tx, 1, [
+			{ productId: 1, quantity: 3 },
+		]);
 	});
 });
