@@ -17,7 +17,7 @@ export const paymentProvider = ["qpay", "transfer", "cash"] as const;
  * `payment.selectTransfer` tRPC mutation. Disabled 2026-06-24 to reduce
  * checkout friction while the transfer confirmation flow is being revised.
  */
-export const BANK_TRANSFER_ENABLED = false;
+export const BANK_TRANSFER_ENABLED = true;
 
 export const deliveryProvider = [
 	"tu-delivery",

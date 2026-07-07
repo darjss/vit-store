@@ -48,7 +48,7 @@ type PaymentInfo = {
 	checkoutToken?: string;
 	total: number;
 	orderNumber: string;
-	transferReference: string;
+	customerPhone: string;
 };
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -121,7 +121,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					// Gather payment details — try server data first, then fallback
 					let total = checkoutData?.total ?? cart.total() + deliveryFee;
 					let orderNumber = checkoutData?.orderNumber ?? paymentNumber;
-					let transferReference = variables.phoneNumber;
+					let customerPhone = variables.phoneNumber;
 
 					try {
 						const details = await api.payment.getPaymentByNumber.query({
@@ -130,7 +130,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						} as { paymentNumber: string });
 						total = details.total;
 						orderNumber = details.order.orderNumber;
-						transferReference = details.order.customerPhone;
+						customerPhone = details.order.customerPhone;
 					} catch {
 						// Fallbacks already set above
 					}
@@ -140,7 +140,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						checkoutToken,
 						total,
 						orderNumber,
-						transferReference,
+						customerPhone,
 					});
 					setStep("payment");
 					window.scrollTo({ top: 0, behavior: "smooth" });
@@ -618,9 +618,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 														<PaymentOptions
 															paymentNumber={paymentInfo()!.paymentNumber}
 															total={paymentInfo()!.total}
-															transferReference={
-																paymentInfo()!.transferReference
-															}
+															customerPhone={paymentInfo()!.customerPhone}
 															checkoutToken={paymentInfo()!.checkoutToken}
 														/>
 													</div>

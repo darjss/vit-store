@@ -1,3 +1,4 @@
+import type { TransferReconciliationState } from "@vit/api/lib/payments/transfer-reconciliation-status";
 import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
 import {
 	createEffect,
@@ -13,7 +14,15 @@ import { api } from "@/lib/trpc";
 import IconCheck from "~icons/ri/check-line";
 import IconClose from "~icons/ri/close-line";
 import IconRefresh from "~icons/ri/refresh-line";
+import IconShieldCheck from "~icons/ri/shield-check-line";
 import IconTime from "~icons/ri/time-line";
+
+const MANUAL_REVIEW_STATUSES = new Set([
+	"timeout",
+	"ambiguous",
+	"auth_required",
+	"failed",
+]);
 
 const PaymentStatus = (props: {
 	payment: {
@@ -46,6 +55,37 @@ const PaymentStatus = (props: {
 
 	const currentData = () => data.latest ?? data();
 
+	const fetchReconciliation = async () => {
+		const current = currentData();
+		if (
+			!current ||
+			current.provider !== "transfer" ||
+			current.status === "success" ||
+			current.status === "failed"
+		) {
+			return null;
+		}
+		const reconciliationApi = api.payment as unknown as {
+			getTransferReconciliationStatus: {
+				query: (input: {
+					paymentNumber: string;
+					checkoutToken?: string;
+				}) => Promise<TransferReconciliationState | null>;
+			};
+		};
+		return await reconciliationApi.getTransferReconciliationStatus.query({
+			paymentNumber: props.payment.paymentNumber,
+			checkoutToken: props.payment.checkoutToken,
+		});
+	};
+
+	const [reconciliation] = createResource(refetchTrigger, fetchReconciliation);
+
+	const needsManualReview = () => {
+		const status = reconciliation.latest?.status;
+		return status !== undefined && MANUAL_REVIEW_STATUSES.has(status);
+	};
+
 	createEffect(() => {
 		const status = currentData()?.status;
 		if (status === "success" || status === "failed") {
@@ -75,6 +115,26 @@ const PaymentStatus = (props: {
 			</Match>
 			<Match
 				when={
+					(currentData()?.status === "pending" ||
+						currentData()?.status === "customer_claimed_paid") &&
+					needsManualReview()
+				}
+			>
+				<div class="mb-12 text-center">
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-info text-info-foreground shadow-soft-lg">
+						<IconShieldCheck class="h-10 w-10" aria-hidden="true" />
+					</div>
+					<h2 class="mb-3 font-display text-2xl text-foreground">
+						Төлбөрийг гараар шалгаж байна
+					</h2>
+					<p class="mx-auto max-w-md text-lg text-muted-foreground">
+						Санаа зовох хэрэггүй — бид таны шилжүүлгийг гараар шалгаж,
+						удахгүй баталгаажуулна. Танаас өөр юу ч хийх шаардлагагүй.
+					</p>
+				</div>
+			</Match>
+			<Match
+				when={
 					currentData()?.status === "pending" ||
 					currentData()?.status === "customer_claimed_paid"
 				}
@@ -84,10 +144,11 @@ const PaymentStatus = (props: {
 						<IconTime class="h-10 w-10" aria-hidden="true" />
 					</div>
 					<h2 class="mb-3 font-display text-2xl text-foreground">
-						Төлбөр боловсруулж байна
+						Таны шилжүүлгийг хүлээж байна
 					</h2>
-					<p class="mb-4 text-lg text-muted-foreground">
-						Таны төлбөр шалгагдаж байна. Түр хүлээнэ үү.
+					<p class="mx-auto mb-4 max-w-md text-lg text-muted-foreground">
+						Та энэ хуудсыг хааж болно — төлбөр баталгаажсан үед энд
+						харагдана.
 					</p>
 					<div class="inline-flex items-center gap-2 text-muted-foreground text-sm">
 						<IconRefresh class="h-4 w-4 animate-spin" aria-hidden="true" />
