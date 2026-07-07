@@ -1,5 +1,11 @@
 import { TRPCError } from "@trpc/server";
-import type { ExtractedProductData } from "@vit/shared";
+import {
+	BRANDS_TAG,
+	CATEGORIES_TAG,
+	type ExtractedProductData,
+	PRODUCTS_TAG,
+	productTag,
+} from "@vit/shared";
 import { productQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import {
@@ -10,6 +16,7 @@ import {
 	startExtractionStage,
 	translateStage,
 } from "~/lib/ai-product/pipeline";
+import { purgeTags } from "~/lib/cache/workers-cache";
 import { logger } from "~/lib/logger";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 
@@ -142,6 +149,18 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 				).length;
 				const failed = results.filter((r) => r.status === "failed").length;
 
+				const createdProductTags = results
+					.filter((r) => r.status !== "failed" && r.productId !== null)
+					.map((r) => productTag(r.productId as number));
+				if (createdProductTags.length > 0) {
+					await purgeTags(ctx, [
+						PRODUCTS_TAG,
+						BRANDS_TAG,
+						CATEGORIES_TAG,
+						...createdProductTags,
+					]);
+				}
+
 				return {
 					results,
 					summary: { total: input.items.length, created, duplicates, failed },
@@ -188,6 +207,12 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						isPrimary: index === 0,
 					})),
 				);
+				await purgeTags(ctx, [
+					PRODUCTS_TAG,
+					BRANDS_TAG,
+					CATEGORIES_TAG,
+					productTag(input.productId),
+				]);
 
 				return {
 					images: result.images,

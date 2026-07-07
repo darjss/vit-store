@@ -1,0 +1,98 @@
+diff --git a/node_modules/alchemy/.bun-tag-43512fa00f027099 b/.bun-tag-43512fa00f027099
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib/cloudflare/worker-metadata.d.ts b/lib/cloudflare/worker-metadata.d.ts
+index a382afeb4e752e1d1413761b413d3836c80810f3..777b360e6de32ea8e51bcbe1849878d87ba6a506 100644
+--- a/lib/cloudflare/worker-metadata.d.ts
++++ b/lib/cloudflare/worker-metadata.d.ts
+@@ -175,6 +175,10 @@ export interface WorkerMetadata {
+     tail_consumers?: Array<Worker | {
+         service: string;
+     }>;
++    cache_options?: {
++        enabled: boolean;
++        cross_version_cache?: boolean;
++    };
+ }
+ export declare function prepareWorkerMetadata(api: CloudflareApi, props: Omit<WorkerProps, "entrypoint"> & {
+     compatibilityDate: string;
+diff --git a/lib/cloudflare/worker-metadata.js b/lib/cloudflare/worker-metadata.js
+index f57200a92fe75bb8e69261f8f7d2d6901caeb185..127498728b08ff5d71be532e97e8b20f6d4fcf55 100644
+--- a/lib/cloudflare/worker-metadata.js
++++ b/lib/cloudflare/worker-metadata.js
+@@ -127,6 +127,7 @@ export async function prepareWorkerMetadata(api, props) {
+         },
+         placement: props.placement,
+         limits: props.limits,
++        ...(props.cache && { cache_options: props.cache }),
+     };
+     const assetUploadResult = props.assetUploadResult;
+     // If we have asset upload results, add them to the metadata
+diff --git a/lib/cloudflare/worker.d.ts b/lib/cloudflare/worker.d.ts
+index ddf1f8b86660edf7aca51633cee38af22d7efecc..db3b269bbeb9b11db59117ac581921102cc7eea3 100644
+--- a/lib/cloudflare/worker.d.ts
++++ b/lib/cloudflare/worker.d.ts
+@@ -111,6 +111,17 @@ export interface BaseWorkerProps<B extends Bindings | undefined = undefined, RPC
+      * @default - `enabled: true`
+      */
+     observability?: WorkerObservability;
++    /**
++     * Enable Workers Cache — a per-Worker cache in front of the Worker's fetch
++     * handler, controlled via HTTP response headers and purged via
++     * `ctx.cache.purge`.
++     *
++     * @see https://developers.cloudflare.com/workers/cache/
++     */
++    cache?: {
++        enabled: boolean;
++        cross_version_cache?: boolean;
++    };
+     /**
+      * Enable Workers Logpush to export trace events (request/response metadata,
+      * console logs, and exceptions) to external destinations.
+diff --git a/src/cloudflare/worker-metadata.ts b/src/cloudflare/worker-metadata.ts
+index 8c29e1ca11f18a766bd7e1d7c0c20254a018c986..0ead9598eee87dc34173efb36d4e7f8ae3e3b837 100644
+--- a/src/cloudflare/worker-metadata.ts
++++ b/src/cloudflare/worker-metadata.ts
+@@ -226,6 +226,10 @@ export interface WorkerMetadata {
+     subrequests?: number;
+   };
+   tail_consumers?: Array<Worker | { service: string }>;
++  cache_options?: {
++    enabled: boolean;
++    cross_version_cache?: boolean;
++  };
+ }
+ 
+ export async function prepareWorkerMetadata(
+@@ -381,6 +385,7 @@ export async function prepareWorkerMetadata(
+     },
+     placement: props.placement,
+     limits: props.limits,
++    ...(props.cache && { cache_options: props.cache }),
+   };
+ 
+   const assetUploadResult = props.assetUploadResult;
+diff --git a/src/cloudflare/worker.ts b/src/cloudflare/worker.ts
+index 5534cee3fe75cf6a004108d8640f3dad54cadd9c..4d2ebf465229d1f24ec1f16e37496b7429d9664c 100644
+--- a/src/cloudflare/worker.ts
++++ b/src/cloudflare/worker.ts
+@@ -200,6 +200,18 @@ export interface BaseWorkerProps<
+    */
+   observability?: WorkerObservability;
+ 
++  /**
++   * Enable Workers Cache — a per-Worker cache in front of the Worker's fetch
++   * handler, controlled via HTTP response headers and purged via
++   * `ctx.cache.purge`.
++   *
++   * @see https://developers.cloudflare.com/workers/cache/
++   */
++  cache?: {
++    enabled: boolean;
++    cross_version_cache?: boolean;
++  };
++
+   /**
+    * Enable Workers Logpush to export trace events (request/response metadata,
+    * console logs, and exceptions) to external destinations.

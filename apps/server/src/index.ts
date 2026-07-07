@@ -1,5 +1,10 @@
 import { trpcServer } from "@hono/trpc-server";
-import { adminRouter, botRouter, storeRouter } from "@vit/api";
+import {
+	adminRouter,
+	botRouter,
+	finalizeCatalogCacheHeaders,
+	storeRouter,
+} from "@vit/api";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -61,6 +66,11 @@ app.use(
 		},
 	}),
 );
+
+app.use("/trpc/store/*", async (c, next) => {
+	await next();
+	finalizeCatalogCacheHeaders(c);
+});
 
 app.use(
 	"/trpc/store/*",
