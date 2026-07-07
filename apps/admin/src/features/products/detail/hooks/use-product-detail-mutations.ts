@@ -11,6 +11,10 @@ export function useProductDetailMutations(
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["admin-products-infinite"],
+				type: "all",
+			});
 			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 		},
 	});
