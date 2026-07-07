@@ -43,7 +43,7 @@ type FilterDrawerProps = {
 	categoryId: number | null;
 	brandId: number | null;
 	priceRange: [number, number];
-	inStockOnly: boolean;
+	listFilter: "featured" | "recent" | null;
 	includeOutOfStock: boolean;
 	onApply: (next: {
 		sortField: string | null;
@@ -163,6 +163,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 				draftPriceRange()[0],
 				draftPriceRange()[1],
 				draftIncludeOutOfStock(),
+				props.listFilter,
 			],
 			queryFn: async () => {
 				const sort =
@@ -183,6 +184,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					sortDirection: sort?.direction,
 					minPrice,
 					maxPrice,
+					listType: props.listFilter ?? undefined,
 				};
 				const result = draftIncludeOutOfStock()
 					? await api.product.getPaginatedProducts.query(params)
