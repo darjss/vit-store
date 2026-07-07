@@ -1,6 +1,6 @@
 import { navigate } from "astro:transitions/client";
 import type { JSX } from "solid-js";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import {
 	Sheet,
 	SheetContent,
@@ -11,8 +11,7 @@ import {
 import { addSearch } from "@/lib/search-history";
 import IconSearch from "~icons/ri/search-line";
 import SearchInput from "./search-input";
-import SearchResults from "./search-results";
-import SearchSuggestions from "./search-suggestions";
+import SearchTakeover from "./search-takeover";
 
 interface SearchSheetProps {
 	position: "top" | "bottom";
@@ -25,13 +24,12 @@ interface SearchSheetProps {
 }
 
 const DEFAULT_CONTENT_CLASS =
-	"h-[90vh] w-full max-w-none border-border border-b p-0 sm:h-[85vh]";
+	"mt-[8vh] left-1/2 right-auto w-full max-w-2xl max-h-[82vh] -translate-x-1/2 rounded-2xl border border-border p-0 shadow-soft-lg";
 const DEFAULT_PLACEHOLDER = "Омега-3, магни, нойргүйдэл…";
 
 const SearchSheet = (props: SearchSheetProps) => {
 	const [isOpen, setIsOpen] = createSignal(false);
 	const [searchQuery, setSearchQuery] = createSignal("");
-	const [isSearching, setIsSearching] = createSignal(false);
 
 	onMount(() => {
 		const handleNavigation = () => setIsOpen(false);
@@ -68,10 +66,7 @@ const SearchSheet = (props: SearchSheetProps) => {
 
 	const handleClose = () => {
 		setIsOpen(false);
-		setTimeout(() => {
-			setSearchQuery("");
-			setIsSearching(false);
-		}, 300);
+		setTimeout(() => setSearchQuery(""), 300);
 	};
 
 	return (
@@ -105,26 +100,19 @@ const SearchSheet = (props: SearchSheetProps) => {
 							onValueChange={setSearchQuery}
 							onSearch={handleSearch}
 							onSubmitSearch={handleSubmitSearch}
-							isLoading={isSearching() && searchQuery().length >= 2}
 							autofocus
 							focusKey={isOpen()}
 							placeholder={props.inputPlaceholder ?? DEFAULT_PLACEHOLDER}
 						/>
 					</div>
 
-					<div class="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-						<Show
-							when={searchQuery().length >= 2}
-							fallback={
-								<SearchSuggestions onSelectSearch={handleSelectSuggestion} />
-							}
-						>
-							<SearchResults
-								searchQuery={searchQuery()}
-								onProductClick={handleClose}
-								onLoadingChange={setIsSearching}
-							/>
-						</Show>
+					<div class="flex-1 overflow-y-auto px-4 pb-6 sm:px-6">
+						<SearchTakeover
+							query={searchQuery()}
+							onQueryChange={setSearchQuery}
+							onSelectSuggestion={handleSelectSuggestion}
+							onClose={handleClose}
+						/>
 					</div>
 				</div>
 			</SheetContent>
