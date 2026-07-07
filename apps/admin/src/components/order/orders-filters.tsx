@@ -1,13 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
-import {
-	Calendar as CalendarIcon,
-	ChevronDown,
-	RotateCcw,
-} from "lucide-react";
-import { useState } from "react";
-import { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
 import { orderStatusLabels } from "@vit/shared";
+import { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
 import type { OrderStatusType } from "@vit/shared/types";
+import { Calendar as CalendarIcon, ChevronDown, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import {
@@ -28,6 +24,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { paymentStatusLabel } from "@/lib/enum-labels";
 
 const primaryStatuses = [undefined, "pending", "shipped", "delivered"] as const;
 const issueStatuses = ["created", "cancelled", "refunded"] as const;
@@ -139,7 +136,7 @@ export default function OrdersFilters({
 							variant={isActive ? "default" : "outline"}
 							size="sm"
 							onClick={() => onFilterChange("orderStatus", value)}
-							className={`h-10 shrink-0 px-4 text-xs font-bold sm:text-sm ${
+							className={`h-10 shrink-0 px-4 font-bold text-xs sm:text-sm ${
 								isActive ? "shadow-hard" : "shadow-hard-sm"
 							}`}
 						>
@@ -153,7 +150,7 @@ export default function OrdersFilters({
 						<Button
 							variant={isIssueActive ? "default" : "outline"}
 							size="sm"
-							className={`h-10 shrink-0 gap-1 px-3 text-xs font-bold sm:text-sm ${
+							className={`h-10 shrink-0 gap-1 px-3 font-bold text-xs sm:text-sm ${
 								isIssueActive ? "shadow-hard" : "shadow-hard-sm"
 							}`}
 						>
@@ -229,9 +226,7 @@ export default function OrdersFilters({
 				<div className="flex items-center gap-2 sm:ml-auto">
 					<Select
 						value={paymentStatus ?? "all"}
-						onValueChange={(value) =>
-							onFilterChange("paymentStatus", value)
-						}
+						onValueChange={(value) => onFilterChange("paymentStatus", value)}
 					>
 						<SelectTrigger className="h-9 w-[150px] text-xs shadow-hard-sm">
 							<SelectValue placeholder="Төлбөр" />
@@ -240,13 +235,7 @@ export default function OrdersFilters({
 							<SelectItem value="all">Бүх төлбөр</SelectItem>
 							{paymentStatusConstants.map((status) => (
 								<SelectItem key={status} value={status}>
-									{status === "customer_claimed_paid"
-										? "Төлсөн гэж мэдэгдсэн"
-										: status === "success"
-											? "Төлсөн"
-											: status === "failed"
-												? "Амжилтгүй"
-												: "Хүлээгдэж буй"}
+									{paymentStatusLabel[status]}
 								</SelectItem>
 							))}
 						</SelectContent>
