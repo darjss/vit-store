@@ -28,9 +28,11 @@ export default function ProductImageCarousel(props: Props) {
 	const washClass = () => WASH_BG[wash()];
 
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	const [heroImageFailed, setHeroImageFailed] = createSignal(false);
 
 	const handleThumbnailClick = (index: number) => {
 		setSelectedIndex(index);
+		setHeroImageFailed(false);
 	};
 
 	const images = sortedImages();
@@ -59,6 +61,7 @@ export default function ProductImageCarousel(props: Props) {
 			const next = dx < 0 ? prev + 1 : prev - 1;
 			return (next + images.length) % images.length;
 		});
+		setHeroImageFailed(false);
 	};
 
 	return (
@@ -75,7 +78,7 @@ export default function ProductImageCarousel(props: Props) {
 				<div class="absolute inset-0 bg-dots-subtle" />
 
 				<Show
-					when={images[selectedIndex()]}
+					when={!heroImageFailed() && images[selectedIndex()]}
 					keyed
 					fallback={
 						<ProductImageFallback
@@ -105,6 +108,7 @@ export default function ProductImageCarousel(props: Props) {
 								objectFit="contain"
 								priority={true}
 								class="h-full w-full p-8 sm:p-12"
+								onError={() => setHeroImageFailed(true)}
 							/>
 						</Motion.div>
 					)}
@@ -143,6 +147,7 @@ export default function ProductImageCarousel(props: Props) {
 					<For each={images}>
 						{(image, index) => {
 							const imageProps = getProductImageProps(image.url, "thumb");
+							const [thumbFailed, setThumbFailed] = createSignal(false);
 							return (
 								<button
 									type="button"
@@ -156,17 +161,20 @@ export default function ProductImageCarousel(props: Props) {
 									)}
 								>
 									<div class="absolute inset-0 bg-dots-subtle" />
-									<Image
-										src={imageProps.src || image.url}
-										alt={`${props.productName} харагдац ${index() + 1}`}
-										width={imageProps.width}
-										height={imageProps.height}
-										sizes={imageProps.sizes}
-										layout="constrained"
-										objectFit="contain"
-										class="relative z-10 h-full w-full p-2 sm:p-3"
-										decoding="async"
-									/>
+									<Show when={!thumbFailed()}>
+										<Image
+											src={imageProps.src || image.url}
+											alt={`${props.productName} харагдац ${index() + 1}`}
+											width={imageProps.width}
+											height={imageProps.height}
+											sizes={imageProps.sizes}
+											layout="constrained"
+											objectFit="contain"
+											class="relative z-10 h-full w-full p-2 sm:p-3"
+											decoding="async"
+											onError={() => setThumbFailed(true)}
+										/>
+									</Show>
 								</button>
 							);
 						}}

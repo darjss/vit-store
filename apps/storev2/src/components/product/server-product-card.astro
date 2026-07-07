@@ -42,15 +42,21 @@ const hasSale = (product.discount ?? 0) > 0;
 			transition:name={`product-image-${product.id}`}
 		>
 			{imageUrl ? (
-				<img
-					src={toProductImageUrl(imageUrl, "card") || imageUrl}
-					alt={product.name}
-					width="400"
-					height="500"
-					loading="lazy"
-					decoding="async"
-					class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
-				/>
+				<>
+					<img
+						src={toProductImageUrl(imageUrl, "card") || imageUrl}
+						alt={product.name}
+						width="400"
+						height="500"
+						loading="lazy"
+						decoding="async"
+						class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
+						onerror="this.style.display='none';this.parentElement.querySelector('[data-image-fallback]').hidden=false"
+					/>
+					<div data-image-fallback hidden>
+						<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
+					</div>
+				</>
 			) : (
 				<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
 			)}
