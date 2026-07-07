@@ -27,6 +27,9 @@ try {
     if (code === "UNAUTHORIZED") {
         throw Astro.redirect("/order-tracking");
     }
+    if (code === "NOT_FOUND") {
+        throw Astro.redirect("/404");
+    }
     throw err;
 }
 if(!order){
