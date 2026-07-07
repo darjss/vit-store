@@ -37,6 +37,10 @@ const createOrderDetailsTx =
 			products: Array<{ productId: number; quantity: number }>,
 		) => Promise<void>
 	>(async () => {});
+const updateOrderTx =
+	mock<(tx: unknown, id: number, data: Record<string, unknown>) => Promise<void>>(
+		async () => {},
+	);
 
 mock.module("@vit/api/queries", () => ({
 	customerQueries: { admin: {} },
@@ -45,7 +49,7 @@ mock.module("@vit/api/queries", () => ({
 			getOrderDetailsByOrderIdTx: async () => orderDetails,
 			deleteOrderDetailsTx,
 			createOrderDetailsTx,
-			updateOrder: async () => {},
+			updateOrderTx,
 			softDeleteOrderTx: async () => {},
 			restoreOrderTx: async () => {},
 		},
@@ -120,10 +124,11 @@ describe("updateOrder — order-detail replacement is atomic with the update", (
 	beforeEach(() => {
 		deleteOrderDetailsTx.mockClear();
 		createOrderDetailsTx.mockClear();
+		updateOrderTx.mockClear();
 		orderDetails = [{ productId: 1, quantity: 3, deletedAt: null }];
 	});
 
-	test("details are deleted and recreated on the transaction handle", async () => {
+	test("header is updated and details replaced on the transaction handle", async () => {
 		latestPaymentStatus = "pending";
 		await caller.updateOrder({
 			id: 1,
@@ -134,6 +139,14 @@ describe("updateOrder — order-detail replacement is atomic with the update", (
 			deliveryProvider: "tu-delivery",
 			isNewCustomer: false,
 			products: [{ productId: 1, quantity: 3, price: 20000 }],
+		});
+		expect(updateOrderTx).toHaveBeenCalledWith(tx, 1, {
+			customerPhone: 99112233,
+			status: "pending",
+			notes: undefined,
+			total: 60000,
+			address: "ulaanbaatar city",
+			addressZoneId: null,
 		});
 		expect(deleteOrderDetailsTx).toHaveBeenCalledWith(tx, 1);
 		expect(createOrderDetailsTx).toHaveBeenCalledWith(tx, 1, [

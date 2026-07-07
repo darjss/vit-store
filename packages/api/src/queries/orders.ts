@@ -591,7 +591,8 @@ export const orderQueries = {
 				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 		},
 
-		async updateOrder(
+		async updateOrderTx(
+			tx: TransactionType,
 			id: number,
 			data: {
 				customerPhone?: number;
@@ -602,7 +603,7 @@ export const orderQueries = {
 				addressZoneId?: number | null;
 			},
 		) {
-			await db().update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
+			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 		},
 
 		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {

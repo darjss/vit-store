@@ -131,19 +131,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     await customerQueries.admin.updateCustomer(Number(input.customerPhone), { address: input.address });
                 }
             }
-            await orderQueries.admin.updateOrder(input.id, {
-                customerPhone: Number(input.customerPhone),
-                status: input.status,
-                notes: input.notes,
-                total: orderTotal,
-                address: input.address,
-                addressZoneId: input.addressZoneId ?? null,
-            });
-            // Critical section: order-detail replacement, prev-status read,
-            // sales insert, stock changes, and payment update in one
-            // transaction so a rollback can't leave lines replaced while
-            // sales/stock/payment stay untouched, and concurrent saves can't
-            // both observe prev=pending and double-book.
+            // Critical section: order header update, order-detail replacement,
+            // prev-status read, sales insert, stock changes, and payment
+            // update in one transaction so a rollback can't leave the header
+            // or lines updated while sales/stock/payment stay untouched, and
+            // concurrent saves can't both observe prev=pending and double-book.
             //
             // Invariant: each order line's stock is deducted EXACTLY ONCE,
             // when payment transitions to success. This matches addOrder
@@ -151,6 +143,14 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             // confirmPaymentAndApplyStock (deducts on transition to success).
             // Pending orders never touch stock.
             await db().transaction(async (tx) => {
+                await orderQueries.admin.updateOrderTx(tx, input.id, {
+                    customerPhone: Number(input.customerPhone),
+                    status: input.status,
+                    notes: input.notes,
+                    total: orderTotal,
+                    address: input.address,
+                    addressZoneId: input.addressZoneId ?? null,
+                });
                 const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 await orderQueries.admin.deleteOrderDetailsTx(tx, input.id);
                 await orderQueries.admin.createOrderDetailsTx(tx, input.id, input.products.map((product) => ({
