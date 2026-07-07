@@ -53,4 +53,21 @@ describe("expandLatinAliases", () => {
 		expect(expandLatinAliases("magnesium")).toContain("магни");
 		expect(expandLatinAliases("magnesium")).toContain("magnesium");
 	});
+
+	test("misspelling family attaches to the canonical product doc", () => {
+		const aliases = buildProductAliases({
+			id: 9,
+			name: "NOW Foods Inositol Powder",
+			nameMn: null,
+			slug: "now-inositol",
+			price: 1,
+			brand: "NOW Foods",
+			category: "Supplements",
+			status: "active",
+			stock: 5,
+		});
+		const tokens = new Set(aliases.flatMap((a) => a.split(" ")));
+		expect(tokens.has("inof")).toBe(true);
+		expect(tokens.has("инозитол")).toBe(true);
+	});
 });
