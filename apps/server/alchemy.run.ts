@@ -9,9 +9,14 @@ import {
 	RateLimit,
 	Worker,
 } from "alchemy/cloudflare";
+import { CloudflareStateStore } from "alchemy/state";
 import { createServerAlchemyEnv } from "../../env";
 
-const app = await alchemy("server");
+const app = await alchemy("server", {
+	stateStore: process.env.CI
+		? (scope) => new CloudflareStateStore(scope)
+		: undefined,
+});
 const stage = app.stage;
 
 const env = createServerAlchemyEnv(process.env);
@@ -57,6 +62,7 @@ const transferReconciliation = DurableObjectNamespace(
 );
 
 const hyperdriveDB = await Hyperdrive("pscale-db", {
+	adopt: true,
 	origin: {
 		host: env.PLANETSCALE_HOST,
 		port: 5432,
