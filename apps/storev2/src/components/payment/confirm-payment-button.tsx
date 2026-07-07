@@ -34,7 +34,11 @@ const ConfirmPaymentButton = (props: {
 					duration: 5000,
 				});
 				cart.clearCart();
-				void safeNavigate(`/order/confirm/${data.orderNumber}`);
+				void safeNavigate(
+					props.checkoutToken
+						? `/order/confirm/${data.orderNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
+						: `/order/confirm/${data.orderNumber}`,
+				);
 			},
 			onError: () => {
 				showToast({
