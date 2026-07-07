@@ -250,6 +250,10 @@ const ProductsList = (props: ProductsListProps) => {
 				pages: [props.initialProductsResult],
 				pageParams: [undefined as string | undefined],
 			},
+			initialDataUpdatedAt:
+				selectedSort() || categoryId() || brandId() || listFilter()
+					? 0
+					: Date.now(),
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
 			enabled: !isSearchMode(),
