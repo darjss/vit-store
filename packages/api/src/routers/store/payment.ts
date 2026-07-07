@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
@@ -61,6 +62,13 @@ export const payment = router({
 					provider: payment.provider,
 					createdAt: payment.createdAt,
 					total: payment.order.total,
+					transferAccount: {
+						bankName: bankTransfer.bankName,
+						accountNumber:
+							ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+						accountName:
+							ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
+					},
 					order: {
 						orderNumber: payment.order.orderNumber,
 						customerPhone: `${payment.order.customerPhone}`,
@@ -382,6 +390,21 @@ export const payment = router({
 					ctx.log.info("payment.provider_selected", {
 						paymentNumber: input.paymentNumber,
 						provider: "transfer",
+					});
+				}
+				try {
+					const reconciler = getTransferReconciliationStub(
+						ctx.c.env,
+						input.paymentNumber,
+					);
+					await reconciler.start({ paymentNumber: input.paymentNumber });
+				} catch (reconciliationError) {
+					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
+						paymentNumber: input.paymentNumber,
+						error:
+							reconciliationError instanceof Error
+								? reconciliationError.message
+								: String(reconciliationError),
 					});
 				}
 				return { provider: "transfer" as const };

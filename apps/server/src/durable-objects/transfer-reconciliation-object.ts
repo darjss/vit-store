@@ -8,7 +8,11 @@ import {
 	type MatchedKhaanTransaction,
 	type TransferReconciliationStatus,
 } from "khaan-client";
-import { matchKhaanTransfer } from "../lib/khaan/match-transfer";
+import {
+	filterTransactionsWithinPaymentWindow,
+	khaanTransactionFingerprint,
+	matchKhaanTransfer,
+} from "../lib/khaan/match-transfer";
 
 const STATE_KEY = "transfer-reconciliation:state:v1";
 const POLL_INTERVAL_MS = 25_000;
@@ -170,8 +174,20 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 
 			const client = await this.ensureClient();
 			const transactions = await client.fetchTransactions();
-			const matchResult = matchKhaanTransfer({
+			const withinWindow = filterTransactionsWithinPaymentWindow(
 				transactions,
+				payment.createdAt.getTime(),
+			);
+			const fingerprints = await Promise.all(
+				withinWindow.map(khaanTransactionFingerprint),
+			);
+			const consumed =
+				await paymentQueries.store.getConsumedKhaanFingerprints(fingerprints);
+			const eligible = withinWindow.filter(
+				(_, index) => !consumed.has(fingerprints[index]),
+			);
+			const matchResult = matchKhaanTransfer({
+				transactions: eligible,
 				paymentNumber: state.paymentNumber,
 				phone: String(payment.order.customerPhone),
 				expectedAmount: payment.amount,
@@ -194,40 +210,7 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				return;
 			}
 
-			await this.writeState({
-				...state,
-				status: "matched",
-				attempts,
-				nextPollAt: null,
-				lastError: null,
-				matchedTransaction: matchResult.match,
-			});
-
-			const confirmation = await confirmTransferPaymentAndNotify({
-				paymentNumber: state.paymentNumber,
-				source: "auto_reconciliation",
-			});
-			const paymentAfterConfirmation = confirmation.confirmed
-				? null
-				: await paymentQueries.store.getPaymentInfoByNumber(
-						state.paymentNumber,
-					);
-			await this.writeState({
-				...state,
-				status:
-					confirmation.confirmed ||
-					paymentAfterConfirmation?.status === "success"
-						? "confirmed"
-						: "failed",
-				attempts,
-				nextPollAt: null,
-				lastError:
-					confirmation.confirmed ||
-					paymentAfterConfirmation?.status === "success"
-						? null
-						: confirmation.reason,
-				matchedTransaction: matchResult.match,
-			});
+			await this.confirmMatch(state, attempts, matchResult.match);
 		} catch (error) {
 			if (error instanceof KhaanAuthError) {
 				this.client = null;
@@ -249,6 +232,61 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				retryDelayMs(error),
 			);
 		}
+	}
+
+	private async confirmMatch(
+		state: TransferReconciliationState,
+		attempts: number,
+		match: MatchedKhaanTransaction,
+	) {
+		await this.writeState({
+			...state,
+			status: "matched",
+			attempts,
+			nextPollAt: null,
+			lastError: null,
+			matchedTransaction: match,
+		});
+
+		const matchedFingerprint = await khaanTransactionFingerprint(match);
+		const confirmation = await confirmTransferPaymentAndNotify({
+			paymentNumber: state.paymentNumber,
+			source: "auto_reconciliation",
+			consumedKhaanTransaction: { fingerprint: matchedFingerprint },
+		});
+
+		if (
+			!confirmation.confirmed &&
+			confirmation.reason === "khaan_transaction_already_consumed"
+		) {
+			await this.writeState({
+				...state,
+				status: "ambiguous",
+				attempts,
+				nextPollAt: null,
+				lastError: confirmation.reason,
+				matchedTransaction: match,
+			});
+			return;
+		}
+
+		const paymentAfterConfirmation = confirmation.confirmed
+			? null
+			: await paymentQueries.store.getPaymentInfoByNumber(
+					state.paymentNumber,
+				);
+		const reason = confirmation.confirmed ? null : confirmation.reason;
+		const succeeded =
+			confirmation.confirmed ||
+			paymentAfterConfirmation?.status === "success";
+		await this.writeState({
+			...state,
+			status: succeeded ? "confirmed" : "failed",
+			attempts,
+			nextPollAt: null,
+			lastError: succeeded ? null : reason,
+			matchedTransaction: match,
+		});
 	}
 
 	private async scheduleNext(
