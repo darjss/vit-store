@@ -37,6 +37,9 @@ import SearchOverlay from "@/components/search/search-overlay";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/starwind/sheet";
 import IconMenu from "~icons/ri/menu-line";
 import IconUser from "~icons/ri/user-line";
+import IconHome from "~icons/ri/home-4-line";
+import IconGrid from "~icons/ri/grid-line";
+import IconCart from "~icons/ri/shopping-cart-2-line";
 ---
 
 <header
@@ -44,8 +47,9 @@ import IconUser from "~icons/ri/user-line";
 >
     <div class="mx-auto max-w-screen-2xl px-5 py-3 lg:px-8 lg:py-4">
         <div class="flex items-center justify-between gap-3 lg:gap-4">
+            <!-- Mobile hamburger sheet (only below lg) -->
             <Sheet>
-                <SheetTrigger class="p-2 border-2 border-border bg-card shadow-hard-sm active:translate-x-px active:translate-y-px active:shadow-none transition-all">
+                <SheetTrigger class="p-2 border-2 border-border bg-card shadow-hard-sm active:translate-x-px active:translate-y-px active:shadow-none transition-all lg:hidden">
                     <IconMenu class="w-6 h-6" />
                     <span class="sr-only">Toggle menu</span>
                 </SheetTrigger>
@@ -55,6 +59,37 @@ import IconUser from "~icons/ri/user-line";
                     </div>
                 </SheetContent>
             </Sheet>
+            <!-- Desktop inline nav (lg and up) -->
+            <nav class="hidden lg:flex items-center gap-2" aria-label="Үндсэн цэс">
+                <a
+                    href="/"
+                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    <IconHome class="w-4 h-4" />
+                    <span>Нүүр</span>
+                </a>
+                <a
+                    href="/products"
+                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    <IconGrid class="w-4 h-4" />
+                    <span>Бүтээгдэхүүн</span>
+                </a>
+                <a
+                    href="/cart"
+                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    <IconCart class="w-4 h-4" />
+                    <span>Сагс</span>
+                </a>
+                <a
+                    href="/profile"
+                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
+                >
+                    <IconUser class="w-4 h-4" />
+                    <span>Профайл</span>
+                </a>
+            </nav>
             <div class="flex min-w-0 items-center gap-2 w-full">
                 <a href="/" class="flex min-w-0 items-center gap-2.5">
                     <div class="h-10 w-10 shrink-0 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">
