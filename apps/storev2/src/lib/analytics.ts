@@ -117,12 +117,15 @@ export async function identifyUser(phone: string) {
 // ============================================
 
 /**
- * Track when a search is performed
+ * Track when a settled search query resolves. Callers should fire this for the
+ * query the user stopped typing on, not per keystroke. `zero_result` flags
+ * queries that returned nothing so zero-result rate is queryable directly.
  */
 export function trackSearchPerformed(query: string, resultsCount: number) {
 	capture("search_performed", {
 		query,
 		results_count: resultsCount,
+		zero_result: resultsCount === 0,
 	});
 }
 
