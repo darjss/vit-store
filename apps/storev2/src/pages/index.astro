@@ -1,5 +1,6 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
+import MobileSearchBar from "@/components/search/mobile-search-bar";
 import Layout from "@/layouts/Layout.astro";
 import { toProductImageUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
@@ -63,6 +64,11 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
   image="/og-landing.png"
   imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
 >
+  <!-- Persistent mobile search bar (below header) -->
+  <div class="md:hidden border-b border-border bg-background px-4 py-3">
+    <MobileSearchBar client:idle />
+  </div>
+
   <!-- ==================== 1. HERO ==================== -->
   <section class="bg-hero-warm">
     <div class="mx-auto grid max-w-6xl gap-8 px-5 pt-9 pb-12 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-16 lg:pb-20">
