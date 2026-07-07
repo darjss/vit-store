@@ -15,13 +15,14 @@ import {
 } from "lucide-react";
 import {
 	type ChangeEvent,
-	Suspense,
 	type FormEvent,
+	Suspense,
 	useMemo,
 	useState,
 } from "react";
 import { toast } from "sonner";
 import PurchaseForm from "@/components/purchase/purchase-form";
+import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -33,9 +34,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { purchaseStatusLabel } from "@/lib/enum-labels";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+
+const purchaseProviderLabel: Record<string, string> = {
+	amazon: "Amazon",
+	iherb: "iHerb",
+	naturebell: "Naturebell",
+	unknown: "Тодорхойгүй",
+};
 
 export const Route = createFileRoute("/_dash/purchases/$id")({
 	component: RouteComponent,
@@ -45,7 +53,9 @@ export const Route = createFileRoute("/_dash/purchases/$id")({
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.purchase.getPurchaseById.queryOptions({ id }),
 		);
-		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getAllProducts.queryOptions());
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.product.getAllProducts.queryOptions(),
+		);
 	},
 });
 
@@ -91,7 +101,7 @@ function PurchaseDetailPage() {
 			setReceiveAt("");
 			setReceiveNotes("");
 			setReceiveItems({});
-			toast.success("Receipt saved");
+			toast.success("Хүлээн авалт хадгалагдлаа");
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -100,7 +110,7 @@ function PurchaseDetailPage() {
 		...trpc.purchase.markPurchaseShipped.mutationOptions(),
 		onSuccess: () => {
 			invalidatePurchase();
-			toast.success("Marked as shipped");
+			toast.success("Илгээгдсэн гэж тэмдэглэлээ");
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -109,7 +119,7 @@ function PurchaseDetailPage() {
 		...trpc.purchase.markPurchaseForwarderReceived.mutationOptions(),
 		onSuccess: () => {
 			invalidatePurchase();
-			toast.success("Marked as received by forwarder");
+			toast.success("Зуучлагч хүлээн авсан гэж тэмдэглэлээ");
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -118,7 +128,7 @@ function PurchaseDetailPage() {
 		...trpc.purchase.cancelPurchase.mutationOptions(),
 		onSuccess: () => {
 			invalidatePurchase();
-			toast.success("Purchase cancelled");
+			toast.success("Худалдан авалт цуцлагдлаа");
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -133,19 +143,22 @@ function PurchaseDetailPage() {
 					sortDirection: "desc",
 				}),
 			);
-			toast.success("Purchase deleted");
+			toast.success("Худалдан авалт устгагдлаа");
 			navigate({ to: "/purchases" });
 		},
 		onError: (error) => toast.error(error.message),
 	});
 
 	const receivableItems = useMemo(
-		() => (purchase ? purchase.items.filter((item) => item.quantityRemaining > 0) : []),
+		() =>
+			purchase
+				? purchase.items.filter((item) => item.quantityRemaining > 0)
+				: [],
 		[purchase],
 	);
 
 	if (!purchase) {
-		return <div className="p-6">Purchase not found.</div>;
+		return <div className="p-6">Худалдан авалт олдсонгүй.</div>;
 	}
 
 	return (
@@ -153,9 +166,10 @@ function PurchaseDetailPage() {
 			<Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
 				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[960px]">
 					<DialogHeader className="border-b px-6 pt-6 pb-4">
-						<DialogTitle>Edit purchase</DialogTitle>
+						<DialogTitle>Худалдан авалт засах</DialogTitle>
 						<DialogDescription>
-							Update supplier purchase details and line items.
+							Нийлүүлэгчийн худалдан авалтын мэдээлэл болон барааны мөрүүдийг
+							шинэчлэх.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="max-h-[80vh] overflow-y-auto p-4 sm:p-6">
@@ -185,7 +199,8 @@ function PurchaseDetailPage() {
 								{purchase.externalOrderNumber}
 							</h1>
 							<p className="text-muted-foreground text-sm">
-								{purchase.provider} · {purchase.status.replaceAll("_", " ")}
+								{purchaseProviderLabel[purchase.provider] ?? purchase.provider}{" "}
+								· {purchaseStatusLabel[purchase.status]}
 							</p>
 						</div>
 					</div>
@@ -197,7 +212,7 @@ function PurchaseDetailPage() {
 							onClick={() => setIsEditOpen(true)}
 						>
 							<Pencil className="mr-2 h-4 w-4" />
-							Edit
+							Засах
 						</Button>
 						<Button
 							type="button"
@@ -210,7 +225,7 @@ function PurchaseDetailPage() {
 							}
 						>
 							<Truck className="mr-2 h-4 w-4" />
-							Mark shipped
+							Илгээгдсэн
 						</Button>
 						<Button
 							type="button"
@@ -223,7 +238,7 @@ function PurchaseDetailPage() {
 							}
 						>
 							<Receipt className="mr-2 h-4 w-4" />
-							Forwarder received
+							Зуучлагч хүлээн авсан
 						</Button>
 						<Button
 							type="button"
@@ -231,7 +246,7 @@ function PurchaseDetailPage() {
 							onClick={() => cancelMutation.mutate({ id: purchase.id })}
 						>
 							<X className="mr-2 h-4 w-4" />
-							Cancel
+							Цуцлах
 						</Button>
 						<Button
 							type="button"
@@ -239,7 +254,7 @@ function PurchaseDetailPage() {
 							onClick={() => deleteMutation.mutate({ id: purchase.id })}
 						>
 							<Trash2 className="mr-2 h-4 w-4" />
-							Delete
+							Устгах
 						</Button>
 					</div>
 				</div>
@@ -247,51 +262,59 @@ function PurchaseDetailPage() {
 				<div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
 					<div className="space-y-6">
 						<section className="rounded-base border-2 border-border bg-card p-5 shadow-shadow">
-							<h2 className="font-heading text-lg">Purchase Summary</h2>
+							<h2 className="font-heading text-lg">
+								Худалдан авалтын мэдээлэл
+							</h2>
 							<div className="mt-4 grid gap-3 sm:grid-cols-2">
-								<SummaryRow label="Provider" value={purchase.provider} />
 								<SummaryRow
-									label="Tracking"
-									value={purchase.trackingNumber || "N/A"}
+									label="Нийлүүлэгч"
+									value={
+										purchaseProviderLabel[purchase.provider] ??
+										purchase.provider
+									}
 								/>
 								<SummaryRow
-									label="Ordered"
+									label="Трек код"
+									value={purchase.trackingNumber || "Байхгүй"}
+								/>
+								<SummaryRow
+									label="Захиалсан"
 									value={
 										purchase.orderedAt
 											? formatDateToText(purchase.orderedAt)
-											: "Not set"
+											: "Оруулаагүй"
 									}
 								/>
 								<SummaryRow
-									label="Shipped"
+									label="Илгээгдсэн"
 									value={
 										purchase.shippedAt
 											? formatDateToText(purchase.shippedAt)
-											: "Not set"
+											: "Оруулаагүй"
 									}
 								/>
 								<SummaryRow
-									label="Forwarder"
+									label="Зуучлагч"
 									value={
 										purchase.forwarderReceivedAt
 											? formatDateToText(purchase.forwarderReceivedAt)
-											: "Not set"
+											: "Оруулаагүй"
 									}
 								/>
 								<SummaryRow
-									label="Received"
+									label="Хүлээн авсан"
 									value={
 										purchase.receivedAt
 											? formatDateToText(purchase.receivedAt)
-											: "Pending"
+											: "Хүлээгдэж буй"
 									}
 								/>
 								<SummaryRow
-									label="Shipping"
+									label="Хүргэлтийн зардал"
 									value={formatCurrency(purchase.shippingCost)}
 								/>
 								<SummaryRow
-									label="Total cost"
+									label="Нийт өртөг"
 									value={formatCurrency(purchase.totalCost)}
 								/>
 							</div>
@@ -303,7 +326,7 @@ function PurchaseDetailPage() {
 						</section>
 
 						<section className="rounded-base border-2 border-border bg-card p-5 shadow-shadow">
-							<h2 className="font-heading text-lg">Items</h2>
+							<h2 className="font-heading text-lg">Бараа</h2>
 							<div className="mt-4 space-y-3">
 								{purchase.items.map((item) => (
 									<div
@@ -313,19 +336,19 @@ function PurchaseDetailPage() {
 										<div>
 											<p className="font-medium">{item.product.name}</p>
 											<p className="text-muted-foreground text-sm">
-												Unit cost: {formatCurrency(item.unitCost)}
+												Нэгжийн өртөг: {formatCurrency(item.unitCost)}
 											</p>
 										</div>
 										<div className="text-sm">
-											<p className="text-muted-foreground">Ordered</p>
+											<p className="text-muted-foreground">Захиалсан</p>
 											<p>{item.quantityOrdered}</p>
 										</div>
 										<div className="text-sm">
-											<p className="text-muted-foreground">Received</p>
+											<p className="text-muted-foreground">Хүлээн авсан</p>
 											<p>{item.quantityReceived}</p>
 										</div>
 										<div className="text-sm">
-											<p className="text-muted-foreground">Remaining</p>
+											<p className="text-muted-foreground">Үлдэгдэл</p>
 											<p>{item.quantityRemaining}</p>
 										</div>
 									</div>
@@ -334,11 +357,11 @@ function PurchaseDetailPage() {
 						</section>
 
 						<section className="rounded-base border-2 border-border bg-card p-5 shadow-shadow">
-							<h2 className="font-heading text-lg">Receipt History</h2>
+							<h2 className="font-heading text-lg">Хүлээн авалтын түүх</h2>
 							<div className="mt-4 space-y-3">
 								{purchase.receipts.length === 0 ? (
 									<p className="text-muted-foreground text-sm">
-										No receipts yet.
+										Одоогоор хүлээн авалт байхгүй.
 									</p>
 								) : (
 									purchase.receipts.map((receipt) => (
@@ -348,7 +371,7 @@ function PurchaseDetailPage() {
 													{formatDateToText(receipt.receivedAt)}
 												</p>
 												<p className="text-muted-foreground text-sm">
-													{receipt.items.length} lines
+													{receipt.items.length} мөр
 												</p>
 											</div>
 											{receipt.notes ? (
@@ -375,9 +398,9 @@ function PurchaseDetailPage() {
 					</div>
 
 					<section className="rounded-base border-2 border-border bg-card p-5 shadow-shadow">
-						<h2 className="font-heading text-lg">Receive Items</h2>
+						<h2 className="font-heading text-lg">Бараа хүлээн авах</h2>
 						<p className="mt-1 text-muted-foreground text-sm">
-							Add stock only for the quantities that arrived to you.
+							Зөвхөн танд ирсэн тоо хэмжээгээр нөөцөд нэмнэ үү.
 						</p>
 
 						<form
@@ -392,7 +415,9 @@ function PurchaseDetailPage() {
 									.filter((item) => item.quantityReceived > 0);
 
 								if (!receiveAt || items.length === 0) {
-									toast.error("Set a receive date and at least one quantity");
+									toast.error(
+										"Хүлээн авсан огноо болон дор хаяж нэг тоо хэмжээ оруулна уу",
+									);
 									return;
 								}
 
@@ -405,7 +430,7 @@ function PurchaseDetailPage() {
 							}}
 						>
 							<div className="space-y-2">
-								<Label htmlFor="receiveAt">Received at</Label>
+								<Label htmlFor="receiveAt">Хүлээн авсан огноо</Label>
 								<Input
 									id="receiveAt"
 									type="datetime-local"
@@ -415,7 +440,7 @@ function PurchaseDetailPage() {
 							</div>
 
 							<div className="space-y-2">
-								<Label htmlFor="receiveNotes">Receipt notes</Label>
+								<Label htmlFor="receiveNotes">Хүлээн авалтын тэмдэглэл</Label>
 								<Textarea
 									id="receiveNotes"
 									value={receiveNotes}
@@ -429,7 +454,7 @@ function PurchaseDetailPage() {
 							<div className="space-y-3">
 								{receivableItems.length === 0 ? (
 									<p className="text-muted-foreground text-sm">
-										Everything has already been received.
+										Бүх бараа хүлээн авагдсан байна.
 									</p>
 								) : (
 									receivableItems.map((item) => (
@@ -438,7 +463,7 @@ function PurchaseDetailPage() {
 												<div>
 													<p className="font-medium">{item.product.name}</p>
 													<p className="text-muted-foreground text-sm">
-														Remaining: {item.quantityRemaining}
+														Үлдэгдэл: {item.quantityRemaining}
 													</p>
 												</div>
 												<Input
@@ -472,7 +497,7 @@ function PurchaseDetailPage() {
 								) : (
 									<Receipt className="h-4 w-4" />
 								)}
-								Save receipt
+								Хүлээн авалт хадгалах
 							</Button>
 						</form>
 					</section>

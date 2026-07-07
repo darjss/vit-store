@@ -232,7 +232,7 @@ function RouteComponent() {
 						type="button"
 						className="-translate-y-1/2 absolute top-1/2 right-14 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-base border-2 border-border bg-secondary text-secondary-foreground transition-colors hover:bg-muted"
 						onClick={handleClearSearch}
-						aria-label="Clear search"
+						aria-label="Хайлт цэвэрлэх"
 					>
 						<X className="h-4 w-4" />
 					</button>
@@ -412,7 +412,7 @@ function ProductsFilters({
 					}
 				>
 					<SelectTrigger className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]">
-						<SelectValue placeholder="All Categories" />
+						<SelectValue placeholder="Бүх ангилал" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">Бүх ангилал</SelectItem>
@@ -433,7 +433,7 @@ function ProductsFilters({
 					}
 				>
 					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]">
-						<SelectValue placeholder="All Brands" />
+						<SelectValue placeholder="Бүх брэнд" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="all">Бүх брэнд</SelectItem>

@@ -6,16 +6,19 @@ import {
 	AIPurchasePreview,
 } from "@/components/purchase/ai-purchase-input";
 import PurchaseForm from "@/components/purchase/purchase-form";
-import type { RouterOutputs } from "@/lib/types";
 import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+import type { RouterOutputs } from "@/lib/types";
 
-type ExtractedPurchaseData = RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
+type ExtractedPurchaseData =
+	RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
 
 export const Route = createFileRoute("/_dash/purchases/add")({
 	component: RouteComponent,
 	pendingComponent: FormPageSkeleton,
 	loader: ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getAllProducts.queryOptions());
+		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.product.getAllProducts.queryOptions(),
+		);
 		void ctx.queryClient.prefetchQuery({
 			...ctx.trpc.category.getAllCategories.queryOptions(),
 			staleTime: 15 * 60 * 1000,
@@ -55,15 +58,17 @@ function AddPurchasePage() {
 							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
 						>
 							<ArrowLeft className="h-3.5 w-3.5" />
-							Purchases
+							Худалдан авалт
 						</Link>
 						<span>/</span>
-						<span className="text-foreground">Add</span>
+						<span className="text-foreground">Нэмэх</span>
 					</div>
-					<h1 className="font-heading text-2xl sm:text-3xl">Add Purchase</h1>
+					<h1 className="font-heading text-2xl sm:text-3xl">
+						Худалдан авалт нэмэх
+					</h1>
 					<p className="mt-1 text-muted-foreground text-sm">
-						Create a supplier purchase manually or import it from invoice
-						screenshots.
+						Нийлүүлэгчийн худалдан авалтыг гараар үүсгэх эсвэл падааны зургаас
+						оруулах.
 					</p>
 				</div>
 
@@ -98,7 +103,7 @@ function AddPurchasePage() {
 											: "text-foreground"
 									}`}
 								>
-									Manual
+									Гараар
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
@@ -107,7 +112,7 @@ function AddPurchasePage() {
 											: "text-muted-foreground"
 									}`}
 								>
-									Enter the purchase and line items yourself
+									Худалдан авалт болон барааны мөрийг өөрөө оруулах
 								</p>
 							</div>
 						</div>
@@ -143,7 +148,7 @@ function AddPurchasePage() {
 											: "text-foreground"
 									}`}
 								>
-									AI Import
+									AI оруулалт
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
@@ -152,7 +157,7 @@ function AddPurchasePage() {
 											: "text-muted-foreground"
 									}`}
 								>
-									Upload invoice screenshots and review the extracted data
+									Падааны зураг оруулж, ялгаж авсан мэдээллийг шалгах
 								</p>
 							</div>
 						</div>

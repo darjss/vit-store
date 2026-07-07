@@ -13,6 +13,7 @@ import {
 import { Package, Plus, Search } from "lucide-react";
 import { Suspense, useState } from "react";
 import * as v from "valibot";
+import { PurchasesPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,9 +23,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { purchaseStatusLabel } from "@/lib/enum-labels";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
-import { PurchasesPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
+
+const purchaseProviderLabel: Record<(typeof purchaseProvider)[number], string> =
+	{
+		amazon: "Amazon",
+		iherb: "iHerb",
+		naturebell: "Naturebell",
+		unknown: "Тодорхойгүй",
+	};
 
 export const Route = createFileRoute("/_dash/purchases/")({
 	component: RouteComponent,
@@ -130,7 +139,7 @@ function PurchasesPage() {
 				<Button asChild className="gap-2">
 					<Link to="/purchases/add">
 						<Plus className="h-4 w-4" />
-						Add purchase
+						Худалдан авалт нэмэх
 					</Link>
 				</Button>
 			</div>
@@ -146,7 +155,7 @@ function PurchasesPage() {
 								updateSearch({ searchTerm: searchValue, page: 1 });
 							}
 						}}
-						placeholder="Search by order number or tracking"
+						placeholder="Захиалгын дугаар эсвэл трек кодоор хайх"
 						className="h-12 rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
 					/>
 				</div>
@@ -164,13 +173,13 @@ function PurchasesPage() {
 					}
 				>
 					<SelectTrigger className="h-12 rounded-base border-2 border-border bg-background shadow-shadow">
-						<SelectValue placeholder="All providers" />
+						<SelectValue placeholder="Бүх нийлүүлэгч" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="all">All providers</SelectItem>
+						<SelectItem value="all">Бүх нийлүүлэгч</SelectItem>
 						{purchaseProvider.map((value) => (
 							<SelectItem key={value} value={value}>
-								{value}
+								{purchaseProviderLabel[value]}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -189,13 +198,13 @@ function PurchasesPage() {
 					}
 				>
 					<SelectTrigger className="h-12 rounded-base border-2 border-border bg-background shadow-shadow">
-						<SelectValue placeholder="All statuses" />
+						<SelectValue placeholder="Бүх төлөв" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="all">All statuses</SelectItem>
+						<SelectItem value="all">Бүх төлөв</SelectItem>
 						{purchaseStatus.map((value) => (
 							<SelectItem key={value} value={value}>
-								{value}
+								{purchaseStatusLabel[value]}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -206,7 +215,7 @@ function PurchasesPage() {
 					onClick={() => updateSearch({ searchTerm: searchValue, page: 1 })}
 					className="h-12 rounded-base border-2 border-border shadow-shadow"
 				>
-					Search
+					Хайх
 				</Button>
 			</div>
 
@@ -214,7 +223,7 @@ function PurchasesPage() {
 				{data.purchases.length === 0 ? (
 					<div className="rounded-base border-2 border-border bg-card p-12 text-center text-muted-foreground">
 						<Package className="mx-auto mb-3 h-10 w-10" />
-						<p>No purchases found.</p>
+						<p>Худалдан авалт олдсонгүй.</p>
 					</div>
 				) : (
 					data.purchases.map((purchase) => (
@@ -228,10 +237,10 @@ function PurchasesPage() {
 								<div className="space-y-3">
 									<div className="flex flex-wrap items-center gap-2">
 										<span className="rounded-full border px-3 py-1 text-xs uppercase">
-											{purchase.provider}
+											{purchaseProviderLabel[purchase.provider]}
 										</span>
 										<span className="rounded-full border px-3 py-1 text-xs uppercase">
-											{purchase.status.replaceAll("_", " ")}
+											{purchaseStatusLabel[purchase.status]}
 										</span>
 									</div>
 									<div>
@@ -239,24 +248,24 @@ function PurchasesPage() {
 											{purchase.externalOrderNumber}
 										</h2>
 										<p className="text-muted-foreground text-sm">
-											Tracking: {purchase.trackingNumber || "N/A"}
+											Трек код: {purchase.trackingNumber || "Байхгүй"}
 										</p>
 									</div>
 									<div className="grid gap-2 text-muted-foreground text-sm sm:grid-cols-2">
 										<p>
-											Ordered:{" "}
+											Захиалсан:{" "}
 											{purchase.orderedAt
 												? formatDateToText(purchase.orderedAt)
-												: "Not set"}
+												: "Оруулаагүй"}
 										</p>
 										<p>
-											Received:{" "}
+											Хүлээн авсан:{" "}
 											{purchase.receivedAt
 												? formatDateToText(purchase.receivedAt)
-												: "Pending"}
+												: "Хүлээгдэж буй"}
 										</p>
-										<p>{purchase.itemCount} items</p>
-										<p>Total: {formatCurrency(purchase.totalCost)}</p>
+										<p>{purchase.itemCount} бараа</p>
+										<p>Нийт: {formatCurrency(purchase.totalCost)}</p>
 									</div>
 								</div>
 							</div>
@@ -267,7 +276,7 @@ function PurchasesPage() {
 
 			<div className="flex items-center justify-between">
 				<p className="text-muted-foreground text-sm">
-					{data.pagination.totalCount} purchases
+					{data.pagination.totalCount} худалдан авалт
 				</p>
 				<div className="flex items-center gap-2">
 					<Button
@@ -276,10 +285,10 @@ function PurchasesPage() {
 						disabled={!data.pagination.hasPreviousPage}
 						onClick={() => updateSearch({ page: page - 1 })}
 					>
-						Previous
+						Өмнөх
 					</Button>
 					<span className="text-sm">
-						Page {data.pagination.currentPage} /{" "}
+						Хуудас {data.pagination.currentPage} /{" "}
 						{Math.max(data.pagination.totalPages, 1)}
 					</span>
 					<Button
@@ -288,7 +297,7 @@ function PurchasesPage() {
 						disabled={!data.pagination.hasNextPage}
 						onClick={() => updateSearch({ page: page + 1 })}
 					>
-						Next
+						Дараах
 					</Button>
 				</div>
 			</div>

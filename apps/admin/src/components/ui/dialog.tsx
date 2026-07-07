@@ -190,7 +190,7 @@ const DialogHeaderDefaultLayout = ({ children }: { children: ReactNode }) => {
 			<ReactDialog.Close asChild>
 				<button
 					type="button"
-					aria-label="Close dialog"
+					aria-label="Хаах"
 					className="-m-1 rounded p-1 focus-visible:outline-none focus-visible:ring-2"
 				>
 					<X className="h-5 w-5" />
