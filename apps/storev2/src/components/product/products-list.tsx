@@ -3,8 +3,8 @@ import {
 	useInfiniteQuery,
 	useQuery,
 } from "@tanstack/solid-query";
-import type { ProductCardData } from "@vit/shared/types";
 import {
+	batch,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -13,12 +13,14 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
 import { WASH_BG, washFor } from "@/lib/wash";
 import FilterBar from "../search/filter-bar";
+import ProductCard from "./product-card";
 import {
 	ProductEmptyState,
 	ProductErrorState,
@@ -26,18 +28,12 @@ import {
 	ProductSkeletonGrid,
 } from "./products-list-states";
 import { ProductsVirtualGrid } from "./products-virtual-grid";
-import ProductCard from "./product-card";
 
 type ListFilter = "featured" | "recent";
 type ProductSortField = "price" | "createdAt";
 type ProductSortDirection = "asc" | "desc";
 const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
 const STORE_DEFAULT_ROW_HEIGHT = 360;
-
-type InfiniteProductsResult = {
-	items: ProductCardData[];
-	nextCursor: string | null;
-};
 
 type FilterOption = {
 	id: number;
@@ -46,7 +42,7 @@ type FilterOption = {
 };
 
 type ProductsListProps = {
-	initialProductsResult: InfiniteProductsResult;
+	dehydratedState?: string;
 	initialCategories?: FilterOption[];
 	initialBrands?: FilterOption[];
 	totalProductCount?: number;
@@ -87,6 +83,8 @@ const getErrorDetails = (error: unknown) => {
 };
 
 const ProductsList = (props: ProductsListProps) => {
+	hydrateServerState(queryClient, props.dehydratedState);
+
 	// URL search params for filters
 	const [searchTerm, setSearchTerm] = useSearchParam("q", {
 		defaultValue: undefined,
@@ -246,14 +244,6 @@ const ProductsList = (props: ProductsListProps) => {
 				return result;
 			},
 			initialPageParam: undefined as string | undefined,
-			initialData: {
-				pages: [props.initialProductsResult],
-				pageParams: [undefined as string | undefined],
-			},
-			initialDataUpdatedAt:
-				selectedSort() || categoryId() || brandId() || listFilter()
-					? 0
-					: Date.now(),
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
 			enabled: !isSearchMode(),
@@ -414,12 +404,16 @@ const ProductsList = (props: ProductsListProps) => {
 			(field === "price" || field === "createdAt") &&
 			(direction === "asc" || direction === "desc")
 		) {
-			setSortField(field);
-			setSortDirection(direction);
+			batch(() => {
+				setSortField(field);
+				setSortDirection(direction);
+			});
 			return;
 		}
-		setSortField(null);
-		setSortDirection(null);
+		batch(() => {
+			setSortField(null);
+			setSortDirection(null);
+		});
 	};
 
 	const handleCategoryChange = (id: number | null) => {
@@ -453,13 +447,15 @@ const ProductsList = (props: ProductsListProps) => {
 	};
 
 	const handleClearFilters = () => {
-		setSearchTerm(null);
-		setSortField(null);
-		setSortDirection(null);
-		setCategoryIdParam(null);
-		setBrandIdParam(null);
-		setListFilterParam(null);
-		setLocalSearchTerm("");
+		batch(() => {
+			setSearchTerm(null);
+			setSortField(null);
+			setSortDirection(null);
+			setCategoryIdParam(null);
+			setBrandIdParam(null);
+			setListFilterParam(null);
+			setLocalSearchTerm("");
+		});
 	};
 
 	const hasActiveFilters = () =>
@@ -702,13 +698,15 @@ const ProductsList = (props: ProductsListProps) => {
 				<Show
 					when={isSearchMode() ? searchQuery.isError : productsQuery.isError}
 				>
-					<ProductErrorState onRetry={() => {
-						if (isSearchMode()) {
-							searchQuery.refetch();
-						} else {
-							productsQuery.refetch();
-						}
-					}} />
+					<ProductErrorState
+						onRetry={() => {
+							if (isSearchMode()) {
+								searchQuery.refetch();
+							} else {
+								productsQuery.refetch();
+							}
+						}}
+					/>
 				</Show>
 
 				{/* Loading More Skeleton (browse mode only) */}
