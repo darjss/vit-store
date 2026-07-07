@@ -2,10 +2,11 @@ import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
 import { animate, inView, stagger } from "motion";
-import { createResource, For, Show } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
+import ProductImageFallback from "./product-image-fallback";
 
 interface RecommendedProductsProps {
 	currentProductId: number;
@@ -166,6 +167,8 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										product.image,
 										"card",
 									);
+									const [imageFailed, setImageFailed] =
+										createSignal(false);
 
 									return (
 										<a
@@ -177,7 +180,15 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 												class={`relative aspect-square overflow-hidden ${washClass()}`}
 											>
 												<div class="absolute inset-0 bg-dots-subtle" />
-												<Show when={product.image}>
+												<Show
+													when={product.image && !imageFailed()}
+													fallback={
+														<ProductImageFallback
+															name={product.name}
+															brand={product.brand}
+														/>
+													}
+												>
 													<Image
 														src={imageProps.src || product.image}
 														alt={product.name}
@@ -189,6 +200,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														class="relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04]"
 														loading="lazy"
 														decoding="async"
+														onError={() => setImageFailed(true)}
 													/>
 												</Show>
 											</div>
