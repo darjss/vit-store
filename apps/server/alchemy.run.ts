@@ -64,6 +64,7 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 		password: env.PLANETSCALE_PASSWORD,
 		database: env.PLANETSCALE_DATABASE,
 	},
+	adopt: true,
 });
 
 const directDbUrl =
@@ -78,7 +79,12 @@ export const server = await Worker("api", {
 	cache: { enabled: true },
 	// Cloudflare cron is UTC; 03:00 UTC = 11:00 Ulaanbaatar (UTC+8)
 	crons: ["0 3 * * *"],
-	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
+	domains:
+		stage === "prod"
+			? ["api.amerikvitamin.mn"]
+			: stage === "staging"
+				? ["api-staging.amerikvitamin.mn"]
+				: undefined,
 
 	adopt: true,
 	bindings: {
