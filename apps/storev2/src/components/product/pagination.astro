@@ -3,12 +3,13 @@ interface Props {
 	page: number;
 	totalPages: number;
 	baseUrl: string;
+	search?: string;
 }
 
-const { page, totalPages, baseUrl } = Astro.props;
+const { page, totalPages, baseUrl, search = "" } = Astro.props;
 
 const getPageUrl = (p: number) => {
-	return `${baseUrl}/${p}`;
+	return `${baseUrl}/${p}${search}`;
 };
 
 // Generate page numbers to show

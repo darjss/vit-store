@@ -1,7 +1,7 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductCardData } from "@vit/shared/types";
-import { createMemo, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { Badge } from "@/components/ui/badge";
 import { getProductImageProps } from "@/lib/image";
 import { WASH_BG, washFor } from "@/lib/wash";
@@ -85,6 +85,7 @@ const ProductCard = (props: ProductCardProps) => {
 		return stock !== undefined && stock > 0 && stock <= LOW_STOCK_THRESHOLD;
 	});
 	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
+	const [imageFailed, setImageFailed] = createSignal(false);
 
 	return (
 		<div
@@ -97,7 +98,7 @@ const ProductCard = (props: ProductCardProps) => {
 					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 				>
 					<Show
-						when={product().image}
+						when={product().image && !imageFailed()}
 						fallback={
 							<ProductImageFallback
 								name={product().name}
@@ -116,6 +117,7 @@ const ProductCard = (props: ProductCardProps) => {
 							class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
 							loading="lazy"
 							decoding="async"
+							onError={() => setImageFailed(true)}
 						/>
 					</Show>
 
