@@ -46,6 +46,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				(context as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil(
 					cache.put(cacheKey, response.clone()),
 				);
+			} else if (response.status >= 400) {
+				response.headers.set("Cache-Control", "no-store");
 			}
 			return response;
 		} catch {
@@ -53,5 +55,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		}
 	}
 
-	return next();
+	const response = await next();
+	if (response.status >= 400) {
+		response.headers.set("Cache-Control", "no-store");
+	}
+	return response;
 });
