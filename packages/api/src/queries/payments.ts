@@ -1,5 +1,7 @@
+import { PRODUCTS_TAG, productTag } from "@vit/shared";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
+import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
 import {
 	OrderDetailsTable,
 	type PaymentInsertType,
@@ -292,7 +294,8 @@ export const paymentQueries = {
 			paymentNumber: string,
 			provider: PaymentProviderType,
 		) {
-			return await db().transaction(async (tx) => {
+			let stockedProductIds: number[] = [];
+			const confirmed = await db().transaction(async (tx) => {
 				const [claimedPayment] = await tx
 					.update(PaymentsTable)
 					.set({ status: "success", provider })
@@ -337,6 +340,8 @@ export const paymentQueries = {
 						);
 					}
 				}
+
+				stockedProductIds = orderDetails.map((detail) => detail.product.id);
 
 				for (const detail of orderDetails) {
 					const [updatedProduct] = await tx
@@ -388,6 +393,15 @@ export const paymentQueries = {
 
 				return true;
 			});
+
+			if (confirmed) {
+				await purgeTagsGlobal([
+					PRODUCTS_TAG,
+					...stockedProductIds.map((id) => productTag(id)),
+				]);
+			}
+
+			return confirmed;
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {
