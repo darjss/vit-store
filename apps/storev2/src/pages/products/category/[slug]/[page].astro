@@ -4,6 +4,7 @@
 import Layout from "@/layouts/Layout.astro";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
+import SortBar from "@/components/product/sort-bar.astro";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
 
@@ -14,6 +15,18 @@ const SITE_URL = "https://amerikvitamin.mn";
 const { slug, page: pageParam } = Astro.params;
 const page = Number.parseInt(pageParam!, 10);
 
+const sortParam = Astro.url.searchParams.get("sort");
+const dirParam = Astro.url.searchParams.get("dir");
+const sortField =
+	sortParam === "price" || sortParam === "createdAt" || sortParam === "stock"
+		? sortParam
+		: undefined;
+const sortDirection =
+	dirParam === "asc" || dirParam === "desc" ? dirParam : undefined;
+const sortQuery = sortField
+	? `?sort=${sortField}&dir=${sortDirection ?? "desc"}`
+	: "";
+
 const category = await api.category.getCategoryBySlug.query({ slug: slug! });
 if (!category) {
 	throw Astro.redirect("/404");
@@ -23,6 +36,8 @@ const { items: products, pagination } = await api.product.getPaginatedProductsWi
 	page,
 	pageSize: PAGE_SIZE,
 	categoryId: category.id,
+	sortField,
+	sortDirection,
 });
 
 const baseUrl = `/products/category/${slug}`;
@@ -108,6 +123,8 @@ const itemListSchema = {
 			<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
 		</div>
 
+		<SortBar baseUrl={baseUrl} sort={sortField ?? null} dir={sortDirection ?? null} />
+
 		<!-- Products Grid -->
 		<div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
 			{products.map((product, index) => (
@@ -122,7 +139,7 @@ const itemListSchema = {
 
 		<!-- Pagination -->
 		{pagination.totalPages > 1 && (
-			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} />
+			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} search={sortQuery} />
 		)}
 	</div>
 </Layout>
