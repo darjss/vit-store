@@ -790,7 +790,7 @@ const ProductsList = (props: ProductsListProps) => {
 					categoryId={categoryId()}
 					brandId={brandId()}
 					priceRange={priceRange()}
-					inStockOnly={!includeOutOfStock()}
+					listFilter={listFilter()}
 					includeOutOfStock={includeOutOfStock()}
 					onApply={applyFilters}
 					onReset={resetDrawerFilters}
