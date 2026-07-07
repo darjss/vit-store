@@ -13,6 +13,7 @@ import IconEmotionSad from "~icons/ri/emotion-sad-line";
 import IconFolder from "~icons/ri/folder-line";
 import IconSearch from "~icons/ri/search-line";
 import IconStore from "~icons/ri/store-2-line";
+import PopularCategories from "./popular-categories";
 
 interface SearchResultsProps {
 	searchQuery: string;
@@ -117,14 +118,17 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						!hasNavigationResults()
 					}
 				>
-					<div class="enter-fade flex flex-col items-center justify-center py-8 text-center">
-						<IconSearch class="mb-3 h-10 w-10 text-muted-foreground" />
-						<p class="font-semibold text-muted-foreground/70">
-							"{props.searchQuery}" хайлтаар үр дүн олдсонгүй
-						</p>
-						<p class="mt-1 text-muted-foreground/80 text-sm">
-							Өөр түлхүүр үгээр хайж үзнэ үү
-						</p>
+					<div class="enter-fade">
+						<div class="flex flex-col items-center justify-center py-8 text-center">
+							<IconSearch class="mb-3 h-10 w-10 text-muted-foreground" />
+							<p class="font-semibold text-muted-foreground/70">
+								"{props.searchQuery}" хайлтаар үр дүн олдсонгүй
+							</p>
+							<p class="mt-1 text-muted-foreground/80 text-sm">
+								Доорх ангилалуудаас сонгож үзнэ үү
+							</p>
+						</div>
+						<PopularCategories />
 					</div>
 				</Match>
 
@@ -137,7 +141,10 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				>
 					<div>
 						<Show when={hasNavigationResults()}>
-							<div class="enter-fade mb-4 space-y-3" style={{ "transition-duration": "250ms" }}>
+							<div
+								class="enter-fade mb-4 space-y-3"
+								style={{ "transition-duration": "250ms" }}
+							>
 								<Show when={(query.data?.brands.length ?? 0) > 0}>
 									<div>
 										<p class="mb-2 font-semibold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
