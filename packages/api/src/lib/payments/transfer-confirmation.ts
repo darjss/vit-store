@@ -1,4 +1,5 @@
 import { paymentQueries } from "~/queries/payments";
+import { KhaanTransactionAlreadyConsumedError } from "~/lib/payments/consumed-transaction";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
 	type DetailedOrderNotificationInput,
@@ -12,21 +13,43 @@ type ConfirmTransferPaymentInput = {
 	paymentNumber: string;
 	source: TransferConfirmationSource;
 	referrer?: string;
+	consumedKhaanTransaction?: { fingerprint: string };
 };
 
 type ConfirmTransferPaymentResult =
 	| { confirmed: true; orderNumber?: string }
-	| { confirmed: false; reason: "already_confirmed_or_not_pending" };
+	| {
+			confirmed: false;
+			reason:
+				| "already_confirmed_or_not_pending"
+				| "khaan_transaction_already_consumed";
+	  };
 
 export async function confirmTransferPaymentAndNotify({
 	paymentNumber,
 	referrer,
+	consumedKhaanTransaction,
 }: ConfirmTransferPaymentInput): Promise<ConfirmTransferPaymentResult> {
 	const q = paymentQueries.store;
-	const confirmed = await q.confirmPaymentAndApplyStock(
-		paymentNumber,
-		"transfer",
-	);
+	let confirmed: boolean;
+	try {
+		confirmed = await q.confirmPaymentAndApplyStock(
+			paymentNumber,
+			"transfer",
+			consumedKhaanTransaction,
+		);
+	} catch (error) {
+		if (error instanceof KhaanTransactionAlreadyConsumedError) {
+			console.error(
+				`[khaan] auto-confirm ABORTED — bank transaction already consumed (fingerprint=${error.fingerprint}, paymentNumber=${paymentNumber}); routing to manual review`,
+			);
+			return {
+				confirmed: false,
+				reason: "khaan_transaction_already_consumed",
+			};
+		}
+		throw error;
+	}
 
 	if (!confirmed) {
 		return { confirmed: false, reason: "already_confirmed_or_not_pending" };
