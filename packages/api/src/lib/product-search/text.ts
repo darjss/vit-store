@@ -39,22 +39,109 @@ const CYRILLIC_TO_LATIN: Record<string, string> = {
 };
 
 const LATIN_SEARCH_ALIASES: Record<string, string[]> = {
-	magnesium: ["magni", "магни", "магниум"],
-	vitamin: ["vit", "витамин"],
-	zinc: ["цинк"],
-	omega: ["омега"],
-	probiotic: ["пробиотик"],
-	collagen: ["коллаген"],
-	calcium: ["кальци"],
-	iron: ["төмөр"],
+	magnesium: ["magni", "магни", "магниум", "magnez", "магнези"],
+	vitamin: ["vit", "витамин", "витамины"],
+	zinc: ["цинк", "zink"],
+	omega: ["омега", "omeg"],
+	probiotic: ["пробиотик", "probiotics", "probiotik"],
+	collagen: ["коллаген", "colagen", "kollagen", "коллоген"],
+	calcium: ["кальци", "калци", "calci"],
+	iron: ["төмөр", "ferrum"],
 	fish: ["загас"],
 	oil: ["тос"],
+	inositol: ["inofa", "inof", "inosto", "myo inositol", "инозитол", "инозит"],
+	hyaluronic: ["hyaluron", "hyaluronic acid", "гиалари", "гиул", "гиалурон"],
+	ashwagandha: ["ashwaganda", "aswagandha", "ашваганда", "ашвагандха"],
+	rhodiola: ["родиола", "rodiola"],
+	turmeric: ["curcumin", "куркумин", "куркума"],
+	berberine: ["берберин"],
+	selenium: ["селен", "selen"],
+	coq10: ["coenzyme q10", "co q10", "koq10", "коэнзим"],
+	biotin: ["биотин"],
+	melatonin: ["мелатонин", "melatonine"],
+	glucosamine: ["глюкозамин", "glucosamin"],
+	creatine: ["creatin", "kreatin", "креатин"],
+	blackmores: ["blackmore", "black mores", "black more", "блэкморс"],
+	tudca: ["tudka", "тудка", "тудца"],
+	ahcc: ["ахцц"],
+	reishi: ["рейши", "reishii"],
+	boric: ["boric acid", "борная"],
+	pumpkin: ["pumpkin seed", "тыквенное"],
+	betaine: ["бетаин", "betaine hcl"],
+	lutein: ["лютеин"],
+	quercetin: ["кверцетин"],
+	resveratrol: ["ресвератрол"],
+	spirulina: ["спирулина"],
+	glutathione: ["глутатион", "glutathion"],
+	niacin: ["ниацин", "niacinamide"],
+	folate: ["folic", "folic acid", "фолиевая", "фолат"],
+	iodine: ["iodine", "йод"],
+	potassium: ["калий", "kalium"],
+	lysine: ["лизин"],
+	taurine: ["таурин"],
+	curcumin: ["куркумин"],
+	ginseng: ["женьшень", "ginzeng"],
+	echinacea: ["эхинацея", "echinacea purpurea"],
+	elderberry: ["бузина", "sambucus"],
+	ginkgo: ["гинкго", "ginko", "ginkgo biloba"],
+	melissa: ["мелисса", "lemon balm"],
+	protein: ["протеин", "whey"],
+};
+
+const BRAND_ALIASES: Record<string, string> = {
+	"nature bell": "naturebell",
+	"natures bell": "naturebell",
+	naturbell: "naturebell",
+	"black mores": "blackmores",
+	"black more": "blackmores",
+	"jarrow formula": "jarrow formulas",
+};
+
+const VITAMIN_LETTER_ALIASES: Record<string, string> = {
+	d: "d3",
+	c: "vitamin c",
+	b: "vitamin b",
+	e: "vitamin e",
+	k: "k2",
+	д: "d3",
+	с: "vitamin c",
+	б: "vitamin b",
+	е: "vitamin e",
+	к: "k2",
+};
+
+const SYMPTOM_INGREDIENT_ALIASES: Record<string, string[]> = {
+	ядаргаа: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
+	fatigue: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
+	tiredness: ["b complex", "b12", "iron", "coq10"],
+	менструац: ["magnesium", "b6", "iron", "evening primrose"],
+	менст: ["magnesium", "b6", "iron", "evening primrose"],
+	menstrual: ["magnesium", "b6", "iron", "evening primrose"],
+	period: ["magnesium", "b6", "iron", "evening primrose"],
+	нойргүйдэл: ["melatonin", "5 htp", "magnesium"],
+	нойр: ["melatonin", "5 htp", "magnesium"],
+	sleep: ["melatonin", "5 htp", "magnesium"],
+	insomnia: ["melatonin", "5 htp"],
+	дархлаа: ["zinc", "vitamin c", "probiotic", "vitamin d3"],
+	immunity: ["zinc", "vitamin c", "probiotic", "vitamin d3"],
+	immune: ["zinc", "vitamin c", "probiotic"],
+	"үе мөч": ["glucosamine", "collagen", "omega 3"],
+	joint: ["glucosamine", "collagen", "omega 3"],
+	joints: ["glucosamine", "collagen", "omega 3"],
+	стресс: ["ashwagandha", "magnesium", "l theanine"],
+	stress: ["ashwagandha", "magnesium", "l theanine"],
+	anxiety: ["ashwagandha", "l theanine", "magnesium"],
+	үс: ["biotin", "collagen", "zinc"],
+	hair: ["biotin", "collagen", "zinc"],
+	skin: ["collagen", "hyaluronic", "vitamin c"],
+	арьс: ["collagen", "hyaluronic", "vitamin c"],
 };
 
 export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")
 		.normalize("NFKD")
 		.toLowerCase()
+		.replace(/(?<=\d),(?=\d)/g, "")
 		.replace(/[^\p{L}\p{N}\s]+/gu, " ")
 		.replace(/\s+/g, " ")
 		.trim();
@@ -115,14 +202,71 @@ export const buildProductAliases = (product: ProductSearchSourceDocument) => {
 	return Array.from(new Set([...aliases, ...transliterated, ...latinExpanded]));
 };
 
+export const expandBrandAliases = (value: string | null | undefined) => {
+	let normalized = normalizeSearchText(value);
+	if (!normalized) return "";
+
+	let changed = false;
+	for (const [phrase, canonical] of Object.entries(BRAND_ALIASES)) {
+		if (normalized.includes(phrase)) {
+			normalized = normalized.replaceAll(phrase, canonical);
+			changed = true;
+		}
+	}
+
+	return changed ? normalized : "";
+};
+
+export const expandVitaminLetters = (value: string | null | undefined) => {
+	const tokens = normalizeSearchText(value).split(" ").filter(Boolean);
+	let changed = false;
+	const expanded = tokens.map((token) => {
+		const alias = VITAMIN_LETTER_ALIASES[token];
+		if (alias) {
+			changed = true;
+			return alias;
+		}
+		return token;
+	});
+
+	return changed ? expanded.join(" ") : "";
+};
+
+export const expandSymptomIngredients = (value: string | null | undefined) => {
+	const normalized = normalizeSearchText(value);
+	if (!normalized) return [];
+
+	const ingredients: string[] = [];
+	for (const [symptom, terms] of Object.entries(SYMPTOM_INGREDIENT_ALIASES)) {
+		if (normalized.includes(normalizeSearchText(symptom))) {
+			ingredients.push(...terms);
+		}
+	}
+
+	return ingredients;
+};
+
 export const createSearchQueries = (query: string) => {
 	const normalized = normalizeSearchText(query);
 	const transliterated = transliterateCyrillicToLatin(query);
 	const expanded = expandLatinAliases(query).join(" ");
+	const vitaminExpanded = expandVitaminLetters(query);
+	const vitaminExpandedTranslit = expandVitaminLetters(transliterated);
+	const brandExpanded = expandBrandAliases(query);
+	const symptomExpanded = expandSymptomIngredients(query);
 
 	return Array.from(
 		new Set(
-			[query.trim(), normalized, transliterated, expanded].filter(Boolean),
+			[
+				query.trim(),
+				normalized,
+				transliterated,
+				expanded,
+				vitaminExpanded,
+				vitaminExpandedTranslit,
+				brandExpanded,
+				...symptomExpanded,
+			].filter(Boolean),
 		),
 	);
 };
