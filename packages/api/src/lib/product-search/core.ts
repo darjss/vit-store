@@ -79,7 +79,7 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 			tags: 1.5,
 			description: 0.5,
 		},
-		prefix: true,
+		prefix: (term: string) => term.length >= 2,
 		fuzzy: (term: string) => (term.length >= 4 ? 0.2 : false),
 	},
 };
