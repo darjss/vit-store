@@ -1,5 +1,5 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import { and, desc, eq, gte, lt, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -47,7 +47,7 @@ export const analyticsQueries = {
 					totalDiscount: sql<number>`SUM(${SalesTable.discountApplied})`,
 				})
 				.from(SalesTable)
-				.where(gte(SalesTable.createdAt, startDate));
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)));
 			const revenue = sales[0]?.totalRevenue || 0;
 			const cost = sales[0]?.totalCost || 0;
 			const discount = sales[0]?.totalDiscount || 0;
@@ -70,7 +70,7 @@ export const analyticsQueries = {
 					eq(ProductsTable.categoryId, CategoriesTable.id),
 				)
 				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-				.where(gte(SalesTable.createdAt, startDate))
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 				.groupBy(CategoriesTable.name, BrandsTable.name);
 		},
 
@@ -231,7 +231,7 @@ export const analyticsQueries = {
 				.from(SalesTable)
 				.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
 				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-				.where(gte(SalesTable.createdAt, startDate))
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 				.groupBy(BrandsTable.name)
 				.orderBy(
 					desc(
@@ -289,7 +289,7 @@ export const analyticsQueries = {
 						totalDiscount: sql<number>`SUM(${SalesTable.discountApplied})`,
 					})
 					.from(SalesTable)
-					.where(gte(SalesTable.createdAt, startDate))
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.then((sales) => {
 						const revenue = sales[0]?.totalRevenue || 0;
 						const cost = sales[0]?.totalCost || 0;
@@ -313,7 +313,7 @@ export const analyticsQueries = {
 						eq(ProductsTable.categoryId, CategoriesTable.id),
 					)
 					.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-					.where(gte(SalesTable.createdAt, startDate))
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.groupBy(CategoriesTable.name, BrandsTable.name)
 					.catch(() => []),
 
@@ -472,7 +472,7 @@ export const analyticsQueries = {
 					.from(SalesTable)
 					.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
 					.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-					.where(gte(SalesTable.createdAt, startDate))
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.groupBy(BrandsTable.name)
 					.orderBy(
 						desc(
