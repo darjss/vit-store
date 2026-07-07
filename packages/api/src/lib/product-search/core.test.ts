@@ -93,6 +93,28 @@ const source: ProductSearchSourceDocument[] = [
 		status: "active",
 		stock: 12,
 	},
+	{
+		id: 8,
+		name: "Now Foods, Melatonin, 3 mg, 180 Capsules",
+		nameMn: "мелатонин",
+		slug: "now-melatonin-3mg",
+		price: 30,
+		brand: "Now Foods",
+		category: "Sleep",
+		status: "active",
+		stock: 25,
+	},
+	{
+		id: 9,
+		name: "Doctor's Best, Glucosamine Chondroitin MSM, 120 Capsules",
+		nameMn: "глюкозамин",
+		slug: "doctors-best-glucosamine",
+		price: 70,
+		brand: "Doctor's Best",
+		category: "Joints",
+		status: "active",
+		stock: 8,
+	},
 ];
 
 const buildIndex = () => {
@@ -135,6 +157,20 @@ describe("short vitamin-letter tokens (handoff §6.4)", () => {
 
 	test("'c 1000' finds the vitamin C product", () => {
 		expect(topIds("c 1000")).toContain(5);
+	});
+});
+
+describe("symptom -> ingredient expansion (handoff Phase B)", () => {
+	test("'нойргүйдэл' (insomnia) surfaces melatonin", () => {
+		expect(topIds("нойргүйдэл")).toContain(8);
+	});
+
+	test("'үе мөч' (joints) surfaces glucosamine", () => {
+		expect(topIds("үе мөч")).toContain(9);
+	});
+
+	test("'fatigue' does not error and stays tag-independent", () => {
+		expect(Array.isArray(search("fatigue"))).toBe(true);
 	});
 });
 
