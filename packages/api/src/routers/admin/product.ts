@@ -1,9 +1,17 @@
 import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
-import { addProductSchema, updateProductSchema } from "@vit/shared";
+import {
+    addProductSchema,
+    BRANDS_TAG,
+    CATEGORIES_TAG,
+    PRODUCTS_TAG,
+    productTag,
+    updateProductSchema,
+} from "@vit/shared";
 import { status } from "@vit/shared/constants";
 import * as v from "valibot";
+import { purgeTags } from "~/lib/cache/workers-cache";
 import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
 import { rebuildProductSearchIndex, searchProducts, } from "~/lib/product-search/client";
 import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
@@ -25,6 +33,7 @@ const normalizeExpirationDate = (value?: string | null) => {
         return `${mmYyyyMatch[2]}-${mmYyyyMatch[1]}`;
     return null;
 };
+const CATALOG_MUTATION_TAGS = [PRODUCTS_TAG, BRANDS_TAG, CATEGORIES_TAG];
 const scheduleProductSearchRebuild = (ctx: {
     c: {
         executionCtx: ExecutionContext;
@@ -181,6 +190,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 isPrimary: index === 0,
             }));
             await productQueries.admin.createProductImages(productId, imagesToInsert);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(productId)]);
             scheduleProductSearchRebuild(ctx, "product_created");
             return { message: "Product added successfully" };
         }
@@ -302,6 +312,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 }));
                 await productQueries.admin.createProductImages(input.id, imagesToInsert);
             }
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_updated");
             return { message: "Product updated successfully" };
         }
@@ -333,6 +344,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Product not found",
                 });
             await productQueries.admin.updateStock(input.productId, input.numberToUpdate, input.type);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.productId)]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
             return { message: "Stock updated successfully" };
         }
@@ -360,6 +372,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Product not found",
                 });
             await productQueries.admin.deleteProduct(input.id);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_deleted");
             return { message: "Product deleted successfully" };
         }
@@ -432,6 +445,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ ctx, input }) => {
         try {
             await productQueries.admin.setProductStock(input.id, input.newStock);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
             return { message: "Stock set successfully" };
         }
@@ -490,6 +504,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 ? normalizeExpirationDate(input.stringValue)
                 : (input.stringValue ?? input.numberValue);
             await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_updated");
             return { message: "Product field updated successfully" };
         }

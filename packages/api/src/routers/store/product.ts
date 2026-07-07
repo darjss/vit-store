@@ -4,10 +4,11 @@ import {
 	categoryQueries,
 	productQueries,
 } from "@vit/api/queries";
+import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
 import * as v from "valibot";
 import { runCacheBenchmarkV2 } from "~/lib/benchmark/cache-benchmark-v2";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
-import { kv } from "~/lib/kv";
+import { markCacheable } from "~/lib/cache/workers-cache";
 import {
 	rebuildProductSearchIndex,
 	searchProducts,
@@ -433,7 +434,7 @@ export const product = router({
 			}
 		}),
 
-	getProductsForHome: publicProcedure.query(async () => {
+	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;
 			const [featuredProducts, newProducts, discountedProducts] =
@@ -442,6 +443,7 @@ export const product = router({
 					q.getNewProducts(),
 					q.getDiscountedProducts(),
 				]);
+			markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
 			return {
 				featuredProducts: featuredProducts.map((product) => ({
 					id: product.id,
@@ -478,7 +480,7 @@ export const product = router({
 		}
 	}),
 
-	getProductsForHomeWithStock: publicProcedure.query(async () => {
+	getProductsForHomeWithStock: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;
 			const [featuredProducts, newProducts, discountedProducts] =
@@ -487,6 +489,7 @@ export const product = router({
 					q.getNewProductsWithStock(),
 					q.getDiscountedProductsWithStock(),
 				]);
+			markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
 			return {
 				featuredProducts: featuredProducts.map((product) => ({
 					id: product.id,
@@ -523,13 +526,17 @@ export const product = router({
 		}
 	}),
 
-	getAllProducts: publicProcedure.query(async () => {
+	getAllProducts: publicProcedure.query(async ({ ctx }) => {
 		const q = productQueries.store;
-		return await q.getAllProducts();
+		const products = await q.getAllProducts();
+		markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+		return products;
 	}),
-	getPrerenderProducts: publicProcedure.query(async () => {
+	getPrerenderProducts: publicProcedure.query(async ({ ctx }) => {
 		const q = productQueries.store;
-		return await q.getPrerenderProducts();
+		const products = await q.getPrerenderProducts();
+		markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+		return products;
 	}),
 	getProductById: publicProcedure
 		.input(
@@ -537,9 +544,13 @@ export const product = router({
 				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			const q = productQueries.store;
 			const result = await q.getProductById(input.id);
+			markCacheable(ctx, CACHE_POLICY.productDetail, [
+				PRODUCTS_TAG,
+				productTag(input.id),
+			]);
 			if (result === null || result === undefined) {
 				return null;
 			}
@@ -559,9 +570,13 @@ export const product = router({
 				ids: v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			const q = productQueries.store;
 			const result = await q.getProductsByIds(input.ids);
+			markCacheable(ctx, CACHE_POLICY.productsList, [
+				PRODUCTS_TAG,
+				...input.ids.map((id) => productTag(id)),
+			]);
 			return result.map((product) => ({
 				id: product.id,
 				name: product.name,
@@ -651,13 +666,14 @@ export const product = router({
 				brandId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const q = productQueries.store;
 				const [sameCategory, sameBrand] = await Promise.all([
 					q.getRecommendedProductsByCategory(input.categoryId, input.productId),
 					q.getRecommendedProductsByBrand(input.brandId, input.productId),
 				]);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
 
 				const allProducts = [...sameCategory, ...sameBrand];
 				const uniqueProducts = allProducts.filter(
@@ -688,7 +704,7 @@ export const product = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 			if (product === null || product === undefined) {
@@ -697,6 +713,10 @@ export const product = router({
 					message: "Product not found",
 				});
 			}
+			markCacheable(ctx, CACHE_POLICY.productDetail, [
+				PRODUCTS_TAG,
+				productTag(input.productId),
+			]);
 			if (product.stock === 0 || product.status === "out_of_stock") {
 				return {
 					isInStock: false,
@@ -829,11 +849,12 @@ export const product = router({
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const q = productQueries.store;
 
 				const products = await q.getInfiniteProducts(input);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
 				return products;
 			} catch (error) {
 				throw new TRPCError({
@@ -857,10 +878,12 @@ export const product = router({
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const q = productQueries.store;
-				return await q.getPaginatedProducts(input);
+				const products = await q.getPaginatedProducts(input);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -883,10 +906,11 @@ export const product = router({
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const q = productQueries.store;
 				const products = await q.getInfiniteProductsWithStock(input);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
 				return products;
 			} catch (error) {
 				throw new TRPCError({
@@ -911,10 +935,12 @@ export const product = router({
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const q = productQueries.store;
-				return await q.getPaginatedProductsWithStock(input);
+				const products = await q.getPaginatedProductsWithStock(input);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -924,10 +950,12 @@ export const product = router({
 			}
 		}),
 
-	getTotalActiveProductCount: publicProcedure.query(async () => {
+	getTotalActiveProductCount: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;
-			return await q.getTotalActiveProductCount();
+			const count = await q.getTotalActiveProductCount();
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return count;
 		} catch (error) {
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",

@@ -1,9 +1,14 @@
 import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
-import { addCategorySchema } from "@vit/shared";
+import {
+    addCategorySchema,
+    CATEGORIES_TAG,
+    categoryTag,
+    PRODUCTS_TAG,
+} from "@vit/shared";
 import * as v from "valibot";
-import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
+import { purgeTags } from "~/lib/cache/workers-cache";
 import { rebuildProductSearchIndex } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -47,7 +52,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+            await purgeTags(ctx, [CATEGORIES_TAG, PRODUCTS_TAG]);
             scheduleProductSearchRebuild(ctx);
             return { message: "Successfully added category" };
         }
@@ -78,7 +83,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+            await purgeTags(ctx, [CATEGORIES_TAG, categoryTag(id), PRODUCTS_TAG]);
             scheduleProductSearchRebuild(ctx);
             return { message: "Successfully updated category" };
         }
@@ -101,7 +106,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
         try {
             const { id } = input;
             await categoryQueries.admin.deleteCategory(id);
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
+            await purgeTags(ctx, [CATEGORIES_TAG, categoryTag(id), PRODUCTS_TAG]);
             scheduleProductSearchRebuild(ctx);
             return { message: "Successfully deleted category" };
         }
