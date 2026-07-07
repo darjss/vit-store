@@ -383,11 +383,11 @@ export const searchMiniSearchIndex = (
 	const anchorTokens = [...queryTokens];
 	return Array.from(rankedResults.values())
 		.filter((result) => hasRelevanceAnchor(result, anchorTokens))
-		.sort(
-			(a, b) =>
-				scoreSearchResult(b, documentsById, trimmed) -
-				scoreSearchResult(a, documentsById, trimmed),
-		)
+		.map((result) => ({
+			result,
+			rank: scoreSearchResult(result, documentsById, trimmed),
+		}))
+		.sort((a, b) => b.rank - a.rank)
 		.slice(0, safeLimit)
-		.map((result) => mapMiniSearchResult(result, documentsById));
+		.map(({ result }) => mapMiniSearchResult(result, documentsById));
 };
