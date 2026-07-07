@@ -26,6 +26,7 @@ import {
 	SalesTable,
 } from "~/db/schema";
 import { logger } from "~/lib/logger";
+import type { TransactionType } from "~/lib/types";
 import {
 	type deliveryProvider,
 	getDaysFromTimeRange,
@@ -246,6 +247,19 @@ export const orderQueries = {
 				quantity: p.quantity,
 			}));
 			await db().insert(OrderDetailsTable).values(values);
+		},
+
+		async createOrderDetailsTx(
+			tx: TransactionType,
+			orderId: number,
+			products: Array<{ productId: number; quantity: number }>,
+		) {
+			const values = products.map((p) => ({
+				orderId,
+				productId: p.productId,
+				quantity: p.quantity,
+			}));
+			await tx.insert(OrderDetailsTable).values(values);
 		},
 
 		async searchOrder(searchTerm: string) {
@@ -577,7 +591,8 @@ export const orderQueries = {
 				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 		},
 
-		async updateOrder(
+		async updateOrderTx(
+			tx: TransactionType,
 			id: number,
 			data: {
 				customerPhone?: number;
@@ -588,62 +603,62 @@ export const orderQueries = {
 				addressZoneId?: number | null;
 			},
 		) {
-			await db().update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
+			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 		},
 
-		async getOrderDetailsByOrderId(orderId: number) {
-			return db()
+		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {
+			return tx
 				.select()
 				.from(OrderDetailsTable)
 				.where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
-		async deleteOrderDetails(orderId: number) {
-			await db()
+		async deleteOrderDetailsTx(tx: TransactionType, orderId: number) {
+			await tx
 				.delete(OrderDetailsTable)
 				.where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
-		async softDeleteOrder(id: number) {
+		async softDeleteOrderTx(tx: TransactionType, id: number) {
 			const now = new Date();
-			await db()
+			await tx
 				.update(OrderDetailsTable)
 				.set({ deletedAt: now })
 				.where(eq(OrderDetailsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(SalesTable)
 				.set({ deletedAt: now })
 				.where(eq(SalesTable.orderId, id));
 
-			await db()
+			await tx
 				.update(PaymentsTable)
 				.set({ deletedAt: now })
 				.where(eq(PaymentsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(OrdersTable)
 				.set({ deletedAt: now })
 				.where(eq(OrdersTable.id, id));
 		},
 
-		async restoreOrder(id: number) {
-			await db()
+		async restoreOrderTx(tx: TransactionType, id: number) {
+			await tx
 				.update(OrderDetailsTable)
 				.set({ deletedAt: null })
 				.where(eq(OrderDetailsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(SalesTable)
 				.set({ deletedAt: null })
 				.where(eq(SalesTable.orderId, id));
 
-			await db()
+			await tx
 				.update(PaymentsTable)
 				.set({ deletedAt: null })
 				.where(eq(PaymentsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(OrdersTable)
 				.set({ deletedAt: null })
 				.where(eq(OrdersTable.id, id));

@@ -233,6 +233,22 @@ export const adminQueries = {
 				);
 		},
 
+		async updateStockTx(
+			tx: TransactionType,
+			productId: number,
+			numberToUpdate: number,
+			type: "add" | "minus",
+		) {
+			await tx
+				.update(ProductsTable)
+				.set({
+					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
+				})
+				.where(
+					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
+				);
+		},
+
 		async deleteProduct(id: number) {
 			await db()
 				.update(ProductsTable)
