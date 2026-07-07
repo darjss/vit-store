@@ -308,9 +308,26 @@ export const paymentQueries = {
 		async confirmPaymentAndApplyStock(
 			paymentNumber: string,
 			provider: PaymentProviderType,
-			consumedKhaanTransaction?: { fingerprint: string },
+			consumedKhaanTransactions?: { fingerprint: string }[],
 		) {
 			return await db().transaction(async (tx) => {
+				// Record consumed Khaan fingerprints BEFORE the status flip and
+				// regardless of whether THIS call wins the flip. A concurrent
+				// admin confirm may flip status→success first, causing the UPDATE
+				// below to claim 0 rows; the fingerprint must still be recorded so
+				// the bank transaction cannot be replayed against a later order.
+				// recordConsumedKhaanTransaction is idempotent for the same
+				// paymentNumber and throws KhaanTransactionAlreadyConsumedError
+				// (aborting this tx) when a DIFFERENT payment already consumed it.
+				if (consumedKhaanTransactions?.length) {
+					for (const { fingerprint } of consumedKhaanTransactions) {
+						await recordConsumedKhaanTransaction(tx, {
+							fingerprint,
+							paymentNumber,
+						});
+					}
+				}
+
 				const [claimedPayment] = await tx
 					.update(PaymentsTable)
 					.set({ status: "success", provider })
@@ -325,13 +342,6 @@ export const paymentQueries = {
 
 				if (!claimedPayment) {
 					return false;
-				}
-
-				if (consumedKhaanTransaction) {
-					await recordConsumedKhaanTransaction(tx, {
-						fingerprint: consumedKhaanTransaction.fingerprint,
-						paymentNumber,
-					});
 				}
 
 				const orderDetails = await tx.query.OrderDetailsTable.findMany({
