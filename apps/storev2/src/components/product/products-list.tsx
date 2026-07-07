@@ -4,7 +4,11 @@ import {
 	useQuery,
 } from "@tanstack/solid-query";
 import { formatCurrency } from "@vit/shared";
-import { productSortOptions } from "@vit/shared/domain/product";
+import {
+	productPresetFilterLabels,
+	productSortOptions,
+	type ProductPresetFilter,
+} from "@vit/shared/domain/product";
 import {
 	batch,
 	createEffect,
@@ -35,7 +39,7 @@ import {
 } from "./products-list-states";
 import { ProductsVirtualGrid } from "./products-virtual-grid";
 
-type ListFilter = "featured" | "recent";
+type ListFilter = ProductPresetFilter;
 type ProductSortField = "price" | "createdAt";
 type ProductSortDirection = "asc" | "desc";
 const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
@@ -52,11 +56,6 @@ type ProductsListProps = {
 	initialCategories?: FilterOption[];
 	initialBrands?: FilterOption[];
 	totalProductCount?: number;
-};
-
-const LIST_FILTER_LABELS: Record<ListFilter, string> = {
-	featured: "Онцлох",
-	recent: "Шинэ ирсэн",
 };
 
 const getStoreProductColumns = (width: number) => {
@@ -541,7 +540,7 @@ const ProductsList = (props: ProductsListProps) => {
 	});
 	const presetLabel = createMemo(() => {
 		const preset = listFilter();
-		return preset ? LIST_FILTER_LABELS[preset] : null;
+		return preset ? productPresetFilterLabels[preset] : null;
 	});
 	const priceChipLabel = createMemo(() =>
 		minPrice() !== undefined || maxPrice() !== undefined ? priceLabel() : null,
@@ -682,7 +681,7 @@ const ProductsList = (props: ProductsListProps) => {
 	// Get active filter display text
 	const getPageTitle = () => {
 		if (searchTerm()) return `"${searchTerm()}" хайлтын үр дүн`;
-		if (listFilter()) return LIST_FILTER_LABELS[listFilter() as ListFilter];
+		if (listFilter()) return productPresetFilterLabels[listFilter() as ListFilter];
 		if (categoryId()) {
 			const cat = categoriesQuery.data?.find(
 				(c: { id: number; name: string }) => c.id === categoryId(),
