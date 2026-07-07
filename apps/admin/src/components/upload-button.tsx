@@ -93,7 +93,7 @@ export const UploadButton = ({
 					multiple // enable multiple selection
 				/>
 				<UploadIcon className="h-4 w-4" />
-				Upload
+				Оруулах
 			</SubmitButton>
 		</div>
 	);

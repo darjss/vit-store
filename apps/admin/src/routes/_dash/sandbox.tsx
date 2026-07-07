@@ -26,5 +26,5 @@ function SandboxContent() {
 	const { data } = useSuspenseQuery({
 		...trpc.product.getProductBenchmark.queryOptions(),
 	});
-	return <div>Benchmark : {data}</div>;
+	return <div>Гүйцэтгэл : {data}</div>;
 }

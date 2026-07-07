@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Textarea({
 	type = "text",
-	placeholder = "Enter text...",
+	placeholder = "Текст оруулах...",
 	className = "",
 	...props
 }) {

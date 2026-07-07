@@ -15,7 +15,7 @@ type Props = {
 
 const SearchBar = ({
 	autoFocus = false,
-	placeholder = "Search",
+	placeholder = "Хайх",
 	onSelectProduct,
 	onSelectOrder,
 }: Props) => {
@@ -102,13 +102,13 @@ const SearchBar = ({
 					if (e.key === "Enter") handleSubmit();
 					if (e.key === "Escape") clearInput();
 				}}
-				aria-label="Search"
+				aria-label="Хайх"
 			/>
 
 			<div className="absolute right-1 flex items-center gap-1">
 				{inputValue ? (
 					<button
-						aria-label="Clear search"
+						aria-label="Хайлт цэвэрлэх"
 						className="flex h-8 w-8 items-center justify-center rounded-base text-foreground/60 ring-offset-background hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 						onClick={clearInput}
 						type="button"
@@ -122,7 +122,7 @@ const SearchBar = ({
 					size="sm"
 					className="h-8"
 					onClick={handleSubmit}
-					aria-label="Submit search"
+					aria-label="Хайх"
 					type="button"
 				>
 					<Search className="h-4 w-4" />
