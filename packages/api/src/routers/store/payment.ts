@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
@@ -61,6 +62,13 @@ export const payment = router({
 					provider: payment.provider,
 					createdAt: payment.createdAt,
 					total: payment.order.total,
+					transferAccount: {
+						bankName: bankTransfer.bankName,
+						accountNumber:
+							ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+						accountName:
+							ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
+					},
 					order: {
 						orderNumber: payment.order.orderNumber,
 						customerPhone: `${payment.order.customerPhone}`,

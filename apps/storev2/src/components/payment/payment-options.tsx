@@ -14,6 +14,8 @@ interface PaymentOptionsProps {
 	paymentNumber: string;
 	total: number;
 	customerPhone: string;
+	accountNumber?: string;
+	accountName?: string;
 	checkoutToken?: string;
 }
 
@@ -126,10 +128,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 									<FieldLabel>Дансны дугаар</FieldLabel>
 									<div class="flex min-w-0 items-stretch">
 										<div class="min-w-0 flex-1 overflow-hidden text-ellipsis rounded-l-xl border border-border bg-background px-2.5 py-2.5 font-mono text-sm tracking-wide sm:px-3 sm:text-base">
-											{bankTransfer.accountNumber}
+											{props.accountNumber ?? bankTransfer.accountNumber}
 										</div>
 										<CopyFieldButton
-											text={bankTransfer.accountNumber}
+											text={props.accountNumber ?? bankTransfer.accountNumber}
 											label="Дансны дугаар"
 										/>
 									</div>
@@ -149,7 +151,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							<div class="space-y-1.5">
 								<FieldLabel>Дансны нэр</FieldLabel>
 								<div class="rounded-xl border border-border bg-background px-2.5 py-2.5 font-medium text-xs leading-tight sm:px-3 sm:text-sm">
-									{bankTransfer.accountName}
+									{props.accountName ?? bankTransfer.accountName}
 								</div>
 							</div>
 						</TransferStep>
