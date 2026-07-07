@@ -7,6 +7,28 @@ import {
 } from "./text";
 import type { ProductSearchSourceDocument } from "./types";
 
+describe("normalizeSearchText preserves Cyrillic combining letters (FIX 2)", () => {
+	test("'нойр' keeps й as a single token", () => {
+		expect(normalizeSearchText("нойр")).toBe("нойр");
+	});
+
+	test("other й-words stay intact", () => {
+		expect(normalizeSearchText("найз")).toBe("найз");
+		expect(normalizeSearchText("цайр")).toBe("цайр");
+		expect(normalizeSearchText("нойргүйдэл")).toBe("нойргүйдэл");
+	});
+
+	test("'ё' is preserved, not split into 'е'", () => {
+		expect(normalizeSearchText("ё")).toBe("ё");
+		expect(normalizeSearchText("ёлка")).toBe("ёлка");
+	});
+
+	test("Latin accents are still folded (café -> cafe)", () => {
+		expect(normalizeSearchText("café")).toBe("cafe");
+		expect(normalizeSearchText("Zürich")).toBe("zurich");
+	});
+});
+
 describe("normalizeSearchText comma-grouped numbers", () => {
 	test("merges comma-grouped digits into a single token", () => {
 		expect(normalizeSearchText("10,000 IU")).toBe("10000 iu");

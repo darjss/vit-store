@@ -115,6 +115,28 @@ const source: ProductSearchSourceDocument[] = [
 		status: "active",
 		stock: 8,
 	},
+	{
+		id: 10,
+		name: "Jarrow Formulas, Methyl B-12, 1000 mcg, 100 Lozenges",
+		nameMn: null,
+		slug: "jarrow-methyl-b12",
+		price: 45,
+		brand: "Jarrow Formulas",
+		category: "Vitamins",
+		status: "active",
+		stock: 5,
+	},
+	{
+		id: 11,
+		name: "MegaStock Jarrow Formula Copycat Blend",
+		nameMn: null,
+		slug: "megastock-copycat",
+		price: 20,
+		brand: "MegaStock",
+		category: "Supplements",
+		status: "active",
+		stock: 999,
+	},
 ];
 
 const buildIndex = () => {
@@ -197,5 +219,29 @@ describe("min relevance floor / honest empty (handoff Phase A)", () => {
 	test("GOOD exact terms still return", () => {
 		expect(topIds("vitamin d3")).toContain(1);
 		expect(topIds("коллаген")).toContain(7);
+	});
+});
+
+describe("unmatched known token stays required (FIX 1)", () => {
+	test("'creatine vitamin d3' is honest — no d3-only leak", () => {
+		expect(topIds("creatine vitamin d3")).not.toContain(1);
+		expect(topIds("creatine vitamin d3")).not.toContain(2);
+		expect(topIds("creatine vitamin d3")).not.toContain(3);
+	});
+
+	test("'creatine vitamin d3' returns empty (no creatine in catalog)", () => {
+		expect(topIds("creatine vitamin d3")).toHaveLength(0);
+	});
+
+	test("noise token is still dropped so the real term resolves", () => {
+		expect(topIds("d 10000")).toContain(1);
+		expect(topIds("c 1000")).toContain(5);
+	});
+});
+
+describe("multi-word canonical brand boost (FIX 3)", () => {
+	test("'jarrow formula' boosts the multi-word Jarrow Formulas brand", () => {
+		expect(topIds("jarrow formula")).toContain(10);
+		expect(topIds("jarrow formula")[0]).toBe(10);
 	});
 });
