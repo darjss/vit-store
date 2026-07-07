@@ -160,7 +160,9 @@ const statusBadgeClasses: Record<string, string> = {
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <h3 class="mb-0.5 truncate font-semibold text-foreground text-sm md:text-base">{detail.product.name}</h3>
-                                    <p class="mb-2 text-muted-foreground text-xs">{detail.product.brand.name}</p>
+                                    {detail.product.brand?.name && (
+                                        <p class="mb-2 text-muted-foreground text-xs">{detail.product.brand.name}</p>
+                                    )}
                                     <div class="flex items-center justify-between">
                                         <span class="rounded-full bg-muted px-2.5 py-0.5 font-semibold text-foreground text-xs">{detail.quantity}x</span>
                                         <span class="font-display text-foreground text-sm md:text-base">₮{detail.product.price.toLocaleString()}</span>
