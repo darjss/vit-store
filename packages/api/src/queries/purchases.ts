@@ -573,6 +573,7 @@ export const purchaseQueries = {
 				})),
 			);
 
+			const affectedProductIds = new Set<number>();
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
 				if (!purchaseItem) continue;
@@ -582,9 +583,12 @@ export const purchaseQueries = {
 						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
 					})
 					.where(eq(ProductsTable.id, purchaseItem.productId));
+				affectedProductIds.add(purchaseItem.productId);
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
+
+			return { affectedProductIds: [...affectedProductIds] };
 		},
 
 		async deletePurchase(tx: Transaction, purchaseId: number) {
