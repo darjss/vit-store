@@ -14,7 +14,7 @@ const SITE_URL = "https://amerikvitamin.mn";
 
 const { slug, page: pageParam } = Astro.params;
 if (!slug || !pageParam) {
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const page = Number.parseInt(pageParam, 10);
@@ -33,7 +33,7 @@ const sortQuery = sortField
 
 const brand = await api.brand.getBrandBySlug.query({ slug });
 if (!brand) {
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 // Treat known placeholder/non-image logo URLs as missing so we render the
@@ -51,7 +51,7 @@ const { items: products, pagination } = await api.product.getPaginatedProductsWi
 	sortDirection,
 });
 if (pagination.totalCount <= 0) {
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const baseUrl = `/products/brand/${slug}`;

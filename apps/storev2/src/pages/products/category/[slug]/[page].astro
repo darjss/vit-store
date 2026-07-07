@@ -29,7 +29,7 @@ const sortQuery = sortField
 
 const category = await api.category.getCategoryBySlug.query({ slug: slug! });
 if (!category) {
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
