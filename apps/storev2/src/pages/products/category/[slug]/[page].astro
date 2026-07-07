@@ -29,8 +29,8 @@ const baseUrl = `/products/category/${slug}`;
 const washClass = WASH_BG[washFor(category.id)];
 
 const seoTitle = page === 1
-	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл | Америк Витамин`)
-	: (category.seoTitle || `${category.name} - Хуудас ${page} | Америк Витамин`);
+	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл`)
+	: (category.seoTitle || `${category.name} - Хуудас ${page}`);
 const seoDescription = category.seoDescription ||
 	`${category.name} ангилалд ${pagination.totalCount} бүтээгдэхүүн байна.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
 const categoryIntro = category.description ||

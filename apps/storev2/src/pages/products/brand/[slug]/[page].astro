@@ -43,8 +43,8 @@ const baseUrl = `/products/brand/${slug}`;
 const washClass = WASH_BG[washFor(`brand-${brand.id}`)];
 
 const seoTitle = page === 1
-	? (brand.seoTitle || `${brand.name} - Америк Витамин дэлгүүр`)
-	: (brand.seoTitle || `${brand.name} - Хуудас ${page} | Америк Витамин`);
+	? (brand.seoTitle || `${brand.name} - Витамин, нэмэлт тэжээл`)
+	: (brand.seoTitle || `${brand.name} - Хуудас ${page}`);
 const seoDescription = brand.seoDescription ||
 	`${brand.name} брэндийн ${pagination.totalCount} витамин, нэмэлт тэжээл.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
 const brandIntro = brand.description ||
