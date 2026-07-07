@@ -3,6 +3,12 @@ import {
 	useInfiniteQuery,
 	useQuery,
 } from "@tanstack/solid-query";
+import { formatCurrency } from "@vit/shared";
+import {
+	productPresetFilterLabels,
+	productSortOptions,
+	type ProductPresetFilter,
+} from "@vit/shared/domain/product";
 import {
 	batch,
 	createEffect,
@@ -19,7 +25,11 @@ import { api } from "@/lib/trpc";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
 import { WASH_BG, washFor } from "@/lib/wash";
-import FilterBar from "../search/filter-bar";
+import IconEqualizer from "~icons/ri/equalizer-line";
+import IconSearch from "~icons/ri/search-line";
+import SearchSheet from "../search/search-sheet";
+import AppliedFilters from "./applied-filters";
+import FilterDrawer, { PRICE_MAX, PRICE_MIN } from "./filter-drawer";
 import ProductCard from "./product-card";
 import {
 	ProductEmptyState,
@@ -29,7 +39,7 @@ import {
 } from "./products-list-states";
 import { ProductsVirtualGrid } from "./products-virtual-grid";
 
-type ListFilter = "featured" | "recent";
+type ListFilter = ProductPresetFilter;
 type ProductSortField = "price" | "createdAt";
 type ProductSortDirection = "asc" | "desc";
 const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
@@ -46,11 +56,6 @@ type ProductsListProps = {
 	initialCategories?: FilterOption[];
 	initialBrands?: FilterOption[];
 	totalProductCount?: number;
-};
-
-const LIST_FILTER_LABELS: Record<ListFilter, string> = {
-	featured: "Онцлох",
-	recent: "Шинэ ирсэн",
 };
 
 const getStoreProductColumns = (width: number) => {
@@ -104,16 +109,16 @@ const ProductsList = (props: ProductsListProps) => {
 	const [listFilterParam, setListFilterParam] = useSearchParam("filter", {
 		defaultValue: undefined,
 	});
+	const [priceParam, setPriceParam] = useSearchParam("price", {
+		defaultValue: undefined,
+	});
+	const [stockParam, setStockParam] = useSearchParam("stock", {
+		defaultValue: undefined,
+	});
 
-	const [localSearchTerm, setLocalSearchTerm] = createSignal(
-		searchTerm() ?? "",
-	);
+	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
-
-	createEffect(() => {
-		setLocalSearchTerm(searchTerm() ?? "");
-	});
 
 	const isSearchMode = createMemo(() => {
 		const term = searchTerm();
@@ -178,6 +183,31 @@ const ProductsList = (props: ProductsListProps) => {
 		return brandByName?.id ?? null;
 	});
 
+	const priceRange = createMemo<[number, number]>(() => {
+		const raw = priceParam();
+		if (!raw) return [PRICE_MIN, PRICE_MAX];
+		const [minStr, maxStr] = raw.split("-");
+		const min = Number.parseInt(minStr ?? "", 10);
+		const max = Number.parseInt(maxStr ?? "", 10);
+		return [
+			Number.isNaN(min) ? PRICE_MIN : min,
+			Number.isNaN(max) ? PRICE_MAX : max,
+		];
+	});
+
+	const minPrice = createMemo(() => {
+		const value = priceRange()[0];
+		return value <= PRICE_MIN ? undefined : value;
+	});
+
+	const maxPrice = createMemo(() => {
+		const value = priceRange()[1];
+		return value >= PRICE_MAX ? undefined : value;
+	});
+
+	const inStockOnly = createMemo(() => stockParam() === "instock");
+	const includeOutOfStock = createMemo(() => !inStockOnly());
+
 	const searchQuery = useQuery(
 		() => ({
 			queryKey: ["search-products-page", searchTerm(), categoryId(), brandId()],
@@ -229,10 +259,13 @@ const ProductsList = (props: ProductsListProps) => {
 				categoryId(),
 				brandId(),
 				listFilter(),
+				minPrice(),
+				maxPrice(),
+				includeOutOfStock(),
 			],
 			queryFn: async ({ pageParam }) => {
 				const sort = selectedSort();
-				const result = await api.product.getInfiniteProducts.query({
+				const params = {
 					cursor: pageParam,
 					limit: 12,
 					listType: listFilter() ?? undefined,
@@ -240,7 +273,12 @@ const ProductsList = (props: ProductsListProps) => {
 					sortDirection: sort?.direction,
 					categoryId: categoryId() ?? undefined,
 					brandId: brandId() ?? undefined,
-				});
+					minPrice: minPrice(),
+					maxPrice: maxPrice(),
+				};
+				const result = includeOutOfStock()
+					? await api.product.getInfiniteProducts.query(params)
+					: await api.product.getInfiniteProductsWithStock.query(params);
 				return result;
 			},
 			initialPageParam: undefined as string | undefined,
@@ -393,59 +431,57 @@ const ProductsList = (props: ProductsListProps) => {
 			!categoryId() &&
 			!brandId() &&
 			!listFilter() &&
-			!sortField(),
+			!sortField() &&
+			minPrice() === undefined &&
+			maxPrice() === undefined &&
+			!inStockOnly(),
 	);
 
-	const handleSearch = (term: string) => {
-		setLocalSearchTerm(term);
-		setSearchTerm(term || null);
-	};
-
-	const handleSortChange = (field: string | null, direction: string | null) => {
-		if (
-			(field === "price" || field === "createdAt") &&
-			(direction === "asc" || direction === "desc")
-		) {
-			batch(() => {
-				setSortField(field);
-				setSortDirection(direction);
-			});
+	const writePrice = (range: [number, number]) => {
+		if (range[0] <= PRICE_MIN && range[1] >= PRICE_MAX) {
+			setPriceParam(null);
 			return;
 		}
+		setPriceParam(`${range[0]}-${range[1]}`);
+	};
+
+	const applyFilters = (next: {
+		sortField: string | null;
+		sortDirection: string | null;
+		categoryId: number | null;
+		brandId: number | null;
+		priceRange: [number, number];
+		includeOutOfStock: boolean;
+	}) => {
+		const validSort =
+			(next.sortField === "price" || next.sortField === "createdAt") &&
+			(next.sortDirection === "asc" || next.sortDirection === "desc");
+		batch(() => {
+			setSortField(validSort ? next.sortField : null);
+			setSortDirection(validSort ? next.sortDirection : null);
+			setCategoryIdParam(next.categoryId?.toString() ?? null);
+			setBrandIdParam(next.brandId?.toString() ?? null);
+			writePrice(next.priceRange);
+			setStockParam(next.includeOutOfStock ? null : "instock");
+		});
+	};
+
+	const resetDrawerFilters = () => {
+		batch(() => {
+			setSortField(null);
+			setSortDirection(null);
+			setCategoryIdParam(null);
+			setBrandIdParam(null);
+			setPriceParam(null);
+			setStockParam(null);
+		});
+	};
+
+	const removeSort = () => {
 		batch(() => {
 			setSortField(null);
 			setSortDirection(null);
 		});
-	};
-
-	const handleCategoryChange = (id: number | null) => {
-		if (!id) {
-			setCategoryIdParam(null);
-			return;
-		}
-		const category = categoriesQuery.data?.find(
-			(c: { id: number; slug: string }) => c.id === id,
-		);
-		if (category?.slug) {
-			window.location.href = `/products/category/${category.slug}/1/`;
-		} else {
-			setCategoryIdParam(id?.toString() ?? null);
-		}
-	};
-
-	const handleBrandChange = (id: number | null) => {
-		if (!id) {
-			setBrandIdParam(null);
-			return;
-		}
-		const brand = brandsQuery.data?.find(
-			(b: { id: number; slug: string }) => b.id === id,
-		);
-		if (brand?.slug) {
-			window.location.href = `/products/brand/${brand.slug}/1/`;
-		} else {
-			setBrandIdParam(id?.toString() ?? null);
-		}
 	};
 
 	const handleClearFilters = () => {
@@ -456,16 +492,111 @@ const ProductsList = (props: ProductsListProps) => {
 			setCategoryIdParam(null);
 			setBrandIdParam(null);
 			setListFilterParam(null);
-			setLocalSearchTerm("");
+			setPriceParam(null);
+			setStockParam(null);
 		});
 	};
+
+	const priceLabel = createMemo(() => {
+		const [min, max] = priceRange();
+		if (min > PRICE_MIN && max < PRICE_MAX) {
+			return `${formatCurrency(min)}–${formatCurrency(max)}`;
+		}
+		if (max < PRICE_MAX) return `≤ ${formatCurrency(max)}`;
+		return `≥ ${formatCurrency(min)}`;
+	});
+
+	const activeFilterCount = createMemo(() => {
+		let count = 0;
+		if (categoryId()) count += 1;
+		if (brandId()) count += 1;
+		if (minPrice() !== undefined || maxPrice() !== undefined) count += 1;
+		if (selectedSort()) count += 1;
+		if (listFilter()) count += 1;
+		if (inStockOnly()) count += 1;
+		return count;
+	});
+
+	const categoryLabel = createMemo(
+		() =>
+			categoriesQuery.data?.find(
+				(c: { id: number; name: string }) => c.id === categoryId(),
+			)?.name ?? null,
+	);
+	const brandLabel = createMemo(
+		() =>
+			brandsQuery.data?.find(
+				(b: { id: number; name: string }) => b.id === brandId(),
+			)?.name ?? null,
+	);
+	const sortLabel = createMemo(() => {
+		const sort = selectedSort();
+		if (!sort) return null;
+		return (
+			productSortOptions.find(
+				(o) => o.field === sort.field && o.direction === sort.direction,
+			)?.label ?? null
+		);
+	});
+	const presetLabel = createMemo(() => {
+		const preset = listFilter();
+		return preset ? productPresetFilterLabels[preset] : null;
+	});
+	const priceChipLabel = createMemo(() =>
+		minPrice() !== undefined || maxPrice() !== undefined ? priceLabel() : null,
+	);
+	const stockLabel = createMemo(() =>
+		inStockOnly() ? "Зөвхөн нөөцтэй" : null,
+	);
+
+	const appliedChips = createMemo(() =>
+		[
+			{
+				key: "search",
+				label: searchTerm(),
+				onRemove: () => setSearchTerm(null),
+			},
+			{
+				key: "category",
+				label: categoryLabel(),
+				onRemove: () => setCategoryIdParam(null),
+			},
+			{
+				key: "brand",
+				label: brandLabel(),
+				onRemove: () => setBrandIdParam(null),
+			},
+			{
+				key: "price",
+				label: priceChipLabel(),
+				onRemove: () => setPriceParam(null),
+			},
+			{ key: "sort", label: sortLabel(), onRemove: removeSort },
+			{
+				key: "preset",
+				label: presetLabel(),
+				onRemove: () => setListFilterParam(null),
+			},
+			{
+				key: "stock",
+				label: stockLabel(),
+				onRemove: () => setStockParam(null),
+			},
+		].filter(
+			(chip): chip is { key: string; label: string; onRemove: () => void } =>
+				chip.label != null && chip.label !== "",
+		),
+	);
 
 	const hasActiveFilters = () =>
 		!!searchTerm() ||
 		!!selectedSort() ||
 		!!categoryId() ||
 		!!brandId() ||
-		!!listFilter();
+		!!listFilter() ||
+		minPrice() !== undefined ||
+		maxPrice() !== undefined ||
+		inStockOnly();
 
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
@@ -550,7 +681,7 @@ const ProductsList = (props: ProductsListProps) => {
 	// Get active filter display text
 	const getPageTitle = () => {
 		if (searchTerm()) return `"${searchTerm()}" хайлтын үр дүн`;
-		if (listFilter()) return LIST_FILTER_LABELS[listFilter() as ListFilter];
+		if (listFilter()) return productPresetFilterLabels[listFilter() as ListFilter];
 		if (categoryId()) {
 			const cat = categoriesQuery.data?.find(
 				(c: { id: number; name: string }) => c.id === categoryId(),
@@ -611,25 +742,57 @@ const ProductsList = (props: ProductsListProps) => {
 					</Show>
 				</div>
 
-				{/* Filter Bar */}
-				<FilterBar
-					searchTerm={localSearchTerm()}
+				{/* Search + filter trigger topbar */}
+				<div class="-mx-3 sm:-mx-6 lg:-mx-8 sticky top-0 z-30 mb-3 flex items-center gap-2 border-border border-b bg-background/95 px-3 py-2.5 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md sm:px-6 lg:px-8">
+					<SearchSheet
+						position="bottom"
+						triggerAriaLabel="Хайх"
+						triggerClass="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out active:scale-[0.99]"
+						contentClass="h-[85vh] w-full max-w-none border-border border-t p-0"
+						headerClass="bg-primary/10"
+						inputPlaceholder="Омега-3, магни, нойргүйдэл…"
+						triggerContent={
+							<>
+								<IconSearch class="h-5 w-5 shrink-0" aria-hidden="true" />
+								<span class="truncate font-medium text-sm">Хайх...</span>
+							</>
+						}
+					/>
+					<button
+						type="button"
+						onClick={() => setFilterDrawerOpen(true)}
+						aria-label="Шүүлтүүр нээх"
+						class="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 font-bold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
+					>
+						<IconEqualizer class="h-4 w-4" />
+						<span>Шүүлтүүр</span>
+						<Show when={activeFilterCount() > 0}>
+							<span class="flex size-5 items-center justify-center rounded-full border border-cocoa bg-primary font-bold text-[11px]">
+								{activeFilterCount()}
+							</span>
+						</Show>
+					</button>
+				</div>
+
+				<AppliedFilters
+					chips={appliedChips()}
+					onClearAll={handleClearFilters}
+				/>
+
+				<FilterDrawer
+					open={filterDrawerOpen()}
+					onOpenChange={setFilterDrawerOpen}
+					categories={categoriesQuery.data ?? []}
+					brands={brandsQuery.data ?? []}
 					sortField={sortField()}
 					sortDirection={sortDirection()}
 					categoryId={categoryId()}
 					brandId={brandId()}
-					categories={categoriesQuery.data ?? []}
-					brands={brandsQuery.data ?? []}
-					onSearchChange={handleSearch}
-					onSortChange={handleSortChange}
-					onCategoryChange={handleCategoryChange}
-					onBrandChange={handleBrandChange}
-					presetFilter={listFilter()}
-					onPresetFilterChange={(value: ListFilter | null) =>
-						setListFilterParam(value)
-					}
-					onClearFilters={handleClearFilters}
-					hasActiveFilters={hasActiveFilters()}
+					priceRange={priceRange()}
+					listFilter={listFilter()}
+					includeOutOfStock={includeOutOfStock()}
+					onApply={applyFilters}
+					onReset={resetDrawerFilters}
 				/>
 
 				{/* Products Grid */}

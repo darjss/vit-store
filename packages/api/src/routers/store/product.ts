@@ -854,6 +854,8 @@ export const product = router({
 				searchTerm: v.optional(v.string()),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+				maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -883,6 +885,8 @@ export const product = router({
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+				maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -911,6 +915,8 @@ export const product = router({
 				searchTerm: v.optional(v.string()),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+				maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -940,6 +946,8 @@ export const product = router({
 				categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 				sortDirection: v.optional(v.picklist(["asc", "desc"])),
+				minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+				maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

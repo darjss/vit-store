@@ -6,10 +6,12 @@ import {
 	desc,
 	eq,
 	gt,
+	gte,
 	ilike,
 	inArray,
 	isNull,
 	lt,
+	lte,
 	or,
 	type SQLWrapper,
 	sql,
@@ -500,6 +502,8 @@ export const storeQueries = {
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
+			minPrice?: number;
+			maxPrice?: number;
 		}) {
 			const {
 				cursor,
@@ -511,6 +515,8 @@ export const storeQueries = {
 				sortField = "stock",
 				sortDirection = "desc",
 			requireStock = false,
+				minPrice,
+				maxPrice,
 			} = params;
 
 			// Build filter conditions
@@ -520,6 +526,10 @@ export const storeQueries = {
 				conditions.push(eq(ProductsTable.brandId, brandId));
 			if (categoryId !== undefined && categoryId !== 0)
 				conditions.push(eq(ProductsTable.categoryId, categoryId));
+			if (minPrice !== undefined)
+				conditions.push(gte(ProductsTable.price, minPrice));
+			if (maxPrice !== undefined)
+				conditions.push(lte(ProductsTable.price, maxPrice));
 			if (listType === "featured") {
 				conditions.push(eq(ProductsTable.isFeatured, true));
 			}
@@ -654,6 +664,8 @@ export const storeQueries = {
 			searchTerm?: string;
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
+			minPrice?: number;
+			maxPrice?: number;
 		}) {
 			return storeQueries.getInfiniteProducts({ ...params, requireStock: true });
 		},
@@ -683,6 +695,8 @@ export const storeQueries = {
 			categoryId?: number;
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
+			minPrice?: number;
+			maxPrice?: number;
 		}) {
 			const {
 				page,
@@ -692,6 +706,8 @@ export const storeQueries = {
 				sortField = "stock",
 				sortDirection = "desc",
 				requireStock = false,
+				minPrice,
+				maxPrice,
 			} = params;
 
 			const conditions: (SQL<unknown> | undefined)[] = [];
@@ -700,6 +716,10 @@ export const storeQueries = {
 				conditions.push(eq(ProductsTable.brandId, brandId));
 			if (categoryId !== undefined && categoryId !== 0)
 				conditions.push(eq(ProductsTable.categoryId, categoryId));
+			if (minPrice !== undefined)
+				conditions.push(gte(ProductsTable.price, minPrice));
+			if (maxPrice !== undefined)
+				conditions.push(lte(ProductsTable.price, maxPrice));
 
 			const finalConditions = conditions.filter(
 				(c): c is SQL<unknown> => c !== undefined,
@@ -795,6 +815,8 @@ export const storeQueries = {
 			categoryId?: number;
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
+			minPrice?: number;
+			maxPrice?: number;
 		}) {
 			return storeQueries.getPaginatedProducts({ ...params, requireStock: true });
 		},
