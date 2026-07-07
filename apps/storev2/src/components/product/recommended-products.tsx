@@ -37,7 +37,7 @@ async function fetchRecommendedProducts(
 ): Promise<ProductForHome[]> {
 	try {
 		const upstashMatches = await withTimeout(
-			api.product.searchProductsForPageWithStock.query({
+			api.product.searchProductsForPage.query({
 				query: productName,
 				limit: 10,
 				categoryId,
@@ -55,6 +55,7 @@ async function fetchRecommendedProducts(
 				price: p.price,
 				image: p.image,
 				brand: p.brand,
+				stock: p.stock,
 			}));
 
 		// Only use search results if we have enough for a decent shelf (>=3).
@@ -81,7 +82,7 @@ async function fetchRecommendedProducts(
 	} catch {
 		try {
 			const fallbackProducts = await withTimeout(
-				api.product.getProductsForHomeWithStock.query(),
+				api.product.getProductsForHome.query(),
 				RECOMMENDED_FETCH_TIMEOUT_MS,
 			);
 			return fallbackProducts.featuredProducts.slice(0, 4);
@@ -167,8 +168,8 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										product.image,
 										"card",
 									);
-									const [imageFailed, setImageFailed] =
-										createSignal(false);
+									const [imageFailed, setImageFailed] = createSignal(false);
+									const isOutOfStock = product.stock === 0;
 
 									return (
 										<a
@@ -177,7 +178,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 											class="group hover:-translate-y-1 block w-[144px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
 											<div
-												class={`relative aspect-square overflow-hidden ${washClass()}`}
+												class={`relative aspect-square overflow-hidden ${washClass()} ${isOutOfStock ? "saturate-[0.35]" : ""}`}
 											>
 												<div class="absolute inset-0 bg-dots-subtle" />
 												<Show
@@ -197,11 +198,16 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														sizes={imageProps.sizes}
 														layout="constrained"
 														objectFit="contain"
-														class="relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04]"
+														class={`relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04] ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
 														loading="lazy"
 														decoding="async"
 														onError={() => setImageFailed(true)}
 													/>
+												</Show>
+												<Show when={isOutOfStock}>
+													<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
+														Дууссан
+													</span>
 												</Show>
 											</div>
 

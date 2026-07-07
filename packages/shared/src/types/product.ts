@@ -15,6 +15,7 @@ export interface ProductForHome {
 	image: string;
 	brand: string;
 	discount?: number;
+	stock?: number;
 }
 
 export interface ProductImage {

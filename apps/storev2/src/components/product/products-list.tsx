@@ -184,7 +184,7 @@ const ProductsList = (props: ProductsListProps) => {
 			queryFn: async () => {
 				const term = searchTerm();
 				if (!term || term.length < 2) return [];
-				return await api.product.searchProductsForPageWithStock.query({
+				return await api.product.searchProductsForPage.query({
 					query: term,
 					limit: 10,
 					categoryId: categoryId() ?? undefined,
@@ -232,7 +232,7 @@ const ProductsList = (props: ProductsListProps) => {
 			],
 			queryFn: async ({ pageParam }) => {
 				const sort = selectedSort();
-				const result = await api.product.getInfiniteProductsWithStock.query({
+				const result = await api.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
 					listType: listFilter() ?? undefined,
