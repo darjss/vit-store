@@ -99,7 +99,7 @@ export function EditableField<T>({
 							disabled={isLoading}
 						>
 							<SelectTrigger className="min-w-0 flex-1 font-medium text-base text-foreground disabled:opacity-60">
-								<SelectValue placeholder="Select an option" />
+								<SelectValue placeholder="Сонголт хийх" />
 							</SelectTrigger>
 							<SelectContent>
 								{options?.map((option) => (
