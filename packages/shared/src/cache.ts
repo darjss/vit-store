@@ -12,7 +12,7 @@ export const CACHE_POLICY = {
 } as const satisfies Record<string, CachePolicy>;
 
 export function cacheControlHeader(policy: CachePolicy): string {
-	return `public, max-age=${policy.maxAge}, stale-while-revalidate=${policy.staleWhileRevalidate}`;
+	return `public, s-maxage=${policy.maxAge}, stale-while-revalidate=${policy.staleWhileRevalidate}`;
 }
 
 export type CatalogCacheAccumulator = {
