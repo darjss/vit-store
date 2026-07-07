@@ -34,14 +34,25 @@ export function isUniqueViolation(error: unknown): boolean {
 // This makes consumption independent of which call wins the payment status
 // flip: a DO poll that loses the race to an admin confirm still records its
 // fingerprint, and a later replay by a different payment is still rejected.
+//
+// The INSERT is wrapped in a SAVEPOINT (drizzle nested tx.transaction()) so
+// the OUTER transaction survives the unique-violation. In real PostgreSQL a
+// 23505 unique-violation aborts the transaction (state 25P02) — every
+// subsequent command on that tx handle fails. Without the savepoint the
+// lookup select would fail and the caller would see a raw 23505 instead of
+// the clean idempotent-return / KhaanTransactionAlreadyConsumedError. The
+// savepoint rolls back only the failed insert; the outer tx remains usable
+// for the lookup.
 export async function recordConsumedKhaanTransaction(
 	tx: TransactionType,
 	input: { fingerprint: string; paymentNumber: string },
 ): Promise<void> {
 	try {
-		await tx.insert(KhaanConsumedTransactionsTable).values({
-			fingerprint: input.fingerprint,
-			paymentNumber: input.paymentNumber,
+		await tx.transaction(async (sp) => {
+			await sp.insert(KhaanConsumedTransactionsTable).values({
+				fingerprint: input.fingerprint,
+				paymentNumber: input.paymentNumber,
+			});
 		});
 	} catch (error) {
 		if (!isUniqueViolation(error)) {
