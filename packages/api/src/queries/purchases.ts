@@ -576,21 +576,17 @@ export const purchaseQueries = {
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
 				if (!purchaseItem) continue;
-				const product = await tx.query.ProductsTable.findFirst({
-					where: and(
-						eq(ProductsTable.id, purchaseItem.productId),
-						isNull(ProductsTable.deletedAt),
-					),
-					columns: {
-						stock: true,
-					},
-				});
 				await tx
 					.update(ProductsTable)
 					.set({
-						stock: (product?.stock ?? 0) + receiptItem.quantityReceived,
+						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
 					})
-					.where(eq(ProductsTable.id, purchaseItem.productId));
+					.where(
+						and(
+							eq(ProductsTable.id, purchaseItem.productId),
+							isNull(ProductsTable.deletedAt),
+						),
+					);
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);

@@ -74,7 +74,7 @@ function SheetContent({
 				{children}
 				<SheetPrimitive.Close className="absolute top-4 right-4 rounded-base ring-offset-white focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
 					<X className="h-4 w-4" />
-					<span className="sr-only">Close</span>
+					<span className="sr-only">Хаах</span>
 				</SheetPrimitive.Close>
 			</SheetPrimitive.Content>
 		</SheetPortal>

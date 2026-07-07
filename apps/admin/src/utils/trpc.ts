@@ -1,4 +1,4 @@
-import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import {
 	createTRPCClient,
 	httpBatchLink,
@@ -24,12 +24,20 @@ export const queryClient = new QueryClient({
 		onError: (error) => {
 			toast.error(error.message, {
 				action: {
-					label: "retry",
+					label: "Дахин оролдох",
 					onClick: () => {
 						queryClient.invalidateQueries();
 					},
 				},
 			});
+		},
+	}),
+	mutationCache: new MutationCache({
+		onError: (error, _variables, _context, mutation) => {
+			// Skip when the mutation defines its own onError (TanStack runs both;
+			// avoid double-toast by deferring to the local handler).
+			if (mutation.options.onError) return;
+			toast.error(error.message);
 		},
 	}),
 });

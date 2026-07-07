@@ -3,12 +3,15 @@ import {
 	useQueryClient,
 	useSuspenseQueries,
 } from "@tanstack/react-query";
+import type { purchaseProvider } from "@vit/shared";
+import { Loader2, Plus } from "lucide-react";
 import {
-	Loader2,
-	Plus,
-} from "lucide-react";
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
-import { purchaseProvider } from "@vit/shared";
+	type ChangeEvent,
+	type FormEvent,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { toast } from "sonner";
 import type { PurchaseDetailType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -17,7 +20,13 @@ import { Button } from "../ui/button";
 import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import {
 	buildImportedPurchasePayload,
@@ -195,20 +204,25 @@ export default function PurchaseForm({
 
 		if (aiData) {
 			if (hasUnresolvedAiItems(items)) {
-				toast.error("Resolve all unmatched products before saving");
+				toast.error("Хадгалахаас өмнө тохироогүй бүх барааг шийдвэрлэнэ үү");
 				return;
 			}
 
-			importPurchaseMutation.mutate(buildImportedPurchasePayload({
-				provider: provider as PurchaseDetailType["provider"],
-				externalOrderNumber,
-				trackingNumber,
-				shippingCost,
-				notes,
-				orderedAt,
-				shippedAt,
-				forwarderReceivedAt,
-			}, items));
+			importPurchaseMutation.mutate(
+				buildImportedPurchasePayload(
+					{
+						provider: provider as PurchaseDetailType["provider"],
+						externalOrderNumber,
+						trackingNumber,
+						shippingCost,
+						notes,
+						orderedAt,
+						shippedAt,
+						forwarderReceivedAt,
+					},
+					items,
+				),
+			);
 			return;
 		}
 
@@ -229,7 +243,10 @@ export default function PurchaseForm({
 		);
 
 		if (purchase) {
-			updatePurchaseMutation.mutate({ id: purchase.id, data: payload } as never);
+			updatePurchaseMutation.mutate({
+				id: purchase.id,
+				data: payload,
+			} as never);
 			return;
 		}
 
@@ -241,7 +258,7 @@ export default function PurchaseForm({
 			<FormLoadingOverlay isLoading={isSubmitting} />
 			<div className="grid gap-4 md:grid-cols-2">
 				<div className="space-y-2">
-					<Label htmlFor="provider">Provider</Label>
+					<Label htmlFor="provider">Нийлүүлэгч</Label>
 					<Select
 						value={provider}
 						onValueChange={(value) =>
@@ -255,13 +272,13 @@ export default function PurchaseForm({
 							<SelectItem value="amazon">Amazon</SelectItem>
 							<SelectItem value="iherb">iHerb</SelectItem>
 							<SelectItem value="naturebell">Naturebell</SelectItem>
-							<SelectItem value="unknown">Unknown</SelectItem>
+							<SelectItem value="unknown">Тодорхойгүй</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="externalOrderNumber">External order number</Label>
+					<Label htmlFor="externalOrderNumber">Гадаад захиалгын дугаар</Label>
 					<Input
 						id="externalOrderNumber"
 						value={externalOrderNumber}
@@ -271,7 +288,7 @@ export default function PurchaseForm({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="trackingNumber">Tracking number</Label>
+					<Label htmlFor="trackingNumber">Трек код</Label>
 					<Input
 						id="trackingNumber"
 						value={trackingNumber}
@@ -280,7 +297,7 @@ export default function PurchaseForm({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="shippingCost">Shipping cost</Label>
+					<Label htmlFor="shippingCost">Хүргэлтийн зардал</Label>
 					<Input
 						id="shippingCost"
 						type="number"
@@ -292,7 +309,7 @@ export default function PurchaseForm({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="orderedAt">Ordered at</Label>
+					<Label htmlFor="orderedAt">Захиалсан огноо</Label>
 					<Input
 						id="orderedAt"
 						type="datetime-local"
@@ -302,7 +319,7 @@ export default function PurchaseForm({
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="shippedAt">Shipped at</Label>
+					<Label htmlFor="shippedAt">Илгээгдсэн огноо</Label>
 					<Input
 						id="shippedAt"
 						type="datetime-local"
@@ -312,7 +329,9 @@ export default function PurchaseForm({
 				</div>
 
 				<div className="space-y-2 md:col-span-2">
-					<Label htmlFor="forwarderReceivedAt">Forwarder received at</Label>
+					<Label htmlFor="forwarderReceivedAt">
+						Зуучлагч хүлээн авсан огноо
+					</Label>
 					<Input
 						id="forwarderReceivedAt"
 						type="datetime-local"
@@ -323,20 +342,20 @@ export default function PurchaseForm({
 			</div>
 
 			<div className="space-y-2">
-				<Label htmlFor="notes">Notes</Label>
-					<Textarea
-						id="notes"
-						value={notes}
-						onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
-							setNotes(event.target.value)
-						}
+				<Label htmlFor="notes">Тэмдэглэл</Label>
+				<Textarea
+					id="notes"
+					value={notes}
+					onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+						setNotes(event.target.value)
+					}
 					rows={4}
 				/>
 			</div>
 
 			<div className="space-y-4">
 				<div className="flex items-center justify-between">
-					<h3 className="font-heading text-lg">Items</h3>
+					<h3 className="font-heading text-lg">Бараа</h3>
 					{!aiData ? (
 						<Button
 							type="button"
@@ -346,7 +365,7 @@ export default function PurchaseForm({
 							className="gap-2"
 						>
 							<Plus className="h-4 w-4" />
-							Add item
+							Бараа нэмэх
 						</Button>
 					) : null}
 				</div>
@@ -372,33 +391,31 @@ export default function PurchaseForm({
 
 			<div className="rounded-base border-2 border-border bg-card p-4">
 				<div className="flex items-center justify-between text-sm">
-					<span className="text-muted-foreground">Merchandise total</span>
+					<span className="text-muted-foreground">Барааны дүн</span>
 					<span>{formatCurrency(subtotal)}</span>
 				</div>
 				<div className="mt-2 flex items-center justify-between text-sm">
-					<span className="text-muted-foreground">Shipping</span>
+					<span className="text-muted-foreground">Хүргэлт</span>
 					<span>{formatCurrency(Number(shippingCost) || 0)}</span>
 				</div>
 				<div className="mt-3 flex items-center justify-between border-t pt-3 font-semibold">
-					<span>Total landed cost</span>
+					<span>Нийт өртөг</span>
 					<span>{formatCurrency(subtotal + (Number(shippingCost) || 0))}</span>
 				</div>
 			</div>
 
 			<div className="flex items-center gap-3">
 				<Button type="submit" disabled={isSubmitting} className="gap-2">
-					{isSubmitting ? (
-						<Loader2 className="h-4 w-4 animate-spin" />
-					) : null}
+					{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
 					{purchase
-						? "Update purchase"
+						? "Худалдан авалт шинэчлэх"
 						: aiData
-							? "Save imported purchase"
-							: "Create purchase"}
+							? "Оруулсан худалдан авалт хадгалах"
+							: "Худалдан авалт үүсгэх"}
 				</Button>
 				{aiData && onResetAI ? (
 					<Button type="button" variant="outline" onClick={onResetAI}>
-						Rescan invoice
+						Падаан дахин уншуулах
 					</Button>
 				) : null}
 			</div>

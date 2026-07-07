@@ -51,7 +51,7 @@ function ItemWarnings({ warnings }: { warnings: string[] }) {
 		<div className="rounded-base border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm">
 			<div className="mb-2 flex items-center gap-2 font-medium">
 				<AlertCircle className="h-4 w-4" />
-				Review warnings
+				Анхааруулга шалгах
 			</div>
 			<ul className="space-y-1">
 				{warnings.map((warning, warningIndex) => (
@@ -75,9 +75,7 @@ function DraftSuggestions({
 
 	return (
 		<div className="space-y-2">
-			<p className="text-muted-foreground text-sm">
-				Suggested existing matches
-			</p>
+			<p className="text-muted-foreground text-sm">Санал болгосон таарц</p>
 			<div className="flex flex-wrap gap-2">
 				{candidates.map((candidate) => (
 					<Button
@@ -111,7 +109,7 @@ function DraftFields({
 	return (
 		<div className="grid gap-4 md:grid-cols-2">
 			<div className="space-y-2">
-				<Label>Product name</Label>
+				<Label>Барааны нэр</Label>
 				<Input
 					value={item.newProductDraft?.name ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
@@ -120,7 +118,7 @@ function DraftFields({
 				/>
 			</div>
 			<div className="space-y-2">
-				<Label>Name (MN)</Label>
+				<Label>Нэр (МН)</Label>
 				<Input
 					value={item.newProductDraft?.name_mn ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
@@ -129,7 +127,7 @@ function DraftFields({
 				/>
 			</div>
 			<div className="space-y-2">
-				<Label>Brand</Label>
+				<Label>Брэнд</Label>
 				<Select
 					value={
 						item.newProductDraft?.brandId
@@ -141,7 +139,7 @@ function DraftFields({
 					}
 				>
 					<SelectTrigger>
-						<SelectValue placeholder="Choose brand" />
+						<SelectValue placeholder="Брэнд сонгох" />
 					</SelectTrigger>
 					<SelectContent>
 						{brands.map((brand) => (
@@ -153,7 +151,7 @@ function DraftFields({
 				</Select>
 			</div>
 			<div className="space-y-2">
-				<Label>Category</Label>
+				<Label>Ангилал</Label>
 				<Select
 					value={
 						item.newProductDraft?.categoryId
@@ -165,7 +163,7 @@ function DraftFields({
 					}
 				>
 					<SelectTrigger>
-						<SelectValue placeholder="Choose category" />
+						<SelectValue placeholder="Ангилал сонгох" />
 					</SelectTrigger>
 					<SelectContent>
 						{categories.map((category) => (
@@ -177,7 +175,7 @@ function DraftFields({
 				</Select>
 			</div>
 			<div className="space-y-2">
-				<Label>Amount</Label>
+				<Label>Хэмжээ</Label>
 				<Input
 					value={item.newProductDraft?.amount ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
@@ -186,7 +184,7 @@ function DraftFields({
 				/>
 			</div>
 			<div className="space-y-2">
-				<Label>Potency</Label>
+				<Label>Агууламж</Label>
 				<Input
 					value={item.newProductDraft?.potency ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
@@ -195,7 +193,7 @@ function DraftFields({
 				/>
 			</div>
 			<div className="space-y-2 md:col-span-2">
-				<Label>Description</Label>
+				<Label>Тайлбар</Label>
 				<Textarea
 					value={item.newProductDraft?.description ?? ""}
 					onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
@@ -258,7 +256,7 @@ function ProductSearchField({
 
 	return (
 		<div className="space-y-2">
-			<Label>Product</Label>
+			<Label>Бараа</Label>
 			{selectedProduct ? (
 				<div className="flex items-center justify-between gap-2 rounded-base border-2 border-border bg-background px-3 py-2">
 					<span className="line-clamp-1 text-sm">{selectedProduct.name}</span>
@@ -268,7 +266,7 @@ function ProductSearchField({
 						size="sm"
 						onClick={() => onUpdateItem(index, "productId", 0)}
 					>
-						Change
+						Солих
 					</Button>
 				</div>
 			) : null}
@@ -276,7 +274,7 @@ function ProductSearchField({
 				<div className="relative">
 					<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
 					<Input
-						placeholder="Search product by name..."
+						placeholder="Барааг нэрээр хайх..."
 						className="pl-10"
 						value={productSearch}
 						onChange={handleProductSearchChange}
@@ -285,7 +283,7 @@ function ProductSearchField({
 				{isSearchingProducts ? (
 					<div className="mt-2 flex items-center text-muted-foreground text-xs">
 						<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-						Searching...
+						Хайж байна...
 					</div>
 				) : null}
 				{searchResults.length > 0 && productSearch ? (
@@ -309,9 +307,7 @@ function ProductSearchField({
 				{debouncedProductSearch &&
 				!isSearchingProducts &&
 				searchResults.length === 0 ? (
-					<p className="mt-2 text-muted-foreground text-xs">
-						No products found
-					</p>
+					<p className="mt-2 text-muted-foreground text-xs">Бараа олдсонгүй</p>
 				) : null}
 			</div>
 			{isAiMode ? (
@@ -321,7 +317,7 @@ function ProductSearchField({
 					size="sm"
 					onClick={() => onUpdateItem(index, "productId", 0)}
 				>
-					Create new product draft
+					Шинэ барааны ноорог үүсгэх
 				</Button>
 			) : null}
 		</div>
@@ -357,12 +353,12 @@ export function PurchaseLineEditor({
 							<p className="font-medium">{item.description}</p>
 							{item.sourceCode ? (
 								<p className="text-muted-foreground text-xs">
-									Code: {item.sourceCode}
+									Код: {item.sourceCode}
 								</p>
 							) : null}
 							{item.expirationDate ? (
 								<p className="text-muted-foreground text-xs">
-									Exp: {item.expirationDate}
+									Хугацаа: {item.expirationDate}
 								</p>
 							) : null}
 						</div>
@@ -370,7 +366,7 @@ export function PurchaseLineEditor({
 				</div>
 
 				<div className="space-y-2">
-					<Label>Qty ordered</Label>
+					<Label>Захиалсан тоо</Label>
 					<Input
 						type="number"
 						min={1}
@@ -383,7 +379,7 @@ export function PurchaseLineEditor({
 				</div>
 
 				<div className="space-y-2">
-					<Label>Unit cost</Label>
+					<Label>Нэгжийн өртөг</Label>
 					<Input
 						type="number"
 						min={0}
@@ -404,7 +400,7 @@ export function PurchaseLineEditor({
 						disabled={!canRemove}
 					>
 						<Trash2 className="h-4 w-4" />
-						Remove
+						Устгах
 					</Button>
 				</div>
 			</div>
@@ -415,7 +411,7 @@ export function PurchaseLineEditor({
 				<div className="space-y-4 rounded-base border border-border border-dashed bg-muted/20 p-4">
 					<div className="flex items-center gap-2">
 						<PackageSearch className="h-4 w-4" />
-						<h4 className="font-medium">New product draft</h4>
+						<h4 className="font-medium">Шинэ барааны ноорог</h4>
 					</div>
 
 					<DraftSuggestions
@@ -436,7 +432,7 @@ export function PurchaseLineEditor({
 
 			{typeof item.quantityReceived === "number" ? (
 				<p className="text-muted-foreground text-sm">
-					Received: {item.quantityReceived} / {item.quantityOrdered}
+					Хүлээн авсан: {item.quantityReceived} / {item.quantityOrdered}
 				</p>
 			) : null}
 		</div>

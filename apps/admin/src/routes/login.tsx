@@ -45,10 +45,10 @@ function RouteComponent() {
 				<div className="w-full max-w-sm">
 					<div className="mb-12 text-center">
 						<h1 className="mb-2 font-bold font-head text-4xl text-foreground">
-							Login
+							Нэвтрэх
 						</h1>
 						<p className="text-muted-foreground">
-							Sign in to access your admin dashboard
+							Админ хэсэгт нэвтрэхийн тулд нэвтэрнэ үү
 						</p>
 					</div>
 
@@ -62,7 +62,7 @@ function RouteComponent() {
 					<Button asChild variant="default" size="lg" className="w-full gap-3">
 						<a href={`${import.meta.env.VITE_SERVER_URL}/admin/login/google`}>
 							<GoogleIcon />
-							Sign in with Google
+							Google-ээр нэвтрэх
 						</a>
 					</Button>
 				</div>

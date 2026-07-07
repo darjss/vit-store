@@ -26,6 +26,7 @@ import {
 	SalesTable,
 } from "~/db/schema";
 import { logger } from "~/lib/logger";
+import type { TransactionType } from "~/lib/types";
 import {
 	type deliveryProvider,
 	getDaysFromTimeRange,
@@ -33,6 +34,7 @@ import {
 	type orderStatus,
 	shapeOrderResult,
 	shapeOrderResults,
+	UB_OFFSET_MS,
 } from "~/lib/utils";
 
 type OrderStatus = (typeof orderStatus)[number];
@@ -82,8 +84,11 @@ export const orderQueries = {
 			try {
 				const orderPromises: Promise<Array<{ orderCount: number }>>[] = [];
 				const salesPromises: Promise<Array<{ salesCount: number }>>[] = [];
+				const dayLabels: string[] = [];
 				for (let i = 0; i < 7; i++) {
 					const { startDate, endDate } = getStartAndEndofDayAgo(i);
+					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
+					dayLabels.push(`${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`);
 					const dayOrderPromise = db()
 						.select({
 							orderCount: sql<number>`COUNT(*)`,
@@ -115,11 +120,10 @@ export const orderQueries = {
 				const salesResults = await Promise.all(salesPromises);
 				return orderResults.map((orderResult, i) => {
 					const salesResult = salesResults[i];
-					const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
 					return {
 						orderCount: orderResult[0]?.orderCount ?? 0,
 						salesCount: salesResult[0]?.salesCount ?? 0,
-						date: `${date.getMonth() + 1}/${date.getDate()}`,
+						date: dayLabels[i],
 					};
 				});
 			} catch {
@@ -181,6 +185,7 @@ export const orderQueries = {
 						orderDetails: {
 							columns: {
 								quantity: true,
+								price: true,
 							},
 							with: {
 								product: {
@@ -238,14 +243,29 @@ export const orderQueries = {
 
 		async createOrderDetails(
 			orderId: number,
-			products: Array<{ productId: number; quantity: number }>,
+			products: Array<{ productId: number; quantity: number; price: number }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
 				productId: p.productId,
 				quantity: p.quantity,
+				price: p.price,
 			}));
 			await db().insert(OrderDetailsTable).values(values);
+		},
+
+		async createOrderDetailsTx(
+			tx: TransactionType,
+			orderId: number,
+			products: Array<{ productId: number; quantity: number; price: number }>,
+		) {
+			const values = products.map((p) => ({
+				orderId,
+				productId: p.productId,
+				quantity: p.quantity,
+				price: p.price,
+			}));
+			await tx.insert(OrderDetailsTable).values(values);
 		},
 
 		async searchOrder(searchTerm: string) {
@@ -265,6 +285,7 @@ export const orderQueries = {
 					orderDetails: {
 						columns: {
 							quantity: true,
+							price: true,
 						},
 						with: {
 							product: {
@@ -381,6 +402,7 @@ export const orderQueries = {
 					orderDetails: {
 						columns: {
 							quantity: true,
+							price: true,
 						},
 						with: {
 							product: {
@@ -487,7 +509,7 @@ export const orderQueries = {
 				where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 				with: {
 					orderDetails: {
-						columns: { quantity: true },
+						columns: { quantity: true, price: true },
 						with: {
 							product: {
 								columns: { name: true, id: true, price: true },
@@ -577,7 +599,8 @@ export const orderQueries = {
 				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 		},
 
-		async updateOrder(
+		async updateOrderTx(
+			tx: TransactionType,
 			id: number,
 			data: {
 				customerPhone?: number;
@@ -586,64 +609,65 @@ export const orderQueries = {
 				total?: number;
 				address?: string;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
 			},
 		) {
-			await db().update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
+			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 		},
 
-		async getOrderDetailsByOrderId(orderId: number) {
-			return db()
+		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {
+			return tx
 				.select()
 				.from(OrderDetailsTable)
 				.where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
-		async deleteOrderDetails(orderId: number) {
-			await db()
+		async deleteOrderDetailsTx(tx: TransactionType, orderId: number) {
+			await tx
 				.delete(OrderDetailsTable)
 				.where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
-		async softDeleteOrder(id: number) {
+		async softDeleteOrderTx(tx: TransactionType, id: number) {
 			const now = new Date();
-			await db()
+			await tx
 				.update(OrderDetailsTable)
 				.set({ deletedAt: now })
 				.where(eq(OrderDetailsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(SalesTable)
 				.set({ deletedAt: now })
 				.where(eq(SalesTable.orderId, id));
 
-			await db()
+			await tx
 				.update(PaymentsTable)
 				.set({ deletedAt: now })
 				.where(eq(PaymentsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(OrdersTable)
 				.set({ deletedAt: now })
 				.where(eq(OrdersTable.id, id));
 		},
 
-		async restoreOrder(id: number) {
-			await db()
+		async restoreOrderTx(tx: TransactionType, id: number) {
+			await tx
 				.update(OrderDetailsTable)
 				.set({ deletedAt: null })
 				.where(eq(OrderDetailsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(SalesTable)
 				.set({ deletedAt: null })
 				.where(eq(SalesTable.orderId, id));
 
-			await db()
+			await tx
 				.update(PaymentsTable)
 				.set({ deletedAt: null })
 				.where(eq(PaymentsTable.orderId, id));
 
-			await db()
+			await tx
 				.update(OrdersTable)
 				.set({ deletedAt: null })
 				.where(eq(OrdersTable.id, id));

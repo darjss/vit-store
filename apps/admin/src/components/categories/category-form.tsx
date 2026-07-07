@@ -118,7 +118,7 @@ const CategoryForm = ({
 
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">SEO & Banner</h3>
+							<h3 className="font-semibold text-xl">SEO ба баннер</h3>
 
 							<FormField
 								control={form.control}
@@ -143,7 +143,7 @@ const CategoryForm = ({
 								name="bannerImage"
 								render={() => (
 									<FormItem>
-										<FormLabel>Banner зураг</FormLabel>
+										<FormLabel>Баннер зураг</FormLabel>
 										<FormControl>
 											<div className="flex flex-col items-center space-y-4">
 												{bannerImageUrl ? (
@@ -157,14 +157,14 @@ const CategoryForm = ({
 														</button>
 														<img
 															src={bannerImageUrl}
-															alt="Banner"
+															alt="Баннер"
 															className="h-24 w-full rounded-lg border-2 border-border bg-background object-cover shadow-sm"
 														/>
 													</div>
 												) : (
 													<div className="flex h-24 w-full items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
 														<p className="text-muted-foreground text-xs">
-															Banner байршуулах
+															Баннер байршуулах
 														</p>
 													</div>
 												)}
@@ -184,7 +184,7 @@ const CategoryForm = ({
 								name="seoTitle"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>SEO Title</FormLabel>
+										<FormLabel>SEO гарчиг</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="SEO гарчиг..."
@@ -202,7 +202,7 @@ const CategoryForm = ({
 								name="seoDescription"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>SEO Description</FormLabel>
+										<FormLabel>SEO тайлбар</FormLabel>
 										<FormControl>
 											<Textarea
 												placeholder="SEO тайлбар..."

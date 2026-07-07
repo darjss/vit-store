@@ -16,6 +16,7 @@ import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
 import { rebuildProductSearchIndex, searchProducts, } from "~/lib/product-search/client";
 import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+import { db } from "~/db/client";
 const normalizeExpirationDate = (value?: string | null) => {
     if (!value)
         return null;
@@ -155,44 +156,47 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-+|-+$/g, "");
-            const productResult = await productQueries.admin.createProduct({
-                name: productName,
-                slug,
-                description: input.description,
-                discount: 0,
-                amount: input.amount,
-                potency: input.potency,
-                stock: input.stock,
-                price: input.price,
-                dailyIntake: input.dailyIntake,
-                categoryId: input.categoryId,
-                brandId: input.brandId,
-                status: input.status || "active",
-                // Optional AI-extracted fields
-                name_mn: input.name_mn || null,
-                ingredients: input.ingredients || [],
-                tags: input.tags || [],
-                seoTitle: input.seoTitle || null,
-                seoDescription: input.seoDescription || null,
-                weightGrams: input.weightGrams || 0,
-                expirationDate: normalizedExpirationDate,
+            const productResult = await db().transaction(async (tx) => {
+                const created = await productQueries.admin.createProduct({
+                    name: productName,
+                    slug,
+                    description: input.description,
+                    discount: 0,
+                    amount: input.amount,
+                    potency: input.potency,
+                    stock: input.stock,
+                    price: input.price,
+                    dailyIntake: input.dailyIntake,
+                    categoryId: input.categoryId,
+                    brandId: input.brandId,
+                    status: input.status || "active",
+                    // Optional AI-extracted fields
+                    name_mn: input.name_mn || null,
+                    ingredients: input.ingredients || [],
+                    tags: input.tags || [],
+                    seoTitle: input.seoTitle || null,
+                    seoDescription: input.seoDescription || null,
+                    weightGrams: input.weightGrams || 0,
+                    expirationDate: normalizedExpirationDate,
+                }, tx);
+                if (!created) {
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Failed to create product",
+                    });
+                }
+                const productId = created.id;
+                const imagesToInsert = images.map((image, index) => ({
+                    productId,
+                    url: image.url,
+                    isPrimary: index === 0,
+                }));
+                await productQueries.admin.createProductImages(productId, imagesToInsert, tx);
+                return created;
             });
-            if (!productResult) {
-                throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Failed to create product",
-                });
-            }
-            const productId = productResult.id;
-            const imagesToInsert = images.map((image, index) => ({
-                productId: productId,
-                url: image.url,
-                isPrimary: index === 0,
-            }));
-            await productQueries.admin.createProductImages(productId, imagesToInsert);
-            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(productId)]);
+            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(productResult.id)]);
             scheduleProductSearchRebuild(ctx, "product_created");
-            return { message: "Product added successfully" };
+            return { message: "Product added successfully", id: productResult.id };
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {

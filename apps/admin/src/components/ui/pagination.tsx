@@ -11,7 +11,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
 		<nav
 			data-slot="pagination"
 			// role="navigation"
-			aria-label="pagination"
+			aria-label="хуудаслалт"
 			className={cn("mx-auto flex w-full justify-center", className)}
 			{...props}
 		/>
@@ -71,7 +71,7 @@ function PaginationPrevious({
 	return (
 		<PaginationLink
 			data-slot="pagination-previous"
-			aria-label="Go to previous page"
+			aria-label="Өмнөх хуудас руу очих"
 			size="default"
 			className={cn("gap-1 pl-2.5", className)}
 			{...props}
@@ -88,7 +88,7 @@ function PaginationNext({
 	return (
 		<PaginationLink
 			data-slot="pagination-next"
-			aria-label="Go to next page"
+			aria-label="Дараагийн хуудас руу очих"
 			size="default"
 			className={cn("gap-1 pr-2.5", className)}
 			{...props}
@@ -110,7 +110,7 @@ function PaginationEllipsis({
 			{...props}
 		>
 			<MoreHorizontal className="size-4" />
-			<span className="sr-only">More pages</span>
+			<span className="sr-only">Нэмэлт хуудас</span>
 		</span>
 	);
 }

@@ -24,13 +24,18 @@ export function useEditableField<T>({
 	};
 
 	const save = async () => {
+		if (isSaving) return;
 		setIsSaving(true);
 		try {
 			await onSave(tempValue);
 			setIsEditing(false);
-		} finally {
+		} catch (_error) {
+			// Keep editing on error so the user can retry/adjust.
+			// The caller's mutation onError is responsible for surfacing the toast.
 			setIsSaving(false);
+			return;
 		}
+		setIsSaving(false);
 	};
 
 	return {

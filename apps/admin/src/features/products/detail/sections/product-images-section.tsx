@@ -83,7 +83,7 @@ export function ProductDetailImagesSection({
 							{currentFeaturedImage && (
 								<img
 									src={currentFeaturedImage.url}
-									alt={`Product ${currentFeaturedImage.id}`}
+									alt={`Бүтээгдэхүүн ${currentFeaturedImage.id}`}
 									className="h-full w-full object-cover"
 								/>
 							)}
@@ -109,7 +109,7 @@ export function ProductDetailImagesSection({
 									>
 										<img
 											src={image.url}
-											alt={`Product ${image.id}`}
+											alt={`Бүтээгдэхүүн ${image.id}`}
 											className="h-full w-full object-cover"
 										/>
 									</button>
