@@ -120,7 +120,10 @@ describe("matchKhaanTransfer", () => {
 });
 
 describe("payment-date window", () => {
-	const txInstant = Date.parse("2026-06-28T18:30:00Z");
+	// transaction() has tranDate "2026-06-28T00:00:00Z" + time "18:30", which
+	// is 18:30 Ulaanbaatar = 10:30 UTC. The window check compares this true
+	// UTC instant against the UTC payment-createdAt.
+	const txInstant = Date.parse("2026-06-28T10:30:00Z");
 
 	test("includes a transfer exactly on the skew boundary", () => {
 		const createdAtMs = txInstant + 10 * 60 * 1000;
@@ -155,7 +158,8 @@ describe("payment-date window", () => {
 	});
 
 	test("a stale replay from days ago is filtered out before matching", () => {
-		const createdAtMs = Date.parse("2026-06-28T18:00:00Z");
+		// Payment created 18:00 UB Jun 28 = 10:00 UTC Jun 28.
+		const createdAtMs = Date.parse("2026-06-28T10:00:00Z");
 		const stale = transaction({
 			tranDate: "2026-06-20T00:00:00Z",
 			description: `transfer ${PHONE}`,
@@ -178,6 +182,71 @@ describe("payment-date window", () => {
 			expectedAmount: 125000,
 		});
 		expect(staleOnly).toEqual({ status: "none", matches: [] });
+	});
+
+	test("UB timezone: a 09:00 UB (01:00 UTC) transfer is excluded against a same-afternoon payment", () => {
+		// Transfer at 09:00 UB Jun 28 = 01:00 UTC Jun 28. Payment created at
+		// 16:00 UB Jun 28 = 08:00 UTC Jun 28. The transfer is 7h older than the
+		// payment; with the old UTC-midnight+local-time bug the computed
+		// instant was 09:00 UTC (8h late) and passed. With the +08:00 fix the
+		// instant is 01:00 UTC and is correctly excluded.
+		const morningTransfer = transaction({
+			tranDate: "2026-06-28T00:00:00Z",
+			time: "09:00",
+			description: `transfer ${PHONE}`,
+		});
+		const paymentCreatedAtMs = Date.parse("2026-06-28T08:00:00Z");
+		expect(
+			isTransactionWithinPaymentWindow(morningTransfer, paymentCreatedAtMs),
+		).toBe(false);
+	});
+
+	test("UB timezone: a same-day post-payment transfer is included", () => {
+		// Transfer at 18:30 UB Jun 28 = 10:30 UTC. Payment at 10:00 UTC.
+		const postPaymentTransfer = transaction({
+			tranDate: "2026-06-28T00:00:00Z",
+			time: "18:30",
+			description: `transfer ${PHONE}`,
+		});
+		const paymentCreatedAtMs = Date.parse("2026-06-28T10:00:00Z");
+		expect(
+			isTransactionWithinPaymentWindow(
+				postPaymentTransfer,
+				paymentCreatedAtMs,
+			),
+		).toBe(true);
+	});
+
+	test("missing time uses UB end-of-day (15:59:59 UTC), not next-day 07:59:59 UTC", () => {
+		// tranDate Jun 7, no time. Latest instant = Jun 7 23:59:59+08:00 =
+		// Jun 7 15:59:59 UTC. A payment created at Jul 7 23:30 UTC (Jul 8
+		// 07:30 UB) must NOT pass — the transfer is over 31h older. The old
+		// code returned Jun 7 23:59:59 UTC = Jul 8 07:59:59 UB and passed.
+		const missingTime = transaction({
+			tranDate: "2026-07-07T00:00:00Z",
+			time: undefined,
+			description: `transfer ${PHONE}`,
+		});
+		const paymentCreatedAtMs = Date.parse("2026-07-07T23:30:00Z");
+		expect(
+			isTransactionWithinPaymentWindow(missingTime, paymentCreatedAtMs),
+		).toBe(false);
+	});
+
+	test("missing time still admits a legit same-UB-day transfer", () => {
+		// tranDate Jun 28, no time → latest instant Jun 28 15:59:59 UTC.
+		// Payment created Jun 28 15:00 UTC (23:00 UB). A same-day transfer
+		// (any time that UB day) could be as late as 15:59:59 UTC, so it
+		// passes the window.
+		const missingTime = transaction({
+			tranDate: "2026-06-28T00:00:00Z",
+			time: undefined,
+			description: `transfer ${PHONE}`,
+		});
+		const paymentCreatedAtMs = Date.parse("2026-06-28T15:00:00Z");
+		expect(
+			isTransactionWithinPaymentWindow(missingTime, paymentCreatedAtMs),
+		).toBe(true);
 	});
 });
 
