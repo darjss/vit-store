@@ -47,6 +47,9 @@ type ProductStatus = (typeof status)[number];
 
 import { buildActiveProductConditions } from "~/queries/products/shared";
 
+const inStockRankExpr = sql`(${ProductsTable.stock} > 0)`;
+const inStockFirst = desc(inStockRankExpr);
+
 export const storeQueries = {
 		async getFeaturedProducts(options?: { requireStock?: boolean }) {
 			const requireStock = options?.requireStock ?? false;
@@ -56,6 +59,7 @@ export const storeQueries = {
 					slug: true,
 					name: true,
 					price: true,
+					stock: true,
 				},
 				orderBy: desc(ProductsTable.stock),
 				limit: 8,
@@ -87,8 +91,9 @@ export const storeQueries = {
 					name: true,
 					price: true,
 					slug: true,
+					stock: true,
 				},
-				orderBy: desc(ProductsTable.updatedAt),
+				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
 				limit: 4,
 				where: buildActiveProductConditions(requireStock),
 				with: {
@@ -119,8 +124,9 @@ export const storeQueries = {
 					name: true,
 					price: true,
 					discount: true,
+					stock: true,
 				},
-				orderBy: desc(ProductsTable.updatedAt),
+				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
 				limit: 4,
 				where: and(
 					gt(ProductsTable.discount, 0),
@@ -211,7 +217,6 @@ export const storeQueries = {
 				where: and(
 					eq(ProductsTable.id, id),
 					eq(ProductsTable.status, "active"),
-					gt(ProductsTable.stock, 0),
 					isNull(ProductsTable.deletedAt),
 				),
 				with: {
@@ -273,6 +278,7 @@ export const storeQueries = {
 					name: true,
 					price: true,
 					discount: true,
+					stock: true,
 				},
 				limit: 2,
 				where: and(
@@ -281,7 +287,7 @@ export const storeQueries = {
 					isNull(ProductsTable.deletedAt),
 					sql`${ProductsTable.id} != ${excludeProductId}`,
 				),
-				orderBy: desc(ProductsTable.updatedAt),
+				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
 				with: {
 					images: {
 						columns: {
@@ -312,6 +318,7 @@ export const storeQueries = {
 					name: true,
 					price: true,
 					discount: true,
+					stock: true,
 				},
 				limit: 2,
 				where: and(
@@ -320,7 +327,7 @@ export const storeQueries = {
 					isNull(ProductsTable.deletedAt),
 					sql`${ProductsTable.id} != ${excludeProductId}`,
 				),
-				orderBy: desc(ProductsTable.updatedAt),
+				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
 				with: {
 					images: {
 						columns: {
@@ -546,14 +553,17 @@ export const storeQueries = {
 
 			const isAsc = sortDirection === "asc";
 			const orderByClauses = isAsc
-				? [asc(sortColumn), asc(ProductsTable.id)]
-				: [desc(sortColumn), desc(ProductsTable.id)];
+				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
+				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
 
-			// Build cursor condition for pagination
+			// Build cursor condition for pagination. In-stock rank is the leading
+			// sort key (in-stock first, out-of-stock last), so it is encoded ahead
+			// of the sort value + id in the cursor and compared first here.
 			let cursorCondition: SQL<unknown> | undefined;
 			if (cursor) {
-				const [sortValueStr, idStr] = cursor.split(",");
+				const [rankStr, sortValueStr, idStr] = cursor.split(",");
 				const cursorId = Number.parseInt(idStr, 10);
+				const cursorInStock = rankStr === "1";
 
 				let sortValue: number | Date;
 				if (sortField === "price" || sortField === "stock") {
@@ -562,18 +572,20 @@ export const storeQueries = {
 					sortValue = new Date(sortValueStr);
 				}
 
-				// For cursor pagination: get items after/before the cursor based on sort direction
-				if (isAsc) {
-					cursorCondition = or(
-						gt(sortColumn, sortValue),
-						and(eq(sortColumn, sortValue), gt(ProductsTable.id, cursorId)),
-					);
-				} else {
-					cursorCondition = or(
-						lt(sortColumn, sortValue),
-						and(eq(sortColumn, sortValue), lt(ProductsTable.id, cursorId)),
-					);
-				}
+				const withinRank = isAsc
+					? or(
+							gt(sortColumn, sortValue),
+							and(eq(sortColumn, sortValue), gt(ProductsTable.id, cursorId)),
+						)
+					: or(
+							lt(sortColumn, sortValue),
+							and(eq(sortColumn, sortValue), lt(ProductsTable.id, cursorId)),
+						);
+
+				cursorCondition = or(
+					sql`${inStockRankExpr} < ${cursorInStock}`,
+					and(sql`${inStockRankExpr} = ${cursorInStock}`, withinRank),
+				);
 			}
 
 			const items = await db().query.ProductsTable.findMany({
@@ -623,7 +635,8 @@ export const storeQueries = {
 						: sortField === "stock"
 							? lastItem.stock
 							: lastItem.createdAt.toISOString();
-				nextCursor = `${sortValue},${lastItem.id}`;
+				const rank = lastItem.stock > 0 ? 1 : 0;
+				nextCursor = `${rank},${sortValue},${lastItem.id}`;
 			}
 
 			return {
@@ -646,9 +659,9 @@ export const storeQueries = {
 		},
 
 		// Lightweight COUNT(*) for the storefront catalog header. Mirrors the
-		// active+non-deleted+in-stock gate used by getInfiniteProductsWithStock
-		// so the displayed total matches what the infinite list can actually
-		// paginate through. Returns 0 if the table is empty.
+		// active+non-deleted gate used by getInfiniteProducts so the displayed
+		// total matches what the infinite list can actually paginate through,
+		// including active out-of-stock products. Returns 0 if the table is empty.
 		async getTotalActiveProductCount() {
 			const result = await db()
 				.select({ count: sql<number>`count(*)::int` })
@@ -657,7 +670,6 @@ export const storeQueries = {
 					and(
 						isNull(ProductsTable.deletedAt),
 						eq(ProductsTable.status, "active"),
-						gt(ProductsTable.stock, 0),
 					),
 				);
 			return result[0]?.count ?? 0;
@@ -702,8 +714,8 @@ export const storeQueries = {
 
 			const isAsc = sortDirection === "asc";
 			const orderByClauses = isAsc
-				? [asc(sortColumn), asc(ProductsTable.id)]
-				: [desc(sortColumn), desc(ProductsTable.id)];
+				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
+				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
 
 			const offset = (page - 1) * pageSize;
 

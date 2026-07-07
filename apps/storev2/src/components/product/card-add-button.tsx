@@ -2,8 +2,8 @@ import type { CartItems } from "@vit/shared/types";
 import { createSignal } from "solid-js";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import IconAdd from "~icons/ri/add-line";
 import IconCheck from "~icons/ri/check-line";
+import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
@@ -14,7 +14,7 @@ const stateClass =
 	"col-start-1 row-start-1 flex items-center justify-center transition-[opacity,filter] duration-200 ease-out";
 
 /**
- * The product card's round butter "+" button — the card's single Neopop
+ * The product card's round butter cart button — the card's single Neopop
  * element (shadow-pop-sm, press translates into the shadow). Morphs to a
  * check via blur crossfade after adding.
  */
@@ -47,7 +47,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					class={cn(stateClass, isAdded() && "opacity-0 blur-[2px]")}
 					aria-hidden={isAdded()}
 				>
-					<IconAdd class="h-5 w-5" />
+					<IconShoppingCart class="h-5 w-5" />
 				</span>
 				<span
 					class={cn(stateClass, !isAdded() && "opacity-0 blur-[2px]")}

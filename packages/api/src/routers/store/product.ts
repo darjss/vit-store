@@ -452,6 +452,7 @@ export const product = router({
 					price: product.price,
 					image: product.images[0]?.url,
 					brand: product.brand.name,
+					stock: product.stock,
 				})),
 				newProducts: newProducts.map((product) => ({
 					id: product.id,
@@ -460,6 +461,7 @@ export const product = router({
 					price: product.price,
 					image: product.images[0]?.url,
 					brand: product.brand.name,
+					stock: product.stock,
 				})),
 				discountedProducts: discountedProducts.map((product) => ({
 					id: product.id,
@@ -469,6 +471,7 @@ export const product = router({
 					image: product.images[0]?.url,
 					brand: product.brand.name,
 					discount: product.discount,
+					stock: product.stock,
 				})),
 			};
 		} catch (error) {
@@ -498,6 +501,7 @@ export const product = router({
 					price: product.price,
 					image: product.images[0]?.url,
 					brand: product.brand.name,
+					stock: product.stock,
 				})),
 				newProducts: newProducts.map((product) => ({
 					id: product.id,
@@ -506,6 +510,7 @@ export const product = router({
 					price: product.price,
 					image: product.images[0]?.url,
 					brand: product.brand.name,
+					stock: product.stock,
 				})),
 				discountedProducts: discountedProducts.map((product) => ({
 					id: product.id,
@@ -515,6 +520,7 @@ export const product = router({
 					image: product.images[0]?.url,
 					brand: product.brand.name,
 					discount: product.discount,
+					stock: product.stock,
 				})),
 			};
 		} catch (error) {
@@ -689,6 +695,7 @@ export const product = router({
 					image: product.images[0]?.url || "",
 					brand: product.brand.name,
 					discount: product.discount,
+					stock: product.stock,
 				}));
 			} catch (error) {
 				throw new TRPCError({
