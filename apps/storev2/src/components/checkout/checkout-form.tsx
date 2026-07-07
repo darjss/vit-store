@@ -220,6 +220,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			}),
 		},
 		onSubmit: async (values) => {
+			if (paymentInfo()) {
+				setStep("payment");
+				window.scrollTo({ top: 0, behavior: "smooth" });
+				return;
+			}
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,
