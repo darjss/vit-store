@@ -30,6 +30,7 @@ const DEFAULT_PLACEHOLDER = "Омега-3, магни, нойргүйдэл…";
 const SearchSheet = (props: SearchSheetProps) => {
 	const [isOpen, setIsOpen] = createSignal(false);
 	const [searchQuery, setSearchQuery] = createSignal("");
+	const [isSearching, setIsSearching] = createSignal(false);
 
 	onMount(() => {
 		const handleNavigation = () => setIsOpen(false);
@@ -100,6 +101,7 @@ const SearchSheet = (props: SearchSheetProps) => {
 							onValueChange={setSearchQuery}
 							onSearch={handleSearch}
 							onSubmitSearch={handleSubmitSearch}
+							isLoading={isSearching() && searchQuery().length >= 2}
 							autofocus
 							focusKey={isOpen()}
 							placeholder={props.inputPlaceholder ?? DEFAULT_PLACEHOLDER}
@@ -109,9 +111,9 @@ const SearchSheet = (props: SearchSheetProps) => {
 					<div class="flex-1 overflow-y-auto px-4 pb-6 sm:px-6">
 						<SearchTakeover
 							query={searchQuery()}
-							onQueryChange={setSearchQuery}
 							onSelectSuggestion={handleSelectSuggestion}
 							onClose={handleClose}
+							onSearchLoadingChange={setIsSearching}
 						/>
 					</div>
 				</div>

@@ -27,9 +27,9 @@ import SearchResultRow from "./search-result-row";
 
 interface SearchTakeoverProps {
 	query: string;
-	onQueryChange: (q: string) => void;
 	onSelectSuggestion: (term: string) => void;
 	onClose: () => void;
+	onSearchLoadingChange?: (loading: boolean) => void;
 }
 
 interface CategoryStock {
@@ -215,12 +215,12 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 
 	const searchResults = useQuery(
 		() => ({
-			queryKey: ["search-products", props.query],
+			queryKey: ["search-takeover", props.query],
 			queryFn: async () => {
 				if (props.query.length < 2) {
 					return { products: [], brands: [], categories: [] };
 				}
-				return await api.product.searchStorefrontWithStock.query({
+				return await api.product.searchStorefront.query({
 					query: props.query,
 					limit: 8,
 				});
@@ -247,6 +247,10 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 		) {
 			trackSearchPerformed(props.query, searchResults.data.products.length);
 		}
+	});
+
+	createEffect(() => {
+		props.onSearchLoadingChange?.(searchResults.isLoading);
 	});
 
 	const hasNavigation = () =>
