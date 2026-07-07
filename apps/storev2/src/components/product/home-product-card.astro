@@ -33,15 +33,21 @@ const productUrl = `/products/${product.slug}-${product.id}`;
 			transition:name={`product-image-${product.id}`}
 		>
 			{product.image ? (
-				<img
-					src={toProductImageUrl(product.image, imageSize) || product.image}
-					alt=""
-					class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4"
-					width="480"
-					height="480"
-					loading="lazy"
-					decoding="async"
-				/>
+				<>
+					<img
+						src={toProductImageUrl(product.image, imageSize) || product.image}
+						alt=""
+						class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4"
+						width="480"
+						height="480"
+						loading="lazy"
+						decoding="async"
+						onerror="this.style.display='none';this.parentElement.querySelector('[data-image-fallback]').hidden=false"
+					/>
+					<div data-image-fallback hidden>
+						<ProductImageFallback name={product.name} brand={product.brand} />
+					</div>
+				</>
 			) : (
 				<ProductImageFallback name={product.name} brand={product.brand} />
 			)}
