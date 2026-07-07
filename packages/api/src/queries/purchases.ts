@@ -581,12 +581,7 @@ export const purchaseQueries = {
 					.set({
 						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
 					})
-					.where(
-						and(
-							eq(ProductsTable.id, purchaseItem.productId),
-							isNull(ProductsTable.deletedAt),
-						),
-					);
+					.where(eq(ProductsTable.id, purchaseItem.productId));
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
