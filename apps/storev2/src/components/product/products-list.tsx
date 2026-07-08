@@ -1,16 +1,6 @@
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
+import { parseSort } from "@vit/shared/domain/product";
 import {
-	keepPreviousData,
-	useInfiniteQuery,
-	useQuery,
-} from "@tanstack/solid-query";
-import { formatCurrency } from "@vit/shared";
-import {
-	productPresetFilterLabels,
-	productSortOptions,
-	type ProductPresetFilter,
-} from "@vit/shared/domain/product";
-import {
-	batch,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -22,14 +12,13 @@ import {
 import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
-import { WASH_BG, washFor } from "@/lib/wash";
+import { washBg } from "@/lib/wash";
 import IconEqualizer from "~icons/ri/equalizer-line";
 import IconSearch from "~icons/ri/search-line";
 import SearchSheet from "../search/search-sheet";
 import AppliedFilters from "./applied-filters";
-import FilterDrawer, { PRICE_MAX, PRICE_MIN } from "./filter-drawer";
+import FilterDrawer from "./filter-drawer";
 import ProductCard from "./product-card";
 import {
 	ProductEmptyState,
@@ -37,13 +26,7 @@ import {
 	ProductListEnd,
 	ProductSkeletonGrid,
 } from "./products-list-states";
-import { ProductsVirtualGrid } from "./products-virtual-grid";
-
-type ListFilter = ProductPresetFilter;
-type ProductSortField = "price" | "createdAt";
-type ProductSortDirection = "asc" | "desc";
-const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
-const STORE_DEFAULT_ROW_HEIGHT = 360;
+import { useProductFilters } from "./use-product-filters";
 
 type FilterOption = {
 	id: number;
@@ -58,72 +41,12 @@ type ProductsListProps = {
 	totalProductCount?: number;
 };
 
-const getStoreProductColumns = (width: number) => {
-	if (width >= 1280) return 4;
-	if (width >= 1024) return 3;
-	return 2;
-};
-
-const chunkItems = <T,>(items: T[], chunkSize: number) => {
-	const chunks: T[][] = [];
-	for (let index = 0; index < items.length; index += chunkSize) {
-		chunks.push(items.slice(index, index + chunkSize));
-	}
-	return chunks;
-};
-
-const getErrorDetails = (error: unknown) => {
-	if (error instanceof Error) {
-		return {
-			name: error.name,
-			message: error.message,
-			stack: error.stack,
-		};
-	}
-
-	return {
-		name: typeof error,
-		message: String(error),
-	};
-};
-
 const ProductsList = (props: ProductsListProps) => {
 	hydrateServerState(queryClient, props.dehydratedState);
-
-	// URL search params for filters
-	const [searchTerm, setSearchTerm] = useSearchParam("q", {
-		defaultValue: undefined,
-	});
-	const [sortField, setSortField] = useSearchParam("sort", {
-		defaultValue: undefined,
-	});
-	const [sortDirection, setSortDirection] = useSearchParam("dir", {
-		defaultValue: undefined,
-	});
-	const [categoryIdParam, setCategoryIdParam] = useSearchParam("category", {
-		defaultValue: undefined,
-	});
-	const [brandIdParam, setBrandIdParam] = useSearchParam("brand", {
-		defaultValue: undefined,
-	});
-	const [listFilterParam, setListFilterParam] = useSearchParam("filter", {
-		defaultValue: undefined,
-	});
-	const [priceParam, setPriceParam] = useSearchParam("price", {
-		defaultValue: undefined,
-	});
-	const [stockParam, setStockParam] = useSearchParam("stock", {
-		defaultValue: undefined,
-	});
 
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
-
-	const isSearchMode = createMemo(() => {
-		const term = searchTerm();
-		return term !== undefined && term !== null && term.length >= 2;
-	});
 
 	const categoriesQuery = useQuery(
 		() => ({
@@ -145,146 +68,93 @@ const ProductsList = (props: ProductsListProps) => {
 		() => queryClient,
 	);
 
-	const listFilter = createMemo<ListFilter | null>(() => {
-		const val = listFilterParam();
-		if (val === "featured" || val === "recent") {
-			return val;
+	const filters = useProductFilters({
+		categories: () => categoriesQuery.data,
+		brands: () => brandsQuery.data,
+	});
+
+	// Remove the SSR fallback grid once the client island mounts. Both grids
+	// use the same plain CSS grid layout, so the swap is seamless (no layout
+	// shift / blink from a virtual absolute-positioned grid).
+	onMount(() => {
+		document.getElementById("products-ssr")?.remove();
+	});
+
+	// Clean invalid sort/dir URL params silently. Single source of truth:
+	// parseSort is shared with the filter drawer and SEO sort routes.
+	createEffect(() => {
+		if (
+			(filters.sortField() || filters.sortDirection()) &&
+			!parseSort(filters.sortField(), filters.sortDirection())
+		) {
+			filters.applyFilters({
+				sortField: null,
+				sortDirection: null,
+				categoryId: filters.categoryId(),
+				brandId: filters.brandId(),
+				priceRange: filters.priceRange(),
+				includeOutOfStock: filters.includeOutOfStock(),
+			});
 		}
-		return null;
 	});
-
-	const categoryId = createMemo(() => {
-		const val = categoryIdParam();
-		if (!val) return null;
-
-		const parsed = Number.parseInt(val, 10);
-		if (!Number.isNaN(parsed)) return parsed;
-
-		const categoryByName = categoriesQuery.data?.find(
-			(c: { id: number; name: string }) =>
-				c.name.trim().toLowerCase() === val.trim().toLowerCase(),
-		);
-
-		return categoryByName?.id ?? null;
-	});
-
-	const brandId = createMemo(() => {
-		const val = brandIdParam();
-		if (!val) return null;
-
-		const parsed = Number.parseInt(val, 10);
-		if (!Number.isNaN(parsed)) return parsed;
-
-		const brandByName = brandsQuery.data?.find(
-			(b: { id: number; name: string }) =>
-				b.name.trim().toLowerCase() === val.trim().toLowerCase(),
-		);
-
-		return brandByName?.id ?? null;
-	});
-
-	const priceRange = createMemo<[number, number]>(() => {
-		const raw = priceParam();
-		if (!raw) return [PRICE_MIN, PRICE_MAX];
-		const [minStr, maxStr] = raw.split("-");
-		const min = Number.parseInt(minStr ?? "", 10);
-		const max = Number.parseInt(maxStr ?? "", 10);
-		return [
-			Number.isNaN(min) ? PRICE_MIN : min,
-			Number.isNaN(max) ? PRICE_MAX : max,
-		];
-	});
-
-	const minPrice = createMemo(() => {
-		const value = priceRange()[0];
-		return value <= PRICE_MIN ? undefined : value;
-	});
-
-	const maxPrice = createMemo(() => {
-		const value = priceRange()[1];
-		return value >= PRICE_MAX ? undefined : value;
-	});
-
-	const inStockOnly = createMemo(() => stockParam() === "instock");
-	const includeOutOfStock = createMemo(() => !inStockOnly());
 
 	const searchQuery = useQuery(
 		() => ({
-			queryKey: ["search-products-page", searchTerm(), categoryId(), brandId()],
+			queryKey: [
+				"search-products-page",
+				filters.searchTerm(),
+				filters.categoryId(),
+				filters.brandId(),
+			],
 			queryFn: async () => {
-				const term = searchTerm();
+				const term = filters.searchTerm();
 				if (!term || term.length < 2) return [];
 				return await api.product.searchProductsForPage.query({
 					query: term,
 					limit: 10,
-					categoryId: categoryId() ?? undefined,
-					brandId: brandId() ?? undefined,
+					categoryId: filters.categoryId() ?? undefined,
+					brandId: filters.brandId() ?? undefined,
 				});
 			},
-			enabled: isSearchMode(),
+			enabled: filters.isSearchMode(),
 			staleTime: 1000 * 60 * 5, // 5 minutes
 			placeholderData: keepPreviousData,
 		}),
 		() => queryClient,
 	);
 
-	const selectedSort = createMemo<{
-		field: ProductSortField;
-		direction: ProductSortDirection;
-	} | null>(() => {
-		const field = sortField();
-		const direction = sortDirection();
-		if (
-			(field === "price" || field === "createdAt") &&
-			(direction === "asc" || direction === "desc")
-		) {
-			return { field, direction };
-		}
-		return null;
-	});
-
-	createEffect(() => {
-		if ((sortField() || sortDirection()) && !selectedSort()) {
-			setSortField(null);
-			setSortDirection(null);
-		}
-	});
-
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
 				"products-browse",
-				selectedSort()?.field,
-				selectedSort()?.direction,
-				categoryId(),
-				brandId(),
-				listFilter(),
-				minPrice(),
-				maxPrice(),
-				includeOutOfStock(),
+				filters.selectedSort()?.field,
+				filters.selectedSort()?.direction,
+				filters.categoryId(),
+				filters.brandId(),
+				filters.listFilter(),
+				filters.minPrice(),
+				filters.maxPrice(),
+				filters.includeOutOfStock(),
 			],
 			queryFn: async ({ pageParam }) => {
-				const sort = selectedSort();
-				const params = {
+				const sort = filters.selectedSort();
+				return await api.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
-					listType: listFilter() ?? undefined,
+					listType: filters.listFilter() ?? undefined,
 					sortField: sort?.field,
 					sortDirection: sort?.direction,
-					categoryId: categoryId() ?? undefined,
-					brandId: brandId() ?? undefined,
-					minPrice: minPrice(),
-					maxPrice: maxPrice(),
-				};
-				const result = includeOutOfStock()
-					? await api.product.getInfiniteProducts.query(params)
-					: await api.product.getInfiniteProductsWithStock.query(params);
-				return result;
+					categoryId: filters.categoryId() ?? undefined,
+					brandId: filters.brandId() ?? undefined,
+					minPrice: filters.minPrice(),
+					maxPrice: filters.maxPrice(),
+					requireStock: !filters.includeOutOfStock(),
+				});
 			},
 			initialPageParam: undefined as string | undefined,
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
-			enabled: !isSearchMode(),
+			enabled: !filters.isSearchMode(),
 		}),
 		() => queryClient,
 	);
@@ -299,12 +169,12 @@ const ProductsList = (props: ProductsListProps) => {
 	);
 
 	const isInitialLoading = createMemo(() => {
-		if (isSearchMode()) return isSearchLoading();
+		if (filters.isSearchMode()) return isSearchLoading();
 		return productsQuery.isLoading && !productsQuery.data;
 	});
 
 	const isRefetching = createMemo(() => {
-		if (isSearchMode()) return isSearchRefetching();
+		if (filters.isSearchMode()) return isSearchRefetching();
 		return (
 			productsQuery.isFetching &&
 			!productsQuery.isLoading &&
@@ -318,51 +188,15 @@ const ProductsList = (props: ProductsListProps) => {
 		if (!data) return [];
 		return data.pages.flatMap((page) => page.items);
 	});
-	let browseGridRef: HTMLDivElement | undefined;
-	let layoutRafId: number | undefined;
-	const [gridWidth, setGridWidth] = createSignal(0);
-	const [gridTop, setGridTop] = createSignal(0);
-	const [viewportTop, setViewportTop] = createSignal(0);
-	const [viewportHeight, setViewportHeight] = createSignal(0);
-	const [rowHeight, setRowHeight] = createSignal(STORE_DEFAULT_ROW_HEIGHT);
-	const [firstBrowseRowEl, setFirstBrowseRowEl] =
-		createSignal<HTMLDivElement>();
-
-	const columnCount = createMemo(() =>
-		getStoreProductColumns(gridWidth() || 1280),
-	);
-	const browseRows = createMemo(() =>
-		chunkItems(allBrowseProducts(), columnCount()),
-	);
-	const totalBrowseHeight = createMemo(() => browseRows().length * rowHeight());
-	const visibleBrowseRange = createMemo(() => {
-		if (browseRows().length === 0) return { start: 0, end: 0 };
-
-		if (gridWidth() === 0) return { start: 0, end: browseRows().length };
-
-		const overscan = rowHeight() * STORE_VIRTUAL_OVERSCAN_ROWS;
-		const start = Math.max(
-			0,
-			Math.floor((viewportTop() - gridTop() - overscan) / rowHeight()),
-		);
-		const end = Math.min(
-			browseRows().length,
-			Math.ceil(
-				(viewportTop() + viewportHeight() - gridTop() + overscan) / rowHeight(),
-			),
-		);
-
-		return { start, end: Math.max(start + 1, end) };
-	});
-	const visibleBrowseRows = createMemo(() =>
-		browseRows().slice(visibleBrowseRange().start, visibleBrowseRange().end),
-	);
 
 	const hasProducts = createMemo(() => {
-		if (isSearchMode()) return searchResults().length > 0;
+		if (filters.isSearchMode()) return searchResults().length > 0;
 		return allBrowseProducts().length > 0;
 	});
 
+	// Log the infinite-products failure once with wide-event context. The query
+	// label reflects the actual procedure variant (WithStock vs all) so logs are
+	// not misleading when the includeOutOfStock toggle switches the call.
 	createEffect(() => {
 		const error = productsQuery.error;
 		if (
@@ -374,12 +208,22 @@ const ProductsList = (props: ProductsListProps) => {
 		}
 
 		setLastLoggedProductsError(error);
-		const sort = selectedSort();
-		const details = getErrorDetails(error);
+		const sort = filters.selectedSort();
+		const details =
+			error instanceof Error
+				? {
+						name: error.name,
+						message: error.message,
+						stack: error.stack,
+					}
+				: { name: typeof error, message: String(error) };
+		const queryName = filters.includeOutOfStock()
+			? "product.getInfiniteProducts"
+			: "product.getInfiniteProducts (requireStock)";
 		const context = {
 			...details,
 			component: "ProductsList",
-			query: "product.getInfiniteProducts",
+			query: queryName,
 			pageUrl: window.location.href,
 			userAgent: window.navigator.userAgent,
 			isOnline: window.navigator.onLine,
@@ -393,16 +237,16 @@ const ProductsList = (props: ProductsListProps) => {
 			isFetchingNextPage: productsQuery.isFetchingNextPage,
 			sortField: sort?.field ?? null,
 			sortDirection: sort?.direction ?? null,
-			categoryId: categoryId(),
-			brandId: brandId(),
-			listFilter: listFilter(),
+			categoryId: filters.categoryId(),
+			brandId: filters.brandId(),
+			listFilter: filters.listFilter(),
 		};
 
 		console.error("[ProductsList] Infinite products query failed", context);
 	});
 
 	const shouldShowEmptyState = createMemo(() => {
-		if (isSearchMode()) {
+		if (filters.isSearchMode()) {
 			return (
 				searchQuery.data !== undefined &&
 				!searchQuery.isLoading &&
@@ -419,184 +263,9 @@ const ProductsList = (props: ProductsListProps) => {
 	});
 
 	const productCount = createMemo(() => {
-		if (isSearchMode()) return searchResults().length;
+		if (filters.isSearchMode()) return searchResults().length;
 		return allBrowseProducts().length;
 	});
-
-	// True when browsing the full catalog with no filter/search/category/brand
-	// active — in that case the SSR totalProductCount is the authoritative count.
-	const isBrowsingAll = createMemo(
-		() =>
-			!isSearchMode() &&
-			!categoryId() &&
-			!brandId() &&
-			!listFilter() &&
-			!sortField() &&
-			minPrice() === undefined &&
-			maxPrice() === undefined &&
-			!inStockOnly(),
-	);
-
-	const writePrice = (range: [number, number]) => {
-		if (range[0] <= PRICE_MIN && range[1] >= PRICE_MAX) {
-			setPriceParam(null);
-			return;
-		}
-		setPriceParam(`${range[0]}-${range[1]}`);
-	};
-
-	const applyFilters = (next: {
-		sortField: string | null;
-		sortDirection: string | null;
-		categoryId: number | null;
-		brandId: number | null;
-		priceRange: [number, number];
-		includeOutOfStock: boolean;
-	}) => {
-		const validSort =
-			(next.sortField === "price" || next.sortField === "createdAt") &&
-			(next.sortDirection === "asc" || next.sortDirection === "desc");
-		batch(() => {
-			setSortField(validSort ? next.sortField : null);
-			setSortDirection(validSort ? next.sortDirection : null);
-			setCategoryIdParam(next.categoryId?.toString() ?? null);
-			setBrandIdParam(next.brandId?.toString() ?? null);
-			writePrice(next.priceRange);
-			setStockParam(next.includeOutOfStock ? null : "instock");
-		});
-	};
-
-	const resetDrawerFilters = () => {
-		batch(() => {
-			setSortField(null);
-			setSortDirection(null);
-			setCategoryIdParam(null);
-			setBrandIdParam(null);
-			setPriceParam(null);
-			setStockParam(null);
-		});
-	};
-
-	const removeSort = () => {
-		batch(() => {
-			setSortField(null);
-			setSortDirection(null);
-		});
-	};
-
-	const handleClearFilters = () => {
-		batch(() => {
-			setSearchTerm(null);
-			setSortField(null);
-			setSortDirection(null);
-			setCategoryIdParam(null);
-			setBrandIdParam(null);
-			setListFilterParam(null);
-			setPriceParam(null);
-			setStockParam(null);
-		});
-	};
-
-	const priceLabel = createMemo(() => {
-		const [min, max] = priceRange();
-		if (min > PRICE_MIN && max < PRICE_MAX) {
-			return `${formatCurrency(min)}–${formatCurrency(max)}`;
-		}
-		if (max < PRICE_MAX) return `≤ ${formatCurrency(max)}`;
-		return `≥ ${formatCurrency(min)}`;
-	});
-
-	const activeFilterCount = createMemo(() => {
-		let count = 0;
-		if (categoryId()) count += 1;
-		if (brandId()) count += 1;
-		if (minPrice() !== undefined || maxPrice() !== undefined) count += 1;
-		if (selectedSort()) count += 1;
-		if (listFilter()) count += 1;
-		if (inStockOnly()) count += 1;
-		return count;
-	});
-
-	const categoryLabel = createMemo(
-		() =>
-			categoriesQuery.data?.find(
-				(c: { id: number; name: string }) => c.id === categoryId(),
-			)?.name ?? null,
-	);
-	const brandLabel = createMemo(
-		() =>
-			brandsQuery.data?.find(
-				(b: { id: number; name: string }) => b.id === brandId(),
-			)?.name ?? null,
-	);
-	const sortLabel = createMemo(() => {
-		const sort = selectedSort();
-		if (!sort) return null;
-		return (
-			productSortOptions.find(
-				(o) => o.field === sort.field && o.direction === sort.direction,
-			)?.label ?? null
-		);
-	});
-	const presetLabel = createMemo(() => {
-		const preset = listFilter();
-		return preset ? productPresetFilterLabels[preset] : null;
-	});
-	const priceChipLabel = createMemo(() =>
-		minPrice() !== undefined || maxPrice() !== undefined ? priceLabel() : null,
-	);
-	const stockLabel = createMemo(() =>
-		inStockOnly() ? "Зөвхөн нөөцтэй" : null,
-	);
-
-	const appliedChips = createMemo(() =>
-		[
-			{
-				key: "search",
-				label: searchTerm(),
-				onRemove: () => setSearchTerm(null),
-			},
-			{
-				key: "category",
-				label: categoryLabel(),
-				onRemove: () => setCategoryIdParam(null),
-			},
-			{
-				key: "brand",
-				label: brandLabel(),
-				onRemove: () => setBrandIdParam(null),
-			},
-			{
-				key: "price",
-				label: priceChipLabel(),
-				onRemove: () => setPriceParam(null),
-			},
-			{ key: "sort", label: sortLabel(), onRemove: removeSort },
-			{
-				key: "preset",
-				label: presetLabel(),
-				onRemove: () => setListFilterParam(null),
-			},
-			{
-				key: "stock",
-				label: stockLabel(),
-				onRemove: () => setStockParam(null),
-			},
-		].filter(
-			(chip): chip is { key: string; label: string; onRemove: () => void } =>
-				chip.label != null && chip.label !== "",
-		),
-	);
-
-	const hasActiveFilters = () =>
-		!!searchTerm() ||
-		!!selectedSort() ||
-		!!categoryId() ||
-		!!brandId() ||
-		!!listFilter() ||
-		minPrice() !== undefined ||
-		maxPrice() !== undefined ||
-		inStockOnly();
 
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
@@ -621,82 +290,6 @@ const ProductsList = (props: ProductsListProps) => {
 		});
 	};
 
-	const updateVirtualLayout = () => {
-		setGridWidth(browseGridRef?.clientWidth ?? window.innerWidth);
-		setGridTop(
-			browseGridRef
-				? window.scrollY + browseGridRef.getBoundingClientRect().top
-				: 0,
-		);
-		setViewportTop(window.scrollY);
-		setViewportHeight(window.innerHeight);
-	};
-
-	onMount(() => {
-		document.getElementById("products-ssr")?.remove();
-		updateVirtualLayout();
-
-		const handleWindowChange = () => {
-			if (layoutRafId !== undefined) return;
-			layoutRafId = window.requestAnimationFrame(() => {
-				layoutRafId = undefined;
-				updateVirtualLayout();
-			});
-		};
-
-		const resizeObserver = new ResizeObserver(() => updateVirtualLayout());
-		if (browseGridRef) resizeObserver.observe(browseGridRef);
-
-		window.addEventListener("scroll", handleWindowChange, { passive: true });
-		window.addEventListener("resize", handleWindowChange);
-
-		onCleanup(() => {
-			if (layoutRafId !== undefined) {
-				window.cancelAnimationFrame(layoutRafId);
-			}
-			resizeObserver.disconnect();
-			window.removeEventListener("scroll", handleWindowChange);
-			window.removeEventListener("resize", handleWindowChange);
-		});
-	});
-
-	createEffect(() => {
-		const row = firstBrowseRowEl();
-		if (!row) return;
-
-		const updateHeight = () => {
-			const nextHeight = row.getBoundingClientRect().height;
-			if (nextHeight > 0 && Math.abs(nextHeight - rowHeight()) > 1) {
-				setRowHeight(nextHeight);
-			}
-		};
-
-		updateHeight();
-		const resizeObserver = new ResizeObserver(() => updateHeight());
-		resizeObserver.observe(row);
-
-		onCleanup(() => resizeObserver.disconnect());
-	});
-
-	// Get active filter display text
-	const getPageTitle = () => {
-		if (searchTerm()) return `"${searchTerm()}" хайлтын үр дүн`;
-		if (listFilter()) return productPresetFilterLabels[listFilter() as ListFilter];
-		if (categoryId()) {
-			const cat = categoriesQuery.data?.find(
-				(c: { id: number; name: string }) => c.id === categoryId(),
-			);
-			if (cat) return cat.name;
-		}
-		if (brandId()) {
-			const brand = brandsQuery.data?.find(
-				(b: { id: number; name: string }) => b.id === brandId(),
-			);
-			if (brand) return brand.name;
-		}
-		return "Бүх бүтээгдэхүүн";
-	};
-
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
 			<div>
@@ -704,11 +297,11 @@ const ProductsList = (props: ProductsListProps) => {
 				<div
 					class={cn(
 						"mb-3 flex flex-col gap-1 rounded-2xl border border-border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
-						WASH_BG[washFor("all-products")],
+						washBg("all-products"),
 					)}
 				>
 					<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
-						{getPageTitle()}
+						{filters.pageTitle()}
 					</h1>
 					<Show
 						when={!isInitialLoading()}
@@ -726,9 +319,9 @@ const ProductsList = (props: ProductsListProps) => {
 								}
 							>
 								<Show
-									when={isSearchMode()}
+									when={filters.isSearchMode()}
 									fallback={
-										isBrowsingAll() && props.totalProductCount != null
+										filters.isBrowsingAll() && props.totalProductCount != null
 											? `${props.totalProductCount} бүтээгдэхүүн`
 											: productsQuery.hasNextPage
 												? `${productCount()}+ бүтээгдэхүүн`
@@ -766,17 +359,17 @@ const ProductsList = (props: ProductsListProps) => {
 					>
 						<IconEqualizer class="h-4 w-4" />
 						<span>Шүүлтүүр</span>
-						<Show when={activeFilterCount() > 0}>
+						<Show when={filters.activeFilterCount() > 0}>
 							<span class="flex size-5 items-center justify-center rounded-full border border-cocoa bg-primary font-bold text-[11px]">
-								{activeFilterCount()}
+								{filters.activeFilterCount()}
 							</span>
 						</Show>
 					</button>
 				</div>
 
 				<AppliedFilters
-					chips={appliedChips()}
-					onClearAll={handleClearFilters}
+					chips={filters.appliedChips()}
+					onClearAll={filters.handleClearFilters}
 				/>
 
 				<FilterDrawer
@@ -784,15 +377,15 @@ const ProductsList = (props: ProductsListProps) => {
 					onOpenChange={setFilterDrawerOpen}
 					categories={categoriesQuery.data ?? []}
 					brands={brandsQuery.data ?? []}
-					sortField={sortField()}
-					sortDirection={sortDirection()}
-					categoryId={categoryId()}
-					brandId={brandId()}
-					priceRange={priceRange()}
-					listFilter={listFilter()}
-					includeOutOfStock={includeOutOfStock()}
-					onApply={applyFilters}
-					onReset={resetDrawerFilters}
+					sortField={filters.sortField()}
+					sortDirection={filters.sortDirection()}
+					categoryId={filters.categoryId()}
+					brandId={filters.brandId()}
+					priceRange={filters.priceRange()}
+					listFilter={filters.listFilter()}
+					includeOutOfStock={filters.includeOutOfStock()}
+					onApply={filters.applyFilters}
+					onReset={filters.resetDrawerFilters}
 				/>
 
 				{/* Products Grid */}
@@ -804,8 +397,8 @@ const ProductsList = (props: ProductsListProps) => {
 							fallback={
 								<Show when={shouldShowEmptyState()}>
 									<ProductEmptyState
-										hasActiveFilters={hasActiveFilters()}
-										onClearFilters={handleClearFilters}
+										hasActiveFilters={filters.hasActiveFilters()}
+										onClearFilters={filters.handleClearFilters}
 									/>
 								</Show>
 							}
@@ -835,25 +428,23 @@ const ProductsList = (props: ProductsListProps) => {
 							)}
 						>
 							{/* Search mode: render search results */}
-							<Show when={isSearchMode()}>
+							<Show when={filters.isSearchMode()}>
 								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 									<For each={searchResults()}>
 										{(product) => <ProductCard product={product} />}
 									</For>
 								</div>
 							</Show>
-							{/* Browse mode: render infinite scroll products */}
-							<Show when={!isSearchMode()}>
-								<ProductsVirtualGrid
-									rows={visibleBrowseRows()}
-									rangeStart={visibleBrowseRange().start}
-									rowHeight={rowHeight()}
-									totalHeight={totalBrowseHeight()}
-									setGridRef={(el) => {
-										browseGridRef = el;
-									}}
-									setFirstRowRef={setFirstBrowseRowEl}
-								/>
+							{/* Browse mode: plain CSS grid. content-visibility:auto keeps
+							    off-screen cards cheap to render without custom
+							    virtualization — pages are 12 items, so even dozens of
+							    loaded pages are a trivial DOM size. */}
+							<Show when={!filters.isSearchMode()}>
+								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 [content-visibility:auto]">
+									<For each={allBrowseProducts()}>
+										{(product) => <ProductCard product={product} />}
+									</For>
+								</div>
 							</Show>
 						</div>
 					</div>
@@ -861,11 +452,13 @@ const ProductsList = (props: ProductsListProps) => {
 
 				{/* Error State */}
 				<Show
-					when={isSearchMode() ? searchQuery.isError : productsQuery.isError}
+					when={
+						filters.isSearchMode() ? searchQuery.isError : productsQuery.isError
+					}
 				>
 					<ProductErrorState
 						onRetry={() => {
-							if (isSearchMode()) {
+							if (filters.isSearchMode()) {
 								searchQuery.refetch();
 							} else {
 								productsQuery.refetch();
@@ -875,7 +468,7 @@ const ProductsList = (props: ProductsListProps) => {
 				</Show>
 
 				{/* Loading More Skeleton (browse mode only) */}
-				<Show when={!isSearchMode() && productsQuery.isFetchingNextPage}>
+				<Show when={!filters.isSearchMode() && productsQuery.isFetchingNextPage}>
 					<ProductSkeletonGrid
 						count={4}
 						class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
@@ -885,7 +478,7 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* End of List */}
 				<Show
 					when={
-						isSearchMode()
+						filters.isSearchMode()
 							? searchResults().length > 0
 							: productsQuery.data &&
 								!productsQuery.hasNextPage &&
@@ -898,7 +491,7 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* Infinite Scroll Sentinel (browse mode only) */}
 				<Show
 					when={
-						!isSearchMode() &&
+						!filters.isSearchMode() &&
 						productsQuery.hasNextPage &&
 						productsQuery.data &&
 						!productsQuery.isFetchingNextPage

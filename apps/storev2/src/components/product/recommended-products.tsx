@@ -1,11 +1,11 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
+import { productStockState } from "@vit/shared/domain/product";
 import type { ProductForHome } from "@vit/shared/types";
-import { animate, inView, stagger } from "motion";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
-import { WASH_BG, washFor } from "@/lib/wash";
+import { washBg } from "@/lib/wash";
 import ProductImageFallback from "./product-image-fallback";
 
 interface RecommendedProductsProps {
@@ -29,23 +29,28 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
 		),
 	]);
 
+// Canonical recommended-products path: same-category + same-brand from the DB,
+// falling back to featured home products on error/timeout. The previous
+// implementation used searchProductsForPage(productName) as a heuristic — that
+// conflated "products whose name matches this product's name" with "products
+// related to this product," which is not what a recommendation shelf should
+// show. The canonical getRecommendedProducts procedure already does
+// same-category + same-brand with dedup, which is the right signal.
 async function fetchRecommendedProducts(
 	productId: number,
 	categoryId: number,
 	brandId: number,
-	productName: string,
 ): Promise<ProductForHome[]> {
 	try {
-		const upstashMatches = await withTimeout(
-			api.product.searchProductsForPage.query({
-				query: productName,
-				limit: 10,
+		const products = await withTimeout(
+			api.product.getRecommendedProducts.query({
+				productId,
 				categoryId,
 				brandId,
 			}),
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
-		const filteredMatches = upstashMatches
+		return products
 			.filter((p) => p.id !== productId && p.slug)
 			.slice(0, 5)
 			.map((p) => ({
@@ -57,35 +62,15 @@ async function fetchRecommendedProducts(
 				brand: p.brand,
 				stock: p.stock,
 			}));
-
-		// Only use search results if we have enough for a decent shelf (>=3).
-		// Otherwise fall back to category/brand-based recommendations.
-		if (filteredMatches.length >= 3) {
-			return filteredMatches;
-		}
-
-		const products = await withTimeout(
-			api.product.getRecommendedProducts.query({
-				productId,
-				categoryId,
-				brandId,
-			}),
-			RECOMMENDED_FETCH_TIMEOUT_MS,
-		);
-		// Merge search matches with recommended, dedupe by id, cap at 4
-		const seen = new Set(filteredMatches.map((p) => p.id));
-		const merged = [
-			...filteredMatches,
-			...products.filter((p) => !seen.has(p.id) && p.slug),
-		].slice(0, 4);
-		return merged;
 	} catch {
 		try {
 			const fallbackProducts = await withTimeout(
 				api.product.getProductsForHome.query(),
 				RECOMMENDED_FETCH_TIMEOUT_MS,
 			);
-			return fallbackProducts.featuredProducts.slice(0, 4);
+			return fallbackProducts.featuredProducts
+				.filter((p) => p.id !== productId)
+				.slice(0, 4);
 		} catch {
 			return [];
 		}
@@ -109,47 +94,16 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 			productId: props.currentProductId,
 			categoryId: props.categoryId,
 			brandId: props.brandId,
-			productName: props.productName,
 		}),
 		(params) =>
 			fetchRecommendedProducts(
 				params.productId,
 				params.categoryId,
 				params.brandId,
-				params.productName,
 			),
 	);
 
-	const washClass = () => WASH_BG[washFor(props.washKey ?? props.categoryId)];
-
-	const setupReveal = (el: HTMLElement) => {
-		queueMicrotask(() => {
-			if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-			const cards = Array.from(
-				el.querySelectorAll<HTMLElement>("[data-shelf-card]"),
-			);
-			if (cards.length === 0) return;
-			for (const card of cards) {
-				card.style.opacity = "0";
-				card.style.transform = "translateY(12px)";
-			}
-			inView(
-				el,
-				() => {
-					animate(
-						cards,
-						{ opacity: 1, transform: "translateY(0px)" },
-						{
-							duration: 0.35,
-							delay: stagger(0.04),
-							ease: [0.23, 1, 0.32, 1],
-						},
-					);
-				},
-				{ amount: 0.15 },
-			);
-		});
-	};
+	const washClass = () => washBg(props.washKey ?? props.categoryId);
 
 	return (
 		<section class="w-full py-6 sm:py-10">
@@ -158,10 +112,7 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 					<Show when={list.length > 0}>
 						<ShelfHeading />
 
-						<div
-							ref={setupReveal}
-							class="scrollbar-hide -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:gap-4 sm:px-0"
-						>
+						<div class="scrollbar-hide -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:gap-4 sm:px-0">
 							<For each={list}>
 								{(product) => {
 									const imageProps = getProductImageProps(
@@ -169,16 +120,18 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										"card",
 									);
 									const [imageFailed, setImageFailed] = createSignal(false);
-									const isOutOfStock = product.stock === 0;
+									const stockState = () => productStockState(product.stock);
+									const isOutOfStock = () => stockState() === "out";
+									const isLowStock = () => stockState() === "low";
 
 									return (
 										<a
 											href={`/products/${product.slug}-${product.id}/`}
 											data-shelf-card
-											class="group hover:-translate-y-1 block w-[144px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
+											class="group hover:-translate-y-1 enter-rise block w-[144px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
 											<div
-												class={`relative aspect-square overflow-hidden ${washClass()} ${isOutOfStock ? "saturate-[0.35]" : ""}`}
+												class={`relative aspect-square overflow-hidden ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 											>
 												<div class="absolute inset-0 bg-dots-subtle" />
 												<Show
@@ -198,15 +151,20 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														sizes={imageProps.sizes}
 														layout="constrained"
 														objectFit="contain"
-														class={`relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04] ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
+														class={`relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04] ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
 														loading="lazy"
 														decoding="async"
 														onError={() => setImageFailed(true)}
 													/>
 												</Show>
-												<Show when={isOutOfStock}>
+												<Show when={isOutOfStock()}>
 													<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
 														Дууссан
+													</span>
+												</Show>
+												<Show when={isLowStock()}>
+													<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
+														Цөөн үлдсэн
 													</span>
 												</Show>
 											</div>

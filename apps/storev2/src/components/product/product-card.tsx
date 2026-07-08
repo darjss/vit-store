@@ -1,15 +1,22 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
+import {
+	LOW_STOCK_THRESHOLD as SHARED_LOW_STOCK_THRESHOLD,
+	productStockState,
+} from "@vit/shared/domain/product";
 import type { ProductCardData } from "@vit/shared/types";
 import { createMemo, createSignal, Show } from "solid-js";
 import { Badge } from "@/components/ui/badge";
 import { getProductImageProps } from "@/lib/image";
-import { WASH_BG, washFor } from "@/lib/wash";
+import { washBg } from "@/lib/wash";
 import CardAddButton from "./card-add-button";
 import ProductImageFallback from "./product-image-fallback";
 
-/** Stock at or below this shows the low-stock warning badge. */
-export const LOW_STOCK_THRESHOLD = 5;
+/**
+ * Re-exported so existing imports (`from "./product-card"`) keep working.
+ * The canonical threshold lives in `@vit/shared/domain/product`.
+ */
+export const LOW_STOCK_THRESHOLD = SHARED_LOW_STOCK_THRESHOLD;
 
 /**
  * Normalized product shape shared by the catalog card and the search card.
@@ -71,19 +78,17 @@ interface ProductCardProps {
 const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
 
-	const washClass = createMemo(
-		() => WASH_BG[washFor(product().categoryId ?? "uncategorized")],
+	const washClass = createMemo(() =>
+		washBg(product().categoryId ?? "uncategorized"),
 	);
 	const productImageProps = createMemo(() =>
 		getProductImageProps(product().image, "card"),
 	);
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
-	const isOutOfStock = createMemo(() => product().stock === 0);
-	const isLowStock = createMemo(() => {
-		const stock = product().stock;
-		return stock !== undefined && stock > 0 && stock <= LOW_STOCK_THRESHOLD;
-	});
+	const stockState = createMemo(() => productStockState(product().stock));
+	const isOutOfStock = createMemo(() => stockState() === "out");
+	const isLowStock = createMemo(() => stockState() === "low");
 	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
 	const [imageFailed, setImageFailed] = createSignal(false);
 

@@ -1,19 +1,14 @@
-import { useQuery } from "@tanstack/solid-query";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
 import ProductCard from "@/components/product/product-card";
-import {
-	trackSearchPerformed,
-	trackSearchResultClicked,
-} from "@/lib/analytics";
-import { queryClient } from "@/lib/query";
-import { api } from "@/lib/trpc";
+import { trackSearchResultClicked } from "@/lib/analytics";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconEmotionSad from "~icons/ri/emotion-sad-line";
 import IconFolder from "~icons/ri/folder-line";
 import IconSearch from "~icons/ri/search-line";
 import IconStore from "~icons/ri/store-2-line";
 import PopularCategories from "./popular-categories";
+import { useSearchStorefront } from "./use-search-storefront";
 
 interface SearchResultsProps {
 	searchQuery: string;
@@ -22,38 +17,15 @@ interface SearchResultsProps {
 }
 
 const SearchResults: Component<SearchResultsProps> = (props) => {
-	const query = useQuery(
-		() => ({
-			queryKey: ["search-products", props.searchQuery],
-			queryFn: async () => {
-				if (!props.searchQuery || props.searchQuery.length < 2) {
-					return { products: [], brands: [], categories: [] };
-				}
-				return await api.product.searchStorefront.query({
-					query: props.searchQuery,
-					limit: 8,
-				});
-			},
-			enabled: props.searchQuery.length >= 2,
-			staleTime: 1000 * 60 * 5,
-		}),
-		() => queryClient,
-	);
+	const search = useSearchStorefront(() => props.searchQuery, { limit: 8 });
 
 	createEffect(() => {
-		props.onLoadingChange?.(query.isFetching);
-	});
-
-	// Track search when results are loaded
-	createEffect(() => {
-		if (query.data && !query.isFetching && props.searchQuery.length >= 2) {
-			trackSearchPerformed(props.searchQuery, query.data.products.length);
-		}
+		props.onLoadingChange?.(search.isFetching());
 	});
 
 	const hasNavigationResults = () =>
-		(query.data?.brands.length ?? 0) > 0 ||
-		(query.data?.categories.length ?? 0) > 0;
+		(search.data()?.brands.length ?? 0) > 0 ||
+		(search.data()?.categories.length ?? 0) > 0;
 
 	const handleProductClick = (
 		productId: number,
@@ -73,7 +45,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 		<div class="mt-4 sm:mt-6">
 			<Switch>
 				{/* Loading State */}
-				<Match when={query.isLoading}>
+				<Match when={search.isLoading()}>
 					<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
 						<For each={Array(4)}>
 							{() => (
@@ -94,7 +66,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				</Match>
 
 				{/* Error State */}
-				<Match when={query.isError}>
+				<Match when={search.isError()}>
 					<div class="enter-fade flex flex-col items-center justify-center py-8 text-center">
 						<IconEmotionSad class="mb-3 h-10 w-10 text-muted-foreground" />
 						<p class="font-semibold text-muted-foreground/70">
@@ -102,7 +74,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						</p>
 						<button
 							type="button"
-							onClick={() => query.refetch()}
+							onClick={() => search.refetch()}
 							class="hover:-translate-y-0.5 mt-4 inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 						>
 							Дахин хайх
@@ -113,8 +85,8 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				{/* Empty State */}
 				<Match
 					when={
-						query.data &&
-						query.data.products.length === 0 &&
+						search.data() &&
+						search.data()!.products.length === 0 &&
 						!hasNavigationResults()
 					}
 				>
@@ -135,8 +107,8 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				{/* Results */}
 				<Match
 					when={
-						query.data &&
-						(query.data.products.length > 0 || hasNavigationResults())
+						search.data() &&
+						(search.data()!.products.length > 0 || hasNavigationResults())
 					}
 				>
 					<div>
@@ -145,13 +117,13 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 								class="enter-fade mb-4 space-y-3"
 								style={{ "transition-duration": "250ms" }}
 							>
-								<Show when={(query.data?.brands.length ?? 0) > 0}>
+								<Show when={(search.data()?.brands.length ?? 0) > 0}>
 									<div>
 										<p class="mb-2 font-semibold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Брэнд
 										</p>
 										<div class="flex flex-wrap gap-2">
-											<For each={query.data?.brands ?? []}>
+											<For each={search.data()?.brands ?? []}>
 												{(brand) => (
 													<a
 														href={`/products/brand/${brand.slug}/1/`}
@@ -171,13 +143,13 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 										</div>
 									</div>
 								</Show>
-								<Show when={(query.data?.categories.length ?? 0) > 0}>
+								<Show when={(search.data()?.categories.length ?? 0) > 0}>
 									<div>
 										<p class="mb-2 font-semibold text-[11px] text-muted-foreground/80 uppercase tracking-wide">
 											Ангилал
 										</p>
 										<div class="flex flex-wrap gap-2">
-											<For each={query.data?.categories ?? []}>
+											<For each={search.data()?.categories ?? []}>
 												{(category) => (
 													<a
 														href={`/products/category/${category.slug}/1/`}
@@ -200,10 +172,10 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							</div>
 						</Show>
 						{/* Results Header */}
-						<Show when={(query.data?.products.length ?? 0) > 0}>
+						<Show when={(search.data()?.products.length ?? 0) > 0}>
 							<div class="mb-3 flex items-center justify-between px-1">
 								<p class="font-semibold text-muted-foreground/70 text-xs uppercase tracking-wide">
-									{query.data?.products.length} бүтээгдэхүүн
+									{search.data()?.products.length} бүтээгдэхүүн
 								</p>
 								<a
 									href={`/products/?q=${encodeURIComponent(props.searchQuery)}`}
@@ -217,7 +189,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 
 						{/* Products Grid — same card as the catalog */}
 						<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-							<For each={query.data?.products ?? []}>
+							<For each={search.data()?.products ?? []}>
 								{(product, index) => (
 									<div
 										class="enter-rise"
