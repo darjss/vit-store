@@ -8,8 +8,8 @@ import type { Context, ServerHonoVariables } from "~/lib/context";
 import { logger } from "~/lib/logger";
 
 // `cloudflare:workers` is only resolvable inside the Cloudflare Workers
-// runtime. Importing it statically breaks plain `bun test` (and any non-Workers
-// consumer), so resolve it lazily and no-op when it is unavailable.
+// runtime. Importing it statically breaks any non-Workers consumer, so
+// resolve it lazily and no-op when it is unavailable.
 let workersCacheModule: typeof import("cloudflare:workers") | null | undefined;
 
 async function getWorkersCacheModule(): Promise<

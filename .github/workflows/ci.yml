@@ -40,9 +40,9 @@ jobs:
       - run: bun x astro check
         working-directory: apps/storev2
 
-  # NOTE: the `bun test` unit-test job was intentionally removed per owner
+  # NOTE: there is intentionally no unit-test job in this workflow per owner
   # policy. This repo does not gate launch readiness on unit tests; launch
   # proof comes from real endpoints, browser verification, staging QA,
-  # screenshots, and performance benchmarks. The existing test files are kept
-  # in-tree for ad-hoc local use but are no longer a CI gate. Do not re-add a
-  # unit-test job without explicit owner approval.
+  # screenshots, and performance benchmarks. The unit-test files
+  # (`*.test.ts`/`*.spec.ts`) were removed from the tree; do not re-add a
+  # unit-test job or restore unit-test files without explicit owner approval.

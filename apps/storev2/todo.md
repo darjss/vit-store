@@ -291,14 +291,9 @@
 
 ## 🧪 Testing & Quality
 
-### Testing Setup
-- [ ] Set up testing framework (Vitest)
-- [ ] Add unit tests for utility functions
-- [ ] Create component tests for critical components
-- [ ] Add integration tests for cart functionality
-- [ ] Test checkout flow end-to-end
-- [ ] Add accessibility tests
-- [ ] Test responsive breakpoints
+- [ ] Test checkout flow end-to-end (browser QA)
+- [ ] Add accessibility checks via browser verification
+- [ ] Test responsive breakpoints via browser verification
 
 ### Code Quality
 - [ ] Add ESLint configuration
