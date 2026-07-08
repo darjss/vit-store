@@ -3,10 +3,28 @@ import {
 	type CatalogCacheAccumulator,
 	cacheControlHeader,
 } from "@vit/shared";
-import * as cloudflareWorkers from "cloudflare:workers";
 import type { Context as HonoContext } from "hono";
 import type { Context, ServerHonoVariables } from "~/lib/context";
 import { logger } from "~/lib/logger";
+
+// `cloudflare:workers` is only resolvable inside the Cloudflare Workers
+// runtime. Importing it statically breaks plain `bun test` (and any non-Workers
+// consumer), so resolve it lazily and no-op when it is unavailable.
+let workersCacheModule: typeof import("cloudflare:workers") | null | undefined;
+
+async function getWorkersCacheModule(): Promise<
+	typeof import("cloudflare:workers") | null
+> {
+	if (workersCacheModule !== undefined) {
+		return workersCacheModule;
+	}
+	try {
+		workersCacheModule = await import("cloudflare:workers");
+	} catch {
+		workersCacheModule = null;
+	}
+	return workersCacheModule;
+}
 
 type CacheHonoContext = HonoContext<{
 	Bindings: Env;
@@ -62,9 +80,13 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 }
 
 export async function purgeTagsGlobal(tags: string[]): Promise<void> {
-	const globalCache: typeof cloudflareWorkers.cache | undefined =
-		cloudflareWorkers.cache;
-	if (!globalCache || tags.length === 0) {
+	if (tags.length === 0) {
+		return;
+	}
+
+	const mod = await getWorkersCacheModule();
+	const globalCache = mod?.cache;
+	if (!globalCache) {
 		return;
 	}
 
