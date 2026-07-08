@@ -15,8 +15,8 @@
 		"jsxImportSource": "solid-js",
 		"baseUrl": ".",
 		"paths": {
-			"@vit/api": ["../../packages/api/dist/index.d.ts"],
-			"@vit/api/*": ["../../packages/api/dist/*"],
+			"@vit/api": ["../../packages/api/src/index.ts"],
+			"@vit/api/*": ["../../packages/api/src/*"],
 			"~/*": ["../../packages/api/src/*"],
 			"@vit/shared": ["../../packages/shared/src/index.ts"],
 			"@vit/shared/*": ["../../packages/shared/src/*"],

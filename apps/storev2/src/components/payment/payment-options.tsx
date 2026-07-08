@@ -1,15 +1,22 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation } from "@tanstack/solid-query";
 import { bankTransfer } from "@vit/shared/constants";
 import { createEffect, createSignal, type JSX, Show } from "solid-js";
 import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
+import type { PaymentProviderType } from "@vit/shared/types";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
+import { buttonVariants } from "@/components/ui/button";
+import { orderConfirmUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
+import { usePaymentStatus } from "@/lib/use-payment-status";
+import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
+import { showToast } from "@/components/ui/toast";
 import IconBank from "~icons/ri/bank-line";
+import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconMobile from "~icons/ri/smartphone-line";
 
 interface PaymentOptionsProps {
@@ -19,6 +26,7 @@ interface PaymentOptionsProps {
 	customerPhone: string;
 	accountNumber?: string;
 	accountName?: string;
+	provider?: PaymentProviderType;
 	checkoutToken?: string;
 }
 
@@ -47,7 +55,11 @@ const FieldLabel = (props: { children: JSX.Element }) => (
 );
 
 const PaymentOptions = (props: PaymentOptionsProps) => {
-	const [tab, setTab] = createSignal<"transfer" | "qpay">("qpay");
+	// F5: default tab honors the existing payment provider so a customer who
+	// already chose transfer lands back on the transfer tab on revisit.
+	const [tab, setTab] = createSignal<"transfer" | "qpay">(
+		props.provider === "transfer" ? "transfer" : "qpay",
+	);
 
 	const selectTransferMutation = useMutation(
 		() => ({
@@ -55,7 +67,18 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 				return await api.payment.selectTransfer.mutate({
 					paymentNumber: props.paymentNumber,
 					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string });
+				});
+			},
+			// F2: surface failure instead of silently showing transfer
+			// instructions as if the reconciler had started.
+			onError: () => {
+				showToast({
+					title: "Алдаа",
+					description:
+						"Төлбөрийн хэлбэр сонгоход алдаа гарлаа. Дахин оролдоно уу.",
+					variant: "error",
+					duration: 5000,
+				});
 			},
 		}),
 		() => queryClient,
@@ -69,20 +92,14 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 	};
 
 	const [advanced, setAdvanced] = createSignal(false);
-	const transferStatusQuery = useQuery(
-		() => ({
-			queryKey: ["transfer-payment-status", props.paymentNumber],
-			queryFn: async () => {
-				return await api.payment.getPaymentStatus.query({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string });
-			},
+	const transferStatusQuery = usePaymentStatus(
+		() => props.paymentNumber,
+		() => props.checkoutToken,
+		{
 			refetchInterval: 5000,
-			staleTime: 0,
 			enabled: BANK_TRANSFER_ENABLED && tab() === "transfer" && !advanced(),
-		}),
-		() => queryClient,
+			keySuffix: "transfer-tab",
+		},
 	);
 
 	createEffect(() => {
@@ -91,11 +108,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 		}
 		setAdvanced(true);
 		cart.clearCart();
-		void safeNavigate(
-			props.checkoutToken
-				? `/order/confirm/${props.orderNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
-				: `/order/confirm/${props.orderNumber}`,
-		);
+		void safeNavigate(orderConfirmUrl(props.orderNumber, props.checkoutToken));
 	});
 
 	return (
@@ -137,7 +150,30 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			<Show when={BANK_TRANSFER_ENABLED && tab() === "transfer"}>
 				<div class="rounded-2xl border border-border bg-card shadow-soft">
 					<div class="space-y-5 p-3 sm:space-y-6 sm:p-4">
-						<TransferStep number={1} title="Яг доорх дүнг данс руу шилжүүлнэ үү">
+						{/* F2: surface selectTransfer failure — don't show instructions
+						    as if the reconciler started when it never did. */}
+						<Show when={selectTransferMutation.isError}>
+							<div class="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-center">
+								<IconErrorWarning class="h-8 w-8 text-destructive" />
+								<div>
+									<p class="font-semibold text-destructive text-sm">
+										Автомат шалгалт эхлэхэд алдаа гарлаа
+									</p>
+									<p class="mt-1 text-muted-foreground text-xs">
+										Төлбөрөө шилжүүлсний дараа доорх товчийг дарж гараар
+										баталгаажуулна уу.
+									</p>
+								</div>
+								<button
+									type="button"
+									onClick={() => selectTransferMutation.mutate()}
+									class={cn(buttonVariants({ size: "sm" }))}
+								>
+									Дахин оролдох
+								</button>
+							</div>
+						</Show>
+												<TransferStep number={1} title="Яг доорх дүнг данс руу шилжүүлнэ үү">
 							<div class="flex items-center gap-2.5 rounded-xl bg-muted/30 p-2.5 sm:p-3">
 								<div class="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-background sm:size-10">
 									<img

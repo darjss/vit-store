@@ -1,16 +1,12 @@
-import type { TransferReconciliationState } from "@vit/api/lib/payments/transfer-reconciliation-status";
+import { useQuery } from "@tanstack/solid-query";
 import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
-import {
-	createEffect,
-	createResource,
-	createSignal,
-	Match,
-	onCleanup,
-	Switch,
-} from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { paymentUrl } from "@/lib/payment-url";
+import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import { usePaymentStatus } from "@/lib/use-payment-status";
+import { cn } from "@/lib/utils";
 import IconCheck from "~icons/ri/check-line";
 import IconClose from "~icons/ri/close-line";
 import IconRefresh from "~icons/ri/refresh-line";
@@ -32,71 +28,53 @@ const PaymentStatus = (props: {
 		provider: PaymentProviderType;
 	};
 }) => {
-	const [refetchTrigger, setRefetchTrigger] = createSignal(1);
+	const paymentNumber = () => props.payment.paymentNumber;
+	const checkoutToken = () => props.payment.checkoutToken;
 
-	type PaymentStatusResult = {
-		status: PaymentStatusType;
-		provider: PaymentProviderType;
-	};
-
-	const fetchPaymentStatus = async (): Promise<PaymentStatusResult> => {
-		return (await api.payment.getPaymentStatus.query({
-			paymentNumber: props.payment.paymentNumber,
-			checkoutToken: props.payment.checkoutToken,
-		} as { paymentNumber: string })) as PaymentStatusResult;
-	};
-
-	const [data] = createResource(refetchTrigger, fetchPaymentStatus, {
-		initialValue: {
+	// Single polling mechanism (shared with payment-options / qpay-button).
+	// `initialData` seeds the server-rendered status so the first paint shows
+	// the correct state instead of a loading skeleton.
+	const statusQuery = usePaymentStatus(paymentNumber, checkoutToken, {
+		refetchInterval: 5000,
+		initialData: {
 			status: props.payment.status,
 			provider: props.payment.provider,
-		} satisfies Awaited<ReturnType<typeof fetchPaymentStatus>>,
+		} as { status: PaymentStatusType; provider: PaymentProviderType },
 	});
 
-	const currentData = () => data.latest ?? data();
-
-	const fetchReconciliation = async () => {
-		const current = currentData();
-		if (
-			!current ||
-			current.provider !== "transfer" ||
-			current.status === "success" ||
-			current.status === "failed"
-		) {
-			return null;
-		}
-		const reconciliationApi = api.payment as unknown as {
-			getTransferReconciliationStatus: {
-				query: (input: {
-					paymentNumber: string;
-					checkoutToken?: string;
-				}) => Promise<TransferReconciliationState | null>;
-			};
+	const currentData = () =>
+		statusQuery.data ?? {
+			status: props.payment.status,
+			provider: props.payment.provider,
 		};
-		return await reconciliationApi.getTransferReconciliationStatus.query({
-			paymentNumber: props.payment.paymentNumber,
-			checkoutToken: props.payment.checkoutToken,
-		});
-	};
 
-	const [reconciliation] = createResource(refetchTrigger, fetchReconciliation);
+	const canReconcile = createMemo(() => {
+		const current = currentData();
+		return (
+			current.provider === "transfer" &&
+			current.status !== "success" &&
+			current.status !== "failed"
+		);
+	});
+
+	const reconciliationQuery = useQuery(
+		() => ({
+			queryKey: ["transfer-reconciliation", paymentNumber()],
+			queryFn: () =>
+				api.payment.getTransferReconciliationStatus.query({
+					paymentNumber: paymentNumber(),
+					checkoutToken: checkoutToken(),
+				}),
+			refetchInterval: 5000,
+			enabled: canReconcile(),
+		}),
+		() => queryClient,
+	);
 
 	const needsManualReview = () => {
-		const status = reconciliation.latest?.status;
+		const status = reconciliationQuery.data?.status;
 		return status !== undefined && MANUAL_REVIEW_STATUSES.has(status);
 	};
-
-	createEffect(() => {
-		const status = currentData()?.status;
-		if (status === "success" || status === "failed") {
-			return;
-		}
-		const interval = setInterval(() => {
-			setRefetchTrigger((prev) => prev + 1);
-		}, 5000);
-
-		onCleanup(() => clearInterval(interval));
-	});
 
 	return (
 		<Switch>
@@ -168,11 +146,10 @@ const PaymentStatus = (props: {
 						Төлбөрийн явцад алдаа гарлаа. Дахин оролдоно уу.
 					</p>
 					<a
-						href={
-							props.payment.checkoutToken
-								? `/payment/${props.payment.paymentNumber}?ct=${encodeURIComponent(props.payment.checkoutToken)}`
-								: `/payment/${props.payment.paymentNumber}`
-						}
+						href={paymentUrl(
+							props.payment.paymentNumber,
+							props.payment.checkoutToken,
+						)}
 						class={cn(buttonVariants())}
 					>
 						<IconRefresh class="h-4 w-4" aria-hidden="true" />
@@ -180,7 +157,7 @@ const PaymentStatus = (props: {
 					</a>
 				</div>
 			</Match>
-			<Match when={data.loading && !data.latest}>
+			<Match when={statusQuery.isPending && !statusQuery.data}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-soft-lg">
 						<IconTime class="h-10 w-10" aria-hidden="true" />
