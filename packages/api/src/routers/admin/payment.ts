@@ -3,25 +3,9 @@ import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
-import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generatePaymentNumber } from "~/lib/utils";
-
-type TransferReconciliationStub = {
-	getStatus(): Promise<TransferReconciliationState | null>;
-	collectMatchingKhaanFingerprints(
-		paymentNumber: string,
-	): Promise<string[] | null>;
-};
-
-const getTransferReconciliationStub = (
-	env: Env,
-	paymentNumber: string,
-): TransferReconciliationStub => {
-	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
-	const id = namespace.idFromName(paymentNumber);
-	return namespace.get(id) as TransferReconciliationStub;
-};
 
 export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
     return router({

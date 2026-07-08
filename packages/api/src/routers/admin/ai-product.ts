@@ -17,6 +17,7 @@ import {
 	translateStage,
 } from "~/lib/ai-product/pipeline";
 import { purgeTags } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { logger } from "~/lib/logger";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 
@@ -159,6 +160,7 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						CATEGORIES_TAG,
 						...createdProductTags,
 					]);
+					scheduleProductSearchRebuild(ctx, "product_created");
 				}
 
 				return {
@@ -213,6 +215,7 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 					CATEGORIES_TAG,
 					productTag(input.productId),
 				]);
+				scheduleProductSearchRebuild(ctx, "product_updated");
 
 				return {
 					images: result.images,

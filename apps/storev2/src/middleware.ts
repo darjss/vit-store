@@ -2,6 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 
 /**
  * Paths that should never be edge-cached — user-specific or dynamic content.
+ * Kept for future re-enablement; the HTML edge cache itself is disabled below.
  */
 function isCacheablePath(pathname: string): boolean {
   return (
@@ -16,6 +17,15 @@ function isCacheablePath(pathname: string): boolean {
     pathname !== "/order-tracking"
   );
 }
+
+// HTML edge cache disabled (LBL-1). The storefront HTML cache lived in the
+// storev2 Worker's caches.default while admin mutations run in the API Worker,
+// so there was no cross-Worker purge path — edited products stayed stale for
+// the full 6h TTL. Catalog caching now relies on the API Worker's Workers
+// Cache (GET tRPC queries tagged with Cache-Tag, purged by admin mutations
+// via purgeTags). If HTML edge caching is re-enabled, it must either move
+// into the API Worker or have a cross-Worker purge endpoint.
+const HTML_EDGE_CACHE_ENABLED = false;
 
 function edgeCacheControl(pathname: string): string {
   const isCatalogSurface =
@@ -35,10 +45,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		return context.redirect("/robots.txt", 301);
 	}
 
-	// Check edge cache BEFORE rendering. Cache API (caches.default) stores
-	// responses in the Worker's edge cache — this is the only way to cache
-	// Worker responses; setting Cache-Control headers alone doesn't work.
-	if (context.request.method === "GET" && isCacheablePath(url.pathname)) {
+	if (HTML_EDGE_CACHE_ENABLED && context.request.method === "GET" && isCacheablePath(url.pathname)) {
 		try {
 			const cache = (caches as unknown as { default: Cache }).default;
 			// The /products index always SSRs the same first 12 products
