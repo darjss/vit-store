@@ -38,7 +38,12 @@ export const storev2 = await Astro("front", {
 		PUBLIC_API_URL: env.PUBLIC_API_URL,
 	},
 	adopt: true,
-	domains: stage === "prod" ? ["amerikvitamin.mn"] : undefined,
+	domains:
+		stage === "prod"
+			? ["amerikvitamin.mn"]
+			: stage === "staging"
+				? ["staging.amerikvitamin.mn"]
+				: undefined,
 	observability: {
 		enabled: false,
 		logs: {
