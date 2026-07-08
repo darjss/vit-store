@@ -272,6 +272,33 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
 </Layout>
 
 <style>
+  /* CSS-only scroll reveal (replaces `motion` library). Elements start
+     hidden and transition in when .is-revealed is added by the
+     IntersectionObserver in the page script. Stagger via --enter-delay. */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 350ms cubic-bezier(0.25, 1, 0.5, 1),
+                  transform 350ms cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    [data-reveal].is-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    [data-reveal-group] > * {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 350ms cubic-bezier(0.25, 1, 0.5, 1),
+                  transform 350ms cubic-bezier(0.25, 1, 0.5, 1);
+      transition-delay: calc(min(var(--stagger-i, 0), 7) * 40ms);
+    }
+    [data-reveal-group].is-revealed > * {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* Sticker pops last: small spring overshoot after the staggered hero entrance. */
   @keyframes sticker-pop {
     from {
@@ -326,54 +353,43 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
 </style>
 
 <script>
-  import { animate, inView } from "motion";
-
-  const EASE: [number, number, number, number] = [0.25, 1, 0.5, 1];
-
+  // CSS-only scroll reveal — replaces the `motion` library (~30kb) with a
+  // tiny IntersectionObserver that toggles a class. The animation itself is
+  // a CSS transition on opacity + transform, gated behind
+  // prefers-reduced-motion. Stagger is achieved via --enter-delay on children.
   function revealOnScroll() {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    for (const el of document.querySelectorAll<HTMLElement>("[data-reveal]")) {
-      if (el.dataset.revealed) continue;
-      el.dataset.revealed = "true";
-      el.style.opacity = "0";
-      el.style.transform = "translateY(10px)";
-      inView(
-        el,
-        () => {
-          animate(
-            el,
-            { opacity: 1, transform: "translateY(0px)" },
-            { duration: 0.35, ease: EASE },
-          );
-        },
-        { margin: "0px 0px -10% 0px" },
-      );
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // No animation — just make everything visible immediately.
+      document.querySelectorAll<HTMLElement>("[data-reveal], [data-reveal-group]")
+        .forEach((el) => el.classList.add("is-revealed"));
+      return;
     }
 
-    for (const group of document.querySelectorAll<HTMLElement>("[data-reveal-group]")) {
-      if (group.dataset.revealed) continue;
-      group.dataset.revealed = "true";
-      const items = Array.from(group.children) as HTMLElement[];
-      for (const item of items) {
-        item.style.opacity = "0";
-        item.style.transform = "translateY(12px)";
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-revealed");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
+    );
+
+    for (const el of document.querySelectorAll<HTMLElement>(
+      "[data-reveal], [data-reveal-group]",
+    )) {
+      if (el.dataset.revealed) continue;
+      el.dataset.revealed = "true";
+      // Set stagger index on group children so CSS can compute
+      // transition-delay per item.
+      if (el.hasAttribute("data-reveal-group")) {
+        Array.from(el.children).forEach((child, i) => {
+          (child as HTMLElement).style.setProperty("--stagger-i", String(i));
+        });
       }
-      inView(
-        group,
-        () => {
-          animate(
-            items,
-            { opacity: 1, transform: "translateY(0px)" },
-            {
-              duration: 0.35,
-              ease: EASE,
-              delay: (i: number) => Math.min(i, 7) * 0.04,
-            },
-          );
-        },
-        { margin: "0px 0px -10% 0px" },
-      );
+      observer.observe(el);
     }
   }
 

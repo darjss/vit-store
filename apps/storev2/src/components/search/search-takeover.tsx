@@ -10,7 +10,6 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { trackSearchPerformed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import {
 	clearHistory,
@@ -19,11 +18,12 @@ import {
 } from "@/lib/search-history";
 import { parseSearchTokens } from "@/lib/search-parse";
 import { api } from "@/lib/trpc";
-import { WASH_BG, washFor } from "@/lib/wash";
+import { washBg } from "@/lib/wash";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconChevron from "~icons/ri/arrow-right-s-line";
 import IconFolder from "~icons/ri/folder-line";
 import SearchResultRow from "./search-result-row";
+import { useSearchStorefront } from "./use-search-storefront";
 
 interface SearchTakeoverProps {
 	query: string;
@@ -86,7 +86,7 @@ const RecentGrid = (props: { onSelect: (term: string) => void }) => {
 								class="flex min-h-14 items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 text-left shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 							>
 								<span
-									class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${WASH_BG[washFor(item.term)]}`}
+									class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${washBg(item.term)}`}
 								>
 									<IconFolder class="h-5 w-5 text-foreground/70" />
 								</span>
@@ -147,7 +147,7 @@ const JumpList = (props: {
 						class="flex min-h-12 items-center gap-2.5 rounded-xl border border-border bg-card px-3 shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 					>
 						<span
-							class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${WASH_BG[washFor(category.id)]}`}
+							class={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${washBg(category.id)}`}
 						>
 							<IconFolder class="h-5 w-5 text-foreground/70" />
 						</span>
@@ -213,23 +213,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 		() => queryClient,
 	);
 
-	const searchResults = useQuery(
-		() => ({
-			queryKey: ["search-takeover", props.query],
-			queryFn: async () => {
-				if (props.query.length < 2) {
-					return { products: [], brands: [], categories: [] };
-				}
-				return await api.product.searchStorefront.query({
-					query: props.query,
-					limit: 8,
-				});
-			},
-			enabled: props.query.length >= 2,
-			staleTime: 1000 * 60 * 5,
-		}),
-		() => queryClient,
-	);
+	const search = useSearchStorefront(() => props.query, { limit: 8 });
 
 	const topCategories = createMemo<CategoryStock[]>(() =>
 		(categoriesQuery.data ?? []).filter((c) => c.productCount > 0).slice(0, 6),
@@ -240,30 +224,20 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 	const tokens = createMemo(() => parseSearchTokens(props.query));
 
 	createEffect(() => {
-		if (
-			searchResults.data &&
-			!searchResults.isFetching &&
-			props.query.length >= 2
-		) {
-			trackSearchPerformed(props.query, searchResults.data.products.length);
-		}
-	});
-
-	createEffect(() => {
-		props.onSearchLoadingChange?.(searchResults.isLoading);
+		props.onSearchLoadingChange?.(search.isLoading());
 	});
 
 	const hasNavigation = () =>
-		(searchResults.data?.brands.length ?? 0) > 0 ||
-		(searchResults.data?.categories.length ?? 0) > 0;
+		(search.data()?.brands.length ?? 0) > 0 ||
+		(search.data()?.categories.length ?? 0) > 0;
 
 	const isZeroResults = () =>
 		props.query.length >= 2 &&
-		!!searchResults.data &&
-		searchResults.data.products.length === 0 &&
+		!!search.data() &&
+		search.data()!.products.length === 0 &&
 		!hasNavigation();
 
-	const resultCount = () => searchResults.data?.products.length ?? 0;
+	const resultCount = () => search.data()?.products.length ?? 0;
 
 	return (
 		<Show
@@ -286,18 +260,18 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 			}
 		>
 			<Switch>
-				<Match when={searchResults.isLoading}>
+				<Match when={search.isLoading()}>
 					<ResultSkeleton />
 				</Match>
 
-				<Match when={searchResults.isError}>
+				<Match when={search.isError()}>
 					<div class="flex flex-col items-center justify-center py-10 text-center">
 						<p class="font-semibold text-muted-foreground">
 							Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.
 						</p>
 						<button
 							type="button"
-							onClick={() => searchResults.refetch()}
+							onClick={() => search.refetch()}
 							class="mt-4 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
 						>
 							Дахин хайх
@@ -328,7 +302,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 					</div>
 				</Match>
 
-				<Match when={searchResults.data}>
+				<Match when={search.data()}>
 					<div>
 						<Show when={tokens().length > 0}>
 							<div class="mt-1 rounded-2xl border border-cocoa bg-primary/15 p-3.5 shadow-soft-sm">
@@ -357,7 +331,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 									{resultCount()}
 								</span>
 							</span>
-							<For each={searchResults.data?.categories ?? []}>
+							<For each={search.data()?.categories ?? []}>
 								{(category) => (
 									<FacetChip
 										label={category.name}
@@ -367,7 +341,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 									/>
 								)}
 							</For>
-							<For each={searchResults.data?.brands ?? []}>
+							<For each={search.data()?.brands ?? []}>
 								{(brand) => (
 									<FacetChip
 										label={brand.name}
@@ -387,7 +361,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 						</p>
 
 						<div class="flex flex-col gap-2.5">
-							<For each={searchResults.data?.products ?? []}>
+							<For each={search.data()?.products ?? []}>
 								{(product, index) => (
 									<SearchResultRow
 										product={product}
