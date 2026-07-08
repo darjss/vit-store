@@ -40,17 +40,9 @@ jobs:
       - run: bun x astro check
         working-directory: apps/storev2
 
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.0
-      - uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - run: bun install --frozen-lockfile
-      - run: bun test
+  # NOTE: the `bun test` unit-test job was intentionally removed per owner
+  # policy. This repo does not gate launch readiness on unit tests; launch
+  # proof comes from real endpoints, browser verification, staging QA,
+  # screenshots, and performance benchmarks. The existing test files are kept
+  # in-tree for ad-hoc local use but are no longer a CI gate. Do not re-add a
+  # unit-test job without explicit owner approval.
