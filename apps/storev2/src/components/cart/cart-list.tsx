@@ -1,6 +1,7 @@
 import { Image } from "@unpic/solid";
 import { deliveryFee } from "@vit/shared/constants";
 import { For, Match, Switch } from "solid-js";
+import { createSignal, onMount } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
@@ -10,8 +11,15 @@ import CartActions from "./cart-actions";
 import EmptyCart from "./empty-cart";
 
 const CartList = () => {
+	// `cart.isHydrated()` is driven from a detached `createRoot` effect that
+	// does not reliably fire inside Astro islands, leaving the page stuck on
+	// the loading skeleton. A local `onMount` signal mirrors the proven
+	// pattern in `cart-count.tsx` / `mobile-cart-button.tsx` and flips only
+	// after the island has hydrated on the client.
+	const [isHydrated, setIsHydrated] = createSignal(false);
+	onMount(() => setIsHydrated(true));
+
 	const isEmpty = () => cart.items().length === 0;
-	const isHydrated = () => cart.isHydrated();
 
 	return (
 		<Switch>
