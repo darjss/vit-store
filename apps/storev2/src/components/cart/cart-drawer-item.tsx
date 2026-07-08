@@ -35,12 +35,10 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 		cart.updateQuantity(props.item.productId, 1);
 	};
 
+	// Decrement policy is canonical in the store (floor at 1). The explicit
+	// × button (startRemove) is the only path that removes an item.
 	const handleDecrement = () => {
-		if (props.item.quantity > 1) {
-			cart.updateQuantity(props.item.productId, -1);
-		} else {
-			startRemove();
-		}
+		cart.updateQuantity(props.item.productId, -1);
 	};
 
 	return (

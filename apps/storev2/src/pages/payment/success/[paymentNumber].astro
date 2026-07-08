@@ -1,6 +1,8 @@
 ---
 import ClearCart from "@/components/payment/clear-cart";
 import Layout from "@/layouts/Layout.astro";
+import { loadPaymentOrRedirect } from "@/lib/server-loaders";
+import { paymentUrl, orderConfirmUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
 import IconCheck from "~icons/ri/check-line";
 import IconReceipt from "~icons/ri/file-list-3-line";
@@ -14,34 +16,13 @@ if (!paymentNumber) {
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
-let payment;
-try {
-    payment = await serverApi.payment.getPaymentByNumber.query({
-        paymentNumber,
-        checkoutToken,
-    } as { paymentNumber: string });
-} catch (err) {
-    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-    if (code === "UNAUTHORIZED") {
-        return Astro.redirect("/order-tracking");
-    }
-    if (code === "NOT_FOUND") {
-        return Astro.redirect("/404");
-    }
-    throw err;
-}
-
-if (!payment) {
-    return Astro.redirect("/404");
-}
+const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
+const result = await loadPaymentOrRedirect(serverApi, paymentNumber, checkoutToken, Astro.redirect);
+if ("redirect" in result) return result.redirect;
+const payment = result.payment;
 
 if (payment.status !== "success") {
-	return Astro.redirect(
-        checkoutToken
-            ? `/payment/${paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
-            : `/payment/${paymentNumber}`,
-    );
+	return Astro.redirect(paymentUrl(paymentNumber, checkoutToken));
 }
 ---
 
@@ -129,7 +110,7 @@ if (payment.status !== "success") {
         <div class="enter-rise stagger-5 max-w-2xl mx-auto">
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
                 <a
-                    href={checkoutToken ? `/order/confirm/${payment.order.orderNumber}?ct=${encodeURIComponent(checkoutToken)}` : `/order/confirm/${payment.order.orderNumber}`}
+                    href={orderConfirmUrl(payment.order.orderNumber, checkoutToken)}
                     class="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 font-semibold text-primary-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-14 md:px-8 md:text-base"
                 >
                     <IconReceipt class="size-4 shrink-0" aria-hidden="true" />
