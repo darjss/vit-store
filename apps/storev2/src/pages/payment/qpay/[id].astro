@@ -1,42 +1,24 @@
 ---
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import Layout from "@/layouts/Layout.astro";
+import { loadPaymentOrRedirect } from "@/lib/server-loaders";
+import { paymentSuccessUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
 import IconMobile from "~icons/ri/smartphone-line";
 
 const { id } = Astro.params;
-if (id === undefined) {
+if (!id) {
     return Astro.redirect("/404");
 }
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
-let payment;
-try {
-    payment = await serverApi.payment.getPaymentByNumber.query({
-        paymentNumber: id,
-        checkoutToken,
-    } as { paymentNumber: string });
-} catch (err) {
-    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-    if (code === "UNAUTHORIZED") {
-        return Astro.redirect("/order-tracking");
-    }
-    if (code === "NOT_FOUND") {
-        return Astro.redirect("/404");
-    }
-    throw err;
-}
-if (!payment) {
-    return Astro.redirect("/404");
-}
+const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
+const result = await loadPaymentOrRedirect(serverApi, id, checkoutToken, Astro.redirect);
+if ("redirect" in result) return result.redirect;
+const payment = result.payment;
 
 if (payment.status === "success") {
-    return Astro.redirect(
-        checkoutToken
-            ? `/payment/success/${payment.paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
-            : `/payment/success/${payment.paymentNumber}`,
-    );
+    return Astro.redirect(paymentSuccessUrl(payment.paymentNumber, checkoutToken));
 }
 ---
 

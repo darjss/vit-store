@@ -1,6 +1,7 @@
 ---
 import PaymentStatus from "@/components/payment/payment-status";
 import Layout from "@/layouts/Layout.astro";
+import { loadOrderOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import IconCheck from "~icons/ri/check-line";
@@ -16,25 +17,12 @@ const { orderNumber } = Astro.params;
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
-if(!orderNumber || orderNumber===undefined){
+if (!orderNumber) {
     return Astro.redirect("/404");
 }
-let order;
-try {
-    order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber, checkoutToken });
-} catch (err) {
-    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-    if (code === "UNAUTHORIZED") {
-        return Astro.redirect("/order-tracking");
-    }
-    if (code === "NOT_FOUND") {
-        return Astro.redirect("/404");
-    }
-    throw err;
-}
-if(!order){
-    return Astro.redirect("/404");
-}
+const result = await loadOrderOrRedirect(serverApi, orderNumber, checkoutToken, Astro.redirect);
+if ("redirect" in result) return result.redirect;
+const order = result.order;
 
 const timelineSteps: OrderStatusType[] = ["pending", "shipped", "delivered"];
 const currentStepIndex = timelineSteps.indexOf((order.status ?? "pending") as OrderStatusType);
@@ -51,7 +39,17 @@ const statusBadgeClasses: Record<string, string> = {
 
 <Layout>
     <div class="container mx-auto max-w-4xl px-4 py-8 lg:py-12">
-        <PaymentStatus payment={{ ...order.payments[0], checkoutToken }} client:load />
+        {order.payments[0] ? (
+            <PaymentStatus payment={{ ...order.payments[0], checkoutToken }} client:load />
+        ) : (
+            <div class="mb-12 text-center">
+                <div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-soft-lg">
+                    <IconCheck class="h-10 w-10" aria-hidden="true" />
+                </div>
+                <h1 class="mb-3 font-display text-2xl text-foreground">Захиалга хүлээн авагдлаа</h1>
+                <p class="text-lg text-muted-foreground">Төлбөрийн мэдээлэл олдсонгүй. Хүргэгчтэй холбогдоно уу.</p>
+            </div>
+        )}
 
         <div class="enter-rise mb-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div class="flex flex-col justify-between gap-4 border-border border-b bg-wash-lemon/70 p-6 md:flex-row md:items-center md:p-8">

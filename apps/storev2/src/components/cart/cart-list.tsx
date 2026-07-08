@@ -1,35 +1,26 @@
 import { Image } from "@unpic/solid";
 import { deliveryFee } from "@vit/shared/constants";
 import { For, Match, Switch } from "solid-js";
-import { createSignal, onMount } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
-import { cart } from "@/store/cart";
+import { cart, createCartState } from "@/store/cart";
 import Loading from "../loading";
 import CartActions from "./cart-actions";
 import EmptyCart from "./empty-cart";
 
 const CartList = () => {
-	// `cart.isHydrated()` is driven from a detached `createRoot` effect that
-	// does not reliably fire inside Astro islands, leaving the page stuck on
-	// the loading skeleton. A local `onMount` signal mirrors the proven
-	// pattern in `cart-count.tsx` / `mobile-cart-button.tsx` and flips only
-	// after the island has hydrated on the client.
-	const [isHydrated, setIsHydrated] = createSignal(false);
-	onMount(() => setIsHydrated(true));
-
-	const isEmpty = () => cart.items().length === 0;
+	const cartState = createCartState();
 
 	return (
 		<Switch>
-			<Match when={!isHydrated()}>
+			<Match when={cartState() === "loading"}>
 				<Loading />
 			</Match>
-			<Match when={isHydrated() && isEmpty()}>
+			<Match when={cartState() === "empty"}>
 				<EmptyCart />
 			</Match>
-			<Match when={isHydrated() && !isEmpty()}>
+			<Match when={cartState() === "ready"}>
 				<h1 class="enter-fade mb-5 font-display text-foreground text-xl md:text-2xl">
 					Таны сагс
 				</h1>

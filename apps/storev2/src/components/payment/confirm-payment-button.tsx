@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
+import { orderConfirmUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -22,7 +23,7 @@ const ConfirmPaymentButton = (props: {
 				return await api.payment.sendTransferNotification.mutate({
 					paymentNumber: props.paymentNumber,
 					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string });
+				});
 			},
 			onSuccess: async (data) => {
 				if (!data?.orderNumber) return;
@@ -35,9 +36,7 @@ const ConfirmPaymentButton = (props: {
 				});
 				cart.clearCart();
 				void safeNavigate(
-					props.checkoutToken
-						? `/order/confirm/${data.orderNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
-						: `/order/confirm/${data.orderNumber}`,
+					orderConfirmUrl(data.orderNumber, props.checkoutToken),
 				);
 			},
 			onError: () => {
