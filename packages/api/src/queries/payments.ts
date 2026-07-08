@@ -22,8 +22,14 @@ import type { paymentProvider, paymentStatus } from "~/lib/utils";
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];
 
+// Accept either a live db() handle or a transaction tx so the canonical
+// implementation can be called both inside transactions (addOrder/updateOrder/
+// confirmPaymentAndApplyStock) and from non-transactional query endpoints
+// (purchase.getAverageCostOfProduct).
+type DbOrTx = ReturnType<typeof db> | TransactionType;
+
 export async function getAverageCostOfProduct(
-	tx: TransactionType,
+	tx: DbOrTx,
 	productId: number,
 	createdAt: Date,
 ) {
@@ -83,6 +89,32 @@ export const paymentQueries = {
 			amount: number;
 		}) {
 			const result = await db()
+				.insert(PaymentsTable)
+				.values({
+					paymentNumber: data.paymentNumber,
+					orderId: data.orderId,
+					provider: data.provider,
+					status: data.status,
+					amount: data.amount,
+				})
+				.returning({
+					id: PaymentsTable.id,
+					paymentNumber: PaymentsTable.paymentNumber,
+				});
+			return result[0];
+		},
+
+		async createPaymentTx(
+			tx: DbOrTx,
+			data: {
+				paymentNumber: string;
+				orderId: number;
+				provider: PaymentProviderType;
+				status: PaymentStatusType;
+				amount: number;
+			},
+		) {
+			const result = await tx
 				.insert(PaymentsTable)
 				.values({
 					paymentNumber: data.paymentNumber,

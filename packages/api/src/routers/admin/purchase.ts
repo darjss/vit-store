@@ -5,6 +5,7 @@ import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "
 import * as v from "valibot";
 import { db } from "~/db/client";
 import { purgeTags } from "~/lib/cache/workers-cache";
+import { getAverageCostOfProduct } from "~/queries/payments";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
@@ -247,7 +248,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .query(async ({ ctx, input }) => {
         try {
-            return await purchaseQueries.admin.getAverageCostOfProduct(input.productId, input.createdAt);
+            return await getAverageCostOfProduct(db(), input.productId, input.createdAt);
         }
         catch (e) {
             ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
