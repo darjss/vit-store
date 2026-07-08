@@ -198,6 +198,49 @@ export const updateOrderSchema = v.object({
 	id: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
 });
 
+/**
+ * Lightweight header-only patch for inline field edits on the order detail
+ * page (notes, address, customerPhone, deliveryProvider, status). Touches
+ * ONLY order header columns — it does NOT rewrite order details, sales, or
+ * stock, so editing "Тэмдэглэл" on a paid order no longer deletes+recreates
+ * every order-detail row. Payment-status changes must still go through
+ * `updateOrder` because they can trigger stock/sales transitions.
+ */
+export const patchOrderHeaderSchema = v.object({
+	id: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+	customerPhone: v.optional(
+		v.pipe(
+			v.string(),
+			v.minLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+			v.maxLength(8, "Утасны дугаар 8 оронтой байх ёстой"),
+			v.regex(/^[6-9]\d{7}$/, "Утасны дугаар 6-9-өөр эхлэх ёстой"),
+		),
+	),
+	address: v.optional(
+		v.pipe(
+			v.string(),
+			v.minLength(10, "Хаяг хамгийн багадаа 10 тэмдэгт байх ёстой"),
+		),
+	),
+	addressZoneId: v.optional(
+		v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
+	),
+	notes: v.optional(v.nullable(v.string())),
+	status: v.optional(
+		v.picklist([
+			"created",
+			"pending",
+			"shipped",
+			"delivered",
+			"cancelled",
+			"refunded",
+		]),
+	),
+	deliveryProvider: v.optional(
+		v.picklist(["tu-delivery", "self", "avidaa", "pick-up"]),
+	),
+});
+
 export const addPurchaseSchema = v.object({
 	id: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
 	provider: v.picklist(purchaseProvider),

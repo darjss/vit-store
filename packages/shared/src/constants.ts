@@ -71,6 +71,35 @@ export const productFields = [
 	"updatedAt",
 ] as const;
 
+/**
+ * Subset of {@link productFields} that may be safely written via the
+ * `updateProductField` inline-edit endpoint. Excludes identity (`id`, `slug`)
+ * and timestamp (`createdAt`, `updatedAt`) columns so an admin/bot cannot
+ * corrupt FK references, break URL routing, or rewrite history.
+ */
+export const editableProductFields = [
+	"name",
+	"description",
+	"status",
+	"discount",
+	"amount",
+	"potency",
+	"stock",
+	"price",
+	"dailyIntake",
+	"expirationDate",
+	"categoryId",
+	"brandId",
+] as const;
+
+/**
+ * Cutoff for the "products needing review" dashboard list
+ * (`getReviewProducts`). Products whose `updatedAt` is null or older than this
+ * timestamp are surfaced for review. Centralized here so it is not a hidden
+ * magic constant in the query; bump it when the review window moves.
+ */
+export const PRODUCT_REVIEW_CUTOFF_DATE = "2026-04-30T16:00:00Z";
+
 export const productColors = [
 	"#FFE5D3",
 	"#FFE1E7",
