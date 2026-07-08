@@ -3,13 +3,18 @@ import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { ProductImagesTable, ProductsTable, SalesTable } from "~/db/schema";
 import { logger } from "~/lib/logger";
-import type { AddSalesType } from "~/lib/types";
+import type { AddSalesType, TransactionType } from "~/lib/types";
 import { getDaysFromTimeRange } from "~/lib/utils";
 
 export const salesQueries = {
 	admin: {
 		async addSale(sale: AddSalesType) {
 			const result = await db().insert(SalesTable).values(sale);
+			return result;
+		},
+
+		async addSaleTx(tx: TransactionType, sale: AddSalesType) {
+			const result = await tx.insert(SalesTable).values(sale);
 			return result;
 		},
 

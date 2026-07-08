@@ -110,7 +110,7 @@ export default function OrdersList({
 	]);
 
 	const sendTuMutation = useMutation(
-		trpc.order.sendDeliveryTU.mutationOptions(),
+		trpc.order.shipOrder.mutationOptions(),
 	);
 	const updateStatusMutation = useMutation(
 		trpc.order.updateOrderStatus.mutationOptions(),
