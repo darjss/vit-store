@@ -50,6 +50,9 @@ export class ProductSearchObject extends DurableObject<Env> {
 	private loadPromise: Promise<void> | null = null;
 	private rebuildPromise: Promise<ProductSearchStatus> | null = null;
 	private readonly appEnv: Env;
+	// Generation guard: clear() bumps this so in-flight rebuild/load can
+	// detect they were superseded and skip writing back stale state (DO-3).
+	private generation = 0;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -95,6 +98,16 @@ export class ProductSearchObject extends DurableObject<Env> {
 	}
 
 	async clear(): Promise<void> {
+		// Bump generation so any in-flight rebuild/load sees a mismatch and
+		// skips writing back stale state (DO-3). Await in-flight promises so
+		// we don't null state out from under a concurrent write.
+		this.generation++;
+		const inFlight: Promise<unknown>[] = [];
+		if (this.rebuildPromise) inFlight.push(this.rebuildPromise);
+		if (this.loadPromise) inFlight.push(this.loadPromise);
+		if (inFlight.length > 0) {
+			await Promise.allSettled(inFlight);
+		}
 		await this.deleteStoredSnapshot();
 		await this.ctx.storage.delete(STATUS_KEY);
 		this.miniSearch = null;
@@ -115,12 +128,16 @@ export class ProductSearchObject extends DurableObject<Env> {
 	}
 
 	private async loadFromStorageOrRebuild(): Promise<void> {
+		const myGeneration = this.generation;
 		const snapshot = await this.readStoredSnapshot();
 
 		if (!snapshot) {
 			await this.rebuild("cold_missing_snapshot");
 			return;
 		}
+
+		// Generation guard (DO-3): clear() may have run during the async read.
+		if (myGeneration !== this.generation) return;
 
 		const hydrated = hydrateProductSearchSnapshot(snapshot);
 		this.miniSearch = hydrated.miniSearch;
@@ -133,6 +150,7 @@ export class ProductSearchObject extends DurableObject<Env> {
 	): Promise<ProductSearchStatus> {
 		const startedAt = new Date().toISOString();
 		const previousStatus = await this.getStatus();
+		const myGeneration = this.generation;
 		await this.ctx.storage.put<ProductSearchStatus>(STATUS_KEY, {
 			...previousStatus,
 			lastRebuildStartedAt: startedAt,
@@ -162,10 +180,21 @@ export class ProductSearchObject extends DurableObject<Env> {
 				lastError: null,
 			};
 
+			// Generation guard (DO-3): if clear() was called while we were
+			// loading from the DB, skip writing back stale state.
+			if (myGeneration !== this.generation) {
+				return status;
+			}
+
 			await Promise.all([
 				this.writeStoredSnapshot(snapshot),
 				this.ctx.storage.put<ProductSearchStatus>(STATUS_KEY, status),
 			]);
+
+			// Re-check after the async write — clear() may have run during it.
+			if (myGeneration !== this.generation) {
+				return status;
+			}
 
 			this.miniSearch = hydrated.miniSearch;
 			this.documentsById = hydrated.documentsById;
@@ -173,18 +202,20 @@ export class ProductSearchObject extends DurableObject<Env> {
 
 			return status;
 		} catch (error) {
-			const failedStatus: ProductSearchStatus = {
-				...previousStatus,
-				memoryReady: Boolean(this.miniSearch),
-				lastRebuildStartedAt: startedAt,
-				lastRebuildFinishedAt: new Date().toISOString(),
-				lastRebuildReason: reason,
-				lastError: errorMessage(error),
-			};
-			await this.ctx.storage.put<ProductSearchStatus>(
-				STATUS_KEY,
-				failedStatus,
-			);
+			if (myGeneration === this.generation) {
+				const failedStatus: ProductSearchStatus = {
+					...previousStatus,
+					memoryReady: Boolean(this.miniSearch),
+					lastRebuildStartedAt: startedAt,
+					lastRebuildFinishedAt: new Date().toISOString(),
+					lastRebuildReason: reason,
+					lastError: errorMessage(error),
+				};
+				await this.ctx.storage.put<ProductSearchStatus>(
+					STATUS_KEY,
+					failedStatus,
+				);
+			}
 			throw error;
 		}
 	}
@@ -209,6 +240,11 @@ export class ProductSearchObject extends DurableObject<Env> {
 		);
 	}
 
+	/**
+	 * Write new chunks + meta first, then delete stale chunks from the previous
+	 * snapshot (DO-1). This way a crash/eviction between write and cleanup
+	 * leaves either the old or the new snapshot intact, never an empty hole.
+	 */
 	private async writeStoredSnapshot(snapshot: ProductSearchSnapshot) {
 		const serialized = JSON.stringify(snapshot);
 		const chunks: string[] = [];
@@ -216,7 +252,12 @@ export class ProductSearchObject extends DurableObject<Env> {
 			chunks.push(serialized.slice(i, i + SNAPSHOT_CHUNK_SIZE));
 		}
 
-		await this.deleteStoredSnapshot();
+		// Read previous meta so we know which old chunk keys to clean up after.
+		const previousMeta =
+			await this.ctx.storage.get<StoredSnapshotMeta>(SNAPSHOT_META_KEY);
+		const previousChunkCount = previousMeta?.chunkCount ?? 0;
+
+		// Write new chunks + meta first.
 		await Promise.all([
 			this.ctx.storage.put<StoredSnapshotMeta>(SNAPSHOT_META_KEY, {
 				version: 1,
@@ -228,6 +269,16 @@ export class ProductSearchObject extends DurableObject<Env> {
 				this.ctx.storage.put(`${SNAPSHOT_CHUNK_PREFIX}${index}`, chunk),
 			),
 		]);
+
+		// Delete stale chunks from the previous snapshot that exceed the new
+		// chunkCount, plus the legacy single-key entry.
+		const staleKeys: string[] = [SNAPSHOT_KEY];
+		for (let i = chunks.length; i < previousChunkCount; i++) {
+			staleKeys.push(`${SNAPSHOT_CHUNK_PREFIX}${i}`);
+		}
+		if (staleKeys.length > 1 || previousMeta) {
+			await this.ctx.storage.delete(staleKeys);
+		}
 	}
 
 	private async deleteStoredSnapshot() {

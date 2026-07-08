@@ -9,28 +9,14 @@ import {
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog";
 import { assertCanAccessPayment } from "~/lib/session/checkout-access";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { kv } from "~/lib/kv";
 import {
 	checkQpayInvoice,
 	createQpayInvoice,
 	type InvoiceResponse,
 } from "~/lib/payments/qpay";
-import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
 import { publicProcedure, router } from "~/lib/trpc";
-
-type TransferReconciliationStub = {
-	start(input: { paymentNumber: string }): Promise<unknown>;
-	getStatus(): Promise<TransferReconciliationState | null>;
-};
-
-const getTransferReconciliationStub = (
-	env: Env,
-	paymentNumber: string,
-): TransferReconciliationStub => {
-	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
-	const id = namespace.idFromName(paymentNumber);
-	return namespace.get(id) as TransferReconciliationStub;
-};
 
 export const payment = router({
 	getPaymentByNumber: publicProcedure

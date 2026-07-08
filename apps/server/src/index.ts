@@ -67,6 +67,12 @@ app.use(
 	}),
 );
 
+// Only the store surface gets finalizeCatalogCacheHeaders because it is the
+// only public, unauthenticated catalog read path. Admin (/trpc/admin) carries
+// an auth cookie → Workers Cache auto-bypasses, so tagging is pointless. Bot
+// (/trpc/bot) uses the same resolvers as admin with a token header → also
+// auto-bypassed. Finalizing only store avoids stamping no-store on admin/bot
+// responses unnecessarily while ensuring catalog GETs get Cache-Tag/Cache-Control.
 app.use("/trpc/store/*", async (c, next) => {
 	await next();
 	finalizeCatalogCacheHeaders(c);
