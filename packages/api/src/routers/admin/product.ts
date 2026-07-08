@@ -1,4 +1,3 @@
-import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import {
@@ -13,8 +12,7 @@ import { status } from "@vit/shared/constants";
 import * as v from "valibot";
 import { purgeTags } from "~/lib/cache/workers-cache";
 import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
-import { rebuildProductSearchIndex, searchProducts, } from "~/lib/product-search/client";
-import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
+import { scheduleProductSearchRebuild, searchProducts, } from "~/lib/product-search/client";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { db } from "~/db/client";
 const normalizeExpirationDate = (value?: string | null) => {
@@ -35,18 +33,6 @@ const normalizeExpirationDate = (value?: string | null) => {
     return null;
 };
 const CATALOG_MUTATION_TAGS = [PRODUCTS_TAG, BRANDS_TAG, CATEGORIES_TAG];
-const scheduleProductSearchRebuild = (ctx: {
-    c: {
-        executionCtx: ExecutionContext;
-    };
-    log: RequestLogger<any>;
-}, reason: ProductSearchRebuildReason) => {
-    ctx.c.executionCtx.waitUntil(rebuildProductSearchIndex(reason).catch((error) => {
-        ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "product_search.rebuild_failed"
-        });
-    }));
-};
 export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     searchProductByName: proc

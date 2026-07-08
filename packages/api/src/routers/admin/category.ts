@@ -1,4 +1,3 @@
-import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
 import {
@@ -9,21 +8,9 @@ import {
 } from "@vit/shared";
 import * as v from "valibot";
 import { purgeTags } from "~/lib/cache/workers-cache";
-import { rebuildProductSearchIndex } from "~/lib/product-search/client";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
-const scheduleProductSearchRebuild = (ctx: {
-    c: {
-        executionCtx: ExecutionContext;
-    };
-    log: RequestLogger<any>;
-}) => {
-    ctx.c.executionCtx.waitUntil(rebuildProductSearchIndex("category_updated").catch((error) => {
-        ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "product_search.rebuild_failed"
-        });
-    }));
-};
 export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     getAllCategories: proc.query(async ({ ctx }) => {
@@ -53,7 +40,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 slug,
             });
             await purgeTags(ctx, [CATEGORIES_TAG, PRODUCTS_TAG]);
-            scheduleProductSearchRebuild(ctx);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully added category" };
         }
         catch (error) {
@@ -84,7 +71,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 slug,
             });
             await purgeTags(ctx, [CATEGORIES_TAG, categoryTag(id), PRODUCTS_TAG]);
-            scheduleProductSearchRebuild(ctx);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully updated category" };
         }
         catch (error) {
@@ -107,7 +94,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
             const { id } = input;
             await categoryQueries.admin.deleteCategory(id);
             await purgeTags(ctx, [CATEGORIES_TAG, categoryTag(id), PRODUCTS_TAG]);
-            scheduleProductSearchRebuild(ctx);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully deleted category" };
         }
         catch (error) {

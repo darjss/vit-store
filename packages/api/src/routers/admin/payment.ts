@@ -2,27 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generatePaymentNumber } from "~/lib/utils";
-
-type TransferReconciliationStub = {
-	getStatus(): Promise<TransferReconciliationState | null>;
-	collectMatchingKhaanFingerprints(
-		paymentNumber: string,
-	): Promise<string[] | null>;
-};
-
-const getTransferReconciliationStub = (
-	env: Env,
-	paymentNumber: string,
-): TransferReconciliationStub => {
-	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
-	const id = namespace.idFromName(paymentNumber);
-	return namespace.get(id) as TransferReconciliationStub;
-};
 
 export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
     return router({

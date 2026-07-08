@@ -10,6 +10,7 @@ import {
 	Worker,
 } from "alchemy/cloudflare";
 import { createServerAlchemyEnv } from "../../env";
+import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
 const app = await alchemy("server");
 const stage = app.stage;
@@ -43,10 +44,13 @@ const images = Images({
 	},
 });
 
-const productSearch = DurableObjectNamespace("product-search", {
-	className: "ProductSearchObject",
-	sqlite: true,
-});
+const productSearch = DurableObjectNamespace<ProductSearchObject>(
+	"product-search",
+	{
+		className: "ProductSearchObject",
+		sqlite: true,
+	},
+);
 
 const transferReconciliation = DurableObjectNamespace(
 	"transfer-reconciliation",
