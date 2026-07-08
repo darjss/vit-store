@@ -153,18 +153,6 @@ export const storeQueries = {
 			});
 		},
 
-		async getFeaturedProductsWithStock() {
-			return this.getFeaturedProducts({ requireStock: true });
-		},
-
-		async getNewProductsWithStock() {
-			return this.getNewProducts({ requireStock: true });
-		},
-
-		async getDiscountedProductsWithStock() {
-			return this.getDiscountedProducts({ requireStock: true });
-		},
-
 		async getAllProducts() {
 			return db().query.ProductsTable.findMany({
 				columns: {
@@ -655,21 +643,6 @@ export const storeQueries = {
 			};
 		},
 
-		async getInfiniteProductsWithStock(params: {
-			cursor?: string | undefined;
-			limit: number;
-			brandId?: number;
-			categoryId?: number;
-			listType?: "featured" | "recent" | "discount";
-			searchTerm?: string;
-			sortField?: "price" | "stock" | "createdAt";
-			sortDirection?: "asc" | "desc";
-			minPrice?: number;
-			maxPrice?: number;
-		}) {
-			return storeQueries.getInfiniteProducts({ ...params, requireStock: true });
-		},
-
 		// Lightweight COUNT(*) for the storefront catalog header. Mirrors the
 		// active+non-deleted gate used by getInfiniteProducts so the displayed
 		// total matches what the infinite list can actually paginate through,
@@ -808,16 +781,4 @@ export const storeQueries = {
 			};
 		},
 
-		async getPaginatedProductsWithStock(params: {
-			page: number;
-			pageSize: number;
-			brandId?: number;
-			categoryId?: number;
-			sortField?: "price" | "stock" | "createdAt";
-			sortDirection?: "asc" | "desc";
-			minPrice?: number;
-			maxPrice?: number;
-		}) {
-			return storeQueries.getPaginatedProducts({ ...params, requireStock: true });
-		},
 };

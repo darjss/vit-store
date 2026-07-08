@@ -1,11 +1,12 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
-import { createSignal, Show } from "solid-js";
+import { productStockState } from "@vit/shared/domain/product";
+import { createMemo, createSignal, Show } from "solid-js";
 import CardAddButton from "@/components/product/card-add-button";
 import ProductImageFallback from "@/components/product/product-image-fallback";
 import { trackSearchResultClicked } from "@/lib/analytics";
 import { getProductImageProps } from "@/lib/image";
-import { WASH_BG, washFor } from "@/lib/wash";
+import { washBg } from "@/lib/wash";
 
 export interface SearchResultProduct {
 	id: number;
@@ -27,12 +28,15 @@ interface SearchResultRowProps {
 
 const SearchResultRow = (props: SearchResultRowProps) => {
 	const [imageFailed, setImageFailed] = createSignal(false);
-	const isInStock = () => props.product.stock !== 0;
+	// Same canonical stock state as the catalog/PDP cards so a row that says
+	// "Нөөцтэй" never clicks through to a PDP that says "Цөөн үлдсэн".
+	const stockState = createMemo(() => productStockState(props.product.stock));
+	const isInStock = () => stockState() !== "out";
+	const isLowStock = () => stockState() === "low";
 
 	const productUrl = () =>
 		`/products/${props.product.slug}-${props.product.id}`;
-	const washClass = () =>
-		WASH_BG[washFor(props.product.categoryId ?? "uncategorized")];
+	const washClass = () => washBg(props.product.categoryId ?? "uncategorized");
 	const imageProps = () => getProductImageProps(props.product.image, "thumb");
 
 	const handleClick = () => {
@@ -100,9 +104,18 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 							</span>
 						}
 					>
-						<span class="rounded-full bg-success/30 px-2 py-0.5 font-semibold text-[10px] text-success uppercase tracking-wide">
-							Нөөцтэй
-						</span>
+						<Show
+							when={isLowStock()}
+							fallback={
+								<span class="rounded-full bg-success/30 px-2 py-0.5 font-semibold text-[10px] text-success uppercase tracking-wide">
+									Нөөцтэй
+								</span>
+							}
+						>
+							<span class="rounded-full bg-warning px-2 py-0.5 font-semibold text-[10px] text-warning-foreground uppercase tracking-wide">
+								Цөөн үлдсэн
+							</span>
+						</Show>
 					</Show>
 				</div>
 			</a>
