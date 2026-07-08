@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { trackQpayError } from "@/lib/analytics";
+import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
+import { usePaymentStatus } from "@/lib/use-payment-status";
 import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconLoader from "~icons/ri/loader-4-line";
 import IconQrCode from "~icons/ri/qr-code-line";
@@ -36,7 +38,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				return await api.payment.createQr.mutate({
 					paymentNumber: props.paymentNumber,
 					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string });
+				});
 			},
 		}),
 		() => queryClient,
@@ -66,22 +68,14 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		}
 	});
 
-	const paymentStatusQuery = useQuery(
-		() => ({
-			queryKey: [
-				"payment-status",
-				props.paymentNumber,
-				invoiceData()?.invoice_id,
-			],
-			queryFn: () =>
-				api.payment.getPaymentStatus.query({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string }),
+	const paymentStatusQuery = usePaymentStatus(
+		() => props.paymentNumber,
+		() => props.checkoutToken,
+		{
 			enabled: Boolean(invoiceData()?.invoice_id),
 			refetchInterval: 5000,
-		}),
-		() => queryClient,
+			keySuffix: invoiceData()?.invoice_id,
+		},
 	);
 
 	createEffect(() => {
@@ -89,9 +83,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		if (paymentStatusQuery.data?.status === "success") {
 			setNavigated(true);
 			void safeNavigate(
-				props.checkoutToken
-					? `/payment/success/${props.paymentNumber}?ct=${encodeURIComponent(props.checkoutToken)}`
-					: `/payment/success/${props.paymentNumber}`,
+				paymentSuccessUrl(props.paymentNumber, props.checkoutToken),
 			);
 		}
 	});

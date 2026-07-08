@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
-import { deliveryFee } from "@vit/shared/constants";
+import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 import * as v from "valibot";
 import { eq, inArray } from "drizzle-orm";
 import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, ProductsTable, } from "~/db/schema";
@@ -293,7 +293,17 @@ export const order = router({
                     });
                 }
             }
-            return { paymentNumber, orderNumber, checkoutToken };
+            // F9/H5: return the full PaymentOptions props so the client does not
+            // need a second getPaymentByNumber round-trip after addOrder.
+            return {
+                paymentNumber,
+                orderNumber,
+                checkoutToken,
+                total,
+                customerPhone: input.phoneNumber,
+                accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+                accountName: ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
+            };
         }
         catch (e) {
             if (e instanceof TRPCError) {

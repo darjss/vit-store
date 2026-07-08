@@ -24,7 +24,7 @@ import {
 } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import { cart } from "@/store/cart";
+import { cart, createCartState } from "@/store/cart";
 import IconPackage from "~icons/ri/archive-line";
 import IconChevronDown from "~icons/ri/arrow-down-s-line";
 import IconChevronLeft from "~icons/ri/arrow-left-s-line";
@@ -57,6 +57,19 @@ const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
 const stepEnter = { duration: 0.25, easing: EASE_OUT_QUART };
 const stepExit = { duration: 0.15, easing: EASE_IN_OUT };
+
+// F12: single checkout validator schema referenced by onChange/onBlur/onSubmit
+// instead of three byte-identical tripled copies.
+const checkoutValidators = v.object({
+	phoneNumber: phoneSchema,
+	address: v.pipe(v.string(), v.minLength(5, "Хаягаа бичнэ үү")),
+	addressZoneId: v.pipe(
+		v.number(),
+		v.integer(),
+		v.minValue(1, "Хаягийн бүс сонгоно уу"),
+	),
+	notes: v.string(),
+});
 
 const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
@@ -100,66 +113,40 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onSuccess: async (data, variables) => {
-				const checkoutData = data as typeof data & {
-					checkoutToken?: string;
-					orderNumber?: string;
-					total?: number;
-				};
-				const paymentNumber = checkoutData?.paymentNumber;
-				const checkoutToken = checkoutData?.checkoutToken;
-
-				if (paymentNumber) {
-					if (checkoutToken) {
-						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
-					}
-					identifyUser(variables.phoneNumber);
-					showToast({
-						title: "Амжилттай",
-						description: "Захиалга амжилттай үүслээ",
-						variant: "success",
-						duration: 5000,
-					});
-
-					// Gather payment details — try server data first, then fallback
-					let total = checkoutData?.total ?? cart.total() + deliveryFee;
-					let orderNumber = checkoutData?.orderNumber ?? paymentNumber;
-					let customerPhone = variables.phoneNumber;
-					let accountNumber: string | undefined;
-					let accountName: string | undefined;
-
-					try {
-						const details = await api.payment.getPaymentByNumber.query({
-							paymentNumber,
-							checkoutToken,
-						} as { paymentNumber: string });
-						total = details.total;
-						orderNumber = details.order.orderNumber;
-						customerPhone = details.order.customerPhone;
-						accountNumber = details.transferAccount.accountNumber;
-						accountName = details.transferAccount.accountName;
-					} catch {
-						// Fallbacks already set above
-					}
-
-					setPaymentInfo({
-						paymentNumber,
-						checkoutToken,
-						total,
-						orderNumber,
-						customerPhone,
-						accountNumber,
-						accountName,
-					});
-					setStep("payment");
-					window.scrollTo({ top: 0, behavior: "smooth" });
-				} else {
+				const paymentNumber = data?.paymentNumber;
+				if (!paymentNumber) {
 					showToast({
 						title: "Алдаа",
 						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 						variant: "error",
 						duration: 5000,
 					});
+					return;
 				}
+
+				identifyUser(variables.phoneNumber);
+				showToast({
+					title: "Амжилттай",
+					description: "Захиалга амжилттай үүслээ",
+					variant: "success",
+					duration: 5000,
+				});
+
+				// F9/H5: addOrder now returns the full PaymentOptions props
+				// (total, orderNumber, customerPhone, accountNumber,
+				// accountName), so the redundant getPaymentByNumber round-trip
+				// and its silent catch are gone.
+				setPaymentInfo({
+					paymentNumber,
+					checkoutToken: data.checkoutToken ?? undefined,
+					total: data.total ?? cart.total() + deliveryFee,
+					orderNumber: data.orderNumber ?? paymentNumber,
+					customerPhone: data.customerPhone ?? variables.phoneNumber,
+					accountNumber: data.accountNumber,
+					accountName: data.accountName,
+				});
+				setStep("payment");
+				window.scrollTo({ top: 0, behavior: "smooth" });
 			},
 			onError: () => {
 				showToast({
@@ -187,45 +174,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		// first invalid field and reveals all errors.
 		canSubmitWhenInvalid: true,
 		validators: {
-			onChange: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
-			onBlur: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
-			onSubmit: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
+			onChange: checkoutValidators,
+			onBlur: checkoutValidators,
+			onSubmit: checkoutValidators,
 		},
 		onSubmit: async (values) => {
 			if (paymentInfo()) {
@@ -259,8 +210,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		}
 	});
 
-	const isEmpty = () => cart.items().length === 0;
-	const isHydrated = () => cart.isHydrated();
+	const cartState = createCartState();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
 
 	// Delivery estimate: orders before 10:30 Ulaanbaatar time deliver today,
@@ -373,13 +323,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	return (
 		<Switch>
-			<Match when={!isHydrated() && isEmpty()}>
+			<Match when={cartState() === "loading"}>
 				<Loading />
 			</Match>
-			<Match when={isHydrated() && isEmpty()}>
+			<Match when={cartState() === "empty"}>
 				<EmptyCart />
 			</Match>
-			<Match when={!isEmpty()}>
+			<Match when={cartState() === "ready"}>
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen pb-24 md:pb-0">
 						{/* Sticky header */}
@@ -560,14 +510,21 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 																<form.AppForm>
 																	<div class="w-full">
+																	{/* F8: once addOrder succeeded (paymentInfo set), the delivery
+																	step is review-only — resubmitting would just bounce back to
+																	payment. Disable and relabel so the no-op is explicit. */}
 																		<form.SubmitButton
 																			size="lg"
 																			class="w-full"
-																			disabled={mutation.isPending}
+																			disabled={
+																				mutation.isPending || Boolean(paymentInfo())
+																			}
 																		>
 																			{mutation.isPending
 																				? "Уншиж байна..."
-																				: "Төлбөр төлөх →"}
+																				: paymentInfo()
+																					? "Захиалга үүссэн — төлбөр хүлээж байна"
+																					: "Төлбөр төлөх →"}
 																		</form.SubmitButton>
 																	</div>
 																</form.AppForm>

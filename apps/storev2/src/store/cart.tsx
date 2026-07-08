@@ -1,7 +1,14 @@
 import { makePersisted } from "@solid-primitives/storage";
 import type { CartItems } from "@vit/shared/types";
-import { createEffect, createMemo, createRoot, createSignal } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createRoot,
+	createSignal,
+	type Accessor,
+} from "solid-js";
 import { createStore } from "solid-js/store";
+import { onMount } from "solid-js";
 import {
 	trackAddToCart,
 	trackCartOpened,
@@ -61,12 +68,29 @@ export const cart = createRoot(() => {
 		cartStore.items.reduce((acc, item) => acc + item.quantity, 0),
 	);
 
+	const isEmpty = createMemo(() => cartStore.items.length === 0);
+
+	// Canonical "loading / empty / ready" derivation. Astro islands cannot
+	// rely on the detached-root `isHydrated()` signal (it does not reliably
+	// fire inside islands), so `createCartState()` below mirrors the proven
+	// local-`onMount` pattern and feeds this same derivation.
+	const state = createMemo<"loading" | "empty" | "ready">(() => {
+		if (!isHydrated()) return "loading";
+		return isEmpty() ? "empty" : "ready";
+	});
+
 	return {
 		items() {
 			return cartStore.items;
 		},
 		isHydrated() {
 			return isHydrated();
+		},
+		isEmpty() {
+			return isEmpty();
+		},
+		state() {
+			return state();
 		},
 		isDrawerOpen() {
 			return isDrawerOpen();
@@ -112,12 +136,18 @@ export const cart = createRoot(() => {
 				announceCart(`${item.name} сагснаас хасагдлаа`);
 			}
 		},
+		// Canonical quantity policy: floor at 1. Call sites (cart page,
+		// drawer) just call updateQuantity(id, ±1) without re-implementing
+		// the decrement-or-remove decision. Explicit removal uses `remove`.
 		updateQuantity: (productId: number, quantityChange: number) => {
 			setCart(
 				"items",
 				(item) => item.productId === productId,
 				"quantity",
-				(quantity) => quantity + quantityChange,
+				(quantity) => {
+					const next = quantity + quantityChange;
+					return next < 1 ? 1 : next;
+				},
 			);
 		},
 		clearCart: () => setCart("items", []),
@@ -126,3 +156,21 @@ export const cart = createRoot(() => {
 		count,
 	};
 });
+
+export type CartState = "loading" | "empty" | "ready";
+
+/**
+ * Per-island canonical cart state derivation. Astro islands cannot rely on
+ * the store's detached-root `isHydrated()` signal, so each island flips a
+ * local `onMount` flag and this helper folds it together with `cart.items()`
+ * into the single "loading / empty / ready" state used by every cart-gated
+ * page. Replaces the divergent `isHydrated && isEmpty` re-derivations.
+ */
+export function createCartState(): Accessor<CartState> {
+	const [hydrated, setHydrated] = createSignal(false);
+	onMount(() => setHydrated(true));
+	return createMemo<CartState>(() => {
+		if (!hydrated()) return "loading";
+		return cart.items().length === 0 ? "empty" : "ready";
+	});
+}
