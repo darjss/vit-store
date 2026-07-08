@@ -135,7 +135,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
                     PRODUCTS_TAG,
                     ...affectedProductIds.map((id) => productTag(id)),
                 ]);
-                await scheduleProductSearchRebuild("product_stock_updated");
+                scheduleProductSearchRebuild(ctx, "product_stock_updated");
             }
             return { message: "Purchase received successfully" };
         }

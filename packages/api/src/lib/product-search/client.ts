@@ -1,20 +1,16 @@
+import type { RequestLogger } from "evlog";
 import { env } from "cloudflare:workers";
 import { logger } from "~/lib/logger";
 import type {
 	ProductSearchFilters,
 	ProductSearchRebuildReason,
-	ProductSearchService,
 	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
 import { PRODUCT_SEARCH_OBJECT_NAME } from "~/lib/product-search/types";
 
 const getProductSearchService = () =>
-	(
-		env as unknown as {
-			PRODUCT_SEARCH: { getByName(name: string): ProductSearchService };
-		}
-	).PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
+	env.PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
 
 const PRODUCT_SEARCH_TIMEOUT_MS = 4000;
 
@@ -59,21 +55,33 @@ export const clearProductSearchIndex = async () => {
 	await getProductSearchService().clear();
 };
 
-/** Product writes trigger a full MiniSearch rebuild rather than incremental upsert. */
-export const scheduleProductSearchRebuild = async (
-	reason: ProductSearchRebuildReason = "product_updated",
-) => {
-	try {
-		await rebuildProductSearchIndex(reason);
-	} catch (error) {
-		logger.error("product_search.rebuild_schedule_failed", error, { reason });
-	}
+type RebuildContext = {
+	c: { executionCtx: ExecutionContext };
+	log: RequestLogger<any>;
 };
 
-/** @deprecated Use scheduleProductSearchRebuild */
-export const upsertProductToSearch = scheduleProductSearchRebuild;
-
-/** @deprecated Use scheduleProductSearchRebuild */
-export const deleteProductFromSearch = async (_productId: number) => {
-	await scheduleProductSearchRebuild("product_deleted");
+/**
+ * Schedule a product-search rebuild in the background via `waitUntil` so the
+ * caller's response is not blocked. Errors are logged, never thrown.
+ */
+export const scheduleProductSearchRebuild = (
+	ctx: RebuildContext,
+	reason: ProductSearchRebuildReason,
+): void => {
+	ctx.c.executionCtx.waitUntil(
+		rebuildProductSearchIndex(reason).catch((error) => {
+			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+				event: "product_search.rebuild_failed",
+				reason,
+			});
+		}),
+	);
 };
+
+/** @deprecated Use scheduleProductSearchRebuild(ctx, reason) */
+export const upsertProductToSearch = (ctx: RebuildContext) =>
+	scheduleProductSearchRebuild(ctx, "product_updated");
+
+/** @deprecated Use scheduleProductSearchRebuild(ctx, reason) */
+export const deleteProductFromSearch = (ctx: RebuildContext) =>
+	scheduleProductSearchRebuild(ctx, "product_deleted");

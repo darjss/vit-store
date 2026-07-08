@@ -63,7 +63,12 @@ export function markCacheable(
 export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	const accumulated: CatalogCacheAccumulator | undefined =
 		c.get("catalogCache");
+
+	// Non-catalog store responses (auth-gated queries, cart, etc.) must not be
+	// cached. Without an explicit no-store, the Workers Cache may apply
+	// heuristic freshness and serve user-specific data to other users.
 	if (!accumulated) {
+		c.res.headers.set("Cache-Control", "no-store");
 		return;
 	}
 
