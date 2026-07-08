@@ -77,11 +77,3 @@ export const scheduleProductSearchRebuild = (
 		}),
 	);
 };
-
-/** @deprecated Use scheduleProductSearchRebuild(ctx, reason) */
-export const upsertProductToSearch = (ctx: RebuildContext) =>
-	scheduleProductSearchRebuild(ctx, "product_updated");
-
-/** @deprecated Use scheduleProductSearchRebuild(ctx, reason) */
-export const deleteProductFromSearch = (ctx: RebuildContext) =>
-	scheduleProductSearchRebuild(ctx, "product_deleted");

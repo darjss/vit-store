@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
-import { bankTransfer } from "@vit/shared/constants";
+import { bankTransfer, BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import { createEffect, createSignal, type JSX, Show } from "solid-js";
-import { BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
 import type { PaymentProviderType } from "@vit/shared/types";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
