@@ -12,7 +12,7 @@ import {
 import { status } from "@vit/shared/constants";
 import * as v from "valibot";
 import { purgeTags } from "~/lib/cache/workers-cache";
-import { PRODUCT_PER_PAGE, productFields } from "~/lib/constants";
+import { PRODUCT_PER_PAGE, editableProductFields } from "~/lib/constants";
 import { rebuildProductSearchIndex, searchProducts, } from "~/lib/product-search/client";
 import type { ProductSearchRebuildReason } from "~/lib/product-search/types";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -129,9 +129,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         .input(addProductSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            const expirationInput = (input as Record<string, unknown>)
-                .expirationDate;
-            const normalizedExpirationDate = normalizeExpirationDate(typeof expirationInput === "string" ? expirationInput : null);
+            const normalizedExpirationDate = normalizeExpirationDate(input.expirationDate ?? null);
             // Remove the last empty image if present
             const images = input.images.filter((image) => image.url.trim() !== "");
             // Validate image URLs
@@ -257,9 +255,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         .input(updateProductSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            const expirationInput = (input as Record<string, unknown>)
-                .expirationDate;
-            const normalizedExpirationDate = normalizeExpirationDate(typeof expirationInput === "string" ? expirationInput : null);
+            const normalizedExpirationDate = normalizeExpirationDate(input.expirationDate ?? null);
             if (!input.id)
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -292,23 +288,13 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 name: productName,
                 slug,
             });
-            const existingImages = await productQueries.admin.getProductImages(input.id);
-            let isDiff = false;
-            if (filteredImages.length !== existingImages.length) {
-                isDiff = true;
-            }
-            else {
-                const sortedNewImages = filteredImages.toSorted((a, b) => a.url.localeCompare(b.url));
-                const sortedExistingImages = existingImages.toSorted((a, b) => a.url.localeCompare(b.url));
-                for (let i = 0; i < filteredImages.length; i++) {
-                    if (sortedNewImages[i]?.url !== sortedExistingImages[i]?.url) {
-                        isDiff = true;
-                        break;
-                    }
-                }
-            }
-            if (isDiff) {
-                await productQueries.admin.softDeleteProductImages(input.id);
+            // Always soft-delete + reinsert images on every updateProduct so
+            // primary-image reorder (same URLs, different order) is honored.
+            // The previous URL-only sorted diff missed isPrimary changes, so
+            // reordering images to promote a different one to primary never
+            // persisted. Images are cheap; reinserting avoids that bug.
+            await productQueries.admin.softDeleteProductImages(input.id);
+            if (filteredImages.length > 0) {
                 const imagesToInsert = filteredImages.map((image, index) => ({
                     productId: input.id,
                     url: image.url,
@@ -498,7 +484,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
     updateProductField: proc
         .input(v.object({
         id: v.number(),
-        field: v.picklist(productFields),
+        field: v.picklist(editableProductFields),
         stringValue: v.optional(v.string()),
         numberValue: v.optional(v.number()),
     }))

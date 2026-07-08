@@ -1,4 +1,5 @@
 import type { status } from "@vit/shared/constants";
+import { PRODUCT_REVIEW_CUTOFF_DATE } from "@vit/shared/constants";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -414,14 +415,14 @@ export const adminQueries = {
 		},
 
 		async getReviewProducts() {
-			const mayFirstUlat = new Date("2026-04-30T16:00:00Z");
+			const reviewCutoff = new Date(PRODUCT_REVIEW_CUTOFF_DATE);
 			return db().query.ProductsTable.findMany({
 				where: and(
 					isNull(ProductsTable.deletedAt),
 					eq(ProductsTable.status, "active"),
 					or(
 						isNull(ProductsTable.updatedAt),
-						lt(ProductsTable.updatedAt, mayFirstUlat),
+						lt(ProductsTable.updatedAt, reviewCutoff),
 					),
 				),
 				orderBy: sql`${ProductsTable.updatedAt} ASC NULLS FIRST`,
