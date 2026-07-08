@@ -4,7 +4,7 @@ import {
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
 import { logger } from "~/lib/logger";
-import { confirmTransferPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
+import { confirmPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
 
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;
@@ -40,8 +40,9 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					});
 					return;
 				}
-				const result = await confirmTransferPaymentAndNotify({
+				const result = await confirmPaymentAndNotify({
 					paymentNumber,
+					provider: "transfer",
 					source: "messenger",
 				});
 				if (!result.confirmed) {

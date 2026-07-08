@@ -124,15 +124,21 @@ export function filterTransactionsWithinPaymentWindow(
 	);
 }
 
-export async function khaanTransactionFingerprint(transaction: {
+type FingerprintableTransaction = {
 	tranDate?: string;
 	time?: string;
 	amount?: number;
 	description?: string;
 	relatedAccount?: string;
 	balance?: number;
-}): Promise<string> {
-	const identity = [
+};
+
+// Stable pre-hash identity for a Khaan transaction. Two transactions with the
+// same identity produce the same fingerprint. Exported only so the eligible
+// pipeline can key a Map by identity and let callers look up a match's
+// fingerprint without recomputing SHA-256 (F7).
+function transactionIdentity(transaction: FingerprintableTransaction): string {
+	return [
 		transaction.tranDate ?? "",
 		transaction.time ?? "",
 		String(transaction.amount ?? ""),
@@ -140,11 +146,64 @@ export async function khaanTransactionFingerprint(transaction: {
 		transaction.relatedAccount ?? "",
 		String(transaction.balance ?? ""),
 	].join("|");
-	const bytes = new TextEncoder().encode(identity);
+}
+
+export async function khaanTransactionFingerprint(
+	transaction: FingerprintableTransaction,
+): Promise<string> {
+	const bytes = new TextEncoder().encode(transactionIdentity(transaction));
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	return Array.from(new Uint8Array(digest))
 		.map((byte) => byte.toString(16).padStart(2, "0"))
 		.join("");
+}
+
+// Shared eligible-transaction pipeline (F3/F7). Both the DO poll and the
+// admin collect path need: window-filter → fingerprint → consumed-lookup →
+// eligible-filter. This runs all four steps in one pass, computing each
+// fingerprint exactly once. The consumed-fingerprint lookup (a DB call) is
+// injected by the caller so this module stays free of DB imports. Returns the
+// eligible transactions plus an identity→fingerprint map so callers look up a
+// match's fingerprint in O(1) instead of recomputing SHA-256 (F7).
+export async function prepareEligibleKhaanTransactions(input: {
+	transactions: KhaanTransaction[];
+	paymentCreatedAtMs: number;
+	getConsumedFingerprints: (
+		fingerprints: string[],
+	) => Promise<Set<string>>;
+}): Promise<{
+	eligible: KhaanTransaction[];
+	fingerprintByIdentity: Map<string, string>;
+}> {
+	const withinWindow = filterTransactionsWithinPaymentWindow(
+		input.transactions,
+		input.paymentCreatedAtMs,
+	);
+	const fingerprintByIdentity = new Map<string, string>();
+	const fingerprints = await Promise.all(
+		withinWindow.map(async (transaction) => {
+			const fingerprint = await khaanTransactionFingerprint(transaction);
+			fingerprintByIdentity.set(transactionIdentity(transaction), fingerprint);
+			return fingerprint;
+		}),
+	);
+	const consumed = await input.getConsumedFingerprints(fingerprints);
+	const eligible = withinWindow.filter(
+		(_, index) => !consumed.has(fingerprints[index]),
+	);
+	return { eligible, fingerprintByIdentity };
+}
+
+// Look up a transaction-shaped object's fingerprint from the map built by
+// prepareEligibleKhaanTransactions. Returns undefined if the object was not in
+// the prepared set (e.g. a transaction outside the window). Callers that need
+// a fingerprint for an unmatched object should fall back to
+// khaanTransactionFingerprint.
+export function fingerprintOf(
+	map: Map<string, string>,
+	transaction: FingerprintableTransaction,
+): string | undefined {
+	return map.get(transactionIdentity(transaction));
 }
 
 // Finds ALL Khaan transactions matching a payment (by paymentNumber-in-memo OR
@@ -158,43 +217,39 @@ export async function khaanTransactionFingerprint(transaction: {
 //
 // Unlike matchKhaanTransfer (which returns the first branch that matches),
 // this unions paymentNumber and phone matches and dedupes by fingerprint.
+//
+// Takes the prepared eligible set + fingerprint map (from
+// prepareEligibleKhaanTransactions) so the window/filter/fingerprint/consumed
+// pipeline is not duplicated (F3) and fingerprints are not recomputed (F7).
 export async function collectMatchingKhaanFingerprints(input: {
-	transactions: KhaanTransaction[];
+	eligible: KhaanTransaction[];
+	fingerprintByIdentity: Map<string, string>;
 	paymentNumber: string;
 	phone: string;
 	expectedAmount: number;
-	paymentCreatedAtMs: number;
-	consumedFingerprints: Set<string>;
 }): Promise<string[]> {
-	const withinWindow = filterTransactionsWithinPaymentWindow(
-		input.transactions,
-		input.paymentCreatedAtMs,
-	);
-	const fingerprints = await Promise.all(
-		withinWindow.map(khaanTransactionFingerprint),
-	);
-	const eligible = withinWindow.filter(
-		(_, index) => !input.consumedFingerprints.has(fingerprints[index]),
-	);
 	const paymentNumber = input.paymentNumber.trim();
 	const phone = input.phone.trim();
 	const byPaymentNumber = paymentNumber
 		? findMatchingKhaanTransfer({
-				transactions: eligible,
+				transactions: input.eligible,
 				paymentNumber,
 				expectedAmount: input.expectedAmount,
 			}).matches
 		: [];
 	const byPhone = phone
 		? findMatchingKhaanTransfer({
-				transactions: eligible,
+				transactions: input.eligible,
 				paymentNumber: phone,
 				expectedAmount: input.expectedAmount,
 			}).matches
 		: [];
 	const result = new Set<string>();
 	for (const match of [...byPaymentNumber, ...byPhone]) {
-		result.add(await khaanTransactionFingerprint(match));
+		const fingerprint = fingerprintOf(input.fingerprintByIdentity, match);
+		// A match is always derived from an eligible transaction, so the map
+		// must contain it. Fall back to a fresh compute only as a safety net.
+		result.add(fingerprint ?? (await khaanTransactionFingerprint(match)));
 	}
 	return [...result];
 }

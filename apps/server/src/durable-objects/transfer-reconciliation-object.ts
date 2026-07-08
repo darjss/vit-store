@@ -1,35 +1,28 @@
 import { paymentQueries } from "@vit/api/queries";
-import { confirmTransferPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import type {
+	TransferReconciliationState,
+	TransferReconciliationStatus,
+} from "@vit/api/lib/payments/transfer-reconciliation-status";
 import { DurableObject } from "cloudflare:workers";
 import {
 	KhaanAuthError,
 	KhaanClient,
 	KhaanRateLimitError,
 	type MatchedKhaanTransaction,
-	type TransferReconciliationStatus,
 } from "khaan-client";
 import {
 	collectMatchingKhaanFingerprints,
-	filterTransactionsWithinPaymentWindow,
+	fingerprintOf,
 	khaanTransactionFingerprint,
 	matchKhaanTransfer,
+	prepareEligibleKhaanTransactions,
 } from "../lib/khaan/match-transfer";
 
 const STATE_KEY = "transfer-reconciliation:state:v1";
 const POLL_INTERVAL_MS = 25_000;
 const RATE_LIMIT_BACKOFF_MS = 90_000;
 const MAX_POLL_MS = 5 * 60_000;
-
-export type TransferReconciliationState = {
-	paymentNumber: string;
-	status: TransferReconciliationStatus;
-	attempts: number;
-	startedAt: string;
-	expiresAt: string;
-	nextPollAt: string | null;
-	lastError: string | null;
-	matchedTransaction?: MatchedKhaanTransaction;
-};
 
 type StartInput = {
 	paymentNumber: string;
@@ -127,18 +120,25 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			}
 			const client = await this.ensureClient();
 			const transactions = await client.fetchTransactions();
-			const allFingerprints = await Promise.all(
-				transactions.map(khaanTransactionFingerprint),
-			);
-			const consumed =
-				await paymentQueries.store.getConsumedKhaanFingerprints(allFingerprints);
+			// Shared eligible pipeline (F3): window-filter → fingerprint →
+			// consumed-lookup → eligible-filter in one pass. Fingerprints are
+			// computed once and reused by collectMatchingKhaanFingerprints via
+			// the identity map (F7).
+			const { eligible, fingerprintByIdentity } =
+				await prepareEligibleKhaanTransactions({
+					transactions,
+					paymentCreatedAtMs: payment.createdAt.getTime(),
+					getConsumedFingerprints:
+						paymentQueries.store.getConsumedKhaanFingerprints.bind(
+							paymentQueries.store,
+						),
+				});
 			return await collectMatchingKhaanFingerprints({
-				transactions,
+				eligible,
+				fingerprintByIdentity,
 				paymentNumber,
 				phone: String(payment.order.customerPhone),
 				expectedAmount: payment.amount,
-				paymentCreatedAtMs: payment.createdAt.getTime(),
-				consumedFingerprints: consumed,
 			});
 		} catch {
 			// Khaan fetch/auth failure or payment lookup failure — do not block
@@ -213,18 +213,19 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 
 			const client = await this.ensureClient();
 			const transactions = await client.fetchTransactions();
-			const withinWindow = filterTransactionsWithinPaymentWindow(
-				transactions,
-				payment.createdAt.getTime(),
-			);
-			const fingerprints = await Promise.all(
-				withinWindow.map(khaanTransactionFingerprint),
-			);
-			const consumed =
-				await paymentQueries.store.getConsumedKhaanFingerprints(fingerprints);
-			const eligible = withinWindow.filter(
-				(_, index) => !consumed.has(fingerprints[index]),
-			);
+			// Shared eligible pipeline (F3): window-filter → fingerprint →
+			// consumed-lookup → eligible-filter in one pass. The identity→
+			// fingerprint map is reused by confirmMatch to record the matched
+			// transaction's fingerprint without recomputing SHA-256 (F7).
+			const { eligible, fingerprintByIdentity } =
+				await prepareEligibleKhaanTransactions({
+					transactions,
+					paymentCreatedAtMs: payment.createdAt.getTime(),
+					getConsumedFingerprints:
+						paymentQueries.store.getConsumedKhaanFingerprints.bind(
+							paymentQueries.store,
+						),
+				});
 			const matchResult = matchKhaanTransfer({
 				transactions: eligible,
 				paymentNumber: state.paymentNumber,
@@ -249,7 +250,12 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				return;
 			}
 
-			await this.confirmMatch(state, attempts, matchResult.match);
+			await this.confirmMatch(
+				state,
+				attempts,
+				matchResult.match,
+				fingerprintByIdentity,
+			);
 		} catch (error) {
 			if (error instanceof KhaanAuthError) {
 				this.client = null;
@@ -277,21 +283,21 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		state: TransferReconciliationState,
 		attempts: number,
 		match: MatchedKhaanTransaction,
+		fingerprintByIdentity: Map<string, string>,
 	) {
-		await this.writeState({
-			...state,
-			status: "matched",
-			attempts,
-			nextPollAt: null,
-			lastError: null,
-			matchedTransaction: match,
-		});
-
-		const matchedFingerprint = await khaanTransactionFingerprint(match);
-		const confirmation = await confirmTransferPaymentAndNotify({
+		// F5: no pre-confirm "matched" write. Go straight from poll → confirm →
+		// write the final status (confirmed/ambiguous/failed). The intermediate
+		// "matched" state was not observable by any consumer that matters and
+		// left a transient stuck-looking state if confirm threw a non-Khaan
+		// error before the recovery path ran.
+		const matchedFingerprint =
+			fingerprintOf(fingerprintByIdentity, match) ??
+			(await khaanTransactionFingerprint(match));
+		const confirmation = await confirmPaymentAndNotify({
 			paymentNumber: state.paymentNumber,
+			provider: "transfer",
 			source: "auto_reconciliation",
-			consumedKhaanTransaction: { fingerprint: matchedFingerprint },
+			consumedKhaanTransactions: [{ fingerprint: matchedFingerprint }],
 		});
 
 		if (

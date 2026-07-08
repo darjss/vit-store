@@ -1,15 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
-import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
+import { sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
 import {
-	sendDetailedOrderNotification,
-	sendTransferClaimedNotification,
-} from "~/lib/integrations/messenger/messages";
-import {
-	trackOrderPlacedServerSide,
-	trackPaymentConfirmedServerSide,
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog";
@@ -522,7 +517,6 @@ export const payment = router({
 		)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = paymentQueries.store;
 				const payment = await assertCanAccessPayment(
 					ctx,
 					input.paymentNumber,
@@ -541,80 +535,20 @@ export const payment = router({
 				if (!isPaid) {
 					return { paid: false };
 				}
-				const confirmed = await q.confirmPaymentAndApplyStock(
-					input.paymentNumber,
-					"qpay",
-				);
-				if (!confirmed) {
+				// Route through the canonical confirm + notify + analytics +
+				// cache-purge boundary (F2).
+				const result = await confirmPaymentAndNotify({
+					paymentNumber: input.paymentNumber,
+					provider: "qpay",
+					source: "qpay_checkout",
+					referrer: ctx.c.req.header("referer") ?? undefined,
+				});
+				if (!result.confirmed) {
 					throw new TRPCError({
 						code: "CONFLICT",
 						message: "Payment already confirmed or not pending",
 					});
 				}
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						const notificationPayload = {
-							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
-							status: "payment_confirmed" as const,
-						};
-						try {
-							await sendDetailedOrderNotification(notificationPayload);
-						} catch (notificationError) {
-							await persistMessengerNotificationFailure({
-								paymentNumber: input.paymentNumber,
-								payload: notificationPayload,
-								error: notificationError,
-							});
-							ctx.log.warn("payment.qpay_notification_queued_for_retry", {
-								paymentNumber: input.paymentNumber,
-								error:
-									notificationError instanceof Error
-										? notificationError.message
-										: String(notificationError),
-							});
-						}
-					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.qpay_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
-				}
-				trackPaymentConfirmedServerSide({
-					phone:
-						payment.order.customerPhone?.toString() ?? input.paymentNumber,
-					paymentNumber: input.paymentNumber,
-					orderNumber: payment.order.orderNumber,
-					provider: "qpay",
-					revenue: payment.order.total,
-					referrer: ctx.c.req.header("referer") ?? undefined,
-				}).catch(() => {});
-				trackOrderPlacedServerSide({
-					phone:
-						payment.order.customerPhone?.toString() ?? input.paymentNumber,
-					orderNumber: payment.order.orderNumber,
-					paymentNumber: input.paymentNumber,
-					total: payment.order.total,
-					provider: "qpay",
-				}).catch(() => {});
 
 				ctx.log.info("payment.qpay_confirmed", {
 					paymentNumber: input.paymentNumber,
