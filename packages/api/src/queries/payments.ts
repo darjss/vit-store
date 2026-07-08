@@ -1,7 +1,5 @@
-import { PRODUCTS_TAG, productTag } from "@vit/shared";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
-import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
 import {
 	KhaanConsumedTransactionsTable,
 	OrderDetailsTable,
@@ -386,29 +384,11 @@ export const paymentQueries = {
 			return new Set(rows.map((row) => row.fingerprint));
 		},
 
-		async confirmPayment(
-			paymentNumber: string,
-			provider: PaymentProviderType | undefined,
-		) {
-			return await this.confirmPaymentAndApplyStock(
-				paymentNumber,
-				provider ?? "transfer",
-			);
-		},
-
-		async confirmPaymentIfPending(
-			paymentNumber: string,
-			provider: PaymentProviderType,
-		) {
-			return await this.confirmPaymentAndApplyStock(paymentNumber, provider);
-		},
-
 		async confirmPaymentAndApplyStock(
 			paymentNumber: string,
 			provider: PaymentProviderType,
 			consumedKhaanTransactions?: { fingerprint: string }[],
 		) {
-			let stockedProductIds: number[] = [];
 			const confirmed = await db().transaction(async (tx) => {
 				// Record consumed Khaan fingerprints BEFORE the status flip and
 				// regardless of whether THIS call wins the flip. A concurrent
@@ -459,20 +439,11 @@ export const paymentQueries = {
 					},
 				});
 
-				for (const detail of orderDetails) {
-					if (
-						detail.quantity <= 0 ||
-						detail.product.status !== "active" ||
-						detail.product.stock < detail.quantity
-					) {
-						throw new Error(
-							`Insufficient stock for product ${detail.product.id}`,
-						);
-					}
-				}
-
-				stockedProductIds = orderDetails.map((detail) => detail.product.id);
-
+				// Stock is decremented by the conditional UPDATE below, which is
+				// the real guard (it re-checks status = active AND stock >=
+				// quantity atomically). A non-locked pre-check here would only
+				// give an earlier error for impossible inputs and cannot prevent
+				// races, so it is intentionally omitted (F6).
 				for (const detail of orderDetails) {
 					const [updatedProduct] = await tx
 						.update(ProductsTable)
@@ -523,13 +494,6 @@ export const paymentQueries = {
 
 				return true;
 			});
-
-			if (confirmed) {
-				await purgeTagsGlobal([
-					PRODUCTS_TAG,
-					...stockedProductIds.map((id) => productTag(id)),
-				]);
-			}
 
 			return confirmed;
 		},

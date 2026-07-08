@@ -113,6 +113,13 @@
       "when": 1783446011960,
       "tag": "0015_add_khaan_consumed_transaction",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1783532400000,
+      "tag": "0016_khaan_consumed_payment_number_index",
+      "breakpoints": true
     }
   ]
 }
