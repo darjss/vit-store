@@ -356,6 +356,7 @@ export const KhaanConsumedTransactionsTable = createTable(
 	},
 	(table) => [
 		uniqueIndex("khaan_consumed_fingerprint_unique_idx").on(table.fingerprint),
+		index("khaan_consumed_payment_number_idx").on(table.paymentNumber),
 	],
 );
 
