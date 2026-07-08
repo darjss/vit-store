@@ -236,7 +236,7 @@ const breadcrumbSchema = {
 
 		<div class="border-t border-border/70 pb-8 pt-8">
 			<RecommendedProducts
-				client:only="solid-js"
+				client:visible
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}
@@ -267,7 +267,7 @@ const breadcrumbSchema = {
 
 	{isInStock && (
 		<StickyMobileCta
-			client:only="solid-js"
+			client:idle
 			cartItem={{
 				productId: product.id,
 				quantity: 1,

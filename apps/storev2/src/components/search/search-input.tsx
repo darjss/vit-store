@@ -93,6 +93,11 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	const handleKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (
 		e,
 	) => {
+		// Enter = explicit submit. Cancels any pending debounce, syncs the
+		// value, and fires onSubmitSearch (full-page navigation) if provided,
+		// else falls back to onSearch (live results). This is the deliberate
+		// "user pressed Enter" path — distinct from the debounced onSearch
+		// that fires on each keystroke.
 		if (e.key === "Enter") {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);

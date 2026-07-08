@@ -41,7 +41,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	if (context.request.method === "GET" && isCacheablePath(url.pathname)) {
 		try {
 			const cache = (caches as unknown as { default: Cache }).default;
-			const cacheKey = new Request(url.toString(), { method: "GET" });
+			// The /products index always SSRs the same first 12 products
+			// regardless of query params (filtering is client-side), so
+			// normalize the cache key to the pathname to avoid storing
+			// identical HTML under every ?category=&brand= variant.
+			const isProductsIndex = url.pathname === "/products";
+			const cacheKeyUrl = isProductsIndex
+				? new URL(url.pathname, url.origin).toString()
+				: url.toString();
+			const cacheKey = new Request(cacheKeyUrl, { method: "GET" });
 			const cached = await cache.match(cacheKey);
 			if (cached) {
 				const hitResponse = new Response(cached.body, cached);

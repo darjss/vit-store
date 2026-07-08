@@ -1,8 +1,19 @@
 import { keepPreviousData, useQuery } from "@tanstack/solid-query";
 import { formatCurrency } from "@vit/shared";
-import { productSortOptions } from "@vit/shared/domain/product";
+import {
+	parseSort,
+	productSortOptions,
+	type SortSelection,
+} from "@vit/shared/domain/product";
 import type { JSX } from "solid-js";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import {
 	Sheet,
 	SheetContent,
@@ -22,6 +33,31 @@ import { cn } from "@/lib/utils";
 export const PRICE_MIN = 0;
 export const PRICE_MAX = 500000;
 export const PRICE_STEP = 10000;
+
+const COUNT_DEBOUNCE_MS = 250;
+
+/**
+ * Trailing-edge debounce for a signal. Returns a read signal that updates
+ * `ms` after the source stops changing. Used to throttle the filter-drawer
+ * live count query so a price-slider drag (many ticks/sec) fires one network
+ * request instead of one per tick.
+ */
+function createDebouncedSignal<T>(
+	source: () => T,
+	ms: number,
+): () => T {
+	const [debounced, setDebounced] = createSignal<T>(source());
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	createEffect(() => {
+		const value = source();
+		if (timer) clearTimeout(timer);
+		timer = setTimeout(() => setDebounced(() => value), ms);
+	});
+	onCleanup(() => {
+		if (timer) clearTimeout(timer);
+	});
+	return debounced;
+}
 
 const CATEGORY_PREVIEW_COUNT = 8;
 const BRAND_PREVIEW_COUNT = 6;
@@ -152,43 +188,64 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 		showAllBrands() ? props.brands : props.brands.slice(0, BRAND_PREVIEW_COUNT),
 	);
 
+	// Debounce every input that feeds the live count query so a slider drag
+	// (dozens of ticks/sec) or rapid chip toggles produce one trailing request
+	// instead of one per change.
+	const debouncedSortField = createDebouncedSignal(
+		draftSortField,
+		COUNT_DEBOUNCE_MS,
+	);
+	const debouncedSortDirection = createDebouncedSignal(
+		draftSortDirection,
+		COUNT_DEBOUNCE_MS,
+	);
+	const debouncedCategoryId = createDebouncedSignal(
+		draftCategoryId,
+		COUNT_DEBOUNCE_MS,
+	);
+	const debouncedBrandId = createDebouncedSignal(
+		draftBrandId,
+		COUNT_DEBOUNCE_MS,
+	);
+	const debouncedPriceRange = createDebouncedSignal(
+		draftPriceRange,
+		COUNT_DEBOUNCE_MS,
+	);
+	const debouncedIncludeOutOfStock = createDebouncedSignal(
+		draftIncludeOutOfStock,
+		COUNT_DEBOUNCE_MS,
+	);
+
 	const countQuery = useQuery(
 		() => ({
 			queryKey: [
 				"filter-count",
-				draftSortField(),
-				draftSortDirection(),
-				draftCategoryId(),
-				draftBrandId(),
-				draftPriceRange()[0],
-				draftPriceRange()[1],
-				draftIncludeOutOfStock(),
+				debouncedSortField(),
+				debouncedSortDirection(),
+				debouncedCategoryId(),
+				debouncedBrandId(),
+				debouncedPriceRange()[0],
+				debouncedPriceRange()[1],
+				debouncedIncludeOutOfStock(),
 				props.listFilter,
 			],
 			queryFn: async () => {
-				const sort =
-					(draftSortField() === "price" || draftSortField() === "createdAt") &&
-					(draftSortDirection() === "asc" || draftSortDirection() === "desc")
-						? {
-								field: draftSortField() as "price" | "createdAt",
-								direction: draftSortDirection() as "asc" | "desc",
-							}
-						: null;
-				const { minPrice, maxPrice } = boundPrice(draftPriceRange());
-				const params = {
+				const sort: SortSelection | null = parseSort(
+					debouncedSortField(),
+					debouncedSortDirection(),
+				);
+				const { minPrice, maxPrice } = boundPrice(debouncedPriceRange());
+				const result = await api.product.getPaginatedProducts.query({
 					page: 1,
 					pageSize: 1,
-					categoryId: draftCategoryId() ?? undefined,
-					brandId: draftBrandId() ?? undefined,
+					categoryId: debouncedCategoryId() ?? undefined,
+					brandId: debouncedBrandId() ?? undefined,
 					sortField: sort?.field,
 					sortDirection: sort?.direction,
 					minPrice,
 					maxPrice,
-					listType: props.listFilter ?? undefined,
-				};
-				const result = draftIncludeOutOfStock()
-					? await api.product.getPaginatedProducts.query(params)
-					: await api.product.getPaginatedProductsWithStock.query(params);
+					requireStock: !debouncedIncludeOutOfStock(),
+				});
 				return result.pagination.totalCount;
 			},
 			placeholderData: keepPreviousData,

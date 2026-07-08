@@ -1,7 +1,7 @@
 ---
 
+import { productStockState } from "@vit/shared/domain/product";
 import CardAddButton from "@/components/product/card-add-button.tsx";
-import { LOW_STOCK_THRESHOLD } from "@/components/product/product-card";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import { toProductImageUrl } from "@/lib/image";
 import type { ProductForHome } from "@/lib/types";
@@ -24,11 +24,9 @@ const {
 
 const wash = washBg(product.brand || product.id);
 const productUrl = `/products/${product.slug}-${product.id}`;
-const isOutOfStock = product.stock === 0;
-const isLowStock =
-	product.stock !== undefined &&
-	product.stock > 0 &&
-	product.stock <= LOW_STOCK_THRESHOLD;
+const stockState = productStockState(product.stock);
+const isOutOfStock = stockState === "out";
+const isLowStock = stockState === "low";
 ---
 
 <div

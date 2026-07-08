@@ -1,4 +1,5 @@
 ---
+import { LOW_STOCK_THRESHOLD } from "@vit/shared/domain/product";
 import ProductQuantitySelector from "@/components/product/product-add-to-cart";
 import { formatCurrency } from "@/lib/utils";
 import IconCheck from "~icons/ri/checkbox-circle-fill";
@@ -25,7 +26,9 @@ interface Props {
 const { product, primaryImage } = Astro.props;
 const isInStock = product.status === "active" && product.stock > 0;
 const stockLabel =
-	product.stock <= 5 ? `Цөөхөн үлдсэн (${product.stock})` : "Бэлэн байна";
+	product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD
+		? `Цөөхөн үлдсэн (${product.stock})`
+		: "Бэлэн байна";
 ---
 
 <div class="space-y-4 sm:space-y-5">
