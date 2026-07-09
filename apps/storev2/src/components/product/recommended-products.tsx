@@ -13,7 +13,6 @@ interface RecommendedProductsProps {
 	currentProductId: number;
 	categoryId: number;
 	brandId: number;
-	productName: string;
 	washKey?: string | number;
 }
 
@@ -49,18 +48,15 @@ async function fetchRecommendedProducts(
 			}),
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
-		return products
-			.filter((p) => p.id !== productId && p.slug && isInStock(p.stock))
-			.slice(0, RECOMMENDED_SHELF_LIMIT)
-			.map((p) => ({
-				id: p.id,
-				slug: p.slug,
-				name: p.name,
-				price: p.price,
-				image: p.image,
-				brand: p.brand,
-				stock: p.stock,
-			}));
+		return products.map((p) => ({
+			id: p.id,
+			slug: p.slug,
+			name: p.name,
+			price: p.price,
+			image: p.image,
+			brand: p.brand,
+			stock: p.stock,
+		}));
 	} catch {
 		try {
 			const fallbackProducts = await withTimeout(
@@ -181,7 +177,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														{formatCurrency(product.price)}
 													</span>
 													<CardAddButton
-														productName={product.name}
 														cartItem={{
 															productId: product.id,
 															quantity: 1,

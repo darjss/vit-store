@@ -31,29 +31,31 @@ async function fetchCartCrossSells(
 			api.product.getCartCrossSells.query({ productIds }),
 			CROSS_SELL_TIMEOUT_MS,
 		);
-		return products
-			.filter((p) => p.slug && (p.stock === undefined || p.stock > 0))
-			.slice(0, 2)
-			.map((p) => ({
-				id: p.id,
-				slug: p.slug,
-				name: p.name,
-				price: p.price,
-				image: p.image,
-				brand: p.brand,
-				stock: p.stock,
-			}));
+		return products.map((p) => ({
+			id: p.id,
+			slug: p.slug,
+			name: p.name,
+			price: p.price,
+			image: p.image,
+			brand: p.brand,
+			stock: p.stock,
+		}));
 	} catch {
 		return [];
 	}
 }
 
 export default function CartCrossSells() {
-	const productIds = createMemo(() =>
-		cart.items().map((item) => item.productId),
+	const productIdsKey = createMemo(() =>
+		[...new Set(cart.items().map((item) => item.productId))]
+			.sort((a, b) => a - b)
+			.join(","),
 	);
 
-	const [crossSells] = createResource(productIds, fetchCartCrossSells);
+	const [crossSells] = createResource(productIdsKey, (key) => {
+		if (!key) return Promise.resolve([] as ProductForHome[]);
+		return fetchCartCrossSells(key.split(",").map(Number));
+	});
 
 	return (
 		<Show when={!crossSells.loading && crossSells()} keyed>
@@ -117,7 +119,6 @@ export default function CartCrossSells() {
 											</div>
 
 											<CardAddButton
-												productName={product.name}
 												cartItem={{
 													productId: product.id,
 													quantity: 1,
