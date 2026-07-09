@@ -12,7 +12,6 @@ import {
 	PurchaseReceiptItemsTable,
 	SalesTable,
 } from "~/db/schema";
-import { ORDER_CONFIRMATION_PURPOSE } from "~/lib/integrations/messenger/failed-notifications";
 import { recordConsumedKhaanTransaction } from "~/lib/payments/consumed-transaction";
 import { applyStockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
@@ -242,15 +241,7 @@ export const paymentQueries = {
 					createdAt: MessengerNotificationFailuresTable.createdAt,
 				})
 				.from(MessengerNotificationFailuresTable)
-				.where(
-					and(
-						eq(MessengerNotificationFailuresTable.status, "pending"),
-						eq(
-							MessengerNotificationFailuresTable.purpose,
-							ORDER_CONFIRMATION_PURPOSE,
-						),
-					),
-				);
+				.where(eq(MessengerNotificationFailuresTable.status, "pending"));
 		},
 
 		async getClaimedTransferCount() {
