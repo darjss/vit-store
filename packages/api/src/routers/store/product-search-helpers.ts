@@ -75,8 +75,12 @@ export const performCatalogSearch = async (
 	const requireStock = options?.requireStock ?? false;
 	const safeLimit = Math.min(limit, 10);
 	const filters =
-		options?.brandId || options?.categoryId
-			? { brandId: options.brandId, categoryId: options.categoryId }
+		options?.brandId || options?.categoryId || requireStock
+			? {
+					brandId: options?.brandId,
+					categoryId: options?.categoryId,
+					requireStock,
+				}
 			: undefined;
 	const searchResults = await searchProducts(query, safeLimit, filters);
 
@@ -218,11 +222,63 @@ const scoreNavigationMatch = (
 	);
 };
 
+// Brand/category navigation lists only change when catalog admin mutates them.
+// Cache the DB aggregation per isolate so every searchStorefront keystroke
+// does not re-join Products for counts. TTL is short enough that stock-gated
+// brand productCounts stay reasonable without a cross-isolate purge path.
+const NAVIGATION_LIST_TTL_MS = 60_000;
+
+type NavigationBrandRow = Awaited<
+	ReturnType<typeof brandQueries.store.getAllBrands>
+>[number];
+type NavigationCategoryRow = Awaited<
+	ReturnType<typeof categoryQueries.store.getAllCategories>
+>[number];
+
+let navigationListsCache: {
+	brands: NavigationBrandRow[];
+	categories: NavigationCategoryRow[];
+	expiresAt: number;
+} | null = null;
+let navigationListsInflight: Promise<{
+	brands: NavigationBrandRow[];
+	categories: NavigationCategoryRow[];
+}> | null = null;
+
+export const clearNavigationListsCache = (): void => {
+	navigationListsCache = null;
+	navigationListsInflight = null;
+};
+
+const loadNavigationLists = async () => {
+	const now = Date.now();
+	if (navigationListsCache && navigationListsCache.expiresAt > now) {
+		return navigationListsCache;
+	}
+
+	if (!navigationListsInflight) {
+		navigationListsInflight = Promise.all([
+			brandQueries.store.getAllBrands(),
+			categoryQueries.store.getAllCategories(),
+		])
+			.then(([brands, categories]) => {
+				navigationListsCache = {
+					brands,
+					categories,
+					expiresAt: Date.now() + NAVIGATION_LIST_TTL_MS,
+				};
+				return { brands, categories };
+			})
+			.finally(() => {
+				navigationListsInflight = null;
+			});
+	}
+
+	return navigationListsInflight;
+};
+
 export const searchNavigationResults = async (query: string, limit: number) => {
-	const [brands, categories] = await Promise.all([
-		brandQueries.store.getAllBrands(),
-		categoryQueries.store.getAllCategories(),
-	]);
+	const { brands, categories } = await loadNavigationLists();
 	const safeLimit = Math.min(Math.max(limit, 1), 8);
 
 	return {

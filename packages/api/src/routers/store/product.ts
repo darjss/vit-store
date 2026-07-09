@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
-import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
+import { BRANDS_TAG, CACHE_POLICY, CATEGORIES_TAG, PRODUCTS_TAG, productTag } from "@vit/shared";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
@@ -47,6 +47,7 @@ const searchInput = {
 	limit: v.optional(v.number(), 8),
 	brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	requireStock: v.optional(v.boolean(), false),
 };
 
 export const product = router({
@@ -55,12 +56,15 @@ export const product = router({
 	// `requireStock: true` if they need the in-stock-only gate.
 	searchProductsForPage: publicProcedure
 		.input(v.object(searchInput))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
-				return await performProductSearch(input.query, input.limit, {
+				const products = await performProductSearch(input.query, input.limit, {
 					brandId: input.brandId,
 					categoryId: input.categoryId,
+					requireStock: input.requireStock,
 				});
+				markCacheable(ctx, CACHE_POLICY.search, [PRODUCTS_TAG]);
+				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -69,7 +73,6 @@ export const product = router({
 				});
 			}
 		}),
-
 	searchStorefront: publicProcedure
 		.input(
 			v.object({
@@ -77,12 +80,18 @@ export const product = router({
 				limit: v.optional(v.number(), 8),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const safeLimit = Math.min(input.limit, 12);
 				const [products, navigation] = await Promise.all([
 					performProductSearch(input.query, safeLimit),
 					searchNavigationResults(input.query, 4),
+				]);
+
+				markCacheable(ctx, CACHE_POLICY.search, [
+					PRODUCTS_TAG,
+					BRANDS_TAG,
+					CATEGORIES_TAG,
 				]);
 
 				return {
@@ -98,7 +107,6 @@ export const product = router({
 				});
 			}
 		}),
-
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;

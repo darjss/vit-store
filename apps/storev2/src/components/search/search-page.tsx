@@ -39,6 +39,8 @@ const SearchPage: Component = () => {
 		});
 	});
 
+	// Debounced only — SearchInput owns the immediate typed value. Do not
+	// bind onValueChange to searchQuery or every keystroke hits the API.
 	const handleSearch = (query: string) => {
 		setSearchQuery(query);
 		if (query.length >= 2) {
@@ -47,7 +49,6 @@ const SearchPage: Component = () => {
 	};
 
 	const handleSelectSuggestion = (term: string) => {
-		setSearchQuery(term);
 		handleSearch(term);
 	};
 
@@ -76,7 +77,6 @@ const SearchPage: Component = () => {
 					</h1>
 					<SearchInput
 						value={searchQuery()}
-						onValueChange={setSearchQuery}
 						onSearch={handleSearch}
 						onSubmitSearch={handleSubmitSearch}
 						isLoading={isSearching() && searchQuery().length >= 2}
