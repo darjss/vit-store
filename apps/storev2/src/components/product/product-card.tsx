@@ -175,6 +175,7 @@ const ProductCard = (props: ProductCardProps) => {
 					</div>
 					<CardAddButton
 						disabled={isOutOfStock()}
+						productName={product().name}
 						cartItem={{
 							productId: product().id,
 							quantity: 1,

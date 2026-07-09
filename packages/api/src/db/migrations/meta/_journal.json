@@ -120,6 +120,13 @@
       "when": 1783532400000,
       "tag": "0016_khaan_consumed_payment_number_index",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783618800000,
+      "tag": "0017_restock_subscriptions",
+      "breakpoints": true
     }
   ]
 }

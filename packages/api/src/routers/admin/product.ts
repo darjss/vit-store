@@ -10,11 +10,16 @@ import {
 } from "@vit/shared";
 import { status } from "@vit/shared/constants";
 import * as v from "valibot";
+import { db } from "~/db/client";
 import { purgeTags } from "~/lib/cache/workers-cache";
 import { PRODUCT_PER_PAGE, editableProductFields } from "~/lib/constants";
 import { scheduleProductSearchRebuild, searchProducts } from "~/lib/product-search/client";
+import {
+	getRestockWaitCount,
+	listRestockWaitCounts,
+	scheduleRestockDispatch,
+} from "~/lib/restock";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
-import { db } from "~/db/client";
 const normalizeExpirationDate = (value?: string | null) => {
     if (!value)
         return null;
@@ -319,9 +324,21 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
-            await productQueries.admin.updateStock(input.productId, input.numberToUpdate, input.type);
+            const stockChange = await productQueries.admin.updateStock(input.productId, input.numberToUpdate, input.type);
+            if (!stockChange)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
             await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.productId)]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
+            if (input.type === "add") {
+                scheduleRestockDispatch(ctx, {
+                    productId: input.productId,
+                    previousStock: stockChange.previousStock,
+                    newStock: stockChange.newStock,
+                });
+            }
             return { message: "Stock updated successfully" };
         }
         catch (error) {
@@ -420,18 +437,89 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number(), newStock: v.number() }))
         .mutation(async ({ ctx, input }) => {
         try {
-            await productQueries.admin.setProductStock(input.id, input.newStock);
+            const stockChange = await productQueries.admin.setProductStock(input.id, input.newStock);
+            if (!stockChange)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
             await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
+            scheduleRestockDispatch(ctx, {
+                productId: input.id,
+                previousStock: stockChange.previousStock,
+                newStock: stockChange.newStock,
+            });
             return { message: "Stock set successfully" };
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "setProductStock"
             });
+            if (error instanceof TRPCError)
+                throw error;
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to set product stock",
+                cause: error,
+            });
+        }
+    }),
+    getRestockWaitCount: proc
+        .input(v.object({ productId: v.pipe(v.number(), v.integer(), v.minValue(1)) }))
+        .query(async ({ ctx, input }) => {
+        try {
+            const waitCount = await getRestockWaitCount(input.productId);
+            return { productId: input.productId, waitCount };
+        }
+        catch (error) {
+            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+                event: "getRestockWaitCount"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch restock wait count",
+                cause: error,
+            });
+        }
+    }),
+    listRestockWaitlist: proc
+        .input(v.object({
+            limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(200)), 50),
+        }))
+        .query(async ({ ctx, input }) => {
+        try {
+            const ranked = await listRestockWaitCounts(input.limit ?? 50);
+            if (ranked.length === 0) {
+                return [];
+            }
+            const products = await Promise.all(
+                ranked.map((row) => productQueries.admin.getProductById(row.productId)),
+            );
+            return ranked.flatMap((row, index) => {
+                const product = products[index];
+                if (!product) return [];
+                return [{
+                    productId: row.productId,
+                    waitCount: row.waitCount,
+                    name: product.name,
+                    slug: product.slug,
+                    stock: product.stock,
+                    status: product.status,
+                    image: product.images.find((img) => img.isPrimary)?.url
+                        ?? product.images[0]?.url
+                        ?? null,
+                    brandName: product.brand?.name ?? null,
+                }];
+            });
+        }
+        catch (error) {
+            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+                event: "listRestockWaitlist"
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch restock waitlist",
                 cause: error,
             });
         }

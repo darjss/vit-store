@@ -360,6 +360,32 @@ export const KhaanConsumedTransactionsTable = createTable(
 	],
 );
 
+export const RestockSubscriptionsTable = createTable(
+	"restock_subscription",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		productId: integer("product_id")
+			.references(() => ProductsTable.id)
+			.notNull(),
+		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
+		contact: text("contact").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		notifiedAt: timestamp("notified_at"),
+		deletedAt: timestamp("deleted_at"),
+	},
+	(table) => [
+		uniqueIndex("restock_sub_open_unique_idx")
+			.on(table.productId, table.channel, table.contact)
+			.where(sql`${table.deletedAt} is null`),
+		index("restock_sub_product_open_idx")
+			.on(table.productId)
+			.where(sql`${table.deletedAt} is null`),
+		index("restock_sub_contact_open_idx")
+			.on(table.contact)
+			.where(sql`${table.deletedAt} is null`),
+	],
+);
+
 export const CartsTable = createTable(
 	"cart",
 	{
@@ -636,6 +662,16 @@ export const salesRelations = relations(SalesTable, ({ one }) => ({
 	}),
 }));
 
+export const restockSubscriptionsRelations = relations(
+	RestockSubscriptionsTable,
+	({ one }) => ({
+		product: one(ProductsTable, {
+			fields: [RestockSubscriptionsTable.productId],
+			references: [ProductsTable.id],
+		}),
+	}),
+);
+
 export type UserSelectType = InferSelectModel<typeof UsersTable>;
 export type CustomerSelectType = InferSelectModel<typeof CustomersTable>;
 export type BrandSelectType = InferSelectModel<typeof BrandsTable>;
@@ -662,6 +698,9 @@ export type PurchaseReceiptItemSelectType = InferSelectModel<
 	typeof PurchaseReceiptItemsTable
 >;
 export type SalesSelectType = InferSelectModel<typeof SalesTable>;
+export type RestockSubscriptionSelectType = InferSelectModel<
+	typeof RestockSubscriptionsTable
+>;
 
 export type UserInsertType = InferInsertModel<typeof UsersTable>;
 export type CustomerInsertType = InferInsertModel<typeof CustomersTable>;
@@ -688,3 +727,6 @@ export type PurchaseReceiptItemInsertType = InferInsertModel<
 	typeof PurchaseReceiptItemsTable
 >;
 export type SalesInsertType = InferInsertModel<typeof SalesTable>;
+export type RestockSubscriptionInsertType = InferInsertModel<
+	typeof RestockSubscriptionsTable
+>;

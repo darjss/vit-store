@@ -573,27 +573,67 @@ export const purchaseQueries = {
 				})),
 			);
 
-			const affectedProductIds = new Set<number>();
+			const stockDeltas = new Map<number, number>();
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
 				if (!purchaseItem) continue;
+				stockDeltas.set(
+					purchaseItem.productId,
+					(stockDeltas.get(purchaseItem.productId) ?? 0) +
+						receiptItem.quantityReceived,
+				);
+			}
+
+			const affectedProductIds = [...stockDeltas.keys()];
+			const previousStocks = new Map<number, number>();
+			if (affectedProductIds.length > 0) {
+				const products = await tx.query.ProductsTable.findMany({
+					columns: { id: true, stock: true },
+					where: and(
+						inArray(ProductsTable.id, affectedProductIds),
+						isNull(ProductsTable.deletedAt),
+					),
+				});
+				for (const product of products) {
+					previousStocks.set(product.id, product.stock);
+				}
+			}
+
+			for (const [productId, delta] of stockDeltas) {
 				await tx
 					.update(ProductsTable)
 					.set({
-						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
+						stock: sql`${ProductsTable.stock} + ${delta}`,
 					})
 					.where(
 						and(
-							eq(ProductsTable.id, purchaseItem.productId),
+							eq(ProductsTable.id, productId),
 							isNull(ProductsTable.deletedAt),
 						),
 					);
-				affectedProductIds.add(purchaseItem.productId);
 			}
+
+			const restockCandidates = affectedProductIds
+				.map((productId) => {
+					const previousStock = previousStocks.get(productId) ?? 0;
+					const delta = stockDeltas.get(productId) ?? 0;
+					return {
+						productId,
+						previousStock,
+						newStock: previousStock + delta,
+					};
+				})
+				.filter(
+					(candidate) =>
+						candidate.previousStock === 0 && candidate.newStock > 0,
+				);
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
 
-			return { affectedProductIds: [...affectedProductIds] };
+			return {
+				affectedProductIds,
+				restockCandidates,
+			};
 		},
 
 		async deletePurchase(tx: Transaction, purchaseId: number) {

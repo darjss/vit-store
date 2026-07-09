@@ -96,6 +96,7 @@ const hasSale = (product.discount ?? 0) > 0;
 			<CardAddButton
 				client:load
 				disabled={isOutOfStock}
+				productName={product.name}
 				cartItem={{
 					productId: product.id,
 					quantity: 1,

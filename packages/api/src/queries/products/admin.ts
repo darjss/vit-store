@@ -223,6 +223,23 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
+			const previous = await db().query.ProductsTable.findFirst({
+				columns: { stock: true },
+				where: and(
+					eq(ProductsTable.id, productId),
+					isNull(ProductsTable.deletedAt),
+				),
+			});
+			if (!previous) {
+				return null;
+			}
+
+			const previousStock = previous.stock;
+			const newStock =
+				type === "add"
+					? previousStock + numberToUpdate
+					: previousStock - numberToUpdate;
+
 			await db()
 				.update(ProductsTable)
 				.set({
@@ -231,6 +248,8 @@ export const adminQueries = {
 				.where(
 					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
 				);
+
+			return { previousStock, newStock };
 		},
 
 		async updateStockTx(
@@ -385,10 +404,21 @@ export const adminQueries = {
 		},
 
 		async setProductStock(id: number, newStock: number) {
+			const previous = await db().query.ProductsTable.findFirst({
+				columns: { stock: true },
+				where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
+			});
+			if (!previous) {
+				return null;
+			}
+
+			const previousStock = previous.stock;
 			await db()
 				.update(ProductsTable)
 				.set({ stock: newStock })
 				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+
+			return { previousStock, newStock };
 		},
 
 		async getAllProductValue() {

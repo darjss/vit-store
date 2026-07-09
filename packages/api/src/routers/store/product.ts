@@ -7,6 +7,7 @@ import { markCacheable } from "~/lib/cache/workers-cache";
 import { redis } from "~/lib/redis";
 import { publicProcedure, router } from "~/lib/trpc";
 import {
+import { subscribeToRestock } from "~/lib/restock";
 	mapStockStatus,
 	performAssistantProductSearch,
 	performProductSearch,
@@ -298,8 +299,16 @@ export const product = router({
 		.input(
 			v.object({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				channel: v.picklist(["sms", "email"]),
-				contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+				contacts: v.pipe(
+					v.array(
+						v.object({
+							channel: v.picklist(["sms", "email"]),
+							contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+						}),
+					),
+					v.minLength(1),
+					v.maxLength(2),
+				),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -320,52 +329,8 @@ export const product = router({
 				});
 			}
 
-			const normalizedContact =
-				input.channel === "sms"
-					? input.contact.replace(/\D/g, "")
-					: input.contact.trim().toLowerCase();
-
-			if (input.channel === "sms" && !/^[6-9]\d{7}$/.test(normalizedContact)) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Invalid phone number",
-				});
-			}
-
-			if (
-				input.channel === "email" &&
-				!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedContact)
-			) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Invalid email address",
-				});
-			}
-
-			const subscriberId = `${input.channel}:${normalizedContact}`;
-			const productSubscribersKey = `restock:subs:${input.productId}`;
-			const subscriberDataKey = `restock:sub:${input.productId}:${subscriberId}`;
-
-			await redis().sadd(productSubscribersKey, subscriberId);
-			await redis().set(
-				subscriberDataKey,
-				JSON.stringify({
-					productId: input.productId,
-					channel: input.channel,
-					contact: normalizedContact,
-					createdAt: new Date().toISOString(),
-				}),
-				{ ex: 60 * 60 * 24 * 30 },
-			);
-
-			await redis().sadd("restock:watch:products", String(input.productId));
-
-			return {
-				success: true,
-				message: "Subscription created",
-			};
+			return subscribeToRestock(input);
 		}),
-
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {
 			return await runProductBenchmark();
