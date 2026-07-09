@@ -1,9 +1,6 @@
-import {
-	brandQueries,
-	categoryQueries,
-	productQueries,
-} from "@vit/api/queries";
+import { productQueries } from "@vit/api/queries";
 import { searchProducts } from "~/lib/product-search/client";
+import { loadNavigationLists } from "~/lib/product-search/isolate-cache";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
@@ -87,9 +84,6 @@ export const performCatalogSearch = async (
 	if (searchResults.length > 0) {
 		return searchResults
 			.filter((result) => result.status === "active")
-			.filter((result) =>
-				requireStock ? result.inStock && result.stock > 0 : true,
-			)
 			.map((result) => ({
 				id: result.id,
 				slug: result.slug,
@@ -109,18 +103,25 @@ export const performCatalogSearch = async (
 		? await q.searchByNameWithStock(query, safeLimit)
 		: await q.searchByName(query, safeLimit);
 
-	return fallbackResults.map((p) => ({
-		id: p.id,
-		slug: p.slug,
-		name: p.name,
-		price: p.price,
-		image: p.images[0]?.url || "",
-		brand: p.brand?.name || "",
-		status: p.status,
-		stock: p.stock,
-		discount: p.discount,
-		categoryId: p.categoryId,
-	}));
+	return fallbackResults
+		.map((p) => ({
+			id: p.id,
+			slug: p.slug,
+			name: p.name,
+			price: p.price,
+			image: p.images[0]?.url || "",
+			brand: p.brand?.name || "",
+			status: p.status,
+			stock: p.stock,
+			discount: p.discount,
+			categoryId: p.categoryId,
+		}))
+		.sort((a, b) => {
+			const aIn = a.stock > 0;
+			const bIn = b.stock > 0;
+			if (aIn !== bIn) return aIn ? -1 : 1;
+			return b.stock - a.stock;
+		});
 };
 
 export const performProductSearch = async (
@@ -220,61 +221,6 @@ const scoreNavigationMatch = (
 			return score;
 		}),
 	);
-};
-
-// Brand/category navigation lists only change when catalog admin mutates them.
-// Cache the DB aggregation per isolate so every searchStorefront keystroke
-// does not re-join Products for counts. TTL is short enough that stock-gated
-// brand productCounts stay reasonable without a cross-isolate purge path.
-const NAVIGATION_LIST_TTL_MS = 60_000;
-
-type NavigationBrandRow = Awaited<
-	ReturnType<typeof brandQueries.store.getAllBrands>
->[number];
-type NavigationCategoryRow = Awaited<
-	ReturnType<typeof categoryQueries.store.getAllCategories>
->[number];
-
-let navigationListsCache: {
-	brands: NavigationBrandRow[];
-	categories: NavigationCategoryRow[];
-	expiresAt: number;
-} | null = null;
-let navigationListsInflight: Promise<{
-	brands: NavigationBrandRow[];
-	categories: NavigationCategoryRow[];
-}> | null = null;
-
-export const clearNavigationListsCache = (): void => {
-	navigationListsCache = null;
-	navigationListsInflight = null;
-};
-
-const loadNavigationLists = async () => {
-	const now = Date.now();
-	if (navigationListsCache && navigationListsCache.expiresAt > now) {
-		return navigationListsCache;
-	}
-
-	if (!navigationListsInflight) {
-		navigationListsInflight = Promise.all([
-			brandQueries.store.getAllBrands(),
-			categoryQueries.store.getAllCategories(),
-		])
-			.then(([brands, categories]) => {
-				navigationListsCache = {
-					brands,
-					categories,
-					expiresAt: Date.now() + NAVIGATION_LIST_TTL_MS,
-				};
-				return { brands, categories };
-			})
-			.finally(() => {
-				navigationListsInflight = null;
-			});
-	}
-
-	return navigationListsInflight;
 };
 
 export const searchNavigationResults = async (query: string, limit: number) => {

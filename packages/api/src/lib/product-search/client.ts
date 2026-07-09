@@ -1,6 +1,13 @@
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
+import {
+	clearAllIsolateSearchCaches,
+	clearProductSearchResultCache,
+	readSearchResultCache,
+	searchResultCacheKey,
+	writeSearchResultCache,
+} from "~/lib/product-search/isolate-cache";
 import type {
 	ProductSearchFilters,
 	ProductSearchRebuildReason,
@@ -9,59 +16,12 @@ import type {
 } from "~/lib/product-search/types";
 import { PRODUCT_SEARCH_OBJECT_NAME } from "~/lib/product-search/types";
 
+export { clearProductSearchResultCache };
+
 const getProductSearchService = () =>
 	env.PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
 
 const PRODUCT_SEARCH_TIMEOUT_MS = 4000;
-// Isolate-local warm cache for popular queries. Skips the DO RPC hop on
-// repeated searches within the same Worker isolate. Short TTL so stock
-// ranking drift stays bounded; not shared across isolates.
-const SEARCH_RESULT_CACHE_TTL_MS = 30_000;
-const SEARCH_RESULT_CACHE_MAX = 128;
-
-type SearchResultCacheEntry = {
-	expiresAt: number;
-	value: SearchProductResult[];
-};
-
-const searchResultCache = new Map<string, SearchResultCacheEntry>();
-
-const searchResultCacheKey = (
-	query: string,
-	limit: number,
-	filters?: ProductSearchFilters,
-) =>
-	JSON.stringify([
-		query,
-		limit,
-		filters?.brandId ?? null,
-		filters?.categoryId ?? null,
-		filters?.requireStock ?? false,
-	]);
-
-const readSearchResultCache = (key: string) => {
-	const entry = searchResultCache.get(key);
-	if (!entry) return null;
-	if (entry.expiresAt <= Date.now()) {
-		searchResultCache.delete(key);
-		return null;
-	}
-	// Refresh insertion order for a simple LRU-ish eviction.
-	searchResultCache.delete(key);
-	searchResultCache.set(key, entry);
-	return entry.value;
-};
-
-const writeSearchResultCache = (key: string, value: SearchProductResult[]) => {
-	if (searchResultCache.size >= SEARCH_RESULT_CACHE_MAX) {
-		const oldest = searchResultCache.keys().next().value;
-		if (oldest !== undefined) searchResultCache.delete(oldest);
-	}
-	searchResultCache.set(key, {
-		expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
-		value,
-	});
-};
 
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 	Promise.race([
@@ -103,24 +63,12 @@ export const searchProducts = async (
 	}
 };
 
-export const clearProductSearchResultCache = (): void => {
-	searchResultCache.clear();
-};
-
-const clearIsolateSearchCaches = (): void => {
-	clearProductSearchResultCache();
-	// Lazy import avoids a lib → router cycle (helpers import searchProducts).
-	void import("~/routers/store/product-search-helpers")
-		.then((m) => m.clearNavigationListsCache())
-		.catch(() => undefined);
-};
-
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",
 ): Promise<ProductSearchStatus> => {
-	clearIsolateSearchCaches();
+	clearAllIsolateSearchCaches();
 	const status = await getProductSearchService().rebuild(reason);
-	clearIsolateSearchCaches();
+	clearAllIsolateSearchCaches();
 	return status;
 };
 
@@ -131,7 +79,7 @@ export const getProductSearchStatus =
 
 export const clearProductSearchIndex = async () => {
 	await getProductSearchService().clear();
-	clearIsolateSearchCaches();
+	clearAllIsolateSearchCaches();
 };
 
 type RebuildContext = {
@@ -149,7 +97,7 @@ export const scheduleProductSearchRebuild = (
 	ctx: RebuildContext,
 	reason: ProductSearchRebuildReason,
 ): void => {
-	clearIsolateSearchCaches();
+	clearAllIsolateSearchCaches();
 	ctx.c.executionCtx.waitUntil(
 		rebuildProductSearchIndex(reason).catch((error) => {
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
