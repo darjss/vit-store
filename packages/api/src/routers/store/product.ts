@@ -263,33 +263,38 @@ export const product = router({
 		)
 		.query(async ({ ctx, input }) => {
 			try {
-				const q = productQueries.store;
-				const [sameCategory, sameBrand] = await Promise.all([
-					q.getRecommendedProductsByCategory(input.categoryId, input.productId),
-					q.getRecommendedProductsByBrand(input.brandId, input.productId),
-				]);
+				const products = await productQueries.store.getRecommendations(input);
 				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
-
-				const allProducts = [...sameCategory, ...sameBrand];
-				const uniqueProducts = allProducts.filter(
-					(product, index, self) =>
-						index === self.findIndex((p) => p.id === product.id),
-				);
-
-				return uniqueProducts.slice(0, 5).map((product) => ({
-					id: product.id,
-					slug: product.slug,
-					name: product.name,
-					price: product.price,
-					image: product.images[0]?.url || "",
-					brand: product.brand.name,
-					discount: product.discount,
-					stock: product.stock,
-				}));
+				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
 					message: "Error getting recommended products",
+					cause: error,
+				});
+			}
+		}),
+
+	getCartCrossSells: publicProcedure
+		.input(
+			v.object({
+				productIds: v.pipe(
+					v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+					v.maxLength(20),
+				),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				const products = await productQueries.store.getCartCrossSells(
+					input.productIds,
+				);
+				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+				return products;
+			} catch (error) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: "Error getting cart cross-sells",
 					cause: error,
 				});
 			}
