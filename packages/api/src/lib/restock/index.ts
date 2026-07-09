@@ -10,6 +10,7 @@ export {
 export {
 	getRestockWaitCount,
 	listRestockWaitCounts,
+	listRestockWaitlist,
 	subscribeToRestock,
 } from "~/lib/restock/subscribe";
 export {

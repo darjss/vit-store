@@ -6,8 +6,8 @@ import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
 import { redis } from "~/lib/redis";
 import { publicProcedure, router } from "~/lib/trpc";
-import {
 import { subscribeToRestock } from "~/lib/restock";
+import {
 	mapStockStatus,
 	performAssistantProductSearch,
 	performProductSearch,
@@ -312,6 +312,7 @@ export const product = router({
 			}),
 		)
 		.mutation(async ({ input }) => {
+			// TODO(rate-limit): bind CF rate limiter when available; per-contact product cap only today
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 

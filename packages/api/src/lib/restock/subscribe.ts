@@ -1,7 +1,21 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
+import {
+	and,
+	count,
+	countDistinct,
+	eq,
+	inArray,
+	isNull,
+	ne,
+	sql,
+} from "drizzle-orm";
 import { db } from "~/db/client";
-import { RestockSubscriptionsTable } from "~/db/schema";
+import {
+	BrandsTable,
+	ProductImagesTable,
+	ProductsTable,
+	RestockSubscriptionsTable,
+} from "~/db/schema";
 import { MAX_OPEN_PRODUCTS_PER_CONTACT } from "~/lib/restock/dispatch";
 import {
 	isValidRestockContact,
@@ -23,6 +37,11 @@ type SubscribeResult = {
 	contact: string;
 	alreadySubscribed: boolean;
 };
+
+const openSubscription = and(
+	isNull(RestockSubscriptionsTable.deletedAt),
+	isNull(RestockSubscriptionsTable.notifiedAt),
+);
 
 function normalizeAndValidateContacts(
 	contacts: RestockContactInput[],
@@ -84,7 +103,7 @@ async function insertOneContact(
 			eq(RestockSubscriptionsTable.productId, productId),
 			eq(RestockSubscriptionsTable.channel, item.channel),
 			eq(RestockSubscriptionsTable.contact, item.contact),
-			isNull(RestockSubscriptionsTable.deletedAt),
+			openSubscription,
 		),
 	});
 
@@ -105,7 +124,7 @@ async function insertOneContact(
 		.where(
 			and(
 				eq(RestockSubscriptionsTable.contact, item.contact),
-				isNull(RestockSubscriptionsTable.deletedAt),
+				openSubscription,
 				ne(RestockSubscriptionsTable.productId, productId),
 			),
 		)
@@ -167,12 +186,12 @@ export async function subscribeToRestock(input: {
 
 export async function getRestockWaitCount(productId: number): Promise<number> {
 	const [row] = await db()
-		.select({ c: count() })
+		.select({ c: countDistinct(RestockSubscriptionsTable.contact) })
 		.from(RestockSubscriptionsTable)
 		.where(
 			and(
 				eq(RestockSubscriptionsTable.productId, productId),
-				isNull(RestockSubscriptionsTable.deletedAt),
+				openSubscription,
 			),
 		);
 
@@ -183,16 +202,89 @@ export async function listRestockWaitCounts(limit = 50) {
 	const rows = await db()
 		.select({
 			productId: RestockSubscriptionsTable.productId,
-			waitCount: count(),
+			waitCount: countDistinct(RestockSubscriptionsTable.contact),
 		})
 		.from(RestockSubscriptionsTable)
-		.where(isNull(RestockSubscriptionsTable.deletedAt))
+		.where(openSubscription)
 		.groupBy(RestockSubscriptionsTable.productId)
-		.orderBy(sql`count(*) desc`)
+		.orderBy(sql`count(distinct ${RestockSubscriptionsTable.contact}) desc`)
 		.limit(limit);
 
 	return rows.map((row) => ({
 		productId: row.productId,
 		waitCount: Number(row.waitCount),
+	}));
+}
+
+export async function listRestockWaitlist(limit = 50) {
+	const ranked = await db()
+		.select({
+			productId: RestockSubscriptionsTable.productId,
+			waitCount: countDistinct(RestockSubscriptionsTable.contact),
+			name: ProductsTable.name,
+			slug: ProductsTable.slug,
+			stock: ProductsTable.stock,
+			status: ProductsTable.status,
+			brandName: BrandsTable.name,
+		})
+		.from(RestockSubscriptionsTable)
+		.innerJoin(
+			ProductsTable,
+			eq(ProductsTable.id, RestockSubscriptionsTable.productId),
+		)
+		.leftJoin(BrandsTable, eq(BrandsTable.id, ProductsTable.brandId))
+		.where(
+			and(
+				openSubscription,
+				isNull(ProductsTable.deletedAt),
+			),
+		)
+		.groupBy(
+			RestockSubscriptionsTable.productId,
+			ProductsTable.name,
+			ProductsTable.slug,
+			ProductsTable.stock,
+			ProductsTable.status,
+			BrandsTable.name,
+		)
+		.orderBy(sql`count(distinct ${RestockSubscriptionsTable.contact}) desc`)
+		.limit(limit);
+
+	if (ranked.length === 0) {
+		return [];
+	}
+
+	const productIds = ranked.map((row) => row.productId);
+	const images = await db()
+		.select({
+			productId: ProductImagesTable.productId,
+			url: ProductImagesTable.url,
+			isPrimary: ProductImagesTable.isPrimary,
+		})
+		.from(ProductImagesTable)
+		.where(
+			and(
+				inArray(ProductImagesTable.productId, productIds),
+				isNull(ProductImagesTable.deletedAt),
+			),
+		);
+
+	const imageByProduct = new Map<number, string>();
+	for (const image of images) {
+		const existing = imageByProduct.get(image.productId);
+		if (!existing || image.isPrimary) {
+			imageByProduct.set(image.productId, image.url);
+		}
+	}
+
+	return ranked.map((row) => ({
+		productId: row.productId,
+		waitCount: Number(row.waitCount),
+		name: row.name,
+		slug: row.slug,
+		stock: row.stock,
+		status: row.status,
+		brandName: row.brandName ?? null,
+		image: imageByProduct.get(row.productId) ?? null,
 	}));
 }

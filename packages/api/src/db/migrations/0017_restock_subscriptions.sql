@@ -10,8 +10,8 @@ CREATE TABLE "ecom_vit_restock_subscription" (
 --> statement-breakpoint
 ALTER TABLE "ecom_vit_restock_subscription" ADD CONSTRAINT "ecom_vit_restock_subscription_product_id_ecom_vit_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."ecom_vit_product"("id") ON DELETE no action ON UPDATE no action;
 --> statement-breakpoint
-CREATE UNIQUE INDEX "restock_sub_open_unique_idx" ON "ecom_vit_restock_subscription" USING btree ("product_id","channel","contact") WHERE "deleted_at" IS NULL;
+CREATE UNIQUE INDEX "restock_sub_open_unique_idx" ON "ecom_vit_restock_subscription" USING btree ("product_id","channel","contact") WHERE "deleted_at" IS NULL AND "notified_at" IS NULL;
 --> statement-breakpoint
-CREATE INDEX "restock_sub_product_open_idx" ON "ecom_vit_restock_subscription" USING btree ("product_id") WHERE "deleted_at" IS NULL;
+CREATE INDEX "restock_sub_product_open_idx" ON "ecom_vit_restock_subscription" USING btree ("product_id") WHERE "deleted_at" IS NULL AND "notified_at" IS NULL;
 --> statement-breakpoint
-CREATE INDEX "restock_sub_contact_open_idx" ON "ecom_vit_restock_subscription" USING btree ("contact") WHERE "deleted_at" IS NULL;
+CREATE INDEX "restock_sub_contact_open_idx" ON "ecom_vit_restock_subscription" USING btree ("contact") WHERE "deleted_at" IS NULL AND "notified_at" IS NULL;

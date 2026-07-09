@@ -9,7 +9,7 @@ import RestockNotifySheet from "./restock-notify-sheet";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
-	disabled?: boolean;
+	outOfStock?: boolean;
 	productName?: string;
 }
 
@@ -26,7 +26,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 
 	const handleAdd = () => {
-		if (props.disabled) {
+		if (props.outOfStock) {
 			setNotifyOpen(true);
 			return;
 		}
@@ -41,18 +41,20 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={!props.disabled && isAdded()}
-				aria-label={props.disabled ? "Мэдэгдэл авах" : "Сагслах"}
+				disabled={!props.outOfStock && isAdded()}
+				aria-label={props.outOfStock ? "Мэдэгдэл авах" : "Сагслах"}
 				class={cn(
 					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out",
 					"active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
-					isAdded() && !props.disabled && "bg-success text-success-foreground",
-					props.disabled &&
+					isAdded() &&
+						!props.outOfStock &&
+						"bg-success text-success-foreground",
+					props.outOfStock &&
 						"border-border bg-card text-foreground shadow-soft-sm",
 				)}
 			>
 				<Show
-					when={!props.disabled}
+					when={!props.outOfStock}
 					fallback={<IconNotification class="h-5 w-5" />}
 				>
 					<span class="grid place-items-center">
@@ -71,7 +73,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					</span>
 				</Show>
 			</button>
-			<Show when={props.disabled}>
+			<Show when={props.outOfStock}>
 				<RestockNotifySheet
 					open={notifyOpen()}
 					onOpenChange={setNotifyOpen}

@@ -174,7 +174,7 @@ const ProductCard = (props: ProductCardProps) => {
 						{formatCurrency(product().price)}
 					</div>
 					<CardAddButton
-						disabled={isOutOfStock()}
+						outOfStock={isOutOfStock()}
 						productName={product().name}
 						cartItem={{
 							productId: product().id,

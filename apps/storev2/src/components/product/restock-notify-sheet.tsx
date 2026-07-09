@@ -89,6 +89,17 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 				});
 				props.onOpenChange(false);
 			},
+			onError: (error) => {
+				showToast({
+					title: "Алдаа",
+					description:
+						error instanceof Error
+							? error.message
+							: "Мэдэгдэл захиалахад алдаа гарлаа.",
+					variant: "error",
+					duration: 5000,
+				});
+			},
 		}),
 		() => queryClient,
 	);

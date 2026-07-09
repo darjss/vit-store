@@ -376,13 +376,19 @@ export const RestockSubscriptionsTable = createTable(
 	(table) => [
 		uniqueIndex("restock_sub_open_unique_idx")
 			.on(table.productId, table.channel, table.contact)
-			.where(sql`${table.deletedAt} is null`),
+			.where(
+				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+			),
 		index("restock_sub_product_open_idx")
 			.on(table.productId)
-			.where(sql`${table.deletedAt} is null`),
+			.where(
+				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+			),
 		index("restock_sub_contact_open_idx")
 			.on(table.contact)
-			.where(sql`${table.deletedAt} is null`),
+			.where(
+				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+			),
 	],
 );
 

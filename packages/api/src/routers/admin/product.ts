@@ -16,7 +16,7 @@ import { PRODUCT_PER_PAGE, editableProductFields } from "~/lib/constants";
 import { scheduleProductSearchRebuild, searchProducts } from "~/lib/product-search/client";
 import {
 	getRestockWaitCount,
-	listRestockWaitCounts,
+	listRestockWaitlist,
 	scheduleRestockDispatch,
 } from "~/lib/restock";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -489,29 +489,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         }))
         .query(async ({ ctx, input }) => {
         try {
-            const ranked = await listRestockWaitCounts(input.limit ?? 50);
-            if (ranked.length === 0) {
-                return [];
-            }
-            const products = await Promise.all(
-                ranked.map((row) => productQueries.admin.getProductById(row.productId)),
-            );
-            return ranked.flatMap((row, index) => {
-                const product = products[index];
-                if (!product) return [];
-                return [{
-                    productId: row.productId,
-                    waitCount: row.waitCount,
-                    name: product.name,
-                    slug: product.slug,
-                    stock: product.stock,
-                    status: product.status,
-                    image: product.images.find((img) => img.isPrimary)?.url
-                        ?? product.images[0]?.url
-                        ?? null,
-                    brandName: product.brand?.name ?? null,
-                }];
-            });
+            return await listRestockWaitlist(input.limit ?? 50);
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {

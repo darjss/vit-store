@@ -223,31 +223,25 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
-			const previous = await db().query.ProductsTable.findFirst({
-				columns: { stock: true },
-				where: and(
-					eq(ProductsTable.id, productId),
-					isNull(ProductsTable.deletedAt),
-				),
-			});
-			if (!previous) {
-				return null;
-			}
-
-			const previousStock = previous.stock;
-			const newStock =
-				type === "add"
-					? previousStock + numberToUpdate
-					: previousStock - numberToUpdate;
-
-			await db()
+			const [row] = await db()
 				.update(ProductsTable)
 				.set({
 					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
 				})
 				.where(
 					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-				);
+				)
+				.returning({ stock: ProductsTable.stock });
+
+			if (!row) {
+				return null;
+			}
+
+			const newStock = row.stock;
+			const previousStock =
+				type === "add"
+					? newStock - numberToUpdate
+					: newStock + numberToUpdate;
 
 			return { previousStock, newStock };
 		},
@@ -404,21 +398,32 @@ export const adminQueries = {
 		},
 
 		async setProductStock(id: number, newStock: number) {
-			const previous = await db().query.ProductsTable.findFirst({
-				columns: { stock: true },
-				where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
+			return db().transaction(async (tx) => {
+				const [previous] = await tx
+					.select({ stock: ProductsTable.stock })
+					.from(ProductsTable)
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
+					.for("update");
+
+				if (!previous) {
+					return null;
+				}
+
+				const [updated] = await tx
+					.update(ProductsTable)
+					.set({ stock: newStock })
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
+					.returning({ stock: ProductsTable.stock });
+
+				if (!updated) {
+					return null;
+				}
+
+				return {
+					previousStock: previous.stock,
+					newStock: updated.stock,
+				};
 			});
-			if (!previous) {
-				return null;
-			}
-
-			const previousStock = previous.stock;
-			await db()
-				.update(ProductsTable)
-				.set({ stock: newStock })
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
-
-			return { previousStock, newStock };
 		},
 
 		async getAllProductValue() {

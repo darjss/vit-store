@@ -91,7 +91,7 @@ const isLowStock = stockState === "low";
 			</div>
 			<CardAddButton
 				client:load
-				disabled={isOutOfStock}
+				outOfStock={isOutOfStock}
 				productName={product.name}
 				cartItem={{
 					productId: product.id,
