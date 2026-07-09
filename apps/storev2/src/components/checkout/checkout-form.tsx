@@ -22,6 +22,10 @@ import {
 	identifyUser,
 	trackCheckoutStarted,
 } from "@/lib/analytics";
+import {
+	celebrateOnce,
+	orderCreatedCelebrationKey,
+} from "@/lib/celebration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart, createCartState } from "@/store/cart";
@@ -147,6 +151,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				});
 				setStep("payment");
 				window.scrollTo({ top: 0, behavior: "smooth" });
+				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
 			},
 			onError: () => {
 				showToast({
