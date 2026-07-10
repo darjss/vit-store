@@ -40,7 +40,7 @@ type SubscribeResult = {
 
 const openSubscription = and(
 	isNull(RestockSubscriptionsTable.deletedAt),
-	isNull(RestockSubscriptionsTable.notifiedAt),
+	sql`${RestockSubscriptionsTable.deliveryState} in ('pending', 'sending')`,
 );
 
 function normalizeAndValidateContacts(
@@ -142,6 +142,7 @@ async function insertOneContact(
 			productId,
 			channel: item.channel,
 			contact: item.contact,
+			deliveryKey: `restock-${crypto.randomUUID()}`,
 		});
 		return {
 			channel: item.channel,
@@ -167,6 +168,14 @@ export async function subscribeToRestock(input: {
 	const contacts = normalizeAndValidateContacts(input.contacts);
 
 	const results = await db().transaction(async (tx) => {
+		const contactsToLock = [
+			...new Set(contacts.map((item) => item.contact)),
+		].sort();
+		for (const contact of contactsToLock) {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtextextended(${contact}, 0))`,
+			);
+		}
 		const out: SubscribeResult[] = [];
 		for (const item of contacts) {
 			out.push(await insertOneContact(tx, input.productId, item));
@@ -189,10 +198,7 @@ export async function getRestockWaitCount(productId: number): Promise<number> {
 		.select({ c: countDistinct(RestockSubscriptionsTable.contact) })
 		.from(RestockSubscriptionsTable)
 		.where(
-			and(
-				eq(RestockSubscriptionsTable.productId, productId),
-				openSubscription,
-			),
+			and(eq(RestockSubscriptionsTable.productId, productId), openSubscription),
 		);
 
 	return Number(row?.c ?? 0);
@@ -233,12 +239,7 @@ export async function listRestockWaitlist(limit = 50) {
 			eq(ProductsTable.id, RestockSubscriptionsTable.productId),
 		)
 		.leftJoin(BrandsTable, eq(BrandsTable.id, ProductsTable.brandId))
-		.where(
-			and(
-				openSubscription,
-				isNull(ProductsTable.deletedAt),
-			),
-		)
+		.where(and(openSubscription, isNull(ProductsTable.deletedAt)))
 		.groupBy(
 			RestockSubscriptionsTable.productId,
 			ProductsTable.name,

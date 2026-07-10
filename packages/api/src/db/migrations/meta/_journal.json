@@ -127,6 +127,13 @@
       "when": 1783618800000,
       "tag": "0017_restock_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783619200000,
+      "tag": "0018_restock_delivery_outbox",
+      "breakpoints": true
     }
   ]
 }

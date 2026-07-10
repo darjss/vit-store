@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, lte, sql } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 import { createLogger } from "evlog";
 import { db } from "~/db/client";
@@ -6,9 +6,11 @@ import { ProductsTable, RestockSubscriptionsTable } from "~/db/schema";
 import { sendRestockNotification } from "~/lib/restock/send";
 
 const MAX_OPEN_PRODUCTS_PER_CONTACT = 5;
-const STALE_CLAIM_MS = 10 * 60 * 1000;
+const DELIVERY_BATCH_SIZE = 25;
+const MAX_DELIVERY_ATTEMPTS = 5;
+const CLAIM_LEASE_MS = 10 * 60 * 1000;
 
-export { MAX_OPEN_PRODUCTS_PER_CONTACT };
+export { DELIVERY_BATCH_SIZE, MAX_OPEN_PRODUCTS_PER_CONTACT };
 
 function createRestockLogger() {
 	return createLogger({
@@ -25,183 +27,208 @@ export function shouldDispatchRestock(input: {
 	return input.previousStock === 0 && input.newStock > 0;
 }
 
-async function claimSubscription(subscriptionId: number, claimedAt: Date) {
+function retryAt(attemptCount: number): Date {
+	return new Date(
+		Date.now() + Math.min(60, 5 * 2 ** Math.max(0, attemptCount - 1)) * 60_000,
+	);
+}
+
+async function claimSubscription(subscriptionId: number) {
+	const token = crypto.randomUUID();
+	const now = new Date();
 	const claimed = await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			notifiedAt: claimedAt,
+			deliveryState: "sending",
+			claimToken: token,
+			leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
+			attemptCount: sql`${RestockSubscriptionsTable.attemptCount} + 1`,
 		})
 		.where(
 			and(
 				eq(RestockSubscriptionsTable.id, subscriptionId),
 				isNull(RestockSubscriptionsTable.deletedAt),
-				isNull(RestockSubscriptionsTable.notifiedAt),
+				eq(RestockSubscriptionsTable.deliveryState, "pending"),
+				lte(RestockSubscriptionsTable.nextAttemptAt, now),
 			),
 		)
 		.returning({
 			id: RestockSubscriptionsTable.id,
 			channel: RestockSubscriptionsTable.channel,
 			contact: RestockSubscriptionsTable.contact,
+			deliveryKey: RestockSubscriptionsTable.deliveryKey,
+			attemptCount: RestockSubscriptionsTable.attemptCount,
 		});
-
-	return claimed[0] ?? null;
+	return claimed[0] ? { ...claimed[0], claimToken: token } : null;
 }
 
-async function completeSubscription(subscriptionId: number, completedAt: Date) {
+async function finishClaim(input: {
+	id: number;
+	claimToken: string;
+	state: "sent" | "failed" | "unknown";
+	error?: string;
+}) {
 	await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			deletedAt: completedAt,
+			deliveryState: input.state,
+			claimToken: null,
+			leaseExpiresAt: null,
+			terminalAt: new Date(),
+			lastError: input.error?.slice(0, 500) ?? null,
+			contact: null,
 		})
 		.where(
 			and(
-				eq(RestockSubscriptionsTable.id, subscriptionId),
-				isNull(RestockSubscriptionsTable.deletedAt),
+				eq(RestockSubscriptionsTable.id, input.id),
+				eq(RestockSubscriptionsTable.deliveryState, "sending"),
+				eq(RestockSubscriptionsTable.claimToken, input.claimToken),
 			),
 		);
 }
 
-async function reopenSubscription(subscriptionId: number) {
-	try {
-		await db()
-			.update(RestockSubscriptionsTable)
-			.set({
-				notifiedAt: null,
-			})
-			.where(
-				and(
-					eq(RestockSubscriptionsTable.id, subscriptionId),
-					isNull(RestockSubscriptionsTable.deletedAt),
-					isNotNull(RestockSubscriptionsTable.notifiedAt),
-				),
-			);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		const uniqueConflict =
-			message.includes("restock_sub_open_unique_idx") ||
-			message.includes("unique") ||
-			message.includes("duplicate");
-		if (!uniqueConflict) {
-			throw error;
-		}
-		await db()
-			.update(RestockSubscriptionsTable)
-			.set({
-				deletedAt: new Date(),
-			})
-			.where(
-				and(
-					eq(RestockSubscriptionsTable.id, subscriptionId),
-					isNull(RestockSubscriptionsTable.deletedAt),
-				),
-			);
+async function retryClaim(input: {
+	id: number;
+	claimToken: string;
+	attemptCount: number;
+	error: string;
+}) {
+	if (input.attemptCount >= MAX_DELIVERY_ATTEMPTS) {
+		return finishClaim({ ...input, state: "failed" });
 	}
+	await db()
+		.update(RestockSubscriptionsTable)
+		.set({
+			deliveryState: "pending",
+			claimToken: null,
+			leaseExpiresAt: null,
+			nextAttemptAt: retryAt(input.attemptCount),
+			lastError: input.error.slice(0, 500),
+		})
+		.where(
+			and(
+				eq(RestockSubscriptionsTable.id, input.id),
+				eq(RestockSubscriptionsTable.deliveryState, "sending"),
+				eq(RestockSubscriptionsTable.claimToken, input.claimToken),
+			),
+		);
 }
 
-export async function notifyRestockSubscribers(productId: number) {
+async function reclaimExpiredClaims() {
+	return db()
+		.update(RestockSubscriptionsTable)
+		.set({
+			deliveryState: "pending",
+			claimToken: null,
+			leaseExpiresAt: null,
+			nextAttemptAt: new Date(),
+			lastError: "delivery lease expired before completion",
+		})
+		.where(
+			and(
+				eq(RestockSubscriptionsTable.deliveryState, "sending"),
+				lt(RestockSubscriptionsTable.leaseExpiresAt, new Date()),
+				isNull(RestockSubscriptionsTable.deletedAt),
+			),
+		)
+		.returning({ id: RestockSubscriptionsTable.id });
+}
+
+export async function notifyRestockSubscribers(
+	productId: number,
+	limit = DELIVERY_BATCH_SIZE,
+) {
 	const log = createRestockLogger();
 	const product = await db().query.ProductsTable.findFirst({
-		columns: {
-			id: true,
-			name: true,
-			slug: true,
-			stock: true,
-			status: true,
-			deletedAt: true,
-		},
+		columns: { id: true, name: true, slug: true, stock: true, status: true },
 		where: and(
 			eq(ProductsTable.id, productId),
 			isNull(ProductsTable.deletedAt),
 		),
 	});
+	if (!product || product.status !== "active" || product.stock <= 0)
+		return { notified: 0, failed: 0, claimed: 0 };
 
-	if (!product) {
-		log.info("restock.skip", {
-			reason: "product_missing",
-			product_id: productId,
-		});
-		log.emit();
-		return { notified: 0, failed: 0 };
-	}
-
-	if (product.status !== "active" || product.stock <= 0) {
-		log.info("restock.skip", {
-			reason: "product_not_sellable",
-			product_id: productId,
-			product_status: product.status,
-			product_stock: product.stock,
-		});
-		log.emit();
-		return { notified: 0, failed: 0 };
-	}
-
-	const subscriptions = await db().query.RestockSubscriptionsTable.findMany({
-		where: and(
-			eq(RestockSubscriptionsTable.productId, productId),
-			isNull(RestockSubscriptionsTable.deletedAt),
-			isNull(RestockSubscriptionsTable.notifiedAt),
-		),
-	});
-
-	if (subscriptions.length === 0) {
-		return { notified: 0, failed: 0 };
-	}
-
+	const candidates = await db()
+		.select({ id: RestockSubscriptionsTable.id })
+		.from(RestockSubscriptionsTable)
+		.where(
+			and(
+				eq(RestockSubscriptionsTable.productId, productId),
+				eq(RestockSubscriptionsTable.deliveryState, "pending"),
+				isNull(RestockSubscriptionsTable.deletedAt),
+				lte(RestockSubscriptionsTable.nextAttemptAt, new Date()),
+			),
+		)
+		.orderBy(RestockSubscriptionsTable.id)
+		.limit(limit);
 	let notified = 0;
 	let failed = 0;
-	const now = new Date();
-
-	for (const sub of subscriptions) {
-		const claimed = await claimSubscription(sub.id, now);
-		if (!claimed) {
-			continue;
-		}
-
-		try {
-			await sendRestockNotification({
-				channel: claimed.channel,
-				contact: claimed.contact,
-				productName: product.name,
-				productSlug: product.slug,
-				productId: product.id,
-			});
-			await completeSubscription(claimed.id, new Date());
-			notified += 1;
-		} catch (error) {
-			failed += 1;
-			try {
-				await reopenSubscription(claimed.id);
-			} catch (reopenError) {
-				log.error(
-					reopenError instanceof Error
-						? reopenError
-						: new Error(String(reopenError)),
-					{
-						event: "restock.reopen_failed",
-						product_id: productId,
-						subscription_id: claimed.id,
-						channel: claimed.channel,
-					},
-				);
-			}
-			log.error(error instanceof Error ? error : new Error(String(error)), {
-				event: "restock.notify_failed",
-				product_id: productId,
-				subscription_id: claimed.id,
-				channel: claimed.channel,
-			});
-		}
+	let claimedCount = 0;
+	for (const candidate of candidates) {
+		const result = await deliverCandidate(candidate.id, product, log);
+		claimedCount += result.claimed;
+		notified += result.notified;
+		failed += result.failed;
 	}
-
 	log.info("restock.dispatch_complete", {
 		product_id: productId,
 		notified,
 		failed,
-		total: subscriptions.length,
+		claimed: claimedCount,
+		batch_limit: limit,
 	});
 	log.emit();
+	return { notified, failed, claimed: claimedCount };
+}
 
-	return { notified, failed };
+async function deliverCandidate(
+	subscriptionId: number,
+	product: { id: number; name: string; slug: string },
+	log: RequestLogger<Record<string, unknown>>,
+) {
+	const claimed = await claimSubscription(subscriptionId);
+	if (!claimed || !claimed.contact)
+		return { claimed: 0, notified: 0, failed: 0 };
+	try {
+		await sendRestockNotification({
+			channel: claimed.channel,
+			contact: claimed.contact,
+			productName: product.name,
+			productSlug: product.slug,
+			productId: product.id,
+			deliveryKey: claimed.deliveryKey,
+		});
+		await finishClaim({
+			id: claimed.id,
+			claimToken: claimed.claimToken,
+			state: "sent",
+		});
+		return { claimed: 1, notified: 1, failed: 0 };
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (claimed.channel === "sms")
+			await finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "unknown",
+				error: message,
+			});
+		else
+			await retryClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				attemptCount: claimed.attemptCount,
+				error: message,
+			});
+		log.error(error instanceof Error ? error : new Error(message), {
+			event: "restock.notify_failed",
+			product_id: product.id,
+			subscription_id: claimed.id,
+			channel: claimed.channel,
+		});
+		return { claimed: 1, notified: 0, failed: 1 };
+	}
 }
 
 export async function dispatchRestockIfCrossedZero(input: {
@@ -209,41 +236,32 @@ export async function dispatchRestockIfCrossedZero(input: {
 	previousStock: number;
 	newStock: number;
 }) {
-	if (!shouldDispatchRestock(input)) {
-		return { notified: 0, failed: 0, skipped: true as const };
-	}
-
-	const result = await notifyRestockSubscribers(input.productId);
-	return { ...result, skipped: false as const };
+	if (!shouldDispatchRestock(input))
+		return { notified: 0, failed: 0, claimed: 0, skipped: true as const };
+	return {
+		...(await notifyRestockSubscribers(input.productId)),
+		skipped: false as const,
+	};
 }
 
 type WaitUntilContext = {
 	c: { executionCtx: ExecutionContext };
-	log: RequestLogger<any>;
+	log: RequestLogger<Record<string, unknown>>;
 };
-
 export function scheduleRestockDispatch(
 	ctx: WaitUntilContext,
-	input: {
-		productId: number;
-		previousStock: number;
-		newStock: number;
-	},
+	input: { productId: number; previousStock: number; newStock: number },
 ): void {
-	if (!shouldDispatchRestock(input)) {
-		return;
-	}
-
+	if (!shouldDispatchRestock(input)) return;
 	ctx.c.executionCtx.waitUntil(
-		notifyRestockSubscribers(input.productId).catch((error) => {
+		notifyRestockSubscribers(input.productId).catch((error) =>
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 				event: "restock.dispatch_failed",
 				product_id: input.productId,
-			});
-		}),
+			}),
+		),
 	);
 }
-
 export function scheduleRestockDispatches(
 	ctx: WaitUntilContext,
 	candidates: Array<{
@@ -252,39 +270,11 @@ export function scheduleRestockDispatches(
 		newStock: number;
 	}>,
 ): void {
-	for (const candidate of candidates) {
-		scheduleRestockDispatch(ctx, candidate);
-	}
-}
-
-async function reclaimStaleClaims() {
-	const cutoff = new Date(Date.now() - STALE_CLAIM_MS);
-	const stale = await db()
-		.select({
-			id: RestockSubscriptionsTable.id,
-		})
-		.from(RestockSubscriptionsTable)
-		.where(
-			and(
-				isNull(RestockSubscriptionsTable.deletedAt),
-				isNotNull(RestockSubscriptionsTable.notifiedAt),
-				lt(RestockSubscriptionsTable.notifiedAt, cutoff),
-			),
-		);
-
-	let reclaimed = 0;
-	for (const row of stale) {
-		try {
-			await reopenSubscription(row.id);
-			reclaimed += 1;
-		} catch {}
-	}
-	return reclaimed;
+	for (const candidate of candidates) scheduleRestockDispatch(ctx, candidate);
 }
 
 export async function runRestockSafetyNet() {
-	const reclaimed = await reclaimStaleClaims();
-
+	const reclaimed = await reclaimExpiredClaims();
 	const openSubs = await db()
 		.selectDistinct({ productId: RestockSubscriptionsTable.productId })
 		.from(RestockSubscriptionsTable)
@@ -294,27 +284,27 @@ export async function runRestockSafetyNet() {
 		)
 		.where(
 			and(
+				eq(RestockSubscriptionsTable.deliveryState, "pending"),
 				isNull(RestockSubscriptionsTable.deletedAt),
-				isNull(RestockSubscriptionsTable.notifiedAt),
 				isNull(ProductsTable.deletedAt),
 				eq(ProductsTable.status, "active"),
 				gt(ProductsTable.stock, 0),
+				lte(RestockSubscriptionsTable.nextAttemptAt, new Date()),
 			),
-		);
-
-	let totalNotified = 0;
-	let totalFailed = 0;
-
+		)
+		.orderBy(RestockSubscriptionsTable.productId)
+		.limit(DELIVERY_BATCH_SIZE);
+	let notified = 0;
+	let failed = 0;
 	for (const row of openSubs) {
 		const result = await notifyRestockSubscribers(row.productId);
-		totalNotified += result.notified;
-		totalFailed += result.failed;
+		notified += result.notified;
+		failed += result.failed;
 	}
-
 	return {
 		productsChecked: openSubs.length,
-		reclaimed,
-		notified: totalNotified,
-		failed: totalFailed,
+		reclaimed: reclaimed.length,
+		notified,
+		failed,
 	};
 }

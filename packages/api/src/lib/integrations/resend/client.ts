@@ -6,6 +6,7 @@ export async function sendEmail(input: {
 	to: string;
 	subject: string;
 	text: string;
+	idempotencyKey?: string;
 }) {
 	if (!process.env.RESEND_API_KEY) {
 		throw new Error("RESEND_API_KEY is not configured");
@@ -18,6 +19,7 @@ export async function sendEmail(input: {
 		to: input.to,
 		subject: input.subject,
 		text: input.text,
+		...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
 	});
 
 	if (result.error) {

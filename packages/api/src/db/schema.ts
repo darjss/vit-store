@@ -368,26 +368,38 @@ export const RestockSubscriptionsTable = createTable(
 			.references(() => ProductsTable.id)
 			.notNull(),
 		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
-		contact: text("contact").notNull(),
+		// Erased on every terminal state; only pending/sending deliveries retain it.
+		contact: text("contact"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
-		notifiedAt: timestamp("notified_at"),
+		deliveryState: text("delivery_state", {
+			enum: ["pending", "sending", "sent", "failed", "unknown", "cancelled"],
+		})
+			.default("pending")
+			.notNull(),
+		deliveryKey: varchar("delivery_key", { length: 96 }).notNull(),
+		claimToken: varchar("claim_token", { length: 64 }),
+		leaseExpiresAt: timestamp("lease_expires_at"),
+		attemptCount: integer("attempt_count").default(0).notNull(),
+		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+		terminalAt: timestamp("terminal_at"),
+		lastError: text("last_error"),
 		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		uniqueIndex("restock_sub_open_unique_idx")
 			.on(table.productId, table.channel, table.contact)
 			.where(
-				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+				sql`${table.deletedAt} is null and ${table.deliveryState} in ('pending', 'sending')`,
 			),
 		index("restock_sub_product_open_idx")
 			.on(table.productId)
 			.where(
-				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+				sql`${table.deletedAt} is null and ${table.deliveryState} = 'pending'`,
 			),
 		index("restock_sub_contact_open_idx")
 			.on(table.contact)
 			.where(
-				sql`${table.deletedAt} is null and ${table.notifiedAt} is null`,
+				sql`${table.deletedAt} is null and ${table.deliveryState} in ('pending', 'sending')`,
 			),
 	],
 );
