@@ -5,13 +5,23 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import RestockNotifySheet from "./restock-notify-sheet";
+import { useInventorySnapshot } from "./inventory-reconciler";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
+	isInStock: boolean;
 }
 
 export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	const [visible, setVisible] = createSignal(false);
+	const inventory = useInventorySnapshot(props.cartItem.productId);
+	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const isInStock = () =>
+		inventory()
+			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
+			: props.isInStock;
+	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	onMount(() => {
 		const mainCta = document.getElementById("product-main-cta");
@@ -30,7 +40,11 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	});
 
 	const handleAdd = () => {
-		cart.add(props.cartItem, { openDrawer: true });
+		if (!isInStock()) {
+			setNotifyOpen(true);
+			return;
+		}
+		cart.add({ ...props.cartItem, price: price() }, { openDrawer: true });
 	};
 
 	return (
@@ -54,7 +68,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 									{props.cartItem.name}
 								</p>
 								<p class="font-display text-base text-foreground">
-									{formatCurrency(props.cartItem.price)}
+									{formatCurrency(price())}
 								</p>
 							</div>
 							<Button
@@ -63,13 +77,21 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 								class="shrink-0"
 								onClick={handleAdd}
 							>
-								<IconShoppingCart class="h-4 w-4" />
-								Сагслах
-							</Button>
+									<Show when={isInStock()} fallback={<span>Дууссан</span>}>
+										<IconShoppingCart class="h-4 w-4" />
+										Сагслах
+									</Show>
+								</Button>
 						</div>
-					</Motion.div>
+				</Motion.div>
 				</Show>
 			</Presence>
+			<RestockNotifySheet
+				open={notifyOpen()}
+				onOpenChange={setNotifyOpen}
+				productId={props.cartItem.productId}
+				productName={props.cartItem.name}
+			/>
 		</>
 	);
 }

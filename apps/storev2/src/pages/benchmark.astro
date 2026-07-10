@@ -15,6 +15,7 @@
 
 
 import BenchmarkComparison from "@/components/benchmark-comparison";
+import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
 import IconCheck from "~icons/ri/check-line";
 import IconServer from "~icons/ri/server-line";
@@ -24,7 +25,7 @@ import { createServerClient } from "../lib/trpc";
 export const prerender = false;
 
 const serverStartTime = performance.now();
-const serverApi = createServerClient("cookieHeader", Astro.locals.runtime.env.server);
+const serverApi = createServerClient("cookieHeader", env.server);
 const serverData = await serverApi.product.getProductBenchmark.query();
 const serverEndTime = performance.now();
 const serverFetchTime = serverEndTime - serverStartTime;

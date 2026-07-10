@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { getProductImageProps } from "@/lib/image";
 import { washBg } from "@/lib/wash";
 import CardAddButton from "./card-add-button";
+import { useInventorySnapshot } from "./inventory-reconciler";
 import ProductImageFallback from "./product-image-fallback";
 
 /**
@@ -77,6 +78,7 @@ interface ProductCardProps {
 
 const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
+	const inventory = useInventorySnapshot(product().id);
 
 	const washClass = createMemo(() =>
 		washBg(product().categoryId ?? "uncategorized"),
@@ -86,9 +88,16 @@ const ProductCard = (props: ProductCardProps) => {
 	);
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
-	const stockState = createMemo(() => productStockState(product().stock));
-	const isOutOfStock = createMemo(() => stockState() === "out");
-	const isLowStock = createMemo(() => stockState() === "low");
+	const stockState = createMemo(() => productStockState(inventory()?.stock ?? product().stock));
+	const isOutOfStock = createMemo(() =>
+		inventory()
+			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
+			: stockState() === "out",
+	);
+	const isLowStock = createMemo(
+		() => !isOutOfStock() && stockState() === "low",
+	);
+	const price = createMemo(() => inventory()?.price ?? product().price);
 	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
 	const [imageFailed, setImageFailed] = createSignal(false);
 
@@ -135,23 +144,23 @@ const ProductCard = (props: ProductCardProps) => {
 						</Badge>
 					</Show>
 
-					<Show when={isLowStock()}>
+					<span data-inventory-stock-low={product().id} hidden={!isLowStock()}>
 						<Badge
 							variant="warning"
 							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
 						>
 							Цөөн үлдсэн
 						</Badge>
-					</Show>
+					</span>
 
-					<Show when={isOutOfStock()}>
+					<span data-inventory-stock-out={product().id} hidden={!isOutOfStock()}>
 						<Badge
 							variant="outline"
 							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
 						>
 							Дууссан
 						</Badge>
-					</Show>
+					</span>
 				</div>
 			</a>
 
@@ -170,8 +179,8 @@ const ProductCard = (props: ProductCardProps) => {
 				</a>
 
 				<div class="mt-auto flex items-end justify-between gap-2 pt-2">
-					<div class="font-bold font-display text-base tracking-tight">
-						{formatCurrency(product().price)}
+					<div class="font-bold font-display text-base tracking-tight" data-inventory-price={product().id}>
+						{formatCurrency(price())}
 					</div>
 					<CardAddButton
 						outOfStock={isOutOfStock()}
