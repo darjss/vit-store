@@ -1,7 +1,11 @@
-# Prerendered HTML pages — edge-cacheable with short s-maxage + stale-while-revalidate
-# SSR pages get the same headers via middleware.
-/*
-  Cache-Control: public, s-maxage=60, stale-while-revalidate=300
+# Static assets use these headers. Storefront SSR HTML is explicitly no-store
+# in middleware until secure cross-Worker invalidation exists.
+
+/404.html
+  Cache-Control: no-store
+
+/500.html
+  Cache-Control: no-store
 
 # Hashed static assets — immutable
 /_astro/*

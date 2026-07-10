@@ -292,6 +292,22 @@ export const storeQueries = {
 			});
 		},
 
+		async getProductInventory(productIds: number[]) {
+			return db().query.ProductsTable.findMany({
+				columns: {
+					id: true,
+					price: true,
+					stock: true,
+					status: true,
+				},
+				where: and(
+					inArray(ProductsTable.id, productIds),
+					eq(ProductsTable.status, "active"),
+					isNull(ProductsTable.deletedAt),
+				),
+			});
+		},
+
 		async getProductsByIds(ids: number[]) {
 			return db().query.ProductsTable.findMany({
 				columns: {

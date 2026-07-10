@@ -1,7 +1,12 @@
 import {
+	BRANDS_TAG,
+	CATEGORIES_TAG,
+	PRODUCTS_TAG,
 	type CachePolicy,
 	type CatalogCacheAccumulator,
 	cacheControlHeader,
+	inventoryTag,
+	productTag,
 } from "@vit/shared";
 import type { Context as HonoContext } from "hono";
 import type { Context, ServerHonoVariables } from "~/lib/context";
@@ -36,7 +41,11 @@ export function markCacheable(
 	policy: CachePolicy,
 	tags: string[],
 ): void {
-	if (ctx.c.req.method !== "GET") {
+	if (
+		ctx.c.req.method !== "GET" ||
+		ctx.c.req.header("cookie") ||
+		ctx.c.req.header("authorization")
+	) {
 		return;
 	}
 
@@ -46,6 +55,7 @@ export function markCacheable(
 			maxAge: policy.maxAge,
 			staleWhileRevalidate: policy.staleWhileRevalidate,
 			tags: new Set(tags),
+			useMaxAge: policy.useMaxAge ?? false,
 		});
 		return;
 	}
@@ -58,6 +68,7 @@ export function markCacheable(
 	for (const tag of tags) {
 		existing.tags.add(tag);
 	}
+	existing.useMaxAge ||= policy.useMaxAge ?? false;
 }
 
 export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
@@ -69,6 +80,7 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	// heuristic freshness and serve user-specific data to other users.
 	if (!accumulated) {
 		c.res.headers.set("Cache-Control", "no-store");
+		c.res.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
 		return;
 	}
 
@@ -77,6 +89,7 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 		cacheControlHeader({
 			maxAge: accumulated.maxAge,
 			staleWhileRevalidate: accumulated.staleWhileRevalidate,
+			useMaxAge: accumulated.useMaxAge,
 		}),
 	);
 	if (accumulated.tags.size > 0) {
@@ -100,6 +113,37 @@ export async function purgeTagsGlobal(tags: string[]): Promise<void> {
 	} catch (error) {
 		logger.error("workers_cache.purge_failed", error, { cache_tags: tags });
 	}
+}
+
+export function catalogCacheTags(
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): string[] {
+	const uniqueProductIds = [...new Set(productIds)];
+	return [
+		...new Set([
+			PRODUCTS_TAG,
+			BRANDS_TAG,
+			CATEGORIES_TAG,
+			...extraTags,
+			...uniqueProductIds.flatMap((id) => [productTag(id), inventoryTag(id)]),
+		]),
+	];
+}
+
+export async function purgeCatalogCache(
+	ctx: Context,
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): Promise<void> {
+	await purgeTags(ctx, catalogCacheTags(productIds, extraTags));
+}
+
+export async function purgeCatalogCacheGlobal(
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): Promise<void> {
+	await purgeTagsGlobal(catalogCacheTags(productIds, extraTags));
 }
 
 export async function purgeTags(ctx: Context, tags: string[]): Promise<void> {

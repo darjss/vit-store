@@ -15,6 +15,7 @@
 
 
 import Layout from "@/layouts/Layout.astro";
+import { env } from "cloudflare:workers";
 import { createServerClient } from "@/lib/trpc";
 import IconShoppingBag from "~icons/ri/shopping-bag-line";
 
@@ -22,7 +23,7 @@ import IconShoppingBag from "~icons/ri/shopping-bag-line";
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(
 	cookieHeader,
-	Astro.locals.runtime.env.server,
+	env.server,
 	Astro.redirect, // Pass redirect function - will automatically redirect on unauthorized
 );
 

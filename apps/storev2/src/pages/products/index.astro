@@ -1,6 +1,7 @@
 ---
 
 import ProductsList from "@/components/product/products-list";
+import InventoryReconciler from "@/components/product/inventory-reconciler";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { dehydrateSeeds } from "@/lib/hydration";
@@ -62,6 +63,7 @@ const itemListSchema = {
 		name: product.name,
 	})),
 };
+
 ---
 
 <Layout title={title} description={description}>
@@ -92,6 +94,10 @@ const itemListSchema = {
 	<ProductsList
 		client:only="solid-js"
 		dehydratedState={dehydratedState}
-		totalProductCount={totalProductCount}
-	/>
-</Layout>
+			totalProductCount={totalProductCount}
+		/>
+		<InventoryReconciler
+			client:load
+			productIds={initialProductsResult.items.map((product) => product.id)}
+		/>
+	</Layout>

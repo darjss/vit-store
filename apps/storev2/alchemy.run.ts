@@ -19,9 +19,14 @@ config({
 
 const env = createStoreAlchemyEnv(process.env);
 
+type StoreBindings = {
+	server: ReturnType<typeof WorkerRef>;
+	PUBLIC_API_URL: string;
+};
+
 console.log("stage", stage, env.PUBLIC_API_URL);
 
-export const storev2 = await Astro("front", {
+export const storev2 = await Astro<StoreBindings>("front", {
 	// The Cloudflare adapter generates a Pages-style _routes.json. This app is
 	// deployed as a Worker with static assets via Alchemy, where assets are
 	// already served before the Worker. Keeping _routes.json has caused
@@ -30,6 +35,11 @@ export const storev2 = await Astro("front", {
 	build: {
 		command: "bun run build && rm -f dist/_routes.json",
 	},
+	// @astrojs/cloudflare v14 emits the server bundle at dist/server/entry.mjs and
+	// client assets at dist/client (Alchemy's Astro resource still defaults to the
+	// legacy v12 dist/_worker.js layout, so override both explicitly).
+	entrypoint: "dist/server/entry.mjs",
+	assets: "dist/client",
 	bindings: {
 		// Reference the already-deployed server Worker by physical service name.
 		// Importing server/alchemy here causes store deploys to evaluate/deploy the

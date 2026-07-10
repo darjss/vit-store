@@ -1,5 +1,6 @@
 ---
 import PaymentStatus from "@/components/payment/payment-status";
+import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
 import { loadOrderOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
@@ -16,7 +17,7 @@ import type { OrderStatusType } from "@vit/shared/types";
 const { orderNumber } = Astro.params;
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const serverApi = createServerClient(cookieHeader, env.server);
 if (!orderNumber) {
     return Astro.redirect("/404");
 }

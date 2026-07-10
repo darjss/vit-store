@@ -1,6 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
-import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
+import {
+	CACHE_POLICY,
+	PRODUCTS_TAG,
+	inventoryTag,
+	productTag,
+} from "@vit/shared";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
@@ -40,6 +45,14 @@ const paginatedProductsInput = {
 	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	requireStock: v.optional(v.boolean(), false),
+};
+
+const inventoryInput = {
+	productIds: v.pipe(
+		v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		v.minLength(1),
+		v.maxLength(100),
+	),
 };
 
 const searchInput = {
@@ -181,6 +194,20 @@ export const product = router({
 					isPrimary: image.isPrimary,
 				})),
 			};
+		}),
+
+	getInventory: publicProcedure
+		.input(v.object(inventoryInput))
+		.query(async ({ ctx, input }) => {
+			const products = await productQueries.store.getProductInventory(
+				input.productIds,
+			);
+			markCacheable(
+				ctx,
+				CACHE_POLICY.inventory,
+				products.map((product) => inventoryTag(product.id)),
+			);
+			return products;
 		}),
 
 	searchProductsForAssistant: publicProcedure

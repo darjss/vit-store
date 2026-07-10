@@ -1,5 +1,6 @@
 ---
 import ClearCart from "@/components/payment/clear-cart";
+import { env } from "cloudflare:workers";
 import Celebration from "@/components/ui/celebration";
 import Layout from "@/layouts/Layout.astro";
 import { paymentSuccessCelebrationKey } from "@/lib/celebration";
@@ -17,7 +18,7 @@ if (!paymentNumber) {
 }
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
+const serverApi = createServerClient(cookieHeader, env.server, Astro.redirect);
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const result = await loadPaymentOrRedirect(serverApi, paymentNumber, checkoutToken, Astro.redirect);
 if ("redirect" in result) return result.redirect;

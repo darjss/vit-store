@@ -1,8 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { brandQueries } from "@vit/api/queries";
-import { addBrandSchema, BRANDS_TAG, brandTag, PRODUCTS_TAG } from "@vit/shared";
+import {
+    addBrandSchema,
+    brandTag,
+} from "@vit/shared";
 import * as v from "valibot";
-import { purgeTags } from "~/lib/cache/workers-cache";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -35,7 +38,7 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await purgeTags(ctx, [BRANDS_TAG, PRODUCTS_TAG]);
+            await purgeCatalogCache(ctx);
             scheduleProductSearchRebuild(ctx, "brand_updated");
             return { message: "Successfully updated category" };
         }
@@ -67,7 +70,7 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await purgeTags(ctx, [BRANDS_TAG, brandTag(id), PRODUCTS_TAG]);
+            await purgeCatalogCache(ctx, [], [brandTag(id)]);
             scheduleProductSearchRebuild(ctx, "brand_updated");
         }
         catch (err) {
@@ -86,7 +89,7 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ ctx, input }) => {
         try {
             await brandQueries.admin.deleteBrand(input.id);
-            await purgeTags(ctx, [BRANDS_TAG, brandTag(input.id), PRODUCTS_TAG]);
+            await purgeCatalogCache(ctx, [], [brandTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "brand_updated");
         }
         catch (err) {

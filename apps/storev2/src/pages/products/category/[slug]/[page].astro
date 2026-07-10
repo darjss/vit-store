@@ -2,6 +2,7 @@
 // Server-rendered: full HTML generated at request time for maximum reliability
 
 import Layout from "@/layouts/Layout.astro";
+import InventoryReconciler from "@/components/product/inventory-reconciler";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
 import SortBar from "@/components/product/sort-bar.astro";
@@ -74,6 +75,7 @@ const itemListSchema = {
 		name: p.name,
 	})),
 };
+
 ---
 
 <Layout title={seoTitle} description={seoDescription}>
@@ -142,4 +144,5 @@ const itemListSchema = {
 			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} search={sortQuery} />
 		)}
 	</div>
+	<InventoryReconciler client:load productIds={products.map((product) => product.id)} />
 </Layout>
