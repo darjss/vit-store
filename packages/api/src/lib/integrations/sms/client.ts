@@ -73,7 +73,7 @@ interface HttpClient {
  * Create a ky-based HTTP client
  */
 function createHttpClient(): HttpClient {
-	const client = ky.create({ throwHttpErrors: false });
+	const client = ky.create({ throwHttpErrors: false, timeout: 10_000 });
 
 	const handleResponse = async <T>(response: Response): Promise<T> => {
 		if (response.status === 204) {

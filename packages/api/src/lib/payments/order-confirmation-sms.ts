@@ -1,7 +1,6 @@
 import { smsGateway } from "~/lib/integrations";
 import { logger } from "~/lib/logger";
 
-const PRODUCTION_STORE_URL = "https://amerikvitamin.mn";
 const MN_PHONE_RE = /^[6-9]\d{7}$/;
 const SMS_SUCCESS_STATES = new Set(["Sent", "Delivered"]);
 
@@ -13,24 +12,11 @@ export type OrderConfirmationSmsInput = {
 };
 
 function getStorefrontBaseUrl(): string {
-	const fromEnv =
-		process.env.STORE_PUBLIC_URL ??
-		process.env.PUBLIC_STORE_URL ??
-		process.env.CORS_ORIGIN?.split(",")
-			.map((origin) => origin.trim())
-			.find(
-				(origin) =>
-					origin.includes("amerikvitamin.mn") &&
-					!origin.includes("admin") &&
-					!origin.includes("api") &&
-					!origin.includes("staging"),
-			);
-
-	if (fromEnv && fromEnv.length > 0) {
-		return fromEnv.replace(/\/$/, "");
-	}
-
-	return PRODUCTION_STORE_URL;
+	const value = process.env.STORE_PUBLIC_URL;
+	if (!value) throw new Error("STORE_PUBLIC_URL is required");
+	const url = new URL(value);
+	if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) throw new Error("STORE_PUBLIC_URL must be a canonical https origin");
+	return url.origin;
 }
 
 export function buildOrderConfirmationSmsMessage(input: {
@@ -53,7 +39,7 @@ export async function sendOrderConfirmationSms(
 				orderNumber: input.orderNumber,
 				reason: "invalid_phone",
 			});
-			return;
+			throw new Error("invalid_phone");
 		}
 
 		const message = buildOrderConfirmationSmsMessage({
@@ -76,24 +62,22 @@ export async function sendOrderConfirmationSms(
 				{
 					paymentNumber: input.paymentNumber,
 					orderNumber: input.orderNumber,
-					phone: input.customerPhone,
 					smsState: finalState.state,
 				},
 			);
-			return;
+			throw new Error(`sms_state_${finalState.state}`);
 		}
 
 		logger.info("order.sms_confirmation_sent", {
 			paymentNumber: input.paymentNumber,
 			orderNumber: input.orderNumber,
-			phone: input.customerPhone,
 			smsState: finalState.state,
 		});
 	} catch (error) {
 		logger.error("order.sms_confirmation_failed", error, {
 			paymentNumber: input.paymentNumber,
 			orderNumber: input.orderNumber,
-			phone: input.customerPhone,
 		});
+		throw error;
 	}
 }

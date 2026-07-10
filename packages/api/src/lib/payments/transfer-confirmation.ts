@@ -5,7 +5,6 @@ import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
-import { sendOrderConfirmationSms } from "~/lib/payments/order-confirmation-sms";
 import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
 import { PRODUCTS_TAG, productTag } from "@vit/shared";
 import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
@@ -135,13 +134,6 @@ export async function confirmPaymentAndNotify({
 			// Payment confirmation has already succeeded; notification storage must not roll it back.
 		}
 	}
-
-	await sendOrderConfirmationSms({
-		paymentNumber,
-		orderNumber: paymentInfo.order.orderNumber,
-		customerPhone: paymentInfo.order.customerPhone,
-		total: paymentInfo.order.total,
-	});
 
 	trackPaymentConfirmedServerSide({
 		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,

@@ -4,6 +4,7 @@ import {
 	KhaanConsumedTransactionsTable,
 	MessengerNotificationFailuresTable,
 	OrderDetailsTable,
+	PaymentNotificationOutboxTable,
 	OrdersTable,
 	type PaymentInsertType,
 	PaymentsTable,
@@ -420,6 +421,10 @@ export const paymentQueries = {
 				if (!claimedPayment) {
 					return false;
 				}
+				await tx.insert(PaymentNotificationOutboxTable).values({
+					paymentNumber,
+					purpose: "order_payment_confirmed_sms",
+				}).onConflictDoNothing();
 
 				const orderDetails = await tx.query.OrderDetailsTable.findMany({
 					where: and(

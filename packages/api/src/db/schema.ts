@@ -345,6 +345,28 @@ export const MessengerNotificationFailuresTable = createTable(
 	],
 );
 
+export const PaymentNotificationOutboxTable = createTable(
+	"payment_notification_outbox",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		purpose: varchar("purpose", { length: 64 }).notNull(),
+		status: text("status", { enum: ["pending", "claimed", "sent", "failed", "unknown"] }).notNull().default("pending"),
+		claimToken: varchar("claim_token", { length: 64 }),
+		claimUntil: timestamp("claim_until"),
+		attemptCount: integer("attempt_count").notNull().default(0),
+		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+		lastErrorCode: varchar("last_error_code", { length: 64 }),
+		lastErrorAt: timestamp("last_error_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("payment_notification_payment_purpose_unique_idx").on(table.paymentNumber, table.purpose),
+		index("payment_notification_dispatch_idx").on(table.status, table.nextAttemptAt),
+	],
+);
+
 export const KhaanConsumedTransactionsTable = createTable(
 	"khaan_consumed_transaction",
 	{

@@ -12,6 +12,7 @@ import { createContext } from "./lib/context";
 import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
+import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -125,5 +126,6 @@ export default {
 	fetch: app.fetch,
 	scheduled: async (_controller: ScheduledController, env: Env) => {
 		await runRestockNotifier(env);
+		await runPaymentNotificationOutbox();
 	},
 };
