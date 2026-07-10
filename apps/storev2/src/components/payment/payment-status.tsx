@@ -106,8 +106,8 @@ const PaymentStatus = (props: {
 						Төлбөрийг гараар шалгаж байна
 					</h2>
 					<p class="mx-auto max-w-md text-lg text-muted-foreground">
-						Санаа зовох хэрэггүй — бид таны шилжүүлгийг гараар шалгаж,
-						удахгүй баталгаажуулна. Танаас өөр юу ч хийх шаардлагагүй.
+						Санаа зовох хэрэггүй — бид таны шилжүүлгийг гараар шалгаж, удахгүй
+						баталгаажуулна. Танаас өөр юу ч хийх шаардлагагүй.
 					</p>
 				</div>
 			</Match>
@@ -125,8 +125,7 @@ const PaymentStatus = (props: {
 						Таны шилжүүлгийг хүлээж байна
 					</h2>
 					<p class="mx-auto mb-4 max-w-md text-lg text-muted-foreground">
-						Та энэ хуудсыг хааж болно — төлбөр баталгаажсан үед энд
-						харагдана.
+						Та энэ хуудсыг хааж болно — төлбөр баталгаажсан үед энд харагдана.
 					</p>
 					<div class="inline-flex items-center gap-2 text-muted-foreground text-sm">
 						<IconRefresh class="h-4 w-4 animate-spin" aria-hidden="true" />
