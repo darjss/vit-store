@@ -81,8 +81,7 @@ function createHttpClient(): HttpClient {
 		}
 
 		if (!response.ok) {
-			const text = await response.text();
-			throw new Error(`HTTP error ${response.status}: ${text}`);
+			throw new Error(`sms_provider_http_${response.status}`);
 		}
 
 		const contentType = response.headers.get("Content-Type");

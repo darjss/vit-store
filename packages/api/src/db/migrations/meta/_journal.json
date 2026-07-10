@@ -141,6 +141,13 @@
       "when": 1783622800000,
       "tag": "0019_restock_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783626400000,
+      "tag": "0020_payment_notification_outbox",
+      "breakpoints": true
     }
   ]
 }

@@ -11,11 +11,29 @@ export type OrderConfirmationSmsInput = {
 	total: number;
 };
 
+export class SmsRetryableError extends Error {
+	constructor(readonly code: string) {
+		super(code);
+	}
+}
+
+export class SmsAmbiguousError extends Error {
+	constructor() {
+		super("provider_ambiguous");
+	}
+}
+
 function getStorefrontBaseUrl(): string {
 	const value = process.env.STORE_PUBLIC_URL;
 	if (!value) throw new Error("STORE_PUBLIC_URL is required");
 	const url = new URL(value);
-	if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) throw new Error("STORE_PUBLIC_URL must be a canonical https origin");
+	if (
+		url.protocol !== "https:" ||
+		url.pathname !== "/" ||
+		url.search ||
+		url.hash
+	)
+		throw new Error("STORE_PUBLIC_URL must be a canonical https origin");
 	return url.origin;
 }
 
@@ -31,53 +49,34 @@ export function buildOrderConfirmationSmsMessage(input: {
 export async function sendOrderConfirmationSms(
 	input: OrderConfirmationSmsInput,
 ): Promise<void> {
+	const phone = String(input.customerPhone);
+	if (!MN_PHONE_RE.test(phone)) {
+		throw new SmsRetryableError("invalid_phone");
+	}
+
+	const message = buildOrderConfirmationSmsMessage({
+		orderNumber: input.orderNumber,
+		total: input.total,
+	});
+
+	let finalState: { state: string };
 	try {
-		const phone = String(input.customerPhone);
-		if (!MN_PHONE_RE.test(phone)) {
-			logger.warn("order.sms_confirmation_skipped", {
-				paymentNumber: input.paymentNumber,
-				orderNumber: input.orderNumber,
-				reason: "invalid_phone",
-			});
-			throw new Error("invalid_phone");
-		}
-
-		const message = buildOrderConfirmationSmsMessage({
-			orderNumber: input.orderNumber,
-			total: input.total,
-		});
-
-		const finalState = await smsGateway.sendSmsAndWait({
+		finalState = await smsGateway.sendSmsAndWait({
 			message,
 			phoneNumbers: [`+976${phone}`],
 		});
-
-		if (!SMS_SUCCESS_STATES.has(finalState.state)) {
-			logger.error(
-				"order.sms_confirmation_failed",
-				new Error(
-					finalState.recipients[0]?.error ??
-						`SMS not delivered (state=${finalState.state})`,
-				),
-				{
-					paymentNumber: input.paymentNumber,
-					orderNumber: input.orderNumber,
-					smsState: finalState.state,
-				},
-			);
-			throw new Error(`sms_state_${finalState.state}`);
-		}
-
-		logger.info("order.sms_confirmation_sent", {
-			paymentNumber: input.paymentNumber,
-			orderNumber: input.orderNumber,
-			smsState: finalState.state,
-		});
-	} catch (error) {
-		logger.error("order.sms_confirmation_failed", error, {
-			paymentNumber: input.paymentNumber,
-			orderNumber: input.orderNumber,
-		});
-		throw error;
+	} catch {
+		// The gateway may have accepted the request before its response was lost.
+		throw new SmsAmbiguousError();
 	}
+
+	if (!SMS_SUCCESS_STATES.has(finalState.state)) {
+		throw new SmsRetryableError("provider_not_accepted");
+	}
+
+	logger.info("order.sms_confirmation_sent", {
+		paymentNumber: input.paymentNumber,
+		orderNumber: input.orderNumber,
+		smsState: finalState.state,
+	});
 }

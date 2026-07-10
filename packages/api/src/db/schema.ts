@@ -351,7 +351,11 @@ export const PaymentNotificationOutboxTable = createTable(
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
-		status: text("status", { enum: ["pending", "claimed", "sent", "failed", "unknown"] }).notNull().default("pending"),
+		status: text("status", {
+			enum: ["pending", "claimed", "sent", "failed", "unknown"],
+		})
+			.notNull()
+			.default("pending"),
 		claimToken: varchar("claim_token", { length: 64 }),
 		claimUntil: timestamp("claim_until"),
 		attemptCount: integer("attempt_count").notNull().default(0),
@@ -362,8 +366,34 @@ export const PaymentNotificationOutboxTable = createTable(
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
-		uniqueIndex("payment_notification_payment_purpose_unique_idx").on(table.paymentNumber, table.purpose),
-		index("payment_notification_dispatch_idx").on(table.status, table.nextAttemptAt),
+		uniqueIndex("payment_notification_payment_purpose_unique_idx").on(
+			table.paymentNumber,
+			table.purpose,
+		),
+		index("payment_notification_dispatch_idx").on(
+			table.status,
+			table.nextAttemptAt,
+		),
+	],
+);
+
+export const PaymentNotificationAttemptsTable = createTable(
+	"payment_notification_attempt",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		outboxId: integer("outbox_id")
+			.references(() => PaymentNotificationOutboxTable.id)
+			.notNull(),
+		attemptNumber: integer("attempt_number").notNull(),
+		outcome: varchar("outcome", { length: 32 }).notNull(),
+		errorCode: varchar("error_code", { length: 64 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("payment_notification_attempt_unique_idx").on(
+			table.outboxId,
+			table.attemptNumber,
+		),
 	],
 );
 

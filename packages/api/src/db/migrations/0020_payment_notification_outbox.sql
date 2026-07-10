@@ -11,3 +11,14 @@ CREATE TABLE IF NOT EXISTS "ecom_vit_payment_notification_outbox" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "payment_notification_payment_purpose_unique_idx" ON "ecom_vit_payment_notification_outbox" ("payment_number", "purpose");
 CREATE INDEX IF NOT EXISTS "payment_notification_dispatch_idx" ON "ecom_vit_payment_notification_outbox" ("status", "next_attempt_at");
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "ecom_vit_payment_notification_attempt" (
+  "id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  "outbox_id" integer NOT NULL REFERENCES "ecom_vit_payment_notification_outbox"("id"),
+  "attempt_number" integer NOT NULL,
+  "outcome" varchar(32) NOT NULL,
+  "error_code" varchar(64),
+  "created_at" timestamp NOT NULL DEFAULT now()
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "payment_notification_attempt_unique_idx" ON "ecom_vit_payment_notification_attempt" ("outbox_id", "attempt_number");
