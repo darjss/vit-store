@@ -46,7 +46,7 @@ export const CustomersTable = createTable(
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		phone: integer("phone").notNull().unique(),
-    address: varchar("address", { length: 256 }),
+		address: varchar("address", { length: 256 }),
 		addressZoneId: integer("address_zone_id"),
 		facebook_username: varchar("facebook_username", { length: 256 }),
 		instagram_username: varchar("instagram_username", { length: 256 }),
@@ -235,11 +235,11 @@ export const OrdersTable = createTable(
 		status: text("status", {
 			enum: orderStatus,
 		}).notNull(),
-    address: varchar("address", { length: 256 }).notNull(),
+		address: varchar("address", { length: 256 }).notNull(),
 		addressZoneId: integer("address_zone_id"),
 		deliveryProvider: text("delivery_provider", {
 			enum: deliveryProvider,
-    }).notNull(),
+		}).notNull(),
 		total: integer("total").notNull(),
 		notes: text("notes"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -312,10 +312,7 @@ export const PaymentsTable = createTable(
 		uniqueIndex("payment_number_unique_idx").on(table.paymentNumber),
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_status_created_idx").on(table.status, table.createdAt),
-		index("payment_number_status_idx").on(
-			table.paymentNumber,
-			table.status,
-		),
+		index("payment_number_status_idx").on(table.paymentNumber, table.status),
 	],
 );
 
@@ -325,7 +322,9 @@ export const MessengerNotificationFailuresTable = createTable(
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
-		status: text("status", { enum: ["pending", "sent", "failed"] }).notNull().default("pending"),
+		status: text("status", { enum: ["pending", "sent", "failed"] })
+			.notNull()
+			.default("pending"),
 		payload: jsonb("payload").notNull(),
 		errorMessage: text("error_message"),
 		errorCode: varchar("error_code", { length: 64 }),
@@ -376,6 +375,11 @@ export const RestockSubscriptionsTable = createTable(
 		})
 			.default("pending")
 			.notNull(),
+		consentState: text("consent_state", {
+			enum: ["pending", "verified"],
+		})
+			.default("pending")
+			.notNull(),
 		deliveryKey: varchar("delivery_key", { length: 96 }).notNull(),
 		claimToken: varchar("claim_token", { length: 64 }),
 		leaseExpiresAt: timestamp("lease_expires_at"),
@@ -389,17 +393,17 @@ export const RestockSubscriptionsTable = createTable(
 		uniqueIndex("restock_sub_open_unique_idx")
 			.on(table.productId, table.channel, table.contact)
 			.where(
-				sql`${table.deletedAt} is null and ${table.deliveryState} in ('pending', 'sending')`,
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} in ('pending', 'sending')`,
 			),
-		index("restock_sub_product_open_idx")
+		index("restock_sub_product_pending_idx")
 			.on(table.productId)
 			.where(
-				sql`${table.deletedAt} is null and ${table.deliveryState} = 'pending'`,
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} = 'pending'`,
 			),
 		index("restock_sub_contact_open_idx")
 			.on(table.contact)
 			.where(
-				sql`${table.deletedAt} is null and ${table.deliveryState} in ('pending', 'sending')`,
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} in ('pending', 'sending')`,
 			),
 	],
 );

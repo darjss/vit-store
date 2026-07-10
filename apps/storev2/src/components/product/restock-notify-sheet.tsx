@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 import { Button } from "@/components/ui/button";
 import {
 	Sheet,
@@ -13,18 +13,27 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import IconNotification from "~icons/ri/notification-3-fill";
 
-const LOGIN_PHONE_KEY = "login-phone";
-
-function readStoredPhone(): string {
-	if (typeof localStorage === "undefined") return "";
-	try {
-		const raw = localStorage.getItem(LOGIN_PHONE_KEY);
-		if (!raw) return "";
-		const parsed = JSON.parse(raw) as unknown;
-		if (typeof parsed === "string") return parsed.replace(/\D/g, "");
-		return String(raw).replace(/\D/g, "");
-	} catch {
-		return "";
+function restockErrorMessage(error: unknown): string {
+	const code =
+		typeof error === "object" &&
+		error !== null &&
+		"data" in error &&
+		typeof error.data === "object" &&
+		error.data !== null &&
+		"code" in error.data
+			? String(error.data.code)
+			: "UNKNOWN";
+	switch (code) {
+		case "UNAUTHORIZED":
+			return "Нэвтэрч, баталгаажуулсан утасны дугаараа ашиглана уу.";
+		case "TOO_MANY_REQUESTS":
+			return "Хэт олон хүсэлт илгээлээ. Түр хүлээгээд дахин оролдоно уу.";
+		case "BAD_REQUEST":
+			return "Мэдээллээ шалгаад дахин оролдоно уу.";
+		case "NOT_FOUND":
+			return "Бараа олдсонгүй. Хуудсаа шинэчлээд дахин оролдоно уу.";
+		default:
+			return "Мэдэгдэл захиалахад алдаа гарлаа. Дараа дахин оролдоно уу.";
 	}
 }
 
@@ -36,45 +45,22 @@ interface RestockNotifySheetProps {
 }
 
 export default function RestockNotifySheet(props: RestockNotifySheetProps) {
-	const [includeEmail, setIncludeEmail] = createSignal(false);
 	const [phone, setPhone] = createSignal("");
-	const [email, setEmail] = createSignal("");
-
-	createEffect(() => {
-		if (props.open && !phone()) {
-			const stored = readStoredPhone();
-			if (stored) setPhone(stored);
-		}
-	});
 
 	const isValidPhone = createMemo(() =>
 		/^[6-9]\d{7}$/.test(phone().replace(/\D/g, "")),
 	);
-	const isValidEmail = createMemo(() =>
-		/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email().trim().toLowerCase()),
-	);
-	const canSubmit = createMemo(
-		() => isValidPhone() && (!includeEmail() || isValidEmail()),
-	);
+	const canSubmit = createMemo(() => isValidPhone());
 
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async () => {
-				const contacts: Array<{
-					channel: "sms" | "email";
-					contact: string;
-				}> = [
+				const contacts = [
 					{
-						channel: "sms",
+						channel: "sms" as const,
 						contact: phone().replace(/\D/g, ""),
 					},
 				];
-				if (includeEmail()) {
-					contacts.push({
-						channel: "email",
-						contact: email().trim(),
-					});
-				}
 				await api.product.subscribeToRestock.mutate({
 					productId: props.productId,
 					contacts,
@@ -92,10 +78,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 			onError: (error) => {
 				showToast({
 					title: "Алдаа",
-					description:
-						error instanceof Error
-							? error.message
-							: "Мэдэгдэл захиалахад алдаа гарлаа.",
+					description: restockErrorMessage(error),
 					variant: "error",
 					duration: 5000,
 				});
@@ -136,32 +119,6 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 							class="h-12 w-full rounded-xl border border-border bg-background px-4 font-medium text-base shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						/>
 					</div>
-
-					<label class="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							checked={includeEmail()}
-							onChange={(e) => setIncludeEmail(e.currentTarget.checked)}
-							class="size-4 rounded border-border"
-						/>
-						Имэйлээр ч мэдэгдэл авах
-					</label>
-
-					<Show when={includeEmail()}>
-						<div class="space-y-2">
-							<label class="font-medium text-sm" for="restock-email">
-								Имэйл
-							</label>
-							<input
-								id="restock-email"
-								type="email"
-								value={email()}
-								onInput={(e) => setEmail(e.currentTarget.value)}
-								placeholder="ner@example.com"
-								class="h-12 w-full rounded-xl border border-border bg-background px-4 font-medium text-base shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							/>
-						</div>
-					</Show>
 
 					<Button
 						type="button"

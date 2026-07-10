@@ -16,6 +16,7 @@ import {
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
+import { applyStockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type DbOrTx = ReturnType<typeof db> | TransactionType;
@@ -184,10 +185,16 @@ export const adminQueries = {
 				expirationDate?: string | null;
 			},
 		) {
-			await db()
-				.update(ProductsTable)
-				.set(data)
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return db().transaction(async (tx) => {
+				const { stock, ...productData } = data;
+				await tx
+					.update(ProductsTable)
+					.set(productData)
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+				return stock === undefined
+					? null
+					: applyStockTransition(tx, { productId: id, setTo: stock });
+			});
 		},
 
 		async getProductImages(productId: number) {
@@ -223,27 +230,12 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
-			const [row] = await db()
-				.update(ProductsTable)
-				.set({
-					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
-				})
-				.where(
-					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-				)
-				.returning({ stock: ProductsTable.stock });
-
-			if (!row) {
-				return null;
-			}
-
-			const newStock = row.stock;
-			const previousStock =
-				type === "add"
-					? newStock - numberToUpdate
-					: newStock + numberToUpdate;
-
-			return { previousStock, newStock };
+			return db().transaction((tx) =>
+				applyStockTransition(tx, {
+					productId,
+					delta: type === "add" ? numberToUpdate : -numberToUpdate,
+				}),
+			);
 		},
 
 		async updateStockTx(
@@ -252,14 +244,10 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
-			await tx
-				.update(ProductsTable)
-				.set({
-					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
-				})
-				.where(
-					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-				);
+			return applyStockTransition(tx, {
+				productId,
+				delta: type === "add" ? numberToUpdate : -numberToUpdate,
+			});
 		},
 
 		async deleteProduct(id: number) {
@@ -398,32 +386,9 @@ export const adminQueries = {
 		},
 
 		async setProductStock(id: number, newStock: number) {
-			return db().transaction(async (tx) => {
-				const [previous] = await tx
-					.select({ stock: ProductsTable.stock })
-					.from(ProductsTable)
-					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
-					.for("update");
-
-				if (!previous) {
-					return null;
-				}
-
-				const [updated] = await tx
-					.update(ProductsTable)
-					.set({ stock: newStock })
-					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
-					.returning({ stock: ProductsTable.stock });
-
-				if (!updated) {
-					return null;
-				}
-
-				return {
-					previousStock: previous.stock,
-					newStock: updated.stock,
-				};
-			});
+			return db().transaction((tx) =>
+				applyStockTransition(tx, { productId: id, setTo: newStock }),
+			);
 		},
 
 		async getAllProductValue() {
@@ -442,10 +407,14 @@ export const adminQueries = {
 			field: string,
 			value: string | number | null,
 		) {
+			if (field === "stock" && typeof value === "number") {
+				return this.setProductStock(id, value);
+			}
 			await db()
 				.update(ProductsTable)
 				.set({ [field]: value })
 				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return null;
 		},
 
 		async getReviewProducts() {

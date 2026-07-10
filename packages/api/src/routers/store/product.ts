@@ -4,9 +4,8 @@ import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
-import { redis } from "~/lib/redis";
-import { publicProcedure, router } from "~/lib/trpc";
 import { subscribeToRestock } from "~/lib/restock";
+import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import {
 	mapStockStatus,
 	performAssistantProductSearch,
@@ -295,24 +294,23 @@ export const product = router({
 			}
 		}),
 
-	subscribeToRestock: publicProcedure
+	subscribeToRestock: verifiedCustomerProcedure
 		.input(
 			v.object({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 				contacts: v.pipe(
 					v.array(
 						v.object({
-							channel: v.picklist(["sms", "email"]),
+							channel: v.literal("sms"),
 							contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
 						}),
 					),
 					v.minLength(1),
-					v.maxLength(2),
+					v.maxLength(1),
 				),
 			}),
 		)
-		.mutation(async ({ input }) => {
-			// TODO(rate-limit): bind CF rate limiter when available; per-contact product cap only today
+		.mutation(async ({ input, ctx }) => {
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 
@@ -330,7 +328,14 @@ export const product = router({
 				});
 			}
 
-			return subscribeToRestock(input);
+			return subscribeToRestock({
+				...input,
+				verifiedPhone: String(ctx.session.user.phone),
+				requestIp:
+					ctx.c.req.header("cf-connecting-ip") ??
+					ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+					"unknown",
+			});
 		}),
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {

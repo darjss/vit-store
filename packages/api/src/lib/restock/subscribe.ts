@@ -1,14 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import {
-	and,
-	count,
-	countDistinct,
-	eq,
-	inArray,
-	isNull,
-	ne,
-	sql,
-} from "drizzle-orm";
+import { and, countDistinct, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -16,6 +7,7 @@ import {
 	ProductsTable,
 	RestockSubscriptionsTable,
 } from "~/db/schema";
+import { redis } from "~/lib/redis";
 import { MAX_OPEN_PRODUCTS_PER_CONTACT } from "~/lib/restock/dispatch";
 import {
 	isValidRestockContact,
@@ -34,12 +26,16 @@ type NormalizedContact = {
 
 type SubscribeResult = {
 	channel: "sms" | "email";
-	contact: string;
 	alreadySubscribed: boolean;
 };
 
+const CONTACT_RATE_LIMIT = 20;
+const CONTACT_RATE_WINDOW_SECONDS = 24 * 60 * 60;
+const IP_RATE_LIMIT = 60;
+
 const openSubscription = and(
 	isNull(RestockSubscriptionsTable.deletedAt),
+	eq(RestockSubscriptionsTable.consentState, "verified"),
 	sql`${RestockSubscriptionsTable.deliveryState} in ('pending', 'sending')`,
 );
 
@@ -110,16 +106,12 @@ async function insertOneContact(
 	if (existing) {
 		return {
 			channel: item.channel,
-			contact: item.contact,
 			alreadySubscribed: true,
 		};
 	}
 
-	const openProductCounts = await tx
-		.select({
-			productId: RestockSubscriptionsTable.productId,
-			c: count(),
-		})
+	const [openProductCount] = await tx
+		.select({ c: countDistinct(RestockSubscriptionsTable.productId) })
 		.from(RestockSubscriptionsTable)
 		.where(
 			and(
@@ -127,10 +119,9 @@ async function insertOneContact(
 				openSubscription,
 				ne(RestockSubscriptionsTable.productId, productId),
 			),
-		)
-		.groupBy(RestockSubscriptionsTable.productId);
+		);
 
-	if (openProductCounts.length >= MAX_OPEN_PRODUCTS_PER_CONTACT) {
+	if (Number(openProductCount?.c ?? 0) >= MAX_OPEN_PRODUCTS_PER_CONTACT) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: "Too many open restock waitlists for this contact",
@@ -143,17 +134,16 @@ async function insertOneContact(
 			channel: item.channel,
 			contact: item.contact,
 			deliveryKey: `restock-${crypto.randomUUID()}`,
+			consentState: "verified",
 		});
 		return {
 			channel: item.channel,
-			contact: item.contact,
 			alreadySubscribed: false,
 		};
 	} catch (error) {
 		if (isUniqueConflict(error)) {
 			return {
 				channel: item.channel,
-				contact: item.contact,
 				alreadySubscribed: true,
 			};
 		}
@@ -164,8 +154,24 @@ async function insertOneContact(
 export async function subscribeToRestock(input: {
 	productId: number;
 	contacts: RestockContactInput[];
+	verifiedPhone: string;
+	requestIp: string;
 }) {
 	const contacts = normalizeAndValidateContacts(input.contacts);
+	if (
+		contacts.length !== 1 ||
+		contacts[0]?.channel !== "sms" ||
+		contacts[0].contact !== normalizeRestockContact("sms", input.verifiedPhone)
+	) {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "Verified phone ownership is required",
+		});
+	}
+	await Promise.all([
+		enforceRateLimit("contact", contacts[0].contact, CONTACT_RATE_LIMIT),
+		enforceRateLimit("ip", input.requestIp, IP_RATE_LIMIT),
+	]);
 
 	const results = await db().transaction(async (tx) => {
 		const contactsToLock = [
@@ -191,6 +197,29 @@ export async function subscribeToRestock(input: {
 		alreadySubscribed: allAlready,
 		results,
 	};
+}
+
+async function enforceRateLimit(
+	scope: "contact" | "ip",
+	value: string,
+	limit: number,
+) {
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(value),
+	);
+	const hash = Array.from(new Uint8Array(digest), (byte) =>
+		byte.toString(16).padStart(2, "0"),
+	).join("");
+	const key = `restock:subscribe:${scope}:${hash}`;
+	const count = await redis().incr(key);
+	if (count === 1) await redis().expire(key, CONTACT_RATE_WINDOW_SECONDS);
+	if (count > limit) {
+		throw new TRPCError({
+			code: "TOO_MANY_REQUESTS",
+			message: "Too many restock subscription requests",
+		});
+	}
 }
 
 export async function getRestockWaitCount(productId: number): Promise<number> {

@@ -4,26 +4,19 @@ import type {
 	receivePurchaseType,
 } from "@vit/shared/schema";
 import type { SQL } from "drizzle-orm";
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	ilike,
-	inArray,
-	isNull,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	ProductImagesTable,
-	ProductsTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	PurchaseReceiptsTable,
 	PurchasesTable,
 } from "~/db/schema";
+import {
+	applyStockTransition,
+	type StockTransition,
+} from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type Transaction = TransactionType;
@@ -585,48 +578,11 @@ export const purchaseQueries = {
 			}
 
 			const affectedProductIds = [...stockDeltas.keys()];
-			const previousStocks = new Map<number, number>();
-			if (affectedProductIds.length > 0) {
-				const products = await tx.query.ProductsTable.findMany({
-					columns: { id: true, stock: true },
-					where: and(
-						inArray(ProductsTable.id, affectedProductIds),
-						isNull(ProductsTable.deletedAt),
-					),
-				});
-				for (const product of products) {
-					previousStocks.set(product.id, product.stock);
-				}
-			}
-
+			const restockCandidates: StockTransition[] = [];
 			for (const [productId, delta] of stockDeltas) {
-				await tx
-					.update(ProductsTable)
-					.set({
-						stock: sql`${ProductsTable.stock} + ${delta}`,
-					})
-					.where(
-						and(
-							eq(ProductsTable.id, productId),
-							isNull(ProductsTable.deletedAt),
-						),
-					);
+				const transition = await applyStockTransition(tx, { productId, delta });
+				if (transition) restockCandidates.push(transition);
 			}
-
-			const restockCandidates = affectedProductIds
-				.map((productId) => {
-					const previousStock = previousStocks.get(productId) ?? 0;
-					const delta = stockDeltas.get(productId) ?? 0;
-					return {
-						productId,
-						previousStock,
-						newStock: previousStock + delta,
-					};
-				})
-				.filter(
-					(candidate) =>
-						candidate.previousStock === 0 && candidate.newStock > 0,
-				);
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
 

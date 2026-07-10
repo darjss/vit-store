@@ -19,7 +19,7 @@ import {
 	listRestockWaitlist,
 	scheduleRestockDispatch,
 } from "~/lib/restock";
-import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+import { adminProcedure, type baseProcedure, botProcedure, router } from "~/lib/trpc";
 const normalizeExpirationDate = (value?: string | null) => {
     if (!value)
         return null;
@@ -252,7 +252,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     code: "BAD_REQUEST",
                     message: "Product ID is required",
                 });
-            const { images, id, ...productData } = input;
+            const { images, id: _id, ...productData } = input;
             const filteredImages = images.filter((image) => image.url.trim() !== "");
             for (const image of filteredImages) {
                 const result = v.safeParse(v.pipe(v.string(), v.url()), image.url);
@@ -273,7 +273,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-+|-+$/g, "");
-            await productQueries.admin.updateProduct(input.id, {
+            const stockChange = await productQueries.admin.updateProduct(input.id, {
                 ...productData,
                 expirationDate: normalizedExpirationDate,
                 name: productName,
@@ -295,6 +295,8 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             }
             await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_updated");
+            if (stockChange)
+                scheduleRestockDispatch(ctx, stockChange);
             return { message: "Product updated successfully" };
         }
         catch (error) {
@@ -545,9 +547,11 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             const value = String(input.field) === "expirationDate"
                 ? normalizeExpirationDate(input.stringValue)
                 : (input.stringValue ?? input.numberValue);
-            await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
+            const stockChange = await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
             await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id)]);
             scheduleProductSearchRebuild(ctx, "product_updated");
+            if (stockChange)
+                scheduleRestockDispatch(ctx, stockChange);
             return { message: "Product field updated successfully" };
         }
         catch (error) {
