@@ -6,17 +6,18 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import { getProductImageProps } from "@/lib/image";
 import { api } from "@/lib/trpc";
 import { washBg } from "@/lib/wash";
+import CardAddButton from "./card-add-button";
 import ProductImageFallback from "./product-image-fallback";
 
 interface RecommendedProductsProps {
 	currentProductId: number;
 	categoryId: number;
 	brandId: number;
-	productName: string;
 	washKey?: string | number;
 }
 
 const RECOMMENDED_FETCH_TIMEOUT_MS = 6000;
+const RECOMMENDED_SHELF_LIMIT = 6;
 
 const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
 	Promise.race([
@@ -29,13 +30,10 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
 		),
 	]);
 
-// Canonical recommended-products path: same-category + same-brand from the DB,
-// falling back to featured home products on error/timeout. The previous
-// implementation used searchProductsForPage(productName) as a heuristic — that
-// conflated "products whose name matches this product's name" with "products
-// related to this product," which is not what a recommendation shelf should
-// show. The canonical getRecommendedProducts procedure already does
-// same-category + same-brand with dedup, which is the right signal.
+function isInStock(stock?: number) {
+	return productStockState(stock) !== "out";
+}
+
 async function fetchRecommendedProducts(
 	productId: number,
 	categoryId: number,
@@ -50,18 +48,15 @@ async function fetchRecommendedProducts(
 			}),
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
-		return products
-			.filter((p) => p.id !== productId && p.slug)
-			.slice(0, 5)
-			.map((p) => ({
-				id: p.id,
-				slug: p.slug,
-				name: p.name,
-				price: p.price,
-				image: p.image,
-				brand: p.brand,
-				stock: p.stock,
-			}));
+		return products.map((p) => ({
+			id: p.id,
+			slug: p.slug,
+			name: p.name,
+			price: p.price,
+			image: p.image,
+			brand: p.brand,
+			stock: p.stock,
+		}));
 	} catch {
 		try {
 			const fallbackProducts = await withTimeout(
@@ -69,8 +64,8 @@ async function fetchRecommendedProducts(
 				RECOMMENDED_FETCH_TIMEOUT_MS,
 			);
 			return fallbackProducts.featuredProducts
-				.filter((p) => p.id !== productId)
-				.slice(0, 4);
+				.filter((p) => p.id !== productId && isInStock(p.stock))
+				.slice(0, RECOMMENDED_SHELF_LIMIT);
 		} catch {
 			return [];
 		}
@@ -120,67 +115,80 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 										"card",
 									);
 									const [imageFailed, setImageFailed] = createSignal(false);
+									const productUrl = `/products/${product.slug}-${product.id}/`;
 									const stockState = () => productStockState(product.stock);
-									const isOutOfStock = () => stockState() === "out";
 									const isLowStock = () => stockState() === "low";
 
 									return (
-										<a
-											href={`/products/${product.slug}-${product.id}/`}
+										<div
 											data-shelf-card
-											class="group hover:-translate-y-1 enter-rise block w-[144px] shrink-0 snap-start overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
+											class="group hover:-translate-y-1 enter-rise flex w-[144px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-soft-lg sm:w-[200px] lg:w-[220px]"
 										>
-											<div
-												class={`relative aspect-square overflow-hidden ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
+											<a
+												href={productUrl}
+												class="relative block aspect-square overflow-hidden"
+												aria-hidden="true"
+												tabIndex={-1}
 											>
-												<div class="absolute inset-0 bg-dots-subtle" />
-												<Show
-													when={product.image && !imageFailed()}
-													fallback={
-														<ProductImageFallback
-															name={product.name}
-															brand={product.brand}
+												<div class={`absolute inset-0 ${washClass()}`}>
+													<div class="absolute inset-0 bg-dots-subtle" />
+													<Show
+														when={product.image && !imageFailed()}
+														fallback={
+															<ProductImageFallback
+																name={product.name}
+																brand={product.brand}
+															/>
+														}
+													>
+														<Image
+															src={imageProps.src || product.image}
+															alt={product.name}
+															width={imageProps.width}
+															height={imageProps.height}
+															sizes={imageProps.sizes}
+															layout="constrained"
+															objectFit="contain"
+															class="relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04]"
+															loading="lazy"
+															decoding="async"
+															onError={() => setImageFailed(true)}
 														/>
-													}
-												>
-													<Image
-														src={imageProps.src || product.image}
-														alt={product.name}
-														width={imageProps.width}
-														height={imageProps.height}
-														sizes={imageProps.sizes}
-														layout="constrained"
-														objectFit="contain"
-														class={`relative z-10 h-full w-full p-4 transition-transform duration-300 ease-out-quart group-hover:scale-[1.04] ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
-														loading="lazy"
-														decoding="async"
-														onError={() => setImageFailed(true)}
-													/>
-												</Show>
-												<Show when={isOutOfStock()}>
-													<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
-														Дууссан
-													</span>
-												</Show>
-												<Show when={isLowStock()}>
-													<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
-														Цөөн үлдсэн
-													</span>
-												</Show>
-											</div>
+													</Show>
+													<Show when={isLowStock()}>
+														<span class="absolute bottom-2 left-2 z-20 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
+															Цөөн үлдсэн
+														</span>
+													</Show>
+												</div>
+											</a>
 
-											<div class="flex flex-col gap-1.5 p-3 sm:p-4">
+											<div class="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
 												<span class="font-medium text-[11px] text-muted-foreground">
 													{product.brand}
 												</span>
-												<h3 class="line-clamp-2 min-h-[2.5em] font-medium text-sm leading-snug">
-													{product.name}
-												</h3>
-												<span class="font-display text-base">
-													{formatCurrency(product.price)}
-												</span>
+												<a href={productUrl} class="block">
+													<h3 class="line-clamp-2 min-h-[2.5em] font-medium text-sm leading-snug group-hover:underline">
+														{product.name}
+													</h3>
+												</a>
+												<div class="mt-auto flex items-end justify-between gap-2 pt-1">
+													<span class="font-display text-base">
+														{formatCurrency(product.price)}
+													</span>
+													<CardAddButton
+														cartItem={{
+															productId: product.id,
+															quantity: 1,
+															name: product.name,
+															price: product.price,
+															image: product.image,
+															slug: product.slug,
+														}}
+													/>
+												</div>
 											</div>
-										</a>
+										</div>
 									);
 								}}
 							</For>

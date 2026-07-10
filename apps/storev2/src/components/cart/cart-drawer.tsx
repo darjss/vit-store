@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import CartCrossSells from "./cart-cross-sells";
 import CartDrawerItem from "./cart-drawer-item";
 import EmptyCart from "./empty-cart";
 
@@ -44,15 +45,18 @@ const CartDrawer = () => {
 							</div>
 						}
 					>
-						<div class="scrollbar-hide min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-							<For each={cart.items()}>
-								{(item) => (
-									<CartDrawerItem
-										item={item}
-										onNavigate={() => cart.closeDrawer()}
-									/>
-								)}
-							</For>
+						<div class="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
+							<div class="space-y-3 px-4 py-4">
+								<For each={cart.items()}>
+									{(item) => (
+										<CartDrawerItem
+											item={item}
+											onNavigate={() => cart.closeDrawer()}
+										/>
+									)}
+								</For>
+							</div>
+							<CartCrossSells />
 						</div>
 
 						<div class="border-border border-t bg-card px-5 pt-4 pb-5">

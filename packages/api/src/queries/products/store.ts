@@ -12,6 +12,8 @@ import {
 	isNull,
 	lt,
 	lte,
+	ne,
+	notInArray,
 	or,
 	type SQLWrapper,
 	sql,
@@ -20,6 +22,7 @@ import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
 import { normalizeSearchText } from "~/lib/product-search/text";
+import { rankInStockProducts } from "~/queries/products/shared";
 
 const buildNameFallbackCondition = (searchTerm: string): SQLWrapper => {
 	const tokens = normalizeSearchText(searchTerm).split(" ").filter(Boolean);
@@ -51,6 +54,64 @@ import { buildActiveProductConditions } from "~/queries/products/shared";
 
 const inStockRankExpr = sql`(${ProductsTable.stock} > 0)`;
 const inStockFirst = desc(inStockRankExpr);
+
+const recommendableProductColumns = {
+	id: true,
+	slug: true,
+	name: true,
+	price: true,
+	discount: true,
+	stock: true,
+} as const;
+
+const recommendableProductWith = {
+	images: {
+		columns: {
+			url: true,
+		},
+		where: and(
+			eq(ProductImagesTable.isPrimary, true),
+			isNull(ProductImagesTable.deletedAt),
+		),
+	},
+	brand: {
+		columns: {
+			name: true,
+		},
+	},
+} as const;
+
+type RecommendableProduct = {
+	id: number;
+	slug: string;
+	name: string;
+	price: number;
+	discount: number | null;
+	stock: number;
+	images: { url: string }[];
+	brand: { name: string };
+};
+
+const RECOMMENDATION_LIMIT = 6;
+const RECOMMENDATION_OVERSAMPLE = 12;
+const CROSS_SELL_INPUT_LIMIT = 20;
+
+const mapRecommendableProduct = (product: RecommendableProduct) => ({
+	id: product.id,
+	slug: product.slug,
+	name: product.name,
+	price: product.price,
+	image: product.images[0]?.url ?? "",
+	brand: product.brand.name,
+	discount: product.discount,
+	stock: product.stock,
+});
+
+const completeRecommendations = (
+	products: RecommendableProduct[],
+	excludeIds: Iterable<number>,
+	limit: number,
+) => rankInStockProducts(products, { excludeIds, limit }).map(mapRecommendableProduct);
 
 export const storeQueries = {
 		async getFeaturedProducts(options?: { requireStock?: boolean }) {
@@ -260,81 +321,174 @@ export const storeQueries = {
 		async getRecommendedProductsByCategory(
 			categoryId: number,
 			excludeProductId: number,
+			limit = 12,
 		) {
 			return db().query.ProductsTable.findMany({
-				columns: {
-					id: true,
-					slug: true,
-					name: true,
-					price: true,
-					discount: true,
-					stock: true,
-				},
-				limit: 2,
+				columns: recommendableProductColumns,
+				limit,
 				where: and(
 					eq(ProductsTable.categoryId, categoryId),
-					eq(ProductsTable.status, "active"),
-					isNull(ProductsTable.deletedAt),
-					sql`${ProductsTable.id} != ${excludeProductId}`,
+					buildActiveProductConditions(true),
+					ne(ProductsTable.id, excludeProductId),
 				),
-				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-				},
+				orderBy: [desc(ProductsTable.stock), desc(ProductsTable.updatedAt)],
+				with: recommendableProductWith,
 			});
 		},
 
 		async getRecommendedProductsByBrand(
 			brandId: number,
 			excludeProductId: number,
+			limit = 12,
 		) {
+			return db().query.ProductsTable.findMany({
+				columns: recommendableProductColumns,
+				limit,
+				where: and(
+					eq(ProductsTable.brandId, brandId),
+					buildActiveProductConditions(true),
+					ne(ProductsTable.id, excludeProductId),
+				),
+				orderBy: [desc(ProductsTable.stock), desc(ProductsTable.updatedAt)],
+				with: recommendableProductWith,
+			});
+		},
+
+		async getHighStockFallbackProducts(
+			excludeIds: number[],
+			limit = 6,
+		) {
+			return db().query.ProductsTable.findMany({
+				columns: recommendableProductColumns,
+				limit,
+				where: and(
+					buildActiveProductConditions(true),
+					excludeIds.length > 0
+						? notInArray(ProductsTable.id, excludeIds)
+						: undefined,
+				),
+				orderBy: [desc(ProductsTable.stock), desc(ProductsTable.updatedAt)],
+				with: recommendableProductWith,
+			});
+		},
+
+		async getProductAffinityKeys(ids: number[]) {
+			if (ids.length === 0) return [];
 			return db().query.ProductsTable.findMany({
 				columns: {
 					id: true,
-					slug: true,
-					name: true,
-					price: true,
-					discount: true,
-					stock: true,
+					categoryId: true,
+					brandId: true,
 				},
-				limit: 2,
 				where: and(
-					eq(ProductsTable.brandId, brandId),
+					inArray(ProductsTable.id, ids),
 					eq(ProductsTable.status, "active"),
 					isNull(ProductsTable.deletedAt),
-					sql`${ProductsTable.id} != ${excludeProductId}`,
 				),
-				orderBy: [inStockFirst, desc(ProductsTable.updatedAt)],
-				with: {
-					images: {
-						columns: {
-							url: true,
-						},
-						where: and(
-							eq(ProductImagesTable.isPrimary, true),
-							isNull(ProductImagesTable.deletedAt),
-						),
-					},
-					brand: {
-						columns: {
-							name: true,
-						},
-					},
-				},
 			});
+		},
+
+		async getCrossSellCandidates(options: {
+			categoryIds: number[];
+			brandIds: number[];
+			excludeIds: number[];
+			limit?: number;
+		}) {
+			const { categoryIds, brandIds, excludeIds, limit = 20 } = options;
+			const affinityParts = [
+				...(categoryIds.length > 0
+					? [inArray(ProductsTable.categoryId, categoryIds)]
+					: []),
+				...(brandIds.length > 0
+					? [inArray(ProductsTable.brandId, brandIds)]
+					: []),
+			];
+			if (affinityParts.length === 0) return [];
+
+			const affinity =
+				affinityParts.length === 1
+					? affinityParts[0]
+					: or(...affinityParts);
+
+			return db().query.ProductsTable.findMany({
+				columns: recommendableProductColumns,
+				limit,
+				where: and(
+					buildActiveProductConditions(true),
+					affinity,
+					excludeIds.length > 0
+						? notInArray(ProductsTable.id, excludeIds)
+						: undefined,
+				),
+				orderBy: [desc(ProductsTable.stock), desc(ProductsTable.updatedAt)],
+				with: recommendableProductWith,
+			});
+		},
+
+		async getRecommendations(input: {
+			productId: number;
+			categoryId: number;
+			brandId: number;
+		}) {
+			const [sameCategory, sameBrand] = await Promise.all([
+				storeQueries.getRecommendedProductsByCategory(
+					input.categoryId,
+					input.productId,
+					RECOMMENDATION_OVERSAMPLE,
+				),
+				storeQueries.getRecommendedProductsByBrand(
+					input.brandId,
+					input.productId,
+					RECOMMENDATION_OVERSAMPLE,
+				),
+			]);
+			const ranked = completeRecommendations(
+				[...sameCategory, ...sameBrand],
+				[input.productId],
+				RECOMMENDATION_LIMIT,
+			);
+			if (ranked.length === RECOMMENDATION_LIMIT) return ranked;
+
+			const fallback = await storeQueries.getHighStockFallbackProducts(
+				[input.productId, ...ranked.map((product) => product.id)],
+				RECOMMENDATION_LIMIT - ranked.length,
+			);
+			return completeRecommendations(
+				[...sameCategory, ...sameBrand, ...fallback],
+				[input.productId],
+				RECOMMENDATION_LIMIT,
+			);
+		},
+
+		async getCartCrossSells(productIds: number[]) {
+			const seedIds = [...new Set(productIds)].slice(0, CROSS_SELL_INPUT_LIMIT);
+			if (seedIds.length === 0) return [];
+
+			const seeds = await storeQueries.getProductAffinityKeys(seedIds);
+			const categoryIds = [...new Set(seeds.map((seed) => seed.categoryId))];
+			const brandIds = [...new Set(seeds.map((seed) => seed.brandId))];
+			const candidates = await storeQueries.getCrossSellCandidates({
+				categoryIds,
+				brandIds,
+				excludeIds: seedIds,
+				limit: RECOMMENDATION_OVERSAMPLE,
+			});
+			const ranked = completeRecommendations(
+				candidates,
+				seedIds,
+				RECOMMENDATION_LIMIT,
+			);
+			if (ranked.length === RECOMMENDATION_LIMIT) return ranked;
+
+			const fallback = await storeQueries.getHighStockFallbackProducts(
+				[...seedIds, ...ranked.map((product) => product.id)],
+				RECOMMENDATION_LIMIT - ranked.length,
+			);
+			return completeRecommendations(
+				[...candidates, ...fallback],
+				seedIds,
+				RECOMMENDATION_LIMIT,
+			);
 		},
 
 		async getProductStockStatus(id: number) {
