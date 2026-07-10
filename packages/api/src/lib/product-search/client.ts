@@ -1,5 +1,5 @@
-import type { RequestLogger } from "evlog";
 import { env } from "cloudflare:workers";
+import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
 import type {
 	ProductSearchFilters,
@@ -30,11 +30,19 @@ export const searchProducts = async (
 	limit = 10,
 	filters?: ProductSearchFilters,
 ): Promise<SearchProductResult[]> => {
+	const trimmed = query.trim();
+	if (!trimmed) return [];
+
 	try {
-		return await withTimeout(
-			getProductSearchService().search({ query, limit, filters }),
+		const results = await withTimeout(
+			getProductSearchService().search({
+				query: trimmed,
+				limit,
+				filters,
+			}),
 			PRODUCT_SEARCH_TIMEOUT_MS,
 		);
+		return results;
 	} catch (error) {
 		logger.error("product_search.search_failed", error);
 		return [];
@@ -47,9 +55,10 @@ export const rebuildProductSearchIndex = async (
 	return getProductSearchService().rebuild(reason);
 };
 
-export const getProductSearchStatus = async (): Promise<ProductSearchStatus> => {
-	return getProductSearchService().getStatus();
-};
+export const getProductSearchStatus =
+	async (): Promise<ProductSearchStatus> => {
+		return getProductSearchService().getStatus();
+	};
 
 export const clearProductSearchIndex = async () => {
 	await getProductSearchService().clear();
@@ -63,6 +72,9 @@ type RebuildContext = {
 /**
  * Schedule a product-search rebuild in the background via `waitUntil` so the
  * caller's response is not blocked. Errors are logged, never thrown.
+ * Search results are never cached outside the Durable Object. The Workers
+ * cache tag purge remains the canonical invalidation boundary for catalog
+ * mutations; the rebuild only refreshes the index.
  */
 export const scheduleProductSearchRebuild = (
 	ctx: RebuildContext,

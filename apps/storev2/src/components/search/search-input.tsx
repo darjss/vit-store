@@ -42,13 +42,20 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	const [inputValue, setInputValue] = createSignal(local.value ?? "");
 	let inputRef: HTMLInputElement | undefined;
 	let debounceTimeout: ReturnType<typeof setTimeout> | undefined;
+	// Track last prop we applied so external updates (suggestions, URL, clear)
+	// still win, without treating local keystrokes as a stale prop and
+	// snapping the field back to the debounced parent value.
+	let lastSyncedValue = local.value ?? "";
 
 	const debounceMs = () => local.debounceMs ?? 300;
 
 	createEffect(() => {
-		if (local.value !== undefined && local.value !== inputValue()) {
-			setInputValue(local.value);
+		const next = local.value;
+		if (next === undefined || next === lastSyncedValue) {
+			return;
 		}
+		lastSyncedValue = next;
+		setInputValue(next);
 	});
 
 	const focusInput = () => {
@@ -79,11 +86,13 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 		debounceTimeout = setTimeout(() => {
+			lastSyncedValue = newValue;
 			local.onSearch?.(newValue);
 		}, debounceMs());
 	};
 
 	const handleClear = () => {
+		lastSyncedValue = "";
 		setInputValue("");
 		local.onValueChange?.("");
 		local.onSearch?.("");
@@ -102,6 +111,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
 			const submittedValue = e.currentTarget.value;
+			lastSyncedValue = submittedValue;
 			setInputValue(submittedValue);
 			local.onValueChange?.(submittedValue);
 			local.onSubmitSearch?.(submittedValue);

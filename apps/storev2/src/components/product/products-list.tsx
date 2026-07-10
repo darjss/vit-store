@@ -105,6 +105,7 @@ const ProductsList = (props: ProductsListProps) => {
 				filters.searchTerm(),
 				filters.categoryId(),
 				filters.brandId(),
+				filters.includeOutOfStock(),
 			],
 			queryFn: async () => {
 				const term = filters.searchTerm();
@@ -114,6 +115,7 @@ const ProductsList = (props: ProductsListProps) => {
 					limit: 10,
 					categoryId: filters.categoryId() ?? undefined,
 					brandId: filters.brandId() ?? undefined,
+					requireStock: !filters.includeOutOfStock(),
 				});
 			},
 			enabled: filters.isSearchMode(),
