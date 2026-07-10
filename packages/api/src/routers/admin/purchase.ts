@@ -5,8 +5,9 @@ import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "
 import * as v from "valibot";
 import { db } from "~/db/client";
 import { purgeTags } from "~/lib/cache/workers-cache";
-import { getAverageCostOfProduct } from "~/queries/payments";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
+import { scheduleRestockDispatches } from "~/lib/restock";
+import { getAverageCostOfProduct } from "~/queries/payments";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -128,7 +129,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(receivePurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            const { affectedProductIds } = await db().transaction(async (tx) => {
+            const { affectedProductIds, restockCandidates } = await db().transaction(async (tx) => {
                 return await purchaseQueries.admin.receivePurchase(tx, input);
             });
             if (affectedProductIds.length > 0) {
@@ -138,6 +139,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
                 ]);
                 scheduleProductSearchRebuild(ctx, "product_stock_updated");
             }
+            scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Purchase received successfully" };
         }
         catch (e) {

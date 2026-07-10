@@ -122,6 +122,7 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 
 			<CardAddButton
 				disabled={!isInStock()}
+				productName={props.product.name}
 				cartItem={{
 					productId: props.product.id,
 					quantity: 1,

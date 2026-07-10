@@ -2,18 +2,18 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	KhaanConsumedTransactionsTable,
-	OrderDetailsTable,
-	type PaymentInsertType,
 	MessengerNotificationFailuresTable,
+	OrderDetailsTable,
 	OrdersTable,
+	type PaymentInsertType,
 	PaymentsTable,
 	ProductImagesTable,
-	ProductsTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	SalesTable,
 } from "~/db/schema";
 import { recordConsumedKhaanTransaction } from "~/lib/payments/consumed-transaction";
+import { applyStockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
@@ -191,10 +191,7 @@ export const paymentQueries = {
 			});
 		},
 
-		async getLatestPaymentByOrderIdTx(
-			tx: TransactionType,
-			orderId: number,
-		) {
+		async getLatestPaymentByOrderIdTx(tx: TransactionType, orderId: number) {
 			return tx.query.PaymentsTable.findFirst({
 				where: and(
 					eq(PaymentsTable.orderId, orderId),
@@ -315,7 +312,6 @@ export const paymentQueries = {
 				})),
 			}));
 		},
-
 	},
 
 	store: {
@@ -412,7 +408,10 @@ export const paymentQueries = {
 					.where(
 						and(
 							eq(PaymentsTable.paymentNumber, paymentNumber),
-							inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+							inArray(PaymentsTable.status, [
+								"pending",
+								"customer_claimed_paid",
+							]),
 							isNull(PaymentsTable.deletedAt),
 						),
 					)
@@ -445,17 +444,12 @@ export const paymentQueries = {
 				// give an earlier error for impossible inputs and cannot prevent
 				// races, so it is intentionally omitted (F6).
 				for (const detail of orderDetails) {
-					const [updatedProduct] = await tx
-						.update(ProductsTable)
-						.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
-						.where(
-							and(
-								eq(ProductsTable.id, detail.product.id),
-								eq(ProductsTable.status, "active"),
-								sql`${ProductsTable.stock} >= ${detail.quantity}`,
-							),
-						)
-						.returning({ id: ProductsTable.id });
+					const updatedProduct = await applyStockTransition(tx, {
+						productId: detail.product.id,
+						delta: -detail.quantity,
+						requireActive: true,
+						requireNonNegative: true,
+					});
 
 					if (!updatedProduct) {
 						throw new Error(

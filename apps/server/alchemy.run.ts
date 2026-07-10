@@ -81,8 +81,8 @@ export const server = await Worker("api", {
 	compatibility: "node",
 	compatibilityDate: "2026-07-07",
 	cache: { enabled: true },
-	// Cloudflare cron is UTC; 03:00 UTC = 11:00 Ulaanbaatar (UTC+8)
-	crons: ["0 3 * * *"],
+	// Durable restock batches/retries run independently of request lifetimes.
+	crons: ["*/5 * * * *"],
 	domains:
 		stage === "prod"
 			? ["api.amerikvitamin.mn"]
