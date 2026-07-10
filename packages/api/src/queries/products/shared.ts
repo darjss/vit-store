@@ -14,6 +14,26 @@ export function buildActiveProductConditions(requireStock = false) {
 	return and(...conditions);
 }
 
+/** Dedupe, drop OOS / excluded ids, rank by stock desc, cap. */
+export function rankInStockProducts<T extends { id: number; stock: number }>(
+	products: T[],
+	options: { excludeIds?: Iterable<number>; limit: number },
+): T[] {
+	const exclude = new Set(options.excludeIds ?? []);
+	const seen = new Set<number>();
+	const eligible: T[] = [];
+
+	for (const product of products) {
+		if (product.stock <= 0) continue;
+		if (exclude.has(product.id) || seen.has(product.id)) continue;
+		seen.add(product.id);
+		eligible.push(product);
+	}
+
+	eligible.sort((a, b) => b.stock - a.stock || a.id - b.id);
+	return eligible.slice(0, options.limit);
+}
+
 export async function hydrateProductsBySearchIds<T extends Record<string, unknown>>(
 	ids: number[],
 	queryFn: (ids: number[]) => Promise<T[]>,
