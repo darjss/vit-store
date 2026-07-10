@@ -1,12 +1,12 @@
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, Match, onMount, Switch } from "solid-js";
+import { createEffect, createSignal, Match, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
 import RestockNotifySheet from "./restock-notify-sheet";
-import { subscribeInventory, type InventorySnapshot } from "./inventory-reconciler";
+import { useInventorySnapshot } from "./inventory-reconciler";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -20,9 +20,7 @@ export default function ProductQuantitySelector(
 	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
-	const [inventory, setInventory] = createSignal<InventorySnapshot>();
-
-	onMount(() => subscribeInventory(props.cartItem.productId, setInventory));
+	const inventory = useInventorySnapshot(props.cartItem.productId);
 
 	const stock = () => inventory()?.stock ?? maxStock;
 	const isInStock = () =>
@@ -30,6 +28,11 @@ export default function ProductQuantitySelector(
 			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
 			: props.isInStock;
 	const price = () => inventory()?.price ?? props.cartItem.price;
+
+	createEffect(() => {
+		const max = Math.min(10, stock());
+		if (max > 0) setQuantity((current) => Math.min(current, max));
+	});
 
 	const increment = () => {
 		const max = Math.min(10, stock());

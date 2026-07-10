@@ -153,11 +153,6 @@ const breadcrumbSchema = {
 	]
 };
 
-Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
-	tags: ["site-shell", "catalog", `product-${product.id}`],
-});
 ---
 
 <Layout 
@@ -247,6 +242,7 @@ Astro.cache.set({
 	<InventoryReconciler client:load productIds={[product.id]} />
 	<StickyMobileCta
 			client:load
+			isInStock={isInStock}
 			cartItem={{
 				productId: product.id,
 				quantity: 1,

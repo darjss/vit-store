@@ -2,15 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
 import {
     addCategorySchema,
-    CATALOG_TAG,
-    CATEGORIES_TAG,
     categoryTag,
-    HOME_TAG,
-    PRODUCTS_TAG,
-    SITE_SHELL_TAG,
 } from "@vit/shared";
 import * as v from "valibot";
-import { purgeTags } from "~/lib/cache/workers-cache";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -42,13 +37,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await purgeTags(ctx, [
-                CATEGORIES_TAG,
-                PRODUCTS_TAG,
-                CATALOG_TAG,
-                HOME_TAG,
-                SITE_SHELL_TAG,
-            ]);
+            await purgeCatalogCache(ctx);
             scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully added category" };
         }
@@ -79,14 +68,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await purgeTags(ctx, [
-                CATEGORIES_TAG,
-                categoryTag(id),
-                PRODUCTS_TAG,
-                CATALOG_TAG,
-                HOME_TAG,
-                SITE_SHELL_TAG,
-            ]);
+            await purgeCatalogCache(ctx, [], [categoryTag(id)]);
             scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully updated category" };
         }
@@ -109,14 +91,7 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
         try {
             const { id } = input;
             await categoryQueries.admin.deleteCategory(id);
-            await purgeTags(ctx, [
-                CATEGORIES_TAG,
-                categoryTag(id),
-                PRODUCTS_TAG,
-                CATALOG_TAG,
-                HOME_TAG,
-                SITE_SHELL_TAG,
-            ]);
+            await purgeCatalogCache(ctx, [], [categoryTag(id)]);
             scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully deleted category" };
         }

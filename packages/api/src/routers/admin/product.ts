@@ -1,21 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import {
-    addProductSchema,
-    BRANDS_TAG,
-    CATEGORIES_TAG,
-    CATALOG_TAG,
-    HOME_TAG,
-    PRODUCTS_TAG,
-    SITE_SHELL_TAG,
-    inventoryTag,
-    productTag,
-    updateProductSchema,
+	addProductSchema,
+	updateProductSchema,
 } from "@vit/shared";
 import { status } from "@vit/shared/constants";
 import * as v from "valibot";
 import { db } from "~/db/client";
-import { purgeTags } from "~/lib/cache/workers-cache";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { PRODUCT_PER_PAGE, editableProductFields } from "~/lib/constants";
 import { scheduleProductSearchRebuild, searchProducts } from "~/lib/product-search/client";
 import {
@@ -41,19 +33,6 @@ const normalizeExpirationDate = (value?: string | null) => {
         return `${mmYyyyMatch[2]}-${mmYyyyMatch[1]}`;
     return null;
 };
-const CATALOG_MUTATION_TAGS = [
-    PRODUCTS_TAG,
-    BRANDS_TAG,
-    CATEGORIES_TAG,
-    SITE_SHELL_TAG,
-    HOME_TAG,
-    CATALOG_TAG,
-];
-const stockMutationTags = (productId: number) => [
-    PRODUCTS_TAG,
-    productTag(productId),
-    inventoryTag(productId),
-];
 export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     searchProductByName: proc
@@ -199,7 +178,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 await productQueries.admin.createProductImages(productId, imagesToInsert, tx);
                 return created;
             });
-            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(productResult.id)]);
+            await purgeCatalogCache(ctx, [productResult.id]);
             scheduleProductSearchRebuild(ctx, "product_created");
             return { message: "Product added successfully", id: productResult.id };
         }
@@ -309,7 +288,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 }));
                 await productQueries.admin.createProductImages(input.id, imagesToInsert);
             }
-            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id), inventoryTag(input.id)]);
+            await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_updated");
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);
@@ -348,7 +327,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
-            await purgeTags(ctx, stockMutationTags(input.productId));
+            await purgeCatalogCache(ctx, [input.productId]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
             if (input.type === "add") {
                 scheduleRestockDispatch(ctx, {
@@ -383,7 +362,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Product not found",
                 });
             await productQueries.admin.deleteProduct(input.id);
-            await purgeTags(ctx, [...CATALOG_MUTATION_TAGS, productTag(input.id), inventoryTag(input.id)]);
+            await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_deleted");
             return { message: "Product deleted successfully" };
         }
@@ -461,7 +440,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
-            await purgeTags(ctx, stockMutationTags(input.id));
+            await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
             scheduleRestockDispatch(ctx, {
                 productId: input.id,
@@ -564,12 +543,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 ? normalizeExpirationDate(input.stringValue)
                 : (input.stringValue ?? input.numberValue);
             const stockChange = await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
-            await purgeTags(
-                ctx,
-                stockChange
-                    ? stockMutationTags(input.id)
-                    : [...CATALOG_MUTATION_TAGS, productTag(input.id)],
-            );
+            await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_updated");
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);

@@ -6,23 +6,22 @@ import { Button } from "@/components/ui/button";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import RestockNotifySheet from "./restock-notify-sheet";
-import { subscribeInventory, type InventorySnapshot } from "./inventory-reconciler";
+import { useInventorySnapshot } from "./inventory-reconciler";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
+	isInStock: boolean;
 }
 
 export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	const [visible, setVisible] = createSignal(false);
-	const [inventory, setInventory] = createSignal<InventorySnapshot>();
+	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 	const isInStock = () =>
 		inventory()
 			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
-			: true;
+			: props.isInStock;
 	const price = () => inventory()?.price ?? props.cartItem.price;
-
-	onMount(() => subscribeInventory(props.cartItem.productId, setInventory));
 
 	onMount(() => {
 		const mainCta = document.getElementById("product-main-cta");

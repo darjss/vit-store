@@ -302,6 +302,7 @@ export const storeQueries = {
 				},
 				where: and(
 					inArray(ProductsTable.id, productIds),
+					eq(ProductsTable.status, "active"),
 					isNull(ProductsTable.deletedAt),
 				),
 			});

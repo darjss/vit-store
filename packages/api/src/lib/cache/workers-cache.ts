@@ -1,7 +1,12 @@
 import {
+	BRANDS_TAG,
+	CATEGORIES_TAG,
+	PRODUCTS_TAG,
 	type CachePolicy,
 	type CatalogCacheAccumulator,
 	cacheControlHeader,
+	inventoryTag,
+	productTag,
 } from "@vit/shared";
 import type { Context as HonoContext } from "hono";
 import type { Context, ServerHonoVariables } from "~/lib/context";
@@ -108,6 +113,37 @@ export async function purgeTagsGlobal(tags: string[]): Promise<void> {
 	} catch (error) {
 		logger.error("workers_cache.purge_failed", error, { cache_tags: tags });
 	}
+}
+
+export function catalogCacheTags(
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): string[] {
+	const uniqueProductIds = [...new Set(productIds)];
+	return [
+		...new Set([
+			PRODUCTS_TAG,
+			BRANDS_TAG,
+			CATEGORIES_TAG,
+			...extraTags,
+			...uniqueProductIds.flatMap((id) => [productTag(id), inventoryTag(id)]),
+		]),
+	];
+}
+
+export async function purgeCatalogCache(
+	ctx: Context,
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): Promise<void> {
+	await purgeTags(ctx, catalogCacheTags(productIds, extraTags));
+}
+
+export async function purgeCatalogCacheGlobal(
+	productIds: readonly number[] = [],
+	extraTags: readonly string[] = [],
+): Promise<void> {
+	await purgeTagsGlobal(catalogCacheTags(productIds, extraTags));
 }
 
 export async function purgeTags(ctx: Context, tags: string[]): Promise<void> {

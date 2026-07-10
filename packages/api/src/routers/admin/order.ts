@@ -4,11 +4,8 @@ import { customerQueries, orderQueries, paymentQueries, productQueries, salesQue
 import {
     addOrderSchema,
     patchOrderHeaderSchema,
-    PRODUCTS_TAG,
-    productTag,
     timeRangeSchema,
     updateOrderSchema,
-    inventoryTag,
 } from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
@@ -21,7 +18,7 @@ import { SalesTable, } from "~/db/schema";
 import { getAverageCostOfProduct } from "~/queries/payments";
 import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
 import { scheduleRestockDispatches } from "~/lib/restock";
-import { purgeTags } from "~/lib/cache/workers-cache";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -58,7 +55,8 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 quantity: product.quantity,
                 price: product.price,
             }));
-            const { orderId } = await db().transaction(async (tx) => {
+            const { orderId, stockTransitions } = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 const order = await orderQueries.admin.createOrderTx(tx, {
                     orderNumber: orderNumber,
                     customerPhone: Number(input.customerPhone),
@@ -80,7 +78,13 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                             sellingPrice: product.price,
                             productId: product.productId,
                         });
-                        await productQueries.admin.updateStockTx(tx, product.productId, product.quantity, "minus");
+                        const transition = await productQueries.admin.updateStockTx(
+                            tx,
+                            product.productId,
+                            product.quantity,
+                            "minus",
+                        );
+                        if (transition) stockTransitions.push(transition);
                     }
                 }
                 await paymentQueries.admin.createPaymentTx(tx, {
@@ -90,8 +94,12 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     status: input.paymentStatus,
                     amount: orderTotal,
                 });
-                return { orderId };
+                return { orderId, stockTransitions };
             });
+            await purgeCatalogCache(
+                ctx,
+                stockTransitions.map((transition) => transition.productId),
+            );
             ctx.log.info("payment.created", {
                 paymentNumber,
                 orderId,
@@ -244,11 +252,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 return stockTransitions;
             });
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
-            await purgeTags(ctx, [
-                PRODUCTS_TAG,
-                ...changedProductIds.map((id) => productTag(id)),
-                ...changedProductIds.map((id) => inventoryTag(id)),
-            ]);
+            await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Order updated successfully" };
         }
@@ -319,11 +323,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 return stockTransitions;
             });
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
-            await purgeTags(ctx, [
-                PRODUCTS_TAG,
-                ...changedProductIds.map((id) => productTag(id)),
-                ...changedProductIds.map((id) => inventoryTag(id)),
-            ]);
+            await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
@@ -359,11 +359,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 return stockTransitions;
             });
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
-            await purgeTags(ctx, [
-                PRODUCTS_TAG,
-                ...changedProductIds.map((id) => productTag(id)),
-                ...changedProductIds.map((id) => inventoryTag(id)),
-            ]);
+            await purgeCatalogCache(ctx, changedProductIds);
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",
