@@ -1,8 +1,9 @@
 ---
+
 import PaymentOptions from "@/components/payment/payment-options";
 import Layout from "@/layouts/Layout.astro";
-import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { paymentSuccessUrl } from "@/lib/payment-url";
+import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
 import IconCreditCard from "~icons/ri/bank-card-line";
 

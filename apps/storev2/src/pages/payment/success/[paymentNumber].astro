@@ -1,6 +1,8 @@
 ---
 import ClearCart from "@/components/payment/clear-cart";
+import Celebration from "@/components/ui/celebration";
 import Layout from "@/layouts/Layout.astro";
+import { paymentSuccessCelebrationKey } from "@/lib/celebration";
 import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { paymentUrl, orderConfirmUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
@@ -28,6 +30,11 @@ if (payment.status !== "success") {
 
 <Layout>
     <ClearCart client:load />
+    <Celebration
+        client:load
+        eventKey={paymentSuccessCelebrationKey(paymentNumber)}
+        intensity="strong"
+    />
     <div class="container mx-auto px-4 py-8 min-h-screen">
         <!-- Success Header -->
         <div class="enter-scale mb-10 text-center">
@@ -43,7 +50,7 @@ if (payment.status !== "success") {
                 Төлбөр амжилттай!
             </h1>
             <p class="text-lg text-muted-foreground max-w-md mx-auto">
-                Таны QPay төлбөр амжилттай хийгдлээ. Захиалга баталгаажлаа.
+                Таны төлбөр амжилттай хийгдлээ. Захиалга баталгаажлаа.
             </p>
         </div>
 

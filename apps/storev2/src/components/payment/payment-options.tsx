@@ -6,7 +6,7 @@ import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { buttonVariants } from "@/components/ui/button";
-import { orderConfirmUrl } from "@/lib/payment-url";
+import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -107,7 +107,9 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 		}
 		setAdvanced(true);
 		cart.clearCart();
-		void safeNavigate(orderConfirmUrl(props.orderNumber, props.checkoutToken));
+		void safeNavigate(
+			paymentSuccessUrl(props.paymentNumber, props.checkoutToken),
+		);
 	});
 
 	return (
