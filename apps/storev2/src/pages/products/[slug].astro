@@ -12,50 +12,17 @@ import ProductImageCarousel from "@/components/product/product-image-carousel.ts
 import ProductInfo from "@/components/product/product-info.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
+import InventoryReconciler from "@/components/product/inventory-reconciler";
 import Layout from "@/layouts/Layout.astro";
 import { washBg } from "@/lib/wash";
 
-export const prerender = true;
+export const prerender = false;
 
 const SITE_URL = "https://amerikvitamin.mn";
 
 import { api } from "@/lib/trpc";
 
-export async function getStaticPaths() {
-	try {
-		const products = await api.product.getPrerenderProducts.query();
-		const paths: Array<{
-			params: { slug: string };
-			props: { redirectTo: string | null };
-		}> = [];
-		for (const product of products) {
-			const canonicalSlug = `${product.slug}-${product.id}`;
-			paths.push({ params: { slug: canonicalSlug }, props: { redirectTo: null } });
-			// Emit one redirect path per previously-used slug so old URLs 301
-			// to the canonical one. See issue #78.
-			for (const oldSlug of product.oldSlugs ?? []) {
-				if (!oldSlug || oldSlug === product.slug) continue;
-				paths.push({
-					params: { slug: `${oldSlug}-${product.id}` },
-					props: { redirectTo: canonicalSlug },
-				});
-			}
-		}
-		return paths;
-	} catch (error) {
-		console.error("Error getting static paths", error);
-		return [];
-	}
-}
-
 const { slug } = Astro.params;
-const { redirectTo } = Astro.props as { redirectTo: string | null };
-
-// Old-slug redirect: a prerendered path whose slug no longer matches the
-// product's canonical slug. 301 preserves SEO link equity. See issue #78.
-if (redirectTo) {
-	return Astro.redirect(`/products/${redirectTo}/`, 301);
-}
 
 const slugParts = slug?.split("-") ?? [];
 const productId = Number(slugParts[slugParts.length - 1]);
@@ -73,8 +40,15 @@ if (!productData) {
 
 const product = productData;
 
-// Determine availability based on status and stock. This is evaluated at build
-// time for prerendered product pages.
+// Old or non-canonical slugs redirect at request time so the stock-sensitive
+// PDP remains on-demand instead of freezing a build-time path list.
+const canonicalSlug = `${product.slug}-${product.id}`;
+if (slug !== canonicalSlug) {
+	return Astro.redirect(`/products/${canonicalSlug}/`, 301);
+}
+
+// This is last-known server data for first paint. The client reconciler fetches
+// the authoritative short-lived inventory snapshot after hydration.
 const isInStock = product.status === "active" && product.stock > 0;
 
 const categoryHref = product.category?.slug
@@ -178,6 +152,12 @@ const breadcrumbSchema = {
 		}
 	]
 };
+
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "catalog", `product-${product.id}`],
+});
 ---
 
 <Layout 
@@ -186,7 +166,7 @@ const breadcrumbSchema = {
 	image={ogImage}
 	imageAlt={product.name}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+	<script type="application/ld+json" data-product-jsonld set:html={JSON.stringify(productSchema)} />
 	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
 	<div class="relative min-h-screen bg-hero-warm">
@@ -264,9 +244,9 @@ const breadcrumbSchema = {
 		</div>
 	</div>
 
-	{isInStock && (
-		<StickyMobileCta
-			client:idle
+	<InventoryReconciler client:load productIds={[product.id]} />
+	<StickyMobileCta
+			client:load
 			cartItem={{
 				productId: product.id,
 				quantity: 1,
@@ -276,7 +256,6 @@ const breadcrumbSchema = {
 				slug: product.slug,
 			}}
 		/>
-	)}
 </Layout>
 
 <script define:vars={{ productData: { product_id: product.id, product_name: product.name, product_price: product.price, product_slug: slug } }}>

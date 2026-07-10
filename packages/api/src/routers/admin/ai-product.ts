@@ -1,10 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import {
 	BRANDS_TAG,
+	CATALOG_TAG,
 	CATEGORIES_TAG,
+	HOME_TAG,
 	type ExtractedProductData,
 	PRODUCTS_TAG,
 	productTag,
+	SITE_SHELL_TAG,
 } from "@vit/shared";
 import { productQueries } from "@vit/api/queries";
 import * as v from "valibot";
@@ -158,6 +161,9 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						PRODUCTS_TAG,
 						BRANDS_TAG,
 						CATEGORIES_TAG,
+						CATALOG_TAG,
+						HOME_TAG,
+						SITE_SHELL_TAG,
 						...createdProductTags,
 					]);
 					scheduleProductSearchRebuild(ctx, "product_created");
@@ -213,6 +219,9 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 					PRODUCTS_TAG,
 					BRANDS_TAG,
 					CATEGORIES_TAG,
+					CATALOG_TAG,
+					HOME_TAG,
+					SITE_SHELL_TAG,
 					productTag(input.productId),
 				]);
 				scheduleProductSearchRebuild(ctx, "product_updated");

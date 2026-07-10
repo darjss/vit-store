@@ -1,11 +1,12 @@
 ---
 import CheckoutForm from "@/components/checkout/checkout-form";
+import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const serverApi = createServerClient(cookieHeader, env.server);
 let user = null;
 try {
 	user = await serverApi.auth.check.query();

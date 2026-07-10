@@ -15,6 +15,7 @@
 
 
 import LogoutButton from "@/components/auth/logout-button";
+import { env } from "cloudflare:workers";
 import {
 	Dropdown,
 	DropdownContent,
@@ -25,7 +26,7 @@ import {
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const serverApi = createServerClient(cookieHeader, env.server);
 
 let user = null;
 try {

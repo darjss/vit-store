@@ -1,7 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { customerQueries, orderQueries, paymentQueries, productQueries, salesQueries, } from "@vit/api/queries";
-import { addOrderSchema, patchOrderHeaderSchema, timeRangeSchema, updateOrderSchema, } from "@vit/shared";
+import {
+    addOrderSchema,
+    patchOrderHeaderSchema,
+    PRODUCTS_TAG,
+    productTag,
+    timeRangeSchema,
+    updateOrderSchema,
+    inventoryTag,
+} from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -13,6 +21,7 @@ import { SalesTable, } from "~/db/schema";
 import { getAverageCostOfProduct } from "~/queries/payments";
 import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
 import { scheduleRestockDispatches } from "~/lib/restock";
+import { purgeTags } from "~/lib/cache/workers-cache";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -234,6 +243,12 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 });
                 return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeTags(ctx, [
+                PRODUCTS_TAG,
+                ...changedProductIds.map((id) => productTag(id)),
+                ...changedProductIds.map((id) => inventoryTag(id)),
+            ]);
             scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Order updated successfully" };
         }
@@ -303,6 +318,12 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 await orderQueries.admin.softDeleteOrderTx(tx, input.id);
                 return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeTags(ctx, [
+                PRODUCTS_TAG,
+                ...changedProductIds.map((id) => productTag(id)),
+                ...changedProductIds.map((id) => inventoryTag(id)),
+            ]);
             scheduleRestockDispatches(ctx, restockCandidates);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
@@ -323,17 +344,26 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 const details = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const stockWasDeducted = latestPayment?.status === "success";
                 if (stockWasDeducted) {
                     for (const d of details.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)) {
-                        await productQueries.admin.updateStockTx(tx, d.productId, d.quantity, "minus");
+                        const transition = await productQueries.admin.updateStockTx(tx, d.productId, d.quantity, "minus");
+                        if (transition) stockTransitions.push(transition);
                     }
                 }
                 await orderQueries.admin.restoreOrderTx(tx, input.id);
+                return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeTags(ctx, [
+                PRODUCTS_TAG,
+                ...changedProductIds.map((id) => productTag(id)),
+                ...changedProductIds.map((id) => inventoryTag(id)),
+            ]);
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",

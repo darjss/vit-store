@@ -37,12 +37,47 @@ function edgeCacheControl(pathname: string): string {
     : "public, s-maxage=60, stale-while-revalidate=300";
 }
 
+function isPublicHtmlPath(pathname: string): boolean {
+	const normalizedPath =
+		pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+
+	return (
+		normalizedPath === "/" ||
+		normalizedPath === "/products" ||
+		/^\/products\/[^/]+-\d+$/.test(normalizedPath) ||
+		/^\/products\/(?:brand|category)\/[^/]+\/\d+$/.test(normalizedPath)
+	);
+}
+
+function setNoStore(response: Response): void {
+	response.headers.set("Cache-Control", "no-store");
+	response.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+	response.headers.delete("Cache-Tag");
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 
 	// Keep the canonical robots endpoint clean. Some crawlers/tools probe both forms.
 	if (url.pathname === "/robots.txt/") {
-		return context.redirect("/robots.txt", 301);
+		context.cache.set(false);
+		const response = context.redirect("/robots.txt", 301);
+		setNoStore(response);
+		return response;
+	}
+
+	const isPublicHtml = isPublicHtmlPath(url.pathname);
+	const hasPersonalization =
+		context.request.headers.has("cookie") ||
+		context.request.headers.has("authorization");
+	const mustBypassCache =
+		context.request.method !== "GET" || !isPublicHtml || hasPersonalization;
+
+	// Route caching is opt-in in page code. Mark every other request as an
+	// explicit bypass before rendering, including the same public paths when a
+	// customer sends cookies or authorization headers.
+	if (mustBypassCache) {
+		context.cache.set(false);
 	}
 
 	if (HTML_EDGE_CACHE_ENABLED && context.request.method === "GET" && isCacheablePath(url.pathname)) {
@@ -81,8 +116,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	}
 
 	const response = await next();
-	if (response.status >= 400) {
-		response.headers.set("Cache-Control", "no-store");
+	if (
+		mustBypassCache ||
+		response.status >= 300 ||
+		response.headers.has("set-cookie")
+	) {
+		context.cache.set(false);
+		setNoStore(response);
+	} else if (isPublicHtml) {
+		// Workers Cache honors Vary. Keeping the anonymous variant separate from
+		// cookie-bearing requests prevents a personalized render from reusing a
+		// public HTML entry, while the cookie response itself is no-store.
+		const vary = response.headers.get("Vary");
+		response.headers.set("Vary", vary ? `${vary}, Cookie` : "Cookie");
 	}
 	return response;
 });
