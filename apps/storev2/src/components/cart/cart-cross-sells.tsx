@@ -1,7 +1,14 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
-import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import {
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import CardAddButton from "@/components/product/card-add-button";
 import ProductImageFallback from "@/components/product/product-image-fallback";
 import { getProductImageProps } from "@/lib/image";
@@ -11,25 +18,15 @@ import { cart } from "@/store/cart";
 
 const CROSS_SELL_TIMEOUT_MS = 5000;
 
-const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
-	Promise.race([
-		promise,
-		new Promise<T>((_resolve, reject) =>
-			setTimeout(
-				() => reject(new Error(`cart cross-sells timed out after ${ms}ms`)),
-				ms,
-			),
-		),
-	]);
-
 async function fetchCartCrossSells(
 	productIds: number[],
+	signal: AbortSignal,
 ): Promise<ProductForHome[]> {
 	if (productIds.length === 0) return [];
 	try {
-		const products = await withTimeout(
-			api.product.getCartCrossSells.query({ productIds }),
-			CROSS_SELL_TIMEOUT_MS,
+		const products = await api.product.getCartCrossSells.query(
+			{ productIds },
+			{ signal },
 		);
 		return products.map((p) => ({
 			id: p.id,
@@ -46,16 +43,29 @@ async function fetchCartCrossSells(
 }
 
 export default function CartCrossSells() {
+	let activeRequest: AbortController | undefined;
+
 	const productIdsKey = createMemo(() =>
 		[...new Set(cart.items().map((item) => item.productId))]
 			.sort((a, b) => a - b)
 			.join(","),
 	);
 
-	const [crossSells] = createResource(productIdsKey, (key) => {
+	const [crossSells] = createResource(productIdsKey, async (key) => {
 		if (!key) return Promise.resolve([] as ProductForHome[]);
-		return fetchCartCrossSells(key.split(",").map(Number));
+		activeRequest?.abort();
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), CROSS_SELL_TIMEOUT_MS);
+		activeRequest = controller;
+		try {
+			return await fetchCartCrossSells(key.split(",").map(Number), controller.signal);
+		} finally {
+			clearTimeout(timeout);
+			if (activeRequest === controller) activeRequest = undefined;
+		}
 	});
+
+	onCleanup(() => activeRequest?.abort());
 
 	return (
 		<Show when={!crossSells.loading && crossSells()} keyed>
