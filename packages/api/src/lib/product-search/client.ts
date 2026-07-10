@@ -1,13 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
-import {
-	clearAllIsolateSearchCaches,
-	clearProductSearchResultCache,
-	readSearchResultCache,
-	searchResultCacheKey,
-	writeSearchResultCache,
-} from "~/lib/product-search/isolate-cache";
 import type {
 	ProductSearchFilters,
 	ProductSearchRebuildReason,
@@ -15,8 +8,6 @@ import type {
 	SearchProductResult,
 } from "~/lib/product-search/types";
 import { PRODUCT_SEARCH_OBJECT_NAME } from "~/lib/product-search/types";
-
-export { clearProductSearchResultCache };
 
 const getProductSearchService = () =>
 	env.PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
@@ -42,10 +33,6 @@ export const searchProducts = async (
 	const trimmed = query.trim();
 	if (!trimmed) return [];
 
-	const cacheKey = searchResultCacheKey(trimmed, limit, filters);
-	const cached = readSearchResultCache(cacheKey);
-	if (cached) return cached;
-
 	try {
 		const results = await withTimeout(
 			getProductSearchService().search({
@@ -55,7 +42,6 @@ export const searchProducts = async (
 			}),
 			PRODUCT_SEARCH_TIMEOUT_MS,
 		);
-		writeSearchResultCache(cacheKey, results);
 		return results;
 	} catch (error) {
 		logger.error("product_search.search_failed", error);
@@ -66,10 +52,7 @@ export const searchProducts = async (
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",
 ): Promise<ProductSearchStatus> => {
-	clearAllIsolateSearchCaches();
-	const status = await getProductSearchService().rebuild(reason);
-	clearAllIsolateSearchCaches();
-	return status;
+	return getProductSearchService().rebuild(reason);
 };
 
 export const getProductSearchStatus =
@@ -79,7 +62,6 @@ export const getProductSearchStatus =
 
 export const clearProductSearchIndex = async () => {
 	await getProductSearchService().clear();
-	clearAllIsolateSearchCaches();
 };
 
 type RebuildContext = {
@@ -90,14 +72,14 @@ type RebuildContext = {
 /**
  * Schedule a product-search rebuild in the background via `waitUntil` so the
  * caller's response is not blocked. Errors are logged, never thrown.
- * Clears the isolate-local warm result cache immediately so subsequent
- * searches do not serve pre-rebuild rankings while DO rebuild runs.
+ * Search results are never cached outside the Durable Object. The Workers
+ * cache tag purge remains the canonical invalidation boundary for catalog
+ * mutations; the rebuild only refreshes the index.
  */
 export const scheduleProductSearchRebuild = (
 	ctx: RebuildContext,
 	reason: ProductSearchRebuildReason,
 ): void => {
-	clearAllIsolateSearchCaches();
 	ctx.c.executionCtx.waitUntil(
 		rebuildProductSearchIndex(reason).catch((error) => {
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {

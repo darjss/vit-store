@@ -9,9 +9,6 @@ export const CACHE_POLICY = {
 	homeFeed: { maxAge: 21600, staleWhileRevalidate: 86400 },
 	categories: { maxAge: 86400, staleWhileRevalidate: 604800 },
 	brands: { maxAge: 86400, staleWhileRevalidate: 604800 },
-	// Search is query-shaped and stock-sensitive; keep TTL short so popular
-	// queries stay warm without masking inventory/ranking updates for long.
-	search: { maxAge: 60, staleWhileRevalidate: 300 },
 } as const satisfies Record<string, CachePolicy>;
 
 export function cacheControlHeader(policy: CachePolicy): string {

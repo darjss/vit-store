@@ -1,6 +1,7 @@
 import { productQueries } from "@vit/api/queries";
+import { brandQueries } from "~/queries/brands";
+import { categoryQueries } from "~/queries/categories";
 import { searchProducts } from "~/lib/product-search/client";
-import { loadNavigationLists } from "~/lib/product-search/isolate-cache";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
@@ -224,7 +225,10 @@ const scoreNavigationMatch = (
 };
 
 export const searchNavigationResults = async (query: string, limit: number) => {
-	const { brands, categories } = await loadNavigationLists();
+	const [brands, categories] = await Promise.all([
+		brandQueries.store.getAllBrands(),
+		categoryQueries.store.getAllCategories(),
+	]);
 	const safeLimit = Math.min(Math.max(limit, 1), 8);
 
 	return {

@@ -392,8 +392,8 @@ export const searchMiniSearchIndex = (
 		}))
 		.sort((a, b) => {
 			if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
-			if (a.rank !== b.rank) return b.rank - a.rank;
-			return b.stock - a.stock;
+			if (a.stock !== b.stock) return b.stock - a.stock;
+			return b.rank - a.rank;
 		})
 		.slice(0, safeLimit)
 		.map(({ result }) => mapMiniSearchResult(result, documentsById));

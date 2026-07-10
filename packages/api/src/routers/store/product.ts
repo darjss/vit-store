@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
-import { BRANDS_TAG, CACHE_POLICY, CATEGORIES_TAG, PRODUCTS_TAG, productTag } from "@vit/shared";
+import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
@@ -63,7 +63,6 @@ export const product = router({
 					categoryId: input.categoryId,
 					requireStock: input.requireStock,
 				});
-				markCacheable(ctx, CACHE_POLICY.search, [PRODUCTS_TAG]);
 				return products;
 			} catch (error) {
 				throw new TRPCError({
@@ -86,12 +85,6 @@ export const product = router({
 				const [products, navigation] = await Promise.all([
 					performProductSearch(input.query, safeLimit),
 					searchNavigationResults(input.query, 4),
-				]);
-
-				markCacheable(ctx, CACHE_POLICY.search, [
-					PRODUCTS_TAG,
-					BRANDS_TAG,
-					CATEGORIES_TAG,
 				]);
 
 				return {
