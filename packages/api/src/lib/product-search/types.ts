@@ -13,6 +13,7 @@ export type ProductSearchRebuildReason =
 export interface ProductSearchFilters {
 	brandId?: number;
 	categoryId?: number;
+	requireStock?: boolean;
 }
 
 export interface ProductSearchInput {

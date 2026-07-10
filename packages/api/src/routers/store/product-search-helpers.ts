@@ -1,8 +1,6 @@
-import {
-	brandQueries,
-	categoryQueries,
-	productQueries,
-} from "@vit/api/queries";
+import { productQueries } from "@vit/api/queries";
+import { brandQueries } from "~/queries/brands";
+import { categoryQueries } from "~/queries/categories";
 import { searchProducts } from "~/lib/product-search/client";
 import {
 	normalizeSearchText,
@@ -75,17 +73,18 @@ export const performCatalogSearch = async (
 	const requireStock = options?.requireStock ?? false;
 	const safeLimit = Math.min(limit, 10);
 	const filters =
-		options?.brandId || options?.categoryId
-			? { brandId: options.brandId, categoryId: options.categoryId }
+		options?.brandId || options?.categoryId || requireStock
+			? {
+					brandId: options?.brandId,
+					categoryId: options?.categoryId,
+					requireStock,
+				}
 			: undefined;
 	const searchResults = await searchProducts(query, safeLimit, filters);
 
 	if (searchResults.length > 0) {
 		return searchResults
 			.filter((result) => result.status === "active")
-			.filter((result) =>
-				requireStock ? result.inStock && result.stock > 0 : true,
-			)
 			.map((result) => ({
 				id: result.id,
 				slug: result.slug,
@@ -105,18 +104,25 @@ export const performCatalogSearch = async (
 		? await q.searchByNameWithStock(query, safeLimit)
 		: await q.searchByName(query, safeLimit);
 
-	return fallbackResults.map((p) => ({
-		id: p.id,
-		slug: p.slug,
-		name: p.name,
-		price: p.price,
-		image: p.images[0]?.url || "",
-		brand: p.brand?.name || "",
-		status: p.status,
-		stock: p.stock,
-		discount: p.discount,
-		categoryId: p.categoryId,
-	}));
+	return fallbackResults
+		.map((p) => ({
+			id: p.id,
+			slug: p.slug,
+			name: p.name,
+			price: p.price,
+			image: p.images[0]?.url || "",
+			brand: p.brand?.name || "",
+			status: p.status,
+			stock: p.stock,
+			discount: p.discount,
+			categoryId: p.categoryId,
+		}))
+		.sort((a, b) => {
+			const aIn = a.stock > 0;
+			const bIn = b.stock > 0;
+			if (aIn !== bIn) return aIn ? -1 : 1;
+			return b.stock - a.stock;
+		});
 };
 
 export const performProductSearch = async (

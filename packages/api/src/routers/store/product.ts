@@ -47,6 +47,7 @@ const searchInput = {
 	limit: v.optional(v.number(), 8),
 	brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	requireStock: v.optional(v.boolean(), false),
 };
 
 export const product = router({
@@ -55,12 +56,14 @@ export const product = router({
 	// `requireStock: true` if they need the in-stock-only gate.
 	searchProductsForPage: publicProcedure
 		.input(v.object(searchInput))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
-				return await performProductSearch(input.query, input.limit, {
+				const products = await performProductSearch(input.query, input.limit, {
 					brandId: input.brandId,
 					categoryId: input.categoryId,
+					requireStock: input.requireStock,
 				});
+				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
@@ -69,7 +72,6 @@ export const product = router({
 				});
 			}
 		}),
-
 	searchStorefront: publicProcedure
 		.input(
 			v.object({
@@ -77,7 +79,7 @@ export const product = router({
 				limit: v.optional(v.number(), 8),
 			}),
 		)
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
 			try {
 				const safeLimit = Math.min(input.limit, 12);
 				const [products, navigation] = await Promise.all([
@@ -98,7 +100,6 @@ export const product = router({
 				});
 			}
 		}),
-
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
 		try {
 			const q = productQueries.store;

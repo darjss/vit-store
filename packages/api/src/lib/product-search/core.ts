@@ -166,6 +166,11 @@ const resultMatchesFilters = (
 	if (filters?.categoryId != null && result.categoryId !== filters.categoryId) {
 		return false;
 	}
+	if (filters?.requireStock) {
+		const inStock = Boolean(result.inStock);
+		const stock = Number(result.stock ?? 0);
+		if (!inStock || stock <= 0) return false;
+	}
 	return true;
 };
 
@@ -282,9 +287,6 @@ const scoreSearchResult = (
 		canonicalBrand.length > 0 &&
 		normalizeSearchText(document.brand).length > 0 &&
 		canonicalBrand.split(" ").includes(normalizeSearchText(document.brand));
-	const stockScore = document.inStock
-		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 60)
-		: -500;
 
 	let score = result.score ?? 0;
 	if (name === normalizedQuery) score += 2000;
@@ -299,7 +301,6 @@ const scoreSearchResult = (
 	else if (productIntentIndex > 0 && productIntentIndex <= 2) score += 2000;
 	else if (productIntentIndex > 2 && productIntentIndex <= 5) score += 900;
 	else if (productIntentIndex > 5) score += 250;
-	score += stockScore;
 
 	return score;
 };
@@ -386,8 +387,14 @@ export const searchMiniSearchIndex = (
 		.map((result) => ({
 			result,
 			rank: scoreSearchResult(result, documentsById, trimmed),
+			inStock: Boolean(result.inStock),
+			stock: Number(result.stock ?? 0),
 		}))
-		.sort((a, b) => b.rank - a.rank)
+		.sort((a, b) => {
+			if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
+			if (a.stock !== b.stock) return b.stock - a.stock;
+			return b.rank - a.rank;
+		})
 		.slice(0, safeLimit)
 		.map(({ result }) => mapMiniSearchResult(result, documentsById));
 };

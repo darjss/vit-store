@@ -364,6 +364,7 @@ export const storeQueries = {
 					eq(ProductsTable.status, "active"),
 					buildNameFallbackCondition(searchTerm),
 				),
+				orderBy: [inStockFirst, desc(ProductsTable.stock), asc(ProductsTable.id)],
 				limit,
 				with: {
 					images: {
@@ -398,6 +399,7 @@ export const storeQueries = {
 					gt(ProductsTable.stock, 0),
 					buildNameFallbackCondition(searchTerm),
 				),
+				orderBy: [desc(ProductsTable.stock), asc(ProductsTable.id)],
 				limit,
 				with: {
 					images: {

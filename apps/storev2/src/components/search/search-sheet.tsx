@@ -43,6 +43,9 @@ const SearchSheet = (props: SearchSheetProps) => {
 		});
 	});
 
+	// Debounced only — SearchInput already owns the immediate typed value.
+	// Wiring onValueChange into this signal used to fire searchStorefront on
+	// every keystroke and defeated the 300ms debounce.
 	const handleSearch = (query: string) => {
 		setSearchQuery(query);
 		if (query.length >= 2) {
@@ -51,7 +54,6 @@ const SearchSheet = (props: SearchSheetProps) => {
 	};
 
 	const handleSelectSuggestion = (term: string) => {
-		setSearchQuery(term);
 		handleSearch(term);
 	};
 
@@ -98,7 +100,6 @@ const SearchSheet = (props: SearchSheetProps) => {
 
 						<SearchInput
 							value={searchQuery()}
-							onValueChange={setSearchQuery}
 							onSearch={handleSearch}
 							onSubmitSearch={handleSubmitSearch}
 							isLoading={isSearching() && searchQuery().length >= 2}
