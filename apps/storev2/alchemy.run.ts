@@ -40,9 +40,6 @@ export const storev2 = await Astro<StoreBindings>("front", {
 	// legacy v12 dist/_worker.js layout, so override both explicitly).
 	entrypoint: "dist/server/entry.mjs",
 	assets: "dist/client",
-	// Keep the official Astro cache provider's Workers Cache metadata when
-	// Alchemy wraps and uploads the generated Worker.
-	cache: { enabled: true },
 	bindings: {
 		// Reference the already-deployed server Worker by physical service name.
 		// Importing server/alchemy here causes store deploys to evaluate/deploy the

@@ -1,12 +1,12 @@
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconNotification from "~icons/ri/notification-3-fill";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import RestockNotifySheet from "./restock-notify-sheet";
-import { subscribeInventory, type InventorySnapshot } from "./inventory-reconciler";
+import { useInventorySnapshot } from "./inventory-reconciler";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
@@ -26,9 +26,7 @@ const stateClass =
 const CardAddButton = (props: CardAddButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
-	const [inventory, setInventory] = createSignal<InventorySnapshot>();
-
-	onMount(() => subscribeInventory(props.cartItem.productId, setInventory));
+	const inventory = useInventorySnapshot(props.cartItem.productId);
 
 	const isOutOfStock = () =>
 		inventory()

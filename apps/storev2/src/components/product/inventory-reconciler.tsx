@@ -11,12 +11,27 @@ export interface InventorySnapshot {
 }
 
 type InventoryListener = (snapshot: InventorySnapshot) => void;
+type StoredSnapshot = {
+	value: InventorySnapshot;
+	fetchedAt: number;
+};
 
-const snapshots = new Map<number, InventorySnapshot>();
+const INVENTORY_SNAPSHOT_TTL_MS = 10_000;
+const snapshots = new Map<number, StoredSnapshot>();
 const listeners = new Map<number, Set<InventoryListener>>();
 
+function getFreshSnapshot(productId: number): InventorySnapshot | undefined {
+	const stored = snapshots.get(productId);
+	if (!stored) return;
+	if (Date.now() - stored.fetchedAt >= INVENTORY_SNAPSHOT_TTL_MS) {
+		snapshots.delete(productId);
+		return;
+	}
+	return stored.value;
+}
+
 export function publishInventory(snapshot: InventorySnapshot): void {
-	snapshots.set(snapshot.id, snapshot);
+	snapshots.set(snapshot.id, { value: snapshot, fetchedAt: Date.now() });
 	for (const listener of listeners.get(snapshot.id) ?? []) {
 		listener(snapshot);
 	}
@@ -26,11 +41,12 @@ export function subscribeInventory(
 	productId: number,
 	listener: InventoryListener,
 ): () => void {
-	const productListeners = listeners.get(productId) ?? new Set<InventoryListener>();
+	const productListeners =
+		listeners.get(productId) ?? new Set<InventoryListener>();
 	productListeners.add(listener);
 	listeners.set(productId, productListeners);
 
-	const current = snapshots.get(productId);
+	const current = getFreshSnapshot(productId);
 	if (current) listener(current);
 
 	return () => {
@@ -41,8 +57,19 @@ export function subscribeInventory(
 
 export function useInventorySnapshot(productId: number) {
 	const [snapshot, setSnapshot] = createSignal<InventorySnapshot>();
-	onMount(() => subscribeInventory(productId, setSnapshot));
+	onMount(() => {
+		const unsubscribe = subscribeInventory(productId, setSnapshot);
+		onCleanup(unsubscribe);
+	});
 	return snapshot;
+}
+
+function setTextIfChanged(element: HTMLElement, value: string): void {
+	if (element.textContent !== value) element.textContent = value;
+}
+
+function setHiddenIfChanged(element: HTMLElement, hidden: boolean): void {
+	if (element.hidden !== hidden) element.hidden = hidden;
 }
 
 function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
@@ -63,7 +90,8 @@ function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
 		jsonLd.offers.availability = inStock
 			? "https://schema.org/InStock"
 			: "https://schema.org/OutOfStock";
-		script.textContent = JSON.stringify(jsonLd);
+		const nextJsonLd = JSON.stringify(jsonLd);
+		if (script.textContent !== nextJsonLd) script.textContent = nextJsonLd;
 	} catch {
 		// A malformed optional JSON-LD block must not affect the purchase UI.
 	}
@@ -77,32 +105,50 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 		: inStock
 			? "Бэлэн байна"
 			: "Дууссан";
-	const selector = `[data-inventory-price="${snapshot.id}"]`;
 
-	for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-		element.textContent = formatCurrency(snapshot.price);
+	for (const element of document.querySelectorAll<HTMLElement>(
+		`[data-inventory-price="${snapshot.id}"]`,
+	)) {
+		setTextIfChanged(element, formatCurrency(snapshot.price));
 	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-badge="${snapshot.id}"]`,
 	)) {
-		element.textContent = stockLabel;
+		setTextIfChanged(element, stockLabel);
 	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-meta="${snapshot.id}"]`,
 	)) {
-		element.hidden = !inStock;
+		setHiddenIfChanged(element, !inStock);
 	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-low="${snapshot.id}"]`,
 	)) {
-		element.hidden = !lowStock;
+		setHiddenIfChanged(element, !lowStock);
 	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-out="${snapshot.id}"]`,
 	)) {
-		element.hidden = inStock;
+		setHiddenIfChanged(element, inStock);
 	}
 	updateJsonLd(snapshot, inStock);
+}
+
+function productIdsInSubtree(node: Node): number[] {
+	if (!(node instanceof Element)) return [];
+	const elements: Element[] = node.matches("[data-product-id]")
+		? [node]
+		: [];
+	elements.push(...node.querySelectorAll("[data-product-id]"));
+	return elements
+		.map((element) => Number(element.getAttribute("data-product-id")))
+		.filter((productId) => Number.isInteger(productId) && productId > 0);
+}
+
+function productIdsInDocument(): number[] {
+	return [...document.querySelectorAll("[data-product-id]")]
+		.map((element) => Number(element.getAttribute("data-product-id")))
+		.filter((productId) => Number.isInteger(productId) && productId > 0);
 }
 
 interface InventoryReconcilerProps {
@@ -117,6 +163,7 @@ export default function InventoryReconciler(
 		let flushTimer: number | undefined;
 		let requestInFlight = false;
 		let rerunAfterRequest = false;
+		let disposed = false;
 
 		const flush = async () => {
 			if (requestInFlight) {
@@ -124,22 +171,21 @@ export default function InventoryReconciler(
 				return;
 			}
 
+			const productIds: number[] = [];
 			for (const productId of pendingIds) {
 				if (!Number.isInteger(productId) || productId <= 0) {
 					pendingIds.delete(productId);
+					continue;
 				}
-			}
-
-			const productIds = [...pendingIds]
-				.filter((productId) => !snapshots.has(productId))
-				.slice(0, 100);
-			for (const productId of productIds) pendingIds.delete(productId);
-
-			for (const productId of pendingIds) {
-				const snapshot = snapshots.get(productId);
-				if (snapshot) {
+				const current = getFreshSnapshot(productId);
+				if (current) {
 					pendingIds.delete(productId);
-					reconcileDocument(snapshot);
+					if (!disposed) reconcileDocument(current);
+					continue;
+				}
+				if (productIds.length < 100) {
+					pendingIds.delete(productId);
+					productIds.push(productId);
 				}
 			}
 
@@ -150,7 +196,7 @@ export default function InventoryReconciler(
 				const inventory = await api.product.getInventory.query({ productIds });
 				for (const snapshot of inventory) {
 					publishInventory(snapshot);
-					reconcileDocument(snapshot);
+					if (!disposed) reconcileDocument(snapshot);
 				}
 			} catch (error) {
 				console.warn("Inventory reconciliation failed", error);
@@ -163,16 +209,9 @@ export default function InventoryReconciler(
 			}
 		};
 
-		const scheduleFlush = () => {
-			for (const element of document.querySelectorAll<HTMLElement>(
-				"[data-product-id]",
-			)) {
-				const productId = Number(element.dataset.productId);
-				if (Number.isInteger(productId) && productId > 0) {
-					pendingIds.add(productId);
-				}
-			}
-
+		const scheduleFlush = (productIds: Iterable<number>) => {
+			for (const productId of productIds) pendingIds.add(productId);
+			if (pendingIds.size === 0) return;
 			if (flushTimer !== undefined) window.clearTimeout(flushTimer);
 			flushTimer = window.setTimeout(() => {
 				flushTimer = undefined;
@@ -180,11 +219,30 @@ export default function InventoryReconciler(
 			}, 0);
 		};
 
-		const observer = new MutationObserver(scheduleFlush);
+		const observer = new MutationObserver((records) => {
+			const addedProductIds = new Set<number>();
+			for (const record of records) {
+				for (const node of record.addedNodes) {
+					for (const productId of productIdsInSubtree(node)) {
+						addedProductIds.add(productId);
+					}
+				}
+			}
+			if (addedProductIds.size > 0) scheduleFlush(addedProductIds);
+		});
 		observer.observe(document.body, { childList: true, subtree: true });
-		scheduleFlush();
+
+		const refreshOnRouteChange = () => {
+			const productIds = productIdsInDocument();
+			for (const productId of productIds) snapshots.delete(productId);
+			scheduleFlush(productIds);
+		};
+		document.addEventListener("astro:page-load", refreshOnRouteChange);
+		scheduleFlush(props.productIds);
 
 		onCleanup(() => {
+			disposed = true;
+			document.removeEventListener("astro:page-load", refreshOnRouteChange);
 			observer.disconnect();
 			if (flushTimer !== undefined) window.clearTimeout(flushTimer);
 		});

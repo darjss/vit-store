@@ -1,8 +1,5 @@
-# Static assets use these headers. Selected SSR catalog pages opt in through
-# Astro's Cloudflare route cache provider; middleware marks private/error paths
-# no-store.
-/*
-  Cache-Control: public, s-maxage=60, stale-while-revalidate=300
+# Static assets use these headers. Storefront SSR HTML is explicitly no-store
+# in middleware until secure cross-Worker invalidation exists.
 
 /404.html
   Cache-Control: no-store

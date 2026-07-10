@@ -1,14 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import {
-	BRANDS_TAG,
-	CATALOG_TAG,
-	CATEGORIES_TAG,
-	HOME_TAG,
-	type ExtractedProductData,
-	PRODUCTS_TAG,
-	productTag,
-	SITE_SHELL_TAG,
-} from "@vit/shared";
+import type { ExtractedProductData } from "@vit/shared";
 import { productQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import {
@@ -19,7 +10,7 @@ import {
 	startExtractionStage,
 	translateStage,
 } from "~/lib/ai-product/pipeline";
-import { purgeTags } from "~/lib/cache/workers-cache";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { logger } from "~/lib/logger";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -153,19 +144,11 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 				).length;
 				const failed = results.filter((r) => r.status === "failed").length;
 
-				const createdProductTags = results
+				const createdProductIds = results
 					.filter((r) => r.status !== "failed" && r.productId !== null)
-					.map((r) => productTag(r.productId as number));
-				if (createdProductTags.length > 0) {
-					await purgeTags(ctx, [
-						PRODUCTS_TAG,
-						BRANDS_TAG,
-						CATEGORIES_TAG,
-						CATALOG_TAG,
-						HOME_TAG,
-						SITE_SHELL_TAG,
-						...createdProductTags,
-					]);
+					.map((r) => r.productId as number);
+				if (createdProductIds.length > 0) {
+					await purgeCatalogCache(ctx, createdProductIds);
 					scheduleProductSearchRebuild(ctx, "product_created");
 				}
 
@@ -215,15 +198,7 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						isPrimary: index === 0,
 					})),
 				);
-				await purgeTags(ctx, [
-					PRODUCTS_TAG,
-					BRANDS_TAG,
-					CATEGORIES_TAG,
-					CATALOG_TAG,
-					HOME_TAG,
-					SITE_SHELL_TAG,
-					productTag(input.productId),
-				]);
+				await purgeCatalogCache(ctx, [input.productId]);
 				scheduleProductSearchRebuild(ctx, "product_updated");
 
 				return {

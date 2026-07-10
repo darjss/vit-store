@@ -6,8 +6,7 @@ import {
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
 import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import { PRODUCTS_TAG, inventoryTag, productTag } from "@vit/shared";
-import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
+import { purgeCatalogCacheGlobal } from "~/lib/cache/workers-cache";
 
 // Canonical confirm + notify + analytics + cache-purge boundary (F2).
 //
@@ -23,7 +22,7 @@ import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
 //
 // LBL-5: the cache purge lives here (lib), NOT in packages/api/src/queries.
 // The query layer returns a plain boolean; this boundary derives the affected
-// product ids from the post-confirm payment info and purges. `purgeTagsGlobal`
+// product ids from the post-confirm payment info and purges.
 // lazily resolves `cloudflare:workers`, so importing it here does not couple
 // the queries package to the Worker runtime.
 
@@ -101,11 +100,7 @@ export async function confirmPaymentAndNotify({
 	const stockedProductIds = paymentInfo.order.orderDetails.map(
 		(detail) => detail.product.id,
 	);
-	await purgeTagsGlobal([
-		PRODUCTS_TAG,
-		...stockedProductIds.map((id) => productTag(id)),
-		...stockedProductIds.map((id) => inventoryTag(id)),
-	]);
+	await purgeCatalogCacheGlobal(stockedProductIds);
 
 	const notificationPayload: DetailedOrderNotificationInput = {
 		paymentNumber,

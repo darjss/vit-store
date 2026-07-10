@@ -76,11 +76,6 @@ const itemListSchema = {
 	})),
 };
 
-Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
-	tags: ["site-shell", "catalog", `category-${category.id}`],
-});
 ---
 
 <Layout title={seoTitle} description={seoDescription}>
