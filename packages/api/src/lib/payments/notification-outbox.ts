@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	PaymentNotificationAttemptsTable,
@@ -13,24 +13,37 @@ import { paymentQueries } from "~/queries";
 
 const PURPOSE = "order_payment_confirmed_sms";
 const BATCH = 10;
-const LEASE_MS = 60_000;
+// sendSmsAndWait makes at most eleven 10s gateway requests.
+const LEASE_MS = 180_000;
 const MAX_ATTEMPTS = 5;
+
+type ClaimedJob = {
+	id: number;
+	paymentNumber: string;
+	token: string;
+	attemptNumber: number;
+};
 
 export async function runPaymentNotificationOutbox() {
 	let claimedCount = 0;
-	for (let page = 0; page < 10; page += 1) {
-		const jobs = await claimDueJobs();
-		if (jobs.length === 0) break;
-		claimedCount += jobs.length;
-		for (const job of jobs) await deliver(job);
-		if (jobs.length < BATCH) break;
+	for (let processed = 0; processed < BATCH * 10; processed += 1) {
+		const candidate = await findDueJob();
+		if (!candidate) break;
+		const payment = await paymentQueries.store.getPaymentInfoByNumber(
+			candidate.paymentNumber,
+		);
+		const job = await claimJob(candidate.id);
+		if (!job) continue;
+		claimedCount += 1;
+		if (!payment) await retry(job, "payment_missing");
+		else await deliver(job, payment);
 	}
 	return { claimedCount };
 }
 
-async function claimDueJobs() {
+async function findDueJob() {
 	const now = new Date();
-	const candidates = await db()
+	const jobs = await db()
 		.select()
 		.from(PaymentNotificationOutboxTable)
 		.where(
@@ -52,16 +65,15 @@ async function claimDueJobs() {
 				),
 			),
 		)
-		.limit(BATCH);
-	const jobs: {
-		id: number;
-		paymentNumber: string;
-		token: string;
-		attemptNumber: number;
-	}[] = [];
-	for (const candidate of candidates) {
+		.limit(1);
+	return jobs[0];
+}
+
+async function claimJob(id: number): Promise<ClaimedJob | undefined> {
+	return db().transaction(async (tx) => {
+		const now = new Date();
 		const token = crypto.randomUUID();
-		const [claimed] = await db()
+		const [claimed] = await tx
 			.update(PaymentNotificationOutboxTable)
 			.set({
 				status: "claimed",
@@ -71,7 +83,7 @@ async function claimDueJobs() {
 			})
 			.where(
 				and(
-					eq(PaymentNotificationOutboxTable.id, candidate.id),
+					eq(PaymentNotificationOutboxTable.id, id),
 					or(
 						and(
 							inArray(PaymentNotificationOutboxTable.status, [
@@ -93,32 +105,23 @@ async function claimDueJobs() {
 				paymentNumber: PaymentNotificationOutboxTable.paymentNumber,
 				attemptCount: PaymentNotificationOutboxTable.attemptCount,
 			});
-		if (!claimed) continue;
-		await db().insert(PaymentNotificationAttemptsTable).values({
+		if (!claimed) return;
+		await tx.insert(PaymentNotificationAttemptsTable).values({
 			outboxId: claimed.id,
 			attemptNumber: claimed.attemptCount,
 			outcome: "claimed",
 		});
-		jobs.push({
-			id: claimed.id,
-			paymentNumber: claimed.paymentNumber,
-			token,
-			attemptNumber: claimed.attemptCount,
-		});
-	}
-	return jobs;
+		return { ...claimed, token, attemptNumber: claimed.attemptCount };
+	});
 }
 
-async function deliver(job: {
-	id: number;
-	paymentNumber: string;
-	token: string;
-	attemptNumber: number;
-}) {
-	const payment = await paymentQueries.store.getPaymentInfoByNumber(
-		job.paymentNumber,
-	);
-	if (!payment) return retry(job, "payment_missing");
+async function deliver(
+	job: ClaimedJob,
+	payment: NonNullable<
+		Awaited<ReturnType<typeof paymentQueries.store.getPaymentInfoByNumber>>
+	>,
+) {
+	if (!(await ownsLease(job))) return;
 	try {
 		await sendOrderConfirmationSms({
 			paymentNumber: job.paymentNumber,
@@ -130,14 +133,28 @@ async function deliver(job: {
 	} catch (error) {
 		if (error instanceof SmsAmbiguousError)
 			return finish(job, "unknown", "provider_ambiguous");
-		const code =
-			error instanceof SmsRetryableError ? error.code : "store_url_invalid";
-		return retry(job, code);
+		return retry(
+			job,
+			error instanceof SmsRetryableError ? error.code : "store_url_invalid",
+		);
 	}
 }
 
+async function ownsLease(job: Pick<ClaimedJob, "id" | "token">) {
+	const row = await db().query.PaymentNotificationOutboxTable.findFirst({
+		where: and(
+			eq(PaymentNotificationOutboxTable.id, job.id),
+			eq(PaymentNotificationOutboxTable.status, "claimed"),
+			eq(PaymentNotificationOutboxTable.claimToken, job.token),
+			gt(PaymentNotificationOutboxTable.claimUntil, new Date()),
+		),
+		columns: { id: true },
+	});
+	return Boolean(row);
+}
+
 async function finish(
-	job: { id: number; token: string; attemptNumber: number },
+	job: ClaimedJob,
 	status: "sent" | "unknown",
 	errorCode?: string,
 ) {
@@ -150,30 +167,12 @@ async function finish(
 			lastErrorCode: errorCode ?? null,
 			lastErrorAt: errorCode ? new Date() : null,
 		})
-		.where(
-			and(
-				eq(PaymentNotificationOutboxTable.id, job.id),
-				eq(PaymentNotificationOutboxTable.status, "claimed"),
-				eq(PaymentNotificationOutboxTable.claimToken, job.token),
-			),
-		)
+		.where(ownedLeaseWhere(job))
 		.returning({ id: PaymentNotificationOutboxTable.id });
-	if (updated)
-		await db()
-			.update(PaymentNotificationAttemptsTable)
-			.set({ outcome: status, errorCode: errorCode ?? null })
-			.where(
-				and(
-					eq(PaymentNotificationAttemptsTable.outboxId, job.id),
-					eq(PaymentNotificationAttemptsTable.attemptNumber, job.attemptNumber),
-				),
-			);
+	if (updated) await recordOutcome(job, status, errorCode);
 }
 
-async function retry(
-	job: { id: number; token: string; attemptNumber: number },
-	code: string,
-) {
+async function retry(job: ClaimedJob, code: string) {
 	const terminal = job.attemptNumber >= MAX_ATTEMPTS;
 	const [updated] = await db()
 		.update(PaymentNotificationOutboxTable)
@@ -187,22 +186,33 @@ async function retry(
 				Date.now() + Math.min(60_000 * 2 ** (job.attemptNumber - 1), 3_600_000),
 			),
 		})
-		.where(
-			and(
-				eq(PaymentNotificationOutboxTable.id, job.id),
-				eq(PaymentNotificationOutboxTable.status, "claimed"),
-				eq(PaymentNotificationOutboxTable.claimToken, job.token),
-			),
-		)
+		.where(ownedLeaseWhere(job))
 		.returning({ id: PaymentNotificationOutboxTable.id });
 	if (updated)
-		await db()
-			.update(PaymentNotificationAttemptsTable)
-			.set({ outcome: terminal ? "exhausted" : "failed", errorCode: code })
-			.where(
-				and(
-					eq(PaymentNotificationAttemptsTable.outboxId, job.id),
-					eq(PaymentNotificationAttemptsTable.attemptNumber, job.attemptNumber),
-				),
-			);
+		await recordOutcome(job, terminal ? "exhausted" : "failed", code);
+}
+
+function ownedLeaseWhere(job: Pick<ClaimedJob, "id" | "token">) {
+	return and(
+		eq(PaymentNotificationOutboxTable.id, job.id),
+		eq(PaymentNotificationOutboxTable.status, "claimed"),
+		eq(PaymentNotificationOutboxTable.claimToken, job.token),
+		gt(PaymentNotificationOutboxTable.claimUntil, new Date()),
+	);
+}
+
+async function recordOutcome(
+	job: Pick<ClaimedJob, "id" | "attemptNumber">,
+	outcome: string,
+	errorCode?: string,
+) {
+	await db()
+		.update(PaymentNotificationAttemptsTable)
+		.set({ outcome, errorCode: errorCode ?? null })
+		.where(
+			and(
+				eq(PaymentNotificationAttemptsTable.outboxId, job.id),
+				eq(PaymentNotificationAttemptsTable.attemptNumber, job.attemptNumber),
+			),
+		);
 }
