@@ -11,6 +11,7 @@ interface CardAddButtonProps {
 	cartItem: CartItems;
 	outOfStock?: boolean;
 	productName?: string;
+	disabled?: boolean;
 }
 
 const stateClass =
@@ -26,6 +27,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 
 	const handleAdd = () => {
+		if (props.disabled) return;
 		if (props.outOfStock) {
 			setNotifyOpen(true);
 			return;
@@ -41,7 +43,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={!props.outOfStock && isAdded()}
+				disabled={props.disabled || (!props.outOfStock && isAdded())}
 				aria-label={props.outOfStock ? "Мэдэгдэл авах" : "Сагслах"}
 				class={cn(
 					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out",
