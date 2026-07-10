@@ -1,11 +1,12 @@
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, Match, Switch } from "solid-js";
+import { createSignal, Match, onMount, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
 import RestockNotifySheet from "./restock-notify-sheet";
+import { subscribeInventory, type InventorySnapshot } from "./inventory-reconciler";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -19,9 +20,19 @@ export default function ProductQuantitySelector(
 	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const [inventory, setInventory] = createSignal<InventorySnapshot>();
+
+	onMount(() => subscribeInventory(props.cartItem.productId, setInventory));
+
+	const stock = () => inventory()?.stock ?? maxStock;
+	const isInStock = () =>
+		inventory()
+			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
+			: props.isInStock;
+	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	const increment = () => {
-		const max = Math.min(10, maxStock);
+		const max = Math.min(10, stock());
 		if (quantity() >= max) {
 			showToast({
 				title: "Нэмэх боломжгүй",
@@ -37,7 +48,7 @@ export default function ProductQuantitySelector(
 
 	return (
 		<Switch>
-			<Match when={props.isInStock}>
+			<Match when={isInStock()}>
 				<div class="flex items-center gap-3">
 					<fieldset
 						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
@@ -67,12 +78,12 @@ export default function ProductQuantitySelector(
 
 					<div class="min-w-0 flex-1">
 						<AddToCartButton
-							cartItem={{ ...props.cartItem, quantity: quantity() }}
+							cartItem={{ ...props.cartItem, price: price(), quantity: quantity() }}
 						/>
 					</div>
 				</div>
 			</Match>
-			<Match when={!props.isInStock}>
+			<Match when={!isInStock()}>
 				<div class="space-y-4">
 					<div class="rounded-2xl bg-sand/40 p-4 sm:p-5">
 						<div class="mb-2 flex items-center gap-2.5">

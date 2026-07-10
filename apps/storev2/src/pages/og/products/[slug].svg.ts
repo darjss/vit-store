@@ -1,5 +1,6 @@
 import { toProductImageUrl } from "@/lib/image";
 import { api, createServerClient } from "@/lib/trpc";
+import { env } from "cloudflare:workers";
 
 export const prerender = false;
 
@@ -214,10 +215,8 @@ function buildOgSvg(product: ProductForOg) {
 
 export async function GET({
 	params,
-	locals,
 }: {
 	params: { slug?: string };
-	locals: App.Locals;
 }) {
 	const slug = params.slug ?? "";
 	const slugParts = slug.split("-");
@@ -227,12 +226,7 @@ export async function GET({
 		return new Response("Invalid product ID", { status: 400 });
 	}
 
-	const runtime = locals.runtime as
-		| { env?: { server?: { fetch: typeof fetch } } }
-		| undefined;
-	const serverApi = runtime?.env?.server
-		? createServerClient(undefined, runtime.env.server)
-		: api;
+	const serverApi = env.server ? createServerClient(undefined, env.server) : api;
 	const product = await serverApi.product.getProductById.query({ id: productId });
 	if (!product) {
 		return new Response("Product not found", { status: 404 });
@@ -241,7 +235,7 @@ export async function GET({
 	return new Response(buildOgSvg(product), {
 		headers: {
 			"Content-Type": "image/svg+xml; charset=utf-8",
-			"Cache-Control": "public, max-age=3600, s-maxage=86400",
+			"Cache-Control": "no-store",
 		},
 	});
 }

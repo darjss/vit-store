@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { purchaseQueries } from "@vit/api/queries";
-import { PRODUCTS_TAG, productTag } from "@vit/shared";
+import { PRODUCTS_TAG, inventoryTag, productTag } from "@vit/shared";
 import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "@vit/shared/schema";
 import * as v from "valibot";
 import { db } from "~/db/client";
@@ -136,6 +136,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
                 await purgeTags(ctx, [
                     PRODUCTS_TAG,
                     ...affectedProductIds.map((id) => productTag(id)),
+                    ...affectedProductIds.map((id) => inventoryTag(id)),
                 ]);
                 scheduleProductSearchRebuild(ctx, "product_stock_updated");
             }

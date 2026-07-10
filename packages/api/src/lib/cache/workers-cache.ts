@@ -36,7 +36,11 @@ export function markCacheable(
 	policy: CachePolicy,
 	tags: string[],
 ): void {
-	if (ctx.c.req.method !== "GET") {
+	if (
+		ctx.c.req.method !== "GET" ||
+		ctx.c.req.header("cookie") ||
+		ctx.c.req.header("authorization")
+	) {
 		return;
 	}
 
@@ -46,6 +50,7 @@ export function markCacheable(
 			maxAge: policy.maxAge,
 			staleWhileRevalidate: policy.staleWhileRevalidate,
 			tags: new Set(tags),
+			useMaxAge: policy.useMaxAge ?? false,
 		});
 		return;
 	}
@@ -58,6 +63,7 @@ export function markCacheable(
 	for (const tag of tags) {
 		existing.tags.add(tag);
 	}
+	existing.useMaxAge ||= policy.useMaxAge ?? false;
 }
 
 export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
@@ -69,6 +75,7 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	// heuristic freshness and serve user-specific data to other users.
 	if (!accumulated) {
 		c.res.headers.set("Cache-Control", "no-store");
+		c.res.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
 		return;
 	}
 
@@ -77,6 +84,7 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 		cacheControlHeader({
 			maxAge: accumulated.maxAge,
 			staleWhileRevalidate: accumulated.staleWhileRevalidate,
+			useMaxAge: accumulated.useMaxAge,
 		}),
 	);
 	if (accumulated.tags.size > 0) {

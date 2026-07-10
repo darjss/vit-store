@@ -31,6 +31,7 @@ const isLowStock = stockState === "low";
 
 <div
 	class={`group hover:-translate-y-[3px] relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg ${className}`}
+	data-product-id={product.id}
 >
 	<a href={productUrl} class="relative block" aria-hidden="true" tabindex="-1">
 		<div
@@ -61,16 +62,12 @@ const isLowStock = stockState === "low";
 					-{product.discount}%
 				</span>
 			) : null}
-			{isLowStock ? (
-				<span class="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-warning px-2 py-0.5 font-semibold text-[10px] text-warning-foreground">
+			<span data-inventory-stock-low={product.id} hidden={!isLowStock} class="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-warning px-2 py-0.5 font-semibold text-[10px] text-warning-foreground">
 					Цөөн үлдсэн
 				</span>
-			) : null}
-			{isOutOfStock ? (
-				<span class="absolute bottom-2 left-2 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
+			<span data-inventory-stock-out={product.id} hidden={!isOutOfStock} class="absolute bottom-2 left-2 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
 					Дууссан
 				</span>
-			) : null}
 		</div>
 	</a>
 	<div class="flex flex-1 flex-col gap-1 p-3">
@@ -86,7 +83,7 @@ const isLowStock = stockState === "low";
 			</h3>
 		</a>
 		<div class="mt-auto flex items-end justify-between gap-2 pt-2">
-			<div class="font-bold font-display text-base tracking-tight">
+		<div class="font-bold font-display text-base tracking-tight" data-inventory-price={product.id}>
 				{formatCurrency(product.price)}
 			</div>
 			<CardAddButton

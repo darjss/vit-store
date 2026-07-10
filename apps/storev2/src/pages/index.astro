@@ -1,5 +1,6 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
+import InventoryReconciler from "@/components/product/inventory-reconciler";
 import MobileSearchBar from "@/components/search/mobile-search-bar";
 import Layout from "@/layouts/Layout.astro";
 import { toProductImageUrl } from "@/lib/image";
@@ -27,7 +28,7 @@ type BrandRow = {
 };
 
 const products = await api.product.getProductsForHome.query();
-const { featuredProducts, newProducts } = products;
+const { featuredProducts, newProducts, discountedProducts } = products;
 const brands = await api.brand.getAllBrandsWithStock.query();
 const allCategories = await api.category.getAllCategoriesWithStock.query();
 
@@ -56,6 +57,12 @@ const heroProducts: ProductForHome[] = featuredProducts.slice(0, 4);
 const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
 const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
 const brandRow: BrandRow[] = brands.slice(0, 10);
+
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "home", "catalog"],
+});
 ---
 
 <Layout
@@ -147,6 +154,17 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
       )}
     </div>
   </section>
+
+  <InventoryReconciler
+    client:load
+    productIds={[
+      ...new Set([
+        ...featuredProducts.map((product) => product.id),
+        ...newProducts.map((product) => product.id),
+        ...discountedProducts.map((product) => product.id),
+      ]),
+    ]}
+  />
 
   <!-- ==================== 2. CATEGORY TILES ==================== -->
   <section>

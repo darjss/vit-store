@@ -1,6 +1,7 @@
 ---
 
 import PaymentOptions from "@/components/payment/payment-options";
+import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { loadPaymentOrRedirect } from "@/lib/server-loaders";
@@ -12,7 +13,7 @@ if (!id) {
      return Astro.redirect("/404");
 }
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
+const serverApi = createServerClient(cookieHeader, env.server, Astro.redirect);
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const result = await loadPaymentOrRedirect(serverApi, id, checkoutToken, Astro.redirect);
 if ("redirect" in result) return result.redirect;

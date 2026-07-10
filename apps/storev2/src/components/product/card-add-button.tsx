@@ -1,11 +1,12 @@
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconNotification from "~icons/ri/notification-3-fill";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import RestockNotifySheet from "./restock-notify-sheet";
+import { subscribeInventory, type InventorySnapshot } from "./inventory-reconciler";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
@@ -25,15 +26,24 @@ const stateClass =
 const CardAddButton = (props: CardAddButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const [inventory, setInventory] = createSignal<InventorySnapshot>();
+
+	onMount(() => subscribeInventory(props.cartItem.productId, setInventory));
+
+	const isOutOfStock = () =>
+		inventory()
+			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
+			: props.outOfStock ?? false;
+	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	const handleAdd = () => {
 		if (props.disabled) return;
-		if (props.outOfStock) {
+		if (isOutOfStock()) {
 			setNotifyOpen(true);
 			return;
 		}
 		if (isAdded()) return;
-		cart.add(props.cartItem, { openDrawer: false });
+		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
 		setTimeout(() => setIsAdded(false), 1500);
 	};
@@ -43,20 +53,20 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={props.disabled || (!props.outOfStock && isAdded())}
-				aria-label={props.outOfStock ? "Мэдэгдэл авах" : "Сагслах"}
+				disabled={props.disabled || (!isOutOfStock() && isAdded())}
+				aria-label={isOutOfStock() ? "Мэдэгдэл авах" : "Сагслах"}
 				class={cn(
 					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out",
 					"active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
 					isAdded() &&
-						!props.outOfStock &&
+						!isOutOfStock() &&
 						"bg-success text-success-foreground",
-					props.outOfStock &&
+					isOutOfStock() &&
 						"border-border bg-card text-foreground shadow-soft-sm",
 				)}
 			>
 				<Show
-					when={!props.outOfStock}
+					when={!isOutOfStock()}
 					fallback={<IconNotification class="h-5 w-5" />}
 				>
 					<span class="grid place-items-center">
@@ -75,7 +85,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					</span>
 				</Show>
 			</button>
-			<Show when={props.outOfStock}>
+			<Show when={isOutOfStock()}>
 				<RestockNotifySheet
 					open={notifyOpen()}
 					onOpenChange={setNotifyOpen}

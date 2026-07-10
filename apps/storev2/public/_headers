@@ -1,7 +1,14 @@
-# Prerendered HTML pages — edge-cacheable with short s-maxage + stale-while-revalidate
-# SSR pages get the same headers via middleware.
+# Static assets use these headers. Selected SSR catalog pages opt in through
+# Astro's Cloudflare route cache provider; middleware marks private/error paths
+# no-store.
 /*
   Cache-Control: public, s-maxage=60, stale-while-revalidate=300
+
+/404.html
+  Cache-Control: no-store
+
+/500.html
+  Cache-Control: no-store
 
 # Hashed static assets — immutable
 /_astro/*

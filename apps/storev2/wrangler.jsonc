@@ -1,5 +1,7 @@
 {
 	"name": "website",
-	"compatibility_date": "2025-04-20",
+	// Keep local Astro prerender/preview compatible with the bundled workerd;
+	// production Alchemy config remains independently managed.
+	"compatibility_date": "2026-07-02",
 	"compatibility_flags": ["nodejs_compat"]
 }

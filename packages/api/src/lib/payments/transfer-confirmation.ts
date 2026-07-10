@@ -6,7 +6,7 @@ import {
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
 import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import { PRODUCTS_TAG, productTag } from "@vit/shared";
+import { PRODUCTS_TAG, inventoryTag, productTag } from "@vit/shared";
 import { purgeTagsGlobal } from "~/lib/cache/workers-cache";
 
 // Canonical confirm + notify + analytics + cache-purge boundary (F2).
@@ -104,6 +104,7 @@ export async function confirmPaymentAndNotify({
 	await purgeTagsGlobal([
 		PRODUCTS_TAG,
 		...stockedProductIds.map((id) => productTag(id)),
+		...stockedProductIds.map((id) => inventoryTag(id)),
 	]);
 
 	const notificationPayload: DetailedOrderNotificationInput = {
