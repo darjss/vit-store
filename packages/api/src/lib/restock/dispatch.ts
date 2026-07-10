@@ -168,20 +168,29 @@ async function recoverExpiredClaims() {
 }
 
 async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
-	let timeout: ReturnType<typeof setTimeout> | undefined;
-	try {
-		return await Promise.race([
-			operation,
-			new Promise<never>((_, reject) => {
-				timeout = setTimeout(
-					() => reject(new Error("Restock provider timed out")),
-					PROVIDER_TIMEOUT_MS,
-				);
-			}),
-		]);
-	} finally {
-		if (timeout) clearTimeout(timeout);
-	}
+	return new Promise<T>((resolve, reject) => {
+		let settled = false;
+		const timeout = setTimeout(() => {
+			if (settled) return;
+			settled = true;
+			reject(new Error("Restock provider timed out"));
+		}, PROVIDER_TIMEOUT_MS);
+
+		operation.then(
+			(value) => {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timeout);
+				resolve(value);
+			},
+			(error) => {
+				if (settled) return;
+				settled = true;
+				clearTimeout(timeout);
+				reject(error);
+			},
+		);
+	});
 }
 
 type DeliveryCandidate = {

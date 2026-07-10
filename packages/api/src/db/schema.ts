@@ -4,11 +4,11 @@ import {
 	boolean,
 	index,
 	integer,
-	uniqueIndex,
 	jsonb,
 	pgTableCreator,
 	text,
 	timestamp,
+	uniqueIndex,
 	varchar,
 } from "drizzle-orm/pg-core";
 import {
@@ -404,6 +404,11 @@ export const RestockSubscriptionsTable = createTable(
 			.on(table.contact)
 			.where(
 				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} in ('pending', 'sending')`,
+			),
+		index("restock_sub_lease_idx")
+			.on(table.leaseExpiresAt)
+			.where(
+				sql`${table.deletedAt} is null and ${table.deliveryState} = 'sending'`,
 			),
 	],
 );

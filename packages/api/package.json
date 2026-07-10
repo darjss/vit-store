@@ -53,7 +53,6 @@
 		"db:studio": "drizzle-kit studio",
 		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
-		"restock:proof": "bun scripts/restock-delivery-proof.ts",
 		"db:seed": "bun run src/lib/seed-postgres.ts",
 		"sync:upstash": "bun run scripts/sync-products-to-upstash.ts"
 	},
