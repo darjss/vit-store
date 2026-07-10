@@ -73,7 +73,7 @@ interface HttpClient {
  * Create a ky-based HTTP client
  */
 function createHttpClient(): HttpClient {
-	const client = ky.create({ throwHttpErrors: false });
+	const client = ky.create({ throwHttpErrors: false, timeout: 10_000 });
 
 	const handleResponse = async <T>(response: Response): Promise<T> => {
 		if (response.status === 204) {
@@ -81,8 +81,7 @@ function createHttpClient(): HttpClient {
 		}
 
 		if (!response.ok) {
-			const text = await response.text();
-			throw new Error(`HTTP error ${response.status}: ${text}`);
+			throw new Error(`sms_provider_http_${response.status}`);
 		}
 
 		const contentType = response.headers.get("Content-Type");

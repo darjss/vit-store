@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
 import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
+import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
 import adminRoutes from "./routes/admin";
@@ -125,5 +126,6 @@ export default {
 	fetch: app.fetch,
 	scheduled: async (_controller: ScheduledController, env: Env) => {
 		await runRestockNotifier(env);
+		await runPaymentNotificationOutbox();
 	},
 };

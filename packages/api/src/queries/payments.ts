@@ -6,6 +6,7 @@ import {
 	OrderDetailsTable,
 	OrdersTable,
 	type PaymentInsertType,
+	PaymentNotificationOutboxTable,
 	PaymentsTable,
 	ProductImagesTable,
 	PurchaseItemsTable,
@@ -86,20 +87,7 @@ export const paymentQueries = {
 			status: PaymentStatusType;
 			amount: number;
 		}) {
-			const result = await db()
-				.insert(PaymentsTable)
-				.values({
-					paymentNumber: data.paymentNumber,
-					orderId: data.orderId,
-					provider: data.provider,
-					status: data.status,
-					amount: data.amount,
-				})
-				.returning({
-					id: PaymentsTable.id,
-					paymentNumber: PaymentsTable.paymentNumber,
-				});
-			return result[0];
+			return db().transaction((tx) => this.createPaymentTx(tx, data));
 		},
 
 		async createPaymentTx(
@@ -125,7 +113,17 @@ export const paymentQueries = {
 					id: PaymentsTable.id,
 					paymentNumber: PaymentsTable.paymentNumber,
 				});
-			return result[0];
+			const payment = result[0];
+			if (data.status === "success") {
+				await tx
+					.insert(PaymentNotificationOutboxTable)
+					.values({
+						paymentNumber: data.paymentNumber,
+						purpose: "order_payment_confirmed_sms",
+					})
+					.onConflictDoNothing();
+			}
+			return payment;
 		},
 
 		async getPayments() {
@@ -225,6 +223,20 @@ export const paymentQueries = {
 				.update(PaymentsTable)
 				.set({ status })
 				.where(eq(PaymentsTable.id, latest.id));
+			if (status === "success") {
+				const payment = await tx.query.PaymentsTable.findFirst({
+					where: eq(PaymentsTable.id, latest.id),
+					columns: { paymentNumber: true },
+				});
+				if (payment)
+					await tx
+						.insert(PaymentNotificationOutboxTable)
+						.values({
+							paymentNumber: payment.paymentNumber,
+							purpose: "order_payment_confirmed_sms",
+						})
+						.onConflictDoNothing();
+			}
 		},
 
 		async getPendingMessengerNotifications() {
@@ -420,6 +432,13 @@ export const paymentQueries = {
 				if (!claimedPayment) {
 					return false;
 				}
+				await tx
+					.insert(PaymentNotificationOutboxTable)
+					.values({
+						paymentNumber,
+						purpose: "order_payment_confirmed_sms",
+					})
+					.onConflictDoNothing();
 
 				const orderDetails = await tx.query.OrderDetailsTable.findMany({
 					where: and(
