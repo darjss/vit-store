@@ -4,26 +4,19 @@ import type {
 	receivePurchaseType,
 } from "@vit/shared/schema";
 import type { SQL } from "drizzle-orm";
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	ilike,
-	inArray,
-	isNull,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	ProductImagesTable,
-	ProductsTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	PurchaseReceiptsTable,
 	PurchasesTable,
 } from "~/db/schema";
+import {
+	applyStockTransition,
+	type StockTransition,
+} from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type Transaction = TransactionType;
@@ -573,27 +566,30 @@ export const purchaseQueries = {
 				})),
 			);
 
-			const affectedProductIds = new Set<number>();
+			const stockDeltas = new Map<number, number>();
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
 				if (!purchaseItem) continue;
-				await tx
-					.update(ProductsTable)
-					.set({
-						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
-					})
-					.where(
-						and(
-							eq(ProductsTable.id, purchaseItem.productId),
-							isNull(ProductsTable.deletedAt),
-						),
-					);
-				affectedProductIds.add(purchaseItem.productId);
+				stockDeltas.set(
+					purchaseItem.productId,
+					(stockDeltas.get(purchaseItem.productId) ?? 0) +
+						receiptItem.quantityReceived,
+				);
+			}
+
+			const affectedProductIds = [...stockDeltas.keys()];
+			const restockCandidates: StockTransition[] = [];
+			for (const [productId, delta] of stockDeltas) {
+				const transition = await applyStockTransition(tx, { productId, delta });
+				if (transition) restockCandidates.push(transition);
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
 
-			return { affectedProductIds: [...affectedProductIds] };
+			return {
+				affectedProductIds,
+				restockCandidates,
+			};
 		},
 
 		async deletePurchase(tx: Transaction, purchaseId: number) {

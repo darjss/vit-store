@@ -3,10 +3,10 @@ import type { timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
 import type { Context } from "~/lib/context";
+import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
-import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { getTtlForTimeRange } from "~/lib/utils";
 
 const t = initTRPC.context<Context>().create({
@@ -58,7 +58,7 @@ const verifiedCustomerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, phone: session.user.phone },
+		user: { id: session.user.id },
 		user_type: "customer",
 	});
 	return next({ ctx: nextCtx });
@@ -164,7 +164,23 @@ const loggingMiddleware = t.middleware(
 		const startTime = Date.now();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput = summarizeTrpcPayload(input);
+		const safeInput =
+			path === "product.subscribeToRestock" &&
+			input &&
+			typeof input === "object" &&
+			"productId" in input &&
+			"contacts" in input &&
+			Array.isArray(input.contacts)
+				? {
+						product_id: input.productId,
+						contact_count: input.contacts.length,
+						channels: input.contacts.map((contact) =>
+							contact && typeof contact === "object" && "channel" in contact
+								? contact.channel
+								: "unknown",
+						),
+					}
+				: summarizeTrpcPayload(input);
 
 		ctx.log.set({
 			trpc: {

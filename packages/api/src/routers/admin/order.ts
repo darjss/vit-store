@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { customerQueries, orderQueries, paymentQueries, productQueries, salesQueries, } from "@vit/api/queries";
 import { addOrderSchema, patchOrderHeaderSchema, timeRangeSchema, updateOrderSchema, } from "@vit/shared";
 import * as v from "valibot";
@@ -9,8 +9,10 @@ import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { planPaymentTransition } from "./order-transition";
 import { db } from "~/db/client";
-import { ProductsTable, SalesTable, } from "~/db/schema";
+import { SalesTable, } from "~/db/schema";
 import { getAverageCostOfProduct } from "~/queries/payments";
+import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
+import { scheduleRestockDispatches } from "~/lib/restock";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -139,7 +141,8 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             // (deducts on creation with paymentStatus==="success") and
             // confirmPaymentAndApplyStock (deducts on transition to success).
             // Pending orders never touch stock.
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 await orderQueries.admin.updateOrderTx(tx, input.id, {
                     customerPhone: Number(input.customerPhone),
                     status: input.status,
@@ -171,26 +174,23 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                             sellingPrice: product.price,
                             productId: product.productId,
                         });
-                        await tx
-                            .update(ProductsTable)
-                            .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
-                            .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                        const transition = await applyStockTransition(tx, { productId: product.productId, delta: -product.quantity });
+                        if (transition)
+                            stockTransitions.push(transition);
                     }
                     else if (wasSuccess) {
                         if (existingDetail) {
                             const quantityDiff = product.quantity - existingDetail.quantity;
                             if (quantityDiff !== 0) {
-                                await tx
-                                    .update(ProductsTable)
-                                    .set({ stock: sql`${ProductsTable.stock} ${quantityDiff > 0 ? sql`-` : sql`+`} ${Math.abs(quantityDiff)}` })
-                                    .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                                const transition = await applyStockTransition(tx, { productId: product.productId, delta: -quantityDiff });
+                                if (transition)
+                                    stockTransitions.push(transition);
                             }
                         }
                         else {
-                            await tx
-                                .update(ProductsTable)
-                                .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
-                                .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                            const transition = await applyStockTransition(tx, { productId: product.productId, delta: -product.quantity });
+                            if (transition)
+                                stockTransitions.push(transition);
                         }
                     }
                     // else: pending/other — no stock changes (deducted on transition)
@@ -198,10 +198,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 if (wasSuccess && !transitionedToSuccess) {
                     const removedProducts = currentOrderDetails.filter((detail) => !input.products.some((p) => p.productId === detail.productId));
                     for (const detail of removedProducts) {
-                        await tx
-                            .update(ProductsTable)
-                            .set({ stock: sql`${ProductsTable.stock} + ${detail.quantity}` })
-                            .where(and(eq(ProductsTable.id, detail.productId), isNull(ProductsTable.deletedAt)));
+                        const transition = await applyStockTransition(tx, { productId: detail.productId, delta: detail.quantity });
+                        if (transition)
+                            stockTransitions.push(transition);
                     }
                     // Sync SalesTable to the edited order details so dashboard
                     // revenue/profit analytics match reality. Previously paid-
@@ -233,7 +232,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     order_status: input.status,
                     payment_transitioned: transitionedToSuccess,
                 });
+                return stockTransitions;
             });
+            scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Order updated successfully" };
         }
         catch (e) {
@@ -287,17 +288,22 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 const orderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const stockWasDeducted = latestPayment?.status === "success";
                 if (stockWasDeducted) {
                     for (const detail of orderDetails.filter((detail) => !detail.deletedAt)) {
-                        await productQueries.admin.updateStockTx(tx, detail.productId, detail.quantity, "add");
+                        const transition = await productQueries.admin.updateStockTx(tx, detail.productId, detail.quantity, "add");
+                        if (transition)
+                            stockTransitions.push(transition);
                     }
                 }
                 await orderQueries.admin.softDeleteOrderTx(tx, input.id);
+                return stockTransitions;
             });
+            scheduleRestockDispatches(ctx, restockCandidates);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
         }

@@ -4,8 +4,8 @@ import { CACHE_POLICY, PRODUCTS_TAG, productTag } from "@vit/shared";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
-import { redis } from "~/lib/redis";
-import { publicProcedure, router } from "~/lib/trpc";
+import { subscribeToRestock } from "~/lib/restock";
+import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import {
 	mapStockStatus,
 	performAssistantProductSearch,
@@ -295,15 +295,23 @@ export const product = router({
 			}
 		}),
 
-	subscribeToRestock: publicProcedure
+	subscribeToRestock: verifiedCustomerProcedure
 		.input(
 			v.object({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				channel: v.picklist(["sms", "email"]),
-				contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+				contacts: v.pipe(
+					v.array(
+						v.object({
+							channel: v.literal("sms"),
+							contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+						}),
+					),
+					v.minLength(1),
+					v.maxLength(1),
+				),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			const q = productQueries.store;
 			const product = await q.getProductStockStatus(input.productId);
 
@@ -321,52 +329,15 @@ export const product = router({
 				});
 			}
 
-			const normalizedContact =
-				input.channel === "sms"
-					? input.contact.replace(/\D/g, "")
-					: input.contact.trim().toLowerCase();
-
-			if (input.channel === "sms" && !/^[6-9]\d{7}$/.test(normalizedContact)) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Invalid phone number",
-				});
-			}
-
-			if (
-				input.channel === "email" &&
-				!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedContact)
-			) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Invalid email address",
-				});
-			}
-
-			const subscriberId = `${input.channel}:${normalizedContact}`;
-			const productSubscribersKey = `restock:subs:${input.productId}`;
-			const subscriberDataKey = `restock:sub:${input.productId}:${subscriberId}`;
-
-			await redis().sadd(productSubscribersKey, subscriberId);
-			await redis().set(
-				subscriberDataKey,
-				JSON.stringify({
-					productId: input.productId,
-					channel: input.channel,
-					contact: normalizedContact,
-					createdAt: new Date().toISOString(),
-				}),
-				{ ex: 60 * 60 * 24 * 30 },
-			);
-
-			await redis().sadd("restock:watch:products", String(input.productId));
-
-			return {
-				success: true,
-				message: "Subscription created",
-			};
+			return subscribeToRestock({
+				...input,
+				verifiedPhone: String(ctx.session.user.phone),
+				requestIp:
+					ctx.c.req.header("cf-connecting-ip") ??
+					ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+					"unknown",
+			});
 		}),
-
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {
 			return await runProductBenchmark();
