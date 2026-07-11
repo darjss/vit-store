@@ -3,10 +3,11 @@ import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import RestockNotifySheet from "./restock-notify-sheet";
 import { useInventorySnapshot } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
@@ -17,6 +18,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	const [visible, setVisible] = createSignal(false);
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const restockSheetFocusRestore = createSheetFocusRestore();
 	const isInStock = () =>
 		inventory()
 			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
@@ -39,8 +41,9 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 		onCleanup(() => observer.disconnect());
 	});
 
-	const handleAdd = () => {
+	const handleAdd = (event: MouseEvent) => {
 		if (!isInStock()) {
+			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
 			return;
 		}
@@ -91,6 +94,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 				onOpenChange={setNotifyOpen}
 				productId={props.cartItem.productId}
 				productName={props.cartItem.name}
+				focusRestore={restockSheetFocusRestore}
 			/>
 		</>
 	);
