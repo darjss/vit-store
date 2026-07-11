@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import RestockNotifySheet from "./restock-notify-sheet";
-import { useInventorySnapshot } from "./inventory-reconciler";
+import {
+	useInventorySnapshot,
+	useInventoryVerification,
+} from "./inventory-reconciler";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
@@ -16,6 +19,7 @@ interface StickyMobileCtaProps {
 export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	const [visible, setVisible] = createSignal(false);
 	const inventory = useInventorySnapshot(props.cartItem.productId);
+	const verification = useInventoryVerification(props.cartItem.productId);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 	const isInStock = () =>
 		inventory()
@@ -40,6 +44,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	});
 
 	const handleAdd = () => {
+		if (verification().status !== "verified") return;
 		if (!isInStock()) {
 			setNotifyOpen(true);
 			return;
@@ -76,14 +81,27 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 								size="default"
 								class="shrink-0"
 								onClick={handleAdd}
+								disabled={verification().status !== "verified"}
+								data-inventory-verification={verification().status}
 							>
+								<Show
+									when={verification().status === "verified"}
+									fallback={
+										<span>
+											{verification().status === "degraded"
+												? "Нөөц баталгаажаагүй"
+												: "Нөөц шалгаж байна"}
+										</span>
+									}
+								>
 									<Show when={isInStock()} fallback={<span>Дууссан</span>}>
 										<IconShoppingCart class="h-4 w-4" />
 										Сагслах
 									</Show>
-								</Button>
+								</Show>
+							</Button>
 						</div>
-				</Motion.div>
+					</Motion.div>
 				</Show>
 			</Presence>
 			<RestockNotifySheet

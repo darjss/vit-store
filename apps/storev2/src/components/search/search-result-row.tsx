@@ -121,6 +121,7 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 			</a>
 
 			<CardAddButton
+				requireVerifiedInventory
 				disabled={!isInStock()}
 				productName={props.product.name}
 				cartItem={{

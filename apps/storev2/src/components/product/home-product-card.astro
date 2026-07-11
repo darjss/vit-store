@@ -92,6 +92,7 @@ const isLowStock = stockState === "low";
 			<div class="w-11 justify-self-end">
 				<CardAddButton
 					client:load
+					requireVerifiedInventory
 					outOfStock={isOutOfStock}
 					productName={product.name}
 					cartItem={{
