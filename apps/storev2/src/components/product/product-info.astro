@@ -25,10 +25,6 @@ interface Props {
 
 const { product, primaryImage } = Astro.props;
 const isInStock = product.status === "active" && product.stock > 0;
-const stockLabel =
-	product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD
-		? `Цөөхөн үлдсэн (${product.stock})`
-		: "Бэлэн байна";
 ---
 
 <div class="space-y-4 sm:space-y-5">
@@ -99,10 +95,6 @@ const stockLabel =
 				{ hidden: !isInStock },
 			]}
 		>
-				<span class="inline-flex items-center gap-1.5">
-					<span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
-					<span data-inventory-stock-badge={product.id}>{stockLabel}</span>
-				</span>
 				<span class="inline-flex items-center gap-1.5">
 					<IconTruck class="h-4 w-4 text-cocoa/70" aria-hidden="true" />
 					УБ-д өнөөдөр эсвэл маргааш хүргэнэ
