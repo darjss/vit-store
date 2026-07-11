@@ -8,7 +8,9 @@ import {
 import type {
 	ProductSearchDocument,
 	ProductSearchFilters,
+	ProductSearchPage,
 	ProductSearchSnapshot,
+	ProductSearchSort,
 	ProductSearchSourceDocument,
 	SearchProductResult,
 } from "~/lib/product-search/types";
@@ -50,6 +52,7 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 		"nameMn",
 		"slug",
 		"price",
+		"createdAt",
 		"discount",
 		"brand",
 		"category",
@@ -109,6 +112,7 @@ export const buildProductSearchDocument = (
 		description: product.description ?? "",
 		slug: product.slug,
 		price: product.price,
+		createdAt: new Date(product.createdAt).toISOString(),
 		discount: product.discount ?? 0,
 		brand: product.brand,
 		category: product.category,
@@ -138,7 +142,7 @@ export const buildProductSearchSnapshot = (
 	miniSearch.addAll(documents);
 
 	return {
-		version: 1,
+		version: 2,
 		generatedAt: new Date().toISOString(),
 		productCount: documents.length,
 		documents,
@@ -171,6 +175,9 @@ const resultMatchesFilters = (
 		const stock = Number(result.stock ?? 0);
 		if (!inStock || stock <= 0) return false;
 	}
+	const price = Number(result.price ?? 0);
+	if (filters?.minPrice != null && price < filters.minPrice) return false;
+	if (filters?.maxPrice != null && price > filters.maxPrice) return false;
 	return true;
 };
 
@@ -319,6 +326,7 @@ export const mapMiniSearchResult = (
 		nameMn: stored.nameMn || document?.nameMn || undefined,
 		slug: stored.slug ?? document?.slug ?? "",
 		price: stored.price ?? document?.price ?? 0,
+		createdAt: stored.createdAt ?? document?.createdAt ?? "",
 		discount: stored.discount ?? document?.discount ?? 0,
 		brand: stored.brand ?? document?.brand ?? "",
 		category: stored.category ?? document?.category ?? "",
@@ -342,13 +350,28 @@ export const searchMiniSearchIndex = (
 	miniSearch: MiniSearch<ProductSearchDocument>,
 	documentsById: Map<number, ProductSearchDocument>,
 	query: string,
-	limit: number,
+	page: number,
+	pageSize: number,
 	filters?: ProductSearchFilters,
-) => {
+	sort?: ProductSearchSort,
+): ProductSearchPage => {
+	const safePage = Math.max(page, 1);
+	const safePageSize = Math.min(Math.max(pageSize, 1), 100);
 	const trimmed = query.trim();
-	if (!trimmed) return [];
+	if (!trimmed) {
+		return {
+			items: [],
+			pagination: {
+				page: safePage,
+				pageSize: safePageSize,
+				totalCount: 0,
+				totalPages: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		};
+	}
 
-	const safeLimit = Math.min(Math.max(limit, 1), 1000);
 	const rankedResults = new Map<string, SearchResult>();
 	const queryTokens = new Set<string>();
 	for (const searchQuery of createSearchQueries(trimmed)) {
@@ -368,12 +391,10 @@ export const searchMiniSearchIndex = (
 				: searchQuery;
 		if (!matchableQuery) continue;
 
-		const results = miniSearch.search(matchableQuery, {
+		for (const result of miniSearch.search(matchableQuery, {
 			...searchOptions,
 			combineWith: "AND",
-		});
-
-		for (const result of results) {
+		})) {
 			const existing = rankedResults.get(String(result.id));
 			if (!existing || (result.score ?? 0) > (existing.score ?? 0)) {
 				rankedResults.set(String(result.id), result);
@@ -381,20 +402,53 @@ export const searchMiniSearchIndex = (
 		}
 	}
 
-	const anchorTokens = [...queryTokens];
-	return Array.from(rankedResults.values())
-		.filter((result) => hasRelevanceAnchor(result, anchorTokens))
+	const ranked = Array.from(rankedResults.values())
+		.filter((result) => hasRelevanceAnchor(result, [...queryTokens]))
 		.map((result) => ({
 			result,
 			rank: scoreSearchResult(result, documentsById, trimmed),
 			inStock: Boolean(result.inStock),
 			stock: Number(result.stock ?? 0),
-		}))
-		.sort((a, b) => {
+		}));
+
+	if (sort) {
+		const direction = sort.direction === "asc" ? 1 : -1;
+		ranked.sort((a, b) => {
+			const aValue =
+				sort.field === "price"
+					? Number(a.result.price ?? 0)
+					: Date.parse(String(a.result.createdAt ?? ""));
+			const bValue =
+				sort.field === "price"
+					? Number(b.result.price ?? 0)
+					: Date.parse(String(b.result.createdAt ?? ""));
+			const difference = (aValue - bValue) * direction;
+			return (
+				difference || (Number(a.result.id) - Number(b.result.id)) * direction
+			);
+		});
+	} else {
+		ranked.sort((a, b) => {
 			if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
 			if (a.stock !== b.stock) return b.stock - a.stock;
 			return b.rank - a.rank;
-		})
-		.slice(0, safeLimit)
-		.map(({ result }) => mapMiniSearchResult(result, documentsById));
+		});
+	}
+
+	const totalCount = ranked.length;
+	const totalPages = Math.ceil(totalCount / safePageSize);
+	const offset = (safePage - 1) * safePageSize;
+	return {
+		items: ranked
+			.slice(offset, offset + safePageSize)
+			.map(({ result }) => mapMiniSearchResult(result, documentsById)),
+		pagination: {
+			page: safePage,
+			pageSize: safePageSize,
+			totalCount,
+			totalPages,
+			hasNextPage: safePage < totalPages,
+			hasPreviousPage: safePage > 1 && totalCount > 0,
+		},
+	};
 };

@@ -1,3 +1,8 @@
+import type {
+	ProductSortDirection,
+	ProductSortField,
+} from "@vit/shared/domain/product";
+
 export const PRODUCT_SEARCH_OBJECT_NAME = "product-search-global";
 
 export type ProductSearchRebuildReason =
@@ -14,12 +19,33 @@ export interface ProductSearchFilters {
 	brandId?: number;
 	categoryId?: number;
 	requireStock?: boolean;
+	minPrice?: number;
+	maxPrice?: number;
+}
+
+export interface ProductSearchSort {
+	field: ProductSortField;
+	direction: ProductSortDirection;
 }
 
 export interface ProductSearchInput {
 	query: string;
-	limit?: number;
+	page?: number;
+	pageSize?: number;
 	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}
+
+export interface ProductSearchPage {
+	items: SearchProductResult[];
+	pagination: {
+		page: number;
+		pageSize: number;
+		totalCount: number;
+		totalPages: number;
+		hasNextPage: boolean;
+		hasPreviousPage: boolean;
+	};
 }
 
 export interface SearchProductResult {
@@ -28,6 +54,7 @@ export interface SearchProductResult {
 	nameMn?: string;
 	slug: string;
 	price: number;
+	createdAt: string;
 	discount: number;
 	brand: string;
 	category: string;
@@ -68,6 +95,7 @@ export interface ProductSearchDocument {
 	description: string;
 	slug: string;
 	price: number;
+	createdAt: string;
 	discount: number;
 	brand: string;
 	category: string;
@@ -96,6 +124,7 @@ export interface ProductSearchSourceDocument {
 	description?: string | null;
 	slug: string;
 	price: number;
+	createdAt: Date | string;
 	discount?: number | null;
 	brand: string;
 	category: string;
@@ -113,7 +142,7 @@ export interface ProductSearchSourceDocument {
 }
 
 export interface ProductSearchSnapshot {
-	version: 1;
+	version: 2;
 	generatedAt: string;
 	productCount: number;
 	documents: ProductSearchDocument[];
@@ -132,7 +161,7 @@ export interface ProductSearchStatus {
 }
 
 export interface ProductSearchService {
-	search(input: ProductSearchInput): Promise<SearchProductResult[]>;
+	search(input: ProductSearchInput): Promise<ProductSearchPage>;
 	rebuild(reason: ProductSearchRebuildReason): Promise<ProductSearchStatus>;
 	getStatus(): Promise<ProductSearchStatus>;
 	clear(): Promise<void>;
