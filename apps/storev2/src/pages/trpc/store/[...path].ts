@@ -1,31 +1,28 @@
+import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
-
-const getBackendUrl = () => {
-	const apiUrlFromEnv = import.meta.env.PUBLIC_API_URL;
-
-	return apiUrlFromEnv
-		? `${apiUrlFromEnv}/trpc/store`
-		: "http://localhost:3000/trpc/store";
-};
 
 export const prerender = false;
 
 export const ALL: APIRoute = async ({ request, params }) => {
-	const backendBaseUrl = getBackendUrl();
-	const incomingUrl = new URL(request.url);
+	const targetUrl = new URL(request.url);
 	const trpcPath = params.path ? `/${params.path}` : "";
-	const targetUrl = new URL(`${backendBaseUrl}${trpcPath}`);
-	targetUrl.search = incomingUrl.search;
+	targetUrl.pathname = `/trpc/store${trpcPath}`;
 
 	const headers = new Headers(request.headers);
-	headers.set("host", targetUrl.host);
+	headers.delete("host");
 	headers.delete("content-length");
 
-	return fetch(targetUrl, {
+	const init: RequestInit = {
 		method: request.method,
 		headers,
-		body: request.body,
 		redirect: "manual",
-		duplex: "half",
-	} as RequestInit & { duplex: "half" });
+	};
+
+	if (request.body && request.method !== "GET" && request.method !== "HEAD") {
+		init.body = request.body;
+		(init as RequestInit & { duplex: "half" }).duplex = "half";
+	}
+
+	const upstreamResponse = await env.server.fetch(new Request(targetUrl, init));
+	return new Response(upstreamResponse.body, upstreamResponse);
 };
