@@ -112,14 +112,15 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	);
 	const deliveryZonesUnavailable = createMemo(
 		() =>
-			addressZonesQuery.isError ||
-			(addressZonesQuery.data !== undefined && addressZoneOptions().length === 0),
+			addressZonesQuery.data === undefined || addressZoneOptions().length === 0,
 	);
 	const deliveryZonesReady = createMemo(
-		() =>
-			!addressZonesQuery.isLoading &&
-			!deliveryZonesUnavailable() &&
-			addressZoneOptions().length > 0,
+		() => !addressZonesQuery.isLoading && addressZoneOptions().length > 0,
+	);
+	const deliveryZoneErrorMessage = createMemo(() =>
+		deliveryZonesReady()
+			? "Хүргэлтийн бүсүүдийг шинэчилж чадсангүй. Хадгалсан мэдээллийг ашиглаж байна."
+			: "Хүргэлтийн бүсүүдийг ачаалж чадсангүй.",
 	);
 
 	const mutation = useMutation(
@@ -475,7 +476,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																</Show>
 																<Show when={addressZonesQuery.isError}>
 																	<div class="flex items-center justify-between gap-2 text-destructive text-xs" role="alert">
-																		<span>Хүргэлтийн бүсүүдийг ачаалж чадсангүй.</span>
+																		<span>{deliveryZoneErrorMessage()}</span>
 																		<button type="button" onClick={() => addressZonesQuery.refetch()} class="min-h-11 shrink-0 font-bold underline underline-offset-2">
 																			Дахин оролдох
 																		</button>

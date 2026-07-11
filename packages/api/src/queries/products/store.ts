@@ -55,6 +55,49 @@ import { buildActiveProductConditions } from "~/queries/products/shared";
 const inStockRankExpr = sql`(${ProductsTable.stock} > 0)`;
 const inStockFirst = desc(inStockRankExpr);
 
+type StorefrontProductFilters = {
+	requireStock?: boolean;
+	brandId?: number;
+	categoryId?: number;
+	listType?: "featured" | "recent" | "discount";
+	minPrice?: number;
+	maxPrice?: number;
+};
+
+const buildStorefrontProductConditions = ({
+	requireStock = false,
+	brandId,
+	categoryId,
+	listType,
+	minPrice,
+	maxPrice,
+}: StorefrontProductFilters): SQL<unknown>[] => {
+	const conditions: SQL<unknown>[] = [
+		isNull(ProductsTable.deletedAt),
+		eq(ProductsTable.status, "active"),
+	];
+	if (requireStock) conditions.push(gt(ProductsTable.stock, 0));
+	if (brandId !== undefined && brandId !== 0) {
+		conditions.push(eq(ProductsTable.brandId, brandId));
+	}
+	if (categoryId !== undefined && categoryId !== 0) {
+		conditions.push(eq(ProductsTable.categoryId, categoryId));
+	}
+	if (minPrice !== undefined) {
+		conditions.push(gte(ProductsTable.price, minPrice));
+	}
+	if (maxPrice !== undefined) {
+		conditions.push(lte(ProductsTable.price, maxPrice));
+	}
+	if (listType === "featured") {
+		conditions.push(eq(ProductsTable.isFeatured, true));
+	}
+	if (listType === "discount") {
+		conditions.push(gt(ProductsTable.discount, 0));
+	}
+	return conditions;
+};
+
 const recommendableProductColumns = {
 	id: true,
 	slug: true,
@@ -679,23 +722,14 @@ export const storeQueries = {
 				maxPrice,
 			} = params;
 
-			// Build filter conditions
-			const conditions: (SQL<unknown> | undefined)[] = [];
-			if (requireStock) conditions.push(gt(ProductsTable.stock, 0));
-			if (brandId !== undefined && brandId !== 0)
-				conditions.push(eq(ProductsTable.brandId, brandId));
-			if (categoryId !== undefined && categoryId !== 0)
-				conditions.push(eq(ProductsTable.categoryId, categoryId));
-			if (minPrice !== undefined)
-				conditions.push(gte(ProductsTable.price, minPrice));
-			if (maxPrice !== undefined)
-				conditions.push(lte(ProductsTable.price, maxPrice));
-			if (listType === "featured") {
-				conditions.push(eq(ProductsTable.isFeatured, true));
-			}
-			if (listType === "discount") {
-				conditions.push(gt(ProductsTable.discount, 0));
-			}
+			const conditions = buildStorefrontProductConditions({
+				requireStock,
+				brandId,
+				categoryId,
+				listType,
+				minPrice,
+				maxPrice,
+			});
 
 			// Use Upstash search for better text matching
 			if (searchTerm !== undefined && searchTerm !== "") {
@@ -708,10 +742,6 @@ export const storeQueries = {
 					return { items: [], nextCursor: null };
 				}
 			}
-
-			const finalConditions = conditions.filter(
-				(c): c is SQL<unknown> => c !== undefined,
-			);
 
 			// Determine sort column and order
 			const sortColumn =
@@ -770,12 +800,7 @@ export const storeQueries = {
 					discount: true,
 					categoryId: true,
 				},
-				where: and(
-					isNull(ProductsTable.deletedAt),
-					eq(ProductsTable.status, "active"),
-					cursorCondition,
-					finalConditions.length > 0 ? and(...finalConditions) : undefined,
-				),
+				where: and(...conditions, cursorCondition),
 				orderBy: orderByClauses,
 				with: {
 					images: {
@@ -838,6 +863,7 @@ export const storeQueries = {
 			pageSize: number;
 			brandId?: number;
 			categoryId?: number;
+			listType?: "featured" | "recent" | "discount";
 			sortField?: "price" | "stock" | "createdAt";
 			sortDirection?: "asc" | "desc";
 			minPrice?: number;
@@ -848,6 +874,7 @@ export const storeQueries = {
 				pageSize,
 				brandId,
 				categoryId,
+				listType,
 				sortField = "stock",
 				sortDirection = "desc",
 				requireStock = false,
@@ -855,20 +882,14 @@ export const storeQueries = {
 				maxPrice,
 			} = params;
 
-			const conditions: (SQL<unknown> | undefined)[] = [];
-			if (requireStock) conditions.push(gt(ProductsTable.stock, 0));
-			if (brandId !== undefined && brandId !== 0)
-				conditions.push(eq(ProductsTable.brandId, brandId));
-			if (categoryId !== undefined && categoryId !== 0)
-				conditions.push(eq(ProductsTable.categoryId, categoryId));
-			if (minPrice !== undefined)
-				conditions.push(gte(ProductsTable.price, minPrice));
-			if (maxPrice !== undefined)
-				conditions.push(lte(ProductsTable.price, maxPrice));
-
-			const finalConditions = conditions.filter(
-				(c): c is SQL<unknown> => c !== undefined,
-			);
+			const conditions = buildStorefrontProductConditions({
+				requireStock,
+				brandId,
+				categoryId,
+				listType,
+				minPrice,
+				maxPrice,
+			});
 
 			const sortColumn =
 				sortField === "price"
@@ -898,13 +919,7 @@ export const storeQueries = {
 						discount: true,
 						categoryId: true,
 					},
-					where: and(
-						isNull(ProductsTable.deletedAt),
-						eq(ProductsTable.status, "active"),
-						finalConditions.length > 0
-							? and(...finalConditions)
-							: undefined,
-					),
+					where: and(...conditions),
 					orderBy: orderByClauses,
 					with: {
 						images: {
@@ -926,15 +941,7 @@ export const storeQueries = {
 				db()
 					.select({ count: sql<number>`count(*)::int` })
 					.from(ProductsTable)
-					.where(
-						and(
-							isNull(ProductsTable.deletedAt),
-							eq(ProductsTable.status, "active"),
-							finalConditions.length > 0
-								? and(...finalConditions)
-								: undefined,
-						),
-					),
+					.where(and(...conditions)),
 			]);
 
 			const totalCount = countResult[0]?.count ?? 0;
