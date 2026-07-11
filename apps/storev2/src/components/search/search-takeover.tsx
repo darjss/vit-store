@@ -326,7 +326,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 
 						<div class="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 							<span class="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-cocoa bg-secondary px-3.5 font-semibold text-secondary-foreground text-xs">
-								Бүгд
+								Урьдчилсан
 								<span class="rounded-full bg-white/25 px-1.5 py-0.5 font-extrabold text-[11px]">
 									{resultCount()}
 								</span>
@@ -357,7 +357,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 							<b class="font-display text-foreground text-sm">
 								{resultCount()}
 							</b>{" "}
-							илэрц · «{props.query}»
+							бүтээгдэхүүнийг урьдчилан харуулж байна · «{props.query}»
 						</p>
 
 						<div class="flex flex-col gap-2.5">
@@ -376,10 +376,9 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 						<Show when={resultCount() > 0}>
 							<a
 								href={`/products/?q=${encodeURIComponent(props.query)}`}
-								onClick={() => props.onClose()}
 								class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cocoa bg-primary font-bold font-display text-sm shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
 							>
-								Каталогоос бүх {resultCount()} илэрц харах
+								Каталогийн бүх илэрцийг харах
 								<IconArrowRight class="h-4 w-4" />
 							</a>
 						</Show>
