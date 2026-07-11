@@ -3,10 +3,40 @@ import type { APIRoute } from "astro";
 
 export const prerender = false;
 
+const canonicalStorePath = (path: string | undefined): string | null => {
+	let decodedPath = path ?? "";
+	try {
+		for (let index = 0; index < 8; index++) {
+			const next = decodeURIComponent(decodedPath);
+			if (next === decodedPath) break;
+			decodedPath = next;
+		}
+	} catch {
+		return null;
+	}
+
+	const segments = decodedPath.split("/");
+	if (
+		segments.some(
+			(segment) =>
+				segment === "." || segment === ".." || segment.includes("\\"),
+		)
+	) {
+		return null;
+	}
+
+	const nestedPath = segments.map(encodeURIComponent).join("/");
+	return nestedPath ? `/trpc/store/${nestedPath}` : "/trpc/store";
+};
+
 export const ALL: APIRoute = async ({ request, params }) => {
+	const targetPath = canonicalStorePath(params.path);
+	if (!targetPath) {
+		return Response.json({ error: "Invalid tRPC path" }, { status: 400 });
+	}
+
 	const targetUrl = new URL(request.url);
-	const trpcPath = params.path ? `/${params.path}` : "";
-	targetUrl.pathname = `/trpc/store${trpcPath}`;
+	targetUrl.pathname = targetPath;
 
 	const headers = new Headers(request.headers);
 	headers.delete("host");
