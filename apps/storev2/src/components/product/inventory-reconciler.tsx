@@ -1,6 +1,6 @@
 import { formatCurrency } from "@vit/shared";
 import { LOW_STOCK_THRESHOLD } from "@vit/shared/domain/product";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/trpc";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
@@ -27,20 +27,65 @@ type StoredSnapshot = {
 	fetchedAt: number;
 };
 
-const INVENTORY_SNAPSHOT_TTL_MS = 10_000;
-const snapshots = new Map<number, StoredSnapshot>();
-const listeners = new Map<number, Set<InventoryListener>>();
-const verificationStates = new Map<number, InventoryVerification>();
-const verificationListeners = new Map<number, Set<VerificationListener>>();
-const registrationCounts = new Map<number, number>();
-const requestGenerations = new Map<number, number>();
-const pendingRequests = new Map<number, number>();
-const warningListeners = new Set<(count: number) => void>();
-const activeRequests = new Set<{
+type ActiveInventoryRequest = {
 	controller: AbortController;
 	entries: Map<number, number>;
-}>();
-let flushTimer: number | undefined;
+};
+
+type InventoryCoordinator = {
+	snapshots: Map<number, StoredSnapshot>;
+	listeners: Map<number, Set<InventoryListener>>;
+	verificationStates: Map<number, InventoryVerification>;
+	verificationListeners: Map<number, Set<VerificationListener>>;
+	registrationCounts: Map<number, number>;
+	requestGenerations: Map<number, number>;
+	pendingRequests: Map<number, number>;
+	warningListeners: Set<(count: number) => void>;
+	activeRequests: Set<ActiveInventoryRequest>;
+	flushTimer?: number;
+	retryListenerInstalled?: boolean;
+};
+
+type InventoryWindow = Window & {
+	__vitInventoryCoordinatorV2?: InventoryCoordinator;
+};
+
+function createInventoryCoordinator(): InventoryCoordinator {
+	return {
+		snapshots: new Map(),
+		listeners: new Map(),
+		verificationStates: new Map(),
+		verificationListeners: new Map(),
+		registrationCounts: new Map(),
+		requestGenerations: new Map(),
+		pendingRequests: new Map(),
+		warningListeners: new Set(),
+		activeRequests: new Set(),
+	};
+}
+
+const serverCoordinator = createInventoryCoordinator();
+
+function getInventoryCoordinator(): InventoryCoordinator {
+	if (typeof window === "undefined") return serverCoordinator;
+	const inventoryWindow = window as InventoryWindow;
+	inventoryWindow.__vitInventoryCoordinatorV2 ??= createInventoryCoordinator();
+	return inventoryWindow.__vitInventoryCoordinatorV2;
+}
+
+const INVENTORY_SNAPSHOT_TTL_MS = 10_000;
+const coordinator = getInventoryCoordinator();
+const {
+	snapshots,
+	listeners,
+	verificationStates,
+	verificationListeners,
+	registrationCounts,
+	requestGenerations,
+	pendingRequests,
+	warningListeners,
+	activeRequests,
+} = coordinator;
 
 function lastVerifiedAt(productId: number): number | undefined {
 	const current = verificationStates.get(productId);
@@ -130,6 +175,7 @@ export function useInventoryVerification(productId: number) {
 		verificationStates.get(productId) ?? { status: "checking" },
 	);
 	onMount(() => {
+		ensureInventoryBrowserContract();
 		const productListeners =
 			verificationListeners.get(productId) ?? new Set<VerificationListener>();
 		productListeners.add(setVerification);
@@ -231,8 +277,15 @@ function degradedRegistrationCount(): number {
 	return count;
 }
 
+function syncWarningHost(count: number): void {
+	if (typeof document === "undefined") return;
+	const host = document.querySelector<HTMLElement>("[data-inventory-warning]");
+	if (host) host.hidden = count === 0;
+}
+
 function notifyWarningListeners(): void {
 	const count = degradedRegistrationCount();
+	syncWarningHost(count);
 	for (const listener of warningListeners) listener(count);
 }
 
@@ -244,9 +297,9 @@ function isCurrentRequest(productId: number, generation: number): boolean {
 }
 
 function scheduleQueueFlush(): void {
-	if (flushTimer !== undefined) return;
-	flushTimer = window.setTimeout(() => {
-		flushTimer = undefined;
+	if (coordinator.flushTimer !== undefined) return;
+	coordinator.flushTimer = window.setTimeout(() => {
+		coordinator.flushTimer = undefined;
 		void flushInventoryQueue();
 	}, 0);
 }
@@ -378,49 +431,61 @@ function retryDegradedInventory(): void {
 	}
 }
 
+function ensureInventoryBrowserContract(): void {
+	if (typeof document === "undefined" || coordinator.retryListenerInstalled) {
+		return;
+	}
+	coordinator.retryListenerInstalled = true;
+	document.addEventListener("click", (event) => {
+		const target = event.target;
+		if (target instanceof Element && target.closest("[data-inventory-retry]")) {
+			retryDegradedInventory();
+		}
+	});
+}
+
 export default function InventoryReconciler() {
 	const [degradedCount, setDegradedCount] = createSignal(
 		degradedRegistrationCount(),
 	);
 
 	onMount(() => {
+		ensureInventoryBrowserContract();
 		warningListeners.add(setDegradedCount);
-		setDegradedCount(degradedRegistrationCount());
+		const count = degradedRegistrationCount();
+		setDegradedCount(count);
+		syncWarningHost(count);
 		onCleanup(() => warningListeners.delete(setDegradedCount));
 	});
 
 	return (
 		<>
 			<span hidden aria-hidden="true" data-inventory-reconciler />
-			<Show when={degradedCount() > 0}>
-				<div
-					class="fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-lg flex-wrap items-start gap-3 rounded-2xl border border-border bg-warning p-3 text-warning-foreground shadow-soft-lg sm:flex-nowrap sm:p-4"
-					role="alert"
-					data-inventory-warning
-				>
-					<IconAlertTriangle
-						class="mt-0.5 h-5 w-5 shrink-0"
-						aria-hidden="true"
-					/>
-					<div class="min-w-0 flex-1">
-						<p class="font-semibold text-sm">Нөөцийг шинэчилж чадсангүй</p>
-						<p class="mt-1 text-xs leading-relaxed sm:text-sm">
-							Хуудсыг нээх үеийн мэдээлэл харагдаж байна. Одоогийн нөөц
-							баталгаажаагүй тул сагслахыг түр зогсоолоо.
-						</p>
-					</div>
-					<Button
-						type="button"
-						variant="secondary"
-						size="compact"
-						class="ml-8 basis-full sm:ml-0 sm:basis-auto"
-						onClick={retryDegradedInventory}
-					>
-						<IconRefresh aria-hidden="true" />
-						Дахин шалгах
-					</Button>
+			<div
+				class="fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-lg flex-wrap items-start gap-3 rounded-2xl border border-border bg-warning p-3 text-warning-foreground shadow-soft-lg sm:flex-nowrap sm:p-4"
+				role="alert"
+				data-inventory-warning
+				hidden={degradedCount() === 0}
+			>
+				<IconAlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+				<div class="min-w-0 flex-1">
+					<p class="font-semibold text-sm">Нөөцийг шинэчилж чадсангүй</p>
+					<p class="mt-1 text-xs leading-relaxed sm:text-sm">
+						Хуудсыг нээх үеийн мэдээлэл харагдаж байна. Одоогийн нөөц
+						баталгаажаагүй тул сагслахыг түр зогсоолоо.
+					</p>
 				</div>
-			</Show>
+				<Button
+					type="button"
+					variant="secondary"
+					size="compact"
+					class="ml-8 basis-full sm:ml-0 sm:basis-auto"
+					data-inventory-retry
+				>
+					<IconRefresh aria-hidden="true" />
+					Дахин шалгах
+				</Button>
+			</div>
 		</>
 	);
 }
