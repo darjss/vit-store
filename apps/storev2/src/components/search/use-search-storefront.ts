@@ -40,9 +40,13 @@ export interface UseSearchStorefrontOptions {
 
 export interface UseSearchStorefrontResult {
 	data: () => SearchStorefrontData | undefined;
+	status: () => "pending" | "error" | "success";
+	fetchStatus: () => "fetching" | "paused" | "idle";
 	isLoading: () => boolean;
 	isFetching: () => boolean;
 	isError: () => boolean;
+	isLoadingError: () => boolean;
+	isRefetchError: () => boolean;
 	refetch: () => void;
 }
 
@@ -117,9 +121,13 @@ export function useSearchStorefront(
 
 	return {
 		data: currentData,
+		status: () => searchQuery.status,
+		fetchStatus: () => searchQuery.fetchStatus,
 		isLoading: () => searchQuery.isLoading,
 		isFetching: () => searchQuery.isFetching,
 		isError: () => searchQuery.isError,
+		isLoadingError: () => searchQuery.isLoadingError,
+		isRefetchError: () => searchQuery.isRefetchError,
 		refetch: () => searchQuery.refetch(),
 	};
 }

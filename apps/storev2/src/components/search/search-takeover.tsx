@@ -211,8 +211,7 @@ const SearchError = (props: { query: string; onRetry: () => void }) => (
 	>
 		<h3 class="font-bold font-display text-lg">Хайлтыг ачаалж чадсангүй</h3>
 		<p class="mt-2 max-w-[280px] text-muted-foreground text-sm">
-			«{props.query}» хайлтын үед сүлжээний алдаа гарлаа. Сүлжээгээ шалгаад
-			дахин оролдоно уу.
+			«{props.query}» хайлтыг ачаалж чадсангүй. Дахин оролдоно уу.
 		</p>
 		<button
 			type="button"
@@ -220,6 +219,28 @@ const SearchError = (props: { query: string; onRetry: () => void }) => (
 			class="mt-4 inline-flex min-h-11 items-center rounded-full border border-cocoa bg-primary px-5 font-bold text-sm shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
 		>
 			Дахин хайх
+		</button>
+	</div>
+);
+
+const SearchRefetchError = (props: {
+	isFetching: boolean;
+	onRetry: () => void;
+}) => (
+	<div
+		role="alert"
+		class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-soft-sm"
+	>
+		<p class="text-muted-foreground text-xs">
+			Хайлтыг шинэчилж чадсангүй. Одоогийн илэрцийг харуулж байна.
+		</p>
+		<button
+			type="button"
+			disabled={props.isFetching}
+			onClick={props.onRetry}
+			class="inline-flex min-h-11 shrink-0 items-center rounded-full border border-cocoa bg-primary px-4 font-bold text-xs transition-opacity disabled:opacity-60"
+		>
+			{props.isFetching ? "Шинэчилж байна…" : "Дахин оролдох"}
 		</button>
 	</div>
 );
@@ -261,9 +282,10 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 	const resultCount = () => search.data()?.products.length ?? 0;
 	const requestState = createMemo(() =>
 		getSearchTakeoverRequestState({
-			isLoading: search.isLoading(),
-			isFetching: search.isFetching(),
-			isError: search.isError(),
+			status: search.status(),
+			fetchStatus: search.fetchStatus(),
+			isLoadingError: search.isLoadingError(),
+			isRefetchError: search.isRefetchError(),
 			hasCurrentData: search.data() !== undefined,
 		}),
 	);
@@ -322,6 +344,13 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 
 				<Match when={search.data()}>
 					<div>
+						<Show when={search.isRefetchError()}>
+							<SearchRefetchError
+								isFetching={search.isFetching()}
+								onRetry={search.refetch}
+							/>
+						</Show>
+
 						<Show when={tokens().length > 0}>
 							<div class="mt-1 rounded-2xl border border-cocoa bg-primary/15 p-3.5 shadow-soft-sm">
 								<div class="mb-2 flex items-center gap-1.5 font-extrabold text-cocoa text-xs uppercase tracking-wide">
