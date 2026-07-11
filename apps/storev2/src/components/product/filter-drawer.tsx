@@ -242,6 +242,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					pageSize: 1,
 					categoryId: debouncedCategoryId() ?? undefined,
 					brandId: debouncedBrandId() ?? undefined,
+					listType: props.listFilter ?? undefined,
 					sortField: sort?.field,
 					sortDirection: sort?.direction,
 					minPrice,

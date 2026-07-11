@@ -30,7 +30,7 @@ type BrandRow = {
 const products = await api.product.getProductsForHome.query();
 const { featuredProducts, newProducts, discountedProducts } = products;
 const brands = await api.brand.getAllBrandsWithStock.query();
-const allCategories = await api.category.getAllCategoriesWithActiveProductCount.query();
+const allCategories = await api.category.getAllCategories.query();
 
 const preferredCategoryNames = [
   "Дархлаа",
