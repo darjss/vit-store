@@ -110,6 +110,18 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			value: zone.Id,
 		})),
 	);
+	const deliveryZonesUnavailable = createMemo(
+		() =>
+			addressZonesQuery.data === undefined || addressZoneOptions().length === 0,
+	);
+	const deliveryZonesReady = createMemo(
+		() => !addressZonesQuery.isLoading && addressZoneOptions().length > 0,
+	);
+	const deliveryZoneErrorMessage = createMemo(() =>
+		deliveryZonesReady()
+			? "Хүргэлтийн бүсүүдийг шинэчилж чадсангүй. Хадгалсан мэдээллийг ашиглаж байна."
+			: "Хүргэлтийн бүсүүдийг ачаалж чадсангүй.",
+	);
 
 	const mutation = useMutation(
 		() => ({
@@ -448,13 +460,33 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																			placeholder={
 																				addressZonesQuery.isLoading
 																					? "Бүсүүд уншиж байна..."
+																					: deliveryZonesUnavailable()
+																					? "Бүс сонгох боломжгүй"
 																					: "Хаягийн бүс сонгох"
 																			}
 																			options={addressZoneOptions()}
-																			disabled={addressZonesQuery.isLoading}
+																			disabled={!deliveryZonesReady()}
 																		/>
 																	)}
 																/>
+																<Show when={addressZonesQuery.isLoading}>
+																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																		Хүргэлтийн бүсүүдийг уншиж байна...
+																	</p>
+																</Show>
+																<Show when={addressZonesQuery.isError}>
+																	<div class="flex items-center justify-between gap-2 text-destructive text-xs" role="alert">
+																		<span>{deliveryZoneErrorMessage()}</span>
+																		<button type="button" onClick={() => addressZonesQuery.refetch()} class="min-h-11 shrink-0 font-bold underline underline-offset-2">
+																			Дахин оролдох
+																		</button>
+																	</div>
+																</Show>
+																<Show when={!addressZonesQuery.isLoading && !addressZonesQuery.isError && addressZonesQuery.data !== undefined && addressZoneOptions().length === 0}>
+																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																		Одоогоор хүргэлтийн бүс алга байна.
+																	</p>
+																</Show>
 															</div>
 
 															{/* Address */}
@@ -522,7 +554,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																			size="lg"
 																			class="w-full"
 																			disabled={
-																				mutation.isPending || Boolean(paymentInfo())
+																				mutation.isPending ||
+																				Boolean(paymentInfo()) ||
+																				!deliveryZonesReady()
 																			}
 																		>
 																			{mutation.isPending
