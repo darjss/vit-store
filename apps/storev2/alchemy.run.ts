@@ -35,11 +35,11 @@ export const storev2 = await Astro<StoreBindings>("front", {
 	build: {
 		command: "bun run build && rm -f dist/_routes.json",
 	},
-	// @astrojs/cloudflare v14 emits the server bundle at dist/server/entry.mjs and
-	// client assets at dist/client (Alchemy's Astro resource still defaults to the
-	// legacy v12 dist/_worker.js layout, so override both explicitly).
-	entrypoint: "dist/server/entry.mjs",
+	// Wrap the official Astro handler to expose a private cache-purge RPC method;
+	// the wrapper imports dist/server/entry.mjs after the build completes.
+	entrypoint: "worker.mjs",
 	assets: "dist/client",
+	cache: { enabled: true },
 	bindings: {
 		// Reference the already-deployed server Worker by physical service name.
 		// Importing server/alchemy here causes store deploys to evaluate/deploy the
