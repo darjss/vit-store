@@ -8,6 +8,7 @@ import CardAddButton from "@/components/product/card-add-button.tsx";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import { toProductImageUrl } from "@/lib/image";
 import { washBg } from "@/lib/wash";
+import { unverifiedInventoryCardPresentation } from "./inventory-card-state";
 
 interface Props {
 	product: {
@@ -38,10 +39,8 @@ const {
 const washClass = washBg(product.categoryId ?? "uncategorized");
 const imageUrl = product.images[0]?.url || "";
 const productUrl = `/products/${product.slug}-${product.id}`;
-const stockState = productStockState(product.stock);
-const isOutOfStock = stockState === "out";
-const isLowStock = stockState === "low";
-const initialInventoryState = isOutOfStock ? "out" : isLowStock ? "low" : "in";
+const isOutOfStock = productStockState(product.stock) === "out";
+const initialInventory = unverifiedInventoryCardPresentation("checking");
 const hasSale = (product.discount ?? 0) > 0;
 const display = projectProductCardDisplay({
 	name: product.name,
@@ -56,7 +55,7 @@ const display = projectProductCardDisplay({
 	class={`group @container hover:-translate-y-[3px] relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg ${className}`}
 	data-product-id={product.id}
 	data-server-product-card={product.id}
-	data-inventory-state={initialInventoryState}
+	data-inventory-state={initialInventory.state}
 >
 	<div class="relative block" aria-hidden="true">
 		<div
@@ -86,7 +85,7 @@ const display = projectProductCardDisplay({
 			)}
 		</div>
 	</div>
-	{hasSale && !isOutOfStock && (
+	{hasSale && (
 		<span
 			class="-rotate-2 absolute top-2 left-2 inline-flex items-center rounded-full bg-sale px-2 py-0.5 font-semibold text-[11px] text-sale-foreground"
 			data-card-sale
@@ -120,7 +119,7 @@ const display = projectProductCardDisplay({
 			</p>
 		)}
 		<p data-card-stock class="font-semibold text-[11px]">
-			{isOutOfStock ? "Дууссан" : isLowStock ? "Цөөн үлдсэн" : "Бэлэн байна"}
+			{initialInventory.availabilityLabel}
 		</p>
 
 		<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
@@ -145,6 +144,23 @@ const display = projectProductCardDisplay({
 </div>
 
 <style>
+	[data-server-product-card][data-inventory-state="checking"] [data-card-image-frame],
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image-frame] {
+		filter: saturate(0.55);
+	}
+	[data-server-product-card][data-inventory-state="checking"] [data-card-image],
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image] {
+		opacity: 0.72;
+	}
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image] {
+		filter: grayscale(0.55);
+	}
+	[data-server-product-card][data-inventory-state="checking"] [data-card-stock] {
+		color: var(--color-muted-foreground);
+	}
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-stock] {
+		color: var(--color-destructive);
+	}
 	[data-server-product-card][data-inventory-state="out"] [data-card-image-frame] {
 		filter: saturate(0.35);
 	}
@@ -155,7 +171,11 @@ const display = projectProductCardDisplay({
 	[data-server-product-card][data-inventory-state="out"] [data-card-stock] {
 		color: var(--color-destructive);
 	}
-	[data-server-product-card][data-inventory-state="out"] [data-card-sale] {
+	[data-server-product-card]:is(
+		[data-inventory-state="checking"],
+		[data-inventory-state="degraded"],
+		[data-inventory-state="out"]
+	) [data-card-sale] {
 		display: none;
 	}
 	[data-server-product-card][data-inventory-state="low"] [data-card-stock] {
