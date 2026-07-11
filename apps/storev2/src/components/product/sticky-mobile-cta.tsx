@@ -5,11 +5,11 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import RestockNotifySheet from "./restock-notify-sheet";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,
 } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
@@ -29,18 +29,43 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	onMount(() => {
 		const mainCta = document.getElementById("product-main-cta");
-		if (!mainCta) return;
-
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				// Show sticky bar when main CTA is NOT visible
-				setVisible(!entry.isIntersecting);
-			},
-			{ threshold: 0.1, rootMargin: "0px" },
+		const stackMeasure = document.querySelector<HTMLElement>(
+			"[data-mobile-purchase-stack-measure]",
 		);
+		if (!mainCta || !stackMeasure) return;
 
-		observer.observe(mainCta);
-		onCleanup(() => observer.disconnect());
+		let observer: IntersectionObserver | undefined;
+		const observePurchaseAction = () => {
+			observer?.disconnect();
+
+			const action =
+				mainCta.querySelector<HTMLElement>(
+					"[data-product-main-purchase-action]",
+				) ?? mainCta;
+			const stackHeight = stackMeasure.getBoundingClientRect().height;
+
+			observer = new IntersectionObserver(
+				([entry]) => {
+					// Handoff only after the complete main action clears both fixed layers.
+					setVisible(entry.intersectionRatio < 1);
+				},
+				{
+					threshold: 1,
+					rootMargin: `0px 0px -${stackHeight}px 0px`,
+				},
+			);
+			observer.observe(action);
+		};
+
+		observePurchaseAction();
+		window.addEventListener("resize", observePurchaseAction);
+		const actionObserver = new MutationObserver(observePurchaseAction);
+		actionObserver.observe(mainCta, { childList: true, subtree: true });
+		onCleanup(() => {
+			observer?.disconnect();
+			actionObserver.disconnect();
+			window.removeEventListener("resize", observePurchaseAction);
+		});
 	});
 
 	const handleAdd = () => {
@@ -54,18 +79,20 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	return (
 		<>
-			<Show when={visible()}>
-				{/* Spacer prevents the floating bar from overlapping footer/content at scroll bottom */}
-				<div class="h-20 sm:hidden" aria-hidden="true" />
-			</Show>
+			<div
+				data-mobile-purchase-stack-measure
+				class="pointer-events-none invisible fixed inset-x-0 bottom-0 h-[var(--mobile-purchase-stack-height)] md:hidden"
+				aria-hidden="true"
+			/>
 			<Presence>
 				<Show when={visible()}>
 					<Motion.div
+						data-pdp-sticky-cta
 						initial={{ opacity: 0, y: 24 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 24 }}
 						transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
-						class="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg sm:hidden"
+						class="fixed inset-x-3 bottom-[var(--mobile-purchase-offset)] z-50 h-[var(--mobile-purchase-height)] rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg md:hidden"
 					>
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 pl-1">
