@@ -1,7 +1,4 @@
-import type {
-	ProductSortDirection,
-	ProductSortField,
-} from "@vit/shared/domain/product";
+import type { ProductSortDirection } from "@vit/shared/domain/product";
 
 export const PRODUCT_SEARCH_OBJECT_NAME = "product-search-global";
 
@@ -23,8 +20,12 @@ export interface ProductSearchFilters {
 	maxPrice?: number;
 }
 
+export const PRODUCT_SEARCH_SORT_FIELDS = ["price", "createdAt"] as const;
+export type ProductSearchSortField =
+	(typeof PRODUCT_SEARCH_SORT_FIELDS)[number];
+
 export interface ProductSearchSort {
-	field: ProductSortField;
+	field: ProductSearchSortField;
 	direction: ProductSortDirection;
 }
 
