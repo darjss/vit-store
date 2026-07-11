@@ -1,5 +1,5 @@
-# Static assets use these headers. Storefront SSR HTML is explicitly no-store
-# in middleware until secure cross-Worker invalidation exists.
+# Static assets use these headers. Selected anonymous SSR catalog pages opt in
+# through Astro's Cloudflare cache provider; middleware bypasses private paths.
 
 /404.html
   Cache-Control: no-store
