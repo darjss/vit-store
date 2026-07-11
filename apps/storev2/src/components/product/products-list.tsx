@@ -99,28 +99,45 @@ const ProductsList = (props: ProductsListProps) => {
 		}
 	});
 
-	const searchQuery = useQuery(
+	const searchQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
 				"search-products-page",
 				filters.searchTerm(),
+				filters.selectedSort()?.field,
+				filters.selectedSort()?.direction,
 				filters.categoryId(),
 				filters.brandId(),
+				filters.minPrice(),
+				filters.maxPrice(),
 				filters.includeOutOfStock(),
 			],
-			queryFn: async () => {
+			queryFn: async ({ pageParam }) => {
 				const term = filters.searchTerm();
-				if (!term || term.length < 2) return [];
+				if (!term || term.length < 2) {
+					throw new Error("Search query must contain at least two characters");
+				}
+				const sort = filters.selectedSort();
 				return await api.product.searchProductsForPage.query({
 					query: term,
-					limit: 10,
+					page: pageParam,
+					pageSize: 12,
 					categoryId: filters.categoryId() ?? undefined,
 					brandId: filters.brandId() ?? undefined,
+					minPrice: filters.minPrice(),
+					maxPrice: filters.maxPrice(),
 					requireStock: !filters.includeOutOfStock(),
+					sortField: sort?.field,
+					sortDirection: sort?.direction,
 				});
 			},
+			initialPageParam: 1,
+			getNextPageParam: (lastPage) =>
+				lastPage.pagination.hasNextPage
+					? lastPage.pagination.page + 1
+					: undefined,
 			enabled: filters.isSearchMode(),
-			staleTime: 1000 * 60 * 5, // 5 minutes
+			staleTime: 1000 * 60 * 5,
 			placeholderData: keepPreviousData,
 		}),
 		() => queryClient,
@@ -162,13 +179,18 @@ const ProductsList = (props: ProductsListProps) => {
 		() => queryClient,
 	);
 
-	const searchResults = createMemo(() => searchQuery.data ?? []);
+	const searchResults = createMemo(() =>
+		(searchQuery.data?.pages ?? []).flatMap((page) => page.items),
+	);
 	const isSearchLoading = createMemo(
 		() => searchQuery.isLoading && !searchQuery.data,
 	);
 	const isSearchRefetching = createMemo(
 		() =>
-			searchQuery.isFetching && !searchQuery.isLoading && !!searchQuery.data,
+			searchQuery.isFetching &&
+			!searchQuery.isLoading &&
+			!searchQuery.isFetchingNextPage &&
+			!!searchQuery.data,
 	);
 
 	const isInitialLoading = createMemo(() => {
@@ -272,7 +294,9 @@ const ProductsList = (props: ProductsListProps) => {
 	});
 
 	const productCount = createMemo(() => {
-		if (filters.isSearchMode()) return searchResults().length;
+		if (filters.isSearchMode()) {
+			return searchQuery.data?.pages[0]?.pagination.totalCount ?? 0;
+		}
 		return allBrowseProducts().length;
 	});
 	const productCountLabel = createMemo(() => {
@@ -293,25 +317,35 @@ const ProductsList = (props: ProductsListProps) => {
 		return `${productCount()}+ бүтээгдэхүүн`;
 	});
 
+	const hasNextPage = () =>
+		filters.isSearchMode()
+			? searchQuery.hasNextPage
+			: productsQuery.hasNextPage;
+	const isFetchingNextPage = () =>
+		filters.isSearchMode()
+			? searchQuery.isFetchingNextPage
+			: productsQuery.isFetchingNextPage;
 	const loadNextPage = () => {
-		if (!productsQuery.hasNextPage || productsQuery.isFetching) return;
-		void productsQuery.fetchNextPage({ cancelRefetch: false });
+		if (!hasNextPage() || isFetchingNextPage()) return;
+		if (filters.isSearchMode()) {
+			void searchQuery.fetchNextPage({ cancelRefetch: false });
+		} else {
+			void productsQuery.fetchNextPage({ cancelRefetch: false });
+		}
 	};
 
 	createEffect(() => {
-		if (
-			!isLoadMoreInRange() ||
-			filters.isSearchMode() ||
-			productsQuery.isError
-		) {
-			return;
-		}
+		if (!isLoadMoreInRange() || !hasNextPage()) return;
 		loadNextPage();
 	});
 
 	const retryProducts = () => {
 		if (filters.isSearchMode()) {
-			searchQuery.refetch();
+			if (searchResults().length > 0 && searchQuery.hasNextPage) {
+				loadNextPage();
+			} else {
+				searchQuery.refetch();
+			}
 			return;
 		}
 		if (allBrowseProducts().length > 0 && productsQuery.hasNextPage) {
@@ -408,6 +442,7 @@ const ProductsList = (props: ProductsListProps) => {
 					brandId={filters.brandId()}
 					priceRange={filters.priceRange()}
 					listFilter={filters.listFilter()}
+					searchTerm={filters.searchTerm()}
 					includeOutOfStock={filters.includeOutOfStock()}
 					onApply={filters.applyFilters}
 					onReset={filters.resetDrawerFilters}
@@ -491,8 +526,8 @@ const ProductsList = (props: ProductsListProps) => {
 					<ProductErrorState onRetry={retryProducts} />
 				</Show>
 
-				{/* Loading More Skeleton (browse mode only) */}
-				<Show when={!filters.isSearchMode() && productsQuery.isFetchingNextPage}>
+				{/* Loading More Skeleton */}
+				<Show when={isFetchingNextPage()}>
 					<ProductSkeletonGrid
 						count={4}
 						class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
@@ -502,11 +537,10 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* End of List */}
 				<Show
 					when={
-						filters.isSearchMode()
-							? searchResults().length > 0
-							: productsQuery.data &&
-								!productsQuery.hasNextPage &&
-								allBrowseProducts().length > 0
+						(filters.isSearchMode()
+							? searchQuery.data && !searchQuery.hasNextPage
+							: productsQuery.data && !productsQuery.hasNextPage) &&
+							hasProducts()
 					}
 				>
 					<ProductListEnd count={productCount()} />
@@ -515,20 +549,19 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* Automatic continuation with an accessible manual fallback. */}
 				<Show
 					when={
-						!filters.isSearchMode() &&
-						productsQuery.hasNextPage &&
-						productsQuery.data
+						hasNextPage() &&
+						(filters.isSearchMode() ? searchQuery.data : productsQuery.data)
 					}
 				>
 					<div class="mt-4 flex justify-center sm:mt-6">
 						<button
 							ref={setupObserver}
 							type="button"
-							disabled={productsQuery.isFetching}
+							disabled={isFetchingNextPage()}
 							onClick={loadNextPage}
 							class="hover:-translate-y-0.5 inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
 						>
-							{productsQuery.isFetching ? "Ачааллаж байна..." : "Цааш үзэх"}
+							{isFetchingNextPage() ? "Ачааллаж байна..." : "Цааш үзэх"}
 						</button>
 					</div>
 				</Show>
