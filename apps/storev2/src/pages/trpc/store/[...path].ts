@@ -53,6 +53,38 @@ export const ALL: APIRoute = async ({ request, params }) => {
 		(init as RequestInit & { duplex: "half" }).duplex = "half";
 	}
 
-	const upstreamResponse = await env.server.fetch(new Request(targetUrl, init));
+	const upstreamRequest = new Request(targetUrl, init);
+	let upstreamResponse: Response;
+	try {
+		upstreamResponse = await env.server.fetch(upstreamRequest);
+	} catch (error) {
+		console.error({
+			event: "store_trpc_transport_rejected",
+			method: request.method,
+			errorType: error instanceof Error ? error.name : typeof error,
+		});
+		return Response.json(
+			{
+				error: {
+					json: {
+						message: "Store API temporarily unavailable",
+						code: -32603,
+						data: {
+							code: "INTERNAL_SERVER_ERROR",
+							httpStatus: 503,
+						},
+					},
+				},
+			},
+			{
+				status: 503,
+				headers: {
+					"cache-control": "no-store",
+					"retry-after": "1",
+				},
+			},
+		);
+	}
+
 	return new Response(upstreamResponse.body, upstreamResponse);
 };
