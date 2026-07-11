@@ -91,6 +91,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		<Sheet open={props.open} onOpenChange={props.onOpenChange}>
 			<SheetContent
 				position="bottom"
+				closeLabel="Мэдэгдлийн цонхыг хаах"
 				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
 				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">

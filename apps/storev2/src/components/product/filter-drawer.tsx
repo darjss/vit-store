@@ -292,6 +292,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 		<Sheet open={props.open} onOpenChange={props.onOpenChange}>
 			<SheetContent
 				position="bottom"
+				closeLabel="Шүүлтүүрийг хаах"
 				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
 				<div class="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border" />

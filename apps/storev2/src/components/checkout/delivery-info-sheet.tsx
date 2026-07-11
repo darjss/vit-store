@@ -46,6 +46,7 @@ export default function DeliveryInfoSheet() {
 			</SheetTrigger>
 			<SheetContent
 				position="bottom"
+				closeLabel="Хүргэлтийн мэдээллийг хаах"
 				class="rounded-t-3xl border-border border-t bg-background ease-(--ease-drawer) data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
 				<SheetHeader class="text-left">
