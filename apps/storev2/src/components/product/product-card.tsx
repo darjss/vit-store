@@ -183,7 +183,6 @@ const ProductCard = (props: ProductCardProps) => {
 						{formatCurrency(price())}
 					</div>
 					<CardAddButton
-						requireVerifiedInventory
 						outOfStock={isOutOfStock()}
 						productName={product().name}
 						cartItem={{

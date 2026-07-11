@@ -12,7 +12,6 @@ import ProductImageCarousel from "@/components/product/product-image-carousel.ts
 import ProductInfo from "@/components/product/product-info.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
-import InventoryReconciler from "@/components/product/inventory-reconciler";
 import Layout from "@/layouts/Layout.astro";
 import { washBg } from "@/lib/wash";
 
@@ -244,7 +243,6 @@ Astro.cache.set({
 		</div>
 	</div>
 
-	<InventoryReconciler client:load productIds={[product.id]} />
 	<StickyMobileCta
 			client:load
 			isInStock={isInStock}

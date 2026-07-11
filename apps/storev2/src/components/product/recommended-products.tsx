@@ -177,7 +177,6 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 														{formatCurrency(product.price)}
 													</span>
 													<CardAddButton
-														requireVerifiedInventory
 														cartItem={{
 															productId: product.id,
 															quantity: 1,
