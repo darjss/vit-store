@@ -1,12 +1,13 @@
 import type { CartItems } from "@vit/shared/types";
 import { createEffect, createSignal, Match, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
-import RestockNotifySheet from "./restock-notify-sheet";
 import { useInventorySnapshot } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -20,6 +21,7 @@ export default function ProductQuantitySelector(
 	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const restockSheetFocusRestore = createSheetFocusRestore();
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 
 	const stock = () => inventory()?.stock ?? maxStock;
@@ -101,7 +103,14 @@ export default function ProductQuantitySelector(
 						</p>
 					</div>
 
-					<Button class="w-full" size="lg" onClick={() => setNotifyOpen(true)}>
+					<Button
+						class="w-full"
+						size="lg"
+						onClick={(event) => {
+							restockSheetFocusRestore.register(event.currentTarget);
+							setNotifyOpen(true);
+						}}
+					>
 						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
 					</Button>
@@ -111,6 +120,7 @@ export default function ProductQuantitySelector(
 						onOpenChange={setNotifyOpen}
 						productId={props.cartItem.productId}
 						productName={props.cartItem.name}
+						focusRestore={restockSheetFocusRestore}
 					/>
 				</div>
 			</Match>

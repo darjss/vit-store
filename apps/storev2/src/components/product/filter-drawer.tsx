@@ -19,6 +19,7 @@ import {
 import {
 	Sheet,
 	SheetContent,
+	type SheetFocusRestore,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
@@ -74,6 +75,7 @@ type FacetOption = {
 type FilterDrawerProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	focusRestore: SheetFocusRestore;
 	categories: FacetOption[];
 	brands: FacetOption[];
 	sortField: string | null;
@@ -293,6 +295,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 			<SheetContent
 				position="bottom"
 				closeLabel="Шүүлтүүрийг хаах"
+				focusRestore={props.focusRestore}
 				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
 				<div class="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border" />

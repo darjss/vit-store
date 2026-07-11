@@ -5,6 +5,7 @@ import {
 	Sheet,
 	SheetContent,
 	SheetDescription,
+	type SheetFocusRestore,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
@@ -40,6 +41,7 @@ function restockErrorMessage(error: unknown): string {
 interface RestockNotifySheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	focusRestore: SheetFocusRestore;
 	productId: number;
 	productName?: string;
 }
@@ -92,6 +94,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 			<SheetContent
 				position="bottom"
 				closeLabel="Мэдэгдлийн цонхыг хаах"
+				focusRestore={props.focusRestore}
 				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
 				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">

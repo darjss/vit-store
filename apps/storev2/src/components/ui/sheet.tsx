@@ -10,7 +10,40 @@ import IconClose from "~icons/ri/close-line"
  
 const Sheet = SheetPrimitive.Root
 const SheetTrigger = SheetPrimitive.Trigger
-const SheetClose = SheetPrimitive.CloseButton
+
+type SheetCloseProps = ComponentProps<typeof SheetPrimitive.CloseButton> & {
+  closeLabel?: string
+}
+
+const SheetClose: Component<SheetCloseProps> = (props) => {
+  const [local, others] = splitProps(props, ["closeLabel"])
+  return (
+    <SheetPrimitive.CloseButton
+      {...others}
+      aria-label={local.closeLabel?.trim() || "Хаах"}
+    />
+  )
+}
+
+export type SheetFocusRestore = {
+  register: (element: HTMLElement) => void
+  restore: () => boolean
+}
+
+export const createSheetFocusRestore = (): SheetFocusRestore => {
+  let target: HTMLElement | undefined
+
+  return {
+    register: (element) => {
+      target = element
+    },
+    restore: () => {
+      if (!target?.isConnected) return false
+      target.focus({ preventScroll: true })
+      return true
+    }
+  }
+}
  
 const portalVariants = cva("fixed inset-0 z-50 flex", {
   variants: {
@@ -78,6 +111,7 @@ type DialogContentProps<T extends ValidComponent = "div"> = SheetPrimitive.Dialo
     class?: string | undefined
     children?: JSX.Element
     closeLabel?: string
+    focusRestore?: SheetFocusRestore
   }
  
 const SheetContent = <T extends ValidComponent = "div">(
@@ -87,12 +121,26 @@ const SheetContent = <T extends ValidComponent = "div">(
     "position",
     "class",
     "children",
-    "closeLabel"
+    "closeLabel",
+    "focusRestore"
   ])
   return (
     <SheetPortal position={local.position}>
       <SheetOverlay />
       <SheetPrimitive.Content
+        onOpenAutoFocus={() => {
+          if (local.focusRestore && typeof document !== "undefined") {
+            const activeElement = document.activeElement
+            if (activeElement instanceof HTMLElement) {
+              local.focusRestore.register(activeElement)
+            }
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          if (local.focusRestore?.restore()) {
+            event.preventDefault()
+          }
+        }}
         class={cn(
           sheetVariants({ position: local.position }),
           local.class,
@@ -102,7 +150,7 @@ const SheetContent = <T extends ValidComponent = "div">(
       >
         {local.children}
         <SheetPrimitive.CloseButton
-          aria-label={local.closeLabel ?? "Хаах"}
+          aria-label={local.closeLabel?.trim() || "Хаах"}
           class="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
         >
           <IconClose class="size-4" aria-hidden="true" />
@@ -115,7 +163,13 @@ const SheetContent = <T extends ValidComponent = "div">(
 const SheetHeader: Component<ComponentProps<"div">> = (props) => {
   const [local, others] = splitProps(props, ["class"])
   return (
-    <div class={cn("flex flex-col space-y-2 text-center sm:text-left", local.class)} {...others} />
+    <div
+      class={cn(
+        "flex min-h-[60px] flex-col space-y-2 pe-[60px] text-center sm:text-left",
+        local.class
+      )}
+      {...others}
+    />
   )
 }
  
