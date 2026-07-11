@@ -185,9 +185,11 @@ const ProductCard = (props: ProductCardProps) => {
 						{display().dose}
 					</p>
 				</Show>
-				<Show when={display().form || display().count}>
+				<Show when={display().form || display().count || display().packageQuantity}>
 					<p class="text-[11px] text-muted-foreground leading-snug">
-						{[display().form, display().count].filter(Boolean).join(" · ")}
+						{[display().form, display().count, display().packageQuantity]
+							.filter(Boolean)
+							.join(" · ")}
 					</p>
 				</Show>
 				<p

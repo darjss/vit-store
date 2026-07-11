@@ -23,7 +23,7 @@ const remainingCategories = categories.slice(6);
 // brand-initial monogram used for missing logos. Self-contained — no sibling
 // DOM needed. See GitHub issue #11.
 const brandLogoOnError =
-	"this.outerHTML='<div class=&quot;w-11 h-11 shrink-0 bg-muted rounded-lg flex items-center justify-center text-sm font-semibold&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
+	"this.outerHTML='<div aria-hidden=&quot;true&quot; class=&quot;w-11 h-11 shrink-0 bg-muted rounded-lg flex items-center justify-center text-sm font-semibold&quot;>'+this.dataset.brandName.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 ---
 
 <div class="flex flex-col h-full bg-background">
@@ -85,18 +85,21 @@ const brandLogoOnError =
                             <a
                                 href={`/products/brand/${brand.slug}/1/`}
                                 class="group flex aspect-square items-center justify-center rounded-xl border border-border bg-card p-3 shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
+                                aria-label={`${brand.name}, ${brand.productCount ?? 0} бүтээгдэхүүн`}
                                 title={brand.name}
                             >
                                 {logoUrl ? (
                                     <img
                                         src={logoUrl}
-                                        alt={brand.name}
+                                        alt=""
+                                        aria-hidden="true"
+                                        data-brand-name={brand.name}
                                         class="max-h-full max-w-full object-contain transition-transform duration-150 ease-out group-hover:scale-105"
                                         loading="lazy"
                                         onerror={brandLogoOnError}
                                     />
                                 ) : (
-                                    <div class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
+                                    <div aria-hidden="true" class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
                                         {brand.name.substring(0, 2).toUpperCase()}
                                     </div>
                                 )}
@@ -117,18 +120,21 @@ const brandLogoOnError =
                                     <a
                                         href={`/products/brand/${brand.slug}/1/`}
                                         class="group flex aspect-square items-center justify-center rounded-xl border border-border bg-card p-3 shadow-soft-sm transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
+                                        aria-label={`${brand.name}, ${brand.productCount ?? 0} бүтээгдэхүүн`}
                                         title={brand.name}
                                     >
                                         {logoUrl ? (
                                             <img
                                                 src={logoUrl}
-                                                alt={brand.name}
+                                                alt=""
+                                                aria-hidden="true"
+                                                data-brand-name={brand.name}
                                                 class="max-h-full max-w-full object-contain transition-transform duration-150 ease-out group-hover:scale-105"
                                                 loading="lazy"
                                                 onerror={brandLogoOnError}
                                             />
                                         ) : (
-                                            <div class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
+                                            <div aria-hidden="true" class="flex h-full w-full items-center justify-center rounded-lg bg-muted font-semibold text-sm">
                                                 {brand.name.substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
