@@ -22,6 +22,7 @@ const CartDrawer = () => {
 		<Sheet open={cart.isDrawerOpen()} onOpenChange={cart.closeDrawer}>
 			<SheetContent
 				position="right"
+				closeLabel="Сагсыг хаах"
 				class="flex w-full flex-col gap-0 border-border border-l bg-background p-0 shadow-soft-xl ease-(--ease-drawer) data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms] sm:max-w-md"
 			>
 				<SheetHeader class="space-y-0.5 border-border border-b px-5 pt-5 pb-4 text-left sm:text-left">

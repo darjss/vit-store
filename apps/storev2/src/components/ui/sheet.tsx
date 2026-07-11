@@ -74,12 +74,21 @@ const sheetVariants = cva(
 )
  
 type DialogContentProps<T extends ValidComponent = "div"> = SheetPrimitive.DialogContentProps<T> &
-  VariantProps<typeof sheetVariants> & { class?: string | undefined; children?: JSX.Element }
+  VariantProps<typeof sheetVariants> & {
+    class?: string | undefined
+    children?: JSX.Element
+    closeLabel?: string
+  }
  
 const SheetContent = <T extends ValidComponent = "div">(
   props: PolymorphicProps<T, DialogContentProps<T>>
 ) => {
-  const [local, others] = splitProps(props as DialogContentProps, ["position", "class", "children"])
+  const [local, others] = splitProps(props as DialogContentProps, [
+    "position",
+    "class",
+    "children",
+    "closeLabel"
+  ])
   return (
     <SheetPortal position={local.position}>
       <SheetOverlay />
@@ -92,9 +101,11 @@ const SheetContent = <T extends ValidComponent = "div">(
         {...others}
       >
         {local.children}
-        <SheetPrimitive.CloseButton class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-          <IconClose class="size-4" />
-          <span class="sr-only">Close</span>
+        <SheetPrimitive.CloseButton
+          aria-label={local.closeLabel ?? "Хаах"}
+          class="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
+        >
+          <IconClose class="size-4" aria-hidden="true" />
         </SheetPrimitive.CloseButton>
       </SheetPrimitive.Content>
     </SheetPortal>
