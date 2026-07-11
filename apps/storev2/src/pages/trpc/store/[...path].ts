@@ -1,7 +1,44 @@
 import { env } from "cloudflare:workers";
+import { sanitizePublicTrpcErrorShape } from "@vit/shared";
 import type { APIRoute } from "astro";
 
 export const prerender = false;
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+	value !== null && typeof value === "object"
+		? (value as Record<string, unknown>)
+		: undefined;
+
+const sanitizeUpstreamError = async (response: Response): Promise<Response> => {
+	let errorShape: unknown;
+	try {
+		const payload = asRecord(await response.json());
+		const error = asRecord(payload?.error);
+		errorShape = asRecord(error?.json) ?? error;
+	} catch (error) {
+		console.warn({
+			event: "store_trpc_invalid_error_response",
+			upstreamStatus: response.status,
+			errorType: error instanceof Error ? error.name : typeof error,
+		});
+	}
+
+	const headers = new Headers(response.headers);
+	headers.set("content-type", "application/json");
+	headers.set("cache-control", "no-store");
+	headers.set("cloudflare-cdn-cache-control", "no-store");
+	headers.delete("cache-tag");
+	headers.delete("content-length");
+
+	return Response.json(
+		{
+			error: {
+				json: sanitizePublicTrpcErrorShape(errorShape, response.status),
+			},
+		},
+		{ status: response.status, statusText: response.statusText, headers },
+	);
+};
 
 const canonicalStorePath = (path: string | undefined): string | null => {
 	let decodedPath = path ?? "";
@@ -84,6 +121,10 @@ export const ALL: APIRoute = async ({ request, params }) => {
 				},
 			},
 		);
+	}
+
+	if (!import.meta.env.DEV && upstreamResponse.status >= 400) {
+		return sanitizeUpstreamError(upstreamResponse);
 	}
 
 	return new Response(upstreamResponse.body, upstreamResponse);
