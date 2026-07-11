@@ -13,8 +13,8 @@ export interface InventorySnapshot {
 	status: string;
 }
 
-// Cached/SSR product data stays visible for discovery, but catalogue and PDP
-// purchase controls require `verified` before they can add stock to the cart.
+// Cached/SSR product data stays visible for discovery, but every stock-sensitive
+// purchase control requires `verified` before it can add stock to the cart.
 export type InventoryVerification =
 	| { status: "checking"; lastVerifiedAt?: number }
 	| { status: "verified"; verifiedAt: number }
@@ -32,6 +32,15 @@ const snapshots = new Map<number, StoredSnapshot>();
 const listeners = new Map<number, Set<InventoryListener>>();
 const verificationStates = new Map<number, InventoryVerification>();
 const verificationListeners = new Map<number, Set<VerificationListener>>();
+const registrationCounts = new Map<number, number>();
+const requestGenerations = new Map<number, number>();
+const pendingRequests = new Map<number, number>();
+const warningListeners = new Set<(count: number) => void>();
+const activeRequests = new Set<{
+	controller: AbortController;
+	entries: Map<number, number>;
+}>();
+let flushTimer: number | undefined;
 
 function lastVerifiedAt(productId: number): number | undefined {
 	const current = verificationStates.get(productId);
@@ -47,6 +56,7 @@ function publishVerification(
 	for (const listener of verificationListeners.get(productId) ?? []) {
 		listener(state);
 	}
+	notifyWarningListeners();
 }
 
 function markInventoryChecking(productId: number): void {
@@ -74,7 +84,7 @@ function getFreshSnapshot(productId: number): InventorySnapshot | undefined {
 	return stored.value;
 }
 
-export function publishInventory(snapshot: InventorySnapshot): void {
+function publishInventory(snapshot: InventorySnapshot): void {
 	const fetchedAt = Date.now();
 	snapshots.set(snapshot.id, { value: snapshot, fetchedAt });
 	publishVerification(snapshot.id, {
@@ -113,6 +123,8 @@ export function useInventorySnapshot(productId: number) {
 	return snapshot;
 }
 
+// This hook is the canonical registration API: every verification consumer is
+// enrolled in the shared request coordinator and removed again on cleanup.
 export function useInventoryVerification(productId: number) {
 	const [verification, setVerification] = createSignal<InventoryVerification>(
 		verificationStates.get(productId) ?? { status: "checking" },
@@ -122,11 +134,13 @@ export function useInventoryVerification(productId: number) {
 			verificationListeners.get(productId) ?? new Set<VerificationListener>();
 		productListeners.add(setVerification);
 		verificationListeners.set(productId, productListeners);
+		const unregister = registerInventoryProduct(productId);
 
 		const current = verificationStates.get(productId);
 		if (current) setVerification(current);
 
 		onCleanup(() => {
+			unregister();
 			productListeners.delete(setVerification);
 			if (productListeners.size === 0) verificationListeners.delete(productId);
 		});
@@ -204,141 +218,175 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 	updateJsonLd(snapshot, inStock);
 }
 
-function productIdsInSubtree(node: Node): number[] {
-	if (!(node instanceof Element)) return [];
-	const elements: Element[] = node.matches("[data-product-id]") ? [node] : [];
-	elements.push(...node.querySelectorAll("[data-product-id]"));
-	return elements
-		.map((element) => Number(element.getAttribute("data-product-id")))
-		.filter((productId) => Number.isInteger(productId) && productId > 0);
+function degradedRegistrationCount(): number {
+	let count = 0;
+	for (const [productId, registrations] of registrationCounts) {
+		if (
+			registrations > 0 &&
+			verificationStates.get(productId)?.status === "degraded"
+		) {
+			count += 1;
+		}
+	}
+	return count;
 }
 
-function productIdsInDocument(): number[] {
-	return [...document.querySelectorAll("[data-product-id]")]
-		.map((element) => Number(element.getAttribute("data-product-id")))
-		.filter((productId) => Number.isInteger(productId) && productId > 0);
+function notifyWarningListeners(): void {
+	const count = degradedRegistrationCount();
+	for (const listener of warningListeners) listener(count);
 }
 
-interface InventoryReconcilerProps {
-	productIds: number[];
+function isCurrentRequest(productId: number, generation: number): boolean {
+	return (
+		(registrationCounts.get(productId) ?? 0) > 0 &&
+		requestGenerations.get(productId) === generation
+	);
 }
 
-export default function InventoryReconciler(props: InventoryReconcilerProps) {
-	const [degradedCount, setDegradedCount] = createSignal(0);
-	let retryDegraded = () => {};
+function scheduleQueueFlush(): void {
+	if (flushTimer !== undefined) return;
+	flushTimer = window.setTimeout(() => {
+		flushTimer = undefined;
+		void flushInventoryQueue();
+	}, 0);
+}
+
+function queueInventoryRequest(productId: number): void {
+	const generation = (requestGenerations.get(productId) ?? 0) + 1;
+	requestGenerations.set(productId, generation);
+	pendingRequests.set(productId, generation);
+	markInventoryChecking(productId);
+	scheduleQueueFlush();
+}
+
+function publishCurrentSnapshots(
+	entries: Map<number, number>,
+	inventory: InventorySnapshot[],
+): Set<number> {
+	const receivedIds = new Set<number>();
+	for (const snapshot of inventory) {
+		const generation = entries.get(snapshot.id);
+		if (
+			generation === undefined ||
+			!isCurrentRequest(snapshot.id, generation)
+		) {
+			continue;
+		}
+		receivedIds.add(snapshot.id);
+		publishInventory(snapshot);
+		reconcileDocument(snapshot);
+	}
+	return receivedIds;
+}
+
+function markMissingSnapshotsDegraded(
+	entries: Map<number, number>,
+	receivedIds: Set<number>,
+): void {
+	for (const [productId, generation] of entries) {
+		if (
+			!receivedIds.has(productId) &&
+			isCurrentRequest(productId, generation)
+		) {
+			markInventoryDegraded(productId);
+		}
+	}
+}
+
+function markCurrentEntriesDegraded(entries: Map<number, number>): void {
+	for (const [productId, generation] of entries) {
+		if (isCurrentRequest(productId, generation)) {
+			markInventoryDegraded(productId);
+		}
+	}
+}
+
+async function flushInventoryQueue(): Promise<void> {
+	const entries = new Map([...pendingRequests].slice(0, 100));
+	for (const productId of entries.keys()) pendingRequests.delete(productId);
+	if (entries.size === 0) return;
+
+	const controller = new AbortController();
+	const request = { controller, entries };
+	activeRequests.add(request);
+
+	try {
+		const inventory = await api.product.getInventory.query(
+			{ productIds: [...entries.keys()] },
+			{ signal: controller.signal },
+		);
+		const receivedIds = publishCurrentSnapshots(entries, inventory);
+		markMissingSnapshotsDegraded(entries, receivedIds);
+	} catch (error) {
+		if (!controller.signal.aborted) {
+			markCurrentEntriesDegraded(entries);
+			console.warn("Inventory reconciliation failed", error);
+		}
+	} finally {
+		activeRequests.delete(request);
+		if (pendingRequests.size > 0) scheduleQueueFlush();
+	}
+}
+
+function registerInventoryProduct(productId: number): () => void {
+	if (!Number.isInteger(productId) || productId <= 0) return () => {};
+
+	const registrations = registrationCounts.get(productId) ?? 0;
+	registrationCounts.set(productId, registrations + 1);
+	if (registrations === 0) {
+		const current = getFreshSnapshot(productId);
+		if (current && verificationStates.get(productId)?.status === "verified") {
+			reconcileDocument(current);
+			notifyWarningListeners();
+		} else {
+			queueInventoryRequest(productId);
+		}
+	}
+
+	return () => {
+		const nextCount = (registrationCounts.get(productId) ?? 1) - 1;
+		if (nextCount > 0) {
+			registrationCounts.set(productId, nextCount);
+			return;
+		}
+
+		registrationCounts.delete(productId);
+		pendingRequests.delete(productId);
+		requestGenerations.set(
+			productId,
+			(requestGenerations.get(productId) ?? 0) + 1,
+		);
+		for (const request of activeRequests) {
+			const hasRegisteredProduct = [...request.entries.keys()].some(
+				(id) => (registrationCounts.get(id) ?? 0) > 0,
+			);
+			if (!hasRegisteredProduct) request.controller.abort();
+		}
+		notifyWarningListeners();
+	};
+}
+
+function retryDegradedInventory(): void {
+	for (const [productId, registrations] of registrationCounts) {
+		if (
+			registrations > 0 &&
+			verificationStates.get(productId)?.status === "degraded"
+		) {
+			snapshots.delete(productId);
+			queueInventoryRequest(productId);
+		}
+	}
+}
+
+export default function InventoryReconciler() {
+	const [degradedCount, setDegradedCount] = createSignal(
+		degradedRegistrationCount(),
+	);
 
 	onMount(() => {
-		const pendingIds = new Set<number>();
-		const degradedIds = new Set<number>();
-		let flushTimer: number | undefined;
-		let requestInFlight = false;
-		let rerunAfterRequest = false;
-		let disposed = false;
-
-		const flush = async () => {
-			if (requestInFlight) {
-				rerunAfterRequest = true;
-				return;
-			}
-
-			const productIds: number[] = [];
-			for (const productId of pendingIds) {
-				if (!Number.isInteger(productId) || productId <= 0) {
-					pendingIds.delete(productId);
-					continue;
-				}
-				const current = getFreshSnapshot(productId);
-				if (current) {
-					pendingIds.delete(productId);
-					if (!disposed) reconcileDocument(current);
-					continue;
-				}
-				if (productIds.length < 100) {
-					pendingIds.delete(productId);
-					productIds.push(productId);
-				}
-			}
-
-			if (productIds.length === 0) return;
-
-			requestInFlight = true;
-			try {
-				const inventory = await api.product.getInventory.query({ productIds });
-				const receivedIds = new Set(inventory.map((snapshot) => snapshot.id));
-				for (const snapshot of inventory) {
-					degradedIds.delete(snapshot.id);
-					publishInventory(snapshot);
-					if (!disposed) reconcileDocument(snapshot);
-				}
-				for (const productId of productIds) {
-					if (receivedIds.has(productId)) continue;
-					degradedIds.add(productId);
-					markInventoryDegraded(productId);
-				}
-				if (!disposed) setDegradedCount(degradedIds.size);
-			} catch (error) {
-				for (const productId of productIds) {
-					degradedIds.add(productId);
-					markInventoryDegraded(productId);
-				}
-				if (!disposed) setDegradedCount(degradedIds.size);
-				console.warn("Inventory reconciliation failed", error);
-			} finally {
-				requestInFlight = false;
-				if (rerunAfterRequest || pendingIds.size > 0) {
-					rerunAfterRequest = false;
-					void flush();
-				}
-			}
-		};
-
-		const scheduleFlush = (productIds: Iterable<number>) => {
-			for (const productId of productIds) {
-				pendingIds.add(productId);
-				if (!getFreshSnapshot(productId)) markInventoryChecking(productId);
-			}
-			if (pendingIds.size === 0) return;
-			if (flushTimer !== undefined) window.clearTimeout(flushTimer);
-			flushTimer = window.setTimeout(() => {
-				flushTimer = undefined;
-				void flush();
-			}, 0);
-		};
-
-		const observer = new MutationObserver((records) => {
-			const addedProductIds = new Set<number>();
-			for (const record of records) {
-				for (const node of record.addedNodes) {
-					for (const productId of productIdsInSubtree(node)) {
-						addedProductIds.add(productId);
-					}
-				}
-			}
-			if (addedProductIds.size > 0) scheduleFlush(addedProductIds);
-		});
-		observer.observe(document.body, { childList: true, subtree: true });
-
-		const refreshOnRouteChange = () => {
-			const productIds = productIdsInDocument();
-			for (const productId of productIds) snapshots.delete(productId);
-			scheduleFlush(productIds);
-		};
-		retryDegraded = () => {
-			const productIds = [...degradedIds];
-			degradedIds.clear();
-			setDegradedCount(0);
-			for (const productId of productIds) snapshots.delete(productId);
-			scheduleFlush(productIds);
-		};
-		document.addEventListener("astro:page-load", refreshOnRouteChange);
-		scheduleFlush(props.productIds);
-
-		onCleanup(() => {
-			disposed = true;
-			document.removeEventListener("astro:page-load", refreshOnRouteChange);
-			observer.disconnect();
-			if (flushTimer !== undefined) window.clearTimeout(flushTimer);
-		});
+		warningListeners.add(setDegradedCount);
+		setDegradedCount(degradedRegistrationCount());
+		onCleanup(() => warningListeners.delete(setDegradedCount));
 	});
 
 	return (
@@ -366,7 +414,7 @@ export default function InventoryReconciler(props: InventoryReconcilerProps) {
 						variant="secondary"
 						size="compact"
 						class="ml-8 basis-full sm:ml-0 sm:basis-auto"
-						onClick={() => retryDegraded()}
+						onClick={retryDegradedInventory}
 					>
 						<IconRefresh aria-hidden="true" />
 						Дахин шалгах

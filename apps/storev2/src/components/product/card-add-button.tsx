@@ -15,8 +15,6 @@ interface CardAddButtonProps {
 	cartItem: CartItems;
 	outOfStock?: boolean;
 	productName?: string;
-	disabled?: boolean;
-	requireVerifiedInventory?: boolean;
 }
 
 const stateClass =
@@ -33,8 +31,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const verification = useInventoryVerification(props.cartItem.productId);
 
-	const isInventoryVerified = () =>
-		!props.requireVerifiedInventory || verification().status === "verified";
+	const isInventoryVerified = () => verification().status === "verified";
 	const isOutOfStock = () =>
 		inventory()
 			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
@@ -42,7 +39,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	const handleAdd = () => {
-		if (props.disabled || !isInventoryVerified()) return;
+		if (!isInventoryVerified()) return;
 		if (isOutOfStock()) {
 			setNotifyOpen(true);
 			return;
@@ -58,14 +55,8 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={
-					props.disabled ||
-					!isInventoryVerified() ||
-					(!isOutOfStock() && isAdded())
-				}
-				data-inventory-verification={
-					props.requireVerifiedInventory ? verification().status : undefined
-				}
+				disabled={!isInventoryVerified() || (!isOutOfStock() && isAdded())}
+				data-inventory-verification={verification().status}
 				aria-label={
 					!isInventoryVerified()
 						? verification().status === "degraded"

@@ -91,7 +91,6 @@ const hasSale = (product.discount ?? 0) > 0;
 			</div>
 			<CardAddButton
 				client:load
-				requireVerifiedInventory
 				outOfStock={isOutOfStock}
 				productName={product.name}
 				cartItem={{

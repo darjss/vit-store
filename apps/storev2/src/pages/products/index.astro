@@ -1,7 +1,6 @@
 ---
 
 import ProductsList from "@/components/product/products-list";
-import InventoryReconciler from "@/components/product/inventory-reconciler";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
 import { dehydrateSeeds } from "@/lib/hydration";
@@ -100,9 +99,5 @@ Astro.cache.set({
 		client:only="solid-js"
 		dehydratedState={dehydratedState}
 			totalProductCount={totalProductCount}
-		/>
-		<InventoryReconciler
-			client:load
-			productIds={initialProductsResult.items.map((product) => product.id)}
 		/>
 	</Layout>
