@@ -27,7 +27,7 @@ const isActive = (o: (typeof options)[number]) =>
 			<a
 				href={hrefFor(o)}
 				aria-current={isActive(o) ? "true" : undefined}
-				class={`flex h-8 items-center px-2.5 font-bold text-[11px] uppercase tracking-wide transition-colors duration-200 ease-out-quart sm:h-9 sm:px-3 ${isActive(o) ? "bg-secondary text-secondary-foreground" : "bg-card hover:bg-primary/20"} ${index > 0 ? "border-border border-l" : ""}`}
+				class={`flex h-11 min-w-11 items-center justify-center px-2.5 font-bold text-[11px] uppercase tracking-wide transition-colors duration-200 ease-out-quart focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-3 ${isActive(o) ? "bg-secondary text-secondary-foreground" : "bg-card hover:bg-primary/20"} ${index > 0 ? "border-border border-l" : ""}`}
 			>
 				{o.label}
 			</a>
