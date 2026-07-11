@@ -11,8 +11,10 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	Match,
 	onCleanup,
 	Show,
+	Switch,
 } from "solid-js";
 import {
 	Sheet,
@@ -255,7 +257,13 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 		() => queryClient,
 	);
 
-	const draftCount = createMemo(() => countQuery.data ?? 0);
+	const countStatus = createMemo(() => {
+		if (countQuery.isError) return "error" as const;
+		if (countQuery.isFetching || countQuery.data === undefined) {
+			return "loading" as const;
+		}
+		return "ready" as const;
+	});
 
 	const handleReset = () => {
 		setDraftSortField(null);
@@ -441,16 +449,45 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					>
 						Цэвэрлэх
 					</button>
-					<button
-						type="button"
-						onClick={handleApply}
-						class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-cocoa bg-primary font-bold font-display text-base shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
-					>
-						<span>Харах</span>
-						<span class="rounded-full bg-secondary px-2.5 py-0.5 text-secondary-foreground text-sm">
-							{draftCount()}
-						</span>
-					</button>
+					<div class="flex min-w-0 flex-1 flex-col gap-1">
+						<button
+							type="button"
+							onClick={handleApply}
+							class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-cocoa bg-primary font-bold font-display text-base shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
+							aria-label="Шүүлтүүрээр бараа харах"
+						>
+							<span>Харах</span>
+							<Switch>
+								<Match when={countStatus() === "ready"}>
+									<span class="rounded-full bg-secondary px-2.5 py-0.5 text-secondary-foreground text-sm tabular-nums">
+										{countQuery.data}
+									</span>
+								</Match>
+								<Match when={countStatus() === "loading"}>
+									<span class="text-secondary text-sm" aria-label="Тоо шинэчилж байна">
+										…
+									</span>
+								</Match>
+								<Match when={countStatus() === "error"}>
+									<span class="text-secondary text-sm" aria-label="Тоо харагдахгүй байна">
+										—
+									</span>
+								</Match>
+							</Switch>
+						</button>
+						<Show when={countStatus() === "error"}>
+							<div class="flex items-center justify-between gap-2 px-1 text-destructive text-xs" role="alert">
+								<span>Тоо ачаалж чадсангүй</span>
+								<button
+									type="button"
+									onClick={() => countQuery.refetch()}
+									class="min-h-11 shrink-0 font-bold underline underline-offset-2"
+								>
+									Дахин оролдох
+								</button>
+							</div>
+						</Show>
+					</div>
 				</div>
 			</SheetContent>
 		</Sheet>
