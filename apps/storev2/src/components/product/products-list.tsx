@@ -195,6 +195,12 @@ const ProductsList = (props: ProductsListProps) => {
 		if (filters.isSearchMode()) return searchResults().length > 0;
 		return allBrowseProducts().length > 0;
 	});
+	const hasInitialBrowseError = createMemo(
+		() =>
+			!filters.isSearchMode() &&
+			productsQuery.isError &&
+			allBrowseProducts().length === 0,
+	);
 
 	// Log the infinite-products failure once with wide-event context. The query
 	// label reflects the actual procedure variant (WithStock vs all) so logs are
@@ -268,6 +274,35 @@ const ProductsList = (props: ProductsListProps) => {
 		if (filters.isSearchMode()) return searchResults().length;
 		return allBrowseProducts().length;
 	});
+	const productCountLabel = createMemo(() => {
+		if (
+			!filters.isSearchMode() &&
+			filters.isBrowsingAll() &&
+			props.totalProductCount != null
+		) {
+			return `${props.totalProductCount} бүтээгдэхүүн`;
+		}
+		if (shouldShowEmptyState()) return "0 бүтээгдэхүүн";
+		if (filters.isSearchMode() && hasProducts()) {
+			return `${productCount()} бүтээгдэхүүн`;
+		}
+		if (!filters.isSearchMode() && hasProducts() && !productsQuery.hasNextPage) {
+			return `${productCount()} бүтээгдэхүүн`;
+		}
+		return `${productCount()}+ бүтээгдэхүүн`;
+	});
+
+	const retryProducts = () => {
+		if (filters.isSearchMode()) {
+			searchQuery.refetch();
+			return;
+		}
+		if (allBrowseProducts().length > 0 && productsQuery.hasNextPage) {
+			productsQuery.fetchNextPage();
+			return;
+		}
+		productsQuery.refetch();
+	};
 
 	const setupObserver = (element: HTMLDivElement) => {
 		const observer = new IntersectionObserver(
@@ -312,27 +347,7 @@ const ProductsList = (props: ProductsListProps) => {
 						}
 					>
 						<span class="font-medium text-foreground/70 text-xs sm:text-sm lg:text-base">
-							<Show
-								when={hasProducts()}
-								fallback={
-									shouldShowEmptyState()
-										? "0 бүтээгдэхүүн"
-										: `${productCount()}+ бүтээгдэхүүн`
-								}
-							>
-								<Show
-									when={filters.isSearchMode()}
-									fallback={
-										filters.isBrowsingAll() && props.totalProductCount != null
-											? `${props.totalProductCount} бүтээгдэхүүн`
-											: productsQuery.hasNextPage
-												? `${productCount()}+ бүтээгдэхүүн`
-												: `${productCount()} бүтээгдэхүүн`
-									}
-								>
-									{`${productCount()} бүтээгдэхүүн`}
-								</Show>
-							</Show>
+							{productCountLabel()}
 						</span>
 					</Show>
 				</div>
@@ -397,11 +412,18 @@ const ProductsList = (props: ProductsListProps) => {
 						<Show
 							when={isInitialLoading()}
 							fallback={
-								<Show when={shouldShowEmptyState()}>
-									<ProductEmptyState
-										hasActiveFilters={filters.hasActiveFilters()}
-										onClearFilters={filters.handleClearFilters}
-									/>
+								<Show
+									when={hasInitialBrowseError()}
+									fallback={
+										<Show when={shouldShowEmptyState()}>
+											<ProductEmptyState
+												hasActiveFilters={filters.hasActiveFilters()}
+												onClearFilters={filters.handleClearFilters}
+											/>
+										</Show>
+									}
+								>
+									<ProductErrorState onRetry={retryProducts} />
 								</Show>
 							}
 						>
@@ -455,18 +477,12 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* Error State */}
 				<Show
 					when={
-						filters.isSearchMode() ? searchQuery.isError : productsQuery.isError
+						filters.isSearchMode()
+							? searchQuery.isError
+							: productsQuery.isError && allBrowseProducts().length > 0
 					}
 				>
-					<ProductErrorState
-						onRetry={() => {
-							if (filters.isSearchMode()) {
-								searchQuery.refetch();
-							} else {
-								productsQuery.refetch();
-							}
-						}}
-					/>
+					<ProductErrorState onRetry={retryProducts} />
 				</Show>
 
 				{/* Loading More Skeleton (browse mode only) */}

@@ -40,6 +40,7 @@ const paginatedProductsInput = {
 	),
 	brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 	categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	listType: v.optional(v.picklist(["featured", "recent", "discount"])),
 	sortField: v.optional(v.picklist(["price", "stock", "createdAt"])),
 	sortDirection: v.optional(v.picklist(["asc", "desc"])),
 	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
