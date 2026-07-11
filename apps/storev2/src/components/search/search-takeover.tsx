@@ -23,6 +23,7 @@ import IconArrowRight from "~icons/ri/arrow-right-line";
 import IconChevron from "~icons/ri/arrow-right-s-line";
 import IconFolder from "~icons/ri/folder-line";
 import SearchResultRow from "./search-result-row";
+import { getSearchTakeoverRequestState } from "./search-takeover-state";
 import { useSearchStorefront } from "./use-search-storefront";
 
 interface SearchTakeoverProps {
@@ -203,6 +204,26 @@ const ResultSkeleton = () => (
 	</div>
 );
 
+const SearchError = (props: { query: string; onRetry: () => void }) => (
+	<div
+		role="alert"
+		class="flex flex-col items-center justify-center py-10 text-center"
+	>
+		<h3 class="font-bold font-display text-lg">Хайлтыг ачаалж чадсангүй</h3>
+		<p class="mt-2 max-w-[280px] text-muted-foreground text-sm">
+			«{props.query}» хайлтын үед сүлжээний алдаа гарлаа. Сүлжээгээ шалгаад
+			дахин оролдоно уу.
+		</p>
+		<button
+			type="button"
+			onClick={props.onRetry}
+			class="mt-4 inline-flex min-h-11 items-center rounded-full border border-cocoa bg-primary px-5 font-bold text-sm shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
+		>
+			Дахин хайх
+		</button>
+	</div>
+);
+
 const SearchTakeover = (props: SearchTakeoverProps) => {
 	const categoriesQuery = useQuery(
 		() => ({
@@ -234,10 +255,18 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 	const isZeroResults = () =>
 		props.query.length >= 2 &&
 		!!search.data() &&
-		search.data()!.products.length === 0 &&
+		search.data()?.products.length === 0 &&
 		!hasNavigation();
 
 	const resultCount = () => search.data()?.products.length ?? 0;
+	const requestState = createMemo(() =>
+		getSearchTakeoverRequestState({
+			isLoading: search.isLoading(),
+			isFetching: search.isFetching(),
+			isError: search.isError(),
+			hasCurrentData: search.data() !== undefined,
+		}),
+	);
 
 	return (
 		<Show
@@ -260,23 +289,12 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 			}
 		>
 			<Switch>
-				<Match when={search.isLoading()}>
+				<Match when={requestState() === "loading"}>
 					<ResultSkeleton />
 				</Match>
 
-				<Match when={search.isError()}>
-					<div class="flex flex-col items-center justify-center py-10 text-center">
-						<p class="font-semibold text-muted-foreground">
-							Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.
-						</p>
-						<button
-							type="button"
-							onClick={() => search.refetch()}
-							class="mt-4 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97]"
-						>
-							Дахин хайх
-						</button>
-					</div>
+				<Match when={requestState() === "error"}>
+					<SearchError query={props.query} onRetry={search.refetch} />
 				</Match>
 
 				<Match when={isZeroResults()}>

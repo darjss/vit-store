@@ -67,19 +67,24 @@ export function useSearchStorefront(
 	const searchQuery = useQuery(
 		() => ({
 			queryKey: ["search-storefront", query(), limit] as const,
-			queryFn: async () => {
-				const term = query();
-				if (term.length < minQueryLength) {
-					return {
-						products: [],
-						brands: [],
-						categories: [],
-					} satisfies SearchStorefrontData;
-				}
-				return await api.product.searchStorefront.query({
-					query: term,
-					limit,
-				});
+			queryFn: async ({ queryKey }) => {
+				const [, term, requestLimit] = queryKey;
+				const data =
+					term.length < minQueryLength
+						? {
+								products: [],
+								brands: [],
+								categories: [],
+							}
+						: await api.product.searchStorefront.query({
+								query: term,
+								limit: requestLimit,
+							});
+
+				return { term, data } satisfies {
+					term: string;
+					data: SearchStorefrontData;
+				};
 			},
 			enabled: query().length >= minQueryLength,
 			staleTime: 1000 * 60 * 5,
@@ -87,13 +92,18 @@ export function useSearchStorefront(
 		() => queryClient,
 	);
 
+	const currentData = () => {
+		const result = searchQuery.data;
+		return result?.term === query() ? result.data : undefined;
+	};
+
 	const [lastTrackedQuery, setLastTrackedQuery] = createSignal<string | null>(
 		null,
 	);
 
 	createEffect(() => {
 		const term = query();
-		const data = searchQuery.data;
+		const data = currentData();
 		if (
 			term.length >= minQueryLength &&
 			data &&
@@ -106,7 +116,7 @@ export function useSearchStorefront(
 	});
 
 	return {
-		data: () => searchQuery.data,
+		data: currentData,
 		isLoading: () => searchQuery.isLoading,
 		isFetching: () => searchQuery.isFetching,
 		isError: () => searchQuery.isError,
