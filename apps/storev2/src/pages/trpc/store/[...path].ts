@@ -1,44 +1,13 @@
 import { env } from "cloudflare:workers";
-import { sanitizePublicTrpcErrorShape } from "@vit/shared";
 import type { APIRoute } from "astro";
+import {
+	isUnsupportedTrpcTransport,
+	noStoreJson,
+	sanitizeUpstreamTrpcResponse,
+	trpcErrorResponse,
+} from "@/lib/trpc-proxy";
 
 export const prerender = false;
-
-const asRecord = (value: unknown): Record<string, unknown> | undefined =>
-	value !== null && typeof value === "object"
-		? (value as Record<string, unknown>)
-		: undefined;
-
-const sanitizeUpstreamError = async (response: Response): Promise<Response> => {
-	let errorShape: unknown;
-	try {
-		const payload = asRecord(await response.json());
-		const error = asRecord(payload?.error);
-		errorShape = asRecord(error?.json) ?? error;
-	} catch (error) {
-		console.warn({
-			event: "store_trpc_invalid_error_response",
-			upstreamStatus: response.status,
-			errorType: error instanceof Error ? error.name : typeof error,
-		});
-	}
-
-	const headers = new Headers(response.headers);
-	headers.set("content-type", "application/json");
-	headers.set("cache-control", "no-store");
-	headers.set("cloudflare-cdn-cache-control", "no-store");
-	headers.delete("cache-tag");
-	headers.delete("content-length");
-
-	return Response.json(
-		{
-			error: {
-				json: sanitizePublicTrpcErrorShape(errorShape, response.status),
-			},
-		},
-		{ status: response.status, statusText: response.statusText, headers },
-	);
-};
 
 const canonicalStorePath = (path: string | undefined): string | null => {
 	let decodedPath = path ?? "";
@@ -69,7 +38,14 @@ const canonicalStorePath = (path: string | undefined): string | null => {
 export const ALL: APIRoute = async ({ request, params }) => {
 	const targetPath = canonicalStorePath(params.path);
 	if (!targetPath) {
-		return Response.json({ error: "Invalid tRPC path" }, { status: 400 });
+		return noStoreJson({ error: "Invalid tRPC path" }, 400);
+	}
+
+	if (!import.meta.env.DEV && isUnsupportedTrpcTransport(request)) {
+		return trpcErrorResponse(
+			400,
+			"Streaming tRPC transport is not supported by the storefront",
+		);
 	}
 
 	const targetUrl = new URL(request.url);
@@ -100,31 +76,16 @@ export const ALL: APIRoute = async ({ request, params }) => {
 			method: request.method,
 			errorType: error instanceof Error ? error.name : typeof error,
 		});
-		return Response.json(
-			{
-				error: {
-					json: {
-						message: "Store API temporarily unavailable",
-						code: -32603,
-						data: {
-							code: "INTERNAL_SERVER_ERROR",
-							httpStatus: 503,
-						},
-					},
-				},
-			},
-			{
-				status: 503,
-				headers: {
-					"cache-control": "no-store",
-					"retry-after": "1",
-				},
-			},
-		);
+		return trpcErrorResponse(503, "Store API temporarily unavailable", {
+			"retry-after": "1",
+		});
 	}
 
-	if (!import.meta.env.DEV && upstreamResponse.status >= 400) {
-		return sanitizeUpstreamError(upstreamResponse);
+	if (
+		!import.meta.env.DEV &&
+		(upstreamResponse.status === 207 || upstreamResponse.status >= 400)
+	) {
+		return sanitizeUpstreamTrpcResponse(upstreamResponse);
 	}
 
 	return new Response(upstreamResponse.body, upstreamResponse);
