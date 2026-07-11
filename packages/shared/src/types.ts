@@ -107,6 +107,10 @@ export interface ProductFormValues {
 export interface ProductCardData {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	name_mn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	price: number;
 	slug: string;
 	images: { url: string | null }[];
