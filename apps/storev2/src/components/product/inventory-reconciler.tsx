@@ -1,10 +1,14 @@
 import { formatCurrency } from "@vit/shared";
-import { LOW_STOCK_THRESHOLD } from "@vit/shared/domain/product";
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/trpc";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconRefresh from "~icons/ri/refresh-line";
+import {
+	type InventoryCardPresentation,
+	unverifiedInventoryCardPresentation,
+	verifiedInventoryCardPresentation,
+} from "./inventory-card-state";
 
 export interface InventorySnapshot {
 	id: number;
@@ -98,6 +102,12 @@ function publishVerification(
 	state: InventoryVerification,
 ): void {
 	verificationStates.set(productId, state);
+	if (state.status !== "verified") {
+		reconcileServerProductCards(
+			productId,
+			unverifiedInventoryCardPresentation(state.status),
+		);
+	}
 	for (const listener of verificationListeners.get(productId) ?? []) {
 		listener(state);
 	}
@@ -132,13 +142,14 @@ function getFreshSnapshot(productId: number): InventorySnapshot | undefined {
 function publishInventory(snapshot: InventorySnapshot): void {
 	const fetchedAt = Date.now();
 	snapshots.set(snapshot.id, { value: snapshot, fetchedAt });
+	reconcileDocument(snapshot);
+	for (const listener of listeners.get(snapshot.id) ?? []) {
+		listener(snapshot);
+	}
 	publishVerification(snapshot.id, {
 		status: "verified",
 		verifiedAt: fetchedAt,
 	});
-	for (const listener of listeners.get(snapshot.id) ?? []) {
-		listener(snapshot);
-	}
 }
 
 export function subscribeInventory(
@@ -203,18 +214,17 @@ function setHiddenIfChanged(element: HTMLElement, hidden: boolean): void {
 }
 
 function reconcileServerProductCards(
-	snapshot: InventorySnapshot,
-	state: "in" | "low" | "out",
-	label: string,
+	productId: number,
+	presentation: InventoryCardPresentation,
 ): void {
 	for (const card of document.querySelectorAll<HTMLElement>(
-		`[data-server-product-card="${snapshot.id}"]`,
+		`[data-server-product-card="${productId}"]`,
 	)) {
-		if (card.dataset.inventoryState !== state) {
-			card.dataset.inventoryState = state;
+		if (card.dataset.inventoryState !== presentation.state) {
+			card.dataset.inventoryState = presentation.state;
 		}
 		const stock = card.querySelector<HTMLElement>("[data-card-stock]");
-		if (stock) setTextIfChanged(stock, label);
+		if (stock) setTextIfChanged(stock, presentation.availabilityLabel);
 	}
 }
 
@@ -244,16 +254,12 @@ function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
 }
 
 function reconcileDocument(snapshot: InventorySnapshot): void {
-	const inStock = snapshot.status === "active" && snapshot.stock > 0;
-	const lowStock = inStock && snapshot.stock <= LOW_STOCK_THRESHOLD;
-	const stockLabel = lowStock
-		? `Цөөхөн үлдсэн (${snapshot.stock})`
-		: inStock
-			? "Бэлэн байна"
-			: "Дууссан";
-	const cardState = inStock ? (lowStock ? "low" : "in") : "out";
+	const presentation = verifiedInventoryCardPresentation(snapshot);
+	const inStock = presentation.state === "in" || presentation.state === "low";
+	const lowStock = presentation.state === "low";
+	const stockLabel = presentation.availabilityLabel;
 
-	reconcileServerProductCards(snapshot, cardState, stockLabel);
+	reconcileServerProductCards(snapshot.id, presentation);
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-price="${snapshot.id}"]`,
 	)) {
@@ -345,7 +351,6 @@ function publishCurrentSnapshots(
 		}
 		receivedIds.add(snapshot.id);
 		publishInventory(snapshot);
-		reconcileDocument(snapshot);
 	}
 	return receivedIds;
 }
