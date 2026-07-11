@@ -45,6 +45,7 @@ const ProductsList = (props: ProductsListProps) => {
 	hydrateServerState(queryClient, props.dehydratedState);
 
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
+	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
 
@@ -292,36 +293,43 @@ const ProductsList = (props: ProductsListProps) => {
 		return `${productCount()}+ бүтээгдэхүүн`;
 	});
 
+	const loadNextPage = () => {
+		if (!productsQuery.hasNextPage || productsQuery.isFetching) return;
+		void productsQuery.fetchNextPage({ cancelRefetch: false });
+	};
+
+	createEffect(() => {
+		if (
+			!isLoadMoreInRange() ||
+			filters.isSearchMode() ||
+			productsQuery.isError
+		) {
+			return;
+		}
+		loadNextPage();
+	});
+
 	const retryProducts = () => {
 		if (filters.isSearchMode()) {
 			searchQuery.refetch();
 			return;
 		}
 		if (allBrowseProducts().length > 0 && productsQuery.hasNextPage) {
-			productsQuery.fetchNextPage();
+			loadNextPage();
 			return;
 		}
 		productsQuery.refetch();
 	};
 
-	const setupObserver = (element: HTMLDivElement) => {
+	const setupObserver = (element: HTMLButtonElement) => {
 		const observer = new IntersectionObserver(
-			(entries) => {
-				const entry = entries[0];
-				if (
-					entry.isIntersecting &&
-					productsQuery.hasNextPage &&
-					!productsQuery.isFetchingNextPage &&
-					!productsQuery.isLoading
-				) {
-					productsQuery.fetchNextPage();
-				}
-			},
-			{ rootMargin: "300px", threshold: 0.1 },
+			(entries) => setIsLoadMoreInRange(entries[0].isIntersecting),
+			{ rootMargin: "300px 0px", threshold: 0 },
 		);
 
 		observer.observe(element);
 		onCleanup(() => {
+			setIsLoadMoreInRange(false);
 			observer.unobserve(element);
 			observer.disconnect();
 		});
@@ -459,12 +467,10 @@ const ProductsList = (props: ProductsListProps) => {
 									</For>
 								</div>
 							</Show>
-							{/* Browse mode: plain CSS grid. content-visibility:auto keeps
-							    off-screen cards cheap to render without custom
-							    virtualization — pages are 12 items, so even dozens of
-							    loaded pages are a trivial DOM size. */}
+							{/* Browse mode: plain CSS grid. Pages are 12 items, so even
+							    dozens of loaded pages are a modest DOM size. */}
 							<Show when={!filters.isSearchMode()}>
-								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 [content-visibility:auto]">
+								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 									<For each={allBrowseProducts()}>
 										{(product) => <ProductCard product={product} />}
 									</For>
@@ -506,16 +512,25 @@ const ProductsList = (props: ProductsListProps) => {
 					<ProductListEnd count={productCount()} />
 				</Show>
 
-				{/* Infinite Scroll Sentinel (browse mode only) */}
+				{/* Automatic continuation with an accessible manual fallback. */}
 				<Show
 					when={
 						!filters.isSearchMode() &&
 						productsQuery.hasNextPage &&
-						productsQuery.data &&
-						!productsQuery.isFetchingNextPage
+						productsQuery.data
 					}
 				>
-					<div ref={setupObserver} class="h-2 w-full" aria-hidden="true" />
+					<div class="mt-4 flex justify-center sm:mt-6">
+						<button
+							ref={setupObserver}
+							type="button"
+							disabled={productsQuery.isFetching}
+							onClick={loadNextPage}
+							class="hover:-translate-y-0.5 inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
+						>
+							{productsQuery.isFetching ? "Ачааллаж байна..." : "Цааш үзэх"}
+						</button>
+					</div>
 				</Show>
 			</div>
 		</div>
