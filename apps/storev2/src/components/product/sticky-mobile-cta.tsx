@@ -25,38 +25,42 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	onMount(() => {
 		const mainCta = document.getElementById("product-main-cta");
-		const mobileNavbar = document.querySelector<HTMLElement>(
-			"[data-mobile-navbar]",
+		const stackMeasure = document.querySelector<HTMLElement>(
+			"[data-mobile-purchase-stack-measure]",
 		);
-		if (!mainCta) return;
+		if (!mainCta || !stackMeasure) return;
 
 		let observer: IntersectionObserver | undefined;
-		const observeMainCta = () => {
+		const observePurchaseAction = () => {
 			observer?.disconnect();
 
-			const navbarTop = mobileNavbar?.getBoundingClientRect().top;
-			const obscuredBottom = navbarTop
-				? Math.max(0, window.innerHeight - navbarTop)
-				: 0;
+			const action =
+				mainCta.querySelector<HTMLElement>(
+					"[data-product-main-purchase-action]",
+				) ?? mainCta;
+			const stackHeight = stackMeasure.getBoundingClientRect().height;
 
 			observer = new IntersectionObserver(
 				([entry]) => {
-					// Fixed navigation is excluded so covered pixels do not count as visible.
-					setVisible(!entry.isIntersecting);
+					// Handoff only after the complete main action clears both fixed layers.
+					setVisible(entry.intersectionRatio < 1);
 				},
 				{
-					threshold: 0,
-					rootMargin: `0px 0px -${obscuredBottom}px 0px`,
+					threshold: 1,
+					rootMargin: `0px 0px -${stackHeight}px 0px`,
 				},
 			);
-			observer.observe(mainCta);
+			observer.observe(action);
 		};
 
-		observeMainCta();
-		window.addEventListener("resize", observeMainCta);
+		observePurchaseAction();
+		window.addEventListener("resize", observePurchaseAction);
+		const actionObserver = new MutationObserver(observePurchaseAction);
+		actionObserver.observe(mainCta, { childList: true, subtree: true });
 		onCleanup(() => {
 			observer?.disconnect();
-			window.removeEventListener("resize", observeMainCta);
+			actionObserver.disconnect();
+			window.removeEventListener("resize", observePurchaseAction);
 		});
 	});
 
@@ -70,6 +74,11 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	return (
 		<>
+			<div
+				data-mobile-purchase-stack-measure
+				class="pointer-events-none invisible fixed inset-x-0 bottom-0 h-[var(--mobile-purchase-stack-height)] md:hidden"
+				aria-hidden="true"
+			/>
 			<Presence>
 				<Show when={visible()}>
 					<Motion.div
@@ -78,7 +87,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 24 }}
 						transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
-						class="fixed inset-x-3 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.375rem)] z-50 rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg sm:hidden"
+						class="fixed inset-x-3 bottom-[var(--mobile-purchase-offset)] z-50 h-[var(--mobile-purchase-height)] rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg md:hidden"
 					>
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 pl-1">
