@@ -104,6 +104,12 @@
         @apply bg-background text-foreground font-sans;
     }
 
+    @media (max-width: 639px) {
+        body:has([data-pdp-sticky-cta]) > footer {
+            padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+        }
+    }
+
     /* Respect user motion preferences globally; opacity fades stay, transforms go. */
     @media (prefers-reduced-motion: reduce) {
         *,
