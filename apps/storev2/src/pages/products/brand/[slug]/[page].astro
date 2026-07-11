@@ -90,6 +90,11 @@ const itemListSchema = {
 	})),
 };
 
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "catalog", `brand-${brand.id}`],
+});
 ---
 
 <Layout title={seoTitle} description={seoDescription}>

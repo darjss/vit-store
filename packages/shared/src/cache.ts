@@ -33,6 +33,9 @@ export type CatalogCacheAccumulator = {
 export const PRODUCTS_TAG = "products";
 export const BRANDS_TAG = "brands";
 export const CATEGORIES_TAG = "categories";
+export const SITE_SHELL_TAG = "site-shell";
+export const HOME_TAG = "home";
+export const CATALOG_TAG = "catalog";
 
 export function productTag(id: number | string): string {
 	return `product-${id}`;
