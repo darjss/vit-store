@@ -292,13 +292,18 @@ const ProductsList = (props: ProductsListProps) => {
 		return `${productCount()}+ бүтээгдэхүүн`;
 	});
 
+	const loadNextPage = () => {
+		if (!productsQuery.hasNextPage || productsQuery.isFetching) return;
+		void productsQuery.fetchNextPage({ cancelRefetch: false });
+	};
+
 	const retryProducts = () => {
 		if (filters.isSearchMode()) {
 			searchQuery.refetch();
 			return;
 		}
 		if (allBrowseProducts().length > 0 && productsQuery.hasNextPage) {
-			productsQuery.fetchNextPage();
+			loadNextPage();
 			return;
 		}
 		productsQuery.refetch();
@@ -307,15 +312,7 @@ const ProductsList = (props: ProductsListProps) => {
 	const setupObserver = (element: HTMLButtonElement) => {
 		const observer = new IntersectionObserver(
 			(entries) => {
-				const entry = entries[0];
-				if (
-					entry.isIntersecting &&
-					productsQuery.hasNextPage &&
-					!productsQuery.isFetchingNextPage &&
-					!productsQuery.isLoading
-				) {
-					void productsQuery.fetchNextPage();
-				}
+				if (entries[0].isIntersecting) loadNextPage();
 			},
 			{ rootMargin: "300px 0px", threshold: 0 },
 		);
@@ -516,13 +513,11 @@ const ProductsList = (props: ProductsListProps) => {
 						<button
 							ref={setupObserver}
 							type="button"
-							disabled={productsQuery.isFetchingNextPage}
-							onClick={() => void productsQuery.fetchNextPage()}
+							disabled={productsQuery.isFetching}
+							onClick={loadNextPage}
 							class="hover:-translate-y-0.5 inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
 						>
-							{productsQuery.isFetchingNextPage
-								? "Ачааллаж байна..."
-								: "Цааш үзэх"}
+							{productsQuery.isFetching ? "Ачааллаж байна..." : "Цааш үзэх"}
 						</button>
 					</div>
 				</Show>
