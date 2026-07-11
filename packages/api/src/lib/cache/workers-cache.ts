@@ -142,36 +142,14 @@ export async function purgeCatalogCache(
 	productIds: readonly number[] = [],
 	extraTags: readonly string[] = [],
 ): Promise<void> {
-	const tags = catalogCacheTags(productIds, extraTags);
-	await Promise.all([purgeTags(ctx, tags), purgeStorefrontTags(ctx, tags)]);
+	await purgeTags(ctx, catalogCacheTags(productIds, extraTags));
 }
 
 export async function purgeCatalogCacheGlobal(
 	productIds: readonly number[] = [],
 	extraTags: readonly string[] = [],
 ): Promise<void> {
-	const tags = catalogCacheTags(productIds, extraTags);
-	await Promise.all([purgeTagsGlobal(tags), purgeStorefrontTagsGlobal(tags)]);
-}
-
-async function purgeStorefrontTags(ctx: Context, tags: string[]): Promise<void> {
-	try {
-		await ctx.c.env.STOREFRONT.purgeCache(tags);
-	} catch (error) {
-		ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-			event: "storefront_cache.purge_failed",
-			cache_tags: tags,
-		});
-	}
-}
-
-async function purgeStorefrontTagsGlobal(tags: string[]): Promise<void> {
-	const mod = await getWorkersCacheModule();
-	try {
-		await mod?.env.STOREFRONT.purgeCache(tags);
-	} catch (error) {
-		logger.error("storefront_cache.purge_failed", error, { cache_tags: tags });
-	}
+	await purgeTagsGlobal(catalogCacheTags(productIds, extraTags));
 }
 
 export async function purgeTags(ctx: Context, tags: string[]): Promise<void> {
