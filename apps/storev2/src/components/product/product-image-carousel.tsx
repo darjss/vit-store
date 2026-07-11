@@ -123,7 +123,7 @@ export default function ProductImageCarousel(props: Props) {
 							<button
 								type="button"
 								onClick={() => handleThumbnailClick(index())}
-								class="flex h-8 w-8 items-center justify-center"
+								class="flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 								aria-label={`${props.productName} зураг ${index() + 1}`}
 								aria-current={selectedIndex() === index()}
 							>
