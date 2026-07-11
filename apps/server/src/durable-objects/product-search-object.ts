@@ -15,6 +15,7 @@ import type {
 	ProductSearchStatus,
 } from "@vit/api/lib/product-search/types";
 import { DurableObject } from "cloudflare:workers";
+import { LosslessRebuildQueue } from "../lib/lossless-rebuild-queue";
 
 const SNAPSHOT_KEY = "product-search:snapshot:v2";
 const SNAPSHOT_META_KEY = "product-search:snapshot:v2:meta";
@@ -48,8 +49,11 @@ export class ProductSearchObject extends DurableObject<Env> {
 	private documentsById = new Map<number, ProductSearchDocument>();
 	private generatedAt: string | null = null;
 	private loadPromise: Promise<void> | null = null;
-	private rebuildPromise: Promise<ProductSearchStatus> | null = null;
 	private readonly appEnv: Env;
+	private readonly rebuilds: LosslessRebuildQueue<
+		ProductSearchStatus,
+		ProductSearchRebuildReason
+	>;
 	// Generation guard: clear() bumps this so in-flight rebuild/load can
 	// detect they were superseded and skip writing back stale state (DO-3).
 	private generation = 0;
@@ -57,6 +61,9 @@ export class ProductSearchObject extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		this.appEnv = env;
+		this.rebuilds = new LosslessRebuildQueue((reason) =>
+			this.performRebuild(reason),
+		);
 	}
 
 	async search(input: ProductSearchInput): Promise<ProductSearchPage> {
@@ -94,14 +101,8 @@ export class ProductSearchObject extends DurableObject<Env> {
 		);
 	}
 
-	async rebuild(
-		reason: ProductSearchRebuildReason,
-	): Promise<ProductSearchStatus> {
-		this.rebuildPromise ??= this.performRebuild(reason).finally(() => {
-			this.rebuildPromise = null;
-		});
-
-		return this.rebuildPromise;
+	rebuild(reason: ProductSearchRebuildReason): Promise<ProductSearchStatus> {
+		return this.rebuilds.request(reason);
 	}
 
 	async getStatus(): Promise<ProductSearchStatus> {
@@ -120,19 +121,15 @@ export class ProductSearchObject extends DurableObject<Env> {
 		// skips writing back stale state (DO-3). Await in-flight promises so
 		// we don't null state out from under a concurrent write.
 		this.generation++;
-		const inFlight: Promise<unknown>[] = [];
-		if (this.rebuildPromise) inFlight.push(this.rebuildPromise);
+		const inFlight: Promise<unknown>[] = [this.rebuilds.whenIdle()];
 		if (this.loadPromise) inFlight.push(this.loadPromise);
-		if (inFlight.length > 0) {
-			await Promise.allSettled(inFlight);
-		}
+		await Promise.allSettled(inFlight);
 		await this.deleteStoredSnapshot();
 		await this.ctx.storage.delete(STATUS_KEY);
 		this.miniSearch = null;
 		this.documentsById = new Map();
 		this.generatedAt = null;
 		this.loadPromise = null;
-		this.rebuildPromise = null;
 	}
 
 	private async ensureLoaded(): Promise<void> {

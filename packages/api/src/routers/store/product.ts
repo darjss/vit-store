@@ -6,13 +6,11 @@ import {
 	inventoryTag,
 	productTag,
 } from "@vit/shared";
-import {
-	PRODUCT_SORT_DIRECTIONS,
-	PRODUCT_SORT_FIELDS,
-} from "@vit/shared/domain/product";
+import { PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
+import { PRODUCT_SEARCH_SORT_FIELDS } from "~/lib/product-search/types";
 import { subscribeToRestock } from "~/lib/restock";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import {
@@ -81,7 +79,7 @@ const searchPageInput = {
 	requireStock: v.optional(v.boolean(), false),
 	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
-	sortField: v.optional(v.picklist(PRODUCT_SORT_FIELDS)),
+	sortField: v.optional(v.picklist(PRODUCT_SEARCH_SORT_FIELDS)),
 	sortDirection: v.optional(v.picklist(PRODUCT_SORT_DIRECTIONS)),
 };
 

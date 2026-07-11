@@ -11,6 +11,7 @@ import type {
 	ProductSearchPage,
 	ProductSearchSnapshot,
 	ProductSearchSort,
+	ProductSearchSortField,
 	ProductSearchSourceDocument,
 	SearchProductResult,
 } from "~/lib/product-search/types";
@@ -346,6 +347,22 @@ export const mapMiniSearchResult = (
 	};
 };
 
+const getSearchSortValue = (
+	result: SearchResult,
+	field: ProductSearchSortField,
+): number => {
+	switch (field) {
+		case "price":
+			return Number(result.price ?? 0);
+		case "createdAt":
+			return Date.parse(String(result.createdAt ?? ""));
+		default: {
+			const unsupportedField: never = field;
+			throw new Error(`Unsupported product search sort: ${unsupportedField}`);
+		}
+	}
+};
+
 export const searchMiniSearchIndex = (
 	miniSearch: MiniSearch<ProductSearchDocument>,
 	documentsById: Map<number, ProductSearchDocument>,
@@ -414,14 +431,8 @@ export const searchMiniSearchIndex = (
 	if (sort) {
 		const direction = sort.direction === "asc" ? 1 : -1;
 		ranked.sort((a, b) => {
-			const aValue =
-				sort.field === "price"
-					? Number(a.result.price ?? 0)
-					: Date.parse(String(a.result.createdAt ?? ""));
-			const bValue =
-				sort.field === "price"
-					? Number(b.result.price ?? 0)
-					: Date.parse(String(b.result.createdAt ?? ""));
+			const aValue = getSearchSortValue(a.result, sort.field);
+			const bValue = getSearchSortValue(b.result, sort.field);
 			const difference = (aValue - bValue) * direction;
 			return (
 				difference || (Number(a.result.id) - Number(b.result.id)) * direction
