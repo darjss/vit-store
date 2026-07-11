@@ -17,6 +17,15 @@ export const category = router({
 		return categories;
 	}),
 
+	getAllCategoriesWithActiveProductCount: publicProcedure.query(
+		async ({ ctx }) => {
+			const categories =
+				await categoryQueries.store.getAllCategoriesWithActiveProductCount();
+			markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
+			return categories;
+		},
+	),
+
 	getAllCategoriesWithStock: publicProcedure.query(async ({ ctx }) => {
 		const categories = await categoryQueries.store.getAllCategoriesWithStock();
 		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);

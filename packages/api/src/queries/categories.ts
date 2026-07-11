@@ -2,6 +2,30 @@ import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { CategoriesTable, ProductsTable } from "~/db/schema";
 
+const getAllCategoriesWithActiveProductCount = async () => {
+	const productCount = sql<number>`count(${ProductsTable.id})::int`;
+
+	return db()
+		.select({
+			id: CategoriesTable.id,
+			name: CategoriesTable.name,
+			slug: CategoriesTable.slug,
+			productCount,
+		})
+		.from(CategoriesTable)
+		.leftJoin(
+			ProductsTable,
+			and(
+				eq(ProductsTable.categoryId, CategoriesTable.id),
+				eq(ProductsTable.status, "active"),
+				isNull(ProductsTable.deletedAt),
+			),
+		)
+		.where(isNull(CategoriesTable.deletedAt))
+		.groupBy(CategoriesTable.id, CategoriesTable.name, CategoriesTable.slug)
+		.orderBy(desc(productCount), asc(CategoriesTable.name));
+};
+
 export const categoryQueries = {
 	admin: {
 		async getAllCategories() {
@@ -93,27 +117,11 @@ export const categoryQueries = {
 		},
 
 		async getAllCategories() {
-			const productCount = sql<number>`count(${ProductsTable.id})::int`;
+			return getAllCategoriesWithActiveProductCount();
+		},
 
-			return db()
-				.select({
-					id: CategoriesTable.id,
-					name: CategoriesTable.name,
-					slug: CategoriesTable.slug,
-					productCount,
-				})
-				.from(CategoriesTable)
-				.leftJoin(
-					ProductsTable,
-					and(
-						eq(ProductsTable.categoryId, CategoriesTable.id),
-						eq(ProductsTable.status, "active"),
-						isNull(ProductsTable.deletedAt),
-					),
-				)
-				.where(isNull(CategoriesTable.deletedAt))
-				.groupBy(CategoriesTable.id, CategoriesTable.name, CategoriesTable.slug)
-				.orderBy(desc(productCount), asc(CategoriesTable.name));
+		async getAllCategoriesWithActiveProductCount() {
+			return getAllCategoriesWithActiveProductCount();
 		},
 
 		async getCategoryBySlug(slug: string) {
