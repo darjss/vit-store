@@ -115,6 +115,9 @@ const recommendableProductColumns = {
 	id: true,
 	slug: true,
 	name: true,
+	name_mn: true,
+	potency: true,
+	amount: true,
 	price: true,
 	discount: true,
 	stock: true,
@@ -141,6 +144,9 @@ type RecommendableProduct = {
 	id: number;
 	slug: string;
 	name: string;
+	name_mn: string | null;
+	potency: string | null;
+	amount: string | null;
 	price: number;
 	discount: number | null;
 	stock: number;
@@ -156,6 +162,9 @@ const mapRecommendableProduct = (product: RecommendableProduct) => ({
 	id: product.id,
 	slug: product.slug,
 	name: product.name,
+	nameMn: product.name_mn,
+	potency: product.potency,
+	amount: product.amount,
 	price: product.price,
 	image: product.images[0]?.url ?? "",
 	brand: product.brand.name,
@@ -177,6 +186,9 @@ export const storeQueries = {
 					id: true,
 					slug: true,
 					name: true,
+					name_mn: true,
+					potency: true,
+					amount: true,
 					price: true,
 					stock: true,
 				},
@@ -208,6 +220,9 @@ export const storeQueries = {
 				columns: {
 					id: true,
 					name: true,
+					name_mn: true,
+					potency: true,
+					amount: true,
 					price: true,
 					slug: true,
 					stock: true,
@@ -241,6 +256,9 @@ export const storeQueries = {
 					id: true,
 					slug: true,
 					name: true,
+					name_mn: true,
+					potency: true,
+					amount: true,
 					price: true,
 					discount: true,
 					stock: true,
@@ -812,6 +830,9 @@ export const storeQueries = {
 				columns: {
 					id: true,
 					name: true,
+					name_mn: true,
+					potency: true,
+					amount: true,
 					price: true,
 					slug: true,
 					createdAt: true,
@@ -936,6 +957,9 @@ export const storeQueries = {
 					columns: {
 						id: true,
 						name: true,
+						name_mn: true,
+						potency: true,
+						amount: true,
 						price: true,
 						slug: true,
 						createdAt: true,

@@ -1,8 +1,9 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import {
-	LOW_STOCK_THRESHOLD as SHARED_LOW_STOCK_THRESHOLD,
 	productStockState,
+	projectProductCardDisplay,
+	LOW_STOCK_THRESHOLD as SHARED_LOW_STOCK_THRESHOLD,
 } from "@vit/shared/domain/product";
 import type { ProductCardData } from "@vit/shared/types";
 import { createMemo, createSignal, Show } from "solid-js";
@@ -27,12 +28,15 @@ export const LOW_STOCK_THRESHOLD = SHARED_LOW_STOCK_THRESHOLD;
 export interface NormalizedProduct {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	slug: string;
 	price: number;
 	image: string;
 	brand: string | null;
 	stock?: number;
-	discount?: number;
+	discount?: number | null;
 	categoryId?: number;
 }
 
@@ -43,12 +47,15 @@ export interface NormalizedProduct {
 export interface SearchProductInput {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	slug: string;
 	price: number;
 	image: string;
 	brand: string;
 	stock?: number;
-	discount?: number;
+	discount?: number | null;
 	categoryId?: number;
 }
 
@@ -60,6 +67,9 @@ export function normalizeProduct(
 		return {
 			id: product.id,
 			name: product.name,
+			nameMn: product.nameMn ?? product.name_mn,
+			potency: product.potency,
+			amount: product.amount,
 			slug: product.slug,
 			price: product.price,
 			image: product.images?.[0]?.url ?? "",
@@ -88,7 +98,18 @@ const ProductCard = (props: ProductCardProps) => {
 	);
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
-	const stockState = createMemo(() => productStockState(inventory()?.stock ?? product().stock));
+	const display = createMemo(() =>
+		projectProductCardDisplay({
+			name: product().name,
+			nameMn: product().nameMn,
+			brand: brandName(),
+			potency: product().potency,
+			amount: product().amount,
+		}),
+	);
+	const stockState = createMemo(() =>
+		productStockState(inventory()?.stock ?? product().stock),
+	);
 	const isOutOfStock = createMemo(() =>
 		inventory()
 			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
@@ -106,23 +127,20 @@ const ProductCard = (props: ProductCardProps) => {
 			class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
 			data-product-id={product().id}
 		>
-			{/* Image Section — decorative link, primary link is heading below */}
-			<a href={productUrl} class="relative block" aria-hidden="true" tabIndex={-1}>
+			{/* Image is decorative; the concise heading below is the card's only link. */}
+			<div class="relative block" aria-hidden="true">
 				<div
 					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 				>
 					<Show
 						when={product().image && !imageFailed()}
 						fallback={
-							<ProductImageFallback
-								name={product().name}
-								brand={brandName()}
-							/>
+							<ProductImageFallback name={product().name} brand={brandName()} />
 						}
 					>
 						<Image
 							src={productImageProps().src || product().image}
-							alt={product().name}
+							alt=""
 							width={productImageProps().width}
 							height={productImageProps().height}
 							sizes={productImageProps().sizes}
@@ -134,35 +152,17 @@ const ProductCard = (props: ProductCardProps) => {
 							onError={() => setImageFailed(true)}
 						/>
 					</Show>
-
-					<Show when={hasSale() && !isOutOfStock()}>
-						<Badge
-							variant="sale"
-							class="-rotate-2 absolute top-2 left-2 px-2 py-0.5 text-[11px]"
-						>
-							-{product().discount}%
-						</Badge>
-					</Show>
-
-					<span data-inventory-stock-low={product().id} hidden={!isLowStock()}>
-						<Badge
-							variant="warning"
-							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
-						>
-							Цөөн үлдсэн
-						</Badge>
-					</span>
-
-					<span data-inventory-stock-out={product().id} hidden={!isOutOfStock()}>
-						<Badge
-							variant="outline"
-							class="absolute bottom-2 left-2 px-2 py-0.5 text-[10px]"
-						>
-							Дууссан
-						</Badge>
-					</span>
 				</div>
-			</a>
+			</div>
+			<Show when={hasSale() && !isOutOfStock()}>
+				<Badge
+					variant="sale"
+					class="-rotate-2 absolute top-2 left-2 px-2 py-0.5 text-[11px]"
+					aria-label={`Хямдрал ${product().discount} хувь`}
+				>
+					-{product().discount}%
+				</Badge>
+			</Show>
 
 			{/* Content Section */}
 			<div class="flex flex-1 flex-col gap-1 p-3">
@@ -171,20 +171,52 @@ const ProductCard = (props: ProductCardProps) => {
 						{brandName()}
 					</p>
 				</Show>
-				<a href={productUrl} class="block">
-					<h3 class="line-clamp-2 font-medium text-foreground text-sm leading-snug group-hover:underline">
-						{product().name}
-						{brandName() ? <span class="sr-only">, {brandName()}</span> : null}
+				<a
+					href={productUrl}
+					class="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					aria-label={`${display().accessibleName}, ${formatCurrency(price())}`}
+				>
+					<h3 class="line-clamp-2 font-semibold text-foreground text-sm leading-snug group-hover:underline">
+						{display().shortName}
 					</h3>
 				</a>
+				<Show when={display().dose}>
+					<p class="line-clamp-2 font-semibold text-[11px] text-foreground/80 leading-snug">
+						{display().dose}
+					</p>
+				</Show>
+				<Show when={display().form || display().count}>
+					<p class="text-[11px] text-muted-foreground leading-snug">
+						{[display().form, display().count].filter(Boolean).join(" · ")}
+					</p>
+				</Show>
+				<p
+					data-inventory-stock-badge={product().id}
+					class={
+						isOutOfStock()
+							? "font-semibold text-[11px] text-destructive"
+							: isLowStock()
+								? "font-semibold text-[11px] text-warning-foreground"
+								: "font-semibold text-[11px] text-success-foreground"
+					}
+				>
+					{isOutOfStock()
+						? "Дууссан"
+						: isLowStock()
+							? "Цөөн үлдсэн"
+							: "Бэлэн байна"}
+				</p>
 
-				<div class="mt-auto flex items-end justify-between gap-2 pt-2">
-					<div class="font-bold font-display text-base tracking-tight" data-inventory-price={product().id}>
+				<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
+					<div
+						class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-base"
+						data-inventory-price={product().id}
+					>
 						{formatCurrency(price())}
 					</div>
 					<CardAddButton
 						outOfStock={isOutOfStock()}
-						productName={product().name}
+						productName={display().shortName}
 						cartItem={{
 							productId: product().id,
 							quantity: 1,
