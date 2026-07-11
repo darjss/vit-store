@@ -30,7 +30,7 @@ const isLowStock = stockState === "low";
 ---
 
 <div
-	class={`group hover:-translate-y-[3px] relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg ${className}`}
+	class={`group @container hover:-translate-y-[3px] relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg ${className}`}
 	data-product-id={product.id}
 >
 	<a href={productUrl} class="relative block" aria-hidden="true" tabindex="-1">
@@ -82,23 +82,28 @@ const isLowStock = stockState === "low";
 				{product.brand ? <span class="sr-only">, {product.brand}</span> : null}
 			</h3>
 		</a>
-		<div class="mt-auto flex items-end justify-between gap-2 pt-2">
-		<div class="font-bold font-display text-base tracking-tight" data-inventory-price={product.id}>
+		<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2 @max-[145px]:grid-cols-1">
+			<div
+				class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] lg:text-base"
+				data-inventory-price={product.id}
+			>
 				{formatCurrency(product.price)}
 			</div>
-			<CardAddButton
-				client:load
-				outOfStock={isOutOfStock}
-				productName={product.name}
-				cartItem={{
-					productId: product.id,
-					quantity: 1,
-					name: product.name,
-					price: product.price,
-					image: product.image,
-					slug: product.slug,
-				}}
-			/>
+			<div class="w-11 justify-self-end">
+				<CardAddButton
+					client:load
+					outOfStock={isOutOfStock}
+					productName={product.name}
+					cartItem={{
+						productId: product.id,
+						quantity: 1,
+						name: product.name,
+						price: product.price,
+						image: product.image,
+						slug: product.slug,
+					}}
+				/>
+			</div>
 		</div>
 	</div>
 </div>
