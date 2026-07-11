@@ -202,6 +202,22 @@ function setHiddenIfChanged(element: HTMLElement, hidden: boolean): void {
 	if (element.hidden !== hidden) element.hidden = hidden;
 }
 
+function reconcileServerProductCards(
+	snapshot: InventorySnapshot,
+	state: "in" | "low" | "out",
+	label: string,
+): void {
+	for (const card of document.querySelectorAll<HTMLElement>(
+		`[data-server-product-card="${snapshot.id}"]`,
+	)) {
+		if (card.dataset.inventoryState !== state) {
+			card.dataset.inventoryState = state;
+		}
+		const stock = card.querySelector<HTMLElement>("[data-card-stock]");
+		if (stock) setTextIfChanged(stock, label);
+	}
+}
+
 function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
 	const script = document.querySelector<HTMLScriptElement>(
 		"script[data-product-jsonld]",
@@ -235,7 +251,9 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 		: inStock
 			? "Бэлэн байна"
 			: "Дууссан";
+	const cardState = inStock ? (lowStock ? "low" : "in") : "out";
 
+	reconcileServerProductCards(snapshot, cardState, stockLabel);
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-price="${snapshot.id}"]`,
 	)) {

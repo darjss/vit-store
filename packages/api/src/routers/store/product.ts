@@ -10,6 +10,7 @@ import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
 import { subscribeToRestock } from "~/lib/restock";
+import { projectStorefrontCard } from "~/queries/products/storefront-card";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import {
 	mapStockStatus,
@@ -70,7 +71,7 @@ export const product = router({
 	// `requireStock: true` if they need the in-stock-only gate.
 	searchProductsForPage: publicProcedure
 		.input(v.object(searchInput))
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
 				const products = await performProductSearch(input.query, input.limit, {
 					brandId: input.brandId,
@@ -93,7 +94,7 @@ export const product = router({
 				limit: v.optional(v.number(), 8),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.query(async ({ input }) => {
 			try {
 				const safeLimit = Math.min(input.limit, 12);
 				const [products, navigation] = await Promise.all([
@@ -125,43 +126,9 @@ export const product = router({
 				]);
 			markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
 			return {
-				featuredProducts: featuredProducts.map((product) => ({
-					id: product.id,
-					slug: product.slug,
-					name: product.name,
-					nameMn: product.name_mn,
-					potency: product.potency,
-					amount: product.amount,
-					price: product.price,
-					image: product.images[0]?.url ?? "",
-					brand: product.brand.name,
-					stock: product.stock,
-				})),
-				newProducts: newProducts.map((product) => ({
-					id: product.id,
-					slug: product.slug,
-					name: product.name,
-					nameMn: product.name_mn,
-					potency: product.potency,
-					amount: product.amount,
-					price: product.price,
-					image: product.images[0]?.url ?? "",
-					brand: product.brand.name,
-					stock: product.stock,
-				})),
-				discountedProducts: discountedProducts.map((product) => ({
-					id: product.id,
-					slug: product.slug,
-					name: product.name,
-					nameMn: product.name_mn,
-					potency: product.potency,
-					amount: product.amount,
-					price: product.price,
-					image: product.images[0]?.url ?? "",
-					brand: product.brand.name,
-					discount: product.discount,
-					stock: product.stock,
-				})),
+				featuredProducts: featuredProducts.map(projectStorefrontCard),
+				newProducts: newProducts.map(projectStorefrontCard),
+				discountedProducts: discountedProducts.map(projectStorefrontCard),
 			};
 		} catch (error) {
 			throw new TRPCError({
