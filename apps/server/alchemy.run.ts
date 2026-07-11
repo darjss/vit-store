@@ -8,7 +8,9 @@ import {
 	R2Bucket,
 	RateLimit,
 	Worker,
+	WorkerRef,
 } from "alchemy/cloudflare";
+import type { Rpc } from "@cloudflare/workers-types";
 import { createServerAlchemyEnv } from "../../env";
 import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
@@ -76,6 +78,10 @@ const directDbUrl =
 		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
 		: "";
 
+interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
+	purgeCache(tags: string[]): Promise<void>;
+}
+
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
@@ -92,6 +98,9 @@ export const server = await Worker("api", {
 
 	adopt: true,
 	bindings: {
+		STOREFRONT: WorkerRef<StorefrontCacheRpc>({
+			service: `storev2-front-${stage}`,
+		}),
 		PRODUCT_SEARCH: productSearch,
 		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 		RATE_LIMITER: rateLimit,

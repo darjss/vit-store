@@ -1,4 +1,5 @@
 import cloudflare from "@astrojs/cloudflare";
+import { cacheCloudflare } from "@astrojs/cloudflare/cache";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import tailwindcss from "@tailwindcss/vite";
@@ -27,6 +28,9 @@ export default defineConfig({
 	site: "https://amerikvitamin.mn",
 	trailingSlash: "ignore",
 	output: "server",
+	cache: {
+		provider: cacheCloudflare(),
+	},
 	adapter: cloudflare({
 		imageService: "cloudflare",
 		...(isDev
