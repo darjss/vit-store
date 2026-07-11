@@ -64,6 +64,19 @@ type StorefrontProductFilters = {
 	maxPrice?: number;
 };
 
+const resolveStorefrontProductSort = ({
+	listType,
+	sortField,
+	sortDirection,
+}: {
+	listType?: "featured" | "recent" | "discount";
+	sortField?: "price" | "stock" | "createdAt";
+	sortDirection?: "asc" | "desc";
+}) => ({
+	field: sortField ?? (listType === "recent" ? "createdAt" : "stock"),
+	direction: sortDirection ?? "desc",
+});
+
 const buildStorefrontProductConditions = ({
 	requireStock = false,
 	brandId,
@@ -715,8 +728,8 @@ export const storeQueries = {
 				categoryId,
 				listType,
 				searchTerm,
-				sortField = "stock",
-				sortDirection = "desc",
+				sortField,
+				sortDirection,
 			requireStock = false,
 				minPrice,
 				maxPrice,
@@ -743,15 +756,21 @@ export const storeQueries = {
 				}
 			}
 
-			// Determine sort column and order
+			// The recent preset supplies the created-at default unless the shopper
+			// explicitly chose another sort.
+			const sort = resolveStorefrontProductSort({
+				listType,
+				sortField,
+				sortDirection,
+			});
 			const sortColumn =
-				sortField === "price"
+				sort.field === "price"
 					? ProductsTable.price
-					: sortField === "stock"
+					: sort.field === "stock"
 						? ProductsTable.stock
 						: ProductsTable.createdAt;
 
-			const isAsc = sortDirection === "asc";
+			const isAsc = sort.direction === "asc";
 			const orderByClauses = isAsc
 				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
 				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
@@ -766,7 +785,7 @@ export const storeQueries = {
 				const cursorInStock = rankStr === "1";
 
 				let sortValue: number | Date;
-				if (sortField === "price" || sortField === "stock") {
+				if (sort.field === "price" || sort.field === "stock") {
 					sortValue = Number.parseInt(sortValueStr, 10);
 				} else {
 					sortValue = new Date(sortValueStr);
@@ -825,9 +844,9 @@ export const storeQueries = {
 			if (items.length === limit && items.length > 0) {
 				const lastItem = items[items.length - 1];
 				const sortValue =
-					sortField === "price"
+					sort.field === "price"
 						? lastItem.price
-						: sortField === "stock"
+						: sort.field === "stock"
 							? lastItem.stock
 							: lastItem.createdAt.toISOString();
 				const rank = lastItem.stock > 0 ? 1 : 0;
@@ -875,8 +894,8 @@ export const storeQueries = {
 				brandId,
 				categoryId,
 				listType,
-				sortField = "stock",
-				sortDirection = "desc",
+				sortField,
+				sortDirection,
 				requireStock = false,
 				minPrice,
 				maxPrice,
@@ -891,14 +910,19 @@ export const storeQueries = {
 				maxPrice,
 			});
 
+			const sort = resolveStorefrontProductSort({
+				listType,
+				sortField,
+				sortDirection,
+			});
 			const sortColumn =
-				sortField === "price"
+				sort.field === "price"
 					? ProductsTable.price
-					: sortField === "stock"
+					: sort.field === "stock"
 						? ProductsTable.stock
 						: ProductsTable.createdAt;
 
-			const isAsc = sortDirection === "asc";
+			const isAsc = sort.direction === "asc";
 			const orderByClauses = isAsc
 				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
 				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
