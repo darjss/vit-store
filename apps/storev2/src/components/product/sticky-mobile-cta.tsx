@@ -5,8 +5,8 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import RestockNotifySheet from "./restock-notify-sheet";
 import { useInventorySnapshot } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface StickyMobileCtaProps {
 	cartItem: CartItems;
@@ -25,18 +25,39 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	onMount(() => {
 		const mainCta = document.getElementById("product-main-cta");
+		const mobileNavbar = document.querySelector<HTMLElement>(
+			"[data-mobile-navbar]",
+		);
 		if (!mainCta) return;
 
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				// Show sticky bar when main CTA is NOT visible
-				setVisible(!entry.isIntersecting);
-			},
-			{ threshold: 0.1, rootMargin: "0px" },
-		);
+		let observer: IntersectionObserver | undefined;
+		const observeMainCta = () => {
+			observer?.disconnect();
 
-		observer.observe(mainCta);
-		onCleanup(() => observer.disconnect());
+			const navbarTop = mobileNavbar?.getBoundingClientRect().top;
+			const obscuredBottom = navbarTop
+				? Math.max(0, window.innerHeight - navbarTop)
+				: 0;
+
+			observer = new IntersectionObserver(
+				([entry]) => {
+					// Fixed navigation is excluded so covered pixels do not count as visible.
+					setVisible(!entry.isIntersecting);
+				},
+				{
+					threshold: 0,
+					rootMargin: `0px 0px -${obscuredBottom}px 0px`,
+				},
+			);
+			observer.observe(mainCta);
+		};
+
+		observeMainCta();
+		window.addEventListener("resize", observeMainCta);
+		onCleanup(() => {
+			observer?.disconnect();
+			window.removeEventListener("resize", observeMainCta);
+		});
 	});
 
 	const handleAdd = () => {
@@ -49,18 +70,15 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 
 	return (
 		<>
-			<Show when={visible()}>
-				{/* Spacer prevents the floating bar from overlapping footer/content at scroll bottom */}
-				<div class="h-20 sm:hidden" aria-hidden="true" />
-			</Show>
 			<Presence>
 				<Show when={visible()}>
 					<Motion.div
+						data-pdp-sticky-cta
 						initial={{ opacity: 0, y: 24 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 24 }}
 						transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
-						class="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg sm:hidden"
+						class="fixed inset-x-3 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.375rem)] z-50 rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg sm:hidden"
 					>
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 pl-1">
@@ -77,13 +95,13 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 								class="shrink-0"
 								onClick={handleAdd}
 							>
-									<Show when={isInStock()} fallback={<span>Дууссан</span>}>
-										<IconShoppingCart class="h-4 w-4" />
-										Сагслах
-									</Show>
-								</Button>
+								<Show when={isInStock()} fallback={<span>Дууссан</span>}>
+									<IconShoppingCart class="h-4 w-4" />
+									Сагслах
+								</Show>
+							</Button>
 						</div>
-				</Motion.div>
+					</Motion.div>
 				</Show>
 			</Presence>
 			<RestockNotifySheet
