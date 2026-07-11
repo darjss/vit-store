@@ -1,5 +1,11 @@
 import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
+import {
+	isUnsupportedTrpcTransport,
+	noStoreJson,
+	sanitizeUpstreamTrpcResponse,
+	trpcErrorResponse,
+} from "@/lib/trpc-proxy";
 
 export const prerender = false;
 
@@ -32,7 +38,14 @@ const canonicalStorePath = (path: string | undefined): string | null => {
 export const ALL: APIRoute = async ({ request, params }) => {
 	const targetPath = canonicalStorePath(params.path);
 	if (!targetPath) {
-		return Response.json({ error: "Invalid tRPC path" }, { status: 400 });
+		return noStoreJson({ error: "Invalid tRPC path" }, 400);
+	}
+
+	if (!import.meta.env.DEV && isUnsupportedTrpcTransport(request)) {
+		return trpcErrorResponse(
+			400,
+			"Streaming tRPC transport is not supported by the storefront",
+		);
 	}
 
 	const targetUrl = new URL(request.url);
@@ -63,27 +76,16 @@ export const ALL: APIRoute = async ({ request, params }) => {
 			method: request.method,
 			errorType: error instanceof Error ? error.name : typeof error,
 		});
-		return Response.json(
-			{
-				error: {
-					json: {
-						message: "Store API temporarily unavailable",
-						code: -32603,
-						data: {
-							code: "INTERNAL_SERVER_ERROR",
-							httpStatus: 503,
-						},
-					},
-				},
-			},
-			{
-				status: 503,
-				headers: {
-					"cache-control": "no-store",
-					"retry-after": "1",
-				},
-			},
-		);
+		return trpcErrorResponse(503, "Store API temporarily unavailable", {
+			"retry-after": "1",
+		});
+	}
+
+	if (
+		!import.meta.env.DEV &&
+		(upstreamResponse.status === 207 || upstreamResponse.status >= 400)
+	) {
+		return sanitizeUpstreamTrpcResponse(upstreamResponse);
 	}
 
 	return new Response(upstreamResponse.body, upstreamResponse);
