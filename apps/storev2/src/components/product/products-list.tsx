@@ -45,6 +45,7 @@ const ProductsList = (props: ProductsListProps) => {
 	hydrateServerState(queryClient, props.dehydratedState);
 
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
+	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
 
@@ -297,6 +298,17 @@ const ProductsList = (props: ProductsListProps) => {
 		void productsQuery.fetchNextPage({ cancelRefetch: false });
 	};
 
+	createEffect(() => {
+		if (
+			!isLoadMoreInRange() ||
+			filters.isSearchMode() ||
+			productsQuery.isError
+		) {
+			return;
+		}
+		loadNextPage();
+	});
+
 	const retryProducts = () => {
 		if (filters.isSearchMode()) {
 			searchQuery.refetch();
@@ -311,14 +323,13 @@ const ProductsList = (props: ProductsListProps) => {
 
 	const setupObserver = (element: HTMLButtonElement) => {
 		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0].isIntersecting) loadNextPage();
-			},
+			(entries) => setIsLoadMoreInRange(entries[0].isIntersecting),
 			{ rootMargin: "300px 0px", threshold: 0 },
 		);
 
 		observer.observe(element);
 		onCleanup(() => {
+			setIsLoadMoreInRange(false);
 			observer.unobserve(element);
 			observer.disconnect();
 		});
