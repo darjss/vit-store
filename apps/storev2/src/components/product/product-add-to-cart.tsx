@@ -5,11 +5,11 @@ import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
-import RestockNotifySheet from "./restock-notify-sheet";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,
 } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface ProductQuantitySelectorProps {
 	cartItem: CartItems;
@@ -108,7 +108,7 @@ export default function ProductQuantitySelector(
 						</button>
 					</fieldset>
 
-					<div class="min-w-0 flex-1">
+					<div data-product-main-purchase-action class="min-w-0 flex-1">
 						<AddToCartButton
 							cartItem={{
 								...props.cartItem,
@@ -134,7 +134,12 @@ export default function ProductQuantitySelector(
 						</p>
 					</div>
 
-					<Button class="w-full" size="lg" onClick={() => setNotifyOpen(true)}>
+					<Button
+						data-product-main-purchase-action
+						class="w-full"
+						size="lg"
+						onClick={() => setNotifyOpen(true)}
+					>
 						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
 					</Button>
