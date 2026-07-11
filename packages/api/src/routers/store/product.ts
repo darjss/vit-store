@@ -6,6 +6,10 @@ import {
 	inventoryTag,
 	productTag,
 } from "@vit/shared";
+import {
+	PRODUCT_SORT_DIRECTIONS,
+	PRODUCT_SORT_FIELDS,
+} from "@vit/shared/domain/product";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
@@ -15,6 +19,7 @@ import {
 	mapStockStatus,
 	performAssistantProductSearch,
 	performProductSearch,
+	performProductSearchPage,
 	searchNavigationResults,
 } from "./product-search-helpers";
 
@@ -64,20 +69,47 @@ const searchInput = {
 	requireStock: v.optional(v.boolean(), false),
 };
 
+const searchPageInput = {
+	query: v.pipe(v.string(), v.minLength(1)),
+	page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+	pageSize: v.optional(
+		v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100)),
+		12,
+	),
+	brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	requireStock: v.optional(v.boolean(), false),
+	minPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+	sortField: v.optional(v.picklist(PRODUCT_SORT_FIELDS)),
+	sortDirection: v.optional(v.picklist(PRODUCT_SORT_DIRECTIONS)),
+};
+
 export const product = router({
-	// Storefront search — used by the catalog list (search mode) and the
-	// search takeover. The `WithStock` variant is collapsed: callers pass
-	// `requireStock: true` if they need the in-stock-only gate.
+	// Catalogue search returns an exact constrained total plus one page. Unlike
+	// the lightweight search takeover, this contract never treats a capped
+	// result array as the complete matching set.
 	searchProductsForPage: publicProcedure
-		.input(v.object(searchInput))
-		.query(async ({ ctx, input }) => {
+		.input(v.object(searchPageInput))
+		.query(async ({ input }) => {
 			try {
-				const products = await performProductSearch(input.query, input.limit, {
-					brandId: input.brandId,
-					categoryId: input.categoryId,
-					requireStock: input.requireStock,
+				const sort =
+					input.sortField && input.sortDirection
+						? { field: input.sortField, direction: input.sortDirection }
+						: undefined;
+				return await performProductSearchPage({
+					query: input.query,
+					page: input.page,
+					pageSize: input.pageSize,
+					filters: {
+						brandId: input.brandId,
+						categoryId: input.categoryId,
+						requireStock: input.requireStock,
+						minPrice: input.minPrice,
+						maxPrice: input.maxPrice,
+					},
+					sort,
 				});
-				return products;
 			} catch (error) {
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
