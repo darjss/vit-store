@@ -1,4 +1,4 @@
-type TrpcErrorShape = {
+export type TrpcErrorShape = {
 	message: string;
 	code: number;
 	data: {
@@ -35,6 +35,11 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 		: undefined;
 }
 
+export type SanitizedTrpcResponse = {
+	payload: unknown;
+	hasError: boolean;
+};
+
 /** Keep only the stable, client-facing fields from a tRPC error shape. */
 export function sanitizePublicTrpcErrorShape(
 	value: unknown,
@@ -62,4 +67,49 @@ export function sanitizePublicTrpcErrorShape(
 			httpStatus,
 		},
 	};
+}
+
+function sanitizeResponseItem(
+	value: unknown,
+	fallbackHttpStatus: number,
+): SanitizedTrpcResponse {
+	const item = asRecord(value);
+	if (!item || !("error" in item)) {
+		return { payload: value, hasError: false };
+	}
+
+	const error = asRecord(item.error);
+	const serializedShape = asRecord(error?.json);
+	return {
+		payload: {
+			...item,
+			error: serializedShape
+				? {
+						json: sanitizePublicTrpcErrorShape(
+							serializedShape,
+							fallbackHttpStatus,
+						),
+					}
+				: sanitizePublicTrpcErrorShape(error, fallbackHttpStatus),
+		},
+		hasError: true,
+	};
+}
+
+/** Sanitize singular and batch tRPC JSON responses without changing wire shape. */
+export function sanitizePublicTrpcResponse(
+	value: unknown,
+	fallbackHttpStatus = 500,
+): SanitizedTrpcResponse {
+	if (!Array.isArray(value)) {
+		return sanitizeResponseItem(value, fallbackHttpStatus);
+	}
+
+	let hasError = false;
+	const payload = value.map((item) => {
+		const sanitized = sanitizeResponseItem(item, fallbackHttpStatus);
+		hasError ||= sanitized.hasError;
+		return sanitized.payload;
+	});
+	return { payload, hasError };
 }

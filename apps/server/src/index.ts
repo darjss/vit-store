@@ -13,6 +13,7 @@ import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
+import { operatorTrpcError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -29,13 +30,6 @@ const DEFAULT_CORS_ORIGINS = [
 ];
 
 const app = new Hono<ServerHonoEnv>();
-
-const privacySafeTrpcError = (error: Error): Error => {
-	const observableError = new Error(error.message);
-	observableError.name = error.name;
-	observableError.stack = error.stack;
-	return observableError;
-};
 
 app.use(evlogMiddleware());
 
@@ -67,7 +61,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(privacySafeTrpcError(error), {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.admin_error",
 				trpc: { path, code: error.code, user_type: "admin" },
 			});
@@ -95,7 +89,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(privacySafeTrpcError(error), {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.store_error",
 				trpc: { path, code: error.code, user_type: "customer" },
 			});
@@ -114,7 +108,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(privacySafeTrpcError(error), {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.bot_error",
 				trpc: { path, code: error.code, user_type: "bot" },
 			});
