@@ -85,6 +85,7 @@ const SearchSheet = (props: SearchSheetProps) => {
 
 			<SheetContent
 				position={props.position}
+				closeLabel="Хайлтыг хаах"
 				class={props.contentClass ?? DEFAULT_CONTENT_CLASS}
 			>
 				<div class="flex h-full flex-col">
