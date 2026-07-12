@@ -1,20 +1,22 @@
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, Show } from "solid-js";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconNotification from "~icons/ri/notification-3-fill";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import RestockNotifySheet from "./restock-notify-sheet";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,
 } from "./inventory-reconciler";
+import RestockNotifySheet from "./restock-notify-sheet";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
 	outOfStock?: boolean;
 	productName?: string;
+	disabled?: boolean;
 }
 
 const stateClass =
@@ -28,6 +30,7 @@ const stateClass =
 const CardAddButton = (props: CardAddButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const restockSheetFocusRestore = createSheetFocusRestore();
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const verification = useInventoryVerification(props.cartItem.productId);
 
@@ -38,9 +41,10 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			: (props.outOfStock ?? false);
 	const price = () => inventory()?.price ?? props.cartItem.price;
 
-	const handleAdd = () => {
-		if (!isInventoryVerified()) return;
+	const handleAdd = (event: MouseEvent) => {
+		if (props.disabled || !isInventoryVerified()) return;
 		if (isOutOfStock()) {
+			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
 			return;
 		}
@@ -55,7 +59,11 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={!isInventoryVerified() || (!isOutOfStock() && isAdded())}
+				disabled={
+					props.disabled ||
+					!isInventoryVerified() ||
+					(!isOutOfStock() && isAdded())
+				}
 				data-inventory-verification={verification().status}
 				aria-label={
 					!isInventoryVerified()
@@ -102,6 +110,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					onOpenChange={setNotifyOpen}
 					productId={props.cartItem.productId}
 					productName={props.productName ?? props.cartItem.name}
+					focusRestore={restockSheetFocusRestore}
 				/>
 			</Show>
 		</>
