@@ -27,7 +27,6 @@ import {
 	ProductListEnd,
 	ProductSkeletonGrid,
 } from "./products-list-states";
-import { isProductSearchMode } from "./search-mode";
 import { useProductFilters } from "./use-product-filters";
 
 type FilterOption = {
@@ -106,7 +105,7 @@ const ProductsList = (props: ProductsListProps) => {
 		() => ({
 			queryKey: [
 				"search-products-page",
-				filters.searchTerm(),
+				filters.effectiveSearchTerm(),
 				filters.selectedSort()?.field,
 				filters.selectedSort()?.direction,
 				filters.categoryId(),
@@ -116,8 +115,8 @@ const ProductsList = (props: ProductsListProps) => {
 				filters.includeOutOfStock(),
 			],
 			queryFn: async ({ pageParam }) => {
-				const term = filters.searchTerm();
-				if (!isProductSearchMode(term)) {
+				const term = filters.effectiveSearchTerm();
+				if (!term) {
 					throw new Error("Search query must contain at least two characters");
 				}
 				const sort = filters.selectedSort();
@@ -449,7 +448,7 @@ const ProductsList = (props: ProductsListProps) => {
 					brandId={filters.brandId()}
 					priceRange={filters.priceRange()}
 					listFilter={filters.listFilter()}
-					searchTerm={filters.searchTerm()}
+					effectiveSearchTerm={filters.effectiveSearchTerm()}
 					includeOutOfStock={filters.includeOutOfStock()}
 					onApply={filters.applyFilters}
 					onReset={filters.resetDrawerFilters}

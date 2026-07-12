@@ -32,7 +32,6 @@ import {
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { isProductSearchMode } from "./search-mode";
 
 export const PRICE_MIN = 0;
 export const PRICE_MAX = 500000;
@@ -82,7 +81,7 @@ type FilterDrawerProps = {
 	brandId: number | null;
 	priceRange: [number, number];
 	listFilter: "featured" | "recent" | null;
-	searchTerm: string | null;
+	effectiveSearchTerm: string | null;
 	includeOutOfStock: boolean;
 	onApply: (next: {
 		sortField: string | null;
@@ -231,7 +230,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 				debouncedPriceRange()[1],
 				debouncedIncludeOutOfStock(),
 				props.listFilter,
-				props.searchTerm,
+				props.effectiveSearchTerm,
 			],
 			queryFn: async () => {
 				const sort: SortSelection | null = parseSort(
@@ -250,10 +249,11 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					maxPrice,
 					requireStock: !debouncedIncludeOutOfStock(),
 				};
-				const result = isProductSearchMode(props.searchTerm)
+				const effectiveSearchTerm = props.effectiveSearchTerm;
+				const result = effectiveSearchTerm
 					? await api.product.searchProductsForPage.query({
 							...sharedInput,
-							query: props.searchTerm,
+							query: effectiveSearchTerm,
 						})
 					: await api.product.getPaginatedProducts.query({
 							...sharedInput,

@@ -1,5 +1,6 @@
-export function isProductSearchMode(
+export function getEffectiveProductSearchTerm(
 	term: string | null | undefined,
-): term is string {
-	return (term?.trim().length ?? 0) >= 2;
+): string | null {
+	const normalized = term?.trim();
+	return normalized && normalized.length >= 2 ? normalized : null;
 }
