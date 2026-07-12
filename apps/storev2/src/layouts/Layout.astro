@@ -1,6 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import CartDrawer from "@/components/cart/cart-drawer";
+import InventoryReconciler from "@/components/product/inventory-reconciler";
 import QueryDevtools from "@/components/query-devtools";
 import SEO from "@/components/SEO.astro";
 import { Toaster } from "@/components/ui/toast";
@@ -83,6 +84,7 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
         <Footer />
         <MobileNavbar />
         <CartDrawer client:idle />
+        <InventoryReconciler client:load />
         		{import.meta.env.DEV && <QueryDevtools client:idle />}
 
     </body>

@@ -40,7 +40,7 @@ export default function DeliveryInfoSheet() {
 			<SheetTrigger
 				as="button"
 				type="button"
-				class="inline-flex items-center gap-1 font-semibold text-muted-foreground text-xs underline-offset-2 transition-colors duration-[140ms] ease-out hover:text-foreground hover:underline"
+				class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-1 font-semibold text-muted-foreground text-xs underline-offset-2 transition-colors duration-[140ms] ease-out hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 			>
 				<span>Дэлгэрэнгүй</span>
 			</SheetTrigger>

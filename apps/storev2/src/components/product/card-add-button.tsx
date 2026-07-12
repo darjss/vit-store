@@ -6,7 +6,10 @@ import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconNotification from "~icons/ri/notification-3-fill";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
-import { useInventorySnapshot } from "./inventory-reconciler";
+import {
+	useInventorySnapshot,
+	useInventoryVerification,
+} from "./inventory-reconciler";
 import RestockNotifySheet from "./restock-notify-sheet";
 
 interface CardAddButtonProps {
@@ -29,15 +32,17 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 	const restockSheetFocusRestore = createSheetFocusRestore();
 	const inventory = useInventorySnapshot(props.cartItem.productId);
+	const verification = useInventoryVerification(props.cartItem.productId);
 
+	const isInventoryVerified = () => verification().status === "verified";
 	const isOutOfStock = () =>
 		inventory()
 			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
-			: props.outOfStock ?? false;
+			: (props.outOfStock ?? false);
 	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	const handleAdd = (event: MouseEvent) => {
-		if (props.disabled) return;
+		if (props.disabled || !isInventoryVerified()) return;
 		if (isOutOfStock()) {
 			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
@@ -54,16 +59,29 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			<button
 				type="button"
 				onClick={handleAdd}
-				disabled={props.disabled || (!isOutOfStock() && isAdded())}
-				aria-label={isOutOfStock() ? "Мэдэгдэл авах" : "Сагслах"}
+				disabled={
+					props.disabled ||
+					!isInventoryVerified() ||
+					(!isOutOfStock() && isAdded())
+				}
+				data-inventory-verification={verification().status}
+				aria-label={
+					!isInventoryVerified()
+						? verification().status === "degraded"
+							? "Нөөц баталгаажаагүй"
+							: "Нөөц шалгаж байна"
+						: isOutOfStock()
+							? "Мэдэгдэл авах"
+							: "Сагслах"
+				}
 				class={cn(
 					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out",
 					"active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
-					isAdded() &&
-						!isOutOfStock() &&
-						"bg-success text-success-foreground",
+					isAdded() && !isOutOfStock() && "bg-success text-success-foreground",
 					isOutOfStock() &&
 						"border-border bg-card text-foreground shadow-soft-sm",
+					!isInventoryVerified() &&
+						"border-border bg-muted text-muted-foreground shadow-none",
 				)}
 			>
 				<Show
