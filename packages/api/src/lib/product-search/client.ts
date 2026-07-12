@@ -3,7 +3,9 @@ import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
 import type {
 	ProductSearchFilters,
+	ProductSearchPage,
 	ProductSearchRebuildReason,
+	ProductSearchSort,
 	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
@@ -34,20 +36,32 @@ export const searchProducts = async (
 	if (!trimmed) return [];
 
 	try {
-		const results = await withTimeout(
+		const result = await withTimeout(
 			getProductSearchService().search({
 				query: trimmed,
-				limit,
+				pageSize: limit,
 				filters,
 			}),
 			PRODUCT_SEARCH_TIMEOUT_MS,
 		);
-		return results;
+		return result.items;
 	} catch (error) {
 		logger.error("product_search.search_failed", error);
 		return [];
 	}
 };
+
+export const searchProductPage = async (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}): Promise<ProductSearchPage> =>
+	withTimeout(
+		getProductSearchService().search(input),
+		PRODUCT_SEARCH_TIMEOUT_MS,
+	);
 
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",

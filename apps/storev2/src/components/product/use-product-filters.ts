@@ -9,6 +9,7 @@ import {
 import { batch, createMemo } from "solid-js";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { PRICE_MAX, PRICE_MIN } from "./filter-drawer";
+import { getEffectiveProductSearchTerm } from "./search-mode";
 
 type ListFilter = ProductPresetFilter;
 
@@ -28,7 +29,7 @@ export interface ApplyFiltersPayload {
 }
 
 export interface ProductFilters {
-	searchTerm: () => string | null;
+	effectiveSearchTerm: () => string | null;
 	setSearchTerm: (value: string | null) => void;
 	sortField: () => string | null;
 	sortDirection: () => string | null;
@@ -96,10 +97,10 @@ export function useProductFilters(args: {
 		defaultValue: undefined,
 	});
 
-	const isSearchMode = createMemo(() => {
-		const term = searchTerm();
-		return term !== undefined && term !== null && term.length >= 2;
-	});
+	const effectiveSearchTerm = createMemo(() =>
+		getEffectiveProductSearchTerm(searchTerm()),
+	);
+	const isSearchMode = createMemo(() => effectiveSearchTerm() !== null);
 
 	const listFilter = createMemo<ListFilter | null>(() => {
 		const val = listFilterParam();
@@ -264,7 +265,7 @@ export function useProductFilters(args: {
 		[
 			{
 				key: "search",
-				label: searchTerm(),
+				label: effectiveSearchTerm(),
 				onRemove: () => setSearchTerm(null),
 			},
 			{
@@ -300,7 +301,7 @@ export function useProductFilters(args: {
 	);
 
 	const hasActiveFilters = () =>
-		!!searchTerm() ||
+		effectiveSearchTerm() !== null ||
 		!!selectedSort() ||
 		!!categoryId() ||
 		!!brandId() ||
@@ -314,7 +315,7 @@ export function useProductFilters(args: {
 	);
 
 	const pageTitle = () => {
-		const term = searchTerm();
+		const term = effectiveSearchTerm();
 		if (term) return `"${term}" хайлтын үр дүн`;
 		return (
 			presetLabel() ??
@@ -325,7 +326,7 @@ export function useProductFilters(args: {
 	};
 
 	return {
-		searchTerm,
+		effectiveSearchTerm,
 		setSearchTerm,
 		sortField,
 		sortDirection,
