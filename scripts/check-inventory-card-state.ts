@@ -101,9 +101,13 @@ if (
 		"Verified stock/visual state is not applied before enabling action",
 	);
 }
+const cardButtonSource = actionSource.slice(
+	actionSource.indexOf("<button"),
+	actionSource.indexOf("data-inventory-verification"),
+);
 if (
 	!actionSource.includes("useInventoryVerification") ||
-	!actionSource.includes("disabled={!isInventoryVerified()")
+	!cardButtonSource.includes("!isInventoryVerified()")
 ) {
 	throw new Error(
 		"Card action is not gated by the shared inventory coordinator",

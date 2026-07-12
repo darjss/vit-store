@@ -1,8 +1,15 @@
 import { productQueries } from "@vit/api/queries";
 import { brandQueries } from "~/queries/brands";
 import { categoryQueries } from "~/queries/categories";
+import {
+	searchProductPage,
+	searchProducts,
+} from "~/lib/product-search/client";
+import type {
+	ProductSearchFilters,
+	ProductSearchSort,
+} from "~/lib/product-search/types";
 import { projectStorefrontCard } from "~/queries/products/storefront-card";
-import { searchProducts } from "~/lib/product-search/client";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
@@ -147,6 +154,33 @@ export const performProductSearch = async (
 		discount: row.discount,
 		categoryId: row.categoryId,
 	}));
+
+export const performProductSearchPage = async (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}) => {
+	const result = await searchProductPage(input);
+	return {
+		items: result.items.map((row) => ({
+			id: row.id,
+			slug: row.slug,
+			name: row.name,
+			nameMn: row.nameMn,
+			potency: row.potency,
+			amount: row.amount,
+			price: row.price,
+			image: row.image,
+			brand: row.brand,
+			stock: row.stock,
+			discount: row.discount,
+			categoryId: row.categoryId,
+		})),
+		pagination: result.pagination,
+	};
+};
 
 export const performProductSearchWithStock = async (
 	query: string,

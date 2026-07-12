@@ -1,6 +1,7 @@
 import type { CartItems } from "@vit/shared/types";
 import { createEffect, createSignal, Match, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
@@ -23,6 +24,7 @@ export default function ProductQuantitySelector(
 	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const restockSheetFocusRestore = createSheetFocusRestore();
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const verification = useInventoryVerification(props.cartItem.productId);
 
@@ -138,7 +140,10 @@ export default function ProductQuantitySelector(
 						data-product-main-purchase-action
 						class="w-full"
 						size="lg"
-						onClick={() => setNotifyOpen(true)}
+						onClick={(event) => {
+							restockSheetFocusRestore.register(event.currentTarget);
+							setNotifyOpen(true);
+						}}
 					>
 						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
@@ -149,6 +154,7 @@ export default function ProductQuantitySelector(
 						onOpenChange={setNotifyOpen}
 						productId={props.cartItem.productId}
 						productName={props.cartItem.name}
+						focusRestore={restockSheetFocusRestore}
 					/>
 				</div>
 			</Match>
