@@ -6,7 +6,10 @@ import IconAlertTriangle from "~icons/ri/error-warning-fill";
 import IconNotification from "~icons/ri/notification-3-fill";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
-import { useInventorySnapshot } from "./inventory-reconciler";
+import {
+	useInventorySnapshot,
+	useInventoryVerification,
+} from "./inventory-reconciler";
 import RestockNotifySheet from "./restock-notify-sheet";
 
 interface ProductQuantitySelectorProps {
@@ -23,6 +26,7 @@ export default function ProductQuantitySelector(
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
 	const restockSheetFocusRestore = createSheetFocusRestore();
 	const inventory = useInventorySnapshot(props.cartItem.productId);
+	const verification = useInventoryVerification(props.cartItem.productId);
 
 	const stock = () => inventory()?.stock ?? maxStock;
 	const isInStock = () =>
@@ -53,6 +57,31 @@ export default function ProductQuantitySelector(
 
 	return (
 		<Switch>
+			<Match when={verification().status !== "verified"}>
+				<div
+					class="rounded-2xl border border-border bg-warning p-4 text-warning-foreground"
+					data-inventory-verification={verification().status}
+				>
+					<div class="flex items-start gap-2.5">
+						<IconAlertTriangle
+							class="mt-0.5 h-5 w-5 shrink-0"
+							aria-hidden="true"
+						/>
+						<div>
+							<p class="font-semibold text-sm">
+								{verification().status === "degraded"
+									? "Нөөц баталгаажаагүй"
+									: "Нөөцийг шалгаж байна"}
+							</p>
+							<p class="mt-1 text-muted-foreground text-xs leading-relaxed sm:text-sm">
+								{verification().status === "degraded"
+									? "Шинэ мэдээлэл авах хүртэл сагслах боломжгүй. Дээрх “Дахин шалгах” товчийг ашиглана уу."
+									: "Одоогийн нөөц баталгаажмагц сагслах боломжтой болно."}
+							</p>
+						</div>
+					</div>
+				</div>
+			</Match>
 			<Match when={isInStock()}>
 				<div class="flex items-center gap-3">
 					<fieldset
@@ -81,9 +110,13 @@ export default function ProductQuantitySelector(
 						</button>
 					</fieldset>
 
-					<div class="min-w-0 flex-1">
+					<div data-product-main-purchase-action class="min-w-0 flex-1">
 						<AddToCartButton
-							cartItem={{ ...props.cartItem, price: price(), quantity: quantity() }}
+							cartItem={{
+								...props.cartItem,
+								price: price(),
+								quantity: quantity(),
+							}}
 						/>
 					</div>
 				</div>
@@ -104,6 +137,7 @@ export default function ProductQuantitySelector(
 					</div>
 
 					<Button
+						data-product-main-purchase-action
 						class="w-full"
 						size="lg"
 						onClick={(event) => {

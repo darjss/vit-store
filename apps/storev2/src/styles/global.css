@@ -92,6 +92,20 @@
 @layer base {
     :root {
         color-scheme: light;
+        --mobile-bottom-edge: max(0.75rem, env(safe-area-inset-bottom));
+        --mobile-navbar-height: 3.875rem;
+        --mobile-bottom-layer-gap: 0.5rem;
+        --mobile-purchase-height: 4.125rem;
+        --mobile-purchase-offset: calc(
+            var(--mobile-bottom-edge) + var(--mobile-navbar-height) +
+                var(--mobile-bottom-layer-gap)
+        );
+        --mobile-purchase-stack-height: calc(
+            var(--mobile-purchase-offset) + var(--mobile-purchase-height)
+        );
+        --mobile-pdp-footer-inset: calc(
+            var(--mobile-purchase-stack-height) + var(--mobile-bottom-layer-gap)
+        );
     }
 
     * {
@@ -102,6 +116,12 @@
     }
     body {
         @apply bg-background text-foreground font-sans;
+    }
+
+    @media (max-width: 767px) {
+        body:has([data-pdp-sticky-cta]) > footer {
+            padding-bottom: var(--mobile-pdp-footer-inset);
+        }
     }
 
     /* Respect user motion preferences globally; opacity fades stay, transforms go. */

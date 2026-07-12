@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { timeRangeType } from "@vit/shared";
+import { sanitizePublicTrpcErrorShape, type timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
 import type { Context } from "~/lib/context";
@@ -9,16 +9,30 @@ import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
 import { getTtlForTimeRange } from "~/lib/utils";
 
+const isLocalDevelopment = process.env.NODE_ENV === "development";
+
 const t = initTRPC.context<Context>().create({
 	transformer: superjson,
+	isDev: isLocalDevelopment,
 	errorFormatter({ shape, error }) {
+		if (isLocalDevelopment) {
+			return {
+				...shape,
+				data: {
+					...shape.data,
+					valibotError:
+						error.cause instanceof v.ValiError ? error.cause.issues : null,
+				},
+			};
+		}
+
+		const publicShape = sanitizePublicTrpcErrorShape(
+			shape,
+			shape.data.httpStatus,
+		);
 		return {
-			...shape,
-			data: {
-				...shape.data,
-				valibotError:
-					error.cause instanceof v.ValiError ? error.cause.issues : null,
-			},
+			...publicShape,
+			data: { ...publicShape.data, valibotError: null },
 		};
 	},
 });

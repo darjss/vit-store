@@ -27,6 +27,7 @@ const SheetClose: Component<SheetCloseProps> = (props) => {
 
 export type SheetFocusRestore = {
   register: (element: HTMLElement) => void
+  registerFallback: (element: HTMLElement) => void
   restore: () => boolean
 }
 
@@ -35,6 +36,17 @@ export const createSheetFocusRestore = (): SheetFocusRestore => {
 
   return {
     register: (element) => {
+      target = element
+    },
+    registerFallback: (element) => {
+      const documentElement = element.ownerDocument
+      if (
+        target?.isConnected ||
+        element === documentElement.body ||
+        element === documentElement.documentElement
+      ) {
+        return
+      }
       target = element
     },
     restore: () => {
@@ -132,7 +144,7 @@ const SheetContent = <T extends ValidComponent = "div">(
           if (local.focusRestore && typeof document !== "undefined") {
             const activeElement = document.activeElement
             if (activeElement instanceof HTMLElement) {
-              local.focusRestore.register(activeElement)
+              local.focusRestore.registerFallback(activeElement)
             }
           }
         }}
