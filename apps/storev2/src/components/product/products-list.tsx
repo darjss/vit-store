@@ -9,6 +9,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
@@ -46,6 +47,7 @@ const ProductsList = (props: ProductsListProps) => {
 	hydrateServerState(queryClient, props.dehydratedState);
 
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
+	const filterSheetFocusRestore = createSheetFocusRestore();
 	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
@@ -413,7 +415,10 @@ const ProductsList = (props: ProductsListProps) => {
 					/>
 					<button
 						type="button"
-						onClick={() => setFilterDrawerOpen(true)}
+						onClick={(event) => {
+							filterSheetFocusRestore.register(event.currentTarget);
+							setFilterDrawerOpen(true);
+						}}
 						aria-label="Шүүлтүүр нээх"
 						class="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 font-bold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
 					>
@@ -435,6 +440,7 @@ const ProductsList = (props: ProductsListProps) => {
 				<FilterDrawer
 					open={filterDrawerOpen()}
 					onOpenChange={setFilterDrawerOpen}
+					focusRestore={filterSheetFocusRestore}
 					categories={categoriesQuery.data ?? []}
 					brands={brandsQuery.data ?? []}
 					sortField={filters.sortField()}
