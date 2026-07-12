@@ -1,6 +1,7 @@
 import { createDb } from "@vit/api/db";
 import {
 	buildProductSearchSnapshot,
+	type createProductMiniSearch,
 	hydrateProductSearchSnapshot,
 	searchMiniSearchIndex,
 } from "@vit/api/lib/product-search/core";
@@ -8,22 +9,22 @@ import { loadProductSearchDocumentsFromDb } from "@vit/api/lib/product-search/db
 import type {
 	ProductSearchDocument,
 	ProductSearchInput,
+	ProductSearchPage,
 	ProductSearchRebuildReason,
 	ProductSearchSnapshot,
 	ProductSearchStatus,
-	SearchProductResult,
 } from "@vit/api/lib/product-search/types";
 import { DurableObject } from "cloudflare:workers";
-import type MiniSearch from "minisearch";
+import { LosslessRebuildQueue } from "../lib/lossless-rebuild-queue";
 
-const SNAPSHOT_KEY = "product-search:snapshot:v1";
-const SNAPSHOT_META_KEY = "product-search:snapshot:v1:meta";
-const SNAPSHOT_CHUNK_PREFIX = "product-search:snapshot:v1:chunk:";
+const SNAPSHOT_KEY = "product-search:snapshot:v2";
+const SNAPSHOT_META_KEY = "product-search:snapshot:v2:meta";
+const SNAPSHOT_CHUNK_PREFIX = "product-search:snapshot:v2:chunk:";
 const STATUS_KEY = "product-search:status:v1";
 const SNAPSHOT_CHUNK_SIZE = 64_000;
 
 type StoredSnapshotMeta = {
-	version: 1;
+	version: 2;
 	generatedAt: string;
 	productCount: number;
 	chunkCount: number;
@@ -44,12 +45,15 @@ const errorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : "Unknown error";
 
 export class ProductSearchObject extends DurableObject<Env> {
-	private miniSearch: MiniSearch<ProductSearchDocument> | null = null;
+	private miniSearch: ReturnType<typeof createProductMiniSearch> | null = null;
 	private documentsById = new Map<number, ProductSearchDocument>();
 	private generatedAt: string | null = null;
 	private loadPromise: Promise<void> | null = null;
-	private rebuildPromise: Promise<ProductSearchStatus> | null = null;
 	private readonly appEnv: Env;
+	private readonly rebuilds: LosslessRebuildQueue<
+		ProductSearchStatus,
+		ProductSearchRebuildReason
+	>;
 	// Generation guard: clear() bumps this so in-flight rebuild/load can
 	// detect they were superseded and skip writing back stale state (DO-3).
 	private generation = 0;
@@ -57,33 +61,48 @@ export class ProductSearchObject extends DurableObject<Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		this.appEnv = env;
+		this.rebuilds = new LosslessRebuildQueue((reason) =>
+			this.performRebuild(reason),
+		);
 	}
 
-	async search(input: ProductSearchInput): Promise<SearchProductResult[]> {
+	async search(input: ProductSearchInput): Promise<ProductSearchPage> {
 		const query = input.query.trim();
-		if (!query) return [];
+		const page = Math.max(input.page ?? 1, 1);
+		const pageSize = Math.min(Math.max(input.pageSize ?? 10, 1), 100);
+		if (!query) {
+			return {
+				items: [],
+				pagination: {
+					page,
+					pageSize,
+					totalCount: 0,
+					totalPages: 0,
+					hasNextPage: false,
+					hasPreviousPage: false,
+				},
+			};
+		}
 
 		await this.ensureLoaded();
 
-		if (!this.miniSearch) return [];
+		if (!this.miniSearch) {
+			throw new Error("Product search index is unavailable");
+		}
 
 		return searchMiniSearchIndex(
 			this.miniSearch,
 			this.documentsById,
 			query,
-			input.limit ?? 10,
+			page,
+			pageSize,
 			input.filters,
+			input.sort,
 		);
 	}
 
-	async rebuild(
-		reason: ProductSearchRebuildReason,
-	): Promise<ProductSearchStatus> {
-		this.rebuildPromise ??= this.performRebuild(reason).finally(() => {
-			this.rebuildPromise = null;
-		});
-
-		return this.rebuildPromise;
+	rebuild(reason: ProductSearchRebuildReason): Promise<ProductSearchStatus> {
+		return this.rebuilds.request(reason);
 	}
 
 	async getStatus(): Promise<ProductSearchStatus> {
@@ -102,19 +121,15 @@ export class ProductSearchObject extends DurableObject<Env> {
 		// skips writing back stale state (DO-3). Await in-flight promises so
 		// we don't null state out from under a concurrent write.
 		this.generation++;
-		const inFlight: Promise<unknown>[] = [];
-		if (this.rebuildPromise) inFlight.push(this.rebuildPromise);
+		const inFlight: Promise<unknown>[] = [this.rebuilds.whenIdle()];
 		if (this.loadPromise) inFlight.push(this.loadPromise);
-		if (inFlight.length > 0) {
-			await Promise.allSettled(inFlight);
-		}
+		await Promise.allSettled(inFlight);
 		await this.deleteStoredSnapshot();
 		await this.ctx.storage.delete(STATUS_KEY);
 		this.miniSearch = null;
 		this.documentsById = new Map();
 		this.generatedAt = null;
 		this.loadPromise = null;
-		this.rebuildPromise = null;
 	}
 
 	private async ensureLoaded(): Promise<void> {
@@ -260,7 +275,7 @@ export class ProductSearchObject extends DurableObject<Env> {
 		// Write new chunks + meta first.
 		await Promise.all([
 			this.ctx.storage.put<StoredSnapshotMeta>(SNAPSHOT_META_KEY, {
-				version: 1,
+				version: 2,
 				generatedAt: snapshot.generatedAt,
 				productCount: snapshot.productCount,
 				chunkCount: chunks.length,

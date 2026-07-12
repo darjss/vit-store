@@ -45,10 +45,7 @@ const COUNT_DEBOUNCE_MS = 250;
  * live count query so a price-slider drag (many ticks/sec) fires one network
  * request instead of one per tick.
  */
-function createDebouncedSignal<T>(
-	source: () => T,
-	ms: number,
-): () => T {
+function createDebouncedSignal<T>(source: () => T, ms: number): () => T {
 	const [debounced, setDebounced] = createSignal<T>(source());
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	createEffect(() => {
@@ -84,6 +81,7 @@ type FilterDrawerProps = {
 	brandId: number | null;
 	priceRange: [number, number];
 	listFilter: "featured" | "recent" | null;
+	effectiveSearchTerm: string | null;
 	includeOutOfStock: boolean;
 	onApply: (next: {
 		sortField: string | null;
@@ -232,6 +230,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 				debouncedPriceRange()[1],
 				debouncedIncludeOutOfStock(),
 				props.listFilter,
+				props.effectiveSearchTerm,
 			],
 			queryFn: async () => {
 				const sort: SortSelection | null = parseSort(
@@ -239,18 +238,27 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					debouncedSortDirection(),
 				);
 				const { minPrice, maxPrice } = boundPrice(debouncedPriceRange());
-				const result = await api.product.getPaginatedProducts.query({
+				const sharedInput = {
 					page: 1,
 					pageSize: 1,
 					categoryId: debouncedCategoryId() ?? undefined,
 					brandId: debouncedBrandId() ?? undefined,
-					listType: props.listFilter ?? undefined,
 					sortField: sort?.field,
 					sortDirection: sort?.direction,
 					minPrice,
 					maxPrice,
 					requireStock: !debouncedIncludeOutOfStock(),
-				});
+				};
+				const effectiveSearchTerm = props.effectiveSearchTerm;
+				const result = effectiveSearchTerm
+					? await api.product.searchProductsForPage.query({
+							...sharedInput,
+							query: effectiveSearchTerm,
+						})
+					: await api.product.getPaginatedProducts.query({
+							...sharedInput,
+							listType: props.listFilter ?? undefined,
+						});
 				return result.pagination.totalCount;
 			},
 			placeholderData: keepPreviousData,
@@ -469,19 +477,28 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 									</span>
 								</Match>
 								<Match when={countStatus() === "loading"}>
-									<span class="text-secondary text-sm" aria-label="Тоо шинэчилж байна">
+									<output
+										class="text-secondary text-sm"
+										aria-label="Тоо шинэчилж байна"
+									>
 										…
-									</span>
+									</output>
 								</Match>
 								<Match when={countStatus() === "error"}>
-									<span class="text-secondary text-sm" aria-label="Тоо харагдахгүй байна">
+									<output
+										class="text-secondary text-sm"
+										aria-label="Тоо харагдахгүй байна"
+									>
 										—
-									</span>
+									</output>
 								</Match>
 							</Switch>
 						</button>
 						<Show when={countStatus() === "error"}>
-							<div class="flex items-center justify-between gap-2 px-1 text-destructive text-xs" role="alert">
+							<div
+								class="flex items-center justify-between gap-2 px-1 text-destructive text-xs"
+								role="alert"
+							>
 								<span>Тоо ачаалж чадсангүй</span>
 								<button
 									type="button"
