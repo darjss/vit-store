@@ -3,6 +3,7 @@ import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cart } from "@/store/cart";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import {
@@ -21,6 +22,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	const inventory = useInventorySnapshot(props.cartItem.productId);
 	const verification = useInventoryVerification(props.cartItem.productId);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
+	const restockSheetFocusRestore = createSheetFocusRestore();
 	const isInStock = () =>
 		inventory()
 			? inventory()?.status === "active" && (inventory()?.stock ?? 0) > 0
@@ -68,9 +70,10 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 		});
 	});
 
-	const handleAdd = () => {
+	const handleAdd = (event: MouseEvent) => {
 		if (verification().status !== "verified") return;
 		if (!isInStock()) {
+			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
 			return;
 		}
@@ -136,6 +139,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 				onOpenChange={setNotifyOpen}
 				productId={props.cartItem.productId}
 				productName={props.cartItem.name}
+				focusRestore={restockSheetFocusRestore}
 			/>
 		</>
 	);
