@@ -1,54 +1,79 @@
 ---
+
+
+
 import { formatCurrency } from "@vit/shared";
-import { productStockState } from "@vit/shared/domain/product";
+import { productStockState, projectProductCardDisplay } from "@vit/shared/domain/product";
 import CardAddButton from "@/components/product/card-add-button.tsx";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
 import { toProductImageUrl } from "@/lib/image";
 import { washBg } from "@/lib/wash";
+import { unverifiedInventoryCardPresentation } from "./inventory-card-state";
 
 interface Props {
 	product: {
 		id: number;
 		name: string;
+		name_mn?: string | null;
+		potency?: string | null;
+		amount?: string | null;
 		slug: string;
 		price: number;
 		brand: { name: string } | null;
 		images: { url: string | null }[];
 		stock?: number;
-		discount?: number;
+		discount?: number | null;
 		categoryId?: number;
 	};
+	aspectRatio?: string;
+	imageSize?: "feature" | "card";
+	class?: string;
 }
 
-const { product } = Astro.props;
+const {
+	product,
+	aspectRatio = "aspect-4/5",
+	imageSize = "card",
+	class: className = "",
+} = Astro.props;
 const washClass = washBg(product.categoryId ?? "uncategorized");
 const imageUrl = product.images[0]?.url || "";
 const productUrl = `/products/${product.slug}-${product.id}`;
-const stockState = productStockState(product.stock);
-const isOutOfStock = stockState === "out";
-const isLowStock = stockState === "low";
+const isOutOfStock = productStockState(product.stock) === "out";
+const initialInventory = unverifiedInventoryCardPresentation("checking");
 const hasSale = (product.discount ?? 0) > 0;
+const display = projectProductCardDisplay({
+	name: product.name,
+	nameMn: product.name_mn,
+	brand: product.brand?.name,
+	potency: product.potency,
+	amount: product.amount,
+});
 ---
 
 <div
-	class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
+	class={`group @container hover:-translate-y-[3px] relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg ${className}`}
 	data-product-id={product.id}
+	data-server-product-card={product.id}
+	data-inventory-state={initialInventory.state}
 >
-	<a href={productUrl} class="relative block" aria-hidden="true" tabindex="-1">
+	<div class="relative block" aria-hidden="true">
 		<div
-			class={`relative aspect-4/5 ${washClass} ${isOutOfStock ? "saturate-[0.35]" : ""}`}
+			class={`relative ${aspectRatio} ${washClass}`}
+			data-card-image-frame
 			transition:name={`product-image-${product.id}`}
 		>
 			{imageUrl ? (
 				<>
 					<img
-						src={toProductImageUrl(imageUrl, "card") || imageUrl}
-						alt={product.name}
+						src={toProductImageUrl(imageUrl, imageSize) || imageUrl}
+						alt=""
 						width="400"
 						height="500"
 						loading="lazy"
 						decoding="async"
-						class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock ? "opacity-70 grayscale" : ""}`}
+						class="absolute inset-0 h-full w-full object-contain p-3 transition-[transform,filter,opacity] duration-300 ease-out-quart group-hover:scale-105 sm:p-4"
+						data-card-image
 						onerror="this.style.display='none';this.parentElement.querySelector('[data-image-fallback]').hidden=false"
 					/>
 					<div data-image-fallback hidden>
@@ -58,19 +83,17 @@ const hasSale = (product.discount ?? 0) > 0;
 			) : (
 				<ProductImageFallback name={product.name} brand={product.brand?.name ?? null} />
 			)}
-			{hasSale && !isOutOfStock && (
-				<span class="-rotate-2 absolute top-2 left-2 inline-flex items-center rounded-full bg-sale px-2 py-0.5 font-semibold text-[11px] text-sale-foreground">
-					-{product.discount}%
-				</span>
-			)}
-			<span data-inventory-stock-low={product.id} hidden={!isLowStock} class="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-warning px-2 py-0.5 font-semibold text-[10px] text-warning-foreground">
-					Цөөн үлдсэн
-				</span>
-			<span data-inventory-stock-out={product.id} hidden={!isOutOfStock} class="absolute bottom-2 left-2 inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 font-semibold text-[10px] text-foreground">
-					Дууссан
-				</span>
 		</div>
-	</a>
+	</div>
+	{hasSale && (
+		<span
+			class="-rotate-2 absolute top-2 left-2 inline-flex items-center rounded-full bg-sale px-2 py-0.5 font-semibold text-[11px] text-sale-foreground"
+			data-card-sale
+			aria-label={`Хямдрал ${product.discount} хувь`}
+		>
+			-{product.discount}%
+		</span>
+	)}
 
 	<div class="flex flex-1 flex-col gap-1 p-3">
 		{product.brand && (
@@ -78,21 +101,35 @@ const hasSale = (product.discount ?? 0) > 0;
 				{product.brand.name}
 			</p>
 		)}
-		<a href={productUrl} class="block">
-			<h3 class="line-clamp-2 font-medium text-foreground text-sm leading-snug group-hover:underline">
-				{product.name}
-				{product.brand ? <span class="sr-only">, {product.brand.name}</span> : null}
+		<a
+			href={productUrl}
+			class="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			aria-label={`${display.accessibleName}, ${formatCurrency(product.price)}`}
+		>
+			<h3 class="line-clamp-2 font-semibold text-foreground text-sm leading-snug group-hover:underline">
+				{display.shortName}
 			</h3>
 		</a>
+		{display.dose && (
+			<p class="line-clamp-2 font-semibold text-[11px] text-foreground/80 leading-snug">{display.dose}</p>
+		)}
+		{(display.form || display.count || display.packageQuantity) && (
+			<p class="text-[11px] text-muted-foreground leading-snug">
+				{[display.form, display.count, display.packageQuantity].filter(Boolean).join(" · ")}
+			</p>
+		)}
+		<p data-card-stock class="font-semibold text-[11px]">
+			{initialInventory.availabilityLabel}
+		</p>
 
-		<div class="mt-auto flex items-end justify-between gap-2 pt-2">
-			<div class="font-bold font-display text-base tracking-tight" data-inventory-price={product.id}>
+		<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
+			<div class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-base" data-inventory-price={product.id}>
 				{formatCurrency(product.price)}
 			</div>
 			<CardAddButton
 				client:load
 				outOfStock={isOutOfStock}
-				productName={product.name}
+				productName={display.shortName}
 				cartItem={{
 					productId: product.id,
 					quantity: 1,
@@ -105,3 +142,46 @@ const hasSale = (product.discount ?? 0) > 0;
 		</div>
 	</div>
 </div>
+
+<style>
+	[data-server-product-card][data-inventory-state="checking"] [data-card-image-frame],
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image-frame] {
+		filter: saturate(0.55);
+	}
+	[data-server-product-card][data-inventory-state="checking"] [data-card-image],
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image] {
+		opacity: 0.72;
+	}
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-image] {
+		filter: grayscale(0.55);
+	}
+	[data-server-product-card][data-inventory-state="checking"] [data-card-stock] {
+		color: var(--color-muted-foreground);
+	}
+	[data-server-product-card][data-inventory-state="degraded"] [data-card-stock] {
+		color: var(--color-destructive);
+	}
+	[data-server-product-card][data-inventory-state="out"] [data-card-image-frame] {
+		filter: saturate(0.35);
+	}
+	[data-server-product-card][data-inventory-state="out"] [data-card-image] {
+		filter: grayscale(1);
+		opacity: 0.7;
+	}
+	[data-server-product-card][data-inventory-state="out"] [data-card-stock] {
+		color: var(--color-destructive);
+	}
+	[data-server-product-card]:is(
+		[data-inventory-state="checking"],
+		[data-inventory-state="degraded"],
+		[data-inventory-state="out"]
+	) [data-card-sale] {
+		display: none;
+	}
+	[data-server-product-card][data-inventory-state="low"] [data-card-stock] {
+		color: var(--color-warning-foreground);
+	}
+	[data-server-product-card][data-inventory-state="in"] [data-card-stock] {
+		color: var(--color-success-foreground);
+	}
+</style>

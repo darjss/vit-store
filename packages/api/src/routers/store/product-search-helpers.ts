@@ -9,6 +9,7 @@ import type {
 	ProductSearchFilters,
 	ProductSearchSort,
 } from "~/lib/product-search/types";
+import { projectStorefrontCard } from "~/queries/products/storefront-card";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
@@ -18,6 +19,9 @@ export interface SearchProductResult {
 	id: number;
 	slug: string;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	price: number;
 	image: string;
 	brand: string;
@@ -59,6 +63,9 @@ interface CatalogSearchRow {
 	id: number;
 	slug: string;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	price: number;
 	image: string;
 	brand: string;
@@ -96,6 +103,9 @@ export const performCatalogSearch = async (
 				id: result.id,
 				slug: result.slug,
 				name: result.name,
+				nameMn: result.nameMn,
+				potency: result.potency,
+				amount: result.amount,
 				price: result.price,
 				image: result.image,
 				brand: result.brand,
@@ -112,18 +122,7 @@ export const performCatalogSearch = async (
 		: await q.searchByName(query, safeLimit);
 
 	return fallbackResults
-		.map((p) => ({
-			id: p.id,
-			slug: p.slug,
-			name: p.name,
-			price: p.price,
-			image: p.images[0]?.url || "",
-			brand: p.brand?.name || "",
-			status: p.status,
-			stock: p.stock,
-			discount: p.discount,
-			categoryId: p.categoryId,
-		}))
+		.map(projectStorefrontCard)
 		.sort((a, b) => {
 			const aIn = a.stock > 0;
 			const bIn = b.stock > 0;
@@ -145,6 +144,9 @@ export const performProductSearch = async (
 		id: row.id,
 		slug: row.slug,
 		name: row.name,
+		nameMn: row.nameMn,
+		potency: row.potency,
+		amount: row.amount,
 		price: row.price,
 		image: row.image,
 		brand: row.brand,
@@ -166,6 +168,9 @@ export const performProductSearchPage = async (input: {
 			id: row.id,
 			slug: row.slug,
 			name: row.name,
+			nameMn: row.nameMn,
+			potency: row.potency,
+			amount: row.amount,
 			price: row.price,
 			image: row.image,
 			brand: row.brand,
