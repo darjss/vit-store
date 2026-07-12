@@ -31,6 +31,7 @@ import {
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { isProductSearchMode } from "./search-mode";
 
 export const PRICE_MIN = 0;
 export const PRICE_MAX = 500000;
@@ -247,7 +248,7 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					maxPrice,
 					requireStock: !debouncedIncludeOutOfStock(),
 				};
-				const result = props.searchTerm
+				const result = isProductSearchMode(props.searchTerm)
 					? await api.product.searchProductsForPage.query({
 							...sharedInput,
 							query: props.searchTerm,

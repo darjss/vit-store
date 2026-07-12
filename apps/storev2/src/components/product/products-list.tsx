@@ -26,6 +26,7 @@ import {
 	ProductListEnd,
 	ProductSkeletonGrid,
 } from "./products-list-states";
+import { isProductSearchMode } from "./search-mode";
 import { useProductFilters } from "./use-product-filters";
 
 type FilterOption = {
@@ -114,7 +115,7 @@ const ProductsList = (props: ProductsListProps) => {
 			],
 			queryFn: async ({ pageParam }) => {
 				const term = filters.searchTerm();
-				if (!term || term.length < 2) {
+				if (!isProductSearchMode(term)) {
 					throw new Error("Search query must contain at least two characters");
 				}
 				const sort = filters.selectedSort();
