@@ -9,6 +9,7 @@ import {
 import { batch, createMemo } from "solid-js";
 import { useSearchParam } from "@/lib/useSearchParam";
 import { PRICE_MAX, PRICE_MIN } from "./filter-drawer";
+import { isProductSearchMode } from "./search-mode";
 
 type ListFilter = ProductPresetFilter;
 
@@ -96,10 +97,7 @@ export function useProductFilters(args: {
 		defaultValue: undefined,
 	});
 
-	const isSearchMode = createMemo(() => {
-		const term = searchTerm();
-		return term !== undefined && term !== null && term.length >= 2;
-	});
+	const isSearchMode = createMemo(() => isProductSearchMode(searchTerm()));
 
 	const listFilter = createMemo<ListFilter | null>(() => {
 		const val = listFilterParam();
