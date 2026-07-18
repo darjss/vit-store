@@ -22,7 +22,18 @@ The cache utility defaults to all targets, mutates a tool-private local format, 
 
 ## Current state
 
-`scripts/clear-kv-cache.ts:107-132` defaults `target` to `"all"`, then always calls both local and remote clearers. A fixed remote target exists elsewhere in the file and is intentionally not reproduced.
+**Baseline source:** `scripts/clear-kv-cache.ts:107-114`
+
+```ts
+
+async function main() {
+	const target = process.argv[2] || "all";
+
+	let keysToDelete: string[] = [];
+
+	switch (target) {
+		case "brands":
+```
 
 ### Domain and repository rule
 
@@ -74,23 +85,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner confirms whether the utility remains needed and which cache code owns current keys.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'clear-kv-cache|clearLocalKV|clearRemoteKV|process.argv\[2\]|cache' -- scripts/clear-kv-cache.ts packages/api/src/lib README.md NOTES.md package.json` → inventories current key owner, baseline implicit target, and documentation; record whether the utility remains owned.
 
 ### Step 2: If retained, require explicit environment, derive keys from owner, and make default invocation fail with usage before I/O; add preview/confirmation before remote action
 
 If retained, require explicit environment, derive keys from owner, and make default invocation fail with usage before I/O; add preview/confirmation before remote action. Otherwise remove utility/docs.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun scripts/clear-kv-cache.ts > /tmp/cache-maintenance-default.out 2>&1; test $? -ne 0; ! git grep -n -E 'process.argv\[2\] \|\| "all"|clearLocalKV|sqlite|namespace' scripts/clear-kv-cache.ts` → command exits 0 only when default invocation fails before I/O and the scan finds no implicit-all, private-storage, or fixed-target implementation.
 
 ### Step 3: Prove only against a disposable local namespace after implementation approval
 
 Prove only against a disposable local namespace after implementation approval. Never invoke the baseline script.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Cache owner decision and disposable local namespace; baseline script must never be run against remote/shared state.
 
-## Real-system proof plan
+**Bounded procedure:** Run retained command with no args, preview explicit local scope, confirm, and inspect only disposable keys before/after.
 
-Default invocation performs no I/O and exits with usage; retained static scan has no fixed production target or private-storage path; disposable local preview selects only intended keys. Root checks/build exit 0.
+**Machine-observable expected result:** No-arg exits before I/O; preview is non-destructive; confirmed local run changes only selected disposable keys; no fixed remote target is exposed.
+
+**Cleanup:** Delete disposable namespace/keys through the same local owner API; never use production for proof.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

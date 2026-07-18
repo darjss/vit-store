@@ -22,7 +22,22 @@ The accepted audit reported three tracked SQL migrations missing from journal me
 
 ## Current state
 
-`packages/api/src/db/migrations/meta/_journal.json:80-91` visibly includes `"tag": "0013_messenger_notification_failures"`. The accepted audit candidate list also names `0011_elite_the_santerians.sql`, `0012_order_payment_uniques_claimed_status.sql`, and `0013_messenger_notification_failures.sql`; this inconsistency must be resolved by comparing normalized SQL basenames with journal tags.
+**Baseline source:** `packages/api/src/db/migrations/meta/_journal.json:80-91`
+
+```json
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779371141275,
+      "tag": "0013_messenger_notification_failures",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+```
 
 ### Domain and repository rule
 
@@ -73,23 +88,32 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Recompute exact SQL-basename-to-journal-tag set equality and reconcile the baseline inconsistency before naming any missing migration; map only confirmed candidates to schema and git history.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `python3 - <<'PY'
+import json, pathlib
+d=pathlib.Path('packages/api/src/db/migrations')
+sql={p.stem for p in d.glob('*.sql')}
+tags={e['tag'] for e in json.load(open(d/'meta/_journal.json'))['entries']}
+print('sql-only', *sorted(sql-tags), sep='\n')
+print('journal-only', *sorted(tags-sql), sep='\n')
+PY` → normalized SQL/journal differences are printed; do not name a missing migration until this output and git history agree.
 
 ### Step 2: With operators, compare read-only migration/schema metadata in every environment
 
 With operators, compare read-only migration/schema metadata in every environment. Stop on any divergence or ambiguity.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: After pointing `drizzle.local.config.ts` at a newly created disposable local database, run `bun run --cwd packages/api db:migrate:local && bun run check-types` → migration and root typecheck exit 0; schema comparison records no missing declared table/column/index and no applied migration file changed.
 
 ### Step 3: After explicit approval, create new forward-only journaled migrations only for truly missing changes and prove a disposable fresh local database reaches `schema
 
 After explicit approval, create new forward-only journaled migrations only for truly missing changes and prove a disposable fresh local database reaches `schema.ts`.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Database owner, read-only migration metadata access for every environment, and a brand-new disposable local database only after repair approval.
 
-## Real-system proof plan
+**Bounded procedure:** Record environment comparison; apply approved forward-only sequence only to fresh local DB; compare resulting schema to declared schema.
 
-Inventory is recorded; no applied checksum/history changes; disposable fresh migration matches schema; production evidence remains read-only. Root/API checks build successfully.
+**Machine-observable expected result:** Every environment state is accounted for, fresh schema matches, no applied journal/SQL checksum changes, and no production write occurs.
+
+**Cleanup:** Drop only the disposable local DB using the existing local workflow after owner confirms evidence capture.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

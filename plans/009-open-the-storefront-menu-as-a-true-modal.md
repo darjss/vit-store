@@ -22,14 +22,22 @@ The shared dialog sets an `open` attribute rather than using the browser modal c
 
 ## Current state
 
-`Dialog.astro:230-247`:
+**Baseline source:** `apps/storev2/src/components/starwind/dialog/Dialog.astro:230-241`
+
 ```ts
-private open(): void {
-  this.dialog.setAttribute("open", "");
-  document.body.classList.add("overflow-hidden");
-}
+    private open(): void {
+      if (!this.dialog || !this.backdrop) return;
+      this.dialog.setAttribute("open", "");
+      document.body.classList.add("overflow-hidden");
+      this.backdrop.classList.remove("hidden");
+      this.backdrop.dataset.state = "open";
+      this.dialog.dataset.state = "open";
+    }
+
+    private close(): void {
+      if (!this.dialog || !this.backdrop) return;
+      this.dialog.dataset.state = "closed";
 ```
-`Layout.astro:122-151` independently closes dialogs during navigation.
 
 ### Domain and repository rule
 
@@ -82,23 +90,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Confirm supported mobile Chrome/Safari matrix and whether any shared-dialog consumer intentionally needs non-modal behavior.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'setAttribute\("open"|showModal|starwind-dialog|closeOpenDialogs' -- apps/storev2/src` → enumerates the shared dialog, Sheet consumers, and every competing navigation close owner.
 
 ### Step 2: Make `DialogHandler` own open/close/focus; remember the invoking trigger and remove only competing cleanup made obsolete
 
 Make `DialogHandler` own open/close/focus; remember the invoking trigger and remove only competing cleanup made obsolete. Guard delayed close against reopen.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/storev2 check-types && bun run lint && ! git grep -n 'setAttribute("open"' -- apps/storev2/src/components/starwind/dialog/Dialog.astro` → checks exit 0 and shared dialog open no longer bypasses native modal behavior.
 
 ### Step 3: Browser-check menu and Sheet under normal/reduced motion, keyboard and navigation
 
 Browser-check menu and Sheet under normal/reduced motion, keyboard and navigation.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Supported mobile Chrome and Safari (or approved device emulation), storefront route with menu and filter Sheet, normal and reduced-motion settings.
 
-## Real-system proof plan
+**Bounded procedure:** For each browser/motion mode: open, Tab/Shift-Tab, Escape, backdrop close, button close, reopen, and navigate with overlay open.
 
-Storefront `check-types` and root `lint` exit 0. Focus cannot tab behind; Escape/backdrop/button close once; focus returns when trigger remains connected; no scroll lock/backdrop survives navigation at 390px and desktop.
+**Machine-observable expected result:** Focus never reaches page behind modal; close occurs once; focus returns when trigger exists; no backdrop/scroll lock/console error remains after navigation.
+
+**Cleanup:** No data cleanup; close the test tabs and retain only sanitized browser observations.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

@@ -22,12 +22,13 @@ Category and brand routes parse page text loosely and disagree on empty/out-of-r
 
 ## Current state
 
-Category route `:16-18`:
+**Baseline source:** `apps/storev2/src/pages/products/category/[slug]/[page].astro:16-18`
+
 ```ts
 const { slug, page: pageParam } = Astro.params;
 const page = Number.parseInt(pageParam!, 10);
+
 ```
-Brand checks missing params but uses the same loose parse.
 
 ### Domain and repository rule
 
@@ -78,23 +79,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner chooses leading-zero, empty-catalog, and invalid/past-end destination policy.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'Number.parseInt\(pageParam|totalPages|Astro.redirect\("/404' -- apps/storev2/src/pages/products packages/api/src/routers/store/product.ts` → lists both category/brand parsers and existing bounds/404 rules; record leading-zero and empty-catalog decisions.
 
 ### Step 2: Implement/reuse a full positive-integer parser in both routes and apply the same past-end rule
 
 Implement/reuse a full positive-integer parser in both routes and apply the same past-end rule.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/storev2 check-types && bun run lint` → both exit 0; both route files import/use the same strict parser or contain byte-identical validation logic.
 
 ### Step 3: Use browser/curl on known disposable/read-only category and brand URLs for valid, zero, malformed, partial, and past-end pages
 
 Use browser/curl on known disposable/read-only category and brand URLs for valid, zero, malformed, partial, and past-end pages.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Running staging storefront with one known non-empty category and brand and known total pages; no writes required.
 
-## Real-system proof plan
+**Bounded procedure:** Request valid page 1, zero, negative, alphabetic, partial numeric, decimal, leading-zero, and past-end URLs for both route families using `curl -sS -o /dev/null -D - <URL>`.
 
-Storefront `check-types` and root `lint` exit 0. Valid pages render; rejected inputs follow the approved response before avoidable Product API work; no customer-facing 500 occurs.
+**Machine-observable expected result:** Valid in-range requests render; every rejected form has the approved status/location and no 500; pre-query invalid forms produce no Product API request in request logs.
+
+**Cleanup:** No data cleanup; remove only temporary response-header files.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

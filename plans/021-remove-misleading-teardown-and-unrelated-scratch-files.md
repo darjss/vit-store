@@ -22,7 +22,17 @@ The root `destroy` alias implies repository-wide teardown while its graph exclud
 
 ## Current state
 
-`package.json` exposes `"destroy": "turbo destroy"`; `turbo.json:35-38` gives `server#destroy` only admin/storefront dependencies. `bts.jsonc` and `temp-design.md` are tracked scratch artifacts.
+**Baseline source:** `turbo.json:32-38`
+
+```json
+			"dependsOn": ["server#deploy"],
+			"cache": false
+		},
+		"server#destroy": {
+			"dependsOn": ["admin#destroy", "storev2#destroy"],
+			"cache": false
+		},
+```
 
 ### Domain and repository rule
 
@@ -75,23 +85,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner checks recovery/deployment docs and archival need for each artifact.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'bun run destroy|turbo destroy|bts\.jsonc|temp-design\.md' -- ':!node_modules'; bunx turbo run destroy --dry=json > /tmp/destroy-graph.json` → references are enumerated and dry-run JSON is created without executing teardown; record runbook/archive ownership.
 
 ### Step 2: Remove the root alias and stale references; retain/document only existing app-specific commands
 
 Remove the root alias and stale references; retain/document only existing app-specific commands. Delete scratch files only with approval.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bunx turbo run destroy --dry=json > /tmp/destroy-graph-after.json && git ls-files bts.jsonc temp-design.md` → dry-run exits 0 without teardown and `git ls-files` prints nothing; `git grep` finds no stale root alias documentation.
 
 ### Step 3: Use only the repository-supported Turbo dry-run mode; never execute destroy
 
 Use only the repository-supported Turbo dry-run mode; never execute destroy.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Owner approval for runbooks/archive and Turbo available; destructive execution prohibited.
 
-## Real-system proof plan
+**Bounded procedure:** Run only `bunx turbo run destroy --dry=json`, inspect task names, and search removed alias/artifacts.
 
-`git grep` finds no stale alias/artifact reference; dry-run lists intended existing tasks without execution; `git ls-files bts.jsonc temp-design.md` is empty.
+**Machine-observable expected result:** Dry run executes nothing and lists existing app-specific tasks; no root alias or scratch file/reference remains.
+
+**Cleanup:** Delete `/tmp/destroy-graph*.json`; do not invoke any destroy task.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

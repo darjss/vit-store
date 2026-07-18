@@ -22,7 +22,17 @@ Four shared files duplicate API-owned contracts or only pass exports through, an
 
 ## Current state
 
-`packages/shared/src/index.ts:1-9` exports order/payment domain pass-throughs and `types`. The pass-through files only re-export root constants/types; Messenger/integration interfaces have no tracked import.
+**Baseline source:** `packages/shared/src/index.ts:1-7`
+
+```ts
+export * from "./cache";
+export * from "./constants";
+export * from "./domain/order";
+export * from "./domain/payment";
+export * from "./domain/product";
+export * from "./order-status";
+export * from "./schema";
+```
 
 ### Domain and repository rule
 
@@ -76,23 +86,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inspect publication metadata, release references, and all tracked/external documented consumers. Search every exported symbol/path.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'domain/(order|payment)|DetailedOrderNotificationInput|SearchProductResult|PostHogConfig|SmsGatewayConfig' -- ':!code-issues.json' ':!node_modules'` → no live import of the four shared candidates; any external/package consumer blocks deletion.
 
 ### Step 2: If no consumer exists, delete files/exports and only manifest entries now proven unused
 
 If no consumer exists, delete files/exports and only manifest entries now proven unused.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && bun run build && ! git grep -n -E 'domain/(order|payment)|DetailedOrderNotificationInput|SearchProductResult' -- packages/shared/src` → checks exit 0 and removed duplicate paths/symbols are absent from shared source.
 
 ### Step 3: Run frozen dependency resolution only if operator permits existing environment use, then static/build checks
 
 Run frozen dependency resolution only if operator permits existing environment use, then static/build checks.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Read-only package publication/consumer inventory and clean existing dependency environment.
 
-## Real-system proof plan
+**Bounded procedure:** Confirm no external consumer, then run static/build checks and import the retained shared entrypoints from their real application consumers.
 
-`git grep` finds no removed import/symbol; `bun run check-types` and `bun run build` exit 0. No active exports or dependencies are accidentally removed.
+**Machine-observable expected result:** Removed paths fail repository search while retained API/shared imports resolve and applications build.
+
+**Cleanup:** No data cleanup; remove any temporary consumer-inventory file outside the commit.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

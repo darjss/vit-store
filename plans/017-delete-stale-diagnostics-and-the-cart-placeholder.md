@@ -22,14 +22,18 @@ Unlinked fixed audit/test/benchmark routes, benchmark procedures, an admin sandb
 
 ## Current state
 
-`packages/api/src/routers/store/cart.ts:5-12`:
+**Baseline source:** `packages/api/src/routers/store/cart.ts:5-12`
+
 ```ts
 export const cart = router({
-  hello: publicProcedure.input(v.object({ text: v.string() }))
-    .query(({ input }) => ({ greeting: `Hello ${input.text}` })),
-});
+	hello: publicProcedure
+		.input(v.object({ text: v.string() }))
+		.query(({ input }) => {
+			return {
+				greeting: `Hello ${input.text}`,
+			};
+		}),
 ```
-The benchmark/test/audit and sandbox files are route entries with direct benchmark callers.
 
 ### Domain and repository rule
 
@@ -89,23 +93,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Operator records last access and owner/runbook status for each surface without copying identifiers or Customer data.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'cart.hello|getProductBenchmark|runProductBenchmark|audit.astro|benchmark.astro|test.astro|sandbox' -- packages/api/src apps/admin/src apps/storev2/src` → inventories every accepted deletion surface and direct caller; append sanitized access-owner evidence before deletion.
 
 ### Step 2: If and only if unused/unowned, remove each route and direct server implementation; regenerate admin routes
 
 If and only if unused/unowned, remove each route and direct server implementation; regenerate admin routes. Preserve any surface with a live owner.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/admin build && bun run check-types && bun run lint && bun run build && ! git grep -n -E 'cart.hello|getProductBenchmark|runProductBenchmark' -- packages/api/src apps/admin/src apps/storev2/src` → the admin build regenerates routes, all checks exit 0, and accepted surfaces have no direct implementation/caller.
 
 ### Step 3: Check removed staging URLs/procedures are absent while health, catalog, and dashboard continue through real boundaries
 
 Check removed staging URLs/procedures are absent while health, catalog, and dashboard continue through real boundaries.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Sanitized access logs/runbooks and staging deployment; owner approval recorded for every accepted route/procedure.
 
-## Real-system proof plan
+**Bounded procedure:** Before deletion record last-use/owner result; after deployment request each removed URL/procedure and one retained health/catalog/dashboard path.
 
-Root `check-types`, `lint`, `build`, storefront `check-types`, and existing dead-code check exit 0 without new orphans. Removed routes return project not-found; retained health and linked flows work.
+**Machine-observable expected result:** Removed surfaces return project not-found/absent procedure; retained paths work; no accepted surface with live owner was deleted.
+
+**Cleanup:** No disposable data required; remove temporary sanitized access summaries after attaching approved evidence.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

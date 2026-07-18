@@ -22,15 +22,16 @@ Upload and operational write routes are mounted beside public routes, while the 
 
 ## Current state
 
-`apps/server/src/index.ts:118-123`:
+**Baseline source:** `apps/server/src/index.ts:118-123`
+
 ```ts
+app.route("/", healthRoutes);
 app.route("/admin", authRoutes);
 app.route("/upload", uploadRoutes);
 app.route("/webhooks", paymentRoutes);
 app.route("/webhooks", webhookRoutes);
 app.route("/admin", adminRoutes);
 ```
-`apps/admin/src/components/upload-button.tsx:25-30` calls `fetch(..., { method: "POST", body: formData })` without `credentials: "include"`.
 
 ### Domain and repository rule
 
@@ -81,23 +82,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inventory every route under the upload and operational mounts and identify public or machine callers from tracked code and read-only access/runbook evidence. Record the intended auth per route.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'app.route\("/(admin|upload|webhooks)|adminAuth|credentials:' -- apps/server/src apps/admin/src packages/api/src/lib/trpc.ts` → output names every protected/public mount, the existing admin-session helper, and the dashboard upload caller; record any non-User machine caller before editing.
 
 ### Step 2: If no public machine caller exists, apply the existing admin session mechanism before body parsing/write dispatch; keep public auth/webhook routes outside the gate
 
 If no public machine caller exists, apply the existing admin session mechanism before body parsing/write dispatch; keep public auth/webhook routes outside the gate.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/server check-types && bun run --cwd apps/admin check-types && git diff --check` → exit 0; the guard and credential change compile and the diff has no whitespace errors.
 
 ### Step 3: Send dashboard uploads with credentials and prove unsigned/signed behavior through the real staging boundary
 
 Send dashboard uploads with credentials and prove unsigned/signed behavior through the real staging boundary.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging server/dashboard URL, disposable signed-in User, synthetic image, and operator access to the staging object list.
 
-## Real-system proof plan
+**Bounded procedure:** Record object count/key prefix, then attempt the upload once without a session and once through the signed-in dashboard.
 
-With a synthetic image, unsigned staging upload returns 401 before any write. A signed-in disposable User can upload through the dashboard with the unchanged response and object behavior; remove the disposable object. `bun run check-types` and `bun run build` exit 0.
+**Machine-observable expected result:** Unsigned response is 401 before object count changes; signed request returns the unchanged response shape and creates exactly one disposable object.
+
+**Cleanup:** Delete that object through the existing staging storage workflow and confirm the count returns to baseline.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

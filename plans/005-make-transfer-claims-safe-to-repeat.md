@@ -22,12 +22,18 @@ A replayed transfer claim currently performs an unconditional Payment status wri
 
 ## Current state
 
-`packages/api/src/queries/payments.ts:530-537`:
+**Baseline source:** `packages/api/src/queries/payments.ts:530-538`
+
 ```ts
-async updatePaymentStatus(paymentNumber: string, status: PaymentStatus) {
-  return db().update(PaymentsTable).set({ status })
-    .where(eq(PaymentsTable.paymentNumber, paymentNumber)).returning();
-}
+		async updatePaymentStatus(
+			paymentNumber: string,
+			status: PaymentStatusType,
+		) {
+			await db()
+				.update(PaymentsTable)
+				.set({ status })
+				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+		},
 ```
 
 ### Domain and repository rule
@@ -82,23 +88,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner chooses the Customer-facing result for claims against `success` or `failed`; record it before editing.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'updatePaymentStatus|claimTransferPaid|confirmPaymentAndNotify|sendTransferClaimedNotification' -- packages/api apps/agent` → enumerates claim writers, alerts, and the separate confirmation boundary; record the approved closed-Payment response.
 
 ### Step 2: Implement one conditional transition with outcomes such as changed/already-claimed/closed; update callers without merging their distinct behavior
 
 Implement one conditional transition with outcomes such as changed/already-claimed/closed; update callers without merging their distinct behavior.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && git grep -n 'confirmPaymentAndNotify' -- packages/api apps/agent` → typecheck exits 0 and output contains confirmation callers only, never the Messenger claim handler.
 
 ### Step 3: Run focused Messenger/payment proof and repeat the same disposable claim
 
 Run focused Messenger/payment proof and repeat the same disposable claim.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Configured non-production Payment/Messenger environment, one disposable pending transfer Payment, alert sink visible to operator, and approved closed-state response.
 
-## Real-system proof plan
+**Bounded procedure:** Invoke the same real claim boundary twice, then repeat against disposable success and failed Payments.
 
-`bun run check-types` exits 0. Two deliveries create one transition and one Admin alert; success/failed Payments stay unchanged; no stock confirmation occurs. Use `bun run --cwd apps/agent payment:proof` if its environment prerequisites are configured.
+**Machine-observable expected result:** Pending changes once and emits one Admin alert; replay reports approved idempotent result; closed Payments remain unchanged and no stock confirmation occurs.
+
+**Cleanup:** Remove disposable Payments/alerts through existing non-production workflow; do not touch real transfer records.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

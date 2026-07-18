@@ -132,7 +132,7 @@ Make bank-transfer claims repeat-safe while preserving the distinction between a
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Choose the Customer-facing result when a transfer claim reaches a closed Payment.
 
 ---
 
@@ -154,7 +154,7 @@ Fail paid Order edits atomically when any required stock transition cannot be ap
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Decide whether Users have an intentional, explicitly audited negative-stock override.
 
 ---
 
@@ -198,7 +198,7 @@ Define the Customer-facing meaning of Featured and New, then apply the same rule
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Define New ordering and its deterministic tie-break, and confirm Featured total semantics.
 
 ---
 
@@ -264,7 +264,7 @@ Apply one approved validation and out-of-range policy to category and brand cata
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Choose leading-zero and empty-catalog handling and the response for invalid or past-end pages.
 
 ---
 
@@ -308,7 +308,7 @@ Preserve prior Product links under an approved slug-history and retention policy
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Decide whether slug history is authoritative for redirects, plus retention and concurrent-edit policy.
 
 ---
 
@@ -331,6 +331,7 @@ Centralize QPay invoice creation so eager checkout preparation and fallback use 
 ## Blocked by
 
 - Draft `child-004`
+- Information gate: Confirm eager/fallback persistence ordering and the approved Worker-lifecycle boundary for non-fatal eager work.
 
 ---
 
@@ -352,7 +353,7 @@ Attempt independent restock and Payment-notification scheduled work on every tri
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Choose whether either job failure rejects the overall scheduled invocation after both jobs settle.
 
 ---
 
@@ -462,7 +463,7 @@ Stop tracking reproducible quality output and a development log, and send future
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Confirm no external dashboard or runbook owns the generated reports or development log.
 
 ---
 
@@ -484,7 +485,7 @@ Remove an ambiguous repository-wide teardown alias and two unowned scratch artif
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Confirm no recovery/runbook or archive owner needs the root teardown alias or scratch artifacts.
 
 ---
 
@@ -506,7 +507,7 @@ Remove manifest commands that point to missing targets or obsolete workspace nam
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Confirm no external operator runbook depends on each broken command name or workspace alias.
 
 ---
 
@@ -529,6 +530,7 @@ Choose and document one proven workspace package-resolution model across all app
 ## Blocked by
 
 - Draft `child-018`
+- Information gate: Choose one candidate source-or-built workspace resolution model after recording every application consumer.
 
 ---
 
@@ -550,7 +552,7 @@ Resolve ownership of the secondary logger and its remaining ingestion workflow b
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Identify the ingestion workflow owner and any external parser of its structured logger output.
 
 ---
 
@@ -594,7 +596,7 @@ Decide whether cache maintenance remains supported; if retained, require an expl
 
 ## Blocked by
 
-None — can start immediately
+- Information gate: Decide whether cache maintenance remains owned and, if retained, which explicit environments and key owner are supported.
 
 ---
 

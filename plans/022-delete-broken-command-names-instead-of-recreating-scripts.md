@@ -22,7 +22,19 @@ Manifests advertise commands whose local targets are absent and workspace aliase
 
 ## Current state
 
-Root `package.json:47-55` includes script-backed commands such as `start:dev`, Vit extraction/comparison, and brand-logo scraping; `dev:native`/`dev:web` use workspace names absent from the current inventory.
+**Baseline source:** `package.json:47-55`
+
+```json
+		"db:docker:up": "docker-compose up -d",
+		"db:docker:down": "docker-compose down",
+		"start:dev": "./start-dev.sh",
+		"vit:extract": "bun scripts/extract-vit-products.ts",
+		"vit:compare": "bun scripts/compare-extracted-products-to-db.ts",
+		"brand-logos:scrape": "bun scripts/scrape-missing-brand-logos.ts",
+		"dead-code": "npx fallow dead-code",
+		"health": "npx fallow health",
+		"dupes": "npx fallow dupes",
+```
 
 ### Domain and repository rule
 
@@ -75,23 +87,38 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inventory every local target and Turbo/workspace filter; check README, runbooks, and external workflows.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `python3 - <<'PY'
+import json, pathlib
+p=json.load(open('package.json'))
+for n,c in p['scripts'].items():
+ print(n, c)
+PY` plus `git grep -n -E 'start:dev|vit:extract|vit:compare|brand-logos:scrape|dev:native|dev:web' -- README.md package.json apps packages docs` → complete command/consumer inventory; record external runbook ownership.
 
 ### Step 2: Owner confirms no external runbook requires each broken alias; remove it and its stale documentation
 
 Owner confirms no external runbook requires each broken alias; remove it and its stale documentation.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `python3 - <<'PY'
+import json, pathlib, re
+for manifest in [pathlib.Path('package.json'), *pathlib.Path('apps').glob('*/package.json'), *pathlib.Path('packages').glob('*/package.json')]:
+ p=json.load(open(manifest))
+ for name, command in p.get('scripts', {}).items():
+  for target in re.findall(r'(?:bun|bash|sh)\s+([^ ]+\.(?:ts|js|sh))|^(\./[^ ]+)', command):
+   value=next(part for part in target if part)
+   print(manifest, name, value, (manifest.parent/value).exists())
+PY` → every retained local target line ends `True`; run `bunx turbo run dev --dry=json --filter=<retained-name>` and confirm each retained filter resolves only its intended workspace.
 
 ### Step 3: Dry-run retained workspace filters and repeat an exact target-existence scan
 
 Dry-run retained workspace filters and repeat an exact target-existence scan.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Owner answer for external runbooks and repository manifests; no command execution that starts servers.
 
-## Real-system proof plan
+**Bounded procedure:** Run target-existence scan and Turbo dry-runs for retained aliases, then compare README/runbook references.
 
-Target scan reports no missing local files; retained filters select intended single workspaces; `git grep` has no stale removed command documentation.
+**Machine-observable expected result:** Every retained file target exists, every retained filter selects intended workspace, and removed names have no stale docs.
+
+**Cleanup:** Delete temporary inventory output; no application data created.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

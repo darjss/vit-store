@@ -22,13 +22,22 @@ Featured browse filtering and its count use different inputs, while New has no e
 
 ## Current state
 
-`packages/api/src/queries/products/store.ts:673-697`:
+**Baseline source:** `packages/api/src/queries/products/store.ts:673-684`
+
 ```ts
-sortField = "stock";
-if (listType === "featured") conditions.push(eq(ProductsTable.isFeatured, true));
-if (listType === "discount") conditions.push(gt(ProductsTable.discount, 0));
+				listType,
+				searchTerm,
+				sortField = "stock",
+				sortDirection = "desc",
+			requireStock = false,
+				minPrice,
+				maxPrice,
+			} = params;
+
+			// Build filter conditions
+			const conditions: (SQL<unknown> | undefined)[] = [];
+			if (requireStock) conditions.push(gt(ProductsTable.stock, 0));
 ```
-There is no `recent` condition; the paginated count input has no `listType`.
 
 ### Domain and repository rule
 
@@ -81,23 +90,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner defines New (including equal timestamps) and confirms Featured count semantics.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'listType|recent|isFeatured|getInfiniteProducts|getPaginatedProducts' -- packages/api/src apps/storev2/src` → lists every Featured/New list and count caller; record the approved New ordering and tie-break before editing.
 
 ### Step 2: Centralize list conditions/order and pass list choice through both API paths and the filter drawer
 
 Centralize list conditions/order and pass list choice through both API paths and the filter drawer.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && bun run lint && bun run --cwd apps/storev2 check-types` → all exit 0; inspect the diff to confirm one list-rule owner feeds both retrieval and count inputs.
 
 ### Step 3: Use disposable catalog Products to compare browse pages and counts in a real browser/API call
 
 Use disposable catalog Products to compare browse pages and counts in a real browser/API call.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging catalogue with disposable active Products: featured/non-featured and distinct/equal creation times; approved New rule.
 
-## Real-system proof plan
+**Bounded procedure:** Record expected IDs, use real API/browser to load Featured/New with filters and a second page, and record displayed totals.
 
-Root `check-types`/`lint` and storefront `check-types` exit 0. Featured excludes non-featured Products and its count matches; New follows the approved stable order across loaded pages.
+**Machine-observable expected result:** Featured contains only marked Products and total equals set; New follows approved order/tie-break without duplicate/missing IDs across pages.
+
+**Cleanup:** Remove/restore disposable Products and catalogue flags.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

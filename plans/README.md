@@ -60,6 +60,10 @@ These commands exist in baseline manifests; planning did not execute builds, ins
 
 Every plan states its real browser/API/Worker/Messenger/CLI proof. Environment credentials and operator approval are prerequisites and must never be printed. Destructive or remote-write commands are not verification.
 
+## Delivery validator
+
+Run `python3 plans/validate.py` from the repository root. Expected: exit 0 and a `PASS` line covering all 26 contiguous baseline excerpts, accepted/rejected/discussion sets, information gates, dependencies, JSON, Markdown links, rendered copy content, public safety, and plans-only scope.
+
 ## Existing-issue coordination
 
 No accepted audit ID appears in the 34 open issues inspected during recon. Adjacent work must be coordinated without claiming duplicates or closing/modifying issues:
