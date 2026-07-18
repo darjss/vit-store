@@ -121,27 +121,6 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
         }, 120);
     }
 
-    function closeOpenDialogs() {
-        document
-            .querySelectorAll<HTMLDialogElement>("dialog[open]")
-            .forEach((dialog) => {
-                dialog.close();
-                dialog.dataset.state = "closed";
-            });
-
-        document
-            .querySelectorAll<HTMLElement>(".starwind-dialog-backdrop")
-            .forEach((backdrop) => {
-                backdrop.classList.add("hidden");
-                backdrop.dataset.state = "closed";
-            });
-
-        document.body.classList.remove("overflow-hidden");
-        if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-        }
-    }
-
     document.addEventListener("astro:before-preparation", () => {
         if (loadingBarHideTimer) {
             window.clearTimeout(loadingBarHideTimer);
@@ -149,8 +128,6 @@ const { title, description, image, imageAlt, noindex, nofollow, canonical } = As
         if (loadingBarFallbackTimer) {
             window.clearTimeout(loadingBarFallbackTimer);
         }
-
-        closeOpenDialogs();
 
         if (prefersReducedMotion.matches) {
             return;

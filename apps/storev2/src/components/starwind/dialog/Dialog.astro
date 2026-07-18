@@ -32,11 +32,13 @@ const { class: className, ...rest } = Astro.props;
     private closeButtons: HTMLButtonElement[] = [];
     private backdrop: HTMLElement | null = null;
     private dialogId: string;
-    /**
-     * The duration of the animation in milliseconds. This is used to calculate the
-     * duration of close animation before hiding the dialog and backdrop
-     */
     private animationDuration: number;
+    private closeTimer: number | undefined;
+    private activeTrigger: HTMLElement | null = null;
+    private scrollPosition = 0;
+    private bodyPosition = "";
+    private bodyTop = "";
+    private bodyWidth = "";
 
     constructor(dialogWrapper: HTMLElement, dialogNumber: number) {
       this.dialog = dialogWrapper.querySelector("dialog");
@@ -114,12 +116,13 @@ const { class: className, ...rest } = Astro.props;
     }
 
     private setupAccessibility(dialogNumber: number): void {
-      // get the first heading element in the dialog
+      if (this.dialog?.hasAttribute("aria-label") || this.dialog?.hasAttribute("aria-labelledby")) {
+        return;
+      }
+
       const firstHeading = this.dialog?.querySelector("h1, h2, h3, h4, h5, h6");
       if (firstHeading) {
-        // create a unique ID for the heading
-        firstHeading.id = `starwind-dialog${dialogNumber}-heading`;
-        // set the aria-labelledby attribute to the first heading element
+        firstHeading.id ||= `starwind-dialog${dialogNumber}-heading`;
         this.dialog?.setAttribute("aria-labelledby", firstHeading.id);
       }
     }
@@ -157,7 +160,7 @@ const { class: className, ...rest } = Astro.props;
       // Add click listeners to all triggers
       this.triggers.forEach((trigger) => {
         trigger.addEventListener("click", () => {
-          this.open();
+          this.open(trigger);
         });
       });
 
@@ -191,17 +194,41 @@ const { class: className, ...rest } = Astro.props;
         }
       });
 
-      // Handle escape key
-      this.dialog.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          // prevent default dialog closing behavior so we can add closing animation
-          e.preventDefault();
-          // Only close if this is the topmost dialog
-          const openDialogs = document.querySelectorAll("dialog[open]");
-          if (openDialogs.length > 0 && openDialogs[openDialogs.length - 1] === this.dialog) {
-            this.close();
-          }
+      this.dialog.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab" || !this.dialog) return;
+        const focusableElements = Array.from(
+          this.dialog.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => element.getClientRects().length > 0);
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+        if (!first || !last) {
+          event.preventDefault();
+          this.dialog.focus();
+        } else if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
         }
+      });
+
+      this.dialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        const openDialogs = document.querySelectorAll("dialog[open]");
+        if (openDialogs.length > 0 && openDialogs[openDialogs.length - 1] === this.dialog) {
+          this.close();
+        }
+      });
+
+      this.dialog.addEventListener("close", () => {
+        this.finishClose(true);
+      });
+
+      document.addEventListener("astro:before-preparation", () => {
+        this.close(true, false);
       });
 
       // Intercept form submissions to handle dialog close
@@ -227,29 +254,89 @@ const { class: className, ...rest } = Astro.props;
       });
     }
 
-    private open(): void {
+    private open(trigger: HTMLElement): void {
       if (!this.dialog || !this.backdrop) return;
-      this.dialog.setAttribute("open", "");
+      if (this.closeTimer !== undefined) {
+        window.clearTimeout(this.closeTimer);
+        this.closeTimer = undefined;
+      }
+
+      this.activeTrigger = trigger;
+      if (!document.querySelector("dialog[open]")) {
+        this.scrollPosition = window.scrollY;
+        this.bodyPosition = document.body.style.position;
+        this.bodyTop = document.body.style.top;
+        this.bodyWidth = document.body.style.width;
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${this.scrollPosition}px`;
+        document.body.style.width = "100%";
+      }
+      document.documentElement.classList.add("overflow-hidden");
       document.body.classList.add("overflow-hidden");
       this.backdrop.classList.remove("hidden");
       this.backdrop.dataset.state = "open";
       this.dialog.dataset.state = "open";
+      this.dialog.setAttribute("aria-modal", "true");
+      if (!this.dialog.open) {
+        this.dialog.showModal();
+      }
     }
 
-    private close(): void {
-      if (!this.dialog || !this.backdrop) return;
+    private close(immediate = false, restoreFocus = true): void {
+      if (
+        !this.dialog ||
+        !this.backdrop ||
+        (!this.dialog.open && this.closeTimer === undefined)
+      ) return;
+      if (this.closeTimer !== undefined) {
+        window.clearTimeout(this.closeTimer);
+        this.closeTimer = undefined;
+      }
+
       this.dialog.dataset.state = "closed";
       this.backdrop.dataset.state = "closed";
+      if (!restoreFocus) {
+        this.activeTrigger = null;
+      }
 
-      // Wait for animation to finish before hiding backdrop
-      setTimeout(() => {
-        this.backdrop?.classList.add("hidden");
-        this.dialog?.close();
-        const stillOpen = document.querySelectorAll("dialog[open]").length;
-        if (stillOpen === 0) {
-          document.body.classList.remove("overflow-hidden");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (immediate || reduceMotion) {
+        if (this.dialog.open) {
+          this.dialog.close();
+        } else {
+          this.finishClose(restoreFocus);
+        }
+        return;
+      }
+
+      this.closeTimer = window.setTimeout(() => {
+        this.closeTimer = undefined;
+        if (this.dialog?.open) {
+          this.dialog.close();
+        } else {
+          this.finishClose(restoreFocus);
         }
       }, this.animationDuration);
+    }
+
+    private finishClose(restoreFocus: boolean): void {
+      this.backdrop?.classList.add("hidden");
+      this.backdrop?.setAttribute("data-state", "closed");
+      this.dialog?.setAttribute("data-state", "closed");
+      this.dialog?.removeAttribute("aria-modal");
+      if (!document.querySelector("dialog[open]")) {
+        document.documentElement.classList.remove("overflow-hidden");
+        document.body.classList.remove("overflow-hidden");
+        document.body.style.position = this.bodyPosition;
+        document.body.style.top = this.bodyTop;
+        document.body.style.width = this.bodyWidth;
+        window.scrollTo(0, this.scrollPosition);
+      }
+
+      if (restoreFocus && this.activeTrigger?.isConnected) {
+        this.activeTrigger.focus();
+      }
+      this.activeTrigger = null;
     }
   }
 
