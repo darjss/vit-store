@@ -142,13 +142,16 @@ export const payment = router({
 					outcome: claim.outcome,
 				};
 			} catch (e) {
+				if (e instanceof TRPCError) {
+					throw e;
+				}
 				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
-					event: "payment.confirm_failed",
+					event: "payment.transfer_claim_failed",
 					paymentNumber: input.paymentNumber,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to confirm payment",
+					message: "Failed to claim transfer payment",
 					cause: e,
 				});
 			}
