@@ -11,7 +11,7 @@ import {
 import ProductForm from "@/components/product/product-form";
 import { trpc } from "@/utils/trpc";
 
-export const Route = createFileRoute("/products/add")({
+export const Route = createFileRoute("/_dash/products/add")({
 	component: RouteComponent,
 });
 
