@@ -24,7 +24,13 @@ export interface PaymentHandlerDeps {
 	) => Promise<{ amount: number; reference: string }>;
 	// Records the transfer CLAIM (status → customer_claimed_paid + admin notify).
 	// NOT a confirmation. Backed by `payment.claimTransferPaid`.
-	claimTransfer: (ref: PaymentRef) => Promise<unknown>;
+	claimTransfer: (ref: PaymentRef) => Promise<{
+		outcome:
+			| "changed"
+			| "already_claimed"
+			| "already_confirmed"
+			| "refused";
+	}>;
 	// Sends the bank details text PLUS the `Шилжүүлсэн` claim button.
 	sendBankDetails: (text: string, ref: PaymentRef) => Promise<unknown>;
 	// Plain text reply (the claim acknowledgement).
@@ -59,7 +65,17 @@ export const handleTransferClaim = async (
 	ref: PaymentRef,
 	deps: PaymentHandlerDeps,
 ): Promise<void> => {
-	await deps.claimTransfer(ref);
+	const claim = await deps.claimTransfer(ref);
+	if (claim.outcome === "already_confirmed") {
+		await deps.sendText("Төлбөр аль хэдийн баталгаажсан байна.");
+		return;
+	}
+	if (claim.outcome === "refused") {
+		await deps.sendText(
+			"Амжилтгүй болсон төлбөр дээр шилжүүлгийн мэдэгдэл хүлээн авах боломжгүй.",
+		);
+		return;
+	}
 	await deps.setTransferStatus?.("transfer_claimed");
 	await deps.sendText(TRANSFER_CLAIM_ACK_MESSAGE);
 };
