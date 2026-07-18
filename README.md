@@ -77,9 +77,9 @@ bun dev
 Or run a single app:
 
 ```bash
-bun dev:web      # storev2
-bun dev:server   # server
-bun dev:native   # admin
+bunx turbo dev --filter=storev2
+bun dev:server
+bunx turbo dev --filter=admin
 ```
 
 The agent runs via Wrangler locally:
@@ -115,7 +115,6 @@ bun deploy          # turbo deploy (server first, then frontends)
 | `bun knip` | Dead-code/dependency analysis |
 | `bun quality` | `check-types` + `fallow dead-code` + `fallow health` |
 | `bun vit:extract` / `bun vit:compare` | Scrape/compare vit product catalog |
-| `bun brand-logos:scrape` | Scrape missing brand logos |
 
 ## Project structure
 
