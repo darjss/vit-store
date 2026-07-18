@@ -311,7 +311,10 @@ export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
 // agent can read admin data (e.g. pending orders) without a browser session.
 // Token comparison is constant-time (SHA-256 both sides, compare digests) to
 // prevent timing side-channel attacks on the shared secret.
-const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
+export const timingSafeEqual = async (
+	a: string,
+	b: string,
+): Promise<boolean> => {
 	const encoder = new TextEncoder();
 	const [hashA, hashB] = await Promise.all([
 		crypto.subtle.digest("SHA-256", encoder.encode(a)),

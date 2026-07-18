@@ -67,6 +67,7 @@ export {
 	customerProcedure,
 	publicProcedure,
 	router,
+	timingSafeEqual,
 } from "~/lib/trpc";
 export * from "~/lib/types";
 export * from "~/lib/utils";
