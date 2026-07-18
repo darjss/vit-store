@@ -1,5 +1,7 @@
-import type { ServerHonoEnv } from "../lib/logging";
+import { timingSafeEqual } from "@vit/api";
 import type { ImageUrlArray } from "@vit/shared";
+import { requireAdminSession } from "../lib/admin-session";
+import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
 const app = new Hono<ServerHonoEnv>();
@@ -26,6 +28,17 @@ function sanitizePrefix(prefix: string | undefined): string {
         .replace(/^\/+|\/+$/g, "")
         .slice(0, 120);
 }
+app.use("/products", requireAdminSession);
+app.use("/brands", requireAdminSession);
+app.use("/images/urls", async (c, next) => {
+    const expected = c.env.IMAGE_UPLOAD_TOKEN;
+    const provided = c.req.header("X-Image-Upload-Token");
+    if (expected && provided && (await timingSafeEqual(expected, provided))) {
+        c.get("log").set({ user_type: "machine" });
+        return next();
+    }
+    return requireAdminSession(c, next);
+});
 app.post("/products", async (c) => {
     const log = c.get("log");
     log.set({ user_type: "admin", operation: "upload.products" });

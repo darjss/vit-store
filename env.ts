@@ -53,6 +53,7 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: requiredString(),
 			DELIVERY_SENDERID: requiredString(),
 			ADMIN_BOT_TOKEN: v.optional(v.string()),
+			IMAGE_UPLOAD_TOKEN: requiredString(),
 		},
 		runtimeEnvStrict: {
 			PLANETSCALE_HOST: runtimeEnv.PLANETSCALE_HOST,
@@ -97,6 +98,7 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: runtimeEnv.DELIVERY_PASSWORD,
 			DELIVERY_SENDERID: runtimeEnv.DELIVERY_SENDERID,
 			ADMIN_BOT_TOKEN: runtimeEnv.ADMIN_BOT_TOKEN,
+			IMAGE_UPLOAD_TOKEN: runtimeEnv.IMAGE_UPLOAD_TOKEN,
 		},
 	});
 };
