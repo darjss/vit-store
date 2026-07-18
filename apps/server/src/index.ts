@@ -5,7 +5,7 @@ import {
 	finalizeCatalogCacheHeaders,
 	storeRouter,
 } from "@vit/api";
-
+import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
@@ -126,7 +126,34 @@ app.route("/admin", adminRoutes);
 export default {
 	fetch: app.fetch,
 	scheduled: async (_controller: ScheduledController, env: Env) => {
-		await runRestockNotifier(env);
-		await runPaymentNotificationOutbox();
+		const log = createLogger({
+			operation: "scheduled.jobs",
+			request_id: crypto.randomUUID(),
+			user_type: "system",
+		});
+		const restock = runRestockNotifier(env);
+		const paymentNotifications = runPaymentNotificationOutbox();
+		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
+			[restock, paymentNotifications],
+		);
+		const jobs = {
+			restock_notifier: restockResult.status,
+			payment_notification_outbox: paymentNotificationResult.status,
+		};
+		const failedJobs = Object.entries(jobs)
+			.filter(([, outcome]) => outcome === "rejected")
+			.map(([name]) => name);
+
+		if (failedJobs.length > 0) {
+			log.error(new Error("Scheduled jobs failed"), {
+				event: "scheduled.jobs_complete",
+				jobs,
+			});
+			log.emit();
+			throw new Error(`Scheduled jobs failed: ${failedJobs.join(", ")}`);
+		}
+
+		log.info("scheduled.jobs_complete", { jobs });
+		log.emit();
 	},
 };
