@@ -5,7 +5,7 @@ import {
 	finalizeCatalogCacheHeaders,
 	storeRouter,
 } from "@vit/api";
-
+import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
@@ -28,6 +28,30 @@ const DEFAULT_CORS_ORIGINS = [
 	"http://localhost:5173",
 	"https://admin.vitstore.dev",
 ];
+
+function scheduledJobFailure(
+	job: string,
+	result: PromiseSettledResult<unknown>,
+) {
+	if (result.status === "fulfilled") return;
+	const error =
+		result.reason instanceof Error
+			? result.reason
+			: Object.assign(new Error(), { name: "NonErrorRejection" });
+	const projected = operatorTrpcError(error) as Error & {
+		code?: string | number;
+		cause?: unknown;
+	};
+	return {
+		job,
+		error: {
+			name: projected.name,
+			code: projected.code,
+			stack: projected.stack,
+			cause: projected.cause,
+		},
+	};
+}
 
 const app = new Hono<ServerHonoEnv>();
 
@@ -126,7 +150,41 @@ app.route("/admin", adminRoutes);
 export default {
 	fetch: app.fetch,
 	scheduled: async (_controller: ScheduledController, env: Env) => {
-		await runRestockNotifier(env);
-		await runPaymentNotificationOutbox();
+		const log = createLogger({
+			operation: "scheduled.jobs",
+			request_id: crypto.randomUUID(),
+			user_type: "system",
+		});
+		const restock = runRestockNotifier(env);
+		const paymentNotifications = runPaymentNotificationOutbox();
+		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
+			[restock, paymentNotifications],
+		);
+		const jobs = {
+			restock_notifier: restockResult.status,
+			payment_notification_outbox: paymentNotificationResult.status,
+		};
+		const failures = [
+			scheduledJobFailure("restock_notifier", restockResult),
+			scheduledJobFailure(
+				"payment_notification_outbox",
+				paymentNotificationResult,
+			),
+		].filter((failure) => failure !== undefined);
+
+		if (failures.length > 0) {
+			log.error(new Error("Scheduled jobs failed"), {
+				event: "scheduled.jobs_complete",
+				jobs,
+				failures,
+			});
+			log.emit();
+			throw new Error(
+				`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`,
+			);
+		}
+
+		log.info("scheduled.jobs_complete", { jobs });
+		log.emit();
 	},
 };
