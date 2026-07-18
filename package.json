@@ -54,7 +54,7 @@
 		"health": "npx fallow health",
 		"dupes": "npx fallow dupes",
 		"quality": "bun run check-types && npx fallow dead-code && npx fallow health",
-		"quality:json": "npx fallow dead-code --format json > code-issues.json && npx fallow health --format json > health-issues.json"
+		"quality:json": "mkdir -p .quality && (npx fallow dead-code --format json > .quality/code-issues.json || [ $? -eq 1 ]) && (npx fallow health --format json > .quality/health-issues.json || [ $? -eq 1 ])"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.80",
