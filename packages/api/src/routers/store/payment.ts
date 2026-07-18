@@ -1,22 +1,61 @@
 import { TRPCError } from "@trpc/server";
-import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import { paymentQueries } from "@vit/api/queries";
 import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
 import {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog";
-import { assertCanAccessPayment } from "~/lib/session/checkout-access";
-import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { kv } from "~/lib/kv";
 import {
 	checkQpayInvoice,
 	createQpayInvoice,
 	type InvoiceResponse,
 } from "~/lib/payments/qpay";
+import { assertCanAccessPayment } from "~/lib/session/checkout-access";
 import { publicProcedure, router } from "~/lib/trpc";
+
+export async function createAndStoreQpayInvoice(
+	paymentNumber: string,
+): Promise<InvoiceResponse> {
+	const payment =
+		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+	if (!payment) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "No payment found",
+		});
+	}
+	if (payment.status === "success") {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "ALREADY_PAID",
+		});
+	}
+
+	const isDev = process.env.NODE_ENV === "development";
+	const qpayResponse = await createQpayInvoice(
+		isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
+		paymentNumber,
+	);
+	await Promise.all([
+		kv().put(`QPAY:${paymentNumber}`, JSON.stringify(qpayResponse), {
+			expirationTtl: 3600,
+		}),
+		paymentQueries.store.changePaymentToQpay(
+			paymentNumber,
+			qpayResponse.invoice_id,
+		),
+	]);
+	await trackQpayInvoiceCreatedServerSide({
+		phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+		paymentNumber,
+	}).catch(() => {});
+	return qpayResponse;
+}
 
 async function sendTransferClaimAlert(paymentNumber: string) {
 	const paymentInfo =
@@ -421,43 +460,7 @@ export const payment = router({
 				if (responseFromKv) {
 					return JSON.parse(responseFromKv) as InvoiceResponse;
 				}
-				const payment = await paymentQueries.store.getPaymentInfoByNumber(
-					input.paymentNumber,
-				);
-				if (!payment) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "No payment found",
-					});
-				}
-				if (payment.status === "success") {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "ALREADY_PAID",
-					});
-				}
-				const isDev = process.env.NODE_ENV === "development";
-				const qpayResponse = await createQpayInvoice(
-					isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
-					input.paymentNumber,
-				);
-				const kvPromise = ctx.c.env.vitStoreKV.put(
-					`QPAY:${input.paymentNumber}`,
-					JSON.stringify(qpayResponse),
-					{
-						expirationTtl: 3600,
-					},
-				);
-				const dbPromise = paymentQueries.store.changePaymentToQpay(
-					input.paymentNumber,
-					qpayResponse.invoice_id,
-				);
-				await Promise.all([kvPromise, dbPromise]);
-				trackQpayInvoiceCreatedServerSide({
-					phone: payment.order.customerPhone?.toString() ?? input.paymentNumber,
-					paymentNumber: input.paymentNumber,
-				}).catch(() => {});
-				return qpayResponse;
+				return await createAndStoreQpayInvoice(input.paymentNumber);
 			} catch (e) {
 				if (e instanceof TRPCError) {
 					throw e;
