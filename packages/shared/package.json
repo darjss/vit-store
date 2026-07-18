@@ -10,14 +10,6 @@
 			"types": "./src/domain/product/index.ts",
 			"default": "./src/domain/product/index.ts"
 		},
-		"./domain/order": {
-			"types": "./src/domain/order/index.ts",
-			"default": "./src/domain/order/index.ts"
-		},
-		"./domain/payment": {
-			"types": "./src/domain/payment/index.ts",
-			"default": "./src/domain/payment/index.ts"
-		},
 		"./*": {
 			"types": "./src/*.ts",
 			"default": "./src/*.ts"
