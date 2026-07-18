@@ -77,10 +77,30 @@ const resolveStorefrontProductSort = ({
 	listType?: "featured" | "recent" | "discount";
 	sortField?: "price" | "stock" | "createdAt";
 	sortDirection?: "asc" | "desc";
-}) => ({
-	field: sortField ?? (listType === "recent" ? "createdAt" : "stock"),
-	direction: sortDirection ?? "desc",
-});
+}) => {
+	const field = sortField ?? (listType === "recent" ? "createdAt" : "stock");
+	const direction = sortDirection ?? "desc";
+	const column =
+		field === "price"
+			? ProductsTable.price
+			: field === "stock"
+				? ProductsTable.stock
+				: ProductsTable.createdAt;
+	const isAsc = direction === "asc";
+	const prioritizeStock = listType !== "recent" || sortField !== undefined;
+
+	return {
+		field,
+		column,
+		isAsc,
+		orderBy: [
+			...(prioritizeStock ? [inStockFirst] : []),
+			isAsc ? asc(column) : desc(column),
+			isAsc ? asc(ProductsTable.id) : desc(ProductsTable.id),
+		],
+		prioritizeStock,
+	};
+};
 
 const buildStorefrontProductConditions = ({
 	requireStock = false,
@@ -622,21 +642,6 @@ export const storeQueries = {
 				sortField,
 				sortDirection,
 			});
-			const sortColumn =
-				sort.field === "price"
-					? ProductsTable.price
-					: sort.field === "stock"
-						? ProductsTable.stock
-						: ProductsTable.createdAt;
-
-			const isAsc = sort.direction === "asc";
-			const orderByClauses = isAsc
-				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
-				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
-
-			// Build cursor condition for pagination. In-stock rank is the leading
-			// sort key (in-stock first, out-of-stock last), so it is encoded ahead
-			// of the sort value + id in the cursor and compared first here.
 			let cursorCondition: SQL<unknown> | undefined;
 			if (cursor) {
 				const [rankStr, sortValueStr, idStr] = cursor.split(",");
@@ -650,27 +655,35 @@ export const storeQueries = {
 					sortValue = new Date(sortValueStr);
 				}
 
-				const withinRank = isAsc
+				const withinSort = sort.isAsc
 					? or(
-							gt(sortColumn, sortValue),
-							and(eq(sortColumn, sortValue), gt(ProductsTable.id, cursorId)),
+							gt(sort.column, sortValue),
+							and(
+								eq(sort.column, sortValue),
+								gt(ProductsTable.id, cursorId),
+							),
 						)
 					: or(
-							lt(sortColumn, sortValue),
-							and(eq(sortColumn, sortValue), lt(ProductsTable.id, cursorId)),
+							lt(sort.column, sortValue),
+							and(
+								eq(sort.column, sortValue),
+								lt(ProductsTable.id, cursorId),
+							),
 						);
 
-				cursorCondition = or(
-					sql`${inStockRankExpr} < ${cursorInStock}`,
-					and(sql`${inStockRankExpr} = ${cursorInStock}`, withinRank),
-				);
+				cursorCondition = sort.prioritizeStock
+					? or(
+							sql`${inStockRankExpr} < ${cursorInStock}`,
+							and(sql`${inStockRankExpr} = ${cursorInStock}`, withinSort),
+						)
+					: withinSort;
 			}
 
 			const items = await db().query.ProductsTable.findMany({
 				limit,
 				columns: { ...storefrontCardColumns, createdAt: true },
 				where: and(...conditions, cursorCondition),
-				orderBy: orderByClauses,
+				orderBy: sort.orderBy,
 				with: storefrontCardRelations,
 			});
 
@@ -750,18 +763,6 @@ export const storeQueries = {
 				sortField,
 				sortDirection,
 			});
-			const sortColumn =
-				sort.field === "price"
-					? ProductsTable.price
-					: sort.field === "stock"
-						? ProductsTable.stock
-						: ProductsTable.createdAt;
-
-			const isAsc = sort.direction === "asc";
-			const orderByClauses = isAsc
-				? [inStockFirst, asc(sortColumn), asc(ProductsTable.id)]
-				: [inStockFirst, desc(sortColumn), desc(ProductsTable.id)];
-
 			const offset = (page - 1) * pageSize;
 
 			const [items, countResult] = await Promise.all([
@@ -770,7 +771,7 @@ export const storeQueries = {
 					offset,
 					columns: { ...storefrontCardColumns, createdAt: true },
 					where: and(...conditions),
-					orderBy: orderByClauses,
+					orderBy: sort.orderBy,
 					with: storefrontCardRelations,
 				}),
 				db()
