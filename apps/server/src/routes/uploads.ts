@@ -195,7 +195,7 @@ app.post("/brands", async (c) => {
 });
 app.post("/images/urls", async (c) => {
     const log = c.get("log");
-    log.set({ user_type: "admin", operation: "upload.urls" });
+    log.set({ operation: "upload.urls" });
     const startTime = Date.now();
     try {
         const uploadPrefix = sanitizePrefix(c.req.query("prefix"));
