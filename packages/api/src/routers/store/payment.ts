@@ -18,6 +18,25 @@ import {
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
 
+async function sendTransferClaimAlert(paymentNumber: string) {
+	const paymentInfo =
+		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+	if (!paymentInfo) return;
+	await sendTransferClaimedNotification({
+		paymentNumber,
+		customerPhone: paymentInfo.order.customerPhone,
+		address: paymentInfo.order.address,
+		notes: paymentInfo.order.notes,
+		total: paymentInfo.order.total,
+		products: paymentInfo.order.orderDetails.map((detail) => ({
+			name: detail.product.name,
+			quantity: detail.quantity,
+			price: detail.product.price,
+			imageUrl: detail.product.images[0]?.url,
+		})),
+	});
+}
+
 export const payment = router({
 	getPaymentByNumber: publicProcedure
 		.input(
@@ -96,54 +115,43 @@ export const payment = router({
 					input.paymentNumber,
 					input.checkoutToken,
 				);
-				await q.updatePaymentStatus(
-					input.paymentNumber,
-					"customer_claimed_paid",
-				);
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						await sendTransferClaimedNotification({
-							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
-						});
+				const claim = await q.claimTransferPaid(input.paymentNumber);
+				if (claim.outcome === "changed") {
+					try {
+						await sendTransferClaimAlert(input.paymentNumber);
+					} catch (notificationError) {
+						ctx.log.error(
+							notificationError instanceof Error
+								? notificationError
+								: new Error(String(notificationError)),
+							{
+								event: "payment.claim_notification_failed",
+								paymentNumber: input.paymentNumber,
+							},
+						);
 					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.confirm_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
 				}
-				ctx.log.info("payment.confirmed", {
+				ctx.log.info("payment.transfer_claimed", {
 					paymentNumber: input.paymentNumber,
 					provider: "transfer",
+					outcome: claim.outcome,
 				});
 				const payment = await q.getPaymentByNumber(input.paymentNumber);
-				return { orderNumber: payment?.order.orderNumber };
+				return {
+					orderNumber: payment?.order.orderNumber,
+					outcome: claim.outcome,
+				};
 			} catch (e) {
+				if (e instanceof TRPCError) {
+					throw e;
+				}
 				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
-					event: "payment.confirm_failed",
+					event: "payment.transfer_claim_failed",
 					paymentNumber: input.paymentNumber,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to confirm payment",
+					message: "Failed to claim transfer payment",
 					cause: e,
 				});
 			}
@@ -178,63 +186,54 @@ export const payment = router({
 				}
 
 				const orderNumber = payment.order.orderNumber;
+				const claim = await q.claimTransferPaid(input.paymentNumber);
 
-				if (payment.provider !== "transfer") {
-					await q.changePaymentToTransfer(input.paymentNumber);
-				}
-
-				if (payment.status !== "customer_claimed_paid") {
-					await q.updatePaymentStatus(
-						input.paymentNumber,
-						"customer_claimed_paid",
-					);
-				}
-
-				try {
-					const reconciler = getTransferReconciliationStub(
-						ctx.c.env,
-						input.paymentNumber,
-					);
-					await reconciler.start({ paymentNumber: input.paymentNumber });
-				} catch (reconciliationError) {
-					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
-						paymentNumber: input.paymentNumber,
-						error:
-							reconciliationError instanceof Error
-								? reconciliationError.message
-								: String(reconciliationError),
+				if (claim.outcome === "refused") {
+					throw new TRPCError({
+						code: "PRECONDITION_FAILED",
+						message: "Failed payments cannot be claimed",
 					});
 				}
 
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						await sendTransferClaimedNotification({
+				if (
+					claim.outcome === "changed" ||
+					claim.outcome === "already_claimed"
+				) {
+					if (payment.provider !== "transfer") {
+						await q.changePaymentToTransfer(input.paymentNumber);
+					}
+
+					try {
+						const reconciler = getTransferReconciliationStub(
+							ctx.c.env,
+							input.paymentNumber,
+						);
+						await reconciler.start({ paymentNumber: input.paymentNumber });
+					} catch (reconciliationError) {
+						ctx.log.warn("payment.transfer_reconciliation_start_failed", {
 							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
+							error:
+								reconciliationError instanceof Error
+									? reconciliationError.message
+									: String(reconciliationError),
 						});
 					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.transfer_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
+				}
+
+				if (claim.outcome === "changed") {
+					try {
+						await sendTransferClaimAlert(input.paymentNumber);
+					} catch (notificationError) {
+						ctx.log.error(
+							notificationError instanceof Error
+								? notificationError
+								: new Error(String(notificationError)),
+							{
+								event: "payment.transfer_notification_failed",
+								paymentNumber: input.paymentNumber,
+							},
+						);
+					}
 				}
 
 				try {
@@ -247,7 +246,7 @@ export const payment = router({
 					// Logging failure should not break the claim flow
 				}
 
-				return { orderNumber };
+				return { orderNumber, outcome: claim.outcome };
 			} catch (e) {
 				if (e instanceof TRPCError) {
 					throw e;
