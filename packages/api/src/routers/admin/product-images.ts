@@ -37,12 +37,20 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
         })),
     }))
         .mutation(async ({ ctx, input }) => {
+        const imageUploadToken = ctx.c.env.IMAGE_UPLOAD_TOKEN;
+        if (!imageUploadToken) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "IMAGE_UPLOAD_TOKEN is required for server image uploads",
+            });
+        }
         try {
             const imageUrls = input.images.map((image) => ({ url: image.url }));
             const response = await fetch(`${process.env.BACKEND_URL}/upload/images/urls`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "X-Image-Upload-Token": imageUploadToken,
                 },
                 body: JSON.stringify(imageUrls),
             });

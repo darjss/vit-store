@@ -54,6 +54,7 @@ type CliOptions = {
 	onlyProductId: number | null;
 	dryRun: boolean;
 	backendUrl: string | null;
+	imageUploadToken: string | null;
 };
 
 type MigrationResult =
@@ -93,6 +94,11 @@ const imageDecisionSchema = z.object({
 });
 
 const options = parseCliArgs(process.argv.slice(2));
+if (!options.dryRun && !options.imageUploadToken) {
+	throw new Error(
+		"IMAGE_UPLOAD_TOKEN is required in ignored local environment configuration",
+	);
+}
 const db = createLowConnectionDb(getDbUrl());
 
 const inputRows = JSON.parse(
@@ -120,7 +126,11 @@ await runPool(filteredRows, options.concurrency, async (row) => {
 		} catch {}
 	}
 
-	const result = await migrateProductImages(row, options.backendUrl);
+	const result = await migrateProductImages(
+		row,
+		options.backendUrl,
+		options.imageUploadToken,
+	);
 	await writeJsonAtomic(resultPath, result);
 });
 
@@ -173,6 +183,7 @@ console.log(
 async function migrateProductImages(
 	row: CreatedProductRow,
 	backendUrl: string | null,
+	imageUploadToken: string | null,
 ): Promise<MigrationResult> {
 	const product = await db.query.ProductsTable.findFirst({
 		where: and(
@@ -285,9 +296,15 @@ async function migrateProductImages(
 					"BACKEND_URL, BUN_PUBLIC_BACKEND_URL, or --backend-url is required for uploads.",
 			};
 		}
+		if (!imageUploadToken) {
+			throw new Error(
+				"IMAGE_UPLOAD_TOKEN is required in ignored local environment configuration",
+			);
+		}
 
 		const uploaded = await uploadUrlsToCdn(
 			backendUrl,
+			imageUploadToken,
 			product.slug,
 			rotatePrimaryFirst(keptSourceUrls, chosenPrimaryIndex),
 		);
@@ -419,6 +436,7 @@ async function selectProductImages(
 
 async function uploadUrlsToCdn(
 	backendUrl: string,
+	imageUploadToken: string,
 	slug: string,
 	urls: string[],
 ): Promise<UploadedResponse> {
@@ -429,6 +447,7 @@ async function uploadUrlsToCdn(
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
+				"X-Image-Upload-Token": imageUploadToken,
 			},
 			body: JSON.stringify(urls.map((url) => ({ url }))),
 		},
@@ -477,6 +496,7 @@ function parseCliArgs(args: string[]): CliOptions {
 	let onlyProductId: number | null = null;
 	let dryRun = false;
 	let backendUrl = getBackendUrl();
+	const imageUploadToken = getImageUploadToken();
 
 	for (let index = 0; index < args.length; index += 1) {
 		const arg = args[index];
@@ -515,6 +535,7 @@ function parseCliArgs(args: string[]): CliOptions {
 		onlyProductId,
 		dryRun,
 		backendUrl,
+		imageUploadToken,
 	};
 }
 
@@ -557,6 +578,10 @@ function getBackendUrl(): string | null {
 	const value = process.env.BACKEND_URL ?? process.env.BUN_PUBLIC_BACKEND_URL;
 	if (!value) return null;
 	return value;
+}
+
+function getImageUploadToken(): string | null {
+	return process.env.IMAGE_UPLOAD_TOKEN || null;
 }
 
 async function loadResults(resultsDir: string): Promise<MigrationResult[]> {
