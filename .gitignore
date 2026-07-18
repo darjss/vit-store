@@ -1,6 +1,7 @@
 node_modules
 .turbo
 .fallow/
+.quality/
 .alchemy
 .dev.vars*
 .prod.vars*
