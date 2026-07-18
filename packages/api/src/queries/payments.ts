@@ -527,6 +527,37 @@ export const paymentQueries = {
 			});
 		},
 
+		async claimTransferPaid(paymentNumber: string) {
+			const [changed] = await db()
+				.update(PaymentsTable)
+				.set({ status: "customer_claimed_paid" })
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						eq(PaymentsTable.status, "pending"),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ id: PaymentsTable.id });
+
+			if (changed) return { outcome: "changed" as const };
+
+			const payment = await db().query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.paymentNumber, paymentNumber),
+					isNull(PaymentsTable.deletedAt),
+				),
+				columns: { status: true },
+			});
+			if (!payment) throw new Error("Payment not found");
+			if (payment.status === "customer_claimed_paid") {
+				return { outcome: "already_claimed" as const };
+			}
+			if (payment.status === "success") {
+				return { outcome: "already_confirmed" as const };
+			}
+			return { outcome: "refused" as const };
+		},
 		async updatePaymentStatus(
 			paymentNumber: string,
 			status: PaymentStatusType,
