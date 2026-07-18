@@ -160,6 +160,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             // Pending orders never touch stock.
             const restockCandidates = await db().transaction(async (tx) => {
                 const stockTransitions: StockTransition[] = [];
+                const applyRequiredStockTransition = async (productId: number, delta: number) => {
+                    const transition = await applyStockTransition(tx, {
+                        productId,
+                        delta,
+                        requireActive: true,
+                        requireNonNegative: true,
+                    });
+                    if (!transition)
+                        throw new Error(`Unable to apply stock transition for product ${productId}`);
+                    stockTransitions.push(transition);
+                };
                 await orderQueries.admin.updateOrderTx(tx, input.id, {
                     customerPhone: Number(input.customerPhone),
                     status: input.status,
@@ -191,23 +202,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                             sellingPrice: product.price,
                             productId: product.productId,
                         });
-                        const transition = await applyStockTransition(tx, { productId: product.productId, delta: -product.quantity });
-                        if (transition)
-                            stockTransitions.push(transition);
+                        await applyRequiredStockTransition(product.productId, -product.quantity);
                     }
                     else if (wasSuccess) {
                         if (existingDetail) {
                             const quantityDiff = product.quantity - existingDetail.quantity;
                             if (quantityDiff !== 0) {
-                                const transition = await applyStockTransition(tx, { productId: product.productId, delta: -quantityDiff });
-                                if (transition)
-                                    stockTransitions.push(transition);
+                                await applyRequiredStockTransition(product.productId, -quantityDiff);
                             }
                         }
                         else {
-                            const transition = await applyStockTransition(tx, { productId: product.productId, delta: -product.quantity });
-                            if (transition)
-                                stockTransitions.push(transition);
+                            await applyRequiredStockTransition(product.productId, -product.quantity);
                         }
                     }
                     // else: pending/other — no stock changes (deducted on transition)
@@ -215,9 +220,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 if (wasSuccess && !transitionedToSuccess) {
                     const removedProducts = currentOrderDetails.filter((detail) => !input.products.some((p) => p.productId === detail.productId));
                     for (const detail of removedProducts) {
-                        const transition = await applyStockTransition(tx, { productId: detail.productId, delta: detail.quantity });
-                        if (transition)
-                            stockTransitions.push(transition);
+                        await applyRequiredStockTransition(detail.productId, detail.quantity);
                     }
                     // Sync SalesTable to the edited order details so dashboard
                     // revenue/profit analytics match reality. Previously paid-
