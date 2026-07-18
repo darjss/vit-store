@@ -18,6 +18,25 @@ import {
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
 
+async function sendTransferClaimAlert(paymentNumber: string) {
+	const paymentInfo =
+		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+	if (!paymentInfo) return;
+	await sendTransferClaimedNotification({
+		paymentNumber,
+		customerPhone: paymentInfo.order.customerPhone,
+		address: paymentInfo.order.address,
+		notes: paymentInfo.order.notes,
+		total: paymentInfo.order.total,
+		products: paymentInfo.order.orderDetails.map((detail) => ({
+			name: detail.product.name,
+			quantity: detail.quantity,
+			price: detail.product.price,
+			imageUrl: detail.product.images[0]?.url,
+		})),
+	});
+}
+
 export const payment = router({
 	getPaymentByNumber: publicProcedure
 		.input(
@@ -99,24 +118,7 @@ export const payment = router({
 				const claim = await q.claimTransferPaid(input.paymentNumber);
 				if (claim.outcome === "changed") {
 					try {
-						const paymentInfo = await q.getPaymentInfoByNumber(
-							input.paymentNumber,
-						);
-						if (paymentInfo) {
-							await sendTransferClaimedNotification({
-								paymentNumber: input.paymentNumber,
-								customerPhone: paymentInfo.order.customerPhone,
-								address: paymentInfo.order.address,
-								notes: paymentInfo.order.notes,
-								total: paymentInfo.order.total,
-								products: paymentInfo.order.orderDetails.map((detail) => ({
-									name: detail.product.name,
-									quantity: detail.quantity,
-									price: detail.product.price,
-									imageUrl: detail.product.images[0]?.url,
-								})),
-							});
-						}
+						await sendTransferClaimAlert(input.paymentNumber);
 					} catch (notificationError) {
 						ctx.log.error(
 							notificationError instanceof Error
@@ -217,24 +219,7 @@ export const payment = router({
 
 				if (claim.outcome === "changed") {
 					try {
-						const paymentInfo = await q.getPaymentInfoByNumber(
-							input.paymentNumber,
-						);
-						if (paymentInfo) {
-							await sendTransferClaimedNotification({
-								paymentNumber: input.paymentNumber,
-								customerPhone: paymentInfo.order.customerPhone,
-								address: paymentInfo.order.address,
-								notes: paymentInfo.order.notes,
-								total: paymentInfo.order.total,
-								products: paymentInfo.order.orderDetails.map((detail) => ({
-									name: detail.product.name,
-									quantity: detail.quantity,
-									price: detail.product.price,
-									imageUrl: detail.product.images[0]?.url,
-								})),
-							});
-						}
+						await sendTransferClaimAlert(input.paymentNumber);
 					} catch (notificationError) {
 						ctx.log.error(
 							notificationError instanceof Error
