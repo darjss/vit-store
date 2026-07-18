@@ -25,11 +25,7 @@ export interface PaymentHandlerDeps {
 	// Records the transfer CLAIM (status → customer_claimed_paid + admin notify).
 	// NOT a confirmation. Backed by `payment.claimTransferPaid`.
 	claimTransfer: (ref: PaymentRef) => Promise<{
-		outcome:
-			| "changed"
-			| "already_claimed"
-			| "already_confirmed"
-			| "refused";
+		outcome: "changed" | "already_claimed" | "already_confirmed" | "refused";
 	}>;
 	// Sends the bank details text PLUS the `Шилжүүлсэн` claim button.
 	sendBankDetails: (text: string, ref: PaymentRef) => Promise<unknown>;
