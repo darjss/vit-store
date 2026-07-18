@@ -147,6 +147,7 @@ export const server = await Worker("api", {
 		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
 		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
 		...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
+		IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
 	},
 
 	observability: {
