@@ -186,10 +186,21 @@ export const adminQueries = {
 			},
 		) {
 			return db().transaction(async (tx) => {
+				const [currentProduct] = await tx
+					.select({ slug: ProductsTable.slug, oldSlugs: ProductsTable.oldSlugs })
+					.from(ProductsTable)
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
+					.for("update");
+				if (!currentProduct) return null;
+
 				const { stock, ...productData } = data;
+				const oldSlugs = [...new Set(currentProduct.oldSlugs.filter((slug) => slug !== data.slug))];
+				if (currentProduct.slug !== data.slug && !oldSlugs.includes(currentProduct.slug)) {
+					oldSlugs.push(currentProduct.slug);
+				}
 				await tx
 					.update(ProductsTable)
-					.set(productData)
+					.set({ ...productData, oldSlugs })
 					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
 				return stock === undefined
 					? null
