@@ -29,6 +29,30 @@ const DEFAULT_CORS_ORIGINS = [
 	"https://admin.vitstore.dev",
 ];
 
+function scheduledJobFailure(
+	job: string,
+	result: PromiseSettledResult<unknown>,
+) {
+	if (result.status === "fulfilled") return;
+	const error =
+		result.reason instanceof Error
+			? result.reason
+			: Object.assign(new Error(), { name: "NonErrorRejection" });
+	const projected = operatorTrpcError(error) as Error & {
+		code?: string | number;
+		cause?: unknown;
+	};
+	return {
+		job,
+		error: {
+			name: projected.name,
+			code: projected.code,
+			stack: projected.stack,
+			cause: projected.cause,
+		},
+	};
+}
+
 const app = new Hono<ServerHonoEnv>();
 
 app.use(evlogMiddleware());
@@ -140,17 +164,24 @@ export default {
 			restock_notifier: restockResult.status,
 			payment_notification_outbox: paymentNotificationResult.status,
 		};
-		const failedJobs = Object.entries(jobs)
-			.filter(([, outcome]) => outcome === "rejected")
-			.map(([name]) => name);
+		const failures = [
+			scheduledJobFailure("restock_notifier", restockResult),
+			scheduledJobFailure(
+				"payment_notification_outbox",
+				paymentNotificationResult,
+			),
+		].filter((failure) => failure !== undefined);
 
-		if (failedJobs.length > 0) {
+		if (failures.length > 0) {
 			log.error(new Error("Scheduled jobs failed"), {
 				event: "scheduled.jobs_complete",
 				jobs,
+				failures,
 			});
 			log.emit();
-			throw new Error(`Scheduled jobs failed: ${failedJobs.join(", ")}`);
+			throw new Error(
+				`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`,
+			);
 		}
 
 		log.info("scheduled.jobs_complete", { jobs });
