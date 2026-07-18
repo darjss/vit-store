@@ -22,12 +22,19 @@ Order, Payment, and Customer writes commit before a detached Customer lookup bui
 
 ## Current state
 
-`packages/api/src/routers/store/order.ts:230-239`:
+**Baseline source:** `packages/api/src/routers/store/order.ts:230-239`
+
 ```ts
-const user = await addCustomerToDB(input.phoneNumber);
-if (!user) {
-  throw new Error("Failed to create user");
-}
+            const user = await addCustomerToDB(input.phoneNumber);
+            if (!user) {
+                ctx.log.error(new Error("No user returned"), {
+                    event: "order.customer_create_failed",
+                });
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to create or retrieve user",
+                });
+            }
 ```
 
 ### Domain and repository rule
@@ -77,23 +84,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Confirm the transaction’s inserted and existing-Customer branches and every field required by the checkout session.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'addCustomerToDB|txResult|createCheckoutAccessToken' -- packages/api/src/routers/store/order.ts packages/api/src/routers/store/auth.ts` → shows the detached Order-path lookup and any legitimate auth-path uses before deletion.
 
 ### Step 2: Return the complete Customer row with `orderId` and `paymentNumber`; if needed, select it inside the same transaction
 
 Return the complete Customer row with `orderId` and `paymentNumber`; if needed, select it inside the same transaction. Remove only the detached lookup and obsolete failure branch.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && ! git grep -n 'addCustomerToDB(input.phoneNumber)' -- packages/api/src/routers/store/order.ts` → typecheck exits 0 and the detached post-transaction lookup is absent from the Order route.
 
 ### Step 3: Call the real API with disposable absent and existing Customers
 
 Call the real API with disposable absent and existing Customers.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Local/staging API with disposable Product stock and permission to create/delete Orders; one absent and one existing disposable Customer.
 
-## Real-system proof plan
+**Bounded procedure:** Call the real checkout Order boundary once for each Customer case and capture Order/Payment counts and returned session claims.
 
-`bun run check-types` exits 0; `git grep -n addCustomerToDB packages/api/src/routers/store/order.ts` has no match. Each proof returns valid existing session claims and creates one Order and Payment with expected address data.
+**Machine-observable expected result:** Each call creates exactly one Order and Payment, returns unchanged claims/address behavior, and emits no post-commit Customer-lookup error.
+
+**Cleanup:** Cancel/delete disposable Orders and Customers through existing non-production cleanup; restore Product stock.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

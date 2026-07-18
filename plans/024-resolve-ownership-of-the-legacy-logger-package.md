@@ -22,7 +22,16 @@ The legacy logger has one undeclared script caller and no application caller, wh
 
 ## Current state
 
-`packages/api/scripts/import-extracted-only-products.ts` imports `@vit/logger` and calls it; `packages/api/package.json` does not declare that dependency. README still lists the logger package.
+**Baseline source:** `packages/api/scripts/import-extracted-only-products.ts:1-6`
+
+```ts
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { opencode } from "../src/lib/opencode-provider";
+import Firecrawl from "@mendable/firecrawl-js";
+import { Search } from "@upstash/search";
+import { createLogger } from "@vit/logger";
+```
 
 ### Domain and repository rule
 
@@ -74,23 +83,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Identify script owner and any parser of its output. Capture only field names with disposable no-network validation.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E '@vit/logger|createLogger' -- ':!bun.lock'` → enumerates the remaining script caller, package exports, README references, and API-owned logger; record workflow/parser ownership.
 
 ### Step 2: If active, replace its logger calls with the owned API logger and declare correct dependencies; if inactive, obtain separate approval before retiring script
 
 If active, replace its logger calls with the owned API logger and declare correct dependencies; if inactive, obtain separate approval before retiring script.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && bun run build && git grep -n '@vit/logger' -- ':!bun.lock'` → checks exit 0; output either shows the explicitly retained owned dependency or no active import after approved removal, matching the owner decision.
 
 ### Step 3: Only when no caller remains, remove package and stale docs; run CLI/static/build proof
 
 Only when no caller remains, remove package and stale docs; run CLI/static/build proof.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Operator decision on ingestion script and external parser; synthetic no-network input accepted by script validation mode.
 
-## Real-system proof plan
+**Bounded procedure:** Capture safe log field names, apply approved retain/migrate/remove path, and run the script’s non-network validation plus root checks.
 
-`git grep -n @vit/logger` has no active import after approved path; disposable CLI preserves required safe keys; root `check-types`/`build` exit 0.
+**Machine-observable expected result:** Required field names remain if active; no undeclared caller/duplicate logger remains; no Customer content is logged.
+
+**Cleanup:** Delete synthetic files/logs; leave operator data untouched.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

@@ -22,7 +22,22 @@ Messenger checkout already models explicit Delivery zone confirmation and option
 
 ## Current state
 
-`packages/assistant/src/checkout-tools.ts:194-205` stores candidates, then calls `applyZoneSelection(...candidates[0]!.zoneId)` and `applyNotes(..., undefined)` before showing the summary.
+**Baseline source:** `packages/assistant/src/checkout-tools.ts:194-205`
+
+```ts
+			// making the customer pick one, then jump straight to the summary for a
+			// single confirm. The chosen zone is shown in the summary, so the
+			// customer can still object before the order is placed.
+			if (candidates.length === 0) {
+				return advance(withCandidates, formatZoneCandidates(candidates));
+			}
+			const zoned = applyZoneSelection(withCandidates, candidates[0]!.zoneId);
+			if (!zoned.ok) {
+				return advance(withCandidates, formatZoneCandidates(candidates));
+			}
+			const confirming = applyNotes(zoned.state, undefined);
+			const saved = await deps.saveCheckout(confirming);
+```
 
 ### Domain and repository rule
 
@@ -75,23 +90,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Confirm baseline phases/tools and simulations still represent address → zone → notes → final confirmation.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'confirming_zone|applyZoneSelection|applyNotes|confirm_delivery_zone|provide_notes' -- packages/assistant apps/agent` → proves the state machine and proof harness already contain zone and notes phases.
 
 ### Step 2: Make address show candidates only; valid zone selection prompts notes; explicit notes or skip advances to final summary
 
 Make address show candidates only; valid zone selection prompts notes; explicit notes or skip advances to final summary.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && bun run --cwd apps/agent checkout:sim` → typecheck exits 0 and simulation output reaches zone confirmation, then notes, then final confirmation before Order creation.
 
 ### Step 3: Run checkout simulation and real configured assistant CLI with disposable input
 
 Run checkout simulation and real configured assistant CLI with disposable input.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Configured Agent CLI with disposable cart/Customer input and delivery candidates; no real Customer conversation.
 
-## Real-system proof plan
+**Bounded procedure:** Run `bun run --cwd apps/agent checkout:sim`, then real CLI flow choosing an unoffered zone, a valid zone, and explicit empty notes before final confirmation.
 
-`bun run check-types` exits 0. Unoffered zone is rejected; valid choice reaches notes; empty notes explicitly skip; only final confirmation creates one Order.
+**Machine-observable expected result:** Unoffered zone is rejected; valid zone reaches notes; skip reaches final summary; exactly one Order appears only after final confirmation.
+
+**Cleanup:** Cancel/delete the disposable Order and clear the CLI checkout state via its existing non-production workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

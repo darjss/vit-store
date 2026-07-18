@@ -22,7 +22,22 @@ Paid Order edits update Order details, Payment, Sales records, and stock in one 
 
 ## Current state
 
-`packages/api/src/routers/admin/order.ts:185-196` calls `applyStockTransition(...)` after inserting a sale but does not require a returned transition. The later paid-edit branches likewise ignore missing transitions.
+**Baseline source:** `packages/api/src/routers/admin/order.ts:185-196`
+
+```ts
+                    if (transitionedToSuccess) {
+                        const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
+                        await tx.insert(SalesTable).values({
+                            productCost: productCost,
+                            quantitySold: product.quantity,
+                            orderId: input.id,
+                            sellingPrice: product.price,
+                            productId: product.productId,
+                        });
+                        const transition = await applyStockTransition(tx, { productId: product.productId, delta: -product.quantity });
+                        if (transition)
+                            stockTransitions.push(transition);
+```
 
 ### Domain and repository rule
 
@@ -73,23 +88,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner confirms whether a deliberate negative-stock override exists. If yes, stop and scope that separately; accidental omission is not an override.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'applyStockTransition|requireNonNegative|transitionedToSuccess' -- packages/api/src/routers/admin/order.ts packages/api/src/queries/payments.ts` → lists every paid-edit transition plus the mandatory confirmation exemplar; record whether a named negative-stock override exists.
 
 ### Step 2: Require every paid-edit stock transition result and throw inside the existing transaction before commit
 
 Require every paid-edit stock transition result and throw inside the existing transaction before commit.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && git grep -n -A3 -B2 'applyStockTransition' packages/api/src/routers/admin/order.ts` → typecheck exits 0 and every required paid-edit transition is followed by a throw/mandatory-result branch, not an optional push.
 
 ### Step 3: Through the real admin/API boundary, prove valid, deleted-product, and insufficient-stock edits with disposable records
 
 Through the real admin/API boundary, prove valid, deleted-product, and insufficient-stock edits with disposable records.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging dashboard/API, disposable paid Orders and Products for valid, deleted/inactive, and insufficient-stock cases; authorized row inspection.
 
-## Real-system proof plan
+**Bounded procedure:** Snapshot Order, Payment, sales, and stock; submit each paid edit through the real admin boundary.
 
-`bun run check-types` exits 0. Valid paid edit keeps current behavior. Each failed transition returns an error and leaves Order, Payment, Sales, and stock unchanged.
+**Machine-observable expected result:** Valid edit commits all expected changes; each invalid case returns an error and all four snapshots remain unchanged.
+
+**Cleanup:** Delete/cancel disposable Orders and restore Product status/stock through existing admin cleanup.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

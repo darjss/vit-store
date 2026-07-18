@@ -22,7 +22,20 @@ Eager checkout and fallback QR creation duplicate amount conversion, provider ca
 
 ## Current state
 
-`packages/api/src/routers/store/order.ts:19-55` defines `precreateQpayInvoice`; `payment.createQr` repeats the same provider/cache/Payment work. `order.addOrder` invokes eager creation with `.catch(() => {})`.
+**Baseline source:** `packages/api/src/routers/store/order.ts:19-28`
+
+```ts
+/**
+ * Fire-and-forget: pre-create the QPay invoice so the QR is ready in KV
+ * before the user reaches the payment page. `createQr` is the fallback
+ * when this misses (invoice expired, pre-create failed, >1h delay).
+ * Mirrors the createQr procedure in payment.ts — same dev `/10000` amount
+ * hack, same KV key + 1h TTL, same provider/invoiceId write, same tracking.
+ */
+async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
+    const payment = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+    if (!payment || payment.status === "success") {
+```
 
 ### Domain and repository rule
 
@@ -75,23 +88,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner confirms whether eager and fallback persistence order is contractual; inspect available request `waitUntil`.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'precreateQpayInvoice|createQr|createQpayInvoice|waitUntil|QPAY:' -- packages/api/src apps/server/src` → shows both duplicated paths and whether the request lifecycle is available; record persistence-order compatibility.
 
 ### Step 2: Extract one helper and replace both copies
 
 Extract one helper and replace both copies. Keep eager failure non-fatal but safely logged and lifecycle-registered.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && test "$(git grep -l 'createQpayInvoice' -- packages/api/src/routers/store/order.ts packages/api/src/routers/store/payment.ts | wc -l)" -le 1` → typecheck exits 0 and at most one route-level implementation remains (provider boundary excluded).
 
 ### Step 3: With disposable Payment and configured provider bindings, prove eager, cache-miss fallback, repeat lookup, and success-state rejection
 
 With disposable Payment and configured provider bindings, prove eager, cache-miss fallback, repeat lookup, and success-state rejection.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Non-production QPay bindings, disposable pending Payment, observable KV/Payment state, and approved persistence-order contract.
 
-## Real-system proof plan
+**Bounded procedure:** Prove eager creation after checkout, delete/expire only the disposable KV entry, invoke fallback, repeat lookup, then invoke against success Payment.
 
-`bun run check-types` exits 0; one implementation calls the provider for these paths; response/cache/Payment fields remain unchanged; no unhandled rejection or secret log appears.
+**Machine-observable expected result:** Eager/fallback return existing shape and persist same fields/order; repeat reuses stored invoice sequentially; success is rejected; no unhandled rejection/secret log.
+
+**Cleanup:** Delete disposable KV entry and Payment/Order through existing non-production workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

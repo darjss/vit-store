@@ -17,6 +17,7 @@
       "label": "ready-for-human",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nProtect dashboard upload and operational writes with the existing User session while keeping explicitly public authentication and webhook surfaces unchanged.\n\n## Acceptance criteria\n\n- [ ] Unsigned writes are rejected before parsing or storage.\n- [ ] A signed-in User can complete the unchanged dashboard upload flow with disposable data.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -27,6 +28,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nPlace Product creation under the existing signed-in dashboard guard without changing its public navigation destination or save behavior.\n\n## Acceptance criteria\n\n- [ ] Signed-out visitors are redirected before the creation form renders.\n- [ ] A signed-in User sees the same dashboard form and can complete the existing Product save flow.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -37,6 +39,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nMake Customer address updates derive ownership from the authenticated Customer rather than request-selected identity.\n\n## Acceptance criteria\n\n- [ ] A Customer can update only their own address.\n- [ ] Unrelated Customer fields and existing response behavior remain unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -47,6 +50,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nBuild checkout session data from the Customer created or updated in the same Order transaction, removing a failure after committed writes.\n\n## Acceptance criteria\n\n- [ ] New and existing disposable Customers receive the unchanged checkout session behavior.\n- [ ] A successful Order no longer depends on a detached Customer lookup after commit.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -57,7 +61,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nMake bank-transfer claims repeat-safe while preserving the distinction between a transfer claim and transfer confirmation.\n\n## Acceptance criteria\n\n- [ ] A repeated claim produces at most one state transition and one Admin alert.\n- [ ] Closed Payments remain closed and no claim applies stock.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Choose the Customer-facing result when a transfer claim reaches a closed Payment."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nMake bank-transfer claims repeat-safe while preserving the distinction between a transfer claim and transfer confirmation.\n\n## Acceptance criteria\n\n- [ ] A repeated claim produces at most one state transition and one Admin alert.\n- [ ] Closed Payments remain closed and no claim applies stock.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Choose the Customer-facing result when a transfer claim reaches a closed Payment."
     },
     {
       "key": "child-006",
@@ -67,7 +74,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nFail paid Order edits atomically when any required stock transition cannot be applied.\n\n## Acceptance criteria\n\n- [ ] A valid paid edit retains current behavior.\n- [ ] A missing or insufficient-stock transition leaves Order, Payment, sales, and stock unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Decide whether Users have an intentional, explicitly audited negative-stock override."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nFail paid Order edits atomically when any required stock transition cannot be applied.\n\n## Acceptance criteria\n\n- [ ] A valid paid edit retains current behavior.\n- [ ] A missing or insufficient-stock transition leaves Order, Payment, sales, and stock unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Decide whether Users have an intentional, explicitly audited negative-stock override."
     },
     {
       "key": "child-007",
@@ -77,6 +87,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nEnsure editable Product search results use complete stored Product data rather than placeholder values.\n\n## Acceptance criteria\n\n- [ ] Editing one field from search preserves every untouched stored field.\n- [ ] Search ranking, card layout, and save behavior remain unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -87,7 +98,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nDefine the Customer-facing meaning of Featured and New, then apply the same rules to results, ordering, and displayed totals.\n\n## Acceptance criteria\n\n- [ ] Featured results and totals describe the same Product set.\n- [ ] New follows the approved deterministic ordering across pages.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Define New ordering and its deterministic tie-break, and confirm Featured total semantics."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nDefine the Customer-facing meaning of Featured and New, then apply the same rules to results, ordering, and displayed totals.\n\n## Acceptance criteria\n\n- [ ] Featured results and totals describe the same Product set.\n- [ ] New follows the approved deterministic ordering across pages.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Define New ordering and its deterministic tie-break, and confirm Featured total semantics."
     },
     {
       "key": "child-009",
@@ -97,6 +111,7 @@
       "label": "ready-for-human",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nMake the shared storefront menu a true modal with one owner for close, focus restoration, animation, and navigation cleanup.\n\n## Acceptance criteria\n\n- [ ] Keyboard focus cannot move behind the open menu and returns to its trigger when possible.\n- [ ] Repeated close and navigation paths leave no stale overlay or scroll lock in supported browsers.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -107,6 +122,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRefresh every cached Purchase-list variant after a Purchase write without clearing unrelated cached data.\n\n## Acceptance criteria\n\n- [ ] Filtered, sorted, searched, and non-default pages refresh without manual reload.\n- [ ] Unrelated dashboard queries are not invalidated.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -117,7 +133,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nApply one approved validation and out-of-range policy to category and brand catalogue page numbers.\n\n## Acceptance criteria\n\n- [ ] Malformed and past-end page requests follow the approved not-found or canonical response without a Customer-facing error.\n- [ ] Valid in-range pages and existing sorting remain unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Choose leading-zero and empty-catalog handling and the response for invalid or past-end pages."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nApply one approved validation and out-of-range policy to category and brand catalogue page numbers.\n\n## Acceptance criteria\n\n- [ ] Malformed and past-end page requests follow the approved not-found or canonical response without a Customer-facing error.\n- [ ] Valid in-range pages and existing sorting remain unchanged.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Choose leading-zero and empty-catalog handling and the response for invalid or past-end pages."
     },
     {
       "key": "child-012",
@@ -127,6 +146,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRestore explicit Delivery zone confirmation and optional Order notes before final Messenger checkout confirmation.\n\n## Acceptance criteria\n\n- [ ] A Customer must choose a surfaced Delivery zone and an unoffered choice is rejected.\n- [ ] Notes can be supplied or explicitly skipped before one final-confirmed Order is created.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -137,7 +157,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nPreserve prior Product links under an approved slug-history and retention policy when a Product name changes.\n\n## Acceptance criteria\n\n- [ ] The current Product URL renders and approved prior URLs redirect to it.\n- [ ] History is updated atomically, deduplicated, and follows the approved retention rule.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Decide whether slug history is authoritative for redirects, plus retention and concurrent-edit policy."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nPreserve prior Product links under an approved slug-history and retention policy when a Product name changes.\n\n## Acceptance criteria\n\n- [ ] The current Product URL renders and approved prior URLs redirect to it.\n- [ ] History is updated atomically, deduplicated, and follows the approved retention rule.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Decide whether slug history is authoritative for redirects, plus retention and concurrent-edit policy."
     },
     {
       "key": "child-014",
@@ -149,7 +172,10 @@
       "blockedBy": [
         "child-004"
       ],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nCentralize QPay invoice creation so eager checkout preparation and fallback use one Payment-owned persistence behavior.\n\n## Acceptance criteria\n\n- [ ] Eager and fallback paths retain the existing response, Payment, and cache behavior.\n- [ ] Eager failure remains non-fatal, is lifecycle-safe, and does not expose sensitive provider information.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Draft `child-004`"
+      "informationGates": [
+        "Confirm eager/fallback persistence ordering and the approved Worker-lifecycle boundary for non-fatal eager work."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nCentralize QPay invoice creation so eager checkout preparation and fallback use one Payment-owned persistence behavior.\n\n## Acceptance criteria\n\n- [ ] Eager and fallback paths retain the existing response, Payment, and cache behavior.\n- [ ] Eager failure remains non-fatal, is lifecycle-safe, and does not expose sensitive provider information.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Draft `child-004`\n- Information gate: Confirm eager/fallback persistence ordering and the approved Worker-lifecycle boundary for non-fatal eager work."
     },
     {
       "key": "child-015",
@@ -159,7 +185,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nAttempt independent restock and Payment-notification scheduled work on every trigger even when one job fails.\n\n## Acceptance criteria\n\n- [ ] Both jobs are attempted when either one fails.\n- [ ] The overall scheduled result follows the approved operations policy without exposing Customer or Payment content.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Choose whether either job failure rejects the overall scheduled invocation after both jobs settle."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nAttempt independent restock and Payment-notification scheduled work on every trigger even when one job fails.\n\n## Acceptance criteria\n\n- [ ] Both jobs are attempted when either one fails.\n- [ ] The overall scheduled result follows the approved operations policy without exposing Customer or Payment content.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Choose whether either job failure rejects the overall scheduled invocation after both jobs settle."
     },
     {
       "key": "child-016",
@@ -169,6 +198,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nDocument the claimed-transfer count and list reads that the admin assistant already has, without adding capabilities.\n\n## Acceptance criteria\n\n- [ ] An authorized User can ask the assistant for each existing read with synthetic data.\n- [ ] The assistant does not describe a transfer claim as confirmation.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -179,6 +209,7 @@
       "label": "ready-for-human",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove the accepted unowned diagnostic, benchmark, sandbox, and starter-cart surfaces after sanitized access and runbook review.\n\n## Acceptance criteria\n\n- [ ] Every removed surface is confirmed unused and unowned before deletion.\n- [ ] Retained health, catalogue, cart, and dashboard behavior continues through real boundaries.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -189,6 +220,7 @@
       "label": "ready-for-agent",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove proven-unused duplicate shared contracts and pass-through exports after checking package consumers.\n\n## Acceptance criteria\n\n- [ ] No tracked or documented external consumer uses a removed export.\n- [ ] Owned API contracts and active shared Product/Order values remain intact.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -199,6 +231,7 @@
       "label": "ready-for-human",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove the redundant dependency-install CI job after confirming its status name is not required.\n\n## Acceptance criteria\n\n- [ ] The retained check job still installs dependencies and reports successfully.\n- [ ] No required status or downstream workflow consumer is lost.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -209,7 +242,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nStop tracking reproducible quality output and a development log, and send future generated output to ignored scratch storage.\n\n## Acceptance criteria\n\n- [ ] No external owner consumes the removed tracked artifacts.\n- [ ] Running quality generation no longer dirties a clean worktree.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Confirm no external dashboard or runbook owns the generated reports or development log."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nStop tracking reproducible quality output and a development log, and send future generated output to ignored scratch storage.\n\n## Acceptance criteria\n\n- [ ] No external owner consumes the removed tracked artifacts.\n- [ ] Running quality generation no longer dirties a clean worktree.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Confirm no external dashboard or runbook owns the generated reports or development log."
     },
     {
       "key": "child-021",
@@ -219,7 +255,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove an ambiguous repository-wide teardown alias and two unowned scratch artifacts after runbook and archive checks.\n\n## Acceptance criteria\n\n- [ ] Existing app-specific teardown behavior remains unchanged and no new destructive command is added.\n- [ ] No active runbook or archive owner depends on the removed names or artifacts.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Confirm no recovery/runbook or archive owner needs the root teardown alias or scratch artifacts."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove an ambiguous repository-wide teardown alias and two unowned scratch artifacts after runbook and archive checks.\n\n## Acceptance criteria\n\n- [ ] Existing app-specific teardown behavior remains unchanged and no new destructive command is added.\n- [ ] No active runbook or archive owner depends on the removed names or artifacts.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Confirm no recovery/runbook or archive owner needs the root teardown alias or scratch artifacts."
     },
     {
       "key": "child-022",
@@ -229,7 +268,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove manifest commands that point to missing targets or obsolete workspace names, with matching documentation cleanup.\n\n## Acceptance criteria\n\n- [ ] Every retained command resolves to a tracked target or intended workspace.\n- [ ] No owned operator workflow loses a command and no absent script is recreated speculatively.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Confirm no external operator runbook depends on each broken command name or workspace alias."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nRemove manifest commands that point to missing targets or obsolete workspace names, with matching documentation cleanup.\n\n## Acceptance criteria\n\n- [ ] Every retained command resolves to a tracked target or intended workspace.\n- [ ] No owned operator workflow loses a command and no absent script is recreated speculatively.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Confirm no external operator runbook depends on each broken command name or workspace alias."
     },
     {
       "key": "child-023",
@@ -241,7 +283,10 @@
       "blockedBy": [
         "child-018"
       ],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nChoose and document one proven workspace package-resolution model across all application consumers.\n\n## Acceptance criteria\n\n- [ ] Every application consumer passes clean static and build checks without stale generated output.\n- [ ] No consumer-specific contradictory alias remains; stop at the first incompatible tool.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Draft `child-018`"
+      "informationGates": [
+        "Choose one candidate source-or-built workspace resolution model after recording every application consumer."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nChoose and document one proven workspace package-resolution model across all application consumers.\n\n## Acceptance criteria\n\n- [ ] Every application consumer passes clean static and build checks without stale generated output.\n- [ ] No consumer-specific contradictory alias remains; stop at the first incompatible tool.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Draft `child-018`\n- Information gate: Choose one candidate source-or-built workspace resolution model after recording every application consumer."
     },
     {
       "key": "child-024",
@@ -251,7 +296,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nResolve ownership of the secondary logger and its remaining ingestion workflow before retaining, migrating, or removing it.\n\n## Acceptance criteria\n\n- [ ] Any active external consumer keeps its required safe structured fields.\n- [ ] The final package/dependency state has one documented logger owner and no undeclared caller.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Identify the ingestion workflow owner and any external parser of its structured logger output."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nResolve ownership of the secondary logger and its remaining ingestion workflow before retaining, migrating, or removing it.\n\n## Acceptance criteria\n\n- [ ] Any active external consumer keeps its required safe structured fields.\n- [ ] The final package/dependency state has one documented logger owner and no undeclared caller.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Identify the ingestion workflow owner and any external parser of its structured logger output."
     },
     {
       "key": "child-025",
@@ -261,6 +309,7 @@
       "label": "ready-for-human",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
+      "informationGates": [],
       "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nReconcile migration metadata, declared schema, and read-only environment history; use only forward-compatible repairs for changes proven missing.\n\n## Acceptance criteria\n\n- [ ] Every environment comparison is recorded without rewriting applied history.\n- [ ] A disposable fresh database reaches the declared schema using the approved forward-only sequence.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
     },
     {
@@ -271,7 +320,10 @@
       "label": "needs-info",
       "parent": "<PARENT_ISSUE_URL>",
       "blockedBy": [],
-      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nDecide whether cache maintenance remains supported; if retained, require an explicit environment and preview before any remote operation.\n\n## Acceptance criteria\n\n- [ ] Default invocation performs no cache I/O and no fixed environment target remains.\n- [ ] Approved proof uses only disposable local data and selects the intended scope.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\nNone — can start immediately"
+      "informationGates": [
+        "Decide whether cache maintenance remains owned and, if retained, which explicit environments and key owner are supported."
+      ],
+      "body": "## Parent\n\n`<PARENT_ISSUE_URL>`\n\n## What to build\n\nDecide whether cache maintenance remains supported; if retained, require an explicit environment and preview before any remote operation.\n\n## Acceptance criteria\n\n- [ ] Default invocation performs no cache I/O and no fixed environment target remains.\n- [ ] Approved proof uses only disposable local data and selects the intended scope.\n- [ ] Applicable existing static/build checks pass, and no unrelated behavior changes.\n\n## Blocked by\n\n- Information gate: Decide whether cache maintenance remains owned and, if retained, which explicit environments and key owner are supported."
     }
   ],
   "needsDiscussion": {

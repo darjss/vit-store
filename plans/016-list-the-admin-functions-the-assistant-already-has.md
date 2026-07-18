@@ -22,7 +22,19 @@ The admin assistant registry exposes claimed-transfer count and list reads, but 
 
 ## Current state
 
-`packages/assistant/src/admin/read-fns.ts:109-118` includes `getClaimedTransferCount()` and `getClaimedTransferPayments()`. The payment section in `instructions.ts:55-64` lists adjacent reads but omits both.
+**Baseline source:** `packages/assistant/src/admin/read-fns.ts:109-117`
+
+```ts
+			name: "payment",
+			fns: {
+				getPayments: async (input: unknown) => botClient.payment.getPayments.query(input as never),
+				getPendingPayments: async () => botClient.payment.getPendingPayments.query(),
+				getPendingMessengerNotifications: async () => botClient.payment.getPendingMessengerNotifications.query(),
+				getClaimedTransferCount: async () => botClient.payment.getClaimedTransferCount.query(),
+				getClaimedTransferPayments: async () => botClient.payment.getClaimedTransferPayments.query(),
+				createPayment: async (input: unknown) => botClient.payment.createPayment.mutate(input as never),
+				confirmTransferPayment: async (input: unknown) => botClient.payment.confirmTransferPayment.mutate(input as never),
+```
 
 ### Domain and repository rule
 
@@ -71,23 +83,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Confirm both no-argument procedures exist in the deployed `BotRouter` contract.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'getClaimedTransferCount|getClaimedTransferPayments|payment management' -- packages/assistant/src packages/api/src` → both no-argument reads exist and only their model-facing instruction entries are missing.
 
 ### Step 2: Add concise function names and meanings to the existing payment instruction section
 
 Add concise function names and meanings to the existing payment instruction section.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && bun run build && git grep -n -E 'getClaimedTransferCount|getClaimedTransferPayments' packages/assistant/src/admin/instructions.ts` → checks exit 0 and each existing read is named in model-facing instructions.
 
 ### Step 3: On a configured test Page, ask an authorized admin assistant for count and list using synthetic data
 
 On a configured test Page, ask an authorized admin assistant for count and list using synthetic data.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Configured test Page, authorized disposable admin Messenger conversation, and synthetic claimed-transfer Payments.
 
-## Real-system proof plan
+**Bounded procedure:** Ask for claimed-transfer count, then bounded list; capture selected function names and response language.
 
-`bun run check-types` and `bun run build` exit 0. Assistant selects each existing read, returns bounded readable data, and never calls a claim confirmed.
+**Machine-observable expected result:** Assistant selects each existing read, count/list agree, output is bounded, and no claim is described as confirmation.
+
+**Cleanup:** Delete synthetic records and private conversation capture; retain only sanitized function-selection evidence.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

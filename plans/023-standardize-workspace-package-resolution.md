@@ -22,7 +22,17 @@ Consumers resolve workspace packages inconsistently from source or generated dis
 
 ## Current state
 
-`tsconfig.base.json:25-31` maps `@vit/shared` to `./packages/shared/dist/index.js` (and its wildcard to `./packages/shared/dist/*`) while `@vit/api` maps to `./packages/api/src/index.ts` (and its wildcard to `./packages/api/src/*`). Agent maps both packages to dist; admin maps both to source; shared package exports source.
+**Baseline source:** `tsconfig.base.json:25-31`
+
+```json
+		"disableSolutionSearching": true,
+		"paths": {
+			"@vit/shared": ["./packages/shared/dist/index.js"],
+			"@vit/shared/*": ["./packages/shared/dist/*"],
+			"@vit/api": ["./packages/api/src/index.ts"],
+			"@vit/api/*": ["./packages/api/src/*"]
+		}
+```
 
 ### Domain and repository rule
 
@@ -75,23 +85,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner chooses candidate only after recording every consumer/build tool and package export. Prove it in a disposable worktree/config.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E '@vit/(shared|api)' -- 'tsconfig*.json' 'apps/**/tsconfig.json' 'packages/*/package.json' turbo.json` → produces one source/dist matrix for every application consumer; record the candidate model and stop at the first incompatible tool.
 
 ### Step 2: At the first incompatible tool, stop and document evidence
 
 At the first incompatible tool, stop and document evidence. Otherwise make all aliases consistently follow the approved model.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: With generated `dist/` directories absent in a disposable worktree, run `bun run check-types && bun run build` → both exit 0 across Agent, Assistant, dashboard, storefront, and server; `git grep` over tsconfigs shows one approved resolution form per package.
 
 ### Step 3: Run frozen dependency resolution only with operator permission, then root and focused application checks/builds
 
 Run frozen dependency resolution only with operator permission, then root and focused application checks/builds.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Owner-approved source/dist model and disposable worktree with frozen dependencies already available; do not alter main worktree.
 
-## Real-system proof plan
+**Bounded procedure:** Remove generated dist only in disposable worktree, run root checks/build, and record each application result and resolved package path.
 
-One source/dist path exists per package across consumers; root `check-types`/`build` and Agent/Assistant/admin/storefront focused checks succeed with no stale dist prerequisite.
+**Machine-observable expected result:** All five consumers succeed with one model and no stale dist prerequisite; any first incompatibility stops the plan before partial aliases.
+
+**Cleanup:** Delete disposable worktree and generated output; do not publish packages.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

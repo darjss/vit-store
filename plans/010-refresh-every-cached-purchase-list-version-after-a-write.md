@@ -22,7 +22,19 @@ Purchase writes invalidate one literal first page, leaving filtered, sorted, sea
 
 ## Current state
 
-`purchase-form.tsx:107-115` invalidates `getPaginatedPurchases` only for `{ page: 1, pageSize: 10, sortDirection: "desc" }`; the detail route repeats it. The list route also uses search, provider, status, sort field, and page inputs.
+**Baseline source:** `apps/admin/src/components/purchase/purchase-form.tsx:107-115`
+
+```tsx
+	const handleMutationSuccess = (purchaseId: number) => {
+		queryClient.invalidateQueries(
+			trpc.purchase.getPaginatedPurchases.queryOptions({
+				page: 1,
+				pageSize: 10,
+				sortDirection: "desc",
+			}),
+		);
+		queryClient.invalidateQueries(trpc.purchase.getAllPurchases.queryOptions());
+```
 
 ### Domain and repository rule
 
@@ -72,23 +84,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inspect query keys for default, filtered, sorted, and non-default-page lists in the running dashboard.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'getPaginatedPurchases.queryOptions|invalidatePurchase|handleMutationSuccess' -- apps/admin/src` → identifies both write-success paths and all current list input variants.
 
 ### Step 2: Use the smallest generated prefix invalidation in both success paths
 
 Use the smallest generated prefix invalidation in both success paths. Confirm it matches only paginated purchase lists.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/admin check-types && bun run --cwd apps/admin build` → both exit 0; a focused query-cache inspection in Step 3 must show only the paginated Purchase prefix invalidated.
 
 ### Step 3: Open two list variants and mutate a disposable Purchase through the real dashboard
 
 Open two list variants and mutate a disposable Purchase through the real dashboard.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging dashboard, one disposable Purchase, and two open list variants: filtered/sorted and non-default page/page size.
 
-## Real-system proof plan
+**Bounded procedure:** Record visible IDs and query-cache keys, mutate the disposable Purchase through form and detail success paths, and wait for refetch completion.
 
-Admin `check-types` and `build` exit 0. Both open list variants refresh without manual reload; unrelated query keys are not invalidated.
+**Machine-observable expected result:** Both relevant lists update without reload; observed invalidated keys all start with the paginated Purchase procedure prefix and unrelated keys stay fresh.
+
+**Cleanup:** Restore/delete the disposable Purchase through existing dashboard workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

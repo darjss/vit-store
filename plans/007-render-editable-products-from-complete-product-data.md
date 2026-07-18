@@ -22,7 +22,22 @@ Instant search fabricates missing Product fields so a narrow result can enter th
 
 ## Current state
 
-`apps/admin/src/routes/_dash/products.index.tsx:303-343` supplies `discount: 0`, `brandId: 0`, `categoryId: 0`, `description: ""`, a new date, and other placeholders before `as never` to `ProductCard`.
+**Baseline source:** `apps/admin/src/routes/_dash/products.index.tsx:303-314`
+
+```tsx
+								{instantSearchQuery.data?.map((product) => (
+									<ProductCard
+										key={product.id}
+										product={
+											{
+												id: product.id,
+												name: product.name,
+												slug: product.slug,
+												price: product.price,
+												stock: product.stock,
+												status: product.status as ProductListStatus,
+												discount: 0,
+```
 
 ### Domain and repository rule
 
@@ -71,23 +86,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inventory every `ProductCard` field and confirm the same-route full-row query supplies stored values.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'instantSearchQuery|<ProductCard|brandId: 0|createdAt: new Date' -- apps/admin/src/routes/_dash/products.index.tsx apps/admin/src/components/product` → identifies the fabricated editable object and complete Product-card callers.
 
 ### Step 2: Remove the fabricated editable object
 
 Remove the fabricated editable object. Reuse the full-row list path; if measured latency is unacceptable, stop for a view-only decision.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/admin check-types && bun run --cwd apps/admin build && ! git grep -n -E 'brandId: 0|categoryId: 0|createdAt: new Date\(\)' -- apps/admin/src/routes/_dash/products.index.tsx` → checks exit 0 and fabricated editable defaults are absent.
 
 ### Step 3: Edit a disposable known Product from real dashboard search and verify untouched fields remain exact
 
 Edit a disposable known Product from real dashboard search and verify untouched fields remain exact.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging dashboard and one disposable Product with non-empty brand, category, description, tags, ingredients, and stable timestamps.
 
-## Real-system proof plan
+**Bounded procedure:** Snapshot all fields, search for the Product, edit one harmless field from the result, save, and reload authoritative detail.
 
-Admin `check-types` and `build` exit 0. After a harmless edit and reload, all untouched Product fields equal their pre-edit values; clean up through existing workflow.
+**Machine-observable expected result:** Edited field changes; every untouched field equals snapshot and no placeholder/zero/current timestamp is written.
+
+**Cleanup:** Restore or soft-delete the disposable Product with the existing admin workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

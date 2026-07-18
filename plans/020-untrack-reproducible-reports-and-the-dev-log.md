@@ -22,7 +22,16 @@ Two reproducible quality snapshots and a development log are tracked, creating s
 
 ## Current state
 
-`package.json:53-57` redirects `quality:json` output to `code-issues.json` and `health-issues.json`; `apps/storev2/dev.log` is tracked. `final-report.json` is explicitly excluded pending ownership proof.
+**Baseline source:** `package.json:53-58`
+
+```json
+		"dead-code": "npx fallow dead-code",
+		"health": "npx fallow health",
+		"dupes": "npx fallow dupes",
+		"quality": "bun run check-types && npx fallow dead-code && npx fallow health",
+		"quality:json": "npx fallow dead-code --format json > code-issues.json && npx fallow health --format json > health-issues.json"
+	},
+```
 
 ### Domain and repository rule
 
@@ -74,23 +83,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Owner confirms no external dashboard/runbook ingests the exact tracked paths.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'code-issues\.json|health-issues\.json|apps/storev2/dev\.log' -- ':!code-issues.json' ':!health-issues.json' && git ls-files code-issues.json health-issues.json apps/storev2/dev.log` → active tracked references are inventoried and the three generated artifacts are tracked; record external owner decision.
 
 ### Step 2: Remove the three generated files, redirect output, and add only the minimal ignore rule
 
 Remove the three generated files, redirect output, and add only the minimal ignore rule.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run quality:json && git status --short` → quality exits 0 and status contains no generated quality JSON or dev-log path; `bun run check-types && bun run build` also exit 0.
 
 ### Step 3: Run quality JSON in a disposable/clean environment and inspect status
 
 Run quality JSON in a disposable/clean environment and inspect status.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Owner answer for external consumers and clean worktree with existing dependencies.
 
-## Real-system proof plan
+**Bounded procedure:** Run `bun run quality:json`, capture exit/status, and inspect configured scratch directory.
 
-Quality JSON exits 0 and `git status --short` remains clean afterward; root `check-types` and `build` exit 0; no active consumer reference remains.
+**Machine-observable expected result:** Command exits 0, expected JSON exists only in ignored scratch storage, and `git status --short` remains clean.
+
+**Cleanup:** Delete ignored scratch output; confirm clean status again.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

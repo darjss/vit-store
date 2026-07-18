@@ -22,13 +22,13 @@ The product-creation route currently belongs to the public root, so a signed-out
 
 ## Current state
 
-`apps/admin/src/routes/products.add.tsx:14-16`:
-```ts
+**Baseline source:** `apps/admin/src/routes/products.add.tsx:14-16`
+
+```tsx
 export const Route = createFileRoute("/products/add")({
-  component: RouteComponent,
+	component: RouteComponent,
 });
 ```
-`apps/admin/src/routes/_dash/route.tsx:8-10` is the signed-in pathless parent.
 
 ### Domain and repository rule
 
@@ -78,23 +78,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Confirm the admin route generator command from installed project tooling; do not invent a package script.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'createFileRoute\("/(products/add|_dash)|ProductsAddRoute' -- apps/admin/src/routes apps/admin/src/routeTree.gen.ts` → exactly one source route for `/products/add`; baseline generated parent is the root and `_dash` contains the session redirect.
 
 ### Step 2: Move the source into the `_dash` route family and regenerate the tree
 
 Move the source into the `_dash` route family and regenerate the tree. Confirm the parent is `_dash` and URL remains `/products/add`.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/admin build && bun run --cwd apps/admin check-types && git grep -n 'getParentRoute: () => DashRouteRoute' apps/admin/src/routeTree.gen.ts` → the build regenerates routes, both commands exit 0, and the Product-add route has the signed-in parent.
 
 ### Step 3: Browser-check signed-out redirect and signed-in dashboard rendering/save behavior
 
 Browser-check signed-out redirect and signed-in dashboard rendering/save behavior.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Staging dashboard with one disposable signed-in User; no Product data is required for the signed-out check.
 
-## Real-system proof plan
+**Bounded procedure:** Open the unchanged Product-create URL in a fresh signed-out context, then sign in and open it again.
 
-`bun run --cwd apps/admin check-types` and `bun run --cwd apps/admin build` exit 0. At `/products/add`, signed-out navigation redirects to `/login` before form render; a disposable signed-in User sees the same form inside the dashboard and can complete the existing save flow.
+**Machine-observable expected result:** Signed-out navigation reaches login before form content; signed-in navigation shows the same form inside the dashboard frame and existing save flow remains available.
+
+**Cleanup:** Discard any draft Product created for proof through the existing admin workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

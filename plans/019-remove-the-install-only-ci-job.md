@@ -22,7 +22,19 @@ The `install` job installs dependencies but exports nothing and gates no job; th
 
 ## Current state
 
-`.github/workflows/ci.yml:12-25` defines `jobs.install` with checkout, Bun setup, cache, and frozen install. It has no outputs; no job uses `needs: install`.
+**Baseline source:** `.github/workflows/ci.yml:12-20`
+
+```yaml
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.0
+      - uses: actions/cache@v4
+```
 
 ### Domain and repository rule
 
@@ -69,23 +81,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Use read-only repository settings/API evidence to check required statuses and workflow consumers.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E '^  install:|needs: install|astro-check' -- .github/workflows && gh api repos/darjss/vit-store/branches/v2/protection/required_status_checks` → workflow has no consumer of `install`; read-only branch data must not require its status name.
 
 ### Step 2: If `install` is not required, remove only that job
 
 If `install` is not required, remove only that job. Validate YAML with already-available tooling.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `actionlint .github/workflows/ci.yml` if `command -v actionlint` succeeds; otherwise `ruby -e 'require "yaml"; YAML.load_file(ARGV[0]); puts "valid"' .github/workflows/ci.yml` → exit 0/`valid`, and `git grep -n '^  install:' .github/workflows/ci.yml` exits 1 with no output.
 
 ### Step 3: Observe a pull-request CI run after implementation
 
 Observe a pull-request CI run after implementation.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Read-only branch-protection access and a PR run after workflow change.
 
-## Real-system proof plan
+**Bounded procedure:** Confirm required statuses before edit; push implementation PR and observe Actions checks without modifying branch protection.
 
-Available workflow validation exits 0; PR reports retained `astro-check`; no required status is missing and no `install` job runs.
+**Machine-observable expected result:** Retained `astro-check` reports success, no missing required status appears, and redundant install job is absent.
+
+**Cleanup:** No data cleanup; do not change repository settings.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

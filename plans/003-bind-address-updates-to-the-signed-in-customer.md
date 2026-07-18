@@ -22,14 +22,17 @@ The procedure authenticates a Customer but lets request data choose the Customer
 
 ## Current state
 
-`packages/api/src/routers/store/customer.ts:9-16`:
+**Baseline source:** `packages/api/src/routers/store/customer.ts:9-16`
+
 ```ts
-updateAddress: customerProcedure
-  .input(updateCustomerSchema)
-  .mutation(async ({ input }) => {
-    const { address, phone } = input;
-    await q.updateCustomerAddress(phone as number, address);
-  }),
+	updateAddress: customerProcedure
+		.input(updateCustomerSchema)
+		.mutation(async ({ input }) => {
+			const q = customerQueries.store;
+			const { address, phone } = input;
+			await q.updateCustomerAddress(phone as number, address);
+		}),
+});
 ```
 
 ### Domain and repository rule
@@ -81,23 +84,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Inspect the session type and all procedure callers/imports. Confirm session phone is canonical and whether an external client still sends `phone`.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'updateAddress|updateCustomerSchema|updateCustomerAddress|customerProcedure' -- packages/api/src` → lists the mutation, schema, query, and authenticated procedure; no tracked application caller supplies a required alternate owner.
 
 ### Step 2: Replace whole-row input with address-only validation and call the existing query with the session Customer phone
 
 Replace whole-row input with address-only validation and call the existing query with the session Customer phone. Delete the shared update schema only if repository search proves it dead.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run check-types && ! git grep -n 'updateCustomerAddress(phone as number' -- packages/api/src/routers/store/customer.ts` → typecheck exits 0 and the request phone no longer selects the row.
 
 ### Step 3: Exercise two disposable authenticated Customers through the real API
 
 Exercise two disposable authenticated Customers through the real API.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Local/staging API, two disposable Customers A/B with distinct phones, authenticated session for A, and authorized read access to both rows.
 
-## Real-system proof plan
+**Bounded procedure:** Snapshot both addresses; submit the address-only mutation as A and, if compatibility input remains, include B phone as ignored data.
 
-`bun run check-types` exits 0. Customer A can update A’s address; a request containing Customer B’s phone cannot select B; unrelated Customer fields cannot be updated. Use no real Customer data.
+**Machine-observable expected result:** Only A address changes; B and every non-address field remain byte-for-byte equal; response shape is unchanged.
+
+**Cleanup:** Restore both addresses or delete both disposable Customers using the environment’s existing cleanup workflow.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 

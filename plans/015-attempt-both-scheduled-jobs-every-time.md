@@ -22,12 +22,15 @@ The scheduled handler awaits restock work before Payment notification work, so t
 
 ## Current state
 
-`apps/server/src/index.ts:125-130`:
+**Baseline source:** `apps/server/src/index.ts:125-130`
+
 ```ts
-async scheduled(_controller, env) {
-  await runRestockNotifier(env);
-  await runPaymentNotificationOutbox();
-}
+export default {
+	fetch: app.fetch,
+	scheduled: async (_controller: ScheduledController, env: Env) => {
+		await runRestockNotifier(env);
+		await runPaymentNotificationOutbox();
+	},
 ```
 
 ### Domain and repository rule
@@ -78,23 +81,25 @@ Package-focused commands may replace root checks only when every changed workspa
 
 Operations chooses whether any job failure should reject the scheduled invocation after both settle.
 
-**Verify**: Run the relevant inventory/read-only check and record the approved decision; expected: scope and owner are explicit.
+**Verify**: `git grep -n -E 'runRestockNotifier|runPaymentNotificationOutbox|scheduled:' -- apps/server/src` → exactly the two independent jobs and their Worker orchestrator; record the approved aggregate failure policy.
 
 ### Step 2: Start both promises before `Promise
 
 Start both promises before `Promise.allSettled`; account safely for each outcome and apply approved final policy.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: `bun run --cwd apps/server check-types && ! git grep -n 'await runRestockNotifier(env);' -- apps/server/src/index.ts` → typecheck exits 0 and the sequential first await is gone; both promises are created before settlement.
 
 ### Step 3: Invoke a disposable/local Worker harness with each dependency failing in turn
 
 Invoke a disposable/local Worker harness with each dependency failing in turn.
 
-**Verify**: Run the focused static or real-system gate described below; expected: the stated behavior only.
+**Verify**: **Prerequisites/setup:** Local Worker harness with disposable dependencies that can make each job fail before external delivery; approved overall failure policy.
 
-## Real-system proof plan
+**Bounded procedure:** Invoke scheduled handler three times: restock fails, outbox fails, both succeed; capture safe job-attempt markers and final promise result.
 
-`bun run check-types` exits 0. Both attempts are observed every run; each retains its own behavior; handler outcome matches the approved policy.
+**Machine-observable expected result:** Both markers appear once per invocation; final resolve/reject matches approved policy; job-internal retry/log behavior is unchanged.
+
+**Cleanup:** Remove temporary harness/config and disposable outbox/restock records; no production Cron invocation.
 
 No unit or integration tests are requested. Do not use production Customer data, destructive operations, or remote writes as proof.
 
