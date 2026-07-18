@@ -1,6 +1,4 @@
 export * from "./types/ai";
-export * from "./types/integration";
-export * from "./types/messenger";
 export * from "./types/order";
 export * from "./types/payment";
 export * from "./types/product";
