@@ -23,7 +23,6 @@
 			"!**/routeTree.gen.ts",
 			"!**/src-tauri",
 			"!**/.nuxt",
-			"!bts.jsonc",
 			"!**/.wrangler",
 			"!**/.alchemy",
 			"!**/dev.log",
