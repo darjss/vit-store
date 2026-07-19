@@ -18,8 +18,8 @@ type Options = {
 
 const USAGE = `Usage:
   bun run cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path> [--confirm local:<unique-local-name>]
-  bun run cache:maintain -- --environment staging --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm staging:<namespace-id>]
-  bun run cache:maintain -- --environment production --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm production:<namespace-id> --confirm-production DELETE-PRODUCTION-CACHE]
+  bun run cache:maintain -- --environment staging --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm staging:<account-id>:<namespace-id>]
+  bun run cache:maintain -- --environment production --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm production:<account-id>:<namespace-id> --confirm-production DELETE-PRODUCTION-CACHE]
 
 Without confirmation, the command only previews the selected scope. No environment is selected by default.`;
 
@@ -139,7 +139,10 @@ function wranglerTarget(options: Options): string[] {
 async function main() {
 	const options = parseOptions(process.argv.slice(2));
 	const keys = await analyticsCacheKeys();
-	const expectedConfirmation = `${options.environment}:${options.namespaceId}`;
+	const expectedConfirmation =
+		options.environment === "local"
+			? `local:${options.namespaceId}`
+			: `${options.environment}:${options.accountId}:${options.namespaceId}`;
 
 	console.log(`Environment: ${options.environment}`);
 	console.log(`Scope: ${options.scope} (${keys.length} keys)`);
