@@ -43,6 +43,7 @@
 		"db:seed": "turbo -F server db:seed",
 		"db:docker:up": "docker-compose up -d",
 		"db:docker:down": "docker-compose down",
+		"cache:maintain": "bun --no-env-file scripts/clear-kv-cache.ts",
 		"vit:extract": "bun scripts/extract-vit-products.ts",
 		"vit:compare": "bun scripts/compare-extracted-products-to-db.ts",
 		"dead-code": "npx fallow dead-code",

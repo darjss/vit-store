@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { sanitizePublicTrpcErrorShape, type timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
+import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
 import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
@@ -93,43 +94,6 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	});
 	return next({ ctx: { ...ctx, session } });
 });
-
-const createCacheKey = async (
-	path: string,
-	input: unknown,
-): Promise<string> => {
-	const cacheableInput =
-		input && typeof input === "object"
-			? {
-					timeRange: (input as Record<string, unknown>).timeRange,
-					ttl: (input as Record<string, unknown>).ttl,
-				}
-			: input;
-
-	const keyString = `${path}:${JSON.stringify(
-		cacheableInput && typeof cacheableInput === "object"
-			? Object.keys(cacheableInput)
-					.sort()
-					.reduce(
-						(result, key) => {
-							result[key] = (cacheableInput as Record<string, unknown>)[key];
-							return result;
-						},
-						{} as Record<string, unknown>,
-					)
-			: cacheableInput,
-	)}`;
-
-	const encoder = new TextEncoder();
-	const data = encoder.encode(keyString);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const hashHex = hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
-
-	return `cache:${hashHex}`;
-};
 
 function ensureTRPCError(
 	error: unknown,
@@ -244,7 +208,7 @@ const loggingMiddleware = t.middleware(
 );
 
 const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
-	const cacheKey = await createCacheKey(path, input);
+	const cacheKey = await createKvCacheKey(path, input);
 
 	const cached = await ctx.kv.get(cacheKey);
 	if (cached) {
