@@ -5,6 +5,7 @@ import { Search } from "@upstash/search";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import { and, asc, eq, inArray, isNull, like, or } from "drizzle-orm";
+import { initLogger } from "evlog";
 import postgres from "postgres";
 import { z } from "zod";
 import { createDb } from "../src/db";
@@ -23,6 +24,16 @@ loadDotEnv({ path: path.resolve(REPO_ROOT, ".env") });
 loadDotEnv({
 	path: path.resolve(import.meta.dir, "../../.env"),
 	override: false,
+});
+
+initLogger({
+	env: {
+		service: "vit-store-product-import",
+		environment: process.env.NODE_ENV ?? "development",
+	},
+	pretty: false,
+	stringify: true,
+	redact: false,
 });
 
 type ExtractedOnlySourceRow = {
