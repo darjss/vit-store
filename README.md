@@ -26,7 +26,6 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 | **`@vit/api`** | tRPC routers (admin/store/bot), Drizzle DB queries, integrations (Messenger, QPay, PostHog, Resend, SMS gateway), AI product-extraction pipeline, payment logic. |
 | **`@vit/assistant`** | Shared tools and instructions for the Messenger agents — product search, advice, photo identification, cart/checkout, payment choices, delivery-zone ranking, admin Codemode tool. |
 | **`@vit/shared`** | Domain types, Valibot schemas, constants (delivery fee 6,000₮, bank transfer details, status enums). |
-| **`@vit/logger`** | Structured logging middleware for Hono. |
 
 ## Tech stack
 
@@ -152,8 +151,7 @@ vit-store/
 ├── packages/
 │   ├── api/       # @vit/api — routers, DB queries, integrations
 │   ├── assistant/ # @vit/assistant — agent tools & instructions
-│   ├── shared/    # @vit/shared — types, schemas, constants
-│   └── logger/    # @vit/logger — Hono logging middleware
+│   └── shared/    # @vit/shared — types, schemas, constants
 ├── docs/
 │   ├── adr/       # Architecture decision records
 │   └── agents/    # Agent workflow docs (issue tracker, triage, domain)
