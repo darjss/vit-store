@@ -33,7 +33,6 @@
 		"build": "turbo build",
 		"check-types": "turbo check-types",
 		"deploy": "turbo deploy",
-		"destroy": "turbo destroy",
 		"dev:server": "turbo -F server dev",
 		"db:generate": "turbo -F @vit/api db:generate",
 		"db:migrate": "turbo -F server db:migrate",

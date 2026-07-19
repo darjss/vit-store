@@ -103,7 +103,7 @@ bun deploy          # turbo deploy (server first, then frontends)
 | `bun dev` | Start all apps in dev mode |
 | `bun build` | Build all apps |
 | `bun check-types` | TypeScript checks across all apps |
-| `bun deploy` / `bun destroy` | Deploy/teardown all apps via Alchemy |
+| `bun deploy` | Deploy all apps |
 | `bun db:push` | Push Drizzle schema to the database |
 | `bun db:migrate` / `bun db:migrate:local` | Run migrations (prod/local) |
 | `bun db:studio` / `bun db:studio:local` | Open Drizzle Studio |
