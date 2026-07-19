@@ -17,7 +17,6 @@ node_modules
 
 # Build caches
 .astro/
-packages/logger/dist/
 
 # Temp and working files
 tmp/
