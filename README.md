@@ -132,10 +132,10 @@ Remote operations additionally require both the account and namespace IDs. Repla
 
 ```bash
 bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id>
-bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id> --confirm staging:<staging-namespace-id>
+bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id> --confirm staging:<staging-account-id>:<staging-namespace-id>
 
 bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id>
-bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id> --confirm production:<production-namespace-id> --confirm-production DELETE-PRODUCTION-CACHE
+bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id> --confirm production:<production-account-id>:<production-namespace-id> --confirm-production DELETE-PRODUCTION-CACHE
 ```
 
 The package script disables Bun env-file loading. Wrangler runs from an isolated directory with only its user-level authentication configuration and the explicitly supplied account ID; it does not load the repository `.env` files.
