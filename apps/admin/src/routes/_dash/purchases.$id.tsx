@@ -21,6 +21,7 @@ import {
 	useState,
 } from "react";
 import { toast } from "sonner";
+import { invalidatePurchaseLists } from "@/components/purchase/invalidate-purchase-lists";
 import PurchaseForm from "@/components/purchase/purchase-form";
 import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
@@ -85,13 +86,7 @@ function PurchaseDetailPage() {
 		queryClient.invalidateQueries(
 			trpc.purchase.getPurchaseById.queryOptions({ id: purchaseId }),
 		);
-		queryClient.invalidateQueries(
-			trpc.purchase.getPaginatedPurchases.queryOptions({
-				page: 1,
-				pageSize: 10,
-				sortDirection: "desc",
-			}),
-		);
+		void invalidatePurchaseLists(queryClient);
 	};
 
 	const receiveMutation = useMutation({
@@ -136,13 +131,7 @@ function PurchaseDetailPage() {
 	const deleteMutation = useMutation({
 		...trpc.purchase.deletePurchase.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.purchase.getPaginatedPurchases.queryOptions({
-					page: 1,
-					pageSize: 10,
-					sortDirection: "desc",
-				}),
-			);
+			void invalidatePurchaseLists(queryClient);
 			toast.success("Худалдан авалт устгагдлаа");
 			navigate({ to: "/purchases" });
 		},
@@ -175,10 +164,7 @@ function PurchaseDetailPage() {
 					<div className="max-h-[80vh] overflow-y-auto p-4 sm:p-6">
 						<PurchaseForm
 							purchase={purchase}
-							onSuccess={() => {
-								setIsEditOpen(false);
-								invalidatePurchase();
-							}}
+							onSuccess={() => setIsEditOpen(false)}
 						/>
 					</div>
 				</DialogContent>
