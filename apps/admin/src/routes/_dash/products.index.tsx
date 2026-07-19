@@ -21,6 +21,7 @@ import {
 import { Suspense, useEffect, useState } from "react";
 import * as v from "valibot";
 import ProductCard from "@/components/product/product-card";
+import { ProductCardById } from "@/components/product/product-card-by-id";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,44 +302,7 @@ function RouteComponent() {
 								className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 xl:grid-cols-3 ${isSearching ? "opacity-50" : "opacity-100"}`}
 							>
 								{instantSearchQuery.data?.map((product) => (
-									<ProductCard
-										key={product.id}
-										product={
-											{
-												id: product.id,
-												name: product.name,
-												slug: product.slug,
-												price: product.price,
-												stock: product.stock,
-												status: product.status as ProductListStatus,
-												discount: 0,
-												brandId: 0,
-												categoryId: 0,
-												description: "",
-												amount: "",
-												potency: "",
-												dailyIntake: 0,
-												createdAt: new Date(),
-												updatedAt: null,
-												deletedAt: null,
-												tags: [],
-												isFeatured: false,
-												ingredients: [],
-												seoTitle: null,
-												seoDescription: null,
-												name_mn: null,
-												weightGrams: 0,
-												expirationDate: null,
-												images: product.images.map((image, index) => ({
-													id: index,
-													url: image.url,
-													isPrimary: index === 0,
-												})),
-											} as never
-										}
-										brands={[]}
-										categories={[]}
-									/>
+									<ProductCardById key={product.id} productId={product.id} />
 								))}
 							</div>
 						</>
