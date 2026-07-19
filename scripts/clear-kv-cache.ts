@@ -1,136 +1,185 @@
 #!/usr/bin/env bun
-/**
- * Clear specific KV cache keys both locally and remotely.
- * Usage: bun run scripts/clear-kv-cache.ts [brands|analytics|all]
- */
+import { mkdirSync, mkdtempSync, rmdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { isAbsolute, join } from "node:path";
+import { analyticsCacheKeys } from "../packages/api/src/lib/cache/kv-cache-key";
 
-import Database from "bun:sqlite";
-import { readdirSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+type Environment = "local" | "staging" | "production";
 
-const PROD_KV_NAMESPACE_ID = "07cd4a83a89c40f098eb62945c0bc09f";
+type Options = {
+	environment: Environment;
+	scope: "analytics";
+	namespaceId: string;
+	accountId?: string;
+	persistTo?: string;
+	confirm?: string;
+	confirmProduction?: string;
+};
 
-// Known cache keys
-const BRAND_KEY = "catalog:brands:all";
-const CATEGORY_KEY = "catalog:categories:all";
+const USAGE = `Usage:
+  bun run cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path> [--confirm local:<unique-local-name>]
+  bun run cache:maintain -- --environment staging --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm staging:<namespace-id>]
+  bun run cache:maintain -- --environment production --scope analytics --account-id <account-id> --namespace-id <namespace-id> [--confirm production:<namespace-id> --confirm-production DELETE-PRODUCTION-CACHE]
 
-// Analytics cache keys (SHA-256 of path + input)
-const ANALYTICS_KEYS = [
-	// analytics.getCurrentProductsValue (no input)
-	"cache:3a51ec08301e953f151047eadb4fc3a44aadaf43b3f2546afcbddef699aa2730",
-	// analytics.getAnalyticsData with timeRange: daily
-	"cache:4d6dfe2db88b45d6d720a94587b139b9046bda132d9892a612c8698f823af2f7",
-	// analytics.getAnalyticsData with timeRange: weekly
-	"cache:5232b1e1bb5a2b3e871138e1d97f509cc8f346f4b5195bb149ee7f81381c7dae",
-	// analytics.getAnalyticsData with timeRange: monthly
-	"cache:76a329d5c3fbb76e6ab0058c83b0bbf05fd3c177d9f753f17603bf3398eb19d6",
-];
+Without confirmation, the command only previews the selected scope. No environment is selected by default.`;
 
-async function clearLocalKV(keys: string[]) {
-	const dbPath =
-		".alchemy/miniflare/v3/kv/miniflare-KVNamespaceObject/8e2fd0c8cb293336e2f337f5e640dc8030b17a02425b467fcd48f342cecf510f.sqlite";
-	const blobsDir = ".alchemy/miniflare/v3/kv/kv/blobs";
-
-	if (!await Bun.file(dbPath).exists()) {
-		console.log("⚠️ Local KV database not found, skipping local cleanup");
-		return;
-	}
-
-	const db = new Database(dbPath);
-
-	// Build WHERE clause
-	const placeholders = keys.map(() => "?").join(",");
-	const stmt = db.query(`SELECT key, blob_id FROM _mf_entries WHERE key IN (${placeholders})`);
-	const found = stmt.all(...keys) as Array<{ key: string; blob_id: string }>;
-
-	if (found.length === 0) {
-		console.log("✅ No matching keys found in local KV");
-		db.close();
-		return;
-	}
-
-	console.log(`🗑️  Deleting ${found.length} keys from local KV:`);
-	for (const { key } of found) {
-		console.log(`   - ${key}`);
-	}
-
-	const deleteStmt = db.query(`DELETE FROM _mf_entries WHERE key IN (${placeholders})`);
-	deleteStmt.run(...keys);
-
-	// Clean up orphaned blobs
-	const usedBlobs = new Set(
-		(db.query("SELECT blob_id FROM _mf_entries").all() as Array<{ blob_id: string }>).map(
-			(r) => r.blob_id,
-		),
-	);
-
-	let blobsCleaned = 0;
-	for (const file of readdirSync(blobsDir)) {
-		if (!usedBlobs.has(file)) {
-			try {
-				unlinkSync(join(blobsDir, file));
-				blobsCleaned++;
-			} catch {}
-		}
-	}
-
-	console.log(`🧹 Cleaned up ${blobsCleaned} orphaned blob files`);
-	db.close();
+function fail(message: string): never {
+	console.error(`${message}\n\n${USAGE}`);
+	process.exit(1);
 }
 
-async function clearRemoteKV(keys: string[]) {
-	console.log("\n☁️  Clearing remote prod KV...");
-	for (const key of keys) {
-		const proc = Bun.spawnSync({
-			cmd: [
-				"npx",
-				"wrangler",
-				"kv",
-				"key",
-				"delete",
-				key,
-				"--namespace-id",
-				PROD_KV_NAMESPACE_ID,
-				"--remote",
-			],
-			stdio: ["inherit", "pipe", "pipe"],
-		});
-		const output = proc.stdout.toString().trim();
-		const errOutput = proc.stderr.toString().trim();
-		if (proc.success) {
-			console.log(`   ✅ Deleted: ${key}`);
-		} else {
-			console.log(`   ⚠️  ${key}: ${errOutput || output}`);
+const OPTION_NAMES = new Set([
+	"--environment",
+	"--scope",
+	"--namespace-id",
+	"--account-id",
+	"--persist-to",
+	"--confirm",
+	"--confirm-production",
+]);
+
+function parseValues(args: string[]): Map<string, string> {
+	const values = new Map<string, string>();
+	for (let index = 0; index < args.length; index += 2) {
+		const flag = args[index];
+		const value = args[index + 1];
+		if (!flag?.startsWith("--") || !value || value.startsWith("--")) {
+			fail("Every option requires an explicit value.");
 		}
+		if (!OPTION_NAMES.has(flag)) fail(`Unknown option: ${flag}`);
+		if (values.has(flag)) fail(`Duplicate option: ${flag}`);
+		values.set(flag, value);
 	}
+	return values;
+}
+
+function parseEnvironment(value?: string): Environment {
+	if (value === "local" || value === "staging" || value === "production") {
+		return value;
+	}
+	fail("--environment must be local, staging, or production.");
+}
+
+function validateBoundary(options: Options): void {
+	if (options.environment === "local") {
+		if (options.accountId)
+			fail("--account-id is not valid for local maintenance.");
+		if (!options.persistTo || !isAbsolute(options.persistTo)) {
+			fail("Local maintenance requires an absolute --persist-to path.");
+		}
+		return;
+	}
+	if (!options.accountId) {
+		fail(`--account-id is required for ${options.environment}.`);
+	}
+	if (options.persistTo)
+		fail("--persist-to is only valid for local maintenance.");
+}
+
+function parseOptions(args: string[]): Options {
+	const values = parseValues(args);
+	if (values.get("--scope") !== "analytics") fail("--scope must be analytics.");
+	const namespaceId = values.get("--namespace-id");
+	if (!namespaceId) fail("--namespace-id is required.");
+
+	const options: Options = {
+		environment: parseEnvironment(values.get("--environment")),
+		scope: "analytics",
+		namespaceId,
+		accountId: values.get("--account-id"),
+		persistTo: values.get("--persist-to"),
+		confirm: values.get("--confirm"),
+		confirmProduction: values.get("--confirm-production"),
+	};
+	validateBoundary(options);
+	return options;
+}
+
+function runWrangler(args: string[], accountId?: string): string {
+	const isolatedCwd = mkdtempSync(join(tmpdir(), "vit-cache-maintenance-"));
+	const wrangler = Bun.which("wrangler");
+	if (!wrangler) fail("Wrangler is not installed or available on PATH.");
+	const env: Record<string, string> = {
+		PATH: process.env.PATH ?? "",
+		HOME: process.env.HOME ?? "",
+		WRANGLER_SEND_METRICS: "false",
+	};
+	if (process.env.XDG_CONFIG_HOME)
+		env.XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
+	if (accountId) env.CLOUDFLARE_ACCOUNT_ID = accountId;
+
+	try {
+		const result = Bun.spawnSync({
+			cmd: [wrangler, ...args, "--cwd", isolatedCwd],
+			env,
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		if (!result.success) {
+			const message = result.stderr.toString().trim() || "Wrangler failed.";
+			throw new Error(message);
+		}
+		return result.stdout.toString();
+	} finally {
+		rmdirSync(isolatedCwd);
+	}
+}
+
+function wranglerTarget(options: Options): string[] {
+	const target = ["--namespace-id", options.namespaceId];
+	if (options.environment === "local") {
+		mkdirSync(options.persistTo as string, { recursive: true });
+		target.push("--local", "--persist-to", options.persistTo as string);
+	} else {
+		target.push("--remote");
+	}
+	return target;
 }
 
 async function main() {
-	const target = process.argv[2] || "all";
+	const options = parseOptions(process.argv.slice(2));
+	const keys = await analyticsCacheKeys();
+	const expectedConfirmation = `${options.environment}:${options.namespaceId}`;
 
-	let keysToDelete: string[] = [];
-
-	switch (target) {
-		case "brands":
-			keysToDelete = [BRAND_KEY];
-			break;
-		case "analytics":
-			keysToDelete = [...ANALYTICS_KEYS];
-			break;
-		case "all":
-			keysToDelete = [BRAND_KEY, ...ANALYTICS_KEYS];
-			break;
-		default:
-			console.log(`Usage: bun run scripts/clear-kv-cache.ts [brands|analytics|all]`);
-			process.exit(1);
+	console.log(`Environment: ${options.environment}`);
+	console.log(`Scope: ${options.scope} (${keys.length} keys)`);
+	console.log(`Namespace: ${options.namespaceId}`);
+	if (options.environment === "local") {
+		console.log(`Persistence: ${options.persistTo}`);
 	}
 
-	console.log(`🎯 Target: ${target}\n`);
+	if (!options.confirm) {
+		console.log("Preview only: no cache mutation performed.");
+		return;
+	}
+	if (options.confirm !== expectedConfirmation) {
+		fail(`--confirm must exactly match ${expectedConfirmation}.`);
+	}
+	if (
+		options.environment === "production" &&
+		options.confirmProduction !== "DELETE-PRODUCTION-CACHE"
+	) {
+		fail(
+			"Production mutation also requires --confirm-production DELETE-PRODUCTION-CACHE.",
+		);
+	}
+	if (
+		options.environment !== "production" &&
+		options.confirmProduction !== undefined
+	) {
+		fail("--confirm-production is only valid for production maintenance.");
+	}
 
-	await clearLocalKV(keysToDelete);
-	await clearRemoteKV(keysToDelete);
-
-	console.log("\n✅ Done!");
+	const target = wranglerTarget(options);
+	for (const key of keys) {
+		runWrangler(["kv", "key", "delete", key, ...target], options.accountId);
+	}
+	console.log(
+		`Deleted ${keys.length} selected keys from ${options.environment}.`,
+	);
 }
 
-main().catch(console.error);
+main().catch((error) => {
+	console.error(error instanceof Error ? error.message : String(error));
+	process.exit(1);
+});
