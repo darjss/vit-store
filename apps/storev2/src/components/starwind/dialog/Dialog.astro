@@ -39,6 +39,7 @@ const { class: className, ...rest } = Astro.props;
     private bodyPosition = "";
     private bodyTop = "";
     private bodyWidth = "";
+    private ownsScrollLock = false;
 
     constructor(dialogWrapper: HTMLElement, dialogNumber: number) {
       this.dialog = dialogWrapper.querySelector("dialog");
@@ -224,7 +225,9 @@ const { class: className, ...rest } = Astro.props;
       });
 
       this.dialog.addEventListener("close", () => {
-        this.finishClose(true);
+        if (!this.dialog?.open) {
+          this.finishClose(true);
+        }
       });
 
       document.addEventListener("astro:before-preparation", () => {
@@ -262,7 +265,8 @@ const { class: className, ...rest } = Astro.props;
       }
 
       this.activeTrigger = trigger;
-      if (!document.querySelector("dialog[open]")) {
+      if (!this.ownsScrollLock && !document.querySelector("dialog[open]")) {
+        this.ownsScrollLock = true;
         this.scrollPosition = window.scrollY;
         this.bodyPosition = document.body.style.position;
         this.bodyTop = document.body.style.top;
@@ -331,6 +335,7 @@ const { class: className, ...rest } = Astro.props;
         document.body.style.top = this.bodyTop;
         document.body.style.width = this.bodyWidth;
         window.scrollTo(0, this.scrollPosition);
+        this.ownsScrollLock = false;
       }
 
       if (restoreFocus && this.activeTrigger?.isConnected) {
