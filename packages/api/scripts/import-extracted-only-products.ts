@@ -1,9 +1,7 @@
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { opencode } from "../src/lib/opencode-provider";
 import Firecrawl from "@mendable/firecrawl-js";
 import { Search } from "@upstash/search";
-import { createLogger } from "@vit/logger";
 import { generateObject } from "ai";
 import { config as loadDotEnv } from "dotenv";
 import { and, asc, eq, inArray, isNull, like, or } from "drizzle-orm";
@@ -16,6 +14,8 @@ import {
 	ProductImagesTable,
 	ProductsTable,
 } from "../src/db/schema";
+import { logger } from "../src/lib/logger";
+import { opencode } from "../src/lib/opencode-provider";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "../../..");
 
@@ -289,10 +289,10 @@ const imageSelectionSchema = z.object({
 });
 
 const options = parseCliArgs(process.argv.slice(2));
-const log = createLogger({
-	requestId: "import-extracted-only",
-	userType: "system",
-});
+const importLogContext = {
+	request_id: "import-extracted-only",
+	user_type: "system",
+};
 
 const dbUrl = getDbUrl();
 const db = createDb(dbUrl);
@@ -337,15 +337,18 @@ const pendingRows = options.resume
 		)
 	: filteredRows;
 
-log.info("importExtractedOnly.start", {
-	totalRows: filteredRows.length,
-	pendingRows: pendingRows.length,
-	dryRun: options.dryRun,
-	resume: options.resume,
-	concurrency: options.concurrency,
-	stock: options.stock,
-	sourceImageDir: options.sourceImageDir,
-	forceCreateNeedsReview: options.forceCreateNeedsReview,
+logger.info("importExtractedOnly.start", {
+	...importLogContext,
+	data: {
+		total_rows: filteredRows.length,
+		pending_rows: pendingRows.length,
+		dry_run: options.dryRun,
+		resume: options.resume,
+		concurrency: options.concurrency,
+		stock: options.stock,
+		source_image_dir: options.sourceImageDir,
+		force_create_needs_review: options.forceCreateNeedsReview,
+	},
 });
 
 await runPool(pendingRows, options.concurrency, async (row) => {
@@ -358,10 +361,13 @@ await runPool(pendingRows, options.concurrency, async (row) => {
 		} catch {}
 	}
 
-	log.info("importExtractedOnly.row.start", {
-		canonicalKey: row.canonicalKey,
-		brandName: row.brandName,
-		productName: row.productName,
+	logger.info("importExtractedOnly.row.start", {
+		...importLogContext,
+		data: {
+			canonical_key: row.canonicalKey,
+			brand_name: row.brandName,
+			product_name: row.productName,
+		},
 	});
 
 	const result = await processRow(row);
@@ -419,14 +425,18 @@ await writeJsonAtomic(path.join(reportsDir, "summary.json"), {
 	dryRun: options.dryRun,
 });
 
-log.info("importExtractedOnly.done", {
-	totalRows: filteredRows.length,
-	completed: allResults.length,
-	created: allResults.filter((result) => result.kind === "created").length,
-	duplicates: allResults.filter((result) => result.kind === "duplicate").length,
-	needsReview: allResults.filter((result) => result.kind === "needs_review")
-		.length,
-	failed: allResults.filter((result) => result.kind === "failed").length,
+logger.info("importExtractedOnly.done", {
+	...importLogContext,
+	data: {
+		total_rows: filteredRows.length,
+		completed: allResults.length,
+		created: allResults.filter((result) => result.kind === "created").length,
+		duplicates: allResults.filter((result) => result.kind === "duplicate")
+			.length,
+		needs_review: allResults.filter((result) => result.kind === "needs_review")
+			.length,
+		failed: allResults.filter((result) => result.kind === "failed").length,
+	},
 });
 
 // The script constructs SDK/DB clients that can keep sockets alive after all
@@ -1030,7 +1040,10 @@ async function searchProductsViaUpstash(query: string, limit = 10) {
 			};
 		});
 	} catch (error) {
-		log.error("importExtractedOnly.upstashSearchFailed", error, { query });
+		logger.error("importExtractedOnly.upstashSearchFailed", error, {
+			...importLogContext,
+			data: { query },
+		});
 		return [];
 	}
 }
