@@ -8,7 +8,6 @@ import {
 } from "@vit/shared";
 import { PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
 import * as v from "valibot";
-import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
 import { PRODUCT_SEARCH_SORT_FIELDS } from "~/lib/product-search/types";
 import { subscribeToRestock } from "~/lib/restock";
@@ -377,18 +376,6 @@ export const product = router({
 					"unknown",
 			});
 		}),
-	getProductBenchmark: publicProcedure.query(async () => {
-		try {
-			return await runProductBenchmark();
-		} catch (error) {
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to run benchmark",
-				cause: error,
-			});
-		}
-	}),
-
 	getInfiniteProducts: publicProcedure
 		.input(v.object(infiniteProductsInput))
 		.query(async ({ ctx, input }) => {

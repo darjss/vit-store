@@ -195,23 +195,6 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             });
         }
     }),
-    getProductBenchmark: proc.query(async ({ ctx }) => {
-        try {
-            const startTime = performance.now();
-            await productQueries.admin.getProductBenchmark();
-            return performance.now() - startTime;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "getProductBenchmark"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to run benchmark",
-                cause: error,
-            });
-        }
-    }),
     getProductById: proc
         .input(v.object({ id: v.number() }))
         .query(async ({ ctx, input }) => {

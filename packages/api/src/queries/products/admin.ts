@@ -137,12 +137,6 @@ export const adminQueries = {
 			await conn.insert(ProductImagesTable).values(values);
 		},
 
-		async getProductBenchmark() {
-			return db().query.ProductsTable.findMany({
-				with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
-			});
-		},
-
 		async getProductById(id: number) {
 			return db().query.ProductsTable.findFirst({
 				where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),

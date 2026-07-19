@@ -496,12 +496,6 @@ Ensure CSS/JS/images have long `Cache-Control: public, max-age=31536000, immutab
 
 Add `<link rel="preload">` for the primary font and hero image.
 
-### 8.3 Remove `/benchmark` and `/test` from production
-
-**File:** `apps/storev2/src/pages/benchmark.astro` and `test.astro`
-
-These pages are already filtered from sitemap but still accessible. Add `noindex` meta or remove from production builds.
-
 ---
 
 ## Implementation priority
