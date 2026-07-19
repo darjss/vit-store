@@ -109,12 +109,36 @@ bun deploy          # turbo deploy (server first, then frontends)
 | `bun db:studio` / `bun db:studio:local` | Open Drizzle Studio |
 | `bun db:seed` | Seed the database |
 | `bun db:docker:up` / `bun db:docker:down` | Start/stop the Postgres container |
+| `bun cache:maintain` | Preview or clear the owned analytics KV cache scope |
 | `bun lint` / `bun lint:fix` | Biome lint / autofix |
 | `bun format` | Biome format |
 | `bun check` | oxlint |
 | `bun knip` | Dead-code/dependency analysis |
 | `bun quality` | `check-types` + `fallow dead-code` + `fallow health` |
 | `bun vit:extract` / `bun vit:compare` | Scrape/compare vit product catalog |
+
+### Cache maintenance
+
+Cache maintenance has no default environment or scope. Every invocation must select `local`, `staging`, or `production`, the `analytics` scope, and a namespace. An invocation without `--confirm` is a non-mutating preview; staging and production previews do not contact Cloudflare.
+
+Use a unique namespace name and persistence directory for disposable local work:
+
+```bash
+bun cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path>
+bun cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path> --confirm local:<unique-local-name>
+```
+
+Remote operations additionally require both the account and namespace IDs. Replace placeholders from the intended Alchemy stage output; do not copy identifiers between environments:
+
+```bash
+bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id>
+bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id> --confirm staging:<staging-namespace-id>
+
+bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id>
+bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id> --confirm production:<production-namespace-id> --confirm-production DELETE-PRODUCTION-CACHE
+```
+
+The package script disables Bun env-file loading. Wrangler runs from an isolated directory with only its user-level authentication configuration and the explicitly supplied account ID; it does not load the repository `.env` files.
 
 ## Project structure
 
