@@ -93,8 +93,7 @@ export default defineConfig({
 				!page.includes("/order/") &&
 				!page.includes("/privacy-policy") &&
 				!page.includes("/returns-refunds") &&
-				!page.includes("/terms-of-service") &&
-				!page.includes("/test"),
+				!page.includes("/terms-of-service"),
 			changefreq: "weekly",
 			priority: 0.7,
 			lastmod: new Date(),
