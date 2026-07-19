@@ -27,7 +27,7 @@
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --workspace packages/logger --reporter compact --no-config-hints --include files,dependencies,exports",
+		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
 		"dev": "turbo dev",
 		"dev:alchemy": "alchemy dev --stage dev",
 		"build": "turbo build",
