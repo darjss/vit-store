@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashRouteRouteImport } from './routes/_dash/route'
 import { Route as DashIndexRouteImport } from './routes/_dash/index'
-import { Route as ProductsAddRouteImport } from './routes/products.add'
 import { Route as DashSandboxRouteImport } from './routes/_dash/sandbox'
 import { Route as DashReviewProductsRouteImport } from './routes/_dash/review-products'
 import { Route as DashRestockWaitlistRouteImport } from './routes/_dash/restock-waitlist'
@@ -25,6 +24,7 @@ import { Route as DashProductsIndexRouteImport } from './routes/_dash/products.i
 import { Route as DashOrdersIndexRouteImport } from './routes/_dash/orders.index'
 import { Route as DashPurchasesAddRouteImport } from './routes/_dash/purchases.add'
 import { Route as DashPurchasesIdRouteImport } from './routes/_dash/purchases.$id'
+import { Route as DashProductsAddRouteImport } from './routes/_dash/products.add'
 import { Route as DashProductsIdRouteImport } from './routes/_dash/products.$id'
 import { Route as DashOrdersAddRouteImport } from './routes/_dash/orders.add'
 import { Route as DashOrdersIdRouteImport } from './routes/_dash/orders.$id'
@@ -42,11 +42,6 @@ const DashIndexRoute = DashIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashRouteRoute,
-} as any)
-const ProductsAddRoute = ProductsAddRouteImport.update({
-  id: '/products/add',
-  path: '/products/add',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const DashSandboxRoute = DashSandboxRouteImport.update({
   id: '/sandbox',
@@ -108,6 +103,11 @@ const DashPurchasesIdRoute = DashPurchasesIdRouteImport.update({
   path: '/purchases/$id',
   getParentRoute: () => DashRouteRoute,
 } as any)
+const DashProductsAddRoute = DashProductsAddRouteImport.update({
+  id: '/products/add',
+  path: '/products/add',
+  getParentRoute: () => DashRouteRoute,
+} as any)
 const DashProductsIdRoute = DashProductsIdRouteImport.update({
   id: '/products/$id',
   path: '/products/$id',
@@ -125,7 +125,6 @@ const DashOrdersIdRoute = DashOrdersIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof DashIndexRoute
   '/login': typeof LoginRoute
   '/analytics': typeof DashAnalyticsRoute
   '/brands': typeof DashBrandsRoute
@@ -134,15 +133,16 @@ export interface FileRoutesByFullPath {
   '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
-  '/products/add': typeof ProductsAddRoute
+  '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
   '/orders/add': typeof DashOrdersAddRoute
   '/products/$id': typeof DashProductsIdRoute
+  '/products/add': typeof DashProductsAddRoute
   '/purchases/$id': typeof DashPurchasesIdRoute
   '/purchases/add': typeof DashPurchasesAddRoute
-  '/orders/': typeof DashOrdersIndexRoute
-  '/products/': typeof DashProductsIndexRoute
-  '/purchases/': typeof DashPurchasesIndexRoute
+  '/orders': typeof DashOrdersIndexRoute
+  '/products': typeof DashProductsIndexRoute
+  '/purchases': typeof DashPurchasesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -153,11 +153,11 @@ export interface FileRoutesByTo {
   '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
-  '/products/add': typeof ProductsAddRoute
   '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
   '/orders/add': typeof DashOrdersAddRoute
   '/products/$id': typeof DashProductsIdRoute
+  '/products/add': typeof DashProductsAddRoute
   '/purchases/$id': typeof DashPurchasesIdRoute
   '/purchases/add': typeof DashPurchasesAddRoute
   '/orders': typeof DashOrdersIndexRoute
@@ -175,11 +175,11 @@ export interface FileRoutesById {
   '/_dash/restock-waitlist': typeof DashRestockWaitlistRoute
   '/_dash/review-products': typeof DashReviewProductsRoute
   '/_dash/sandbox': typeof DashSandboxRoute
-  '/products/add': typeof ProductsAddRoute
   '/_dash/': typeof DashIndexRoute
   '/_dash/orders/$id': typeof DashOrdersIdRoute
   '/_dash/orders/add': typeof DashOrdersAddRoute
   '/_dash/products/$id': typeof DashProductsIdRoute
+  '/_dash/products/add': typeof DashProductsAddRoute
   '/_dash/purchases/$id': typeof DashPurchasesIdRoute
   '/_dash/purchases/add': typeof DashPurchasesAddRoute
   '/_dash/orders/': typeof DashOrdersIndexRoute
@@ -189,7 +189,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/login'
     | '/analytics'
     | '/brands'
@@ -198,15 +197,16 @@ export interface FileRouteTypes {
     | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
-    | '/products/add'
+    | '/'
     | '/orders/$id'
     | '/orders/add'
     | '/products/$id'
+    | '/products/add'
     | '/purchases/$id'
     | '/purchases/add'
-    | '/orders/'
-    | '/products/'
-    | '/purchases/'
+    | '/orders'
+    | '/products'
+    | '/purchases'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -217,11 +217,11 @@ export interface FileRouteTypes {
     | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
-    | '/products/add'
     | '/'
     | '/orders/$id'
     | '/orders/add'
     | '/products/$id'
+    | '/products/add'
     | '/purchases/$id'
     | '/purchases/add'
     | '/orders'
@@ -238,11 +238,11 @@ export interface FileRouteTypes {
     | '/_dash/restock-waitlist'
     | '/_dash/review-products'
     | '/_dash/sandbox'
-    | '/products/add'
     | '/_dash/'
     | '/_dash/orders/$id'
     | '/_dash/orders/add'
     | '/_dash/products/$id'
+    | '/_dash/products/add'
     | '/_dash/purchases/$id'
     | '/_dash/purchases/add'
     | '/_dash/orders/'
@@ -253,7 +253,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   DashRouteRoute: typeof DashRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
-  ProductsAddRoute: typeof ProductsAddRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -268,7 +267,7 @@ declare module '@tanstack/react-router' {
     '/_dash': {
       id: '/_dash'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof DashRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -278,13 +277,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof DashIndexRouteImport
       parentRoute: typeof DashRouteRoute
-    }
-    '/products/add': {
-      id: '/products/add'
-      path: '/products/add'
-      fullPath: '/products/add'
-      preLoaderRoute: typeof ProductsAddRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_dash/sandbox': {
       id: '/_dash/sandbox'
@@ -338,21 +330,21 @@ declare module '@tanstack/react-router' {
     '/_dash/purchases/': {
       id: '/_dash/purchases/'
       path: '/purchases'
-      fullPath: '/purchases/'
+      fullPath: '/purchases'
       preLoaderRoute: typeof DashPurchasesIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/products/': {
       id: '/_dash/products/'
       path: '/products'
-      fullPath: '/products/'
+      fullPath: '/products'
       preLoaderRoute: typeof DashProductsIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/orders/': {
       id: '/_dash/orders/'
       path: '/orders'
-      fullPath: '/orders/'
+      fullPath: '/orders'
       preLoaderRoute: typeof DashOrdersIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
@@ -368,6 +360,13 @@ declare module '@tanstack/react-router' {
       path: '/purchases/$id'
       fullPath: '/purchases/$id'
       preLoaderRoute: typeof DashPurchasesIdRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/products/add': {
+      id: '/_dash/products/add'
+      path: '/products/add'
+      fullPath: '/products/add'
+      preLoaderRoute: typeof DashProductsAddRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/products/$id': {
@@ -406,6 +405,7 @@ interface DashRouteRouteChildren {
   DashOrdersIdRoute: typeof DashOrdersIdRoute
   DashOrdersAddRoute: typeof DashOrdersAddRoute
   DashProductsIdRoute: typeof DashProductsIdRoute
+  DashProductsAddRoute: typeof DashProductsAddRoute
   DashPurchasesIdRoute: typeof DashPurchasesIdRoute
   DashPurchasesAddRoute: typeof DashPurchasesAddRoute
   DashOrdersIndexRoute: typeof DashOrdersIndexRoute
@@ -425,6 +425,7 @@ const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashOrdersIdRoute: DashOrdersIdRoute,
   DashOrdersAddRoute: DashOrdersAddRoute,
   DashProductsIdRoute: DashProductsIdRoute,
+  DashProductsAddRoute: DashProductsAddRoute,
   DashPurchasesIdRoute: DashPurchasesIdRoute,
   DashPurchasesAddRoute: DashPurchasesAddRoute,
   DashOrdersIndexRoute: DashOrdersIndexRoute,
@@ -439,7 +440,6 @@ const DashRouteRouteWithChildren = DashRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   DashRouteRoute: DashRouteRouteWithChildren,
   LoginRoute: LoginRoute,
-  ProductsAddRoute: ProductsAddRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
