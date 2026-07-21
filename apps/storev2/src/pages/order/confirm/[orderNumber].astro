@@ -1,23 +1,11 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import PaymentStatus from "@/components/payment/payment-status";
+import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
+import { loadOrderOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
+import IconCheck from "~icons/ri/check-line";
 import IconHome from "~icons/ri/home-4-line";
 import IconMail from "~icons/ri/mail-line";
 import IconMapPin from "~icons/ri/map-pin-line";
@@ -29,87 +17,122 @@ import type { OrderStatusType } from "@vit/shared/types";
 const { orderNumber } = Astro.params;
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
-if(!orderNumber || orderNumber===undefined){
-    throw Astro.redirect("/404");
+const serverApi = createServerClient(cookieHeader, env.server);
+if (!orderNumber) {
+    return Astro.redirect("/404");
 }
-let order;
-try {
-    order = await serverApi.order.getOrderByOrderNumber.query({ orderNumber: orderNumber, checkoutToken });
-} catch (err) {
-    const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-    if (code === "UNAUTHORIZED") {
-        throw Astro.redirect("/order-tracking");
-    }
-    throw err;
-}
-if(!order){
-    throw Astro.redirect("/404");
-}
+const result = await loadOrderOrRedirect(serverApi, orderNumber, checkoutToken, Astro.redirect);
+if ("redirect" in result) return result.redirect;
+const order = result.order;
 
+const timelineSteps: OrderStatusType[] = ["pending", "shipped", "delivered"];
+const currentStepIndex = timelineSteps.indexOf((order.status ?? "pending") as OrderStatusType);
+
+const statusBadgeClasses: Record<string, string> = {
+    created: "bg-card border border-border text-foreground",
+    pending: "bg-warning text-warning-foreground",
+    shipped: "bg-info text-info-foreground",
+    delivered: "bg-success text-success-foreground",
+    cancelled: "bg-error text-error-foreground",
+    refunded: "bg-secondary text-secondary-foreground",
+};
 ---
 
 <Layout>
-    <div class="container mx-auto px-4 py-8 min-h-screen">
-        <PaymentStatus payment={order.payments[0]} client:load />
+    <div class="container mx-auto max-w-4xl px-4 py-8 lg:py-12">
+        {order.payments[0] ? (
+            <PaymentStatus payment={{ ...order.payments[0], checkoutToken }} client:load />
+        ) : (
+            <div class="mb-12 text-center">
+                <div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-soft-lg">
+                    <IconCheck class="h-10 w-10" aria-hidden="true" />
+                </div>
+                <h1 class="mb-3 font-display text-2xl text-foreground">Захиалга хүлээн авагдлаа</h1>
+                <p class="text-lg text-muted-foreground">Төлбөрийн мэдээлэл олдсонгүй. Хүргэгчтэй холбогдоно уу.</p>
+            </div>
+        )}
 
-        <div class="max-w-4xl mx-auto mb-8">
-            <div class="border-4 border-border bg-card shadow-hard-xl transition-all">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-6 md:p-8 border-b-4 border-border">
-                    <div>
-                        <h2 class="text-2xl font-black uppercase tracking-tight mb-2">Захиалгын мэдээлэл</h2>
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm text-muted-foreground">Захиалгын дугаар:</span>
-                            <span class="font-mono font-bold text-lg">{orderNumber}</span>
-                        </div>
-                    </div>
-                    <div class="mt-4 md:mt-0">
-                        <div class="inline-flex items-center border-2 border-border px-3 py-1 text-xs font-black uppercase tracking-wide shadow-hard-sm bg-success text-success-foreground">
-                            {orderStatusLabels[order?.status as OrderStatusType] ?? order?.status ?? 'Хүлээгдэж буй'}
-                        </div>
+        <div class="enter-rise mb-6 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+            <div class="flex flex-col justify-between gap-4 border-border border-b bg-wash-lemon/70 p-6 md:flex-row md:items-center md:p-8">
+                <div>
+                    <h2 class="mb-1 font-display text-foreground text-h3">Захиалгын мэдээлэл</h2>
+                    <div class="flex items-center gap-3">
+                        <span class="text-muted-foreground text-sm">Захиалгын дугаар:</span>
+                        <span class="font-display text-base text-foreground">{orderNumber}</span>
                     </div>
                 </div>
-                
-                <div class="p-6 md:p-8">
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 class="font-black uppercase tracking-tight mb-3">Хүргэлтийн мэдээлэл</h3>
-                            <div class="space-y-2">
-                                <div class="flex items-start gap-3">
-                                    <IconMapPin class="w-5 h-5 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <p class="text-sm text-muted-foreground">Хүргэлтийн хаяг</p>
-                                        <p class="font-medium">{order?.address}</p>
+                <div>
+                    <span class={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${statusBadgeClasses[order?.status ?? "pending"] ?? "bg-success text-success-foreground"}`}>
+                        {orderStatusLabels[order?.status as OrderStatusType] ?? order?.status ?? 'Хүлээгдэж буй'}
+                    </span>
+                </div>
+            </div>
+
+            <div class="p-6 md:p-8">
+                {currentStepIndex >= 0 && (
+                    <div class="mb-6 rounded-xl bg-wash-mint/40 p-4">
+                        <div class="flex items-start">
+                            {timelineSteps.map((timelineStep, index) => (
+                                <>
+                                    {index > 0 && (
+                                        <div class={`mt-4 h-px flex-1 ${index <= currentStepIndex ? "bg-success-foreground/40" : "bg-border"}`}></div>
+                                    )}
+                                    <div class="flex w-16 flex-col items-center gap-1.5">
+                                        <div class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${index <= currentStepIndex ? "bg-success text-success-foreground" : "border border-border bg-card text-muted-foreground"}`}>
+                                            {index <= currentStepIndex ? (
+                                                <IconCheck class="h-4 w-4" />
+                                            ) : (
+                                                <span class="font-semibold">{index + 1}</span>
+                                            )}
+                                        </div>
+                                        <span class={`text-center text-[11px] leading-tight ${index === currentStepIndex ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                                            {orderStatusLabels[timelineStep]}
+                                        </span>
                                     </div>
+                                </>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div>
+                        <h3 class="mb-3 font-display text-base text-foreground">Хүргэлтийн мэдээлэл</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start gap-3">
+                                <IconMapPin class="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                                <div>
+                                    <p class="text-muted-foreground text-sm">Хүргэлтийн хаяг</p>
+                                    <p class="font-medium text-foreground">{order?.address}</p>
                                 </div>
-                                <div class="flex items-start gap-3">
-                                    <IconPhone class="w-5 h-5 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <p class="text-sm text-muted-foreground">Холбоо барих дугаар</p>
-                                        <p class="font-medium">{order?.customerPhone}</p>
-                                    </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <IconPhone class="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
+                                <div>
+                                    <p class="text-muted-foreground text-sm">Холбоо барих дугаар</p>
+                                    <p class="font-medium text-foreground">{order?.customerPhone}</p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div>
-                            <h3 class="font-black uppercase tracking-tight mb-3">Захиалгын дүн</h3>
-                            <div class="space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-muted-foreground">Захиалсан огноо:</span>
-                                    <span class="font-medium">{new Date(order?.createdAt || '').toLocaleDateString()}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-muted-foreground">Хүргэлтийн арга:</span>
-                                    <span class="font-medium capitalize">{order?.deliveryProvider === 'tu-delivery' ? 'TU Delivery' : order?.deliveryProvider === 'self' ? 'Өөрөө авах' : order?.deliveryProvider?.replace('-', ' ') || 'TU Delivery'}</span>
-                                </div>
-                                {order?.notes && (
-                                    <div class="flex justify-between">
-                                        <span class="text-muted-foreground">Тэмдэглэл:</span>
-                                        <span class="font-medium">{order.notes}</span>
-                                    </div>
-                                )}
+                    </div>
+
+                    <div>
+                        <h3 class="mb-3 font-display text-base text-foreground">Захиалгын дүн</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground text-sm">Захиалсан огноо:</span>
+                                <span class="font-medium text-foreground text-sm">{new Date(order?.createdAt || '').toLocaleDateString()}</span>
                             </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted-foreground text-sm">Хүргэлтийн арга:</span>
+                                <span class="font-medium text-foreground text-sm">{order?.deliveryProvider === 'tu-delivery' ? 'TU Delivery' : order?.deliveryProvider === 'self' ? 'Өөрөө авах' : order?.deliveryProvider?.replace('-', ' ') || 'TU Delivery'}</span>
+                            </div>
+                            {order?.notes && (
+                                <div class="flex justify-between gap-4">
+                                    <span class="text-muted-foreground text-sm">Тэмдэглэл:</span>
+                                    <span class="font-medium text-foreground text-sm">{order.notes}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -117,35 +140,31 @@ if(!order){
         </div>
 
         {order.orderDetails && order.orderDetails.length > 0 && (
-            <div class="max-w-4xl mx-auto mb-8">
-                <h2 class="text-2xl font-black uppercase tracking-tight mb-6">Захиалсан бүтээгдэхүүн</h2>
-                <div class="space-y-4">
+            <div class="enter-rise stagger-1 mb-6">
+                <h2 class="mb-4 font-display text-foreground text-h3">Захиалсан бүтээгдэхүүн</h2>
+                <div class="space-y-3">
                     {order.orderDetails.map((detail) => (
-                        <div class="border-4 border-border bg-card shadow-hard-xl transition-all hover:shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px]">
-                            <div class="p-6 flex flex-col md:flex-row gap-6">
-                                <div class="flex-shrink-0 w-24 h-24 border-2 border-border overflow-hidden relative bg-primary/5">
+                        <div class="rounded-2xl border border-border bg-card p-4 shadow-soft md:p-5">
+                            <div class="flex items-center gap-4">
+                                <div class="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-muted md:h-20 md:w-20">
                                     {detail.product.images[0]?.url ? (
                                         <img
                                             src={detail.product.images[0].url}
                                             alt={detail.product.name}
-                                            class="w-24 h-24 object-cover"
+                                            class="h-full w-full object-cover"
                                         />
                                     ) : (
                                         <ProductImageFallback name={detail.product.name} brand={detail.product.brand?.name ?? null} />
                                     )}
                                 </div>
-                                <div class="flex-grow">
-                                    <h3 class="font-black text-lg uppercase tracking-tight mb-1">{detail.product.name}</h3>
-                                    <p class="text-sm text-muted-foreground mb-3">{detail.product.brand.name}</p>
-                                    <div class="flex justify-between items-center">
-                                        <div class="flex items-center gap-4">
-                                            <span class="text-sm text-muted-foreground">Тоо хэмжээ:</span>
-                                            <span class="font-bold">{detail.quantity}</span>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-sm text-muted-foreground">Үнэ</p>
-                                            <p class="font-black text-lg">₮{detail.product.price.toLocaleString()}</p>
-                                        </div>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="mb-0.5 truncate font-semibold text-foreground text-sm md:text-base">{detail.product.name}</h3>
+                                    {detail.product.brand?.name && (
+                                        <p class="mb-2 text-muted-foreground text-xs">{detail.product.brand.name}</p>
+                                    )}
+                                    <div class="flex items-center justify-between">
+                                        <span class="rounded-full bg-muted px-2.5 py-0.5 font-semibold text-foreground text-xs">{detail.quantity}x</span>
+                                        <span class="font-display text-foreground text-sm md:text-base">₮{detail.product.price.toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
@@ -155,57 +174,53 @@ if(!order){
             </div>
         )}
 
-        <div class="max-w-4xl mx-auto mb-12">
-            <div class="border-4 border-border bg-primary text-primary-foreground shadow-hard-xl p-6 md:p-8">
-                <div class="flex justify-between items-center">
+        <div class="enter-rise stagger-2 mb-10">
+            <div class="rounded-2xl border border-border bg-wash-lemon/70 p-6 shadow-soft md:p-8">
+                <div class="flex items-center justify-between gap-4">
                     <div>
-                        <h3 class="text-xl font-black uppercase tracking-tight">Нийт дүн</h3>
-                        <p class="text-sm opacity-90">Татвар, шимтгэл багтсан</p>
+                        <h3 class="font-display text-foreground text-lg">Нийт дүн</h3>
+                        <p class="text-muted-foreground text-sm">Татвар, шимтгэл багтсан</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-3xl font-black">₮{(order?.total || 0).toLocaleString()}</p>
-                    </div>
+                    <p class="font-display text-2xl text-foreground md:text-3xl">₮{(order?.total || 0).toLocaleString()}</p>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-4xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                    href="/"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
-                >
-                    <IconHome class="w-4 h-4" />
-                    Худалдан авалтыг үргэлжлүүлэх
-                </a>
-                <a 
-                    href="/profile"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-primary text-primary-foreground shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
-                >
-                    <IconUser class="w-4 h-4" />
-                    Миний захиалгууд
-                </a>
-            </div>
+        <div class="enter-rise stagger-3 flex flex-col justify-center gap-3 sm:flex-row">
+            <a
+                href="/"
+                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-8 py-3 font-semibold text-primary-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97] md:text-base"
+            >
+                <IconHome class="h-4 w-4" />
+                Худалдан авалтыг үргэлжлүүлэх
+            </a>
+            <a
+                href="/profile"
+                class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-border bg-card px-8 py-3 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97] md:text-base"
+            >
+                <IconUser class="h-4 w-4" />
+                Миний захиалгууд
+            </a>
         </div>
 
         <!-- Help Section -->
-        <div class="max-w-4xl mx-auto mt-16 text-center">
-            <div class="border-4 border-border bg-secondary p-8 shadow-hard-light-lg">
-                <h3 class="text-xl font-black uppercase tracking-tight mb-4">Тусламж хэрэгтэй юу?</h3>
-                <p class="text-muted-foreground mb-6">Хэрэв таны захиалгатай холбоотой асуулт байвал бидэнтэй холбогдоорой.</p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a 
+        <div class="enter-rise stagger-4 mx-auto mt-12 text-center">
+            <div class="rounded-2xl border border-border bg-card p-6 shadow-soft md:p-8">
+                <h3 class="mb-2 font-display text-foreground text-lg">Тусламж хэрэгтэй юу?</h3>
+                <p class="mb-6 text-muted-foreground text-sm">Хэрэв таны захиалгатай холбоотой асуулт байвал бидэнтэй холбогдоорой.</p>
+                <div class="flex flex-col justify-center gap-3 sm:flex-row">
+                    <a
                         href="tel:+97699993950"
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-2.5 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                     >
-                        <IconPhone class="w-4 h-4" />
+                        <IconPhone class="h-4 w-4" />
                         Утсаар залгах
                     </a>
-                    <a 
+                    <a
                         href="mailto:info@amerikvitamin.mn"
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 px-6 py-3 text-sm"
+                        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border bg-card px-6 py-2.5 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
                     >
-                        <IconMail class="w-4 h-4" />
+                        <IconMail class="h-4 w-4" />
                         Имэйл илгээх
                     </a>
                 </div>

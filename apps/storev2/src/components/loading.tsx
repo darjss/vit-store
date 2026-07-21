@@ -1,13 +1,17 @@
 const Loading = () => {
 	return (
-		<div class="flex flex-col items-center justify-center py-16 md:py-24">
-			<div class="max-w-md border-4 border-border bg-card p-8 text-center shadow-hard-xl md:p-12">
-				<div class="mb-6 inline-flex h-24 w-24 items-center justify-center border-4 border-border bg-muted">
-					<div class="h-8 w-8 animate-spin border-4 border-border border-t-primary" />
+		<div class="enter-fade flex flex-col items-center justify-center py-16 md:py-24">
+			<div class="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-soft md:p-12">
+				<div
+					class="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-2 border-muted border-t-cocoa"
+					style="animation-duration: 0.6s;"
+				/>
+				<h2 class="mb-4 font-display text-foreground text-lg">Уншиж байна...</h2>
+				<div class="space-y-2.5">
+					<div class="h-3 w-full animate-pulse rounded-full bg-muted" />
+					<div class="mx-auto h-3 w-4/5 animate-pulse rounded-full bg-muted [animation-delay:120ms]" />
+					<div class="mx-auto h-3 w-3/5 animate-pulse rounded-full bg-muted [animation-delay:240ms]" />
 				</div>
-				<h2 class="mb-3 font-black text-2xl uppercase md:text-3xl">
-					Уншиж байна...
-				</h2>
 			</div>
 		</div>
 	);

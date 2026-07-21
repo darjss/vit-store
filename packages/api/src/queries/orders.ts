@@ -43,89 +43,114 @@ type DeliveryProvider = (typeof deliveryProvider)[number];
 function resolveDateRange(date?: string): { start: Date; end: Date } | null {
 	if (date === undefined || date === "all") return null;
 
-	const now = new Date();
-	const startOfDay = (d: Date) => {
-		const r = new Date(d);
-		r.setHours(0, 0, 0, 0);
-		return r;
-	};
-	const endOfDay = (d: Date) => {
-		const r = new Date(d);
-		r.setHours(23, 59, 59, 999);
-		return r;
-	};
-
+	// All ranges are computed in Asia/Ulaanbaatar (UTC+8, no DST) using the
+	// shared UB-aware helpers from ~/lib/utils. The previous implementation
+	// used runtime-local setHours (UTC on Workers) and a hardcoded "+08:00"
+	// string for specific dates, which diverged from the rest of the app.
 	if (date === "today") {
-		return { start: startOfDay(now), end: endOfDay(now) };
+		const { startDate, endDate } = getStartAndEndofDayAgo(0);
+		return { start: startDate, end: endDate };
 	}
 	if (date === "yesterday") {
-		const yesterday = new Date(now);
-		yesterday.setDate(yesterday.getDate() - 1);
-		return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+		const { startDate, endDate } = getStartAndEndofDayAgo(1);
+		return { start: startDate, end: endDate };
 	}
 	if (date === "last7days") {
-		const start = new Date(now);
-		start.setDate(start.getDate() - 6);
-		return { start: startOfDay(start), end: endOfDay(now) };
+		const start = getStartAndEndofDayAgo(6).startDate;
+		const end = getStartAndEndofDayAgo(0).endDate;
+		return { start, end };
 	}
 	if (date === "last30days") {
-		const start = new Date(now);
-		start.setDate(start.getDate() - 29);
-		return { start: startOfDay(start), end: endOfDay(now) };
+		const start = getStartAndEndofDayAgo(29).startDate;
+		const end = getStartAndEndofDayAgo(0).endDate;
+		return { start, end };
 	}
-	// specific date "YYYY-MM-DD"
-	const selectedDate = new Date(`${date}T00:00:00+08:00`);
-	return { start: startOfDay(selectedDate), end: endOfDay(selectedDate) };
+	// specific date "YYYY-MM-DD" — interpret as a UB-local calendar date and
+	// return the UTC instants for UB midnight start and UB 23:59:59.999 end.
+	const [y, m, d] = date.split("-").map(Number);
+	const epochUtcMidnight = Date.UTC(y, m - 1, d);
+	const ubMidnightUtc = epochUtcMidnight - UB_OFFSET_MS;
+	const DAY_MS = 24 * 60 * 60 * 1000;
+	return { start: new Date(ubMidnightUtc), end: new Date(ubMidnightUtc + DAY_MS - 1) };
 }
 
 export const orderQueries = {
 	admin: {
 		async getOrderCountForWeek() {
 			try {
-				const orderPromises: Promise<Array<{ orderCount: number }>>[] = [];
-				const salesPromises: Promise<Array<{ salesCount: number }>>[] = [];
-				const dayLabels: string[] = [];
-				for (let i = 0; i < 7; i++) {
-					const { startDate, endDate } = getStartAndEndofDayAgo(i);
-					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
-					dayLabels.push(`${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`);
-					const dayOrderPromise = db()
+				// 2 aggregate queries (orders + sales) with GROUP BY UB-day over
+				// the last 7 days, replacing the previous 14 parallel per-day
+				// queries. Buckets are computed by shifting createdAt into
+				// Asia/Ulaanbaatar (UTC+8) before DATE_TRUNC('day', ...).
+				const weekStart = getStartAndEndofDayAgo(6).startDate;
+				const weekEnd = getStartAndEndofDayAgo(0).endDate;
+				const ubDayBucket = sql<Date>`DATE_TRUNC('day', ${OrdersTable.createdAt} + INTERVAL '8 hours')`;
+				const ubSalesDayBucket = sql<Date>`DATE_TRUNC('day', ${SalesTable.createdAt} + INTERVAL '8 hours')`;
+
+				const [orderRows, salesRows] = await Promise.all([
+					db()
 						.select({
+							day: ubDayBucket,
 							orderCount: sql<number>`COUNT(*)`,
 						})
 						.from(OrdersTable)
 						.where(
 							and(
-								between(OrdersTable.createdAt, startDate, endDate),
+								between(OrdersTable.createdAt, weekStart, weekEnd),
 								isNull(OrdersTable.deletedAt),
 							),
 						)
-						.limit(1);
-					orderPromises.push(dayOrderPromise);
-					const daySalesPromise = db()
+						.groupBy(ubDayBucket),
+					db()
 						.select({
+							day: ubSalesDayBucket,
 							salesCount: sql<number>`COUNT(*)`,
 						})
 						.from(SalesTable)
 						.where(
 							and(
-								between(SalesTable.createdAt, startDate, endDate),
+								between(SalesTable.createdAt, weekStart, weekEnd),
 								isNull(SalesTable.deletedAt),
 							),
 						)
-						.limit(1);
-					salesPromises.push(daySalesPromise);
+						.groupBy(ubSalesDayBucket),
+				]);
+
+				const ordersByDay = new Map<string, number>();
+				for (const row of orderRows) {
+					const ubDay = new Date(row.day.getTime() + UB_OFFSET_MS);
+					ordersByDay.set(
+						`${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`,
+						Number(row.orderCount),
+					);
 				}
-				const orderResults = await Promise.all(orderPromises);
-				const salesResults = await Promise.all(salesPromises);
-				return orderResults.map((orderResult, i) => {
-					const salesResult = salesResults[i];
-					return {
-						orderCount: orderResult[0]?.orderCount ?? 0,
-						salesCount: salesResult[0]?.salesCount ?? 0,
-						date: dayLabels[i],
-					};
-				});
+				const salesByDay = new Map<string, number>();
+				for (const row of salesRows) {
+					const ubDay = new Date(row.day.getTime() + UB_OFFSET_MS);
+					salesByDay.set(
+						`${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`,
+						Number(row.salesCount),
+					);
+				}
+
+				// Emit today-first (i=0) through 6-days-ago (i=6), matching the
+				// previous ordering.
+				const result: Array<{
+					orderCount: number;
+					salesCount: number;
+					date: string;
+				}> = [];
+				for (let i = 0; i < 7; i++) {
+					const { startDate } = getStartAndEndofDayAgo(i);
+					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
+					const label = `${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`;
+					result.push({
+						orderCount: ordersByDay.get(label) ?? 0,
+						salesCount: salesByDay.get(label) ?? 0,
+						date: label,
+					});
+				}
+				return result;
 			} catch {
 				return [];
 			}
@@ -147,7 +172,7 @@ export const orderQueries = {
 				return acc + order.total;
 			}, 0);
 
-			return total / order.length;
+			return order.length > 0 ? total / order.length : 0;
 		},
 
 		async getOrderCount(timeRange: timeRangeType) {
@@ -235,6 +260,25 @@ export const orderQueries = {
 			deliveryProvider: DeliveryProvider;
 		}) {
 			const result = await db()
+				.insert(OrdersTable)
+				.values(data)
+				.returning({ orderId: OrdersTable.id });
+			return result[0];
+		},
+
+		async createOrderTx(
+			tx: TransactionType,
+			data: {
+				orderNumber: string;
+				customerPhone: number;
+				status: OrderStatus;
+				notes: string | null;
+				total: number;
+				address: string;
+				deliveryProvider: DeliveryProvider;
+			},
+		) {
+			const result = await tx
 				.insert(OrdersTable)
 				.values(data)
 				.returning({ orderId: OrdersTable.id });
@@ -462,12 +506,22 @@ export const orderQueries = {
 				conditions.push(ne(OrdersTable.status, "created"));
 			}
 
+			if (params.paymentStatus !== undefined) {
+				// Move the payment-status filter into the SQL WHERE so both the page
+				// query and the count query honor it. Previously the count ignored
+				// paymentStatus, producing wrong totalPages (mostly empty pages
+				// after page 1).
+				conditions.push(
+					sql`${OrdersTable.id} IN (SELECT ${PaymentsTable.orderId} FROM ${PaymentsTable} WHERE ${PaymentsTable.status} = ${params.paymentStatus} AND ${PaymentsTable.deletedAt} IS NULL)`,
+				);
+			}
+
 			if (params.searchTerm !== undefined) {
 				conditions.push(
 					or(
-						like(OrdersTable.orderNumber, `%${params.searchTerm}%`),
-						like(OrdersTable.address, `%${params.searchTerm}%`),
-						like(
+						ilike(OrdersTable.orderNumber, `%${params.searchTerm}%`),
+						ilike(OrdersTable.address, `%${params.searchTerm}%`),
+						ilike(
 							sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
 							`%${params.searchTerm}%`,
 						),
@@ -554,13 +608,6 @@ export const orderQueries = {
 				});
 			}
 
-			let filteredOrders = orderResults;
-			if (params.paymentStatus !== undefined) {
-				filteredOrders = orderResults.filter((order) =>
-					order.payments.some((p) => p.status === params.paymentStatus),
-				);
-			}
-
 			const totalCountResult = await db()
 				.select({ count: sql<number>`COUNT(*)` })
 				.from(OrdersTable)
@@ -571,7 +618,7 @@ export const orderQueries = {
 			const totalPages = Math.ceil(totalCount / params.pageSize);
 
 			return {
-				orders: shapeOrderResults(filteredOrders),
+				orders: shapeOrderResults(orderResults),
 				pagination: {
 					currentPage: params.page,
 					totalPages,
@@ -613,6 +660,23 @@ export const orderQueries = {
 			},
 		) {
 			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
+		},
+
+		async patchOrderHeader(
+			id: number,
+			data: {
+				customerPhone?: number;
+				status?: OrderStatusType;
+				notes?: string | null;
+				address?: string;
+				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
+			},
+		) {
+			await db()
+				.update(OrdersTable)
+				.set(data)
+				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
 		},
 
 		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {

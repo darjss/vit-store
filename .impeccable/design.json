@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-02T00:00:00Z",
+  "title": "Design System: Amerik Vitamin Storefront",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Butter",
+        "canonical": "oklch(0.9 0.14 95)",
+        "tonalRamp": ["oklch(0.18 0.14 95)", "oklch(0.29 0.14 95)", "oklch(0.40 0.14 95)", "oklch(0.51 0.14 95)", "oklch(0.62 0.14 95)", "oklch(0.73 0.14 95)", "oklch(0.84 0.14 95)", "oklch(0.95 0.10 95)"]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Butter Deep",
+        "canonical": "oklch(0.8 0.13 92)",
+        "tonalRamp": ["oklch(0.18 0.13 92)", "oklch(0.28 0.13 92)", "oklch(0.39 0.13 92)", "oklch(0.50 0.13 92)", "oklch(0.60 0.13 92)", "oklch(0.71 0.13 92)", "oklch(0.80 0.13 92)", "oklch(0.90 0.10 92)"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Espresso",
+        "canonical": "oklch(0.28 0.02 60)",
+        "tonalRamp": ["oklch(0.18 0.02 60)", "oklch(0.28 0.02 60)", "oklch(0.39 0.025 60)", "oklch(0.50 0.025 60)", "oklch(0.61 0.02 60)", "oklch(0.72 0.02 60)", "oklch(0.84 0.015 60)", "oklch(0.95 0.01 60)"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Warm Cream",
+        "canonical": "oklch(0.98 0.012 90)",
+        "tonalRamp": ["oklch(0.18 0.012 90)", "oklch(0.29 0.012 90)", "oklch(0.40 0.012 90)", "oklch(0.51 0.012 90)", "oklch(0.62 0.012 90)", "oklch(0.73 0.012 90)", "oklch(0.86 0.012 90)", "oklch(0.98 0.012 90)"]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card",
+        "canonical": "oklch(0.995 0.008 95)",
+        "tonalRamp": ["oklch(0.20 0.008 95)", "oklch(0.31 0.008 95)", "oklch(0.42 0.008 95)", "oklch(0.53 0.008 95)", "oklch(0.64 0.008 95)", "oklch(0.75 0.008 95)", "oklch(0.88 0.008 95)", "oklch(0.995 0.008 95)"]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "oklch(0.48 0.025 70)",
+        "tonalRamp": ["oklch(0.18 0.025 70)", "oklch(0.28 0.025 70)", "oklch(0.38 0.025 70)", "oklch(0.48 0.025 70)", "oklch(0.60 0.025 70)", "oklch(0.72 0.02 70)", "oklch(0.84 0.015 70)", "oklch(0.95 0.01 70)"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Warm Border",
+        "canonical": "oklch(0.88 0.02 85)",
+        "tonalRamp": ["oklch(0.20 0.02 85)", "oklch(0.31 0.02 85)", "oklch(0.42 0.02 85)", "oklch(0.53 0.02 85)", "oklch(0.64 0.02 85)", "oklch(0.75 0.02 85)", "oklch(0.88 0.02 85)", "oklch(0.96 0.015 85)"]
+      },
+      "cocoa": {
+        "role": "neutral",
+        "displayName": "Cocoa",
+        "canonical": "oklch(0.35 0.05 50)",
+        "tonalRamp": ["oklch(0.18 0.05 50)", "oklch(0.27 0.05 50)", "oklch(0.35 0.05 50)", "oklch(0.46 0.05 50)", "oklch(0.57 0.05 50)", "oklch(0.68 0.045 50)", "oklch(0.80 0.04 50)", "oklch(0.92 0.03 50)"]
+      },
+      "sand": {
+        "role": "neutral",
+        "displayName": "Sand",
+        "canonical": "oklch(0.88 0.03 60)",
+        "tonalRamp": ["oklch(0.20 0.03 60)", "oklch(0.31 0.03 60)", "oklch(0.42 0.03 60)", "oklch(0.53 0.03 60)", "oklch(0.64 0.03 60)", "oklch(0.75 0.03 60)", "oklch(0.88 0.03 60)", "oklch(0.96 0.02 60)"]
+      },
+      "sale": {
+        "role": "secondary",
+        "displayName": "Coral",
+        "canonical": "oklch(0.68 0.14 30)",
+        "tonalRamp": ["oklch(0.20 0.14 30)", "oklch(0.30 0.16 30)", "oklch(0.40 0.18 30)", "oklch(0.50 0.18 30)", "oklch(0.60 0.16 30)", "oklch(0.68 0.14 30)", "oklch(0.80 0.10 30)", "oklch(0.92 0.05 30)"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Sage Success",
+        "canonical": "oklch(0.88 0.1 150)",
+        "tonalRamp": ["oklch(0.20 0.1 150)", "oklch(0.31 0.1 150)", "oklch(0.42 0.12 150)", "oklch(0.53 0.12 150)", "oklch(0.64 0.12 150)", "oklch(0.75 0.11 150)", "oklch(0.88 0.10 150)", "oklch(0.95 0.06 150)"]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Warning Amber",
+        "canonical": "oklch(0.9 0.12 85)",
+        "tonalRamp": ["oklch(0.20 0.12 85)", "oklch(0.31 0.12 85)", "oklch(0.42 0.13 85)", "oklch(0.53 0.13 85)", "oklch(0.64 0.13 85)", "oklch(0.75 0.13 85)", "oklch(0.90 0.12 85)", "oklch(0.96 0.07 85)"]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Sky Info",
+        "canonical": "oklch(0.9 0.06 235)",
+        "tonalRamp": ["oklch(0.20 0.06 235)", "oklch(0.31 0.06 235)", "oklch(0.42 0.07 235)", "oklch(0.53 0.07 235)", "oklch(0.64 0.07 235)", "oklch(0.75 0.07 235)", "oklch(0.90 0.06 235)", "oklch(0.96 0.04 235)"]
+      },
+      "wash-peach": {
+        "role": "tertiary",
+        "displayName": "Peach Wash",
+        "canonical": "oklch(0.9 0.06 45)",
+        "tonalRamp": ["oklch(0.20 0.06 45)", "oklch(0.31 0.06 45)", "oklch(0.42 0.06 45)", "oklch(0.53 0.06 45)", "oklch(0.64 0.06 45)", "oklch(0.77 0.06 45)", "oklch(0.90 0.06 45)", "oklch(0.96 0.04 45)"]
+      },
+      "wash-blush": {
+        "role": "tertiary",
+        "displayName": "Blush Wash",
+        "canonical": "oklch(0.91 0.05 10)",
+        "tonalRamp": ["oklch(0.20 0.05 10)", "oklch(0.31 0.05 10)", "oklch(0.42 0.05 10)", "oklch(0.53 0.05 10)", "oklch(0.64 0.05 10)", "oklch(0.78 0.05 10)", "oklch(0.91 0.05 10)", "oklch(0.96 0.03 10)"]
+      },
+      "wash-mint": {
+        "role": "tertiary",
+        "displayName": "Mint Wash",
+        "canonical": "oklch(0.93 0.06 160)",
+        "tonalRamp": ["oklch(0.20 0.06 160)", "oklch(0.31 0.06 160)", "oklch(0.42 0.06 160)", "oklch(0.53 0.06 160)", "oklch(0.64 0.06 160)", "oklch(0.79 0.06 160)", "oklch(0.93 0.06 160)", "oklch(0.97 0.04 160)"]
+      },
+      "wash-sky": {
+        "role": "tertiary",
+        "displayName": "Sky Wash",
+        "canonical": "oklch(0.92 0.05 230)",
+        "tonalRamp": ["oklch(0.20 0.05 230)", "oklch(0.31 0.05 230)", "oklch(0.42 0.05 230)", "oklch(0.53 0.05 230)", "oklch(0.64 0.05 230)", "oklch(0.78 0.05 230)", "oklch(0.92 0.05 230)", "oklch(0.97 0.03 230)"]
+      },
+      "wash-lilac": {
+        "role": "tertiary",
+        "displayName": "Lilac Wash",
+        "canonical": "oklch(0.9 0.05 300)",
+        "tonalRamp": ["oklch(0.20 0.05 300)", "oklch(0.31 0.05 300)", "oklch(0.42 0.05 300)", "oklch(0.53 0.05 300)", "oklch(0.64 0.05 300)", "oklch(0.77 0.05 300)", "oklch(0.90 0.05 300)", "oklch(0.96 0.03 300)"]
+      },
+      "wash-lemon": {
+        "role": "tertiary",
+        "displayName": "Lemon Wash",
+        "canonical": "oklch(0.95 0.08 100)",
+        "tonalRamp": ["oklch(0.20 0.08 100)", "oklch(0.31 0.08 100)", "oklch(0.42 0.08 100)", "oklch(0.53 0.08 100)", "oklch(0.66 0.08 100)", "oklch(0.80 0.08 100)", "oklch(0.95 0.08 100)", "oklch(0.98 0.05 100)"]
+      },
+      "wash-sage": {
+        "role": "tertiary",
+        "displayName": "Sage Wash",
+        "canonical": "oklch(0.92 0.04 130)",
+        "tonalRamp": ["oklch(0.20 0.04 130)", "oklch(0.31 0.04 130)", "oklch(0.42 0.04 130)", "oklch(0.53 0.04 130)", "oklch(0.64 0.04 130)", "oklch(0.78 0.04 130)", "oklch(0.92 0.04 130)", "oklch(0.97 0.03 130)"]
+      },
+      "wash-apricot": {
+        "role": "tertiary",
+        "displayName": "Apricot Wash",
+        "canonical": "oklch(0.92 0.07 70)",
+        "tonalRamp": ["oklch(0.20 0.07 70)", "oklch(0.31 0.07 70)", "oklch(0.42 0.07 70)", "oklch(0.53 0.07 70)", "oklch(0.64 0.07 70)", "oklch(0.78 0.07 70)", "oklch(0.92 0.07 70)", "oklch(0.97 0.04 70)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Unbounded)", "purpose": "Hero and page H1 headlines. One per screen. Sentence case." },
+      "headline": { "displayName": "Headline (Unbounded)", "purpose": "Section headers (H2)." },
+      "title": { "displayName": "Title (Unbounded)", "purpose": "Card titles and subsection headers (H3)." },
+      "body": { "displayName": "Body (Onest)", "purpose": "Product descriptions and paragraphs. Never below weight 500." },
+      "label": { "displayName": "Label (Onest)", "purpose": "Brand tags, kickers, metadata. Only role allowed uppercase, at 12px and under with tracking." },
+      "mono": { "displayName": "Mono (Geist Mono)", "purpose": "Rare numeric or code context." }
+    },
+    "shadows": [
+      { "name": "shadow-soft-sm", "value": "0 1px 2px oklch(0.3 0.02 60 / 0.08)", "purpose": "Lightest rest state: icon buttons, small chips, logo tile." },
+      { "name": "shadow-soft", "value": "0 2px 6px oklch(0.3 0.02 60 / 0.1)", "purpose": "Default card and container elevation at rest." },
+      { "name": "shadow-soft-lg", "value": "0 8px 24px oklch(0.3 0.02 60 / 0.12)", "purpose": "Card hover, hero frame, popover and dropdown surfaces." },
+      { "name": "shadow-soft-xl", "value": "0 12px 32px oklch(0.3 0.02 60 / 0.14)", "purpose": "Deepest ambient step: overlays and sheets." },
+      { "name": "shadow-lift", "value": "0 2px 0 0 var(--color-primary-deep)", "purpose": "Butter CTA rest state: a solid Butter Deep underline." },
+      { "name": "shadow-lift-lg", "value": "0 4px 0 0 var(--color-primary-deep)", "purpose": "Butter CTA hover state, paired with a 2px upward translate." },
+      { "name": "shadow-pop-sm", "value": "2px 2px 0 0 var(--color-cocoa)", "purpose": "Small cocoa stamp: sticker badges and the product-card +." },
+      { "name": "shadow-pop", "value": "3px 3px 0 0 var(--color-cocoa)", "purpose": "Medium cocoa stamp." },
+      { "name": "shadow-pop-sand", "value": "4px 4px 0 0 var(--color-sand)", "purpose": "Largest, softest stamp in sand." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Default easing for state transitions and entrances." },
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Ambient loops (float, wiggle) and image zoom on hover." },
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Long, decisive fills like the loading bar." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Symmetric in-out transitions." },
+      { "name": "ease-drawer", "value": "cubic-bezier(0.32, 0.72, 0, 1)", "purpose": "Sheet and drawer slide." },
+      { "name": "sticker-pop", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "The one sanctioned overshoot bounce: hero authenticity sticker entrance only." },
+      { "name": "press", "value": "140ms scale(0.97)", "purpose": "Universal press feedback on interactive elements." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (Butter)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one CTA voice. Butter fill on a solid lift; lifts on hover, presses on active.",
+      "html": "<button class=\"ds-btn-primary\">Бүтээгдэхүүн үзэх</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: none; border-radius: 9999px; background: var(--color-primary); color: var(--color-primary-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 15px; font-weight: 600; box-shadow: 0 2px 0 0 var(--color-primary-deep); transition: transform 140ms cubic-bezier(0.23,1,0.32,1), box-shadow 140ms cubic-bezier(0.23,1,0.32,1), background-color 140ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 0 0 var(--color-primary-deep); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-btn-primary:active { transform: translateY(0) scale(0.97); box-shadow: none; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Non-buy secondary action: card surface, hairline border, soft ambient shadow. No lift.",
+      "html": "<button class=\"ds-btn-secondary\">Дэлгэрэнгүй</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: 1px solid var(--color-border); border-radius: 9999px; background: var(--color-card); color: var(--color-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 15px; font-weight: 600; box-shadow: 0 1px 2px oklch(0.3 0.02 60 / 0.08); transition: transform 140ms cubic-bezier(0.23,1,0.32,1), box-shadow 140ms cubic-bezier(0.23,1,0.32,1), background-color 140ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-btn-secondary:hover { background: var(--color-muted); box-shadow: 0 2px 6px oklch(0.3 0.02 60 / 0.1); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-btn-secondary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Sale Chip",
+      "kind": "chip",
+      "refersTo": "badge-sale",
+      "description": "The discount chip. Coral fill, rotated, stamped with the small cocoa Neopop shadow. One of only three places a hard stamp is allowed.",
+      "html": "<span class=\"ds-badge-sale\">-20%</span>",
+      "css": ".ds-badge-sale { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; background: var(--color-sale); color: var(--color-sale-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 11px; font-weight: 600; transform: rotate(-2deg); box-shadow: 2px 2px 0 0 var(--color-cocoa); }"
+    },
+    {
+      "name": "Sticker Badge",
+      "kind": "chip",
+      "refersTo": "badge-sticker",
+      "description": "Cream pill with a 2px cocoa outline and hard cocoa stamp: the sanctioned Neopop trust marker.",
+      "html": "<span class=\"ds-badge-sticker\">100% жинхэнэ</span>",
+      "css": ".ds-badge-sticker { display: inline-flex; align-items: center; padding: 4px 12px; border: 2px solid var(--color-cocoa); border-radius: 9999px; background: var(--color-card); color: var(--color-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 12px; font-weight: 700; box-shadow: 2px 2px 0 0 var(--color-cocoa); }"
+    },
+    {
+      "name": "Text Field Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Card-surface input with a hairline border and a calm warm focus glow. Rounded-xl, 48px tall.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Хайх...\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 48px; padding: 12px 16px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-card); color: var(--color-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 16px; font-weight: 500; transition: border-color 140ms cubic-bezier(0.23,1,0.32,1), box-shadow 140ms cubic-bezier(0.23,1,0.32,1), background-color 140ms cubic-bezier(0.23,1,0.32,1); } .ds-input::placeholder { color: var(--color-muted-foreground); } .ds-input:focus-visible { outline: none; border-color: color-mix(in oklch, var(--color-cocoa) 50%, transparent); box-shadow: 0 0 0 2px var(--color-ring); } .ds-input[data-invalid] { border-color: var(--color-destructive); background: color-mix(in oklch, var(--color-error) 60%, transparent); color: var(--color-destructive); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The default container: near-white surface, generous 1.5rem rounding, hairline border, soft ambient shadow that deepens on hover.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Онцлох</h3><p class=\"ds-card-body\">Өдөр тутам авдаг витамин, нэмэлт тэжээл.</p></div>",
+      "css": ".ds-card { border: 1px solid var(--color-border); border-radius: 24px; background: var(--color-card); color: var(--color-card-foreground); padding: 24px; box-shadow: 0 2px 6px oklch(0.3 0.02 60 / 0.1); transition: box-shadow 200ms cubic-bezier(0.23,1,0.32,1); } .ds-card:hover { box-shadow: 0 8px 24px oklch(0.3 0.02 60 / 0.12); } .ds-card-title { margin: 0 0 8px; font-family: \"Unbounded Variable\", system-ui, sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.005em; } .ds-card-body { margin: 0; font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.6; color: var(--color-muted-foreground); }"
+    },
+    {
+      "name": "Card Add Button",
+      "kind": "custom",
+      "refersTo": "add-button",
+      "description": "The product card's round butter +, the card's single Neopop element. Presses 2px into its own cocoa stamp.",
+      "html": "<button class=\"ds-add-btn\" aria-label=\"Сагслах\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><line x1=\"12\" y1=\"5\" x2=\"12\" y2=\"19\"/><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/></svg></button>",
+      "css": ".ds-add-btn { display: flex; align-items: center; justify-content: center; height: 44px; width: 44px; flex-shrink: 0; border: 1px solid var(--color-cocoa); border-radius: 9999px; background: var(--color-primary); color: var(--color-primary-foreground); box-shadow: 2px 2px 0 0 var(--color-cocoa); transition: transform 150ms cubic-bezier(0.23,1,0.32,1), box-shadow 150ms cubic-bezier(0.23,1,0.32,1), background-color 150ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-add-btn:hover { transform: translateY(-1px); } .ds-add-btn:active { transform: translate(2px, 2px); box-shadow: none; }"
+    },
+    {
+      "name": "Select Trigger",
+      "kind": "custom",
+      "refersTo": "input",
+      "description": "Dropdown trigger, matched to the text input: card surface, hairline border, rounded-xl, calm focus glow.",
+      "html": "<button class=\"ds-select-trigger\"><span>Ангилал сонгох</span><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"opacity:0.5\"><polyline points=\"7 15 12 20 17 15\"/><polyline points=\"7 9 12 4 17 9\"/></svg></button>",
+      "css": ".ds-select-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 48px; padding: 8px 16px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-card); color: var(--color-foreground); font-family: \"Onest Variable\", system-ui, sans-serif; font-size: 14px; font-weight: 500; transition: border-color 140ms cubic-bezier(0.23,1,0.32,1), box-shadow 140ms cubic-bezier(0.23,1,0.32,1), background-color 140ms cubic-bezier(0.23,1,0.32,1); cursor: pointer; } .ds-select-trigger:focus-visible { outline: none; border-color: color-mix(in oklch, var(--color-cocoa) 50%, transparent); box-shadow: 0 0 0 2px var(--color-ring); }"
+    },
+    {
+      "name": "Nav Icon Button",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "Header control: 44px circular touch target, ghost fill until hover. Springy press on the quart curve.",
+      "html": "<button class=\"ds-nav-icon\" aria-label=\"Цэс\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><line x1=\"4\" y1=\"7\" x2=\"20\" y2=\"7\"/><line x1=\"4\" y1=\"12\" x2=\"20\" y2=\"12\"/><line x1=\"4\" y1=\"17\" x2=\"20\" y2=\"17\"/></svg></button>",
+      "css": ".ds-nav-icon { display: flex; align-items: center; justify-content: center; height: 44px; width: 44px; border: none; border-radius: 9999px; background: transparent; color: var(--color-foreground); transition: background-color 200ms cubic-bezier(0.25,1,0.5,1), transform 200ms cubic-bezier(0.25,1,0.5,1); cursor: pointer; } .ds-nav-icon:hover { background: var(--color-muted); } .ds-nav-icon:active { transform: scale(0.94); } .ds-nav-icon:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Sorbet Counter",
+    "overview": "Amerik Vitamin is a bright ice-cream counter run by a shopkeeper who knows every flavor by heart. The canvas is warm cream, never sterile white. Categories arrive as soft sorbet washes, each keyed to meaning so a returning customer learns the room by color. There is exactly one butter-yellow voice for \"buy this,\" and it is the warmest, most physical thing on the screen. This honors PRODUCT.md's brand of a \"confident local shopkeeper who knows their stock inside-out,\" rendered in warmth and personality without sacrificing the clarity a shopper scrolling at speed needs. The system is chunky and springy: soft at rest, physical on press. Surfaces sit on quiet ambient shadows. Buttons are full pills that lift when you reach for them and depress when you commit. Sorbet washes tint product cards and hero frames. Motion follows an Emil Kowalski doctrine: custom ease-out curves, transform and opacity and filter only, entrances that rise gently through @starting-style, and exits that leave faster than they arrive. One deliberate bounce is sanctioned, the hero authenticity sticker, and it exists precisely because everything else is calm. This is a redesign away from the old neo-brutalist system: the hard black borders, the sharp zero-radius corners, the stamped offset shadows on everything, and the all-uppercase Space Grotesk screaming are all retired. Warmth replaces aggression. This is a mobile-first surface. 99% of traffic is a thumb on a phone, so touch targets stay at 44 by 44dp minimum, CTAs stay thumb-reachable, and every animation respects prefers-reduced-motion.",
+    "keyCharacteristics": [
+      "Warm cream canvas (oklch(0.98 0.012 90)), never cold white.",
+      "One butter-yellow CTA voice; category meaning carried by eight sorbet washes.",
+      "Full pill corners and generous 12px to 24px radii; sharp corners are forbidden.",
+      "Hybrid elevation: soft ambient shadows by default, a 2px butter lift on CTAs, hard Neopop stamps reserved for stickers and the card + only.",
+      "Unbounded display over Onest body; sentence case everywhere.",
+      "Emil-style motion: ease-out curves, transform and opacity only, one sanctioned bounce."
+    ],
+    "rules": [
+      { "name": "The Wash Rule", "body": "Washes are keyed to category, never random. A card's wash comes from washFor(categoryId) in apps/storev2/src/lib/wash.ts, a stable hash into the eight-color WASH_ORDER. The same category is always the same flavor across the whole store. Never hardcode a wash, cycle them decoratively, or pick one to \"look nice.\" Meaning is the point.", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "Butter is the only \"buy\" voice. If two butter CTAs compete in one viewport, one of them is wrong. Everything else that is interactive but not the primary action is a card-surface or ghost treatment, never butter.", "section": "colors" },
+      { "name": "The Coral Lock Rule", "body": "Coral (oklch(0.68 0.14 30)) is reserved for sale and destructive only. Never use it for emphasis, decoration, or a second accent. Its rarity is what makes a -20% chip read instantly.", "section": "colors" },
+      { "name": "The Sentence Case Rule", "body": "Sentence case everywhere. Headings, buttons, and product names are sentence case. Uppercase is permitted only for tracked labels at 12px (0.75rem) and under, with positive letter-spacing (0.05em and up). The old all-caps font-black shouting is retired; loudness now comes from the Unbounded face and size, not from caps-lock.", "section": "typography" },
+      { "name": "The Display-For-Meaning Rule", "body": "Unbounded is reserved for headings and prices, the two things a shopper scans for. Do not set body copy, form labels, or long strings in Unbounded; that is Onest's job. If a whole paragraph is in the display face, it is wrong.", "section": "typography" },
+      { "name": "The Stamp Rule", "body": "Hard Neopop offset shadows (shadow-pop-*) are reserved for sticker badges, sale chips, and the product-card + button. Nowhere else. A card, an input, a section, or a plain button that wears a hard offset stamp is a bug. Default elevation is always a soft ambient shadow.", "section": "elevation" },
+      { "name": "The Lift Rule", "body": "Only butter CTAs lift. shadow-lift and its hover growth to shadow-lift-lg belong exclusively to the primary action. On press the CTA translates back to zero and drops the shadow, so committing feels like pressing a real key. Do not apply lift to secondary, ghost, or dark buttons; those use soft ambient shadows.", "section": "elevation" },
+      { "name": "The Chunky-And-Springy Rule", "body": "Every interactive element is soft at rest and physical on press: active:scale(0.97), 140ms, --ease-out. Full pill or generously rounded, never sharp. If a control does not respond to a press, it feels dead and is wrong.", "section": "components" },
+      { "name": "The One Bounce Rule", "body": "Exactly one overshoot bounce exists in the whole system: the hero authenticity sticker's entrance (sticker-pop, cubic-bezier(0.34, 1.56, 0.64, 1), 450ms). It is deliberate brand personality, sanctioned precisely because everything else uses non-overshooting ease-out curves. Never add a second bounce; a springy CTA, a bouncing modal, or a wobbling card breaks the contract. All other entrances use enter-fade / enter-rise / enter-scale with stagger-1 through stagger-8, transform and opacity only, and exits leave faster than entrances arrive.", "section": "components" }
+    ],
+    "dos": [
+      "Do sit every screen on the warm cream canvas (oklch(0.98 0.012 90)), never on cold white.",
+      "Do derive product and category surface color from washFor(categoryId). Washes are keyed to category, never random.",
+      "Do keep butter (oklch(0.9 0.14 95)) as the single \"buy\" voice; give the primary CTA shadow-lift and let it lift on hover, press on active.",
+      "Do reserve hard Neopop stamps (shadow-pop-*) for sticker badges, sale chips, and the product-card + only. Everything else rests on soft ambient shadows.",
+      "Do write sentence case everywhere; reserve uppercase for tracked labels at 12px and under.",
+      "Do set headings and prices in Unbounded, body and UI in Onest.",
+      "Do use one motion contract for interactive elements: 140ms, --ease-out, active:scale(0.97).",
+      "Do keep touch targets at 44 by 44dp minimum and respect prefers-reduced-motion.",
+      "Do show price, stock status, brand origin, and delivery info upfront; trust is earned by real information, not badges."
+    ],
+    "donts": [
+      "Don't ship a generic minimalist black-and-white shadcn/ui lookalike. Warm cream, sorbet washes, and Unbounded are the antidote.",
+      "Don't make it feel like a cold, clinical pharmacy or medical-supply website. Warmth is a requirement, not a garnish.",
+      "Don't look like a templated Shopify storefront with stock photography and generic trust badges. Use real product imagery and show real delivery and origin facts.",
+      "Don't bury products in lifestyle fluff like an overly corporate supplement brand. Conversion is the only metric; if an element does not help someone buy faster, it is clutter.",
+      "Don't revive the retired neo-brutalist system: no sharp zero-radius corners, no thick 2px to 4px black borders, no stamped offset shadows on cards, no all-uppercase font-black shouting.",
+      "Don't use a true black (#000) or a cold gray. Ink is warm Espresso (oklch(0.28 0.02 60)); borders are warm (oklch(0.88 0.02 85)).",
+      "Don't use coral for anything but sale and destructive. No second accent may compete with butter.",
+      "Don't add a second bounce. The hero sticker is the only sanctioned overshoot.",
+      "Don't use gradient text or background-clip: text. Emphasis comes from the display face, weight, and size.",
+      "Don't use side-stripe borders (border-left: 4px solid) as card accents. Use a full hairline, a wash tint, or an icon.",
+      "Don't animate anything but transform, opacity, and filter, and never let an animation slow the mobile scroll.",
+      "Don't use em dashes in copy. Use commas, colons, or periods."
+    ]
+  }
+}

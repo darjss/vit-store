@@ -8,8 +8,11 @@ import {
 	R2Bucket,
 	RateLimit,
 	Worker,
+	WorkerRef,
 } from "alchemy/cloudflare";
+import type { Rpc } from "@cloudflare/workers-types";
 import { createServerAlchemyEnv } from "../../env";
+import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
 const app = await alchemy("server");
 const stage = app.stage;
@@ -43,10 +46,13 @@ const images = Images({
 	},
 });
 
-const productSearch = DurableObjectNamespace("product-search", {
-	className: "ProductSearchObject",
-	sqlite: true,
-});
+const productSearch = DurableObjectNamespace<ProductSearchObject>(
+	"product-search",
+	{
+		className: "ProductSearchObject",
+		sqlite: true,
+	},
+);
 
 const transferReconciliation = DurableObjectNamespace(
 	"transfer-reconciliation",
@@ -64,6 +70,7 @@ const hyperdriveDB = await Hyperdrive("pscale-db", {
 		password: env.PLANETSCALE_PASSWORD,
 		database: env.PLANETSCALE_DATABASE,
 	},
+	adopt: true,
 });
 
 const directDbUrl =
@@ -71,15 +78,29 @@ const directDbUrl =
 		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
 		: "";
 
+interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
+	purgeCache(tags: string[]): Promise<void>;
+}
+
 export const server = await Worker("api", {
 	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	compatibility: "node",
-	// Cloudflare cron is UTC; 03:00 UTC = 11:00 Ulaanbaatar (UTC+8)
-	crons: ["0 3 * * *"],
-	domains: stage === "prod" ? ["api.amerikvitamin.mn"] : undefined,
+	compatibilityDate: "2026-07-07",
+	cache: { enabled: true },
+	// Durable restock batches/retries run independently of request lifetimes.
+	crons: ["*/5 * * * *"],
+	domains:
+		stage === "prod"
+			? ["api.amerikvitamin.mn"]
+			: stage === "staging"
+				? ["api-staging.amerikvitamin.mn"]
+				: undefined,
 
 	adopt: true,
 	bindings: {
+		STOREFRONT: WorkerRef<StorefrontCacheRpc>({
+			service: `storev2-front-${stage}`,
+		}),
 		PRODUCT_SEARCH: productSearch,
 		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 		RATE_LIMITER: rateLimit,
@@ -115,6 +136,7 @@ export const server = await Worker("api", {
 		KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
 		...(env.KHAAN_USER_AGENT ? { KHAAN_USER_AGENT: env.KHAAN_USER_AGENT } : {}),
 		KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
+		KHAAN_ACCOUNT_NAME: env.KHAAN_ACCOUNT_NAME,
 		KHAAN_BRANCH_CODE: env.KHAAN_BRANCH_CODE,
 		POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
 		POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
@@ -125,6 +147,7 @@ export const server = await Worker("api", {
 		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
 		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
 		...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
+		IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
 	},
 
 	observability: {

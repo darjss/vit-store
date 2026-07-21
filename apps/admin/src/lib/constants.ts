@@ -1,5 +1,6 @@
 import {
 	BarChart2,
+	Bell,
 	CreditCard,
 	FolderTree,
 	Home,
@@ -25,6 +26,11 @@ export const sideNavItems = [
 		title: "Бүтээгдэхүүнүүд",
 		url: "/products",
 		icon: Package,
+	},
+	{
+		title: "Нөөц хүлээлт",
+		url: "/restock-waitlist",
+		icon: Bell,
 	},
 	{
 		title: "Харьцуулалт",
@@ -61,6 +67,7 @@ export const sideNavItems = [
 export const breadcrumbLabels: Record<string, string> = {
 	orders: "Захиалгууд",
 	products: "Бүтээгдэхүүнүүд",
+	"restock-waitlist": "Нөөц хүлээлт",
 	"review-products": "Харьцуулалт",
 	analytics: "Аналитик",
 	purchases: "Худалдан авалт",

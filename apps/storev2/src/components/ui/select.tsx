@@ -26,7 +26,7 @@ const SelectTrigger = <T extends ValidComponent = "button">(
   return (
     <SelectPrimitive.Trigger
       class={cn(
-        "flex h-10 w-full items-center justify-between border-[3px] border-border bg-background px-3 py-2 text-sm shadow-hard-sm transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-12 w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-[border-color,box-shadow,background-color] duration-[140ms] ease-out placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-cocoa/50 disabled:cursor-not-allowed disabled:opacity-50",
         local.class
       )}
       {...others}
@@ -48,7 +48,7 @@ const SelectContent = <T extends ValidComponent = "div">(
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         class={cn(
-          "relative z-50 min-w-32 overflow-hidden border-[3px] border-border bg-popover text-popover-foreground shadow-hard-lg animate-in fade-in-80",
+          "relative z-50 min-w-32 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-soft-lg animate-in fade-in-80",
           local.class
         )}
         {...others}
@@ -71,7 +71,7 @@ const SelectItem = <T extends ValidComponent = "li">(
   return (
     <SelectPrimitive.Item
       class={cn(
-        "relative mt-0 flex w-full cursor-default select-none items-center py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative mt-0 flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-muted focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         local.class
       )}
       {...others}
@@ -85,7 +85,7 @@ const SelectItem = <T extends ValidComponent = "li">(
 }
  
 const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+  "text-xs font-semibold tracking-wide leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
   {
     variants: {
       variant: {

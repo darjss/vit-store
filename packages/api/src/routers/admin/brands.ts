@@ -1,24 +1,14 @@
-import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { brandQueries } from "@vit/api/queries";
-import { addBrandSchema } from "@vit/shared";
+import {
+    addBrandSchema,
+    brandTag,
+} from "@vit/shared";
 import * as v from "valibot";
-import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
-import { rebuildProductSearchIndex } from "~/lib/product-search/client";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
-const scheduleProductSearchRebuild = (ctx: {
-    c: {
-        executionCtx: ExecutionContext;
-    };
-    log: RequestLogger<any>;
-}) => {
-    ctx.c.executionCtx.waitUntil(rebuildProductSearchIndex("brand_updated").catch((error) => {
-        ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "product_search.rebuild_failed"
-        });
-    }));
-};
 export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     getAllBrands: proc.query(async ({ ctx }) => {
@@ -48,8 +38,8 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx);
+            scheduleProductSearchRebuild(ctx, "brand_updated");
             return { message: "Successfully updated category" };
         }
         catch (err) {
@@ -80,8 +70,8 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx, [], [brandTag(id)]);
+            scheduleProductSearchRebuild(ctx, "brand_updated");
         }
         catch (err) {
             ctx.log.error(err instanceof Error ? err : new Error(String(err)), {
@@ -99,8 +89,8 @@ export function buildBrandsRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ ctx, input }) => {
         try {
             await brandQueries.admin.deleteBrand(input.id);
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.brandsAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx, [], [brandTag(input.id)]);
+            scheduleProductSearchRebuild(ctx, "brand_updated");
         }
         catch (err) {
             ctx.log.error(err instanceof Error ? err : new Error(String(err)), {

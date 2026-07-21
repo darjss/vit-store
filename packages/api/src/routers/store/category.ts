@@ -1,63 +1,26 @@
 import { categoryQueries } from "@vit/api/queries";
+import { CACHE_POLICY, CATEGORIES_TAG, categoryTag } from "@vit/shared";
 import * as v from "valibot";
-import {
-	CATALOG_CACHE_KEYS,
-	CATALOG_CACHE_TTL_SECONDS,
-} from "~/lib/cache/catalog";
-import type { Context } from "~/lib/context";
+import { markCacheable } from "~/lib/cache/workers-cache";
 import { publicProcedure, router } from "~/lib/trpc";
-
-const getCachedCategories = async (ctx: Context) => {
-	const cachedCategories = await ctx.kv.get(CATALOG_CACHE_KEYS.categoriesAll);
-	if (cachedCategories) {
-		return JSON.parse(cachedCategories) as Awaited<
-			ReturnType<typeof categoryQueries.store.getAllCategories>
-		>;
-	}
-
-	const categories = await categoryQueries.store.getAllCategories();
-
-	await ctx.kv.put(
-		CATALOG_CACHE_KEYS.categoriesAll,
-		JSON.stringify(categories),
-		{
-			expirationTtl: CATALOG_CACHE_TTL_SECONDS,
-		},
-	);
-
-	return categories;
-};
-
-const getCachedCategoriesWithStock = async (ctx: Context) => {
-	const cacheKey = `${CATALOG_CACHE_KEYS.categoriesAll}:stock`;
-	const cachedCategories = await ctx.kv.get(cacheKey);
-	if (cachedCategories) {
-		return JSON.parse(cachedCategories) as Awaited<
-			ReturnType<typeof categoryQueries.store.getAllCategoriesWithStock>
-		>;
-	}
-
-	const categories = await categoryQueries.store.getAllCategoriesWithStock();
-
-	await ctx.kv.put(cacheKey, JSON.stringify(categories), {
-		expirationTtl: CATALOG_CACHE_TTL_SECONDS,
-	});
-
-	return categories;
-};
 
 export const category = router({
 	getAllCategoryNames: publicProcedure.query(async ({ ctx }) => {
-		const categories = await getCachedCategories(ctx);
+		const categories = await categoryQueries.store.getAllCategories();
+		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
 		return categories.map((category) => category.name);
 	}),
 
 	getAllCategories: publicProcedure.query(async ({ ctx }) => {
-		return await getCachedCategories(ctx);
+		const categories = await categoryQueries.store.getAllCategories();
+		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
+		return categories;
 	}),
 
 	getAllCategoriesWithStock: publicProcedure.query(async ({ ctx }) => {
-		return await getCachedCategoriesWithStock(ctx);
+		const categories = await categoryQueries.store.getAllCategoriesWithStock();
+		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
+		return categories;
 	}),
 
 	getCategoryBySlug: publicProcedure
@@ -66,8 +29,17 @@ export const category = router({
 				slug: v.pipe(v.string(), v.minLength(1)),
 			}),
 		)
-		.query(async ({ input }) => {
-			const q = categoryQueries.store;
-			return await q.getCategoryBySlug(input.slug);
+		.query(async ({ ctx, input }) => {
+			const category = await categoryQueries.store.getCategoryBySlug(
+				input.slug,
+			);
+			markCacheable(
+				ctx,
+				CACHE_POLICY.categories,
+				category
+					? [CATEGORIES_TAG, categoryTag(category.id)]
+					: [CATEGORIES_TAG],
+			);
+			return category;
 		}),
 });

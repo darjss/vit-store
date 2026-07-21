@@ -48,7 +48,15 @@ export const fetchPaymentSummary = async (
 
 const claimResultSchema = v.object({
 	orderNumber: v.nullable(v.optional(v.string())),
+	outcome: v.picklist([
+		"changed",
+		"already_claimed",
+		"already_confirmed",
+		"refused",
+	]),
 });
+
+export type TransferClaimResult = v.InferOutput<typeof claimResultSchema>;
 
 // `payment.claimTransferPaid` (a tRPC mutation): records the customer's transfer
 // CLAIM (status → `customer_claimed_paid`) and notifies admin. This is the ONLY
@@ -57,7 +65,7 @@ export const claimTransfer = async (
 	paymentNumber: string,
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
-): Promise<{ orderNumber?: string | null }> => {
+): Promise<TransferClaimResult> => {
 	const data = await storeClient().payment.claimTransferPaid.mutate(
 		{
 			paymentNumber,

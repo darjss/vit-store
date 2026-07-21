@@ -17,29 +17,22 @@ interface FormSelectFieldProps {
 export function FormSelectField(props: FormSelectFieldProps) {
 	const field = useFieldContext<number>();
 	const errors = useStore(field().store, (state) => state.meta.errors);
-	const isTouched = useStore(field().store, (state) => state.meta.isTouched);
+	const isBlurred = useStore(field().store, (state) => state.meta.isBlurred);
 	const submissionAttempts = useStore(
 		field().form.store,
 		(state) => state.submissionAttempts,
 	);
-	const showErrors = () => isTouched() || submissionAttempts() > 0 || errors().length > 0;
-	// `meta.errors` can contain duplicates when the same field is validated by
-	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
-	const uniqueErrors = createMemo(() => {
-		const seen = new Set<string>();
-		return errors().filter((e) => {
-			const key = e.message ?? "";
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		});
-	});
-	const isInvalid = () => showErrors() && uniqueErrors().length > 0;
+	// Lazy to flag, eager to clear: errors stay hidden until the field is
+	// blurred or a submit was attempted; once shown, onChange validation
+	// keeps them refreshing live as the user picks a correction.
+	const showErrors = () => isBlurred() || submissionAttempts() > 0;
+	const firstError = createMemo(() => errors()[0]?.message ?? null);
+	const isInvalid = () => showErrors() && firstError() != null;
 
 	return (
 		<div class="space-y-2">
 			<label
-				class="font-bold text-sm uppercase data-[invalid]:text-destructive"
+				class="font-semibold text-xs leading-none tracking-wide data-[invalid]:text-destructive"
 				for={field().name}
 				data-invalid={isInvalid() ? "" : undefined}
 			>
@@ -61,9 +54,10 @@ export function FormSelectField(props: FormSelectFieldProps) {
 						}));
 					}
 				}}
-				class="h-12 w-full border-2 border-border bg-transparent px-3 font-bold text-base shadow-hard-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:shadow-hard-sm data-[invalid]:focus-visible:ring-destructive"
+				class="h-12 w-full rounded-xl border border-border bg-card px-4 text-base font-medium outline-none transition-[border-color,box-shadow,background-color] duration-[140ms] ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-cocoa/50 disabled:cursor-not-allowed disabled:opacity-50"
 				classList={{
-					"border-destructive shadow-hard-sm": isInvalid(),
+					"border-destructive bg-error/60 text-destructive focus-visible:ring-destructive/40":
+						isInvalid(),
 				}}
 			>
 				<option value="">{props.placeholder || props.label}</option>
@@ -72,13 +66,9 @@ export function FormSelectField(props: FormSelectFieldProps) {
 				</For>
 			</select>
 			<Show when={isInvalid()}>
-				<For each={uniqueErrors()}>
-					{(error) => (
-						<p class="text-xs md:text-sm text-destructive font-bold">
-							{error.message}
-						</p>
-					)}
-				</For>
+				<p class="text-xs md:text-sm text-destructive font-bold">
+					{firstError()}
+				</p>
 			</Show>
 		</div>
 	);

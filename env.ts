@@ -42,6 +42,7 @@ export const createServerAlchemyEnv = (
 			KHAAN_DEVICE_ID: requiredString(),
 			KHAAN_USER_AGENT: v.optional(requiredString()),
 			KHAAN_ACCOUNT_NUMBER: requiredString(),
+			KHAAN_ACCOUNT_NAME: v.optional(requiredString(), "Aviddaram Bazarragchaa"),
 			KHAAN_BRANCH_CODE: v.optional(requiredString(), "5041"),
 			POSTHOG_API_KEY: requiredString(),
 			POSTHOG_PROJECT_API_KEY: requiredString(),
@@ -52,6 +53,7 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: requiredString(),
 			DELIVERY_SENDERID: requiredString(),
 			ADMIN_BOT_TOKEN: v.optional(v.string()),
+			IMAGE_UPLOAD_TOKEN: requiredString(),
 		},
 		runtimeEnvStrict: {
 			PLANETSCALE_HOST: runtimeEnv.PLANETSCALE_HOST,
@@ -85,6 +87,7 @@ export const createServerAlchemyEnv = (
 			KHAAN_DEVICE_ID: runtimeEnv.KHAAN_DEVICE_ID,
 			KHAAN_USER_AGENT: runtimeEnv.KHAAN_USER_AGENT,
 			KHAAN_ACCOUNT_NUMBER: runtimeEnv.KHAAN_ACCOUNT_NUMBER,
+			KHAAN_ACCOUNT_NAME: runtimeEnv.KHAAN_ACCOUNT_NAME,
 			KHAAN_BRANCH_CODE: runtimeEnv.KHAAN_BRANCH_CODE,
 			POSTHOG_API_KEY: runtimeEnv.POSTHOG_API_KEY,
 			POSTHOG_PROJECT_API_KEY: runtimeEnv.POSTHOG_PROJECT_API_KEY,
@@ -95,6 +98,7 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: runtimeEnv.DELIVERY_PASSWORD,
 			DELIVERY_SENDERID: runtimeEnv.DELIVERY_SENDERID,
 			ADMIN_BOT_TOKEN: runtimeEnv.ADMIN_BOT_TOKEN,
+			IMAGE_UPLOAD_TOKEN: runtimeEnv.IMAGE_UPLOAD_TOKEN,
 		},
 	});
 };

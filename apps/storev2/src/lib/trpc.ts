@@ -1,14 +1,7 @@
-import { createTRPCClient, httpBatchLink, httpLink } from "@trpc/client";
+import { createTRPCClient, httpLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
 import { safeNavigate } from "@/lib/safe-navigate";
-
-class UnauthorizedError extends Error {
-	constructor(message = "Unauthorized") {
-		super(message);
-		this.name = "UnauthorizedError";
-	}
-}
 
 const checkUnauthorized = async (response: Response): Promise<boolean> => {
 	if (response.status === 401) {
@@ -106,7 +99,7 @@ export const createServerClient = (
 
 	return createTRPCClient<StoreRouter>({
 		links: [
-			httpBatchLink({
+			httpLink({
 				url,
 				transformer: SuperJSON,
 				fetch: async (url, options) => {
@@ -123,12 +116,8 @@ export const createServerClient = (
 						},
 					});
 
-					if (await checkUnauthorized(response)) {
-						if (redirectFn) {
-							redirectFn("/login");
-						} else {
-							throw new UnauthorizedError("Unauthorized");
-						}
+					if (redirectFn && (await checkUnauthorized(response))) {
+						redirectFn("/login");
 					}
 
 					return response;

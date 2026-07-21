@@ -3,92 +3,84 @@ import Layout from "@/layouts/Layout.astro";
 
 const title = "Үйлчилгээний нөхцөл";
 const description = "Amerik Vitamin-ийн үйлчилгээний нөхцөл. Захиалга, төлбөр, хүргэлт, буцаалтын дүрэм.";
+
+const sections = [
+  {
+    heading: "1. Ерөнхий нөхцөл",
+    body: "Amerik Vitamin нь АНУ-аас шууд импортлогдсон витамин, нэмэлт тэжээлийг Монгол улсын дотоодод хүргэлттэй борлуулдаг онлайн дэлгүүр юм. Энэхүү нөхцөл нь хэрэглэгч, борлуулагч хоёрын хооронд үүсэх харилцааг зохицуулна.",
+  },
+  {
+    heading: "2. Бүтээгдэхүүний мэдээлэл",
+    body: "Бидний борлуулж буй бүтээгдэхүүнүүд бүгд АНУ-аас импортлогдсон жинхэнэ бүтээгдэхүүнүүд юм. Бүтээгдэхүүний найрлага, хэрэглэх заавар, хадгалах нөхцөлийг сайтар уншиж танилцана уу. Хүнсний нэмэлт нь эмийн орлогч биш гэдгийг анхаарна уу.",
+  },
+  {
+    heading: "3. Захиалга",
+    body: "Захиалгыг вэбсайт, эсвэл утсаар хүлээн авна. Захиалга баталгаажсаны дараа бүтээгдэхүүний нөөц хангалттай бол захиалгыг бэлтгэнэ. Захиалгыг цуцлах, өөрчлөх боломжгүй.",
+  },
+  {
+    heading: "4. Төлбөр",
+    body: "Төлбөрийг дансаар шилжүүлэх эсвэл QPay ашиглан төлнө. Төлбөр баталгаажсаны дараа захиалга хүргэлтэд гарна. Төлбөрийг захиалга өгснөөс хойш 24 цагийн дотор төлөх шаардлагатай.",
+  },
+  {
+    heading: "5. Хүргэлт",
+    body: 'Зөвхөн Монгол улсын дотоодод хүргэлт хийнэ. Улаанбаатар хотод 12:00 цагаас хойш хүргэнэ. Хөдөө орон нутаг руу "Замын Унаа"-ар илгээдэг бөгөөд тээврийн зардал хүлээн авагчийн хариуцах болно.',
+  },
+];
 ---
 
 <Layout title={title} description={description} noindex nofollow>
-  <div class="container mx-auto px-5 py-8 lg:px-8 lg:py-14 max-w-4xl">
+  <div class="container mx-auto max-w-[65ch] px-5 py-8 lg:px-8 lg:py-14">
     <!-- Header -->
-    <div class="mb-8 lg:mb-10">
-      <div class="border-4 border-border bg-primary p-4 lg:p-6 shadow-hard-lg mb-4">
-        <h1 class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight">
-          Үйлчилгээний нөхцөл
-        </h1>
-        <p class="text-sm font-medium text-foreground/70 mt-2">
-          Энэхүү нөхцөлийг зөвшөөрсний дараа захиалга хийх боломжтой
-        </p>
-      </div>
-    </div>
+    <header class="enter-rise mb-10">
+      <h1 class="mb-2 font-display text-foreground text-h2">Үйлчилгээний нөхцөл</h1>
+      <p class="text-muted-foreground text-sm md:text-base">
+        Энэхүү нөхцөлийг зөвшөөрсний дараа захиалга хийх боломжтой
+      </p>
+    </header>
 
-    <div class="space-y-6">
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">1. Ерөнхий нөхцөл</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Amerik Vitamin нь АНУ-аас шууд импортлогдсон витамин, нэмэлт тэжээлийг Монгол улсын дотоодод 
-          хүргэлттэй борлуулдаг онлайн дэлгүүр юм. Энэхүү нөхцөл нь хэрэглэгч, борлуулагч хоёрын хооронд 
-          үүсэх харилцааг зохицуулна.
-        </p>
-      </section>
+    <div class="enter-rise stagger-1 space-y-10">
+      {sections.map((section) => (
+        <section>
+          <h2 class="mb-3 font-display text-foreground text-lg">{section.heading}</h2>
+          <p class="text-muted-foreground text-sm leading-relaxed md:text-base">
+            {section.body}
+          </p>
+        </section>
+      ))}
 
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">2. Бүтээгдэхүүний мэдээлэл</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Бидний борлуулж буй бүтээгдэхүүнүүд бүгд АНУ-аас импортлогдсон жинхэнэ бүтээгдэхүүнүүд юм. 
-          Бүтээгдэхүүний найрлага, хэрэглэх заавар, хадгалах нөхцөлийг сайтар уншиж танилцана уу. 
-          Хүнсний нэмэлт нь эмийн орлогч биш гэдгийг анхаарна уу.
-        </p>
-      </section>
-
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">3. Захиалга</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Захиалгыг вэбсайт, эсвэл утсаар хүлээн авна. Захиалга баталгаажсаны дараа бүтээгдэхүүний 
-          нөөц хангалттай бол захиалгыг бэлтгэнэ. Захиалгыг цуцлах, өөрчлөх боломжгүй.
-        </p>
-      </section>
-
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">4. Төлбөр</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Төлбөрийг дансаар шилжүүлэх эсвэл QPay ашиглан төлнө. Төлбөр баталгаажсаны дараа захиалга 
-          хүргэлтэд гарна. Төлбөрийг захиалга өгснөөс хойш 24 цагийн дотор төлөх шаардлагатай.
-        </p>
-      </section>
-
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">5. Хүргэлт</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Зөвхөн Монгол улсын дотоодод хүргэлт хийнэ. Улаанбаатар хотод 12:00 цагаас хойш хүргэнэ. 
-          Хөдөө орон нутаг руу "Замын Унаа"-ар илгээдэг бөгөөд тээврийн зардал хүлээн авагчийн хариуцах болно.
-        </p>
-      </section>
-
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">6. Буцаалт</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Бид <strong>бараа буцаалт хүлээн авдаггүй</strong>. Импортын хүнсний нэмэлт тэжээлийн онцлогоос 
-          шалтгаалан бараа буцаах, мөнгө буцаан олгох боломжгүй. Захиалга өгөхөөс өмнө бүтээгдэхүүнээ 
+      <section>
+        <h2 class="mb-3 font-display text-foreground text-lg">6. Буцаалт</h2>
+        <p class="text-muted-foreground text-sm leading-relaxed md:text-base">
+          Бид <strong class="text-foreground">бараа буцаалт хүлээн авдаггүй</strong>. Импортын хүнсний нэмэлт тэжээлийн онцлогоос
+          шалтгаалан бараа буцаах, мөнгө буцаан олгох боломжгүй. Захиалга өгөхөөс өмнө бүтээгдэхүүнээ
           сайтар сонгоно уу.
         </p>
       </section>
 
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">7. Хариуцлага</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
-          Бүтээгдэхүүнийг зөвхөн багц дээрх зааврын дагуу хэрэглэнэ. Бид бүтээгдэхүүнийг буруу хэрэглэсэнээс 
+      <section>
+        <h2 class="mb-3 font-display text-foreground text-lg">7. Хариуцлага</h2>
+        <p class="text-muted-foreground text-sm leading-relaxed md:text-base">
+          Бүтээгдэхүүнийг зөвхөн багц дээрх зааврын дагуу хэрэглэнэ. Бид бүтээгдэхүүнийг буруу хэрэглэсэнээс
           үүдсэн ямар ч хохиролд хариуцлага хүлээхгүй. Эмчийн зөвлөгөө авна уу.
         </p>
       </section>
 
-      <section class="border-3 border-border bg-card p-5 lg:p-6 shadow-hard-sm">
-        <h2 class="text-lg font-black uppercase tracking-tight mb-3">8. Холбоо барих</h2>
-        <p class="text-sm font-medium text-muted-foreground leading-relaxed">
+      <section>
+        <h2 class="mb-3 font-display text-foreground text-lg">8. Холбоо барих</h2>
+        <p class="mb-4 text-muted-foreground text-sm leading-relaxed md:text-base">
           Үйлчилгээний нөхцөлтэй холбоотой асуулт байвал бидэнтэй холбогдоно уу.
         </p>
-        <div class="mt-3 flex flex-wrap gap-3">
-          <a href="tel:+97699993950" class="inline-flex items-center gap-2 px-4 py-2 border-2 border-border bg-muted font-bold text-xs uppercase tracking-wider hover:bg-primary transition-colors">
+        <div class="flex flex-wrap gap-3">
+          <a
+            href="tel:+97699993950"
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
+          >
             Утас: 9999-3950
           </a>
-          <a href="mailto:info@amerikvitamin.mn" class="inline-flex items-center gap-2 px-4 py-2 border-2 border-border bg-muted font-bold text-xs uppercase tracking-wider hover:bg-primary transition-colors">
+          <a
+            href="mailto:info@amerikvitamin.mn"
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97]"
+          >
             И-мэйл: info@amerikvitamin.mn
           </a>
         </div>

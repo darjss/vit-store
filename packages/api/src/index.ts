@@ -32,7 +32,14 @@ export type {
 } from "~/db/schema";
 export * as db from "~/db/schema";
 
-export type { Context, CreateContextOptions } from "~/lib/context";
+export { finalizeCatalogCacheHeaders } from "~/lib/cache/workers-cache";
+export type {
+	Context,
+	CreateContextOptions,
+	WorkersCache,
+} from "~/lib/context";
+export * from "~/lib/product-search/client";
+export * from "~/lib/product-search/types";
 export type { Session } from "~/lib/session";
 export { createSessionManager, generateSessionToken } from "~/lib/session";
 export {
@@ -60,9 +67,8 @@ export {
 	customerProcedure,
 	publicProcedure,
 	router,
+	timingSafeEqual,
 } from "~/lib/trpc";
-export * from "~/lib/product-search/client";
-export * from "~/lib/product-search/types";
 export * from "~/lib/types";
 export * from "~/lib/utils";
 export * from "~/routers";

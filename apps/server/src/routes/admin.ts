@@ -2,7 +2,10 @@ import { getProductSearchStatus, rebuildProductSearchIndex, } from "@vit/api/lib
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { requireAdminSession } from "../lib/admin-session";
 const app = new Hono<ServerHonoEnv>();
+
+app.use("*", requireAdminSession);
 const syncProductSearch = async (c: Context<ServerHonoEnv>, legacy: boolean) => {
     const log = c.get("log");
     log.set({ user_type: "admin", operation: "product_search.sync" });

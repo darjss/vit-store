@@ -4,16 +4,27 @@ import type {
 	CustomerSelectType,
 	Session,
 	UserSelectType,
+	WorkersCache,
 } from "@vit/api";
 import { createDb } from "@vit/api/db";
 import type { AppRequestLogger } from "./logging";
 
+function resolveWorkersCache(
+	context: CreateContextOptions["context"],
+): WorkersCache | undefined {
+	try {
+		return (context.executionCtx as unknown as { cache?: WorkersCache })?.cache;
+	} catch {
+		return undefined;
+	}
+}
 
 export async function createContext({
 	context,
 }: CreateContextOptions): Promise<ApiContext> {
 	const kv = context.env.vitStoreKV;
 	const r2 = context.env.r2Bucket;
+	const cache = resolveWorkersCache(context);
 	type EnvWithDirectDbUrl = typeof context.env & { DIRECT_DB_URL?: string };
 
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
@@ -32,6 +43,7 @@ export async function createContext({
 		db: db,
 		kv,
 		r2,
+		cache,
 		log,
 	};
 }

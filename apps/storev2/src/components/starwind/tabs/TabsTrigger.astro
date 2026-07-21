@@ -2055,12 +2055,12 @@ interface Props extends Omit<HTMLAttributes<"button">, "type" | "id" | "role"> {
 
 export const tabsTrigger = tv({
   base: [
-    "inline-flex grow items-center justify-center gap-2 border-3 border-border px-4 py-2 font-bold uppercase tracking-wide whitespace-nowrap transition-all text-sm",
-    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-hard-lg data-[state=active]:translate-x-[2px] data-[state=active]:translate-y-[2px]",
-    "data-[state=inactive]:bg-background data-[state=inactive]:shadow-hard-xl",
-    "hover:shadow-hard-lg hover:translate-x-[2px] hover:translate-y-[2px]",
+    "inline-flex grow items-center justify-center gap-2 rounded-full px-4 py-2 font-semibold whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 ease-out text-sm",
+    "data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-soft-sm",
+    "data-[state=inactive]:text-muted-foreground",
+    "hover:text-foreground",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-    "focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
     "disabled:pointer-events-none disabled:opacity-50",
   ],
 });

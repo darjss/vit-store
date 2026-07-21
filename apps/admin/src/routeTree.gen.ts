@@ -15,6 +15,7 @@ import { Route as DashIndexRouteImport } from './routes/_dash/index'
 import { Route as ProductsAddRouteImport } from './routes/products.add'
 import { Route as DashSandboxRouteImport } from './routes/_dash/sandbox'
 import { Route as DashReviewProductsRouteImport } from './routes/_dash/review-products'
+import { Route as DashRestockWaitlistRouteImport } from './routes/_dash/restock-waitlist'
 import { Route as DashCustomersRouteImport } from './routes/_dash/customers'
 import { Route as DashCategoriesRouteImport } from './routes/_dash/categories'
 import { Route as DashBrandsRouteImport } from './routes/_dash/brands'
@@ -55,6 +56,11 @@ const DashSandboxRoute = DashSandboxRouteImport.update({
 const DashReviewProductsRoute = DashReviewProductsRouteImport.update({
   id: '/review-products',
   path: '/review-products',
+  getParentRoute: () => DashRouteRoute,
+} as any)
+const DashRestockWaitlistRoute = DashRestockWaitlistRouteImport.update({
+  id: '/restock-waitlist',
+  path: '/restock-waitlist',
   getParentRoute: () => DashRouteRoute,
 } as any)
 const DashCustomersRoute = DashCustomersRouteImport.update({
@@ -119,23 +125,24 @@ const DashOrdersIdRoute = DashOrdersIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof DashIndexRoute
   '/login': typeof LoginRoute
   '/analytics': typeof DashAnalyticsRoute
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
+  '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
-  '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
   '/orders/add': typeof DashOrdersAddRoute
   '/products/$id': typeof DashProductsIdRoute
   '/purchases/$id': typeof DashPurchasesIdRoute
   '/purchases/add': typeof DashPurchasesAddRoute
-  '/orders': typeof DashOrdersIndexRoute
-  '/products': typeof DashProductsIndexRoute
-  '/purchases': typeof DashPurchasesIndexRoute
+  '/orders/': typeof DashOrdersIndexRoute
+  '/products/': typeof DashProductsIndexRoute
+  '/purchases/': typeof DashPurchasesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/brands': typeof DashBrandsRoute
   '/categories': typeof DashCategoriesRoute
   '/customers': typeof DashCustomersRoute
+  '/restock-waitlist': typeof DashRestockWaitlistRoute
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_dash/brands': typeof DashBrandsRoute
   '/_dash/categories': typeof DashCategoriesRoute
   '/_dash/customers': typeof DashCustomersRoute
+  '/_dash/restock-waitlist': typeof DashRestockWaitlistRoute
   '/_dash/review-products': typeof DashReviewProductsRoute
   '/_dash/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
@@ -180,23 +189,24 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/login'
     | '/analytics'
     | '/brands'
     | '/categories'
     | '/customers'
+    | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
     | '/products/add'
-    | '/'
     | '/orders/$id'
     | '/orders/add'
     | '/products/$id'
     | '/purchases/$id'
     | '/purchases/add'
-    | '/orders'
-    | '/products'
-    | '/purchases'
+    | '/orders/'
+    | '/products/'
+    | '/purchases/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/categories'
     | '/customers'
+    | '/restock-waitlist'
     | '/review-products'
     | '/sandbox'
     | '/products/add'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/_dash/brands'
     | '/_dash/categories'
     | '/_dash/customers'
+    | '/_dash/restock-waitlist'
     | '/_dash/review-products'
     | '/_dash/sandbox'
     | '/products/add'
@@ -256,7 +268,7 @@ declare module '@tanstack/react-router' {
     '/_dash': {
       id: '/_dash'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof DashRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -286,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/review-products'
       fullPath: '/review-products'
       preLoaderRoute: typeof DashReviewProductsRouteImport
+      parentRoute: typeof DashRouteRoute
+    }
+    '/_dash/restock-waitlist': {
+      id: '/_dash/restock-waitlist'
+      path: '/restock-waitlist'
+      fullPath: '/restock-waitlist'
+      preLoaderRoute: typeof DashRestockWaitlistRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/customers': {
@@ -319,21 +338,21 @@ declare module '@tanstack/react-router' {
     '/_dash/purchases/': {
       id: '/_dash/purchases/'
       path: '/purchases'
-      fullPath: '/purchases'
+      fullPath: '/purchases/'
       preLoaderRoute: typeof DashPurchasesIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/products/': {
       id: '/_dash/products/'
       path: '/products'
-      fullPath: '/products'
+      fullPath: '/products/'
       preLoaderRoute: typeof DashProductsIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/orders/': {
       id: '/_dash/orders/'
       path: '/orders'
-      fullPath: '/orders'
+      fullPath: '/orders/'
       preLoaderRoute: typeof DashOrdersIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
@@ -380,6 +399,7 @@ interface DashRouteRouteChildren {
   DashBrandsRoute: typeof DashBrandsRoute
   DashCategoriesRoute: typeof DashCategoriesRoute
   DashCustomersRoute: typeof DashCustomersRoute
+  DashRestockWaitlistRoute: typeof DashRestockWaitlistRoute
   DashReviewProductsRoute: typeof DashReviewProductsRoute
   DashSandboxRoute: typeof DashSandboxRoute
   DashIndexRoute: typeof DashIndexRoute
@@ -398,6 +418,7 @@ const DashRouteRouteChildren: DashRouteRouteChildren = {
   DashBrandsRoute: DashBrandsRoute,
   DashCategoriesRoute: DashCategoriesRoute,
   DashCustomersRoute: DashCustomersRoute,
+  DashRestockWaitlistRoute: DashRestockWaitlistRoute,
   DashReviewProductsRoute: DashReviewProductsRoute,
   DashSandboxRoute: DashSandboxRoute,
   DashIndexRoute: DashIndexRoute,

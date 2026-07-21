@@ -1,13 +1,11 @@
 ---
-
-
-
-
-
-
-
 import ClearCart from "@/components/payment/clear-cart";
+import { env } from "cloudflare:workers";
+import Celebration from "@/components/ui/celebration";
 import Layout from "@/layouts/Layout.astro";
+import { paymentSuccessCelebrationKey } from "@/lib/celebration";
+import { loadPaymentOrRedirect } from "@/lib/server-loaders";
+import { paymentUrl, orderConfirmUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
 import IconCheck from "~icons/ri/check-line";
 import IconReceipt from "~icons/ri/file-list-3-line";
@@ -16,81 +14,82 @@ import IconHome from "~icons/ri/home-4-line";
 const { paymentNumber } = Astro.params;
 
 if (!paymentNumber) {
-    throw Astro.redirect("/404");
+    return Astro.redirect("/404");
 }
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server, Astro.redirect);
-const checkoutToken = Astro.url.searchParams.get("ct") ?? undefined;
-const payment = await serverApi.payment.getPaymentByNumber.query({
-    paymentNumber,
-    checkoutToken,
-} as { paymentNumber: string });
-
-if (!payment) {
-    throw Astro.redirect("/404");
-}
+const serverApi = createServerClient(cookieHeader, env.server, Astro.redirect);
+const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
+const result = await loadPaymentOrRedirect(serverApi, paymentNumber, checkoutToken, Astro.redirect);
+if ("redirect" in result) return result.redirect;
+const payment = result.payment;
 
 if (payment.status !== "success") {
-	throw Astro.redirect(
-        checkoutToken
-            ? `/payment/${paymentNumber}?ct=${encodeURIComponent(checkoutToken)}`
-            : `/payment/${paymentNumber}`,
-    );
+	return Astro.redirect(paymentUrl(paymentNumber, checkoutToken));
 }
 ---
 
 <Layout>
     <ClearCart client:load />
+    <Celebration
+        client:load
+        eventKey={paymentSuccessCelebrationKey(paymentNumber)}
+        intensity="strong"
+    />
     <div class="container mx-auto px-4 py-8 min-h-screen">
         <!-- Success Header -->
-        <div class="mb-12 text-center">
-            <div class="mb-6 inline-flex h-24 w-24 items-center justify-center rounded-full border-4 border-border bg-success text-success-foreground shadow-hard-xl">
-                <IconCheck class="h-12 w-12" />
+        <div class="enter-scale mb-10 text-center">
+            <div class="relative mb-6 inline-block">
+                <div class="inline-flex size-24 items-center justify-center rounded-full bg-success text-success-foreground shadow-soft-lg">
+                    <IconCheck class="h-12 w-12" aria-hidden="true" />
+                </div>
+                <span class="-rotate-6 -right-10 absolute top-0 inline-flex items-center rounded-full border-2 border-cocoa bg-card px-3 py-1 font-bold text-foreground text-xs shadow-pop-sm">
+                    Баярлалаа!
+                </span>
             </div>
-            <h1 class="mb-4 font-black text-3xl uppercase tracking-tight md:text-5xl">
+            <h1 class="mb-3 font-display text-3xl text-foreground md:text-4xl">
                 Төлбөр амжилттай!
             </h1>
             <p class="text-lg text-muted-foreground max-w-md mx-auto">
-                Таны QPay төлбөр амжилттай хийгдлээ. Захиалга баталгаажлаа.
+                Таны төлбөр амжилттай хийгдлээ. Захиалга баталгаажлаа.
             </p>
         </div>
 
         <!-- Payment Summary -->
         <div class="max-w-2xl mx-auto mb-8">
-            <div class="border-4 border-border bg-card shadow-hard-xl">
-                <div class="p-6 border-b-4 border-border bg-primary/10">
-                    <div class="flex items-center justify-between">
+            <div class="rounded-2xl border border-border bg-card shadow-soft overflow-hidden">
+                <div class="enter-scale stagger-1 p-5 sm:p-6 border-b border-border bg-wash-lemon/60">
+                    <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-sm text-muted-foreground font-bold uppercase">Төлбөрийн дугаар</p>
-                            <p class="font-mono font-black text-lg">{paymentNumber}</p>
+                            <p class="text-xs text-muted-foreground font-semibold mb-0.5">Төлбөрийн дугаар</p>
+                            <p class="font-display text-base sm:text-lg text-foreground">{paymentNumber}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm text-muted-foreground font-bold uppercase">Захиалгын дугаар</p>
-                            <p class="font-mono font-black text-lg">{payment.order.orderNumber}</p>
+                            <p class="text-xs text-muted-foreground font-semibold mb-0.5">Захиалгын дугаар</p>
+                            <p class="font-display text-base sm:text-lg text-foreground">{payment.order.orderNumber}</p>
                         </div>
                     </div>
                 </div>
-                
-                <div class="p-6 space-y-4">
+
+                <div class="p-5 sm:p-6 space-y-4">
                     <!-- Products -->
-                    <div>
-                        <h3 class="font-black uppercase tracking-tight mb-3 text-sm text-muted-foreground">Бүтээгдэхүүнүүд</h3>
+                    <div class="enter-rise stagger-2">
+                        <h3 class="font-semibold mb-3 text-sm text-muted-foreground">Бүтээгдэхүүнүүд</h3>
                         <div class="space-y-2">
                             {payment.order.products.map((product) => (
-                                <div class="flex items-center gap-3 p-3 border-2 border-border bg-background">
+                                <div class="flex items-center gap-3 rounded-xl p-2.5 bg-muted/30">
                                     {product.imageUrl && (
                                         <img
                                             src={product.imageUrl}
                                             alt={product.name}
-                                            class="w-12 h-12 object-cover border-2 border-border shrink-0"
+                                            class="size-12 object-cover rounded-lg shrink-0"
                                         />
                                     )}
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-bold text-sm truncate">{product.name}</p>
-                                        <p class="text-xs text-muted-foreground">{product.quantity}x</p>
+                                        <p class="font-medium text-sm text-foreground truncate">{product.name}</p>
+                                        <p class="text-xs text-muted-foreground tabular-nums">{product.quantity}x</p>
                                     </div>
-                                    <p class="font-black text-sm shrink-0">
+                                    <p class="font-semibold text-sm text-foreground shrink-0">
                                         {(product.price * product.quantity).toLocaleString()}₮
                                     </p>
                                 </div>
@@ -99,16 +98,16 @@ if (payment.status !== "success") {
                     </div>
 
                     <!-- Delivery Address -->
-                    <div class="pt-4 border-t-2 border-border">
-                        <h3 class="font-black uppercase tracking-tight mb-2 text-sm text-muted-foreground">Хүргэлтийн хаяг</h3>
-                        <p class="font-medium">{payment.order.address}</p>
+                    <div class="enter-rise stagger-3 pt-4 border-t border-border">
+                        <h3 class="font-semibold mb-1.5 text-sm text-muted-foreground">Хүргэлтийн хаяг</h3>
+                        <p class="text-foreground text-sm leading-relaxed">{payment.order.address}</p>
                     </div>
 
                     <!-- Total -->
-                    <div class="pt-4 border-t-2 border-border">
-                        <div class="flex items-center justify-between">
-                            <span class="font-black uppercase">Нийт төлсөн</span>
-                            <span class="font-black text-2xl text-primary">{payment.total.toLocaleString()}₮</span>
+                    <div class="enter-rise stagger-4 pt-4 border-t border-border">
+                        <div class="flex items-baseline justify-between">
+                            <span class="font-semibold text-foreground">Нийт төлсөн</span>
+                            <span class="font-display text-2xl text-foreground">{payment.total.toLocaleString()}₮</span>
                         </div>
                     </div>
                 </div>
@@ -116,30 +115,30 @@ if (payment.status !== "success") {
         </div>
 
         <!-- Action Buttons -->
-        <div class="max-w-2xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <div class="enter-rise stagger-5 max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
                 <a
-                    href={checkoutToken ? `/order/confirm/${payment.order.orderNumber}?ct=${encodeURIComponent(checkoutToken)}` : `/order/confirm/${payment.order.orderNumber}`}
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 border-3 border-border bg-primary text-primary-foreground shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    href={orderConfirmUrl(payment.order.orderNumber, checkoutToken)}
+                    class="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary px-6 font-semibold text-primary-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-[140ms] ease-out hover:-translate-y-[2px] hover:shadow-lift-lg active:translate-y-0 active:scale-[0.97] active:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-14 md:px-8 md:text-base"
                 >
-                    <IconReceipt class="w-5 h-5" />
+                    <IconReceipt class="size-4 shrink-0" aria-hidden="true" />
                     Захиалга харах
                 </a>
-                <a 
+                <a
                     href="/"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-black uppercase tracking-wide transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 border-3 border-border bg-background text-black shadow-hard-xl hover:shadow-hard hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none h-12 md:h-14 px-6 md:px-8 py-3 text-sm md:text-base"
+                    class="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border bg-card px-6 font-semibold text-foreground text-sm shadow-soft-sm transition-[transform,box-shadow,background-color] duration-[140ms] ease-out hover:bg-muted hover:shadow-soft active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:h-14 md:px-8 md:text-base"
                 >
-                    <IconHome class="w-5 h-5" />
+                    <IconHome class="size-4 shrink-0" aria-hidden="true" />
                     Нүүр хуудас
                 </a>
             </div>
         </div>
 
         <!-- Info Box -->
-        <div class="max-w-2xl mx-auto mt-8">
-            <div class="border-3 border-border bg-muted/30 p-4">
-                <p class="text-sm text-muted-foreground text-center">
-                    Таны захиалгын мэдээллийг имэйл эсвэл мессежээр илгээх болно. 
+        <div class="enter-rise stagger-6 max-w-2xl mx-auto mt-8">
+            <div class="rounded-2xl bg-muted/40 p-4">
+                <p class="text-sm text-muted-foreground text-center leading-relaxed">
+                    Таны захиалгын мэдээллийг имэйл эсвэл мессежээр илгээх болно.
                     Хүргэлт 1-3 хоногийн дотор хийгдэнэ.
                 </p>
             </div>

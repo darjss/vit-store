@@ -4,11 +4,11 @@ import {
 	boolean,
 	index,
 	integer,
-	uniqueIndex,
 	jsonb,
 	pgTableCreator,
 	text,
 	timestamp,
+	uniqueIndex,
 	varchar,
 } from "drizzle-orm/pg-core";
 import {
@@ -46,7 +46,7 @@ export const CustomersTable = createTable(
 	{
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		phone: integer("phone").notNull().unique(),
-    address: varchar("address", { length: 256 }),
+		address: varchar("address", { length: 256 }),
 		addressZoneId: integer("address_zone_id"),
 		facebook_username: varchar("facebook_username", { length: 256 }),
 		instagram_username: varchar("instagram_username", { length: 256 }),
@@ -235,11 +235,11 @@ export const OrdersTable = createTable(
 		status: text("status", {
 			enum: orderStatus,
 		}).notNull(),
-    address: varchar("address", { length: 256 }).notNull(),
+		address: varchar("address", { length: 256 }).notNull(),
 		addressZoneId: integer("address_zone_id"),
 		deliveryProvider: text("delivery_provider", {
 			enum: deliveryProvider,
-    }).notNull(),
+		}).notNull(),
 		total: integer("total").notNull(),
 		notes: text("notes"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -312,10 +312,7 @@ export const PaymentsTable = createTable(
 		uniqueIndex("payment_number_unique_idx").on(table.paymentNumber),
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_status_created_idx").on(table.status, table.createdAt),
-		index("payment_number_status_idx").on(
-			table.paymentNumber,
-			table.status,
-		),
+		index("payment_number_status_idx").on(table.paymentNumber, table.status),
 	],
 );
 
@@ -325,7 +322,9 @@ export const MessengerNotificationFailuresTable = createTable(
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
-		status: text("status", { enum: ["pending", "sent", "failed"] }).notNull().default("pending"),
+		status: text("status", { enum: ["pending", "sent", "failed"] })
+			.notNull()
+			.default("pending"),
 		payload: jsonb("payload").notNull(),
 		errorMessage: text("error_message"),
 		errorCode: varchar("error_code", { length: 64 }),
@@ -343,6 +342,126 @@ export const MessengerNotificationFailuresTable = createTable(
 			table.status,
 			table.createdAt,
 		),
+	],
+);
+
+export const PaymentNotificationOutboxTable = createTable(
+	"payment_notification_outbox",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		purpose: varchar("purpose", { length: 64 }).notNull(),
+		status: text("status", {
+			enum: ["pending", "claimed", "sent", "failed", "unknown"],
+		})
+			.notNull()
+			.default("pending"),
+		claimToken: varchar("claim_token", { length: 64 }),
+		claimUntil: timestamp("claim_until"),
+		attemptCount: integer("attempt_count").notNull().default(0),
+		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+		lastErrorCode: varchar("last_error_code", { length: 64 }),
+		lastErrorAt: timestamp("last_error_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("payment_notification_payment_purpose_unique_idx").on(
+			table.paymentNumber,
+			table.purpose,
+		),
+		index("payment_notification_dispatch_idx").on(
+			table.status,
+			table.nextAttemptAt,
+		),
+	],
+);
+
+export const PaymentNotificationAttemptsTable = createTable(
+	"payment_notification_attempt",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		outboxId: integer("outbox_id")
+			.references(() => PaymentNotificationOutboxTable.id)
+			.notNull(),
+		attemptNumber: integer("attempt_number").notNull(),
+		outcome: varchar("outcome", { length: 32 }).notNull(),
+		errorCode: varchar("error_code", { length: 64 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("payment_notification_attempt_unique_idx").on(
+			table.outboxId,
+			table.attemptNumber,
+		),
+	],
+);
+
+export const KhaanConsumedTransactionsTable = createTable(
+	"khaan_consumed_transaction",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		confirmedAt: timestamp("confirmed_at").defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("khaan_consumed_fingerprint_unique_idx").on(table.fingerprint),
+		index("khaan_consumed_payment_number_idx").on(table.paymentNumber),
+	],
+);
+
+export const RestockSubscriptionsTable = createTable(
+	"restock_subscription",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		productId: integer("product_id")
+			.references(() => ProductsTable.id)
+			.notNull(),
+		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
+		// Erased on every terminal state; only pending/sending deliveries retain it.
+		contact: text("contact"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deliveryState: text("delivery_state", {
+			enum: ["pending", "sending", "sent", "failed", "unknown", "cancelled"],
+		})
+			.default("pending")
+			.notNull(),
+		consentState: text("consent_state", {
+			enum: ["pending", "verified"],
+		})
+			.default("pending")
+			.notNull(),
+		deliveryKey: varchar("delivery_key", { length: 96 }).notNull(),
+		claimToken: varchar("claim_token", { length: 64 }),
+		leaseExpiresAt: timestamp("lease_expires_at"),
+		attemptCount: integer("attempt_count").default(0).notNull(),
+		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+		terminalAt: timestamp("terminal_at"),
+		lastError: text("last_error"),
+		deletedAt: timestamp("deleted_at"),
+	},
+	(table) => [
+		uniqueIndex("restock_sub_open_unique_idx")
+			.on(table.productId, table.channel, table.contact)
+			.where(
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} in ('pending', 'sending')`,
+			),
+		index("restock_sub_product_pending_idx")
+			.on(table.productId)
+			.where(
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} = 'pending'`,
+			),
+		index("restock_sub_contact_open_idx")
+			.on(table.contact)
+			.where(
+				sql`${table.deletedAt} is null and ${table.consentState} = 'verified' and ${table.deliveryState} in ('pending', 'sending')`,
+			),
+		index("restock_sub_lease_idx")
+			.on(table.leaseExpiresAt)
+			.where(
+				sql`${table.deletedAt} is null and ${table.deliveryState} = 'sending'`,
+			),
 	],
 );
 
@@ -622,6 +741,16 @@ export const salesRelations = relations(SalesTable, ({ one }) => ({
 	}),
 }));
 
+export const restockSubscriptionsRelations = relations(
+	RestockSubscriptionsTable,
+	({ one }) => ({
+		product: one(ProductsTable, {
+			fields: [RestockSubscriptionsTable.productId],
+			references: [ProductsTable.id],
+		}),
+	}),
+);
+
 export type UserSelectType = InferSelectModel<typeof UsersTable>;
 export type CustomerSelectType = InferSelectModel<typeof CustomersTable>;
 export type BrandSelectType = InferSelectModel<typeof BrandsTable>;
@@ -648,6 +777,9 @@ export type PurchaseReceiptItemSelectType = InferSelectModel<
 	typeof PurchaseReceiptItemsTable
 >;
 export type SalesSelectType = InferSelectModel<typeof SalesTable>;
+export type RestockSubscriptionSelectType = InferSelectModel<
+	typeof RestockSubscriptionsTable
+>;
 
 export type UserInsertType = InferInsertModel<typeof UsersTable>;
 export type CustomerInsertType = InferInsertModel<typeof CustomersTable>;
@@ -674,3 +806,6 @@ export type PurchaseReceiptItemInsertType = InferInsertModel<
 	typeof PurchaseReceiptItemsTable
 >;
 export type SalesInsertType = InferInsertModel<typeof SalesTable>;
+export type RestockSubscriptionInsertType = InferInsertModel<
+	typeof RestockSubscriptionsTable
+>;

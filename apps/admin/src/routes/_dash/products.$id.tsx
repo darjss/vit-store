@@ -12,6 +12,9 @@ export const Route = createFileRoute("/_dash/products/$id")({
 			ctx.trpc.product.getProductById.queryOptions({ id: productId }),
 		);
 		void ctx.queryClient.prefetchQuery(
+			ctx.trpc.product.getRestockWaitCount.queryOptions({ productId }),
+		);
+		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getRecentOrdersByProductId.queryOptions({
 				productId,
 			}),

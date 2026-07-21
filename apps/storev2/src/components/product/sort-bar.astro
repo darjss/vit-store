@@ -1,0 +1,36 @@
+---
+interface Props {
+	baseUrl: string;
+	sort: string | null;
+	dir: string | null;
+}
+
+const { baseUrl, sort, dir } = Astro.props;
+
+const options = [
+	{ label: "Онцлох", sort: null, dir: null },
+	{ label: "Шинэ", sort: "createdAt", dir: "desc" },
+	{ label: "Хямд", sort: "price", dir: "asc" },
+	{ label: "Үнэтэй", sort: "price", dir: "desc" },
+] as const;
+
+const hrefFor = (o: (typeof options)[number]) =>
+	o.sort ? `${baseUrl}/1?sort=${o.sort}&dir=${o.dir}` : `${baseUrl}/1`;
+const isActive = (o: (typeof options)[number]) =>
+	o.sort ? sort === o.sort && dir === o.dir : !sort;
+---
+
+<div class="mb-3 flex items-center justify-end gap-2 sm:mb-4">
+	<span class="font-bold text-[11px] text-muted-foreground uppercase tracking-wide">Эрэмбэ</span>
+	<div class="flex overflow-hidden rounded-md border border-border shadow-soft-sm">
+		{options.map((o, index) => (
+			<a
+				href={hrefFor(o)}
+				aria-current={isActive(o) ? "true" : undefined}
+				class={`flex h-11 min-w-11 items-center justify-center px-2.5 font-bold text-[11px] uppercase tracking-wide transition-colors duration-200 ease-out-quart focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:px-3 ${isActive(o) ? "bg-secondary text-secondary-foreground" : "bg-card hover:bg-primary/20"} ${index > 0 ? "border-border border-l" : ""}`}
+			>
+				{o.label}
+			</a>
+		))}
+	</div>
+</div>

@@ -1,3 +1,4 @@
+import type { CatalogCacheAccumulator } from "@vit/shared";
 import { initLogger, type RequestLogger } from "evlog";
 import { createAxiomDrain } from "evlog/axiom";
 import { evlog } from "evlog/hono";
@@ -9,6 +10,7 @@ export type ServerHonoEnv = {
 	Bindings: Env;
 	Variables: {
 		log: AppRequestLogger;
+		catalogCache?: CatalogCacheAccumulator;
 	};
 };
 

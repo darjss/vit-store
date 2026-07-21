@@ -10,6 +10,8 @@ import {
 	startExtractionStage,
 	translateStage,
 } from "~/lib/ai-product/pipeline";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { logger } from "~/lib/logger";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 
@@ -142,6 +144,14 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 				).length;
 				const failed = results.filter((r) => r.status === "failed").length;
 
+				const createdProductIds = results
+					.filter((r) => r.status !== "failed" && r.productId !== null)
+					.map((r) => r.productId as number);
+				if (createdProductIds.length > 0) {
+					await purgeCatalogCache(ctx, createdProductIds);
+					scheduleProductSearchRebuild(ctx, "product_created");
+				}
+
 				return {
 					results,
 					summary: { total: input.items.length, created, duplicates, failed },
@@ -188,6 +198,8 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						isPrimary: index === 0,
 					})),
 				);
+				await purgeCatalogCache(ctx, [input.productId]);
+				scheduleProductSearchRebuild(ctx, "product_updated");
 
 				return {
 					images: result.images,

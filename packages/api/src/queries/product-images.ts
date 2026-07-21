@@ -41,6 +41,20 @@ export const productImageQueries = {
 				.orderBy(ProductImagesTable.isPrimary);
 		},
 
+		async getImageById(id: number) {
+			return db()
+				.select({ productId: ProductImagesTable.productId })
+				.from(ProductImagesTable)
+				.where(
+					and(
+						eq(ProductImagesTable.id, id),
+						isNull(ProductImagesTable.deletedAt),
+					),
+				)
+				.limit(1)
+				.then((rows) => rows[0]);
+		},
+
 		async getAllImages() {
 			return db()
 				.select({

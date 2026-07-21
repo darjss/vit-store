@@ -1,32 +1,88 @@
 import { paymentQueries } from "~/queries/payments";
+import { KhaanTransactionAlreadyConsumedError } from "~/lib/payments/consumed-transaction";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
 import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
+import { purgeCatalogCacheGlobal } from "~/lib/cache/workers-cache";
 
-type TransferConfirmationSource = "admin" | "auto_reconciliation" | "messenger";
+// Canonical confirm + notify + analytics + cache-purge boundary (F2).
+//
+// Every payment confirm path — DO auto-reconciliation, messenger postback,
+// admin manual transfer confirm, qpay checkout, qpay webhook — calls this.
+// The consumed-Khaan-transaction ledger, customer notification, analytics,
+// and storefront cache purge are all enforced here so they cannot be skipped
+// or duplicated by a caller.
+//
+// `provider` is generalized (transfer | qpay); the consumed-Khaan ledger only
+// applies to transfer (qpay has no bank-transaction fingerprints), so
+// `consumedKhaanTransactions` is only passed by transfer callers.
+//
+// LBL-5: the cache purge lives here (lib), NOT in packages/api/src/queries.
+// The query layer returns a plain boolean; this boundary derives the affected
+// product ids from the post-confirm payment info and purges.
+// lazily resolves `cloudflare:workers`, so importing it here does not couple
+// the queries package to the Worker runtime.
 
-type ConfirmTransferPaymentInput = {
+export type ConfirmPaymentSource =
+	| "admin"
+	| "auto_reconciliation"
+	| "messenger"
+	| "qpay_checkout"
+	| "qpay_webhook";
+
+export type ConfirmPaymentProvider = "transfer" | "qpay";
+
+type ConfirmPaymentInput = {
 	paymentNumber: string;
-	source: TransferConfirmationSource;
+	provider: ConfirmPaymentProvider;
+	source: ConfirmPaymentSource;
 	referrer?: string;
+	consumedKhaanTransactions?: { fingerprint: string }[];
 };
 
-type ConfirmTransferPaymentResult =
+export type ConfirmPaymentResult =
 	| { confirmed: true; orderNumber?: string }
-	| { confirmed: false; reason: "already_confirmed_or_not_pending" };
+	| {
+			confirmed: false;
+			reason:
+				| "already_confirmed_or_not_pending"
+				| "khaan_transaction_already_consumed";
+	  };
 
-export async function confirmTransferPaymentAndNotify({
+export async function confirmPaymentAndNotify({
 	paymentNumber,
+	provider,
+	source,
 	referrer,
-}: ConfirmTransferPaymentInput): Promise<ConfirmTransferPaymentResult> {
+	consumedKhaanTransactions,
+}: ConfirmPaymentInput): Promise<ConfirmPaymentResult> {
 	const q = paymentQueries.store;
-	const confirmed = await q.confirmPaymentAndApplyStock(
-		paymentNumber,
-		"transfer",
-	);
+	let confirmed: boolean;
+	try {
+		confirmed = await q.confirmPaymentAndApplyStock(
+			paymentNumber,
+			provider,
+			consumedKhaanTransactions,
+		);
+	} catch (error) {
+		if (error instanceof KhaanTransactionAlreadyConsumedError) {
+			// Do NOT surface the fingerprint hash to any caller/UI. The hash is
+			// logged server-side only; the result carries a clean reason so the
+			// admin/manual-review path can present "bank transaction already
+			// used by another order" without leaking the fingerprint (F1).
+			console.error(
+				`[khaan] ${source} confirm ABORTED — bank transaction already consumed (paymentNumber=${paymentNumber}); routing to manual review`,
+			);
+			return {
+				confirmed: false,
+				reason: "khaan_transaction_already_consumed",
+			};
+		}
+		throw error;
+	}
 
 	if (!confirmed) {
 		return { confirmed: false, reason: "already_confirmed_or_not_pending" };
@@ -36,6 +92,15 @@ export async function confirmTransferPaymentAndNotify({
 	if (!paymentInfo) {
 		return { confirmed: true };
 	}
+
+	// Purge storefront product cache for the affected products. The product ids
+	// come from the post-confirm payment info (every order detail was stocked
+	// on a successful confirm). Purging a few extra tags is harmless; missing
+	// one would leave a stale price/stock on the storefront.
+	const stockedProductIds = paymentInfo.order.orderDetails.map(
+		(detail) => detail.product.id,
+	);
+	await purgeCatalogCacheGlobal(stockedProductIds);
 
 	const notificationPayload: DetailedOrderNotificationInput = {
 		paymentNumber,
@@ -70,7 +135,7 @@ export async function confirmTransferPaymentAndNotify({
 		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
 		paymentNumber,
 		orderNumber: paymentInfo.order.orderNumber,
-		provider: "transfer",
+		provider,
 		revenue: paymentInfo.order.total,
 		referrer,
 	}).catch(() => {});
@@ -79,7 +144,7 @@ export async function confirmTransferPaymentAndNotify({
 		orderNumber: paymentInfo.order.orderNumber,
 		paymentNumber,
 		total: paymentInfo.order.total,
-		provider: "transfer",
+		provider,
 	}).catch(() => {});
 
 	return {

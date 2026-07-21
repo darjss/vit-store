@@ -1,24 +1,14 @@
-import type { RequestLogger } from "evlog";
 import { TRPCError } from "@trpc/server";
 import { categoryQueries } from "@vit/api/queries";
-import { addCategorySchema } from "@vit/shared";
+import {
+    addCategorySchema,
+    categoryTag,
+} from "@vit/shared";
 import * as v from "valibot";
-import { CATALOG_CACHE_KEYS } from "~/lib/cache/catalog";
-import { rebuildProductSearchIndex } from "~/lib/product-search/client";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { slugify } from "~/lib/utils";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
-const scheduleProductSearchRebuild = (ctx: {
-    c: {
-        executionCtx: ExecutionContext;
-    };
-    log: RequestLogger<any>;
-}) => {
-    ctx.c.executionCtx.waitUntil(rebuildProductSearchIndex("category_updated").catch((error) => {
-        ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "product_search.rebuild_failed"
-        });
-    }));
-};
 export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     getAllCategories: proc.query(async ({ ctx }) => {
@@ -47,8 +37,8 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully added category" };
         }
         catch (error) {
@@ -78,8 +68,8 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
                 ...data,
                 slug,
             });
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx, [], [categoryTag(id)]);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully updated category" };
         }
         catch (error) {
@@ -101,8 +91,8 @@ export function buildCategoryRouter<P extends typeof baseProcedure>(proc: P) {
         try {
             const { id } = input;
             await categoryQueries.admin.deleteCategory(id);
-            await ctx.kv.delete(CATALOG_CACHE_KEYS.categoriesAll);
-            scheduleProductSearchRebuild(ctx);
+            await purgeCatalogCache(ctx, [], [categoryTag(id)]);
+            scheduleProductSearchRebuild(ctx, "category_updated");
             return { message: "Successfully deleted category" };
         }
         catch (error) {

@@ -51,16 +51,14 @@ const PhoneForm = (props: {
 
 	return (
 		<div class="space-y-6">
-			<div class="border-3 border-border bg-muted/50 p-4 shadow-hard-lg">
+			<div class="rounded-xl bg-info/60 p-4">
 				<div class="flex items-start gap-3">
-					<div class="mt-1 flex-shrink-0">
-						<IconInformation class="h-5 w-5 md:h-6 md:w-6" />
+					<div class="mt-0.5 flex-shrink-0 text-info-foreground">
+						<IconInformation class="h-5 w-5" />
 					</div>
-					<div class="flex-1">
-						<p class="font-bold text-xs leading-relaxed md:text-sm">
-							Таны утасны дугаарт баталгаажуулах код илгээгдэх болно
-						</p>
-					</div>
+					<p class="flex-1 font-medium text-info-foreground text-xs leading-relaxed md:text-sm">
+						Таны утасны дугаарт баталгаажуулах код илгээгдэх болно
+					</p>
 				</div>
 			</div>
 

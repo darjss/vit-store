@@ -205,19 +205,47 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			},
 		});
 
-	const savePatch = (patch: Partial<typeof order>) =>
-		updateOrderField({
-			id: orderId,
-			customerPhone: String(patch.customerPhone ?? order.customerPhone),
-			status: patch.status ?? order.status,
-			notes: patch.notes ?? order.notes,
-			address: patch.address ?? order.address,
-			addressZoneId: patch.addressZoneId ?? order.addressZoneId,
-			products: order.products || [],
-			paymentStatus: patch.paymentStatus ?? order.paymentStatus,
-			deliveryProvider: patch.deliveryProvider ?? order.deliveryProvider,
-			isNewCustomer: false,
+	const { mutate: patchOrderHeader, isPending: isPatchHeaderPending } =
+		useMutation({
+			...trpc.order.patchOrderHeader.mutationOptions(),
+			onSuccess: () => {
+				invalidateOrder();
+				toast.success("Мэдээлэл хадгалагдлаа");
+			},
 		});
+
+	// Header-only inline edits (notes, address, phone, deliveryProvider, status)
+	// go through the lightweight patchOrderHeader endpoint, which touches only
+	// order header columns and does NOT rewrite order details / sales / stock.
+	// Payment-status edits still go through updateOrder because they can trigger
+	// stock + sales transitions.
+	const savePatch = (patch: Partial<typeof order>) => {
+		if (patch.paymentStatus !== undefined) {
+			updateOrderField({
+				id: orderId,
+				customerPhone: String(order.customerPhone),
+				status: order.status,
+				notes: order.notes,
+				address: order.address,
+				addressZoneId: order.addressZoneId,
+				products: order.products || [],
+				paymentStatus: patch.paymentStatus,
+				deliveryProvider: order.deliveryProvider,
+				isNewCustomer: false,
+			});
+			return;
+		}
+		patchOrderHeader({
+			id: orderId,
+			customerPhone:
+				patch.customerPhone !== undefined
+					? String(patch.customerPhone)
+					: undefined,
+			address: patch.address,
+			notes: patch.notes,
+			deliveryProvider: patch.deliveryProvider,
+		});
+	};
 
 	const copy = async (text: string, label: string) => {
 		await navigator.clipboard.writeText(text);
@@ -373,7 +401,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 								>
 									<EditableField
 										value={order.customerPhone.toString()}
-										isLoading={isUpdateFieldPending}
+										isLoading={isPatchHeaderPending}
 										onSave={(next) => savePatch({ customerPhone: next })}
 									/>
 								</InfoRow>
@@ -385,7 +413,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									<EditableField
 										value={order.address || ""}
 										type="textarea"
-										isLoading={isUpdateFieldPending}
+										isLoading={isPatchHeaderPending}
 										onSave={(next) => savePatch({ address: next })}
 									/>
 								</InfoRow>
@@ -394,7 +422,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									<EditableField
 										value={order.notes || ""}
 										type="textarea"
-										isLoading={isUpdateFieldPending}
+										isLoading={isPatchHeaderPending}
 										onSave={(next) => savePatch({ notes: next })}
 										renderDisplay={(value) =>
 											value || (
@@ -539,7 +567,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									{ value: "avidaa", label: "Avidaa" },
 									{ value: "pick-up", label: "Өөрөө авна" },
 								]}
-								isLoading={isUpdateFieldPending}
+								isLoading={isPatchHeaderPending}
 								renderDisplay={(value) => deliveryLabel(value)}
 								onSave={(next) =>
 									savePatch({

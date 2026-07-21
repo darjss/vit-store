@@ -1,35 +1,4 @@
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import UserProfile from "@/components/auth/UserProfile.astro";
 import CartButton from "@/components/cart/cart-button";
 import SidebarContent from "@/components/SidebarContent.astro";
@@ -37,88 +6,53 @@ import SearchOverlay from "@/components/search/search-overlay";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/starwind/sheet";
 import IconMenu from "~icons/ri/menu-line";
 import IconUser from "~icons/ri/user-line";
-import IconHome from "~icons/ri/home-4-line";
-import IconGrid from "~icons/ri/grid-line";
-import IconCart from "~icons/ri/shopping-cart-2-line";
 ---
 
 <header
-    class="sticky top-0 z-50 border-b-2 border-border bg-background/95 bg-dots-subtle" transition:persist transition:name="header"
+    class="sticky top-0 z-50 border-b border-border bg-background supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-md" transition:persist transition:name="header"
 >
-    <div class="mx-auto max-w-screen-2xl px-5 py-3 lg:px-8 lg:py-4">
-        <div class="flex items-center justify-between gap-3 lg:gap-4">
-            <!-- Mobile hamburger sheet (only below lg) -->
+    <div class="mx-auto max-w-screen-2xl px-4 py-2.5 lg:px-8 lg:py-3">
+        <div class="flex items-center justify-between gap-2 lg:gap-4">
             <Sheet>
-                <SheetTrigger class="p-2 border-2 border-border bg-card shadow-hard-sm active:translate-x-px active:translate-y-px active:shadow-none transition-all lg:hidden">
+                <SheetTrigger class="flex h-11 w-11 items-center justify-center rounded-full text-foreground transition-[background-color,transform] duration-200 ease-out-quart hover:bg-muted active:scale-[0.94]">
                     <IconMenu class="w-6 h-6" />
                     <span class="sr-only">Toggle menu</span>
                 </SheetTrigger>
-                <SheetContent side="left" class="w-[300px] sm:w-[400px] border-r-2 border-border p-0">
-                    <div class="h-full overflow-y-auto bg-background">
+                <SheetContent aria-label="Үндсэн цэс" side="left" class="h-[100dvh] w-[300px] sm:w-[400px] border-r border-border p-0">
+                    <div class="h-full overflow-y-auto overscroll-contain bg-background [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <SidebarContent />
                     </div>
                 </SheetContent>
             </Sheet>
-            <!-- Desktop inline nav (lg and up) -->
-            <nav class="hidden lg:flex items-center gap-2" aria-label="Үндсэн цэс">
-                <a
-                    href="/"
-                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
-                >
-                    <IconHome class="w-4 h-4" />
-                    <span>Нүүр</span>
-                </a>
-                <a
-                    href="/products"
-                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
-                >
-                    <IconGrid class="w-4 h-4" />
-                    <span>Бүтээгдэхүүн</span>
-                </a>
-                <a
-                    href="/cart"
-                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
-                >
-                    <IconCart class="w-4 h-4" />
-                    <span>Сагс</span>
-                </a>
-                <a
-                    href="/profile"
-                    class="flex items-center gap-1.5 px-3 py-2 border-2 border-border bg-card font-black text-xs uppercase tracking-wide shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-primary transition-all"
-                >
-                    <IconUser class="w-4 h-4" />
-                    <span>Профайл</span>
-                </a>
-            </nav>
-            <div class="flex min-w-0 items-center gap-2 w-full">
-                <a href="/" class="flex min-w-0 items-center gap-2.5">
-                    <div class="h-10 w-10 shrink-0 border-2 border-border bg-primary flex items-center justify-center font-black text-[11px] uppercase tracking-wider shadow-hard-sm">
-                        AV
-                    </div>
-                    <div class="min-w-0">
-                        <span class="block truncate font-black text-sm uppercase tracking-wider sm:text-base">Amerik Vitamin</span>
-                        <span class="hidden sm:block text-[10px] font-semibold text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
-                    </div>
-                </a>
-            </div>
+            <a href="/" class="flex min-w-0 shrink-0 items-center gap-2.5 rounded-full py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <div class="h-10 w-10 shrink-0 rounded-xl bg-primary flex items-center justify-center font-display font-bold text-xs shadow-soft-sm">
+                    AV
+                </div>
+                <div class="min-w-0">
+                    <span class="block truncate font-display font-semibold text-[13px] sm:text-[15px] leading-tight">Amerik Vitamin</span>
+                    <span class="hidden lg:block text-[11px] font-medium text-muted-foreground">АНУ-аас шууд хүргэлттэй</span>
+                </div>
+            </a>
 
-            <div class="flex items-center gap-2.5 lg:gap-3">
-                <!-- Search Button - triggers SearchOverlay -->
-                <div class="hidden sm:block">
+            <!-- Inline search field — the header's visual anchor on tablet/desktop -->
+            <div class="hidden md:flex flex-1 justify-center px-2 lg:px-6">
+                <div class="w-full max-w-xl">
                     <SearchOverlay client:idle />
                 </div>
+            </div>
 
+            <div class="flex items-center gap-1.5 lg:gap-2.5 shrink-0">
                 <UserProfile server:defer>
                     <div
                         slot="fallback"
                         aria-label="Профайл"
-                        class="flex items-center justify-center w-11 h-11 border-2 border-border bg-card shadow-hard-sm"
+                        class="flex items-center justify-center w-11 h-11 rounded-full border border-border bg-card shadow-soft-sm"
                     >
                         <IconUser class="w-4 h-4" />
                     </div>
                 </UserProfile>
-                
-                
+
+
                 <div class="hidden md:block">
                     <CartButton client:idle />
                 </div>

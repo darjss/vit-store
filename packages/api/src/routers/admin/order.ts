@@ -1,7 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { customerQueries, orderQueries, paymentQueries, productQueries, purchaseQueries, salesQueries, } from "@vit/api/queries";
-import { addOrderSchema, timeRangeSchema, updateOrderSchema, } from "@vit/shared";
+import { eq } from "drizzle-orm";
+import { customerQueries, orderQueries, paymentQueries, productQueries, salesQueries, } from "@vit/api/queries";
+import {
+    addOrderSchema,
+    patchOrderHeaderSchema,
+    timeRangeSchema,
+    updateOrderSchema,
+} from "@vit/shared";
 import * as v from "valibot";
 import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
@@ -9,8 +14,11 @@ import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { planPaymentTransition } from "./order-transition";
 import { db } from "~/db/client";
-import { ProductsTable, SalesTable, } from "~/db/schema";
+import { SalesTable, } from "~/db/schema";
 import { getAverageCostOfProduct } from "~/queries/payments";
+import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
+import { scheduleRestockDispatches } from "~/lib/restock";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -22,6 +30,12 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .mutation(async ({ input, ctx }) => {
         try {
             const orderTotal = input.products.reduce((acc, currentProduct) => acc + currentProduct.price * currentProduct.quantity, 0);
+            // Customer create/update stays outside the order transaction: it is
+            // idempotent and not order-critical. The order insert, order-details
+            // insert, sales rows, stock deductions, and payment insert are all
+            // atomic so a payment-create failure (or any other failure) rolls
+            // back the whole order — no orphaned order with deducted stock and
+            // recorded sales but no payment row.
             if (input.isNewCustomer) {
                 const existingCustomer = await customerQueries.admin.getCustomerByPhone(Number(input.customerPhone));
                 if (!existingCustomer) {
@@ -35,63 +49,64 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 }
             }
             const orderNumber = generateOrderNumber();
-            const order = await orderQueries.admin.createOrder({
-                orderNumber: orderNumber,
-                customerPhone: Number(input.customerPhone),
-                status: input.status,
-                notes: input.notes ?? null,
-                total: orderTotal,
-                address: input.address,
-                deliveryProvider: input.deliveryProvider,
-            });
-            const orderId = order?.orderId;
+            const paymentNumber = generatePaymentNumber();
             const orderDetails = input.products.map((product) => ({
                 productId: product.productId,
                 quantity: product.quantity,
                 price: product.price,
             }));
-            await orderQueries.admin.createOrderDetails(orderId, orderDetails);
-            if (input.paymentStatus === "success") {
-                for (const product of input.products) {
-                    const productCost = await purchaseQueries.admin.getAverageCostOfProduct(product.productId, new Date());
-                    await salesQueries.admin.addSale({
-                        productCost: productCost,
-                        quantitySold: product.quantity,
-                        orderId: order.orderId,
-                        sellingPrice: product.price,
-                        productId: product.productId,
-                    });
-                    await productQueries.admin.updateStock(product.productId, product.quantity, "minus");
+            const { orderId, stockTransitions } = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
+                const order = await orderQueries.admin.createOrderTx(tx, {
+                    orderNumber: orderNumber,
+                    customerPhone: Number(input.customerPhone),
+                    status: input.status,
+                    notes: input.notes ?? null,
+                    total: orderTotal,
+                    address: input.address,
+                    deliveryProvider: input.deliveryProvider,
+                });
+                const orderId = order?.orderId;
+                await orderQueries.admin.createOrderDetailsTx(tx, orderId, orderDetails);
+                if (input.paymentStatus === "success") {
+                    for (const product of input.products) {
+                        const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
+                        await salesQueries.admin.addSaleTx(tx, {
+                            productCost: productCost,
+                            quantitySold: product.quantity,
+                            orderId: orderId,
+                            sellingPrice: product.price,
+                            productId: product.productId,
+                        });
+                        const transition = await productQueries.admin.updateStockTx(
+                            tx,
+                            product.productId,
+                            product.quantity,
+                            "minus",
+                        );
+                        if (transition) stockTransitions.push(transition);
+                    }
                 }
-            }
-            try {
-                const paymentNumber = generatePaymentNumber();
-                await paymentQueries.admin.createPayment({
+                await paymentQueries.admin.createPaymentTx(tx, {
                     paymentNumber,
                     orderId: orderId,
                     provider: "transfer",
                     status: input.paymentStatus,
                     amount: orderTotal,
                 });
-                ctx.log.info("payment.created", {
-                    paymentNumber,
-                    orderId,
-                    amount: orderTotal,
-                    provider: "transfer",
-                    payment_status: input.paymentStatus,
-                });
-            }
-            catch (error) {
-                ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                    event: "admin.payment_create_failed",
-                    orderId
-                });
-                throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Failed to create payment",
-                    cause: error,
-                });
-            }
+                return { orderId, stockTransitions };
+            });
+            await purgeCatalogCache(
+                ctx,
+                stockTransitions.map((transition) => transition.productId),
+            );
+            ctx.log.info("payment.created", {
+                paymentNumber,
+                orderId,
+                amount: orderTotal,
+                provider: "transfer",
+                payment_status: input.paymentStatus,
+            });
             ctx.log.info("order.created", {
                 orderId,
                 orderNumber,
@@ -143,7 +158,19 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             // (deducts on creation with paymentStatus==="success") and
             // confirmPaymentAndApplyStock (deducts on transition to success).
             // Pending orders never touch stock.
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
+                const applyRequiredStockTransition = async (productId: number, delta: number) => {
+                    const transition = await applyStockTransition(tx, {
+                        productId,
+                        delta,
+                        requireActive: true,
+                        requireNonNegative: true,
+                    });
+                    if (!transition)
+                        throw new Error(`Unable to apply stock transition for product ${productId}`);
+                    stockTransitions.push(transition);
+                };
                 await orderQueries.admin.updateOrderTx(tx, input.id, {
                     customerPhone: Number(input.customerPhone),
                     status: input.status,
@@ -175,26 +202,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                             sellingPrice: product.price,
                             productId: product.productId,
                         });
-                        await tx
-                            .update(ProductsTable)
-                            .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
-                            .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                        await applyRequiredStockTransition(product.productId, -product.quantity);
                     }
                     else if (wasSuccess) {
                         if (existingDetail) {
                             const quantityDiff = product.quantity - existingDetail.quantity;
                             if (quantityDiff !== 0) {
-                                await tx
-                                    .update(ProductsTable)
-                                    .set({ stock: sql`${ProductsTable.stock} ${quantityDiff > 0 ? sql`-` : sql`+`} ${Math.abs(quantityDiff)}` })
-                                    .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                                await applyRequiredStockTransition(product.productId, -quantityDiff);
                             }
                         }
                         else {
-                            await tx
-                                .update(ProductsTable)
-                                .set({ stock: sql`${ProductsTable.stock} - ${product.quantity}` })
-                                .where(and(eq(ProductsTable.id, product.productId), isNull(ProductsTable.deletedAt)));
+                            await applyRequiredStockTransition(product.productId, -product.quantity);
                         }
                     }
                     // else: pending/other — no stock changes (deducted on transition)
@@ -202,10 +220,29 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 if (wasSuccess && !transitionedToSuccess) {
                     const removedProducts = currentOrderDetails.filter((detail) => !input.products.some((p) => p.productId === detail.productId));
                     for (const detail of removedProducts) {
-                        await tx
-                            .update(ProductsTable)
-                            .set({ stock: sql`${ProductsTable.stock} + ${detail.quantity}` })
-                            .where(and(eq(ProductsTable.id, detail.productId), isNull(ProductsTable.deletedAt)));
+                        await applyRequiredStockTransition(detail.productId, detail.quantity);
+                    }
+                    // Sync SalesTable to the edited order details so dashboard
+                    // revenue/profit analytics match reality. Previously paid-
+                    // order edits adjusted stock but left SalesTable stale
+                    // (wrong quantitySold/sellingPrice, missing rows for added
+                    // lines, phantom rows for removed lines). Soft-delete all
+                    // existing sales for this order and re-insert from the
+                    // current product list — same delete+recreate pattern used
+                    // for order details above.
+                    await tx
+                        .update(SalesTable)
+                        .set({ deletedAt: new Date() })
+                        .where(eq(SalesTable.orderId, input.id));
+                    for (const product of input.products) {
+                        const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
+                        await tx.insert(SalesTable).values({
+                            productCost: productCost,
+                            quantitySold: product.quantity,
+                            orderId: input.id,
+                            sellingPrice: product.price,
+                            productId: product.productId,
+                        });
                     }
                 }
                 await paymentQueries.admin.updatePaymentStatusTx(tx, input.id, input.paymentStatus);
@@ -215,7 +252,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     order_status: input.status,
                     payment_transitioned: transitionedToSuccess,
                 });
+                return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeCatalogCache(ctx, changedProductIds);
+            scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Order updated successfully" };
         }
         catch (e) {
@@ -230,21 +271,63 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             });
         }
     }),
+    patchOrderHeader: proc
+        .input(patchOrderHeaderSchema)
+        .mutation(async ({ input, ctx }) => {
+        try {
+            const { id, customerPhone, ...rest } = input;
+            const patch: {
+                customerPhone?: number;
+                address?: string;
+                addressZoneId?: number | null;
+                notes?: string | null;
+                status?: typeof rest.status;
+                deliveryProvider?: typeof rest.deliveryProvider;
+            } = { ...rest };
+            if (customerPhone !== undefined) {
+                patch.customerPhone = Number(customerPhone);
+            }
+            await orderQueries.admin.patchOrderHeader(id, patch);
+            ctx.log.info("order.header_patched", {
+                orderId: id,
+                fields: Object.keys(rest),
+            });
+            return { message: "Order header patched successfully" };
+        }
+        catch (e) {
+            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+                event: "admin.order_header_patch_failed",
+                orderId: input.id
+            });
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to patch order header",
+                cause: e,
+            });
+        }
+    }),
     deleteOrder: proc
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 const orderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const stockWasDeducted = latestPayment?.status === "success";
                 if (stockWasDeducted) {
                     for (const detail of orderDetails.filter((detail) => !detail.deletedAt)) {
-                        await productQueries.admin.updateStockTx(tx, detail.productId, detail.quantity, "add");
+                        const transition = await productQueries.admin.updateStockTx(tx, detail.productId, detail.quantity, "add");
+                        if (transition)
+                            stockTransitions.push(transition);
                     }
                 }
                 await orderQueries.admin.softDeleteOrderTx(tx, input.id);
+                return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeCatalogCache(ctx, changedProductIds);
+            scheduleRestockDispatches(ctx, restockCandidates);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
         }
@@ -264,17 +347,22 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ id: v.number() }))
         .mutation(async ({ input, ctx }) => {
         try {
-            await db().transaction(async (tx) => {
+            const restockCandidates = await db().transaction(async (tx) => {
+                const stockTransitions: StockTransition[] = [];
                 const details = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
                 const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
                 const stockWasDeducted = latestPayment?.status === "success";
                 if (stockWasDeducted) {
                     for (const d of details.filter((d) => d.deletedAt !== null && d.deletedAt !== undefined)) {
-                        await productQueries.admin.updateStockTx(tx, d.productId, d.quantity, "minus");
+                        const transition = await productQueries.admin.updateStockTx(tx, d.productId, d.quantity, "minus");
+                        if (transition) stockTransitions.push(transition);
                     }
                 }
                 await orderQueries.admin.restoreOrderTx(tx, input.id);
+                return stockTransitions;
             });
+            const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
+            await purgeCatalogCache(ctx, changedProductIds);
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",
@@ -540,53 +628,6 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 orderId: input.orderId
             });
             const message = e instanceof Error ? e.message : "Захиалга илгээхэд алдаа гарлаа";
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message,
-                cause: e,
-            });
-        }
-    }),
-    sendDeliveryTU: proc
-        .input(v.object({ orderId: v.number() }))
-        .mutation(async ({ input, ctx }) => {
-        const order = await orderQueries.admin.getOrderById(input.orderId);
-        if (!order) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Захиалга олдсонгүй",
-            });
-        }
-        if (order.status !== "pending") {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Зөвхөн хүлээгдэж буй захиалгыг TU руу илгээнэ",
-            });
-        }
-        try {
-            const deliveryResult = await createDelivery(order.id, order.orderNumber, String(order.customerPhone), 15, order.address, order.notes);
-            await orderQueries.admin.updateOrderStatus(order.id, "shipped", {
-                deliveryProvider: "tu-delivery",
-            });
-            ctx.log.info("order.status_changed", {
-                orderId: order.id,
-                order_status: "shipped",
-            });
-            return {
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                documentNo: deliveryResult.documentNo,
-                deliveryOrderId: deliveryResult.orderId,
-            };
-        }
-        catch (e) {
-            if (e instanceof TRPCError)
-                throw e;
-            ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
-                event: "admin.send_delivery_tu_failed",
-                orderId: input.orderId
-            });
-            const message = e instanceof Error ? e.message : "TU хүргэлт илгээхэд алдаа гарлаа";
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message,

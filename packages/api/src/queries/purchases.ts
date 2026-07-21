@@ -4,26 +4,19 @@ import type {
 	receivePurchaseType,
 } from "@vit/shared/schema";
 import type { SQL } from "drizzle-orm";
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	ilike,
-	inArray,
-	isNull,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	ProductImagesTable,
-	ProductsTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	PurchaseReceiptsTable,
 	PurchasesTable,
 } from "~/db/schema";
+import {
+	applyStockTransition,
+	type StockTransition,
+} from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type Transaction = TransactionType;
@@ -573,18 +566,30 @@ export const purchaseQueries = {
 				})),
 			);
 
+			const stockDeltas = new Map<number, number>();
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
 				if (!purchaseItem) continue;
-				await tx
-					.update(ProductsTable)
-					.set({
-						stock: sql`${ProductsTable.stock} + ${receiptItem.quantityReceived}`,
-					})
-					.where(eq(ProductsTable.id, purchaseItem.productId));
+				stockDeltas.set(
+					purchaseItem.productId,
+					(stockDeltas.get(purchaseItem.productId) ?? 0) +
+						receiptItem.quantityReceived,
+				);
+			}
+
+			const affectedProductIds = [...stockDeltas.keys()];
+			const restockCandidates: StockTransition[] = [];
+			for (const [productId, delta] of stockDeltas) {
+				const transition = await applyStockTransition(tx, { productId, delta });
+				if (transition) restockCandidates.push(transition);
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
+
+			return {
+				affectedProductIds,
+				restockCandidates,
+			};
 		},
 
 		async deletePurchase(tx: Transaction, purchaseId: number) {
@@ -663,58 +668,6 @@ export const purchaseQueries = {
 				.update(PurchasesTable)
 				.set({ forwarderReceivedAt })
 				.where(eq(PurchasesTable.id, purchaseId));
-		},
-
-		async getAverageCostOfProduct(productId: number, createdAt: Date) {
-			const purchaseItems = await db().query.PurchaseItemsTable.findMany({
-				where: and(
-					eq(PurchaseItemsTable.productId, productId),
-					isNull(PurchaseItemsTable.deletedAt),
-				),
-				with: {
-					purchase: {
-						columns: {
-							orderedAt: true,
-							createdAt: true,
-							cancelledAt: true,
-							deletedAt: true,
-						},
-					},
-					receiptItems: {
-						where: isNull(PurchaseReceiptItemsTable.deletedAt),
-						columns: {
-							quantityReceived: true,
-						},
-					},
-				},
-			});
-
-			const eligibleItems = purchaseItems.filter((item) => {
-				if (item.purchase.deletedAt) return false;
-				const effectiveDate =
-					item.purchase.orderedAt ?? item.purchase.createdAt;
-				return effectiveDate < createdAt;
-			});
-
-			const totals = eligibleItems.reduce(
-				(acc, item) => {
-					const receivedQuantity = item.receiptItems.reduce(
-						(sum, receiptItem) => sum + receiptItem.quantityReceived,
-						0,
-					);
-					const effectiveQuantity = item.purchase.cancelledAt
-						? receivedQuantity
-						: item.quantityOrdered;
-					acc.totalCost += effectiveQuantity * item.unitCost;
-					acc.totalQuantity += effectiveQuantity;
-					return acc;
-				},
-				{ totalCost: 0, totalQuantity: 0 },
-			);
-
-			return totals.totalQuantity > 0
-				? totals.totalCost / totals.totalQuantity
-				: 0;
 		},
 	},
 };

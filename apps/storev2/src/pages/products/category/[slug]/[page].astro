@@ -4,31 +4,61 @@
 import Layout from "@/layouts/Layout.astro";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
+import SortBar from "@/components/product/sort-bar.astro";
 import { api } from "@/lib/trpc";
+import { WASH_BG, washFor } from "@/lib/wash";
 
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
 
 
 const { slug, page: pageParam } = Astro.params;
-const page = Number.parseInt(pageParam!, 10);
-
-const category = await api.category.getCategoryBySlug.query({ slug: slug! });
-if (!category) {
-	throw Astro.redirect("/404");
+if (!slug || !pageParam || !/^\d+$/.test(pageParam)) {
+	return Astro.redirect("/404");
 }
 
-const { items: products, pagination } = await api.product.getPaginatedProductsWithStock.query({
+const page = Number(pageParam);
+if (!Number.isSafeInteger(page) || page < 1) {
+	return Astro.redirect("/404");
+}
+if (pageParam !== String(page)) {
+	return Astro.redirect(`/products/category/${slug}/${page}/${Astro.url.search}`, 301);
+}
+
+const sortParam = Astro.url.searchParams.get("sort");
+const dirParam = Astro.url.searchParams.get("dir");
+const sortField =
+	sortParam === "price" || sortParam === "createdAt" || sortParam === "stock"
+		? sortParam
+		: undefined;
+const sortDirection =
+	dirParam === "asc" || dirParam === "desc" ? dirParam : undefined;
+const sortQuery = sortField
+	? `?sort=${sortField}&dir=${sortDirection ?? "desc"}`
+	: "";
+
+const category = await api.category.getCategoryBySlug.query({ slug });
+if (!category) {
+	return Astro.redirect("/404");
+}
+
+const { items: products, pagination } = await api.product.getPaginatedProducts.query({
 	page,
 	pageSize: PAGE_SIZE,
 	categoryId: category.id,
+	sortField,
+	sortDirection,
 });
+if (page > pagination.totalPages) {
+	return Astro.redirect("/404");
+}
 
 const baseUrl = `/products/category/${slug}`;
+const washClass = WASH_BG[washFor(category.id)];
 
 const seoTitle = page === 1
-	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл | Америк Витамин`)
-	: (category.seoTitle || `${category.name} - Хуудас ${page} | Америк Витамин`);
+	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл`)
+	: (category.seoTitle || `${category.name} - Хуудас ${page}`);
 const seoDescription = category.seoDescription ||
 	`${category.name} ангилалд ${pagination.totalCount} бүтээгдэхүүн байна.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
 const categoryIntro = category.description ||
@@ -57,6 +87,12 @@ const itemListSchema = {
 		name: p.name,
 	})),
 };
+
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "catalog", `category-${category.id}`],
+});
 ---
 
 <Layout title={seoTitle} description={seoDescription}>
@@ -64,60 +100,65 @@ const itemListSchema = {
 	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
 
 	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
-		<div class="overflow-hidden border-3 border-border bg-primary/5 px-3 py-3 shadow-hard-lg sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
-			<!-- Breadcrumb -->
-			<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-bold text-muted-foreground sm:mb-4 sm:text-sm">
-				<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
-				<span>/</span>
-				<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
-				<span>/</span>
-				<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
-				{page > 1 && (
-					<>
-						<span>/</span>
-						<span class="text-foreground">Хуудас {page}</span>
-					</>
-				)}
-			</nav>
-
-			<!-- Header -->
-			<div class="mb-3 sm:mb-4">
-				<h1 class="font-black text-xl tracking-tight uppercase sm:text-2xl lg:text-3xl">
-					{category.name}
-				</h1>
-				<p class="mt-1 font-bold text-muted-foreground text-xs sm:text-sm">
-					Нийт {pagination.totalCount} бүтээгдэхүүн{page > 1 ? ` — Хуудас ${page}/${pagination.totalPages}` : ""}
-				</p>
-			</div>
-
-			<!-- Banner -->
-			{category.bannerImage && (
-				<div class="mb-3 overflow-hidden border-2 border-border shadow-hard sm:mb-4 sm:border-3 sm:shadow-hard-lg">
-					<img
-						src={category.bannerImage}
-						alt={category.name}
-						class="h-32 w-full object-cover sm:h-48"
-						width="1200"
-						height="300"
-					/>
-				</div>
+		<!-- Breadcrumb -->
+		<nav aria-label="Breadcrumb" class="mb-3 flex flex-wrap items-center gap-1.5 font-medium text-muted-foreground text-xs sm:mb-4 sm:text-sm">
+			<a href="/" class="hover:text-foreground hover:underline">Нүүр</a>
+			<span>/</span>
+			<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
+			<span>/</span>
+			<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
+			{page > 1 && (
+				<>
+					<span>/</span>
+					<span class="text-foreground">Хуудас {page}</span>
+				</>
 			)}
+		</nav>
 
-			<div class="mb-3 border-2 border-border bg-background p-3 shadow-hard sm:mb-4 sm:border-3 sm:p-4 sm:shadow-hard-lg">
-				<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
+		<!-- Header on category-keyed wash tint -->
+		<header class={`enter-rise mb-3 rounded-2xl border border-border ${washClass} px-4 py-4 sm:mb-4 sm:px-6 sm:py-5`}>
+			<h1 class="font-bold font-display text-xl tracking-tight sm:text-2xl lg:text-3xl">
+				{category.name}
+			</h1>
+			<p class="mt-1 font-medium text-foreground/70 text-xs sm:text-sm">
+				Нийт {pagination.totalCount} бүтээгдэхүүн{page > 1 ? ` — Хуудас ${page}/${pagination.totalPages}` : ""}
+			</p>
+		</header>
+
+		<!-- Banner -->
+		{category.bannerImage && (
+			<div class="mb-3 overflow-hidden rounded-2xl border border-border shadow-soft sm:mb-4">
+				<img
+					src={category.bannerImage}
+					alt={category.name}
+					class="h-32 w-full object-cover sm:h-48"
+					width="1200"
+					height="300"
+				/>
 			</div>
+		)}
 
-			<!-- Products Grid -->
-			<div class="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-				{products.map((product) => (
-					<ServerProductCard product={product} />
-				))}
-			</div>
-
-			<!-- Pagination -->
-			{pagination.totalPages > 1 && (
-				<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} />
-			)}
+		<div class="mb-4 rounded-2xl border border-border bg-card p-3 shadow-soft-sm sm:mb-5 sm:p-4">
+			<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
 		</div>
+
+		<SortBar baseUrl={baseUrl} sort={sortField ?? null} dir={sortDirection ?? null} />
+
+		<!-- Products Grid -->
+		<div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+			{products.map((product, index) => (
+				<div
+					class="enter-rise"
+					style={`--enter-delay:${Math.min(index, 8) * 40}ms`}
+				>
+					<ServerProductCard product={product} />
+				</div>
+			))}
+		</div>
+
+		<!-- Pagination -->
+		{pagination.totalPages > 1 && (
+			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} search={sortQuery} />
+		)}
 	</div>
 </Layout>
