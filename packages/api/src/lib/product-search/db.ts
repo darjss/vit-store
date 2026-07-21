@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DB } from "~/db";
 import {
 	BrandsTable,
@@ -20,6 +20,7 @@ export const loadProductSearchDocumentsFromDb = async (
 			description: ProductsTable.description,
 			slug: ProductsTable.slug,
 			price: ProductsTable.price,
+			createdAt: ProductsTable.createdAt,
 			discount: ProductsTable.discount,
 			status: ProductsTable.status,
 			stock: ProductsTable.stock,
@@ -34,11 +35,7 @@ export const loadProductSearchDocumentsFromDb = async (
 		})
 		.from(ProductsTable)
 		.where(
-			and(
-				isNull(ProductsTable.deletedAt),
-				eq(ProductsTable.status, "active"),
-				gt(ProductsTable.stock, 0),
-			),
+			and(isNull(ProductsTable.deletedAt), eq(ProductsTable.status, "active")),
 		);
 
 	if (products.length === 0) return [];
@@ -61,9 +58,7 @@ export const loadProductSearchDocumentsFromDb = async (
 				url: ProductImagesTable.url,
 			})
 			.from(ProductImagesTable)
-			.where(
-				eq(ProductImagesTable.isPrimary, true),
-			),
+			.where(eq(ProductImagesTable.isPrimary, true)),
 	]);
 
 	const brandMap = new Map(brands.map((b) => [b.id, b.name]));
@@ -84,6 +79,7 @@ export const loadProductSearchDocumentsFromDb = async (
 			description: product.description,
 			slug: product.slug,
 			price: product.price,
+			createdAt: product.createdAt,
 			discount: product.discount,
 			brand: brandMap.get(product.brandId) ?? "",
 			category: categoryMap.get(product.categoryId) ?? "",

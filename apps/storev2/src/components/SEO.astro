@@ -51,7 +51,10 @@ const {
 } = Astro.props;
 
 // Build page title with template
-const pageTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - АНУ-ын витамин, нэмэлт тэжээл`;
+const titleSuffix = ` | ${SITE_NAME}`;
+const pageTitle = title
+	? (title.endsWith(titleSuffix) ? title : `${title}${titleSuffix}`)
+	: `${SITE_NAME} - АНУ-ын витамин, нэмэлт тэжээл`;
 
 // Canonical URL
 const canonicalURL = canonical || new URL(Astro.url.pathname, SITE_URL).toString();

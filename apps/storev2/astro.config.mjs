@@ -1,7 +1,8 @@
+import cloudflare from "@astrojs/cloudflare";
+import { cacheCloudflare } from "@astrojs/cloudflare/cache";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import tailwindcss from "@tailwindcss/vite";
-import alchemy from "alchemy/cloudflare/astro";
 import { defineConfig } from "astro/config";
 import posthog from "@posthog/rollup-plugin";
 import Icons from "unplugin-icons/vite";
@@ -21,12 +22,23 @@ const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHO
 		})
 	: null;
 
+const isDev = process.argv.includes("dev");
+
 export default defineConfig({
 	site: "https://amerikvitamin.mn",
 	trailingSlash: "ignore",
 	output: "server",
-	adapter: alchemy({
+	cache: {
+		provider: cacheCloudflare(),
+	},
+	adapter: cloudflare({
 		imageService: "cloudflare",
+		...(isDev
+			? {
+					configPath: ".alchemy/local/wrangler.jsonc",
+					persistState: { path: "../../.alchemy/miniflare/v3" },
+				}
+			: {}),
 	}),
 
 	prefetch: {

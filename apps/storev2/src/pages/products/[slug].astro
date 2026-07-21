@@ -13,72 +13,49 @@ import ProductInfo from "@/components/product/product-info.astro";
 import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
+import { washBg } from "@/lib/wash";
 
-export const prerender = true;
+export const prerender = false;
 
 const SITE_URL = "https://amerikvitamin.mn";
 
 import { api } from "@/lib/trpc";
 
-export async function getStaticPaths() {
-	try {
-		const products = await api.product.getPrerenderProducts.query();
-		const paths: Array<{
-			params: { slug: string };
-			props: { redirectTo: string | null };
-		}> = [];
-		for (const product of products) {
-			const canonicalSlug = `${product.slug}-${product.id}`;
-			paths.push({ params: { slug: canonicalSlug }, props: { redirectTo: null } });
-			// Emit one redirect path per previously-used slug so old URLs 301
-			// to the canonical one. See issue #78.
-			for (const oldSlug of product.oldSlugs ?? []) {
-				if (!oldSlug || oldSlug === product.slug) continue;
-				paths.push({
-					params: { slug: `${oldSlug}-${product.id}` },
-					props: { redirectTo: canonicalSlug },
-				});
-			}
-		}
-		return paths;
-	} catch (error) {
-		console.error("Error getting static paths", error);
-		return [];
-	}
-}
-
 const { slug } = Astro.params;
-const { redirectTo } = Astro.props as { redirectTo: string | null };
-
-// Old-slug redirect: a prerendered path whose slug no longer matches the
-// product's canonical slug. 301 preserves SEO link equity. See issue #78.
-if (redirectTo) {
-	return Astro.redirect(`/products/${redirectTo}/`, 301);
-}
 
 const slugParts = slug?.split("-") ?? [];
 const productId = Number(slugParts[slugParts.length - 1]);
 
 if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const productData = await api.product.getProductById.query({ id: productId });
 if (!productData) {
 	console.error("Product not found");
-	throw Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 const product = productData;
 
-// Determine availability based on status and stock. This is evaluated at build
-// time for prerendered product pages.
+// Old or non-canonical slugs redirect at request time so the stock-sensitive
+// PDP remains on-demand instead of freezing a build-time path list.
+const canonicalSlug = `${product.slug}-${product.id}`;
+if (slug !== canonicalSlug) {
+	return Astro.redirect(`/products/${canonicalSlug}/`, 301);
+}
+
+// This is last-known server data for first paint. The client reconciler fetches
+// the authoritative short-lived inventory snapshot after hydration.
 const isInStock = product.status === "active" && product.stock > 0;
 
 const categoryHref = product.category?.slug
 	? `/products/category/${product.category.slug}/1/`
 	: `/products/?category=${product.categoryId}`;
+
+const washKey = product.category?.slug ?? product.categoryId;
+const productWashBg = washBg(washKey);
 
 const breadcrumbItems = [
 	{
@@ -174,6 +151,12 @@ const breadcrumbSchema = {
 		}
 	]
 };
+
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "catalog", `product-${product.id}`],
+});
 ---
 
 <Layout 
@@ -182,13 +165,10 @@ const breadcrumbSchema = {
 	image={ogImage}
 	imageAlt={product.name}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+	<script type="application/ld+json" data-product-jsonld set:html={JSON.stringify(productSchema)} />
 	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
-	<div class="product-page-bg relative min-h-screen">
-		<div class="bg-pattern"></div>
-		<div class="bg-gradient"></div>
-
+	<div class="relative min-h-screen bg-hero-warm">
 		<div
 			class="relative z-10 mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8"
 		>
@@ -203,11 +183,10 @@ const breadcrumbSchema = {
 						images={product.images}
 						productName={product.name}
 						productId={product.id}
+						washKey={washKey}
 					>
-						<div slot="fallback" class="aspect-square min-h-[400px] border-4 border-border bg-background shadow-hard-xl">
-							<div class="flex h-full w-full animate-pulse items-center justify-center bg-foreground/5">
-								<div class="h-32 w-32 animate-spin rounded-full border-4 border-border/20 border-t-black"></div>
-							</div>
+						<div slot="fallback" class={`aspect-square min-h-[400px] rounded-2xl shadow-soft ${productWashBg}`}>
+							<div class="h-full w-full animate-pulse rounded-2xl bg-dots-subtle"></div>
 						</div>
 					</ProductImageCarousel>
 				</div>
@@ -234,23 +213,26 @@ const breadcrumbSchema = {
 			/>
 		</div>
 
-		<div class="border-t-4 border-border pb-8 pt-10">
+		<div class="border-t border-border/70 pb-8 pt-8">
 			<RecommendedProducts
-				client:only="solid-js"
+				client:visible
 				currentProductId={product.id}
 				categoryId={product.categoryId}
 				brandId={product.brandId}
-				productName={product.name}
+				washKey={washKey}
 			>
-				<div slot="fallback" class="min-h-[300px]">
-					<h2 class="mb-6 text-2xl font-black sm:text-3xl">Санал болгох бүтээгдэхүүн</h2>
-					<div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+				<div slot="fallback" class="min-h-[300px] py-6 sm:py-10">
+					<h2 class="mb-5 font-display text-h3 sm:mb-6 sm:text-h2">Таньд таалагдаж магадгүй</h2>
+					<div class="scrollbar-hide -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:gap-4 sm:px-0">
 						{[1, 2, 3, 4].map(() => (
-							<div class="border-3 border-border bg-background shadow-hard-lg">
-								<div class="border-b-3 aspect-[4/3] animate-pulse border-border bg-foreground/5"></div>
-								<div class="space-y-2 p-3">
-									<div class="h-4 w-3/4 animate-pulse bg-foreground/10"></div>
-									<div class="h-6 w-1/2 animate-pulse bg-foreground/10"></div>
+							<div class="w-[160px] shrink-0 sm:w-[200px] lg:w-[220px]">
+								<div class="animate-pulse overflow-hidden rounded-2xl bg-card shadow-soft">
+									<div class="aspect-square bg-muted/40"></div>
+									<div class="space-y-2 p-3 sm:p-4">
+										<div class="h-3 w-1/3 rounded bg-muted/60"></div>
+										<div class="h-4 w-3/4 rounded bg-muted/60"></div>
+										<div class="h-4 w-1/2 rounded bg-muted/60"></div>
+									</div>
 								</div>
 							</div>
 						))}
@@ -261,9 +243,9 @@ const breadcrumbSchema = {
 		</div>
 	</div>
 
-	{isInStock && (
-		<StickyMobileCta
-			client:only="solid-js"
+	<StickyMobileCta
+			client:load
+			isInStock={isInStock}
 			cartItem={{
 				productId: product.id,
 				quantity: 1,
@@ -273,35 +255,7 @@ const breadcrumbSchema = {
 				slug: product.slug,
 			}}
 		/>
-	)}
 </Layout>
-
-<style>
-	.product-page-bg {
-		--pattern-opacity: 0.4;
-		--gradient-opacity: 0.5;
-		--color-accent-yellow: #FFF991;
-		--color-accent-pink: #FFB6C1;
-	}
-
-	.bg-pattern {
-		position: absolute;
-		inset: 0;
-		opacity: var(--pattern-opacity);
-		background: var(--color-background);
-		background-image: radial-gradient(circle at 2px 2px, var(--color-foreground) 1.5px, transparent 0);
-		background-size: 30px 30px;
-	}
-
-	.bg-gradient {
-		position: absolute;
-		inset: 0;
-		opacity: var(--gradient-opacity);
-		background-image: 
-			radial-gradient(ellipse at 30% 20%, var(--color-accent-yellow) 0%, transparent 50%),
-			radial-gradient(ellipse at 70% 80%, var(--color-accent-pink) 0%, transparent 50%);
-	}
-</style>
 
 <script define:vars={{ productData: { product_id: product.id, product_name: product.name, product_price: product.price, product_slug: slug } }}>
 	// Track product view on page load (supports view transitions)

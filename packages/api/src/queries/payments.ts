@@ -1,25 +1,34 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
-	OrderDetailsTable,
-	type PaymentInsertType,
+	KhaanConsumedTransactionsTable,
 	MessengerNotificationFailuresTable,
+	OrderDetailsTable,
 	OrdersTable,
+	type PaymentInsertType,
+	PaymentNotificationOutboxTable,
 	PaymentsTable,
 	ProductImagesTable,
-	ProductsTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	SalesTable,
 } from "~/db/schema";
+import { recordConsumedKhaanTransaction } from "~/lib/payments/consumed-transaction";
+import { applyStockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];
 
+// Accept either a live db() handle or a transaction tx so the canonical
+// implementation can be called both inside transactions (addOrder/updateOrder/
+// confirmPaymentAndApplyStock) and from non-transactional query endpoints
+// (purchase.getAverageCostOfProduct).
+type DbOrTx = ReturnType<typeof db> | TransactionType;
+
 export async function getAverageCostOfProduct(
-	tx: TransactionType,
+	tx: DbOrTx,
 	productId: number,
 	createdAt: Date,
 ) {
@@ -78,7 +87,20 @@ export const paymentQueries = {
 			status: PaymentStatusType;
 			amount: number;
 		}) {
-			const result = await db()
+			return db().transaction((tx) => this.createPaymentTx(tx, data));
+		},
+
+		async createPaymentTx(
+			tx: DbOrTx,
+			data: {
+				paymentNumber: string;
+				orderId: number;
+				provider: PaymentProviderType;
+				status: PaymentStatusType;
+				amount: number;
+			},
+		) {
+			const result = await tx
 				.insert(PaymentsTable)
 				.values({
 					paymentNumber: data.paymentNumber,
@@ -91,7 +113,17 @@ export const paymentQueries = {
 					id: PaymentsTable.id,
 					paymentNumber: PaymentsTable.paymentNumber,
 				});
-			return result[0];
+			const payment = result[0];
+			if (data.status === "success") {
+				await tx
+					.insert(PaymentNotificationOutboxTable)
+					.values({
+						paymentNumber: data.paymentNumber,
+						purpose: "order_payment_confirmed_sms",
+					})
+					.onConflictDoNothing();
+			}
+			return payment;
 		},
 
 		async getPayments() {
@@ -157,10 +189,7 @@ export const paymentQueries = {
 			});
 		},
 
-		async getLatestPaymentByOrderIdTx(
-			tx: TransactionType,
-			orderId: number,
-		) {
+		async getLatestPaymentByOrderIdTx(tx: TransactionType, orderId: number) {
 			return tx.query.PaymentsTable.findFirst({
 				where: and(
 					eq(PaymentsTable.orderId, orderId),
@@ -194,6 +223,20 @@ export const paymentQueries = {
 				.update(PaymentsTable)
 				.set({ status })
 				.where(eq(PaymentsTable.id, latest.id));
+			if (status === "success") {
+				const payment = await tx.query.PaymentsTable.findFirst({
+					where: eq(PaymentsTable.id, latest.id),
+					columns: { paymentNumber: true },
+				});
+				if (payment)
+					await tx
+						.insert(PaymentNotificationOutboxTable)
+						.values({
+							paymentNumber: payment.paymentNumber,
+							purpose: "order_payment_confirmed_sms",
+						})
+						.onConflictDoNothing();
+			}
 		},
 
 		async getPendingMessengerNotifications() {
@@ -281,7 +324,6 @@ export const paymentQueries = {
 				})),
 			}));
 		},
-
 	},
 
 	store: {
@@ -335,35 +377,53 @@ export const paymentQueries = {
 			});
 		},
 
-		async confirmPayment(
-			paymentNumber: string,
-			provider: PaymentProviderType | undefined,
-		) {
-			return await this.confirmPaymentAndApplyStock(
-				paymentNumber,
-				provider ?? "transfer",
-			);
-		},
-
-		async confirmPaymentIfPending(
-			paymentNumber: string,
-			provider: PaymentProviderType,
-		) {
-			return await this.confirmPaymentAndApplyStock(paymentNumber, provider);
+		async getConsumedKhaanFingerprints(
+			fingerprints: string[],
+		): Promise<Set<string>> {
+			if (fingerprints.length === 0) {
+				return new Set();
+			}
+			const rows = await db()
+				.select({ fingerprint: KhaanConsumedTransactionsTable.fingerprint })
+				.from(KhaanConsumedTransactionsTable)
+				.where(
+					inArray(KhaanConsumedTransactionsTable.fingerprint, fingerprints),
+				);
+			return new Set(rows.map((row) => row.fingerprint));
 		},
 
 		async confirmPaymentAndApplyStock(
 			paymentNumber: string,
 			provider: PaymentProviderType,
+			consumedKhaanTransactions?: { fingerprint: string }[],
 		) {
-			return await db().transaction(async (tx) => {
+			const confirmed = await db().transaction(async (tx) => {
+				// Record consumed Khaan fingerprints BEFORE the status flip and
+				// regardless of whether THIS call wins the flip. A concurrent
+				// admin confirm may flip status→success first, causing the UPDATE
+				// below to claim 0 rows; the fingerprint must still be recorded so
+				// the bank transaction cannot be replayed against a later order.
+				// recordConsumedKhaanTransaction is idempotent for the same
+				// paymentNumber and throws KhaanTransactionAlreadyConsumedError
+				// (aborting this tx) when a DIFFERENT payment already consumed it.
+				if (consumedKhaanTransactions?.length) {
+					for (const { fingerprint } of consumedKhaanTransactions) {
+						await recordConsumedKhaanTransaction(tx, {
+							fingerprint,
+							paymentNumber,
+						});
+					}
+				}
 				const [claimedPayment] = await tx
 					.update(PaymentsTable)
 					.set({ status: "success", provider })
 					.where(
 						and(
 							eq(PaymentsTable.paymentNumber, paymentNumber),
-							inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+							inArray(PaymentsTable.status, [
+								"pending",
+								"customer_claimed_paid",
+							]),
 							isNull(PaymentsTable.deletedAt),
 						),
 					)
@@ -372,6 +432,13 @@ export const paymentQueries = {
 				if (!claimedPayment) {
 					return false;
 				}
+				await tx
+					.insert(PaymentNotificationOutboxTable)
+					.values({
+						paymentNumber,
+						purpose: "order_payment_confirmed_sms",
+					})
+					.onConflictDoNothing();
 
 				const orderDetails = await tx.query.OrderDetailsTable.findMany({
 					where: and(
@@ -390,30 +457,18 @@ export const paymentQueries = {
 					},
 				});
 
+				// Stock is decremented by the conditional UPDATE below, which is
+				// the real guard (it re-checks status = active AND stock >=
+				// quantity atomically). A non-locked pre-check here would only
+				// give an earlier error for impossible inputs and cannot prevent
+				// races, so it is intentionally omitted (F6).
 				for (const detail of orderDetails) {
-					if (
-						detail.quantity <= 0 ||
-						detail.product.status !== "active" ||
-						detail.product.stock < detail.quantity
-					) {
-						throw new Error(
-							`Insufficient stock for product ${detail.product.id}`,
-						);
-					}
-				}
-
-				for (const detail of orderDetails) {
-					const [updatedProduct] = await tx
-						.update(ProductsTable)
-						.set({ stock: sql`${ProductsTable.stock} - ${detail.quantity}` })
-						.where(
-							and(
-								eq(ProductsTable.id, detail.product.id),
-								eq(ProductsTable.status, "active"),
-								sql`${ProductsTable.stock} >= ${detail.quantity}`,
-							),
-						)
-						.returning({ id: ProductsTable.id });
+					const updatedProduct = await applyStockTransition(tx, {
+						productId: detail.product.id,
+						delta: -detail.quantity,
+						requireActive: true,
+						requireNonNegative: true,
+					});
 
 					if (!updatedProduct) {
 						throw new Error(
@@ -452,6 +507,8 @@ export const paymentQueries = {
 
 				return true;
 			});
+
+			return confirmed;
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {
@@ -470,6 +527,37 @@ export const paymentQueries = {
 			});
 		},
 
+		async claimTransferPaid(paymentNumber: string) {
+			const [changed] = await db()
+				.update(PaymentsTable)
+				.set({ status: "customer_claimed_paid" })
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						eq(PaymentsTable.status, "pending"),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ id: PaymentsTable.id });
+
+			if (changed) return { outcome: "changed" as const };
+
+			const payment = await db().query.PaymentsTable.findFirst({
+				where: and(
+					eq(PaymentsTable.paymentNumber, paymentNumber),
+					isNull(PaymentsTable.deletedAt),
+				),
+				columns: { status: true },
+			});
+			if (!payment) throw new Error("Payment not found");
+			if (payment.status === "customer_claimed_paid") {
+				return { outcome: "already_claimed" as const };
+			}
+			if (payment.status === "success") {
+				return { outcome: "already_confirmed" as const };
+			}
+			return { outcome: "refused" as const };
+		},
 		async updatePaymentStatus(
 			paymentNumber: string,
 			status: PaymentStatusType,

@@ -15,6 +15,7 @@
 
 
 import LogoutButton from "@/components/auth/logout-button";
+import { env } from "cloudflare:workers";
 import {
 	Dropdown,
 	DropdownContent,
@@ -25,7 +26,7 @@ import {
 import { createServerClient } from "@/lib/trpc";
 
 const cookieHeader = Astro.request.headers.get("cookie") || "";
-const serverApi = createServerClient(cookieHeader, Astro.locals.runtime.env.server);
+const serverApi = createServerClient(cookieHeader, env.server);
 
 let user = null;
 try {
@@ -37,7 +38,7 @@ try {
 <Dropdown class="user-profile-dropdown">
 	<DropdownTrigger
 		aria-label="Профайл"
-		class="relative flex items-center justify-center w-11 h-11 border-2 border-border bg-background shadow-hard-sm transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none hover:bg-primary active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+		class="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-soft active:scale-[0.97]"
 	>
 		<svg
 			class="w-4 h-4"
@@ -53,14 +54,14 @@ try {
 			></path>
 		</svg>
 		{user && (
-			<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 border-2 border-border"></span>
+			<span class="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-cocoa/30 bg-success"></span>
 		)}
 	</DropdownTrigger>
 	<DropdownContent align="end" class="w-[min(18rem,calc(100vw-1rem))]">
 		{
 			user !== null ? (
 				<>
-					<DropdownLabel class="text-xs font-bold truncate max-w-[180px]">
+					<DropdownLabel class="max-w-[180px] truncate font-semibold text-xs">
 						{user?.phone}
 					</DropdownLabel>
 					<DropdownItem as="a" href="/profile" class="flex items-center gap-2 text-sm">

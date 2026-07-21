@@ -1,40 +1,41 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
-import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
+import { sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
 import {
-	sendDetailedOrderNotification,
-	sendTransferClaimedNotification,
-} from "~/lib/integrations/messenger/messages";
-import {
-	trackOrderPlacedServerSide,
-	trackPaymentConfirmedServerSide,
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog";
 import { assertCanAccessPayment } from "~/lib/session/checkout-access";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { kv } from "~/lib/kv";
 import {
 	checkQpayInvoice,
 	createQpayInvoice,
 	type InvoiceResponse,
 } from "~/lib/payments/qpay";
-import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
 import { publicProcedure, router } from "~/lib/trpc";
 
-type TransferReconciliationStub = {
-	start(input: { paymentNumber: string }): Promise<unknown>;
-	getStatus(): Promise<TransferReconciliationState | null>;
-};
-
-const getTransferReconciliationStub = (
-	env: Env,
-	paymentNumber: string,
-): TransferReconciliationStub => {
-	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
-	const id = namespace.idFromName(paymentNumber);
-	return namespace.get(id) as TransferReconciliationStub;
-};
+async function sendTransferClaimAlert(paymentNumber: string) {
+	const paymentInfo =
+		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+	if (!paymentInfo) return;
+	await sendTransferClaimedNotification({
+		paymentNumber,
+		customerPhone: paymentInfo.order.customerPhone,
+		address: paymentInfo.order.address,
+		notes: paymentInfo.order.notes,
+		total: paymentInfo.order.total,
+		products: paymentInfo.order.orderDetails.map((detail) => ({
+			name: detail.product.name,
+			quantity: detail.quantity,
+			price: detail.product.price,
+			imageUrl: detail.product.images[0]?.url,
+		})),
+	});
+}
 
 export const payment = router({
 	getPaymentByNumber: publicProcedure
@@ -61,6 +62,13 @@ export const payment = router({
 					provider: payment.provider,
 					createdAt: payment.createdAt,
 					total: payment.order.total,
+					transferAccount: {
+						bankName: bankTransfer.bankName,
+						accountNumber:
+							ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+						accountName:
+							ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
+					},
 					order: {
 						orderNumber: payment.order.orderNumber,
 						customerPhone: `${payment.order.customerPhone}`,
@@ -107,54 +115,43 @@ export const payment = router({
 					input.paymentNumber,
 					input.checkoutToken,
 				);
-				await q.updatePaymentStatus(
-					input.paymentNumber,
-					"customer_claimed_paid",
-				);
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						await sendTransferClaimedNotification({
-							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
-						});
+				const claim = await q.claimTransferPaid(input.paymentNumber);
+				if (claim.outcome === "changed") {
+					try {
+						await sendTransferClaimAlert(input.paymentNumber);
+					} catch (notificationError) {
+						ctx.log.error(
+							notificationError instanceof Error
+								? notificationError
+								: new Error(String(notificationError)),
+							{
+								event: "payment.claim_notification_failed",
+								paymentNumber: input.paymentNumber,
+							},
+						);
 					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.confirm_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
 				}
-				ctx.log.info("payment.confirmed", {
+				ctx.log.info("payment.transfer_claimed", {
 					paymentNumber: input.paymentNumber,
 					provider: "transfer",
+					outcome: claim.outcome,
 				});
 				const payment = await q.getPaymentByNumber(input.paymentNumber);
-				return { orderNumber: payment?.order.orderNumber };
+				return {
+					orderNumber: payment?.order.orderNumber,
+					outcome: claim.outcome,
+				};
 			} catch (e) {
+				if (e instanceof TRPCError) {
+					throw e;
+				}
 				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
-					event: "payment.confirm_failed",
+					event: "payment.transfer_claim_failed",
 					paymentNumber: input.paymentNumber,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to confirm payment",
+					message: "Failed to claim transfer payment",
 					cause: e,
 				});
 			}
@@ -189,63 +186,54 @@ export const payment = router({
 				}
 
 				const orderNumber = payment.order.orderNumber;
+				const claim = await q.claimTransferPaid(input.paymentNumber);
 
-				if (payment.provider !== "transfer") {
-					await q.changePaymentToTransfer(input.paymentNumber);
-				}
-
-				if (payment.status !== "customer_claimed_paid") {
-					await q.updatePaymentStatus(
-						input.paymentNumber,
-						"customer_claimed_paid",
-					);
-				}
-
-				try {
-					const reconciler = getTransferReconciliationStub(
-						ctx.c.env,
-						input.paymentNumber,
-					);
-					await reconciler.start({ paymentNumber: input.paymentNumber });
-				} catch (reconciliationError) {
-					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
-						paymentNumber: input.paymentNumber,
-						error:
-							reconciliationError instanceof Error
-								? reconciliationError.message
-								: String(reconciliationError),
+				if (claim.outcome === "refused") {
+					throw new TRPCError({
+						code: "PRECONDITION_FAILED",
+						message: "Failed payments cannot be claimed",
 					});
 				}
 
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						await sendTransferClaimedNotification({
+				if (
+					claim.outcome === "changed" ||
+					claim.outcome === "already_claimed"
+				) {
+					if (payment.provider !== "transfer") {
+						await q.changePaymentToTransfer(input.paymentNumber);
+					}
+
+					try {
+						const reconciler = getTransferReconciliationStub(
+							ctx.c.env,
+							input.paymentNumber,
+						);
+						await reconciler.start({ paymentNumber: input.paymentNumber });
+					} catch (reconciliationError) {
+						ctx.log.warn("payment.transfer_reconciliation_start_failed", {
 							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
+							error:
+								reconciliationError instanceof Error
+									? reconciliationError.message
+									: String(reconciliationError),
 						});
 					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.transfer_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
+				}
+
+				if (claim.outcome === "changed") {
+					try {
+						await sendTransferClaimAlert(input.paymentNumber);
+					} catch (notificationError) {
+						ctx.log.error(
+							notificationError instanceof Error
+								? notificationError
+								: new Error(String(notificationError)),
+							{
+								event: "payment.transfer_notification_failed",
+								paymentNumber: input.paymentNumber,
+							},
+						);
+					}
 				}
 
 				try {
@@ -258,7 +246,7 @@ export const payment = router({
 					// Logging failure should not break the claim flow
 				}
 
-				return { orderNumber };
+				return { orderNumber, outcome: claim.outcome };
 			} catch (e) {
 				if (e instanceof TRPCError) {
 					throw e;
@@ -384,6 +372,21 @@ export const payment = router({
 						provider: "transfer",
 					});
 				}
+				try {
+					const reconciler = getTransferReconciliationStub(
+						ctx.c.env,
+						input.paymentNumber,
+					);
+					await reconciler.start({ paymentNumber: input.paymentNumber });
+				} catch (reconciliationError) {
+					ctx.log.warn("payment.transfer_reconciliation_start_failed", {
+						paymentNumber: input.paymentNumber,
+						error:
+							reconciliationError instanceof Error
+								? reconciliationError.message
+								: String(reconciliationError),
+					});
+				}
 				return { provider: "transfer" as const };
 			} catch (e) {
 				if (e instanceof TRPCError) {
@@ -499,7 +502,6 @@ export const payment = router({
 		)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				const q = paymentQueries.store;
 				const payment = await assertCanAccessPayment(
 					ctx,
 					input.paymentNumber,
@@ -518,80 +520,20 @@ export const payment = router({
 				if (!isPaid) {
 					return { paid: false };
 				}
-				const confirmed = await q.confirmPaymentAndApplyStock(
-					input.paymentNumber,
-					"qpay",
-				);
-				if (!confirmed) {
+				// Route through the canonical confirm + notify + analytics +
+				// cache-purge boundary (F2).
+				const result = await confirmPaymentAndNotify({
+					paymentNumber: input.paymentNumber,
+					provider: "qpay",
+					source: "qpay_checkout",
+					referrer: ctx.c.req.header("referer") ?? undefined,
+				});
+				if (!result.confirmed) {
 					throw new TRPCError({
 						code: "CONFLICT",
 						message: "Payment already confirmed or not pending",
 					});
 				}
-				try {
-					const paymentInfo = await q.getPaymentInfoByNumber(
-						input.paymentNumber,
-					);
-					if (paymentInfo) {
-						const notificationPayload = {
-							paymentNumber: input.paymentNumber,
-							customerPhone: paymentInfo.order.customerPhone,
-							address: paymentInfo.order.address,
-							notes: paymentInfo.order.notes,
-							total: paymentInfo.order.total,
-							products: paymentInfo.order.orderDetails.map((detail) => ({
-								name: detail.product.name,
-								quantity: detail.quantity,
-								price: detail.product.price,
-								imageUrl: detail.product.images[0]?.url,
-							})),
-							status: "payment_confirmed" as const,
-						};
-						try {
-							await sendDetailedOrderNotification(notificationPayload);
-						} catch (notificationError) {
-							await persistMessengerNotificationFailure({
-								paymentNumber: input.paymentNumber,
-								payload: notificationPayload,
-								error: notificationError,
-							});
-							ctx.log.warn("payment.qpay_notification_queued_for_retry", {
-								paymentNumber: input.paymentNumber,
-								error:
-									notificationError instanceof Error
-										? notificationError.message
-										: String(notificationError),
-							});
-						}
-					}
-				} catch (notificationError) {
-					ctx.log.error(
-						notificationError instanceof Error
-							? notificationError
-							: new Error(String(notificationError)),
-						{
-							event: "payment.qpay_notification_failed",
-							paymentNumber: input.paymentNumber,
-						},
-					);
-				}
-				trackPaymentConfirmedServerSide({
-					phone:
-						payment.order.customerPhone?.toString() ?? input.paymentNumber,
-					paymentNumber: input.paymentNumber,
-					orderNumber: payment.order.orderNumber,
-					provider: "qpay",
-					revenue: payment.order.total,
-					referrer: ctx.c.req.header("referer") ?? undefined,
-				}).catch(() => {});
-				trackOrderPlacedServerSide({
-					phone:
-						payment.order.customerPhone?.toString() ?? input.paymentNumber,
-					orderNumber: payment.order.orderNumber,
-					paymentNumber: input.paymentNumber,
-					total: payment.order.total,
-					provider: "qpay",
-				}).catch(() => {});
 
 				ctx.log.info("payment.qpay_confirmed", {
 					paymentNumber: input.paymentNumber,

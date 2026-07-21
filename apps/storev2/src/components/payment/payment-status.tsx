@@ -1,17 +1,24 @@
+import { useQuery } from "@tanstack/solid-query";
 import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
-import {
-	createEffect,
-	createResource,
-	createSignal,
-	Match,
-	onCleanup,
-	Switch,
-} from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
+import { buttonVariants } from "@/components/ui/button";
+import { paymentUrl } from "@/lib/payment-url";
+import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import { usePaymentStatus } from "@/lib/use-payment-status";
+import { cn } from "@/lib/utils";
 import IconCheck from "~icons/ri/check-line";
 import IconClose from "~icons/ri/close-line";
 import IconRefresh from "~icons/ri/refresh-line";
+import IconShieldCheck from "~icons/ri/shield-check-line";
 import IconTime from "~icons/ri/time-line";
+
+const MANUAL_REVIEW_STATUSES = new Set([
+	"timeout",
+	"ambiguous",
+	"auth_required",
+	"failed",
+]);
 
 const PaymentStatus = (props: {
 	payment: {
@@ -21,53 +28,86 @@ const PaymentStatus = (props: {
 		provider: PaymentProviderType;
 	};
 }) => {
-	const [refetchTrigger, setRefetchTrigger] = createSignal(1);
+	const paymentNumber = () => props.payment.paymentNumber;
+	const checkoutToken = () => props.payment.checkoutToken;
 
-	type PaymentStatusResult = {
-		status: PaymentStatusType;
-		provider: PaymentProviderType;
-	};
-
-	const fetchPaymentStatus = async (): Promise<PaymentStatusResult> => {
-		return (await api.payment.getPaymentStatus.query({
-			paymentNumber: props.payment.paymentNumber,
-			checkoutToken: props.payment.checkoutToken,
-		} as { paymentNumber: string })) as PaymentStatusResult;
-	};
-
-	const [data] = createResource(refetchTrigger, fetchPaymentStatus, {
-		initialValue: {
+	// Single polling mechanism (shared with payment-options / qpay-button).
+	// `initialData` seeds the server-rendered status so the first paint shows
+	// the correct state instead of a loading skeleton.
+	const statusQuery = usePaymentStatus(paymentNumber, checkoutToken, {
+		refetchInterval: 5000,
+		initialData: {
 			status: props.payment.status,
 			provider: props.payment.provider,
-		} satisfies Awaited<ReturnType<typeof fetchPaymentStatus>>,
+		} as { status: PaymentStatusType; provider: PaymentProviderType },
 	});
 
-	const currentData = () => data.latest ?? data();
+	const currentData = () =>
+		statusQuery.data ?? {
+			status: props.payment.status,
+			provider: props.payment.provider,
+		};
 
-	createEffect(() => {
-		const status = currentData()?.status;
-		if (status === "success" || status === "failed") {
-			return;
-		}
-		const interval = setInterval(() => {
-			setRefetchTrigger((prev) => prev + 1);
-		}, 5000);
-
-		onCleanup(() => clearInterval(interval));
+	const canReconcile = createMemo(() => {
+		const current = currentData();
+		return (
+			current.provider === "transfer" &&
+			current.status !== "success" &&
+			current.status !== "failed"
+		);
 	});
+
+	const reconciliationQuery = useQuery(
+		() => ({
+			queryKey: ["transfer-reconciliation", paymentNumber()],
+			queryFn: () =>
+				api.payment.getTransferReconciliationStatus.query({
+					paymentNumber: paymentNumber(),
+					checkoutToken: checkoutToken(),
+				}),
+			refetchInterval: 5000,
+			enabled: canReconcile(),
+		}),
+		() => queryClient,
+	);
+
+	const needsManualReview = () => {
+		const status = reconciliationQuery.data?.status;
+		return status !== undefined && MANUAL_REVIEW_STATUSES.has(status);
+	};
 
 	return (
 		<Switch>
 			<Match when={currentData()?.status === "success"}>
-				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-success text-success-foreground shadow-hard-xl">
-						<IconCheck class="h-10 w-10" />
+				<div class="enter-scale mb-12 text-center">
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-success text-success-foreground shadow-soft-lg">
+						<IconCheck class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h1 class="mb-4 font-black text-4xl uppercase tracking-tight md:text-5xl">
+					<h1 class="mb-3 font-display text-3xl text-foreground md:text-4xl">
 						Захиалга баталгаажлаа!
 					</h1>
 					<p class="text-lg text-muted-foreground">
 						Танд баярлалаа. Таны захиалга хүлээн авагдлаа.
+					</p>
+				</div>
+			</Match>
+			<Match
+				when={
+					(currentData()?.status === "pending" ||
+						currentData()?.status === "customer_claimed_paid") &&
+					needsManualReview()
+				}
+			>
+				<div class="mb-12 text-center">
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-info text-info-foreground shadow-soft-lg">
+						<IconShieldCheck class="h-10 w-10" aria-hidden="true" />
+					</div>
+					<h2 class="mb-3 font-display text-2xl text-foreground">
+						Төлбөрийг гараар шалгаж байна
+					</h2>
+					<p class="mx-auto max-w-md text-lg text-muted-foreground">
+						Санаа зовох хэрэггүй — бид таны шилжүүлгийг гараар шалгаж, удахгүй
+						баталгаажуулна. Танаас өөр юу ч хийх шаардлагагүй.
 					</p>
 				</div>
 			</Match>
@@ -78,45 +118,48 @@ const PaymentStatus = (props: {
 				}
 			>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-4 border-border bg-yellow-400 text-foreground shadow-hard-xl">
-						<IconTime class="h-10 w-10 animate-spin" />
+					<div class="mb-6 inline-flex size-20 animate-pulse items-center justify-center rounded-full bg-warning text-warning-foreground shadow-soft-lg">
+						<IconTime class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
-						Төлбөр боловсруулж байна
+					<h2 class="mb-3 font-display text-2xl text-foreground">
+						Таны шилжүүлгийг хүлээж байна
 					</h2>
-					<p class="mb-4 text-lg text-muted-foreground">
-						Таны төлбөр шалгагдаж байна. Түр хүлээнэ үү.
+					<p class="mx-auto mb-4 max-w-md text-lg text-muted-foreground">
+						Та энэ хуудсыг хааж болно — төлбөр баталгаажсан үед энд харагдана.
 					</p>
 					<div class="inline-flex items-center gap-2 text-muted-foreground text-sm">
-						<IconRefresh class="h-4 w-4 animate-spin" />
+						<IconRefresh class="h-4 w-4 animate-spin" aria-hidden="true" />
 						Автоматаар шалгаж байна...
 					</div>
 				</div>
 			</Match>
 			<Match when={currentData()?.status === "failed"}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-destructive text-destructive-foreground shadow-hard-xl">
-						<IconClose class="h-10 w-10" />
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-soft-lg">
+						<IconClose class="h-10 w-10" aria-hidden="true" />
 					</div>
-					<h2 class="mb-4 font-black text-2xl uppercase tracking-tight">
+					<h2 class="mb-3 font-display text-2xl text-foreground">
 						Төлбөр амжилтгүй боллоо
 					</h2>
 					<p class="mb-6 text-lg text-muted-foreground">
 						Төлбөрийн явцад алдаа гарлаа. Дахин оролдоно уу.
 					</p>
 					<a
-						href={`/payment/${props.payment.paymentNumber}`}
-						class="inline-flex h-12 items-center gap-2 whitespace-nowrap border-3 border-border bg-primary px-6 py-3 font-black text-primary-foreground text-sm uppercase tracking-wide shadow-hard-lg transition-all hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-hard focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-2 active:shadow-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+						href={paymentUrl(
+							props.payment.paymentNumber,
+							props.payment.checkoutToken,
+						)}
+						class={cn(buttonVariants())}
 					>
-						<IconRefresh class="h-4 w-4" />
+						<IconRefresh class="h-4 w-4" aria-hidden="true" />
 						Дахин оролдох
 					</a>
 				</div>
 			</Match>
-			<Match when={data.loading && !data.latest}>
+			<Match when={statusQuery.isPending && !statusQuery.data}>
 				<div class="mb-12 text-center">
-					<div class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full border-4 border-border bg-muted-foreground text-muted-foreground shadow-hard-xl">
-						<IconTime class="h-10 w-10" />
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-soft-lg">
+						<IconTime class="h-10 w-10" aria-hidden="true" />
 					</div>
 				</div>
 			</Match>

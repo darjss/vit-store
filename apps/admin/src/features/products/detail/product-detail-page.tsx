@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
 	AlertCircle,
 	ArrowLeft,
+	Bell,
 	DollarSign,
 	Eye,
 	Info,
@@ -50,6 +51,10 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 
 	const { data: product } = useSuspenseQuery({
 		...trpc.product.getProductById.queryOptions({ id: productId }),
+	});
+
+	const { data: restockWait } = useSuspenseQuery({
+		...trpc.product.getRestockWaitCount.queryOptions({ productId }),
 	});
 
 	const {
@@ -187,7 +192,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 						</div>
 					)}
 
-					<div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+					<div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
 						<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
 							<div className="flex items-center gap-2">
 								<div className="flex h-8 w-8 items-center justify-center border-2 border-border bg-primary/20">
@@ -218,6 +223,22 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 								</div>
 							</div>
 						</div>
+						<Link
+							to="/restock-waitlist"
+							className="border-2 border-border bg-card p-3 shadow-hard-sm transition-colors hover:bg-muted/40"
+						>
+							<div className="flex items-center gap-2">
+								<div className="flex h-8 w-8 items-center justify-center border-2 border-border bg-primary/15">
+									<Bell className="h-4 w-4 text-foreground" />
+								</div>
+								<div className="min-w-0 flex-1">
+									<p className="font-bold font-heading text-sm sm:text-base">
+										{restockWait.waitCount}
+									</p>
+									<p className="text-muted-foreground text-xs">Хүлээж буй</p>
+								</div>
+							</div>
+						</Link>
 						<Suspense
 							fallback={
 								<>

@@ -28,6 +28,7 @@ import {
 	SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
+import { invalidatePurchaseLists } from "./invalidate-purchase-lists";
 import {
 	buildImportedPurchasePayload,
 	buildPurchasePayload,
@@ -105,13 +106,7 @@ export default function PurchaseForm({
 	);
 
 	const handleMutationSuccess = (purchaseId: number) => {
-		queryClient.invalidateQueries(
-			trpc.purchase.getPaginatedPurchases.queryOptions({
-				page: 1,
-				pageSize: 10,
-				sortDirection: "desc",
-			}),
-		);
+		void invalidatePurchaseLists(queryClient);
 		queryClient.invalidateQueries(trpc.purchase.getAllPurchases.queryOptions());
 		queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
 		if (purchase) {

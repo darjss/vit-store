@@ -1,28 +1,28 @@
 import { paymentQueries } from "@vit/api/queries";
-import { confirmTransferPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
+import type {
+	TransferReconciliationState,
+	TransferReconciliationStatus,
+} from "@vit/api/lib/payments/transfer-reconciliation-status";
 import { DurableObject } from "cloudflare:workers";
-import { KhaanClient } from "../lib/khaan/client";
 import {
+	KhaanAuthError,
+	KhaanClient,
+	KhaanRateLimitError,
 	type MatchedKhaanTransaction,
-	type TransferReconciliationStatus,
-	findMatchingKhaanTransfer,
-} from "../lib/khaan/reconciliation";
+} from "khaan-client";
+import {
+	collectMatchingKhaanFingerprints,
+	fingerprintOf,
+	khaanTransactionFingerprint,
+	matchKhaanTransfer,
+	prepareEligibleKhaanTransactions,
+} from "../lib/khaan/match-transfer";
 
 const STATE_KEY = "transfer-reconciliation:state:v1";
 const POLL_INTERVAL_MS = 25_000;
+const RATE_LIMIT_BACKOFF_MS = 90_000;
 const MAX_POLL_MS = 5 * 60_000;
-const LOOKBACK_MS = 10 * 60_000;
-
-export type TransferReconciliationState = {
-	paymentNumber: string;
-	status: TransferReconciliationStatus;
-	attempts: number;
-	startedAt: string;
-	expiresAt: string;
-	nextPollAt: string | null;
-	lastError: string | null;
-	matchedTransaction?: MatchedKhaanTransaction;
-};
 
 type StartInput = {
 	paymentNumber: string;
@@ -39,15 +39,38 @@ const terminalStatuses = new Set<TransferReconciliationStatus>([
 const errorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : String(error);
 
+const retryDelayMs = (error: unknown) =>
+	error instanceof KhaanRateLimitError
+		? RATE_LIMIT_BACKOFF_MS
+		: POLL_INTERVAL_MS;
+
 const isConfirmablePaymentStatus = (status: string) =>
 	status === "pending" || status === "customer_claimed_paid";
 
 export class TransferReconciliationObject extends DurableObject<Env> {
 	private readonly appEnv: Env;
+	private client: KhaanClient | null = null;
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		this.appEnv = env;
+	}
+
+	private async ensureClient(): Promise<KhaanClient> {
+		if (this.client) {
+			return this.client;
+		}
+		const client = new KhaanClient({
+			username: this.appEnv.KHAAN_USERNAME,
+			password: this.appEnv.KHAAN_PASSWORD,
+			deviceId: this.appEnv.KHAAN_DEVICE_ID,
+			userAgent: this.appEnv.KHAAN_USER_AGENT,
+			accountNumber: this.appEnv.KHAAN_ACCOUNT_NUMBER,
+			branchCode: this.appEnv.KHAAN_BRANCH_CODE,
+		});
+		await client.login();
+		this.client = client;
+		return client;
 	}
 
 	async start(input: StartInput): Promise<TransferReconciliationState> {
@@ -79,6 +102,54 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		return await this.getStoredState();
 	}
 
+	// Used by the admin manual-confirm path to find ALL Khaan transactions
+	// matching this payment and return their fingerprints, so the admin
+	// confirm can record them as consumed (P0-1). Returns null on any failure
+	// (Khaan auth, fetch, payment not found) — the caller must NOT block the
+	// admin confirm on a null return. Returns [] when no matching transactions
+	// are found (tx scrolled out of the recent list, or a cash/override).
+	async collectMatchingKhaanFingerprints(
+		paymentNumber: string,
+	): Promise<string[] | null> {
+		try {
+			const payment = await paymentQueries.store.getPaymentInfoByNumber(
+				paymentNumber,
+			);
+			if (!payment || payment.provider !== "transfer") {
+				return null;
+			}
+			const client = await this.ensureClient();
+			const transactions = await client.fetchTransactions();
+			// Shared eligible pipeline (F3): window-filter → fingerprint →
+			// consumed-lookup → eligible-filter in one pass. Fingerprints are
+			// computed once and reused by collectMatchingKhaanFingerprints via
+			// the identity map (F7).
+			const { eligible, fingerprintByIdentity } =
+				await prepareEligibleKhaanTransactions({
+					transactions,
+					paymentCreatedAtMs: payment.createdAt.getTime(),
+					getConsumedFingerprints:
+						paymentQueries.store.getConsumedKhaanFingerprints.bind(
+							paymentQueries.store,
+						),
+				});
+			return await collectMatchingKhaanFingerprints({
+				eligible,
+				fingerprintByIdentity,
+				paymentNumber,
+				phone: String(payment.order.customerPhone),
+				expectedAmount: payment.amount,
+			});
+		} catch {
+			// Khaan fetch/auth failure or payment lookup failure — do not block
+			// the admin confirm. The caller logs and proceeds.
+			return null;
+		}
+	}
+
+	// khaan-client's reconcileTransfer async iterator is intentionally not used:
+	// it cannot survive DO hibernation between alarms, so alarm-driven polling
+	// reproduces its contract instead.
 	async alarm(): Promise<void> {
 		const state = await this.getStoredState();
 		if (!state || state.status !== "polling") {
@@ -140,40 +211,25 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				return;
 			}
 
-			const client = new KhaanClient({
-				username: this.appEnv.KHAAN_USERNAME,
-				password: this.appEnv.KHAAN_PASSWORD,
-				deviceId: this.appEnv.KHAAN_DEVICE_ID,
-				userAgent: this.appEnv.KHAAN_USER_AGENT,
-				accountNumber: this.appEnv.KHAAN_ACCOUNT_NUMBER,
-				branchCode: this.appEnv.KHAAN_BRANCH_CODE,
-			});
-			const login = await client.loginInitial();
-			if (login.status === "mfa_required") {
-				await this.writeState({
-					...state,
-					status: "auth_required",
-					attempts,
-					nextPollAt: null,
-					lastError: "Khaan MFA required",
+			const client = await this.ensureClient();
+			const transactions = await client.fetchTransactions();
+			// Shared eligible pipeline (F3): window-filter → fingerprint →
+			// consumed-lookup → eligible-filter in one pass. The identity→
+			// fingerprint map is reused by confirmMatch to record the matched
+			// transaction's fingerprint without recomputing SHA-256 (F7).
+			const { eligible, fingerprintByIdentity } =
+				await prepareEligibleKhaanTransactions({
+					transactions,
+					paymentCreatedAtMs: payment.createdAt.getTime(),
+					getConsumedFingerprints:
+						paymentQueries.store.getConsumedKhaanFingerprints.bind(
+							paymentQueries.store,
+						),
 				});
-				return;
-			}
-			if (login.status === "failed") {
-				await this.scheduleNext({
-					...state,
-					attempts,
-					lastError: login.error,
-				});
-				return;
-			}
-
-			const transactions = await client.fetchTransactions({
-				accessToken: login.accessToken,
-			});
-			const matchResult = findMatchingKhaanTransfer({
-				transactions,
+			const matchResult = matchKhaanTransfer({
+				transactions: eligible,
 				paymentNumber: state.paymentNumber,
+				phone: String(payment.order.customerPhone),
 				expectedAmount: payment.amount,
 			});
 
@@ -194,51 +250,95 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				return;
 			}
 
-			await this.writeState({
-				...state,
-				status: "matched",
+			await this.confirmMatch(
+				state,
 				attempts,
-				nextPollAt: null,
-				lastError: null,
-				matchedTransaction: matchResult.match,
-			});
-
-			const confirmation = await confirmTransferPaymentAndNotify({
-				paymentNumber: state.paymentNumber,
-				source: "auto_reconciliation",
-			});
-			const paymentAfterConfirmation = confirmation.confirmed
-				? null
-				: await paymentQueries.store.getPaymentInfoByNumber(
-						state.paymentNumber,
-					);
-			await this.writeState({
-				...state,
-				status:
-					confirmation.confirmed ||
-					paymentAfterConfirmation?.status === "success"
-						? "confirmed"
-						: "failed",
-				attempts,
-				nextPollAt: null,
-				lastError:
-					confirmation.confirmed ||
-					paymentAfterConfirmation?.status === "success"
-						? null
-						: confirmation.reason,
-				matchedTransaction: matchResult.match,
-			});
+				matchResult.match,
+				fingerprintByIdentity,
+			);
 		} catch (error) {
-			await this.scheduleNext({
-				...state,
-				attempts,
-				lastError: errorMessage(error),
-			});
+			if (error instanceof KhaanAuthError) {
+				this.client = null;
+				await this.writeState({
+					...state,
+					status: "auth_required",
+					attempts,
+					nextPollAt: null,
+					lastError: errorMessage(error),
+				});
+				return;
+			}
+			await this.scheduleNext(
+				{
+					...state,
+					attempts,
+					lastError: errorMessage(error),
+				},
+				retryDelayMs(error),
+			);
 		}
 	}
 
-	private async scheduleNext(state: TransferReconciliationState) {
-		const nextPollAt = Date.now() + POLL_INTERVAL_MS;
+	private async confirmMatch(
+		state: TransferReconciliationState,
+		attempts: number,
+		match: MatchedKhaanTransaction,
+		fingerprintByIdentity: Map<string, string>,
+	) {
+		// F5: no pre-confirm "matched" write. Go straight from poll → confirm →
+		// write the final status (confirmed/ambiguous/failed). The intermediate
+		// "matched" state was not observable by any consumer that matters and
+		// left a transient stuck-looking state if confirm threw a non-Khaan
+		// error before the recovery path ran.
+		const matchedFingerprint =
+			fingerprintOf(fingerprintByIdentity, match) ??
+			(await khaanTransactionFingerprint(match));
+		const confirmation = await confirmPaymentAndNotify({
+			paymentNumber: state.paymentNumber,
+			provider: "transfer",
+			source: "auto_reconciliation",
+			consumedKhaanTransactions: [{ fingerprint: matchedFingerprint }],
+		});
+
+		if (
+			!confirmation.confirmed &&
+			confirmation.reason === "khaan_transaction_already_consumed"
+		) {
+			await this.writeState({
+				...state,
+				status: "ambiguous",
+				attempts,
+				nextPollAt: null,
+				lastError: confirmation.reason,
+				matchedTransaction: match,
+			});
+			return;
+		}
+
+		const paymentAfterConfirmation = confirmation.confirmed
+			? null
+			: await paymentQueries.store.getPaymentInfoByNumber(
+					state.paymentNumber,
+				);
+		const reason = confirmation.confirmed ? null : confirmation.reason;
+		const succeeded =
+			confirmation.confirmed ||
+			paymentAfterConfirmation?.status === "success";
+		await this.writeState({
+			...state,
+			status: succeeded ? "confirmed" : "failed",
+			attempts,
+			nextPollAt: null,
+			lastError: succeeded ? null : reason,
+			matchedTransaction: match,
+		});
+	}
+
+	private async scheduleNext(
+		state: TransferReconciliationState,
+		delayMs = POLL_INTERVAL_MS,
+	) {
+		const nextPollAt = Date.now() + delayMs;
 		if (nextPollAt >= Date.parse(state.expiresAt)) {
 			await this.writeState({
 				...state,

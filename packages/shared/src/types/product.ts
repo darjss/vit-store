@@ -11,10 +11,14 @@ export interface ProductForHome {
 	id: number;
 	slug: string;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	price: number;
 	image: string;
 	brand: string;
-	discount?: number;
+	discount?: number | null;
+	stock?: number;
 }
 
 export interface ProductImage {

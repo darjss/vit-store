@@ -14,7 +14,12 @@ config({
 const env = createAdminAlchemyEnv(process.env);
 
 export const admin = await Vite("dashboard", {
-	domains: stage === "prod" ? ["admin.amerikvitamin.mn"] : undefined,
+	domains:
+		stage === "prod"
+			? ["admin.amerikvitamin.mn"]
+			: stage === "staging"
+				? ["admin-staging.amerikvitamin.mn"]
+				: undefined,
 	cwd: import.meta.dirname,
 	adopt: true,
 	assets: "dist",

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -13,6 +14,7 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
         .mutation(async ({ ctx, input }) => {
         try {
             await productImageQueries.admin.createImage(input);
+            await purgeCatalogCache(ctx, [input.productId]);
             return { message: "Successfully added image" };
         }
         catch (error) {
@@ -35,12 +37,20 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
         })),
     }))
         .mutation(async ({ ctx, input }) => {
+        const imageUploadToken = ctx.c.env.IMAGE_UPLOAD_TOKEN;
+        if (!imageUploadToken) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "IMAGE_UPLOAD_TOKEN is required for server image uploads",
+            });
+        }
         try {
             const imageUrls = input.images.map((image) => ({ url: image.url }));
             const response = await fetch(`${process.env.BACKEND_URL}/upload/images/urls`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "X-Image-Upload-Token": imageUploadToken,
                 },
                 body: JSON.stringify(imageUrls),
             });
@@ -70,6 +80,10 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
                 url: uploadedImage.url,
             }));
             await productImageQueries.admin.createImages(imagesToInsert);
+            await purgeCatalogCache(
+                ctx,
+                [...new Set(imagesToInsert.map((image) => image.productId))],
+            );
             return { message: "Successfully uploaded images" };
         }
         catch (error) {
@@ -118,6 +132,7 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
                     isPrimary: index === 0,
                 }));
                 await productImageQueries.admin.createImages(imagesToInsert);
+                await purgeCatalogCache(ctx, [productId]);
             }
             return { message: "Successfully updated images" };
         }
@@ -160,7 +175,9 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
         .mutation(async ({ ctx, input }) => {
         try {
             const { id } = input;
+            const image = await productImageQueries.admin.getImageById(id);
             await productImageQueries.admin.deleteImage(id);
+            if (image) await purgeCatalogCache(ctx, [image.productId]);
             return { message: "Successfully deleted image" };
         }
         catch (error) {
@@ -183,6 +200,7 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
         try {
             const { productId, imageId } = input;
             await productImageQueries.admin.setPrimaryImage(productId, imageId);
+            await purgeCatalogCache(ctx, [productId]);
             return { message: "Successfully set primary image" };
         }
         catch (error) {

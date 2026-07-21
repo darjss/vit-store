@@ -26,7 +26,6 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 | **`@vit/api`** | tRPC routers (admin/store/bot), Drizzle DB queries, integrations (Messenger, QPay, PostHog, Resend, SMS gateway), AI product-extraction pipeline, payment logic. |
 | **`@vit/assistant`** | Shared tools and instructions for the Messenger agents — product search, advice, photo identification, cart/checkout, payment choices, delivery-zone ranking, admin Codemode tool. |
 | **`@vit/shared`** | Domain types, Valibot schemas, constants (delivery fee 6,000₮, bank transfer details, status enums). |
-| **`@vit/logger`** | Structured logging middleware for Hono. |
 
 ## Tech stack
 
@@ -77,9 +76,9 @@ bun dev
 Or run a single app:
 
 ```bash
-bun dev:web      # storev2
-bun dev:server   # server
-bun dev:native   # admin
+bunx turbo dev --filter=storev2
+bun dev:server
+bunx turbo dev --filter=admin
 ```
 
 The agent runs via Wrangler locally:
@@ -103,19 +102,42 @@ bun deploy          # turbo deploy (server first, then frontends)
 | `bun dev` | Start all apps in dev mode |
 | `bun build` | Build all apps |
 | `bun check-types` | TypeScript checks across all apps |
-| `bun deploy` / `bun destroy` | Deploy/teardown all apps via Alchemy |
+| `bun deploy` | Deploy all apps |
 | `bun db:push` | Push Drizzle schema to the database |
 | `bun db:migrate` / `bun db:migrate:local` | Run migrations (prod/local) |
 | `bun db:studio` / `bun db:studio:local` | Open Drizzle Studio |
 | `bun db:seed` | Seed the database |
 | `bun db:docker:up` / `bun db:docker:down` | Start/stop the Postgres container |
+| `bun cache:maintain` | Preview or clear the owned analytics KV cache scope |
 | `bun lint` / `bun lint:fix` | Biome lint / autofix |
 | `bun format` | Biome format |
 | `bun check` | oxlint |
 | `bun knip` | Dead-code/dependency analysis |
 | `bun quality` | `check-types` + `fallow dead-code` + `fallow health` |
 | `bun vit:extract` / `bun vit:compare` | Scrape/compare vit product catalog |
-| `bun brand-logos:scrape` | Scrape missing brand logos |
+
+### Cache maintenance
+
+Cache maintenance has no default environment or scope. Every invocation must select `local`, `staging`, or `production`, the `analytics` scope, and a namespace. An invocation without `--confirm` is a non-mutating preview; staging and production previews do not contact Cloudflare.
+
+Use a unique namespace name and persistence directory for disposable local work:
+
+```bash
+bun cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path>
+bun cache:maintain -- --environment local --scope analytics --namespace-id <unique-local-name> --persist-to <absolute-path> --confirm local:<unique-local-name>
+```
+
+Remote operations additionally require both the account and namespace IDs. Replace placeholders from the intended Alchemy stage output; do not copy identifiers between environments:
+
+```bash
+bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id>
+bun cache:maintain -- --environment staging --scope analytics --account-id <staging-account-id> --namespace-id <staging-namespace-id> --confirm staging:<staging-account-id>:<staging-namespace-id>
+
+bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id>
+bun cache:maintain -- --environment production --scope analytics --account-id <production-account-id> --namespace-id <production-namespace-id> --confirm production:<production-account-id>:<production-namespace-id> --confirm-production DELETE-PRODUCTION-CACHE
+```
+
+The package script disables Bun env-file loading. Wrangler runs from an isolated directory with only its user-level authentication configuration and the explicitly supplied account ID; it does not load the repository `.env` files.
 
 ## Project structure
 
@@ -129,8 +151,7 @@ vit-store/
 ├── packages/
 │   ├── api/       # @vit/api — routers, DB queries, integrations
 │   ├── assistant/ # @vit/assistant — agent tools & instructions
-│   ├── shared/    # @vit/shared — types, schemas, constants
-│   └── logger/    # @vit/logger — Hono logging middleware
+│   └── shared/    # @vit/shared — types, schemas, constants
 ├── docs/
 │   ├── adr/       # Architecture decision records
 │   └── agents/    # Agent workflow docs (issue tracker, triage, domain)

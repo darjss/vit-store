@@ -2,12 +2,16 @@ import MiniSearch, { type Options, type SearchResult } from "minisearch";
 import {
 	buildProductAliases,
 	createSearchQueries,
+	expandBrandAliases,
 	normalizeSearchText,
 } from "~/lib/product-search/text";
 import type {
 	ProductSearchDocument,
 	ProductSearchFilters,
+	ProductSearchPage,
 	ProductSearchSnapshot,
+	ProductSearchSort,
+	ProductSearchSortField,
 	ProductSearchSourceDocument,
 	SearchProductResult,
 } from "~/lib/product-search/types";
@@ -49,6 +53,7 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 		"nameMn",
 		"slug",
 		"price",
+		"createdAt",
 		"discount",
 		"brand",
 		"category",
@@ -79,8 +84,8 @@ const PRODUCT_SEARCH_OPTIONS: Options<ProductSearchDocument> = {
 			tags: 1.5,
 			description: 0.5,
 		},
-		prefix: true,
-		fuzzy: (term: string) => (term.length >= 4 ? 0.2 : false),
+		prefix: (term: string) => term.length >= 2,
+		fuzzy: (term: string) => (term.length >= 5 ? 0.15 : false),
 	},
 };
 
@@ -108,6 +113,7 @@ export const buildProductSearchDocument = (
 		description: product.description ?? "",
 		slug: product.slug,
 		price: product.price,
+		createdAt: new Date(product.createdAt).toISOString(),
 		discount: product.discount ?? 0,
 		brand: product.brand,
 		category: product.category,
@@ -137,7 +143,7 @@ export const buildProductSearchSnapshot = (
 	miniSearch.addAll(documents);
 
 	return {
-		version: 1,
+		version: 2,
 		generatedAt: new Date().toISOString(),
 		productCount: documents.length,
 		documents,
@@ -165,11 +171,38 @@ const resultMatchesFilters = (
 	if (filters?.categoryId != null && result.categoryId !== filters.categoryId) {
 		return false;
 	}
+	if (filters?.requireStock) {
+		const inStock = Boolean(result.inStock);
+		const stock = Number(result.stock ?? 0);
+		if (!inStock || stock <= 0) return false;
+	}
+	const price = Number(result.price ?? 0);
+	if (filters?.minPrice != null && price < filters.minPrice) return false;
+	if (filters?.maxPrice != null && price > filters.maxPrice) return false;
 	return true;
 };
 
 const tokenizeSearchText = (value: string) =>
 	normalizeSearchText(value).split(" ").filter(Boolean);
+
+const RELEVANCE_ANCHOR_PREFIX = 3;
+
+const sharedPrefixLength = (a: string, b: string) => {
+	const max = Math.min(a.length, b.length);
+	let index = 0;
+	while (index < max && a[index] === b[index]) index++;
+	return index;
+};
+
+const hasRelevanceAnchor = (result: SearchResult, queryTokens: string[]) =>
+	((result.terms as string[] | undefined) ?? []).some((matched) =>
+		queryTokens.some(
+			(token) =>
+				matched.includes(token) ||
+				token.includes(matched) ||
+				sharedPrefixLength(matched, token) >= RELEVANCE_ANCHOR_PREFIX,
+		),
+	);
 
 const withoutTerms = (terms: string[], termsToRemove: string[]) => {
 	const remove = new Set(termsToRemove);
@@ -220,7 +253,9 @@ const scoreSearchResult = (
 	const name = normalizeSearchText(
 		[document.name, document.nameMn, brandName, brandNameMn].join(" "),
 	);
-	const productName = normalizeSearchText(`${document.name} ${document.nameMn}`);
+	const productName = normalizeSearchText(
+		`${document.name} ${document.nameMn}`,
+	);
 	const aliases = normalizeSearchText(
 		`${document.aliases} ${document.normalized}`,
 	);
@@ -248,9 +283,18 @@ const scoreSearchResult = (
 	const productIntentIndex = productIntent
 		? getPhraseTokenIndex(productName, productIntent)
 		: -1;
-	const stockScore = document.inStock
-		? Math.min(Math.log1p(Math.max(document.stock, 0)) * 45, 240)
-		: -500;
+	const dosageTerms = terms.filter((term) => /^\d+$/.test(term));
+	const dosageHaystack = normalizeSearchText(
+		`${document.amount} ${document.potency} ${document.aliases}`,
+	).split(" ");
+	const dosageExact =
+		dosageTerms.length > 0 &&
+		dosageTerms.every((term) => dosageHaystack.includes(term));
+	const canonicalBrand = expandBrandAliases(query);
+	const brandCanonical =
+		canonicalBrand.length > 0 &&
+		normalizeSearchText(document.brand).length > 0 &&
+		canonicalBrand.split(" ").includes(normalizeSearchText(document.brand));
 
 	let score = result.score ?? 0;
 	if (name === normalizedQuery) score += 2000;
@@ -259,11 +303,12 @@ const scoreSearchResult = (
 	if (aliases.includes(normalizedQuery)) score += 1000;
 	if (allTermsInName) score += 800;
 	if (allTermsInHaystack) score += 400;
+	if (dosageExact) score += 1800;
+	if (brandCanonical) score += 2200;
 	if (productIntentIndex === 0) score += 2400;
 	else if (productIntentIndex > 0 && productIntentIndex <= 2) score += 2000;
 	else if (productIntentIndex > 2 && productIntentIndex <= 5) score += 900;
 	else if (productIntentIndex > 5) score += 250;
-	score += stockScore;
 
 	return score;
 };
@@ -282,6 +327,7 @@ export const mapMiniSearchResult = (
 		nameMn: stored.nameMn || document?.nameMn || undefined,
 		slug: stored.slug ?? document?.slug ?? "",
 		price: stored.price ?? document?.price ?? 0,
+		createdAt: stored.createdAt ?? document?.createdAt ?? "",
 		discount: stored.discount ?? document?.discount ?? 0,
 		brand: stored.brand ?? document?.brand ?? "",
 		category: stored.category ?? document?.category ?? "",
@@ -301,33 +347,71 @@ export const mapMiniSearchResult = (
 	};
 };
 
+const getSearchSortValue = (
+	result: SearchResult,
+	field: ProductSearchSortField,
+): number => {
+	switch (field) {
+		case "price":
+			return Number(result.price ?? 0);
+		case "createdAt":
+			return Date.parse(String(result.createdAt ?? ""));
+		default: {
+			const unsupportedField: never = field;
+			throw new Error(`Unsupported product search sort: ${unsupportedField}`);
+		}
+	}
+};
+
 export const searchMiniSearchIndex = (
 	miniSearch: MiniSearch<ProductSearchDocument>,
 	documentsById: Map<number, ProductSearchDocument>,
 	query: string,
-	limit: number,
+	page: number,
+	pageSize: number,
 	filters?: ProductSearchFilters,
-) => {
+	sort?: ProductSearchSort,
+): ProductSearchPage => {
+	const safePage = Math.max(page, 1);
+	const safePageSize = Math.min(Math.max(pageSize, 1), 100);
 	const trimmed = query.trim();
-	if (!trimmed) return [];
+	if (!trimmed) {
+		return {
+			items: [],
+			pagination: {
+				page: safePage,
+				pageSize: safePageSize,
+				totalCount: 0,
+				totalPages: 0,
+				hasNextPage: false,
+				hasPreviousPage: false,
+			},
+		};
+	}
 
-	const safeLimit = Math.min(Math.max(limit, 1), 1000);
 	const rankedResults = new Map<string, SearchResult>();
+	const queryTokens = new Set<string>();
 	for (const searchQuery of createSearchQueries(trimmed)) {
 		const searchOptions = {
 			...PRODUCT_SEARCH_OPTIONS.searchOptions,
 			filter: (result: SearchResult) => resultMatchesFilters(result, filters),
 		};
-		const andResults = miniSearch.search(searchQuery, {
+		const tokens = tokenizeSearchText(searchQuery);
+		for (const token of tokens) queryTokens.add(token);
+		const matchableQuery =
+			tokens.length > 1
+				? tokens
+						.filter(
+							(token) => miniSearch.search(token, searchOptions).length > 0,
+						)
+						.join(" ")
+				: searchQuery;
+		if (!matchableQuery) continue;
+
+		for (const result of miniSearch.search(matchableQuery, {
 			...searchOptions,
 			combineWith: "AND",
-		});
-		const results =
-			andResults.length > 0
-				? andResults
-				: miniSearch.search(searchQuery, searchOptions);
-
-		for (const result of results) {
+		})) {
 			const existing = rankedResults.get(String(result.id));
 			if (!existing || (result.score ?? 0) > (existing.score ?? 0)) {
 				rankedResults.set(String(result.id), result);
@@ -335,12 +419,47 @@ export const searchMiniSearchIndex = (
 		}
 	}
 
-	return Array.from(rankedResults.values())
-		.sort(
-			(a, b) =>
-				scoreSearchResult(b, documentsById, trimmed) -
-				scoreSearchResult(a, documentsById, trimmed),
-		)
-		.slice(0, safeLimit)
-		.map((result) => mapMiniSearchResult(result, documentsById));
+	const ranked = Array.from(rankedResults.values())
+		.filter((result) => hasRelevanceAnchor(result, [...queryTokens]))
+		.map((result) => ({
+			result,
+			rank: scoreSearchResult(result, documentsById, trimmed),
+			inStock: Boolean(result.inStock),
+			stock: Number(result.stock ?? 0),
+		}));
+
+	if (sort) {
+		const direction = sort.direction === "asc" ? 1 : -1;
+		ranked.sort((a, b) => {
+			const aValue = getSearchSortValue(a.result, sort.field);
+			const bValue = getSearchSortValue(b.result, sort.field);
+			const difference = (aValue - bValue) * direction;
+			return (
+				difference || (Number(a.result.id) - Number(b.result.id)) * direction
+			);
+		});
+	} else {
+		ranked.sort((a, b) => {
+			if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
+			if (a.stock !== b.stock) return b.stock - a.stock;
+			return b.rank - a.rank;
+		});
+	}
+
+	const totalCount = ranked.length;
+	const totalPages = Math.ceil(totalCount / safePageSize);
+	const offset = (safePage - 1) * safePageSize;
+	return {
+		items: ranked
+			.slice(offset, offset + safePageSize)
+			.map(({ result }) => mapMiniSearchResult(result, documentsById)),
+		pagination: {
+			page: safePage,
+			pageSize: safePageSize,
+			totalCount,
+			totalPages,
+			hasNextPage: safePage < totalPages,
+			hasPreviousPage: safePage > 1 && totalCount > 0,
+		},
+	};
 };

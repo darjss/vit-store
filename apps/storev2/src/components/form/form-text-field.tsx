@@ -1,6 +1,6 @@
 import { useStore } from "@tanstack/solid-form";
 import type { ComponentProps } from "solid-js";
-import { createMemo, For, Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import {
 	TextField,
 	TextFieldErrorMessage,
@@ -20,25 +20,18 @@ interface FormTextFieldProps {
 export function FormTextField(props: FormTextFieldProps) {
 	const field = useFieldContext<string>();
 	const errors = useStore(field().store, (state) => state.meta.errors);
-	const isTouched = useStore(field().store, (state) => state.meta.isTouched);
+	const isBlurred = useStore(field().store, (state) => state.meta.isBlurred);
 	const submissionAttempts = useStore(
 		field().form.store,
 		(state) => state.submissionAttempts,
 	);
-	const showErrors = () => isTouched() || submissionAttempts() > 0 || errors().length > 0;
-	// `meta.errors` can contain duplicates when the same field is validated by
-	// both `onBlur` and `onSubmit` — dedupe by message so users see each error once.
-	const uniqueErrors = createMemo(() => {
-		const seen = new Set<string>();
-		return errors().filter((e) => {
-			const key = e.message ?? "";
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		});
-	});
+	// Lazy to flag, eager to clear: errors stay hidden until the field is
+	// blurred or a submit was attempted; once shown, onChange validation
+	// keeps them refreshing live as the user types the correction.
+	const showErrors = () => isBlurred() || submissionAttempts() > 0;
+	const firstError = createMemo(() => errors()[0]?.message ?? null);
 	const validationState = () =>
-		showErrors() && uniqueErrors().length > 0 ? "invalid" : "valid";
+		showErrors() && firstError() ? "invalid" : "valid";
 
 	return (
 		<TextField validationState={validationState()}>
@@ -63,12 +56,8 @@ export function FormTextField(props: FormTextFieldProps) {
 					}
 				}}
 			/>
-			<Show when={showErrors() && uniqueErrors().length > 0}>
-				<For each={uniqueErrors()}>
-					{(error) => (
-						<TextFieldErrorMessage>{error.message}</TextFieldErrorMessage>
-					)}
-				</For>
+			<Show when={showErrors() && firstError()}>
+				<TextFieldErrorMessage>{firstError()}</TextFieldErrorMessage>
 			</Show>
 		</TextField>
 	);

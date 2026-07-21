@@ -1,24 +1,39 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { timeRangeType } from "@vit/shared";
+import { sanitizePublicTrpcErrorShape, type timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
+import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
+import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
-import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { getTtlForTimeRange } from "~/lib/utils";
+
+const isLocalDevelopment = process.env.NODE_ENV === "development";
 
 const t = initTRPC.context<Context>().create({
 	transformer: superjson,
+	isDev: isLocalDevelopment,
 	errorFormatter({ shape, error }) {
+		if (isLocalDevelopment) {
+			return {
+				...shape,
+				data: {
+					...shape.data,
+					valibotError:
+						error.cause instanceof v.ValiError ? error.cause.issues : null,
+				},
+			};
+		}
+
+		const publicShape = sanitizePublicTrpcErrorShape(
+			shape,
+			shape.data.httpStatus,
+		);
 		return {
-			...shape,
-			data: {
-				...shape.data,
-				valibotError:
-					error.cause instanceof v.ValiError ? error.cause.issues : null,
-			},
+			...publicShape,
+			data: { ...publicShape.data, valibotError: null },
 		};
 	},
 });
@@ -58,7 +73,7 @@ const verifiedCustomerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, phone: session.user.phone },
+		user: { id: session.user.id },
 		user_type: "customer",
 	});
 	return next({ ctx: nextCtx });
@@ -79,43 +94,6 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	});
 	return next({ ctx: { ...ctx, session } });
 });
-
-const createCacheKey = async (
-	path: string,
-	input: unknown,
-): Promise<string> => {
-	const cacheableInput =
-		input && typeof input === "object"
-			? {
-					timeRange: (input as Record<string, unknown>).timeRange,
-					ttl: (input as Record<string, unknown>).ttl,
-				}
-			: input;
-
-	const keyString = `${path}:${JSON.stringify(
-		cacheableInput && typeof cacheableInput === "object"
-			? Object.keys(cacheableInput)
-					.sort()
-					.reduce(
-						(result, key) => {
-							result[key] = (cacheableInput as Record<string, unknown>)[key];
-							return result;
-						},
-						{} as Record<string, unknown>,
-					)
-			: cacheableInput,
-	)}`;
-
-	const encoder = new TextEncoder();
-	const data = encoder.encode(keyString);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const hashHex = hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
-
-	return `cache:${hashHex}`;
-};
 
 function ensureTRPCError(
 	error: unknown,
@@ -164,7 +142,23 @@ const loggingMiddleware = t.middleware(
 		const startTime = Date.now();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput = summarizeTrpcPayload(input);
+		const safeInput =
+			path === "product.subscribeToRestock" &&
+			input &&
+			typeof input === "object" &&
+			"productId" in input &&
+			"contacts" in input &&
+			Array.isArray(input.contacts)
+				? {
+						product_id: input.productId,
+						contact_count: input.contacts.length,
+						channels: input.contacts.map((contact) =>
+							contact && typeof contact === "object" && "channel" in contact
+								? contact.channel
+								: "unknown",
+						),
+					}
+				: summarizeTrpcPayload(input);
 
 		ctx.log.set({
 			trpc: {
@@ -214,7 +208,7 @@ const loggingMiddleware = t.middleware(
 );
 
 const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
-	const cacheKey = await createCacheKey(path, input);
+	const cacheKey = await createKvCacheKey(path, input);
 
 	const cached = await ctx.kv.get(cacheKey);
 	if (cached) {
@@ -281,7 +275,10 @@ export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
 // agent can read admin data (e.g. pending orders) without a browser session.
 // Token comparison is constant-time (SHA-256 both sides, compare digests) to
 // prevent timing side-channel attacks on the shared secret.
-const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
+export const timingSafeEqual = async (
+	a: string,
+	b: string,
+): Promise<boolean> => {
 	const encoder = new TextEncoder();
 	const [hashA, hashB] = await Promise.all([
 		crypto.subtle.digest("SHA-256", encoder.encode(a)),

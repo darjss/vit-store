@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
-import { deliveryFee } from "@vit/shared/constants";
+import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 import * as v from "valibot";
 import { eq, inArray } from "drizzle-orm";
 import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, ProductsTable, } from "~/db/schema";
@@ -14,7 +14,6 @@ import { createQpayInvoice } from "~/lib/payments/qpay";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
-import { addCustomerToDB } from "~/routers/store/auth";
 
 /**
  * Fire-and-forget: pre-create the QPay invoice so the QR is ready in KV
@@ -144,19 +143,22 @@ export const order = router({
                 const existingCustomer = await tx.query.CustomersTable.findFirst({
                     where: eq(CustomersTable.phone, customerPhone),
                 });
-                if (!existingCustomer) {
-                    await tx.insert(CustomersTable).values({
+                const [customer] = existingCustomer
+                    ? await tx
+                        .update(CustomersTable)
+                        .set({ address: input.address, addressZoneId: input.addressZoneId })
+                        .where(eq(CustomersTable.phone, customerPhone))
+                        .returning()
+                    : await tx
+                        .insert(CustomersTable)
+                        .values({
                         phone: customerPhone,
                         address: input.address,
                         addressZoneId: input.addressZoneId,
-                    });
-                }
-                else {
-                    await tx
-                        .update(CustomersTable)
-                        .set({ address: input.address, addressZoneId: input.addressZoneId })
-                        .where(eq(CustomersTable.phone, customerPhone));
-                }
+                    })
+                        .returning();
+                if (!customer)
+                    throw new Error("No customer returned");
                 const [createdOrder] = await tx
                     .insert(OrdersTable)
                     .values({
@@ -188,7 +190,11 @@ export const order = router({
                     amount: total,
                 })
                     .returning({ paymentNumber: PaymentsTable.paymentNumber });
-                return { orderId: createdOrder.orderId, paymentNumber: payment?.paymentNumber ?? null };
+                return {
+                    customer,
+                    orderId: createdOrder.orderId,
+                    paymentNumber: payment?.paymentNumber ?? null,
+                };
             });
             const orderId = txResult.orderId;
             ctx.log.info("order.created", {
@@ -227,16 +233,6 @@ export const order = router({
                 referrer: ctx.c.req.header("referer") ?? undefined,
             }).catch(() => {});
 
-            const user = await addCustomerToDB(input.phoneNumber);
-            if (!user) {
-                ctx.log.error(new Error("No user returned"), {
-                    event: "order.customer_create_failed",
-                });
-                throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Failed to create or retrieve user",
-                });
-            }
             const checkoutToken = paymentNumber
                 ? await createCheckoutAccessToken(ctx, {
                     orderId,
@@ -246,12 +242,12 @@ export const order = router({
                 })
                 : null;
             const checkoutGuestUser = {
-                ...user,
+                ...txResult.customer,
                 trust: "checkout_guest" as const,
                 checkout: paymentNumber
                     ? { orderId, orderNumber, paymentNumber }
                     : undefined,
-            } satisfies typeof user & CustomerSessionClaims;
+            } satisfies typeof txResult.customer & CustomerSessionClaims;
             const { session, token } = await createSession(checkoutGuestUser, kv());
             setSessionTokenCookie(ctx.c, token, session.expiresAt);
             const durationMs = performance.now() - startTime;
@@ -293,7 +289,17 @@ export const order = router({
                     });
                 }
             }
-            return { paymentNumber, orderNumber, checkoutToken };
+            // F9/H5: return the full PaymentOptions props so the client does not
+            // need a second getPaymentByNumber round-trip after addOrder.
+            return {
+                paymentNumber,
+                orderNumber,
+                checkoutToken,
+                total,
+                customerPhone: input.phoneNumber,
+                accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
+                accountName: ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
+            };
         }
         catch (e) {
             if (e instanceof TRPCError) {

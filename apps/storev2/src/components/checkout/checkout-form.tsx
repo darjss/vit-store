@@ -14,6 +14,7 @@ import {
 	Suspense,
 	Switch,
 } from "solid-js";
+import { Motion, Presence } from "solid-motionone";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import PaymentOptions from "@/components/payment/payment-options";
@@ -21,11 +22,16 @@ import {
 	identifyUser,
 	trackCheckoutStarted,
 } from "@/lib/analytics";
+import {
+	celebrateOnce,
+	orderCreatedCelebrationKey,
+} from "@/lib/celebration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import { cart } from "@/store/cart";
+import { cart, createCartState } from "@/store/cart";
 import IconPackage from "~icons/ri/archive-line";
 import IconChevronDown from "~icons/ri/arrow-down-s-line";
+import IconChevronLeft from "~icons/ri/arrow-left-s-line";
 import IconChevronUp from "~icons/ri/arrow-up-s-line";
 import IconBankCard from "~icons/ri/bank-card-line";
 import IconTruck from "~icons/ri/truck-line";
@@ -46,8 +52,28 @@ type PaymentInfo = {
 	checkoutToken?: string;
 	total: number;
 	orderNumber: string;
-	transferReference: string;
+	customerPhone: string;
+	accountNumber?: string;
+	accountName?: string;
 };
+
+const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
+const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
+const stepEnter = { duration: 0.25, easing: EASE_OUT_QUART };
+const stepExit = { duration: 0.15, easing: EASE_IN_OUT };
+
+// F12: single checkout validator schema referenced by onChange/onBlur/onSubmit
+// instead of three byte-identical tripled copies.
+const checkoutValidators = v.object({
+	phoneNumber: phoneSchema,
+	address: v.pipe(v.string(), v.minLength(5, "Хаягаа бичнэ үү")),
+	addressZoneId: v.pipe(
+		v.number(),
+		v.integer(),
+		v.minValue(1, "Хаягийн бүс сонгоно уу"),
+	),
+	notes: v.string(),
+});
 
 const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
@@ -84,6 +110,18 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			value: zone.Id,
 		})),
 	);
+	const deliveryZonesUnavailable = createMemo(
+		() =>
+			addressZonesQuery.data === undefined || addressZoneOptions().length === 0,
+	);
+	const deliveryZonesReady = createMemo(
+		() => !addressZonesQuery.isLoading && addressZoneOptions().length > 0,
+	);
+	const deliveryZoneErrorMessage = createMemo(() =>
+		deliveryZonesReady()
+			? "Хүргэлтийн бүсүүдийг шинэчилж чадсангүй. Хадгалсан мэдээллийг ашиглаж байна."
+			: "Хүргэлтийн бүсүүдийг ачаалж чадсангүй.",
+	);
 
 	const mutation = useMutation(
 		() => ({
@@ -91,60 +129,41 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
 			onSuccess: async (data, variables) => {
-				const checkoutData = data as typeof data & {
-					checkoutToken?: string;
-					orderNumber?: string;
-					total?: number;
-				};
-				const paymentNumber = checkoutData?.paymentNumber;
-				const checkoutToken = checkoutData?.checkoutToken;
-
-				if (paymentNumber) {
-					if (checkoutToken) {
-						sessionStorage.setItem(`checkout:${paymentNumber}`, checkoutToken);
-					}
-					identifyUser(variables.phoneNumber);
-					showToast({
-						title: "Амжилттай",
-						description: "Захиалга амжилттай үүслээ",
-						variant: "success",
-						duration: 5000,
-					});
-
-					// Gather payment details — try server data first, then fallback
-					let total = checkoutData?.total ?? cart.total() + deliveryFee;
-					let orderNumber = checkoutData?.orderNumber ?? paymentNumber;
-					let transferReference = variables.phoneNumber;
-
-					try {
-						const details = await api.payment.getPaymentByNumber.query({
-							paymentNumber,
-							checkoutToken,
-						} as { paymentNumber: string });
-						total = details.total;
-						orderNumber = details.order.orderNumber;
-						transferReference = details.order.customerPhone;
-					} catch {
-						// Fallbacks already set above
-					}
-
-					setPaymentInfo({
-						paymentNumber,
-						checkoutToken,
-						total,
-						orderNumber,
-						transferReference,
-					});
-					setStep("payment");
-					window.scrollTo({ top: 0, behavior: "smooth" });
-				} else {
+				const paymentNumber = data?.paymentNumber;
+				if (!paymentNumber) {
 					showToast({
 						title: "Алдаа",
 						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
 						variant: "error",
 						duration: 5000,
 					});
+					return;
 				}
+
+				identifyUser(variables.phoneNumber);
+				showToast({
+					title: "Амжилттай",
+					description: "Захиалга амжилттай үүслээ",
+					variant: "success",
+					duration: 5000,
+				});
+
+				// F9/H5: addOrder now returns the full PaymentOptions props
+				// (total, orderNumber, customerPhone, accountNumber,
+				// accountName), so the redundant getPaymentByNumber round-trip
+				// and its silent catch are gone.
+				setPaymentInfo({
+					paymentNumber,
+					checkoutToken: data.checkoutToken ?? undefined,
+					total: data.total ?? cart.total() + deliveryFee,
+					orderNumber: data.orderNumber ?? paymentNumber,
+					customerPhone: data.customerPhone ?? variables.phoneNumber,
+					accountNumber: data.accountNumber,
+					accountName: data.accountName,
+				});
+				setStep("payment");
+				window.scrollTo({ top: 0, behavior: "smooth" });
+				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
 			},
 			onError: () => {
 				showToast({
@@ -172,47 +191,16 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		// first invalid field and reveals all errors.
 		canSubmitWhenInvalid: true,
 		validators: {
-			onChange: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
-			onBlur: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
-			onSubmit: v.object({
-				phoneNumber: phoneSchema,
-				address: v.pipe(
-					v.string(),
-					v.minLength(5, "Хаягаа бичнэ үү"),
-				),
-				addressZoneId: v.pipe(
-					v.number(),
-					v.integer(),
-					v.minValue(1, "Хаягийн бүс сонгоно уу"),
-				),
-				notes: v.string(),
-			}),
+			onChange: checkoutValidators,
+			onBlur: checkoutValidators,
+			onSubmit: checkoutValidators,
 		},
 		onSubmit: async (values) => {
+			if (paymentInfo()) {
+				setStep("payment");
+				window.scrollTo({ top: 0, behavior: "smooth" });
+				return;
+			}
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,
@@ -239,8 +227,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		}
 	});
 
-	const isEmpty = () => cart.items().length === 0;
-	const isHydrated = () => cart.isHydrated();
+	const cartState = createCartState();
 	const totalWithDelivery = () => cart.total() + deliveryFee;
 
 	// Delivery estimate: orders before 10:30 Ulaanbaatar time deliver today,
@@ -252,22 +239,30 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		const isBeforeCutoff = ulaanbaatarMin < 10 * 60 + 30;
 		return isBeforeCutoff ? "today" : "tomorrow";
 	});
+
+	const goBackToDelivery = () => {
+		setStep("delivery");
+		window.scrollTo({ top: 0, behavior: "smooth" });
+	};
+
 	const OrderSummary = () => (
-		<div class="border-2 border-border shadow-hard-sm">
+		<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft-sm">
 			<button
 				type="button"
 				onClick={() => setSummaryOpen((v) => !v)}
-				class="flex w-full items-center justify-between gap-3 bg-card p-3 text-left"
+				class="flex w-full items-center justify-between gap-3 p-3.5 text-left"
 			>
 				<div class="flex min-w-0 items-center gap-2">
-					<IconPackage class="h-5 w-5 shrink-0" />
-					<span class="font-black text-sm uppercase">Таны захиалга</span>
-					<span class="border-2 border-border bg-primary px-1.5 py-0.5 font-black text-foreground text-xs">
+					<IconPackage class="h-5 w-5 shrink-0 text-muted-foreground" />
+					<span class="font-semibold text-foreground text-sm">
+						Таны захиалга
+					</span>
+					<span class="rounded-full bg-primary px-2 py-0.5 font-bold text-foreground text-xs tabular-nums">
 						{cart.count()}
 					</span>
 				</div>
 				<div class="flex shrink-0 items-center gap-2">
-					<span class="font-black text-foreground text-sm">
+					<span class="font-display text-foreground text-sm">
 						₮{totalWithDelivery().toLocaleString()}
 					</span>
 					<Show
@@ -280,34 +275,35 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			</button>
 
 			<Show when={summaryOpen()}>
-				<div class="border-border border-t-2 p-3">
-					<div class="max-h-56 space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-280px)]">
+				<div class="enter-fade border-border border-t p-3.5">
+					<div class="max-h-56 space-y-2.5 overflow-y-auto pr-1 lg:max-h-[calc(100vh-280px)]">
 						<For each={cart.items()}>
 							{(item) => (
 								<div class="flex gap-2.5">
-									<div class="h-14 w-14 flex-shrink-0 overflow-hidden border border-border bg-card">
-										<a href={`/products/${item.slug}-${item.productId}/`}>
-											<Image
-												src={item.image}
-												alt={`${item.name}`}
-												width={56}
-												height={56}
-												layout="fixed"
-												class="h-full w-full object-cover"
-											/>
-										</a>
-									</div>
+									<a
+										href={`/products/${item.slug}-${item.productId}/`}
+										class="block size-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted"
+									>
+										<Image
+											src={item.image}
+											alt={`${item.name}`}
+											width={56}
+											height={56}
+											layout="fixed"
+											class="h-full w-full object-cover"
+										/>
+									</a>
 									<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
 										<a href={`/products/${item.slug}-${item.productId}/`}>
-											<h3 class="line-clamp-2 font-black text-foreground text-xs uppercase leading-tight">
+											<h3 class="line-clamp-2 font-medium text-foreground text-xs leading-tight">
 												{item.name}
 											</h3>
 										</a>
 										<div class="flex items-center justify-between gap-2">
-											<p class="font-bold text-[10px] text-muted-foreground">
+											<p class="text-[11px] text-muted-foreground">
 												₮{item.price.toLocaleString()} × {item.quantity}
 											</p>
-											<p class="font-black text-primary text-xs">
+											<p class="font-semibold text-foreground text-xs">
 												₮{(item.price * item.quantity).toLocaleString()}
 											</p>
 										</div>
@@ -317,26 +313,22 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						</For>
 					</div>
 
-					<div class="mt-3 space-y-2 border-border border-t-2 pt-3">
-						<div class="flex items-center justify-between">
-							<p class="font-bold text-muted-foreground text-xs uppercase">
-								Бараа
-							</p>
-							<p class="font-black text-foreground text-sm">
+					<div class="mt-3 space-y-2 border-border border-t pt-3">
+						<div class="flex items-center justify-between text-xs">
+							<p class="text-muted-foreground">Бараа</p>
+							<p class="font-medium text-foreground">
 								₮{cart.total().toLocaleString()}
 							</p>
 						</div>
-						<div class="flex items-center justify-between">
-							<p class="font-bold text-muted-foreground text-xs uppercase">
-								Хүргэлт
-							</p>
-							<p class="font-black text-foreground text-sm">
+						<div class="flex items-center justify-between text-xs">
+							<p class="text-muted-foreground">Хүргэлт</p>
+							<p class="font-medium text-foreground">
 								₮{deliveryFee.toLocaleString()}
 							</p>
 						</div>
-						<div class="flex items-center justify-between border-border border-t-2 pt-2">
-							<p class="font-black text-foreground text-sm uppercase">Нийт</p>
-							<p class="font-black text-foreground text-lg">
+						<div class="flex items-baseline justify-between border-border border-t pt-2">
+							<p class="font-semibold text-foreground text-sm">Нийт</p>
+							<p class="font-display text-foreground text-lg">
 								₮{totalWithDelivery().toLocaleString()}
 							</p>
 						</div>
@@ -348,20 +340,20 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	return (
 		<Switch>
-			<Match when={!isHydrated() && isEmpty()}>
+			<Match when={cartState() === "loading"}>
 				<Loading />
 			</Match>
-			<Match when={isHydrated() && isEmpty()}>
+			<Match when={cartState() === "empty"}>
 				<EmptyCart />
 			</Match>
-			<Match when={!isEmpty()}>
+			<Match when={cartState() === "ready"}>
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b-4 bg-background/90 backdrop-blur-sm">
+						<div class="sticky top-0 z-30 border-border border-b bg-background/90 backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
-									<h1 class="font-black text-lg uppercase tracking-tight">
+									<h1 class="font-display text-foreground text-lg">
 										<Show
 											when={step() === "payment"}
 											fallback={"Захиалга баталгаажуулах"}
@@ -369,28 +361,22 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 											Төлбөр төлөх
 										</Show>
 									</h1>
-									<p class="font-bold text-muted-foreground text-xs">
+									<p class="text-muted-foreground text-xs">
 										<Show
 											when={step() === "payment"}
-											fallback={"Алхам 1 / 2 — Хүргэлт"}
+											fallback={"Алхам 1/2 · Хүргэлт"}
 										>
-											Алхам 2 / 2 — Төлбөр
+											Алхам 2/2 · Төлбөр
 										</Show>
 									</p>
 								</div>
 								<div class="flex gap-1.5">
+									<div class="h-1.5 w-8 rounded-full bg-primary" />
 									<div
-										class="h-2 w-8 border border-border"
-										classList={{
-											"bg-primary": step() === "delivery",
-											"bg-muted": step() === "payment",
-										}}
-									/>
-									<div
-										class="h-2 w-8 border border-border"
+										class="h-1.5 w-8 rounded-full transition-colors duration-200 ease-out"
 										classList={{
 											"bg-primary": step() === "payment",
-											"bg-muted": step() === "delivery",
+											"bg-border": step() === "delivery",
 										}}
 									/>
 								</div>
@@ -400,172 +386,259 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 						<div class="mx-auto grid max-w-5xl gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
 							<div class="order-1 space-y-4">
 								{/* Step content */}
-								<Switch>
-									{/* DELIVERY STEP */}
-									<Match when={step() === "delivery"}>
-										<div class="border-2 border-border shadow-hard-sm">
-											<div class="border-border border-b-2 bg-secondary p-3.5">
-												<div class="flex items-center gap-2">
-													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
-														<IconTruck class="h-3.5 w-3.5 text-foreground" />
-													</div>
-													<div>
-														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
-															Хүргэлтийн мэдээлэл
-														</h2>
-														<p class="font-bold text-[10px] text-secondary-foreground/70">
-															Бүх талбарыг бөглөнө үү
-														</p>
-													</div>
-												</div>
-											</div>
-
-											<div class="p-4">
-												<form
-													ref={(el) => (checkoutFormEl = el)}
-													class="space-y-5"
-													onSubmit={async (e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														if (document.activeElement instanceof HTMLElement) {
-															document.activeElement.blur();
-														}
-														await form.handleSubmit();
-													}}
-												>
-													{/* Phone */}
-													<form.AppField
-														name="phoneNumber"
-														children={(field) => (
-															<field.FormTextField
-																label="Утасны дугаар"
-																placeholder="88889999"
-																type="tel"
-																autoComplete="tel"
-																inputMode="numeric"
+								<Presence exitBeforeEnter>
+									<Switch>
+										{/* DELIVERY STEP */}
+										<Match when={step() === "delivery"}>
+											<Motion.div
+												initial={{ opacity: 0, x: -8 }}
+												animate={{
+													opacity: 1,
+													x: 0,
+													transition: stepEnter,
+												}}
+												exit={{
+													opacity: 0,
+													x: -8,
+													transition: stepExit,
+												}}
+											>
+												<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+													<div class="flex items-center gap-2.5 border-border border-b px-4 py-3.5">
+														<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-wash-sky">
+															<IconTruck
+																class="h-4 w-4 text-foreground"
+																aria-hidden="true"
 															/>
-														)}
-													/>
-
-													{/* Zone + info */}
-													<div class="space-y-2">
-														<form.AppField
-															name="addressZoneId"
-															children={(field) => (
-																<field.FormSelectField
-																	label="Хаягийн бүс"
-																	placeholder={
-																		addressZonesQuery.isLoading
-																			? "Бүсүүд уншиж байна..."
-																			: "Хаягийн бүс сонгох"
-																	}
-																	options={addressZoneOptions()}
-																	disabled={addressZonesQuery.isLoading}
-																/>
-															)}
-														/>
-													</div>
-
-													{/* Address */}
-													<form.AppField
-														name="address"
-														children={(field) => (
-															<field.FormTextArea
-																label="Хаяг"
-																placeholder="Байр, тоот, давхар"
-																autoComplete="street-address"
-															/>
-														)}
-													/>
-
-													{/* Notes */}
-													<form.AppField
-														name="notes"
-														children={(field) => (
-															<field.FormTextArea
-																label="Нэмэлт мэдээлэл (заавал биш)"
-																placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
-															/>
-														)}
-													/>
-
-													{/* Delivery estimate */}
-													<div class="flex items-center gap-2.5 rounded-sm bg-muted/50 px-3.5 py-2.5">
-														<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
-														<p class="text-xs font-medium leading-snug text-muted-foreground">
-															<Show when={deliveryEstimate() === "today"} fallback={<>Хүргэлт маргааш 12:00-аас хойш</>}>
-																Хүргэлт өнөөдөр 12:00-аас хойш
-															</Show>
-															<span class="text-foreground/40"> · </span>
-															<DeliveryInfoSheet />
-														</p>
-													</div>
-
-													{/* Submit */}
-													<div class="space-y-3 pt-1">
-														<div class="flex items-center justify-between border-2 border-border bg-primary p-3.5">
-															<div>
-																<p class="font-black text-foreground text-sm uppercase">
-																	Төлөх дүн
-																</p>
-																<p class="font-bold text-[10px] text-muted-foreground">
-																	Хүргэлтийн хураамж орсон
-																</p>
-															</div>
-															<p class="font-black text-foreground text-xl">
-																₮{totalWithDelivery().toLocaleString()}
+														</span>
+														<div>
+															<h2 class="font-semibold text-foreground text-sm">
+																Хүргэлтийн мэдээлэл
+															</h2>
+															<p class="text-muted-foreground text-xs">
+																Бүх талбарыг бөглөнө үү
 															</p>
 														</div>
+													</div>
 
-														<form.AppForm>
-															<div class="w-full">
-																<form.SubmitButton size="lg" class="w-full" disabled={mutation.isPending}>
-																	{mutation.isPending
-																		? "Уншиж байна..."
-																		: "Төлбөр төлөх →"}
-																</form.SubmitButton>
+													<div class="p-4">
+														<form
+															ref={(el) => (checkoutFormEl = el)}
+															class="space-y-5"
+															onSubmit={async (e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																if (
+																	document.activeElement instanceof HTMLElement
+																) {
+																	document.activeElement.blur();
+																}
+																await form.handleSubmit();
+															}}
+														>
+															{/* Phone */}
+															<form.AppField
+																name="phoneNumber"
+																children={(field) => (
+																	<field.FormTextField
+																		label="Утасны дугаар"
+																		placeholder="88889999"
+																		type="tel"
+																		autoComplete="tel"
+																		inputMode="numeric"
+																	/>
+																)}
+															/>
+
+															{/* Zone + info */}
+															<div class="space-y-2">
+																<form.AppField
+																	name="addressZoneId"
+																	children={(field) => (
+																		<field.FormSelectField
+																			label="Хаягийн бүс"
+																			placeholder={
+																				addressZonesQuery.isLoading
+																					? "Бүсүүд уншиж байна..."
+																					: deliveryZonesUnavailable()
+																					? "Бүс сонгох боломжгүй"
+																					: "Хаягийн бүс сонгох"
+																			}
+																			options={addressZoneOptions()}
+																			disabled={!deliveryZonesReady()}
+																		/>
+																	)}
+																/>
+																<Show when={addressZonesQuery.isLoading}>
+																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																		Хүргэлтийн бүсүүдийг уншиж байна...
+																	</p>
+																</Show>
+																<Show when={addressZonesQuery.isError}>
+																	<div class="flex items-center justify-between gap-2 text-destructive text-xs" role="alert">
+																		<span>{deliveryZoneErrorMessage()}</span>
+																		<button type="button" onClick={() => addressZonesQuery.refetch()} class="min-h-11 shrink-0 font-bold underline underline-offset-2">
+																			Дахин оролдох
+																		</button>
+																	</div>
+																</Show>
+																<Show when={!addressZonesQuery.isLoading && !addressZonesQuery.isError && addressZonesQuery.data !== undefined && addressZoneOptions().length === 0}>
+																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																		Одоогоор хүргэлтийн бүс алга байна.
+																	</p>
+																</Show>
 															</div>
-														</form.AppForm>
 
-														<p class="text-center font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-															Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
-														</p>
-													</div>
-												</form>
-											</div>
-										</div>
-									</Match>
+															{/* Address */}
+															<form.AppField
+																name="address"
+																children={(field) => (
+																	<field.FormTextArea
+																		label="Хаяг"
+																		placeholder="Байр, тоот, давхар"
+																		autoComplete="street-address"
+																	/>
+																)}
+															/>
 
-									{/* PAYMENT STEP */}
-									<Match when={step() === "payment" && paymentInfo()}>
-										<div class="border-2 border-border shadow-hard-sm">
-											<div class="border-border border-b-2 bg-secondary p-3.5">
-												<div class="flex items-center gap-2">
-													<div class="flex h-7 w-7 items-center justify-center border border-border bg-primary">
-														<IconBankCard class="h-3.5 w-3.5 text-foreground" />
-													</div>
-													<div>
-														<h2 class="font-black text-secondary-foreground text-sm uppercase tracking-tight">
-															Төлбөр төлөх
-														</h2>
-														<p class="font-bold text-[10px] text-secondary-foreground/70">
-															Төлбөрийн хэлбэрээ сонгоно уу
-														</p>
+															{/* Notes */}
+															<form.AppField
+																name="notes"
+																children={(field) => (
+																	<field.FormTextArea
+																		label="Нэмэлт мэдээлэл (заавал биш)"
+																		placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
+																	/>
+																)}
+															/>
+
+															{/* Delivery estimate */}
+															<div class="flex items-center gap-2.5 rounded-xl bg-muted/50 px-3.5 py-2.5">
+																<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
+																<p class="font-medium text-muted-foreground text-xs leading-snug">
+																	<Show
+																		when={deliveryEstimate() === "today"}
+																		fallback={
+																			<>Хүргэлт маргааш 12:00-аас хойш</>
+																		}
+																	>
+																		Хүргэлт өнөөдөр 12:00-аас хойш
+																	</Show>
+																	<span class="text-foreground/40"> · </span>
+																	<DeliveryInfoSheet />
+																</p>
+															</div>
+
+															{/* Submit */}
+															<div class="space-y-3 pt-1">
+																<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-4 py-3">
+																	<div>
+																		<p class="font-semibold text-foreground text-sm">
+																			Төлөх дүн
+																		</p>
+																		<p class="text-foreground/60 text-xs">
+																			Хүргэлтийн хураамж орсон
+																		</p>
+																	</div>
+																	<p class="font-display text-foreground text-xl">
+																		₮{totalWithDelivery().toLocaleString()}
+																	</p>
+																</div>
+
+																<form.AppForm>
+																	<div class="w-full">
+																	{/* F8: once addOrder succeeded (paymentInfo set), the delivery
+																	step is review-only — resubmitting would just bounce back to
+																	payment. Disable and relabel so the no-op is explicit. */}
+																		<form.SubmitButton
+																			size="lg"
+																			class="w-full"
+																			disabled={
+																				mutation.isPending ||
+																				Boolean(paymentInfo()) ||
+																				!deliveryZonesReady()
+																			}
+																		>
+																			{mutation.isPending
+																				? "Уншиж байна..."
+																				: paymentInfo()
+																					? "Захиалга үүссэн — төлбөр хүлээж байна"
+																					: "Төлбөр төлөх →"}
+																		</form.SubmitButton>
+																	</div>
+																</form.AppForm>
+
+																<p class="text-center text-muted-foreground text-xs">
+																	Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
+																</p>
+															</div>
+														</form>
 													</div>
 												</div>
-											</div>
+											</Motion.div>
+										</Match>
 
-											<div class="p-4">
-												<PaymentOptions
-													paymentNumber={paymentInfo()!.paymentNumber}
-													total={paymentInfo()!.total}
-													transferReference={paymentInfo()!.transferReference}
-													checkoutToken={paymentInfo()!.checkoutToken}
-												/>
-											</div>
-										</div>
-									</Match>
-								</Switch>
+										{/* PAYMENT STEP */}
+										<Match when={step() === "payment" && paymentInfo()}>
+											<Motion.div
+												initial={{ opacity: 0, x: 8 }}
+												animate={{
+													opacity: 1,
+													x: 0,
+													transition: stepEnter,
+												}}
+												exit={{
+													opacity: 0,
+													x: 8,
+													transition: stepExit,
+												}}
+											>
+												<button
+													type="button"
+													onClick={goBackToDelivery}
+													class="mb-3 inline-flex h-11 items-center gap-1 rounded-full pr-4 pl-2.5 font-medium text-muted-foreground text-sm transition-colors duration-[140ms] ease-out hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+												>
+													<IconChevronLeft
+														class="h-4 w-4"
+														aria-hidden="true"
+													/>
+													Буцах
+												</button>
+
+												<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+													<div class="flex items-center gap-2.5 border-border border-b px-4 py-3.5">
+														<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-wash-mint">
+															<IconBankCard
+																class="h-4 w-4 text-foreground"
+																aria-hidden="true"
+															/>
+														</span>
+														<div>
+															<h2 class="font-semibold text-foreground text-sm">
+																Төлбөр төлөх
+															</h2>
+															<p class="text-muted-foreground text-xs">
+																Төлбөрийн хэлбэрээ сонгоно уу
+															</p>
+														</div>
+													</div>
+
+													<div class="p-4">
+														<PaymentOptions
+															paymentNumber={paymentInfo()!.paymentNumber}
+															orderNumber={paymentInfo()!.orderNumber}
+															total={paymentInfo()!.total}
+															customerPhone={paymentInfo()!.customerPhone}
+															accountNumber={paymentInfo()!.accountNumber}
+															accountName={paymentInfo()!.accountName}
+															checkoutToken={paymentInfo()!.checkoutToken}
+														/>
+													</div>
+												</div>
+											</Motion.div>
+										</Match>
+									</Switch>
+								</Presence>
 							</div>
 
 							<aside class="order-2 lg:sticky lg:top-24">

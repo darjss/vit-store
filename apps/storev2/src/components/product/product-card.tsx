@@ -1,10 +1,24 @@
 import { Image } from "@unpic/solid";
-import { formatCurrency, productColors } from "@vit/shared";
+import { formatCurrency } from "@vit/shared";
+import {
+	productStockState,
+	projectProductCardDisplay,
+	LOW_STOCK_THRESHOLD as SHARED_LOW_STOCK_THRESHOLD,
+} from "@vit/shared/domain/product";
 import type { ProductCardData } from "@vit/shared/types";
-import { createMemo, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
+import { Badge } from "@/components/ui/badge";
 import { getProductImageProps } from "@/lib/image";
-import AddToCartButton from "../cart/add-to-cart-button";
+import { washBg } from "@/lib/wash";
+import CardAddButton from "./card-add-button";
+import { useInventorySnapshot } from "./inventory-reconciler";
 import ProductImageFallback from "./product-image-fallback";
+
+/**
+ * Re-exported so existing imports (`from "./product-card"`) keep working.
+ * The canonical threshold lives in `@vit/shared/domain/product`.
+ */
+export const LOW_STOCK_THRESHOLD = SHARED_LOW_STOCK_THRESHOLD;
 
 /**
  * Normalized product shape shared by the catalog card and the search card.
@@ -14,10 +28,16 @@ import ProductImageFallback from "./product-image-fallback";
 export interface NormalizedProduct {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	slug: string;
 	price: number;
 	image: string;
 	brand: string | null;
+	stock?: number;
+	discount?: number | null;
+	categoryId?: number;
 }
 
 /**
@@ -27,10 +47,16 @@ export interface NormalizedProduct {
 export interface SearchProductInput {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	slug: string;
 	price: number;
 	image: string;
 	brand: string;
+	stock?: number;
+	discount?: number | null;
+	categoryId?: number;
 }
 
 /** Collapse either upstream product shape into the normalized card shape. */
@@ -41,10 +67,16 @@ export function normalizeProduct(
 		return {
 			id: product.id,
 			name: product.name,
+			nameMn: product.nameMn ?? product.name_mn,
+			potency: product.potency,
+			amount: product.amount,
 			slug: product.slug,
 			price: product.price,
 			image: product.images?.[0]?.url ?? "",
 			brand: product.brand?.name ?? null,
+			stock: product.stock,
+			discount: product.discount,
+			categoryId: product.categoryId,
 		};
 	}
 	return { ...product, brand: product.brand ?? null };
@@ -56,94 +88,147 @@ interface ProductCardProps {
 
 const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
+	const inventory = useInventorySnapshot(product().id);
 
-	const bgColor = createMemo(
-		() => productColors[product().id % productColors.length],
+	const washClass = createMemo(() =>
+		washBg(product().categoryId ?? "uncategorized"),
 	);
 	const productImageProps = createMemo(() =>
 		getProductImageProps(product().image, "card"),
 	);
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
+	const display = createMemo(() =>
+		projectProductCardDisplay({
+			name: product().name,
+			nameMn: product().nameMn,
+			brand: brandName(),
+			potency: product().potency,
+			amount: product().amount,
+		}),
+	);
+	const stockState = createMemo(() =>
+		productStockState(inventory()?.stock ?? product().stock),
+	);
+	const isOutOfStock = createMemo(() =>
+		inventory()
+			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
+			: stockState() === "out",
+	);
+	const isLowStock = createMemo(
+		() => !isOutOfStock() && stockState() === "low",
+	);
+	const price = createMemo(() => inventory()?.price ?? product().price);
+	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
+	const [imageFailed, setImageFailed] = createSignal(false);
 
 	return (
 		<div
-			class="group hover:-translate-y-0.5 relative flex flex-col border-2 border-border bg-card shadow-hard transition-all duration-200 ease-out-quart hover:shadow-hard-lg"
+			class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
 			data-product-id={product().id}
 		>
-			{/* Image Section — decorative link, primary link is heading below */}
-			<a
-				href={productUrl}
-				class="relative block overflow-hidden border-border border-b-2"
-				aria-hidden="true"
-				tabIndex={-1}
-			>
+			{/* Image is decorative; the concise heading below is the card's only link. */}
+			<div class="relative block" aria-hidden="true">
 				<div
-					class="relative aspect-4/5"
-					style={{ background: bgColor() }}
+					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 				>
-					{/* Dot Pattern Overlay */}
-					<div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.07)_2px,transparent_0)] bg-size-[14px_14px]" />
-
-					{/* Product Image */}
 					<Show
-						when={product().image}
+						when={product().image && !imageFailed()}
 						fallback={
-							<ProductImageFallback
-								name={product().name}
-								brand={brandName()}
-							/>
+							<ProductImageFallback name={product().name} brand={brandName()} />
 						}
 					>
 						<Image
 							src={productImageProps().src || product().image}
-							alt={product().name}
+							alt=""
 							width={productImageProps().width}
 							height={productImageProps().height}
 							sizes={productImageProps().sizes}
 							layout="constrained"
 							objectFit="contain"
-							class="absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4"
+							class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
 							loading="lazy"
 							decoding="async"
+							onError={() => setImageFailed(true)}
 						/>
 					</Show>
-
-					{/* Brand Badge */}
-					<Show when={brandName()}>
-						<div class="absolute right-1.5 bottom-1.5 border-2 border-border bg-card px-1.5 py-0.5 font-black text-[11px] uppercase tracking-tight shadow-hard-sm sm:right-3 sm:bottom-3 sm:px-2.5 sm:py-1">
-							{brandName()}
-						</div>
-					</Show>
 				</div>
-			</a>
+			</div>
+			<Show when={hasSale() && !isOutOfStock()}>
+				<Badge
+					variant="sale"
+					class="-rotate-2 absolute top-2 left-2 px-2 py-0.5 text-[11px]"
+					aria-label={`Хямдрал ${product().discount} хувь`}
+				>
+					-{product().discount}%
+				</Badge>
+			</Show>
 
 			{/* Content Section */}
-			<div class="flex flex-1 flex-col p-2 sm:p-3">
-				<a href={productUrl} class="block">
-					<h3 class="line-clamp-2 font-bold text-[11px] leading-tight tracking-tight group-hover:underline sm:text-sm sm:leading-snug">
-						{product().name}
-						{brandName() ? <span class="sr-only">, {brandName()}</span> : null}
+			<div class="flex flex-1 flex-col gap-1 p-3">
+				<Show when={brandName()}>
+					<p class="font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+						{brandName()}
+					</p>
+				</Show>
+				<a
+					href={productUrl}
+					class="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					aria-label={`${display().accessibleName}, ${formatCurrency(price())}`}
+				>
+					<h3 class="line-clamp-2 font-semibold text-foreground text-sm leading-snug group-hover:underline">
+						{display().shortName}
 					</h3>
 				</a>
-			</div>
+				<Show when={display().dose}>
+					<p class="line-clamp-2 font-semibold text-[11px] text-foreground/80 leading-snug">
+						{display().dose}
+					</p>
+				</Show>
+				<Show when={display().form || display().count || display().packageQuantity}>
+					<p class="text-[11px] text-muted-foreground leading-snug">
+						{[display().form, display().count, display().packageQuantity]
+							.filter(Boolean)
+							.join(" · ")}
+					</p>
+				</Show>
+				<p
+					data-inventory-stock-badge={product().id}
+					class={
+						isOutOfStock()
+							? "font-semibold text-[11px] text-destructive"
+							: isLowStock()
+								? "font-semibold text-[11px] text-warning-foreground"
+								: "font-semibold text-[11px] text-success-foreground"
+					}
+				>
+					{isOutOfStock()
+						? "Дууссан"
+						: isLowStock()
+							? "Цөөн үлдсэн"
+							: "Бэлэн байна"}
+				</p>
 
-			{/* Price & CTA Bar */}
-			<div class="flex items-center justify-between gap-2 border-border border-t-2 bg-primary/10 px-3 py-2.5 sm:gap-3 sm:border-t-3 sm:px-4 sm:py-3">
-				<div class="font-black text-sm tracking-tight sm:text-lg">
-					{formatCurrency(product().price)}
+				<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
+					<div
+						class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-base"
+						data-inventory-price={product().id}
+					>
+						{formatCurrency(price())}
+					</div>
+					<CardAddButton
+						outOfStock={isOutOfStock()}
+						productName={display().shortName}
+						cartItem={{
+							productId: product().id,
+							quantity: 1,
+							name: product().name,
+							price: product().price,
+							image: product().image,
+							slug: product().slug,
+						}}
+					/>
 				</div>
-				<AddToCartButton
-					compact
-					cartItem={{
-						productId: product().id,
-						quantity: 1,
-						name: product().name,
-						price: product().price,
-						image: product().image,
-						slug: product().slug,
-					}}
-				/>
 			</div>
 		</div>
 	);

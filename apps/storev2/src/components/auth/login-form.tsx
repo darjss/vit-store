@@ -1,5 +1,6 @@
 import { makePersisted } from "@solid-primitives/storage";
 import { createSignal, Match, onMount, Switch } from "solid-js";
+import { safeStorage } from "@/lib/safe-storage";
 import { Card, CardContent } from "../ui/card";
 import OtpForm from "./otp-form";
 import PhoneForm from "./phone-form";
@@ -12,14 +13,14 @@ const OTP_EXPIRY_MS = 5 * 60 * 1000;
 const LoginForm = () => {
 	const [phone, setPhone] = makePersisted(createSignal(""), {
 		name: "login-phone",
-		storage: localStorage,
+		storage: safeStorage,
 		deferInit: true,
 	});
 	const [step, setStepRaw] = makePersisted(
 		createSignal<"phone" | "otp">("phone"),
 		{
 			name: "login-step",
-			storage: localStorage,
+			storage: safeStorage,
 			deferInit: true,
 		},
 	);
@@ -27,9 +28,9 @@ const LoginForm = () => {
 	// Wrapper to also track timestamp when entering OTP step
 	const setStep = (newStep: "phone" | "otp") => {
 		if (newStep === "otp") {
-			localStorage.setItem(OTP_TIMESTAMP_KEY, Date.now().toString());
+			safeStorage.setItem(OTP_TIMESTAMP_KEY, Date.now().toString());
 		} else {
-			localStorage.removeItem(OTP_TIMESTAMP_KEY);
+			safeStorage.removeItem(OTP_TIMESTAMP_KEY);
 		}
 		setStepRaw(newStep);
 	};
@@ -37,7 +38,7 @@ const LoginForm = () => {
 	onMount(() => {
 		const currentStep = step();
 		if (currentStep === "otp") {
-			const timestamp = localStorage.getItem(OTP_TIMESTAMP_KEY);
+			const timestamp = safeStorage.getItem(OTP_TIMESTAMP_KEY);
 			if (timestamp) {
 				const elapsed = Date.now() - Number.parseInt(timestamp, 10);
 				if (elapsed > OTP_EXPIRY_MS) {
@@ -52,15 +53,13 @@ const LoginForm = () => {
 
 	return (
 		<div class="flex min-h-[80vh] w-full items-center justify-center px-4 py-8 md:py-12">
-			<div class="w-full max-w-md">
+			<div class="enter-scale w-full max-w-md">
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
-					<div class="mb-4 inline-block rotate-[-2deg] border-4 border-border bg-primary px-4 py-2 shadow-hard-xl">
-						<h1 class="font-black text-2xl uppercase md:text-3xl">
-							{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
-						</h1>
-					</div>
-					<p class="font-medium text-muted-foreground text-sm md:text-base">
+					<h1 class="mb-2 font-display text-2xl text-foreground md:text-3xl">
+						{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
+					</h1>
+					<p class="text-muted-foreground text-sm md:text-base">
 						{step() === "phone"
 							? "Таны аюулгүй нэвтрэлт"
 							: `Код илгээгдсэн: ${phone()}`}
@@ -85,9 +84,12 @@ const LoginForm = () => {
 				<div class="mt-6 text-center">
 					<p class="text-muted-foreground text-xs md:text-sm">
 						Нэвтрэх товчийг дарснаар та манай{" "}
-						<span class="font-black text-foreground underline decoration-2 underline-offset-4">
+						<a
+							href="/terms-of-service"
+							class="font-semibold text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-cocoa"
+						>
 							үйлчилгээний нөхцөл
-						</span>
+						</a>
 						-тэй зөвшөөрч байна
 					</p>
 				</div>

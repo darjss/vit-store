@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
+import { orderConfirmUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -22,7 +23,7 @@ const ConfirmPaymentButton = (props: {
 				return await api.payment.sendTransferNotification.mutate({
 					paymentNumber: props.paymentNumber,
 					checkoutToken: props.checkoutToken,
-				} as { paymentNumber: string });
+				});
 			},
 			onSuccess: async (data) => {
 				if (!data?.orderNumber) return;
@@ -34,7 +35,9 @@ const ConfirmPaymentButton = (props: {
 					duration: 5000,
 				});
 				cart.clearCart();
-				void safeNavigate(`/order/confirm/${data.orderNumber}`);
+				void safeNavigate(
+					orderConfirmUrl(data.orderNumber, props.checkoutToken),
+				);
 			},
 			onError: () => {
 				showToast({
@@ -55,23 +58,27 @@ const ConfirmPaymentButton = (props: {
 	};
 
 	return (
-		<Button size="lg" onClick={handleConfirmPayment}>
+		<Button
+			size="lg"
+			class="w-full"
+			disabled={mutation.isPending}
+			onClick={handleConfirmPayment}
+		>
 			<Show when={mutation.isPending}>
-				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> Уншиж
+				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> Шалгаж
 				байна...
 			</Show>
 			<Show when={mutation.isSuccess}>
-				<IconCheckboxCircle class="mr-2 h-4 w-4 text-green-500" />{" "}
+				<IconCheckboxCircle class="mr-2 h-4 w-4" />{" "}
 				{PENDING_APPROVAL_MESSAGE}
 			</Show>
 			<Show when={mutation.isError}>
-				<IconCloseCircle class="mr-2 h-4 w-4 text-red-500" /> Дахин
-				оролдоно уу
+				<IconCloseCircle class="mr-2 h-4 w-4" /> Дахин оролдоно уу
 			</Show>
 			<Show
 				when={!mutation.isPending && !mutation.isSuccess && !mutation.isError}
 			>
-				<span>Төлбөр баталгаажуулах</span>
+				<span>Шилжүүлсэн — төлбөрөө шалгуулах</span>
 			</Show>
 		</Button>
 	);

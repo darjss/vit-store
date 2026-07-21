@@ -42,13 +42,20 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	const [inputValue, setInputValue] = createSignal(local.value ?? "");
 	let inputRef: HTMLInputElement | undefined;
 	let debounceTimeout: ReturnType<typeof setTimeout> | undefined;
+	// Track last prop we applied so external updates (suggestions, URL, clear)
+	// still win, without treating local keystrokes as a stale prop and
+	// snapping the field back to the debounced parent value.
+	let lastSyncedValue = local.value ?? "";
 
 	const debounceMs = () => local.debounceMs ?? 300;
 
 	createEffect(() => {
-		if (local.value !== undefined && local.value !== inputValue()) {
-			setInputValue(local.value);
+		const next = local.value;
+		if (next === undefined || next === lastSyncedValue) {
+			return;
 		}
+		lastSyncedValue = next;
+		setInputValue(next);
 	});
 
 	const focusInput = () => {
@@ -79,11 +86,13 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 
 		if (debounceTimeout) clearTimeout(debounceTimeout);
 		debounceTimeout = setTimeout(() => {
+			lastSyncedValue = newValue;
 			local.onSearch?.(newValue);
 		}, debounceMs());
 	};
 
 	const handleClear = () => {
+		lastSyncedValue = "";
 		setInputValue("");
 		local.onValueChange?.("");
 		local.onSearch?.("");
@@ -93,10 +102,16 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 	const handleKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (
 		e,
 	) => {
+		// Enter = explicit submit. Cancels any pending debounce, syncs the
+		// value, and fires onSubmitSearch (full-page navigation) if provided,
+		// else falls back to onSearch (live results). This is the deliberate
+		// "user pressed Enter" path — distinct from the debounced onSearch
+		// that fires on each keystroke.
 		if (e.key === "Enter") {
 			e.preventDefault();
 			if (debounceTimeout) clearTimeout(debounceTimeout);
 			const submittedValue = e.currentTarget.value;
+			lastSyncedValue = submittedValue;
 			setInputValue(submittedValue);
 			local.onValueChange?.(submittedValue);
 			local.onSubmitSearch?.(submittedValue);
@@ -141,7 +156,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 							<button
 								type="button"
 								onClick={handleClear}
-								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-background transition-all hover:bg-primary active:scale-95"
+								class="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background transition-all duration-200 ease-out-quart hover:bg-primary active:scale-[0.97]"
 								aria-label="Clear search"
 							>
 								<IconClose class="h-4 w-4" aria-hidden="true" />
@@ -149,7 +164,7 @@ const SearchInput: Component<SearchInputProps> = (props) => {
 						</Show>
 					}
 				>
-					<div class="h-5 w-5 animate-spin rounded-full border-2 border-border/20 border-t-black" />
+					<div class="h-5 w-5 animate-spin rounded-full border border-border/20 border-t-black" />
 				</Show>
 			</div>
 		</TextField>

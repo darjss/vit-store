@@ -3,6 +3,10 @@ import { purchaseQueries } from "@vit/api/queries";
 import { addPurchaseSchema, listPurchasesSchema, receivePurchaseSchema, } from "@vit/shared/schema";
 import * as v from "valibot";
 import { db } from "~/db/client";
+import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
+import { scheduleRestockDispatches } from "~/lib/restock";
+import { getAverageCostOfProduct } from "~/queries/payments";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -124,9 +128,14 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
         .input(receivePurchaseSchema)
         .mutation(async ({ ctx, input }) => {
         try {
-            await db().transaction(async (tx) => {
-                await purchaseQueries.admin.receivePurchase(tx, input);
+            const { affectedProductIds, restockCandidates } = await db().transaction(async (tx) => {
+                return await purchaseQueries.admin.receivePurchase(tx, input);
             });
+            if (affectedProductIds.length > 0) {
+                await purgeCatalogCache(ctx, affectedProductIds);
+                scheduleProductSearchRebuild(ctx, "product_stock_updated");
+            }
+            scheduleRestockDispatches(ctx, restockCandidates);
             return { message: "Purchase received successfully" };
         }
         catch (e) {
@@ -237,7 +246,7 @@ export function buildPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .query(async ({ ctx, input }) => {
         try {
-            return await purchaseQueries.admin.getAverageCostOfProduct(input.productId, input.createdAt);
+            return await getAverageCostOfProduct(db(), input.productId, input.createdAt);
         }
         catch (e) {
             ctx.log.error(e instanceof Error ? e : new Error(String(e)), {

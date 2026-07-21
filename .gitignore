@@ -1,6 +1,7 @@
 node_modules
 .turbo
 .fallow/
+.quality/
 .alchemy
 .dev.vars*
 .prod.vars*
@@ -16,7 +17,6 @@ node_modules
 
 # Build caches
 .astro/
-packages/logger/dist/
 
 # Temp and working files
 tmp/

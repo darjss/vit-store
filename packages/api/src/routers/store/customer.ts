@@ -1,5 +1,5 @@
 import { customerQueries } from "@vit/api/queries";
-import { updateCustomerSchema } from "~/db/valibot";
+import * as v from "valibot";
 import { customerProcedure, router } from "~/lib/trpc";
 
 export const customer = router({
@@ -7,10 +7,13 @@ export const customer = router({
 		return ctx.session.user;
 	}),
 	updateAddress: customerProcedure
-		.input(updateCustomerSchema)
-		.mutation(async ({ input }) => {
+		.input(
+			v.strictObject({
+				address: v.optional(v.nullable(v.string())),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
 			const q = customerQueries.store;
-			const { address, phone } = input;
-			await q.updateCustomerAddress(phone as number, address);
+			await q.updateCustomerAddress(ctx.session.user.phone, input.address);
 		}),
 });

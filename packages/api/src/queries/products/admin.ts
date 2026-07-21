@@ -1,4 +1,4 @@
-import type { status } from "@vit/shared/constants";
+import { type status, PRODUCT_REVIEW_CUTOFF_DATE } from "@vit/shared/constants";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -16,6 +16,7 @@ import {
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
+import { applyStockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type DbOrTx = ReturnType<typeof db> | TransactionType;
@@ -184,10 +185,27 @@ export const adminQueries = {
 				expirationDate?: string | null;
 			},
 		) {
-			await db()
-				.update(ProductsTable)
-				.set(data)
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return db().transaction(async (tx) => {
+				const [currentProduct] = await tx
+					.select({ slug: ProductsTable.slug, oldSlugs: ProductsTable.oldSlugs })
+					.from(ProductsTable)
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
+					.for("update");
+				if (!currentProduct) return null;
+
+				const { stock, ...productData } = data;
+				const oldSlugs = [...new Set(currentProduct.oldSlugs.filter((slug) => slug !== data.slug))];
+				if (currentProduct.slug !== data.slug && !oldSlugs.includes(currentProduct.slug)) {
+					oldSlugs.push(currentProduct.slug);
+				}
+				await tx
+					.update(ProductsTable)
+					.set({ ...productData, oldSlugs })
+					.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+				return stock === undefined
+					? null
+					: applyStockTransition(tx, { productId: id, setTo: stock });
+			});
 		},
 
 		async getProductImages(productId: number) {
@@ -223,14 +241,12 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
-			await db()
-				.update(ProductsTable)
-				.set({
-					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
-				})
-				.where(
-					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-				);
+			return db().transaction((tx) =>
+				applyStockTransition(tx, {
+					productId,
+					delta: type === "add" ? numberToUpdate : -numberToUpdate,
+				}),
+			);
 		},
 
 		async updateStockTx(
@@ -239,14 +255,10 @@ export const adminQueries = {
 			numberToUpdate: number,
 			type: "add" | "minus",
 		) {
-			await tx
-				.update(ProductsTable)
-				.set({
-					stock: sql`${ProductsTable.stock} ${type === "add" ? sql`+` : sql`-`} ${numberToUpdate}`,
-				})
-				.where(
-					and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-				);
+			return applyStockTransition(tx, {
+				productId,
+				delta: type === "add" ? numberToUpdate : -numberToUpdate,
+			});
 		},
 
 		async deleteProduct(id: number) {
@@ -385,10 +397,9 @@ export const adminQueries = {
 		},
 
 		async setProductStock(id: number, newStock: number) {
-			await db()
-				.update(ProductsTable)
-				.set({ stock: newStock })
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return db().transaction((tx) =>
+				applyStockTransition(tx, { productId: id, setTo: newStock }),
+			);
 		},
 
 		async getAllProductValue() {
@@ -407,21 +418,25 @@ export const adminQueries = {
 			field: string,
 			value: string | number | null,
 		) {
+			if (field === "stock" && typeof value === "number") {
+				return this.setProductStock(id, value);
+			}
 			await db()
 				.update(ProductsTable)
 				.set({ [field]: value })
 				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return null;
 		},
 
 		async getReviewProducts() {
-			const mayFirstUlat = new Date("2026-04-30T16:00:00Z");
+			const reviewCutoff = new Date(PRODUCT_REVIEW_CUTOFF_DATE);
 			return db().query.ProductsTable.findMany({
 				where: and(
 					isNull(ProductsTable.deletedAt),
 					eq(ProductsTable.status, "active"),
 					or(
 						isNull(ProductsTable.updatedAt),
-						lt(ProductsTable.updatedAt, mayFirstUlat),
+						lt(ProductsTable.updatedAt, reviewCutoff),
 					),
 				),
 				orderBy: sql`${ProductsTable.updatedAt} ASC NULLS FIRST`,

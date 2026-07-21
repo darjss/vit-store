@@ -1,43 +1,11 @@
 ---
+
 import ProductsList from "@/components/product/products-list";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Layout from "@/layouts/Layout.astro";
+import { dehydrateSeeds } from "@/lib/hydration";
 import { api } from "@/lib/trpc";
-
-// Redirect old query-param URLs to new slug-based URLs
-const url = new URL(Astro.request.url);
-const categoryParam = url.searchParams.get("category");
-const brandParam = url.searchParams.get("brand");
-
-if (categoryParam) {
-	const categoryId = Number.parseInt(categoryParam, 10);
-	if (!Number.isNaN(categoryId)) {
-		try {
-			const categories = await api.category.getAllCategoriesWithStock.query();
-			const category = categories.find((c) => c.id === categoryId);
-			if (category?.slug) {
-				return Astro.redirect(`/products/category/${category.slug}/1/`, 301);
-			}
-		} catch {
-			// fall through to normal rendering
-		}
-	}
-}
-
-if (brandParam) {
-	const brandId = Number.parseInt(brandParam, 10);
-	if (!Number.isNaN(brandId)) {
-		try {
-			const brands = await api.brand.getAllBrandsWithStock.query();
-			const brand = brands.find((b) => b.id === brandId);
-			if (brand?.slug) {
-				return Astro.redirect(`/products/brand/${brand.slug}/1/`, 301);
-			}
-		} catch {
-			// fall through to normal rendering
-		}
-	}
-}
+import { WASH_BG, washFor } from "@/lib/wash";
 
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
@@ -46,8 +14,28 @@ const SITE_URL = "https://amerikvitamin.mn";
 // the client-side FilterBar and are fetched by the hydrated ProductsList via
 // tanstack-query, so they no longer block SSR first paint.
 const [initialProductsResult, totalProductCount] = await Promise.all([
-	api.product.getInfiniteProductsWithStock.query({ limit: INITIAL_PAGE_SIZE }),
+	api.product.getInfiniteProducts.query({ limit: INITIAL_PAGE_SIZE }),
 	api.product.getTotalActiveProductCount.query(),
+]);
+
+const dehydratedState = dehydrateSeeds([
+	{
+		queryKey: [
+			"products-browse",
+			undefined,
+			undefined,
+			null,
+			null,
+			null,
+			undefined,
+			undefined,
+			true,
+		],
+		data: {
+			pages: [initialProductsResult],
+			pageParams: [undefined],
+		},
+	},
 ]);
 
 const title = "АНУ-ын витамин, нэмэлт тэжээл";
@@ -74,33 +62,42 @@ const itemListSchema = {
 		name: product.name,
 	})),
 };
+
+Astro.cache.set({
+	maxAge: 86400,
+	swr: 604800,
+	tags: ["site-shell", "catalog"],
+});
 ---
 
 <Layout title={title} description={description}>
 	<div id="products-ssr">
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<div class="overflow-hidden border-2 border-border bg-primary/5 bg-dots-subtle px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
-				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
-					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
-						Бүх бүтээгдэхүүн
-					</h1>
-					<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
-						{totalProductCount > 0 ? `${totalProductCount} бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
-					</span>
-				</div>
+			<header class={`enter-rise mb-3 flex flex-col gap-1 rounded-2xl border border-border ${WASH_BG[washFor("all-products")]} px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5`}>
+				<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
+					Бүх бүтээгдэхүүн
+				</h1>
+				<span class="font-medium text-foreground/70 text-xs sm:text-sm lg:text-base">
+					{totalProductCount > 0 ? `${totalProductCount} бүтээгдэхүүн` : `${initialProductsResult.items.length} бүтээгдэхүүн`}
+				</span>
+			</header>
 
-				<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
-					{initialProductsResult.items.map((product) => (
+			<div class="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
+				{initialProductsResult.items.map((product, index) => (
+					<div
+						class="enter-rise"
+						style={`--enter-delay:${Math.min(index, 8) * 40}ms`}
+					>
 						<ServerProductCard product={product} />
-					))}
-				</div>
+					</div>
+				))}
 			</div>
 		</div>
 	</div>
 
 	<ProductsList
 		client:only="solid-js"
-		initialProductsResult={initialProductsResult}
-		totalProductCount={totalProductCount}
-	/>
-</Layout>
+		dehydratedState={dehydratedState}
+			totalProductCount={totalProductCount}
+		/>
+	</Layout>

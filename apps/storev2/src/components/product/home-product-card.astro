@@ -1,10 +1,9 @@
 ---
-import AddToCartButton from "@/components/cart/add-to-cart-button";
-import { productColors } from "@/lib/constant";
-import { toProductImageUrl } from "@/lib/image";
+
+
+
 import type { ProductForHome } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
-import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
+import ServerProductCard from "./server-product-card.astro";
 
 interface Props {
 	product: ProductForHome;
@@ -13,67 +12,24 @@ interface Props {
 	class?: string;
 }
 
-const {
-	product,
-	aspectRatio = "aspect-square",
-	imageSize = "feature",
-	class: className = "",
-} = Astro.props;
-
-const bgColor = productColors[product.id % productColors.length];
-const productUrl = `/products/${product.slug}-${product.id}`;
+const { product, aspectRatio, imageSize, class: className } = Astro.props;
 ---
 
-<div
-	class={`group min-w-0 border-2 border-border bg-card shadow-hard transition-all hover:shadow-hard-lg active:shadow-hard-sm ${className}`}
->
-	<a href={productUrl} class="block" aria-hidden="true" tabindex="-1">
-		<div
-			class={`relative overflow-hidden border-b-2 border-border ${aspectRatio}`}
-			style={`background: ${bgColor}`}
-			transition:name={`product-image-${product.id}`}
-		>
-			{product.image ? (
-				<img
-					src={toProductImageUrl(product.image, imageSize) || product.image}
-					alt=""
-					class="absolute inset-0 w-full h-full object-contain p-3.5 lg:p-5"
-					width="480"
-					height="480"
-					loading="lazy"
-					decoding="async"
-				/>
-			) : (
-				<ProductImageFallback name={product.name} brand={product.brand} />
-			)}
-		</div>
-	</a>
-	<div class="p-2.5">
-		<div class="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-			{product.brand}
-		</div>
-		<a href={productUrl}>
-			<h3 class="text-[11px] md:text-xs font-bold line-clamp-2 mt-0.5 leading-tight">
-				{product.name}
-				{product.brand ? <span class="sr-only">, {product.brand}</span> : null}
-			</h3>
-		</a>
-		<div class="flex items-center justify-between mt-2 pt-2 border-t-2 border-border">
-			<span class="font-black text-[13px] md:text-sm">
-				{formatCurrency(product.price)}
-			</span>
-			<AddToCartButton
-				client:load
-				compact
-				cartItem={{
-					productId: product.id,
-					quantity: 1,
-					name: product.name,
-					price: product.price,
-					image: product.image,
-					slug: product.slug,
-				}}
-			/>
-		</div>
-	</div>
-</div>
+<ServerProductCard
+	product={{
+		id: product.id,
+		name: product.name,
+		name_mn: product.nameMn,
+		potency: product.potency,
+		amount: product.amount,
+		slug: product.slug,
+		price: product.price,
+		brand: product.brand ? { name: product.brand } : null,
+		images: [{ url: product.image }],
+		stock: product.stock,
+		discount: product.discount,
+	}}
+	aspectRatio={aspectRatio}
+	imageSize={imageSize}
+	class={className}
+/>

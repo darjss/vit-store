@@ -1,12 +1,19 @@
 import { trpcServer } from "@hono/trpc-server";
-import { adminRouter, botRouter, storeRouter } from "@vit/api";
-
+import {
+	adminRouter,
+	botRouter,
+	finalizeCatalogCacheHeaders,
+	storeRouter,
+} from "@vit/api";
+import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
 import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
+import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
+import { operatorTrpcError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -21,6 +28,30 @@ const DEFAULT_CORS_ORIGINS = [
 	"http://localhost:5173",
 	"https://admin.vitstore.dev",
 ];
+
+function scheduledJobFailure(
+	job: string,
+	result: PromiseSettledResult<unknown>,
+) {
+	if (result.status === "fulfilled") return;
+	const error =
+		result.reason instanceof Error
+			? result.reason
+			: Object.assign(new Error(), { name: "NonErrorRejection" });
+	const projected = operatorTrpcError(error) as Error & {
+		code?: string | number;
+		cause?: unknown;
+	};
+	return {
+		job,
+		error: {
+			name: projected.name,
+			code: projected.code,
+			stack: projected.stack,
+			cause: projected.cause,
+		},
+	};
+}
 
 const app = new Hono<ServerHonoEnv>();
 
@@ -54,13 +85,24 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(error, {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.admin_error",
 				trpc: { path, code: error.code, user_type: "admin" },
 			});
 		},
 	}),
 );
+
+// Only the store surface gets finalizeCatalogCacheHeaders because it is the
+// only public, unauthenticated catalog read path. Admin (/trpc/admin) carries
+// an auth cookie → Workers Cache auto-bypasses, so tagging is pointless. Bot
+// (/trpc/bot) uses the same resolvers as admin with a token header → also
+// auto-bypassed. Finalizing only store avoids stamping no-store on admin/bot
+// responses unnecessarily while ensuring catalog GETs get Cache-Tag/Cache-Control.
+app.use("/trpc/store/*", async (c, next) => {
+	await next();
+	finalizeCatalogCacheHeaders(c);
+});
 
 app.use(
 	"/trpc/store/*",
@@ -71,7 +113,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(error, {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.store_error",
 				trpc: { path, code: error.code, user_type: "customer" },
 			});
@@ -90,7 +132,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(error, {
+			ctx?.log.error(operatorTrpcError(error), {
 				event: "trpc.bot_error",
 				trpc: { path, code: error.code, user_type: "bot" },
 			});
@@ -108,6 +150,41 @@ app.route("/admin", adminRoutes);
 export default {
 	fetch: app.fetch,
 	scheduled: async (_controller: ScheduledController, env: Env) => {
-		await runRestockNotifier(env);
+		const log = createLogger({
+			operation: "scheduled.jobs",
+			request_id: crypto.randomUUID(),
+			user_type: "system",
+		});
+		const restock = runRestockNotifier(env);
+		const paymentNotifications = runPaymentNotificationOutbox();
+		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
+			[restock, paymentNotifications],
+		);
+		const jobs = {
+			restock_notifier: restockResult.status,
+			payment_notification_outbox: paymentNotificationResult.status,
+		};
+		const failures = [
+			scheduledJobFailure("restock_notifier", restockResult),
+			scheduledJobFailure(
+				"payment_notification_outbox",
+				paymentNotificationResult,
+			),
+		].filter((failure) => failure !== undefined);
+
+		if (failures.length > 0) {
+			log.error(new Error("Scheduled jobs failed"), {
+				event: "scheduled.jobs_complete",
+				jobs,
+				failures,
+			});
+			log.emit();
+			throw new Error(
+				`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`,
+			);
+		}
+
+		log.info("scheduled.jobs_complete", { jobs });
+		log.emit();
 	},
 };

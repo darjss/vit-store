@@ -15,11 +15,7 @@
 		"jsxImportSource": "solid-js",
 		"baseUrl": ".",
 		"paths": {
-			"@vit/api": ["../../packages/api/dist/index.d.ts"],
-			"@vit/api/*": ["../../packages/api/dist/*"],
 			"~/*": ["../../packages/api/src/*"],
-			"@vit/shared": ["../../packages/shared/src/index.ts"],
-			"@vit/shared/*": ["../../packages/shared/src/*"],
 			"@/*": ["./src/*"],
 			"@server/*": ["../server/src/*"],
 			"server/alchemy": ["../server/alchemy.run.ts"]

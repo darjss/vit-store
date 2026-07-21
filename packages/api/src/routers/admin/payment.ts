@@ -1,25 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { paymentQueries } from "@vit/api/queries";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import * as v from "valibot";
 import { paymentProvider, paymentStatus } from "~/lib/constants";
-import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
-import { trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
+import { getTransferReconciliationStub } from "~/lib/durable-objects";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generatePaymentNumber } from "~/lib/utils";
-
-type TransferReconciliationStub = {
-	getStatus(): Promise<TransferReconciliationState | null>;
-};
-
-const getTransferReconciliationStub = (
-	env: Env,
-	paymentNumber: string,
-): TransferReconciliationStub => {
-	const namespace = (env as any).KHAAN_TRANSFER_RECONCILER;
-	const id = namespace.idFromName(paymentNumber);
-	return namespace.get(id) as TransferReconciliationStub;
-};
 
 export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
@@ -157,53 +143,75 @@ export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
         .input(v.object({ paymentNumber: v.string() }))
         .mutation(async ({ ctx, input }) => {
             try {
-                const q = paymentQueries.store;
-                const confirmed = await q.confirmPaymentAndApplyStock(
-                    input.paymentNumber,
-                    "transfer",
-                );
-                if (!confirmed) {
+                // Fetch matching Khaan transactions and record their
+                // fingerprints as consumed alongside the confirm, so the
+                // admin-verified transfer can't be replayed against a later
+                // order via the phone fallback (P0-1). The admin doesn't know
+                // which specific bank transaction corresponds to the payment,
+                // so we mark ALL plausible matches as consumed. Do NOT block
+                // the admin confirm on the Khaan fetch failing — catch/log
+                // and proceed (admin override is authoritative; an un-findable
+                // tx can't be replayed anyway).
+                let consumedKhaanTransactions:
+                    | { fingerprint: string }[]
+                    | undefined;
+                try {
+                    const reconciler = getTransferReconciliationStub(
+                        ctx.c.env,
+                        input.paymentNumber,
+                    );
+                    const fingerprints =
+                        await reconciler.collectMatchingKhaanFingerprints(
+                            input.paymentNumber,
+                        );
+                    if (fingerprints && fingerprints.length > 0) {
+                        consumedKhaanTransactions = fingerprints.map(
+                            (fingerprint) => ({ fingerprint }),
+                        );
+                    } else if (fingerprints && fingerprints.length === 0) {
+                        ctx.log.warn(
+                            "admin.confirm_transfer_no_matching_khaan_tx",
+                            { paymentNumber: input.paymentNumber },
+                        );
+                    }
+                } catch (error) {
+                    ctx.log.error(
+                        error instanceof Error
+                            ? error
+                            : new Error(String(error)),
+                        {
+                            event: "admin.confirm_transfer_khaan_fetch_failed",
+                            paymentNumber: input.paymentNumber,
+                        },
+                    );
+                }
+
+                // Route through the canonical confirm + notify + analytics +
+                // cache-purge boundary (F2). This catches the consumed-
+                // fingerprint conflict and returns a clean reason instead of
+                // an opaque 500, and never leaks the fingerprint hash to the
+                // admin UI (F1).
+                const result = await confirmPaymentAndNotify({
+                    paymentNumber: input.paymentNumber,
+                    provider: "transfer",
+                    source: "admin",
+                    consumedKhaanTransactions,
+                });
+
+                if (!result.confirmed) {
+                    if (
+                        result.reason === "khaan_transaction_already_consumed"
+                    ) {
+                        throw new TRPCError({
+                            code: "CONFLICT",
+                            message:
+                                "Bank transaction already used by another order — needs manual review",
+                        });
+                    }
                     throw new TRPCError({
                         code: "CONFLICT",
                         message: "Payment already confirmed or not pending",
                     });
-                }
-
-                try {
-                    const paymentInfo = await q.getPaymentInfoByNumber(input.paymentNumber);
-                    if (paymentInfo) {
-                        await sendDetailedOrderNotification({
-                            paymentNumber: input.paymentNumber,
-                            customerPhone: paymentInfo.order.customerPhone,
-                            address: paymentInfo.order.address,
-                            notes: paymentInfo.order.notes,
-                            total: paymentInfo.order.total,
-                            products: paymentInfo.order.orderDetails.map((detail) => ({
-                                name: detail.product.name,
-                                quantity: detail.quantity,
-                                price: detail.product.price,
-                                imageUrl: detail.product.images[0]?.url,
-                            })),
-                            status: "payment_confirmed",
-                        });
-                        await trackPaymentConfirmedServerSide({
-                            phone: paymentInfo.order.customerPhone?.toString() ?? input.paymentNumber,
-                            paymentNumber: input.paymentNumber,
-                            orderNumber: paymentInfo.order.orderNumber,
-                            provider: "transfer",
-                            revenue: paymentInfo.order.total,
-                        });
-                    }
-                } catch (notificationError) {
-                    ctx.log.error(
-                        notificationError instanceof Error
-                            ? notificationError
-                            : new Error(String(notificationError)),
-                        {
-                            event: "admin.confirm_transfer_notification_failed",
-                            paymentNumber: input.paymentNumber,
-                        },
-                    );
                 }
 
                 ctx.log.info("admin.transfer_payment_confirmed", {
@@ -220,7 +228,7 @@ export function buildPaymentRouter<P extends typeof baseProcedure>(proc: P) {
                 });
                 throw new TRPCError({
                     code: "INTERNAL_SERVER_ERROR",
-                    message: error instanceof Error ? error.message : "Failed to confirm transfer payment",
+                    message: "Failed to confirm transfer payment",
                     cause: error,
                 });
             }

@@ -1,6 +1,4 @@
 export * from "./types/ai";
-export * from "./types/integration";
-export * from "./types/messenger";
 export * from "./types/order";
 export * from "./types/payment";
 export * from "./types/product";
@@ -107,10 +105,24 @@ export interface ProductFormValues {
 export interface ProductCardData {
 	id: number;
 	name: string;
+	nameMn?: string | null;
+	name_mn?: string | null;
+	potency?: string | null;
+	amount?: string | null;
 	price: number;
 	slug: string;
 	images: { url: string | null }[];
 	brand?: { name: string } | null;
+	/**
+	 * Units on hand. Optional because some feeders (e.g. legacy home
+	 * projections) do not select it; when absent the card renders without
+	 * stock messaging and never disables add-to-cart.
+	 */
+	stock?: number;
+	/** Discount percent (0-100). 0 or absent means no sale price. */
+	discount?: number;
+	/** Category id used for the stable sorbet wash mapping on the card. */
+	categoryId?: number;
 }
 
 export interface SessionConfig {

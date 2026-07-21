@@ -135,7 +135,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
           <thead>
-            <tr class="border-b-2 border-border">
+            <tr class="border-b border-border">
               <th class="text-left py-2 px-3 text-muted-foreground font-medium">Page</th>
               {Object.keys(metricNames).map(k => (
                 <th class="text-right py-2 px-3 text-muted-foreground font-medium">{metricNames[k]}<br/><span class="text-xs font-normal">({metricUnits[k] || ''})</span></th>
@@ -199,7 +199,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <div class="overflow-x-auto">
         <table class="w-full text-sm border-collapse">
           <thead>
-            <tr class="border-b-2 border-border">
+            <tr class="border-b border-border">
               <th class="text-left py-2 px-3 text-muted-foreground font-medium">Endpoint</th>
               <th class="text-right py-2 px-3 text-muted-foreground font-medium">TTFB</th>
               <th class="text-right py-2 px-3 text-muted-foreground font-medium">Total</th>
@@ -231,7 +231,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
       <h2 class="text-xl font-semibold text-foreground mb-4">Recommendations</h2>
       <div class="space-y-3">
         {data.recommendations.map((rec: any) => (
-          <div class={`rec-card rounded-lg border-2 p-4 ${rec.impact === 'high' ? 'border-red-300 bg-red-50' : rec.impact === 'medium' ? 'border-orange-300 bg-orange-50' : 'border-blue-300 bg-blue-50'}`}>
+          <div class={`rec-card rounded-lg border p-4 ${rec.impact === 'high' ? 'border-red-300 bg-red-50' : rec.impact === 'medium' ? 'border-orange-300 bg-orange-50' : 'border-blue-300 bg-blue-50'}`}>
             <div class="flex items-start gap-3">
               <span class={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-bold shrink-0 ${priorityBadge(rec.priority)}`}>
                 {rec.priority}

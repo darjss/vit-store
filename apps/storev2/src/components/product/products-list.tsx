@@ -1,9 +1,5 @@
-import {
-	keepPreviousData,
-	useInfiniteQuery,
-	useQuery,
-} from "@tanstack/solid-query";
-import type { ProductCardData } from "@vit/shared/types";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
+import { parseSort } from "@vit/shared/domain/product";
 import {
 	createEffect,
 	createMemo,
@@ -13,30 +9,25 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { createSheetFocusRestore } from "@/components/ui/sheet";
+import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import { useSearchParam } from "@/lib/useSearchParam";
 import { cn } from "@/lib/utils";
-import FilterBar from "../search/filter-bar";
+import { washBg } from "@/lib/wash";
+import IconEqualizer from "~icons/ri/equalizer-line";
+import IconSearch from "~icons/ri/search-line";
+import SearchSheet from "../search/search-sheet";
+import AppliedFilters from "./applied-filters";
+import FilterDrawer from "./filter-drawer";
+import ProductCard from "./product-card";
 import {
 	ProductEmptyState,
 	ProductErrorState,
 	ProductListEnd,
 	ProductSkeletonGrid,
 } from "./products-list-states";
-import { ProductsVirtualGrid } from "./products-virtual-grid";
-import ProductCard from "./product-card";
-
-type ListFilter = "featured" | "recent";
-type ProductSortField = "price" | "createdAt";
-type ProductSortDirection = "asc" | "desc";
-const STORE_VIRTUAL_OVERSCAN_ROWS = 2;
-const STORE_DEFAULT_ROW_HEIGHT = 360;
-
-type InfiniteProductsResult = {
-	items: ProductCardData[];
-	nextCursor: string | null;
-};
+import { useProductFilters } from "./use-product-filters";
 
 type FilterOption = {
 	id: number;
@@ -45,81 +36,20 @@ type FilterOption = {
 };
 
 type ProductsListProps = {
-	initialProductsResult: InfiniteProductsResult;
+	dehydratedState?: string;
 	initialCategories?: FilterOption[];
 	initialBrands?: FilterOption[];
 	totalProductCount?: number;
 };
 
-const LIST_FILTER_LABELS: Record<ListFilter, string> = {
-	featured: "Онцлох",
-	recent: "Шинэ ирсэн",
-};
-
-const getStoreProductColumns = (width: number) => {
-	if (width >= 1280) return 4;
-	if (width >= 1024) return 3;
-	return 2;
-};
-
-const chunkItems = <T,>(items: T[], chunkSize: number) => {
-	const chunks: T[][] = [];
-	for (let index = 0; index < items.length; index += chunkSize) {
-		chunks.push(items.slice(index, index + chunkSize));
-	}
-	return chunks;
-};
-
-const getErrorDetails = (error: unknown) => {
-	if (error instanceof Error) {
-		return {
-			name: error.name,
-			message: error.message,
-			stack: error.stack,
-		};
-	}
-
-	return {
-		name: typeof error,
-		message: String(error),
-	};
-};
-
 const ProductsList = (props: ProductsListProps) => {
-	// URL search params for filters
-	const [searchTerm, setSearchTerm] = useSearchParam("q", {
-		defaultValue: undefined,
-	});
-	const [sortField, setSortField] = useSearchParam("sort", {
-		defaultValue: undefined,
-	});
-	const [sortDirection, setSortDirection] = useSearchParam("dir", {
-		defaultValue: undefined,
-	});
-	const [categoryIdParam, setCategoryIdParam] = useSearchParam("category", {
-		defaultValue: undefined,
-	});
-	const [brandIdParam, setBrandIdParam] = useSearchParam("brand", {
-		defaultValue: undefined,
-	});
-	const [listFilterParam, setListFilterParam] = useSearchParam("filter", {
-		defaultValue: undefined,
-	});
+	hydrateServerState(queryClient, props.dehydratedState);
 
-	const [localSearchTerm, setLocalSearchTerm] = createSignal(
-		searchTerm() ?? "",
-	);
+	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
+	const filterSheetFocusRestore = createSheetFocusRestore();
+	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
 	const [lastLoggedProductsError, setLastLoggedProductsError] =
 		createSignal<unknown>();
-
-	createEffect(() => {
-		setLocalSearchTerm(searchTerm() ?? "");
-	});
-
-	const isSearchMode = createMemo(() => {
-		const term = searchTerm();
-		return term !== undefined && term !== null && term.length >= 2;
-	});
 
 	const categoriesQuery = useQuery(
 		() => ({
@@ -141,137 +71,137 @@ const ProductsList = (props: ProductsListProps) => {
 		() => queryClient,
 	);
 
-	const listFilter = createMemo<ListFilter | null>(() => {
-		const val = listFilterParam();
-		if (val === "featured" || val === "recent") {
-			return val;
+	const filters = useProductFilters({
+		categories: () => categoriesQuery.data,
+		brands: () => brandsQuery.data,
+	});
+
+	// Remove the SSR fallback grid once the client island mounts. Both grids
+	// use the same plain CSS grid layout, so the swap is seamless (no layout
+	// shift / blink from a virtual absolute-positioned grid).
+	onMount(() => {
+		document.getElementById("products-ssr")?.remove();
+	});
+
+	// Clean invalid sort/dir URL params silently. Single source of truth:
+	// parseSort is shared with the filter drawer and SEO sort routes.
+	createEffect(() => {
+		if (
+			(filters.sortField() || filters.sortDirection()) &&
+			!parseSort(filters.sortField(), filters.sortDirection())
+		) {
+			filters.applyFilters({
+				sortField: null,
+				sortDirection: null,
+				categoryId: filters.categoryId(),
+				brandId: filters.brandId(),
+				priceRange: filters.priceRange(),
+				includeOutOfStock: filters.includeOutOfStock(),
+			});
 		}
-		return null;
 	});
 
-	const categoryId = createMemo(() => {
-		const val = categoryIdParam();
-		if (!val) return null;
-
-		const parsed = Number.parseInt(val, 10);
-		if (!Number.isNaN(parsed)) return parsed;
-
-		const categoryByName = categoriesQuery.data?.find(
-			(c: { id: number; name: string }) =>
-				c.name.trim().toLowerCase() === val.trim().toLowerCase(),
-		);
-
-		return categoryByName?.id ?? null;
-	});
-
-	const brandId = createMemo(() => {
-		const val = brandIdParam();
-		if (!val) return null;
-
-		const parsed = Number.parseInt(val, 10);
-		if (!Number.isNaN(parsed)) return parsed;
-
-		const brandByName = brandsQuery.data?.find(
-			(b: { id: number; name: string }) =>
-				b.name.trim().toLowerCase() === val.trim().toLowerCase(),
-		);
-
-		return brandByName?.id ?? null;
-	});
-
-	const searchQuery = useQuery(
+	const searchQuery = useInfiniteQuery(
 		() => ({
-			queryKey: ["search-products-page", searchTerm(), categoryId(), brandId()],
-			queryFn: async () => {
-				const term = searchTerm();
-				if (!term || term.length < 2) return [];
-				return await api.product.searchProductsForPageWithStock.query({
+			queryKey: [
+				"search-products-page",
+				filters.effectiveSearchTerm(),
+				filters.selectedSort()?.field,
+				filters.selectedSort()?.direction,
+				filters.categoryId(),
+				filters.brandId(),
+				filters.minPrice(),
+				filters.maxPrice(),
+				filters.includeOutOfStock(),
+			],
+			queryFn: async ({ pageParam }) => {
+				const term = filters.effectiveSearchTerm();
+				if (!term) {
+					throw new Error("Search query must contain at least two characters");
+				}
+				const sort = filters.selectedSort();
+				return await api.product.searchProductsForPage.query({
 					query: term,
-					limit: 10,
-					categoryId: categoryId() ?? undefined,
-					brandId: brandId() ?? undefined,
+					page: pageParam,
+					pageSize: 12,
+					categoryId: filters.categoryId() ?? undefined,
+					brandId: filters.brandId() ?? undefined,
+					minPrice: filters.minPrice(),
+					maxPrice: filters.maxPrice(),
+					requireStock: !filters.includeOutOfStock(),
+					sortField: sort?.field,
+					sortDirection: sort?.direction,
 				});
 			},
-			enabled: isSearchMode(),
-			staleTime: 1000 * 60 * 5, // 5 minutes
+			initialPageParam: 1,
+			getNextPageParam: (lastPage) =>
+				lastPage.pagination.hasNextPage
+					? lastPage.pagination.page + 1
+					: undefined,
+			enabled: filters.isSearchMode(),
+			staleTime: 1000 * 60 * 5,
 			placeholderData: keepPreviousData,
 		}),
 		() => queryClient,
 	);
-
-	const selectedSort = createMemo<{
-		field: ProductSortField;
-		direction: ProductSortDirection;
-	} | null>(() => {
-		const field = sortField();
-		const direction = sortDirection();
-		if (
-			(field === "price" || field === "createdAt") &&
-			(direction === "asc" || direction === "desc")
-		) {
-			return { field, direction };
-		}
-		return null;
-	});
-
-	createEffect(() => {
-		if ((sortField() || sortDirection()) && !selectedSort()) {
-			setSortField(null);
-			setSortDirection(null);
-		}
-	});
 
 	const productsQuery = useInfiniteQuery(
 		() => ({
 			queryKey: [
 				"products-browse",
-				selectedSort()?.field,
-				selectedSort()?.direction,
-				categoryId(),
-				brandId(),
-				listFilter(),
+				filters.selectedSort()?.field,
+				filters.selectedSort()?.direction,
+				filters.categoryId(),
+				filters.brandId(),
+				filters.listFilter(),
+				filters.minPrice(),
+				filters.maxPrice(),
+				filters.includeOutOfStock(),
 			],
 			queryFn: async ({ pageParam }) => {
-				const sort = selectedSort();
-				const result = await api.product.getInfiniteProductsWithStock.query({
+				const sort = filters.selectedSort();
+				return await api.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
-					listType: listFilter() ?? undefined,
+					listType: filters.listFilter() ?? undefined,
 					sortField: sort?.field,
 					sortDirection: sort?.direction,
-					categoryId: categoryId() ?? undefined,
-					brandId: brandId() ?? undefined,
+					categoryId: filters.categoryId() ?? undefined,
+					brandId: filters.brandId() ?? undefined,
+					minPrice: filters.minPrice(),
+					maxPrice: filters.maxPrice(),
+					requireStock: !filters.includeOutOfStock(),
 				});
-				return result;
 			},
 			initialPageParam: undefined as string | undefined,
-			initialData: {
-				pages: [props.initialProductsResult],
-				pageParams: [undefined as string | undefined],
-			},
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 			placeholderData: keepPreviousData,
-			enabled: !isSearchMode(),
+			enabled: !filters.isSearchMode(),
 		}),
 		() => queryClient,
 	);
 
-	const searchResults = createMemo(() => searchQuery.data ?? []);
+	const searchResults = createMemo(() =>
+		(searchQuery.data?.pages ?? []).flatMap((page) => page.items),
+	);
 	const isSearchLoading = createMemo(
 		() => searchQuery.isLoading && !searchQuery.data,
 	);
 	const isSearchRefetching = createMemo(
 		() =>
-			searchQuery.isFetching && !searchQuery.isLoading && !!searchQuery.data,
+			searchQuery.isFetching &&
+			!searchQuery.isLoading &&
+			!searchQuery.isFetchingNextPage &&
+			!!searchQuery.data,
 	);
 
 	const isInitialLoading = createMemo(() => {
-		if (isSearchMode()) return isSearchLoading();
+		if (filters.isSearchMode()) return isSearchLoading();
 		return productsQuery.isLoading && !productsQuery.data;
 	});
 
 	const isRefetching = createMemo(() => {
-		if (isSearchMode()) return isSearchRefetching();
+		if (filters.isSearchMode()) return isSearchRefetching();
 		return (
 			productsQuery.isFetching &&
 			!productsQuery.isLoading &&
@@ -285,49 +215,21 @@ const ProductsList = (props: ProductsListProps) => {
 		if (!data) return [];
 		return data.pages.flatMap((page) => page.items);
 	});
-	let browseGridRef: HTMLDivElement | undefined;
-	let layoutRafId: number | undefined;
-	const [gridWidth, setGridWidth] = createSignal(0);
-	const [gridTop, setGridTop] = createSignal(0);
-	const [viewportTop, setViewportTop] = createSignal(0);
-	const [viewportHeight, setViewportHeight] = createSignal(0);
-	const [rowHeight, setRowHeight] = createSignal(STORE_DEFAULT_ROW_HEIGHT);
-	const [firstBrowseRowEl, setFirstBrowseRowEl] =
-		createSignal<HTMLDivElement>();
-
-	const columnCount = createMemo(() =>
-		getStoreProductColumns(gridWidth() || 1280),
-	);
-	const browseRows = createMemo(() =>
-		chunkItems(allBrowseProducts(), columnCount()),
-	);
-	const totalBrowseHeight = createMemo(() => browseRows().length * rowHeight());
-	const visibleBrowseRange = createMemo(() => {
-		if (browseRows().length === 0) return { start: 0, end: 0 };
-
-		const overscan = rowHeight() * STORE_VIRTUAL_OVERSCAN_ROWS;
-		const start = Math.max(
-			0,
-			Math.floor((viewportTop() - gridTop() - overscan) / rowHeight()),
-		);
-		const end = Math.min(
-			browseRows().length,
-			Math.ceil(
-				(viewportTop() + viewportHeight() - gridTop() + overscan) / rowHeight(),
-			),
-		);
-
-		return { start, end: Math.max(start + 1, end) };
-	});
-	const visibleBrowseRows = createMemo(() =>
-		browseRows().slice(visibleBrowseRange().start, visibleBrowseRange().end),
-	);
 
 	const hasProducts = createMemo(() => {
-		if (isSearchMode()) return searchResults().length > 0;
+		if (filters.isSearchMode()) return searchResults().length > 0;
 		return allBrowseProducts().length > 0;
 	});
+	const hasInitialBrowseError = createMemo(
+		() =>
+			!filters.isSearchMode() &&
+			productsQuery.isError &&
+			allBrowseProducts().length === 0,
+	);
 
+	// Log the infinite-products failure once with wide-event context. The query
+	// label reflects the actual procedure variant (WithStock vs all) so logs are
+	// not misleading when the includeOutOfStock toggle switches the call.
 	createEffect(() => {
 		const error = productsQuery.error;
 		if (
@@ -339,12 +241,22 @@ const ProductsList = (props: ProductsListProps) => {
 		}
 
 		setLastLoggedProductsError(error);
-		const sort = selectedSort();
-		const details = getErrorDetails(error);
+		const sort = filters.selectedSort();
+		const details =
+			error instanceof Error
+				? {
+						name: error.name,
+						message: error.message,
+						stack: error.stack,
+					}
+				: { name: typeof error, message: String(error) };
+		const queryName = filters.includeOutOfStock()
+			? "product.getInfiniteProducts"
+			: "product.getInfiniteProducts (requireStock)";
 		const context = {
 			...details,
 			component: "ProductsList",
-			query: "product.getInfiniteProducts",
+			query: queryName,
 			pageUrl: window.location.href,
 			userAgent: window.navigator.userAgent,
 			isOnline: window.navigator.onLine,
@@ -358,16 +270,16 @@ const ProductsList = (props: ProductsListProps) => {
 			isFetchingNextPage: productsQuery.isFetchingNextPage,
 			sortField: sort?.field ?? null,
 			sortDirection: sort?.direction ?? null,
-			categoryId: categoryId(),
-			brandId: brandId(),
-			listFilter: listFilter(),
+			categoryId: filters.categoryId(),
+			brandId: filters.brandId(),
+			listFilter: filters.listFilter(),
 		};
 
 		console.error("[ProductsList] Infinite products query failed", context);
 	});
 
 	const shouldShowEmptyState = createMemo(() => {
-		if (isSearchMode()) {
+		if (filters.isSearchMode()) {
 			return (
 				searchQuery.data !== undefined &&
 				!searchQuery.isLoading &&
@@ -384,192 +296,93 @@ const ProductsList = (props: ProductsListProps) => {
 	});
 
 	const productCount = createMemo(() => {
-		if (isSearchMode()) return searchResults().length;
+		if (filters.isSearchMode()) {
+			return searchQuery.data?.pages[0]?.pagination.totalCount ?? 0;
+		}
 		return allBrowseProducts().length;
 	});
-
-	// True when browsing the full catalog with no filter/search/category/brand
-	// active — in that case the SSR totalProductCount is the authoritative count.
-	const isBrowsingAll = createMemo(
-		() =>
-			!isSearchMode() &&
-			!categoryId() &&
-			!brandId() &&
-			!listFilter() &&
-			!sortField(),
-	);
-
-	const handleSearch = (term: string) => {
-		setLocalSearchTerm(term);
-		setSearchTerm(term || null);
-	};
-
-	const handleSortChange = (field: string | null, direction: string | null) => {
+	const productCountLabel = createMemo(() => {
 		if (
-			(field === "price" || field === "createdAt") &&
-			(direction === "asc" || direction === "desc")
+			!filters.isSearchMode() &&
+			filters.isBrowsingAll() &&
+			props.totalProductCount != null
 		) {
-			setSortField(field);
-			setSortDirection(direction);
-			return;
+			return `${props.totalProductCount} бүтээгдэхүүн`;
 		}
-		setSortField(null);
-		setSortDirection(null);
-	};
+		if (shouldShowEmptyState()) return "0 бүтээгдэхүүн";
+		if (filters.isSearchMode() && hasProducts()) {
+			return `${productCount()} бүтээгдэхүүн`;
+		}
+		if (!filters.isSearchMode() && hasProducts() && !productsQuery.hasNextPage) {
+			return `${productCount()} бүтээгдэхүүн`;
+		}
+		return `${productCount()}+ бүтээгдэхүүн`;
+	});
 
-	const handleCategoryChange = (id: number | null) => {
-		if (!id) {
-			setCategoryIdParam(null);
-			return;
-		}
-		const category = categoriesQuery.data?.find(
-			(c: { id: number; slug: string }) => c.id === id,
-		);
-		if (category?.slug) {
-			window.location.href = `/products/category/${category.slug}/1/`;
+	const hasNextPage = () =>
+		filters.isSearchMode()
+			? searchQuery.hasNextPage
+			: productsQuery.hasNextPage;
+	const isFetchingNextPage = () =>
+		filters.isSearchMode()
+			? searchQuery.isFetchingNextPage
+			: productsQuery.isFetchingNextPage;
+	const loadNextPage = () => {
+		if (!hasNextPage() || isFetchingNextPage()) return;
+		if (filters.isSearchMode()) {
+			void searchQuery.fetchNextPage({ cancelRefetch: false });
 		} else {
-			setCategoryIdParam(id?.toString() ?? null);
+			void productsQuery.fetchNextPage({ cancelRefetch: false });
 		}
 	};
 
-	const handleBrandChange = (id: number | null) => {
-		if (!id) {
-			setBrandIdParam(null);
+	createEffect(() => {
+		if (!isLoadMoreInRange() || !hasNextPage()) return;
+		loadNextPage();
+	});
+
+	const retryProducts = () => {
+		if (filters.isSearchMode()) {
+			if (searchResults().length > 0 && searchQuery.hasNextPage) {
+				loadNextPage();
+			} else {
+				searchQuery.refetch();
+			}
 			return;
 		}
-		const brand = brandsQuery.data?.find(
-			(b: { id: number; slug: string }) => b.id === id,
-		);
-		if (brand?.slug) {
-			window.location.href = `/products/brand/${brand.slug}/1/`;
-		} else {
-			setBrandIdParam(id?.toString() ?? null);
+		if (allBrowseProducts().length > 0 && productsQuery.hasNextPage) {
+			loadNextPage();
+			return;
 		}
+		productsQuery.refetch();
 	};
 
-	const handleClearFilters = () => {
-		setSearchTerm(null);
-		setSortField(null);
-		setSortDirection(null);
-		setCategoryIdParam(null);
-		setBrandIdParam(null);
-		setListFilterParam(null);
-		setLocalSearchTerm("");
-	};
-
-	const hasActiveFilters = () =>
-		!!searchTerm() ||
-		!!selectedSort() ||
-		!!categoryId() ||
-		!!brandId() ||
-		!!listFilter();
-
-	const setupObserver = (element: HTMLDivElement) => {
+	const setupObserver = (element: HTMLButtonElement) => {
 		const observer = new IntersectionObserver(
-			(entries) => {
-				const entry = entries[0];
-				if (
-					entry.isIntersecting &&
-					productsQuery.hasNextPage &&
-					!productsQuery.isFetchingNextPage &&
-					!productsQuery.isLoading
-				) {
-					productsQuery.fetchNextPage();
-				}
-			},
-			{ rootMargin: "300px", threshold: 0.1 },
+			(entries) => setIsLoadMoreInRange(entries[0].isIntersecting),
+			{ rootMargin: "300px 0px", threshold: 0 },
 		);
 
 		observer.observe(element);
 		onCleanup(() => {
+			setIsLoadMoreInRange(false);
 			observer.unobserve(element);
 			observer.disconnect();
 		});
 	};
 
-	const updateVirtualLayout = () => {
-		setGridWidth(browseGridRef?.clientWidth ?? window.innerWidth);
-		setGridTop(
-			browseGridRef
-				? window.scrollY + browseGridRef.getBoundingClientRect().top
-				: 0,
-		);
-		setViewportTop(window.scrollY);
-		setViewportHeight(window.innerHeight);
-	};
-
-	onMount(() => {
-		document.getElementById("products-ssr")?.remove();
-		updateVirtualLayout();
-
-		const handleWindowChange = () => {
-			if (layoutRafId !== undefined) return;
-			layoutRafId = window.requestAnimationFrame(() => {
-				layoutRafId = undefined;
-				updateVirtualLayout();
-			});
-		};
-
-		const resizeObserver = new ResizeObserver(() => updateVirtualLayout());
-		if (browseGridRef) resizeObserver.observe(browseGridRef);
-
-		window.addEventListener("scroll", handleWindowChange, { passive: true });
-		window.addEventListener("resize", handleWindowChange);
-
-		onCleanup(() => {
-			if (layoutRafId !== undefined) {
-				window.cancelAnimationFrame(layoutRafId);
-			}
-			resizeObserver.disconnect();
-			window.removeEventListener("scroll", handleWindowChange);
-			window.removeEventListener("resize", handleWindowChange);
-		});
-	});
-
-	createEffect(() => {
-		const row = firstBrowseRowEl();
-		if (!row) return;
-
-		const updateHeight = () => {
-			const nextHeight = row.getBoundingClientRect().height;
-			if (nextHeight > 0 && Math.abs(nextHeight - rowHeight()) > 1) {
-				setRowHeight(nextHeight);
-			}
-		};
-
-		updateHeight();
-		const resizeObserver = new ResizeObserver(() => updateHeight());
-		resizeObserver.observe(row);
-
-		onCleanup(() => resizeObserver.disconnect());
-	});
-
-	// Get active filter display text
-	const getPageTitle = () => {
-		if (searchTerm()) return `"${searchTerm()}" хайлтын үр дүн`;
-		if (listFilter()) return LIST_FILTER_LABELS[listFilter() as ListFilter];
-		if (categoryId()) {
-			const cat = categoriesQuery.data?.find(
-				(c: { id: number; name: string }) => c.id === categoryId(),
-			);
-			if (cat) return cat.name;
-		}
-		if (brandId()) {
-			const brand = brandsQuery.data?.find(
-				(b: { id: number; name: string }) => b.id === brandId(),
-			);
-			if (brand) return brand.name;
-		}
-		return "Бүх бүтээгдэхүүн";
-	};
-
 	return (
 		<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-			<div class="overflow-hidden border-2 border-border bg-primary/5 bg-dots-subtle px-3 py-3 shadow-hard sm:border-4 sm:px-5 sm:py-4 sm:shadow-hard-xl">
-				{/* Compact Header */}
-				<div class="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:gap-y-1.5">
-					<h1 class="font-black text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
-						{getPageTitle()}
+			<div>
+				{/* Compact Header on wash tint */}
+				<div
+					class={cn(
+						"mb-3 flex flex-col gap-1 rounded-2xl border border-border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
+						washBg("all-products"),
+					)}
+				>
+					<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
+						{filters.pageTitle()}
 					</h1>
 					<Show
 						when={!isInitialLoading()}
@@ -577,51 +390,68 @@ const ProductsList = (props: ProductsListProps) => {
 							<div class="h-3.5 w-20 animate-pulse rounded bg-muted sm:h-4 sm:w-24 lg:h-5 lg:w-28" />
 						}
 					>
-						<span class="font-bold text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
-							<Show
-								when={hasProducts()}
-								fallback={
-									shouldShowEmptyState()
-										? "0 бүтээгдэхүүн"
-										: `${productCount()}+ бүтээгдэхүүн`
-								}
-							>
-								<Show
-									when={isSearchMode()}
-									fallback={
-										isBrowsingAll() && props.totalProductCount != null
-											? `${props.totalProductCount} бүтээгдэхүүн`
-											: productsQuery.hasNextPage
-												? `${productCount()}+ бүтээгдэхүүн`
-												: `${productCount()} бүтээгдэхүүн`
-									}
-								>
-									{`${productCount()} бүтээгдэхүүн`}
-								</Show>
-							</Show>
+						<span class="font-medium text-foreground/70 text-xs sm:text-sm lg:text-base">
+							{productCountLabel()}
 						</span>
 					</Show>
 				</div>
 
-				{/* Filter Bar */}
-				<FilterBar
-					searchTerm={localSearchTerm()}
-					sortField={sortField()}
-					sortDirection={sortDirection()}
-					categoryId={categoryId()}
-					brandId={brandId()}
+				{/* Search + filter trigger topbar */}
+				<div class="-mx-3 sm:-mx-6 lg:-mx-8 sticky top-0 z-30 mb-3 flex items-center gap-2 border-border border-b bg-background/95 px-3 py-2.5 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md sm:px-6 lg:px-8">
+					<SearchSheet
+						position="bottom"
+						triggerAriaLabel="Хайх"
+						triggerClass="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out active:scale-[0.99]"
+						contentClass="h-[85vh] w-full max-w-none border-border border-t p-0"
+						headerClass="bg-primary/10"
+						inputPlaceholder="Омега-3, магни, нойргүйдэл…"
+						triggerContent={
+							<>
+								<IconSearch class="h-5 w-5 shrink-0" aria-hidden="true" />
+								<span class="truncate font-medium text-sm">Хайх...</span>
+							</>
+						}
+					/>
+					<button
+						type="button"
+						onClick={(event) => {
+							filterSheetFocusRestore.register(event.currentTarget);
+							setFilterDrawerOpen(true);
+						}}
+						aria-label="Шүүлтүүр нээх"
+						class="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 font-bold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
+					>
+						<IconEqualizer class="h-4 w-4" />
+						<span>Шүүлтүүр</span>
+						<Show when={filters.activeFilterCount() > 0}>
+							<span class="flex size-5 items-center justify-center rounded-full border border-cocoa bg-primary font-bold text-[11px]">
+								{filters.activeFilterCount()}
+							</span>
+						</Show>
+					</button>
+				</div>
+
+				<AppliedFilters
+					chips={filters.appliedChips()}
+					onClearAll={filters.handleClearFilters}
+				/>
+
+				<FilterDrawer
+					open={filterDrawerOpen()}
+					onOpenChange={setFilterDrawerOpen}
+					focusRestore={filterSheetFocusRestore}
 					categories={categoriesQuery.data ?? []}
 					brands={brandsQuery.data ?? []}
-					onSearchChange={handleSearch}
-					onSortChange={handleSortChange}
-					onCategoryChange={handleCategoryChange}
-					onBrandChange={handleBrandChange}
-					presetFilter={listFilter()}
-					onPresetFilterChange={(value: ListFilter | null) =>
-						setListFilterParam(value)
-					}
-					onClearFilters={handleClearFilters}
-					hasActiveFilters={hasActiveFilters()}
+					sortField={filters.sortField()}
+					sortDirection={filters.sortDirection()}
+					categoryId={filters.categoryId()}
+					brandId={filters.brandId()}
+					priceRange={filters.priceRange()}
+					listFilter={filters.listFilter()}
+					effectiveSearchTerm={filters.effectiveSearchTerm()}
+					includeOutOfStock={filters.includeOutOfStock()}
+					onApply={filters.applyFilters}
+					onReset={filters.resetDrawerFilters}
 				/>
 
 				{/* Products Grid */}
@@ -631,11 +461,18 @@ const ProductsList = (props: ProductsListProps) => {
 						<Show
 							when={isInitialLoading()}
 							fallback={
-								<Show when={shouldShowEmptyState()}>
-									<ProductEmptyState
-										hasActiveFilters={hasActiveFilters()}
-										onClearFilters={handleClearFilters}
-									/>
+								<Show
+									when={hasInitialBrowseError()}
+									fallback={
+										<Show when={shouldShowEmptyState()}>
+											<ProductEmptyState
+												hasActiveFilters={filters.hasActiveFilters()}
+												onClearFilters={filters.handleClearFilters}
+											/>
+										</Show>
+									}
+								>
+									<ProductErrorState onRetry={retryProducts} />
 								</Show>
 							}
 						>
@@ -649,8 +486,8 @@ const ProductsList = (props: ProductsListProps) => {
 						{/* Loading indicator for initial load */}
 						<Show when={isInitialLoading()}>
 							<div class="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-								<div class="flex flex-col items-center gap-3 border-2 border-border bg-card px-5 py-4 shadow-hard sm:gap-3.5 sm:border-3 sm:px-6 sm:py-5 sm:shadow-hard-lg lg:px-8 lg:py-6">
-									<div class="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-transparent sm:h-7 sm:w-7 sm:border-3 lg:h-8 lg:w-8" />
+								<div class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-5 py-4 shadow-soft sm:gap-3.5 sm:px-6 sm:py-5 sm:shadow-soft-lg lg:px-8 lg:py-6">
+									<div class="h-6 w-6 animate-spin rounded-full border border-border border-t-transparent sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
 									<p class="font-bold text-xs sm:text-sm lg:text-base">
 										Ачааллаж байна...
 									</p>
@@ -664,25 +501,21 @@ const ProductsList = (props: ProductsListProps) => {
 							)}
 						>
 							{/* Search mode: render search results */}
-							<Show when={isSearchMode()}>
+							<Show when={filters.isSearchMode()}>
 								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
 									<For each={searchResults()}>
 										{(product) => <ProductCard product={product} />}
 									</For>
 								</div>
 							</Show>
-							{/* Browse mode: render infinite scroll products */}
-							<Show when={!isSearchMode()}>
-								<ProductsVirtualGrid
-									rows={visibleBrowseRows()}
-									rangeStart={visibleBrowseRange().start}
-									rowHeight={rowHeight()}
-									totalHeight={totalBrowseHeight()}
-									setGridRef={(el) => {
-										browseGridRef = el;
-									}}
-									setFirstRowRef={setFirstBrowseRowEl}
-								/>
+							{/* Browse mode: plain CSS grid. Pages are 12 items, so even
+							    dozens of loaded pages are a modest DOM size. */}
+							<Show when={!filters.isSearchMode()}>
+								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
+									<For each={allBrowseProducts()}>
+										{(product) => <ProductCard product={product} />}
+									</For>
+								</div>
 							</Show>
 						</div>
 					</div>
@@ -690,19 +523,17 @@ const ProductsList = (props: ProductsListProps) => {
 
 				{/* Error State */}
 				<Show
-					when={isSearchMode() ? searchQuery.isError : productsQuery.isError}
+					when={
+						filters.isSearchMode()
+							? searchQuery.isError
+							: productsQuery.isError && allBrowseProducts().length > 0
+					}
 				>
-					<ProductErrorState onRetry={() => {
-						if (isSearchMode()) {
-							searchQuery.refetch();
-						} else {
-							productsQuery.refetch();
-						}
-					}} />
+					<ProductErrorState onRetry={retryProducts} />
 				</Show>
 
-				{/* Loading More Skeleton (browse mode only) */}
-				<Show when={!isSearchMode() && productsQuery.isFetchingNextPage}>
+				{/* Loading More Skeleton */}
+				<Show when={isFetchingNextPage()}>
 					<ProductSkeletonGrid
 						count={4}
 						class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
@@ -712,26 +543,33 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* End of List */}
 				<Show
 					when={
-						isSearchMode()
-							? searchResults().length > 0
-							: productsQuery.data &&
-								!productsQuery.hasNextPage &&
-								allBrowseProducts().length > 0
+						(filters.isSearchMode()
+							? searchQuery.data && !searchQuery.hasNextPage
+							: productsQuery.data && !productsQuery.hasNextPage) &&
+							hasProducts()
 					}
 				>
 					<ProductListEnd count={productCount()} />
 				</Show>
 
-				{/* Infinite Scroll Sentinel (browse mode only) */}
+				{/* Automatic continuation with an accessible manual fallback. */}
 				<Show
 					when={
-						!isSearchMode() &&
-						productsQuery.hasNextPage &&
-						productsQuery.data &&
-						!productsQuery.isFetchingNextPage
+						hasNextPage() &&
+						(filters.isSearchMode() ? searchQuery.data : productsQuery.data)
 					}
 				>
-					<div ref={setupObserver} class="h-2 w-full" aria-hidden="true" />
+					<div class="mt-4 flex justify-center sm:mt-6">
+						<button
+							ref={setupObserver}
+							type="button"
+							disabled={isFetchingNextPage()}
+							onClick={loadNextPage}
+							class="hover:-translate-y-0.5 inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
+						>
+							{isFetchingNextPage() ? "Ачааллаж байна..." : "Цааш үзэх"}
+						</button>
+					</div>
 				</Show>
 			</div>
 		</div>

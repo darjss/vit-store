@@ -1,57 +1,52 @@
 import { defineMiddleware } from "astro:middleware";
 
-/**
- * Paths that should never be edge-cached — user-specific or dynamic content.
- */
-function isCacheablePath(pathname: string): boolean {
-  return (
-    !pathname.startsWith("/api/") &&
-    !pathname.startsWith("/order/") &&
-    !pathname.startsWith("/payment/") &&
-    !pathname.startsWith("/og/") &&
-    pathname !== "/login" &&
-    pathname !== "/checkout" &&
-    pathname !== "/cart" &&
-    pathname !== "/profile" &&
-    pathname !== "/order-tracking"
-  );
+function isPublicHtmlPath(pathname: string): boolean {
+	const normalized = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+	return (
+		normalized === "/" ||
+		normalized === "/products" ||
+		/^\/products\/[^/]+-\d+$/.test(normalized) ||
+		/^\/products\/(?:brand|category)\/[^/]+\/\d+$/.test(normalized)
+	);
+}
+
+function setNoStore(response: Response): void {
+	response.headers.set("Cache-Control", "no-store");
+	response.headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+	response.headers.delete("Cache-Tag");
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 
-	// Keep the canonical robots endpoint clean. Some crawlers/tools probe both forms.
 	if (url.pathname === "/robots.txt/") {
-		return context.redirect("/robots.txt", 301);
+		const response = context.redirect("/robots.txt", 301);
+		setNoStore(response);
+		return response;
 	}
 
-	// Check edge cache BEFORE rendering. Cache API (caches.default) stores
-	// responses in the Worker's edge cache — this is the only way to cache
-	// Worker responses; setting Cache-Control headers alone doesn't work.
-	if (context.request.method === "GET" && isCacheablePath(url.pathname)) {
-		try {
-			const cache = (caches as unknown as { default: Cache }).default;
-			const cacheKey = new Request(url.toString(), { method: "GET" });
-			const cached = await cache.match(cacheKey);
-			if (cached) {
-				const hitResponse = new Response(cached.body, cached);
-				hitResponse.headers.set("X-Edge-Cache", "HIT");
-				return hitResponse;
-			}
-			// MISS — render, then cache the result.
-			const response = await next();
-			if (response.status === 200) {
-				response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-				response.headers.set("X-Edge-Cache", "MISS");
-				(context as unknown as { waitUntil: (p: Promise<unknown>) => void }).waitUntil(
-					cache.put(cacheKey, response.clone()),
-				);
-			}
-			return response;
-		} catch {
-			// Cache API not available (e.g. local dev) — fall through.
-		}
+	const isPublicHtml = isPublicHtmlPath(url.pathname);
+	const hasPersonalization =
+		context.request.headers.has("cookie") ||
+		context.request.headers.has("authorization");
+	const mustBypass =
+		context.request.method !== "GET" || !isPublicHtml || hasPersonalization;
+
+	if (mustBypass) {
+		context.cache.set(false);
 	}
 
-	return next();
+	const response = await next();
+	if (
+		mustBypass ||
+		response.status >= 300 ||
+		response.headers.has("set-cookie")
+	) {
+		context.cache.set(false);
+		setNoStore(response);
+	} else {
+		const vary = response.headers.get("Vary");
+		response.headers.set("Vary", vary ? `${vary}, Cookie` : "Cookie");
+	}
+	return response;
 });
