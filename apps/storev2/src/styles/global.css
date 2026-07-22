@@ -305,6 +305,186 @@
         animation: count-pop 350ms var(--ease-out);
     }
 
+    @keyframes cart-add-stamp {
+        0% {
+            transform: scale(1) rotate(0deg);
+        }
+        35% {
+            transform: scale(0.82) rotate(-7deg);
+        }
+        68% {
+            transform: scale(1.12) rotate(4deg);
+        }
+        100% {
+            transform: scale(1) rotate(0deg);
+        }
+    }
+
+    .animate-cart-add-stamp {
+        animation: cart-add-stamp 520ms var(--ease-out-expo);
+    }
+
+    .cart-add-burst {
+        position: fixed;
+        z-index: 100;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
+    }
+
+    .cart-add-burst i {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 3px;
+        background: var(--burst-color);
+        animation: cart-add-particle 650ms var(--ease-out-expo) forwards;
+    }
+
+    @keyframes cart-add-particle {
+        from {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        }
+        to {
+            opacity: 0;
+            transform: translate(
+                    calc(-50% + var(--burst-x)),
+                    calc(-50% + var(--burst-y))
+                )
+                scale(0.45) rotate(var(--burst-rotate));
+        }
+    }
+
+    @keyframes checkout-loader-ring {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .checkout-loader-ring {
+        transform-origin: center;
+        animation: checkout-loader-ring 800ms linear infinite;
+    }
+
+    .checkout-loader-ring-slow {
+        transform-origin: center;
+        animation: checkout-loader-ring 1400ms linear infinite reverse;
+    }
+
+    @keyframes checkout-loader-dot {
+        to {
+            opacity: 0.3;
+            transform: translateY(-5px);
+        }
+    }
+
+    .checkout-loader-dot {
+        animation: checkout-loader-dot 650ms ease-in-out infinite alternate;
+    }
+
+    .checkout-loader-dot:nth-child(2) {
+        animation-delay: 100ms;
+    }
+
+    .checkout-loader-dot:nth-child(3) {
+        animation-delay: 200ms;
+    }
+
+    @keyframes checkout-car-drive {
+        0%,
+        100% {
+            transform: translateX(-5px) rotate(-2deg);
+        }
+        50% {
+            transform: translateX(5px) rotate(2deg);
+        }
+    }
+
+    .animate-checkout-car {
+        animation: checkout-car-drive 800ms var(--ease-in-out) infinite;
+    }
+
+    @keyframes checkout-nudge {
+        0%,
+        100% {
+            transform: translateX(0);
+        }
+        25% {
+            transform: translateX(-6px) rotate(-0.35deg);
+        }
+        55% {
+            transform: translateX(5px) rotate(0.35deg);
+        }
+        80% {
+            transform: translateX(-2px);
+        }
+    }
+
+    .animate-checkout-nudge {
+        animation: checkout-nudge 420ms var(--ease-out-expo);
+    }
+
+    @keyframes payment-panel-enter-left {
+        from {
+            opacity: 0;
+            transform: translateX(-16px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    @keyframes payment-panel-enter-right {
+        from {
+            opacity: 0;
+            transform: translateX(16px) scale(0.98);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    .animate-payment-panel-left {
+        animation: payment-panel-enter-left 320ms var(--ease-out-expo);
+    }
+
+    .animate-payment-panel-right {
+        animation: payment-panel-enter-right 320ms var(--ease-out-expo);
+    }
+
+    @keyframes payment-state-pop {
+        0% {
+            opacity: 0;
+            transform: scale(0.86) rotate(-5deg);
+        }
+        65% {
+            opacity: 1;
+            transform: scale(1.06) rotate(2deg);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+    }
+
+    .animate-payment-state-pop {
+        animation: payment-state-pop 450ms var(--ease-out-expo);
+    }
+
+    @keyframes quantity-pop {
+        45% {
+            color: var(--color-cocoa);
+            transform: translateY(-4px) scale(1.35);
+        }
+    }
+
+    .animate-quantity-pop {
+        animation: quantity-pop 320ms var(--ease-out-expo);
+    }
+
     /* Hide scrollbar but keep functionality */
     .scrollbar-hide {
         -ms-overflow-style: none;

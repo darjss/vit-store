@@ -1,5 +1,5 @@
 import { deliveryFee } from "@vit/shared/constants";
-import { For, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import {
 	Sheet,
@@ -17,7 +17,28 @@ import { cartSheetFocusRestore } from "./cart-sheet-focus";
 import EmptyCart from "./empty-cart";
 
 const CartDrawer = () => {
+	const [totalPulse, setTotalPulse] = createSignal(false);
 	const isEmpty = () => cart.items().length === 0;
+	let totalPulseTimer: number | undefined;
+
+	createEffect(
+		on(
+			() => cart.total(),
+			(total, previous) => {
+				if (previous === undefined || total === previous) return;
+				setTotalPulse(false);
+				requestAnimationFrame(() => setTotalPulse(true));
+				window.clearTimeout(totalPulseTimer);
+				totalPulseTimer = window.setTimeout(() => setTotalPulse(false), 350);
+			},
+		),
+	);
+
+	onCleanup(() => {
+		if (typeof window !== "undefined") {
+			window.clearTimeout(totalPulseTimer);
+		}
+	});
 
 	return (
 		<Sheet open={cart.isDrawerOpen()} onOpenChange={cart.closeDrawer}>
@@ -34,7 +55,12 @@ const CartDrawer = () => {
 						</span>
 						Таны сагс
 					</SheetTitle>
-					<p class="font-medium text-muted-foreground text-sm">
+					<p
+						class={cn(
+							"font-medium text-muted-foreground text-sm",
+							totalPulse() && "animate-quantity-pop",
+						)}
+					>
 						{cart.count()} бүтээгдэхүүн
 					</p>
 				</SheetHeader>
@@ -78,7 +104,12 @@ const CartDrawer = () => {
 								</div>
 								<div class="flex items-baseline justify-between border-border border-t pt-3">
 									<span class="font-semibold text-foreground">Нийт дүн</span>
-									<span class="font-display text-2xl text-foreground">
+									<span
+										class={cn(
+											"font-display text-2xl text-foreground",
+											totalPulse() && "animate-quantity-pop",
+										)}
+									>
 										₮{(cart.total() + deliveryFee).toLocaleString()}
 									</span>
 								</div>

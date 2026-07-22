@@ -1,5 +1,5 @@
 import { createFormHook } from "@tanstack/solid-form";
-import type { ComponentProps } from "solid-js";
+import type { ComponentProps, JSX } from "solid-js";
 import { lazy } from "solid-js";
 import { Button } from "../ui/button";
 import { fieldContext, formContext, useFormContext } from "./form-context";
@@ -14,7 +14,8 @@ const FormSelectField = lazy(() =>
 	import("./form-select-field").then((f) => ({ default: f.FormSelectField })),
 );
 function SubmitButton(props: {
-	children?: string;
+	children?: JSX.Element;
+	loadingContent?: JSX.Element;
 	disabled?: boolean;
 	type?: ComponentProps<typeof Button>["type"];
 	size?: ComponentProps<typeof Button>["size"];
@@ -35,7 +36,9 @@ function SubmitButton(props: {
 					size={props.size}
 					class={props.class}
 				>
-					{state().isSubmitting ? "..." : props.children || "Submit"}
+					{state().isSubmitting
+						? (props.loadingContent ?? "...")
+						: (props.children ?? "Submit")}
 				</Button>
 			)}
 		</form.Subscribe>

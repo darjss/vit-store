@@ -1,7 +1,8 @@
 import type { CartItems } from "@vit/shared/types";
 import { createSignal } from "solid-js";
-import { cart } from "@/store/cart";
+import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
+import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
 import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
 import { Button } from "../ui/button";
@@ -18,9 +19,10 @@ const stateClass =
 const AddToCartButton = (props: AddToCartButtonProps) => {
 	const [isAdded, setIsAdded] = createSignal(false);
 
-	const handleAddToCart = () => {
+	const handleAddToCart = (event: MouseEvent) => {
 		cart.add(props.cartItem, { openDrawer: props.openDrawer ?? true });
 		setIsAdded(true);
+		playCartBurst(event.currentTarget as HTMLElement);
 		setTimeout(() => setIsAdded(false), 1500);
 	};
 
@@ -28,7 +30,8 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 		<Button
 			class={cn(
 				props.compact ? "" : "w-full",
-				isAdded() && "bg-success text-success-foreground shadow-none",
+				isAdded() &&
+					"animate-cart-add-stamp bg-success text-success-foreground shadow-none",
 			)}
 			type="button"
 			variant="default"
@@ -39,20 +42,14 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 		>
 			<span class="grid place-items-center">
 				<span
-					class={cn(
-						stateClass,
-						isAdded() && "opacity-0 blur-[2px]",
-					)}
+					class={cn(stateClass, isAdded() && "opacity-0 blur-[2px]")}
 					aria-hidden={isAdded()}
 				>
 					<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5" />
 					<span class="hidden text-[11px] sm:inline sm:text-xs">Сагслах</span>
 				</span>
 				<span
-					class={cn(
-						stateClass,
-						!isAdded() && "opacity-0 blur-[2px]",
-					)}
+					class={cn(stateClass, !isAdded() && "opacity-0 blur-[2px]")}
 					aria-hidden={!isAdded()}
 				>
 					<IconCheck class="h-4 w-4 sm:h-5 sm:w-5" />

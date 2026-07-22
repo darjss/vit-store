@@ -1,6 +1,7 @@
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
+import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import IconCheck from "~icons/ri/check-line";
@@ -64,6 +65,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 		if (isAdded()) return;
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
+		playCartBurst(event.currentTarget as HTMLElement);
 		setTimeout(() => setIsAdded(false), 1500);
 	};
 
@@ -87,7 +89,9 @@ const CardAddButton = (props: CardAddButtonProps) => {
 				class={cn(
 					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 					"active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
-					isAdded() && !isOutOfStock() && "bg-success text-success-foreground",
+					isAdded() &&
+						!isOutOfStock() &&
+						"animate-cart-add-stamp bg-success text-success-foreground",
 					isOutOfStock() &&
 						"border-border bg-card text-foreground shadow-soft-sm",
 					!isInventoryVerified() &&

@@ -1,6 +1,6 @@
 import { Image } from "@unpic/solid";
 import type { CartItems } from "@vit/shared/types";
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
@@ -17,7 +17,31 @@ const EXIT_MS = 220;
 const CartDrawerItem = (props: CartDrawerItemProps) => {
 	const [removing, setRemoving] = createSignal(false);
 	const [measuredHeight, setMeasuredHeight] = createSignal<number | null>(null);
+	const [quantityPulse, setQuantityPulse] = createSignal(false);
 	let rootEl: HTMLDivElement | undefined;
+	let quantityPulseTimer: number | undefined;
+
+	createEffect(
+		on(
+			() => props.item.quantity,
+			(quantity, previous) => {
+				if (previous === undefined || quantity === previous) return;
+				setQuantityPulse(false);
+				requestAnimationFrame(() => setQuantityPulse(true));
+				window.clearTimeout(quantityPulseTimer);
+				quantityPulseTimer = window.setTimeout(
+					() => setQuantityPulse(false),
+					350,
+				);
+			},
+		),
+	);
+
+	onCleanup(() => {
+		if (typeof window !== "undefined") {
+			window.clearTimeout(quantityPulseTimer);
+		}
+	});
 
 	const productUrl = () =>
 		`/products/${props.item.slug}-${props.item.productId}/`;
@@ -45,7 +69,9 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 		<Presence>
 			<Show when={!removing()}>
 				<Motion.div
-					ref={rootEl}
+					ref={(element) => {
+						rootEl = element;
+					}}
 					initial={{ opacity: 0, y: 8 }}
 					animate={{ opacity: 1, y: 0 }}
 					exit={{
@@ -54,7 +80,10 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 						...(measuredHeight() !== null
 							? { height: [`${measuredHeight()}px`, "0px"] }
 							: {}),
-						transition: { duration: EXIT_MS / 1000, easing: [0.65, 0, 0.35, 1] },
+						transition: {
+							duration: EXIT_MS / 1000,
+							easing: [0.65, 0, 0.35, 1],
+						},
 					}}
 					transition={{ duration: 0.25, easing: [0.25, 1, 0.5, 1] }}
 					class={cn(
@@ -113,7 +142,12 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 									>
 										−
 									</button>
-									<span class="min-w-6 text-center font-semibold text-sm tabular-nums">
+									<span
+										class={cn(
+											"min-w-6 text-center font-semibold text-sm tabular-nums",
+											quantityPulse() && "animate-quantity-pop",
+										)}
+									>
 										{props.item.quantity}
 									</span>
 									<button
@@ -126,7 +160,12 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 									</button>
 								</div>
 
-								<span class="font-display text-foreground text-sm">
+								<span
+									class={cn(
+										"font-display text-foreground text-sm",
+										quantityPulse() && "animate-quantity-pop",
+									)}
+								>
 									₮{(props.item.price * props.item.quantity).toLocaleString()}
 								</span>
 							</div>
