@@ -198,14 +198,14 @@ const ProductCard = (props: ProductCardProps) => {
 						isOutOfStock()
 							? "font-semibold text-[11px] text-destructive"
 							: isLowStock()
-								? "font-semibold text-[11px] text-warning-foreground"
+								? "low-stock-indicator font-semibold text-[11px]"
 								: "font-semibold text-[11px] text-success-foreground"
 					}
 				>
 					{isOutOfStock()
 						? "Дууссан"
 						: isLowStock()
-							? "Цөөн үлдсэн"
+							? "Цөөхөн үлдсэн"
 							: "Бэлэн байна"}
 				</p>
 

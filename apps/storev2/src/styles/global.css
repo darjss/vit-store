@@ -374,6 +374,52 @@
 }
 
 @layer utilities {
+    .low-stock-indicator {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 0.375rem;
+        border-radius: 9999px;
+        background-color: var(--color-warning);
+        padding: 0.25rem 0.5rem;
+        color: var(--color-warning-foreground);
+        line-height: 1;
+        animation: low-stock-enter 420ms var(--ease-out-quart);
+    }
+
+    .low-stock-indicator::before {
+        width: 0.375rem;
+        height: 0.375rem;
+        flex: none;
+        border-radius: 9999px;
+        background-color: currentColor;
+        content: "";
+        animation: low-stock-pulse 700ms var(--ease-in-out) 450ms 2;
+    }
+
+    @keyframes low-stock-enter {
+        from {
+            opacity: 0.72;
+            transform: translateY(3px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes low-stock-pulse {
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.55;
+            transform: scale(0.7);
+        }
+    }
+
     /* Soft blurred shadows — the default elevation language. */
     .shadow-soft-sm {
         box-shadow: 0 1px 2px oklch(0.3 0.02 60 / 0.08);

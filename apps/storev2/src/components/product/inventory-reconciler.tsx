@@ -224,7 +224,13 @@ function reconcileServerProductCards(
 			card.dataset.inventoryState = presentation.state;
 		}
 		const stock = card.querySelector<HTMLElement>("[data-card-stock]");
-		if (stock) setTextIfChanged(stock, presentation.availabilityLabel);
+		if (stock) {
+			setTextIfChanged(stock, presentation.availabilityLabel);
+			stock.classList.toggle(
+				"low-stock-indicator",
+				presentation.state === "low",
+			);
+		}
 	}
 }
 
@@ -269,6 +275,7 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 		`[data-inventory-stock-badge="${snapshot.id}"]`,
 	)) {
 		setTextIfChanged(element, stockLabel);
+		element.classList.toggle("low-stock-indicator", lowStock);
 	}
 	for (const element of document.querySelectorAll<HTMLElement>(
 		`[data-inventory-stock-meta="${snapshot.id}"]`,
