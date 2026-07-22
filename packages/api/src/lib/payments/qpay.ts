@@ -1,6 +1,6 @@
-import { logger } from "~/lib/logger";
 import { env } from "cloudflare:workers";
 import ky, { HTTPError } from "ky";
+import { logger } from "~/lib/logger";
 
 const apiUrl = env.QPAY_URL.endsWith("/") ? env.QPAY_URL : `${env.QPAY_URL}/`;
 const requestStartedAt = new WeakMap<Request, number>();
@@ -153,7 +153,8 @@ const qpayClient = ky.create({
 					method: request.method,
 					url: request.url,
 					status: response.status,
-					durationMs: Date.now() - (requestStartedAt.get(request) ?? Date.now()),
+					durationMs:
+						Date.now() - (requestStartedAt.get(request) ?? Date.now()),
 				});
 				if (response.status !== 401) {
 					return response;
@@ -164,10 +165,6 @@ const qpayClient = ky.create({
 				}
 
 				const body = await response.clone().text();
-				if (!body.includes("NO_CREDENDIALS")) {
-					return response;
-				}
-
 				logger.warn("qpay token rejected, refreshing and retrying request", {
 					method: request.method,
 					url: request.url,
