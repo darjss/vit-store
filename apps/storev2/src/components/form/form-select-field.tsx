@@ -50,7 +50,11 @@ export function FormSelectField(props: FormSelectFieldProps) {
 					if (showErrors()) {
 						field().setMeta((prev) => ({
 							...prev,
-							errorMap: { ...prev.errorMap, onBlur: undefined, onSubmit: undefined },
+							errorMap: {
+								...prev.errorMap,
+								onBlur: undefined,
+								onSubmit: undefined,
+							},
 						}));
 					}
 				}}
@@ -66,7 +70,7 @@ export function FormSelectField(props: FormSelectFieldProps) {
 				</For>
 			</select>
 			<Show when={isInvalid()}>
-				<p class="text-xs md:text-sm text-destructive font-bold">
+				<p class="animate-error-pop font-bold text-destructive text-xs md:text-sm">
 					{firstError()}
 				</p>
 			</Show>

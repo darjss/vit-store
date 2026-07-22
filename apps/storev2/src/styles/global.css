@@ -71,6 +71,7 @@
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-playful-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
     /* Heading type scale tokens — canonical page heading sizes. */
     --text-h1: clamp(1.9rem, 6vw, 3.2rem);
@@ -291,29 +292,29 @@
 
     @keyframes count-pop {
         0% {
-            transform: scale(1);
+            transform: scale(0.4) rotate(-18deg);
         }
-        40% {
-            transform: scale(1.35);
+        55% {
+            transform: scale(1.5) rotate(10deg);
         }
         100% {
-            transform: scale(1);
+            transform: scale(1) rotate(0deg);
         }
     }
 
     .animate-count-pop {
-        animation: count-pop 350ms var(--ease-out);
+        animation: count-pop 600ms var(--ease-playful-spring);
     }
 
     @keyframes cart-add-stamp {
         0% {
             transform: scale(1) rotate(0deg);
         }
-        35% {
-            transform: scale(0.82) rotate(-7deg);
+        25% {
+            transform: scale(0.84) rotate(-9deg);
         }
-        68% {
-            transform: scale(1.12) rotate(4deg);
+        55% {
+            transform: scale(1.18) rotate(6deg);
         }
         100% {
             transform: scale(1) rotate(0deg);
@@ -321,7 +322,7 @@
     }
 
     .animate-cart-add-stamp {
-        animation: cart-add-stamp 520ms var(--ease-out-expo);
+        animation: cart-add-stamp 700ms var(--ease-playful-spring);
     }
 
     .cart-add-burst {
@@ -338,7 +339,7 @@
         height: 8px;
         border-radius: 3px;
         background: var(--burst-color);
-        animation: cart-add-particle 650ms var(--ease-out-expo) forwards;
+        animation: cart-add-particle 850ms var(--ease-out-expo) forwards;
     }
 
     @keyframes cart-add-particle {
@@ -352,7 +353,7 @@
                     calc(-50% + var(--burst-x)),
                     calc(-50% + var(--burst-y))
                 )
-                scale(0.45) rotate(var(--burst-rotate));
+                rotate(var(--burst-rotate));
         }
     }
 
@@ -410,14 +411,17 @@
         100% {
             transform: translateX(0);
         }
-        25% {
-            transform: translateX(-6px) rotate(-0.35deg);
+        20% {
+            transform: translateX(-8px) rotate(-0.5deg);
         }
-        55% {
-            transform: translateX(5px) rotate(0.35deg);
+        40% {
+            transform: translateX(7px) rotate(0.5deg);
+        }
+        60% {
+            transform: translateX(-4px);
         }
         80% {
-            transform: translateX(-2px);
+            transform: translateX(2px);
         }
     }
 
@@ -425,10 +429,65 @@
         animation: checkout-nudge 420ms var(--ease-out-expo);
     }
 
+    @keyframes error-pop {
+        from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.85);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .animate-error-pop {
+        animation: error-pop 420ms var(--ease-playful-spring) both;
+    }
+
+    @keyframes submit-celebrate {
+        50% {
+            transform: scale(1.06) rotate(-1deg);
+        }
+    }
+
+    @keyframes pulse-halo {
+        0% {
+            box-shadow: 0 0 0 0 oklch(0.9 0.14 95 / 0.65);
+        }
+        70% {
+            box-shadow: 0 0 0 18px oklch(0.9 0.14 95 / 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 oklch(0.9 0.14 95 / 0);
+        }
+    }
+
+    .animate-submit-working {
+        animation:
+            submit-celebrate 550ms var(--ease-playful-spring),
+            pulse-halo 1500ms ease-out 550ms infinite;
+    }
+
+    @keyframes checkout-car-track {
+        0% {
+            transform: translateX(-7px) rotate(-2deg);
+        }
+        55% {
+            transform: translateX(7px) rotate(2deg);
+        }
+        100% {
+            transform: translateX(-7px) rotate(-2deg);
+        }
+    }
+
+    .animate-checkout-car-track {
+        animation: checkout-car-track 900ms var(--ease-out-expo) infinite;
+    }
+
     @keyframes payment-panel-enter-left {
         from {
             opacity: 0;
-            transform: translateX(-16px) scale(0.98);
+            transform: translateX(-24px) scale(0.97);
         }
         to {
             opacity: 1;
@@ -439,7 +498,7 @@
     @keyframes payment-panel-enter-right {
         from {
             opacity: 0;
-            transform: translateX(16px) scale(0.98);
+            transform: translateX(24px) scale(0.97);
         }
         to {
             opacity: 1;
@@ -448,41 +507,63 @@
     }
 
     .animate-payment-panel-left {
-        animation: payment-panel-enter-left 320ms var(--ease-out-expo);
+        animation: payment-panel-enter-left 440ms var(--ease-out-expo);
     }
 
     .animate-payment-panel-right {
-        animation: payment-panel-enter-right 320ms var(--ease-out-expo);
+        animation: payment-panel-enter-right 440ms var(--ease-out-expo);
     }
 
     @keyframes payment-state-pop {
-        0% {
+        from {
             opacity: 0;
-            transform: scale(0.86) rotate(-5deg);
+            transform: scale(0.85) rotate(-5deg);
         }
-        65% {
-            opacity: 1;
-            transform: scale(1.06) rotate(2deg);
-        }
-        100% {
+        to {
             opacity: 1;
             transform: scale(1) rotate(0deg);
         }
     }
 
     .animate-payment-state-pop {
-        animation: payment-state-pop 450ms var(--ease-out-expo);
+        animation: payment-state-pop 450ms var(--ease-playful-spring) both;
+    }
+
+    @keyframes qpay-qr-pop {
+        from {
+            opacity: 0;
+            transform: scale(0.55) rotate(-8deg);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+    }
+
+    .animate-qpay-qr-pop {
+        animation: qpay-qr-pop 600ms var(--ease-playful-spring) both;
     }
 
     @keyframes quantity-pop {
-        45% {
-            color: var(--color-cocoa);
-            transform: translateY(-4px) scale(1.35);
+        50% {
+            color: var(--color-destructive);
+            transform: translateY(-5px) scale(1.4);
         }
     }
 
     .animate-quantity-pop {
-        animation: quantity-pop 320ms var(--ease-out-expo);
+        animation: quantity-pop 380ms var(--ease-playful-spring);
+    }
+
+    @keyframes cart-total-flash {
+        35% {
+            background: var(--color-primary);
+            transform: scale(1.13);
+        }
+    }
+
+    .animate-cart-total-flash {
+        animation: cart-total-flash 520ms var(--ease-playful-spring);
     }
 
     /* Hide scrollbar but keep functionality */

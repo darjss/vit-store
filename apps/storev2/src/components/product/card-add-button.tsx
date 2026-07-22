@@ -21,7 +21,7 @@ interface CardAddButtonProps {
 }
 
 const stateClass =
-	"col-start-1 row-start-1 flex items-center justify-center transition-[opacity,filter] duration-200 ease-out";
+	"col-start-1 row-start-1 flex items-center justify-center transition-[opacity,filter,transform] duration-[430ms] ease-(--ease-playful-spring)";
 
 const cardAddLabel = (
 	verificationStatus: "checking" | "verified" | "degraded",
@@ -104,13 +104,19 @@ const CardAddButton = (props: CardAddButtonProps) => {
 				>
 					<span class="grid place-items-center">
 						<span
-							class={cn(stateClass, isAdded() && "opacity-0 blur-[2px]")}
+							class={cn(
+								stateClass,
+								isAdded() && "scale-25 -rotate-[100deg] opacity-0 blur-[2px]",
+							)}
 							aria-hidden={isAdded()}
 						>
 							<IconShoppingCart class="h-5 w-5" />
 						</span>
 						<span
-							class={cn(stateClass, !isAdded() && "opacity-0 blur-[2px]")}
+							class={cn(
+								stateClass,
+								!isAdded() && "scale-25 rotate-[100deg] opacity-0 blur-[2px]",
+							)}
 							aria-hidden={!isAdded()}
 						>
 							<IconCheck class="h-5 w-5" />
