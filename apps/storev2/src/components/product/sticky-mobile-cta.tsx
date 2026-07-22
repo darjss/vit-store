@@ -5,7 +5,7 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cart } from "@/store/cart";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import { CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,

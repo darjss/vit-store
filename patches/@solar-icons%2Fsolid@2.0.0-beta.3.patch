@@ -1,0 +1,121 @@
+diff --git a/dist/lib/IconBase.mjs b/dist/lib/IconBase.mjs
+index 0fe67035eca67caafb5bdca3db3855d945c0885f..287dc09419b2f9ba58dc33e705ef29fd977978a6 100644
+--- a/dist/lib/IconBase.mjs
++++ b/dist/lib/IconBase.mjs
+@@ -1 +1,101 @@
+-import{effect as e,insert as t,memo as n,mergeProps as r,spread as i,template as a}from"solid-js/web";import{mergeProps as o,splitProps as s}from"solid-js";var c=a(`<svg xmlns=http://www.w3.org/2000/svg fill=none viewBox="0 0 24 24">`),l=a(`<title>`),u=a(`<svg><g></svg>`,!1,!0,!1);const d=`solar`;function f(e){return e[`aria-label`]!==void 0||e.title!==void 0}function p(a){let[p,m]=s(o({},a),[`alt`,`color`,`size`,`strokeWidth`,`secondaryColor`,`secondaryOpacity`,`iconName`,`iconBody`,`isolated`,`children`]),h=()=>{let e=p.iconName;return e?`${d} solar-${e}`:d},g=()=>m.class,_=()=>{let e=g();return e?`${h()} ${e}`:h()},v=()=>!!p.alt||f(m),y=()=>m.style??{},b=()=>{let e={...y()};if(p.isolated&&(e[`--solar-secondary-color`]=`initial`,e[`--solar-secondary-opacity`]=`initial`),p.color!==void 0&&(e.color=p.color),p.size!==void 0){let t=typeof p.size==`number`?`${p.size}px`:p.size;e.width=t,e.height=t}return p.strokeWidth!==void 0&&(e[`stroke-width`]=String(p.strokeWidth)),p.secondaryColor&&(e[`--solar-secondary-color`]=p.secondaryColor),p.secondaryOpacity!=null&&(e[`--solar-secondary-opacity`]=String(p.secondaryOpacity)),p.size===void 0&&!p.isolated&&(e[`font-size`]=e[`font-size`]??`var(--solar-size, 24px)`),e},x=()=>{if(p.size===void 0)return p.isolated?`24px`:`1em`},S=()=>{if(p.size===void 0)return p.isolated?`24px`:`1em`},C=()=>{if(p.color===void 0)return p.isolated?`currentColor`:`var(--solar-color, currentColor)`},w=()=>{if(p.strokeWidth===void 0)return p.isolated?`1.5`:`var(--solar-stroke-width, 1.5)`},T=()=>v()?void 0:`true`;return(()=>{var a=c();return i(a,r(m,{get class(){return _()},get style(){return b()},get width(){return x()},get height(){return S()},get color(){return C()},get"stroke-width"(){return w()},get"aria-hidden"(){return T()}}),!0,!0),t(a,(()=>{var e=n(()=>!!p.alt);return()=>e()&&(()=>{var e=l();return t(e,()=>p.alt),e})()})(),null),t(a,(()=>{var t=n(()=>!!p.iconBody);return()=>t()?(()=>{var t=u();return e(()=>t.innerHTML=p.iconBody),t})():p.children})(),null),a})()}export{p as default};
+\ No newline at end of file
++import { effect, escape, insert, isServer, memo, mergeProps as mergeWebProps, spread, ssr, ssrElement, template } from "solid-js/web";
++import { mergeProps, splitProps } from "solid-js";
++
++const createSvg = isServer ? undefined : template('<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">');
++const createTitle = isServer ? undefined : template("<title>");
++const createBody = isServer ? undefined : template("<svg><g></svg>", false, true, false);
++const SOLAR_CLASS = "solar";
++
++function hasA11yProp(props) {
++	return props["aria-label"] !== undefined || props.title !== undefined;
++}
++
++function IconBase(allProps) {
++	const props = mergeProps({}, allProps);
++	const [local, others] = splitProps(props, [
++		"alt",
++		"color",
++		"size",
++		"strokeWidth",
++		"secondaryColor",
++		"secondaryOpacity",
++		"iconName",
++		"iconBody",
++		"isolated",
++		"children",
++	]);
++	const iconClass = () => local.iconName ? `${SOLAR_CLASS} solar-${local.iconName}` : SOLAR_CLASS;
++	const className = () => others.class ? `${iconClass()} ${others.class}` : iconClass();
++	const isAccessible = () => !!local.alt || hasA11yProp(others);
++	const baseStyle = () => {
++		const userStyle = others.style;
++		const style = typeof userStyle === "string" ? {} : { ...(userStyle ?? {}) };
++		if (local.isolated) {
++			style["--solar-secondary-color"] = "initial";
++			style["--solar-secondary-opacity"] = "initial";
++		}
++		if (local.color !== undefined) style.color = local.color;
++		if (local.size !== undefined) {
++			const size = typeof local.size === "number" ? `${local.size}px` : local.size;
++			if (others.width === undefined) style.width = size;
++			if (others.height === undefined) style.height = size;
++		}
++		if (local.strokeWidth !== undefined && others["stroke-width"] === undefined) style["stroke-width"] = String(local.strokeWidth);
++		if (local.secondaryColor) style["--solar-secondary-color"] = local.secondaryColor;
++		if (local.secondaryOpacity != null) style["--solar-secondary-opacity"] = String(local.secondaryOpacity);
++		if (local.size === undefined && !local.isolated && (typeof userStyle !== "string" || !/(^|;)\s*font-size\s*:/.test(userStyle))) {
++			style["font-size"] ??= "var(--solar-size, 24px)";
++		}
++		if (typeof userStyle !== "string") return style;
++		const additions = Object.entries(style).map(([name, value]) => `${name}:${value}`).join(";");
++		return additions ? `${userStyle};${additions}` : userStyle;
++	};
++	const width = () => others.width ?? (local.size === undefined ? (local.isolated ? "24px" : "1em") : undefined);
++	const height = () => others.height ?? (local.size === undefined ? (local.isolated ? "24px" : "1em") : undefined);
++	const color = () => local.color === undefined ? (local.isolated ? "currentColor" : "var(--solar-color, currentColor)") : undefined;
++	const strokeWidth = () => others["stroke-width"] ?? (local.strokeWidth === undefined ? (local.isolated ? "1.5" : "var(--solar-stroke-width, 1.5)") : undefined);
++	const ariaHidden = () => others["aria-hidden"] ?? (isAccessible() ? undefined : "true");
++	const svgProps = mergeWebProps({
++		xmlns: "http://www.w3.org/2000/svg",
++		fill: "none",
++		viewBox: "0 0 24 24",
++	}, others, {
++		get class() { return className(); },
++		get style() { return baseStyle(); },
++		get width() { return width(); },
++		get height() { return height(); },
++		get color() { return color(); },
++		get "stroke-width"() { return strokeWidth(); },
++		get "aria-hidden"() { return ariaHidden(); },
++	});
++
++	if (isServer) {
++		const children = [];
++		if (local.alt) children.push(ssrElement("title", {}, escape(local.alt), false));
++		if (local.iconBody) children.push(ssrElement("g", {}, ssr(local.iconBody), false));
++		else children.push(escape(local.children));
++		return ssrElement("svg", svgProps, children, false);
++	}
++
++	const svg = createSvg();
++	spread(svg, svgProps, true, true);
++	insert(svg, (() => {
++		const hasAlt = memo(() => !!local.alt);
++		return () => hasAlt() && (() => {
++			const title = createTitle();
++			insert(title, () => local.alt);
++			return title;
++		})();
++	})(), null);
++	insert(svg, (() => {
++		const hasBody = memo(() => !!local.iconBody);
++		return () => hasBody() ? (() => {
++			const body = createBody();
++			effect(() => body.innerHTML = local.iconBody);
++			return body;
++		})() : local.children;
++	})(), null);
++	return svg;
++}
++
++export { IconBase as default };
+diff --git a/dist/lib/types.d.mts b/dist/lib/types.d.mts
+index ec94b22d0a1226bed17dc3abe1c2f99711e96e0d..636349d7fb7c1f4d3798fb691a741ce99560ec93 100644
+--- a/dist/lib/types.d.mts
++++ b/dist/lib/types.d.mts
+@@ -25,7 +25,7 @@ interface IconBaseProps {
+   iconBody?: string;
+ }
+ type SvgSVGAttributes = JSX.SvgSVGAttributes<SVGSVGElement>;
+-interface IconProps extends IconBaseProps {
++interface IconProps extends IconBaseProps, SvgSVGAttributes {
+   color?: string;
+   children?: JSX.Element;
+ }

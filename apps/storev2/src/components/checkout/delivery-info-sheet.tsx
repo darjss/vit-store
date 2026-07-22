@@ -6,10 +6,8 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import IconTruck from "~icons/ri/truck-line";
-import IconMapPin from "~icons/ri/map-pin-line";
-import IconTime from "~icons/ri/time-line";
-import IconAlert from "~icons/ri/alert-line";
+import { DeliveryIcon as IconTruck, MapPointIcon as IconMapPin, ClockCircleIcon as IconTime } from "@solar-icons/solid/linear";
+import { DangerTriangleIcon as IconAlert } from "@solar-icons/solid/bold";
 
 const deliveryInfo = [
 	{

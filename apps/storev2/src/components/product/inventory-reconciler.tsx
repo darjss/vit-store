@@ -2,8 +2,8 @@ import { formatCurrency } from "@vit/shared";
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/trpc";
-import IconAlertTriangle from "~icons/ri/error-warning-fill";
-import IconRefresh from "~icons/ri/refresh-line";
+import { RefreshIcon as IconRefresh } from "@solar-icons/solid/linear";
+import { DangerTriangleIcon as IconAlertTriangle } from "@solar-icons/solid/bold";
 import {
 	type InventoryCardPresentation,
 	unverifiedInventoryCardPresentation,

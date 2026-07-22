@@ -5,10 +5,9 @@ import * as DropdownMenuPrimitive from "@kobalte/core/dropdown-menu"
 import type { PolymorphicProps } from "@kobalte/core/polymorphic"
  
 import { cn } from "@/lib/utils"
-import IconChevronRight from "~icons/ri/arrow-right-s-line"
-import IconCheck from "~icons/ri/check-line"
-import IconCircle from "~icons/ri/checkbox-blank-circle-fill"
- 
+import { AltArrowRightIcon as IconChevronRight } from "@solar-icons/solid/linear"
+import { CheckCircleIcon as IconCheck, RecordIcon as IconCircle } from "@solar-icons/solid/bold"
+
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal
 const DropdownMenuSub = DropdownMenuPrimitive.Sub

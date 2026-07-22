@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { showToast } from "@/components/ui/toast";
-import IconFileCopy from "~icons/ri/file-copy-line";
-import IconCheck from "~icons/ri/check-line";
+import { CopyIcon as IconFileCopy } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 
 interface CopyButtonProps {
   text: string | number ,

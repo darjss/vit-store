@@ -7,8 +7,8 @@ import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import IconErrorWarning from "~icons/ri/error-warning-line";
-import IconQrCode from "~icons/ri/qr-code-line";
+import { QrCodeIcon as IconQrCode } from "@solar-icons/solid/linear";
+import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
 
 interface QpayPaymentPanelProps {
 	paymentNumber: string;

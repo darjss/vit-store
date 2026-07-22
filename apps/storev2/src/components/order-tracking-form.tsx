@@ -13,13 +13,8 @@ import {
 	TextFieldInput,
 	TextFieldLabel,
 } from "@/components/ui/text-field";
-import IconPackage from "~icons/ri/archive-line";
-import IconLock from "~icons/ri/lock-password-line";
-import IconSearch from "~icons/ri/search-line";
-import IconCheck from "~icons/ri/check-line";
-import IconCheckDouble from "~icons/ri/check-double-line";
-import IconAlert from "~icons/ri/error-warning-line";
-import IconLoader from "~icons/ri/loader-4-line";
+import { BoxIcon as IconPackage, LockPasswordIcon as IconLock, MinimalisticMagnifierIcon as IconSearch, RefreshIcon as IconLoader } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck, CheckReadIcon as IconCheckDouble, DangerCircleIcon as IconAlert } from "@solar-icons/solid/bold";
 
 const statusBadgeVariant: Record<
 	string,

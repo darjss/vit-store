@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { cn } from "@/lib/utils";
-import IconCheck from "~icons/ri/check-line";
-import IconFileCopy from "~icons/ri/file-copy-line";
+import { CopyIcon as IconFileCopy } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 
 interface CopyFieldButtonProps {
 	text: string | number;

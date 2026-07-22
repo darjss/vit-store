@@ -5,9 +5,8 @@ import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
-import IconBankCard from "~icons/ri/bank-card-line";
-import IconCheckboxCircle from "~icons/ri/checkbox-circle-fill";
-import IconCloseCircle from "~icons/ri/close-circle-fill";
+import { CardIcon as IconBankCard } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheckboxCircle, CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 

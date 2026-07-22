@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import IconArrowRight from "~icons/ri/arrow-right-line";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import { ArrowRightIcon as IconArrowRight } from "@solar-icons/solid/linear";
+import { CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import CartCrossSells from "./cart-cross-sells";
 import CartDrawerItem from "./cart-drawer-item";
 import { cartSheetFocusRestore } from "./cart-sheet-focus";

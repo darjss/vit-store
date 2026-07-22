@@ -1,4 +1,4 @@
-import IconSearch from "~icons/ri/search-line";
+import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
 import SearchSheet from "./search-sheet";
 
 /**

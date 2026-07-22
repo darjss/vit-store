@@ -19,9 +19,7 @@ import {
 import { parseSearchTokens } from "@/lib/search-parse";
 import { api } from "@/lib/trpc";
 import { washBg } from "@/lib/wash";
-import IconArrowRight from "~icons/ri/arrow-right-line";
-import IconChevron from "~icons/ri/arrow-right-s-line";
-import IconFolder from "~icons/ri/folder-line";
+import { ArrowRightIcon as IconArrowRight, AltArrowRightIcon as IconChevron, FolderIcon as IconFolder } from "@solar-icons/solid/linear";
 import SearchResultRow from "./search-result-row";
 import { getSearchTakeoverRequestState } from "./search-takeover-state";
 import { useSearchStorefront } from "./use-search-storefront";
