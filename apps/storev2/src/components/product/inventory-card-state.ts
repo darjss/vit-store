@@ -28,7 +28,7 @@ export const verifiedInventoryCardPresentation = (snapshot: {
 	if (snapshot.stock <= LOW_STOCK_THRESHOLD) {
 		return {
 			state: "low",
-			availabilityLabel: `Цөөхөн үлдсэн (${snapshot.stock})`,
+			availabilityLabel: "Цөөхөн үлдсэн",
 			verified: true,
 		};
 	}

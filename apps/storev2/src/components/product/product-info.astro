@@ -78,11 +78,17 @@ const isInStock = product.status === "active" && product.stock > 0;
 			</div>
 			<span
 				data-inventory-stock-badge={product.id}
-				class="rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground"
+				class:list={[
+					"rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground",
+					{
+						"low-stock-indicator":
+							isInStock && product.stock <= LOW_STOCK_THRESHOLD,
+					},
+				]}
 			>
 				{isInStock
 					? product.stock <= LOW_STOCK_THRESHOLD
-						? `Цөөхөн үлдсэн (${product.stock})`
+						? "Цөөхөн үлдсэн"
 						: "Бэлэн байна"
 					: "Дууссан"}
 			</span>
