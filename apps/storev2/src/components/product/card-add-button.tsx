@@ -4,9 +4,7 @@ import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import IconCheck from "~icons/ri/check-line";
-import IconNotification from "~icons/ri/notification-3-fill";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import { CheckCircleIcon as IconCheck, BellIcon as IconNotification, CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,

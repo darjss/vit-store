@@ -1,7 +1,5 @@
 import { cart } from "@/store/cart";
-import IconPlus from "~icons/ri/add-line";
-import IconClose from "~icons/ri/close-line";
-import IconMinus from "~icons/ri/subtract-line";
+import { AddCircleIcon as IconPlus, CloseCircleIcon as IconClose, MinusCircleIcon as IconMinus } from "@solar-icons/solid/linear";
 
 const CartActions = ({
 	quantity,

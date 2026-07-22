@@ -7,9 +7,8 @@ import { paymentSuccessCelebrationKey } from "@/lib/celebration";
 import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { paymentUrl, orderConfirmUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
-import IconCheck from "~icons/ri/check-line";
-import IconReceipt from "~icons/ri/file-list-3-line";
-import IconHome from "~icons/ri/home-4-line";
+import { BillListIcon as IconReceipt, HomeAngleIcon as IconHome } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 
 const { paymentNumber } = Astro.params;
 

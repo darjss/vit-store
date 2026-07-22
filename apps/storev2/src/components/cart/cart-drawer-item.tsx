@@ -5,7 +5,7 @@ import { Motion, Presence } from "solid-motionone";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
 import { cart } from "@/store/cart";
-import IconClose from "~icons/ri/close-line";
+import { CloseCircleIcon as IconClose } from "@solar-icons/solid/linear";
 
 interface CartDrawerItemProps {
 	item: CartItems;

@@ -9,8 +9,7 @@ import {
 } from "solid-js";
 import { TextField, TextFieldInput } from "@/components/ui/text-field";
 import { cn } from "@/lib/utils";
-import IconClose from "~icons/ri/close-line";
-import IconSearch from "~icons/ri/search-line";
+import { CloseCircleIcon as IconClose, MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
 
 interface SearchInputProps {
 	value?: string;

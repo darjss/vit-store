@@ -6,7 +6,7 @@ import Layout from "@/layouts/Layout.astro";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
-import IconCreditCard from "~icons/ri/bank-card-line";
+import { CardIcon as IconCreditCard } from "@solar-icons/solid/linear";
 
 const { id } = Astro.params;
 if (!id) {

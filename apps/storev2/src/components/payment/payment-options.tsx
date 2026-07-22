@@ -14,9 +14,8 @@ import { api } from "@/lib/trpc";
 import { usePaymentStatus } from "@/lib/use-payment-status";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import IconBank from "~icons/ri/bank-line";
-import IconErrorWarning from "~icons/ri/error-warning-line";
-import IconMobile from "~icons/ri/smartphone-line";
+import { BuildingsIcon as IconBank, SmartphoneIcon as IconMobile } from "@solar-icons/solid/linear";
+import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
 
 interface PaymentOptionsProps {
 	paymentNumber: string;

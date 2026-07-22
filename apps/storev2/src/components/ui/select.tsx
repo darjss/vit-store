@@ -6,9 +6,9 @@ import * as SelectPrimitive from "@kobalte/core/select"
 import { cva } from "class-variance-authority"
  
 import { cn } from "@/lib/utils"
-import IconExpandUpDown from "~icons/ri/expand-up-down-line"
-import IconCheck from "~icons/ri/check-line"
- 
+import { RoundSortVerticalIcon as IconExpandUpDown } from "@solar-icons/solid/linear"
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold"
+
 const Select = SelectPrimitive.Root
 const SelectValue = SelectPrimitive.Value
 const SelectHiddenSelect = SelectPrimitive.HiddenSelect

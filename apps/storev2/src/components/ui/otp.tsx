@@ -5,8 +5,8 @@ import type { DynamicProps, RootProps } from "@corvu/otp-field"
 import OtpField from "@corvu/otp-field"
  
 import { cn } from "@/lib/utils"
-import IconCircle from "~icons/ri/circle-fill"
- 
+import { RecordIcon as IconCircle } from "@solar-icons/solid/bold"
+
 export const REGEXP_ONLY_DIGITS = "^\\d*$"
 export const REGEXP_ONLY_CHARS = "^[a-zA-Z]*$"
 export const REGEXP_ONLY_DIGITS_AND_CHARS = "^[a-zA-Z0-9]*$"

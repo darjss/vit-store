@@ -15,9 +15,8 @@ import createEmblaCarousel from "embla-carousel-solid"
 import { cn } from "@/lib/utils"
 import type { ButtonProps } from "@/components/ui/button"
 import { Button } from "@/components/ui/button"
-import IconArrowLeft from "~icons/ri/arrow-left-line"
-import IconArrowRight from "~icons/ri/arrow-right-line"
- 
+import { ArrowLeftIcon as IconArrowLeft, ArrowRightIcon as IconArrowRight } from "@solar-icons/solid/linear"
+
 export type CarouselApi = CreateEmblaCarouselType[1]
  
 type UseCarouselParameters = Parameters<typeof createEmblaCarousel>

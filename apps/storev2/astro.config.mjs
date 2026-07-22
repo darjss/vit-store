@@ -5,7 +5,6 @@ import solidJs from "@astrojs/solid-js";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import posthog from "@posthog/rollup-plugin";
-import Icons from "unplugin-icons/vite";
 
 // https://astro.build/config
 const posthogSourceMapPlugin = process.env.POSTHOG_API_KEY && process.env.POSTHOG_PROJECT_ID && process.env.POSTHOG_SOURCEMAPS !== "false"
@@ -51,10 +50,6 @@ export default defineConfig({
 
 		plugins: [
 			tailwindcss(),
-			Icons({
-				compiler: "solid",
-				autoInstall: true,
-			}),
 			posthogSourceMapPlugin,
 		].filter(Boolean),
 

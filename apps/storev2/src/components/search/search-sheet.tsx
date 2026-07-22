@@ -9,7 +9,7 @@ import {
 	SheetTrigger,
 } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
-import IconSearch from "~icons/ri/search-line";
+import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
 import SearchInput from "./search-input";
 import SearchTakeover from "./search-takeover";
 

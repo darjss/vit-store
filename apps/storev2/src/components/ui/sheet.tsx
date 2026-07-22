@@ -6,8 +6,8 @@ import type { PolymorphicProps } from "@kobalte/core/polymorphic"
 import { cva, type VariantProps } from "class-variance-authority"
  
 import { cn } from "@/lib/utils"
-import IconClose from "~icons/ri/close-line"
- 
+import { CloseCircleIcon as IconClose } from "@solar-icons/solid/linear"
+
 const Sheet = SheetPrimitive.Root
 const SheetTrigger = SheetPrimitive.Trigger
 

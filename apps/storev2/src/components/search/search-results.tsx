@@ -2,11 +2,7 @@ import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
 import ProductCard from "@/components/product/product-card";
 import { trackSearchResultClicked } from "@/lib/analytics";
-import IconArrowRight from "~icons/ri/arrow-right-line";
-import IconEmotionSad from "~icons/ri/emotion-sad-line";
-import IconFolder from "~icons/ri/folder-line";
-import IconSearch from "~icons/ri/search-line";
-import IconStore from "~icons/ri/store-2-line";
+import { ArrowRightIcon as IconArrowRight, SadCircleIcon as IconEmotionSad, FolderIcon as IconFolder, MinimalisticMagnifierIcon as IconSearch, ShopIcon as IconStore } from "@solar-icons/solid/linear";
 import PopularCategories from "./popular-categories";
 import { useSearchStorefront } from "./use-search-storefront";
 

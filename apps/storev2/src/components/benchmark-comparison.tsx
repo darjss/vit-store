@@ -1,6 +1,6 @@
 import { createMemo, createResource, Show } from "solid-js";
-import IconCheck from "~icons/ri/check-line";
-import IconComputer from "~icons/ri/computer-line";
+import { MonitorIcon as IconComputer } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { api } from "../lib/trpc";
 
 interface BenchmarkComparisonProps {

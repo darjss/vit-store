@@ -1,7 +1,6 @@
 import { For, Show } from "solid-js";
-import IconErrorWarning from "~icons/ri/error-warning-line";
-import IconSearch from "~icons/ri/search-line";
-import IconSparkle from "~icons/ri/sparkling-fill";
+import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
+import { DangerCircleIcon as IconErrorWarning, StarsIcon as IconSparkle } from "@solar-icons/solid/bold";
 
 const ProductCardSkeleton = () => (
 	<div class="flex animate-pulse flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft">

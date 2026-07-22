@@ -1,6 +1,6 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { cart } from "@/store/cart";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-line";
+import { CartIcon as IconShoppingCart } from "@solar-icons/solid/linear";
 import { cartSheetFocusRestore } from "./cart-sheet-focus";
 
 /**

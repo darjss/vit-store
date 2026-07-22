@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/solid-query";
 import { For, Show } from "solid-js";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import IconFolder from "~icons/ri/folder-line";
+import { FolderIcon as IconFolder } from "@solar-icons/solid/linear";
 
 const PopularCategories = () => {
 	const query = useQuery(

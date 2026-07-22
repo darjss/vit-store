@@ -3,8 +3,7 @@ import { createSignal, onCleanup } from "solid-js";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import IconCheck from "~icons/ri/check-line";
-import IconShoppingCart from "~icons/ri/shopping-cart-2-fill";
+import { CheckCircleIcon as IconCheck, CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 
 interface AddToCartButtonProps {

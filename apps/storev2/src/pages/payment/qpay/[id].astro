@@ -5,7 +5,7 @@ import Layout from "@/layouts/Layout.astro";
 import { loadPaymentOrRedirect } from "@/lib/server-loaders";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { createServerClient } from "@/lib/trpc";
-import IconMobile from "~icons/ri/smartphone-line";
+import { SmartphoneIcon as IconMobile } from "@solar-icons/solid/linear";
 
 const { id } = Astro.params;
 if (!id) {

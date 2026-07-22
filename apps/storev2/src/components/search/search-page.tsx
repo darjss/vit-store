@@ -2,7 +2,7 @@ import { navigate } from "astro:transitions/client";
 import type { Component } from "solid-js";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { addSearch } from "@/lib/search-history";
-import IconSearch from "~icons/ri/search-line";
+import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
 import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";

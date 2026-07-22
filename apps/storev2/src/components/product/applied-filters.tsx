@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import IconClose from "~icons/ri/close-line";
+import { CloseCircleIcon as IconClose } from "@solar-icons/solid/linear";
 
 type AppliedChip = {
 	key: string;

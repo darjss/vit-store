@@ -1,4 +1,4 @@
-import IconCar from "~icons/ri/car-line";
+import { DeliveryIcon as IconCar } from "@solar-icons/solid/linear";
 
 export const CheckoutDeliveryTrack = () => (
 	<div

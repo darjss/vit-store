@@ -5,12 +5,8 @@ import Layout from "@/layouts/Layout.astro";
 import { loadOrderOrRedirect } from "@/lib/server-loaders";
 import { createServerClient } from "@/lib/trpc";
 import ProductImageFallback from "@/components/product/product-image-fallback.tsx";
-import IconCheck from "~icons/ri/check-line";
-import IconHome from "~icons/ri/home-4-line";
-import IconMail from "~icons/ri/mail-line";
-import IconMapPin from "~icons/ri/map-pin-line";
-import IconPhone from "~icons/ri/phone-line";
-import IconUser from "~icons/ri/user-line";
+import { HomeAngleIcon as IconHome, LetterIcon as IconMail, MapPointIcon as IconMapPin, PhoneIcon as IconPhone, UserIcon as IconUser } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { orderStatusLabels } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
 
