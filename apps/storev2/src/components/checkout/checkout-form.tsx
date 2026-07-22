@@ -23,6 +23,7 @@ import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { cart, createCartState } from "@/store/cart";
 import IconPackage from "~icons/ri/archive-line";
 import IconChevronDown from "~icons/ri/arrow-down-s-line";
@@ -33,7 +34,9 @@ import IconTruck from "~icons/ri/truck-line";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
-import CheckoutSubmitStatus from "./checkout-submit-status";
+import CheckoutSubmitStatus, {
+	CheckoutDeliveryTrack,
+} from "./checkout-submit-status";
 import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type DeliveryZone = {
@@ -55,8 +58,8 @@ type PaymentInfo = {
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
-const stepEnter = { duration: 0.25, easing: EASE_OUT_QUART };
-const stepExit = { duration: 0.15, easing: EASE_IN_OUT };
+const stepEnter = { duration: 0.44, easing: EASE_OUT_QUART };
+const stepExit = { duration: 0.2, easing: EASE_IN_OUT };
 
 // F12: single checkout validator schema referenced by onChange/onBlur/onSubmit
 // instead of three byte-identical tripled copies.
@@ -400,7 +403,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 										{/* DELIVERY STEP */}
 										<Match when={step() === "delivery"}>
 											<Motion.div
-												initial={{ opacity: 0, x: -8 }}
+												initial={{ opacity: 0, x: -24, scale: 0.97 }}
 												animate={{
 													opacity: 1,
 													x: 0,
@@ -408,7 +411,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												}}
 												exit={{
 													opacity: 0,
-													x: -8,
+													x: -24,
+													scale: 0.97,
 													transition: stepExit,
 												}}
 											>
@@ -590,7 +594,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																	payment. Disable and relabel so the no-op is explicit. */}
 																		<form.SubmitButton
 																			size="lg"
-																			class="w-full"
+																			class={cn(
+																				"w-full",
+																				mutation.isPending &&
+																					"animate-submit-working",
+																			)}
 																			loadingContent={<CheckoutSubmitStatus />}
 																			disabled={
 																				mutation.isPending ||
@@ -612,6 +620,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																	</div>
 																</form.AppForm>
 
+																<Show when={mutation.isPending}>
+																	<CheckoutDeliveryTrack />
+																</Show>
+
 																<p class="text-center text-muted-foreground text-xs">
 																	Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
 																</p>
@@ -625,7 +637,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 										{/* PAYMENT STEP */}
 										<Match when={step() === "payment" && paymentInfo()}>
 											<Motion.div
-												initial={{ opacity: 0, x: 8 }}
+												initial={{ opacity: 0, x: 24, scale: 0.97 }}
 												animate={{
 													opacity: 1,
 													x: 0,
@@ -633,7 +645,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 												}}
 												exit={{
 													opacity: 0,
-													x: 8,
+													x: 24,
+													scale: 0.97,
 													transition: stepExit,
 												}}
 											>

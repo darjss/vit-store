@@ -46,7 +46,7 @@ const CartDrawer = () => {
 				position="right"
 				closeLabel="Сагсыг хаах"
 				focusRestore={cartSheetFocusRestore}
-				class="flex w-full flex-col gap-0 border-border border-l bg-background p-0 shadow-soft-xl ease-(--ease-drawer) data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms] sm:max-w-md"
+				class="flex w-full flex-col gap-0 border-border border-l bg-background p-0 shadow-soft-xl ease-(--ease-drawer) data-[closed=]:duration-[260ms] data-[expanded=]:duration-[520ms] sm:max-w-md"
 			>
 				<SheetHeader class="space-y-0.5 border-border border-b px-5 pt-5 pb-4 text-left sm:text-left">
 					<SheetTitle class="flex items-center gap-2.5 font-display text-foreground text-xl">
@@ -106,8 +106,8 @@ const CartDrawer = () => {
 									<span class="font-semibold text-foreground">Нийт дүн</span>
 									<span
 										class={cn(
-											"font-display text-2xl text-foreground",
-											totalPulse() && "animate-quantity-pop",
+											"rounded-lg px-1 font-display text-2xl text-foreground",
+											totalPulse() && "animate-cart-total-flash",
 										)}
 									>
 										₮{(cart.total() + deliveryFee).toLocaleString()}
