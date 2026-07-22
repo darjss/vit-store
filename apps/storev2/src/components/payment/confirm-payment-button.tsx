@@ -5,9 +5,9 @@ import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
+import IconBankCard from "~icons/ri/bank-card-line";
 import IconCheckboxCircle from "~icons/ri/checkbox-circle-fill";
 import IconCloseCircle from "~icons/ri/close-circle-fill";
-import IconLoader from "~icons/ri/loader-4-line";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
@@ -65,20 +65,60 @@ const ConfirmPaymentButton = (props: {
 			onClick={handleConfirmPayment}
 		>
 			<Show when={mutation.isPending}>
-				<IconLoader class="mr-2 h-4 w-4 animate-spin" /> Шалгаж
-				байна...
+				<span class="flex animate-payment-state-pop items-center gap-3">
+					<span
+						class="relative grid size-7 place-items-center"
+						aria-hidden="true"
+					>
+						<svg class="absolute inset-0 size-7" viewBox="0 0 28 28">
+							<title>Төлбөр шалгаж байна</title>
+							<circle
+								cx="14"
+								cy="14"
+								r="10"
+								fill="none"
+								stroke="currentColor"
+								stroke-opacity="0.2"
+								stroke-width="2.5"
+							/>
+							<path
+								class="checkout-loader-ring"
+								d="M14 4a10 10 0 0 1 10 10"
+								fill="none"
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-width="3"
+							/>
+						</svg>
+						<IconBankCard class="size-3.5" />
+					</span>
+					<span class="text-left leading-tight">
+						<span class="block">Төлбөр шалгаж байна</span>
+						<span class="mt-1 flex gap-1" aria-hidden="true">
+							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
+							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
+							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
+						</span>
+					</span>
+				</span>
 			</Show>
 			<Show when={mutation.isSuccess}>
-				<IconCheckboxCircle class="mr-2 h-4 w-4" />{" "}
-				{PENDING_APPROVAL_MESSAGE}
+				<span class="flex animate-payment-state-pop items-center gap-2">
+					<IconCheckboxCircle class="size-5" /> {PENDING_APPROVAL_MESSAGE}
+				</span>
 			</Show>
 			<Show when={mutation.isError}>
-				<IconCloseCircle class="mr-2 h-4 w-4" /> Дахин оролдоно уу
+				<span class="flex animate-payment-state-pop items-center gap-2">
+					<IconCloseCircle class="size-5" /> Дахин оролдоно уу
+				</span>
 			</Show>
 			<Show
 				when={!mutation.isPending && !mutation.isSuccess && !mutation.isError}
 			>
-				<span>Шилжүүлсэн — төлбөрөө шалгуулах</span>
+				<span class="flex items-center gap-2">
+					<IconBankCard class="size-5" />
+					Шилжүүлсэн — төлбөрөө шалгуулах
+				</span>
 			</Show>
 		</Button>
 	);

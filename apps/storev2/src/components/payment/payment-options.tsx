@@ -1,11 +1,12 @@
 import { useMutation } from "@tanstack/solid-query";
-import { bankTransfer, BANK_TRANSFER_ENABLED } from "@vit/shared/constants";
-import { createEffect, createSignal, type JSX, Show } from "solid-js";
+import { BANK_TRANSFER_ENABLED, bankTransfer } from "@vit/shared/constants";
 import type { PaymentProviderType } from "@vit/shared/types";
+import { createEffect, createSignal, type JSX, Show } from "solid-js";
 import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { buttonVariants } from "@/components/ui/button";
+import { showToast } from "@/components/ui/toast";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -13,7 +14,6 @@ import { api } from "@/lib/trpc";
 import { usePaymentStatus } from "@/lib/use-payment-status";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import { showToast } from "@/components/ui/toast";
 import IconBank from "~icons/ri/bank-line";
 import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconMobile from "~icons/ri/smartphone-line";
@@ -127,8 +127,20 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 						}}
 					>
 						<span class="flex items-center justify-center gap-1.5 sm:gap-2">
-							<IconBank class="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-							<span>Данс</span>
+							<Show
+								when={selectTransferMutation.isPending}
+								fallback={
+									<IconBank class="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+								}
+							>
+								<span
+									class="checkout-loader-ring size-4 rounded-full border-2 border-current/20 border-t-current sm:size-5"
+									aria-hidden="true"
+								/>
+							</Show>
+							<span>
+								{selectTransferMutation.isPending ? "Бэлдэж байна" : "Данс"}
+							</span>
 						</span>
 					</button>
 					<button
@@ -149,7 +161,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</Show>
 
 			<Show when={BANK_TRANSFER_ENABLED && tab() === "transfer"}>
-				<div class="rounded-2xl border border-border bg-card shadow-soft">
+				<div class="animate-payment-panel-left rounded-2xl border border-border bg-card shadow-soft">
 					<div class="space-y-5 p-3 sm:space-y-6 sm:p-4">
 						{/* F2: surface selectTransfer failure — don't show instructions
 						    as if the reconciler started when it never did. */}
@@ -174,7 +186,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</button>
 							</div>
 						</Show>
-												<TransferStep number={1} title="Яг доорх дүнг данс руу шилжүүлнэ үү">
+						<TransferStep
+							number={1}
+							title="Яг доорх дүнг данс руу шилжүүлнэ үү"
+						>
 							<div class="flex items-center gap-2.5 rounded-xl bg-muted/30 p-2.5 sm:p-3">
 								<div class="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-background sm:size-10">
 									<img
@@ -243,8 +258,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</div>
 							</div>
 							<p class="text-muted-foreground text-xs leading-snug sm:text-sm">
-								Бид энэ дугаараар таны төлбөрийг автоматаар олж
-								баталгаажуулна.
+								Бид энэ дугаараар таны төлбөрийг автоматаар олж баталгаажуулна.
 							</p>
 						</TransferStep>
 
@@ -253,8 +267,8 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							title="Шилжүүлсний дараа доорх товчийг дарна уу"
 						>
 							<p class="text-muted-foreground text-xs leading-snug sm:text-sm">
-								Товч дарснаар автомат шалгалт эхэлж, ихэвчлэн хэдхэн
-								минутын дотор баталгаажна.
+								Товч дарснаар автомат шалгалт эхэлж, ихэвчлэн хэдхэн минутын
+								дотор баталгаажна.
 							</p>
 							<ConfirmPaymentButton
 								paymentNumber={props.paymentNumber}
@@ -266,7 +280,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			</Show>
 
 			<Show when={!BANK_TRANSFER_ENABLED || tab() === "qpay"}>
-				<div class="rounded-2xl border border-border bg-card shadow-soft">
+				<div class="animate-payment-panel-right rounded-2xl border border-border bg-card shadow-soft">
 					<div class="p-3 sm:p-5">
 						<QpayPaymentPanel
 							paymentNumber={props.paymentNumber}
