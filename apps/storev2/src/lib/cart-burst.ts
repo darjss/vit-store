@@ -3,6 +3,7 @@ const BURST_COLORS = [
 	"oklch(0.68 0.14 30)",
 	"oklch(0.92 0.05 230)",
 	"oklch(0.93 0.06 160)",
+	"oklch(0.995 0.008 95)",
 ];
 
 export const playCartBurst = (target: HTMLElement) => {
@@ -15,13 +16,16 @@ export const playCartBurst = (target: HTMLElement) => {
 	burst.style.left = `${bounds.left + bounds.width / 2}px`;
 	burst.style.top = `${bounds.top + bounds.height / 2}px`;
 
-	for (let index = 0; index < 12; index += 1) {
+	for (let index = 0; index < 18; index += 1) {
 		const particle = document.createElement("i");
-		const angle = (Math.PI * 2 * index) / 12;
-		const distance = 34 + (index % 3) * 8;
+		const angle = (Math.PI * 2 * index) / 18;
+		const distance = 55 + Math.random() * 70;
 		particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
 		particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
-		particle.style.setProperty("--burst-rotate", `${index * 47}deg`);
+		particle.style.setProperty(
+			"--burst-rotate",
+			`${Math.random() * 540 - 270}deg`,
+		);
 		particle.style.setProperty(
 			"--burst-color",
 			BURST_COLORS[index % BURST_COLORS.length] ?? BURST_COLORS[0],
@@ -30,5 +34,5 @@ export const playCartBurst = (target: HTMLElement) => {
 	}
 
 	document.body.appendChild(burst);
-	window.setTimeout(() => burst.remove(), 700);
+	window.setTimeout(() => burst.remove(), 900);
 };

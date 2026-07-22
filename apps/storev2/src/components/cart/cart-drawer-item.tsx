@@ -12,7 +12,7 @@ interface CartDrawerItemProps {
 	onNavigate?: () => void;
 }
 
-const EXIT_MS = 220;
+const EXIT_MS = 350;
 
 const CartDrawerItem = (props: CartDrawerItemProps) => {
 	const [removing, setRemoving] = createSignal(false);
@@ -76,13 +76,15 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 					animate={{ opacity: 1, y: 0 }}
 					exit={{
 						opacity: 0,
-						x: 16,
+						x: 80,
+						rotate: 4,
+						scale: 0.9,
 						...(measuredHeight() !== null
 							? { height: [`${measuredHeight()}px`, "0px"] }
 							: {}),
 						transition: {
 							duration: EXIT_MS / 1000,
-							easing: [0.65, 0, 0.35, 1],
+							easing: [0.16, 1, 0.3, 1],
 						},
 					}}
 					transition={{ duration: 0.25, easing: [0.25, 1, 0.5, 1] }}

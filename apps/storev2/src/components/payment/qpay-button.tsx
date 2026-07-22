@@ -196,7 +196,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</button>
 
 						<Show when={showQr()}>
-							<div class="enter-scale flex flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
+							<div class="animate-qpay-qr-pop flex flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"

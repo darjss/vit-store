@@ -60,7 +60,7 @@ const ConfirmPaymentButton = (props: {
 	return (
 		<Button
 			size="lg"
-			class="w-full"
+			class={mutation.isPending ? "w-full animate-submit-working" : "w-full"}
 			disabled={mutation.isPending}
 			onClick={handleConfirmPayment}
 		>

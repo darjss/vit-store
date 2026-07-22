@@ -51,13 +51,19 @@ export function FormTextField(props: FormTextFieldProps) {
 					if (showErrors()) {
 						field().setMeta((prev) => ({
 							...prev,
-							errorMap: { ...prev.errorMap, onBlur: undefined, onSubmit: undefined },
+							errorMap: {
+								...prev.errorMap,
+								onBlur: undefined,
+								onSubmit: undefined,
+							},
 						}));
 					}
 				}}
 			/>
 			<Show when={showErrors() && firstError()}>
-				<TextFieldErrorMessage>{firstError()}</TextFieldErrorMessage>
+				<TextFieldErrorMessage class="animate-error-pop">
+					{firstError()}
+				</TextFieldErrorMessage>
 			</Show>
 		</TextField>
 	);
