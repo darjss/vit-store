@@ -20,6 +20,7 @@
 		"@fontsource-variable/onest": "^5.2.11",
 		"@fontsource-variable/unbounded": "^5.2.8",
 		"@kobalte/core": "^0.13.11",
+		"@solar-icons/solid": "2.0.0-beta.3",
 		"@solid-primitives/storage": "^4.3.3",
 		"@tailwindcss/vite": "^4",
 		"@tanstack/solid-form": "^1.23.8",
@@ -49,12 +50,10 @@
 	"devDependencies": {
 		"@astrojs/cloudflare": "^14.1.1",
 		"@cloudflare/workers-types": "^4.20260617.1",
-		"@iconify/json": "^2.2.416",
 		"@posthog/rollup-plugin": "^1.4.3",
 		"alchemy": "catalog:",
 		"miniflare": "^4.20260616.0",
 		"typescript": "^5.9.3",
-		"wrangler": "^4.101.0",
-		"unplugin-icons": "^22.5.0"
+		"wrangler": "^4.101.0"
 	}
 }

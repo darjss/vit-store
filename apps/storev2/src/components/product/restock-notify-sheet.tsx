@@ -12,7 +12,7 @@ import {
 import { showToast } from "@/components/ui/toast";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
-import IconNotification from "~icons/ri/notification-3-fill";
+import { BellIcon as IconNotification } from "@solar-icons/solid/bold";
 
 function restockErrorMessage(error: unknown): string {
 	const code =

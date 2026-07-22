@@ -7,11 +7,7 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { usePaymentStatus } from "@/lib/use-payment-status";
 import { cn } from "@/lib/utils";
-import IconCheck from "~icons/ri/check-line";
-import IconClose from "~icons/ri/close-line";
-import IconRefresh from "~icons/ri/refresh-line";
-import IconShieldCheck from "~icons/ri/shield-check-line";
-import IconTime from "~icons/ri/time-line";
+import { CheckCircleIcon as IconCheck, CloseCircleIcon as IconClose, RefreshIcon as IconRefresh, ShieldCheckIcon as IconShieldCheck, ClockCircleIcon as IconTime } from "@solar-icons/solid/bold";
 
 const MANUAL_REVIEW_STATUSES = new Set([
 	"timeout",

@@ -10,7 +10,7 @@ import { identifyUser } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
-import IconCloseCircle from "~icons/ri/close-circle-fill";
+import { CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 

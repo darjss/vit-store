@@ -2,10 +2,8 @@
 import { LOW_STOCK_THRESHOLD } from "@vit/shared/domain/product";
 import ProductQuantitySelector from "@/components/product/product-add-to-cart";
 import { formatCurrency } from "@/lib/utils";
-import IconCheck from "~icons/ri/checkbox-circle-fill";
-import IconRefund from "~icons/ri/refund-2-line";
-import IconShield from "~icons/ri/shield-check-line";
-import IconTruck from "~icons/ri/truck-line";
+import { CashOutIcon as IconRefund, ShieldCheckIcon as IconShield, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 
 interface Props {
 	product: {

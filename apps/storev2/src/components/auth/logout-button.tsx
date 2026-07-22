@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/solid-query";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import IconLogout from "~icons/ri/logout-box-line";
+import { LogoutIcon as IconLogout } from "@solar-icons/solid/linear";
 import { Button } from "../ui/button";
 
 const LogoutButton = (props: { class?: string }) => {

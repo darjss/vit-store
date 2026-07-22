@@ -17,8 +17,8 @@
 import BenchmarkComparison from "@/components/benchmark-comparison";
 import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
-import IconCheck from "~icons/ri/check-line";
-import IconServer from "~icons/ri/server-line";
+import { ServerIcon as IconServer } from "@solar-icons/solid/linear";
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { createServerClient } from "../lib/trpc";
 
 // Force dynamic rendering

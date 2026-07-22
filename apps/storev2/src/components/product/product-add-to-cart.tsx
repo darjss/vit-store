@@ -2,8 +2,7 @@ import type { CartItems } from "@vit/shared/types";
 import { createEffect, createSignal, Match, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
-import IconAlertTriangle from "~icons/ri/error-warning-fill";
-import IconNotification from "~icons/ri/notification-3-fill";
+import { DangerTriangleIcon as IconAlertTriangle, BellIcon as IconNotification } from "@solar-icons/solid/bold";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
 import {

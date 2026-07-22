@@ -6,9 +6,8 @@ import {
 	removeSearch,
 	type SearchHistoryItem,
 } from "@/lib/search-history";
-import IconClose from "~icons/ri/close-line";
-import IconFire from "~icons/ri/fire-fill";
-import IconTime from "~icons/ri/time-line";
+import { CloseCircleIcon as IconClose, ClockCircleIcon as IconTime } from "@solar-icons/solid/linear";
+import { FireIcon as IconFire } from "@solar-icons/solid/bold";
 
 interface SearchSuggestionsProps {
 	onSelectSearch: (term: string) => void;

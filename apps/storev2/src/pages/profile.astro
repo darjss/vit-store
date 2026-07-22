@@ -17,7 +17,7 @@
 import Layout from "@/layouts/Layout.astro";
 import { env } from "cloudflare:workers";
 import { createServerClient } from "@/lib/trpc";
-import IconShoppingBag from "~icons/ri/shopping-bag-line";
+import { BagIcon as IconShoppingBag } from "@solar-icons/solid/linear";
 
 // Get cookies from Astro's request context
 const cookieHeader = Astro.request.headers.get("cookie") || "";

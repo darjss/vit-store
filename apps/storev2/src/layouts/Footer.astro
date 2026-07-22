@@ -1,17 +1,6 @@
 ---
-import IconPhone from "~icons/ri/phone-line";
-import IconMail from "~icons/ri/mail-line";
-import IconClock from "~icons/ri/time-line";
-import IconMapPin from "~icons/ri/map-pin-line";
-import IconFacebook from "~icons/ri/facebook-fill";
-import IconInstagram from "~icons/ri/instagram-line";
-import IconTruck from "~icons/ri/truck-line";
-import IconQuestion from "~icons/ri/question-line";
-import IconShield from "~icons/ri/shield-check-line";
-import IconFile from "~icons/ri/file-list-line";
-import IconSearch from "~icons/ri/search-line";
-import IconClose from "~icons/ri/close-circle-line";
-import IconChevronDown from "~icons/ri/arrow-down-s-line";
+import { PhoneIcon as IconPhone, LetterIcon as IconMail, ClockCircleIcon as IconClock, MapPointIcon as IconMapPin, DeliveryIcon as IconTruck, QuestionCircleIcon as IconQuestion, ShieldCheckIcon as IconShield, BillListIcon as IconFile, MinimalisticMagnifierIcon as IconSearch, CloseCircleIcon as IconClose, AltArrowDownIcon as IconChevronDown } from "@solar-icons/solid/linear";
+import { FacebookIcon as IconFacebook, InstagramIcon as IconInstagram } from "@/components/brand-icons";
 
 const currentYear = new Date().getFullYear();
 
@@ -202,6 +191,19 @@ const certifications = ["GMP", "FDA", "NSF", "USP", "Non-GMO", "USDA"];
             {link.label}
           </a>
         ))}
+        <span class="font-medium text-secondary-foreground/60">
+          <a
+            href="https://github.com/480-Design/Solar-Icon-Set"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-secondary-foreground transition-colors duration-150 underline decoration-secondary-foreground/30 decoration-1 underline-offset-2"
+          >Solar Icons by 480 Design</a>, <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="license noopener noreferrer"
+            class="hover:text-secondary-foreground transition-colors duration-150 underline decoration-secondary-foreground/30 decoration-1 underline-offset-2"
+          >CC BY 4.0</a>
+        </span>
       </div>
       <p class="font-semibold text-secondary-foreground/60">© {currentYear} Amerik Vitamin</p>
     </div>

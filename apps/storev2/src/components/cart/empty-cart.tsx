@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import IconShoppingBag from "~icons/ri/shopping-bag-3-line";
+import { Bag3Icon as IconShoppingBag } from "@solar-icons/solid/linear";
 
 const EmptyCart = () => {
 	return (

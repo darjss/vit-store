@@ -1,5 +1,4 @@
 /// <reference types="astro/client" />
-/// <reference types="unplugin-icons/types/solid" />
 
 import type { storev2 } from "./alchemy.run.ts";
 import type { Bound, WorkerRef } from "alchemy/cloudflare";

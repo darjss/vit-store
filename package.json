@@ -80,6 +80,7 @@
 	"packageManager": "bun@1.3.0",
 	"patchedDependencies": {
 		"@solid-primitives/storage@4.3.3": "patches/@solid-primitives%2Fstorage@4.3.3.patch",
-		"alchemy@0.93.12": "patches/alchemy@0.93.12.patch"
+		"alchemy@0.93.12": "patches/alchemy@0.93.12.patch",
+		"@solar-icons/solid@2.0.0-beta.3": "patches/@solar-icons%2Fsolid@2.0.0-beta.3.patch"
 	}
 }
