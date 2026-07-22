@@ -1,10 +1,14 @@
+import {
+	CheckCircleIcon as IconCheck,
+	BellIcon as IconNotification,
+} from "@solar-icons/solid/bold";
+import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/cart-large-2";
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import { CheckCircleIcon as IconCheck, BellIcon as IconNotification, CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,
@@ -104,16 +108,16 @@ const CardAddButton = (props: CardAddButtonProps) => {
 						<span
 							class={cn(
 								stateClass,
-								isAdded() && "scale-25 -rotate-[100deg] opacity-0 blur-[2px]",
+								isAdded() && "-rotate-[100deg] scale-25 opacity-0 blur-[2px]",
 							)}
 							aria-hidden={isAdded()}
 						>
-							<IconShoppingCart class="h-5 w-5" />
+							<IconShoppingCart class="h-5 w-5" strokeWidth={2} />
 						</span>
 						<span
 							class={cn(
 								stateClass,
-								!isAdded() && "scale-25 rotate-[100deg] opacity-0 blur-[2px]",
+								!isAdded() && "rotate-[100deg] scale-25 opacity-0 blur-[2px]",
 							)}
 							aria-hidden={!isAdded()}
 						>
