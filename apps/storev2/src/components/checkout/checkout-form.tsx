@@ -9,6 +9,7 @@ import {
 	createSignal,
 	For,
 	Match,
+	onCleanup,
 	onMount,
 	Show,
 	Suspense,
@@ -18,14 +19,8 @@ import { Motion, Presence } from "solid-motionone";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import PaymentOptions from "@/components/payment/payment-options";
-import {
-	identifyUser,
-	trackCheckoutStarted,
-} from "@/lib/analytics";
-import {
-	celebrateOnce,
-	orderCreatedCelebrationKey,
-} from "@/lib/celebration";
+import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
+import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cart, createCartState } from "@/store/cart";
@@ -38,6 +33,7 @@ import IconTruck from "~icons/ri/truck-line";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
+import CheckoutSubmitStatus from "./checkout-submit-status";
 import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type DeliveryZone = {
@@ -79,7 +75,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	onMount(() => {
 		if (cart.items().length === 0) return;
 		// Only fire once per browser session per cart signature
-		const cartSignature = cart.items().map((i) => i.productId).sort().join(",");
+		const cartSignature = cart
+			.items()
+			.map((i) => i.productId)
+			.sort()
+			.join(",");
 		const key = `checkout_started:${cartSignature}`;
 		if (sessionStorage.getItem(key)) return;
 		sessionStorage.setItem(key, "1");
@@ -93,7 +93,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	const [step, setStep] = createSignal<Step>("delivery");
 	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
 	const [summaryOpen, setSummaryOpen] = createSignal(false);
+	const [invalidPulse, setInvalidPulse] = createSignal(false);
 	let checkoutFormEl: HTMLFormElement | undefined;
+	let invalidPulseTimer: number | undefined;
+
+	onCleanup(() => window.clearTimeout(invalidPulseTimer));
 
 	const addressZonesQuery = useQuery(
 		() => ({
@@ -208,6 +212,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			mutation.mutate({ ...values.value, products });
 		},
 		onSubmitInvalid: () => {
+			setInvalidPulse(false);
+			requestAnimationFrame(() => setInvalidPulse(true));
+			window.clearTimeout(invalidPulseTimer);
+			invalidPulseTimer = window.setTimeout(() => setInvalidPulse(false), 450);
+
 			// Focus the first invalid field so the user can fix it.
 			// queueMicrotask lets Solid flush aria-invalid attributes before we query.
 			queueMicrotask(() => {
@@ -403,7 +412,12 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 													transition: stepExit,
 												}}
 											>
-												<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+												<div
+													class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft"
+													classList={{
+														"animate-checkout-nudge": invalidPulse(),
+													}}
+												>
 													<div class="flex items-center gap-2.5 border-border border-b px-4 py-3.5">
 														<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-wash-sky">
 															<IconTruck
@@ -423,7 +437,9 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 													<div class="p-4">
 														<form
-															ref={(el) => (checkoutFormEl = el)}
+															ref={(element) => {
+																checkoutFormEl = element;
+															}}
 															class="space-y-5"
 															onSubmit={async (e) => {
 																e.preventDefault();
@@ -461,8 +477,8 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																				addressZonesQuery.isLoading
 																					? "Бүсүүд уншиж байна..."
 																					: deliveryZonesUnavailable()
-																					? "Бүс сонгох боломжгүй"
-																					: "Хаягийн бүс сонгох"
+																						? "Бүс сонгох боломжгүй"
+																						: "Хаягийн бүс сонгох"
 																			}
 																			options={addressZoneOptions()}
 																			disabled={!deliveryZonesReady()}
@@ -470,20 +486,42 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																	)}
 																/>
 																<Show when={addressZonesQuery.isLoading}>
-																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																	<p
+																		class="text-muted-foreground text-xs"
+																		aria-live="polite"
+																	>
 																		Хүргэлтийн бүсүүдийг уншиж байна...
 																	</p>
 																</Show>
 																<Show when={addressZonesQuery.isError}>
-																	<div class="flex items-center justify-between gap-2 text-destructive text-xs" role="alert">
+																	<div
+																		class="flex items-center justify-between gap-2 text-destructive text-xs"
+																		role="alert"
+																	>
 																		<span>{deliveryZoneErrorMessage()}</span>
-																		<button type="button" onClick={() => addressZonesQuery.refetch()} class="min-h-11 shrink-0 font-bold underline underline-offset-2">
+																		<button
+																			type="button"
+																			onClick={() =>
+																				addressZonesQuery.refetch()
+																			}
+																			class="min-h-11 shrink-0 font-bold underline underline-offset-2"
+																		>
 																			Дахин оролдох
 																		</button>
 																	</div>
 																</Show>
-																<Show when={!addressZonesQuery.isLoading && !addressZonesQuery.isError && addressZonesQuery.data !== undefined && addressZoneOptions().length === 0}>
-																	<p class="text-muted-foreground text-xs" aria-live="polite">
+																<Show
+																	when={
+																		!addressZonesQuery.isLoading &&
+																		!addressZonesQuery.isError &&
+																		addressZonesQuery.data !== undefined &&
+																		addressZoneOptions().length === 0
+																	}
+																>
+																	<p
+																		class="text-muted-foreground text-xs"
+																		aria-live="polite"
+																	>
 																		Одоогоор хүргэлтийн бүс алга байна.
 																	</p>
 																</Show>
@@ -547,23 +585,29 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 																<form.AppForm>
 																	<div class="w-full">
-																	{/* F8: once addOrder succeeded (paymentInfo set), the delivery
+																		{/* F8: once addOrder succeeded (paymentInfo set), the delivery
 																	step is review-only — resubmitting would just bounce back to
 																	payment. Disable and relabel so the no-op is explicit. */}
 																		<form.SubmitButton
 																			size="lg"
 																			class="w-full"
+																			loadingContent={<CheckoutSubmitStatus />}
 																			disabled={
 																				mutation.isPending ||
 																				Boolean(paymentInfo()) ||
 																				!deliveryZonesReady()
 																			}
 																		>
-																			{mutation.isPending
-																				? "Уншиж байна..."
-																				: paymentInfo()
-																					? "Захиалга үүссэн — төлбөр хүлээж байна"
-																					: "Төлбөр төлөх →"}
+																			<Show
+																				when={mutation.isPending}
+																				fallback={
+																					paymentInfo()
+																						? "Захиалга үүссэн — төлбөр хүлээж байна"
+																						: "Төлбөр төлөх →"
+																				}
+																			>
+																				<CheckoutSubmitStatus />
+																			</Show>
 																		</form.SubmitButton>
 																	</div>
 																</form.AppForm>
@@ -598,10 +642,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 													onClick={goBackToDelivery}
 													class="mb-3 inline-flex h-11 items-center gap-1 rounded-full pr-4 pl-2.5 font-medium text-muted-foreground text-sm transition-colors duration-[140ms] ease-out hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 												>
-													<IconChevronLeft
-														class="h-4 w-4"
-														aria-hidden="true"
-													/>
+													<IconChevronLeft class="h-4 w-4" aria-hidden="true" />
 													Буцах
 												</button>
 

@@ -8,7 +8,6 @@ import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import IconErrorWarning from "~icons/ri/error-warning-line";
-import IconLoader from "~icons/ri/loader-4-line";
 import IconQrCode from "~icons/ri/qr-code-line";
 
 interface QpayPaymentPanelProps {
@@ -105,17 +104,55 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	return (
 		<div class="flex w-full flex-col items-center gap-4">
 			<Show when={mutation.isPending}>
-				<div class="flex flex-col items-center gap-3 py-8 text-center">
-					<IconLoader class="h-10 w-10 animate-spin text-cocoa" />
+				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-8 text-center">
+					<div
+						class="relative grid size-16 place-items-center text-cocoa"
+						aria-hidden="true"
+					>
+						<svg class="absolute inset-0 size-16" viewBox="0 0 64 64">
+							<title>QPay холболт үүсгэж байна</title>
+							<circle
+								cx="32"
+								cy="32"
+								r="25"
+								fill="none"
+								stroke="currentColor"
+								stroke-opacity="0.16"
+								stroke-width="4"
+							/>
+							<path
+								class="checkout-loader-ring"
+								d="M32 7a25 25 0 0 1 25 25"
+								fill="none"
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-width="5"
+							/>
+							<path
+								class="checkout-loader-ring-slow"
+								d="M32 16a16 16 0 0 0-16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-linecap="round"
+								stroke-width="3"
+							/>
+						</svg>
+						<IconQrCode class="size-6" />
+					</div>
 					<p class="font-semibold text-foreground text-sm">
-						QPay холболт үүсгэж байна...
+						QPay холболт үүсгэж байна
 					</p>
+					<span class="flex gap-1.5 text-cocoa" aria-hidden="true">
+						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
+						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
+						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
+					</span>
 					<p class="text-muted-foreground text-xs">Түр хүлээнэ үү</p>
 				</div>
 			</Show>
 
 			<Show when={mutation.isError}>
-				<div class="flex flex-col items-center gap-3 py-6">
+				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-6">
 					<IconErrorWarning class="h-10 w-10 text-destructive" />
 					<div class="text-center">
 						<p class="font-semibold text-destructive text-sm">Алдаа гарлаа</p>
@@ -134,7 +171,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			</Show>
 
 			<Show when={mutation.isSuccess && invoiceData()}>
-				<div class="w-full space-y-4">
+				<div class="w-full animate-payment-panel-right space-y-4">
 					{/* Amount display */}
 					<Show when={amountLabel()}>
 						<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-3.5 py-2.5">
