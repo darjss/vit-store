@@ -1,3 +1,4 @@
+import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/cart-large-2";
 import { formatCurrency } from "@vit/shared";
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
@@ -5,7 +6,6 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cart } from "@/store/cart";
-import { CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import {
 	useInventorySnapshot,
 	useInventoryVerification,
@@ -125,7 +125,7 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 									}
 								>
 									<Show when={isInStock()} fallback={<span>Дууссан</span>}>
-										<IconShoppingCart class="h-4 w-4" />
+										<IconShoppingCart class="h-4 w-4" strokeWidth={2} />
 										Сагслах
 									</Show>
 								</Show>

@@ -1,3 +1,5 @@
+import { ArrowRightIcon as IconArrowRight } from "@solar-icons/solid/linear";
+import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/cart-large-2";
 import { deliveryFee } from "@vit/shared/constants";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
@@ -9,8 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import { ArrowRightIcon as IconArrowRight } from "@solar-icons/solid/linear";
-import { CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import CartCrossSells from "./cart-cross-sells";
 import CartDrawerItem from "./cart-drawer-item";
 import { cartSheetFocusRestore } from "./cart-sheet-focus";
@@ -51,7 +51,11 @@ const CartDrawer = () => {
 				<SheetHeader class="space-y-0.5 border-border border-b px-5 pt-5 pb-4 text-left sm:text-left">
 					<SheetTitle class="flex items-center gap-2.5 font-display text-foreground text-xl">
 						<span class="flex size-9 items-center justify-center rounded-full bg-wash-lemon">
-							<IconShoppingCart class="h-5 w-5" aria-hidden="true" />
+							<IconShoppingCart
+								class="h-5 w-5"
+								strokeWidth={2}
+								aria-hidden="true"
+							/>
 						</span>
 						Таны сагс
 					</SheetTitle>
