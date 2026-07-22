@@ -1,8 +1,10 @@
 ---
+
+import { AltArrowDownIcon as IconArrowDown, WidgetIcon as IconGrid, HomeAngleIcon as IconHome, UserIcon as IconUser } from "@solar-icons/solid/linear";
+import { CartLarge2Icon as IconCart } from "@solar-icons/solid/linear/cart-large-2";
 import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { getStaticNavigationData } from "@/lib/static-navigation";
-import { AltArrowDownIcon as IconArrowDown, WidgetIcon as IconGrid, HomeAngleIcon as IconHome, CartIcon as IconCart, UserIcon as IconUser } from "@solar-icons/solid/linear";
 
 const { categories, brands } = await getStaticNavigationData();
 // Defensive filter: the brand query already enforces `having count > 0`, but a
@@ -54,7 +56,7 @@ const brandLogoOnError =
                 href="/cart"
                 class="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-4 text-foreground shadow-soft-sm transition-[transform,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-muted hover:shadow-soft active:scale-[0.97]"
             >
-                <IconCart class="w-6 h-6" />
+                <IconCart class="w-6 h-6" strokeWidth={2} />
                 <span class="font-semibold text-xs">Сагс</span>
             </a>
 

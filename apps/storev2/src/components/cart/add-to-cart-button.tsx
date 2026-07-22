@@ -1,9 +1,10 @@
+import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
+import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/cart-large-2";
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup } from "solid-js";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import { CheckCircleIcon as IconCheck, CartIcon as IconShoppingCart } from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 
 interface AddToCartButtonProps {
@@ -56,17 +57,17 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 				<span
 					class={cn(
 						stateClass,
-						isAdded() && "scale-25 -rotate-[100deg] opacity-0 blur-[2px]",
+						isAdded() && "-rotate-[100deg] scale-25 opacity-0 blur-[2px]",
 					)}
 					aria-hidden={isAdded()}
 				>
-					<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5" />
+					<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
 					<span class="hidden text-[11px] sm:inline sm:text-xs">Сагслах</span>
 				</span>
 				<span
 					class={cn(
 						stateClass,
-						!isAdded() && "scale-25 rotate-[100deg] opacity-0 blur-[2px]",
+						!isAdded() && "rotate-[100deg] scale-25 opacity-0 blur-[2px]",
 					)}
 					aria-hidden={!isAdded()}
 				>
