@@ -1,13 +1,12 @@
-import { useMutation } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { trackQpayError } from "@/lib/analytics";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
-import { cn } from "@/lib/utils";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
-import { usePaymentStatus } from "@/lib/use-payment-status";
+import { cn } from "@/lib/utils";
 import IconErrorWarning from "~icons/ri/error-warning-line";
 import IconLoader from "~icons/ri/loader-4-line";
 import IconQrCode from "~icons/ri/qr-code-line";
@@ -26,7 +25,9 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	// after the user switched to a bank app), which throws InvalidStateError.
 	const [navigated, setNavigated] = createSignal(false);
 
-	const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+	const isDesktop = () =>
+		typeof window !== "undefined" &&
+		window.matchMedia("(min-width: 640px)").matches;
 
 	onMount(() => {
 		setShowQr(isDesktop());
@@ -68,19 +69,32 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		}
 	});
 
-	const paymentStatusQuery = usePaymentStatus(
-		() => props.paymentNumber,
-		() => props.checkoutToken,
-		{
+	// Reconcile against QPay while this page is open instead of only polling
+	// our database. The webhook remains the primary confirmation path, but QPay
+	// callbacks can be delayed or missed; this authenticated fallback verifies
+	// the invoice and runs the same idempotent confirmation boundary.
+	const paymentStatusQuery = useQuery(
+		() => ({
+			queryKey: [
+				"qpay-payment-status",
+				props.paymentNumber,
+				invoiceData()?.invoice_id,
+			],
+			queryFn: () =>
+				api.payment.checkQpayPayment.mutate({
+					paymentNumber: props.paymentNumber,
+					checkoutToken: props.checkoutToken,
+				}),
 			enabled: Boolean(invoiceData()?.invoice_id),
 			refetchInterval: 5000,
-			keySuffix: invoiceData()?.invoice_id,
-		},
+			staleTime: 0,
+		}),
+		() => queryClient,
 	);
 
 	createEffect(() => {
 		if (navigated()) return;
-		if (paymentStatusQuery.data?.status === "success") {
+		if (paymentStatusQuery.data?.paid) {
 			setNavigated(true);
 			void safeNavigate(
 				paymentSuccessUrl(props.paymentNumber, props.checkoutToken),
@@ -104,9 +118,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				<div class="flex flex-col items-center gap-3 py-6">
 					<IconErrorWarning class="h-10 w-10 text-destructive" />
 					<div class="text-center">
-						<p class="font-semibold text-destructive text-sm">
-							Алдаа гарлаа
-						</p>
+						<p class="font-semibold text-destructive text-sm">Алдаа гарлаа</p>
 						<p class="mt-1 text-muted-foreground text-xs">
 							{mutation.error?.message ?? "Төлбөр үүсгэхэд алдаа гарлаа"}
 						</p>
@@ -173,7 +185,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 											href={link.link}
 											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
 										>
-											<div class="size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:-translate-y-0.5 group-hover:shadow-soft sm:size-16">
+											<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
 												<img
 													src={link.logo}
 													alt={link.name || link.description}
