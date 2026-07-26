@@ -21,13 +21,15 @@ export const getStockColor = (stock: number) => {
 export const getPaymentStatusColor = (status: string) => {
 	switch (status) {
 		case "success":
-			return "border-black bg-[#00ff88] text-black";
+			return "border-[#059669] bg-[#d1fae5] text-[#064e3b]";
 		case "pending":
-			return "border-black bg-[#ffa502] text-black";
+			return "border-[#64748b] bg-[#f1f5f9] text-[#334155]";
+		case "customer_claimed_paid":
+			return "border-[#ea580c] bg-[#ffedd5] text-[#7c2d12]";
 		case "failed":
-			return "border-black bg-[#ff4757] text-white";
+			return "border-[#dc2626] bg-[#fee2e2] text-[#7f1d1d]";
 		default:
-			return "border-black bg-[#5f27cd] text-white";
+			return "border-[#64748b] bg-[#f1f5f9] text-[#334155]";
 	}
 };
 

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 
-const primaryStatuses = [undefined, "pending", "shipped", "delivered"] as const;
+const primaryStatuses = ["pending", "shipped", "delivered", "all"] as const;
 const issueStatuses = ["created", "cancelled", "refunded"] as const;
 
 const datePresets = [
@@ -38,7 +38,7 @@ const datePresets = [
 ] as const;
 
 function formatStatusLabel(status?: string) {
-	if (!status) return "Идэвхтэй";
+	if (!status || status === "all") return "Бүгд";
 	return orderStatusLabels[status as OrderStatusType] ?? status;
 }
 
@@ -128,8 +128,8 @@ export default function OrdersFilters({
 			{/* Status tabs — primary + issues dropdown */}
 			<div className="scrollbar-thin flex gap-1 overflow-x-auto pb-1">
 				{primaryStatuses.map((status) => {
-					const value = status ?? "all";
-					const isActive = (orderStatus ?? "all") === value;
+					const value = status;
+					const isActive = orderStatus === value;
 					return (
 						<Button
 							key={value}

@@ -27,7 +27,9 @@ export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
 
 	return (
 		<Badge
-			className={`flex w-fit items-center gap-1 border-2 px-2 py-0.5 font-bold text-xs ${className}`}
+			variant="outline"
+			size="sm"
+			className={`flex w-fit items-center gap-1.5 whitespace-nowrap px-2 py-1 font-bold text-[11px] shadow-none ${className}`}
 		>
 			<Icon className="h-3 w-3" />
 			{label}

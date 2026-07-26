@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+	orderStatus as orderStatusConstants,
 	paymentStatus as paymentStatusConstants,
 	PRODUCT_PER_PAGE,
 } from "@vit/shared/constants";
@@ -75,18 +76,22 @@ export default function OrdersList({
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
 			page,
+			includeAllStatuses: orderStatus === "all",
 			paymentStatus: paymentStatus as
 				| (typeof paymentStatusConstants)[number]
 				| undefined,
 			pageSize,
 			sortField,
 			sortDirection,
-			orderStatus: orderStatus as
-				| ("pending" | "shipped" | "delivered" | "cancelled" | "refunded")
-				| undefined,
+			orderStatus:
+				orderStatus === "all"
+					? undefined
+					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
 			searchTerm,
 			date,
 		}),
+		refetchInterval: 15_000,
+		refetchOnWindowFocus: true,
 	});
 	const orders = ordersData.orders;
 	const pagination = ordersData.pagination;

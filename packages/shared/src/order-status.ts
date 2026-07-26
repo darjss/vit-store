@@ -5,12 +5,12 @@ import type { OrderStatusType } from "./types/order";
  * import this instead of hand-copying the map. Used by admin and storefront.
  */
 export const orderStatusLabels: Record<OrderStatusType, string> = {
-	created: "Төлөөгүй",
-	pending: "Хүлээгдэж буй",
-	shipped: "Илгээгдсэн",
+	created: "Төлбөр хүлээж буй",
+	pending: "Илгээхэд бэлэн",
+	shipped: "Хүргэлтэд гарсан",
 	delivered: "Хүргэгдсэн",
 	cancelled: "Цуцлагдсан",
-	refunded: "Буцаагдсан",
+	refunded: "Буцаан олгосон",
 };
 
 /**
@@ -22,27 +22,27 @@ export const orderStatusStyles: Record<
 	{ badge: string; border: string }
 > = {
 	created: {
-		badge: "border-black bg-[#778ca3] text-white",
-		border: "border-l-[#778ca3]",
+		badge: "border-[#64748b] bg-[#e2e8f0] text-[#0f172a]",
+		border: "border-l-[#64748b]",
 	},
 	pending: {
-		badge: "border-black bg-[#ffa502] text-black",
-		border: "border-l-[#ffa502]",
+		badge: "border-[#d97706] bg-[#fef3c7] text-[#78350f]",
+		border: "border-l-[#d97706]",
 	},
 	shipped: {
-		badge: "border-black bg-[#3742fa] text-white",
-		border: "border-l-[#3742fa]",
+		badge: "border-[#2563eb] bg-[#dbeafe] text-[#1e3a8a]",
+		border: "border-l-[#2563eb]",
 	},
 	delivered: {
-		badge: "border-black bg-[#00ff88] text-black",
-		border: "border-l-[#00ff88]",
+		badge: "border-[#059669] bg-[#d1fae5] text-[#064e3b]",
+		border: "border-l-[#059669]",
 	},
 	cancelled: {
-		badge: "border-black bg-[#ff4757] text-white",
-		border: "border-l-[#ff4757]",
+		badge: "border-[#dc2626] bg-[#fee2e2] text-[#7f1d1d]",
+		border: "border-l-[#dc2626]",
 	},
 	refunded: {
-		badge: "border-black bg-[#5f27cd] text-white",
-		border: "border-l-[#5f27cd]",
+		badge: "border-[#7c3aed] bg-[#ede9fe] text-[#4c1d95]",
+		border: "border-l-[#7c3aed]",
 	},
 };

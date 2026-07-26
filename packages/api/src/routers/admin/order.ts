@@ -489,6 +489,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
         pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
         paymentStatus: v.optional(v.picklist(paymentStatus)),
+        includeAllStatuses: v.optional(v.boolean()),
         orderStatus: v.optional(v.picklist([
             "created",
             "pending",
@@ -508,6 +509,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 page: input.page ?? 1,
                 pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
                 paymentStatus: input.paymentStatus,
+                includeAllStatuses: input.includeAllStatuses,
                 orderStatus: input.orderStatus,
                 sortField: input.sortField,
                 sortDirection: input.sortDirection,

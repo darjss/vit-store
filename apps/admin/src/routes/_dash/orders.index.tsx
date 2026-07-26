@@ -23,6 +23,8 @@ import OrdersFilters from "@/components/order/orders-filters";
 import OrdersList from "@/components/order/orders-list";
 import PendingTransferWidget from "@/components/order/pending-transfer-widget";
 
+const orderStatusFilterValues = [...orderStatusConstants, "all"] as const;
+
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
 	pendingComponent: OrdersPageSkeleton,
@@ -37,16 +39,19 @@ export const Route = createFileRoute("/_dash/orders/")({
 			paymentStatus?: string;
 			date?: string;
 		};
+		const requestedOrderStatus = search.orderStatus ?? "pending";
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getPaginatedOrders.queryOptions({
 				page: search.page ?? 1,
 				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+				includeAllStatuses: requestedOrderStatus === "all",
 				searchTerm: search.searchTerm,
 				sortField: search.sortField,
 				sortDirection: search.sortDirection,
-				orderStatus: search.orderStatus as
-					| (typeof orderStatusConstants)[number]
-					| undefined,
+				orderStatus:
+					requestedOrderStatus === "all"
+						? undefined
+						: (requestedOrderStatus as (typeof orderStatusConstants)[number]),
 				paymentStatus: search.paymentStatus as
 					| (typeof paymentStatusConstants)[number]
 					| undefined,
@@ -66,7 +71,7 @@ export const Route = createFileRoute("/_dash/orders/")({
 		searchTerm: v.optional(v.string()),
 		sortField: v.optional(v.string()),
 		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		orderStatus: v.optional(v.picklist(orderStatusConstants)),
+		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "pending"),
 		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
 		date: v.optional(v.string()),
 	}),
@@ -89,7 +94,7 @@ function RouteComponent() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 
 	const hasActiveFilters =
-		orderStatus !== undefined ||
+		orderStatus !== "pending" ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
 		sortDirection !== undefined ||
@@ -141,7 +146,7 @@ function RouteComponent() {
 			to: "/orders",
 			search: {
 				date,
-				orderStatus: field === "orderStatus" ? normalized : orderStatus,
+				orderStatus: field === "orderStatus" ? value : orderStatus,
 				page: 1,
 				pageSize,
 				paymentStatus:
@@ -149,7 +154,6 @@ function RouteComponent() {
 				searchTerm,
 				sortDirection,
 				sortField,
-				[field]: normalized,
 			},
 		});
 	};
@@ -159,7 +163,7 @@ function RouteComponent() {
 		navigate({
 			to: "/orders",
 			search: {
-				orderStatus: undefined,
+				orderStatus: "pending",
 				paymentStatus: undefined,
 				sortField: undefined,
 				sortDirection: "asc",
