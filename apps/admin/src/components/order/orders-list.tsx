@@ -39,6 +39,8 @@ import BatchShipOrderDialog, {
 } from "./batch-ship-order-dialog";
 import OrderCard from "./order-card";
 
+const activeOrderStatuses = ["created", "pending", "shipped"] as const;
+
 function trpcErrorMessage(error: unknown): string {
 	if (error instanceof Error) return error.message;
 	return "Алдаа гарлаа";
@@ -85,9 +87,11 @@ export default function OrdersList({
 			sortField,
 			sortDirection,
 			orderStatus:
-				orderStatus === "all"
+				orderStatus === "all" || orderStatus === "active"
 					? undefined
 					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
+			orderStatuses:
+				orderStatus === "active" ? [...activeOrderStatuses] : undefined,
 			searchTerm,
 			date,
 		}),

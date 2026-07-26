@@ -20,9 +20,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { OrdersPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import OrdersFilters from "@/components/order/orders-filters";
 import OrdersList from "@/components/order/orders-list";
-import PendingTransferWidget from "@/components/order/pending-transfer-widget";
 
-const orderStatusFilterValues = [...orderStatusConstants, "all"] as const;
+const orderStatusFilterValues = [
+	...orderStatusConstants,
+	"active",
+	"all",
+] as const;
+const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
@@ -38,8 +42,8 @@ export const Route = createFileRoute("/_dash/orders/")({
 			paymentStatus?: string;
 			date?: string;
 		};
-		const requestedOrderStatus = search.orderStatus ?? "pending";
-		const requestedDate = search.date ?? "last7days";
+		const requestedOrderStatus = search.orderStatus ?? "active";
+		const requestedDate = search.date ?? "all";
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getPaginatedOrders.queryOptions({
 				page: search.page ?? 1,
@@ -49,17 +53,16 @@ export const Route = createFileRoute("/_dash/orders/")({
 				sortField: search.sortField,
 				sortDirection: search.sortDirection,
 				orderStatus:
-					requestedOrderStatus === "all"
+					requestedOrderStatus === "all" || requestedOrderStatus === "active"
 						? undefined
 						: (requestedOrderStatus as (typeof orderStatusConstants)[number]),
+				orderStatuses:
+					requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
 				paymentStatus: search.paymentStatus as
 					| (typeof paymentStatusConstants)[number]
 					| undefined,
 				date: requestedDate,
 			}),
-		);
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.payment.getClaimedTransferCount.queryOptions(),
 		);
 	},
 	validateSearch: v.object({
@@ -71,9 +74,9 @@ export const Route = createFileRoute("/_dash/orders/")({
 		searchTerm: v.optional(v.string()),
 		sortField: v.optional(v.string()),
 		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "pending"),
+		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
 		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
-		date: v.optional(v.string(), "last7days"),
+		date: v.optional(v.string(), "all"),
 	}),
 });
 
@@ -94,12 +97,12 @@ function RouteComponent() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 
 	const hasActiveFilters =
-		orderStatus !== "pending" ||
+		orderStatus !== "active" ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
 		sortDirection !== undefined ||
 		searchTerm !== undefined ||
-		date !== "last7days";
+		date !== "all";
 
 	const navigate = useNavigate({ from: Route.fullPath });
 	const mutation = useMutation({
@@ -163,12 +166,12 @@ function RouteComponent() {
 		navigate({
 			to: "/orders",
 			search: {
-				orderStatus: "pending",
+				orderStatus: "active",
 				paymentStatus: undefined,
 				sortField: undefined,
 				sortDirection: "asc",
 				searchTerm: undefined,
-				date: "last7days",
+				date: "all",
 				page: 1,
 			},
 		});
@@ -216,8 +219,6 @@ function RouteComponent() {
 					</Link>
 				</Button>
 			</div>
-
-			<PendingTransferWidget />
 
 			{/* Search */}
 			<div className="relative">
