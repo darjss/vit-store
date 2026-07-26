@@ -487,6 +487,7 @@ export const orderQueries = {
 			page: number;
 			pageSize: number;
 			paymentStatus?: PaymentStatusType;
+			includeAllStatuses?: boolean;
 			orderStatus?: OrderStatus;
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
@@ -498,7 +499,7 @@ export const orderQueries = {
 
 			if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
-			} else if (params.paymentStatus === undefined) {
+			} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
 				// Default: hide "created" (unpaid) orders from the admin list.
 				// When a paymentStatus filter is set, drop the exclusion so admins
 				// filtering by pending payments can still see "created" orders

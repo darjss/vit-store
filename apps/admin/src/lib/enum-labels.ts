@@ -16,10 +16,10 @@ export const orderStatusLabel: Record<OrderStatusType, string> =
 	orderStatusLabels;
 
 export const paymentStatusLabel: Record<PaymentStatusType, string> = {
-	pending: "Хүлээгдэж буй",
-	customer_claimed_paid: "Төлсөн гэж мэдэгдсэн",
-	success: "Төлсөн",
-	failed: "Амжилтгүй",
+	pending: "Төлбөр хүлээж буй",
+	customer_claimed_paid: "Шалгах шаардлагатай",
+	success: "Төлбөр баталгаажсан",
+	failed: "Төлбөр амжилтгүй",
 };
 
 export const paymentProviderLabel: Record<PaymentProviderType, string> = {
