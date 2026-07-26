@@ -494,6 +494,7 @@ export const orderQueries = {
 			searchTerm?: string;
 			date?: string;
 		}) {
+			const database = db();
 			const conditions: (SQL<unknown> | undefined)[] = [];
 			conditions.push(isNull(OrdersTable.deletedAt));
 
@@ -557,7 +558,7 @@ export const orderQueries = {
 
 			const offset = (params.page - 1) * params.pageSize;
 
-			const orderResults = await db().query.OrdersTable.findMany({
+			const orderResults = await database.query.OrdersTable.findMany({
 				limit: params.pageSize,
 				offset: offset,
 				orderBy: orderByClauses,
@@ -609,7 +610,7 @@ export const orderQueries = {
 				});
 			}
 
-			const totalCountResult = await db()
+			const totalCountResult = await database
 				.select({ count: sql<number>`COUNT(*)` })
 				.from(OrdersTable)
 				.where(finalConditions.length > 0 ? and(...finalConditions) : undefined)
