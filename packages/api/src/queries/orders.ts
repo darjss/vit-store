@@ -489,6 +489,7 @@ export const orderQueries = {
 			paymentStatus?: PaymentStatusType;
 			includeAllStatuses?: boolean;
 			orderStatus?: OrderStatus;
+			orderStatuses?: OrderStatus[];
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
@@ -498,7 +499,9 @@ export const orderQueries = {
 			const conditions: (SQL<unknown> | undefined)[] = [];
 			conditions.push(isNull(OrdersTable.deletedAt));
 
-			if (params.orderStatus !== undefined) {
+			if (params.orderStatuses && params.orderStatuses.length > 0) {
+				conditions.push(inArray(OrdersTable.status, params.orderStatuses));
+			} else if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
 			} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
 				// Default: hide "created" (unpaid) orders from the admin list.

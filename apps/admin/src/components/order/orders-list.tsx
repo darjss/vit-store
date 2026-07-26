@@ -5,14 +5,12 @@ import {
 	Loader2,
 	Package,
 	Truck,
-	X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-	orderStatus as orderStatusConstants,
-	paymentStatus as paymentStatusConstants,
-	PRODUCT_PER_PAGE,
+	type orderStatus as orderStatusConstants,
+	type paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
@@ -38,6 +36,8 @@ import {
 } from "@/components/ui/tooltip";
 import { trpc } from "@/utils/trpc";
 import OrderCard from "./order-card";
+
+const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
 function trpcErrorMessage(error: unknown): string {
 	if (error instanceof Error) return error.message;
@@ -84,9 +84,11 @@ export default function OrdersList({
 			sortField,
 			sortDirection,
 			orderStatus:
-				orderStatus === "all"
+				orderStatus === "all" || orderStatus === "active"
 					? undefined
 					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
+			orderStatuses:
+				orderStatus === "active" ? [...activeOrderStatuses] : undefined,
 			searchTerm,
 			date,
 		}),

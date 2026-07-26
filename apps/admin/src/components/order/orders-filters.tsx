@@ -26,7 +26,13 @@ import {
 } from "@/components/ui/select";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 
-const primaryStatuses = ["pending", "shipped", "delivered", "all"] as const;
+const primaryStatuses = [
+	"active",
+	"pending",
+	"shipped",
+	"delivered",
+	"all",
+] as const;
 const issueStatuses = ["created", "cancelled", "refunded"] as const;
 
 const datePresets = [
@@ -39,6 +45,7 @@ const datePresets = [
 
 function formatStatusLabel(status?: string) {
 	if (!status || status === "all") return "Бүгд";
+	if (status === "active") return "Явагдаж буй";
 	return orderStatusLabels[status as OrderStatusType] ?? status;
 }
 
@@ -184,7 +191,7 @@ export default function OrdersFilters({
 				<div className="flex flex-wrap items-center gap-1.5">
 					{datePresets.map((preset) => {
 						const isActive =
-							date === preset.value || (!date && preset.value === "last7days");
+							date === preset.value || (!date && preset.value === "all");
 						return (
 							<Button
 								key={preset.value}
