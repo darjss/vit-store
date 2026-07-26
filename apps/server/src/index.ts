@@ -13,7 +13,7 @@ import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
-import { operatorTrpcError } from "./lib/trpc-error-log";
+import { logTrpcError, operatorTrpcError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -85,10 +85,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(operatorTrpcError(error), {
-				event: "trpc.admin_error",
-				trpc: { path, code: error.code, user_type: "admin" },
-			});
+			if (ctx) logTrpcError(ctx.log, "trpc.admin_error", path, error);
 		},
 	}),
 );
@@ -113,10 +110,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(operatorTrpcError(error), {
-				event: "trpc.store_error",
-				trpc: { path, code: error.code, user_type: "customer" },
-			});
+			if (ctx) logTrpcError(ctx.log, "trpc.store_error", path, error);
 		},
 	}),
 );
@@ -132,10 +126,7 @@ app.use(
 			return createContext({ context });
 		},
 		onError({ path, error, ctx }) {
-			ctx?.log.error(operatorTrpcError(error), {
-				event: "trpc.bot_error",
-				trpc: { path, code: error.code, user_type: "bot" },
-			});
+			if (ctx) logTrpcError(ctx.log, "trpc.bot_error", path, error);
 		},
 	}),
 );

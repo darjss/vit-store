@@ -184,7 +184,7 @@ export default function OrdersFilters({
 				<div className="flex flex-wrap items-center gap-1.5">
 					{datePresets.map((preset) => {
 						const isActive =
-							date === preset.value || (!date && preset.value === "all");
+							date === preset.value || (!date && preset.value === "last7days");
 						return (
 							<Button
 								key={preset.value}
