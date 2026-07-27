@@ -64,10 +64,10 @@ const pill = (text: string, backgroundColor: string): JSXNode =>
 			style: {
 				display: "flex",
 				alignItems: "center",
-				padding: "12px 20px",
+				padding: "14px 22px",
 				borderRadius: 999,
 				backgroundColor,
-				fontSize: 20,
+				fontSize: 24,
 				fontWeight: 700,
 			},
 		},
@@ -111,75 +111,8 @@ export const renderHomeOgSvg = (fonts: OgFonts) => {
 					display: "flex",
 					flexDirection: "column",
 					justifyContent: "space-between",
-					width: "68%",
-					padding: "58px 30px 48px 60px",
-				},
-			},
-			h(
-				"div",
-				{ style: { display: "flex", alignItems: "center", gap: 14 } },
-				h("div", {
-					style: {
-						display: "flex",
-						width: 34,
-						height: 34,
-						borderRadius: 12,
-						backgroundColor: colors.butter,
-						boxShadow: `0 3px 0 ${colors.butterDeep}`,
-					},
-				}),
-				h(
-					"div",
-					{ style: { display: "flex", fontSize: 24, fontWeight: 700 } },
-					"amerikvitamin.mn",
-				),
-			),
-			h(
-				"div",
-				{ style: { display: "flex", flexDirection: "column", gap: 24 } },
-				h(
-					"div",
-					{
-						style: {
-							display: "flex",
-							fontFamily: "Unbounded",
-							fontSize: 68,
-							fontWeight: 700,
-							lineHeight: 1.08,
-							letterSpacing: "-0.02em",
-						},
-					},
-					"Өдөр бүрт тань хэрэгтэй витамин",
-				),
-				h(
-					"div",
-					{
-						style: {
-							display: "flex",
-							fontSize: 27,
-							fontWeight: 600,
-							color: colors.muted,
-						},
-					},
-					"АНУ-аас импортолсон жинхэнэ бүтээгдэхүүн",
-				),
-			),
-			h(
-				"div",
-				{ style: { display: "flex", gap: 12 } },
-				pill("Өргөн сонголт", colors.butter),
-				pill("Хурдан хүргэлт", colors.mint),
-			),
-		),
-		h(
-			"div",
-			{
-				style: {
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					width: "32%",
-					backgroundColor: colors.butter,
+					width: "100%",
+					padding: "62px 68px 56px",
 				},
 			},
 			h(
@@ -187,29 +120,57 @@ export const renderHomeOgSvg = (fonts: OgFonts) => {
 				{
 					style: {
 						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						width: 246,
-						height: 246,
-						borderRadius: 123,
-						backgroundColor: colors.card,
-						border: `2px solid ${colors.foreground}`,
+						fontSize: 28,
+						fontWeight: 700,
+						color: colors.muted,
 					},
 				},
+				"amerikvitamin.mn",
+			),
+			h(
+				"div",
+				{ style: { display: "flex", flexDirection: "column", gap: 28 } },
 				h(
 					"div",
 					{
 						style: {
 							display: "flex",
 							fontFamily: "Unbounded",
-							fontSize: 43,
+							fontSize: 88,
 							fontWeight: 700,
-							lineHeight: 1.05,
-							textAlign: "center",
+							lineHeight: 1.04,
+							letterSpacing: "-0.025em",
 						},
 					},
 					"Америк Витамин",
 				),
+				h(
+					"div",
+					{
+						style: {
+							display: "flex",
+							fontSize: 38,
+							fontWeight: 700,
+						},
+					},
+					"Жинхэнэ витамин. Хурдан хүргэлт.",
+				),
+			),
+			h(
+				"div",
+				{
+					style: {
+						display: "flex",
+						alignItems: "center",
+						alignSelf: "flex-start",
+						padding: "16px 26px",
+						borderRadius: 999,
+						backgroundColor: colors.butter,
+						fontSize: 25,
+						fontWeight: 700,
+					},
+				},
+				"АНУ-аас импортолсон бүтээгдэхүүн",
 			),
 		),
 	]);
@@ -233,15 +194,14 @@ export const renderProductOgSvg = (product: ProductOgData, fonts: OgFonts) => {
 					display: "flex",
 					flexDirection: "column",
 					justifyContent: "space-between",
-					width: "60%",
-					padding: "50px 38px 46px 56px",
+					width: "57%",
+					padding: "54px 34px 52px 56px",
 				},
 			},
 			h(
 				"div",
-				{ style: { display: "flex", alignItems: "center", gap: 12 } },
+				{ style: { display: "flex", alignItems: "center" } },
 				pill(product.brand || "Америк Витамин", colors.butter),
-				product.category ? pill(product.category, "#f1eee5") : null,
 			),
 			h(
 				"div",
@@ -252,11 +212,11 @@ export const renderProductOgSvg = (product: ProductOgData, fonts: OgFonts) => {
 						style: {
 							display: "flex",
 							fontFamily: "Unbounded",
-							fontSize: product.name.length > 48 ? 45 : 54,
+							fontSize: product.name.length > 48 ? 50 : 62,
 							fontWeight: 700,
 							lineHeight: 1.12,
 							letterSpacing: "-0.02em",
-							maxHeight: 190,
+							maxHeight: 220,
 							overflow: "hidden",
 						},
 					},
@@ -269,7 +229,7 @@ export const renderProductOgSvg = (product: ProductOgData, fonts: OgFonts) => {
 								style: {
 									display: "flex",
 									fontFamily: "Unbounded",
-									fontSize: 42,
+									fontSize: 50,
 									fontWeight: 700,
 								},
 							},
@@ -279,7 +239,7 @@ export const renderProductOgSvg = (product: ProductOgData, fonts: OgFonts) => {
 			),
 			h(
 				"div",
-				{ style: { display: "flex", fontSize: 22, fontWeight: 700 } },
+				{ style: { display: "flex", fontSize: 28, fontWeight: 700 } },
 				"amerikvitamin.mn",
 			),
 		),
@@ -290,16 +250,16 @@ export const renderProductOgSvg = (product: ProductOgData, fonts: OgFonts) => {
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
-					width: "40%",
-					padding: 42,
+					width: "43%",
+					padding: 24,
 					backgroundColor: colors.peach,
 				},
 			},
 			product.imageUrl
 				? h("img", {
 						src: product.imageUrl,
-						width: 390,
-						height: 470,
+						width: 440,
+						height: 510,
 						style: { objectFit: "contain" },
 					})
 				: h(
