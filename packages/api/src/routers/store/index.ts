@@ -7,6 +7,7 @@ import { customer } from "~/routers/store/customer";
 import { order } from "~/routers/store/order";
 import { payment } from "~/routers/store/payment";
 import { product } from "~/routers/store/product";
+import { storeV2Router } from "~/routers/store/v2";
 
 export const storeRouter = router({
 	healthCheck: publicProcedure.query(() => {
@@ -20,5 +21,6 @@ export const storeRouter = router({
 	order,
 	product,
 	cart,
+	v2: storeV2Router,
 });
 export type StoreRouter = typeof storeRouter;

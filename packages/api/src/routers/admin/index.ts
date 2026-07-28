@@ -13,6 +13,7 @@ import { product } from "~/routers/admin/product";
 import { productImages } from "~/routers/admin/product-images";
 import { purchase } from "~/routers/admin/purchase";
 import { sales } from "~/routers/admin/sales";
+import { adminV2Router } from "~/routers/admin/v2";
 
 export { type BotRouter, botRouter } from "~/routers/admin/bot";
 
@@ -34,5 +35,6 @@ export const adminRouter = router({
 	product,
 	purchase,
 	sales,
+	v2: adminV2Router,
 });
 export type AdminRouter = typeof adminRouter;

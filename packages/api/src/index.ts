@@ -71,4 +71,5 @@ export {
 } from "~/lib/trpc";
 export * from "~/lib/types";
 export * from "~/lib/utils";
+export * from "~/result/legacy-trpc";
 export * from "~/routers";

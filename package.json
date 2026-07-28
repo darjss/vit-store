@@ -18,10 +18,14 @@
 			"tsdown": "^0.15.12",
 			"drizzle-orm": "^0.44.4",
 			"drizzle-kit": "^0.31.4",
-			"alchemy": "0.93.12"
+			"alchemy": "0.93.12",
+			"better-result": "2.10.0",
+			"dismatch": "2.6.0"
 		}
 	},
 	"scripts": {
+		"test": "bun test",
+		"test:contract": "bun test packages/api/test/result-foundation.test.ts",
 		"format": "biome format --write .",
 		"check": "oxlint",
 		"lint": "biome lint .",

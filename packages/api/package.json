@@ -75,6 +75,7 @@
 		"@warriorteam/messenger-sdk": "^1.5.3",
 		"ai": "^6.0.40",
 		"android-sms-gateway": "^3.0.0",
+		"better-result": "catalog:",
 		"dotenv": "catalog:",
 		"drizzle-orm": "catalog:",
 		"drizzle-valibot": "^0.4.2",

@@ -2,6 +2,7 @@ import { router } from "~/lib/trpc";
 import { aiProductBot } from "~/routers/admin/ai-product";
 import { aiPurchaseBot } from "~/routers/admin/ai-purchase";
 import { analyticsBot } from "~/routers/admin/analytics";
+import { botV2Router } from "~/routers/admin/bot-v2";
 import { brandsBot } from "~/routers/admin/brands";
 import { categoryBot } from "~/routers/admin/category";
 import { customerBot } from "~/routers/admin/customer";
@@ -35,5 +36,6 @@ export const botRouter = router({
 	productImages: productImagesBot,
 	purchase: purchaseBot,
 	sales: salesBot,
+	v2: botV2Router,
 });
 export type BotRouter = typeof botRouter;

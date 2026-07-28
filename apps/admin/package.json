@@ -33,6 +33,7 @@
 		"@unpic/react": "^1.0.1",
 		"@vit/api": "workspace:*",
 		"@vit/shared": "workspace:*",
+		"better-result": "catalog:",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lodash": "^4.17.21",
