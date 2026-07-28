@@ -5,18 +5,22 @@ import {
 	CACHE_POLICY,
 	serializeResult,
 } from "@vit/shared";
+import type { Result } from "better-result";
 import * as v from "valibot";
+import { markCacheable } from "~/lib/cache/workers-cache";
+import { publicProcedure, router } from "~/lib/trpc";
 import {
 	getAllBrandsWithStockOperation,
 	getBrandBySlugOperation,
 } from "~/operations/product/catalog";
 import { brandQueries } from "~/queries/brands";
-import { markCacheable } from "~/lib/cache/workers-cache";
-import { publicProcedure, router } from "~/lib/trpc";
 
 const brandBySlugInput = v.object({
 	slug: v.pipe(v.string(), v.minLength(1)),
 });
+
+const valueOrNull = <Value, Failure>(result: Result<Value, Failure>) =>
+	result.match<Value | null>({ ok: (value) => value, err: () => null });
 
 const markBrandLookupCache = (
 	ctx: Parameters<typeof markCacheable>[0],
@@ -54,7 +58,7 @@ export const brand = router({
 		.input(brandBySlugInput)
 		.query(async ({ ctx, input }) => {
 			const result = await getBrandBySlugOperation(input.slug);
-			const brand = result.match({ ok: (value) => value, err: () => null });
+			const brand = valueOrNull(result);
 			markBrandLookupCache(ctx, brand);
 			return brand;
 		}),
@@ -70,10 +74,7 @@ export const brandV2Router = router({
 		.input(brandBySlugInput)
 		.query(async ({ ctx, input }) => {
 			const result = await getBrandBySlugOperation(input.slug);
-			markBrandLookupCache(
-				ctx,
-				result.match({ ok: (value) => value, err: () => null }),
-			);
+			markBrandLookupCache(ctx, valueOrNull(result));
 			return serializeResult(result, brandLookupResultSchemas);
 		}),
 });

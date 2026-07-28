@@ -5,19 +5,23 @@ import {
 	categoryTag,
 	serializeResult,
 } from "@vit/shared";
+import type { Result } from "better-result";
 import * as v from "valibot";
+import { markCacheable } from "~/lib/cache/workers-cache";
+import { publicProcedure, router } from "~/lib/trpc";
 import {
 	getAllCategoriesOperation,
 	getAllCategoriesWithStockOperation,
 	getCategoryBySlugOperation,
 } from "~/operations/product/catalog";
 import { categoryQueries } from "~/queries/categories";
-import { markCacheable } from "~/lib/cache/workers-cache";
-import { publicProcedure, router } from "~/lib/trpc";
 
 const categoryBySlugInput = v.object({
 	slug: v.pipe(v.string(), v.minLength(1)),
 });
+
+const valueOrNull = <Value, Failure>(result: Result<Value, Failure>) =>
+	result.match<Value | null>({ ok: (value) => value, err: () => null });
 
 const markCategoryLookupCache = (
 	ctx: Parameters<typeof markCacheable>[0],
@@ -49,7 +53,7 @@ export const category = router({
 		.input(categoryBySlugInput)
 		.query(async ({ ctx, input }) => {
 			const result = await getCategoryBySlugOperation(input.slug);
-			const category = result.match({ ok: (value) => value, err: () => null });
+			const category = valueOrNull(result);
 			markCategoryLookupCache(ctx, category);
 			return category;
 		}),
@@ -70,10 +74,7 @@ export const categoryV2Router = router({
 		.input(categoryBySlugInput)
 		.query(async ({ ctx, input }) => {
 			const result = await getCategoryBySlugOperation(input.slug);
-			markCategoryLookupCache(
-				ctx,
-				result.match({ ok: (value) => value, err: () => null }),
-			);
+			markCategoryLookupCache(ctx, valueOrNull(result));
 			return serializeResult(result, categoryLookupResultSchemas);
 		}),
 });
