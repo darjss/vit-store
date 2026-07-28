@@ -3,17 +3,17 @@ import type { AiOperationError, ExtractedProductData } from "@vit/shared";
 import type { Result } from "better-result";
 import { AlertCircle, Loader2, Search, Sparkles, X } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
 	ExtractionProgressPanel,
+	type ExtractionStep,
 	markStepComplete,
 	markStepError,
 	resetSteps,
 	setStepActive,
-	type ExtractionStep,
 } from "@/components/product/extraction-progress-panel";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
 	finalizeProductMutationOptions,
 	scrapeProductMutationOptions,

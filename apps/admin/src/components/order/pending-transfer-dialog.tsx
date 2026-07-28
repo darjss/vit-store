@@ -186,7 +186,7 @@ export default function PendingTransferDialog({
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 											<div className="min-w-0 space-y-2">
 												<div className="flex flex-wrap items-center gap-2">
-													<span className="font-heading font-black">
+													<span className="font-black font-heading">
 														#{claim.orderNumber}
 													</span>
 													<span className="text-muted-foreground text-xs">
@@ -201,7 +201,7 @@ export default function PendingTransferDialog({
 														{claim.customerPhone}
 													</span>
 												</div>
-												<p className="font-heading text-lg font-black tabular-nums">
+												<p className="font-black font-heading text-lg tabular-nums">
 													{formatCurrency(claim.amount)}
 												</p>
 												<p className="text-muted-foreground text-xs">

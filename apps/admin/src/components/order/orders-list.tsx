@@ -4,15 +4,15 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
+import type { AdminBatchFailure } from "@vit/shared";
+import type {
+	orderStatus as orderStatusConstants,
+	paymentStatus as paymentStatusConstants,
+} from "@vit/shared/constants";
 import { match } from "dismatch";
+import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { AdminBatchFailure } from "@vit/shared";
-import {
-	type orderStatus as orderStatusConstants,
-	type paymentStatus as paymentStatusConstants,
-} from "@vit/shared/constants";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

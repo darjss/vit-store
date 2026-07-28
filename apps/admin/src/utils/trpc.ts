@@ -8,11 +8,11 @@ import {
 } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AdminRouter } from "@vit/api";
+import superjson from "superjson";
 import {
 	presentTransportError,
 	showErrorPresentation,
 } from "@/lib/error-presentations";
-import superjson from "superjson";
 
 export const queryClient = new QueryClient({
 	defaultOptions: {

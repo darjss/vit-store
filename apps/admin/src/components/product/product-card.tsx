@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
 } from "@/lib/error-presentations";
 import { handleResult } from "@/lib/handle-result";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { formatProductStatusMn } from "@vit/shared/domain/product";
 import RowActions from "../row-actions";
 import {
 	AlertDialog,
@@ -36,12 +36,12 @@ import {
 	DialogTitle,
 } from "../ui/dialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
-import ProductForm from "./product-form";
-import { ProductSummary } from "./product-card-summary";
 import {
 	ProductExpirationEditor,
 	ProductStockEditor,
 } from "./product-card-editors";
+import { ProductSummary } from "./product-card-summary";
+import ProductForm from "./product-form";
 
 interface ProductCardProps {
 	product: ProductType;

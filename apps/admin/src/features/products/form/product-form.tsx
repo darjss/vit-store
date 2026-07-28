@@ -15,6 +15,9 @@ import {
 } from "@vit/shared/domain/product";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
+import SubmitButton from "@/components/submit-button";
+import { Form } from "@/components/ui/form";
+import { FormLoadingOverlay } from "@/components/ui/form-loading-overlay";
 import {
 	addProductMutationOptions,
 	updateProductMutationOptions,
@@ -22,9 +25,6 @@ import {
 import { presentCatalogError } from "@/lib/error-presentations";
 import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
-import SubmitButton from "@/components/submit-button";
-import { Form } from "@/components/ui/form";
-import { FormLoadingOverlay } from "@/components/ui/form-loading-overlay";
 import { ProductAdvancedSection } from "./sections/product-advanced-section";
 import { ProductDetailsSection } from "./sections/product-details-section";
 import { ProductImagesSection } from "./sections/product-images-section";
