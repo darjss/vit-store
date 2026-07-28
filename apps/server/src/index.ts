@@ -11,6 +11,7 @@ import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
 import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
+import { retryPendingPaymentPostCommitRecovery } from "./lib/payment-post-commit-recovery";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
 import { logTrpcError, operatorTrpcError } from "./lib/trpc-error-log";
@@ -148,18 +149,27 @@ export default {
 		});
 		const restock = runRestockNotifier(env);
 		const paymentNotifications = runPaymentNotificationOutbox();
-		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
-			[restock, paymentNotifications],
-		);
+		const paymentRecovery = retryPendingPaymentPostCommitRecovery();
+		const [restockResult, paymentNotificationResult, paymentRecoveryResult] =
+			await Promise.allSettled([
+				restock,
+				paymentNotifications,
+				paymentRecovery,
+			]);
 		const jobs = {
 			restock_notifier: restockResult.status,
 			payment_notification_outbox: paymentNotificationResult.status,
+			payment_post_commit_recovery: paymentRecoveryResult.status,
 		};
 		const failures = [
 			scheduledJobFailure("restock_notifier", restockResult),
 			scheduledJobFailure(
 				"payment_notification_outbox",
 				paymentNotificationResult,
+			),
+			scheduledJobFailure(
+				"payment_post_commit_recovery",
+				paymentRecoveryResult,
 			),
 		].filter((failure) => failure !== undefined);
 

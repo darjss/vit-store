@@ -15,6 +15,7 @@ import {
 } from "~/db/schema";
 import {
 	applyStockTransition,
+	requireStockTransition,
 	type StockTransition,
 } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
@@ -580,8 +581,10 @@ export const purchaseQueries = {
 			const affectedProductIds = [...stockDeltas.keys()];
 			const restockCandidates: StockTransition[] = [];
 			for (const [productId, delta] of stockDeltas) {
-				const transition = await applyStockTransition(tx, { productId, delta });
-				if (transition) restockCandidates.push(transition);
+				const transition = requireStockTransition(
+					await applyStockTransition(tx, { productId, delta }),
+				);
+				restockCandidates.push(transition);
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);

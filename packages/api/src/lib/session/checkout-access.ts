@@ -1,6 +1,8 @@
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeHexLowerCase } from "@oslojs/encoding";
 import { TRPCError } from "@trpc/server";
+import type { OrderAccessError, PaymentError } from "@vit/shared";
+import { Result, type Result as ResultType } from "better-result";
 import type { Context, CustomerSelectType } from "~/lib/context";
 import { paymentQueries } from "~/queries/payments";
 import { orderQueries } from "~/queries/orders";
@@ -71,39 +73,110 @@ export function isPhoneVerifiedCustomer(ctx: Context): boolean {
 	return getCustomerClaims(ctx)?.trust === "phone_verified";
 }
 
+export async function getPaymentAccess(
+	ctx: Context,
+	paymentNumber: string,
+	checkoutToken?: string,
+): Promise<
+	ResultType<
+		NonNullable<
+			Awaited<ReturnType<typeof paymentQueries.store.getPaymentInfoByNumber>>
+		>,
+		PaymentError
+	>
+> {
+	const payment =
+		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
+	if (!payment) {
+		return Result.err({
+			_tag: "PaymentNotFound",
+			message: "Төлбөрийн мэдээлэл олдсонгүй.",
+		});
+	}
+
+	const claims = getCustomerClaims(ctx);
+	if (
+		(claims?.trust === "phone_verified" &&
+			claims.phone === payment.order.customerPhone) ||
+		(claims?.trust === "checkout_guest" &&
+			claims.checkout?.paymentNumber === paymentNumber)
+	) {
+		return Result.ok(payment);
+	}
+
+	const tokenRecord = await validateCheckoutToken(
+		ctx,
+		paymentNumber,
+		checkoutToken,
+	);
+	return tokenRecord?.phone === payment.order.customerPhone
+		? Result.ok(payment)
+		: Result.err({
+				_tag: "PaymentAccessDenied",
+				message: "Энэ төлбөрийн мэдээллийг харах эрхгүй байна.",
+			});
+}
+
+export async function getOrderAccess(
+	ctx: Context,
+	orderNumber: string,
+	checkoutToken?: string,
+): Promise<
+	ResultType<
+		NonNullable<
+			Awaited<ReturnType<typeof orderQueries.store.getOrderByOrderNumber>>
+		>,
+		OrderAccessError
+	>
+> {
+	const order = await orderQueries.store.getOrderByOrderNumber(orderNumber);
+	if (!order) {
+		return Result.err({
+			_tag: "OrderNotFound",
+			message: "Захиалга олдсонгүй.",
+		});
+	}
+
+	const paymentNumber = order.payments[0]?.paymentNumber;
+	const claims = getCustomerClaims(ctx);
+	if (
+		(claims?.trust === "phone_verified" &&
+			claims.phone === order.customerPhone) ||
+		(claims?.trust === "checkout_guest" &&
+			claims.checkout?.orderNumber === orderNumber)
+	) {
+		return Result.ok(order);
+	}
+
+	if (paymentNumber) {
+		const tokenRecord = await validateCheckoutToken(
+			ctx,
+			paymentNumber,
+			checkoutToken,
+		);
+		if (tokenRecord?.phone === order.customerPhone) return Result.ok(order);
+	}
+
+	return Result.err({
+		_tag: "OrderAccessDenied",
+		message: "Энэ захиалгын мэдээллийг харах эрхгүй байна.",
+	});
+}
+
 export async function assertCanAccessPayment(
 	ctx: Context,
 	paymentNumber: string,
 	checkoutToken?: string,
 ) {
-	const payment = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
-	if (!payment) {
-		throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
-	}
-
-	const claims = getCustomerClaims(ctx);
-	if (
-		claims?.trust === "phone_verified" &&
-		claims.phone === payment.order.customerPhone
-	) {
-		return payment;
-	}
-
-	if (
-		claims?.trust === "checkout_guest" &&
-		claims.checkout?.paymentNumber === paymentNumber
-	) {
-		return payment;
-	}
-
-	const tokenRecord = await validateCheckoutToken(ctx, paymentNumber, checkoutToken);
-	if (tokenRecord?.phone === payment.order.customerPhone) {
-		return payment;
-	}
-
+	const result = await getPaymentAccess(ctx, paymentNumber, checkoutToken);
+	if (result.isOk()) return result.value;
 	throw new TRPCError({
-		code: "UNAUTHORIZED",
-		message: "You are not authorized to access this payment",
+		code:
+			result.error._tag === "PaymentNotFound" ? "NOT_FOUND" : "UNAUTHORIZED",
+		message:
+			result.error._tag === "PaymentNotFound"
+				? "Payment not found"
+				: "You are not authorized to access this payment",
 	});
 }
 
@@ -112,31 +185,13 @@ export async function assertCanAccessOrder(
 	orderNumber: string,
 	checkoutToken?: string,
 ) {
-	const order = await orderQueries.store.getOrderByOrderNumber(orderNumber);
-	if (!order) {
-		throw new TRPCError({ code: "NOT_FOUND", message: "Захиалга олдсонгүй" });
-	}
-
-	const paymentNumber = order.payments[0]?.paymentNumber;
-	const claims = getCustomerClaims(ctx);
-	if (claims?.trust === "phone_verified" && claims.phone === order.customerPhone) {
-		return order;
-	}
-
-	if (
-		claims?.trust === "checkout_guest" &&
-		claims.checkout?.orderNumber === orderNumber
-	) {
-		return order;
-	}
-
-	if (paymentNumber) {
-		const tokenRecord = await validateCheckoutToken(ctx, paymentNumber, checkoutToken);
-		if (tokenRecord?.phone === order.customerPhone) return order;
-	}
-
+	const result = await getOrderAccess(ctx, orderNumber, checkoutToken);
+	if (result.isOk()) return result.value;
 	throw new TRPCError({
-		code: "UNAUTHORIZED",
-		message: "Захиалгын мэдээлэл харах эрхгүй",
+		code: result.error._tag === "OrderNotFound" ? "NOT_FOUND" : "UNAUTHORIZED",
+		message:
+			result.error._tag === "OrderNotFound"
+				? "Захиалга олдсонгүй"
+				: "Захиалгын мэдээлэл харах эрхгүй",
 	});
 }

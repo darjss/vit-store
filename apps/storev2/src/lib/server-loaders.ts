@@ -1,65 +1,78 @@
-import type { StoreRouter } from "@vit/api";
 import type { TRPCClient } from "@trpc/client";
+import type { StoreRouter } from "@vit/api";
+import {
+	deserializeResultOrThrow,
+	orderAccessErrorSchema,
+	orderTrackingSchema,
+	paymentDetailsSchema,
+	paymentErrorSchema,
+	type OrderTracking,
+	type PaymentDetails,
+	type PaymentError,
+} from "@vit/shared";
+import { match } from "dismatch";
 import { withCt } from "@/lib/payment-url";
 
 type ServerApi = TRPCClient<StoreRouter>;
+type PaymentLoadResult = { payment: PaymentDetails } | { redirect: Response };
+type OrderLoadResult = { order: OrderTracking } | { redirect: Response };
 
-const errorCode = (err: unknown): string | undefined => {
-	const e = err as { data?: { code?: string }; code?: string };
-	return e?.data?.code ?? e?.code;
-};
+const paymentErrorRedirect = (error: PaymentError) =>
+	match(
+		error,
+		"_tag",
+	)({
+		PaymentNotFound: () => "/404",
+		PaymentAccessDenied: () => "/order-tracking",
+		PaymentAlreadyConfirmed: () => "/order-tracking",
+		PaymentNotPending: () => "/order-tracking",
+		PaymentMethodMismatch: () => "/order-tracking",
+		PaymentProviderUnavailable: () => "/order-tracking",
+		PaymentConfirmationConflict: () => "/order-tracking",
+		BankTransactionAlreadyConsumed: () => "/order-tracking",
+		ManualReviewRequired: () => "/order-tracking",
+	});
 
-/**
- * Load a payment by number via the server tRPC client, redirecting on the
- * UNAUTHORIZED / NOT_FOUND errors shared by every payment-flow page. Throws
- * on any other error so the page's error boundary handles it.
- */
 export async function loadPaymentOrRedirect(
 	serverApi: ServerApi,
 	paymentNumber: string,
 	checkoutToken: string | undefined,
 	redirect: (path: string) => Response,
 ) {
-	let payment;
-	try {
-		payment = await serverApi.payment.getPaymentByNumber.query({
+	const result = deserializeResultOrThrow(
+		await serverApi.v2.payment.getPaymentByNumber.query({
 			paymentNumber,
 			checkoutToken,
-		});
-	} catch (err) {
-		const code = errorCode(err);
-		if (code === "UNAUTHORIZED") return { redirect: redirect("/order-tracking") };
-		if (code === "NOT_FOUND") return { redirect: redirect("/404") };
-		throw err;
-	}
-	if (!payment) return { redirect: redirect("/404") };
-	return { payment };
+		}),
+		{ value: paymentDetailsSchema, error: paymentErrorSchema },
+	);
+	return result.match<PaymentLoadResult>({
+		ok: (payment) => ({ payment }),
+		err: (error) => ({ redirect: redirect(paymentErrorRedirect(error)) }),
+	});
 }
 
-/**
- * Load an order by number via the server tRPC client, redirecting on the
- * UNAUTHORIZED / NOT_FOUND errors shared by every order-flow page.
- */
 export async function loadOrderOrRedirect(
 	serverApi: ServerApi,
 	orderNumber: string,
 	checkoutToken: string | undefined,
 	redirect: (path: string) => Response,
 ) {
-	let order;
-	try {
-		order = await serverApi.order.getOrderByOrderNumber.query({
+	const result = deserializeResultOrThrow(
+		await serverApi.v2.order.getOrderByOrderNumber.query({
 			orderNumber,
 			checkoutToken,
-		});
-	} catch (err) {
-		const code = errorCode(err);
-		if (code === "UNAUTHORIZED") return { redirect: redirect("/order-tracking") };
-		if (code === "NOT_FOUND") return { redirect: redirect("/404") };
-		throw err;
-	}
-	if (!order) return { redirect: redirect("/404") };
-	return { order };
+		}),
+		{ value: orderTrackingSchema, error: orderAccessErrorSchema },
+	);
+	return result.match<OrderLoadResult>({
+		ok: (order) => ({ order }),
+		err: (error) => ({
+			redirect: redirect(
+				error._tag === "OrderNotFound" ? "/404" : "/order-tracking",
+			),
+		}),
+	});
 }
 
 export { withCt };

@@ -1,11 +1,13 @@
 export { analyticsQueries } from "~/queries/analytics";
 export { brandQueries } from "~/queries/brands";
 export { categoryQueries } from "~/queries/categories";
+export { checkoutQueries } from "~/queries/checkout";
 export { customerQueries } from "~/queries/customers";
 export { orderQueries } from "~/queries/orders";
 export { paymentQueries } from "~/queries/payments";
 export { productImageQueries } from "~/queries/product-images";
 export { productQueries } from "~/queries/products/index";
 export { purchaseQueries } from "~/queries/purchases";
+export { qpayInvoiceQueries } from "~/queries/qpay-invoices";
 export { salesQueries } from "~/queries/sales";
 export { userQueries } from "~/queries/users";

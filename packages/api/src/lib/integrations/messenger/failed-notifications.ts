@@ -5,11 +5,13 @@ import type { DetailedOrderNotificationInput } from "~/lib/integrations/messenge
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
 
 export const ORDER_CONFIRMATION_PURPOSE = "order_payment_confirmed";
+export const ORDER_CREATED_PURPOSE = "order_created";
 
 type PersistFailureInput = {
 	paymentNumber: string;
 	payload: DetailedOrderNotificationInput;
 	error: unknown;
+	purpose?: typeof ORDER_CONFIRMATION_PURPOSE | typeof ORDER_CREATED_PURPOSE;
 };
 
 const errorMessage = (error: unknown) =>
@@ -26,12 +28,13 @@ export async function persistMessengerNotificationFailure({
 	paymentNumber,
 	payload,
 	error,
+	purpose = ORDER_CONFIRMATION_PURPOSE,
 }: PersistFailureInput) {
 	await db()
 		.insert(MessengerNotificationFailuresTable)
 		.values({
 			paymentNumber,
-			purpose: ORDER_CONFIRMATION_PURPOSE,
+			purpose,
 			status: "pending",
 			payload,
 			errorMessage: errorMessage(error),
@@ -57,12 +60,15 @@ export async function persistMessengerNotificationFailure({
 }
 
 export async function retryMessengerNotificationFailure(id: number) {
-	const failure = await db().query.MessengerNotificationFailuresTable.findFirst({
-		where: eq(MessengerNotificationFailuresTable.id, id),
-	});
+	const failure = await db().query.MessengerNotificationFailuresTable.findFirst(
+		{
+			where: eq(MessengerNotificationFailuresTable.id, id),
+		},
+	);
 
 	if (!failure) return { ok: false as const, reason: "not_found" as const };
-	if (failure.status === "sent") return { ok: true as const, alreadySent: true };
+	if (failure.status === "sent")
+		return { ok: true as const, alreadySent: true };
 
 	try {
 		await sendDetailedOrderNotification(
@@ -70,7 +76,12 @@ export async function retryMessengerNotificationFailure(id: number) {
 		);
 		await db()
 			.update(MessengerNotificationFailuresTable)
-			.set({ status: "sent", errorMessage: null, errorCode: null, lastAttemptAt: new Date() })
+			.set({
+				status: "sent",
+				errorMessage: null,
+				errorCode: null,
+				lastAttemptAt: new Date(),
+			})
 			.where(eq(MessengerNotificationFailuresTable.id, id));
 		return { ok: true as const };
 	} catch (error) {

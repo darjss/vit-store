@@ -45,12 +45,21 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 					provider: "transfer",
 					source: "messenger",
 				});
-				if (!result.confirmed) {
-					logger.info("messengerWebhook.paymentAlreadyConfirmedOrNotPending", {
-						paymentNumber,
-					});
-					return;
-				}
+				result.match({
+					ok: ({ newlyConfirmed, recoveryPending }) => {
+						logger.info("messengerWebhook.paymentConfirmationHandled", {
+							paymentNumber,
+							newlyConfirmed,
+							recoveryPending,
+						});
+					},
+					err: (error) => {
+						logger.info("messengerWebhook.paymentConfirmationRejected", {
+							paymentNumber,
+							errorTag: error._tag,
+						});
+					},
+				});
 			} else if (event.postback.payload.startsWith("reject_payment")) {
 				logger.info("messengerWebhook.rejectPayment", { paymentNumber });
 				if (!paymentNumber) {

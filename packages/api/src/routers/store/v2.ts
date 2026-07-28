@@ -1,6 +1,9 @@
 import { publicProcedure, router } from "~/lib/trpc";
+import { orderV2 } from "~/routers/store/order";
+import { paymentV2 } from "~/routers/store/payment";
 
-/** Add serialized-Result procedures here without changing legacy outputs. */
 export const storeV2Router = router({
 	healthCheck: publicProcedure.query(() => "OK"),
+	order: orderV2,
+	payment: paymentV2,
 });

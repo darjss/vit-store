@@ -1,23 +1,9 @@
-// Canonical source of the transfer-reconciliation status/state types for this
-// repo (F4). Both the admin router and the TransferReconciliationObject import
-// from here instead of redefining the union locally.
-//
-// khaan-client owns its own copy (src/reconciliation/orchestrator.ts) for its
-// standalone async-iterator orchestrator; we do NOT re-export from khaan-client
-// here because that would couple the @vit/api data-access package to a
-// server-only bank SDK (the same boundary LBL-5 protects). The two unions are
-// kept in sync manually; they are a 7-value string union that changes very
-// rarely. The DO imports MatchedKhaanTransaction (the transaction shape) from
-// khaan-client directly, but the status/state union comes from here.
+import type { TransferReconciliation } from "@vit/shared";
 
-export type TransferReconciliationStatus =
-	| "polling"
-	| "matched"
-	| "confirmed"
-	| "timeout"
-	| "auth_required"
-	| "ambiguous"
-	| "failed";
+export type TransferReconciliationStatus = TransferReconciliation["status"];
+export type TransferReconciliationErrorCode = NonNullable<
+	TransferReconciliation["lastError"]
+>;
 
 export type TransferReconciliationState = {
 	paymentNumber: string;
@@ -26,7 +12,7 @@ export type TransferReconciliationState = {
 	startedAt: string;
 	expiresAt: string;
 	nextPollAt: string | null;
-	lastError: string | null;
+	lastError: TransferReconciliationErrorCode | null;
 	matchedTransaction?: {
 		tranDate?: string;
 		time?: string;
@@ -36,3 +22,19 @@ export type TransferReconciliationState = {
 		balance?: number;
 	};
 };
+
+/** Remove bank/provider transaction details before any RPC response. */
+export const toPublicTransferReconciliation = (
+	state: TransferReconciliationState | null,
+): TransferReconciliation | null =>
+	state
+		? {
+				paymentNumber: state.paymentNumber,
+				status: state.status,
+				attempts: state.attempts,
+				startedAt: state.startedAt,
+				expiresAt: state.expiresAt,
+				nextPollAt: state.nextPollAt,
+				lastError: state.lastError,
+			}
+		: null;

@@ -1,4 +1,9 @@
 import { useMutation } from "@tanstack/solid-query";
+import {
+	paymentErrorSchema,
+	selectTransferSchema,
+	type PaymentError,
+} from "@vit/shared";
 import { BANK_TRANSFER_ENABLED, bankTransfer } from "@vit/shared/constants";
 import type { PaymentProviderType } from "@vit/shared/types";
 import { createEffect, createSignal, type JSX, Show } from "solid-js";
@@ -7,14 +12,23 @@ import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { buttonVariants } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
+import { clearCheckoutIdempotency } from "@/lib/checkout-idempotency";
+import {
+	paymentErrorPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { usePaymentStatus } from "@/lib/use-payment-status";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import { BuildingsIcon as IconBank, SmartphoneIcon as IconMobile } from "@solar-icons/solid/linear";
+import {
+	BuildingsIcon as IconBank,
+	SmartphoneIcon as IconMobile,
+} from "@solar-icons/solid/linear";
 import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
 
 interface PaymentOptionsProps {
@@ -61,32 +75,51 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 
 	const selectTransferMutation = useMutation(
 		() => ({
-			mutationFn: async () => {
-				return await api.payment.selectTransfer.mutate({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
+			...resultMutationOptions(
+				() =>
+					api.v2.payment.selectTransfer.mutate({
+						paymentNumber: props.paymentNumber,
+						checkoutToken: props.checkoutToken,
+					}),
+				{ value: selectTransferSchema, error: paymentErrorSchema },
+			),
+			onSuccess: (result) => {
+				result.match({
+					ok: () => {
+						setTab("transfer");
+					},
+					err: (error) => {
+						const presentation = paymentErrorPresentation(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 7000,
+						});
+					},
 				});
 			},
-			// F2: surface failure instead of silently showing transfer
-			// instructions as if the reconciler had started.
 			onError: () => {
 				showToast({
-					title: "Алдаа",
-					description:
-						"Төлбөрийн хэлбэр сонгоход алдаа гарлаа. Дахин оролдоно уу.",
+					title: unexpectedCommerceError.title,
+					description: unexpectedCommerceError.description,
 					variant: "error",
-					duration: 5000,
+					duration: 7000,
 				});
 			},
 		}),
 		() => queryClient,
 	);
 
+	const selectTransferFailure = () =>
+		selectTransferMutation.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+
 	const selectTab = (next: "transfer" | "qpay") => {
-		setTab(next);
-		if (next === "transfer") {
-			selectTransferMutation.mutate();
-		}
+		if (next === "qpay") setTab(next);
+		else selectTransferMutation.mutate(undefined);
 	};
 
 	const [advanced, setAdvanced] = createSignal(false);
@@ -100,12 +133,22 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 		},
 	);
 
+	const transferStatus = () =>
+		transferStatusQuery.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		});
+	const transferStatusFailure = () =>
+		transferStatusQuery.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+
 	createEffect(() => {
-		if (advanced() || transferStatusQuery.data?.status !== "success") {
-			return;
-		}
+		if (advanced() || transferStatus()?.status !== "success") return;
 		setAdvanced(true);
 		cart.clearCart();
+		clearCheckoutIdempotency();
 		void safeNavigate(
 			paymentSuccessUrl(props.paymentNumber, props.checkoutToken),
 		);
@@ -164,7 +207,14 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 					<div class="space-y-5 p-3 sm:space-y-6 sm:p-4">
 						{/* F2: surface selectTransfer failure — don't show instructions
 						    as if the reconciler started when it never did. */}
-						<Show when={selectTransferMutation.isError}>
+						<Show
+							when={
+								selectTransferMutation.isError ||
+								selectTransferFailure() ||
+								transferStatusQuery.isError ||
+								transferStatusFailure()
+							}
+						>
 							<div class="flex flex-col items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-center">
 								<IconErrorWarning class="h-8 w-8 text-destructive" />
 								<div>
@@ -178,7 +228,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								</div>
 								<button
 									type="button"
-									onClick={() => selectTransferMutation.mutate()}
+									onClick={() => selectTransferMutation.mutate(undefined)}
 									class={cn(buttonVariants({ size: "sm" }))}
 								>
 									Дахин оролдох
