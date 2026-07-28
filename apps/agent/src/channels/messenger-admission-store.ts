@@ -6,8 +6,15 @@ export class MessengerAdmissionStore implements DurableObject {
 	constructor(private readonly state: DurableObjectState) {}
 
 	async fetch(request: Request): Promise<Response> {
-		const key = decodeURIComponent(new URL(request.url).pathname.slice(1));
-		if (key.length === 0) return new Response("Missing key", { status: 400 });
+		let key: string;
+		try {
+			key = decodeURIComponent(new URL(request.url).pathname.slice(1));
+		} catch {
+			return Response.json({ error: "invalid_key" }, { status: 400 });
+		}
+		if (key.length === 0) {
+			return Response.json({ error: "missing_key" }, { status: 400 });
+		}
 
 		if (request.method === "POST") {
 			const existing = await this.state.storage.get(key);

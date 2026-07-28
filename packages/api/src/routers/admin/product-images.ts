@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import * as v from "valibot";
 import {
 	adminProcedure,
-	baseProcedure,
+	type baseProcedure,
 	botProcedure,
 	router,
 } from "~/lib/trpc";

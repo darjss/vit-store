@@ -4,11 +4,9 @@ import {
 	PaymentNotificationAttemptsTable,
 	PaymentNotificationOutboxTable,
 } from "~/db/schema";
-import {
-	SmsAmbiguousError,
-	SmsRetryableError,
-	sendOrderConfirmationSms,
-} from "~/lib/payments/order-confirmation-sms";
+import type { DeliveryFailure } from "@vit/shared";
+import { match } from "dismatch";
+import { sendOrderConfirmationSms } from "~/lib/payments/order-confirmation-sms";
 import { paymentQueries } from "~/queries";
 
 const PURPOSE = "order_payment_confirmed_sms";
@@ -29,6 +27,13 @@ export async function runPaymentNotificationOutbox() {
 	for (let processed = 0; processed < BATCH * 10; processed += 1) {
 		const candidate = await findDueJob();
 		if (!candidate) break;
+		if (
+			candidate.status === "claimed" &&
+			candidate.lastErrorCode === "dispatching_sms"
+		) {
+			await finishExpiredAmbiguousClaim(candidate.id);
+			continue;
+		}
 		const payment = await paymentQueries.store.getPaymentInfoByNumber(
 			candidate.paymentNumber,
 		);
@@ -121,36 +126,61 @@ async function deliver(
 		Awaited<ReturnType<typeof paymentQueries.store.getPaymentInfoByNumber>>
 	>,
 ) {
-	if (!(await ownsLease(job))) return;
-	try {
-		await sendOrderConfirmationSms({
-			paymentNumber: job.paymentNumber,
-			orderNumber: payment.order.orderNumber,
-			customerPhone: payment.order.customerPhone,
-			total: payment.order.total,
-		});
+	if (!(await markDispatching(job))) return;
+	const result = await sendOrderConfirmationSms({
+		paymentNumber: job.paymentNumber,
+		orderNumber: payment.order.orderNumber,
+		customerPhone: payment.order.customerPhone,
+		total: payment.order.total,
+	});
+	if (result.status === "ok") {
 		await finish(job, "sent");
-	} catch (error) {
-		if (error instanceof SmsAmbiguousError)
-			return finish(job, "unknown", "provider_ambiguous");
-		return retry(
-			job,
-			error instanceof SmsRetryableError ? error.code : "store_url_invalid",
-		);
+		return;
 	}
+	await finishDeliveryFailure(job, result.error);
 }
 
-async function ownsLease(job: Pick<ClaimedJob, "id" | "token">) {
-	const row = await db().query.PaymentNotificationOutboxTable.findFirst({
-		where: and(
-			eq(PaymentNotificationOutboxTable.id, job.id),
-			eq(PaymentNotificationOutboxTable.status, "claimed"),
-			eq(PaymentNotificationOutboxTable.claimToken, job.token),
-			gt(PaymentNotificationOutboxTable.claimUntil, new Date()),
-		),
-		columns: { id: true },
+const finishDeliveryFailure = (job: ClaimedJob, error: DeliveryFailure) =>
+	match(
+		error,
+		"_tag",
+	)<Promise<void>>({
+		RetryableDeliveryFailure: () => retry(job, error.code),
+		AmbiguousDelivery: () => finish(job, "unknown", error.code),
+		PermanentDeliveryFailure: () => terminalFailure(job, error.code),
+		DuplicateInboundDelivery: () => finish(job, "sent", error.code),
+		InvalidDelivery: () => terminalFailure(job, error.code),
 	});
-	return Boolean(row);
+
+async function markDispatching(job: ClaimedJob) {
+	const [updated] = await db()
+		.update(PaymentNotificationOutboxTable)
+		.set({ lastErrorCode: "dispatching_sms", lastErrorAt: new Date() })
+		.where(ownedLeaseWhere(job))
+		.returning({ id: PaymentNotificationOutboxTable.id });
+	if (!updated) return false;
+	await recordOutcome(job, "dispatching");
+	return true;
+}
+
+async function finishExpiredAmbiguousClaim(id: number) {
+	await db()
+		.update(PaymentNotificationOutboxTable)
+		.set({
+			status: "unknown",
+			claimToken: null,
+			claimUntil: null,
+			lastErrorCode: "provider_ambiguous",
+			lastErrorAt: new Date(),
+		})
+		.where(
+			and(
+				eq(PaymentNotificationOutboxTable.id, id),
+				eq(PaymentNotificationOutboxTable.status, "claimed"),
+				lte(PaymentNotificationOutboxTable.claimUntil, new Date()),
+				eq(PaymentNotificationOutboxTable.lastErrorCode, "dispatching_sms"),
+			),
+		);
 }
 
 async function finish(
@@ -170,6 +200,22 @@ async function finish(
 		.where(ownedLeaseWhere(job))
 		.returning({ id: PaymentNotificationOutboxTable.id });
 	if (updated) await recordOutcome(job, status, errorCode);
+}
+
+async function terminalFailure(job: ClaimedJob, code: string) {
+	const [updated] = await db()
+		.update(PaymentNotificationOutboxTable)
+		.set({
+			status: "failed",
+			claimToken: null,
+			claimUntil: null,
+			attemptCount: MAX_ATTEMPTS,
+			lastErrorCode: code,
+			lastErrorAt: new Date(),
+		})
+		.where(ownedLeaseWhere(job))
+		.returning({ id: PaymentNotificationOutboxTable.id });
+	if (updated) await recordOutcome(job, "permanent_failure", code);
 }
 
 async function retry(job: ClaimedJob, code: string) {

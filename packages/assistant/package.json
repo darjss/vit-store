@@ -17,6 +17,8 @@
 		"@trpc/client": "catalog:",
 		"@vit/api": "workspace:*",
 		"@vit/shared": "workspace:*",
+		"better-result": "2.10.0",
+		"dismatch": "2.6.0",
 		"superjson": "^2.2.3",
 		"valibot": "catalog:"
 	},

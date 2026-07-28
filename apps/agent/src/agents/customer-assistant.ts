@@ -48,13 +48,14 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 	// remote-only) and the inbound R2 bucket. Register it additively only when
 	// both are bound, so text/cart turns under local miniflare (no env.AI) are
 	// unaffected.
+	const ai = env.AI;
+	const inboundBucket = env.MESSENGER_INBOUND_BUCKET;
 	const photoTools =
-		env.AI && env.MESSENGER_INBOUND_BUCKET
+		ai && inboundBucket
 			? [
 					buildPhotoIdentifyTool({
-						loadImage: (key) =>
-							loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
-						runVision: buildKimiVision(env.AI),
+						loadImage: (key) => loadInboundImage(inboundBucket, key),
+						runVision: buildKimiVision(ai),
 					}),
 				]
 			: [];
@@ -99,8 +100,12 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 						// the suggestion order is best-effort. Safe because the customer
 						// always explicitly confirms one candidate — the bot never
 						// auto-picks. Pass the mined aliases here once #26 ships.
-						resolveZoneCandidates: async (addressText) =>
-							rankZoneCandidates(addressText, await fetchDeliveryZones()),
+						resolveZoneCandidates: async (addressText) => {
+							const zones = await fetchDeliveryZones();
+							return zones.map((items) =>
+								rankZoneCandidates(addressText, items),
+							);
+						},
 						createOrder,
 						sendText: sendTextReply(conversation),
 						// After the order is created, offer the QPay/transfer payment

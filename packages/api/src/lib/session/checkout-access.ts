@@ -3,26 +3,27 @@ import { encodeHexLowerCase } from "@oslojs/encoding";
 import { TRPCError } from "@trpc/server";
 import type { OrderAccessError, PaymentError } from "@vit/shared";
 import { Result, type Result as ResultType } from "better-result";
+import * as v from "valibot";
 import type { Context, CustomerSelectType } from "~/lib/context";
-import { paymentQueries } from "~/queries/payments";
+import {
+	type CheckoutAccessTokenRecord,
+	type CheckoutScope,
+	checkoutAccessTokenRecordSchema,
+	customerSessionClaimsSchema,
+} from "~/lib/session/protocol";
 import { orderQueries } from "~/queries/orders";
+import { paymentQueries } from "~/queries/payments";
 
 export type CustomerSessionTrust = "checkout_guest" | "phone_verified";
 
-export type CheckoutScope = {
-	orderId: number;
-	orderNumber: string;
-	paymentNumber: string;
-};
+export type {
+	CheckoutAccessTokenRecord,
+	CheckoutScope,
+} from "~/lib/session/protocol";
 
 export type CustomerSessionClaims = CustomerSelectType & {
 	trust?: CustomerSessionTrust;
 	checkout?: CheckoutScope;
-};
-
-export type CheckoutAccessTokenRecord = CheckoutScope & {
-	phone: number;
-	tokenHash: string;
 };
 
 const CHECKOUT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -59,14 +60,15 @@ async function validateCheckoutToken(
 	if (!checkoutToken) return null;
 	const raw = await ctx.kv.get(tokenKey(paymentNumber));
 	if (!raw) return null;
-	const record = JSON.parse(raw) as CheckoutAccessTokenRecord;
+	const record = v.parse(checkoutAccessTokenRecordSchema, JSON.parse(raw));
 	return record.tokenHash === hashToken(checkoutToken) ? record : null;
 }
 
-function getCustomerClaims(ctx: Context): CustomerSessionClaims | null {
-	const user = ctx.session?.user;
-	if (!user || !("phone" in user)) return null;
-	return user as CustomerSessionClaims;
+function getCustomerClaims(
+	ctx: Context,
+): Pick<CustomerSessionClaims, "phone" | "trust" | "checkout"> | null {
+	const parsed = v.safeParse(customerSessionClaimsSchema, ctx.session?.user);
+	return parsed.success ? parsed.output : null;
 }
 
 export function isPhoneVerifiedCustomer(ctx: Context): boolean {

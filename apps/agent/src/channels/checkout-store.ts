@@ -31,10 +31,7 @@ export class CheckoutStore implements DurableObject {
 	private async read(): Promise<CheckoutState | undefined> {
 		const stored = await this.state.storage.get(STORAGE_KEY);
 		if (stored === undefined) return undefined;
-		// Tolerate a legacy/garbled record by resetting rather than throwing the
-		// customer's whole turn.
-		const parsed = v.safeParse(checkoutStateSchema, stored);
-		return parsed.success ? parsed.output : undefined;
+		return v.parse(checkoutStateSchema, stored);
 	}
 
 	private async write(state: CheckoutState): Promise<CheckoutState> {

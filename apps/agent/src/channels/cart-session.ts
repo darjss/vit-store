@@ -1,5 +1,10 @@
-import type { Cart, CartCommand, CartProductInput } from "@vit/assistant";
-import { EMPTY_CART } from "@vit/assistant";
+import {
+	type Cart,
+	type CartCommand,
+	type CartProductInput,
+	cartSchema,
+} from "@vit/assistant";
+import * as v from "valibot";
 
 // Thin client over the per-session CartStore Durable Object. Both the
 // deterministic button path (channel webhook) and the conversational model
@@ -20,10 +25,10 @@ type CartStoreNamespace = {
 // Internal URL; only the path/method/body matter to the DO.
 const DO_URL = "https://cart-store/cart";
 
-const readCart = async (response: Response): Promise<Cart> => {
-	const body = (await response.json()) as { cart?: Cart };
-	return body.cart ?? { ...EMPTY_CART };
-};
+const cartResponseSchema = v.strictObject({ cart: cartSchema });
+
+const readCart = async (response: Response) =>
+	v.parse(cartResponseSchema, await response.json()).cart;
 
 // Builds a cart session bound to a Durable Object instance for `sessionId`.
 // Returns `undefined` when the binding is absent (e.g. a mock/test env with no

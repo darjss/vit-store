@@ -1,11 +1,11 @@
-import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { checkQpayInvoice } from "@vit/api/lib/payments/qpay";
+import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { paymentQueries } from "@vit/api/queries";
 import { Hono } from "hono";
 import type { ServerHonoEnv } from "../lib/logging";
 import { qpayWebhookStatus } from "../lib/payment-webhook-status";
 
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 
 app.get("/qpay", async (c) => {
 	const log = c.get("log");

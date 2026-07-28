@@ -37,6 +37,7 @@
 		"@vit/api": "workspace:*",
 		"@vit/shared": "workspace:*",
 		"arctic": "^3.7.0",
+		"better-result": "catalog:",
 		"dismatch": "catalog:",
 		"drizzle-orm": "catalog:",
 		"evlog": "^2.11.0",

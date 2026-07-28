@@ -24,8 +24,9 @@ export async function runRestockNotifier(_env: Env) {
 		log.info("restock.safety_net_complete", result);
 		log.emit();
 	} catch (error) {
-		log.error(error instanceof Error ? error : new Error(String(error)), {
+		log.error(new Error("Restock safety net failed."), {
 			event: "restock.safety_net_failed",
+			panic: true,
 		});
 		log.emit();
 		throw error;

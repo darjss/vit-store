@@ -56,10 +56,7 @@ export class CartStore implements DurableObject {
 	private async read(): Promise<Cart> {
 		const stored = await this.state.storage.get(STORAGE_KEY);
 		if (stored === undefined) return { ...EMPTY_CART };
-		// Tolerate a legacy/garbled record by falling back to an empty cart rather
-		// than throwing the customer's whole turn.
-		const parsed = v.safeParse(cartSchema, stored);
-		return parsed.success ? parsed.output : { ...EMPTY_CART };
+		return v.parse(cartSchema, stored);
 	}
 
 	private async write(cart: Cart): Promise<void> {
@@ -94,7 +91,7 @@ export class CartStore implements DurableObject {
 			parsed.output.type === "add"
 				? addToCart(
 						current,
-						parsed.output.product as CartProductInput,
+						parsed.output.product satisfies CartProductInput,
 						parsed.output.quantity,
 					)
 				: applyCartCommand(current, parsed.output.command);

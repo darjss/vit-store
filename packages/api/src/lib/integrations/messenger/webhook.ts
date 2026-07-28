@@ -1,45 +1,50 @@
 import { paymentQueries } from "@vit/api/queries";
+import { invalidDelivery } from "@vit/shared";
 import {
 	type GenericWebhookPayload,
 	processWebhookEvents,
 } from "@warriorteam/messenger-sdk";
+import { Result } from "better-result";
 import { logger } from "~/lib/logger";
 import { confirmPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
 
+const paymentPostbackPattern =
+	/^(confirm_payment|reject_payment):([A-Za-z0-9_-]+)$/;
+
 export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 	const q = paymentQueries.store;
-	return await processWebhookEvents(payload, {
-		onMessage: async (event) => {
-			const userId = event.sender.id;
-			const text = event.message.text?.trim();
-			logger.info("messengerWebhook.onMessage", {
-				userId,
-				text,
-			});
+	let invalidPostback = false;
+	await processWebhookEvents(payload, {
+		onMessage: async () => {
+			logger.info("messengerWebhook.onMessage", { eventType: "message" });
 		},
-		onMessageEdit: async (event) => {
+		onMessageEdit: async () => {
 			logger.info("messengerWebhook.onMessageEdit", {
-				text: event.message_edit.text,
+				eventType: "message_edit",
 			});
 		},
-		onMessageReaction: async (event) => {
+		onMessageReaction: async () => {
 			logger.info("messengerWebhook.onMessageReaction", {
-				reaction: event.reaction.reaction,
+				eventType: "message_reaction",
 			});
 		},
 		onMessagingPostback: async (event) => {
-			logger.info("messengerWebhook.onMessagingPostback", {
-				payload: event.postback.payload,
-			});
-			const paymentNumber = event.postback.payload.split(":")[1];
-			if (event.postback.payload.startsWith("confirm_payment")) {
-				logger.info("messengerWebhook.confirmPayment", { paymentNumber });
-				if (!paymentNumber) {
-					logger.error("messengerWebhook.paymentNumberNotFound", {
-						payload: event.postback.payload,
-					});
-					return;
+			const payloadMatch = paymentPostbackPattern.exec(event.postback.payload);
+			if (payloadMatch === null) {
+				if (
+					event.postback.payload.startsWith("confirm_payment") ||
+					event.postback.payload.startsWith("reject_payment")
+				) {
+					invalidPostback = true;
 				}
+				return;
+			}
+			const [, action, paymentNumber] = payloadMatch;
+			if (paymentNumber === undefined) {
+				invalidPostback = true;
+				return;
+			}
+			if (action === "confirm_payment") {
 				const result = await confirmPaymentAndNotify({
 					paymentNumber,
 					provider: "transfer",
@@ -60,16 +65,13 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 						});
 					},
 				});
-			} else if (event.postback.payload.startsWith("reject_payment")) {
-				logger.info("messengerWebhook.rejectPayment", { paymentNumber });
-				if (!paymentNumber) {
-					logger.error("messengerWebhook.paymentNumberNotFound", {
-						payload: event.postback.payload,
-					});
-					return;
-				}
-				await q.updatePaymentStatus(paymentNumber, "failed");
+				return;
 			}
+			logger.info("messengerWebhook.rejectPayment", { paymentNumber });
+			await q.updatePaymentStatus(paymentNumber, "failed");
 		},
 	});
+	return invalidPostback
+		? Result.err(invalidDelivery("messenger", "invalid_payload"))
+		: Result.ok(undefined);
 }

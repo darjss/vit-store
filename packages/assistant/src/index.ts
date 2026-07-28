@@ -53,6 +53,7 @@ export * from "./cart-tools";
 export * from "./checkout";
 export * from "./checkout-tools";
 export * from "./delivery-zones";
+export * from "./errors";
 export * from "./payment";
 export * from "./photo";
 export * from "./products";
