@@ -7,16 +7,11 @@ import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
 
-const deriveExtension = (image: File): string => {
+const deriveExtension = (image: File) => {
 	const mimeSub = image.type.split("/")[1];
-	if (mimeSub) {
-		return mimeSub;
-	}
+	if (mimeSub) return mimeSub;
 	const nameMatch = image.name.match(/\.([a-zA-Z0-9]+)$/);
-	if (nameMatch) {
-		return nameMatch[1].toLowerCase();
-	}
-	return "jpg";
+	return nameMatch?.[1]?.toLowerCase() ?? "jpg";
 };
 
 const uploadImage = async (image: File, category: string) => {
@@ -32,11 +27,30 @@ const uploadImage = async (image: File, category: string) => {
 			body: formData,
 		},
 	);
-	const data = (await response.json()) as { url?: string; message: string };
-	if (response.ok && data.url) {
+	const data: unknown = await response.json();
+	if (
+		response.ok &&
+		data !== null &&
+		typeof data === "object" &&
+		"url" in data &&
+		typeof data.url === "string"
+	) {
 		return data.url;
 	}
-	throw new Error(data.message || `Upload failed (${response.status})`);
+	throw new Error("Image upload failed");
+};
+
+const uploadImages = async (images: File[], category: string) => {
+	const settled = await Promise.allSettled(
+		images.map((image) => uploadImage(image, category)),
+	);
+	return {
+		urls: settled.flatMap((result) =>
+			result.status === "fulfilled" ? [result.value] : [],
+		),
+		failed: settled.filter((result) => result.status === "rejected").length,
+		total: images.length,
+	};
 };
 
 export const UploadButton = ({
@@ -50,42 +64,31 @@ export const UploadButton = ({
 }) => {
 	const fileRef = useRef<HTMLInputElement>(null);
 	const { mutate: upload, isPending } = useMutation({
-		mutationFn: ({ image, category }: { image: File; category: string }) => {
-			return uploadImage(image, category);
+		mutationFn: (images: File[]) => uploadImages(images, category),
+		mutationKey: ["upload", category],
+		onSuccess: ({ urls, failed, total }) => {
+			for (const url of urls) {
+				append?.({ url });
+				onSuccess(url);
+			}
+			if (failed > 0) {
+				toast.warning(
+					`${total}-с ${urls.length} зураг орлоо. ${failed} зургийг оруулж чадсангүй.`,
+				);
+			}
 		},
-		mutationKey: ["upload"],
 	});
-	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const files = e.target.files;
-		if (!files || files.length === 0) {
-			return;
-		}
-
-		Array.from(files).forEach((file) => {
-			upload(
-				{ image: file, category },
-				{
-					onSuccess: (url) => {
-						append?.({ url });
-						onSuccess(url);
-					},
-					onError: (error) => {
-						toast.error(error.message || "Зураг оруулахад алдаа гарлаа");
-					},
-				},
-			);
-		});
-		// Reset input so re-selecting the same file fires onChange again
-		e.target.value = "";
+	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const files = event.target.files;
+		if (files?.length) upload(Array.from(files));
+		event.target.value = "";
 	};
 	return (
 		<div>
 			<SubmitButton
 				type="button"
 				isPending={isPending}
-				onClick={() => {
-					fileRef.current?.click();
-				}}
+				onClick={() => fileRef.current?.click()}
 				className="flex items-center gap-2"
 			>
 				<Input
@@ -94,7 +97,7 @@ export const UploadButton = ({
 					ref={fileRef}
 					onChange={handleFileChange}
 					accept="image/*"
-					multiple // enable multiple selection
+					multiple
 				/>
 				<UploadIcon className="h-4 w-4" />
 				Оруулах

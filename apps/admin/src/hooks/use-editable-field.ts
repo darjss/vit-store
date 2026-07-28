@@ -2,7 +2,7 @@ import { useState } from "react";
 
 type UseEditableOptions<T> = {
 	initialValue: T;
-	onSave: (next: T) => void | Promise<void>;
+	onSave: (next: T) => boolean | void | Promise<boolean | void>;
 };
 
 export function useEditableField<T>({
@@ -27,11 +27,10 @@ export function useEditableField<T>({
 		if (isSaving) return;
 		setIsSaving(true);
 		try {
-			await onSave(tempValue);
-			setIsEditing(false);
-		} catch (_error) {
-			// Keep editing on error so the user can retry/adjust.
-			// The caller's mutation onError is responsible for surfacing the toast.
+			const saved = await onSave(tempValue);
+			if (saved !== false) setIsEditing(false);
+		} catch {
+			// Transport failures stay in TanStack's error path. Keep the editor open.
 			setIsSaving(false);
 			return;
 		}

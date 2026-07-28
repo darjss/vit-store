@@ -15,7 +15,7 @@ const isLocalDevelopment = process.env.NODE_ENV === "development";
 const t = initTRPC.context<Context>().create({
 	transformer: superjson,
 	isDev: isLocalDevelopment,
-	errorFormatter({ shape, error }) {
+	errorFormatter({ shape, error, ctx }) {
 		if (isLocalDevelopment) {
 			return {
 				...shape,
@@ -30,6 +30,7 @@ const t = initTRPC.context<Context>().create({
 		const publicShape = sanitizePublicTrpcErrorShape(
 			shape,
 			shape.data.httpStatus,
+			ctx?.correlationId,
 		);
 		return {
 			...publicShape,
@@ -189,8 +190,7 @@ const loggingMiddleware = t.middleware(
 			return result;
 		} catch (error) {
 			const durationMs = Date.now() - startTime;
-
-			ctx.log.error(toError(error), {
+			const fields = {
 				event: "trpc.procedure_error",
 				trpc: {
 					procedure: path,
@@ -200,7 +200,13 @@ const loggingMiddleware = t.middleware(
 					input: safeInput,
 					error_code: error instanceof TRPCError ? error.code : undefined,
 				},
-			});
+			};
+
+			if (ctx.log.getContext().error === undefined) {
+				ctx.log.error(toError(error), fields);
+			} else {
+				ctx.log.set(fields);
+			}
 
 			throw error;
 		}

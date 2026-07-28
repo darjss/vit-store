@@ -4,7 +4,11 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { PaymentStatusType } from "@vit/shared/types";
+import type {
+	OrderDeliveryProviderType,
+	PaymentStatusType,
+} from "@vit/shared/types";
+import { match } from "dismatch";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -42,10 +46,20 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+	deleteOrderMutationOptions,
+	patchOrderHeaderMutationOptions,
+	shipOrderMutationOptions,
+	updateOrderMutationOptions,
+	updateOrderStatusMutationOptions,
+} from "@/lib/admin-result-options";
+import { copyToClipboard } from "@/lib/clipboard";
+import {
 	orderStatusLabel,
 	paymentProviderLabel,
 	paymentStatusLabel,
 } from "@/lib/enum-labels";
+import { presentAdminOrderError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import {
 	formatCurrency,
 	getPaymentProviderIcon,
@@ -83,19 +97,23 @@ function RouteComponent() {
 	);
 }
 
-function deliveryLabel(provider?: string | null) {
-	switch (provider) {
-		case "tu-delivery":
-			return "TU delivery";
-		case "self":
-			return "Өөрсдөө хүргэнэ";
-		case "avidaa":
-			return "Avidaa";
-		case "pick-up":
-			return "Өөрөө авна";
-		default:
-			return "Тодорхойгүй";
-	}
+type DeliveryProviderValue =
+	| { provider: "tu-delivery" }
+	| { provider: "self" }
+	| { provider: "avidaa" }
+	| { provider: "pick-up" };
+
+function deliveryLabel(provider?: OrderDeliveryProviderType | null) {
+	if (!provider) return "Тодорхойгүй";
+	return match(
+		{ provider } as DeliveryProviderValue,
+		"provider",
+	)<string>({
+		"tu-delivery": () => "TU delivery",
+		self: () => "Өөрсдөө хүргэнэ",
+		avidaa: () => "Avidaa",
+		"pick-up": () => "Өөрөө авна",
+	});
 }
 
 function OrderDetailContent() {
@@ -162,56 +180,80 @@ function OrderDetail({ orderId }: { orderId: number }) {
 		);
 
 	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
-		...trpc.order.deleteOrder.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			navigate({ to: "/orders" });
-			toast.success("Захиалга устгагдлаа");
-		},
+		...deleteOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+					navigate({ to: "/orders" });
+					toast.success("Захиалга устгагдлаа");
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const { mutate: updateOrderStatus, isPending: isUpdateStatusPending } =
 		useMutation({
-			...trpc.order.updateOrderStatus.mutationOptions(),
-			onSuccess: () => {
-				invalidateOrder();
-				queryClient.invalidateQueries(
-					trpc.order.getPaginatedOrders.queryOptions({}),
-				);
-				toast.success("Төлөв шинэчлэгдлээ");
-			},
+			...updateOrderStatusMutationOptions,
+			onSuccess: (result) =>
+				handleResult(
+					result,
+					() => {
+						void invalidateOrder();
+						void queryClient.invalidateQueries(
+							trpc.order.getPaginatedOrders.queryOptions({}),
+						);
+						toast.success("Төлөв шинэчлэгдлээ");
+					},
+					presentAdminOrderError,
+				),
 		});
 
 	const { mutate: shipOrder, isPending: isShipOrderPending } = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			invalidateOrder();
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			toast.success("Захиалга илгээгдлээ");
-		},
-		onError: (error) => toast.error(error.message),
+		...shipOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void invalidateOrder();
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+					toast.success("Захиалга илгээгдлээ");
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const { mutate: updateOrderField, isPending: isUpdateFieldPending } =
 		useMutation({
-			...trpc.order.updateOrder.mutationOptions(),
-			onSuccess: () => {
-				invalidateOrder();
-				toast.success("Мэдээлэл хадгалагдлаа");
-			},
+			...updateOrderMutationOptions,
+			onSuccess: (result) =>
+				handleResult(
+					result,
+					() => {
+						void invalidateOrder();
+						toast.success("Мэдээлэл хадгалагдлаа");
+					},
+					presentAdminOrderError,
+				),
 		});
 
 	const { mutate: patchOrderHeader, isPending: isPatchHeaderPending } =
 		useMutation({
-			...trpc.order.patchOrderHeader.mutationOptions(),
-			onSuccess: () => {
-				invalidateOrder();
-				toast.success("Мэдээлэл хадгалагдлаа");
-			},
+			...patchOrderHeaderMutationOptions,
+			onSuccess: (result) =>
+				handleResult(
+					result,
+					() => {
+						void invalidateOrder();
+						toast.success("Мэдээлэл хадгалагдлаа");
+					},
+					presentAdminOrderError,
+				),
 		});
 
 	// Header-only inline edits (notes, address, phone, deliveryProvider, status)
@@ -248,8 +290,11 @@ function OrderDetail({ orderId }: { orderId: number }) {
 	};
 
 	const copy = async (text: string, label: string) => {
-		await navigator.clipboard.writeText(text);
-		toast.success(`${label} хуулагдлаа`);
+		const copied = await copyToClipboard(text);
+		copied.match({
+			ok: () => toast.success(`${label} хуулагдлаа`),
+			err: () => toast.error(`${label} хуулж чадсангүй. Дахин оролдоно уу.`),
+		});
 	};
 
 	const nextAction =

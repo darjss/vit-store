@@ -1,13 +1,14 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import {
-	ChevronDown,
-	Loader2,
-	Package,
-	Truck,
-} from "lucide-react";
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
+import { match } from "dismatch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { AdminBatchFailure } from "@vit/shared";
 import {
 	type orderStatus as orderStatusConstants,
 	type paymentStatus as paymentStatusConstants,
@@ -34,15 +35,38 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+	batchShipOrdersMutationOptions,
+	batchUpdateOrderStatusMutationOptions,
+} from "@/lib/admin-result-options";
+import {
+	presentAdminOrderError,
+	showErrorPresentation,
+} from "@/lib/error-presentations";
 import { trpc } from "@/utils/trpc";
 import OrderCard from "./order-card";
 
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
-function trpcErrorMessage(error: unknown): string {
-	if (error instanceof Error) return error.message;
-	return "Алдаа гарлаа";
-}
+type MatchableBatchFailure = Omit<AdminBatchFailure, "errorTag"> &
+	(
+		| { errorTag: "OrderNotFound" }
+		| { errorTag: "InvalidOrderTransition" }
+		| { errorTag: "StockConflict" }
+		| { errorTag: "DeliverySubmissionFailed" }
+	);
+
+const batchFailureDescription = (failure: AdminBatchFailure) =>
+	match(
+		failure as MatchableBatchFailure,
+		"errorTag",
+	)<string>({
+		OrderNotFound: () => "Захиалга олдсонгүй.",
+		InvalidOrderTransition: () =>
+			"Захиалгын төлөв энэ үйлдлийг зөвшөөрөхгүй байна.",
+		StockConflict: () => "Барааны нөөц өөрчлөгдсөн байна.",
+		DeliverySubmissionFailed: () => "Хүргэлтийн үйлчилгээ хариу өгсөнгүй.",
+	});
 
 interface OrdersListProps {
 	page: number;
@@ -68,10 +92,9 @@ export default function OrdersList({
 	const queryClient = useQueryClient();
 	const navigate = useNavigate({ from: "/orders" });
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
-	const [batchFailed, setBatchFailed] = useState<
-		{ orderNumber: string; message: string }[] | null
-	>(null);
-	const [isBatchSending, setIsBatchSending] = useState(false);
+	const [batchFailed, setBatchFailed] = useState<AdminBatchFailure[] | null>(
+		null,
+	);
 
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
@@ -116,11 +139,9 @@ export default function OrdersList({
 		sortDirection,
 	]);
 
-	const sendTuMutation = useMutation(
-		trpc.order.shipOrder.mutationOptions(),
-	);
-	const updateStatusMutation = useMutation(
-		trpc.order.updateOrderStatus.mutationOptions(),
+	const batchShipMutation = useMutation(batchShipOrdersMutationOptions);
+	const batchStatusMutation = useMutation(
+		batchUpdateOrderStatusMutationOptions,
 	);
 
 	const handlePageChange = (nextPage: number) => {
@@ -146,87 +167,64 @@ export default function OrdersList({
 		});
 	};
 
-	const sendOneTuWithRetry = async (orderId: number) => {
-		let lastMessage = "";
-		for (let attempt = 1; attempt <= 2; attempt++) {
-			try {
-				await sendTuMutation.mutateAsync({ orderId });
-				return { ok: true as const };
-			} catch (e) {
-				lastMessage = trpcErrorMessage(e);
-				if (attempt < 2) {
-					await new Promise((r) => setTimeout(r, 1000));
-				}
-			}
-		}
-		return { ok: false as const, message: lastMessage };
+	const selectedOrders = () =>
+		orders.flatMap((order) =>
+			selectedIds.has(order.id)
+				? [{ id: order.id, orderNumber: order.orderNumber }]
+				: [],
+		);
+
+	const handleBatchError = (
+		error: Parameters<typeof presentAdminOrderError>[0],
+	) => {
+		showErrorPresentation(presentAdminOrderError(error));
+		match(
+			error,
+			"_tag",
+		)({
+			OrderNotFound: () => setBatchFailed(null),
+			InvalidOrderTransition: () => setBatchFailed(null),
+			StockConflict: () => setBatchFailed(null),
+			DeliverySubmissionFailed: () => setBatchFailed(null),
+			BatchPartiallyFailed: ({ failures }) => setBatchFailed(failures),
+		});
 	};
 
 	const handleSendTuBatch = async () => {
-		if (selectedIds.size === 0) return;
-		setIsBatchSending(true);
-		const ids = [...selectedIds];
-		const failed: { orderNumber: string; message: string }[] = [];
-		for (const id of ids) {
-			const order = orders.find((o) => o.id === id);
-			const result = await sendOneTuWithRetry(id);
-			if (!result.ok) {
-				failed.push({
-					orderNumber: order?.orderNumber ?? String(id),
-					message: result.message,
-				});
-			}
-		}
+		const selected = selectedOrders();
+		if (selected.length === 0) return;
+		const result = await batchShipMutation.mutateAsync({ orders: selected });
+		result.match({
+			ok: ({ succeeded }) =>
+				toast.success(`${succeeded} захиалгыг TU руу илгээлээ`),
+			err: handleBatchError,
+		});
 		await queryClient.invalidateQueries(
 			trpc.order.getPaginatedOrders.queryOptions({}),
 		);
 		setSelectedIds(new Set());
-		setIsBatchSending(false);
-
-		const okCount = ids.length - failed.length;
-		if (failed.length === 0) {
-			toast.success(`${okCount} захиалгыг TU руу илгээлээ`);
-		} else if (okCount === 0) {
-			toast.error("Илгээлт амжилтгүй");
-			setBatchFailed(failed);
-		} else {
-			toast.warning(`${okCount} амжилттай, ${failed.length} алдаатай`);
-			setBatchFailed(failed);
-		}
 	};
 
 	const handleMarkSelfShipped = async () => {
-		if (selectedIds.size === 0) return;
-		setIsBatchSending(true);
-		const ids = [...selectedIds];
-		const failed: { orderNumber: string; message: string }[] = [];
-		await Promise.all(
-			ids.map(async (id) => {
-				const order = orders.find((o) => o.id === id);
-				try {
-					await updateStatusMutation.mutateAsync({ id, status: "shipped" });
-				} catch (e) {
-					failed.push({
-						orderNumber: order?.orderNumber ?? String(id),
-						message: trpcErrorMessage(e),
-					});
-				}
-			}),
-		);
+		const selected = selectedOrders();
+		if (selected.length === 0) return;
+		const result = await batchStatusMutation.mutateAsync({
+			orders: selected,
+			status: "shipped",
+		});
+		result.match({
+			ok: ({ succeeded }) =>
+				toast.success(`${succeeded} захиалгыг илгээсэн гэж тэмдэглэлээ`),
+			err: handleBatchError,
+		});
 		await queryClient.invalidateQueries(
 			trpc.order.getPaginatedOrders.queryOptions({}),
 		);
 		setSelectedIds(new Set());
-		setIsBatchSending(false);
-
-		if (failed.length === 0) {
-			toast.success("Сонгосон захиалгыг илгээсэн гэж тэмдэглэлээ");
-		} else {
-			toast.error("Зарим захиалгыг шинэчилж чадсангүй");
-			setBatchFailed(failed);
-		}
 	};
 
+	const isBatchSending =
+		batchShipMutation.isPending || batchStatusMutation.isPending;
 	const canTuSend = selectedIds.size > 0 && !isBatchSending;
 	const toolbarOpen = selectedIds.size > 0;
 
@@ -262,16 +260,16 @@ export default function OrdersList({
 						selection={
 							order.status === "pending"
 								? {
-									checked: selectedIds.has(order.id),
-									onCheckedChange: (checked) => {
-										setSelectedIds((prev) => {
-											const next = new Set(prev);
-											if (checked) next.add(order.id);
-											else next.delete(order.id);
-											return next;
-										});
-									},
-								}
+										checked: selectedIds.has(order.id),
+										onCheckedChange: (checked) => {
+											setSelectedIds((prev) => {
+												const next = new Set(prev);
+												if (checked) next.add(order.id);
+												else next.delete(order.id);
+												return next;
+											});
+										},
+									}
 								: undefined
 						}
 					/>
@@ -352,7 +350,9 @@ export default function OrdersList({
 														) : (
 															<Truck className="h-4 w-4" />
 														)}
-														<span className="hidden sm:inline">TU руу илгээх</span>
+														<span className="hidden sm:inline">
+															TU руу илгээх
+														</span>
 														<span className="sm:hidden">Илгээх</span>
 													</Button>
 												</span>
@@ -373,9 +373,7 @@ export default function OrdersList({
 												<Button
 													size="sm"
 													className="h-10 rounded-l-none px-3"
-													disabled={
-														selectedIds.size === 0 || isBatchSending
-													}
+													disabled={selectedIds.size === 0 || isBatchSending}
 													aria-label="Нэмэлт сонголт"
 												>
 													<ChevronDown className="h-4 w-4" />
@@ -415,14 +413,14 @@ export default function OrdersList({
 						</DialogTitle>
 					</DialogHeader>
 					<ul className="space-y-2 text-sm">
-						{batchFailed?.map((row) => (
+						{batchFailed?.map((failure) => (
 							<li
-								key={row.orderNumber}
+								key={failure.targetId}
 								className="border-2 border-border bg-muted px-3 py-2"
 							>
-								<span className="font-bold">#{row.orderNumber}</span>
+								<span className="font-bold">#{failure.targetLabel}</span>
 								<p className="mt-0.5 text-muted-foreground text-xs">
-									{row.message}
+									{batchFailureDescription(failure)}
 								</p>
 							</li>
 						))}

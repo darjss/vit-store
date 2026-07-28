@@ -3,6 +3,9 @@ import { useRouteContext } from "@tanstack/react-router";
 import type { CategorySelectType } from "@vit/api/db/schema";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { deleteCategoryMutationOptions } from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import RowAction from "../row-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -12,12 +15,17 @@ const CategoryCard = (category: CategorySelectType) => {
 	const context = useRouteContext({ from: "/_dash/categories" });
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const deleteMutation = useMutation({
-		...trpc.category.deleteCategory.mutationOptions(),
-		onSuccess: () => {
-			context.queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
-		},
+		...deleteCategoryMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void context.queryClient.invalidateQueries(
+						trpc.category.getAllCategories.queryOptions(),
+					);
+				},
+				presentCatalogError,
+			),
 	});
 	const deleteHelper = async (id: number) => {
 		deleteMutation.mutate({ id });

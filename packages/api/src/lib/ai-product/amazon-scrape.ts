@@ -150,18 +150,10 @@ export async function scrapeAmazonProduct(
 	}
 }
 
-export async function resolveProductUrl(
-	firecrawl: Firecrawl,
-	query: string,
-): Promise<string> {
+export async function resolveProductUrl(firecrawl: Firecrawl, query: string) {
 	if (isAmazonUrl(query)) {
 		return query;
 	}
 
-	const productUrl = await searchAmazonProduct(firecrawl, query);
-	if (!productUrl) {
-		throw new Error("Could not find product on Amazon. Try a direct URL.");
-	}
-
-	return productUrl;
+	return searchAmazonProduct(firecrawl, query);
 }

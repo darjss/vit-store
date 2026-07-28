@@ -4,6 +4,7 @@ export type TrpcErrorShape = {
 	data: {
 		code: string;
 		httpStatus: number;
+		correlationId?: string;
 	};
 };
 
@@ -29,6 +30,14 @@ function fallbackError(httpStatus: number): TrpcErrorShape {
 	};
 }
 
+const SAFE_CORRELATION_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
+
+function safeCorrelationId(value: unknown) {
+	return typeof value === "string" && SAFE_CORRELATION_ID.test(value)
+		? value
+		: undefined;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | undefined {
 	return value !== null && typeof value === "object"
 		? (value as Record<string, unknown>)
@@ -44,6 +53,7 @@ export type SanitizedTrpcResponse = {
 export function sanitizePublicTrpcErrorShape(
 	value: unknown,
 	fallbackHttpStatus = 500,
+	fallbackCorrelationId?: string,
 ): TrpcErrorShape {
 	const fallback = fallbackError(fallbackHttpStatus);
 	const shape = asRecord(value);
@@ -53,6 +63,10 @@ export function sanitizePublicTrpcErrorShape(
 	const httpStatus =
 		typeof data?.httpStatus === "number" ? data.httpStatus : fallbackHttpStatus;
 	const isInternalError = dataCode === "INTERNAL_SERVER_ERROR";
+	const correlationId = isInternalError
+		? (safeCorrelationId(data?.correlationId) ??
+			safeCorrelationId(fallbackCorrelationId))
+		: undefined;
 
 	return {
 		message:
@@ -65,6 +79,7 @@ export function sanitizePublicTrpcErrorShape(
 		data: {
 			code: dataCode,
 			httpStatus,
+			...(correlationId ? { correlationId } : {}),
 		},
 	};
 }

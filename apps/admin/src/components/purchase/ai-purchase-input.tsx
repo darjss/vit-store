@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import type { aiExtractedPurchaseType } from "@vit/shared";
 import { AlertCircle, FileImage, Loader2, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { UploadButton } from "@/components/upload-button";
-import type { RouterOutputs } from "@/lib/types";
-import { trpc } from "@/utils/trpc";
+import { extractPurchaseMutationOptions } from "@/lib/admin-result-options";
+import { presentAiError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 
-type ExtractedPurchaseData =
-	RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
+type ExtractedPurchaseData = aiExtractedPurchaseType;
 
 const matchStatusLabel: Record<string, string> = {
 	matched: "Тохирсон",
@@ -45,8 +46,8 @@ export function AIPurchaseInput({
 	const [images, setImages] = useState<{ url: string }[]>([]);
 
 	const extractMutation = useMutation({
-		...trpc.aiPurchase.extractPurchaseFromImages.mutationOptions(),
-		onSuccess: onExtracted,
+		...extractPurchaseMutationOptions,
+		onSuccess: (result) => handleResult(result, onExtracted, presentAiError),
 	});
 
 	return (
@@ -150,7 +151,7 @@ export function AIPurchaseInput({
 							<AlertCircle className="h-4 w-4" />
 							Падаанаас мэдээлэл ялгаж чадсангүй
 						</div>
-						<p>{extractMutation.error.message}</p>
+						<p>Түр хүлээгээд дахин оролдоно уу.</p>
 					</div>
 				) : null}
 

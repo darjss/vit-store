@@ -233,7 +233,7 @@ export const adminQueries = {
 						),
 					),
 			);
-			await Promise.allSettled(deletePromises);
+			await Promise.all(deletePromises);
 		},
 
 		async updateStock(

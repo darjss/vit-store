@@ -35,7 +35,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	cancelPurchaseMutationOptions,
+	deletePurchaseMutationOptions,
+	markPurchaseForwarderMutationOptions,
+	markPurchaseShippedMutationOptions,
+	receivePurchaseMutationOptions,
+} from "@/lib/admin-result-options";
 import { purchaseStatusLabel } from "@/lib/enum-labels";
+import { presentPurchaseError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -90,52 +99,72 @@ function PurchaseDetailPage() {
 	};
 
 	const receiveMutation = useMutation({
-		...trpc.purchase.receivePurchase.mutationOptions(),
-		onSuccess: () => {
-			invalidatePurchase();
-			setReceiveAt("");
-			setReceiveNotes("");
-			setReceiveItems({});
-			toast.success("Хүлээн авалт хадгалагдлаа");
-		},
-		onError: (error) => toast.error(error.message),
+		...receivePurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidatePurchase();
+					setReceiveAt("");
+					setReceiveNotes("");
+					setReceiveItems({});
+					toast.success("Хүлээн авалт хадгалагдлаа");
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const markShippedMutation = useMutation({
-		...trpc.purchase.markPurchaseShipped.mutationOptions(),
-		onSuccess: () => {
-			invalidatePurchase();
-			toast.success("Илгээгдсэн гэж тэмдэглэлээ");
-		},
-		onError: (error) => toast.error(error.message),
+		...markPurchaseShippedMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidatePurchase();
+					toast.success("Илгээгдсэн гэж тэмдэглэлээ");
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const markForwarderMutation = useMutation({
-		...trpc.purchase.markPurchaseForwarderReceived.mutationOptions(),
-		onSuccess: () => {
-			invalidatePurchase();
-			toast.success("Зуучлагч хүлээн авсан гэж тэмдэглэлээ");
-		},
-		onError: (error) => toast.error(error.message),
+		...markPurchaseForwarderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidatePurchase();
+					toast.success("Зуучлагч хүлээн авсан гэж тэмдэглэлээ");
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const cancelMutation = useMutation({
-		...trpc.purchase.cancelPurchase.mutationOptions(),
-		onSuccess: () => {
-			invalidatePurchase();
-			toast.success("Худалдан авалт цуцлагдлаа");
-		},
-		onError: (error) => toast.error(error.message),
+		...cancelPurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidatePurchase();
+					toast.success("Худалдан авалт цуцлагдлаа");
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const deleteMutation = useMutation({
-		...trpc.purchase.deletePurchase.mutationOptions(),
-		onSuccess: () => {
-			void invalidatePurchaseLists(queryClient);
-			toast.success("Худалдан авалт устгагдлаа");
-			navigate({ to: "/purchases" });
-		},
-		onError: (error) => toast.error(error.message),
+		...deletePurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void invalidatePurchaseLists(queryClient);
+					toast.success("Худалдан авалт устгагдлаа");
+					navigate({ to: "/purchases" });
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const receivableItems = useMemo(

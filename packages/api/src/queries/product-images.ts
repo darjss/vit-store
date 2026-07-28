@@ -69,7 +69,7 @@ export const productImageQueries = {
 		},
 
 		async deleteImage(id: number) {
-			await db()
+			const result = await db()
 				.update(ProductImagesTable)
 				.set({ deletedAt: new Date() })
 				.where(
@@ -77,7 +77,9 @@ export const productImageQueries = {
 						eq(ProductImagesTable.id, id),
 						isNull(ProductImagesTable.deletedAt),
 					),
-				);
+				)
+				.returning({ id: ProductImagesTable.id });
+			return result[0] ?? null;
 		},
 
 		async softDeleteImagesByProductId(productId: number) {
@@ -93,20 +95,35 @@ export const productImageQueries = {
 		},
 
 		async setPrimaryImage(productId: number, imageId: number) {
-			await db()
-				.update(ProductImagesTable)
-				.set({ isPrimary: false })
-				.where(
-					and(
-						eq(ProductImagesTable.productId, productId),
-						isNull(ProductImagesTable.deletedAt),
-					),
-				);
+			return db().transaction(async (tx) => {
+				const [image] = await tx
+					.select({ id: ProductImagesTable.id })
+					.from(ProductImagesTable)
+					.where(
+						and(
+							eq(ProductImagesTable.id, imageId),
+							eq(ProductImagesTable.productId, productId),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					)
+					.for("update");
+				if (!image) return null;
 
-			await db()
-				.update(ProductImagesTable)
-				.set({ isPrimary: true })
-				.where(eq(ProductImagesTable.id, imageId));
+				await tx
+					.update(ProductImagesTable)
+					.set({ isPrimary: false })
+					.where(
+						and(
+							eq(ProductImagesTable.productId, productId),
+							isNull(ProductImagesTable.deletedAt),
+						),
+					);
+				await tx
+					.update(ProductImagesTable)
+					.set({ isPrimary: true })
+					.where(eq(ProductImagesTable.id, imageId));
+				return image;
+			});
 		},
 
 		async updateImage(id: number, data: { deletedAt?: Date | null }) {

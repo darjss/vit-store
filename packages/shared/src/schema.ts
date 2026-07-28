@@ -177,7 +177,9 @@ export const addOrderSchema = v.object({
 		v.string(),
 		v.minLength(10, "Хаяг хамгийн багадаа 10 тэмдэгт байх ёстой"),
 	),
-	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
+	addressZoneId: v.optional(
+		v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+	),
 	notes: v.optional(v.nullable(v.string())),
 	status: v.picklist([
 		"created",
@@ -387,9 +389,14 @@ export const newOrderSchema = v.object({
 export type newOrderType = v.InferOutput<typeof newOrderSchema>;
 export type addBrandType = v.InferOutput<typeof addBrandSchema>;
 export type addCategoryType = v.InferOutput<typeof addCategorySchema>;
+export type addProductInputType = v.InferInput<typeof addProductSchema>;
+export type updateProductInputType = v.InferInput<typeof updateProductSchema>;
 export type addProductType = v.InferOutput<typeof addProductSchema>;
+export type updateProductType = v.InferOutput<typeof updateProductSchema>;
 export type addImageType = addProductType["images"];
 export type addOrderType = v.InferOutput<typeof addOrderSchema>;
+export type updateOrderType = v.InferOutput<typeof updateOrderSchema>;
+export type patchOrderHeaderType = v.InferOutput<typeof patchOrderHeaderSchema>;
 export type addOrderProductType = v.InferOutput<typeof productSchema>;
 export type imageType = v.InferOutput<typeof imageSchema>;
 export type addPurchaseType = v.InferOutput<typeof addPurchaseSchema>;

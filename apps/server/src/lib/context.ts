@@ -35,7 +35,14 @@ export async function createContext({
 			: createDb(context.env.DB);
 
 	const log = context.get("log") as AppRequestLogger;
-	log.set({ user_type: "anonymous" });
+	const requestedCorrelationId = context.req.header("x-correlation-id");
+	const correlationId =
+		requestedCorrelationId &&
+		/^[A-Za-z0-9_.:-]{1,80}$/.test(requestedCorrelationId)
+			? requestedCorrelationId
+			: crypto.randomUUID();
+	log.set({ correlation_id: correlationId, user_type: "anonymous" });
+	context.header("X-Correlation-ID", correlationId);
 
 	return {
 		c: context,
@@ -44,6 +51,7 @@ export async function createContext({
 		kv,
 		r2,
 		cache,
+		correlationId,
 		log,
 	};
 }

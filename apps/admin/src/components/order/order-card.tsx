@@ -22,7 +22,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	deleteOrderMutationOptions,
+	shipOrderMutationOptions,
+	updateOrderStatusMutationOptions,
+} from "@/lib/admin-result-options";
+import { copyToClipboard } from "@/lib/clipboard";
 import { paymentStatusLabel } from "@/lib/enum-labels";
+import { presentAdminOrderError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import type { OrderType } from "@/lib/types";
 import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -58,61 +66,48 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 	const queryClient = useQueryClient();
 
 	const updateOrderStatus = useMutation({
-		...trpc.order.updateOrderStatus.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
-		},
+		...updateOrderStatusMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+					toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const shipOrder = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			toast.success("Захиалга амжилттай илгээгдлээ");
-		},
-		onError: (error) => {
-			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
-		},
+		...shipOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+					toast.success("Захиалга амжилттай илгээгдлээ");
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const deleteOrder = useMutation({
-		...trpc.order.deleteOrder.mutationOptions(),
-		onMutate: async (variables) => {
-			const qk = trpc.order.getPaginatedOrders.queryKey({});
-			await queryClient.cancelQueries({ queryKey: qk });
-			const previous = queryClient.getQueriesData({ queryKey: qk });
-			for (const [key, data] of previous) {
-				if (data && typeof data === "object" && "orders" in data) {
-					const typed = data as { orders: OrderType[]; pagination: unknown };
-					queryClient.setQueryData(key, {
-						...typed,
-						orders: typed.orders.filter((o) => o.id !== variables.id),
-					});
-				}
-			}
-			return { previous };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previous) {
-				for (const [key, data] of context.previous) {
-					queryClient.setQueryData(key, data);
-				}
-			}
-			toast.error("Захиалга устгахад алдаа гарлаа");
-		},
-		onSuccess: () => {
-			toast.success("Захиалга амжилттай устгагдлаа");
-		},
-		onSettled: () => {
-			void queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-		},
+		...deleteOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					toast.success("Захиалга амжилттай устгагдлаа");
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const products = order.products ?? [];
@@ -260,8 +255,12 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 							data-no-nav
 							onClick={async (e) => {
 								e.stopPropagation();
-								await navigator.clipboard.writeText(order.address);
-								toast("Хаяг хуулагдлаа");
+								const copied = await copyToClipboard(order.address);
+								copied.match({
+									ok: () => toast.success("Хаяг хуулагдлаа"),
+									err: () =>
+										toast.error("Хаяг хуулж чадсангүй. Дахин оролдоно уу."),
+								});
 							}}
 						>
 							<Copy className="h-3.5 w-3.5" />
