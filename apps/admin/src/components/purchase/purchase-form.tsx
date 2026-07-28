@@ -13,6 +13,16 @@ import {
 	useState,
 } from "react";
 import { toast } from "sonner";
+import {
+	addPurchaseMutationOptions,
+	saveExtractedPurchaseMutationOptions,
+	updatePurchaseMutationOptions,
+} from "@/lib/admin-result-options";
+import {
+	presentAiError,
+	presentPurchaseError,
+} from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import type { PurchaseDetailType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -120,30 +130,36 @@ export default function PurchaseForm({
 		onSuccess?.(purchaseId);
 	};
 
-	const handleMutationError = (message: string) => {
-		toast.error(message);
-	};
-
 	const createPurchaseMutation = useMutation({
-		...trpc.purchase.addPurchase.mutationOptions(),
-		onSuccess: (result) => handleMutationSuccess(result.id),
-		onError: (error) => handleMutationError(error.message),
+		...addPurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				({ id }) => handleMutationSuccess(id),
+				presentPurchaseError,
+			),
 	});
 
 	const updatePurchaseMutation = useMutation({
-		...trpc.purchase.updatePurchase.mutationOptions(),
-		onSuccess: () => {
-			if (purchase) {
-				handleMutationSuccess(purchase.id);
-			}
-		},
-		onError: (error) => handleMutationError(error.message),
+		...updatePurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					if (purchase) handleMutationSuccess(purchase.id);
+				},
+				presentPurchaseError,
+			),
 	});
 
 	const importPurchaseMutation = useMutation({
-		...trpc.aiPurchase.saveExtractedPurchase.mutationOptions(),
-		onSuccess: (result) => handleMutationSuccess(result.id),
-		onError: (error) => handleMutationError(error.message),
+		...saveExtractedPurchaseMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				({ id }) => handleMutationSuccess(id),
+				presentAiError,
+			),
 	});
 
 	const isSubmitting =
@@ -241,11 +257,11 @@ export default function PurchaseForm({
 			updatePurchaseMutation.mutate({
 				id: purchase.id,
 				data: payload,
-			} as never);
+			});
 			return;
 		}
 
-		createPurchaseMutation.mutate(payload as never);
+		createPurchaseMutation.mutate(payload);
 	};
 
 	return (

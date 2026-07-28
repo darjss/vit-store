@@ -79,7 +79,7 @@ export const customerQueries = {
 		},
 
 		async deleteCustomer(phone: number) {
-			await db()
+			const result = await db()
 				.update(CustomersTable)
 				.set({ deletedAt: new Date() })
 				.where(
@@ -87,7 +87,9 @@ export const customerQueries = {
 						eq(CustomersTable.phone, phone),
 						isNull(CustomersTable.deletedAt),
 					),
-				);
+				)
+				.returning({ phone: CustomersTable.phone });
+			return result[0] ?? null;
 		},
 	},
 

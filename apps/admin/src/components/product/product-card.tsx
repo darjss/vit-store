@@ -1,12 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	deleteProductMutationOptions,
+	setProductStockMutationOptions,
+	updateProductFieldMutationOptions,
+} from "@/lib/admin-result-options";
+import {
+	presentCatalogError,
+	showErrorPresentation,
+} from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { formatProductStatusMn } from "@vit/shared/domain/product";
-import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
 	AlertDialog,
@@ -27,9 +36,12 @@ import {
 	DialogTitle,
 } from "../ui/dialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
-import ProductForm from "./product-form";
+import {
+	ProductExpirationEditor,
+	ProductStockEditor,
+} from "./product-card-editors";
 import { ProductSummary } from "./product-card-summary";
-import { ProductExpirationEditor, ProductStockEditor } from "./product-card-editors";
+import ProductForm from "./product-form";
 
 interface ProductCardProps {
 	product: ProductType;
@@ -53,69 +65,54 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
-	const previousStockRef = useRef<number>(0);
 	const { mutate: setProductStock, isPending: isSetProductStockPending } =
 		useMutation({
-			...trpc.product.setProductStock.mutationOptions(),
-			onMutate: async (variables) => {
-				await queryClient.cancelQueries({
-					queryKey: ["admin-products-infinite"],
-				});
-
-				previousStockRef.current = stockValue;
-				setStockValue(variables.newStock);
-
-				queryClient.setQueriesData(
-					{ queryKey: ["admin-products-infinite"], type: "all" },
-					(old: { pages: { products: { id: number; stock: number }[] }[] } | undefined) => {
-						if (!old) return old;
-						return {
-							...old,
-							pages: old.pages.map((page) => ({
-								...page,
-								products: page.products.map((p) =>
-									p.id === variables.id
-										? { ...p, stock: variables.newStock }
-										: p,
-								),
-							})),
-						};
+			...setProductStockMutationOptions,
+			onSuccess: (result) =>
+				result.match({
+					ok: () => {
+						setIsStockEditing(false);
+						void queryClient.invalidateQueries({
+							queryKey: ["admin-products-infinite"],
+							type: "all",
+						});
 					},
-				);
-
-				setIsStockEditing(false);
-				return undefined;
-			},
-			onError: () => {
-				setStockValue(previousStockRef.current);
-			},
-			onSettled: () => {
-				void queryClient.invalidateQueries({
-					queryKey: ["admin-products-infinite"],
-					type: "all",
-				});
-			},
+					err: (error) => {
+						setStockValue(product.stock);
+						showErrorPresentation(presentCatalogError(error));
+					},
+				}),
 		});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
 		useMutation({
-			...trpc.product.updateProductField.mutationOptions(),
-			onSuccess: async () => {
-				await queryClient.invalidateQueries({
-					queryKey: ["admin-products-infinite"],
-					type: "all",
-				});
-				setIsExpEditing(false);
-				setIsActivateConfirmOpen(false);
-			},
+			...updateProductFieldMutationOptions,
+			onSuccess: (result) =>
+				handleResult(
+					result,
+					async () => {
+						await queryClient.invalidateQueries({
+							queryKey: ["admin-products-infinite"],
+							type: "all",
+						});
+						setIsExpEditing(false);
+						setIsActivateConfirmOpen(false);
+					},
+					presentCatalogError,
+				),
 		});
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
-		...trpc.product.deleteProduct.mutationOptions(),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-		},
+		...deleteProductMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				async () => {
+					await queryClient.invalidateQueries({
+						queryKey: ["admin-products-infinite"],
+						type: "all",
+					});
+				},
+				presentCatalogError,
+			),
 	});
 	const deleteHelper = async (id: number) => {
 		deleteProduct({ id });

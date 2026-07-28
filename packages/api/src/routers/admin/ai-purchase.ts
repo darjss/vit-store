@@ -1,5 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import { brandQueries, categoryQueries, purchaseQueries } from "@vit/api/queries";
+import {
+	adminCreatedSuccessSchema,
+	aiExtractedPurchaseSchema,
+	aiOperationErrorSchema,
+} from "@vit/shared";
+import {
+	brandQueries,
+	categoryQueries,
+	purchaseQueries,
+} from "@vit/api/queries";
 import { purchaseProvider } from "@vit/shared";
 import {
 	type addPurchaseType,
@@ -9,6 +18,7 @@ import {
 	type saveExtractedPurchaseType,
 } from "@vit/shared/schema";
 import { generateText, Output } from "ai";
+import { Result } from "better-result";
 import { and, eq, isNull } from "drizzle-orm";
 import * as v from "valibot";
 import { z } from "zod";
@@ -23,7 +33,19 @@ import {
 } from "~/lib/ai/product-match";
 import { createSlug } from "~/lib/ai-product/brand-resolve";
 import { DEFAULT_BRAND_LOGO_URL } from "~/lib/ai-product/constants";
-import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+import {
+	adminProcedure,
+	baseProcedure,
+	botProcedure,
+	router,
+} from "~/lib/trpc";
+import {
+	aiExtractionFailed,
+	aiProductResolutionRequired,
+} from "~/errors/factories/admin";
+import { aiErrorToLegacyTrpc } from "~/operations/admin-ai/product";
+import { serializeOperationResult } from "~/operations/serialize-operation-result";
+import { runLegacyOperation } from "~/result/run-legacy-operation";
 import { opencode } from "~/lib/opencode-provider";
 
 const invoiceExtractionSchema = z.object({
@@ -136,7 +158,10 @@ async function inferInvoiceData(
 		}
 	}
 
-	const aiReranks = await rerankAmbiguousMatches(dedupedItems, ambiguousCandidates);
+	const aiReranks = await rerankAmbiguousMatches(
+		dedupedItems,
+		ambiguousCandidates,
+	);
 
 	return {
 		header: {
@@ -174,7 +199,7 @@ async function inferInvoiceData(
 						)?.candidate ?? null)
 					: null;
 			const resolvedMatch = autoMatched ?? aiMatched;
-			const matchStatus = resolvedMatch
+			const matchStatus: "matched" | "ambiguous" | "unmatched" = resolvedMatch
 				? "matched"
 				: rankedCandidates.length > 0
 					? "ambiguous"
@@ -269,19 +294,24 @@ async function createProductFromDraft(
 	if (item.productId) return item.productId;
 	const draft = item.newProductDraft;
 	if (!draft) {
-		throw new Error(`Unresolved product for line: ${item.description}`);
+		throw new Error("Validated purchase line has no product draft");
 	}
 
 	const resolvedBrandId = await ensureBrandId(tx, draft.brandId, draft.brand);
 	if (!resolvedBrandId || !draft.categoryId) {
-		throw new Error(`Draft product is missing brand/category: ${draft.name}`);
+		throw new Error("Validated product draft has no brand or category");
 	}
 
 	const productResult = await tx
 		.insert(ProductsTable)
 		.values({
 			name: draft.name,
-			slug: createSlug(draft.name, draft.brand ?? null, draft.amount, draft.potency),
+			slug: createSlug(
+				draft.name,
+				draft.brand ?? null,
+				draft.amount,
+				draft.potency,
+			),
 			description: draft.description || draft.name,
 			status: "draft",
 			discount: 0,
@@ -304,7 +334,7 @@ async function createProductFromDraft(
 
 	const productId = productResult[0]?.id;
 	if (!productId) {
-		throw new Error(`Failed to create product for line: ${draft.name}`);
+		throw new Error("Draft product insert returned no ID");
 	}
 
 	if (draft.images?.length) {
@@ -334,10 +364,9 @@ async function resolveR2ImageKeysToUrls(
 			const object = await ctx.r2.get(key);
 			if (object === null) continue;
 			const bytes = new Uint8Array(await object.arrayBuffer());
-			const contentType =
-				object.httpMetadata?.contentType?.startsWith("image/")
-					? object.httpMetadata.contentType
-					: "image/jpeg";
+			const contentType = object.httpMetadata?.contentType?.startsWith("image/")
+				? object.httpMetadata.contentType
+				: "image/jpeg";
 			out.push({ url: `data:${contentType};base64,${bytesToBase64(bytes)}` });
 		} catch (error) {
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
@@ -360,85 +389,122 @@ function bytesToBase64(bytes: Uint8Array): string {
 	return btoa(binary);
 }
 
+const aiPurchaseExtractionResultSchemas = {
+	value: aiExtractedPurchaseSchema,
+	error: aiOperationErrorSchema,
+};
+const aiPurchaseCreatedResultSchemas = {
+	value: adminCreatedSuccessSchema,
+	error: aiOperationErrorSchema,
+};
+
+const extractPurchaseFromImages = async (
+	input: extractPurchaseFromImagesType,
+) => {
+	const [brands, categories] = await Promise.all([
+		brandQueries.admin.getAllBrands(),
+		categoryQueries.admin.getAllCategories(),
+	]);
+	const extracted = await inferInvoiceData(input, brands, categories);
+	return extracted.extractionStatus === "failed"
+		? Result.err(aiExtractionFailed(true))
+		: Result.ok(extracted);
+};
+
+const saveExtractedPurchase = async (input: saveExtractedPurchaseType) => {
+	const unresolvedLines = input.items.flatMap((item, index) => {
+		if (item.productId) return [];
+		const draft = item.newProductDraft;
+		const hasBrand = !!draft?.brandId || !!draft?.brand?.trim();
+		return draft && hasBrand && draft.categoryId ? [] : [index + 1];
+	});
+	if (unresolvedLines.length > 0) {
+		return Result.err(aiProductResolutionRequired(unresolvedLines));
+	}
+
+	const created = await db().transaction(async (tx) => {
+		const resolvedItems: addPurchaseType["items"] = [];
+		for (const item of input.items) {
+			const productId = await createProductFromDraft(tx, item);
+			resolvedItems.push({
+				productId,
+				quantityOrdered: item.quantity,
+				unitCost: item.unitPrice,
+			});
+		}
+		return purchaseQueries.admin.createPurchase(tx, {
+			provider: input.provider,
+			externalOrderNumber: input.externalOrderNumber,
+			trackingNumber: input.trackingNumber ?? null,
+			shippingCost: input.shippingCost,
+			notes: input.notes ?? null,
+			orderedAt: input.orderedAt ?? null,
+			shippedAt: input.shippedAt ?? null,
+			forwarderReceivedAt: input.forwarderReceivedAt ?? null,
+			receivedAt: null,
+			cancelledAt: null,
+			items: resolvedItems,
+		});
+	});
+	return Result.ok({
+		id: created.id,
+		message: "Purchase imported successfully",
+	});
+};
+
 function commonPurchaseProcedures<P extends typeof baseProcedure>(proc: P) {
 	return {
 		extractPurchaseFromImages: proc
 			.input(extractPurchaseFromImagesSchema)
-			.mutation(async ({ ctx, input }) => {
-				try {
-					const [brands, categories] = await Promise.all([
-						brandQueries.admin.getAllBrands(),
-						categoryQueries.admin.getAllCategories(),
-					]);
-					return await inferInvoiceData(input, brands, categories);
-				} catch (error) {
-					ctx.log.error(
-						error instanceof Error ? error : new Error(String(error)),
-						{ event: "aiPurchase.extractPurchaseFromImages" },
-					);
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message: "Failed to extract purchase invoice",
-						cause: error,
-					});
-				}
-			}),
-
+			.mutation(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"aiPurchase.extractPurchaseFromImages",
+					"Failed to extract purchase invoice",
+					() => extractPurchaseFromImages(input),
+					aiErrorToLegacyTrpc,
+				),
+			),
 		saveExtractedPurchase: proc
 			.input(saveExtractedPurchaseSchema)
-			.mutation(async ({ ctx, input }) => {
-				try {
-					return await db().transaction(async (tx) => {
-						const resolvedItems: addPurchaseType["items"] = [];
-						for (const item of input.items) {
-							const productId = await createProductFromDraft(tx, item);
-							resolvedItems.push({
-								productId,
-								quantityOrdered: item.quantity,
-								unitCost: item.unitPrice,
-							});
-						}
-
-						const created = await purchaseQueries.admin.createPurchase(tx, {
-							provider: input.provider,
-							externalOrderNumber: input.externalOrderNumber,
-							trackingNumber: input.trackingNumber ?? null,
-							shippingCost: input.shippingCost,
-							notes: input.notes ?? null,
-							orderedAt: input.orderedAt ?? null,
-							shippedAt: input.shippedAt ?? null,
-							forwarderReceivedAt: input.forwarderReceivedAt ?? null,
-							receivedAt: null,
-							cancelledAt: null,
-							items: resolvedItems,
-						});
-
-						return {
-							id: created.id,
-							message: "Purchase imported successfully",
-						};
-					});
-				} catch (error) {
-					ctx.log.error(
-						error instanceof Error ? error : new Error(String(error)),
-						{ event: "aiPurchase.saveExtractedPurchase" },
-					);
-					throw new TRPCError({
-						code: "INTERNAL_SERVER_ERROR",
-						message:
-							error instanceof Error
-								? error.message
-								: "Failed to save extracted purchase",
-						cause: error,
-					});
-				}
-			}),
+			.mutation(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"aiPurchase.saveExtractedPurchase",
+					"Failed to save extracted purchase",
+					() => saveExtractedPurchase(input),
+					aiErrorToLegacyTrpc,
+				),
+			),
 	};
 }
 
 export function buildAiPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
 	return router(commonPurchaseProcedures(proc));
 }
+
+export const aiPurchaseV2 = router({
+	extractPurchaseFromImages: adminProcedure
+		.input(extractPurchaseFromImagesSchema)
+		.mutation(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await extractPurchaseFromImages(input),
+				aiPurchaseExtractionResultSchemas,
+				{ operation: "admin.ai_purchase.extract", error_layer: "provider" },
+			),
+		),
+	saveExtractedPurchase: adminProcedure
+		.input(saveExtractedPurchaseSchema)
+		.mutation(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await saveExtractedPurchase(input),
+				aiPurchaseCreatedResultSchemas,
+				{ operation: "admin.ai_purchase.save", error_layer: "domain" },
+			),
+		),
+});
 
 export const aiPurchase = buildAiPurchaseRouter(adminProcedure);
 
@@ -452,7 +518,10 @@ export const aiPurchaseBot = router({
 		.input(
 			v.object({
 				provider: v.picklist(purchaseProvider),
-				imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+				imageKeys: v.pipe(
+					v.array(v.pipe(v.string(), v.minLength(1))),
+					v.minLength(1),
+				),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

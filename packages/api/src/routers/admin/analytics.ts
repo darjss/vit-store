@@ -1,19 +1,25 @@
 import { TRPCError } from "@trpc/server";
 import { analyticsQueries, orderQueries, salesQueries } from "@vit/api/queries";
 import { timeRangeSchema } from "@vit/shared/schema";
+import { match } from "dismatch";
 import * as v from "valibot";
 import { createPostHogClient } from "~/lib/integrations/posthog";
 import { adminCachedProcedure, adminProcedure, baseProcedure, botCachedProcedure, botProcedure, router } from "~/lib/trpc";
-/** Convert timeRange to days for PostHog queries */
-function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {
-    switch (timeRange) {
-        case "daily":
-            return 1;
-        case "weekly":
-            return 7;
-        case "monthly":
-            return 30;
-    }
+type TimeRangeValue =
+    | { timeRange: "daily" }
+    | { timeRange: "weekly" }
+    | { timeRange: "monthly" };
+
+/** Convert timeRange to days for PostHog queries. */
+function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly") {
+    return match(
+        { timeRange } as TimeRangeValue,
+        "timeRange",
+    )<number>({
+        daily: () => 1,
+        weekly: () => 7,
+        monthly: () => 30,
+    });
 }
 export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, cachedProc: P) {
     return router({
@@ -282,29 +288,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getWebAnalytics"
             });
-            // Return zeros instead of throwing — graceful fallback
-            return {
-                current: {
-                    uniqueVisitors: 0,
-                    pageviews: 0,
-                    productViews: 0,
-                    addToCarts: 0,
-                    checkouts: 0,
-                    orders: 0,
-                    payments: 0,
-                    searches: 0,
-                },
-                previous: {
-                    uniqueVisitors: 0,
-                    pageviews: 0,
-                    orders: 0,
-                },
-                changes: {
-                    visitors: 0,
-                    pageviews: 0,
-                    orders: 0,
-                },
-            };
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch web analytics",
+                cause: error,
+            });
         }
     }),
     /**
@@ -324,14 +312,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getConversionFunnel"
             });
-            return {
-                visitors: 0,
-                productViewers: 0,
-                cartAdders: 0,
-                checkoutStarters: 0,
-                orderPlacers: 0,
-                paymentConfirmers: 0,
-            };
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch conversion funnel",
+                cause: error,
+            });
         }
     }),
     /**
@@ -352,7 +337,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getTopSearches"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch top searches",
+                cause: error,
+            });
         }
     }),
     /**
@@ -373,7 +362,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getMostViewedProducts"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch most viewed products",
+                cause: error,
+            });
         }
     }),
     /**
@@ -394,13 +387,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getProductBehavior"
             });
-            return {
-                views: 0,
-                uniqueViewers: 0,
-                addToCartCount: 0,
-                searchClicks: 0,
-                dailyTrend: [],
-            };
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch product behavior",
+                cause: error,
+            });
         }
     }),
     /**
@@ -420,7 +411,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getDailyVisitorTrend"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to fetch daily visitor trend",
+                cause: error,
+            });
         }
     }),
 });

@@ -1,5 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+	addImageMutationOptions,
+	deleteImageMutationOptions,
+	deleteProductMutationOptions,
+	regenerateProductImagesMutationOptions,
+	setPrimaryImageMutationOptions,
+	updateProductFieldMutationOptions,
+} from "@/lib/admin-result-options";
+import {
+	presentAiError,
+	presentCatalogError,
+	showErrorPresentation,
+} from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 
 export function useProductDetailMutations(
@@ -7,90 +21,88 @@ export function useProductDetailMutations(
 	options?: { onRegenerateSuccess?: () => void },
 ) {
 	const queryClient = useQueryClient();
+	const invalidateProduct = () =>
+		queryClient.invalidateQueries(
+			trpc.product.getProductById.queryOptions({ id: productId }),
+		);
 
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
-		...trpc.product.deleteProduct.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
-		},
+		...deleteProductMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries({
+						queryKey: ["admin-products-infinite"],
+						type: "all",
+					});
+					void queryClient.invalidateQueries(
+						trpc.product.getAllProducts.queryOptions(),
+					);
+				},
+				presentCatalogError,
+			),
 	});
 
-	const {
-		mutateAsync: updateProductField,
-		isPending: isUpdateProductFieldPending,
-	} = useMutation({
-		...trpc.product.updateProductField.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
-			queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-		},
-		onError: (error) => {
-			toast.error(error.message || "Талбар шинэчлэхэд алдаа гарлаа");
-		},
-	});
+	const updateFieldMutation = useMutation(updateProductFieldMutationOptions);
+	const updateProductField = async (
+		input: Parameters<typeof updateFieldMutation.mutateAsync>[0],
+	) => {
+		const result = await updateFieldMutation.mutateAsync(input);
+		return result.match({
+			ok: () => {
+				void invalidateProduct();
+				void queryClient.invalidateQueries({
+					queryKey: ["admin-products-infinite"],
+					type: "all",
+				});
+				return true;
+			},
+			err: (error) => {
+				showErrorPresentation(presentCatalogError(error));
+				return false;
+			},
+		});
+	};
 
 	const { mutate: deleteImage, isPending: isDeleteImagePending } = useMutation({
-		...trpc.image.deleteImage.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
-		},
+		...deleteImageMutationOptions,
+		onSuccess: (result) =>
+			handleResult(result, () => void invalidateProduct(), presentCatalogError),
 	});
 
 	const { mutate: addImage } = useMutation({
-		...trpc.image.addImage.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
-		},
+		...addImageMutationOptions,
+		onSuccess: (result) =>
+			handleResult(result, () => void invalidateProduct(), presentCatalogError),
 	});
 
 	const {
 		mutate: regenerateProductImages,
 		isPending: isRegenerateProductImagesPending,
 	} = useMutation({
-		...trpc.aiProduct.regenerateProductImages.mutationOptions(),
-		onSuccess: (result) => {
-			options?.onRegenerateSuccess?.();
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
-
-			if (result.count > 0) {
-				toast.success(`AI зураг амжилттай шинэчлэгдлээ (${result.count})`);
-			} else {
-				toast.warning("AI зураг олдсонгүй. Query-г шалгаад дахин оролдоно уу.");
-			}
-		},
-		onError: (error, variables) => {
-			console.error("aiProduct.regenerateProductImages.error", {
-				productId: variables.productId,
-				query: variables.query,
-				error,
-			});
-			toast.error(error.message || "AI зураг татах үед алдаа гарлаа");
-		},
+		...regenerateProductImagesMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				({ count }) => {
+					options?.onRegenerateSuccess?.();
+					void invalidateProduct();
+					toast.success(`AI зураг амжилттай шинэчлэгдлээ (${count})`);
+				},
+				presentAiError,
+			),
 	});
 
 	const { mutate: setPrimaryImage, isPending: isSetPrimaryImagePending } =
 		useMutation({
-			...trpc.image.setPrimaryImage.mutationOptions(),
-			onSuccess: () => {
-				queryClient.invalidateQueries(
-					trpc.product.getProductById.queryOptions({ id: productId }),
-				);
-			},
+			...setPrimaryImageMutationOptions,
+			onSuccess: (result) =>
+				handleResult(
+					result,
+					() => void invalidateProduct(),
+					presentCatalogError,
+				),
 		});
 
 	const deleteHelper = async (id: number) => {
@@ -101,7 +113,7 @@ export function useProductDetailMutations(
 		deleteProduct,
 		isDeletePending,
 		updateProductField,
-		isUpdateProductFieldPending,
+		isUpdateProductFieldPending: updateFieldMutation.isPending,
 		deleteImage,
 		isDeleteImagePending,
 		addImage,

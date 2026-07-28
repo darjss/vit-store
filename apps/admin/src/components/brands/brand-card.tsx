@@ -4,6 +4,9 @@ import { Image } from "@unpic/react";
 import type { BrandSelectType } from "@vit/api/db/schema";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { deleteBrandMutationOptions } from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import RowAction from "../row-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -13,12 +16,17 @@ const BrandCard = (brand: BrandSelectType) => {
 	const context = useRouteContext({ from: "/_dash/brands" });
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const deleteMutation = useMutation({
-		...trpc.brands.deleteBrand.mutationOptions(),
-		onSuccess: () => {
-			context.queryClient.invalidateQueries(
-				trpc.brands.getAllBrands.queryOptions(),
-			);
-		},
+		...deleteBrandMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void context.queryClient.invalidateQueries(
+						trpc.brands.getAllBrands.queryOptions(),
+					);
+				},
+				presentCatalogError,
+			),
 	});
 	const deleteHelper = async (id: number) => {
 		deleteMutation.mutate({ id });

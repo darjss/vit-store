@@ -11,7 +11,15 @@ import { useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+	addOrderMutationOptions,
+	customerLookupQueryOptions,
+	shipOrderMutationOptions,
+	updateOrderMutationOptions,
+} from "@/lib/admin-result-options";
 import { paymentStatusLabel } from "@/lib/enum-labels";
+import { presentAdminOrderError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -73,56 +81,69 @@ const OrderForm = ({
 	const prevPhoneRef = useRef(order?.customerPhone ?? "");
 
 	const shipOrder = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
-			toast.success("Захиалга амжилттай илгээгдлээ");
-			onSuccess();
-		},
-		onError: (error) => {
-			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
-		},
+		...shipOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getAllOrders.queryOptions(),
+					);
+					void queryClient.invalidateQueries({
+						queryKey: trpc.order.getPaginatedOrders.queryKey(),
+					});
+					toast.success("Захиалга амжилттай илгээгдлээ");
+					onSuccess();
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const addMutation = useMutation({
-		...trpc.order.addOrder.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Захиалга нэмэхэд алдаа гарлаа");
-		},
+		...addOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					form.reset();
+					void queryClient.invalidateQueries(
+						trpc.order.getAllOrders.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const updateMutation = useMutation({
-		...trpc.order.updateOrder.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Захиалга шинэчлэхэд алдаа гарлаа");
-		},
+		...updateOrderMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getAllOrders.queryOptions(),
+					);
+					void queryClient.invalidateQueries({
+						queryKey: trpc.order.getPaginatedOrders.queryKey(),
+					});
+					onSuccess();
+				},
+				presentAdminOrderError,
+			),
 	});
 
 	const {
-		data: customerInfo,
+		data: customerResult,
 		isLoading: isSearchByLoading,
 		isSuccess,
 	} = useQuery({
-		...trpc.customer.getCustomerByPhone.queryOptions({
-			phone: Number(phone),
-		}),
-
+		...customerLookupQueryOptions(Number(phone)),
 		enabled: !!isValidPhone,
+	});
+	const customerInfo = customerResult?.match({
+		ok: (customer) => customer,
+		err: () => null,
 	});
 
 	const handlePhoneChange = useCallback(() => {

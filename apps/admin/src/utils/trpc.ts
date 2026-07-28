@@ -8,8 +8,11 @@ import {
 } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AdminRouter } from "@vit/api";
-import { toast } from "sonner";
 import superjson from "superjson";
+import {
+	presentTransportError,
+	showErrorPresentation,
+} from "@/lib/error-presentations";
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
@@ -21,12 +24,15 @@ export const queryClient = new QueryClient({
 		},
 	},
 	queryCache: new QueryCache({
-		onError: (error) => {
-			toast.error(error.message, {
+		onError: (error, query) => {
+			const presentation = presentTransportError(error);
+			showErrorPresentation(presentation, {
+				id: "admin-query-transport-error",
 				action: {
 					label: "Дахин оролдох",
 					onClick: () => {
-						queryClient.invalidateQueries();
+						// Retry only the failed query. Do not fan out to the complete cache.
+						void query.fetch();
 					},
 				},
 			});
@@ -37,7 +43,9 @@ export const queryClient = new QueryClient({
 			// Skip when the mutation defines its own onError (TanStack runs both;
 			// avoid double-toast by deferring to the local handler).
 			if (mutation.options.onError) return;
-			toast.error(error.message);
+			showErrorPresentation(presentTransportError(error), {
+				id: "admin-mutation-transport-error",
+			});
 		},
 	}),
 });
@@ -46,9 +54,11 @@ async function checkUnauthorized(response: Response): Promise<boolean> {
 	if (response.status === 401) return true;
 	const cloned = response.clone();
 	try {
-		const data = (await cloned.json()) as {
-			error?: { data?: { code?: string }; code?: string };
-		} | Array<{ error?: { data?: { code?: string }; code?: string } }>;
+		const data = (await cloned.json()) as
+			| {
+					error?: { data?: { code?: string }; code?: string };
+			  }
+			| Array<{ error?: { data?: { code?: string }; code?: string } }>;
 		if (Array.isArray(data)) {
 			return data.some(
 				(item) =>
@@ -65,9 +75,7 @@ async function checkUnauthorized(response: Response): Promise<boolean> {
 	}
 }
 
-function createAuthenticatedFetch(
-	fetchFn: typeof fetch,
-): typeof fetch {
+function createAuthenticatedFetch(fetchFn: typeof fetch): typeof fetch {
 	return async (url, options) => {
 		const response = await fetchFn(url, options);
 		if (await checkUnauthorized(response)) {

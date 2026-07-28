@@ -10,6 +10,9 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Text } from "@/components/ui/text";
+import { deleteCustomerMutationOptions } from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import CustomerForm from "./customer-form";
 
@@ -23,12 +26,17 @@ const CustomerCard = ({ customer }: { customer: Customer }) => {
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const queryClient = useQueryClient();
 	const { mutate: deleteCustomer, isPending } = useMutation({
-		...trpc.customer.deleteCustomer.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(
-				trpc.customer.getAllCustomers.queryOptions(),
-			);
-		},
+		...deleteCustomerMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.customer.getAllCustomers.queryOptions(),
+					);
+				},
+				presentCatalogError,
+			),
 	});
 
 	return (

@@ -33,6 +33,8 @@ export type Context = {
 	kv: KVNamespace;
 	r2: R2Bucket;
 	cache?: WorkersCache;
+	/** Safe request identifier shown to operators and users for unexpected failures. */
+	correlationId: string;
 	/** Request-scoped wide-event logger */
 	log: RequestLogger<any>;
 };

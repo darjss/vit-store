@@ -47,6 +47,12 @@ export const brandQueries = {
 				.orderBy(desc(productCount), asc(BrandsTable.name));
 		},
 
+		async getBrandById(id: number) {
+			return db().query.BrandsTable.findFirst({
+				where: and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)),
+			});
+		},
+
 		async createBrand(data: {
 			name: string;
 			slug: string;
@@ -72,17 +78,21 @@ export const brandQueries = {
 				seoDescription?: string | null;
 			},
 		) {
-			await db()
+			const result = await db()
 				.update(BrandsTable)
 				.set(data)
-				.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)));
+				.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)))
+				.returning({ id: BrandsTable.id });
+			return result[0] ?? null;
 		},
 
 		async deleteBrand(id: number) {
-			await db()
+			const result = await db()
 				.update(BrandsTable)
 				.set({ deletedAt: new Date() })
-				.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)));
+				.where(and(eq(BrandsTable.id, id), isNull(BrandsTable.deletedAt)))
+				.returning({ id: BrandsTable.id });
+			return result[0] ?? null;
 		},
 	},
 

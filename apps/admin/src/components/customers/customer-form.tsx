@@ -1,8 +1,13 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import * as v from "valibot";
+import {
+	addCustomerMutationOptions,
+	updateCustomerMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -52,30 +57,34 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 	const queryClient = useQueryClient();
 
 	const addMutation = useMutation({
-		...trpc.customer.addUser.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(
-				trpc.customer.getAllCustomers.queryOptions(),
-			);
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Хэрэглэгч нэмэхэд алдаа гарлаа");
-		},
+		...addCustomerMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					form.reset();
+					void queryClient.invalidateQueries(
+						trpc.customer.getAllCustomers.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const updateMutation = useMutation({
-		...trpc.customer.updateCustomer.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(
-				trpc.customer.getAllCustomers.queryOptions(),
-			);
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Хэрэглэгч засахад алдаа гарлаа");
-		},
+		...updateCustomerMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.customer.getAllCustomers.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const onSubmit = (values: AddCustomerFormValues) => {

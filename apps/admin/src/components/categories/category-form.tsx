@@ -3,7 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addCategorySchema, type addCategoryType } from "@vit/shared";
 import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import {
+	addCategoryMutationOptions,
+	updateCategoryMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -42,30 +47,34 @@ const CategoryForm = ({
 
 	const queryClient = useQueryClient();
 	const addMutation = useMutation({
-		...trpc.category.addCategory.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
-			onSuccess();
-		},
-		onError: () => {
-			toast.error("Ангилал нэмэхэд алдаа гарлаа");
-		},
+		...addCategoryMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					form.reset();
+					void queryClient.invalidateQueries(
+						trpc.category.getAllCategories.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const updateMutation = useMutation({
-		...trpc.category.updateCategory.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
-			onSuccess();
-		},
-		onError: () => {
-			toast.error("Ангилал шинэчлэхэд алдаа гарлаа");
-		},
+		...updateCategoryMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					void queryClient.invalidateQueries(
+						trpc.category.getAllCategories.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const onSubmit = async (values: addCategoryType) => {

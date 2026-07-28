@@ -1,12 +1,13 @@
 import type {
 	AIPurchaseMatchedProduct,
 	AIPurchaseProductDraft,
+	aiExtractedPurchaseType,
 } from "@vit/shared";
-import type { PurchaseDetailType, RouterInputs, RouterOutputs } from "@/lib/types";
+import type { PurchaseDetailType, RouterInputs } from "@/lib/types";
 
 export type PurchaseFormProps = {
 	purchase?: PurchaseDetailType;
-	aiData?: RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
+	aiData?: aiExtractedPurchaseType;
 	onSuccess?: (purchaseId: number) => void;
 	onResetAI?: () => void;
 };
@@ -111,7 +112,9 @@ export function hasUnresolvedAiItems(items: PurchaseLineState[]) {
 
 function buildAiDraft(
 	item: PurchaseLineState,
-): NonNullable<RouterInputs["aiPurchase"]["saveExtractedPurchase"]["items"][number]["newProductDraft"]> {
+): NonNullable<
+	RouterInputs["aiPurchase"]["saveExtractedPurchase"]["items"][number]["newProductDraft"]
+> {
 	const draft = item.newProductDraft;
 
 	if (!draft) {
@@ -180,7 +183,7 @@ export function buildPurchasePayload(
 		cancelledAt?: Date | null;
 	},
 	items: PurchaseLineState[],
-){
+) {
 	return {
 		provider: values.provider,
 		externalOrderNumber: values.externalOrderNumber,

@@ -10,6 +10,12 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	confirmTransferMutationOptions,
+	rejectTransferMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentPaymentError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -18,7 +24,9 @@ interface PendingTransferDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-function invalidateTransferQueries(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidateTransferQueries(
+	queryClient: ReturnType<typeof useQueryClient>,
+) {
 	void queryClient.invalidateQueries({
 		queryKey: trpc.payment.getClaimedTransferCount.queryKey(),
 	});
@@ -44,31 +52,33 @@ export function TransferPaymentActions({
 }) {
 	const queryClient = useQueryClient();
 
-	const confirmTransfer = useMutation(
-		trpc.payment.confirmTransferPayment.mutationOptions({
-			onSuccess: () => {
-				invalidateTransferQueries(queryClient);
-				toast.success("Төлбөр баталгаажлаа");
-				onSuccess?.();
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
-			},
-		}),
-	);
+	const confirmTransfer = useMutation({
+		...confirmTransferMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidateTransferQueries(queryClient);
+					toast.success("Төлбөр баталгаажлаа");
+					onSuccess?.();
+				},
+				presentPaymentError,
+			),
+	});
 
-	const rejectTransfer = useMutation(
-		trpc.payment.rejectTransferPayment.mutationOptions({
-			onSuccess: () => {
-				invalidateTransferQueries(queryClient);
-				toast.success("Төлбөр татгалзлаа");
-				onSuccess?.();
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
-			},
-		}),
-	);
+	const rejectTransfer = useMutation({
+		...rejectTransferMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidateTransferQueries(queryClient);
+					toast.success("Төлбөр татгалзлаа");
+					onSuccess?.();
+				},
+				presentPaymentError,
+			),
+	});
 
 	const isPending = confirmTransfer.isPending || rejectTransfer.isPending;
 
@@ -115,29 +125,31 @@ export default function PendingTransferDialog({
 		enabled: open,
 	});
 
-	const confirmTransfer = useMutation(
-		trpc.payment.confirmTransferPayment.mutationOptions({
-			onSuccess: () => {
-				invalidateTransferQueries(queryClient);
-				toast.success("Төлбөр баталгаажлаа");
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
-			},
-		}),
-	);
+	const confirmTransfer = useMutation({
+		...confirmTransferMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidateTransferQueries(queryClient);
+					toast.success("Төлбөр баталгаажлаа");
+				},
+				presentPaymentError,
+			),
+	});
 
-	const rejectTransfer = useMutation(
-		trpc.payment.rejectTransferPayment.mutationOptions({
-			onSuccess: () => {
-				invalidateTransferQueries(queryClient);
-				toast.success("Төлбөр татгалзлаа");
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
-			},
-		}),
-	);
+	const rejectTransfer = useMutation({
+		...rejectTransferMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					invalidateTransferQueries(queryClient);
+					toast.success("Төлбөр татгалзлаа");
+				},
+				presentPaymentError,
+			),
+	});
 
 	const pendingPaymentNumber =
 		confirmTransfer.variables?.paymentNumber ??
@@ -174,7 +186,7 @@ export default function PendingTransferDialog({
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 											<div className="min-w-0 space-y-2">
 												<div className="flex flex-wrap items-center gap-2">
-													<span className="font-heading font-black">
+													<span className="font-black font-heading">
 														#{claim.orderNumber}
 													</span>
 													<span className="text-muted-foreground text-xs">
@@ -189,7 +201,7 @@ export default function PendingTransferDialog({
 														{claim.customerPhone}
 													</span>
 												</div>
-												<p className="font-heading text-lg font-black tabular-nums">
+												<p className="font-black font-heading text-lg tabular-nums">
 													{formatCurrency(claim.amount)}
 												</p>
 												<p className="text-muted-foreground text-xs">

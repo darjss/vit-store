@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { aiExtractedPurchaseType } from "@vit/shared";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { Suspense, useState } from "react";
 import {
@@ -7,10 +8,8 @@ import {
 } from "@/components/purchase/ai-purchase-input";
 import PurchaseForm from "@/components/purchase/purchase-form";
 import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
-import type { RouterOutputs } from "@/lib/types";
 
-type ExtractedPurchaseData =
-	RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
+type ExtractedPurchaseData = aiExtractedPurchaseType;
 
 export const Route = createFileRoute("/_dash/purchases/add")({
 	component: RouteComponent,

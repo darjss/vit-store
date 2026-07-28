@@ -1,25 +1,26 @@
 import { useMutation } from "@tanstack/react-query";
-import type { ExtractedProductData } from "@vit/shared";
-import {
-	AlertCircle,
-	Loader2,
-	Search,
-	Sparkles,
-	X,
-} from "lucide-react";
+import type { AiOperationError, ExtractedProductData } from "@vit/shared";
+import type { Result } from "better-result";
+import { AlertCircle, Loader2, Search, Sparkles, X } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
 	ExtractionProgressPanel,
+	type ExtractionStep,
 	markStepComplete,
 	markStepError,
 	resetSteps,
 	setStepActive,
-	type ExtractionStep,
 } from "@/components/product/extraction-progress-panel";
-import { trpc } from "@/utils/trpc";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+	finalizeProductMutationOptions,
+	scrapeProductMutationOptions,
+	startProductExtractionMutationOptions,
+	translateProductMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentAiError } from "@/lib/error-presentations";
 
 interface AIProductInputProps {
 	onExtracted: (data: ExtractedProductData) => void;
@@ -34,16 +35,20 @@ export function AIProductInput({ onExtracted, onCancel }: AIProductInputProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-	const startMutation = useMutation(trpc.aiProduct.startExtraction.mutationOptions());
-	const scrapeMutation = useMutation(
-		trpc.aiProduct.scrapeAndAnalyze.mutationOptions(),
-	);
-	const translateMutation = useMutation(
-		trpc.aiProduct.translateProduct.mutationOptions(),
-	);
-	const finalizeMutation = useMutation(
-		trpc.aiProduct.finalizeExtraction.mutationOptions(),
-	);
+	const startMutation = useMutation(startProductExtractionMutationOptions);
+	const scrapeMutation = useMutation(scrapeProductMutationOptions);
+	const translateMutation = useMutation(translateProductMutationOptions);
+	const finalizeMutation = useMutation(finalizeProductMutationOptions);
+
+	const resultValue = <Value,>(result: Result<Value, AiOperationError>) =>
+		result.match<Value | null>({
+			ok: (value) => value,
+			err: (error) => {
+				const presentation = presentAiError(error);
+				setErrorMessage(`${presentation.title}. ${presentation.description}`);
+				return null;
+			},
+		});
 
 	const runExtraction = async (trimmedQuery: string) => {
 		setIsLoading(true);
@@ -54,36 +59,44 @@ export function AIProductInput({ onExtracted, onCancel }: AIProductInputProps) {
 			currentSteps = setStepActive(currentSteps, "searching");
 			setSteps(currentSteps);
 
-			const start = await startMutation.mutateAsync({ query: trimmedQuery });
+			const start = resultValue(
+				await startMutation.mutateAsync({ query: trimmedQuery }),
+			);
+			if (!start) return;
 			currentSteps = markStepComplete(currentSteps, "searching");
 			currentSteps = setStepActive(currentSteps, "extracting");
 			setSteps(currentSteps);
 
-			await scrapeMutation.mutateAsync({ sessionId: start.sessionId });
+			const scraped = resultValue(
+				await scrapeMutation.mutateAsync({ sessionId: start.sessionId }),
+			);
+			if (!scraped) return;
 			currentSteps = markStepComplete(currentSteps, "extracting");
 			currentSteps = setStepActive(currentSteps, "translating");
 			setSteps(currentSteps);
 
-			await translateMutation.mutateAsync({ sessionId: start.sessionId });
+			const translated = resultValue(
+				await translateMutation.mutateAsync({ sessionId: start.sessionId }),
+			);
+			if (!translated) return;
 			currentSteps = markStepComplete(currentSteps, "translating");
 			currentSteps = setStepActive(currentSteps, "uploading");
 			setSteps(currentSteps);
 
-			const result = await finalizeMutation.mutateAsync({
-				sessionId: start.sessionId,
-			});
+			const result = resultValue(
+				await finalizeMutation.mutateAsync({ sessionId: start.sessionId }),
+			);
+			if (!result) return;
 			currentSteps = markStepComplete(currentSteps, "uploading");
 			setSteps(currentSteps);
 			onExtracted(result);
-		} catch (error) {
+		} catch {
 			const activeStep = currentSteps.find((step) => step.status === "active");
 			if (activeStep) {
 				setSteps(markStepError(currentSteps, activeStep.id));
 			}
 			setErrorMessage(
-				error instanceof Error
-					? error.message
-					: "Бүтээгдэхүүн татахад алдаа гарлаа. Дахин оролдоно уу.",
+				"Системтэй холбогдож чадсангүй. Түр хүлээгээд дахин оролдоно уу.",
 			);
 		} finally {
 			setIsLoading(false);
@@ -182,7 +195,9 @@ export function AIProductInput({ onExtracted, onCancel }: AIProductInputProps) {
 								<p className="font-bold text-destructive text-sm">
 									Алдаа гарлаа
 								</p>
-								<p className="mt-1 text-destructive/80 text-xs">{errorMessage}</p>
+								<p className="mt-1 text-destructive/80 text-xs">
+									{errorMessage}
+								</p>
 							</div>
 						</div>
 						<Button

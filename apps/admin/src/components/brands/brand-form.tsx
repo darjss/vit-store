@@ -4,7 +4,12 @@ import { Image } from "@unpic/react";
 import { addBrandSchema, type addBrandType } from "@vit/shared";
 import { X } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import {
+	addBrandMutationOptions,
+	updateBrandMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
 import { trpc } from "@/utils/trpc";
 import { ImagePlaceholderIcon } from "../icons";
 import SubmitButton from "../submit-button";
@@ -33,6 +38,7 @@ const BrandForm = ({
 	const form = useForm({
 		resolver: valibotResolver(addBrandSchema),
 		defaultValues: {
+			id: brand?.id,
 			name: brand?.name || "",
 			slug: brand?.slug || "",
 			logoUrl: brand?.logoUrl || "",
@@ -45,15 +51,19 @@ const BrandForm = ({
 
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
-		...trpc.brands.addBrand.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(trpc.brands.getAllBrands.queryOptions());
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
-		},
+		...(brand ? updateBrandMutationOptions : addBrandMutationOptions),
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				() => {
+					form.reset();
+					void queryClient.invalidateQueries(
+						trpc.brands.getAllBrands.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 	const onSubmit = async (values: addBrandType) => {
 		mutation.mutate(values);
@@ -112,24 +122,19 @@ const BrandForm = ({
 															type="button"
 															size="icon"
 															variant="destructive"
-															onClick={() =>
-																form.setValue(
-																	"logoUrl",
-																	"",
-																)
-															}
+															onClick={() => form.setValue("logoUrl", "")}
 															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-															>
-																<X className="h-3 w-3" />
-															</Button>
+														>
+															<X className="h-3 w-3" />
+														</Button>
 														<Image
-																src={currentImageUrl}
-																alt={form.watch("name") || "Брэндийн лого"}
-																width={120}
-																height={120}
-																layout="constrained"
-																className="h-28 w-28 rounded-lg border-2 border-border bg-background object-contain p-3 shadow-sm"
-															/>
+															src={currentImageUrl}
+															alt={form.watch("name") || "Брэндийн лого"}
+															width={120}
+															height={120}
+															layout="constrained"
+															className="h-28 w-28 rounded-lg border-2 border-border bg-background object-contain p-3 shadow-sm"
+														/>
 													</div>
 												) : (
 													<div className="flex h-28 w-28 items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
@@ -192,17 +197,17 @@ const BrandForm = ({
 															variant="destructive"
 															onClick={() => form.setValue("bannerImage", "")}
 															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-															>
-																<X className="h-3 w-3" />
-															</Button>
+														>
+															<X className="h-3 w-3" />
+														</Button>
 														<Image
-																src={bannerImageUrl}
-																alt="Баннер"
-																width={400}
-																height={120}
-																layout="constrained"
-																className="h-24 w-full rounded-lg border-2 border-border bg-background object-cover shadow-sm"
-															/>
+															src={bannerImageUrl}
+															alt="Баннер"
+															width={400}
+															height={120}
+															layout="constrained"
+															className="h-24 w-full rounded-lg border-2 border-border bg-background object-cover shadow-sm"
+														/>
 													</div>
 												) : (
 													<div className="flex h-24 w-full items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">

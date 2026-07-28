@@ -15,11 +15,16 @@ import {
 } from "@vit/shared/domain/product";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { trpc } from "@/utils/trpc";
 import SubmitButton from "@/components/submit-button";
 import { Form } from "@/components/ui/form";
 import { FormLoadingOverlay } from "@/components/ui/form-loading-overlay";
+import {
+	addProductMutationOptions,
+	updateProductMutationOptions,
+} from "@/lib/admin-result-options";
+import { presentCatalogError } from "@/lib/error-presentations";
+import { handleResult } from "@/lib/handle-result";
+import { trpc } from "@/utils/trpc";
 import { ProductAdvancedSection } from "./sections/product-advanced-section";
 import { ProductDetailsSection } from "./sections/product-details-section";
 import { ProductImagesSection } from "./sections/product-images-section";
@@ -63,37 +68,47 @@ const ProductForm = ({
 	const isEditing = typeof productId === "number";
 
 	const addMutation = useMutation({
-		...trpc.product.addProduct.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Бүтээгдэхүүн нэмэхэд алдаа гарлаа");
-		},
+		...addProductMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				async () => {
+					form.reset();
+					await queryClient.invalidateQueries({
+						queryKey: ["admin-products-infinite"],
+						type: "all",
+					});
+					void queryClient.invalidateQueries(
+						trpc.product.getAllProducts.queryOptions(),
+					);
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const updateMutation = useMutation({
-		...trpc.product.updateProduct.mutationOptions(),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId! }),
-			);
-			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Бүтээгдэхүүн шинэчлэхэд алдаа гарлаа");
-		},
+		...updateProductMutationOptions,
+		onSuccess: (result) =>
+			handleResult(
+				result,
+				async () => {
+					await queryClient.invalidateQueries({
+						queryKey: ["admin-products-infinite"],
+						type: "all",
+					});
+					void queryClient.invalidateQueries(
+						trpc.product.getAllProducts.queryOptions(),
+					);
+					if (productId) {
+						void queryClient.invalidateQueries(
+							trpc.product.getProductById.queryOptions({ id: productId }),
+						);
+					}
+					onSuccess();
+				},
+				presentCatalogError,
+			),
 	});
 
 	const mutation = isEditing ? updateMutation : addMutation;
@@ -131,7 +146,9 @@ const ProductForm = ({
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
-				<FormLoadingOverlay isLoading={form.formState.isSubmitting || mutation.isPending} />
+				<FormLoadingOverlay
+					isLoading={form.formState.isSubmitting || mutation.isPending}
+				/>
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
 					<ProductDetailsSection
 						form={form}

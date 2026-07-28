@@ -43,21 +43,25 @@ export const categoryQueries = {
 				seoDescription?: string | null;
 			},
 		) {
-			await db()
+			const result = await db()
 				.update(CategoriesTable)
 				.set(data)
 				.where(
 					and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-				);
+				)
+				.returning({ id: CategoriesTable.id });
+			return result[0] ?? null;
 		},
 
 		async deleteCategory(id: number) {
-			await db()
+			const result = await db()
 				.update(CategoriesTable)
 				.set({ deletedAt: new Date() })
 				.where(
 					and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-				);
+				)
+				.returning({ id: CategoriesTable.id });
+			return result[0] ?? null;
 		},
 
 		async getCategoryById(id: number) {

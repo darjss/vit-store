@@ -1,169 +1,189 @@
 import { TRPCError } from "@trpc/server";
-import { customerQueries } from "@vit/api/queries";
-import { timeRangeSchema } from "@vit/shared/schema";
+import { timeRangeSchema } from "@vit/shared";
 import * as v from "valibot";
-import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { getDaysFromTimeRange } from "~/lib/utils";
-export function buildCustomerRouter<P extends typeof baseProcedure>(proc: P) {
-    return router({
-    addUser: proc
-        .input(v.object({
-        phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
-        address: v.optional(v.string()),
-        addressZoneId: v.optional(v.number()),
-    }))
-        .mutation(async ({ ctx, input }) => {
-        try {
-            const result = await customerQueries.admin.createCustomer(input);
-            return result;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "addUser"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to add customer",
-                cause: error,
-            });
-        }
-    }),
-    getCustomerByPhone: proc
-        .input(v.object({
-        phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
-    }))
-        .query(async ({ ctx, input }) => {
-        try {
-            const result = await customerQueries.admin.getCustomerByPhone(input.phone);
-            if (!result) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Customer not found",
-                });
-            }
-            return result;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "getCustomerByPhone"
-            });
-            if (error instanceof TRPCError)
-                throw error;
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to get customer by phone",
-                cause: error,
-            });
-        }
-    }),
-    getCustomerCount: proc.query(async ({ ctx }) => {
-        try {
-            const count = await customerQueries.admin.getCustomerCount();
-            return count;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "getCustomerCount"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to get customer count",
-                cause: error,
-            });
-        }
-    }),
-    getNewCustomersCount: proc
-        .input(v.object({
-        timeRange: timeRangeSchema,
-    }))
-        .query(async ({ ctx, input }) => {
-        try {
-            const { timeRange } = input;
-            const startDate = await getDaysFromTimeRange(timeRange);
-            const count = await customerQueries.admin.getNewCustomersCount(startDate);
-            return count;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "getNewCustomersCount"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to get new customers count",
-                cause: error,
-            });
-        }
-    }),
-    getAllCustomers: proc.query(async ({ ctx }) => {
-        try {
-            const customers = await customerQueries.admin.getAllCustomers();
-            return customers;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "getAllCustomers"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to get all customers",
-                cause: error,
-            });
-        }
-    }),
-    updateCustomer: proc
-        .input(v.object({
-        phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
-        address: v.optional(v.string()),
-    }))
-        .mutation(async ({ ctx, input }) => {
-        try {
-            const { phone, address } = input;
-            const result = await customerQueries.admin.updateCustomer(phone, {
-                address,
-            });
-            if (!result) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Customer not found",
-                });
-            }
-            return result;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "updateCustomer"
-            });
-            if (error instanceof TRPCError)
-                throw error;
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to update customer",
-                cause: error,
-            });
-        }
-    }),
-    deleteCustomer: proc
-        .input(v.object({
-        phone: v.pipe(v.number(), v.integer(), v.minValue(60000000), v.maxValue(99999999)),
-    }))
-        .mutation(async ({ ctx, input }) => {
-        try {
-            const { phone } = input;
-            await customerQueries.admin.deleteCustomer(phone);
-            return { message: "Successfully deleted customer" };
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "deleteCustomer"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to delete customer",
-                cause: error,
-            });
-        }
-    }),
+import {
+	adminProcedure,
+	baseProcedure,
+	botProcedure,
+	router,
+} from "~/lib/trpc";
+import {
+	addCustomer,
+	catalogErrorToLegacyTrpc,
+	catalogMutationResultSchemas,
+	customerCreatedResultSchemas,
+	customerLookupResultSchemas,
+	customerUpdatedResultSchemas,
+	deleteCustomer,
+	getCustomerByPhone,
+	updateCustomer,
+} from "~/operations/admin-catalog";
+import { serializeOperationResult } from "~/operations/serialize-operation-result";
+import { customerQueries } from "~/queries/customers";
+import { runLegacyOperation } from "~/result/run-legacy-operation";
+
+const phoneSchema = v.pipe(
+	v.number(),
+	v.integer(),
+	v.minValue(60000000),
+	v.maxValue(99999999),
+);
+const customerPhoneInputSchema = v.object({ phone: phoneSchema });
+const addCustomerInputSchema = v.object({
+	phone: phoneSchema,
+	address: v.optional(v.string()),
+	addressZoneId: v.optional(v.number()),
 });
+const updateCustomerInputSchema = v.object({
+	phone: phoneSchema,
+	address: v.optional(v.string()),
+});
+
+export function buildCustomerRouter<P extends typeof baseProcedure>(proc: P) {
+	return router({
+		addUser: proc
+			.input(addCustomerInputSchema)
+			.mutation(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"addUser",
+					"Failed to add customer",
+					() => addCustomer(input),
+					catalogErrorToLegacyTrpc,
+				),
+			),
+		getCustomerByPhone: proc
+			.input(customerPhoneInputSchema)
+			.query(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"getCustomerByPhone",
+					"Failed to get customer by phone",
+					() => getCustomerByPhone(input.phone),
+					catalogErrorToLegacyTrpc,
+				),
+			),
+		getCustomerCount: proc.query(async ({ ctx }) => {
+			try {
+				return await customerQueries.admin.getCustomerCount();
+			} catch (error) {
+				ctx.log.error(
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						event: "getCustomerCount",
+					},
+				);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get customer count",
+					cause: error,
+				});
+			}
+		}),
+		getNewCustomersCount: proc
+			.input(v.object({ timeRange: timeRangeSchema }))
+			.query(async ({ ctx, input }) => {
+				try {
+					return await customerQueries.admin.getNewCustomersCount(
+						await getDaysFromTimeRange(input.timeRange),
+					);
+				} catch (error) {
+					ctx.log.error(
+						error instanceof Error ? error : new Error(String(error)),
+						{ event: "getNewCustomersCount" },
+					);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to get new customers count",
+						cause: error,
+					});
+				}
+			}),
+		getAllCustomers: proc.query(async ({ ctx }) => {
+			try {
+				return await customerQueries.admin.getAllCustomers();
+			} catch (error) {
+				ctx.log.error(
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						event: "getAllCustomers",
+					},
+				);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get all customers",
+					cause: error,
+				});
+			}
+		}),
+		updateCustomer: proc
+			.input(updateCustomerInputSchema)
+			.mutation(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"updateCustomer",
+					"Failed to update customer",
+					() => updateCustomer(input),
+					catalogErrorToLegacyTrpc,
+				),
+			),
+		deleteCustomer: proc
+			.input(customerPhoneInputSchema)
+			.mutation(({ ctx, input }) =>
+				runLegacyOperation(
+					ctx,
+					"deleteCustomer",
+					"Failed to delete customer",
+					() => deleteCustomer(input.phone),
+					catalogErrorToLegacyTrpc,
+				),
+			),
+	});
 }
+
+export const customerV2 = router({
+	addUser: adminProcedure
+		.input(addCustomerInputSchema)
+		.mutation(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await addCustomer(input),
+				customerCreatedResultSchemas,
+				{ operation: "admin.customer.add", error_layer: "domain" },
+			),
+		),
+	getCustomerByPhone: adminProcedure
+		.input(customerPhoneInputSchema)
+		.query(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await getCustomerByPhone(input.phone),
+				customerLookupResultSchemas,
+				{ operation: "admin.customer.lookup", error_layer: "domain" },
+			),
+		),
+	updateCustomer: adminProcedure
+		.input(updateCustomerInputSchema)
+		.mutation(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await updateCustomer(input),
+				customerUpdatedResultSchemas,
+				{ operation: "admin.customer.update", error_layer: "domain" },
+			),
+		),
+	deleteCustomer: adminProcedure
+		.input(customerPhoneInputSchema)
+		.mutation(async ({ ctx, input }) =>
+			serializeOperationResult(
+				ctx,
+				await deleteCustomer(input.phone),
+				catalogMutationResultSchemas,
+				{ operation: "admin.customer.delete", error_layer: "domain" },
+			),
+		),
+});
+
 export const customer = buildCustomerRouter(adminProcedure);
 export const customerBot = buildCustomerRouter(botProcedure);

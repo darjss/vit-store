@@ -1,29 +1,17 @@
 import type { AiProductSessionState } from "@vit/shared";
-import { TRPCError } from "@trpc/server";
 import { kv } from "~/lib/kv";
-import {
-	AI_PRODUCT_SESSION_TTL,
-} from "~/lib/ai-product/constants";
+import { AI_PRODUCT_SESSION_TTL } from "~/lib/ai-product/constants";
 import { aiProductSessionKey } from "~/lib/ai-product/amazon-url";
 
 export function createSessionId(): string {
 	return crypto.randomUUID();
 }
 
-export async function readSession(
-	sessionId: string,
-): Promise<AiProductSessionState> {
-	const session = await kv().get<AiProductSessionState>(
+export async function readSession(sessionId: string) {
+	return kv().get<AiProductSessionState>(
 		aiProductSessionKey(sessionId),
 		"json",
 	);
-	if (!session) {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: "Extraction session expired or not found",
-		});
-	}
-	return session;
 }
 
 export async function writeSession(

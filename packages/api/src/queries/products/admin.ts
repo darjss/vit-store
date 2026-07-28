@@ -1,4 +1,4 @@
-import { type status, PRODUCT_REVIEW_CUTOFF_DATE } from "@vit/shared/constants";
+import { PRODUCT_REVIEW_CUTOFF_DATE, type status } from "@vit/shared/constants";
 import type { SQL } from "drizzle-orm";
 import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
@@ -235,7 +235,7 @@ export const adminQueries = {
 					),
 				),
 		);
-		await Promise.allSettled(deletePromises);
+		await Promise.all(deletePromises);
 	},
 
 	async updateStock(
