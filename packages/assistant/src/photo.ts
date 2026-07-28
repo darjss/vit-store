@@ -1,5 +1,7 @@
 import { defineTool } from "@flue/runtime";
+import { Result, type Result as BetterResult } from "better-result";
 import * as v from "valibot";
+import { type AiOperationError, aiOperationErrorSchema } from "./errors";
 
 // Channel-neutral product-photo identification domain (ADR 0003). The R2
 // fetch/put and the Workers AI binding call are app/channel concerns and are
@@ -50,61 +52,76 @@ const visionResultSchema = v.object({
 	queries: v.array(v.string()),
 });
 
-// Pull the `{facts, queries}` object out of the model's text. Tolerant of code
-// fences and surrounding prose by extracting the first balanced JSON object.
-// Falls back to treating the whole reply as the facts (with no queries) so a
-// non-JSON answer still degrades to a usable, non-throwing result.
-export const parsePhotoVision = (text: string): PhotoIdentifyResult => {
+// Pull a validated `{facts, queries}` object out of the model text. Malformed
+// model output stays distinct from a valid unreadable-photo result.
+export const parsePhotoVision = (text: string) => {
 	const raw = extractJsonObject(text);
-	if (raw !== undefined) {
-		try {
-			const parsed = v.parse(visionResultSchema, JSON.parse(raw));
-			const queries = parsed.queries
-				.map((q) => q.trim())
-				.filter((q) => q.length > 0)
-				.slice(0, 4);
-			return { facts: parsed.facts.trim(), queries };
-		} catch {
-			// fall through to the soft fallback below
-		}
+	if (raw === undefined) {
+		return Result.err<PhotoIdentifyResult, AiOperationError>({
+			_tag: "InvalidModelOutput",
+		});
 	}
-	const facts = text.trim();
-	return { facts: facts.length > 0 ? facts : "No description returned.", queries: [] };
+	let decoded: unknown;
+	try {
+		decoded = JSON.parse(raw);
+	} catch {
+		return Result.err<PhotoIdentifyResult, AiOperationError>({
+			_tag: "InvalidModelOutput",
+		});
+	}
+	const parsed = v.safeParse(visionResultSchema, decoded);
+	if (!parsed.success || parsed.output.facts.trim().length === 0) {
+		return Result.err<PhotoIdentifyResult, AiOperationError>({
+			_tag: "InvalidModelOutput",
+		});
+	}
+	return Result.ok<PhotoIdentifyResult, AiOperationError>({
+		facts: parsed.output.facts.trim(),
+		queries: parsed.output.queries
+			.map((query) => query.trim())
+			.filter((query) => query.length > 0)
+			.slice(0, 4),
+	});
 };
 
-const extractJsonObject = (text: string): string | undefined => {
+const extractJsonObject = (text: string) => {
 	const start = text.indexOf("{");
-	if (start === -1) return undefined;
-	let depth = 0;
-	let inString = false;
-	let escaped = false;
-	for (let i = start; i < text.length; i += 1) {
-		const ch = text[i];
-		if (inString) {
-			if (escaped) escaped = false;
-			else if (ch === "\\") escaped = true;
-			else if (ch === '"') inString = false;
-			continue;
-		}
-		if (ch === '"') inString = true;
-		else if (ch === "{") depth += 1;
-		else if (ch === "}") {
-			depth -= 1;
-			if (depth === 0) return text.slice(start, i + 1);
-		}
-	}
-	return undefined;
+	const end = text.lastIndexOf("}");
+	return start >= 0 && end > start ? text.slice(start, end + 1) : undefined;
 };
+
+type PhotoIdentifyFailure = Extract<
+	AiOperationError,
+	| { _tag: "ExtractionFailed" }
+	| { _tag: "InvalidSource" }
+	| { _tag: "InvalidModelOutput" }
+	| { _tag: "NoUsableImages" }
+	| { _tag: "ProviderUnavailable" }
+>;
 
 export interface PhotoIdentifyToolDeps {
-	// Reads the staged R2 object by key. Returns undefined when the object is
-	// missing/expired (lifecycle cleanup) so the tool can tell the model the
-	// photo is no longer available instead of throwing the turn out.
-	loadImage: (imageKey: string) => Promise<InboundImage | undefined>;
-	// Runs the vision model on the image with the given prompt and returns its
-	// raw text. Injected by the app (Workers AI binding); see lib/vision.ts.
-	runVision: (image: InboundImage, prompt: string) => Promise<string>;
+	loadImage: (
+		imageKey: string,
+	) => Promise<BetterResult<InboundImage, PhotoIdentifyFailure>>;
+	runVision: (
+		image: InboundImage,
+		prompt: string,
+	) => Promise<BetterResult<string, PhotoIdentifyFailure>>;
 }
+
+export const photoIdentifyToolOutputSchema = v.variant("status", [
+	v.strictObject({
+		status: v.literal("identified"),
+		imageKey: v.string(),
+		facts: v.string(),
+		queries: v.array(v.string()),
+	}),
+	v.strictObject({
+		status: v.literal("unavailable"),
+		imageKey: v.string(),
+		error: aiOperationErrorSchema,
+	}),
+]);
 
 // Builds the photo-identification tool. The model calls this with the R2
 // `imageKey` carried in the dispatch input, gets back text facts + suggested
@@ -116,31 +133,39 @@ export const buildPhotoIdentifyTool = (deps: PhotoIdentifyToolDeps) =>
 		description:
 			"Identify the product in a customer-sent photo. Call this whenever the dispatch input includes an imageKey (the customer sent a picture instead of text). Pass that imageKey; it returns text facts about the product plus suggested catalog search queries. After calling it, call search_products with the most specific suggested query to show the matching product cards.",
 		input: v.object({
-			imageKey: v.pipe(
-				v.string(),
-				v.minLength(1),
-				v.description(
-					"The messenger-inbound/ R2 object key for the customer's photo, taken from the dispatch input's imageKeys.",
-				),
-			),
+			imageKey: v.pipe(v.string(), v.minLength(1)),
 		}),
+		output: photoIdentifyToolOutputSchema,
 		async run({ input }) {
 			const image = await deps.loadImage(input.imageKey);
-			if (image === undefined) {
+			if (image.status === "error") {
 				return {
+					status: "unavailable" as const,
 					imageKey: input.imageKey,
-					available: false,
-					facts: "The photo is no longer available.",
-					queries: [],
+					error: image.error,
 				};
 			}
-			const text = await deps.runVision(image, PHOTO_IDENTIFY_PROMPT);
-			const result = parsePhotoVision(text);
+			const vision = await deps.runVision(image.value, PHOTO_IDENTIFY_PROMPT);
+			if (vision.status === "error") {
+				return {
+					status: "unavailable" as const,
+					imageKey: input.imageKey,
+					error: vision.error,
+				};
+			}
+			const parsed = parsePhotoVision(vision.value);
+			if (parsed.status === "error") {
+				return {
+					status: "unavailable" as const,
+					imageKey: input.imageKey,
+					error: parsed.error,
+				};
+			}
 			return {
+				status: "identified" as const,
 				imageKey: input.imageKey,
-				available: true,
-				facts: result.facts,
-				queries: result.queries,
+				facts: parsed.value.facts,
+				queries: parsed.value.queries,
 			};
 		},
 	});

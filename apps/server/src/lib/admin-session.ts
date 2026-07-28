@@ -17,7 +17,7 @@ export const requireAdminSession: MiddlewareHandler<ServerHonoEnv> = async (
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, email: session.user.username },
+		user: { id: session.user.id },
 		user_type: "admin",
 	});
 	await next();

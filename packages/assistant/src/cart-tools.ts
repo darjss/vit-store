@@ -1,4 +1,6 @@
 import { defineTool } from "@flue/runtime";
+import { type DeliveryFailure, deliveryFailureSchema } from "@vit/shared";
+import type { Result as BetterResult } from "better-result";
 import * as v from "valibot";
 import {
 	type Cart,
@@ -20,10 +22,9 @@ import {
 export interface CartToolDeps {
 	getCart: () => Promise<Cart>;
 	applyCommand: (command: CartCommand) => Promise<Cart>;
-	// Sends the rendered summary out on the bound channel (mirrors how the
-	// product-search tool sends cards itself), so the model does not have to
-	// re-type the cart contents into a separate reply.
-	sendCartSummary: (cart: Cart) => Promise<unknown>;
+	sendCartSummary: (
+		cart: Cart,
+	) => Promise<BetterResult<unknown, DeliveryFailure>>;
 }
 
 const cartFacts = (cart: Cart) => ({
@@ -38,22 +39,52 @@ const cartFacts = (cart: Cart) => ({
 	})),
 });
 
-const respond = (cart: Cart) => ({
+const cartDeliverySchema = v.variant("status", [
+	v.strictObject({ status: v.literal("delivered") }),
+	v.strictObject({
+		status: v.literal("failed"),
+		error: deliveryFailureSchema,
+	}),
+]);
+
+export const cartToolOutputSchema = v.strictObject({
+	summary: v.string(),
+	itemCount: v.number(),
+	subtotal: v.number(),
+	confirmed: v.boolean(),
+	items: v.array(
+		v.strictObject({
+			productId: v.number(),
+			name: v.string(),
+			price: v.number(),
+			quantity: v.number(),
+		}),
+	),
+	delivery: cartDeliverySchema,
+});
+
+const respond = (
+	cart: Cart,
+	delivery: BetterResult<unknown, DeliveryFailure>,
+) => ({
 	summary: formatCartSummary(cart),
 	...cartFacts(cart),
+	delivery:
+		delivery.status === "ok"
+			? { status: "delivered" as const }
+			: { status: "failed" as const, error: delivery.error },
 });
 
 export const buildCartTools = (deps: CartToolDeps) => {
-	const sendAndReport = async (cart: Cart) => {
-		await deps.sendCartSummary(cart);
-		return respond(cart);
-	};
+	const sendAndReport = async (cart: Cart) =>
+		respond(cart, await deps.sendCartSummary(cart));
 
 	const viewCart = defineTool({
 		name: "view_cart",
 		description:
 			"Show the customer their current shopping cart: every item with quantity, unit price, line total, and the subtotal. Call this whenever the customer asks what is in their cart or to review their order before confirming. Sends the cart summary to the customer directly.",
 		input: v.object({}),
+		output: cartToolOutputSchema,
 		async run() {
 			return sendAndReport(await deps.getCart());
 		},
@@ -67,6 +98,7 @@ export const buildCartTools = (deps: CartToolDeps) => {
 			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			quantity: v.pipe(v.number(), v.integer(), v.minValue(0)),
 		}),
+		output: cartToolOutputSchema,
 		async run({ input }) {
 			const cart = await deps.applyCommand({
 				kind: "set",
@@ -84,6 +116,7 @@ export const buildCartTools = (deps: CartToolDeps) => {
 		input: v.object({
 			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 		}),
+		output: cartToolOutputSchema,
 		async run({ input }) {
 			const cart = await deps.applyCommand({
 				kind: "remove",
@@ -98,6 +131,7 @@ export const buildCartTools = (deps: CartToolDeps) => {
 		description:
 			"Mark the cart as confirmed once the customer has EXPLICITLY agreed to place the order (e.g. they said yes/confirm). This is the checkout gate: only call it on an explicit confirmation, never preemptively. Order creation itself happens in a later step.",
 		input: v.object({}),
+		output: cartToolOutputSchema,
 		async run() {
 			const cart = await deps.applyCommand({ kind: "confirm" });
 			return sendAndReport(cart);

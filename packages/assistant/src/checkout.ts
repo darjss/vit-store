@@ -1,6 +1,8 @@
 import { deliveryFee } from "@vit/shared/constants";
+import { Result } from "better-result";
 import * as v from "valibot";
 import { type Cart, cartItemCount, cartSubtotal, isCartEmpty } from "./cart";
+import type { AssistantCheckoutError } from "./errors";
 
 // Channel-neutral checkout domain for the customer assistant (ADR 0002/0007).
 // A small, pure state machine that turns a CONFIRMED cart (#21) into the inputs
@@ -119,15 +121,22 @@ export const normalizePhone = (raw: string): string => {
 	return digits;
 };
 
-export type PhoneValidation =
-	| { ok: true; phone: string }
-	| { ok: false; error: string };
+const checkoutFailure = <Tag extends AssistantCheckoutError["_tag"]>(
+	error: Extract<AssistantCheckoutError, { _tag: Tag }>,
+) => error;
 
-export const validatePhone = (raw: string): PhoneValidation => {
+type InvalidPhoneFailure = Extract<
+	AssistantCheckoutError,
+	{ _tag: "InvalidPhone" }
+>;
+
+export const validatePhone = (raw: string) => {
 	const phone = normalizePhone(raw);
 	return PHONE_RE.test(phone)
-		? { ok: true, phone }
-		: { ok: false, error: PHONE_INVALID_MESSAGE };
+		? Result.ok<{ phone: string }, InvalidPhoneFailure>({ phone })
+		: Result.err<{ phone: string }, InvalidPhoneFailure>(
+				checkoutFailure({ _tag: "InvalidPhone" }),
+			);
 };
 
 // ── Transitions (pure) ───────────────────────────────────────────────────────
@@ -138,50 +147,32 @@ export const validatePhone = (raw: string): PhoneValidation => {
 export const CHECKOUT_NEEDS_CONFIRMED_CART_MESSAGE =
 	"Захиалга эхлүүлэхийн өмнө сагсаа баталгаажуулна уу.";
 
-export const canBeginCheckout = (
-	cart: Cart,
-): { ok: true } | { ok: false; error: string } => {
-	if (isCartEmpty(cart) || !cart.confirmed) {
-		return { ok: false, error: CHECKOUT_NEEDS_CONFIRMED_CART_MESSAGE };
-	}
-	return { ok: true };
-};
+export const canBeginCheckout = (cart: Cart) =>
+	isCartEmpty(cart) || !cart.confirmed
+		? Result.err(checkoutFailure({ _tag: "CartNotConfirmed" }))
+		: Result.ok(undefined);
 
 // Records a validated phone and advances to address collection. Returns the
 // validation error untouched when the phone is invalid (caller re-prompts).
-export const applyPhone = (
-	state: CheckoutState,
-	raw: string,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
-	const result = validatePhone(raw);
-	if (!result.ok) return result;
-	return {
-		ok: true,
-		state: {
-			...state,
-			phone: result.phone,
-			phase: "collecting_address",
-		},
-	};
-};
+export const applyPhone = (state: CheckoutState, raw: string) =>
+	validatePhone(raw).map(({ phone }) => ({
+		...state,
+		phone,
+		phase: "collecting_address" as const,
+	}));
 
 // Records the natural-language address and advances to zone confirmation. The
 // candidates are attached separately (the channel resolves them over HTTP).
-export const applyAddress = (
-	state: CheckoutState,
-	text: string,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
+export const applyAddress = (state: CheckoutState, text: string) => {
 	const address = text.trim();
-	if (address.length === 0) {
-		return {
-			ok: false,
-			error: "Хүргэлтийн хаягаа бичнэ үү (дүүрэг, хороо, байр/тоот).",
-		};
-	}
-	return {
-		ok: true,
-		state: { ...state, address, phase: "confirming_zone", candidates: [] },
-	};
+	return address.length === 0
+		? Result.err(checkoutFailure({ _tag: "AddressRequired" }))
+		: Result.ok({
+				...state,
+				address,
+				phase: "confirming_zone" as const,
+				candidates: [],
+			});
 };
 
 export const setZoneCandidates = (
@@ -195,21 +186,16 @@ export const ZONE_NOT_A_CANDIDATE_MESSAGE =
 // Confirms one of the surfaced candidates (ADR 0005: the customer picks; the
 // bot never silently auto-selects). Rejects a zoneId that was not offered so a
 // model hallucinating a zone id cannot leak into the order.
-export const applyZoneSelection = (
-	state: CheckoutState,
-	zoneId: number,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
-	const candidate = state.candidates.find((c) => c.zoneId === zoneId);
-	if (!candidate) return { ok: false, error: ZONE_NOT_A_CANDIDATE_MESSAGE };
-	return {
-		ok: true,
-		state: {
-			...state,
-			selectedZoneId: candidate.zoneId,
-			selectedZoneName: candidate.zoneName,
-			phase: "collecting_notes",
-		},
-	};
+export const applyZoneSelection = (state: CheckoutState, zoneId: number) => {
+	const candidate = state.candidates.find((item) => item.zoneId === zoneId);
+	return candidate
+		? Result.ok({
+				...state,
+				selectedZoneId: candidate.zoneId,
+				selectedZoneName: candidate.zoneName,
+				phase: "collecting_notes" as const,
+			})
+		: Result.err(checkoutFailure({ _tag: "DeliveryZoneNotSelected" }));
 };
 
 // Records optional notes (empty/skip → no notes) and advances to the final
@@ -278,26 +264,29 @@ export const isReadyToCreate = (state: CheckoutState): boolean =>
 	state.selectedZoneId !== undefined;
 
 // Builds the exact `order.addOrder` input from the checkout state and the
-// CONFIRMED cart snapshot. Line quantities come straight from the cart; prices
-// are NOT sent — the API recomputes the authoritative total from its own
-// catalog and adds the delivery fee. Throws if called before `isReadyToCreate`.
-export const buildCheckoutOrderPayload = (
-	state: CheckoutState,
-	cart: Cart,
-): CheckoutOrderPayload => {
-	if (!isReadyToCreate(state)) {
-		throw new Error("checkout is not ready: missing phone, address, or zone");
+// CONFIRMED cart snapshot. Missing customer input is an expected typed failure;
+// persisted impossible shapes and other defects still throw at their boundary.
+export const buildCheckoutOrderPayload = (state: CheckoutState, cart: Cart) => {
+	if (state.phone === undefined) {
+		return Result.err(checkoutFailure({ _tag: "InvalidPhone" }));
 	}
-	return {
-		phoneNumber: state.phone as string,
-		address: state.address as string,
-		addressZoneId: state.selectedZoneId as number,
+	if (state.address === undefined || state.address.length === 0) {
+		return Result.err(checkoutFailure({ _tag: "AddressRequired" }));
+	}
+	if (state.selectedZoneId === undefined) {
+		return Result.err(checkoutFailure({ _tag: "DeliveryZoneNotSelected" }));
+	}
+	const payload: CheckoutOrderPayload = {
+		phoneNumber: state.phone,
+		address: state.address,
+		addressZoneId: state.selectedZoneId,
 		...(state.notes ? { notes: state.notes } : {}),
 		products: cart.items.map((item) => ({
 			productId: item.productId,
 			quantity: item.quantity,
 		})),
 	};
+	return Result.ok(payload);
 };
 
 // ── Formatting (Mongolian, channel-neutral text) ─────────────────────────────

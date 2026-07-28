@@ -3,10 +3,30 @@ import type {
 	MessengerConversationRef,
 	MessengerMessagingEvent,
 } from "@flue/messenger";
+import {
+	type DeliveryFailure,
+	duplicateInboundDelivery,
+	invalidDelivery,
+	retryableDeliveryFailure,
+} from "@vit/shared";
+import { Result, type Result as BetterResult } from "better-result";
+import * as v from "valibot";
 
 type AdmissionEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
 };
+
+export type MessengerAdmissionFailure = Extract<
+	DeliveryFailure,
+	| { _tag: "DuplicateInboundDelivery" }
+	| { _tag: "InvalidDelivery" }
+	| { _tag: "RetryableDeliveryFailure" }
+>;
+
+export type MessengerAdmissionReleaseFailure = Extract<
+	DeliveryFailure,
+	{ _tag: "InvalidDelivery" } | { _tag: "RetryableDeliveryFailure" }
+>;
 
 export type MessengerTextAdmission = {
 	conversation: MessengerConversationRef;
@@ -15,12 +35,15 @@ export type MessengerTextAdmission = {
 	text: string;
 	attachmentTypes: string[];
 	quickReplyPayload?: string;
-	/** Drop the dedupe claim so a failed turn can be re-delivered. */
-	release(): Promise<void>;
+	/** Drop the dedupe claim so a failed turn can be delivered again. */
+	release(): Promise<BetterResult<void, MessengerAdmissionReleaseFailure>>;
 };
 
-// Bounded fast-path in front of the durable store: an optimization that skips a
-// DO round-trip for mids this isolate already saw, never a fallback for it.
+const claimResponseSchema = v.strictObject({ admitted: v.boolean() });
+const releaseResponseSchema = v.strictObject({ released: v.literal(true) });
+
+// Bounded fast path in front of the durable store. This skips a DO call for a
+// message ID that this isolate has seen. It is not a durable fallback.
 const IN_PROCESS_LIMIT = 1024;
 const admittedInProcess = new Map<string, true>();
 
@@ -28,27 +51,38 @@ export async function admitMessengerTextMessage(input: {
 	channel: MessengerChannel;
 	event: MessengerMessagingEvent;
 	env?: AdmissionEnv;
-}): Promise<MessengerTextAdmission | undefined> {
+}) {
 	const { channel, event, env } = input;
-	if (event.message === undefined || event.message.is_echo) return undefined;
+	if (event.message === undefined || event.message.is_echo) {
+		return Result.ok<
+			MessengerTextAdmission | undefined,
+			MessengerAdmissionFailure
+		>(undefined);
+	}
+
+	const text = event.message.text?.trim();
+	if (text === undefined || text.length === 0) {
+		return Result.ok<
+			MessengerTextAdmission | undefined,
+			MessengerAdmissionFailure
+		>(undefined);
+	}
 
 	const conversation = channel.conversationRef(event);
 	const messageId = event.message.mid;
-	const text = event.message.text?.trim();
-	if (
-		conversation === undefined ||
-		messageId.length === 0 ||
-		text === undefined ||
-		text.length === 0
-	) {
-		return undefined;
+	if (conversation === undefined || messageId.length === 0) {
+		return Result.err<
+			MessengerTextAdmission | undefined,
+			MessengerAdmissionFailure
+		>(invalidDelivery("messenger", "invalid_payload"));
 	}
 
 	const sessionId = channel.conversationKey(conversation);
 	const dedupeKey = `messenger:inbound:v1:${sessionId}:mid:${messageId}`;
-	if (!(await claimOnce(dedupeKey, env))) return undefined;
+	const claimed = await claimOnce(dedupeKey, env);
+	if (claimed.status === "error") return claimed;
 
-	return {
+	return Result.ok<MessengerTextAdmission, MessengerAdmissionFailure>({
 		conversation,
 		sessionId,
 		messageId,
@@ -58,11 +92,11 @@ export async function admitMessengerTextMessage(input: {
 		),
 		quickReplyPayload: event.message.quick_reply?.payload,
 		release: () => releaseClaim(dedupeKey, env),
-	};
+	});
 }
 
 export type MessengerInboundImage = {
-	/** Meta CDN attachment URL — fetched server-side, never dispatched. */
+	/** Meta CDN attachment URL. This value is fetched but never dispatched. */
 	url: string;
 	index: number;
 };
@@ -71,15 +105,13 @@ export type MessengerImageAdmission = {
 	conversation: MessengerConversationRef;
 	sessionId: string;
 	messageId: string;
-	/** Optional caption text the customer sent alongside the photo(s). */
+	/** Optional caption text the customer sent with the images. */
 	caption: string;
 	images: MessengerInboundImage[];
-	/** Drop the dedupe claim so a failed turn can be re-delivered. */
-	release(): Promise<void>;
+	/** Drop the dedupe claim so a failed turn can be delivered again. */
+	release(): Promise<BetterResult<void, MessengerAdmissionReleaseFailure>>;
 };
 
-// Pull image attachments (with a usable Meta CDN url) out of a message event.
-// Exported so the webhook can branch to the photo path before admission.
 export function extractInboundImages(
 	event: MessengerMessagingEvent,
 ): MessengerInboundImage[] {
@@ -95,103 +127,153 @@ export function extractInboundImages(
 	return images;
 }
 
-// Admits an inbound image turn and claims its mid for dedupe, mirroring
-// `admitMessengerTextMessage` for the text path. Returns undefined when the
-// event is not a fresh image message (echo, no usable image, already claimed),
-// so the caller can fall through to the text path. The dedupe key shares the
-// text namespace (one claim per mid), so a Meta retry of the same photo mid is
-// applied at most once.
 export async function admitMessengerImageMessage(input: {
 	channel: MessengerChannel;
 	event: MessengerMessagingEvent;
 	env?: AdmissionEnv;
-	/** Pre-extracted images from the webhook, to avoid re-scanning attachments. */
+	/** Pre-extracted images from the webhook. */
 	images?: MessengerInboundImage[];
-}): Promise<MessengerImageAdmission | undefined> {
+}) {
 	const { channel, event, env } = input;
-	if (event.message === undefined || event.message.is_echo) return undefined;
+	if (event.message === undefined || event.message.is_echo) {
+		return Result.ok<
+			MessengerImageAdmission | undefined,
+			MessengerAdmissionFailure
+		>(undefined);
+	}
 
 	const images = input.images ?? extractInboundImages(event);
-	if (images.length === 0) return undefined;
+	if (images.length === 0) {
+		return Result.ok<
+			MessengerImageAdmission | undefined,
+			MessengerAdmissionFailure
+		>(undefined);
+	}
 
 	const conversation = channel.conversationRef(event);
 	const messageId = event.message.mid;
-	if (conversation === undefined || messageId.length === 0) return undefined;
+	if (conversation === undefined || messageId.length === 0) {
+		return Result.err<
+			MessengerImageAdmission | undefined,
+			MessengerAdmissionFailure
+		>(invalidDelivery("messenger", "invalid_payload"));
+	}
 
 	const sessionId = channel.conversationKey(conversation);
 	const dedupeKey = `messenger:inbound:v1:${sessionId}:mid:${messageId}`;
-	if (!(await claimOnce(dedupeKey, env))) return undefined;
+	const claimed = await claimOnce(dedupeKey, env);
+	if (claimed.status === "error") return claimed;
 
-	return {
+	return Result.ok<MessengerImageAdmission, MessengerAdmissionFailure>({
 		conversation,
 		sessionId,
 		messageId,
 		caption: event.message.text?.trim() ?? "",
 		images,
 		release: () => releaseClaim(dedupeKey, env),
-	};
+	});
 }
 
-// Generic single-claim primitive shared by the text path and the cart-event
-// path (postback/quick-reply). Returns true exactly once per key within the
-// dedupe window so a Meta webhook retry of the same mid is not applied twice
-// (e.g. a duplicate Захиалах add). Callers namespace their own keys.
-export async function claimInboundOnce(
-	key: string,
-	env?: AdmissionEnv,
-): Promise<boolean> {
+export async function claimInboundOnce(key: string, env?: AdmissionEnv) {
 	return claimOnce(key, env);
 }
 
-export async function releaseInboundClaim(
-	key: string,
-	env?: AdmissionEnv,
-): Promise<void> {
+export async function releaseInboundClaim(key: string, env?: AdmissionEnv) {
 	return releaseClaim(key, env);
 }
 
-async function claimOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
+async function claimOnce(
+	key: string,
+	env?: AdmissionEnv,
+): Promise<BetterResult<void, MessengerAdmissionFailure>> {
 	const store = env?.MESSENGER_ADMISSION_STORE;
-	// In the production webhook path `env` is always present; a missing binding
-	// there would silently degrade dedupe to per-isolate, so fail loudly instead.
 	if (env !== undefined && store === undefined) {
 		throw new Error(
 			"MESSENGER_ADMISSION_STORE binding is required for Messenger admission.",
 		);
 	}
 
-	if (admittedInProcess.has(key)) return false;
-
-	// No durable store wired (mock/tests): in-process dedupe is the whole story.
-	if (store === undefined) {
-		rememberInProcess(key);
-		return true;
+	if (key.length === 0) {
+		return Result.err(invalidDelivery("messenger", "invalid_payload"));
+	}
+	if (admittedInProcess.has(key)) {
+		return Result.err(duplicateInboundDelivery());
 	}
 
-	const id = store.idFromName(key);
-	const response = await store
-		.get(id)
-		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
-			method: "POST",
-		});
-	const result = (await response.json()) as { admitted?: boolean };
+	if (store === undefined) {
+		rememberInProcess(key);
+		return Result.ok(undefined);
+	}
+
+	let response: Response;
+	try {
+		const id = store.idFromName(key);
+		response = await store
+			.get(id)
+			.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
+				method: "POST",
+			});
+	} catch {
+		return Result.err(
+			retryableDeliveryFailure("messenger", "provider_unavailable"),
+		);
+	}
+
+	if (!response.ok) {
+		return response.status >= 500
+			? Result.err(
+					retryableDeliveryFailure("messenger", "provider_unavailable"),
+				)
+			: Result.err(invalidDelivery("messenger", "malformed_response"));
+	}
+
+	const parsed = v.parse(claimResponseSchema, await response.json());
+	if (!parsed.admitted) return Result.err(duplicateInboundDelivery());
+
 	rememberInProcess(key);
-	return result.admitted === true;
+	return Result.ok(undefined);
 }
 
-async function releaseClaim(key: string, env?: AdmissionEnv): Promise<void> {
+async function releaseClaim(
+	key: string,
+	env?: AdmissionEnv,
+): Promise<BetterResult<void, MessengerAdmissionReleaseFailure>> {
 	admittedInProcess.delete(key);
 	const store = env?.MESSENGER_ADMISSION_STORE;
-	if (store === undefined) return;
-	const id = store.idFromName(key);
-	await store
-		.get(id)
-		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
-			method: "DELETE",
-		});
+	if (env !== undefined && store === undefined) {
+		throw new Error(
+			"MESSENGER_ADMISSION_STORE binding is required for Messenger admission.",
+		);
+	}
+	if (store === undefined) return Result.ok(undefined);
+
+	let response: Response;
+	try {
+		const id = store.idFromName(key);
+		response = await store
+			.get(id)
+			.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
+				method: "DELETE",
+			});
+	} catch {
+		return Result.err(
+			retryableDeliveryFailure("messenger", "provider_unavailable"),
+		);
+	}
+
+	if (!response.ok) {
+		return response.status >= 500
+			? Result.err(
+					retryableDeliveryFailure("messenger", "provider_unavailable"),
+				)
+			: Result.err(invalidDelivery("messenger", "malformed_response"));
+	}
+
+	v.parse(releaseResponseSchema, await response.json());
+	return Result.ok(undefined);
 }
 
-function rememberInProcess(key: string): void {
+function rememberInProcess(key: string) {
 	admittedInProcess.set(key, true);
 	if (admittedInProcess.size > IN_PROCESS_LIMIT) {
 		const oldest = admittedInProcess.keys().next().value;

@@ -1,3 +1,7 @@
+import type { DeliveryFailure } from "@vit/shared";
+import type { Result as BetterResult } from "better-result";
+import { Result } from "better-result";
+import { match } from "dismatch";
 import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
 import type { RequestLogger } from "evlog";
 import { createLogger } from "evlog";
@@ -130,7 +134,7 @@ async function recoverExpiredClaims() {
 			leaseExpiresAt: null,
 			terminalAt: now,
 			contact: null,
-			lastError: "SMS lease expired after an ambiguous provider call",
+			lastError: "provider_ambiguous",
 		})
 		.where(
 			and(
@@ -149,7 +153,7 @@ async function recoverExpiredClaims() {
 			claimToken: null,
 			leaseExpiresAt: null,
 			nextAttemptAt: now,
-			lastError: "Email lease expired before completion",
+			lastError: "provider_timeout",
 		})
 		.where(
 			and(
@@ -167,30 +171,39 @@ async function recoverExpiredClaims() {
 	};
 }
 
-async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
-	return new Promise<T>((resolve, reject) => {
-		let settled = false;
-		const timeout = setTimeout(() => {
-			if (settled) return;
-			settled = true;
-			reject(new Error("Restock provider timed out"));
-		}, PROVIDER_TIMEOUT_MS);
-
-		operation.then(
-			(value) => {
-				if (settled) return;
-				settled = true;
-				clearTimeout(timeout);
-				resolve(value);
-			},
-			(error) => {
-				if (settled) return;
-				settled = true;
-				clearTimeout(timeout);
-				reject(error);
-			},
+async function withProviderTimeout<T>(
+	operation: Promise<BetterResult<T, DeliveryFailure>>,
+	channel: "sms" | "email",
+) {
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	const timedOut = new Promise<BetterResult<T, DeliveryFailure>>((resolve) => {
+		timeout = setTimeout(
+			() =>
+				resolve(
+					Result.err(
+						channel === "sms"
+							? {
+									_tag: "AmbiguousDelivery",
+									provider: "sms",
+									code: "timeout",
+									retryable: false,
+								}
+							: {
+									_tag: "RetryableDeliveryFailure",
+									provider: "email",
+									code: "timeout",
+									retryable: true,
+								},
+					),
+				),
+			PROVIDER_TIMEOUT_MS,
 		);
 	});
+	try {
+		return await Promise.race([operation, timedOut]);
+	} finally {
+		if (timeout !== undefined) clearTimeout(timeout);
+	}
 }
 
 type DeliveryCandidate = {
@@ -205,50 +218,78 @@ async function deliverCandidate(
 	log: RequestLogger<Record<string, unknown>>,
 ) {
 	const claimed = await claimSubscription(candidate.id);
-	if (!claimed || !claimed.contact)
+	if (!claimed || !claimed.contact) {
 		return { claimed: 0, notified: 0, failed: 0 };
-	try {
-		await withProviderTimeout(
-			sendRestockNotification({
-				channel: claimed.channel,
-				contact: claimed.contact,
-				productName: candidate.productName,
-				productSlug: candidate.productSlug,
-				productId: candidate.productId,
-				deliveryKey: claimed.deliveryKey,
-			}),
-		);
+	}
+
+	const delivery = await withProviderTimeout(
+		sendRestockNotification({
+			channel: claimed.channel,
+			contact: claimed.contact,
+			productName: candidate.productName,
+			productSlug: candidate.productSlug,
+			productId: candidate.productId,
+			deliveryKey: claimed.deliveryKey,
+		}),
+		claimed.channel,
+	);
+	if (delivery.status === "ok") {
 		await finishClaim({
 			id: claimed.id,
 			claimToken: claimed.claimToken,
 			state: "sent",
 		});
 		return { claimed: 1, notified: 1, failed: 0 };
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		if (claimed.channel === "sms") {
-			await finishClaim({
-				id: claimed.id,
-				claimToken: claimed.claimToken,
-				state: "unknown",
-				error: message,
-			});
-		} else {
-			await retryClaim({
+	}
+
+	await match(
+		delivery.error,
+		"_tag",
+	)<Promise<void>>({
+		RetryableDeliveryFailure: ({ code }) =>
+			retryClaim({
 				id: claimed.id,
 				claimToken: claimed.claimToken,
 				attemptCount: claimed.attemptCount,
-				error: message,
-			});
-		}
-		log.error(error instanceof Error ? error : new Error(message), {
-			event: "restock.notify_failed",
-			product_id: candidate.productId,
-			subscription_id: claimed.id,
-			channel: claimed.channel,
-		});
-		return { claimed: 1, notified: 0, failed: 1 };
-	}
+				error: code,
+			}),
+		AmbiguousDelivery: ({ code }) =>
+			finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "unknown",
+				error: code,
+			}),
+		PermanentDeliveryFailure: ({ code }) =>
+			finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "failed",
+				error: code,
+			}),
+		DuplicateInboundDelivery: () =>
+			finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "sent",
+			}),
+		InvalidDelivery: ({ code }) =>
+			finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "failed",
+				error: code,
+			}),
+	});
+	log.warn("restock.notify_failed", {
+		product_id: candidate.productId,
+		subscription_id: claimed.id,
+		channel: claimed.channel,
+		error_tag: delivery.error._tag,
+		provider: delivery.error.provider,
+		code: delivery.error.code,
+	});
+	return { claimed: 1, notified: 0, failed: 1 };
 }
 
 export async function runRestockDeliveryBatch(productId?: number) {

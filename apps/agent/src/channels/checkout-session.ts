@@ -1,4 +1,5 @@
-import type { CheckoutState } from "@vit/assistant";
+import { type CheckoutState, checkoutStateSchema } from "@vit/assistant";
+import * as v from "valibot";
 
 // Thin client over the per-session CheckoutStore Durable Object, keyed by the
 // assistant session id — the same keying the CartStore uses — so the in-progress
@@ -16,12 +17,12 @@ type CheckoutStoreNamespace = {
 
 const DO_URL = "https://checkout-store/checkout";
 
-const readCheckout = async (
-	response: Response,
-): Promise<CheckoutState | undefined> => {
-	const body = (await response.json()) as { checkout?: CheckoutState | null };
-	return body.checkout ?? undefined;
-};
+const checkoutResponseSchema = v.strictObject({
+	checkout: v.nullable(checkoutStateSchema),
+});
+
+const readCheckout = async (response: Response) =>
+	v.parse(checkoutResponseSchema, await response.json()).checkout ?? undefined;
 
 // Builds a checkout session bound to a Durable Object instance for `sessionId`.
 // Returns `undefined` when the binding is absent (e.g. a mock/test env with no

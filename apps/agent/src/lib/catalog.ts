@@ -1,9 +1,12 @@
+import { TRPCClientError } from "@trpc/client";
 import {
+	type AiOperationError,
 	type AssistantAdviceProduct,
 	assistantAdviceProductSchema,
 	type AssistantProduct,
 	assistantProductSchema,
 } from "@vit/assistant";
+import { Result } from "better-result";
 import * as v from "valibot";
 import { storeClient, withTimeout } from "./store-client";
 
@@ -16,19 +19,41 @@ import { storeClient, withTimeout } from "./store-client";
 const assistantProductsSchema = v.array(assistantProductSchema);
 const assistantAdviceProductsSchema = v.array(assistantAdviceProductSchema);
 
+type CatalogFailure = Extract<
+	AiOperationError,
+	{ _tag: "ProviderUnavailable" }
+>;
+
+const catalogOperation = async <Value>(operation: () => Promise<Value>) => {
+	try {
+		return Result.ok<Value, CatalogFailure>(await operation());
+	} catch (error) {
+		if (
+			error instanceof TRPCClientError ||
+			error instanceof TypeError ||
+			(error instanceof DOMException && error.name === "TimeoutError")
+		) {
+			return Result.err<Value, CatalogFailure>({
+				_tag: "ProviderUnavailable",
+				retryable: true,
+			});
+		}
+		throw error;
+	}
+};
+
 export const searchAssistantProducts = async (
 	query: string,
 	limit: number,
 	signal?: AbortSignal,
-): Promise<AssistantProduct[]> => {
-	const data = await storeClient().product.searchProductsForAssistant.query(
-		{ query, limit },
-		{ signal: withTimeout(signal) },
-	);
-	// Defense-in-depth: the typed client gives compile-time safety, but the
-	// valibot guard still fails loudly on RUNTIME api-side shape drift.
-	return v.parse(assistantProductsSchema, data);
-};
+) =>
+	catalogOperation(async () => {
+		const data = await storeClient().product.searchProductsForAssistant.query(
+			{ query, limit },
+			{ signal: withTimeout(signal) },
+		);
+		return v.parse(assistantProductsSchema, data);
+	});
 
 // Resolves products by id using the existing storefront projection
 // (`getProductsByIdsForAssistant`, #19) so the cart never duplicates catalog
@@ -38,13 +63,17 @@ export const searchAssistantProducts = async (
 export const getAssistantProductsByIds = async (
 	ids: number[],
 	signal?: AbortSignal,
-): Promise<AssistantProduct[]> => {
-	if (ids.length === 0) return [];
-	const data = await storeClient().product.getProductsByIdsForAssistant.query(
-		{ ids },
-		{ signal: withTimeout(signal) },
-	);
-	return v.parse(assistantProductsSchema, data);
+) => {
+	if (ids.length === 0) {
+		return Result.ok<AssistantProduct[], CatalogFailure>([]);
+	}
+	return catalogOperation(async () => {
+		const data = await storeClient().product.getProductsByIdsForAssistant.query(
+			{ ids },
+			{ signal: withTimeout(signal) },
+		);
+		return v.parse(assistantProductsSchema, data);
+	});
 };
 
 // Resolves the label-data projection for the customer assistant's advice tool
@@ -54,11 +83,15 @@ export const getAssistantProductsByIds = async (
 export const getAdviceProductsByIds = async (
 	ids: number[],
 	signal?: AbortSignal,
-): Promise<AssistantAdviceProduct[]> => {
-	if (ids.length === 0) return [];
-	const data = await storeClient().product.getProductsByIdsForAdvice.query(
-		{ ids },
-		{ signal: withTimeout(signal) },
-	);
-	return v.parse(assistantAdviceProductsSchema, data);
+) => {
+	if (ids.length === 0) {
+		return Result.ok<AssistantAdviceProduct[], CatalogFailure>([]);
+	}
+	return catalogOperation(async () => {
+		const data = await storeClient().product.getProductsByIdsForAdvice.query(
+			{ ids },
+			{ signal: withTimeout(signal) },
+		);
+		return v.parse(assistantAdviceProductsSchema, data);
+	});
 };

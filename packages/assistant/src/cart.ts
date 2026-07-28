@@ -1,3 +1,4 @@
+import { match } from "dismatch";
 import * as v from "valibot";
 import { assistantStockStatusSchema } from "./products";
 
@@ -233,24 +234,19 @@ export const parseCartPayload = (payload: string): CartCommand | undefined => {
 
 // Applies a parsed cart command to a cart. Pure: persistence is the caller's
 // job. `view` returns the cart unchanged (read-only summary refresh).
-export const applyCartCommand = (cart: Cart, command: CartCommand): Cart => {
-	switch (command.kind) {
-		case "view":
-			return cart;
-		case "confirm":
-			return confirmCart(cart);
-		case "clear":
-			return clearCart(cart);
-		case "inc":
-			return adjustQuantity(cart, command.productId, 1);
-		case "dec":
-			return adjustQuantity(cart, command.productId, -1);
-		case "set":
-			return setQuantity(cart, command.productId, command.quantity);
-		case "remove":
-			return removeFromCart(cart, command.productId);
-	}
-};
+export const applyCartCommand = (cart: Cart, command: CartCommand): Cart =>
+	match(
+		command,
+		"kind",
+	)<Cart>({
+		view: () => cart,
+		confirm: () => confirmCart(cart),
+		clear: () => clearCart(cart),
+		inc: ({ productId }) => adjustQuantity(cart, productId, 1),
+		dec: ({ productId }) => adjustQuantity(cart, productId, -1),
+		set: ({ productId, quantity }) => setQuantity(cart, productId, quantity),
+		remove: ({ productId }) => removeFromCart(cart, productId),
+	});
 
 // Channel-neutral quick-reply descriptor. The Messenger channel maps each onto
 // a `quick_replies` entry (content_type 'text'); a web widget could render the

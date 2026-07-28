@@ -1,5 +1,8 @@
 import { defineTool } from "@flue/runtime";
+import { type DeliveryFailure, deliveryFailureSchema } from "@vit/shared";
+import type { Result as BetterResult } from "better-result";
 import * as v from "valibot";
+import { type AiOperationError, aiOperationErrorSchema } from "./errors";
 
 // Channel-neutral product-advice domain (#22, ADR 0002/0007). The customer
 // assistant answers real Messenger advice flows — "энэ юунд сайн бэ" (what is
@@ -48,18 +51,57 @@ export const PRODUCT_ADVICE_TOOL_NAME = "get_product_advice";
 export const ADVICE_ERROR_MESSAGE =
 	"Уучлаарай, яг одоо барааны дэлгэрэнгүй мэдээлэл авахад түр алдаа гарлаа. Хэсэг хүлээгээд дахин оролдоно уу.";
 
+type ProductAdviceFailure = Extract<
+	AiOperationError,
+	{ _tag: "ProviderUnavailable" }
+>;
+
 export interface ProductAdviceToolDeps {
-	// Resolves the label-data projection for the given ids using the existing
-	// storefront catalog (do not duplicate catalog logic). Returns only the ids
-	// that still resolve, in request order. The optional signal carries the tool
-	// turn's cancellation/timeout deadline through to the underlying fetch.
 	getAdviceProducts: (
 		ids: number[],
 		signal?: AbortSignal,
-	) => Promise<AssistantAdviceProduct[]>;
-	// Sends a plain text reply (used only for the transport-error path).
-	sendText: (text: string) => Promise<unknown>;
+	) => Promise<BetterResult<AssistantAdviceProduct[], ProductAdviceFailure>>;
+	sendText: (text: string) => Promise<BetterResult<unknown, DeliveryFailure>>;
 }
+
+const adviceDeliverySchema = v.variant("status", [
+	v.strictObject({ status: v.literal("delivered") }),
+	v.strictObject({
+		status: v.literal("failed"),
+		error: deliveryFailureSchema,
+	}),
+]);
+
+const adviceProductOutputSchema = v.strictObject({
+	id: v.number(),
+	name: v.string(),
+	brand: v.string(),
+	category: v.string(),
+	description: v.string(),
+	ingredients: v.array(v.string()),
+	amount: v.string(),
+	potency: v.string(),
+	dailyIntake: v.number(),
+	price: v.number(),
+	hasDescription: v.boolean(),
+	hasIngredients: v.boolean(),
+});
+
+export const productAdviceToolOutputSchema = v.variant("status", [
+	v.strictObject({
+		status: v.literal("available"),
+		requestedIds: v.array(v.number()),
+		matchCount: v.number(),
+		missingIds: v.array(v.number()),
+		products: v.array(adviceProductOutputSchema),
+	}),
+	v.strictObject({
+		status: v.literal("unavailable"),
+		requestedIds: v.array(v.number()),
+		error: aiOperationErrorSchema,
+		delivery: adviceDeliverySchema,
+	}),
+]);
 
 // Builds the conversation-bound product-advice tool. The model first finds the
 // product(s) with search_products (which returns ids), then calls this with
@@ -79,35 +121,32 @@ export const buildProductAdviceTool = (deps: ProductAdviceToolDeps) =>
 				v.array(v.pipe(v.number(), v.integer(), v.minValue(1))),
 				v.minLength(1),
 				v.maxLength(5),
-				v.description(
-					"The catalog ids of the product(s) to fetch label data for, taken from a prior search_products result. Pass two or more to compare them.",
-				),
 			),
 		}),
+		output: productAdviceToolOutputSchema,
 		async run({ input, signal }) {
-			let products: AssistantAdviceProduct[];
-			try {
-				products = await deps.getAdviceProducts(input.productIds, signal);
-			} catch {
-				await deps.sendText(ADVICE_ERROR_MESSAGE);
+			const result = await deps.getAdviceProducts(input.productIds, signal);
+			if (result.status === "error") {
+				const delivery = await deps.sendText(ADVICE_ERROR_MESSAGE);
 				return {
+					status: "unavailable" as const,
 					requestedIds: input.productIds,
-					matchCount: 0,
-					missingIds: input.productIds,
-					sent: "advice_error_text",
-					products: [],
+					error: result.error,
+					delivery:
+						delivery.status === "ok"
+							? { status: "delivered" as const }
+							: { status: "failed" as const, error: delivery.error },
 				};
 			}
 
+			const products = result.value;
 			return {
+				status: "available" as const,
 				requestedIds: input.productIds,
 				matchCount: products.length,
-				// Ids requested that no longer resolve (out of stock / removed); the
-				// model should not claim to know about these.
 				missingIds: input.productIds.filter(
 					(id) => !products.some((product) => product.id === id),
 				),
-				sent: "advice_facts",
 				products: products.map((product) => ({
 					id: product.id,
 					name: product.name,

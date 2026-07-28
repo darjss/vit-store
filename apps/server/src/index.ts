@@ -5,6 +5,8 @@ import {
 	finalizeCatalogCacheHeaders,
 	storeRouter,
 } from "@vit/api";
+import { projectPanicForLog } from "@vit/shared";
+import { Result } from "better-result";
 import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -13,7 +15,7 @@ import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
-import { logTrpcError, operatorTrpcError } from "./lib/trpc-error-log";
+import { logTrpcError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -29,38 +31,55 @@ const DEFAULT_CORS_ORIGINS = [
 	"https://admin.vitstore.dev",
 ];
 
-function scheduledJobFailure(
-	job: string,
-	result: PromiseSettledResult<unknown>,
-) {
-	if (result.status === "fulfilled") return;
-	const error =
-		result.reason instanceof Error
-			? result.reason
-			: Object.assign(new Error(), { name: "NonErrorRejection" });
-	const projected = operatorTrpcError(error) as Error & {
-		code?: string | number;
-		cause?: unknown;
-	};
-	return {
-		job,
-		error: {
-			name: projected.name,
-			code: projected.code,
-			stack: projected.stack,
-			cause: projected.cause,
-		},
-	};
-}
+type ScheduledJobFailure = {
+	_tag: "ScheduledJobFailed";
+	job: "restock_notifier" | "payment_notification_outbox";
+};
 
-const app = new Hono<ServerHonoEnv>();
+const runScheduledJob = async (
+	job: ScheduledJobFailure["job"],
+	operation: Promise<unknown>,
+) => {
+	try {
+		await operation;
+		return Result.ok<void, ScheduledJobFailure>(undefined);
+	} catch {
+		return Result.err<void, ScheduledJobFailure>({
+			_tag: "ScheduledJobFailed",
+			job,
+		});
+	}
+};
+
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 
 app.use(evlogMiddleware());
+
+app.onError((_error, c) => {
+	const correlationId = c.req.header("x-request-id") ?? crypto.randomUUID();
+	c.get("log").error(new Error("Unhandled request defect."), {
+		event: "http.unhandled_error",
+		...projectPanicForLog(correlationId, {
+			operation: "http.request",
+			error_layer: "router",
+		}),
+	});
+	return c.json(
+		{
+			error: {
+				code: "internal_error",
+				message: "Internal server error",
+				correlationId,
+			},
+		},
+		500,
+	);
+});
 
 app.use("/*", (c, next) => {
 	const rateLimitMiddleware = rateLimit({
 		rateLimiter: () => c.env.RATE_LIMITER,
-		getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
+		getRateLimitKey: (c) => c.req.header("cf-connecting-ip"),
 	});
 	return rateLimitMiddleware(c, next);
 });
@@ -138,33 +157,32 @@ app.route("/webhooks", paymentRoutes);
 app.route("/webhooks", webhookRoutes);
 app.route("/admin", adminRoutes);
 
-export default {
-	fetch: app.fetch,
-	scheduled: async (_controller: ScheduledController, env: Env) => {
+const worker: ExportedHandler<Env> = {
+	fetch: (request, env, executionCtx) => app.fetch(request, env, executionCtx),
+	scheduled: async (_controller, env) => {
 		const log = createLogger({
 			operation: "scheduled.jobs",
 			request_id: crypto.randomUUID(),
 			user_type: "system",
 		});
-		const restock = runRestockNotifier(env);
-		const paymentNotifications = runPaymentNotificationOutbox();
-		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
-			[restock, paymentNotifications],
+		const [restock, paymentNotifications] = await Promise.all([
+			runScheduledJob("restock_notifier", runRestockNotifier(env)),
+			runScheduledJob(
+				"payment_notification_outbox",
+				runPaymentNotificationOutbox(),
+			),
+		]);
+		const failures = [restock, paymentNotifications].flatMap((result) =>
+			result.status === "error" ? [result.error] : [],
 		);
 		const jobs = {
-			restock_notifier: restockResult.status,
-			payment_notification_outbox: paymentNotificationResult.status,
+			restock_notifier: restock.status === "ok" ? "fulfilled" : "rejected",
+			payment_notification_outbox:
+				paymentNotifications.status === "ok" ? "fulfilled" : "rejected",
 		};
-		const failures = [
-			scheduledJobFailure("restock_notifier", restockResult),
-			scheduledJobFailure(
-				"payment_notification_outbox",
-				paymentNotificationResult,
-			),
-		].filter((failure) => failure !== undefined);
 
 		if (failures.length > 0) {
-			log.error(new Error("Scheduled jobs failed"), {
+			log.error(new Error("Scheduled jobs failed."), {
 				event: "scheduled.jobs_complete",
 				jobs,
 				failures,
@@ -179,3 +197,5 @@ export default {
 		log.emit();
 	},
 };
+
+export default worker;

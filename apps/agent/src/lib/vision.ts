@@ -1,81 +1,86 @@
-import { type InboundImage, KIMI_VISION_MODEL } from "@vit/assistant";
+import {
+	type AiOperationError,
+	type InboundImage,
+	KIMI_VISION_MODEL,
+} from "@vit/assistant";
+import { Result } from "better-result";
 
-// Workers AI binding adapter for the photo-identification tool. Reads the
-// staged image bytes (already loaded from R2 by the tool's `loadImage`) and
-// runs Kimi vision via the AI binding, returning the model's raw text for the
-// channel-neutral domain to parse. env.AI is only available on the remote
-// Workers AI binding (unsupported under local miniflare), so the photo path is
-// a remote-only capability — see README "Photo identification".
-//
-// The binding speaks the OpenAI-compatible chat shape for kimi-k2.6 (same shape
-// the flue Cloudflare provider uses): a user message whose content array
-// carries the prompt text plus an image_url data-url.
-//
-// kimi-k2.6 is a REASONING model: it spends completion tokens on hidden
-// `reasoning_content` before emitting the answer `content`. A budget that is
-// too small is consumed entirely by reasoning, leaving an empty answer — so
-// this is sized to leave ample room for the JSON answer after reasoning.
 const MAX_VISION_TOKENS = 1536;
 
+type VisionFailure = Extract<
+	AiOperationError,
+	{ _tag: "InvalidModelOutput" } | { _tag: "ProviderUnavailable" }
+>;
+
 export const buildKimiVision =
-	(ai: Ai) =>
-	async (image: InboundImage, prompt: string): Promise<string> => {
+	(ai: Ai) => async (image: InboundImage, prompt: string) => {
 		const dataUrl = `data:${image.contentType};base64,${toBase64(image.bytes)}`;
-		const response = await ai.run(KIMI_VISION_MODEL, {
-			messages: [
-				{
-					role: "user",
-					content: [
-						{ type: "text", text: prompt },
-						{ type: "image_url", image_url: { url: dataUrl } },
-					],
-				},
-			],
-			max_tokens: MAX_VISION_TOKENS,
-		});
-		return extractText(response);
+		let response: unknown;
+		try {
+			response = await ai.run(KIMI_VISION_MODEL, {
+				messages: [
+					{
+						role: "user",
+						content: [
+							{ type: "text", text: prompt },
+							{ type: "image_url", image_url: { url: dataUrl } },
+						],
+					},
+				],
+				max_tokens: MAX_VISION_TOKENS,
+			});
+		} catch {
+			return Result.err<string, VisionFailure>({
+				_tag: "ProviderUnavailable",
+				retryable: true,
+			});
+		}
+
+		const text = extractText(response)?.trim();
+		return text
+			? Result.ok<string, VisionFailure>(text)
+			: Result.err<string, VisionFailure>({ _tag: "InvalidModelOutput" });
 	};
 
-// The AI binding's non-streamed return shape varies by model family. Pull the
-// assistant text out of the shapes Workers AI / OpenAI-compat models use,
-// falling back to a JSON dump so a shape change surfaces as a parse miss
-// downstream rather than a silent empty string.
-const extractText = (response: unknown): string => {
-	if (typeof response === "string") return response;
-	if (response && typeof response === "object") {
-		const obj = response as Record<string, unknown>;
-		if (typeof obj.response === "string") return obj.response;
-		const choices = obj.choices;
-		if (Array.isArray(choices) && choices.length > 0) {
-			const message = (choices[0] as Record<string, unknown>)?.message as
-				| Record<string, unknown>
-				| undefined;
-			const content = message?.content;
-			if (typeof content === "string") return content;
-			if (Array.isArray(content)) {
-				return content
-					.map((part) =>
-						part && typeof part === "object"
-							? String((part as Record<string, unknown>).text ?? "")
-							: "",
-					)
-					.join("");
-			}
-		}
-		const result = obj.result as Record<string, unknown> | undefined;
-		if (result && typeof result.response === "string") return result.response;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const textFromContent = (content: unknown) => {
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return undefined;
+	const parts: string[] = [];
+	for (const part of content) {
+		if (isRecord(part) && typeof part.text === "string") parts.push(part.text);
 	}
-	return JSON.stringify(response);
+	return parts.length > 0 ? parts.join("") : undefined;
 };
 
-// Base64-encode bytes using btoa over a binary string (workers-types provides
-// btoa; Buffer is not in the agent's type set). Chunked so a multi-hundred-KB
-// photo doesn't overflow the argument stack.
-const toBase64 = (bytes: Uint8Array): string => {
+const extractText = (response: unknown): string | undefined => {
+	if (typeof response === "string") return response;
+	if (!isRecord(response)) return undefined;
+	if (typeof response.response === "string") return response.response;
+
+	const firstChoice = Array.isArray(response.choices)
+		? response.choices[0]
+		: undefined;
+	if (isRecord(firstChoice) && isRecord(firstChoice.message)) {
+		const content = textFromContent(firstChoice.message.content);
+		if (content !== undefined) return content;
+	}
+	if (
+		isRecord(response.result) &&
+		typeof response.result.response === "string"
+	) {
+		return response.result.response;
+	}
+	return undefined;
+};
+
+const toBase64 = (bytes: Uint8Array) => {
 	let binary = "";
-	const CHUNK = 0x8000;
-	for (let i = 0; i < bytes.length; i += CHUNK) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+	const chunkSize = 0x8000;
+	for (let index = 0; index < bytes.length; index += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
 	}
 	return btoa(binary);
 };

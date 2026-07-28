@@ -9,6 +9,27 @@ import { buildReadFns } from "./read-fns";
 // JSON.parse(JSON.stringify(...)) before the cast.
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+const isJson = (value: unknown): value is Json => {
+	if (
+		value === null ||
+		typeof value === "boolean" ||
+		typeof value === "number" ||
+		typeof value === "string"
+	) {
+		return true;
+	}
+	if (Array.isArray(value)) return value.every(isJson);
+	if (typeof value !== "object") return false;
+	return Object.values(value).every(isJson);
+};
+
+const jsonValueSchema = v.custom<Json>(isJson, "Expected a JSON value");
+const adminQueryToolOutputSchema = v.strictObject({
+	result: jsonValueSchema,
+	logs: v.array(v.string()),
+	error: v.optional(v.string()),
+});
+
 // Max chars of tool result to keep in conversation history. Larger results are
 // truncated so the model's context doesn't bloat (e.g. getAllOrders can return
 // 130k+ chars). The model should write targeted queries, not fetch everything.
@@ -46,6 +67,7 @@ export function buildAdminQueryTool({
 				),
 			),
 		}),
+		output: adminQueryToolOutputSchema,
 		async run({ input }) {
 			const executor = new DynamicWorkerExecutor({
 				loader,
@@ -57,8 +79,11 @@ export function buildAdminQueryTool({
 			const result = await executor.execute(input.code, fns);
 			// Clean the codemode result to a JSON-safe value (the sandbox returns
 			// `unknown`; Flue tools must return JsonValue | undefined).
-			const clean = (value: unknown): Json =>
-				value === undefined ? null : JSON.parse(JSON.stringify(value)) as Json;
+			const clean = (value: unknown): Json => {
+				const decoded: unknown =
+					value === undefined ? null : JSON.parse(JSON.stringify(value));
+				return v.parse(jsonValueSchema, decoded);
+			};
 			const cleanedResult = clean(result.result);
 			// Truncate large results to prevent context bloat. The model should
 			// write targeted queries (e.g. filter by date, limit fields) instead
@@ -77,7 +102,7 @@ export function buildAdminQueryTool({
 				result: truncated,
 				logs: result.logs ?? [],
 				...(result.error ? { error: result.error } : {}),
-			} as Json;
+			};
 		},
 	});
 }

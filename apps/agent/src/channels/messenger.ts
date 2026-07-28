@@ -6,7 +6,6 @@ import {
 } from "@flue/messenger";
 import { defineTool, dispatch, type AgentDefinition } from "@flue/runtime";
 import {
-	type AssistantProduct,
 	buildPaymentChoice,
 	type Cart,
 	type CreatedOrder,
@@ -23,14 +22,35 @@ import {
 	TRANSFER_DONE_BUTTON_TITLE,
 	type TransferStatus,
 } from "@vit/assistant";
+import {
+	type DeliveryFailure,
+	deliveryFailureSchema,
+	invalidDelivery,
+	retryableDeliveryFailure,
+} from "@vit/shared";
+import { Result, type Result as BetterResult } from "better-result";
+import { match } from "dismatch";
+import { matchAsync } from "dismatch/async";
 import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
 import * as v from "valibot";
 import assistant from "../agents/customer-assistant";
 import adminAssistant from "../agents/admin-assistant";
 import { getAssistantProductsByIds } from "../lib/catalog";
+import {
+	classifyMessengerDeliveryFailure,
+	sendMessenger,
+} from "../lib/messenger-delivery";
 import { stageInboundImage } from "../lib/messenger-inbound";
-import { claimTransfer, fetchPaymentSummary } from "../lib/payment";
-import { detectCartEvent, handleCartEvent } from "./cart-handler";
+import {
+	claimTransfer,
+	fetchPaymentSummary,
+	type PaymentOperationFailure,
+} from "../lib/payment";
+import {
+	CartPostcommitError,
+	detectCartEvent,
+	handleCartEvent,
+} from "./cart-handler";
 import { cartSessionFor } from "./cart-session";
 import { checkoutSessionFor } from "./checkout-session";
 import {
@@ -38,11 +58,14 @@ import {
 	admitMessengerTextMessage,
 	claimInboundOnce,
 	extractInboundImages,
+	type MessengerAdmissionFailure,
+	type MessengerAdmissionReleaseFailure,
 	releaseInboundClaim,
 } from "./messenger-admission";
 import {
 	handleChooseTransfer,
 	handleTransferClaim,
+	PaymentPostcommitError,
 	type PaymentHandlerDeps,
 } from "./payment-handler";
 
@@ -86,20 +109,6 @@ export const messenger = new Messenger({
 		: {}),
 });
 
-// Outbound capture at the single SDK choke point: log every text the bot sends.
-// This is prod observability of what the bot actually says, and it lets a CLI
-// dogfood read the bot's replies from `wrangler tail` / Workers Logs WITHOUT the
-// message being delivered (drive the webhook with a non-deliverable test PSID).
-const _sendMessage = messenger.send.message.bind(messenger.send);
-// biome-ignore lint/suspicious/noExplicitAny: intentional thin send wrapper.
-(messenger.send as any).message = async (body: any, opts: any) => {
-	const text = body?.message?.text;
-	if (typeof text === "string" && text.length > 0) {
-		console.log(`[bot.say] ${text.replace(/\n/g, " ⏎ ").slice(0, 700)}`);
-	}
-	return _sendMessage(body, opts);
-};
-
 export function toRecipient(ref: MessengerParticipantRef): Recipient {
 	return ref.type === "page-scoped-id" ? { id: ref.id } : { user_ref: ref.id };
 }
@@ -111,50 +120,136 @@ export function toRecipient(ref: MessengerParticipantRef): Recipient {
 // if the session ever needs rotating again.
 const ADMIN_SESSION_SUFFIX = ":v2";
 
+type WebhookOutcome =
+	| { _tag: "Acknowledged" }
+	| { _tag: "Retry"; response: Response };
+
+const acknowledged = { _tag: "Acknowledged" } as const;
+
+const admissionOutcome = (error: MessengerAdmissionFailure) =>
+	match(
+		error,
+		"_tag",
+	)<WebhookOutcome>({
+		DuplicateInboundDelivery: () => acknowledged,
+		InvalidDelivery: () => acknowledged,
+		RetryableDeliveryFailure: () => ({
+			_tag: "Retry",
+			response: Response.json(
+				{ error: "temporarily_unavailable" },
+				{ status: 503 },
+			),
+		}),
+	});
+
+const logDeliveryFailure = async (
+	delivery: Promise<BetterResult<unknown, DeliveryFailure>>,
+	operation: string,
+) => {
+	const result = await delivery;
+	if (result.status === "error") {
+		console.warn("[messenger] delivery failed", {
+			operation,
+			error_tag: result.error._tag,
+			provider: result.error.provider,
+			code: result.error.code,
+		});
+	}
+};
+
+const logReleaseFailure = async (
+	release: Promise<BetterResult<void, MessengerAdmissionReleaseFailure>>,
+) => {
+	const result = await release;
+	if (result.status === "error") {
+		console.warn("[messenger] claim release failed", {
+			error_tag: result.error._tag,
+			provider: result.error.provider,
+			code: result.error.code,
+		});
+	}
+};
+
 export const channel: MessengerChannel = createMessengerChannel({
 	appSecret: requiredEnv("MESSENGER_APP_SECRET"),
 	verifyToken: requiredEnv("MESSENGER_VERIFY_TOKEN"),
 	pageId: requiredEnv("MESSENGER_PAGE_ID"),
 
-	// Mounted at GET/POST /channels/messenger/webhook.
+	// Mounted at GET/POST /channels/messenger/webhook. Flue owns exact-byte
+	// signature verification, Page validation, and provider-native parsing.
 	async webhook({ c, payload }) {
 		const env = c.env as WebhookEnv;
 		for (const entry of payload.entry) {
 			for (const event of entry.messaging ?? []) {
-				// Admin PSID gate: an authorized admin's messages route to the
-				// admin agent (Codemode query tool) BEFORE any customer-path
-				// logic. Non-admin PSIDs fall through to the customer agent
-				// unchanged. Reuses the same image/text dispatch helpers with
-				// `adminAssistant` as the target — no duplicated logic.
-				const adminConversation = channel.conversationRef(event);
-				if (
-					adminConversation &&
-					isAdminPsid(adminConversation.participant.id, env)
-				) {
-					if (await dispatchInboundImage(event, env, adminAssistant, ADMIN_SESSION_SUFFIX)) continue;
-					await dispatchInboundText(event, env, adminAssistant, ADMIN_SESSION_SUFFIX);
-					continue;
-				}
-				// Cart buttons (Захиалах postback + cart_* controls) are handled
-				// deterministically ahead of the text path, so they never reach the
-				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
-				// run under local miniflare where `env.AI` is unavailable).
-				if (await tryHandleCartEvent(event, env)) continue;
-				// Post-order payment surface (#25): the QPay/transfer button taps, a
-				// "Шилжүүлсэн" claim, and (within the transfer context) a "хийсэн"
-				// text or a screenshot are handled deterministically here, ahead of
-				// the photo/text paths, so a transfer claim never reaches the model
-				// and never touches a payment-confirmation API.
-				if (await tryHandlePaymentEvent(event, env)) continue;
-				// Photo turns: trusted channel code fetches the Meta image, stages it
-				// under messenger-inbound/ in R2, and dispatches ONLY the key (#20).
-				if (await dispatchInboundImage(event, env)) continue;
-				await dispatchInboundText(event, env);
+				const outcome = await handleVerifiedMessengerEvent(event, env);
+				if (outcome._tag === "Retry") return outcome.response;
 			}
 		}
 		return undefined;
 	},
 });
+
+type MessengerEvent = Parameters<typeof admitMessengerTextMessage>[0]["event"];
+
+const consumedStepOutcome = (
+	result: BetterResult<boolean, MessengerAdmissionFailure>,
+) => {
+	if (result.status === "error") return admissionOutcome(result.error);
+	return result.value ? acknowledged : undefined;
+};
+
+async function handleAdminMessengerEvent(
+	event: MessengerEvent,
+	env: WebhookEnv,
+): Promise<WebhookOutcome> {
+	const image = await dispatchInboundImage(
+		event,
+		env,
+		adminAssistant,
+		ADMIN_SESSION_SUFFIX,
+	);
+	const imageOutcome = consumedStepOutcome(image);
+	if (imageOutcome) return imageOutcome;
+
+	const text = await dispatchInboundText(
+		event,
+		env,
+		adminAssistant,
+		ADMIN_SESSION_SUFFIX,
+	);
+	return text.status === "error" ? admissionOutcome(text.error) : acknowledged;
+}
+
+async function handleCustomerMessengerEvent(
+	event: MessengerEvent,
+	env: WebhookEnv,
+): Promise<WebhookOutcome> {
+	const cartOutcome = consumedStepOutcome(await tryHandleCartEvent(event, env));
+	if (cartOutcome) return cartOutcome;
+
+	const paymentOutcome = consumedStepOutcome(
+		await tryHandlePaymentEvent(event, env),
+	);
+	if (paymentOutcome) return paymentOutcome;
+
+	const imageOutcome = consumedStepOutcome(
+		await dispatchInboundImage(event, env),
+	);
+	if (imageOutcome) return imageOutcome;
+
+	const text = await dispatchInboundText(event, env);
+	return text.status === "error" ? admissionOutcome(text.error) : acknowledged;
+}
+
+async function handleVerifiedMessengerEvent(
+	event: MessengerEvent,
+	env: WebhookEnv,
+): Promise<WebhookOutcome> {
+	const conversation = channel.conversationRef(event);
+	return conversation && isAdminPsid(conversation.participant.id, env)
+		? handleAdminMessengerEvent(event, env)
+		: handleCustomerMessengerEvent(event, env);
+}
 
 // Admin PSID allowlist: env.ADMIN_PSIDS is a comma-separated list of authorized
 // admin PSIDs. Returns true when the sender is an admin (routes to the admin
@@ -181,13 +276,16 @@ async function dispatchInboundText(
 	env: WebhookEnv,
 	target: AgentDefinition = assistant,
 	sessionIdSuffix = "",
-): Promise<void> {
-	const admission = await admitMessengerTextMessage({ channel, event, env });
-	if (admission === undefined) return;
+): Promise<BetterResult<void, MessengerAdmissionFailure>> {
+	const admitted = await admitMessengerTextMessage({ channel, event, env });
+	if (admitted.status === "error") {
+		return Result.err<void, MessengerAdmissionFailure>(admitted.error);
+	}
+	const admission = admitted.value;
+	if (admission === undefined) return Result.ok(undefined);
 
-	// dispatch() is the durable commit point. If it throws before the turn is
-	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
-	// re-deliver instead of being swallowed by dedupe.
+	// dispatch() is the durable commit point. Release a precommit claim before
+	// the unknown defect is rethrown so Meta can deliver the event again.
 	try {
 		await dispatch(target, {
 			id: admission.sessionId + sessionIdSuffix,
@@ -196,17 +294,16 @@ async function dispatchInboundText(
 				messageId: admission.messageId,
 				text: admission.text,
 				attachmentTypes: admission.attachmentTypes,
-				// dispatch() input must be JSON-clean: omit the key entirely when
-				// there is no quick reply rather than passing undefined.
 				...(admission.quickReplyPayload !== undefined
 					? { quickReplyPayload: admission.quickReplyPayload }
 					: {}),
 			},
 		});
 	} catch (error) {
-		await admission.release();
+		await logReleaseFailure(admission.release());
 		throw error;
 	}
+	return Result.ok(undefined);
 }
 
 // Admits an inbound photo turn: fetches each Meta CDN attachment server-side,
@@ -221,15 +318,12 @@ async function dispatchInboundImage(
 	env: WebhookEnv,
 	target: AgentDefinition = assistant,
 	sessionIdSuffix = "",
-): Promise<boolean> {
-	// Extract once and pass the array through to admission so the webhook loop
-	// doesn't scan attachments twice per event.
+): Promise<BetterResult<boolean, MessengerAdmissionFailure>> {
 	const images = extractInboundImages(event);
-	if (images.length === 0) return false;
+	if (images.length === 0) return Result.ok(false);
 
-	// Resolve the bucket BEFORE claiming the mid: a missing binding is a
-	// production misconfig that must fail loud (like the cart/admission stores),
-	// leaving the mid unclaimed so Meta's retry is honored.
+	// Resolve the bucket before admission. A missing production binding is a
+	// defect, and the message ID must remain unclaimed.
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	if (bucket === undefined) {
 		throw new Error(
@@ -237,16 +331,21 @@ async function dispatchInboundImage(
 		);
 	}
 
-	const admission = await admitMessengerImageMessage({
+	const admitted = await admitMessengerImageMessage({
 		channel,
 		event,
 		env,
 		images,
 	});
-	if (admission === undefined) return true;
+	if (admitted.status === "error") {
+		return Result.err<boolean, MessengerAdmissionFailure>(admitted.error);
+	}
+	const admission = admitted.value;
+	if (admission === undefined) return Result.ok(true);
 
 	try {
 		const imageKeys: string[] = [];
+		let hasRetryableFailure = false;
 		for (const image of admission.images) {
 			const staged = await stageInboundImage(
 				bucket,
@@ -257,14 +356,37 @@ async function dispatchInboundImage(
 				},
 				image.url,
 			);
-			if (staged !== undefined) imageKeys.push(staged.key);
+			if (staged.status === "ok") {
+				imageKeys.push(staged.value.key);
+				continue;
+			}
+			hasRetryableFailure ||= match(
+				staged.error,
+				"_tag",
+			)({
+				InvalidSource: () => false,
+				NoUsableImages: () => false,
+				ExtractionFailed: ({ retryable }) => retryable,
+				ProviderUnavailable: ({ retryable }) => retryable,
+			});
 		}
 
-		// Nothing staged (expired/oversized url). Keep the claim so a Meta retry
-		// of the same dead url doesn't re-apologize, and tell the customer.
+		if (imageKeys.length === 0 && hasRetryableFailure) {
+			await logReleaseFailure(admission.release());
+			return Result.err(
+				retryableDeliveryFailure("messenger", "provider_unavailable"),
+			);
+		}
+
+		// Permanent per-image failures are acknowledged. This prevents a dead CDN
+		// URL from causing repeated apologies. Expected send failures are
+		// postclaim best effort.
 		if (imageKeys.length === 0) {
-			await sendTextReply(admission.conversation)(PHOTO_FETCH_FAILED_MESSAGE);
-			return true;
+			await logDeliveryFailure(
+				sendTextReply(admission.conversation)(PHOTO_FETCH_FAILED_MESSAGE),
+				"photo.apology",
+			);
+			return Result.ok(true);
 		}
 
 		await dispatch(target, {
@@ -273,19 +395,15 @@ async function dispatchInboundImage(
 				type: "messenger.message",
 				messageId: admission.messageId,
 				text: admission.caption,
-				// Derive from the STAGED keys, not every attempted attachment, so the
-				// reported type count can't diverge from imageKeys.
 				attachmentTypes: imageKeys.map(() => "image"),
-				// The dispatch input carries R2 KEYS, never the Meta CDN url or any
-				// base64 payload (#20 acceptance criterion).
 				imageKeys,
 			},
 		});
 	} catch (error) {
-		await admission.release();
+		await logReleaseFailure(admission.release());
 		throw error;
 	}
-	return true;
+	return Result.ok(true);
 }
 
 // Handles a Messenger event if it is a cart button/quick-reply, returning true
@@ -295,18 +413,16 @@ async function dispatchInboundImage(
 async function tryHandleCartEvent(
 	event: Parameters<typeof detectCartEvent>[0],
 	env: WebhookEnv,
-): Promise<boolean> {
+): Promise<BetterResult<boolean, MessengerAdmissionFailure>> {
 	const cartEvent = detectCartEvent(event);
-	if (cartEvent === undefined) return false;
+	if (cartEvent === undefined) return Result.ok(false);
 
 	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) return true;
+	if (conversation === undefined) {
+		return Result.err(invalidDelivery("messenger", "invalid_payload"));
+	}
 	const sessionId = channel.conversationKey(conversation);
 
-	// Resolve the cart store BEFORE claiming the mid: a missing binding is a
-	// production misconfig that must fail loud (like the admission store does),
-	// not silently swallow the customer's tap and burn the mid. Throwing here —
-	// ahead of the claim — leaves the mid unclaimed so Meta's retry is honored.
 	const cart = cartSessionFor(env.CART_STORE, sessionId);
 	if (cart === undefined) {
 		throw new Error(
@@ -315,23 +431,35 @@ async function tryHandleCartEvent(
 	}
 
 	const claimKey = `messenger:cart:v1:${sessionId}:mid:${cartEvent.mid}`;
-	if (cartEvent.mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
-		return true;
+	if (cartEvent.mid.length > 0) {
+		const claimed = await claimInboundOnce(claimKey, env);
+		if (claimed.status === "error") {
+			return Result.err<boolean, MessengerAdmissionFailure>(claimed.error);
+		}
 	}
 
 	try {
-		await handleCartEvent(cartEvent, {
+		const handled = await handleCartEvent(cartEvent, {
 			cart,
 			resolveProduct: resolveProductById,
 			sendCartSummary: sendCartSummary(conversation),
 			sendText: sendTextReply(conversation),
 		});
+		if (handled.status === "error") {
+			if (cartEvent.mid.length > 0) {
+				await logReleaseFailure(releaseInboundClaim(claimKey, env));
+			}
+			return Result.err(
+				retryableDeliveryFailure("messenger", "provider_unavailable"),
+			);
+		}
 	} catch (error) {
-		// Release the claim so Meta's retry can re-apply the dropped event.
-		if (cartEvent.mid.length > 0) await releaseInboundClaim(claimKey, env);
+		if (!(error instanceof CartPostcommitError) && cartEvent.mid.length > 0) {
+			await logReleaseFailure(releaseInboundClaim(claimKey, env));
+		}
 		throw error;
 	}
-	return true;
+	return Result.ok(true);
 }
 
 // Public storefront origin the QPay-only page (#24) lives on. The store tRPC
@@ -351,13 +479,13 @@ const storePublicUrl = (): string => {
 const toMessengerButtons = (
 	buttons: ReturnType<typeof buildPaymentChoice>["buttons"],
 ) =>
-	buttons.map((b) =>
-		b.type === "web_url"
-			? { type: "web_url" as const, title: b.title, url: b.url as string }
+	buttons.map((button) =>
+		button.type === "web_url"
+			? { type: "web_url" as const, title: button.title, url: button.url }
 			: {
 					type: "postback" as const,
-					title: b.title,
-					payload: b.payload as string,
+					title: button.title,
+					payload: button.payload,
 				},
 	);
 
@@ -367,39 +495,42 @@ const toMessengerButtons = (
 // sent right after the order confirmation.
 export function sendPaymentChoices(ref: MessengerConversationRef) {
 	return async (order: CreatedOrder) => {
-		if (!order.paymentNumber) return undefined;
+		if (!order.paymentNumber) {
+			return Result.ok<undefined, DeliveryFailure>(undefined);
+		}
 		const choice = buildPaymentChoice(storePublicUrl(), {
 			paymentNumber: order.paymentNumber,
 			checkoutToken: order.checkoutToken,
 		});
-		const result = await messenger.templates.button({
-			recipient: toRecipient(ref.participant),
-			text: choice.text,
-			buttons: toMessengerButtons(choice.buttons),
-			messaging_type: "RESPONSE",
-		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return sendMessenger(() =>
+			messenger.templates.button({
+				recipient: toRecipient(ref.participant),
+				text: choice.text,
+				buttons: toMessengerButtons(choice.buttons),
+				messaging_type: "RESPONSE",
+			}),
+		);
 	};
 }
 
 // Bank-transfer details (#25): the account/amount/reference text plus a single
 // `Шилжүүлсэн` postback button the customer taps to lodge a transfer claim.
 export function sendBankTransferDetails(ref: MessengerConversationRef) {
-	return async (text: string, paymentRef: PaymentRef) => {
-		const result = await messenger.templates.button({
-			recipient: toRecipient(ref.participant),
-			text,
-			buttons: [
-				{
-					type: "postback" as const,
-					title: TRANSFER_DONE_BUTTON_TITLE,
-					payload: claimTransferPayload(paymentRef),
-				},
-			],
-			messaging_type: "RESPONSE",
-		});
-		return { ok: true, messageId: result?.message_id ?? null };
-	};
+	return async (text: string, paymentRef: PaymentRef) =>
+		sendMessenger(() =>
+			messenger.templates.button({
+				recipient: toRecipient(ref.participant),
+				text,
+				buttons: [
+					{
+						type: "postback" as const,
+						title: TRANSFER_DONE_BUTTON_TITLE,
+						payload: claimTransferPayload(paymentRef),
+					},
+				],
+				messaging_type: "RESPONSE",
+			}),
+		);
 }
 
 // Binds the post-order payment handler dependencies to one conversation: the
@@ -410,13 +541,8 @@ function paymentDepsFor(
 	checkout: ReturnType<typeof checkoutSessionFor>,
 ): PaymentHandlerDeps {
 	return {
-		fetchPaymentSummary: async (ref) => {
-			const summary = await fetchPaymentSummary(
-				ref.paymentNumber,
-				ref.checkoutToken,
-			);
-			return { amount: summary.total, reference: summary.order.customerPhone };
-		},
+		fetchPaymentSummary: (ref) =>
+			fetchPaymentSummary(ref.paymentNumber, ref.checkoutToken),
 		// The ONLY payment write a claim performs — records the claim, never
 		// confirms (ADR 0004).
 		claimTransfer: (ref) => claimTransfer(ref.paymentNumber, ref.checkoutToken),
@@ -442,10 +568,10 @@ function paymentDepsFor(
 async function tryHandlePaymentEvent(
 	event: Parameters<typeof detectCartEvent>[0],
 	env: WebhookEnv,
-): Promise<boolean> {
-	if (event.message?.is_echo) return false;
+): Promise<BetterResult<boolean, MessengerAdmissionFailure>> {
+	if (event.message?.is_echo) return Result.ok(false);
 	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) return false;
+	if (conversation === undefined) return Result.ok(false);
 	const sessionId = channel.conversationKey(conversation);
 	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
 	// Postbacks carry no message id; synthesize a stable dedup id from the
@@ -474,14 +600,20 @@ async function tryHandlePaymentEvent(
 	// 2. Free-text "хийсэн"/"hiisen" or a screenshot — a claim ONLY inside the
 	// transfer context recorded on the checkout session. Without a payment
 	// context (or store binding) fall through to the normal paths.
-	if (checkout === undefined) return false;
+	if (checkout === undefined) return Result.ok(false);
 	const claim = await resolveContextualClaim(event, checkout);
-	if (claim === undefined) return false;
+	if (claim === undefined) return Result.ok(false);
 	const d = deps();
 	// Already claimed: just re-acknowledge, do not re-record (avoid re-notifying
 	// admin on a repeated "хийсэн").
 	const run = claim.alreadyClaimed
-		? () => d.sendText(TRANSFER_CLAIM_ACK_MESSAGE).then(() => undefined)
+		? async () => {
+				await logDeliveryFailure(
+					d.sendText(TRANSFER_CLAIM_ACK_MESSAGE),
+					"payment.repeat_claim_ack",
+				);
+				return Result.ok<void, PaymentOperationFailure>(undefined);
+			}
 		: () => handleTransferClaim(claim.ref, d);
 	return runPaymentTransition(env, mid, sessionId, run);
 }
@@ -537,18 +669,56 @@ async function runPaymentTransition(
 	env: WebhookEnv,
 	mid: string,
 	sessionId: string,
-	run: () => Promise<unknown>,
-): Promise<boolean> {
+	run: () => Promise<BetterResult<void, PaymentOperationFailure>>,
+): Promise<BetterResult<boolean, MessengerAdmissionFailure>> {
 	const claimKey = `messenger:payment:v1:${sessionId}:mid:${mid}`;
-	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) return true;
+	if (mid.length > 0) {
+		const claimed = await claimInboundOnce(claimKey, env);
+		if (claimed.status === "error") {
+			return Result.err<boolean, MessengerAdmissionFailure>(claimed.error);
+		}
+	}
 	try {
-		await run();
+		const result = await run();
+		if (result.status === "ok") return Result.ok(true);
+		console.warn("[payment] operation failed", {
+			error_tag: result.error._tag,
+			retryable: result.error.retryable,
+		});
+		return matchAsync(
+			result.error,
+			"_tag",
+		)<BetterResult<boolean, MessengerAdmissionFailure>>({
+			RetryablePaymentFailure: async () => {
+				if (mid.length > 0) {
+					await logReleaseFailure(releaseInboundClaim(claimKey, env));
+				}
+				return Result.err(
+					retryableDeliveryFailure("messenger", "provider_unavailable"),
+				);
+			},
+			AmbiguousPaymentFailure: async () => Result.ok(true),
+			PermanentPaymentFailure: async () => Result.ok(true),
+			InvalidPaymentRequest: async () => Result.ok(true),
+		});
 	} catch (error) {
-		if (mid.length > 0) await releaseInboundClaim(claimKey, env);
+		if (!(error instanceof PaymentPostcommitError) && mid.length > 0) {
+			await logReleaseFailure(releaseInboundClaim(claimKey, env));
+		}
 		throw error;
 	}
-	return true;
 }
+
+const postMessageOutputSchema = v.variant("status", [
+	v.strictObject({
+		status: v.literal("delivered"),
+		messageId: v.string(),
+	}),
+	v.strictObject({
+		status: v.literal("failed"),
+		error: deliveryFailureSchema,
+	}),
+]);
 
 export function postMessage(ref: MessengerConversationRef) {
 	const recipientId = ref.participant.id;
@@ -557,82 +727,75 @@ export function postMessage(ref: MessengerConversationRef) {
 		description:
 			"Post a simple text reply to the bound Messenger customer conversation.",
 		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
+		output: postMessageOutputSchema,
 		async run({ input }) {
-			// Own the typing lifecycle here so typing_on and typing_off are always
-			// paired: teardown is guaranteed in finally, and typing is never sent
-			// from a path whose termination we cannot observe.
 			await bestEffortTyping("on");
 			try {
-				const result = await messenger.send.message({
-					recipient: toRecipient(ref.participant),
-					messaging_type: "RESPONSE",
-					message: { text: input.text },
-				});
-				return { ok: true, messageId: result?.message_id ?? null };
+				const result = await sendTextReply(ref)(input.text);
+				return result.status === "ok"
+					? {
+							status: "delivered" as const,
+							messageId: result.value.messageId,
+						}
+					: { status: "failed" as const, error: result.error };
 			} finally {
 				await bestEffortTyping("off");
 			}
 		},
 	});
 
-	async function bestEffortTyping(action: "on" | "off"): Promise<void> {
+	async function bestEffortTyping(action: "on" | "off") {
 		try {
 			if (action === "on") await messenger.send.typingOn(recipientId);
 			else await messenger.send.typingOff(recipientId);
-		} catch {
-			// Typing indicators are cosmetic; never fail a reply over one.
+		} catch (error) {
+			const failure = classifyMessengerDeliveryFailure(error);
+			if (failure === undefined) throw error;
+			console.warn("[messenger] typing indicator failed", {
+				error_tag: failure._tag,
+				provider: failure.provider,
+				code: failure.code,
+			});
 		}
 	}
 }
 
-// Plain text sender bound to a conversation. Used by the product-search tool's
-// no-match path; mirrors the send shape of post_messenger_message.
 export function sendTextReply(ref: MessengerConversationRef) {
-	return async (text: string) => {
-		const result = await messenger.send.message({
-			recipient: toRecipient(ref.participant),
-			messaging_type: "RESPONSE",
-			message: { text },
-		});
-		return { ok: true, messageId: result?.message_id ?? null };
-	};
+	return async (text: string) =>
+		sendMessenger(() =>
+			messenger.send.message({
+				recipient: toRecipient(ref.participant),
+				messaging_type: "RESPONSE",
+				message: { text },
+			}),
+		);
 }
 
-// Sends the cart summary as a text message carrying the cart-control quick
-// replies (✅ confirm / 🗑 clear and per-item ➕ ➖ ✖). Tapping a quick reply
-// delivers its payload back on the webhook, where `detectCartEvent` routes it
-// straight to the cart reducer — no model turn. Bound to one conversation.
 export function sendCartSummary(ref: MessengerConversationRef) {
 	return async (cart: Cart) => {
-		const quickReplies = cartQuickReplies(cart).map((qr) => ({
+		const quickReplies = cartQuickReplies(cart).map((quickReply) => ({
 			content_type: "text" as const,
-			title: qr.title,
-			payload: qr.payload,
+			title: quickReply.title,
+			payload: quickReply.payload,
 		}));
-		const result = await messenger.send.message({
-			recipient: toRecipient(ref.participant),
-			messaging_type: "RESPONSE",
-			message: {
-				text: formatCartSummary(cart),
-				...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
-			},
-		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return sendMessenger(() =>
+			messenger.send.message({
+				recipient: toRecipient(ref.participant),
+				messaging_type: "RESPONSE",
+				message: {
+					text: formatCartSummary(cart),
+					...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
+				},
+			}),
+		);
 	};
 }
 
-// Resolves a single product id to the shared assistant projection for cart
-// lines. Reuses the by-id catalog boundary (no duplicated catalog logic).
-export async function resolveProductById(
-	id: number,
-): Promise<AssistantProduct | undefined> {
-	const [product] = await getAssistantProductsByIds([id]);
-	return product;
+export async function resolveProductById(id: number) {
+	const products = await getAssistantProductsByIds([id]);
+	return products.map((items) => items[0]);
 }
 
-// Sends channel-neutral product cards as a Messenger generic template. Each
-// element carries the product's Захиалах postback button whose payload holds
-// the product id. Generic templates allow at most 10 elements.
 export function sendProductCards(ref: MessengerConversationRef) {
 	return async (cards: ProductCard[]) => {
 		const elements = cards.slice(0, 10).map((card) => ({
@@ -648,30 +811,17 @@ export function sendProductCards(ref: MessengerConversationRef) {
 			],
 		}));
 
-		console.log(
-			`[bot.cards] ${elements.map((e) => e.title).join(" | ").slice(0, 700)}`,
-		);
-		try {
-			const result = await messenger.templates.generic({
+		const result = await sendMessenger(() =>
+			messenger.templates.generic({
 				recipient: toRecipient(ref.participant),
 				elements,
 				messaging_type: "RESPONSE",
-			});
-			return {
-				ok: true,
-				messageId: result?.message_id ?? null,
-				cardCount: elements.length,
-			};
-		} catch (error) {
-			// Cards are best-effort: the catalog search already succeeded, so a
-			// transient Graph send failure (or a non-deliverable test PSID during
-			// dogfooding) must NOT throw out of the tool and make the model apologise
-			// that the search itself failed. Log and report the cards as produced.
-			console.warn(
-				`[bot.cards] send failed (best-effort): ${error instanceof Error ? error.message : String(error)}`,
-			);
-			return { ok: true, messageId: null, cardCount: elements.length };
-		}
+			}),
+		);
+		return result.map((receipt) => ({
+			...receipt,
+			cardCount: elements.length,
+		}));
 	};
 }
 

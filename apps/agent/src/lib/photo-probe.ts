@@ -42,19 +42,13 @@ export interface PhotoProbeResult {
 	searchError?: string;
 }
 
-type IdentifyOutput = {
-	imageKey: string;
-	available: boolean;
-	facts: string;
-	queries: string[];
-};
-
 export async function runPhotoProbe(
 	env: PhotoProbeEnv,
 	input: PhotoProbeInput,
 ): Promise<PhotoProbeResult> {
+	const ai = env.AI;
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
-	if (!env.AI || !bucket) {
+	if (!ai || !bucket) {
 		throw new Error(
 			"photo-probe requires the Workers AI binding (remote) and MESSENGER_INBOUND_BUCKET. Run with real Workers AI (not --local).",
 		);
@@ -67,18 +61,21 @@ export async function runPhotoProbe(
 		{ sessionId, messageId, index: 0 },
 		input.imageUrl,
 	);
-	if (staged === undefined) {
-		throw new Error(`could not fetch/stage image from ${input.imageUrl}`);
+	if (staged.status === "error") {
+		throw new Error("Could not fetch or stage the probe image.");
 	}
 
-	// Run the REAL production tool against the staged R2 key.
+	// Run the real production tool against the staged R2 key.
 	const tool = buildPhotoIdentifyTool({
 		loadImage: (key) => loadInboundImage(bucket, key),
-		runVision: buildKimiVision(env.AI),
+		runVision: buildKimiVision(ai),
 	});
-	const identified = (await tool.run({
-		input: { imageKey: staged.key },
-	})) as IdentifyOutput;
+	const identified = await tool.run({
+		input: { imageKey: staged.value.key },
+	});
+	if (identified.status === "unavailable") {
+		throw new Error("Photo identification is unavailable.");
+	}
 
 	// Feed the top suggested query into the SAME #19 search + card formatter.
 	const usedQuery = identified.queries[0];
@@ -86,22 +83,19 @@ export async function runPhotoProbe(
 	let matchCount = 0;
 	let searchError: string | undefined;
 	if (usedQuery) {
-		try {
-			const products = await searchAssistantProducts(
-				usedQuery,
-				input.limit ?? 8,
-			);
-			matchCount = products.length;
-			cards = formatProductCards(products);
-		} catch (error) {
-			searchError = error instanceof Error ? error.message : String(error);
+		const products = await searchAssistantProducts(usedQuery, input.limit ?? 8);
+		if (products.status === "error") {
+			searchError = "catalog_unavailable";
+		} else {
+			matchCount = products.value.length;
+			cards = formatProductCards(products.value);
 		}
 	}
 
 	return {
-		key: staged.key,
-		contentType: staged.contentType,
-		size: staged.size,
+		key: staged.value.key,
+		contentType: staged.value.contentType,
+		size: staged.value.size,
 		facts: identified.facts,
 		queries: identified.queries,
 		usedQuery,

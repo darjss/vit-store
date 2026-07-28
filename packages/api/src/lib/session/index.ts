@@ -5,9 +5,49 @@ import {
 } from "@oslojs/encoding";
 
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import type { Context, CustomerSelectType, UserSelectType } from "~/lib/context";
+import * as v from "valibot";
+import type {
+	Context,
+	CustomerSelectType,
+	UserSelectType,
+} from "~/lib/context";
 import type { HonoContextType, SessionConfig } from "~/lib/types";
 
+const jsonDateSchema = v.pipe(
+	v.string(),
+	v.transform((value) => new Date(value)),
+	v.check((value) => !Number.isNaN(value.getTime())),
+);
+
+const userSessionSchema = v.strictObject({
+	id: v.number(),
+	username: v.string(),
+	googleId: v.nullable(v.string()),
+	isApproved: v.boolean(),
+	createdAt: jsonDateSchema,
+	updatedAt: v.nullable(jsonDateSchema),
+	deletedAt: v.nullable(jsonDateSchema),
+}) satisfies v.GenericSchema<unknown, UserSelectType>;
+
+const customerSessionSchema = v.strictObject({
+	id: v.number(),
+	phone: v.number(),
+	address: v.nullable(v.string()),
+	addressZoneId: v.nullable(v.number()),
+	facebook_username: v.nullable(v.string()),
+	instagram_username: v.nullable(v.string()),
+	createdAt: jsonDateSchema,
+	updatedAt: v.nullable(jsonDateSchema),
+	deletedAt: v.nullable(jsonDateSchema),
+	trust: v.optional(v.picklist(["checkout_guest", "phone_verified"])),
+	checkout: v.optional(
+		v.strictObject({
+			orderId: v.number(),
+			orderNumber: v.string(),
+			paymentNumber: v.string(),
+		}),
+	),
+}) satisfies v.GenericSchema<unknown, CustomerSelectType>;
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	id: string;
@@ -23,7 +63,7 @@ export function generateSessionToken(): string {
 
 export function createSessionManager<
 	TUser extends CustomerSelectType | UserSelectType,
->(config: SessionConfig) {
+>(config: SessionConfig, userSchema: v.GenericSchema<unknown, TUser>) {
 	const {
 		kvSessionPrefix,
 		kvUserSessionPrefix,
@@ -89,28 +129,23 @@ export function createSessionManager<
 			return null;
 		}
 
-		const result = JSON.parse(rawSession) as {
-			id: string;
-			user: TUser;
-			expires_at: number;
-		};
+		const result = v.parse(
+			v.strictObject({
+				id: v.string(),
+				user: userSchema,
+				expires_at: v.pipe(v.number(), v.integer(), v.minValue(0)),
+			}),
+			JSON.parse(rawSession),
+		);
+		if (result.id !== sessionId) {
+			throw new Error("Stored session ID does not match its KV key.");
+		}
 
 		const session: Session<TUser> = {
 			id: result.id,
 			user: result.user,
 			expiresAt: new Date(result.expires_at * 1000),
 		};
-
-		if (
-			session === null ||
-			session === undefined ||
-			session.user === null ||
-			session.user === undefined ||
-			session.id === null ||
-			session.id === undefined
-		) {
-			return null;
-		}
 
 		const expiresAt = new Date(session.expiresAt);
 
@@ -233,7 +268,7 @@ export function createSessionManager<
 }
 
 export const createCustomerSessionManager = (config: SessionConfig) =>
-	createSessionManager<CustomerSelectType>(config);
+	createSessionManager<CustomerSelectType>(config, customerSessionSchema);
 
 export const createUserSessionManager = (config: SessionConfig) =>
-	createSessionManager<UserSelectType>(config);
+	createSessionManager<UserSelectType>(config, userSessionSchema);

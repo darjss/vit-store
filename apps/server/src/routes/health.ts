@@ -1,6 +1,7 @@
 import { Hono } from "hono";
+import type { ServerHonoEnv } from "../lib/logging";
 
-const app = new Hono<{ Bindings: Env }>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 
 app.get("/", (c) => {
 	return c.text("OK");
