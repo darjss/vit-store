@@ -1,8 +1,13 @@
 import type { CartItems } from "@vit/shared/types";
-import { createEffect, createSignal, Match, Switch } from "solid-js";
+import { match } from "dismatch";
+import type { JSX } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
-import { DangerTriangleIcon as IconAlertTriangle, BellIcon as IconNotification } from "@solar-icons/solid/bold";
+import {
+	DangerTriangleIcon as IconAlertTriangle,
+	BellIcon as IconNotification,
+} from "@solar-icons/solid/bold";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
 import {
@@ -16,6 +21,27 @@ interface ProductQuantitySelectorProps {
 	isInStock: boolean;
 	stock: number;
 }
+
+const VerificationWarning = (props: { degraded: boolean }) => (
+	<div
+		class="rounded-2xl border border-border bg-warning p-4 text-warning-foreground"
+		data-inventory-verification={props.degraded ? "degraded" : "checking"}
+	>
+		<div class="flex items-start gap-2.5">
+			<IconAlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+			<div>
+				<p class="font-semibold text-sm">
+					{props.degraded ? "Нөөц баталгаажаагүй" : "Нөөцийг шалгаж байна"}
+				</p>
+				<p class="mt-1 text-muted-foreground text-xs leading-relaxed sm:text-sm">
+					{props.degraded
+						? "Шинэ мэдээлэл авах хүртэл сагслах боломжгүй. Дээрх “Дахин шалгах” товчийг ашиглана уу."
+						: "Одоогийн нөөц баталгаажмагц сагслах боломжтой болно."}
+				</p>
+			</div>
+		</div>
+	</div>
+);
 
 export default function ProductQuantitySelector(
 	props: ProductQuantitySelectorProps,
@@ -54,34 +80,14 @@ export default function ProductQuantitySelector(
 	};
 	const decrement = () => setQuantity((prev) => Math.max(1, prev - 1));
 
-	return (
-		<Switch>
-			<Match when={verification().status !== "verified"}>
-				<div
-					class="rounded-2xl border border-border bg-warning p-4 text-warning-foreground"
-					data-inventory-verification={verification().status}
-				>
-					<div class="flex items-start gap-2.5">
-						<IconAlertTriangle
-							class="mt-0.5 h-5 w-5 shrink-0"
-							aria-hidden="true"
-						/>
-						<div>
-							<p class="font-semibold text-sm">
-								{verification().status === "degraded"
-									? "Нөөц баталгаажаагүй"
-									: "Нөөцийг шалгаж байна"}
-							</p>
-							<p class="mt-1 text-muted-foreground text-xs leading-relaxed sm:text-sm">
-								{verification().status === "degraded"
-									? "Шинэ мэдээлэл авах хүртэл сагслах боломжгүй. Дээрх “Дахин шалгах” товчийг ашиглана уу."
-									: "Одоогийн нөөц баталгаажмагц сагслах боломжтой болно."}
-							</p>
-						</div>
-					</div>
-				</div>
-			</Match>
-			<Match when={isInStock()}>
+	return match(
+		verification(),
+		"status",
+	)<JSX.Element>({
+		checking: () => <VerificationWarning degraded={false} />,
+		degraded: () => <VerificationWarning degraded />,
+		verified: () =>
+			isInStock() ? (
 				<div class="flex items-center gap-3">
 					<fieldset
 						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
@@ -119,8 +125,7 @@ export default function ProductQuantitySelector(
 						/>
 					</div>
 				</div>
-			</Match>
-			<Match when={!isInStock()}>
+			) : (
 				<div class="space-y-4">
 					<div class="rounded-2xl bg-sand/40 p-4 sm:p-5">
 						<div class="mb-2 flex items-center gap-2.5">
@@ -156,7 +161,6 @@ export default function ProductQuantitySelector(
 						focusRestore={restockSheetFocusRestore}
 					/>
 				</div>
-			</Match>
-		</Switch>
-	);
+			),
+	});
 }

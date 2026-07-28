@@ -9,7 +9,7 @@ const LogoutButton = (props: { class?: string }) => {
 	const logoutMutation = useMutation(
 		() => ({
 			mutationFn: async () => {
-				return await api.auth.logout.mutate();
+				return await api.v2.auth.logout.mutate();
 			},
 			onSuccess: async () => {
 				window.location.href = "/";

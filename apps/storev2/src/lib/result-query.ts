@@ -13,7 +13,7 @@ type ResultQueryOptions<
 	schemas: ResultSchemas<ValueSchema, ErrorSchema>;
 };
 
-const hydrateResult = <
+export const hydrateResult = <
 	ValueSchema extends v.GenericSchema,
 	ErrorSchema extends v.GenericSchema,
 >(

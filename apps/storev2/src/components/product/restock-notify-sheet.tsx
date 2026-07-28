@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
+import { restockSubscriptionResultSchemas } from "@vit/shared";
 import { createMemo, createSignal } from "solid-js";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,33 +11,11 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { showToast } from "@/components/ui/toast";
+import { presentRestockError } from "@/lib/error-presentations";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { BellIcon as IconNotification } from "@solar-icons/solid/bold";
-
-function restockErrorMessage(error: unknown): string {
-	const code =
-		typeof error === "object" &&
-		error !== null &&
-		"data" in error &&
-		typeof error.data === "object" &&
-		error.data !== null &&
-		"code" in error.data
-			? String(error.data.code)
-			: "UNKNOWN";
-	switch (code) {
-		case "UNAUTHORIZED":
-			return "Нэвтэрч, баталгаажуулсан утасны дугаараа ашиглана уу.";
-		case "TOO_MANY_REQUESTS":
-			return "Хэт олон хүсэлт илгээлээ. Түр хүлээгээд дахин оролдоно уу.";
-		case "BAD_REQUEST":
-			return "Мэдээллээ шалгаад дахин оролдоно уу.";
-		case "NOT_FOUND":
-			return "Бараа олдсонгүй. Хуудсаа шинэчлээд дахин оролдоно уу.";
-		default:
-			return "Мэдэгдэл захиалахад алдаа гарлаа. Дараа дахин оролдоно уу.";
-	}
-}
 
 interface RestockNotifySheetProps {
 	open: boolean;
@@ -56,35 +35,40 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 
 	const mutation = useMutation(
 		() => ({
-			mutationFn: async () => {
-				const contacts = [
-					{
-						channel: "sms" as const,
-						contact: phone().replace(/\D/g, ""),
+			...resultMutationOptions(
+				() =>
+					api.v2.product.subscribeToRestock.mutate({
+						productId: props.productId,
+						contacts: [
+							{
+								channel: "sms" as const,
+								contact: phone().replace(/\D/g, ""),
+							},
+						],
+					}),
+				restockSubscriptionResultSchemas,
+			),
+			onSuccess: (result) =>
+				result.match({
+					ok: () => {
+						showToast({
+							title: "Амжилттай",
+							description: "Бараа орж ирэхэд танд мэдэгдэнэ.",
+							variant: "success",
+							duration: 4000,
+						});
+						props.onOpenChange(false);
 					},
-				];
-				await api.product.subscribeToRestock.mutate({
-					productId: props.productId,
-					contacts,
-				});
-			},
-			onSuccess: () => {
-				showToast({
-					title: "Амжилттай",
-					description: "Бараа орж ирэхэд танд мэдэгдэнэ.",
-					variant: "success",
-					duration: 4000,
-				});
-				props.onOpenChange(false);
-			},
-			onError: (error) => {
-				showToast({
-					title: "Алдаа",
-					description: restockErrorMessage(error),
-					variant: "error",
-					duration: 5000,
-				});
-			},
+					err: (error) => {
+						const presentation = presentRestockError(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 5000,
+						});
+					},
+				}),
 		}),
 		() => queryClient,
 	);
@@ -129,7 +113,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						class="w-full"
 						size="lg"
 						disabled={!canSubmit() || mutation.isPending}
-						onClick={() => mutation.mutate()}
+						onClick={() => mutation.mutate(undefined)}
 					>
 						<IconNotification class="mr-1" />
 						{mutation.isPending ? "Илгээж байна..." : "Мэдэгдэл захиалах"}

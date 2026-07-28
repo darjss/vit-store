@@ -1,5 +1,7 @@
-import { TRPCError } from "@trpc/server";
+import type { RestockError, RestockSubscriptionResult } from "@vit/shared";
+import { Result } from "better-result";
 import { and, countDistinct, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { restockErrors } from "~/errors/factories/restock";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -39,51 +41,32 @@ const openSubscription = and(
 	sql`${RestockSubscriptionsTable.deliveryState} in ('pending', 'sending')`,
 );
 
-function normalizeAndValidateContacts(
-	contacts: RestockContactInput[],
-): NormalizedContact[] {
+export function normalizeRestockContacts(contacts: RestockContactInput[]) {
 	if (contacts.length === 0) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: "At least one contact is required",
-		});
+		return Result.err<NormalizedContact[], RestockError>(
+			restockErrors.invalidContact("sms"),
+		);
 	}
 
 	const seenChannels = new Set<string>();
 	const normalized: NormalizedContact[] = [];
-
 	for (const item of contacts) {
 		if (seenChannels.has(item.channel)) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: `Duplicate channel: ${item.channel}`,
-			});
+			return Result.err<NormalizedContact[], RestockError>(
+				restockErrors.invalidContact(item.channel),
+			);
 		}
 		seenChannels.add(item.channel);
 
 		const contact = normalizeRestockContact(item.channel, item.contact);
 		if (!isValidRestockContact(item.channel, contact)) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message:
-					item.channel === "sms"
-						? "Invalid phone number"
-						: "Invalid email address",
-			});
+			return Result.err<NormalizedContact[], RestockError>(
+				restockErrors.invalidContact(item.channel),
+			);
 		}
 		normalized.push({ channel: item.channel, contact });
 	}
-
-	return normalized;
-}
-
-function isUniqueConflict(error: unknown): boolean {
-	const message = error instanceof Error ? error.message : String(error);
-	return (
-		message.includes("restock_sub_open_unique_idx") ||
-		message.includes("unique") ||
-		message.includes("duplicate")
-	);
+	return Result.ok<NormalizedContact[], RestockError>(normalized);
 }
 
 type Tx = Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0];
@@ -92,7 +75,7 @@ async function insertOneContact(
 	tx: Tx,
 	productId: number,
 	item: NormalizedContact,
-): Promise<SubscribeResult> {
+) {
 	const existing = await tx.query.RestockSubscriptionsTable.findFirst({
 		columns: { id: true },
 		where: and(
@@ -102,12 +85,11 @@ async function insertOneContact(
 			openSubscription,
 		),
 	});
-
 	if (existing) {
-		return {
+		return Result.ok<SubscribeResult, RestockError>({
 			channel: item.channel,
 			alreadySubscribed: true,
-		};
+		});
 	}
 
 	const [openProductCount] = await tx
@@ -120,35 +102,27 @@ async function insertOneContact(
 				ne(RestockSubscriptionsTable.productId, productId),
 			),
 		);
-
 	if (Number(openProductCount?.c ?? 0) >= MAX_OPEN_PRODUCTS_PER_CONTACT) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message: "Too many open restock waitlists for this contact",
-		});
+		return Result.err<SubscribeResult, RestockError>(
+			restockErrors.subscriptionLimitReached(),
+		);
 	}
 
-	try {
-		await tx.insert(RestockSubscriptionsTable).values({
+	const inserted = await tx
+		.insert(RestockSubscriptionsTable)
+		.values({
 			productId,
 			channel: item.channel,
 			contact: item.contact,
 			deliveryKey: `restock-${crypto.randomUUID()}`,
 			consentState: "verified",
-		});
-		return {
-			channel: item.channel,
-			alreadySubscribed: false,
-		};
-	} catch (error) {
-		if (isUniqueConflict(error)) {
-			return {
-				channel: item.channel,
-				alreadySubscribed: true,
-			};
-		}
-		throw error;
-	}
+		})
+		.onConflictDoNothing()
+		.returning({ id: RestockSubscriptionsTable.id });
+	return Result.ok<SubscribeResult, RestockError>({
+		channel: item.channel,
+		alreadySubscribed: inserted.length === 0,
+	});
 }
 
 export async function subscribeToRestock(input: {
@@ -157,23 +131,35 @@ export async function subscribeToRestock(input: {
 	verifiedPhone: string;
 	requestIp: string;
 }) {
-	const contacts = normalizeAndValidateContacts(input.contacts);
+	const contactsResult = normalizeRestockContacts(input.contacts);
+	if (contactsResult.status === "error") {
+		return Result.err<RestockSubscriptionResult, RestockError>(
+			contactsResult.error,
+		);
+	}
+	const contacts = contactsResult.value;
 	if (
 		contacts.length !== 1 ||
 		contacts[0]?.channel !== "sms" ||
 		contacts[0].contact !== normalizeRestockContact("sms", input.verifiedPhone)
 	) {
-		throw new TRPCError({
-			code: "UNAUTHORIZED",
-			message: "Verified phone ownership is required",
-		});
+		return Result.err<RestockSubscriptionResult, RestockError>(
+			restockErrors.contactNotVerified(),
+		);
 	}
-	await Promise.all([
-		enforceRateLimit("contact", contacts[0].contact, CONTACT_RATE_LIMIT),
-		enforceRateLimit("ip", input.requestIp, IP_RATE_LIMIT),
-	]);
 
-	const results = await db().transaction(async (tx) => {
+	for (const rateLimit of [
+		await enforceRateLimit("contact", contacts[0].contact, CONTACT_RATE_LIMIT),
+		await enforceRateLimit("ip", input.requestIp, IP_RATE_LIMIT),
+	]) {
+		if (rateLimit.status === "error") {
+			return Result.err<RestockSubscriptionResult, RestockError>(
+				rateLimit.error,
+			);
+		}
+	}
+
+	const transactionResult = await db().transaction(async (tx) => {
 		const contactsToLock = [
 			...new Set(contacts.map((item) => item.contact)),
 		].sort();
@@ -182,21 +168,32 @@ export async function subscribeToRestock(input: {
 				sql`select pg_advisory_xact_lock(hashtextextended(${contact}, 0))`,
 			);
 		}
-		const out: SubscribeResult[] = [];
+
+		const results: SubscribeResult[] = [];
 		for (const item of contacts) {
-			out.push(await insertOneContact(tx, input.productId, item));
+			const inserted = await insertOneContact(tx, input.productId, item);
+			if (inserted.status === "error") {
+				return Result.err<SubscribeResult[], RestockError>(inserted.error);
+			}
+			results.push(inserted.value);
 		}
-		return out;
+		return Result.ok<SubscribeResult[], RestockError>(results);
 	});
+	if (transactionResult.status === "error") {
+		return Result.err<RestockSubscriptionResult, RestockError>(
+			transactionResult.error,
+		);
+	}
 
-	const allAlready = results.every((r) => r.alreadySubscribed);
-
-	return {
-		success: true as const,
+	const allAlready = transactionResult.value.every(
+		(result) => result.alreadySubscribed,
+	);
+	return Result.ok<RestockSubscriptionResult, RestockError>({
+		success: true,
 		message: allAlready ? "Already subscribed" : "Subscription created",
 		alreadySubscribed: allAlready,
-		results,
-	};
+		results: transactionResult.value,
+	});
 }
 
 async function enforceRateLimit(
@@ -212,14 +209,17 @@ async function enforceRateLimit(
 		byte.toString(16).padStart(2, "0"),
 	).join("");
 	const key = `restock:subscribe:${scope}:${hash}`;
-	const count = await redis().incr(key);
-	if (count === 1) await redis().expire(key, CONTACT_RATE_WINDOW_SECONDS);
-	if (count > limit) {
-		throw new TRPCError({
-			code: "TOO_MANY_REQUESTS",
-			message: "Too many restock subscription requests",
-		});
+	const client = redis();
+	const count = await client.incr(key);
+	if (count === 1) await client.expire(key, CONTACT_RATE_WINDOW_SECONDS);
+	if (count <= limit) {
+		return Result.ok<void, RestockError>(undefined);
 	}
+
+	const ttl = await client.ttl(key);
+	return Result.err<void, RestockError>(
+		restockErrors.rateLimited(ttl > 0 ? ttl : CONTACT_RATE_WINDOW_SECONDS),
+	);
 }
 
 export async function getRestockWaitCount(productId: number): Promise<number> {
@@ -280,9 +280,7 @@ export async function listRestockWaitlist(limit = 50) {
 		.orderBy(sql`count(distinct ${RestockSubscriptionsTable.contact}) desc`)
 		.limit(limit);
 
-	if (ranked.length === 0) {
-		return [];
-	}
+	if (ranked.length === 0) return [];
 
 	const productIds = ranked.map((row) => row.productId);
 	const images = await db()
@@ -302,9 +300,8 @@ export async function listRestockWaitlist(limit = 50) {
 	const imageByProduct = new Map<number, string>();
 	for (const image of images) {
 		const existing = imageByProduct.get(image.productId);
-		if (!existing || image.isPrimary) {
+		if (!existing || image.isPrimary)
 			imageByProduct.set(image.productId, image.url);
-		}
 	}
 
 	return ranked.map((row) => ({

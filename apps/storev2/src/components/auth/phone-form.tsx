@@ -1,6 +1,9 @@
 import { useMutation } from "@tanstack/solid-query";
+import { sendOtpResultSchemas } from "@vit/shared";
 import * as v from "valibot";
+import { presentAuthError } from "@/lib/error-presentations";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { InfoCircleIcon as IconInformation } from "@solar-icons/solid/linear";
 import { useAppForm } from "../form/form";
@@ -12,19 +15,31 @@ const PhoneForm = (props: {
 }) => {
 	const mutation = useMutation(
 		() => ({
-			mutationFn: async (phone: string) => {
-				return await api.auth.sendOtp.mutate({ phone: phone });
-			},
-
-			onSuccess: async () => {
-				props.setStep("otp");
-				showToast({
-					title: "Амжилттай",
-					description: "Таны утсанд баталгаажуулах код илгээгдлээ",
-					variant: "success",
-					duration: 5000,
-				});
-			},
+			...resultMutationOptions(
+				(phone: string) => api.v2.auth.sendOtp.mutate({ phone }),
+				sendOtpResultSchemas,
+			),
+			onSuccess: (result) =>
+				result.match({
+					ok: () => {
+						props.setStep("otp");
+						showToast({
+							title: "Амжилттай",
+							description: "Таны утсанд баталгаажуулах код илгээгдлээ",
+							variant: "success",
+							duration: 5000,
+						});
+					},
+					err: (error) => {
+						const presentation = presentAuthError(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 5000,
+						});
+					},
+				}),
 		}),
 		() => queryClient,
 	);

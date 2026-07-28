@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
@@ -16,6 +17,13 @@ const getProductSearchService = () =>
 
 const PRODUCT_SEARCH_TIMEOUT_MS = 4000;
 
+export class ProductSearchUnavailableError extends Error {
+	constructor(cause: unknown) {
+		super("Product search service is unavailable", { cause });
+		this.name = "ProductSearchUnavailableError";
+	}
+}
+
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 	Promise.race([
 		promise,
@@ -27,6 +35,35 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 		),
 	]);
 
+const requestSearchPage = async (input: {
+	query: string;
+	page?: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}) => {
+	const request = await Result.tryPromise({
+		try: () =>
+			withTimeout(
+				getProductSearchService().search(input),
+				PRODUCT_SEARCH_TIMEOUT_MS,
+			),
+		catch: (cause) => new ProductSearchUnavailableError(cause),
+	});
+
+	const page = request.match({
+		ok: (value) => value,
+		err: (error) => {
+			logger.error("product_search.search_failed", error);
+			throw error;
+		},
+	});
+	if (!Array.isArray(page.items) || !page.pagination) {
+		throw new TypeError("Product search returned a malformed page");
+	}
+	return page;
+};
+
 export const searchProducts = async (
 	query: string,
 	limit = 10,
@@ -35,20 +72,12 @@ export const searchProducts = async (
 	const trimmed = query.trim();
 	if (!trimmed) return [];
 
-	try {
-		const result = await withTimeout(
-			getProductSearchService().search({
-				query: trimmed,
-				pageSize: limit,
-				filters,
-			}),
-			PRODUCT_SEARCH_TIMEOUT_MS,
-		);
-		return result.items;
-	} catch (error) {
-		logger.error("product_search.search_failed", error);
-		return [];
-	}
+	const result = await requestSearchPage({
+		query: trimmed,
+		pageSize: limit,
+		filters,
+	});
+	return result.items;
 };
 
 export const searchProductPage = async (input: {
@@ -57,11 +86,7 @@ export const searchProductPage = async (input: {
 	pageSize: number;
 	filters?: ProductSearchFilters;
 	sort?: ProductSearchSort;
-}): Promise<ProductSearchPage> =>
-	withTimeout(
-		getProductSearchService().search(input),
-		PRODUCT_SEARCH_TIMEOUT_MS,
-	);
+}): Promise<ProductSearchPage> => requestSearchPage(input);
 
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",

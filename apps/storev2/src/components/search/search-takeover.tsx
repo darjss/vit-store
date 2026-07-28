@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/solid-query";
+import { match } from "dismatch";
 import type { JSX } from "solid-js";
 import {
 	createEffect,
 	createMemo,
 	createSignal,
 	For,
-	Match,
 	onMount,
 	Show,
-	Switch,
 } from "solid-js";
 import { queryClient } from "@/lib/query";
 import {
@@ -19,9 +18,16 @@ import {
 import { parseSearchTokens } from "@/lib/search-parse";
 import { api } from "@/lib/trpc";
 import { washBg } from "@/lib/wash";
-import { ArrowRightIcon as IconArrowRight, AltArrowRightIcon as IconChevron, FolderIcon as IconFolder } from "@solar-icons/solid/linear";
+import {
+	ArrowRightIcon as IconArrowRight,
+	AltArrowRightIcon as IconChevron,
+	FolderIcon as IconFolder,
+} from "@solar-icons/solid/linear";
 import SearchResultRow from "./search-result-row";
-import { getSearchTakeoverRequestState } from "./search-takeover-state";
+import {
+	getSearchTakeoverRequestState,
+	type SearchTakeoverRequestState,
+} from "./search-takeover-state";
 import { useSearchStorefront } from "./use-search-storefront";
 
 interface SearchTakeoverProps {
@@ -37,6 +43,17 @@ interface CategoryStock {
 	slug: string;
 	productCount: number;
 }
+
+type RequestState =
+	| { status: "loading" }
+	| { status: "error" }
+	| { status: "results" };
+
+const requestStates = {
+	loading: { status: "loading" },
+	error: { status: "error" },
+	results: { status: "results" },
+} satisfies Record<SearchTakeoverRequestState, RequestState>;
 
 const TOKEN_KEY: Record<"dose" | "form" | "type", string> = {
 	dose: "Тун",
@@ -247,7 +264,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 	const categoriesQuery = useQuery(
 		() => ({
 			queryKey: ["popular-categories"],
-			queryFn: () => api.category.getAllCategoriesWithStock.query(),
+			queryFn: () => api.v2.category.getAllCategoriesWithStock.query(),
 			staleTime: 1000 * 60 * 30,
 		}),
 		() => queryClient,
@@ -278,14 +295,17 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 		!hasNavigation();
 
 	const resultCount = () => search.data()?.products.length ?? 0;
-	const requestState = createMemo(() =>
-		getSearchTakeoverRequestState({
-			status: search.status(),
-			fetchStatus: search.fetchStatus(),
-			isLoadingError: search.isLoadingError(),
-			isRefetchError: search.isRefetchError(),
-			hasCurrentData: search.data() !== undefined,
-		}),
+	const requestState = createMemo(
+		() =>
+			requestStates[
+				getSearchTakeoverRequestState({
+					status: search.status(),
+					fetchStatus: search.fetchStatus(),
+					isLoadingError: search.isLoadingError(),
+					isRefetchError: search.isRefetchError(),
+					hasCurrentData: search.data() !== undefined,
+				})
+			],
 	);
 
 	return (
@@ -294,6 +314,23 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 			fallback={
 				<div>
 					<RecentGrid onSelect={props.onSelectSuggestion} />
+					<Show when={categoriesQuery.isError}>
+						<div
+							class="mt-4 rounded-xl border border-border bg-card p-3"
+							role="alert"
+						>
+							<p class="text-muted-foreground text-xs">
+								Түгээмэл ангиллыг ачаалж чадсангүй.
+							</p>
+							<button
+								type="button"
+								onClick={() => categoriesQuery.refetch()}
+								class="min-h-11 font-semibold text-xs underline underline-offset-2"
+							>
+								Дахин оролдох
+							</button>
+						</div>
+					</Show>
 					<TrendingPills
 						categories={topCategories()}
 						onSelect={props.onSelectSuggestion}
@@ -308,128 +345,128 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 				</div>
 			}
 		>
-			<Switch>
-				<Match when={requestState() === "loading"}>
-					<ResultSkeleton />
-				</Match>
-
-				<Match when={requestState() === "error"}>
+			{match(
+				requestState(),
+				"status",
+			)<JSX.Element>({
+				loading: () => <ResultSkeleton />,
+				error: () => (
 					<SearchError query={props.query} onRetry={search.refetch} />
-				</Match>
-
-				<Match when={isZeroResults()}>
-					<div>
-						<div class="flex flex-col items-center gap-2 py-9 text-center">
-							<span class="text-[44px] leading-none">🔍</span>
-							<h3 class="font-bold font-display text-lg">Илэрц олдсонгүй</h3>
-							<p class="max-w-[280px] text-muted-foreground text-sm">
-								«{props.query}»-д тохирох бараа алга.
-							</p>
+				),
+				results: () =>
+					isZeroResults() ? (
+						<div>
+							<div class="flex flex-col items-center gap-2 py-9 text-center">
+								<span class="text-[44px] leading-none">🔍</span>
+								<h3 class="font-bold font-display text-lg">Илэрц олдсонгүй</h3>
+								<p class="max-w-[280px] text-muted-foreground text-sm">
+									«{props.query}»-д тохирох бараа алга.
+								</p>
+							</div>
+							<section>
+								<SectionLabel>Ойролцоо ангилал</SectionLabel>
+								<JumpList
+									categories={jumpCategories()}
+									onNavigate={props.onClose}
+								/>
+							</section>
+							<TrendingPills
+								categories={topCategories()}
+								onSelect={props.onSelectSuggestion}
+							/>
 						</div>
-						<section>
-							<SectionLabel>Ойролцоо ангилал</SectionLabel>
-							<JumpList
-								categories={jumpCategories()}
-								onNavigate={props.onClose}
-							/>
-						</section>
-						<TrendingPills
-							categories={topCategories()}
-							onSelect={props.onSelectSuggestion}
-						/>
-					</div>
-				</Match>
+					) : (
+						<Show when={search.data()}>
+							<div>
+								<Show when={search.isRefetchError()}>
+									<SearchRefetchError
+										isFetching={search.isFetching()}
+										onRetry={search.refetch}
+									/>
+								</Show>
 
-				<Match when={search.data()}>
-					<div>
-						<Show when={search.isRefetchError()}>
-							<SearchRefetchError
-								isFetching={search.isFetching()}
-								onRetry={search.refetch}
-							/>
-						</Show>
+								<Show when={tokens().length > 0}>
+									<div class="mt-1 rounded-2xl border border-cocoa bg-primary/15 p-3.5 shadow-soft-sm">
+										<div class="mb-2 flex items-center gap-1.5 font-extrabold text-cocoa text-xs uppercase tracking-wide">
+											✨ Ухаалаг тайлбар
+										</div>
+										<div class="flex flex-wrap gap-2">
+											<For each={tokens()}>
+												{(token) => (
+													<span class="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 font-semibold text-xs shadow-soft-sm">
+														<span class="font-extrabold text-[10px] text-muted-foreground uppercase">
+															{TOKEN_KEY[token.kind]}
+														</span>
+														{token.label}
+													</span>
+												)}
+											</For>
+										</div>
+									</div>
+								</Show>
 
-						<Show when={tokens().length > 0}>
-							<div class="mt-1 rounded-2xl border border-cocoa bg-primary/15 p-3.5 shadow-soft-sm">
-								<div class="mb-2 flex items-center gap-1.5 font-extrabold text-cocoa text-xs uppercase tracking-wide">
-									✨ Ухаалаг тайлбар
-								</div>
-								<div class="flex flex-wrap gap-2">
-									<For each={tokens()}>
-										{(token) => (
-											<span class="flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 font-semibold text-xs shadow-soft-sm">
-												<span class="font-extrabold text-[10px] text-muted-foreground uppercase">
-													{TOKEN_KEY[token.kind]}
-												</span>
-												{token.label}
-											</span>
+								<div class="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+									<span class="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-cocoa bg-secondary px-3.5 font-semibold text-secondary-foreground text-xs">
+										Урьдчилсан
+										<span class="rounded-full bg-white/25 px-1.5 py-0.5 font-extrabold text-[11px]">
+											{resultCount()}
+										</span>
+									</span>
+									<For each={search.data()?.categories ?? []}>
+										{(category) => (
+											<FacetChip
+												label={category.name}
+												count={category.productCount}
+												href={`/products?category=${category.id}`}
+												onNavigate={props.onClose}
+											/>
+										)}
+									</For>
+									<For each={search.data()?.brands ?? []}>
+										{(brand) => (
+											<FacetChip
+												label={brand.name}
+												count={brand.productCount}
+												href={`/products?brand=${brand.id}`}
+												onNavigate={props.onClose}
+											/>
 										)}
 									</For>
 								</div>
+
+								<p class="mt-3.5 mb-2 font-semibold text-muted-foreground text-xs">
+									<b class="font-display text-foreground text-sm">
+										{resultCount()}
+									</b>{" "}
+									бүтээгдэхүүнийг урьдчилан харуулж байна · «{props.query}»
+								</p>
+
+								<div class="flex flex-col gap-2.5">
+									<For each={search.data()?.products ?? []}>
+										{(product, index) => (
+											<SearchResultRow
+												product={product}
+												query={props.query}
+												position={index()}
+												onNavigate={props.onClose}
+											/>
+										)}
+									</For>
+								</div>
+
+								<Show when={resultCount() > 0}>
+									<a
+										href={`/products/?q=${encodeURIComponent(props.query)}`}
+										class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cocoa bg-primary font-bold font-display text-sm shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
+									>
+										Каталогийн бүх илэрцийг харах
+										<IconArrowRight class="h-4 w-4" />
+									</a>
+								</Show>
 							</div>
 						</Show>
-
-						<div class="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-							<span class="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-cocoa bg-secondary px-3.5 font-semibold text-secondary-foreground text-xs">
-								Урьдчилсан
-								<span class="rounded-full bg-white/25 px-1.5 py-0.5 font-extrabold text-[11px]">
-									{resultCount()}
-								</span>
-							</span>
-							<For each={search.data()?.categories ?? []}>
-								{(category) => (
-									<FacetChip
-										label={category.name}
-										count={category.productCount}
-										href={`/products?category=${category.id}`}
-										onNavigate={props.onClose}
-									/>
-								)}
-							</For>
-							<For each={search.data()?.brands ?? []}>
-								{(brand) => (
-									<FacetChip
-										label={brand.name}
-										count={brand.productCount}
-										href={`/products?brand=${brand.id}`}
-										onNavigate={props.onClose}
-									/>
-								)}
-							</For>
-						</div>
-
-						<p class="mt-3.5 mb-2 font-semibold text-muted-foreground text-xs">
-							<b class="font-display text-foreground text-sm">
-								{resultCount()}
-							</b>{" "}
-							бүтээгдэхүүнийг урьдчилан харуулж байна · «{props.query}»
-						</p>
-
-						<div class="flex flex-col gap-2.5">
-							<For each={search.data()?.products ?? []}>
-								{(product, index) => (
-									<SearchResultRow
-										product={product}
-										query={props.query}
-										position={index()}
-										onNavigate={props.onClose}
-									/>
-								)}
-							</For>
-						</div>
-
-						<Show when={resultCount() > 0}>
-							<a
-								href={`/products/?q=${encodeURIComponent(props.query)}`}
-								class="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-cocoa bg-primary font-bold font-display text-sm shadow-lift transition-transform duration-200 ease-out active:scale-[0.97]"
-							>
-								Каталогийн бүх илэрцийг харах
-								<IconArrowRight class="h-4 w-4" />
-							</a>
-						</Show>
-					</div>
-				</Match>
-			</Switch>
+					),
+			})}
 		</Show>
 	);
 };

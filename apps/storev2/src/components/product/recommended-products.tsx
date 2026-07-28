@@ -31,7 +31,7 @@ async function fetchRecommendedProducts(
 ): Promise<ProductForHome[]> {
 	try {
 		return await withTimeout(
-			api.product.getRecommendedProducts.query({
+			api.v2.product.getRecommendedProducts.query({
 				productId,
 				categoryId,
 				brandId,
@@ -39,19 +39,13 @@ async function fetchRecommendedProducts(
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
 	} catch {
-		try {
-			const fallbackProducts = await withTimeout(
-				api.product.getProductsForHome.query(),
-				RECOMMENDED_FETCH_TIMEOUT_MS,
-			);
-			return fallbackProducts.featuredProducts
-				.filter(
-					(product) => product.id !== productId && (product.stock ?? 0) > 0,
-				)
-				.slice(0, RECOMMENDED_SHELF_LIMIT);
-		} catch {
-			return [];
-		}
+		const fallbackProducts = await withTimeout(
+			api.v2.product.getProductsForHome.query(),
+			RECOMMENDED_FETCH_TIMEOUT_MS,
+		);
+		return fallbackProducts.featuredProducts
+			.filter((product) => product.id !== productId && (product.stock ?? 0) > 0)
+			.slice(0, RECOMMENDED_SHELF_LIMIT);
 	}
 }
 
@@ -67,7 +61,7 @@ function ShelfHeading() {
 }
 
 export default function RecommendedProducts(props: RecommendedProductsProps) {
-	const [products] = createResource(
+	const [products, { refetch }] = createResource(
 		() => ({
 			productId: props.currentProductId,
 			categoryId: props.categoryId,
@@ -98,6 +92,27 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 						</div>
 					</Show>
 				)}
+			</Show>
+
+			<Show when={products.error}>
+				<div
+					class="rounded-2xl border border-border bg-card p-6 text-center"
+					role="alert"
+				>
+					<h2 class="font-display text-lg">
+						Санал болгох бүтээгдэхүүнийг ачаалж чадсангүй
+					</h2>
+					<p class="mt-2 text-muted-foreground text-sm">
+						Үйлчилгээнд түр саатал гарлаа. Хэсэг хүлээгээд дахин оролдоно уу.
+					</p>
+					<button
+						type="button"
+						onClick={() => refetch()}
+						class="mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-5 font-semibold text-sm"
+					>
+						Дахин оролдох
+					</button>
+				</div>
 			</Show>
 
 			<Show when={products.loading}>

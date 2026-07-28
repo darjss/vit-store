@@ -1,5 +1,13 @@
 import { useMutation } from "@tanstack/solid-query";
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { loginResultSchemas, sendOtpResultSchemas } from "@vit/shared";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import {
 	OTPField,
 	OTPFieldGroup,
@@ -7,7 +15,9 @@ import {
 	OTPFieldSlot,
 } from "@/components/ui/otp";
 import { identifyUser } from "@/lib/analytics";
+import { presentAuthError } from "@/lib/error-presentations";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
@@ -19,6 +29,7 @@ const OtpForm = (props: {
 	setStep: (step: "phone" | "otp") => void;
 }) => {
 	const [otp, setOtp] = createSignal("");
+	const [lastAutoSubmittedOtp, setLastAutoSubmittedOtp] = createSignal("");
 	const [timer, setTimer] = createSignal(59);
 	const [canResend, setCanResend] = createSignal(false);
 
@@ -51,52 +62,76 @@ const OtpForm = (props: {
 	});
 	const loginMutation = useMutation(
 		() => ({
-			mutationFn: async (otp: string) => {
-				return await api.auth.login.mutate({ phone: props.phone, otp });
-			},
-			onSuccess: async () => {
-				// Identify user in PostHog for cross-session tracking
-				await identifyUser(props.phone);
-
-				showToast({
-					title: "Амжилттай нэвтэрлээ",
-					description: "Тавтай морил!",
-					variant: "success",
-					duration: 3000,
-				});
-				props.setStep("phone");
-				void safeNavigate("/profile", { history: "push" });
-			},
+			...resultMutationOptions(
+				(otp: string) => api.v2.auth.login.mutate({ phone: props.phone, otp }),
+				loginResultSchemas,
+			),
+			onSuccess: (result) =>
+				result.match({
+					ok: async () => {
+						await identifyUser(props.phone);
+						showToast({
+							title: "Амжилттай нэвтэрлээ",
+							description: "Тавтай морил!",
+							variant: "success",
+							duration: 3000,
+						});
+						props.setStep("phone");
+						void safeNavigate("/profile", { history: "push" });
+					},
+					err: () => undefined,
+				}),
 		}),
 		() => queryClient,
 	);
 	const sendOptMutation = useMutation(
 		() => ({
-			mutationFn: async (phone: string) => {
-				return await api.auth.sendOtp.mutate({ phone: phone });
-			},
-
-			onSuccess: async () => {
-				showToast({
-					title: "Код дахин илгээгдлээ",
-					description: "Таны утсанд шинэ баталгаажуулах код илгээгдлээ",
-					variant: "success",
-					duration: 5000,
-				});
-				props.setStep("otp");
-			},
+			...resultMutationOptions(
+				(phone: string) => api.v2.auth.sendOtp.mutate({ phone }),
+				sendOtpResultSchemas,
+			),
+			onSuccess: (result) =>
+				result.match({
+					ok: () => {
+						showToast({
+							title: "Код дахин илгээгдлээ",
+							description: "Таны утсанд шинэ баталгаажуулах код илгээгдлээ",
+							variant: "success",
+							duration: 5000,
+						});
+						props.setStep("otp");
+						startTimer(59);
+					},
+					err: (error) => {
+						const presentation = presentAuthError(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 5000,
+						});
+					},
+				}),
 		}),
 		() => queryClient,
 	);
-	const handleResend = () => {
-		sendOptMutation.mutate(props.phone);
-		startTimer(59);
-	};
+	const loginFailure = createMemo(() =>
+		loginMutation.data?.match({
+			ok: () => undefined,
+			err: presentAuthError,
+		}),
+	);
+	const handleResend = () => sendOptMutation.mutate(props.phone);
 
 	// Auto-submit when OTP is complete (4 digits)
 	createEffect(() => {
 		const otpValue = otp();
-		if (otpValue.length === 4 && !loginMutation.isPending) {
+		if (
+			otpValue.length === 4 &&
+			otpValue !== lastAutoSubmittedOtp() &&
+			!loginMutation.isPending
+		) {
+			setLastAutoSubmittedOtp(otpValue);
 			loginMutation.mutate(otpValue);
 		}
 	});
@@ -129,16 +164,34 @@ const OtpForm = (props: {
 				</OTPField>
 			</div>
 
-			{loginMutation.isError && (
-				<div class="animate-shake rounded-xl border border-destructive/30 bg-error p-4">
-					<div class="flex items-center gap-3">
-						<IconCloseCircle class="h-5 w-5 flex-shrink-0 text-destructive" />
-						<p class="font-semibold text-error-foreground text-sm">
-							Код буруу байна. Дахин оролдоно уу.
-						</p>
+			<Show when={loginFailure()} keyed>
+				{(presentation) => (
+					<div class="animate-shake rounded-xl border border-destructive/30 bg-error p-4">
+						<div class="flex items-start gap-3">
+							<IconCloseCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+							<div>
+								<p class="font-semibold text-error-foreground text-sm">
+									{presentation.title}
+								</p>
+								<p class="mt-1 text-error-foreground/80 text-xs">
+									{presentation.description}
+								</p>
+							</div>
+						</div>
 					</div>
+				)}
+			</Show>
+
+			<Show when={loginMutation.isError}>
+				<div class="rounded-xl border border-destructive/30 bg-error p-4">
+					<p class="font-semibold text-error-foreground text-sm">
+						Нэвтрэх үйлчилгээнд түр саатал гарлаа.
+					</p>
+					<p class="mt-1 text-error-foreground/80 text-xs">
+						Хэсэг хүлээгээд дахин оролдоно уу.
+					</p>
 				</div>
-			)}
+			</Show>
 
 			<div class="space-y-3">
 				<Button

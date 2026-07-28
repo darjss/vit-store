@@ -1,5 +1,9 @@
 import { toProductImageUrl } from "@/lib/image";
 import { api, createServerClient } from "@/lib/trpc";
+import {
+	deserializeResultOrThrow,
+	productLookupResultSchemas,
+} from "@vit/shared";
 import { env } from "cloudflare:workers";
 
 export const prerender = false;
@@ -213,11 +217,7 @@ function buildOgSvg(product: ProductForOg) {
 `.trim();
 }
 
-export async function GET({
-	params,
-}: {
-	params: { slug?: string };
-}) {
+export async function GET({ params }: { params: { slug?: string } }) {
 	const slug = params.slug ?? "";
 	const slugParts = slug.split("-");
 	const productId = Number(slugParts[slugParts.length - 1]);
@@ -226,11 +226,15 @@ export async function GET({
 		return new Response("Invalid product ID", { status: 400 });
 	}
 
-	const serverApi = env.server ? createServerClient(undefined, env.server) : api;
-	const product = await serverApi.product.getProductById.query({ id: productId });
-	if (!product) {
-		return new Response("Product not found", { status: 404 });
-	}
+	const serverApi = env.server
+		? createServerClient(undefined, env.server)
+		: api;
+	const result = deserializeResultOrThrow(
+		await serverApi.v2.product.getProductById.query({ id: productId }),
+		productLookupResultSchemas,
+	);
+	const product = result.match({ ok: (value) => value, err: () => null });
+	if (!product) return new Response("Product not found", { status: 404 });
 
 	return new Response(buildOgSvg(product), {
 		headers: {

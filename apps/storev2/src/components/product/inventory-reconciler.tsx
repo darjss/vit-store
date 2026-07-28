@@ -394,7 +394,7 @@ async function flushInventoryQueue(): Promise<void> {
 	activeRequests.add(request);
 
 	try {
-		const inventory = await api.product.getInventory.query(
+		const inventory = await api.v2.product.getInventory.query(
 			{ productIds: [...entries.keys()] },
 			{ signal: controller.signal },
 		);

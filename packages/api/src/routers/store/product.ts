@@ -1,25 +1,41 @@
 import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
+import type { ProductError, RestockError } from "@vit/shared";
 import {
 	CACHE_POLICY,
 	PRODUCTS_TAG,
 	inventoryTag,
+	productLookupResultSchemas,
+	productSearchPageResultSchemas,
 	productTag,
+	restockSubscriptionResultSchemas,
+	serializeResult,
+	storefrontSearchResultSchemas,
 } from "@vit/shared";
 import { PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
+import { match } from "dismatch";
 import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
 import { PRODUCT_SEARCH_SORT_FIELDS } from "~/lib/product-search/types";
-import { subscribeToRestock } from "~/lib/restock";
-import { projectStorefrontCard } from "~/queries/products/storefront-card";
-import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
+import {
+	getHomeProductsOperation,
+	getInfiniteProductsOperation,
+	getPaginatedProductsOperation,
+	getProductByIdOperation,
+	getProductInventoryOperation,
+	getRecommendedProductsOperation,
+	getTotalActiveProductCountOperation,
+	searchProductsForPageOperation,
+	searchStorefrontOperation,
+} from "~/operations/product/storefront";
+import { subscribeToRestockOperation } from "~/operations/restock/subscribe";
+import type { LegacyTrpcError } from "~/result/legacy-trpc";
+import { toLegacyTrpc } from "~/result/legacy-trpc";
+import { customerProcedure, publicProcedure, router } from "~/lib/trpc";
 import {
 	mapStockStatus,
 	performAssistantProductSearch,
-	performProductSearch,
-	performProductSearchPage,
-	searchNavigationResults,
 } from "./product-search-helpers";
 
 const infiniteProductsInput = {
@@ -84,39 +100,108 @@ const searchPageInput = {
 	sortDirection: v.optional(v.picklist(PRODUCT_SORT_DIRECTIONS)),
 };
 
+const toLegacyProductError = (error: ProductError) =>
+	match(
+		error,
+		"_tag",
+	)<LegacyTrpcError>({
+		ProductNotFound: () => ({
+			code: "NOT_FOUND",
+			message: "Product not found",
+		}),
+		ProductUnavailable: () => ({
+			code: "BAD_REQUEST",
+			message: "Product is unavailable",
+		}),
+		InsufficientStock: () => ({
+			code: "BAD_REQUEST",
+			message: "Insufficient stock",
+		}),
+		SearchUnavailable: () => ({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to search products",
+		}),
+	});
+
+const toLegacyRestockError = (error: RestockError) =>
+	match(
+		error,
+		"_tag",
+	)<LegacyTrpcError>({
+		InvalidContact: ({ channel }) => ({
+			code: "BAD_REQUEST",
+			message:
+				channel === "sms" ? "Invalid phone number" : "Invalid email address",
+		}),
+		ContactNotVerified: () => ({
+			code: "UNAUTHORIZED",
+			message: "Verified phone ownership is required",
+		}),
+		SubscriptionLimitReached: () => ({
+			code: "BAD_REQUEST",
+			message: "Too many open restock waitlists for this contact",
+		}),
+		RestockRateLimited: () => ({
+			code: "TOO_MANY_REQUESTS",
+			message: "Too many restock subscription requests",
+		}),
+		ProductNotFound: () => ({
+			code: "NOT_FOUND",
+			message: "Product not found",
+		}),
+		ProductAlreadyInStock: () => ({
+			code: "BAD_REQUEST",
+			message: "Product is already in stock",
+		}),
+	});
+
+const searchPageOperationInput = (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	brandId?: number;
+	categoryId?: number;
+	requireStock: boolean;
+	minPrice?: number;
+	maxPrice?: number;
+	sortField?: "price" | "createdAt";
+	sortDirection?: "asc" | "desc";
+}) => ({
+	query: input.query,
+	page: input.page,
+	pageSize: input.pageSize,
+	filters: {
+		brandId: input.brandId,
+		categoryId: input.categoryId,
+		requireStock: input.requireStock,
+		minPrice: input.minPrice,
+		maxPrice: input.maxPrice,
+	},
+	sort:
+		input.sortField && input.sortDirection
+			? { field: input.sortField, direction: input.sortDirection }
+			: undefined,
+});
+
+const requestIp = (ctx: {
+	c: { req: { header: (name: string) => string | undefined } };
+}) =>
+	ctx.c.req.header("cf-connecting-ip") ??
+	ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+	"unknown";
+
 export const product = router({
 	// Catalogue search returns an exact constrained total plus one page. Unlike
 	// the lightweight search takeover, this contract never treats a capped
 	// result array as the complete matching set.
 	searchProductsForPage: publicProcedure
 		.input(v.object(searchPageInput))
-		.query(async ({ input }) => {
-			try {
-				const sort =
-					input.sortField && input.sortDirection
-						? { field: input.sortField, direction: input.sortDirection }
-						: undefined;
-				return await performProductSearchPage({
-					query: input.query,
-					page: input.page,
-					pageSize: input.pageSize,
-					filters: {
-						brandId: input.brandId,
-						categoryId: input.categoryId,
-						requireStock: input.requireStock,
-						minPrice: input.minPrice,
-						maxPrice: input.maxPrice,
-					},
-					sort,
-				});
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to search products",
-					cause: error,
-				});
-			}
-		}),
+		.query(async ({ input }) =>
+			toLegacyTrpc(
+				await searchProductsForPageOperation(searchPageOperationInput(input)),
+				toLegacyProductError,
+			),
+		),
 	searchStorefront: publicProcedure
 		.input(
 			v.object({
@@ -124,49 +209,16 @@ export const product = router({
 				limit: v.optional(v.number(), 8),
 			}),
 		)
-		.query(async ({ input }) => {
-			try {
-				const safeLimit = Math.min(input.limit, 12);
-				const [products, navigation] = await Promise.all([
-					performProductSearch(input.query, safeLimit),
-					searchNavigationResults(input.query, 4),
-				]);
-
-				return {
-					products,
-					brands: navigation.brands,
-					categories: navigation.categories,
-				};
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to search storefront",
-					cause: error,
-				});
-			}
-		}),
+		.query(async ({ input }) =>
+			toLegacyTrpc(
+				await searchStorefrontOperation(input),
+				toLegacyProductError,
+			),
+		),
 	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
-		try {
-			const q = productQueries.store;
-			const [featuredProducts, newProducts, discountedProducts] =
-				await Promise.all([
-					q.getFeaturedProducts(),
-					q.getNewProducts(),
-					q.getDiscountedProducts(),
-				]);
-			markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
-			return {
-				featuredProducts: featuredProducts.map(projectStorefrontCard),
-				newProducts: newProducts.map(projectStorefrontCard),
-				discountedProducts: discountedProducts.map(projectStorefrontCard),
-			};
-		} catch (error) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Error getting products for home",
-				cause: error,
-			});
-		}
+		const products = await getHomeProductsOperation();
+		markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
+		return products;
 	}),
 
 	getPrerenderProducts: publicProcedure.query(async ({ ctx }) => {
@@ -183,32 +235,18 @@ export const product = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const q = productQueries.store;
-			const result = await q.getProductById(input.id);
+			const result = await getProductByIdOperation(input.id);
 			markCacheable(ctx, CACHE_POLICY.productDetail, [
 				PRODUCTS_TAG,
 				productTag(input.id),
 			]);
-			if (result === null || result === undefined) {
-				return null;
-			}
-
-			return {
-				...result,
-				stock: result.stock,
-				images: result.images.map((image) => ({
-					url: image.url,
-					isPrimary: image.isPrimary,
-				})),
-			};
+			return result.match({ ok: (product) => product, err: () => null });
 		}),
 
 	getInventory: publicProcedure
 		.input(v.object(inventoryInput))
 		.query(async ({ ctx, input }) => {
-			const products = await productQueries.store.getProductInventory(
-				input.productIds,
-			);
+			const products = await getProductInventoryOperation(input.productIds);
 			markCacheable(
 				ctx,
 				CACHE_POLICY.inventory,
@@ -296,17 +334,9 @@ export const product = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			try {
-				const products = await productQueries.store.getRecommendations(input);
-				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
-				return products;
-			} catch (error) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Error getting recommended products",
-					cause: error,
-				});
-			}
+			const products = await getRecommendedProductsOperation(input);
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return products;
 		}),
 
 	getCartCrossSells: publicProcedure
@@ -334,7 +364,7 @@ export const product = router({
 			}
 		}),
 
-	subscribeToRestock: verifiedCustomerProcedure
+	subscribeToRestock: customerProcedure
 		.input(
 			v.object({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -350,33 +380,15 @@ export const product = router({
 				),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
-			const q = productQueries.store;
-			const product = await q.getProductStockStatus(input.productId);
-
-			if (!product) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "Product not found",
-				});
-			}
-
-			if (product.stock > 0 && product.status !== "out_of_stock") {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Product is already in stock",
-				});
-			}
-
-			return subscribeToRestock({
-				...input,
-				verifiedPhone: String(ctx.session.user.phone),
-				requestIp:
-					ctx.c.req.header("cf-connecting-ip") ??
-					ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-					"unknown",
-			});
-		}),
+		.mutation(async ({ input, ctx }) =>
+			toLegacyTrpc(
+				await subscribeToRestockOperation(
+					{ ...input, requestIp: requestIp(ctx) },
+					ctx.session.user,
+				),
+				toLegacyRestockError,
+			),
+		),
 	getProductBenchmark: publicProcedure.query(async () => {
 		try {
 			return await runProductBenchmark();
@@ -392,49 +404,133 @@ export const product = router({
 	getInfiniteProducts: publicProcedure
 		.input(v.object(infiniteProductsInput))
 		.query(async ({ ctx, input }) => {
-			try {
-				const q = productQueries.store;
-				const products = await q.getInfiniteProducts(input);
-				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
-				return products;
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to get infinite products",
-					cause: error,
-				});
-			}
+			const products = await getInfiniteProductsOperation(input);
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return products;
 		}),
 
 	getPaginatedProducts: publicProcedure
 		.input(v.object(paginatedProductsInput))
 		.query(async ({ ctx, input }) => {
-			try {
-				const q = productQueries.store;
-				const products = await q.getPaginatedProducts(input);
-				markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
-				return products;
-			} catch (error) {
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to get paginated products",
-					cause: error,
-				});
-			}
+			const products = await getPaginatedProductsOperation(input);
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return products;
 		}),
 
 	getTotalActiveProductCount: publicProcedure.query(async ({ ctx }) => {
-		try {
-			const q = productQueries.store;
-			const count = await q.getTotalActiveProductCount();
+		const count = await getTotalActiveProductCountOperation();
+		markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+		return count;
+	}),
+});
+
+export const productV2Router = router({
+	searchProductsForPage: publicProcedure
+		.input(v.object(searchPageInput))
+		.query(async ({ input }) =>
+			serializeResult(
+				await searchProductsForPageOperation(searchPageOperationInput(input)),
+				productSearchPageResultSchemas,
+			),
+		),
+	searchStorefront: publicProcedure
+		.input(
+			v.object({
+				query: v.pipe(v.string(), v.minLength(1)),
+				limit: v.optional(v.number(), 8),
+			}),
+		)
+		.query(async ({ input }) =>
+			serializeResult(
+				await searchStorefrontOperation(input),
+				storefrontSearchResultSchemas,
+			),
+		),
+	getProductsForHome: publicProcedure.query(async ({ ctx }) => {
+		const products = await getHomeProductsOperation();
+		markCacheable(ctx, CACHE_POLICY.homeFeed, [PRODUCTS_TAG]);
+		return products;
+	}),
+	getProductById: publicProcedure
+		.input(
+			v.object({
+				id: v.pipe(v.number(), v.integer(), v.minValue(1)),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const result = await getProductByIdOperation(input.id);
+			markCacheable(ctx, CACHE_POLICY.productDetail, [
+				PRODUCTS_TAG,
+				productTag(input.id),
+			]);
+			return serializeResult(result, productLookupResultSchemas);
+		}),
+	getInventory: publicProcedure
+		.input(v.object(inventoryInput))
+		.query(async ({ ctx, input }) => {
+			const products = await getProductInventoryOperation(input.productIds);
+			markCacheable(
+				ctx,
+				CACHE_POLICY.inventory,
+				products.map((product) => inventoryTag(product.id)),
+			);
+			return products;
+		}),
+	getRecommendedProducts: publicProcedure
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				categoryId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				brandId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const products = await getRecommendedProductsOperation(input);
 			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
-			return count;
-		} catch (error) {
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to get total product count",
-				cause: error,
-			});
-		}
+			return products;
+		}),
+	subscribeToRestock: customerProcedure
+		.input(
+			v.object({
+				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+				contacts: v.pipe(
+					v.array(
+						v.object({
+							channel: v.literal("sms"),
+							contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+						}),
+					),
+					v.minLength(1),
+					v.maxLength(1),
+				),
+			}),
+		)
+		.mutation(async ({ input, ctx }) =>
+			serializeResult(
+				await subscribeToRestockOperation(
+					{ ...input, requestIp: requestIp(ctx) },
+					ctx.session.user,
+				),
+				restockSubscriptionResultSchemas,
+			),
+		),
+	getInfiniteProducts: publicProcedure
+		.input(v.object(infiniteProductsInput))
+		.query(async ({ ctx, input }) => {
+			const products = await getInfiniteProductsOperation(input);
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return products;
+		}),
+	getPaginatedProducts: publicProcedure
+		.input(v.object(paginatedProductsInput))
+		.query(async ({ ctx, input }) => {
+			const products = await getPaginatedProductsOperation(input);
+			markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+			return products;
+		}),
+	getTotalActiveProductCount: publicProcedure.query(async ({ ctx }) => {
+		const count = await getTotalActiveProductCountOperation();
+		markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
+		return count;
 	}),
 });

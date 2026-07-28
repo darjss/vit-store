@@ -2,6 +2,7 @@ import { productQueries } from "@vit/api/queries";
 import { brandQueries } from "~/queries/brands";
 import { categoryQueries } from "~/queries/categories";
 import {
+	ProductSearchUnavailableError,
 	searchProductPage,
 	searchProducts,
 } from "~/lib/product-search/client";
@@ -94,7 +95,15 @@ export const performCatalogSearch = async (
 					requireStock,
 				}
 			: undefined;
-	const searchResults = await searchProducts(query, safeLimit, filters);
+	let searchResults: Awaited<ReturnType<typeof searchProducts>>;
+	let searchFailure: ProductSearchUnavailableError | undefined;
+	try {
+		searchResults = await searchProducts(query, safeLimit, filters);
+	} catch (error) {
+		if (!(error instanceof ProductSearchUnavailableError)) throw error;
+		searchFailure = error;
+		searchResults = [];
+	}
 
 	if (searchResults.length > 0) {
 		return searchResults
@@ -121,14 +130,14 @@ export const performCatalogSearch = async (
 		? await q.searchByNameWithStock(query, safeLimit)
 		: await q.searchByName(query, safeLimit);
 
-	return fallbackResults
-		.map(projectStorefrontCard)
-		.sort((a, b) => {
-			const aIn = a.stock > 0;
-			const bIn = b.stock > 0;
-			if (aIn !== bIn) return aIn ? -1 : 1;
-			return b.stock - a.stock;
-		});
+	const fallback = fallbackResults.map(projectStorefrontCard).sort((a, b) => {
+		const aIn = a.stock > 0;
+		const bIn = b.stock > 0;
+		if (aIn !== bIn) return aIn ? -1 : 1;
+		return b.stock - a.stock;
+	});
+	if (searchFailure && fallback.length === 0) throw searchFailure;
+	return fallback;
 };
 
 export const performProductSearch = async (

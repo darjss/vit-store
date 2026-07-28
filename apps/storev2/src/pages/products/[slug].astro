@@ -14,6 +14,7 @@ import RecommendedProducts from "@/components/product/recommended-products.tsx";
 import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
 import { washBg } from "@/lib/wash";
+import { deserializeResultOrThrow, productLookupResultSchemas } from "@vit/shared";
 
 export const prerender = false;
 
@@ -31,13 +32,12 @@ if (Number.isNaN(productId)) {
 	return Astro.redirect("/404");
 }
 
-const productData = await api.product.getProductById.query({ id: productId });
-if (!productData) {
-	console.error("Product not found");
-	return Astro.redirect("/404");
-}
-
-const product = productData;
+const productResult = deserializeResultOrThrow(
+	await api.v2.product.getProductById.query({ id: productId }),
+	productLookupResultSchemas,
+);
+const product = productResult.match({ ok: (value) => value, err: () => null });
+if (!product) return Astro.redirect("/404");
 
 // Old or non-canonical slugs redirect at request time so the stock-sensitive
 // PDP remains on-demand instead of freezing a build-time path list.
@@ -165,8 +165,8 @@ Astro.cache.set({
 	image={ogImage}
 	imageAlt={product.name}
 >
-	<script type="application/ld+json" data-product-jsonld set:html={JSON.stringify(productSchema)} />
-	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	<script is:inline type="application/ld+json" data-product-jsonld set:html={JSON.stringify(productSchema)}></script>
+	<script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)}></script>
 
 	<div class="relative min-h-screen bg-hero-warm">
 		<div

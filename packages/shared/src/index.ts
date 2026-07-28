@@ -1,6 +1,6 @@
 export * from "./cache";
 export * from "./constants";
-export * from "./contracts/errors";
+export * from "./contracts";
 export * from "./domain/product";
 export * from "./order-status";
 export * from "./result";

@@ -1,8 +1,15 @@
-import type { Component } from "solid-js";
-import { createEffect, For, Match, Show, Switch } from "solid-js";
+import { match } from "dismatch";
+import type { Component, JSX } from "solid-js";
+import { createEffect, createMemo, For, Show } from "solid-js";
 import ProductCard from "@/components/product/product-card";
 import { trackSearchResultClicked } from "@/lib/analytics";
-import { ArrowRightIcon as IconArrowRight, SadCircleIcon as IconEmotionSad, FolderIcon as IconFolder, MinimalisticMagnifierIcon as IconSearch, ShopIcon as IconStore } from "@solar-icons/solid/linear";
+import {
+	ArrowRightIcon as IconArrowRight,
+	SadCircleIcon as IconEmotionSad,
+	FolderIcon as IconFolder,
+	MinimalisticMagnifierIcon as IconSearch,
+	ShopIcon as IconStore,
+} from "@solar-icons/solid/linear";
 import PopularCategories from "./popular-categories";
 import { useSearchStorefront } from "./use-search-storefront";
 
@@ -11,6 +18,12 @@ interface SearchResultsProps {
 	onProductClick?: () => void;
 	onLoadingChange?: (isLoading: boolean) => void;
 }
+
+type SearchView =
+	| { status: "loading" }
+	| { status: "error" }
+	| { status: "empty" }
+	| { status: "results" };
 
 const SearchResults: Component<SearchResultsProps> = (props) => {
 	const search = useSearchStorefront(() => props.searchQuery, { limit: 8 });
@@ -22,6 +35,19 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 	const hasNavigationResults = () =>
 		(search.data()?.brands.length ?? 0) > 0 ||
 		(search.data()?.categories.length ?? 0) > 0;
+
+	const view = createMemo<SearchView>(() => {
+		if (search.isLoading()) return { status: "loading" };
+		if (search.isError()) return { status: "error" };
+		if (
+			search.data() &&
+			search.data()?.products.length === 0 &&
+			!hasNavigationResults()
+		) {
+			return { status: "empty" };
+		}
+		return { status: "results" };
+	});
 
 	const handleProductClick = (
 		productId: number,
@@ -39,9 +65,11 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 
 	return (
 		<div class="mt-4 sm:mt-6">
-			<Switch>
-				{/* Loading State */}
-				<Match when={search.isLoading()}>
+			{match(
+				view(),
+				"status",
+			)<JSX.Element>({
+				loading: () => (
 					<div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
 						<For each={Array(4)}>
 							{() => (
@@ -59,10 +87,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							)}
 						</For>
 					</div>
-				</Match>
+				),
 
-				{/* Error State */}
-				<Match when={search.isError()}>
+				error: () => (
 					<div class="enter-fade flex flex-col items-center justify-center py-8 text-center">
 						<IconEmotionSad class="mb-3 h-10 w-10 text-muted-foreground" />
 						<p class="font-semibold text-muted-foreground/70">
@@ -76,16 +103,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							Дахин хайх
 						</button>
 					</div>
-				</Match>
+				),
 
-				{/* Empty State */}
-				<Match
-					when={
-						search.data() &&
-						search.data()!.products.length === 0 &&
-						!hasNavigationResults()
-					}
-				>
+				empty: () => (
 					<div class="enter-fade">
 						<div class="flex flex-col items-center justify-center py-8 text-center">
 							<IconSearch class="mb-3 h-10 w-10 text-muted-foreground" />
@@ -98,15 +118,9 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 						</div>
 						<PopularCategories />
 					</div>
-				</Match>
+				),
 
-				{/* Results */}
-				<Match
-					when={
-						search.data() &&
-						(search.data()!.products.length > 0 || hasNavigationResults())
-					}
-				>
+				results: () => (
 					<div>
 						<Show when={hasNavigationResults()}>
 							<div
@@ -203,8 +217,8 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 							</For>
 						</div>
 					</div>
-				</Match>
-			</Switch>
+				),
+			})}
 		</div>
 	);
 };

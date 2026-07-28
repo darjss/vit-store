@@ -15,6 +15,7 @@
 
 
 import LogoutButton from "@/components/auth/logout-button";
+import { deserializeResultOrThrow, sessionResultSchemas } from "@vit/shared";
 import { env } from "cloudflare:workers";
 import {
 	Dropdown,
@@ -28,11 +29,11 @@ import { createServerClient } from "@/lib/trpc";
 const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, env.server);
 
-let user = null;
-try {
-	user = await serverApi.auth.check.query();
-} catch (error) {
-}
+const sessionResult = deserializeResultOrThrow(
+	await serverApi.v2.auth.check.query(),
+	sessionResultSchemas,
+);
+const user = sessionResult.match({ ok: (value) => value, err: () => null });
 ---
 
 <Dropdown class="user-profile-dropdown">

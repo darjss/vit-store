@@ -60,11 +60,11 @@ export const queryClient = new QueryClient({
 			gcTime: 1000 * 60 * 60,
 		},
 		mutations: {
-			onError: (error) => {
+			onError: () => {
 				showToast({
-					title: "Алдаа гарлаа",
+					title: "Үйлчилгээнд түр саатал гарлаа",
 					description:
-						error.message || "Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.",
+						"Хүсэлтийг гүйцэтгэж чадсангүй. Хэсэг хүлээгээд дахин оролдоно уу.",
 					duration: 5000,
 					variant: "error",
 				});

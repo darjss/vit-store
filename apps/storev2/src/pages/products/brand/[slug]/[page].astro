@@ -7,6 +7,7 @@ import SortBar from "@/components/product/sort-bar.astro";
 import Layout from "@/layouts/Layout.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { api } from "@/lib/trpc";
+import { brandLookupResultSchemas, deserializeResultOrThrow } from "@vit/shared";
 import { WASH_BG, washFor } from "@/lib/wash";
 
 const PAGE_SIZE = 24;
@@ -37,10 +38,12 @@ const sortQuery = sortField
 	? `?sort=${sortField}&dir=${sortDirection ?? "desc"}`
 	: "";
 
-const brand = await api.brand.getBrandBySlug.query({ slug });
-if (!brand) {
-	return Astro.redirect("/404");
-}
+const brandResult = deserializeResultOrThrow(
+	await api.v2.brand.getBrandBySlug.query({ slug }),
+	brandLookupResultSchemas,
+);
+const brand = brandResult.match({ ok: (value) => value, err: () => null });
+if (!brand) return Astro.redirect("/404");
 
 // Treat known placeholder/non-image logo URLs as missing so we render the
 // designed brand-initial monogram fallback instead of a broken image.
@@ -49,7 +52,7 @@ const brandLogoUrl = getBrandLogoUrl(brand.logoUrl);
 const brandLogoOnError =
 	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border border-border bg-card rounded-xl flex items-center justify-center font-bold font-display text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 
-const { items: products, pagination } = await api.product.getPaginatedProducts.query({
+const { items: products, pagination } = await api.v2.product.getPaginatedProducts.query({
 	page,
 	pageSize: PAGE_SIZE,
 	brandId: brand.id,

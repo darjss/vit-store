@@ -25,7 +25,7 @@
 	},
 	"scripts": {
 		"test": "bun test",
-		"test:contract": "bun test packages/api/test/result-foundation.test.ts",
+		"test:contract": "bun test packages/api/test/result-foundation.test.ts packages/api/test/storefront-result-contracts.test.ts packages/api/test/storefront-error-presentations.test.ts",
 		"format": "biome format --write .",
 		"check": "oxlint",
 		"lint": "biome lint .",

@@ -1,6 +1,9 @@
 import { For, Show } from "solid-js";
 import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
-import { DangerCircleIcon as IconErrorWarning, StarsIcon as IconSparkle } from "@solar-icons/solid/bold";
+import {
+	DangerCircleIcon as IconErrorWarning,
+	StarsIcon as IconSparkle,
+} from "@solar-icons/solid/bold";
 
 const ProductCardSkeleton = () => (
 	<div class="flex animate-pulse flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -19,7 +22,12 @@ const ProductCardSkeleton = () => (
 
 export function ProductSkeletonGrid(props: { count: number; class?: string }) {
 	return (
-		<div class={props.class ?? "grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"}>
+		<div
+			class={
+				props.class ??
+				"grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
+			}
+		>
 			<For each={Array(props.count)}>{() => <ProductCardSkeleton />}</For>
 		</div>
 	);
@@ -38,14 +46,27 @@ export function ProductEmptyState(props: {
 				when={props.hasActiveFilters}
 				fallback={
 					<>
-						<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">Бүтээгдэхүүн олдсонгүй</h3>
-						<p class="px-4 text-muted-foreground/70 text-xs sm:text-sm lg:text-base">Одоогоор бүтээгдэхүүн байхгүй байна</p>
+						<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">
+							Бүтээгдэхүүн олдсонгүй
+						</h3>
+						<p class="px-4 text-muted-foreground/70 text-xs sm:text-sm lg:text-base">
+							Одоогоор бүтээгдэхүүн байхгүй байна
+						</p>
 					</>
 				}
 			>
-				<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">Үр дүн олдсонгүй</h3>
-				<p class="mb-4 px-4 text-muted-foreground/70 text-xs sm:mb-5 sm:text-sm lg:mb-6 lg:text-base">Таны шүүлтүүрт тохирох бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилж үзнэ үү.</p>
-				<button type="button" onClick={props.onClearFilters} class="mx-auto min-h-[44px] rounded-full bg-primary px-5 py-2.5 font-bold text-sm shadow-lift transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97] sm:px-6 sm:py-3">
+				<h3 class="mb-2 font-extrabold text-base sm:mb-2.5 sm:text-lg lg:text-xl">
+					Үр дүн олдсонгүй
+				</h3>
+				<p class="mb-4 px-4 text-muted-foreground/70 text-xs sm:mb-5 sm:text-sm lg:mb-6 lg:text-base">
+					Таны шүүлтүүрт тохирох бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилж үзнэ
+					үү.
+				</p>
+				<button
+					type="button"
+					onClick={props.onClearFilters}
+					class="mx-auto min-h-[44px] rounded-full bg-primary px-5 py-2.5 font-bold text-sm shadow-lift transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97] sm:px-6 sm:py-3"
+				>
 					Бүх шүүлтүүр цэвэрлэх
 				</button>
 			</Show>
@@ -53,14 +74,22 @@ export function ProductEmptyState(props: {
 	);
 }
 
-export function ProductErrorState(props: { onRetry?: () => void }) {
+export function ProductErrorState(props: {
+	onRetry?: () => void;
+	title?: string;
+	description?: string;
+}) {
 	return (
 		<div class="py-8 text-center sm:py-10">
 			<div class="mb-3 flex justify-center sm:mb-4">
 				<IconErrorWarning class="h-10 w-10 text-destructive sm:h-12 sm:w-12" />
 			</div>
-			<p class="font-bold text-base text-destructive sm:text-lg">Алдаа гарлаа</p>
-			<p class="mt-1 text-muted-foreground/70 text-xs sm:text-sm">Дахин оролдох уу?</p>
+			<p class="font-bold text-base text-destructive sm:text-lg">
+				{props.title ?? "Мэдээллийг ачаалж чадсангүй"}
+			</p>
+			<p class="mt-1 text-muted-foreground/70 text-xs sm:text-sm">
+				{props.description ?? "Хэсэг хүлээгээд дахин оролдоно уу."}
+			</p>
 			<Show when={props.onRetry}>
 				<button
 					type="button"
@@ -78,7 +107,8 @@ export function ProductListEnd(props: { count: number }) {
 	return (
 		<div class="mt-4 py-4 text-center sm:mt-6 sm:py-5 lg:mt-8 lg:py-6">
 			<span class="flex items-center justify-center gap-2 font-semibold text-muted-foreground/80 text-xs sm:text-sm">
-				<IconSparkle class="text-primary-deep" /> Нийт {props.count} бүтээгдэхүүн
+				<IconSparkle class="text-primary-deep" /> Нийт {props.count}{" "}
+				бүтээгдэхүүн
 			</span>
 		</div>
 	);

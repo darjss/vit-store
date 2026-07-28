@@ -1,4 +1,12 @@
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
+import {
+	keepPreviousData,
+	useInfiniteQuery,
+	useQuery,
+} from "@tanstack/solid-query";
+import {
+	productSearchPageResultSchemas,
+	type SearchUnavailable,
+} from "@vit/shared";
 import { parseSort } from "@vit/shared/domain/product";
 import {
 	createEffect,
@@ -10,12 +18,17 @@ import {
 	Show,
 } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
+import { presentProductError } from "@/lib/error-presentations";
 import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
+import { hydrateResult } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
-import { TuningIcon as IconEqualizer, MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
+import {
+	TuningIcon as IconEqualizer,
+	MinimalisticMagnifierIcon as IconSearch,
+} from "@solar-icons/solid/linear";
 import SearchSheet from "../search/search-sheet";
 import AppliedFilters from "./applied-filters";
 import FilterDrawer from "./filter-drawer";
@@ -47,13 +60,11 @@ const ProductsList = (props: ProductsListProps) => {
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
 	const filterSheetFocusRestore = createSheetFocusRestore();
 	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
-	const [lastLoggedProductsError, setLastLoggedProductsError] =
-		createSignal<unknown>();
 
 	const categoriesQuery = useQuery(
 		() => ({
 			queryKey: ["categories"],
-			queryFn: () => api.category.getAllCategoriesWithStock.query(),
+			queryFn: () => api.v2.category.getAllCategoriesWithStock.query(),
 			initialData: props.initialCategories,
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
@@ -63,7 +74,7 @@ const ProductsList = (props: ProductsListProps) => {
 	const brandsQuery = useQuery(
 		() => ({
 			queryKey: ["brands"],
-			queryFn: () => api.brand.getAllBrandsWithStock.query(),
+			queryFn: () => api.v2.brand.getAllBrandsWithStock.query(),
 			initialData: props.initialBrands,
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
@@ -119,24 +130,29 @@ const ProductsList = (props: ProductsListProps) => {
 					throw new Error("Search query must contain at least two characters");
 				}
 				const sort = filters.selectedSort();
-				return await api.product.searchProductsForPage.query({
-					query: term,
-					page: pageParam,
-					pageSize: 12,
-					categoryId: filters.categoryId() ?? undefined,
-					brandId: filters.brandId() ?? undefined,
-					minPrice: filters.minPrice(),
-					maxPrice: filters.maxPrice(),
-					requireStock: !filters.includeOutOfStock(),
-					sortField: sort?.field,
-					sortDirection: sort?.direction,
-				});
+				return hydrateResult(
+					await api.v2.product.searchProductsForPage.query({
+						query: term,
+						page: pageParam,
+						pageSize: 12,
+						categoryId: filters.categoryId() ?? undefined,
+						brandId: filters.brandId() ?? undefined,
+						minPrice: filters.minPrice(),
+						maxPrice: filters.maxPrice(),
+						requireStock: !filters.includeOutOfStock(),
+						sortField: sort?.field,
+						sortDirection: sort?.direction,
+					}),
+					productSearchPageResultSchemas,
+				);
 			},
 			initialPageParam: 1,
 			getNextPageParam: (lastPage) =>
-				lastPage.pagination.hasNextPage
-					? lastPage.pagination.page + 1
-					: undefined,
+				lastPage.match({
+					ok: (page) =>
+						page.pagination.hasNextPage ? page.pagination.page + 1 : undefined,
+					err: () => undefined,
+				}),
 			enabled: filters.isSearchMode(),
 			staleTime: 1000 * 60 * 5,
 			placeholderData: keepPreviousData,
@@ -159,7 +175,7 @@ const ProductsList = (props: ProductsListProps) => {
 			],
 			queryFn: async ({ pageParam }) => {
 				const sort = filters.selectedSort();
-				return await api.product.getInfiniteProducts.query({
+				return await api.v2.product.getInfiniteProducts.query({
 					cursor: pageParam,
 					limit: 12,
 					listType: filters.listFilter() ?? undefined,
@@ -181,8 +197,20 @@ const ProductsList = (props: ProductsListProps) => {
 	);
 
 	const searchResults = createMemo(() =>
-		(searchQuery.data?.pages ?? []).flatMap((page) => page.items),
+		(searchQuery.data?.pages ?? []).flatMap((result) =>
+			result.match({ ok: (page) => page.items, err: () => [] }),
+		),
 	);
+	const searchDomainError = createMemo<SearchUnavailable | undefined>(() => {
+		for (const result of searchQuery.data?.pages ?? []) {
+			if (result.status === "error") return result.error;
+		}
+		return undefined;
+	});
+	const searchErrorPresentation = createMemo(() => {
+		const error = searchDomainError();
+		return error ? presentProductError(error) : undefined;
+	});
 	const isSearchLoading = createMemo(
 		() => searchQuery.isLoading && !searchQuery.data,
 	);
@@ -219,67 +247,22 @@ const ProductsList = (props: ProductsListProps) => {
 		if (filters.isSearchMode()) return searchResults().length > 0;
 		return allBrowseProducts().length > 0;
 	});
-	const hasInitialBrowseError = createMemo(
-		() =>
-			!filters.isSearchMode() &&
-			productsQuery.isError &&
-			allBrowseProducts().length === 0,
+	const hasInitialProductsError = createMemo(() =>
+		filters.isSearchMode()
+			? (searchQuery.isError || searchDomainError() !== undefined) &&
+				searchResults().length === 0
+			: productsQuery.isError && allBrowseProducts().length === 0,
+	);
+	const hasFacetError = createMemo(
+		() => categoriesQuery.isError || brandsQuery.isError,
 	);
 
-	// Log the infinite-products failure once with wide-event context. The query
-	// label reflects the actual procedure variant (WithStock vs all) so logs are
-	// not misleading when the includeOutOfStock toggle switches the call.
-	createEffect(() => {
-		const error = productsQuery.error;
-		if (
-			!productsQuery.isError ||
-			!error ||
-			lastLoggedProductsError() === error
-		) {
-			return;
-		}
-
-		setLastLoggedProductsError(error);
-		const sort = filters.selectedSort();
-		const details =
-			error instanceof Error
-				? {
-						name: error.name,
-						message: error.message,
-						stack: error.stack,
-					}
-				: { name: typeof error, message: String(error) };
-		const queryName = filters.includeOutOfStock()
-			? "product.getInfiniteProducts"
-			: "product.getInfiniteProducts (requireStock)";
-		const context = {
-			...details,
-			component: "ProductsList",
-			query: queryName,
-			pageUrl: window.location.href,
-			userAgent: window.navigator.userAgent,
-			isOnline: window.navigator.onLine,
-			devicePixelRatio: window.devicePixelRatio,
-			viewportWidth: window.innerWidth,
-			viewportHeight: window.innerHeight,
-			loadedProductCount: allBrowseProducts().length,
-			loadedPageCount: productsQuery.data?.pages.length ?? 0,
-			hasNextPage: productsQuery.hasNextPage,
-			isFetching: productsQuery.isFetching,
-			isFetchingNextPage: productsQuery.isFetchingNextPage,
-			sortField: sort?.field ?? null,
-			sortDirection: sort?.direction ?? null,
-			categoryId: filters.categoryId(),
-			brandId: filters.brandId(),
-			listFilter: filters.listFilter(),
-		};
-
-		console.error("[ProductsList] Infinite products query failed", context);
-	});
 
 	const shouldShowEmptyState = createMemo(() => {
 		if (filters.isSearchMode()) {
 			return (
+				searchDomainError() === undefined &&
+				!searchQuery.isError &&
 				searchQuery.data !== undefined &&
 				!searchQuery.isLoading &&
 				!searchQuery.isFetching &&
@@ -296,11 +279,17 @@ const ProductsList = (props: ProductsListProps) => {
 
 	const productCount = createMemo(() => {
 		if (filters.isSearchMode()) {
-			return searchQuery.data?.pages[0]?.pagination.totalCount ?? 0;
+			return (
+				searchQuery.data?.pages[0]?.match({
+					ok: (page) => page.pagination.totalCount,
+					err: () => 0,
+				}) ?? 0
+			);
 		}
 		return allBrowseProducts().length;
 	});
 	const productCountLabel = createMemo(() => {
+		if (hasInitialProductsError()) return "Тоо ачаалагдсангүй";
 		if (
 			!filters.isSearchMode() &&
 			filters.isBrowsingAll() &&
@@ -312,7 +301,11 @@ const ProductsList = (props: ProductsListProps) => {
 		if (filters.isSearchMode() && hasProducts()) {
 			return `${productCount()} бүтээгдэхүүн`;
 		}
-		if (!filters.isSearchMode() && hasProducts() && !productsQuery.hasNextPage) {
+		if (
+			!filters.isSearchMode() &&
+			hasProducts() &&
+			!productsQuery.hasNextPage
+		) {
 			return `${productCount()} бүтээгдэхүүн`;
 		}
 		return `${productCount()}+ бүтээгдэхүүн`;
@@ -339,6 +332,11 @@ const ProductsList = (props: ProductsListProps) => {
 		if (!isLoadMoreInRange() || !hasNextPage()) return;
 		loadNextPage();
 	});
+
+	const retryFacets = () => {
+		if (categoriesQuery.isError) void categoriesQuery.refetch();
+		if (brandsQuery.isError) void brandsQuery.refetch();
+	};
 
 	const retryProducts = () => {
 		if (filters.isSearchMode()) {
@@ -430,6 +428,24 @@ const ProductsList = (props: ProductsListProps) => {
 					</button>
 				</div>
 
+				<Show when={hasFacetError()}>
+					<div
+						class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-warning p-3 text-warning-foreground"
+						role="alert"
+					>
+						<span class="text-sm">
+							Шүүлтүүрийн ангилал, брэндийг ачаалж чадсангүй.
+						</span>
+						<button
+							type="button"
+							onClick={retryFacets}
+							class="min-h-11 font-semibold text-sm underline underline-offset-2"
+						>
+							Дахин оролдох
+						</button>
+					</div>
+				</Show>
+
 				<AppliedFilters
 					chips={filters.appliedChips()}
 					onClearAll={filters.handleClearFilters}
@@ -461,7 +477,7 @@ const ProductsList = (props: ProductsListProps) => {
 							when={isInitialLoading()}
 							fallback={
 								<Show
-									when={hasInitialBrowseError()}
+									when={hasInitialProductsError()}
 									fallback={
 										<Show when={shouldShowEmptyState()}>
 											<ProductEmptyState
@@ -471,7 +487,11 @@ const ProductsList = (props: ProductsListProps) => {
 										</Show>
 									}
 								>
-									<ProductErrorState onRetry={retryProducts} />
+									<ProductErrorState
+										onRetry={retryProducts}
+										title={searchErrorPresentation()?.title}
+										description={searchErrorPresentation()?.description}
+									/>
 								</Show>
 							}
 						>
@@ -524,11 +544,16 @@ const ProductsList = (props: ProductsListProps) => {
 				<Show
 					when={
 						filters.isSearchMode()
-							? searchQuery.isError
+							? (searchQuery.isError || searchDomainError() !== undefined) &&
+								searchResults().length > 0
 							: productsQuery.isError && allBrowseProducts().length > 0
 					}
 				>
-					<ProductErrorState onRetry={retryProducts} />
+					<ProductErrorState
+						onRetry={retryProducts}
+						title={searchErrorPresentation()?.title}
+						description={searchErrorPresentation()?.description}
+					/>
 				</Show>
 
 				{/* Loading More Skeleton */}
@@ -545,7 +570,7 @@ const ProductsList = (props: ProductsListProps) => {
 						(filters.isSearchMode()
 							? searchQuery.data && !searchQuery.hasNextPage
 							: productsQuery.data && !productsQuery.hasNextPage) &&
-							hasProducts()
+						hasProducts()
 					}
 				>
 					<ProductListEnd count={productCount()} />

@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/solid-query";
+import {
+	storefrontSearchResultSchemas,
+	type SearchUnavailable,
+} from "@vit/shared";
 import { createEffect, createSignal } from "solid-js";
 import { trackSearchPerformed } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
+import { hydrateResult } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 
 export interface SearchStorefrontData {
@@ -47,6 +52,7 @@ export interface UseSearchStorefrontResult {
 	isError: () => boolean;
 	isLoadingError: () => boolean;
 	isRefetchError: () => boolean;
+	domainError: () => SearchUnavailable | undefined;
 	refetch: () => void;
 }
 
@@ -73,22 +79,15 @@ export function useSearchStorefront(
 			queryKey: ["search-storefront", query(), limit] as const,
 			queryFn: async ({ queryKey }) => {
 				const [, term, requestLimit] = queryKey;
-				const data =
-					term.length < minQueryLength
-						? {
-								products: [],
-								brands: [],
-								categories: [],
-							}
-						: await api.product.searchStorefront.query({
-								query: term,
-								limit: requestLimit,
-							});
+				const result = hydrateResult(
+					await api.v2.product.searchStorefront.query({
+						query: term,
+						limit: requestLimit,
+					}),
+					storefrontSearchResultSchemas,
+				);
 
-				return { term, data } satisfies {
-					term: string;
-					data: SearchStorefrontData;
-				};
+				return { term, result };
 			},
 			enabled: query().length >= minQueryLength,
 			staleTime: 1000 * 60 * 5,
@@ -96,10 +95,14 @@ export function useSearchStorefront(
 		() => queryClient,
 	);
 
-	const currentData = () => {
-		const result = searchQuery.data;
-		return result?.term === query() ? result.data : undefined;
+	const currentResult = () => {
+		const data = searchQuery.data;
+		return data?.term === query() ? data.result : undefined;
 	};
+	const currentData = (): SearchStorefrontData | undefined =>
+		currentResult()?.match({ ok: (value) => value, err: () => undefined });
+	const domainError = () =>
+		currentResult()?.match({ ok: () => undefined, err: (error) => error });
 
 	const [lastTrackedQuery, setLastTrackedQuery] = createSignal<string | null>(
 		null,
@@ -121,13 +124,15 @@ export function useSearchStorefront(
 
 	return {
 		data: currentData,
-		status: () => searchQuery.status,
+		status: () => (domainError() ? "error" : searchQuery.status),
 		fetchStatus: () => searchQuery.fetchStatus,
 		isLoading: () => searchQuery.isLoading,
 		isFetching: () => searchQuery.isFetching,
-		isError: () => searchQuery.isError,
-		isLoadingError: () => searchQuery.isLoadingError,
+		isError: () => searchQuery.isError || domainError() !== undefined,
+		isLoadingError: () =>
+			searchQuery.isLoadingError || domainError() !== undefined,
 		isRefetchError: () => searchQuery.isRefetchError,
+		domainError,
 		refetch: () => searchQuery.refetch(),
 	};
 }

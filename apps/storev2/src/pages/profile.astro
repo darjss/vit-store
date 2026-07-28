@@ -15,6 +15,7 @@
 
 
 import Layout from "@/layouts/Layout.astro";
+import { deserializeResultOrThrow, sessionResultSchemas } from "@vit/shared";
 import { env } from "cloudflare:workers";
 import { createServerClient } from "@/lib/trpc";
 import { BagIcon as IconShoppingBag } from "@solar-icons/solid/linear";
@@ -27,25 +28,20 @@ const serverApi = createServerClient(
 	Astro.redirect, // Pass redirect function - will automatically redirect on unauthorized
 );
 
-// Auth guard: profile is auth-gated. On 401, the tRPC link calls
-// redirectFn("/login") but the client still throws TRPCClientError.
-// Redirect ONLY on UNAUTHORIZED; any other auth.check error is fatal.
-let user;
-try {
-	user = await serverApi.auth.check.query();
-} catch (err) {
-	const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-	if (code === "UNAUTHORIZED") return Astro.redirect("/login");
-	throw err;
-}
+const sessionResult = deserializeResultOrThrow(
+	await serverApi.v2.auth.check.query(),
+	sessionResultSchemas,
+);
+const user = sessionResult.match({ ok: (value) => value, err: () => null });
+if (!user) return Astro.redirect("/login");
 
-// Orders query is non-fatal: degrade gracefully (empty orders) instead of 500
-// if order.getOrdersByCustomerId throws (e.g. INTERNAL_SERVER_ERROR).
-let orders: Awaited<ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>> = [];
+let orders:
+	| Awaited<ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>>
+	| undefined;
 try {
 	orders = await serverApi.order.getOrdersByCustomerId.query();
-} catch (err) {
-	console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", err);
+} catch {
+	orders = undefined;
 }
 
 const title = "Миний профайл";
@@ -106,7 +102,7 @@ const statusLabels: Record<string, string> = {
 						<div class="text-muted-foreground text-xs uppercase tracking-wide">
 							Нийт захиалга
 						</div>
-						<div class="font-display text-foreground text-xl">{orders.length}</div>
+						<div class="font-display text-foreground text-xl">{orders?.length ?? "—"}</div>
 					</div>
 				</div>
 			</div>
@@ -125,7 +121,24 @@ const statusLabels: Record<string, string> = {
 		<section class="enter-rise stagger-2">
 			<h2 class="mb-4 font-display text-foreground text-h3">Захиалгын түүх</h2>
 
-			{orders.length === 0 ? (
+			{orders === undefined ? (
+				<div class="rounded-2xl border border-border bg-card px-6 py-10 text-center shadow-soft" role="alert">
+					<h3 class="mb-2 font-display text-foreground text-lg">
+						Захиалгын түүхийг ачаалж чадсангүй
+					</h3>
+					<p class="mx-auto mb-5 max-w-md text-muted-foreground text-sm">
+						Үйлчилгээнд түр саатал гарлаа. Таны захиалгууд устсан гэсэн үг биш. Хэсэг хүлээгээд дахин оролдоно уу.
+					</p>
+					<div class="flex flex-wrap justify-center gap-3">
+						<a href={Astro.url.pathname} class="inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-semibold text-sm">
+							Дахин ачаалах
+						</a>
+						<a href="/products" class="inline-flex min-h-11 items-center rounded-full border border-border px-5 font-semibold text-sm">
+							Бүтээгдэхүүн үзэх
+						</a>
+					</div>
+				</div>
+			) : orders.length === 0 ? (
 				<div class="rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-soft">
 					<div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-wash-peach/70 text-foreground">
 						<IconShoppingBag class="h-8 w-8" />

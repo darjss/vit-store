@@ -1,20 +1,24 @@
 import { keepPreviousData, useQuery } from "@tanstack/solid-query";
-import { formatCurrency } from "@vit/shared";
+import {
+	formatCurrency,
+	productSearchPageResultSchemas,
+	type SearchUnavailable,
+} from "@vit/shared";
 import {
 	parseSort,
 	productSortOptions,
 	type SortSelection,
 } from "@vit/shared/domain/product";
+import { Result } from "better-result";
+import { match } from "dismatch";
 import type { JSX } from "solid-js";
 import {
 	createEffect,
 	createMemo,
 	createSignal,
 	For,
-	Match,
 	onCleanup,
 	Show,
-	Switch,
 } from "solid-js";
 import {
 	Sheet,
@@ -30,6 +34,7 @@ import {
 	SliderTrack,
 } from "@/components/ui/slider";
 import { queryClient } from "@/lib/query";
+import { hydrateResult } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
@@ -250,16 +255,23 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 					requireStock: !debouncedIncludeOutOfStock(),
 				};
 				const effectiveSearchTerm = props.effectiveSearchTerm;
-				const result = effectiveSearchTerm
-					? await api.product.searchProductsForPage.query({
+				if (effectiveSearchTerm) {
+					return hydrateResult(
+						await api.v2.product.searchProductsForPage.query({
 							...sharedInput,
 							query: effectiveSearchTerm,
-						})
-					: await api.product.getPaginatedProducts.query({
-							...sharedInput,
-							listType: props.listFilter ?? undefined,
-						});
-				return result.pagination.totalCount;
+						}),
+						productSearchPageResultSchemas,
+					).map((result) => result.pagination.totalCount);
+				}
+
+				const result = await api.v2.product.getPaginatedProducts.query({
+					...sharedInput,
+					listType: props.listFilter ?? undefined,
+				});
+				return Result.ok<number, SearchUnavailable>(
+					result.pagination.totalCount,
+				);
 			},
 			placeholderData: keepPreviousData,
 			staleTime: 1000 * 60,
@@ -268,12 +280,18 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 		() => queryClient,
 	);
 
-	const countStatus = createMemo(() => {
-		if (countQuery.isError) return "error" as const;
-		if (countQuery.isFetching || countQuery.data === undefined) {
-			return "loading" as const;
+	type CountState =
+		| { status: "error" }
+		| { status: "loading" }
+		| { status: "ready"; count: number };
+	const countState = createMemo<CountState>(() => {
+		if (countQuery.isError || countQuery.data?.status === "error") {
+			return { status: "error" };
 		}
-		return "ready" as const;
+		if (countQuery.isFetching || countQuery.data === undefined) {
+			return { status: "loading" };
+		}
+		return { status: "ready", count: countQuery.data.value };
 	});
 
 	const handleReset = () => {
@@ -470,31 +488,34 @@ const FilterDrawer = (props: FilterDrawerProps) => {
 							aria-label="Шүүлтүүрээр бараа харах"
 						>
 							<span>Харах</span>
-							<Switch>
-								<Match when={countStatus() === "ready"}>
+							{match(
+								countState(),
+								"status",
+							)<JSX.Element>({
+								ready: ({ count }) => (
 									<span class="rounded-full bg-secondary px-2.5 py-0.5 text-secondary-foreground text-sm tabular-nums">
-										{countQuery.data}
+										{count}
 									</span>
-								</Match>
-								<Match when={countStatus() === "loading"}>
+								),
+								loading: () => (
 									<output
 										class="text-secondary text-sm"
 										aria-label="Тоо шинэчилж байна"
 									>
 										…
 									</output>
-								</Match>
-								<Match when={countStatus() === "error"}>
+								),
+								error: () => (
 									<output
 										class="text-secondary text-sm"
 										aria-label="Тоо харагдахгүй байна"
 									>
 										—
 									</output>
-								</Match>
-							</Switch>
+								),
+							})}
 						</button>
-						<Show when={countStatus() === "error"}>
+						<Show when={countState().status === "error"}>
 							<div
 								class="flex items-center justify-between gap-2 px-1 text-destructive text-xs"
 								role="alert"

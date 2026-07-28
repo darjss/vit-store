@@ -24,10 +24,10 @@ type BrandRow = {
   productCount: number;
 };
 
-const products = await api.product.getProductsForHome.query();
+const products = await api.v2.product.getProductsForHome.query();
 const { featuredProducts, newProducts } = products;
-const brands = await api.brand.getAllBrandsWithStock.query();
-const allCategories = await api.category.getAllCategories.query();
+const brands = await api.v2.brand.getAllBrandsWithStock.query();
+const allCategories = await api.v2.category.getAllCategories.query();
 
 const preferredCategoryNames = [
   "Дархлаа",

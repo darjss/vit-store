@@ -77,10 +77,7 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 				<Show when={data.error}>
 					<div class="mt-4 border border-border bg-error/10 p-4 text-destructive">
-						Error:{" "}
-						{data.error instanceof Error
-							? data.error.message
-							: "Failed to fetch data"}
+						Бенчмаркын мэдээллийг ачаалж чадсангүй. Дахин оролдоно уу.
 					</div>
 				</Show>
 			</div>
@@ -121,7 +118,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 						</div>
 
 						<div class="bg-background p-4">
-							<p class="mb-1 text-muted-foreground text-sm">Database Query Time</p>
+							<p class="mb-1 text-muted-foreground text-sm">
+								Database Query Time
+							</p>
 							<p class="font-semibold text-2xl text-foreground">
 								{formatTime(data()?.dbElapsed ?? 0)}
 							</p>
@@ -180,7 +179,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 						<div class="grid gap-4 md:grid-cols-3">
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Time Difference</p>
+								<p class="mb-1 text-muted-foreground text-sm">
+									Time Difference
+								</p>
 								<p
 									class={`font-bold text-2xl ${
 										diff().isFaster ? "text-foreground" : "text-destructive"
@@ -192,7 +193,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</div>
 
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Percentage Difference</p>
+								<p class="mb-1 text-muted-foreground text-sm">
+									Percentage Difference
+								</p>
 								<p
 									class={`font-bold text-2xl ${
 										diff().isFaster ? "text-foreground" : "text-destructive"
@@ -203,7 +206,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</div>
 
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Network Overhead</p>
+								<p class="mb-1 text-muted-foreground text-sm">
+									Network Overhead
+								</p>
 								<p class="font-bold text-2xl text-foreground">
 									{formatTime(
 										(data()?.fetchTime ?? 0) -
