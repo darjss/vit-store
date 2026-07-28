@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import { paymentStatus, purchaseProvider, purchaseStatus } from "./constants";
+import { checkoutIdempotencyKeySchema } from "./contracts/checkout";
 
 export const orderSchema = v.object({
 	phone: v.pipe(
@@ -177,7 +178,9 @@ export const addOrderSchema = v.object({
 		v.string(),
 		v.minLength(10, "Хаяг хамгийн багадаа 10 тэмдэгт байх ёстой"),
 	),
-	addressZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.finite())),
+	addressZoneId: v.optional(
+		v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+	),
 	notes: v.optional(v.nullable(v.string())),
 	status: v.picklist([
 		"created",
@@ -382,6 +385,7 @@ export const newOrderSchema = v.object({
 			quantity: v.number(),
 		}),
 	),
+	idempotencyKey: v.optional(checkoutIdempotencyKeySchema),
 });
 
 export type newOrderType = v.InferOutput<typeof newOrderSchema>;

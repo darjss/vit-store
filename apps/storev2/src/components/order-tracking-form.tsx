@@ -4,12 +4,19 @@ import type { JSX } from "solid-js";
 import { createSignal, For, Show } from "solid-js";
 import {
 	loginResultSchemas,
+	orderAccessErrorSchema,
 	orderStatusLabels,
+	orderTrackingSchema,
 	sendOtpResultSchemas,
 	sessionResultSchemas,
+	type OrderAccessError,
 } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
 import { presentAuthError } from "@/lib/error-presentations";
+import {
+	orderAccessErrorPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
 import { queryClient } from "@/lib/query";
 import { resultMutationOptions, resultQueryOptions } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
@@ -66,15 +73,6 @@ const trackingSteps = {
 	result: { status: "result" },
 } satisfies Record<TrackingStep["status"], TrackingStep>;
 
-const trpcErrorCode = (error: unknown) => {
-	if (!error || typeof error !== "object" || !("data" in error))
-		return undefined;
-	const data = error.data;
-	return data && typeof data === "object" && "code" in data
-		? String(data.code)
-		: undefined;
-};
-
 const OrderTrackingForm = () => {
 	const [step, setStep] = createSignal<"input" | "otp" | "result">("input");
 	const [phone, setPhone] = createSignal("");
@@ -102,21 +100,21 @@ const OrderTrackingForm = () => {
 		});
 	};
 
-	// Track order mutation
 	const trackMutation = useMutation(
 		() => ({
-			mutationFn: async (input: { orderNumber: string; phone?: string }) => {
-				return await api.order.getOrderByOrderNumber.query({
-					orderNumber: input.orderNumber,
-				});
-			},
+			...resultMutationOptions(
+				(input: { orderNumber: string; phone?: string }) =>
+					api.v2.order.getOrderByOrderNumber.query({
+						orderNumber: input.orderNumber,
+					}),
+				{ value: orderTrackingSchema, error: orderAccessErrorSchema },
+			),
 			onError: () => {
 				showToast({
-					title: "Захиалгыг ачаалж чадсангүй",
-					description:
-						"Мэдээллээ шалгах эсвэл хэсэг хүлээгээд дахин оролдоно уу.",
+					title: unexpectedCommerceError.title,
+					description: unexpectedCommerceError.description,
 					variant: "error",
-					duration: 5000,
+					duration: 7000,
 				});
 			},
 		}),
@@ -195,15 +193,7 @@ const OrderTrackingForm = () => {
 			});
 			return;
 		}
-		if (authQuery.isError) {
-			showToast({
-				title: "Нэвтрэх үйлчилгээнд түр саатал гарлаа",
-				description: "Хэсэг хүлээгээд дахин оролдоно уу.",
-				variant: "error",
-				duration: 5000,
-			});
-			return;
-		}
+		if (authQuery.isError) return;
 
 		const user = authUser();
 		if (user && user.phone.toString() === phone()) {
@@ -235,12 +225,26 @@ const OrderTrackingForm = () => {
 		});
 	};
 
+	const trackedOrder = () =>
+		trackMutation.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		});
+	const trackingExpectedError = () =>
+		trackMutation.data?.match<OrderAccessError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+	const trackingErrorPresentation = () => {
+		const expected = trackingExpectedError();
+		return expected
+			? orderAccessErrorPresentation(expected)
+			: unexpectedCommerceError;
+	};
 	const currentStepIndex = () =>
 		timelineSteps.indexOf(
-			(trackMutation.data?.status ?? "pending") as OrderStatusType,
+			(trackedOrder()?.status ?? "pending") as OrderStatusType,
 		);
-	const orderWasNotFound = () =>
-		trackMutation.isError && trpcErrorCode(trackMutation.error) === "NOT_FOUND";
 
 	return (
 		<div class="space-y-6">
@@ -296,7 +300,7 @@ const OrderTrackingForm = () => {
 								<Button
 									class="w-full"
 									onClick={handleSearch}
-									disabled={sendOtpMutation.isPending}
+									disabled={sendOtpMutation.isPending || authQuery.isPending}
 								>
 									{sendOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -318,6 +322,24 @@ const OrderTrackingForm = () => {
 											Та нэвтэрсэн байна. Захиалгын дугаараа оруулан шууд хайна
 											уу.
 										</span>
+									</div>
+								</Show>
+								<Show when={authQuery.isError}>
+									<div
+										class="space-y-3 rounded-xl bg-error p-3 text-error-foreground text-xs"
+										role="alert"
+									>
+										<p>
+											Нэвтрэлтийн төлөвийг шалгаж чадсангүй. Таныг системээс
+											гарсан гэж үзээгүй.
+										</p>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => authQuery.refetch()}
+										>
+											Дахин шалгах
+										</Button>
 									</div>
 								</Show>
 							</div>
@@ -398,21 +420,17 @@ const OrderTrackingForm = () => {
 							</Card>
 						</Show>
 
-						<Show when={trackMutation.isError}>
+						<Show when={trackMutation.isError || trackingExpectedError()}>
 							<Card class="enter-scale">
 								<CardContent class="p-6 pt-6 text-center md:p-8 md:pt-8">
 									<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-error text-error-foreground">
 										<IconAlert class="h-7 w-7" />
 									</div>
 									<h3 class="mb-2 font-display text-foreground text-lg">
-										{orderWasNotFound()
-											? "Захиалга олдсонгүй"
-											: "Захиалгыг ачаалж чадсангүй"}
+										{trackingErrorPresentation().title}
 									</h3>
 									<p class="mb-5 text-muted-foreground text-sm">
-										{orderWasNotFound()
-											? "Захиалгын дугаар эсвэл утасны дугаараа шалгана уу."
-											: "Үйлчилгээнд түр саатал гарлаа. Хэсэг хүлээгээд дахин оролдоно уу."}
+										{trackingErrorPresentation().description}
 									</p>
 									<Button
 										onClick={() => {
@@ -426,7 +444,7 @@ const OrderTrackingForm = () => {
 							</Card>
 						</Show>
 
-						<Show when={trackMutation.isSuccess && trackMutation.data}>
+						<Show when={trackedOrder()}>
 							<div class="space-y-4">
 								{/* Order header */}
 								<Card class="enter-rise overflow-hidden">
@@ -441,21 +459,21 @@ const OrderTrackingForm = () => {
 														Захиалга №
 													</div>
 													<div class="font-display text-foreground text-lg">
-														{trackMutation.data?.orderNumber}
+														{trackedOrder()?.orderNumber}
 													</div>
 												</div>
 											</div>
 											<Badge
 												variant={
 													statusBadgeVariant[
-														trackMutation.data?.status || "pending"
+														trackedOrder()?.status || "pending"
 													] ?? "outline"
 												}
 											>
 												{orderStatusLabels[
-													trackMutation.data?.status as OrderStatusType
+													trackedOrder()?.status as OrderStatusType
 												] ??
-													trackMutation.data?.status ??
+													trackedOrder()?.status ??
 													"Хүлээгдэж буй"}
 											</Badge>
 										</div>
@@ -521,9 +539,7 @@ const OrderTrackingForm = () => {
 													Огноо
 												</div>
 												<div class="font-medium text-foreground text-sm">
-													{formatDate(
-														trackMutation.data?.createdAt || new Date(),
-													)}
+													{formatDate(trackedOrder()?.createdAt || new Date())}
 												</div>
 											</div>
 											<div class="rounded-xl bg-muted/50 p-3">
@@ -531,7 +547,7 @@ const OrderTrackingForm = () => {
 													Нийт дүн
 												</div>
 												<div class="font-display text-foreground text-sm">
-													{trackMutation.data?.total?.toLocaleString()}₮
+													{trackedOrder()?.total?.toLocaleString()}₮
 												</div>
 											</div>
 										</div>
@@ -541,17 +557,17 @@ const OrderTrackingForm = () => {
 												Хүргэлтийн хаяг
 											</div>
 											<div class="text-foreground text-sm">
-												{trackMutation.data?.address}
+												{trackedOrder()?.address}
 											</div>
 										</div>
 
-										{trackMutation.data?.notes && (
+										{trackedOrder()?.notes && (
 											<div class="rounded-xl bg-wash-lemon/50 p-3">
 												<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
 													Тэмдэглэл
 												</div>
 												<div class="text-foreground text-sm">
-													{trackMutation.data?.notes}
+													{trackedOrder()?.notes}
 												</div>
 											</div>
 										)}
@@ -562,7 +578,7 @@ const OrderTrackingForm = () => {
 												Төлбөрийн төлөв
 											</div>
 											<div class="flex flex-wrap items-center gap-2">
-												{trackMutation.data?.payments?.map(
+												{trackedOrder()?.payments.map(
 													(payment: { provider: string; status: string }) => (
 														<Badge
 															variant={
@@ -582,8 +598,7 @@ const OrderTrackingForm = () => {
 														</Badge>
 													),
 												)}
-												{(!trackMutation.data?.payments ||
-													trackMutation.data.payments.length === 0) && (
+												{(trackedOrder()?.payments.length ?? 0) === 0 && (
 													<span class="text-muted-foreground text-sm">
 														Төлбөрийн мэдээлэл олдсонгүй
 													</span>
@@ -601,7 +616,7 @@ const OrderTrackingForm = () => {
 										</h3>
 									</div>
 									<CardContent class="space-y-3 p-5 pt-5 md:p-6 md:pt-6">
-										{trackMutation.data?.orderDetails?.map(
+										{trackedOrder()?.orderDetails.map(
 											(detail: {
 												product: {
 													name: string;

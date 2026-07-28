@@ -1,3 +1,4 @@
+import type { QpayInvoice } from "@vit/shared";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { relations, sql } from "drizzle-orm";
 import {
@@ -313,6 +314,89 @@ export const PaymentsTable = createTable(
 		index("payment_created_at_idx").on(table.createdAt),
 		index("payment_status_created_idx").on(table.status, table.createdAt),
 		index("payment_number_status_idx").on(table.paymentNumber, table.status),
+	],
+);
+
+export const CheckoutIdempotencyTable = createTable(
+	"checkout_idempotency",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		keyHash: varchar("key_hash", { length: 64 }).notNull(),
+		requestHash: varchar("request_hash", { length: 64 }).notNull(),
+		orderId: integer("order_id")
+			.references(() => OrdersTable.id)
+			.notNull(),
+		paymentId: integer("payment_id")
+			.references(() => PaymentsTable.id)
+			.notNull(),
+		notificationStatus: text("notification_status", {
+			enum: ["pending", "sending", "completed", "ambiguous"],
+		})
+			.notNull()
+			.default("pending"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("checkout_idempotency_key_hash_unique_idx").on(table.keyHash),
+		uniqueIndex("checkout_idempotency_order_unique_idx").on(table.orderId),
+		uniqueIndex("checkout_idempotency_payment_unique_idx").on(table.paymentId),
+	],
+);
+
+export const QpayInvoicesTable = createTable(
+	"qpay_invoice",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		providerRequestId: varchar("provider_request_id", { length: 64 }).notNull(),
+		status: text("status", {
+			enum: ["creating", "created", "rejected", "ambiguous"],
+		}).notNull(),
+		claimToken: varchar("claim_token", { length: 64 }).notNull(),
+		invoiceId: varchar("invoice_id", { length: 64 }),
+		response: jsonb("response").$type<QpayInvoice>(),
+		lastErrorCode: varchar("last_error_code", { length: 64 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("qpay_invoice_payment_unique_idx").on(table.paymentNumber),
+		uniqueIndex("qpay_invoice_request_unique_idx").on(table.providerRequestId),
+		index("qpay_invoice_status_idx").on(table.status),
+	],
+);
+
+export const PaymentPostCommitRecoveryTable = createTable(
+	"payment_post_commit_recovery",
+	{
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
+		effect: text("effect", {
+			enum: ["cache_purge", "messenger_notification", "analytics"],
+		}).notNull(),
+		status: text("status", {
+			enum: ["pending", "claimed", "completed", "ambiguous"],
+		})
+			.notNull()
+			.default("pending"),
+		claimToken: varchar("claim_token", { length: 64 }),
+		claimUntil: timestamp("claim_until"),
+		attemptCount: integer("attempt_count").notNull().default(0),
+		lastErrorCode: varchar("last_error_code", { length: 64 }),
+		lastAttemptAt: timestamp("last_attempt_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+	},
+	(table) => [
+		uniqueIndex("payment_recovery_payment_effect_unique_idx").on(
+			table.paymentNumber,
+			table.effect,
+		),
+		index("payment_recovery_status_created_idx").on(
+			table.status,
+			table.createdAt,
+		),
 	],
 );
 

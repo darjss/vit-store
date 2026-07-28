@@ -1,5 +1,8 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import type { OrderStatusType, PaymentStatusType } from "@vit/shared/types/order";
+import type {
+	OrderStatusType,
+	PaymentStatusType,
+} from "@vit/shared/types/order";
 import type { SQL } from "drizzle-orm";
 import {
 	and,
@@ -71,7 +74,10 @@ function resolveDateRange(date?: string): { start: Date; end: Date } | null {
 	const epochUtcMidnight = Date.UTC(y, m - 1, d);
 	const ubMidnightUtc = epochUtcMidnight - UB_OFFSET_MS;
 	const DAY_MS = 24 * 60 * 60 * 1000;
-	return { start: new Date(ubMidnightUtc), end: new Date(ubMidnightUtc + DAY_MS - 1) };
+	return {
+		start: new Date(ubMidnightUtc),
+		end: new Date(ubMidnightUtc + DAY_MS - 1),
+	};
 }
 
 export const orderQueries = {
@@ -503,7 +509,10 @@ export const orderQueries = {
 				conditions.push(inArray(OrdersTable.status, params.orderStatuses));
 			} else if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
-			} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
+			} else if (
+				!params.includeAllStatuses &&
+				params.paymentStatus === undefined
+			) {
 				// Default: hide "created" (unpaid) orders from the admin list.
 				// When a paymentStatus filter is set, drop the exclusion so admins
 				// filtering by pending payments can still see "created" orders
@@ -639,7 +648,10 @@ export const orderQueries = {
 			status: OrderStatus,
 			options?: { deliveryProvider?: DeliveryProvider },
 		) {
-			const patch: { status: OrderStatus; deliveryProvider?: DeliveryProvider } = {
+			const patch: {
+				status: OrderStatus;
+				deliveryProvider?: DeliveryProvider;
+			} = {
 				status,
 			};
 			if (options?.deliveryProvider !== undefined) {
@@ -875,6 +887,7 @@ export const orderQueries = {
 						with: {
 							product: {
 								columns: {
+									id: true,
 									name: true,
 									price: true,
 								},

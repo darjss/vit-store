@@ -1,20 +1,31 @@
 import { useQuery } from "@tanstack/solid-query";
+import {
+	nullableTransferReconciliationSchema,
+	paymentErrorSchema,
+	type PaymentError,
+} from "@vit/shared";
 import type { PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
 import { createMemo, Match, Switch } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
+import {
+	paymentErrorPresentation,
+	paymentStatusCopy,
+	reconciliationPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
 import { paymentUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { resultQueryOptions } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { usePaymentStatus } from "@/lib/use-payment-status";
 import { cn } from "@/lib/utils";
-import { CheckCircleIcon as IconCheck, CloseCircleIcon as IconClose, RefreshIcon as IconRefresh, ShieldCheckIcon as IconShieldCheck, ClockCircleIcon as IconTime } from "@solar-icons/solid/bold";
-
-const MANUAL_REVIEW_STATUSES = new Set([
-	"timeout",
-	"ambiguous",
-	"auth_required",
-	"failed",
-]);
+import {
+	CheckCircleIcon as IconCheck,
+	CloseCircleIcon as IconClose,
+	RefreshIcon as IconRefresh,
+	ShieldCheckIcon as IconShieldCheck,
+	ClockCircleIcon as IconTime,
+} from "@solar-icons/solid/bold";
 
 const PaymentStatus = (props: {
 	payment: {
@@ -35,46 +46,78 @@ const PaymentStatus = (props: {
 		initialData: {
 			status: props.payment.status,
 			provider: props.payment.provider,
-		} as { status: PaymentStatusType; provider: PaymentProviderType },
+		},
 	});
 
 	const currentData = () =>
-		statusQuery.data ?? {
+		statusQuery.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		}) ?? {
 			status: props.payment.status,
 			provider: props.payment.provider,
 		};
+	const statusExpectedError = () =>
+		statusQuery.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
 
-	const canReconcile = createMemo(() => {
-		const current = currentData();
-		return (
-			current.provider === "transfer" &&
-			current.status !== "success" &&
-			current.status !== "failed"
-		);
-	});
+	const currentView = () => paymentStatusCopy(currentData().status).view;
+	const canReconcile = createMemo(
+		() => currentData().provider === "transfer" && currentView() === "waiting",
+	);
 
 	const reconciliationQuery = useQuery(
 		() => ({
-			queryKey: ["transfer-reconciliation", paymentNumber()],
-			queryFn: () =>
-				api.payment.getTransferReconciliationStatus.query({
-					paymentNumber: paymentNumber(),
-					checkoutToken: checkoutToken(),
-				}),
+			...resultQueryOptions({
+				queryKey: ["transfer-reconciliation", paymentNumber()] as const,
+				request: () =>
+					api.v2.payment.getTransferReconciliationStatus.query({
+						paymentNumber: paymentNumber(),
+						checkoutToken: checkoutToken(),
+					}),
+				schemas: {
+					value: nullableTransferReconciliationSchema,
+					error: paymentErrorSchema,
+				},
+			}),
 			refetchInterval: 5000,
 			enabled: canReconcile(),
 		}),
 		() => queryClient,
 	);
 
+	const reconciliationData = () =>
+		reconciliationQuery.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		});
+	const reconciliationExpectedError = () =>
+		reconciliationQuery.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
 	const needsManualReview = () => {
-		const status = reconciliationQuery.data?.status;
-		return status !== undefined && MANUAL_REVIEW_STATUSES.has(status);
+		const status = reconciliationData()?.status;
+		return status ? reconciliationPresentation(status).manualReview : false;
 	};
+	const pollingPresentation = () => {
+		const expected = statusExpectedError() ?? reconciliationExpectedError();
+		return expected
+			? paymentErrorPresentation(expected)
+			: unexpectedCommerceError;
+	};
+	const pollingFailed = () =>
+		currentView() !== "success" &&
+		(statusQuery.isError ||
+			Boolean(statusExpectedError()) ||
+			reconciliationQuery.isError ||
+			Boolean(reconciliationExpectedError()));
 
 	return (
 		<Switch>
-			<Match when={currentData()?.status === "success"}>
+			<Match when={currentView() === "success"}>
 				<div class="enter-scale mb-12 text-center">
 					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-success text-success-foreground shadow-soft-lg">
 						<IconCheck class="h-10 w-10" aria-hidden="true" />
@@ -87,13 +130,34 @@ const PaymentStatus = (props: {
 					</p>
 				</div>
 			</Match>
-			<Match
-				when={
-					(currentData()?.status === "pending" ||
-						currentData()?.status === "customer_claimed_paid") &&
-					needsManualReview()
-				}
-			>
+			<Match when={pollingFailed()}>
+				<div class="mb-12 text-center">
+					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-warning text-warning-foreground shadow-soft-lg">
+						<IconRefresh class="h-10 w-10" aria-hidden="true" />
+					</div>
+					<h2 class="mb-3 font-display text-2xl text-foreground">
+						{pollingPresentation().title}
+					</h2>
+					<p class="mx-auto mb-5 max-w-md text-lg text-muted-foreground">
+						{pollingPresentation().description}
+					</p>
+					<p class="mx-auto mb-5 max-w-md text-muted-foreground text-sm">
+						Төлбөр хийсэн бол дахин төлөх шаардлагагүй.
+					</p>
+					<button
+						type="button"
+						onClick={() => {
+							void statusQuery.refetch();
+							void reconciliationQuery.refetch();
+						}}
+						class={cn(buttonVariants())}
+					>
+						<IconRefresh class="h-4 w-4" aria-hidden="true" />
+						Дахин шалгах
+					</button>
+				</div>
+			</Match>
+			<Match when={currentView() === "waiting" && needsManualReview()}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-info text-info-foreground shadow-soft-lg">
 						<IconShieldCheck class="h-10 w-10" aria-hidden="true" />
@@ -107,12 +171,7 @@ const PaymentStatus = (props: {
 					</p>
 				</div>
 			</Match>
-			<Match
-				when={
-					currentData()?.status === "pending" ||
-					currentData()?.status === "customer_claimed_paid"
-				}
-			>
+			<Match when={currentView() === "waiting"}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex size-20 animate-pulse items-center justify-center rounded-full bg-warning text-warning-foreground shadow-soft-lg">
 						<IconTime class="h-10 w-10" aria-hidden="true" />
@@ -129,7 +188,7 @@ const PaymentStatus = (props: {
 					</div>
 				</div>
 			</Match>
-			<Match when={currentData()?.status === "failed"}>
+			<Match when={currentView() === "failed"}>
 				<div class="mb-12 text-center">
 					<div class="mb-6 inline-flex size-20 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-soft-lg">
 						<IconClose class="h-10 w-10" aria-hidden="true" />

@@ -33,7 +33,9 @@ interface TrackOrderCreatedProps {
 	utmCampaign?: string;
 }
 
-export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
+export async function trackOrderCreatedServerSide(
+	props: TrackOrderCreatedProps,
+) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -52,8 +54,9 @@ export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps)
 				utm_campaign: props.utmCampaign,
 			},
 		});
+		return true;
 	} catch {
-		// Silently fail — analytics should never break the order flow
+		return false;
 	}
 }
 
@@ -81,8 +84,9 @@ export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
 				provider: props.provider,
 			},
 		});
+		return true;
 	} catch {
-		// Silently fail — analytics should never break the flow
+		return false;
 	}
 }
 
@@ -114,8 +118,9 @@ export async function trackPaymentConfirmedServerSide(
 				$referrer: props.referrer,
 			},
 		});
+		return true;
 	} catch {
-		// Silently fail — analytics should never break the payment flow
+		return false;
 	}
 }
 

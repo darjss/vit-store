@@ -4,10 +4,14 @@ import type {
 	TransferReconciliationState,
 	TransferReconciliationStatus,
 } from "@vit/api/lib/payments/transfer-reconciliation-status";
+import type { PaymentError } from "@vit/shared";
 import { DurableObject } from "cloudflare:workers";
+import { match } from "dismatch";
+import { matchAsync } from "dismatch/async";
 import {
 	KhaanAuthError,
 	KhaanClient,
+	KhaanError,
 	KhaanRateLimitError,
 	type MatchedKhaanTransaction,
 } from "khaan-client";
@@ -36,8 +40,17 @@ const terminalStatuses = new Set<TransferReconciliationStatus>([
 	"failed",
 ]);
 
-const errorMessage = (error: unknown) =>
-	error instanceof Error ? error.message : String(error);
+type KhaanFailure =
+	| { _tag: "AuthRequired" }
+	| { _tag: "RateLimited" }
+	| { _tag: "ProviderUnavailable" };
+
+const classifyKhaanFailure = (error: unknown): KhaanFailure | null => {
+	if (error instanceof KhaanAuthError) return { _tag: "AuthRequired" };
+	if (error instanceof KhaanRateLimitError) return { _tag: "RateLimited" };
+	if (error instanceof KhaanError) return { _tag: "ProviderUnavailable" };
+	return null;
+};
 
 const retryDelayMs = (error: unknown) =>
 	error instanceof KhaanRateLimitError
@@ -46,6 +59,57 @@ const retryDelayMs = (error: unknown) =>
 
 const isConfirmablePaymentStatus = (status: string) =>
 	status === "pending" || status === "customer_claimed_paid";
+
+const confirmationFailureState = (error: PaymentError) =>
+	match(
+		error,
+		"_tag",
+	)<{
+		status: "ambiguous" | "failed";
+		lastError:
+			| "payment_not_found"
+			| "payment_not_confirmable"
+			| "provider_unavailable"
+			| "bank_transaction_already_consumed"
+			| "confirmation_conflict";
+	}>({
+		PaymentNotFound: () => ({
+			status: "failed",
+			lastError: "payment_not_found",
+		}),
+		PaymentAccessDenied: () => ({
+			status: "failed",
+			lastError: "confirmation_conflict",
+		}),
+		PaymentAlreadyConfirmed: () => ({
+			status: "failed",
+			lastError: "payment_not_confirmable",
+		}),
+		PaymentNotPending: () => ({
+			status: "failed",
+			lastError: "payment_not_confirmable",
+		}),
+		PaymentMethodMismatch: () => ({
+			status: "failed",
+			lastError: "payment_not_confirmable",
+		}),
+		PaymentProviderUnavailable: () => ({
+			status: "failed",
+			lastError: "provider_unavailable",
+		}),
+		PaymentConfirmationConflict: () => ({
+			status: "ambiguous",
+			lastError: "confirmation_conflict",
+		}),
+		BankTransactionAlreadyConsumed: () => ({
+			status: "ambiguous",
+			lastError: "bank_transaction_already_consumed",
+		}),
+		ManualReviewRequired: () => ({
+			status: "ambiguous",
+			lastError: "confirmation_conflict",
+		}),
+	});
 
 export class TransferReconciliationObject extends DurableObject<Env> {
 	private readonly appEnv: Env;
@@ -112,9 +176,8 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		paymentNumber: string,
 	): Promise<string[] | null> {
 		try {
-			const payment = await paymentQueries.store.getPaymentInfoByNumber(
-				paymentNumber,
-			);
+			const payment =
+				await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
 			if (!payment || payment.provider !== "transfer") {
 				return null;
 			}
@@ -140,10 +203,9 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				phone: String(payment.order.customerPhone),
 				expectedAmount: payment.amount,
 			});
-		} catch {
-			// Khaan fetch/auth failure or payment lookup failure — do not block
-			// the admin confirm. The caller logs and proceeds.
-			return null;
+		} catch (error) {
+			if (error instanceof KhaanError) return null;
+			throw error;
 		}
 	}
 
@@ -183,7 +245,7 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 					status: "failed",
 					attempts,
 					nextPollAt: null,
-					lastError: "Payment not found",
+					lastError: "payment_not_found",
 				});
 				return;
 			}
@@ -206,7 +268,7 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 					status: "failed",
 					attempts,
 					nextPollAt: null,
-					lastError: `Payment is not confirmable (${payment.provider}/${payment.status})`,
+					lastError: "payment_not_confirmable",
 				});
 				return;
 			}
@@ -233,49 +295,51 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				expectedAmount: payment.amount,
 			});
 
-			if (matchResult.status === "none") {
-				await this.scheduleNext({ ...state, attempts, lastError: null });
-				return;
-			}
-
-			if (matchResult.status === "ambiguous") {
-				await this.writeState({
-					...state,
-					status: "ambiguous",
-					attempts,
-					nextPollAt: null,
-					lastError: null,
-					matchedTransaction: matchResult.matches[0],
-				});
-				return;
-			}
-
-			await this.confirmMatch(
-				state,
-				attempts,
-				matchResult.match,
-				fingerprintByIdentity,
-			);
+			await matchAsync(
+				matchResult,
+				"status",
+			)({
+				none: () => this.scheduleNext({ ...state, attempts, lastError: null }),
+				ambiguous: ({ matches }) =>
+					this.writeState({
+						...state,
+						status: "ambiguous",
+						attempts,
+						nextPollAt: null,
+						lastError: null,
+						matchedTransaction: matches[0],
+					}),
+				matched: ({ match: matched }) =>
+					this.confirmMatch(state, attempts, matched, fingerprintByIdentity),
+			});
 		} catch (error) {
-			if (error instanceof KhaanAuthError) {
-				this.client = null;
-				await this.writeState({
-					...state,
-					status: "auth_required",
-					attempts,
-					nextPollAt: null,
-					lastError: errorMessage(error),
-				});
-				return;
-			}
-			await this.scheduleNext(
-				{
-					...state,
-					attempts,
-					lastError: errorMessage(error),
+			const failure = classifyKhaanFailure(error);
+			if (!failure) throw error;
+			await matchAsync(
+				failure,
+				"_tag",
+			)({
+				AuthRequired: async () => {
+					this.client = null;
+					await this.writeState({
+						...state,
+						status: "auth_required",
+						attempts,
+						nextPollAt: null,
+						lastError: "auth_required",
+					});
 				},
-				retryDelayMs(error),
-			);
+				RateLimited: () =>
+					this.scheduleNext(
+						{ ...state, attempts, lastError: "rate_limited" },
+						retryDelayMs(error),
+					),
+				ProviderUnavailable: () =>
+					this.scheduleNext(
+						{ ...state, attempts, lastError: "provider_unavailable" },
+						retryDelayMs(error),
+					),
+			});
 		}
 	}
 
@@ -300,37 +364,27 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			consumedKhaanTransactions: [{ fingerprint: matchedFingerprint }],
 		});
 
-		if (
-			!confirmation.confirmed &&
-			confirmation.reason === "khaan_transaction_already_consumed"
-		) {
-			await this.writeState({
-				...state,
-				status: "ambiguous",
-				attempts,
-				nextPollAt: null,
-				lastError: confirmation.reason,
-				matchedTransaction: match,
-			});
-			return;
-		}
-
-		const paymentAfterConfirmation = confirmation.confirmed
-			? null
-			: await paymentQueries.store.getPaymentInfoByNumber(
-					state.paymentNumber,
-				);
-		const reason = confirmation.confirmed ? null : confirmation.reason;
-		const succeeded =
-			confirmation.confirmed ||
-			paymentAfterConfirmation?.status === "success";
-		await this.writeState({
-			...state,
-			status: succeeded ? "confirmed" : "failed",
-			attempts,
-			nextPollAt: null,
-			lastError: succeeded ? null : reason,
-			matchedTransaction: match,
+		await confirmation.match({
+			ok: () =>
+				this.writeState({
+					...state,
+					status: "confirmed",
+					attempts,
+					nextPollAt: null,
+					lastError: null,
+					matchedTransaction: match,
+				}),
+			err: (error) => {
+				const failure = confirmationFailureState(error);
+				return this.writeState({
+					...state,
+					status: failure.status,
+					attempts,
+					nextPollAt: null,
+					lastError: failure.lastError,
+					matchedTransaction: match,
+				});
+			},
 		});
 	}
 

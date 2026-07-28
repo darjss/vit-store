@@ -1,9 +1,20 @@
 import { useMutation, useQuery } from "@tanstack/solid-query";
+import {
+	paymentErrorSchema,
+	qpayCheckSchema,
+	qpayInvoiceSchema,
+	type PaymentError,
+} from "@vit/shared";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { trackQpayError } from "@/lib/analytics";
+import {
+	paymentErrorPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions, resultQueryOptions } from "@/lib/result-query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -33,14 +44,15 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	});
 
 	const mutation = useMutation(
-		() => ({
-			mutationFn: async () => {
-				return await api.payment.createQr.mutate({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
-				});
-			},
-		}),
+		() =>
+			resultMutationOptions(
+				() =>
+					api.v2.payment.createQr.mutate({
+						paymentNumber: props.paymentNumber,
+						checkoutToken: props.checkoutToken,
+					}),
+				{ value: qpayInvoiceSchema, error: paymentErrorSchema },
+			),
 		() => queryClient,
 	);
 
@@ -51,20 +63,35 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		return `${props.amount.toLocaleString()}₮`;
 	};
 
-	const invoiceData = () => mutation.data;
+	const invoiceData = () =>
+		mutation.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		});
+	const invoiceError = () =>
+		mutation.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+	const invoiceErrorCopy = () => {
+		const error = invoiceError();
+		return error ? paymentErrorPresentation(error) : unexpectedCommerceError;
+	};
 
 	createEffect(() => {
 		if (mutation.isError) {
+			trackQpayError(props.paymentNumber, "transport_failure");
+		} else if (invoiceError()) {
 			trackQpayError(
 				props.paymentNumber,
-				mutation.error?.message ?? "Unknown error",
+				invoiceError()?._tag ?? "expected_failure",
 			);
 		}
 	});
 
 	onMount(() => {
 		if (!mutation.isSuccess && !mutation.isPending && !mutation.isError) {
-			mutation.mutate();
+			mutation.mutate(undefined);
 		}
 	});
 
@@ -74,16 +101,19 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	// the invoice and runs the same idempotent confirmation boundary.
 	const paymentStatusQuery = useQuery(
 		() => ({
-			queryKey: [
-				"qpay-payment-status",
-				props.paymentNumber,
-				invoiceData()?.invoice_id,
-			],
-			queryFn: () =>
-				api.payment.checkQpayPayment.mutate({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
-				}),
+			...resultQueryOptions({
+				queryKey: [
+					"qpay-payment-status",
+					props.paymentNumber,
+					invoiceData()?.invoice_id,
+				] as const,
+				request: () =>
+					api.v2.payment.checkQpayPayment.mutate({
+						paymentNumber: props.paymentNumber,
+						checkoutToken: props.checkoutToken,
+					}),
+				schemas: { value: qpayCheckSchema, error: paymentErrorSchema },
+			}),
 			enabled: Boolean(invoiceData()?.invoice_id),
 			refetchInterval: 5000,
 			staleTime: 0,
@@ -91,9 +121,19 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		() => queryClient,
 	);
 
+	const paymentStatusError = () =>
+		paymentStatusQuery.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+
 	createEffect(() => {
 		if (navigated()) return;
-		if (paymentStatusQuery.data?.paid) {
+		const status = paymentStatusQuery.data?.match({
+			ok: (value) => value,
+			err: () => undefined,
+		});
+		if (status?.paid) {
 			setNavigated(true);
 			void safeNavigate(
 				paymentSuccessUrl(props.paymentNumber, props.checkoutToken),
@@ -151,18 +191,20 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				</div>
 			</Show>
 
-			<Show when={mutation.isError}>
+			<Show when={mutation.isError || invoiceError()}>
 				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-6">
 					<IconErrorWarning class="h-10 w-10 text-destructive" />
 					<div class="text-center">
-						<p class="font-semibold text-destructive text-sm">Алдаа гарлаа</p>
+						<p class="font-semibold text-destructive text-sm">
+							{invoiceErrorCopy().title}
+						</p>
 						<p class="mt-1 text-muted-foreground text-xs">
-							{mutation.error?.message ?? "Төлбөр үүсгэхэд алдаа гарлаа"}
+							{invoiceErrorCopy().description}
 						</p>
 					</div>
 					<button
 						type="button"
-						onClick={() => mutation.mutate()}
+						onClick={() => mutation.mutate(undefined)}
 						class={cn(buttonVariants({ size: "sm" }))}
 					>
 						Дахин оролдох
@@ -196,7 +238,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</button>
 
 						<Show when={showQr()}>
-							<div class="animate-qpay-qr-pop flex flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
+							<div class="flex animate-qpay-qr-pop flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"
@@ -240,6 +282,16 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</div>
 					</Show>
 
+					<Show when={paymentStatusQuery.isError || paymentStatusError()}>
+						<div class="rounded-xl border border-warning/30 bg-warning/10 p-3 text-center">
+							<p class="font-semibold text-foreground text-xs">
+								Төлбөрийн төлөвийг шинэчилж чадсангүй
+							</p>
+							<p class="mt-1 text-muted-foreground text-xs">
+								Төлбөр хийсэн бол дахин төлөхгүйгээр түр хүлээгээд шалгана уу.
+							</p>
+						</div>
+					</Show>
 					<p class="text-center text-[11px] text-muted-foreground">
 						Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.
 					</p>

@@ -1,12 +1,26 @@
 import { useMutation } from "@tanstack/solid-query";
+import {
+	paymentErrorSchema,
+	transferClaimSchema,
+	type PaymentError,
+} from "@vit/shared";
 import { Show } from "solid-js";
+import {
+	paymentErrorPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
+import { clearCheckoutIdempotency } from "@/lib/checkout-idempotency";
 import { orderConfirmUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cart } from "@/store/cart";
 import { CardIcon as IconBankCard } from "@solar-icons/solid/linear";
-import { CheckCircleIcon as IconCheckboxCircle, CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
+import {
+	CheckCircleIcon as IconCheckboxCircle,
+	CloseCircleIcon as IconCloseCircle,
+} from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
@@ -18,42 +32,62 @@ const ConfirmPaymentButton = (props: {
 }) => {
 	const mutation = useMutation(
 		() => ({
-			mutationFn: async () => {
-				return await api.payment.sendTransferNotification.mutate({
-					paymentNumber: props.paymentNumber,
-					checkoutToken: props.checkoutToken,
+			...resultMutationOptions(
+				() =>
+					api.v2.payment.sendTransferNotification.mutate({
+						paymentNumber: props.paymentNumber,
+						checkoutToken: props.checkoutToken,
+					}),
+				{ value: transferClaimSchema, error: paymentErrorSchema },
+			),
+			onSuccess: (result) => {
+				result.match({
+					ok: (data) => {
+						showToast({
+							title: "Амжилттай",
+							description: PENDING_APPROVAL_MESSAGE,
+							variant: "success",
+							duration: 5000,
+						});
+						cart.clearCart();
+						clearCheckoutIdempotency();
+						void safeNavigate(
+							orderConfirmUrl(data.orderNumber, props.checkoutToken),
+						);
+					},
+					err: (error) => {
+						const presentation = paymentErrorPresentation(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 7000,
+						});
+					},
 				});
-			},
-			onSuccess: async (data) => {
-				if (!data?.orderNumber) return;
-
-				showToast({
-					title: "Амжилттай",
-					description: PENDING_APPROVAL_MESSAGE,
-					variant: "success",
-					duration: 5000,
-				});
-				cart.clearCart();
-				void safeNavigate(
-					orderConfirmUrl(data.orderNumber, props.checkoutToken),
-				);
 			},
 			onError: () => {
 				showToast({
-					title: "Алдаа",
-					description:
-						"Хүсэлт илгээхэд алдаа гарлаа. Төлбөрөө шилжүүлсэн бол бид удахгүй шалгана.",
+					title: unexpectedCommerceError.title,
+					description: unexpectedCommerceError.description,
 					variant: "error",
-					duration: 5000,
+					duration: 7000,
 				});
 			},
 		}),
-
 		() => queryClient,
 	);
 
+	const expectedError = () =>
+		mutation.data?.match<PaymentError | undefined>({
+			ok: () => undefined,
+			err: (error) => error,
+		});
+	const succeeded = () =>
+		mutation.data?.match({ ok: () => true, err: () => false }) ?? false;
+
 	const handleConfirmPayment = () => {
-		mutation.mutate();
+		mutation.mutate(undefined);
 	};
 
 	return (
@@ -101,18 +135,23 @@ const ConfirmPaymentButton = (props: {
 					</span>
 				</span>
 			</Show>
-			<Show when={mutation.isSuccess}>
+			<Show when={succeeded()}>
 				<span class="flex animate-payment-state-pop items-center gap-2">
 					<IconCheckboxCircle class="size-5" /> {PENDING_APPROVAL_MESSAGE}
 				</span>
 			</Show>
-			<Show when={mutation.isError}>
+			<Show when={mutation.isError || expectedError()}>
 				<span class="flex animate-payment-state-pop items-center gap-2">
 					<IconCloseCircle class="size-5" /> Дахин оролдоно уу
 				</span>
 			</Show>
 			<Show
-				when={!mutation.isPending && !mutation.isSuccess && !mutation.isError}
+				when={
+					!mutation.isPending &&
+					!mutation.isError &&
+					!expectedError() &&
+					!succeeded()
+				}
 			>
 				<span class="flex items-center gap-2">
 					<IconBankCard class="size-5" />

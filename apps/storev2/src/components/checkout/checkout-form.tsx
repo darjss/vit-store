@@ -1,7 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
-import { phoneSchema } from "@vit/shared";
+import {
+	checkoutCreatedSchema,
+	checkoutErrorSchema,
+	phoneSchema,
+} from "@vit/shared";
 import { deliveryFee } from "@vit/shared/constants";
 import {
 	createEffect,
@@ -20,12 +24,25 @@ import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import PaymentOptions from "@/components/payment/payment-options";
 import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
+import { addCheckoutIdempotency } from "@/lib/checkout-idempotency";
+import {
+	checkoutErrorPresentation,
+	unexpectedCommerceError,
+} from "@/lib/error-presentations/commerce";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
 import { queryClient } from "@/lib/query";
+import { resultMutationOptions } from "@/lib/result-query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { cart, createCartState } from "@/store/cart";
-import { BoxIcon as IconPackage, AltArrowDownIcon as IconChevronDown, AltArrowLeftIcon as IconChevronLeft, AltArrowUpIcon as IconChevronUp, CardIcon as IconBankCard, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
+import {
+	BoxIcon as IconPackage,
+	AltArrowDownIcon as IconChevronDown,
+	AltArrowLeftIcon as IconChevronLeft,
+	AltArrowUpIcon as IconChevronUp,
+	CardIcon as IconBankCard,
+	DeliveryIcon as IconTruck,
+} from "@solar-icons/solid/linear";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
@@ -90,6 +107,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	const [step, setStep] = createSignal<Step>("delivery");
 	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
+	const requiredPaymentInfo = () => {
+		const info = paymentInfo();
+		if (!info) throw new Error("Payment step requires committed checkout info.");
+		return info;
+	};
 	const [summaryOpen, setSummaryOpen] = createSignal(false);
 	const [invalidPulse, setInvalidPulse] = createSignal(false);
 	let checkoutFormEl: HTMLFormElement | undefined;
@@ -127,52 +149,54 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 	const mutation = useMutation(
 		() => ({
-			mutationFn: async (values: newOrderType) => {
-				return await api.order.addOrder.mutate({ ...values });
-			},
-			onSuccess: async (data, variables) => {
-				const paymentNumber = data?.paymentNumber;
-				if (!paymentNumber) {
-					showToast({
-						title: "Алдаа",
-						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
-						variant: "error",
-						duration: 5000,
-					});
-					return;
-				}
-
-				identifyUser(variables.phoneNumber);
-				showToast({
-					title: "Амжилттай",
-					description: "Захиалга амжилттай үүслээ",
-					variant: "success",
-					duration: 5000,
+			...resultMutationOptions(
+				async (values: newOrderType) =>
+					api.v2.order.addOrder.mutate(await addCheckoutIdempotency(values)),
+				{ value: checkoutCreatedSchema, error: checkoutErrorSchema },
+			),
+			onSuccess: (result, variables) => {
+				result.match({
+					err: (error) => {
+						const presentation = checkoutErrorPresentation(error);
+						showToast({
+							title: presentation.title,
+							description: presentation.description,
+							variant: "error",
+							duration: 7000,
+						});
+					},
+					ok: (data) => {
+						identifyUser(variables.phoneNumber);
+						showToast({
+							title: "Амжилттай",
+							description: "Захиалга амжилттай үүслээ",
+							variant: "success",
+							duration: 5000,
+						});
+						setPaymentInfo({
+							paymentNumber: data.paymentNumber,
+							checkoutToken: data.checkoutToken,
+							total: data.total,
+							orderNumber: data.orderNumber,
+							customerPhone: data.customerPhone,
+							accountNumber: data.accountNumber,
+							accountName: data.accountName,
+						});
+						setStep("payment");
+						window.scrollTo({ top: 0, behavior: "smooth" });
+						celebrateOnce(
+							orderCreatedCelebrationKey(data.paymentNumber),
+							"light",
+						);
+					},
 				});
-
-				// F9/H5: addOrder now returns the full PaymentOptions props
-				// (total, orderNumber, customerPhone, accountNumber,
-				// accountName), so the redundant getPaymentByNumber round-trip
-				// and its silent catch are gone.
-				setPaymentInfo({
-					paymentNumber,
-					checkoutToken: data.checkoutToken ?? undefined,
-					total: data.total ?? cart.total() + deliveryFee,
-					orderNumber: data.orderNumber ?? paymentNumber,
-					customerPhone: data.customerPhone ?? variables.phoneNumber,
-					accountNumber: data.accountNumber,
-					accountName: data.accountName,
-				});
-				setStep("payment");
-				window.scrollTo({ top: 0, behavior: "smooth" });
-				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
 			},
 			onError: () => {
 				showToast({
-					title: "Алдаа",
-					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+					title: unexpectedCommerceError.title,
+					description: unexpectedCommerceError.description,
 					variant: "error",
-					duration: 5000,
+					duration: 7000,
 				});
 			},
 		}),
@@ -674,13 +698,13 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 													<div class="p-4">
 														<PaymentOptions
-															paymentNumber={paymentInfo()!.paymentNumber}
-															orderNumber={paymentInfo()!.orderNumber}
-															total={paymentInfo()!.total}
-															customerPhone={paymentInfo()!.customerPhone}
-															accountNumber={paymentInfo()!.accountNumber}
-															accountName={paymentInfo()!.accountName}
-															checkoutToken={paymentInfo()!.checkoutToken}
+															paymentNumber={requiredPaymentInfo().paymentNumber}
+															orderNumber={requiredPaymentInfo().orderNumber}
+															total={requiredPaymentInfo().total}
+															customerPhone={requiredPaymentInfo().customerPhone}
+															accountNumber={requiredPaymentInfo().accountNumber}
+															accountName={requiredPaymentInfo().accountName}
+															checkoutToken={requiredPaymentInfo().checkoutToken}
 														/>
 													</div>
 												</div>

@@ -1,4 +1,6 @@
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { Result, type Result as ResultType } from "better-result";
+import { match } from "dismatch";
+import { and, desc, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	KhaanConsumedTransactionsTable,
@@ -7,19 +9,49 @@ import {
 	OrdersTable,
 	type PaymentInsertType,
 	PaymentNotificationOutboxTable,
+	PaymentPostCommitRecoveryTable,
 	PaymentsTable,
 	ProductImagesTable,
 	PurchaseItemsTable,
 	PurchaseReceiptItemsTable,
 	SalesTable,
 } from "~/db/schema";
-import { recordConsumedKhaanTransaction } from "~/lib/payments/consumed-transaction";
-import { applyStockTransition } from "~/lib/stock/transition";
+import {
+	KhaanTransactionAlreadyConsumedError,
+	recordConsumedKhaanTransaction,
+} from "~/lib/payments/consumed-transaction";
+import type {
+	PaymentCommit,
+	PaymentCommitError,
+} from "~/lib/payments/payment-confirmation-core";
+import {
+	applyStockTransition,
+	StockTransitionRejected,
+} from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 import type { paymentProvider, paymentStatus } from "~/lib/utils";
 
 type PaymentProviderType = (typeof paymentProvider)[number];
 type PaymentStatusType = (typeof paymentStatus)[number];
+
+const paymentStates = {
+	pending: { _tag: "pending" },
+	customer_claimed_paid: { _tag: "customer_claimed_paid" },
+	success: { _tag: "success" },
+	failed: { _tag: "failed" },
+} as const satisfies Record<PaymentStatusType, { _tag: PaymentStatusType }>;
+
+class PaymentCommitAbort extends Error {
+	constructor(readonly failure: PaymentCommitError) {
+		super(`Payment commit aborted: ${failure._tag}`);
+		this.name = "PaymentCommitAbort";
+	}
+}
+
+export type PaymentRecoveryEffect =
+	| "cache_purge"
+	| "messenger_notification"
+	| "analytics";
 
 // Accept either a live db() handle or a transaction tx so the canonical
 // implementation can be called both inside transactions (addOrder/updateOrder/
@@ -246,7 +278,6 @@ export const paymentQueries = {
 					paymentNumber: MessengerNotificationFailuresTable.paymentNumber,
 					purpose: MessengerNotificationFailuresTable.purpose,
 					status: MessengerNotificationFailuresTable.status,
-					errorMessage: MessengerNotificationFailuresTable.errorMessage,
 					errorCode: MessengerNotificationFailuresTable.errorCode,
 					retryCount: MessengerNotificationFailuresTable.retryCount,
 					lastAttemptAt: MessengerNotificationFailuresTable.lastAttemptAt,
@@ -396,119 +427,227 @@ export const paymentQueries = {
 			paymentNumber: string,
 			provider: PaymentProviderType,
 			consumedKhaanTransactions?: { fingerprint: string }[],
-		) {
-			const confirmed = await db().transaction(async (tx) => {
-				// Record consumed Khaan fingerprints BEFORE the status flip and
-				// regardless of whether THIS call wins the flip. A concurrent
-				// admin confirm may flip status→success first, causing the UPDATE
-				// below to claim 0 rows; the fingerprint must still be recorded so
-				// the bank transaction cannot be replayed against a later order.
-				// recordConsumedKhaanTransaction is idempotent for the same
-				// paymentNumber and throws KhaanTransactionAlreadyConsumedError
-				// (aborting this tx) when a DIFFERENT payment already consumed it.
-				if (consumedKhaanTransactions?.length) {
-					for (const { fingerprint } of consumedKhaanTransactions) {
+		): Promise<ResultType<PaymentCommit, PaymentCommitError>> {
+			try {
+				return await db().transaction(async (tx) => {
+					const [payment] = await tx
+						.select({
+							orderId: PaymentsTable.orderId,
+							status: PaymentsTable.status,
+						})
+						.from(PaymentsTable)
+						.where(
+							and(
+								eq(PaymentsTable.paymentNumber, paymentNumber),
+								isNull(PaymentsTable.deletedAt),
+							),
+						)
+						.for("update");
+					if (!payment) {
+						throw new PaymentCommitAbort({ _tag: "PaymentNotFound" });
+					}
+
+					// Fingerprints are recorded while the payment row is locked. A
+					// same-payment replay is idempotent; a different payment aborts.
+					for (const { fingerprint } of consumedKhaanTransactions ?? []) {
 						await recordConsumedKhaanTransaction(tx, {
 							fingerprint,
 							paymentNumber,
 						});
 					}
-				}
-				const [claimedPayment] = await tx
-					.update(PaymentsTable)
-					.set({ status: "success", provider })
-					.where(
-						and(
-							eq(PaymentsTable.paymentNumber, paymentNumber),
-							inArray(PaymentsTable.status, [
-								"pending",
-								"customer_claimed_paid",
-							]),
-							isNull(PaymentsTable.deletedAt),
-						),
-					)
-					.returning({ id: PaymentsTable.id, orderId: PaymentsTable.orderId });
 
-				if (!claimedPayment) {
-					return false;
-				}
-				await tx
-					.insert(PaymentNotificationOutboxTable)
-					.values({
-						paymentNumber,
-						purpose: "order_payment_confirmed_sms",
-					})
-					.onConflictDoNothing();
-
-				const orderDetails = await tx.query.OrderDetailsTable.findMany({
-					where: and(
-						eq(OrderDetailsTable.orderId, claimedPayment.orderId),
-						isNull(OrderDetailsTable.deletedAt),
-					),
-					with: {
-						product: {
-							columns: {
-								id: true,
-								price: true,
-								status: true,
-								stock: true,
-							},
-						},
-					},
-				});
-
-				// Stock is decremented by the conditional UPDATE below, which is
-				// the real guard (it re-checks status = active AND stock >=
-				// quantity atomically). A non-locked pre-check here would only
-				// give an earlier error for impossible inputs and cannot prevent
-				// races, so it is intentionally omitted (F6).
-				for (const detail of orderDetails) {
-					const updatedProduct = await applyStockTransition(tx, {
-						productId: detail.product.id,
-						delta: -detail.quantity,
-						requireActive: true,
-						requireNonNegative: true,
+					const action = match(
+						paymentStates[payment.status],
+						"_tag",
+					)<"confirm" | "replay" | "reject">({
+						pending: () => "confirm" as const,
+						customer_claimed_paid: () => "confirm" as const,
+						success: () => "replay" as const,
+						failed: () => "reject" as const,
 					});
-
-					if (!updatedProduct) {
-						throw new Error(
-							`Insufficient stock for product ${detail.product.id}`,
-						);
+					if (action === "replay") {
+						return Result.ok({
+							outcome: "already_confirmed",
+							orderId: payment.orderId,
+						});
+					}
+					if (action === "reject") {
+						throw new PaymentCommitAbort({
+							_tag: "PaymentNotPending",
+							status: payment.status,
+						});
 					}
 
-					const productCost = await getAverageCostOfProduct(
-						tx,
-						detail.product.id,
-						new Date(),
-					);
+					await tx
+						.update(PaymentsTable)
+						.set({ status: "success", provider })
+						.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 
-					await tx.insert(SalesTable).values({
-						orderId: claimedPayment.orderId,
-						productId: detail.product.id,
-						quantitySold: detail.quantity,
-						productCost,
-						sellingPrice: detail.price ?? detail.product.price,
+					await tx
+						.insert(PaymentNotificationOutboxTable)
+						.values({
+							paymentNumber,
+							purpose: "order_payment_confirmed_sms",
+						})
+						.onConflictDoNothing();
+					await tx
+						.insert(PaymentPostCommitRecoveryTable)
+						.values(
+							(
+								["cache_purge", "messenger_notification", "analytics"] as const
+							).map((effect) => ({ paymentNumber, effect })),
+						)
+						.onConflictDoNothing();
+
+					const orderDetails = await tx.query.OrderDetailsTable.findMany({
+						where: and(
+							eq(OrderDetailsTable.orderId, payment.orderId),
+							isNull(OrderDetailsTable.deletedAt),
+						),
+						with: {
+							product: {
+								columns: { id: true, price: true },
+							},
+						},
+					});
+
+					for (const detail of orderDetails) {
+						const stock = await applyStockTransition(tx, {
+							productId: detail.product.id,
+							delta: -detail.quantity,
+							requireActive: true,
+							requireNonNegative: true,
+						});
+						if (stock.isErr()) {
+							throw new StockTransitionRejected(stock.error);
+						}
+
+						const productCost = await getAverageCostOfProduct(
+							tx,
+							detail.product.id,
+							new Date(),
+						);
+						await tx.insert(SalesTable).values({
+							orderId: payment.orderId,
+							productId: detail.product.id,
+							quantitySold: detail.quantity,
+							productCost,
+							sellingPrice: detail.price ?? detail.product.price,
+						});
+					}
+
+					await tx
+						.update(OrdersTable)
+						.set({ status: "pending" })
+						.where(
+							and(
+								eq(OrdersTable.id, payment.orderId),
+								eq(OrdersTable.status, "created"),
+							),
+						);
+
+					return Result.ok({ outcome: "confirmed", orderId: payment.orderId });
+				});
+			} catch (error) {
+				if (error instanceof PaymentCommitAbort) {
+					return Result.err(error.failure);
+				}
+				if (error instanceof KhaanTransactionAlreadyConsumedError) {
+					return Result.err({ _tag: "BankTransactionAlreadyConsumed" });
+				}
+				if (error instanceof StockTransitionRejected) {
+					return Result.err({
+						_tag: "StockTransitionFailed",
+						failure: error.failure,
 					});
 				}
+				throw error;
+			}
+		},
 
-				// Payment confirmed — promote the order from "created" (unpaid)
-				// to "pending" (paid, awaiting shipment). Guard on current status
-				// = "created" so this is a no-op for legacy "pending" orders and
-				// never accidentally demotes a shipped/delivered order.
-				await tx
-					.update(OrdersTable)
-					.set({ status: "pending" })
-					.where(
+		async claimPostCommitRecovery(
+			paymentNumber: string,
+			effect: PaymentRecoveryEffect,
+		) {
+			const token = crypto.randomUUID();
+			const now = new Date();
+			const claimable =
+				effect === "messenger_notification"
+					? eq(PaymentPostCommitRecoveryTable.status, "pending")
+					: or(
+							eq(PaymentPostCommitRecoveryTable.status, "pending"),
+							and(
+								eq(PaymentPostCommitRecoveryTable.status, "claimed"),
+								lte(PaymentPostCommitRecoveryTable.claimUntil, now),
+							),
+						);
+			const [claimed] = await db()
+				.update(PaymentPostCommitRecoveryTable)
+				.set({
+					status: "claimed",
+					claimToken: token,
+					claimUntil: new Date(Date.now() + 60_000),
+				})
+				.where(
+					and(
+						eq(PaymentPostCommitRecoveryTable.paymentNumber, paymentNumber),
+						eq(PaymentPostCommitRecoveryTable.effect, effect),
+						claimable,
+					),
+				)
+				.returning({ token: PaymentPostCommitRecoveryTable.claimToken });
+			return claimed?.token === token ? token : null;
+		},
+
+		async markPostCommitRecovery(
+			paymentNumber: string,
+			effect: PaymentRecoveryEffect,
+			claimToken: string,
+			status: "completed" | "ambiguous" | "pending",
+			errorCode?: string,
+		) {
+			await db()
+				.update(PaymentPostCommitRecoveryTable)
+				.set({
+					status,
+					claimToken: null,
+					claimUntil: null,
+					attemptCount: sql`${PaymentPostCommitRecoveryTable.attemptCount} + 1`,
+					lastErrorCode: errorCode ?? null,
+					lastAttemptAt: new Date(),
+				})
+				.where(
+					and(
+						eq(PaymentPostCommitRecoveryTable.paymentNumber, paymentNumber),
+						eq(PaymentPostCommitRecoveryTable.effect, effect),
+						eq(PaymentPostCommitRecoveryTable.status, "claimed"),
+						eq(PaymentPostCommitRecoveryTable.claimToken, claimToken),
+					),
+				);
+		},
+
+		async getPendingPostCommitRecovery(limit = 20) {
+			const now = new Date();
+			return await db()
+				.select({
+					paymentNumber: PaymentPostCommitRecoveryTable.paymentNumber,
+					effect: PaymentPostCommitRecoveryTable.effect,
+				})
+				.from(PaymentPostCommitRecoveryTable)
+				.where(
+					or(
+						eq(PaymentPostCommitRecoveryTable.status, "pending"),
 						and(
-							eq(OrdersTable.id, claimedPayment.orderId),
-							eq(OrdersTable.status, "created"),
+							eq(PaymentPostCommitRecoveryTable.status, "claimed"),
+							ne(
+								PaymentPostCommitRecoveryTable.effect,
+								"messenger_notification",
+							),
+							lte(PaymentPostCommitRecoveryTable.claimUntil, now),
 						),
-					);
-
-				return true;
-			});
-
-			return confirmed;
+					),
+				)
+				.limit(limit);
 		},
 
 		async getPaymentByNumber(paymentNumber: string) {
@@ -530,7 +669,11 @@ export const paymentQueries = {
 		async claimTransferPaid(paymentNumber: string) {
 			const [changed] = await db()
 				.update(PaymentsTable)
-				.set({ status: "customer_claimed_paid" })
+				.set({
+					status: "customer_claimed_paid",
+					provider: "transfer",
+					invoiceId: null,
+				})
 				.where(
 					and(
 						eq(PaymentsTable.paymentNumber, paymentNumber),
@@ -549,23 +692,42 @@ export const paymentQueries = {
 				),
 				columns: { status: true },
 			});
-			if (!payment) throw new Error("Payment not found");
-			if (payment.status === "customer_claimed_paid") {
-				return { outcome: "already_claimed" as const };
-			}
-			if (payment.status === "success") {
-				return { outcome: "already_confirmed" as const };
-			}
-			return { outcome: "refused" as const };
+			if (!payment) return { outcome: "not_found" as const };
+			return match(
+				paymentStates[payment.status],
+				"_tag",
+			)<
+				| { outcome: "already_claimed" }
+				| { outcome: "already_confirmed" }
+				| { outcome: "refused"; status: PaymentStatusType }
+			>({
+				pending: () => ({ outcome: "refused", status: payment.status }),
+				customer_claimed_paid: () => ({ outcome: "already_claimed" }),
+				success: () => ({ outcome: "already_confirmed" }),
+				failed: () => ({ outcome: "refused", status: payment.status }),
+			});
 		},
 		async updatePaymentStatus(
 			paymentNumber: string,
 			status: PaymentStatusType,
 		) {
-			await db()
+			const [updated] = await db()
 				.update(PaymentsTable)
 				.set({ status })
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						isNull(PaymentsTable.deletedAt),
+						status === "failed"
+							? inArray(PaymentsTable.status, [
+									"pending",
+									"customer_claimed_paid",
+								])
+							: undefined,
+					),
+				)
+				.returning({ status: PaymentsTable.status });
+			return updated ?? null;
 		},
 		async createPayment(data: PaymentInsertType) {
 			const result = await db().insert(PaymentsTable).values(data).returning({
@@ -575,16 +737,32 @@ export const paymentQueries = {
 			return result[0];
 		},
 		async changePaymentToQpay(paymentNumber: string, invoiceId: string) {
-			await db()
+			const [updated] = await db()
 				.update(PaymentsTable)
-				.set({ provider: "qpay", invoiceId: invoiceId })
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+				.set({ provider: "qpay", invoiceId })
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						eq(PaymentsTable.status, "pending"),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ status: PaymentsTable.status });
+			return updated ?? null;
 		},
 		async changePaymentToTransfer(paymentNumber: string) {
-			await db()
+			const [updated] = await db()
 				.update(PaymentsTable)
 				.set({ provider: "transfer", invoiceId: null })
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+				.where(
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ status: PaymentsTable.status });
+			return updated ?? null;
 		},
 	},
 };

@@ -100,21 +100,19 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	}
 }
 
-export async function purgeTagsGlobal(tags: string[]): Promise<void> {
-	if (tags.length === 0) {
-		return;
-	}
+export async function purgeTagsGlobal(tags: string[]) {
+	if (tags.length === 0) return true;
 
 	const mod = await getWorkersCacheModule();
 	const globalCache = mod?.cache;
-	if (!globalCache) {
-		return;
-	}
+	if (!globalCache) return true;
 
 	try {
 		await globalCache.purge({ tags });
+		return true;
 	} catch (error) {
 		logger.error("workers_cache.purge_failed", error, { cache_tags: tags });
+		return false;
 	}
 }
 
@@ -149,12 +147,19 @@ export async function purgeCatalogCache(
 export async function purgeCatalogCacheGlobal(
 	productIds: readonly number[] = [],
 	extraTags: readonly string[] = [],
-): Promise<void> {
+) {
 	const tags = catalogCacheTags(productIds, extraTags);
-	await Promise.all([purgeTagsGlobal(tags), purgeStorefrontTagsGlobal(tags)]);
+	const outcomes = await Promise.all([
+		purgeTagsGlobal(tags),
+		purgeStorefrontTagsGlobal(tags),
+	]);
+	return outcomes.every(Boolean);
 }
 
-async function purgeStorefrontTags(ctx: Context, tags: string[]): Promise<void> {
+async function purgeStorefrontTags(
+	ctx: Context,
+	tags: string[],
+): Promise<void> {
 	try {
 		await ctx.c.env.STOREFRONT.purgeCache(tags);
 	} catch (error) {
@@ -165,12 +170,15 @@ async function purgeStorefrontTags(ctx: Context, tags: string[]): Promise<void> 
 	}
 }
 
-async function purgeStorefrontTagsGlobal(tags: string[]): Promise<void> {
+async function purgeStorefrontTagsGlobal(tags: string[]) {
 	const mod = await getWorkersCacheModule();
+	if (!mod?.env.STOREFRONT) return true;
 	try {
-		await mod?.env.STOREFRONT.purgeCache(tags);
+		await mod.env.STOREFRONT.purgeCache(tags);
+		return true;
 	} catch (error) {
 		logger.error("storefront_cache.purge_failed", error, { cache_tags: tags });
+		return false;
 	}
 }
 
