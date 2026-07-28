@@ -19,12 +19,21 @@ export const paymentStateAction = (status: PaymentStatusType) =>
 		failed: () => "failed",
 	});
 
+const actions = {
+	pending: { _tag: "pending" },
+	confirmed: { _tag: "confirmed" },
+	failed: { _tag: "failed" },
+} as const satisfies Record<
+	ReturnType<typeof paymentStateAction>,
+	{ _tag: ReturnType<typeof paymentStateAction> }
+>;
+
 export const pendingPaymentError = (
 	status: PaymentStatusType,
 	orderNumber?: string,
 ) =>
 	match(
-		{ _tag: paymentStateAction(status) },
+		actions[paymentStateAction(status)],
 		"_tag",
 	)<PaymentError | null>({
 		pending: () => null,
