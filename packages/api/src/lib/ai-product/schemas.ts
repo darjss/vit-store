@@ -1,11 +1,5 @@
 import { z } from "zod";
 
-export const imageSelectionSchema = z.object({
-	keepIndices: z.array(z.number().int().min(0)).max(8),
-	primaryIndex: z.number().int().min(0).nullable(),
-});
-export type ImageSelectionResult = z.infer<typeof imageSelectionSchema>;
-
 export const visionAnalysisSchema = z.object({
 	ingredients: z
 		.array(z.string())
@@ -29,11 +23,15 @@ export const translationSchema = z.object({
 	potency: z.string().describe("Strength/potency, e.g. '5000 IU', '1000mg'"),
 	dailyIntake: z.number().describe("Pills per day"),
 	weightGrams: z.number().describe("Estimated shipping weight in grams"),
-	seoTitle: z.string().describe("SEO title with Mongolian + English for search"),
+	seoTitle: z
+		.string()
+		.describe("SEO title with Mongolian + English for search"),
 	seoDescription: z
 		.string()
 		.describe("SEO description with Mongolian + English for search"),
-	ingredients: z.array(z.string()).describe("Ingredients in Mongolian Cyrillic"),
+	ingredients: z
+		.array(z.string())
+		.describe("Ingredients in Mongolian Cyrillic"),
 	brandId: z
 		.number()
 		.nullable()

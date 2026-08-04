@@ -1,6 +1,8 @@
 import path from "node:path";
+import type { Rpc } from "@cloudflare/workers-types";
 import alchemy from "alchemy";
 import {
+	Ai,
 	DurableObjectNamespace,
 	Hyperdrive,
 	Images,
@@ -10,7 +12,6 @@ import {
 	Worker,
 	WorkerRef,
 } from "alchemy/cloudflare";
-import type { Rpc } from "@cloudflare/workers-types";
 import { createServerAlchemyEnv } from "../../env";
 import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
@@ -98,6 +99,7 @@ export const server = await Worker("api", {
 
 	adopt: true,
 	bindings: {
+		AI: Ai<Pick<AiModels, "@cf/moonshotai/kimi-k2.6">>(),
 		STOREFRONT: WorkerRef<StorefrontCacheRpc>({
 			service: `storev2-front-${stage}`,
 		}),
