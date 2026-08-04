@@ -3,13 +3,12 @@ import type {
 	TranslationResult,
 	VisionAnalysisResult,
 } from "@vit/shared";
-import { generateText, Output } from "ai";
-import { parseLlmOutput } from "~/lib/ai/llm-output";
 import { translationSchema } from "~/lib/ai-product/schemas";
+import { type ProductAi, runProductAi } from "~/lib/ai-product/workers-ai";
 import { logger } from "~/lib/logger";
-import { opencode } from "~/lib/opencode-provider";
 
 export async function translateAndStructureProduct(
+	ai: ProductAi,
 	extractedData: FirecrawlExtractedProduct,
 	visionData: VisionAnalysisResult,
 	brands: { id: number; name: string }[],
@@ -25,9 +24,10 @@ export async function translateAndStructureProduct(
 			.map((c) => `  ID ${c.id}: ${c.name}`)
 			.join("\n");
 
-		const { output: rawOutput } = await generateText({
-			model: opencode("kimi-k2.5"),
-			output: Output.object({ schema: translationSchema }),
+		const output = await runProductAi(ai, {
+			name: "translated_product",
+			schema: translationSchema,
+			maxCompletionTokens: 3072,
 			prompt: `You are a product specialist for a Mongolian supplement store. Translate this product for Mongolian customers who search in both Cyrillic and Latin scripts.
 
 PRODUCT: ${extractedData.title}
@@ -60,9 +60,9 @@ INSTRUCTIONS:
 6. ingredients: Mongolian Cyrillic, keep amounts. Example: "Берберин HCl - 1500мг"
 7. Extract amount (e.g. "240 Veggie Capsules") and potency (e.g. "1500mg") from title
 8. brandId: Match the product brand "${extractedData.brand || "Unknown"}" to one of the AVAILABLE BRANDS above.
-9. categoryId: Based on the product type and ingredients, pick the single best matching category.`,
+9. categoryId: Based on the product type and ingredients, pick the single best matching category.
+10. Do not add nutrients, doses, forms, or counts that are absent from the source data.`,
 		});
-		const output = parseLlmOutput(translationSchema, rawOutput);
 
 		logger.info("translateAndStructureProduct.done", {
 			name: output.name,

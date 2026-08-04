@@ -1,17 +1,18 @@
 import type Firecrawl from "@mendable/firecrawl-js";
 import type { FirecrawlExtractedProduct } from "@vit/shared";
-import { CACHE_TTL } from "~/lib/ai-product/constants";
 import {
 	extractAmazonPriceUsd,
 	extractProductImageIds,
 } from "~/lib/ai-product/amazon-html";
-import { amazonProductSchema } from "~/lib/ai-product/schemas";
 import {
 	isAmazonUrl,
+	productTitleMatchesQuery,
 	scrapeCacheKey,
 	searchCacheKey,
 	toHighResUrl,
 } from "~/lib/ai-product/amazon-url";
+import { CACHE_TTL } from "~/lib/ai-product/constants";
+import { amazonProductSchema } from "~/lib/ai-product/schemas";
 import { kv } from "~/lib/kv";
 import { logger } from "~/lib/logger";
 
@@ -53,21 +54,23 @@ export async function searchAmazonProduct(
 			return null;
 		}
 
-		let resultUrl: string | null = null;
-		for (const result of searchResponse.web) {
+		const productResults = searchResponse.web.flatMap((result) => {
 			const url = "url" in result ? result.url : undefined;
-			if (url && (url.includes("/dp/") || url.includes("/gp/product/"))) {
-				resultUrl = url;
-				break;
+			if (!url || (!url.includes("/dp/") && !url.includes("/gp/product/"))) {
+				return [];
 			}
-		}
+			const title = "title" in result ? result.title : undefined;
+			return [{ url, title }];
+		});
+		const matchingResult = productResults.find(
+			(result) => result.title && productTitleMatchesQuery(query, result.title),
+		);
+		let resultUrl = matchingResult?.url ?? productResults[0]?.url ?? null;
 
 		if (!resultUrl) {
 			const firstResult = searchResponse.web[0];
 			const firstUrl = "url" in firstResult ? firstResult.url : undefined;
-			if (firstUrl?.includes("amazon.com")) {
-				resultUrl = firstUrl;
-			}
+			if (firstUrl?.includes("amazon.com")) resultUrl = firstUrl;
 		}
 
 		await kv().put(cacheKey, JSON.stringify(resultUrl), {
@@ -102,11 +105,11 @@ export async function scrapeAmazonProduct(
 
 	try {
 		const scrapeResponse = await firecrawl.scrape(url, {
-			formats: [{ type: "json", schema: amazonProductSchema }, "html"],
+			formats: [{ type: "json", schema: amazonProductSchema }, "rawHtml"],
 		});
 
 		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
-		const html = scrapeResponse.html || "";
+		const html = scrapeResponse.rawHtml || "";
 		const jsonPriceRaw = jsonData.priceUsd;
 		const jsonPrice =
 			typeof jsonPriceRaw === "number" &&
