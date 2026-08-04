@@ -15,157 +15,169 @@ import {
 import { createServerAlchemyEnv } from "../../env";
 import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
-const app = await alchemy("server");
-const stage = app.stage;
+// Bun 1.3.14 crashes when Alchemy's async context crosses top-level await.
+async function main() {
+	const app = await alchemy("server");
+	const stage = app.stage;
 
-const env = createServerAlchemyEnv(process.env);
+	const env = createServerAlchemyEnv(process.env);
 
-const kv = await KVNamespace("kv", {
-	title: `vit-kv-${app.stage}`,
-	adopt: true,
-});
+	const kv = await KVNamespace("kv", {
+		title: `vit-kv-${app.stage}`,
+		adopt: true,
+	});
 
-const r2 = await R2Bucket("r2", {
-	name: "vit-store-bucket-prod",
-	dev: {
-		remote: true,
-	},
-	adopt: true,
-});
+	const r2 = await R2Bucket("r2", {
+		name: "vit-store-bucket-prod",
+		dev: {
+			remote: true,
+		},
+		adopt: true,
+	});
 
-const rateLimit = RateLimit({
-	namespace_id: 1001,
-	simple: {
-		limit: 1000,
-		period: 60,
-	},
-});
+	const rateLimit = RateLimit({
+		namespace_id: 1001,
+		simple: {
+			limit: 1000,
+			period: 60,
+		},
+	});
 
-const images = Images({
-	dev: {
-		remote: true,
-	},
-});
+	const images = Images({
+		dev: {
+			remote: true,
+		},
+	});
 
-const productSearch = DurableObjectNamespace<ProductSearchObject>(
-	"product-search",
-	{
-		className: "ProductSearchObject",
-		sqlite: true,
-	},
-);
+	const productSearch = DurableObjectNamespace<ProductSearchObject>(
+		"product-search",
+		{
+			className: "ProductSearchObject",
+			sqlite: true,
+		},
+	);
 
-const transferReconciliation = DurableObjectNamespace(
-	"transfer-reconciliation",
-	{
-		className: "TransferReconciliationObject",
-		sqlite: true,
-	},
-);
+	const transferReconciliation = DurableObjectNamespace(
+		"transfer-reconciliation",
+		{
+			className: "TransferReconciliationObject",
+			sqlite: true,
+		},
+	);
 
-const hyperdriveDB = await Hyperdrive("pscale-db", {
-	origin: {
-		host: env.PLANETSCALE_HOST,
-		port: 5432,
-		user: env.PLANETSCALE_USER,
-		password: env.PLANETSCALE_PASSWORD,
-		database: env.PLANETSCALE_DATABASE,
-	},
-	adopt: true,
-});
+	const hyperdriveDB = await Hyperdrive("pscale-db", {
+		origin: {
+			host: env.PLANETSCALE_HOST,
+			port: 5432,
+			user: env.PLANETSCALE_USER,
+			password: env.PLANETSCALE_PASSWORD,
+			database: env.PLANETSCALE_DATABASE,
+		},
+		adopt: true,
+	});
 
-const directDbUrl =
-	stage === "dev"
-		? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
-		: "";
+	const directDbUrl =
+		stage === "dev"
+			? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
+			: "";
 
-interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
-	purgeCache(tags: string[]): Promise<void>;
+	interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
+		purgeCache(tags: string[]): Promise<void>;
+	}
+
+	const server = await Worker("api", {
+		entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
+		compatibility: "node",
+		compatibilityDate: "2026-07-07",
+		cache: { enabled: true },
+		// Durable restock batches/retries run independently of request lifetimes.
+		crons: ["*/5 * * * *"],
+		domains:
+			stage === "prod"
+				? ["api.amerikvitamin.mn"]
+				: stage === "staging"
+					? ["api-staging.amerikvitamin.mn"]
+					: undefined,
+
+		adopt: true,
+		bindings: {
+			AI: Ai<Pick<AiModels, "@cf/moonshotai/kimi-k2.6">>(),
+			STOREFRONT: WorkerRef<StorefrontCacheRpc>({
+				service: `storev2-front-${stage}`,
+			}),
+			PRODUCT_SEARCH: productSearch,
+			KHAAN_TRANSFER_RECONCILER: transferReconciliation,
+			RATE_LIMITER: rateLimit,
+			DB: hyperdriveDB,
+			...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
+			vitStoreKV: kv,
+			r2Bucket: r2,
+			images: images,
+			CORS_ORIGIN: env.CORS_ORIGIN,
+			DASH_URL: env.DASH_URL,
+			GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
+			GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
+			GOOGLE_CALLBACK_URL: env.GOOGLE_CALLBACK_URL,
+			DOMAIN: env.DOMAIN,
+			MESSENGER_ACCESS_TOKEN: env.MESSENGER_ACCESS_TOKEN,
+			MESSENGER_VERIFY_TOKEN: env.MESSENGER_VERIFY_TOKEN,
+			SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
+			SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
+			RESEND_API_KEY: env.RESEND_API_KEY,
+			RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
+			FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
+			OPENCODE_GO_API_KEY: env.OPENCODE_GO_API_KEY,
+			UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
+			UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
+			UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,
+			UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN,
+			QPAY_URL: env.QPAY_URL,
+			QPAY_USERNAME: env.QPAY_USERNAME,
+			QPAY_PASSWORD: env.QPAY_PASSWORD,
+			QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
+			KHAAN_USERNAME: env.KHAAN_USERNAME,
+			KHAAN_PASSWORD: env.KHAAN_PASSWORD,
+			KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
+			...(env.KHAAN_USER_AGENT
+				? { KHAAN_USER_AGENT: env.KHAAN_USER_AGENT }
+				: {}),
+			KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
+			KHAAN_ACCOUNT_NAME: env.KHAAN_ACCOUNT_NAME,
+			KHAAN_BRANCH_CODE: env.KHAAN_BRANCH_CODE,
+			POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
+			POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
+			POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
+			POSTHOG_HOST: env.POSTHOG_HOST,
+			DELIVERY_API_URL: env.DELIVERY_API_URL,
+			DELIVERY_USERNAME: env.DELIVERY_USERNAME,
+			DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
+			DELIVERY_SENDERID: env.DELIVERY_SENDERID,
+			...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
+			IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
+		},
+
+		observability: {
+			enabled: true,
+			logs: {
+				enabled: true,
+				persist: true,
+				destinations: ["axiom-logs"],
+			},
+		},
+		placement: {
+			region: "aws:ap-southeast-1",
+		},
+		dev: {
+			port: 3006,
+		},
+	});
+
+	await app.finalize();
+	return server;
 }
 
-export const server = await Worker("api", {
-	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
-	compatibility: "node",
-	compatibilityDate: "2026-07-07",
-	cache: { enabled: true },
-	// Durable restock batches/retries run independently of request lifetimes.
-	crons: ["*/5 * * * *"],
-	domains:
-		stage === "prod"
-			? ["api.amerikvitamin.mn"]
-			: stage === "staging"
-				? ["api-staging.amerikvitamin.mn"]
-				: undefined,
-
-	adopt: true,
-	bindings: {
-		AI: Ai<Pick<AiModels, "@cf/moonshotai/kimi-k2.6">>(),
-		STOREFRONT: WorkerRef<StorefrontCacheRpc>({
-			service: `storev2-front-${stage}`,
-		}),
-		PRODUCT_SEARCH: productSearch,
-		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
-		RATE_LIMITER: rateLimit,
-		DB: hyperdriveDB,
-		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
-		vitStoreKV: kv,
-		r2Bucket: r2,
-		images: images,
-		CORS_ORIGIN: env.CORS_ORIGIN,
-		DASH_URL: env.DASH_URL,
-		GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
-		GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
-		GOOGLE_CALLBACK_URL: env.GOOGLE_CALLBACK_URL,
-		DOMAIN: env.DOMAIN,
-		MESSENGER_ACCESS_TOKEN: env.MESSENGER_ACCESS_TOKEN,
-		MESSENGER_VERIFY_TOKEN: env.MESSENGER_VERIFY_TOKEN,
-		SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
-		SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
-		RESEND_API_KEY: env.RESEND_API_KEY,
-		RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
-		FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
-		OPENCODE_GO_API_KEY: env.OPENCODE_GO_API_KEY,
-		UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
-		UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
-		UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,
-		UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN,
-		QPAY_URL: env.QPAY_URL,
-		QPAY_USERNAME: env.QPAY_USERNAME,
-		QPAY_PASSWORD: env.QPAY_PASSWORD,
-		QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
-		KHAAN_USERNAME: env.KHAAN_USERNAME,
-		KHAAN_PASSWORD: env.KHAAN_PASSWORD,
-		KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
-		...(env.KHAAN_USER_AGENT ? { KHAAN_USER_AGENT: env.KHAAN_USER_AGENT } : {}),
-		KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
-		KHAAN_ACCOUNT_NAME: env.KHAAN_ACCOUNT_NAME,
-		KHAAN_BRANCH_CODE: env.KHAAN_BRANCH_CODE,
-		POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
-		POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
-		POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
-		POSTHOG_HOST: env.POSTHOG_HOST,
-		DELIVERY_API_URL: env.DELIVERY_API_URL,
-		DELIVERY_USERNAME: env.DELIVERY_USERNAME,
-		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
-		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
-		...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
-		IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
-	},
-
-	observability: {
-		enabled: true,
-		logs: {
-			enabled: true,
-			persist: true,
-			destinations: ["axiom-logs"],
-		},
-	},
-	placement: {
-		region: "aws:ap-southeast-1",
-	},
-	dev: {
-		port: 3006,
-	},
+export const server = main();
+server.catch((error) => {
+	console.error(error);
+	process.exit(1);
 });
-
-await app.finalize();
