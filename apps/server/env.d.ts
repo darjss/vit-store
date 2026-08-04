@@ -1,6 +1,6 @@
 import type { server } from "./alchemy.run";
 
-export type CloudflareEnv = typeof server.Env;
+export type CloudflareEnv = Awaited<typeof server>["Env"];
 
 declare global {
 	type Env = CloudflareEnv;
