@@ -3,7 +3,7 @@
 import type { storev2 } from "./alchemy.run.ts";
 import type { Bound, WorkerRef } from "alchemy/cloudflare";
 
-type Storev2Env = typeof storev2.Env;
+type Storev2Env = Awaited<typeof storev2>["Env"];
 type StoreServerBinding = Bound<ReturnType<typeof WorkerRef>>;
 export type CloudflareEnv = Storev2Env & {
 	server: StoreServerBinding;
@@ -14,7 +14,10 @@ interface PostHog {
 	init: (apiKey: string, options?: Record<string, unknown>) => void;
 	capture: (event: string, properties?: Record<string, unknown>) => void;
 	identify: (distinctId: string, properties?: Record<string, unknown>) => void;
-	captureException: (error: unknown, properties?: Record<string, unknown>) => void;
+	captureException: (
+		error: unknown,
+		properties?: Record<string, unknown>,
+	) => void;
 	get_distinct_id: () => string;
 }
 
