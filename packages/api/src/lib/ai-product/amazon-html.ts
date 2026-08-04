@@ -1,62 +1,79 @@
+const AMAZON_IMAGE_ID = /\/images\/I\/([A-Za-z0-9\-_+%]+)\./;
+
+function imageIdFromUrl(url: string): string | null {
+	return url.match(AMAZON_IMAGE_ID)?.[1] ?? null;
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: bracket matching must track strings, escapes, and nesting together.
+function extractJsonArrayAt(source: string, start: number): string | null {
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+
+	for (let i = start; i < source.length; i += 1) {
+		const char = source[i];
+		if (inString) {
+			if (escaped) escaped = false;
+			else if (char === "\\") escaped = true;
+			else if (char === '"') inString = false;
+			continue;
+		}
+		if (char === '"') inString = true;
+		else if (char === "[") depth += 1;
+		else if (char === "]") {
+			depth -= 1;
+			if (depth === 0) return source.slice(start, i + 1);
+		}
+	}
+
+	return null;
+}
+
+function extractGalleryImageIds(html: string): string[] {
+	const marker = /["']colorImages["']\s*:\s*\{\s*["']initial["']\s*:/g;
+	const match = marker.exec(html);
+	if (!match) return [];
+
+	const arrayStart = html.indexOf("[", match.index + match[0].length);
+	if (arrayStart === -1) return [];
+	const raw = extractJsonArrayAt(html, arrayStart);
+	if (!raw) return [];
+
+	try {
+		const images = JSON.parse(raw) as Array<{
+			hiRes?: string;
+			large?: string;
+			main?: Record<string, [number, number]>;
+		}>;
+		return images.flatMap((image) => {
+			const url =
+				image.hiRes ?? image.large ?? Object.keys(image.main ?? {})[0];
+			const id = url ? imageIdFromUrl(url) : null;
+			return id ? [id] : [];
+		});
+	} catch {
+		return [];
+	}
+}
+
+function extractLandingImageId(html: string): string | null {
+	for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+		const tag = match[0];
+		if (!/\bid=["']landingImage["']/i.test(tag)) continue;
+		const url =
+			tag.match(/\bdata-old-hires=["']([^"']+)["']/i)?.[1] ??
+			tag.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+		return url ? imageIdFromUrl(url) : null;
+	}
+	return null;
+}
+
 export function extractProductImageIds(html: string): string[] {
-	const imageIds = new Set<string>();
+	const galleryIds = uniqueStable(extractGalleryImageIds(html), (id) => id);
+	if (galleryIds.length > 0) return galleryIds.slice(0, 10);
 
-	const colorImagesMatch = html.match(
-		/'colorImages'\s*:\s*\{\s*'initial'\s*:\s*(\[[\s\S]*?\])\s*\}/,
-	);
-	if (colorImagesMatch) {
-		try {
-			const imagesData = JSON.parse(colorImagesMatch[1]) as Array<{
-				hiRes?: string;
-				large?: string;
-				main?: Record<string, string>;
-			}>;
-			for (const img of imagesData) {
-				const url = img.hiRes || img.large || Object.values(img.main || {})[0];
-				if (url) {
-					const idMatch = url.match(/\/images\/I\/([A-Za-z0-9\-_+%]+)\./);
-					if (idMatch) imageIds.add(idMatch[1]);
-				}
-			}
-		} catch {
-			// continue
-		}
-	}
-
-	const hiResMatches = html.matchAll(/data-old-hires="([^"]+)"/g);
-	for (const match of hiResMatches) {
-		const idMatch = match[1].match(/\/images\/I\/([A-Za-z0-9\-_+%]+)\./);
-		if (idMatch) imageIds.add(idMatch[1]);
-	}
-
-	const mainImageMatches = html.matchAll(
-		/id="(?:imgTagWrapperId|main-image-container|landingImage)"[^>]*>[\s\S]*?src="([^"]+)"/g,
-	);
-	for (const match of mainImageMatches) {
-		const idMatch = match[1].match(/\/images\/I\/([A-Za-z0-9\-_+%]+)\./);
-		if (idMatch) imageIds.add(idMatch[1]);
-	}
-
-	const altImagesSection = html.match(
-		/id="altImages"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/,
-	);
-	if (altImagesSection) {
-		const thumbMatches = altImagesSection[0].matchAll(
-			/\/images\/I\/([A-Za-z0-9\-_+%]+)\._[^"]+"/g,
-		);
-		for (const match of thumbMatches) {
-			imageIds.add(match[1]);
-		}
-	}
-
-	const productImageMatches = html.matchAll(
-		/\/images\/I\/([789][0-9][A-Za-z0-9\-_+%]{5,})\._[^"]*"/g,
-	);
-	for (const match of productImageMatches) {
-		imageIds.add(match[1]);
-	}
-
-	return Array.from(imageIds).slice(0, 10);
+	const landingImageId = extractLandingImageId(html);
+	return landingImageId ? [landingImageId] : [];
 }
 
 export function normalizedImageKey(url: string): string {

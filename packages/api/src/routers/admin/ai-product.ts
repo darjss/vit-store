@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import type { ExtractedProductData } from "@vit/shared";
 import { productQueries } from "@vit/api/queries";
+import type { ExtractedProductData } from "@vit/shared";
 import * as v from "valibot";
 import {
 	extractAndUploadProductImages,
@@ -11,9 +11,14 @@ import {
 	translateStage,
 } from "~/lib/ai-product/pipeline";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
-import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
 import { logger } from "~/lib/logger";
-import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+import { scheduleProductSearchRebuild } from "~/lib/product-search/client";
+import {
+	adminProcedure,
+	type baseProcedure,
+	botProcedure,
+	router,
+} from "~/lib/trpc";
 
 export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 	return router({
@@ -166,7 +171,9 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 				}),
 			)
 			.mutation(async ({ ctx, input }) => {
-				const product = await productQueries.admin.getProductById(input.productId);
+				const product = await productQueries.admin.getProductById(
+					input.productId,
+				);
 				if (!product) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
@@ -181,7 +188,11 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 						.join(" ")
 						.trim();
 
-				const result = await extractAndUploadProductImages(ctx, query);
+				const result = await extractAndUploadProductImages(
+					ctx,
+					query,
+					product.brand?.name,
+				);
 
 				if (result.images.length === 0) {
 					throw new TRPCError({

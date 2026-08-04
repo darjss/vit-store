@@ -1,21 +1,26 @@
 import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
+import { brandQueries, categoryQueries } from "@vit/api/queries";
 import type {
 	AiProductSessionState,
 	ExtractedProductData,
 	ExtractionStepId,
 } from "@vit/shared";
-import { brandQueries, categoryQueries } from "@vit/api/queries";
-import {
-	assembleExtractedProductData,
-	noteImageUploadIssues,
-} from "~/lib/ai-product/assemble";
+import { calculatePriceMntFromUsd } from "~/lib/ai/pricing";
 import {
 	resolveProductUrl,
 	scrapeAmazonProduct,
 	searchAmazonProduct,
 } from "~/lib/ai-product/amazon-scrape";
-import { isAmazonUrl } from "~/lib/ai-product/amazon-url";
+import {
+	isAmazonUrl,
+	productTitleMatchesBrand,
+	productTitleMatchesQuery,
+} from "~/lib/ai-product/amazon-url";
+import {
+	assembleExtractedProductData,
+	noteImageUploadIssues,
+} from "~/lib/ai-product/assemble";
 import { resolveOrCreateBrandId } from "~/lib/ai-product/brand-resolve";
 import {
 	analyzeProductImages,
@@ -30,7 +35,6 @@ import {
 } from "~/lib/ai-product/session";
 import { translateAndStructureProduct } from "~/lib/ai-product/translate";
 import { uploadImagesToR2 } from "~/lib/ai-product/upload-r2";
-import { calculatePriceMntFromUsd } from "~/lib/ai/pricing";
 import type { Context } from "~/lib/context";
 import { logger } from "~/lib/logger";
 
@@ -95,11 +99,24 @@ export async function scrapeAndAnalyzeStage(
 
 	try {
 		const firecrawl = getFirecrawl(ctx);
-		const scrapeResult = await scrapeAmazonProduct(firecrawl, session.productUrl);
+		const scrapeResult = await scrapeAmazonProduct(
+			firecrawl,
+			session.productUrl,
+		);
 		if (!scrapeResult?.extracted.title) {
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Failed to scrape product page.",
+			});
+		}
+
+		if (
+			!isAmazonUrl(session.query) &&
+			!productTitleMatchesQuery(session.query, scrapeResult.extracted.title)
+		) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: `Amazon result did not match the requested product: ${scrapeResult.extracted.title}`,
 			});
 		}
 
@@ -113,19 +130,22 @@ export async function scrapeAndAnalyzeStage(
 			extractionStatus = "partial";
 		}
 
-		const imageFilter = await filterProductImages(
-			scrapeResult.extracted.title,
-			scrapeResult.extracted.images,
-		);
+		const imageFilter = filterProductImages(scrapeResult.extracted.images);
 		session.filteredImages = imageFilter.images;
 
-		if (imageFilter.images.length === 0 && scrapeResult.extracted.images.length > 0) {
+		if (
+			imageFilter.images.length === 0 &&
+			scrapeResult.extracted.images.length > 0
+		) {
 			errors.push("Image filtering removed all candidates.");
 			extractionStatus = "partial";
 		}
 
 		if (imageFilter.images.length > 0) {
-			session.vision = await analyzeProductImages(imageFilter.images);
+			session.vision = await analyzeProductImages(
+				ctx.c.env.AI,
+				imageFilter.images,
+			);
 			if (
 				session.vision.ingredients.length === 0 &&
 				scrapeResult.extracted.ingredients.length === 0
@@ -182,6 +202,7 @@ export async function translateStage(
 	]);
 
 	const structuredData = await translateAndStructureProduct(
+		ctx.c.env.AI,
 		session.scraped,
 		session.vision,
 		allBrands.map((b) => ({ id: b.id, name: b.name })),
@@ -288,6 +309,7 @@ export async function runFullExtraction(
 export async function extractAndUploadProductImages(
 	ctx: Context,
 	query: string,
+	expectedBrand?: string,
 ): Promise<{ images: { url: string }[]; sourceUrl: string }> {
 	const firecrawl = getFirecrawl(ctx);
 	const productUrl = isAmazonUrl(query)
@@ -309,10 +331,19 @@ export async function extractAndUploadProductImages(
 		});
 	}
 
-	const imageFilter = await filterProductImages(
-		scrapeResult.extracted.title,
-		scrapeResult.extracted.images,
-	);
+	const title = scrapeResult.extracted.title;
+	const brandMatches =
+		!expectedBrand || productTitleMatchesBrand(title, expectedBrand);
+	const queryMatches =
+		isAmazonUrl(query) || productTitleMatchesQuery(query, title);
+	if (!brandMatches || !queryMatches) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `Amazon result did not match the current product: ${title}`,
+		});
+	}
+
+	const imageFilter = filterProductImages(scrapeResult.extracted.images);
 
 	if (imageFilter.images.length === 0) {
 		throw new TRPCError({
