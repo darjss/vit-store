@@ -34,6 +34,35 @@ export interface InvoiceResponse {
 	urls: PaymentUrl[];
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null;
+
+const isPaymentUrl = (value: unknown): value is PaymentUrl =>
+	isRecord(value) &&
+	typeof value.name === "string" &&
+	typeof value.description === "string" &&
+	typeof value.logo === "string" &&
+	typeof value.link === "string";
+
+const isInvoiceResponse = (value: unknown): value is InvoiceResponse =>
+	isRecord(value) &&
+	typeof value.invoice_id === "string" &&
+	value.invoice_id.length > 0 &&
+	typeof value.qr_text === "string" &&
+	typeof value.qr_image === "string" &&
+	typeof value.qPay_shortUrl === "string" &&
+	Array.isArray(value.urls) &&
+	value.urls.every(isPaymentUrl);
+
+export const parseQpayInvoiceResponse = (value: string) => {
+	try {
+		const parsed: unknown = JSON.parse(value);
+		return isInvoiceResponse(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
+};
+
 interface P2PTransaction {
 	id: string;
 	transaction_bank_code: string;

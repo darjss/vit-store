@@ -15,6 +15,7 @@ import {
 	checkQpayInvoice,
 	createQpayInvoice,
 	type InvoiceResponse,
+	parseQpayInvoiceResponse,
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
 
@@ -418,8 +419,15 @@ export const payment = router({
 					input.checkoutToken,
 				);
 				const responseFromKv = await kv().get(`QPAY:${input.paymentNumber}`);
-				if (responseFromKv) {
-					return JSON.parse(responseFromKv) as InvoiceResponse;
+				const cachedInvoice = responseFromKv
+					? parseQpayInvoiceResponse(responseFromKv)
+					: null;
+				if (cachedInvoice) {
+					await paymentQueries.store.changePaymentToQpay(
+						input.paymentNumber,
+						cachedInvoice.invoice_id,
+					);
+					return cachedInvoice;
 				}
 				const payment = await paymentQueries.store.getPaymentInfoByNumber(
 					input.paymentNumber,
@@ -441,18 +449,17 @@ export const payment = router({
 					isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
 					input.paymentNumber,
 				);
-				const kvPromise = ctx.c.env.vitStoreKV.put(
+				await paymentQueries.store.changePaymentToQpay(
+					input.paymentNumber,
+					qpayResponse.invoice_id,
+				);
+				await ctx.c.env.vitStoreKV.put(
 					`QPAY:${input.paymentNumber}`,
 					JSON.stringify(qpayResponse),
 					{
 						expirationTtl: 3600,
 					},
 				);
-				const dbPromise = paymentQueries.store.changePaymentToQpay(
-					input.paymentNumber,
-					qpayResponse.invoice_id,
-				);
-				await Promise.all([kvPromise, dbPromise]);
 				trackQpayInvoiceCreatedServerSide({
 					phone: payment.order.customerPhone?.toString() ?? input.paymentNumber,
 					paymentNumber: input.paymentNumber,
