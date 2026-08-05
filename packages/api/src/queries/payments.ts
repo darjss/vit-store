@@ -574,6 +574,12 @@ export const paymentQueries = {
 			});
 			return result[0];
 		},
+		async storeQpayInvoice(paymentNumber: string, invoiceId: string) {
+			await db()
+				.update(PaymentsTable)
+				.set({ invoiceId })
+				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+		},
 		async changePaymentToQpay(paymentNumber: string, invoiceId: string) {
 			await db()
 				.update(PaymentsTable)
@@ -583,7 +589,7 @@ export const paymentQueries = {
 		async changePaymentToTransfer(paymentNumber: string) {
 			await db()
 				.update(PaymentsTable)
-				.set({ provider: "transfer", invoiceId: null })
+				.set({ provider: "transfer" })
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 	},

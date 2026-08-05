@@ -16,11 +16,10 @@ import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 
 /**
- * Fire-and-forget: pre-create the QPay invoice so the QR is ready in KV
- * before the user reaches the payment page. `createQr` is the fallback
- * when this misses (invoice expired, pre-create failed, >1h delay).
- * Mirrors the createQr procedure in payment.ts — same dev `/10000` amount
- * hack, same KV key + 1h TTL, same provider/invoiceId write, same tracking.
+ * Pre-create the QPay invoice so the QR is ready in KV before the user
+ * reaches the payment page. `createQr` is the fallback when this misses
+ * (invoice expired, pre-create failed, >1h delay). The issued invoice is
+ * stored without changing the provider because this work is speculative.
  */
 async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
     const payment = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
@@ -32,10 +31,10 @@ async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
         isDev ? Math.ceil(payment.amount / 10000) : payment.amount,
         paymentNumber,
     );
+    await paymentQueries.store.storeQpayInvoice(paymentNumber, qpayResponse.invoice_id);
     await kv().put(`QPAY:${paymentNumber}`, JSON.stringify(qpayResponse), {
         expirationTtl: 3600,
     });
-    await paymentQueries.store.changePaymentToQpay(paymentNumber, qpayResponse.invoice_id);
     trackQpayInvoiceCreatedServerSide({
         phone: payment.order.customerPhone?.toString() ?? paymentNumber,
         paymentNumber,
@@ -216,11 +215,15 @@ export const order = router({
                 });
             }
 
-            // Fire-and-forget: pre-create QPay invoice so the QR is ready before the
-            // user reaches the payment page. Failure is non-fatal — createQr is the
-            // fallback. KV caches the invoice for 1h.
+            // Keep speculative QPay invoice creation alive after the response.
+            // Failure is non-fatal — createQr is the fallback.
             if (paymentNumber) {
-                precreateQpayInvoice(paymentNumber).catch(() => {});
+                ctx.c.executionCtx.waitUntil(precreateQpayInvoice(paymentNumber).catch((error) => {
+                    ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
+                        event: "qpay.invoice_precreate_failed",
+                        paymentNumber,
+                    });
+                }));
             }
 
             // Fire-and-forget server-side PostHog tracking
