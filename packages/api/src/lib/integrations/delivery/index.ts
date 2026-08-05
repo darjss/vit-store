@@ -46,6 +46,11 @@ interface OrderStatusResponse {
 	driverComment: string;
 }
 
+interface OrderStatusNotFoundResponse {
+	status: "notfound";
+	message: string;
+}
+
 const deliveryClient = ky.create({
 	prefixUrl: API_URL,
 	hooks: {
@@ -137,11 +142,45 @@ export const createDelivery = async (
 		senderId: payload.order.senderId,
 	});
 
-	const result = await deliveryClient
-		.post("setDelivery", {
-			json: payload,
-		})
-		.json<OrderResponse>();
+	let result: OrderResponse;
+	try {
+		result = await deliveryClient
+			.post("setDelivery", {
+				json: payload,
+			})
+			.json<OrderResponse>();
+	} catch (createError) {
+		try {
+			const existing = await getDeliveryStatus(orderId);
+			if (
+				"documentNo" in existing &&
+				existing.documentNo.endsWith(orderNumber) &&
+				existing.orderStatus !== "Цуцлагдсан"
+			) {
+				logger.warn("delivery reconciled after create error", {
+					orderId,
+					orderNumber,
+					deliveryOrderId: existing.orderId,
+					documentNo: existing.documentNo,
+					orderStatus: existing.orderStatus,
+				});
+				return {
+					orderId: existing.orderId,
+					documentNo: existing.documentNo,
+				};
+			}
+		} catch (lookupError) {
+			logger.warn("delivery reconciliation lookup failed", {
+				orderId,
+				orderNumber,
+				error:
+					lookupError instanceof Error
+						? lookupError.message
+						: String(lookupError),
+			});
+		}
+		throw createError;
+	}
 
 	logger.info("delivery created", {
 		orderId,
@@ -152,7 +191,9 @@ export const createDelivery = async (
 	return result;
 };
 
-export const getDeliveryStatus = async (orderId: number) => {
+export const getDeliveryStatus = async (
+	orderId: number,
+): Promise<OrderStatusResponse | OrderStatusNotFoundResponse> => {
 	logger.info("getting delivery status", { orderId });
 	const result = await deliveryClient
 		.get(`setdelivery/${orderId}`)
