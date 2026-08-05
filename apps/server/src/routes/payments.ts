@@ -1,5 +1,8 @@
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
-import { checkQpayInvoice } from "@vit/api/lib/payments/qpay";
+import {
+    checkQpayInvoice,
+    parseQpayInvoiceResponse,
+} from "@vit/api/lib/payments/qpay";
 import { paymentQueries } from "@vit/api/queries";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
@@ -25,12 +28,39 @@ app.get("/qpay", async (c) => {
     if (payment.status === "success") {
         return c.json({ success: true });
     }
-    if (!payment.invoiceId) {
-        log.warn("qpay.webhook_missing_invoice", { paymentNumber, qpayPaymentId });
-        return c.json({ success: true });
+    let invoiceId = payment.invoiceId;
+    if (!invoiceId) {
+        try {
+            const cachedValue = await c.env.vitStoreKV.get(`QPAY:${paymentNumber}`);
+            const cachedInvoice = cachedValue
+                ? parseQpayInvoiceResponse(cachedValue)
+                : null;
+            if (!cachedInvoice) {
+                log.warn("qpay.webhook_missing_invoice", {
+                    paymentNumber,
+                    qpayPaymentId,
+                    qpayCache: cachedValue ? "malformed" : "missing",
+                });
+                return c.json({ success: true });
+            }
+            invoiceId = cachedInvoice.invoice_id;
+            await paymentQueries.store.storeQpayInvoice(paymentNumber, invoiceId);
+            log.info("qpay.webhook_invoice_recovered", {
+                paymentNumber,
+                invoiceId,
+            });
+        }
+        catch (error) {
+            log.error(error instanceof Error ? error : new Error(String(error)), {
+                event: "qpay.webhook_invoice_recovery_failed",
+                paymentNumber,
+                qpayPaymentId
+            });
+            return c.json({ success: true });
+        }
     }
     try {
-        const isPaid = await checkQpayInvoice(payment.invoiceId);
+        const isPaid = await checkQpayInvoice(invoiceId);
         if (!isPaid) {
             return c.json({ success: true });
         }
@@ -39,7 +69,7 @@ app.get("/qpay", async (c) => {
         log.error(error instanceof Error ? error : new Error(String(error)), {
             event: "qpay.webhook_check_failed",
             paymentNumber,
-            invoiceId: payment.invoiceId,
+            invoiceId,
             qpayPaymentId
         });
         return c.json({ success: true });
@@ -57,7 +87,7 @@ app.get("/qpay", async (c) => {
         if (result.confirmed) {
             log.info("qpay.webhook_confirmed", {
                 paymentNumber,
-                invoiceId: payment.invoiceId,
+                invoiceId,
                 qpayPaymentId,
             });
         }
@@ -66,7 +96,7 @@ app.get("/qpay", async (c) => {
         log.error(error instanceof Error ? error : new Error(String(error)), {
             event: "qpay.webhook_confirm_failed",
             paymentNumber,
-            invoiceId: payment.invoiceId,
+            invoiceId,
             qpayPaymentId
         });
     }
