@@ -583,7 +583,13 @@ export const paymentQueries = {
 		async changePaymentToQpay(paymentNumber: string, invoiceId: string) {
 			await db()
 				.update(PaymentsTable)
-				.set({ provider: "qpay", invoiceId: invoiceId })
+				.set({
+					provider: sql<PaymentProviderType>`case
+						when ${PaymentsTable.status} = 'success' then ${PaymentsTable.provider}
+						else 'qpay'
+					end`,
+					invoiceId,
+				})
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 		async changePaymentToTransfer(paymentNumber: string) {
