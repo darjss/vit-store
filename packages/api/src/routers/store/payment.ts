@@ -413,11 +413,17 @@ export const payment = router({
 		)
 		.mutation(async ({ input, ctx }): Promise<InvoiceResponse> => {
 			try {
-				await assertCanAccessPayment(
+				const payment = await assertCanAccessPayment(
 					ctx,
 					input.paymentNumber,
 					input.checkoutToken,
 				);
+				if (payment.status === "success") {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "ALREADY_PAID",
+					});
+				}
 				const responseFromKv = await kv().get(`QPAY:${input.paymentNumber}`);
 				const cachedInvoice = responseFromKv
 					? parseQpayInvoiceResponse(responseFromKv)
@@ -428,21 +434,6 @@ export const payment = router({
 						cachedInvoice.invoice_id,
 					);
 					return cachedInvoice;
-				}
-				const payment = await paymentQueries.store.getPaymentInfoByNumber(
-					input.paymentNumber,
-				);
-				if (!payment) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "No payment found",
-					});
-				}
-				if (payment.status === "success") {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: "ALREADY_PAID",
-					});
 				}
 				const isDev = process.env.NODE_ENV === "development";
 				const qpayResponse = await createQpayInvoice(
