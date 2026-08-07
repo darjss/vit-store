@@ -640,6 +640,7 @@ export const orderQueries = {
 			options?: {
 				deliveryProvider?: DeliveryProvider;
 				addressZoneId?: number | null;
+				fromStatus?: OrderStatus;
 			},
 		) {
 			const patch: {
@@ -653,10 +654,19 @@ export const orderQueries = {
 			if (options?.addressZoneId !== undefined) {
 				patch.addressZoneId = options.addressZoneId;
 			}
-			await db()
+			const conditions = [
+				eq(OrdersTable.id, id),
+				isNull(OrdersTable.deletedAt),
+			];
+			if (options?.fromStatus !== undefined) {
+				conditions.push(eq(OrdersTable.status, options.fromStatus));
+			}
+			const updated = await db()
 				.update(OrdersTable)
 				.set(patch)
-				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
+				.where(and(...conditions))
+				.returning({ id: OrdersTable.id });
+			return updated.length > 0;
 		},
 
 		async updateOrderTx(

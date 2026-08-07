@@ -123,6 +123,18 @@ export default function OrdersList({
 		sortDirection,
 	]);
 
+	useEffect(() => {
+		const pendingIds = new Set(
+			orders
+				.filter((order) => order.status === "pending")
+				.map((order) => order.id),
+		);
+		setSelectedIds((current) => {
+			const next = new Set([...current].filter((id) => pendingIds.has(id)));
+			return next.size === current.size ? current : next;
+		});
+	}, [orders]);
+
 	const updateStatusMutation = useMutation(
 		trpc.order.updateOrderStatus.mutationOptions(),
 	);
