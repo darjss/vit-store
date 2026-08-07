@@ -1,6 +1,13 @@
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { logger } from "~/lib/logger";
+import {
+	clearUpstashProductSearchIndex,
+	getUpstashProductSearchStatus,
+	isUpstashRedisSearchConfigured,
+	rebuildUpstashProductSearchIndex,
+	searchUpstashProductPage,
+} from "~/lib/product-search/upstash-redis";
 import type {
 	ProductSearchFilters,
 	ProductSearchPage,
@@ -22,10 +29,42 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 		new Promise<T>((_resolve, reject) =>
 			setTimeout(
 				() => reject(new Error(`product_search timed out after ${ms}ms`)),
-				ms,
 			),
 		),
 	]);
+
+const searchDurableObject = (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}) =>
+	withTimeout(
+		getProductSearchService().search(input),
+		PRODUCT_SEARCH_TIMEOUT_MS,
+	);
+
+export const searchProductPage = async (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}): Promise<ProductSearchPage> => {
+	if (isUpstashRedisSearchConfigured()) {
+		try {
+			return await withTimeout(
+				searchUpstashProductPage(input),
+				PRODUCT_SEARCH_TIMEOUT_MS,
+			);
+		} catch (error) {
+			logger.error("product_search.upstash_search_failed", error);
+		}
+	}
+
+	return searchDurableObject(input);
+};
 
 export const searchProducts = async (
 	query: string,
@@ -36,14 +75,12 @@ export const searchProducts = async (
 	if (!trimmed) return [];
 
 	try {
-		const result = await withTimeout(
-			getProductSearchService().search({
-				query: trimmed,
-				pageSize: limit,
-				filters,
-			}),
-			PRODUCT_SEARCH_TIMEOUT_MS,
-		);
+		const result = await searchProductPage({
+			query: trimmed,
+			page: 1,
+			pageSize: limit,
+			filters,
+		});
 		return result.items;
 	} catch (error) {
 		logger.error("product_search.search_failed", error);
@@ -51,31 +88,53 @@ export const searchProducts = async (
 	}
 };
 
-export const searchProductPage = async (input: {
-	query: string;
-	page: number;
-	pageSize: number;
-	filters?: ProductSearchFilters;
-	sort?: ProductSearchSort;
-}): Promise<ProductSearchPage> =>
-	withTimeout(
-		getProductSearchService().search(input),
-		PRODUCT_SEARCH_TIMEOUT_MS,
-	);
-
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",
 ): Promise<ProductSearchStatus> => {
-	return getProductSearchService().rebuild(reason);
+	const durableRebuild = getProductSearchService().rebuild(reason);
+	if (!isUpstashRedisSearchConfigured()) return durableRebuild;
+
+	const [upstashResult, durableResult] = await Promise.allSettled([
+		rebuildUpstashProductSearchIndex(reason),
+		durableRebuild,
+	]);
+
+	if (upstashResult.status === "fulfilled") {
+		if (durableResult.status === "rejected") {
+			logger.error(
+				"product_search.durable_object_rebuild_failed",
+				durableResult.reason,
+			);
+		}
+		return upstashResult.value;
+	}
+
+	logger.error("product_search.upstash_rebuild_failed", upstashResult.reason);
+	if (durableResult.status === "fulfilled") return durableResult.value;
+	throw upstashResult.reason;
 };
 
-export const getProductSearchStatus =
-	async (): Promise<ProductSearchStatus> => {
-		return getProductSearchService().getStatus();
-	};
+export const getProductSearchStatus = async (): Promise<ProductSearchStatus> => {
+	if (isUpstashRedisSearchConfigured()) {
+		try {
+			const status = await getUpstashProductSearchStatus();
+			if (status.initialized || status.lastError) return status;
+		} catch (error) {
+			logger.error("product_search.upstash_status_failed", error);
+		}
+	}
+	return getProductSearchService().getStatus();
+};
 
 export const clearProductSearchIndex = async () => {
-	await getProductSearchService().clear();
+	const tasks: Promise<unknown>[] = [getProductSearchService().clear()];
+	if (isUpstashRedisSearchConfigured()) {
+		tasks.push(clearUpstashProductSearchIndex());
+	}
+	const results = await Promise.allSettled(tasks);
+	if (results.every((result) => result.status === "rejected")) {
+		throw (results[0] as PromiseRejectedResult).reason;
+	}
 };
 
 type RebuildContext = {
@@ -84,11 +143,9 @@ type RebuildContext = {
 };
 
 /**
- * Schedule a product-search rebuild in the background via `waitUntil` so the
- * caller's response is not blocked. Errors are logged, never thrown.
- * Search results are never cached outside the Durable Object. The Workers
- * cache tag purge remains the canonical invalidation boundary for catalog
- * mutations; the rebuild only refreshes the index.
+ * Schedule a product-search rebuild via `waitUntil` so catalog mutations do
+ * not block on index maintenance. While the migration is in shadow-safe mode,
+ * a rebuild refreshes Upstash Redis Search and the Durable Object fallback.
  */
 export const scheduleProductSearchRebuild = (
 	ctx: RebuildContext,
