@@ -264,6 +264,15 @@ export const OrdersTable = createTable(
 	],
 );
 
+export const DeliveryDispatchesTable = createTable("delivery_dispatch", {
+	orderId: integer("order_id")
+		.primaryKey()
+		.references(() => OrdersTable.id, { onDelete: "cascade" }),
+	fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+	deliveryDate: varchar("delivery_date", { length: 10 }).notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const OrderDetailsTable = createTable(
 	"order_detail",
 	{
