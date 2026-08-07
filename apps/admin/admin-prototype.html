@@ -1,0 +1,310 @@
+<!-- Vit Store admin prototype: a standalone mobile-first workspace for Mongolian operations. -->
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5efe4">
+  <title>Vit Store · Админ</title>
+  <style>
+    :root {
+      --cream: #f5efe4;
+      --paper: #fffdf9;
+      --espresso: #2e241e;
+      --cocoa: #765d4d;
+      --butter: #f4d96e;
+      --lavender: #d9c9eb;
+      --apricot: #f7d0ae;
+      --coral: #f2b0a9;
+      --lemon: #f5e89b;
+      --neutral: #ded6cc;
+      --line: #e6ddd1;
+      --muted: #8b7e72;
+      --shadow: 0 12px 30px rgba(72, 48, 31, .07);
+      --radius-lg: 24px;
+      --radius-md: 17px;
+      --radius-sm: 12px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--espresso);
+      background: var(--cream);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--cream); }
+    body { margin: 0; min-width: 320px; background: var(--cream); }
+    body::before { content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none; opacity: .8; background: radial-gradient(circle at 8% 10%, #ead8b8 0 10%, transparent 32%), radial-gradient(circle at 93% 68%, #ecd4d9 0 9%, transparent 29%); }
+    body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .14; background-image: radial-gradient(rgba(46,36,30,.34) .7px, transparent .8px); background-size: 8px 8px; }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 3px solid #9d794f;
+      outline-offset: 3px;
+    }
+    img { display: block; max-width: 100%; }
+    .app { position: relative; isolation: isolate; min-height: 100vh; padding-bottom: calc(86px + env(safe-area-inset-bottom)); background-color: var(--cream); background-image: radial-gradient(circle at 7% 5%, rgba(217,201,235,.34), transparent 22rem), radial-gradient(circle at 96% 25%, rgba(247,208,174,.28), transparent 21rem), radial-gradient(circle at 76% 92%, rgba(245,232,155,.22), transparent 26rem); }
+    .shell { width: min(100%, 760px); margin: 0 auto; padding: 18px 16px 28px; }
+    .eyebrow { margin: 0 0 7px; color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(28px, 8vw, 42px); line-height: .98; letter-spacing: -.055em; }
+    h2 { font-size: 23px; line-height: 1.05; letter-spacing: -.035em; }
+    h3 { font-size: 16px; line-height: 1.15; letter-spacing: -.015em; }
+    .muted { color: var(--muted); }
+    .subtle { color: var(--cocoa); font-size: 13px; line-height: 1.45; }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+    .avatar { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--espresso); color: var(--butter); font-size: 13px; font-weight: 850; }
+    .view { display: none; animation: appear .24s ease both; }
+    .view.active { display: block; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+
+    .texture { position: relative; overflow: hidden; }
+    .texture::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .16; background-image: radial-gradient(rgba(46,36,30,.25) .7px, transparent .8px); background-size: 7px 7px; mix-blend-mode: multiply; }
+    .summary { display: grid; grid-template-columns: 1.2fr .8fr; gap: 10px; margin-bottom: 26px; }
+    .summary-card { min-height: 142px; padding: 18px; border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+    .summary-card.primary { background: var(--espresso); color: var(--paper); }
+    .summary-card.primary::after { opacity: .1; background-image: radial-gradient(var(--butter) .7px, transparent .8px); }
+    .summary-card.secondary { background: var(--butter); }
+    .summary-number { display: block; margin: 20px 0 5px; font-size: 31px; font-weight: 850; letter-spacing: -.06em; }
+    .summary-label { font-size: 12px; font-weight: 700; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+    .text-button { min-height: 44px; padding: 8px 0; border: 0; background: none; color: var(--cocoa); font-size: 13px; font-weight: 800; cursor: pointer; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper); box-shadow: var(--shadow); }
+    .order-list, .product-list { display: grid; gap: 11px; }
+    .order-card { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 12px; text-align: left; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper); box-shadow: var(--shadow); cursor: pointer; }
+    .order-card:hover, .product-card:hover { border-color: #c5ae92; }
+    .thumb-stack { width: 52px; height: 52px; position: relative; }
+    .thumb { width: 52px; height: 52px; padding: 6px; object-fit: contain; border-radius: 14px; background: #eee2d4; outline: 1px solid rgba(46,36,30,.08); }
+    .thumb-stack .thumb + .thumb { position: absolute; right: -5px; bottom: -4px; width: 26px; height: 26px; border: 2px solid var(--paper); border-radius: 8px; }
+    .order-meta { min-width: 0; }
+    .order-meta strong, .order-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .order-meta strong { font-size: 14px; }
+    .order-meta span { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .order-side { text-align: right; }
+    .order-side strong { display: block; font-size: 13px; }.order-next { display: block; margin-top: 3px; color: var(--cocoa); font-size: 11px; font-weight: 800; }
+    .arrow { color: var(--cocoa); font-size: 20px; line-height: 1; }
+    .status { display: inline-flex; align-items: center; gap: 5px; width: fit-content; padding: 5px 8px; border-radius: 9px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .status-icon { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .status.done { color: #5f4b79; background: var(--lavender); }
+    .status.processing { color: #795035; background: var(--apricot); }
+    .status.problem { color: #7a3d35; background: var(--coral); }
+    .status.low { color: #695720; background: var(--lemon); }
+    .status.neutral { color: #665c54; background: var(--neutral); }
+    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 26px; }
+    .quick-action { min-height: 74px; padding: 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper); text-align: left; font-weight: 800; cursor: pointer; }
+    .quick-action b { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--butter); font-size: 18px; }
+    .low-stock { margin-top: 26px; }
+    .low-stock-card { display: grid; grid-template-columns: 48px 1fr auto; gap: 11px; align-items: center; padding: 10px 12px; }
+    .low-stock-card + .low-stock-card { border-top: 1px solid var(--line); }
+    .low-stock-card img { width: 48px; height: 48px; padding: 5px; object-fit: contain; border-radius: 12px; background: #eee2d4; outline: 1px solid rgba(46,36,30,.08); }
+    .stock-count { color: #a35f46; font-size: 12px; font-weight: 850; }
+
+    .page-head { margin-bottom: 17px; }
+    .page-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .icon-button { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); font-size: 20px; cursor: pointer; }
+    .primary-button, .secondary-button { min-height: 48px; padding: 0 17px; border-radius: 14px; border: 1px solid transparent; font-weight: 850; cursor: pointer; }
+    .primary-button { background: var(--butter); color: var(--espresso); box-shadow: 0 3px 0 #d0aa43; }
+    .primary-button:hover { background: #f7df82; }
+    .primary-button:active { transform: translateY(2px); box-shadow: none; }
+    .secondary-button { border-color: var(--line); background: var(--paper); }
+    .search-wrap { position: relative; margin-bottom: 11px; }
+    .search-wrap span { position: absolute; top: 50%; left: 14px; transform: translateY(-50%); color: var(--muted); }
+    .search-input { width: 100%; min-height: 50px; padding: 0 14px 0 41px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); color: var(--espresso); }
+    .filter-row { display: flex; gap: 8px; overflow-x: auto; margin: 0 -2px 17px; padding: 2px; scrollbar-width: none; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-button { min-height: 42px; padding: 0 13px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .filter-button.selected { border-color: var(--espresso); background: var(--espresso); color: var(--paper); }
+    .product-card { display: block; overflow: hidden; cursor: default; }
+    .product-card-open { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 13px; width: 100%; padding: 11px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .product-card-open:active { transform: scale(.99); }
+    .product-image { width: 92px; height: 110px; padding: 8px; object-fit: contain; border-radius: 13px; background: #eadfce; outline: 1px solid rgba(46,36,30,.08); }
+    .product-card-body { min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 1px 0; }
+    .brand { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+    .product-title { margin-top: 3px; font-size: 16px; font-weight: 850; line-height: 1.14; }
+    .price-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .price { font-size: 16px; font-weight: 900; }
+    .stock { color: var(--cocoa); font-size: 12px; font-weight: 750; }
+    .card-actions { display: flex; gap: 6px; }
+    .product-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 11px 11px 116px; }
+    .mini-button { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--cream); font-size: 11px; font-weight: 850; cursor: pointer; }
+    .empty { display: none; padding: 28px 15px; border: 1px dashed #cdbdaa; border-radius: var(--radius-md); color: var(--muted); text-align: center; }
+
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .detail-header h2 { flex: 1; }
+    .hero-product { overflow: hidden; margin-bottom: 14px; border-radius: var(--radius-lg); background: var(--paper); box-shadow: var(--shadow); }
+    .detail-image { width: 100%; height: 280px; object-fit: cover; }
+    .hero-copy { padding: 17px; }
+    .hero-copy .product-title { font-size: 24px; }
+    .detail-price { margin: 16px 0 3px; font-size: 28px; font-weight: 900; letter-spacing: -.05em; }
+    .summary-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 14px; }
+    .metric { padding: 14px; border-radius: 15px; background: var(--butter); }
+    .metric:nth-child(2) { background: var(--lemon); }
+    .metric strong, .metric span { display: block; }.metric strong { margin-top: 4px; font-size: 20px; }.metric span { color: var(--cocoa); font-size: 11px; font-weight: 800; }
+    .info-section { padding: 16px; margin-bottom: 10px; }.info-section h3 { margin-bottom: 11px; }.info-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }.info-row:first-of-type { border-top: 0; padding-top: 0; }.info-row span:first-child { color: var(--muted); }.info-row span:last-child { text-align: right; font-weight: 800; }
+    .detail-action { position: sticky; z-index: 4; bottom: calc(78px + env(safe-area-inset-bottom)); width: 100%; margin-top: 4px; box-shadow: 0 3px 0 #d0aa43, 0 10px 24px rgba(72,48,31,.12); }
+
+    .form-card { padding: 15px; margin-bottom: 14px; }
+    .field { display: grid; gap: 7px; margin-bottom: 15px; }.field:last-child { margin-bottom: 0; }.field label { font-size: 12px; font-weight: 850; }.field input, .field select { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--cream); color: var(--espresso); }.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.hint { margin-top: -7px; color: var(--muted); font-size: 11px; line-height: 1.4; }.image-drop { min-height: 152px; display: grid; place-items: center; border: 1px dashed #bca992; border-radius: 15px; background: var(--cream); text-align: center; }.image-drop img { width: 60px; height: 76px; margin: 0 auto 8px; object-fit: cover; border-radius: 10px; }.image-drop span { display: block; color: var(--cocoa); font-size: 12px; font-weight: 800; }
+    .sticky-bar { position: fixed; z-index: 7; right: 0; bottom: calc(88px + env(safe-area-inset-bottom)); left: 0; padding: 10px 16px; border-top: 1px solid var(--line); background: rgba(245,239,228,.96); backdrop-filter: blur(12px); }.sticky-bar > div { width: min(100%, 728px); margin: 0 auto; display: flex; justify-content: flex-end; gap: 8px; }.sticky-bar button { flex: 1; max-width: 170px; }
+    .toast { position: fixed; z-index: 9; left: 50%; bottom: calc(145px + env(safe-area-inset-bottom)); transform: translate(-50%, 18px); width: max-content; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px; background: var(--espresso); color: var(--paper); font-size: 13px; font-weight: 800; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .order-detail-card { padding: 15px; margin-bottom: 11px; }.order-detail-title { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }.order-detail-title h3 { font-size: 20px; }.order-products { display: grid; gap: 9px; margin-bottom: 4px; }.order-product { display: flex; align-items: center; gap: 10px; }.order-product img { width: 52px; height: 52px; padding: 5px; object-fit: contain; border-radius: 12px; background: #eee2d4; outline: 1px solid rgba(46,36,30,.08); }.order-product-copy { flex: 1; }.order-product-copy strong, .order-product-copy span { display: block; }.order-product-copy span { margin-top: 4px; color: var(--muted); font-size: 12px; }.order-total { display: flex; justify-content: space-between; padding-top: 13px; margin-top: 13px; border-top: 1px solid var(--line); font-weight: 900; }.progress { display: grid; gap: 0; position: relative; }.progress-step { position: relative; display: grid; grid-template-columns: 25px 1fr; gap: 10px; min-height: 51px; }.progress-step::before { content: ""; position: absolute; top: 20px; left: 10px; width: 2px; height: 35px; background: var(--line); }.progress-step:last-child::before { display: none; }.progress-dot { z-index: 1; width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: var(--neutral); color: var(--cocoa); font-size: 11px; font-weight: 900; }.progress-step.done .progress-dot { background: var(--lavender); }.progress-step.current .progress-dot { background: var(--apricot); }.progress-step strong { font-size: 13px; }.progress-step span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .analytics-placeholder { min-height: 370px; display: grid; place-items: center; padding: 28px; text-align: center; }.analytics-mark { width: 70px; height: 70px; display: grid; place-items: center; margin: 0 auto 17px; border-radius: 22px; background: var(--lavender); font-size: 31px; }.analytics-placeholder p { max-width: 260px; margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+    .bottom-nav { position: fixed; z-index: 6; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,253,249,.94); backdrop-filter: blur(14px); }.nav-button { min-height: 54px; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-radius: 13px; background: none; color: var(--muted); font-size: 10px; font-weight: 850; cursor: pointer; }.nav-button span:first-child { font-size: 21px; line-height: 1; }.nav-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }.nav-button.active { background: var(--butter); color: var(--espresso); }
+    @media (min-width: 620px) { .shell { padding: 28px 24px 40px; } .bottom-nav { right: 50%; width: 430px; left: auto; transform: translateX(50%); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; } .sticky-bar > div { padding: 0 8px; } }
+    @media (min-width: 1000px) { body { padding: 20px; background: #e6d9c9; } .app { width: min(1180px, 100%); min-height: calc(100vh - 40px); margin: 0 auto; border: 1px solid rgba(82, 59, 42, .16); border-radius: 20px; background: rgba(245, 239, 228, .72); box-shadow: 0 22px 60px rgba(72, 48, 31, .13); } .shell { width: min(100%, 1120px); padding-inline: 36px; } }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="shell">
+      <section class="view active" id="home-view" aria-labelledby="home-title">
+        <header class="topbar"><div><p class="eyebrow">Vit Store · Өглөөний тойм</p><h1 id="home-title">Сайн байна уу,<br>Номин.</h1></div><div class="avatar" aria-label="Номины профайл">НБ</div></header>
+        <div class="summary"><article class="summary-card primary texture"><p class="eyebrow" style="color:#d8c8b9">Өнөөдрийн захиалга</p><strong class="summary-number">24</strong><span class="summary-label">+18% өчигдрөөс</span></article><article class="summary-card secondary texture"><p class="eyebrow">Хүлээгдэж буй</p><strong class="summary-number">₮1.8м</strong><span class="summary-label">14 захиалга</span></article></div>
+        <div class="section-heading"><h2>Сүүлийн захиалгууд</h2><button class="text-button" data-view="orders">Бүгдийг харах →</button></div>
+        <div class="order-list" id="home-orders"></div>
+        <section class="low-stock"><div class="section-heading"><h2>Нөөц бага</h2><button class="text-button" data-view="products">Бараа →</button></div><div class="card" id="home-low-stock"></div></section>
+        <section class="quick-actions"><button type="button" class="quick-action" data-view="product-form" data-new-product><b>＋</b><span>Шинэ бүтээгдэхүүн</span></button><button class="quick-action" data-view="orders"><b>↗</b><span>Захиалга шалгах</span></button></section>
+      </section>
+
+      <section class="view" id="products-view" aria-labelledby="products-title">
+        <header class="page-head"><div class="page-head-row"><div><p class="eyebrow">Каталог</p><h2 id="products-title">Бүтээгдэхүүн</h2></div><button type="button" class="primary-button" data-view="product-form" data-new-product>＋ Нэмэх</button></div></header>
+        <div class="search-wrap"><span aria-hidden="true">⌕</span><input class="search-input" id="product-search" type="search" placeholder="Нэрээр хайх..." aria-label="Бүтээгдэхүүн хайх"></div>
+        <div class="filter-row" aria-label="Бүтээгдэхүүн шүүх"><button type="button" class="filter-button selected" data-filter="all" aria-pressed="true">Бүгд <span>5</span></button><button type="button" class="filter-button" data-filter="available" aria-pressed="false">Борлуулалттай</button><button type="button" class="filter-button" data-filter="low" aria-pressed="false">Нөөц бага</button><button type="button" class="filter-button" data-filter="draft" aria-pressed="false">Ноорог</button></div>
+        <div class="product-list" id="product-list"></div><div class="empty" id="product-empty">Ийм нэртэй бүтээгдэхүүн олдсонгүй.</div>
+      </section>
+
+      <section class="view" id="product-detail-view" aria-labelledby="product-detail-title">
+        <header class="detail-header"><button class="icon-button" data-back aria-label="Буцах">←</button><h2 id="product-detail-title">Бүтээгдэхүүний дэлгэрэнгүй</h2><span style="width:44px"></span></header>
+        <div id="product-detail-content"></div>
+      </section>
+
+      <section class="view" id="product-form-view" aria-labelledby="product-form-title">
+        <header class="detail-header"><button class="icon-button" data-back aria-label="Буцах">←</button><h2 id="product-form-title">Бүтээгдэхүүн засах</h2><span style="width:44px"></span></header>
+        <form id="product-form">
+          <div class="card form-card"><div class="field"><label for="form-name">Нэр</label><input id="form-name" name="name" required value="Daily Multi эмэгтэйчүүдийн витамин"></div><div class="field"><label for="form-brand">Брэнд</label><input id="form-brand" name="brand" required value="Nature's Way"></div><div class="field"><label for="form-category">Ангилал</label><select id="form-category" name="category"><option>Өдөр тутмын витамин</option><option>Дархлаа</option><option>Зүрх, тархи</option><option>Гоо сайхан</option><option>Эрдэс</option></select></div><div class="field-grid"><div class="field"><label for="form-price">Үнэ (₮)</label><input id="form-price" name="price" inputmode="numeric" required value="89000"></div><div class="field"><label for="form-stock">Нөөц</label><input id="form-stock" name="stock" inputmode="numeric" required value="18"></div></div></div>
+          <div class="card form-card"><div class="field"><label for="form-status">Төлөв</label><select id="form-status" name="status"><option value="available">Борлуулалттай</option><option value="low">Нөөц бага</option><option value="draft">Ноорог</option></select><span class="hint">Нөөц 5-аас бага бол “Нөөц бага” төлөвийг сонгоно уу.</span></div><div class="field"><label>Зураг</label><div class="image-drop"><div><img id="form-image" src="https://cdn.darjs.dev/products/catalog/OS5o7UDnQWz09XF9J0uX6.webp" alt="Бүтээгдэхүүний зураг"><span>Зураг солих · JPG, PNG</span></div></div></div><div class="field"><label for="form-labels">Шошго</label><input id="form-labels" name="labels" value="Шинэ, Онцлох"><span class="hint">Шошгыг таслалаар тусгаарлана.</span></div></div>
+          <div class="sticky-bar"><div><button type="button" class="secondary-button" data-back>Цуцлах</button><button type="submit" class="primary-button">Хадгалах</button></div></div>
+        </form>
+      </section>
+
+      <section class="view" id="orders-view" aria-labelledby="orders-title">
+        <header class="page-head"><div class="page-head-row"><div><p class="eyebrow">Борлуулалт</p><h2 id="orders-title">Захиалгууд</h2></div><span class="status processing"><svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2"></path></svg><span>Өнөөдөр 24</span></span></div></header>
+        <div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="order-search">Захиалга хайх</label><input class="search-input" id="order-search" type="search" placeholder="Дугаар, нэрээр хайх..." aria-label="Захиалга хайх"></div>
+        <div class="filter-row" aria-label="Захиалга шүүх"><button type="button" class="filter-button selected" data-order-filter="all" aria-pressed="true">Бүгд</button><button type="button" class="filter-button" data-order-filter="processing" aria-pressed="false">Бэлтгэж буй</button><button type="button" class="filter-button" data-order-filter="delivery" aria-pressed="false">Хүргэлт</button><button type="button" class="filter-button" data-order-filter="done" aria-pressed="false">Дууссан</button><button type="button" class="filter-button" data-order-filter="problem" aria-pressed="false">Анхаарах</button></div>
+        <div class="order-list" id="orders-list"></div><div class="empty" id="order-empty">Ийм дугаартай эсвэл нэртэй захиалга олдсонгүй.</div>
+      </section>
+
+      <section class="view" id="order-detail-view" aria-labelledby="order-detail-title">
+        <header class="detail-header"><button class="icon-button" data-back aria-label="Буцах">←</button><h2 id="order-detail-title">Захиалгын дэлгэрэнгүй</h2><span style="width:44px"></span></header>
+        <div id="order-detail-content"></div>
+        <div class="sticky-bar"><div><button class="secondary-button" data-back>Буцах</button><button class="primary-button" id="next-order-action">Дараагийн алхам</button></div></div>
+      </section>
+
+      <section class="view" id="analytics-view" aria-labelledby="analytics-title">
+        <header class="page-head"><p class="eyebrow">Өгөгдөл</p><h2 id="analytics-title">Аналитик</h2></header>
+        <div class="card analytics-placeholder"><div><div class="analytics-mark">◒</div><h2>Тун удахгүй</h2><p>Борлуулалт, бүтээгдэхүүний эргэлт, хэрэглэгчийн тайланг энд нэг дор харна.</p></div></div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <nav class="bottom-nav" aria-label="Үндсэн цэс"><button type="button" class="nav-button active" data-view="home" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"></path><path d="M5 9v11h14V9"></path><path d="M9 20v-6h6v6"></path></svg><span>Нүүр</span></button><button type="button" class="nav-button" data-view="products" aria-current="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"></path><path d="M4 7v10l8 4 8-4V7"></path><path d="M12 11v10"></path></svg><span>Бараа</span></button><button type="button" class="nav-button" data-view="orders" aria-current="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg><span>Захиалга</span></button><button type="button" class="nav-button" data-view="analytics" aria-current="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"></path><path d="m7 15 3-4 3 2 5-7"></path></svg><span>Тайлан</span></button></nav>
+  </main>
+
+  <script>
+    const IMAGE_URLS = [
+      'https://cdn.darjs.dev/products/catalog/OS5o7UDnQWz09XF9J0uX6.webp',
+      'https://cdn.darjs.dev/products/ai-extracted/3FO19pL95Ajfcneam-4jG.webp',
+      'https://cdn.darjs.dev/products/ai-extracted/jrUXdoWqBO1Px_X01EAx_.webp',
+      'https://cdn.darjs.dev/products/catalog-v4/now-choline-and-inositol-nervous-system-health-100-veg-capsules/E7K9khYJjQemGo-Z7aWsp.webp',
+      'https://cdn.darjs.dev/products/catalog/micro-ingredients-triple-strength-magnesium-glycinate-1-500mg-per-serving-240-capsules-1-500-500-240/M0qRVt9EFFK9Dg3mxfw4I.webp',
+      'https://cdn.darjs.dev/products/catalog/cc9b29b1c62e442d9d3d726a04f5931d.jpg'
+    ];
+    const products = [
+      { id: 'p1', name: 'Daily Multi эмэгтэйчүүдийн витамин', brand: "Nature's Way", category: 'Өдөр тутмын витамин', price: 89000, stock: 18, status: 'available', image: IMAGE_URLS[0] },
+      { id: 'p2', name: 'Vitamin D3 2000 IU', brand: 'NOW Foods', category: 'Дархлаа', price: 54000, stock: 4, status: 'low', image: IMAGE_URLS[1] },
+      { id: 'p3', name: 'Omega-3 Fish Oil', brand: 'Nordic Naturals', category: 'Зүрх, тархи', price: 118000, stock: 26, status: 'available', image: IMAGE_URLS[2] },
+      { id: 'p4', name: 'Collagen Beauty Powder', brand: 'Vital Proteins', category: 'Гоо сайхан', price: 149000, stock: 2, status: 'low', image: IMAGE_URLS[3] },
+      { id: 'p5', name: 'Magnesium Glycinate', brand: 'Thorne', category: 'Эрдэс', price: 97000, stock: 0, status: 'draft', image: IMAGE_URLS[4] }
+    ];
+    const orders = [
+      { id: '#VS-1048', customer: 'Б. Мөнхжин', total: 207000, items: 'Daily Multi · Omega-3', status: 'processing', statusLabel: 'Бэлтгэж байна', next: 'Савлах', date: 'Өнөөдөр, 10:42', images: [products[0].image, products[2].image] },
+      { id: '#VS-1047', customer: 'А. Энхсайхан', total: 54000, items: 'Vitamin D3 2000 IU', status: 'delivery', statusLabel: 'Хүргэлтэнд', next: 'Мөшгөх', date: 'Өнөөдөр, 09:18', images: [products[1].image] },
+      { id: '#VS-1046', customer: 'С. Оюунчимэг', total: 149000, items: 'Collagen Beauty Powder', status: 'done', statusLabel: 'Дууссан', next: 'Дахин харах', date: 'Өчигдөр, 18:26', images: [products[3].image] },
+      { id: '#VS-1045', customer: 'Г. Тэмүүлэн', total: 194000, items: 'Magnesium Glycinate · D3', status: 'problem', statusLabel: 'Анхаарах', next: 'Шалгах', date: 'Өчигдөр, 16:05', images: [products[4].image, products[1].image] }
+    ];
+    let currentView = 'home';
+    let previousView = 'home';
+    let selectedProduct = products[0];
+    let selectedOrder = orders[0];
+
+    const money = value => '₮' + value.toLocaleString('mn-MN');
+    const statusIcons = {
+      done: '<svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"></path></svg>',
+      processing: '<svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2"></path></svg>',
+      problem: '<svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 4 8 15H4L12 4Z"></path><path d="M12 9v5M12 17h.01"></path></svg>',
+      low: '<svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h7"></path></svg>',
+      neutral: '<svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg>'
+    };
+    const statusTone = { available: 'neutral', low: 'low', draft: 'neutral', processing: 'processing', delivery: 'processing', done: 'done', problem: 'problem' };
+    const statusText = { available: 'Идэвхтэй', low: 'Нөөц бага', draft: 'Ноорог' };
+    const statusMarkup = (status, label = statusText[status]) => { const tone = statusTone[status] || 'neutral'; return `<span class="status ${tone}">${statusIcons[tone]}<span>${label}</span></span>`; };
+    const go = (view, remember = true) => {
+      if (remember && currentView !== view) previousView = currentView;
+      currentView = view;
+      document.querySelectorAll('.view').forEach(item => item.classList.toggle('active', item.id === view + '-view'));
+      document.querySelectorAll('.nav-button').forEach(item => { const active = item.dataset.view === view || (view === 'product-detail' || view === 'product-form' ? item.dataset.view === 'products' : view === 'order-detail' ? item.dataset.view === 'orders' : false); item.classList.toggle('active', active); item.setAttribute('aria-current', active ? 'page' : 'false'); });
+      window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    };
+    const showToast = message => { const toast = document.querySelector('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); };
+    const orderImages = order => `<div class="thumb-stack">${order.images.map((image, index) => `<img class="thumb${index ? ' thumb' : ''}" src="${image}" alt="" loading="lazy">`).join('')}</div>`;
+
+    function renderHome() {
+      document.querySelector('#home-orders').innerHTML = orders.slice(0, 3).map(order => `<button class="order-card" data-order-id="${order.id}">${orderImages(order)}<span class="order-meta"><strong>${order.id} · ${order.customer}</strong><span>${order.items}</span></span><span class="order-side">${statusMarkup(order.status, order.statusLabel)}<strong>${money(order.total)}</strong><span class="order-next">${order.next} →</span></span></button>`).join('');
+      document.querySelector('#home-low-stock').innerHTML = products.filter(product => product.status === 'low').map(product => `<button class="low-stock-card" data-product-id="${product.id}"><img src="${product.image}" alt="${product.name}" loading="lazy"><span><strong>${product.name}</strong><span class="subtle">${product.brand}</span></span><span class="stock-count">${product.stock} үлдсэн</span></button>`).join('');
+    }
+    const productCard = product => `<article class="product-card card" data-product-id="${product.id}"><button type="button" class="product-card-open" data-open-product="${product.id}" aria-label="${product.name} дэлгэрэнгүйг нээх"><img class="product-image" src="${product.image}" alt="${product.name}" loading="lazy"><span class="product-card-body"><span><span class="brand">${product.brand}</span><span class="product-title">${product.name}</span></span><span class="price-row"><span class="price">${money(product.price)}</span><span class="stock">${product.stock} ширхэг</span></span></span></button><span class="product-card-footer">${statusMarkup(product.status)}<button type="button" class="mini-button" data-edit-product="${product.id}">Засах</button></span></article>`;
+    function renderProducts() {
+      const query = document.querySelector('#product-search').value.trim().toLowerCase();
+      const filter = document.querySelector('.filter-button.selected[data-filter]')?.dataset.filter || 'all';
+      const visible = products.filter(product => (product.name + product.brand).toLowerCase().includes(query) && (filter === 'all' || (filter === 'available' && product.status === 'available') || (filter === 'low' && product.status === 'low') || (filter === 'draft' && product.status === 'draft')));
+      document.querySelector('#product-list').innerHTML = visible.map(productCard).join('');
+      document.querySelector('#product-empty').style.display = visible.length ? 'none' : 'block';
+    }
+    function renderOrders() {
+      const filter = document.querySelector('.filter-button.selected[data-order-filter]')?.dataset.orderFilter || 'all';
+      const query = document.querySelector('#order-search').value.trim().toLowerCase();
+      const visible = orders.filter(order => (order.id + order.customer + order.items).toLowerCase().includes(query) && (filter === 'all' || order.status === filter));
+      document.querySelector('#orders-list').innerHTML = visible.map(order => `<button type="button" class="order-card" data-order-id="${order.id}">${orderImages(order)}<span class="order-meta"><strong>${order.id} · ${order.customer}</strong><span>${order.date} · ${order.items}</span></span><span class="order-side">${statusMarkup(order.status, order.statusLabel)}<strong>${money(order.total)}</strong><span class="order-next">${order.next} →</span><span class="arrow">›</span></span></button>`).join('');
+      document.querySelector('#order-empty').style.display = visible.length ? 'none' : 'block';
+    }
+    function renderProductDetail() {
+      const product = selectedProduct;
+      document.querySelector('#product-detail-content').innerHTML = `<article class="hero-product"><img class="detail-image" src="${product.image}" alt="${product.name}"><div class="hero-copy"><span class="brand">${product.brand} · ${product.category}</span><h3 class="product-title">${product.name}</h3><strong class="detail-price">${money(product.price)}</strong>${statusMarkup(product.status)}<p class="subtle" style="margin-top:13px">Өдөр тутмын хэрэгцээнд зориулсан найрлага. Монгол дахь агуулахын мэдээлэл шинэчлэгдсэн.</p></div></article><div class="summary-strip"><div class="metric"><span>Одоогийн нөөц</span><strong>${product.stock} ширхэг</strong></div><div class="metric"><span>Сарын борлуулалт</span><strong>${product.stock > 5 ? '42' : '18'} ширхэг</strong></div></div><section class="card info-section"><h3>Үндсэн мэдээлэл</h3><div class="info-row"><span>Ангилал</span><span>${product.category}</span></div><div class="info-row"><span>Брэнд</span><span>${product.brand}</span></div><div class="info-row"><span>SKU</span><span>VIT-${product.id.slice(1).toUpperCase()}-24</span></div></section><button class="primary-button detail-action" data-edit-product="${product.id}">Бүтээгдэхүүн засах</button>`;
+    }
+    function renderOrderDetail() {
+      const order = selectedOrder;
+      document.querySelector('#order-detail-content').innerHTML = `<section class="card order-detail-card"><div class="order-detail-title"><div><p class="eyebrow">${order.date}</p><h3>${order.id}</h3></div>${statusMarkup(order.status, order.statusLabel)}</div><div class="order-products">${order.images.map((image, index) => `<div class="order-product"><img src="${image}" alt="" loading="lazy"><span class="order-product-copy"><strong>${order.items.split(' · ')[index] || order.items}</strong><span>1 ширхэг</span></span><strong>${money(index ? 118000 : order.total - (order.images.length > 1 ? 118000 : 0))}</strong></div>`).join('')}</div><div class="order-total"><span>Нийт дүн</span><span>${money(order.total)}</span></div></section><section class="card order-detail-card"><h3>Хүргэлтийн явц</h3><div class="progress" style="margin-top:15px"><div class="progress-step done"><span class="progress-dot">✓</span><span><strong>Захиалга баталгаажсан</strong><span>10:42 · Vit Store</span></span></div><div class="progress-step ${order.status === 'processing' ? 'current' : 'done'}"><span class="progress-dot">${order.status === 'processing' ? '2' : '✓'}</span><span><strong>Бэлтгэлд</strong><span>Агуулах захиалгыг бэлдэж байна</span></span></div><div class="progress-step ${order.status === 'delivery' ? 'current' : ''}"><span class="progress-dot">3</span><span><strong>Хүргэлтэнд</strong><span>Курьер хүлээн авна</span></span></div><div class="progress-step"><span class="progress-dot">4</span><span><strong>Хүргэгдсэн</strong><span>Харилцагч хүлээн авна</span></span></div></div></section><section class="card info-section"><h3>Харилцагч</h3><div class="info-row"><span>Нэр</span><span>${order.customer}</span></div><div class="info-row"><span>Утас</span><span>9911 2048</span></div></section><section class="card info-section"><h3>Хүргэлт ба төлбөр</h3><div class="info-row"><span>Хаяг</span><span>СБД, 1-р хороо</span></div><div class="info-row"><span>Төлбөр</span><span>QPay · Төлөгдсөн</span></div></section>`;
+      document.querySelector('#next-order-action').textContent = order.next;
+    }
+
+    document.addEventListener('click', event => {
+      const target = event.target.closest('[data-view], [data-back], [data-open-product], [data-product-id], [data-order-id], [data-edit-product], [data-filter], [data-order-filter]');
+      if (!target) return;
+      if (target.dataset.view) { if (target.dataset.newProduct !== undefined) { document.querySelector('#product-form').reset(); document.querySelector('#product-form-title').textContent = 'Шинэ бүтээгдэхүүн'; document.querySelector('#form-image').src = IMAGE_URLS[0]; } go(target.dataset.view); return; }
+      if (target.hasAttribute('data-back')) { const backView = previousView === 'product-detail' ? 'product-detail' : previousView || 'products'; go(backView, false); return; }
+      if (target.dataset.openProduct) { selectedProduct = products.find(product => product.id === target.dataset.openProduct) || products[0]; renderProductDetail(); go('product-detail'); return; }
+      if (target.dataset.productId) { selectedProduct = products.find(product => product.id === target.dataset.productId) || products[0]; renderProductDetail(); go('product-detail'); return; }
+      if (target.dataset.editProduct) { selectedProduct = products.find(product => product.id === target.dataset.editProduct) || products[0]; document.querySelector('#form-name').value = selectedProduct.name; document.querySelector('#form-brand').value = selectedProduct.brand; document.querySelector('#form-category').value = selectedProduct.category; document.querySelector('#form-price').value = selectedProduct.price; document.querySelector('#form-stock').value = selectedProduct.stock; document.querySelector('#form-status').value = selectedProduct.status === 'available' ? 'available' : selectedProduct.status; document.querySelector('#form-image').src = selectedProduct.image; go('product-form'); return; }
+      if (target.dataset.orderId) { selectedOrder = orders.find(order => order.id === target.dataset.orderId) || orders[0]; renderOrderDetail(); go('order-detail'); return; }
+      if (target.dataset.filter) { document.querySelectorAll('[data-filter]').forEach(button => { const selected = button === target; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); }); renderProducts(); return; }
+      if (target.dataset.orderFilter) { document.querySelectorAll('[data-order-filter]').forEach(button => { const selected = button === target; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); }); renderOrders(); }
+    });
+    document.querySelector('#product-search').addEventListener('input', renderProducts);
+    document.querySelector('#order-search').addEventListener('input', renderOrders);
+    document.querySelector('#product-form').addEventListener('submit', event => { event.preventDefault(); showToast('Бүтээгдэхүүн амжилттай хадгалагдлаа'); setTimeout(() => go('products'), 500); });
+    document.querySelector('#next-order-action').addEventListener('click', () => showToast(`${selectedOrder.id} · ${selectedOrder.next} үйлдэл сонгогдлоо`));
+    renderHome(); renderProducts(); renderOrders();
+  </script>
+</body>
+</html>
