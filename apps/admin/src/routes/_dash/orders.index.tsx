@@ -10,18 +10,23 @@ import {
 	PRODUCT_PER_PAGE,
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
-import { Loader2, PlusCircle, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { PlusCircle, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { Suspense, useState } from "react";
 import * as v from "valibot";
 import SubmitButton from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { trpc } from "@/utils/trpc";
 import { OrdersPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import OrdersFilters from "@/components/order/orders-filters";
 import OrdersList from "@/components/order/orders-list";
-import PendingTransferWidget from "@/components/order/pending-transfer-widget";
+
+const orderStatusFilterValues = [
+	...orderStatusConstants,
+	"active",
+	"all",
+] as const;
+const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
@@ -37,24 +42,27 @@ export const Route = createFileRoute("/_dash/orders/")({
 			paymentStatus?: string;
 			date?: string;
 		};
+		const requestedOrderStatus = search.orderStatus ?? "active";
+		const requestedDate = search.date ?? "all";
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getPaginatedOrders.queryOptions({
 				page: search.page ?? 1,
 				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+				includeAllStatuses: requestedOrderStatus === "all",
 				searchTerm: search.searchTerm,
 				sortField: search.sortField,
 				sortDirection: search.sortDirection,
-				orderStatus: search.orderStatus as
-					| (typeof orderStatusConstants)[number]
-					| undefined,
+				orderStatus:
+					requestedOrderStatus === "all" || requestedOrderStatus === "active"
+						? undefined
+						: (requestedOrderStatus as (typeof orderStatusConstants)[number]),
+				orderStatuses:
+					requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
 				paymentStatus: search.paymentStatus as
 					| (typeof paymentStatusConstants)[number]
 					| undefined,
-				date: search.date,
+				date: requestedDate,
 			}),
-		);
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.payment.getClaimedTransferCount.queryOptions(),
 		);
 	},
 	validateSearch: v.object({
@@ -66,9 +74,9 @@ export const Route = createFileRoute("/_dash/orders/")({
 		searchTerm: v.optional(v.string()),
 		sortField: v.optional(v.string()),
 		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		orderStatus: v.optional(v.picklist(orderStatusConstants)),
+		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
 		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
-		date: v.optional(v.string()),
+		date: v.optional(v.string(), "all"),
 	}),
 });
 
@@ -89,12 +97,12 @@ function RouteComponent() {
 	const [filtersOpen, setFiltersOpen] = useState(false);
 
 	const hasActiveFilters =
-		orderStatus !== undefined ||
+		orderStatus !== "active" ||
 		paymentStatus !== undefined ||
 		sortField !== undefined ||
 		sortDirection !== undefined ||
 		searchTerm !== undefined ||
-		(date !== undefined && date !== "all");
+		date !== "all";
 
 	const navigate = useNavigate({ from: Route.fullPath });
 	const mutation = useMutation({
@@ -141,7 +149,7 @@ function RouteComponent() {
 			to: "/orders",
 			search: {
 				date,
-				orderStatus: field === "orderStatus" ? normalized : orderStatus,
+				orderStatus: field === "orderStatus" ? value : orderStatus,
 				page: 1,
 				pageSize,
 				paymentStatus:
@@ -149,7 +157,6 @@ function RouteComponent() {
 				searchTerm,
 				sortDirection,
 				sortField,
-				[field]: normalized,
 			},
 		});
 	};
@@ -159,7 +166,7 @@ function RouteComponent() {
 		navigate({
 			to: "/orders",
 			search: {
-				orderStatus: undefined,
+				orderStatus: "active",
 				paymentStatus: undefined,
 				sortField: undefined,
 				sortDirection: "asc",
@@ -193,7 +200,7 @@ function RouteComponent() {
 			{/* Header */}
 			<div className="flex items-center justify-between gap-4">
 				<div>
-					<h1 className="font-heading text-2xl font-black tracking-tight sm:text-3xl">
+					<h1 className="font-black font-heading text-2xl tracking-tight sm:text-3xl">
 						Захиалгууд
 					</h1>
 					<p className="mt-0.5 text-muted-foreground text-sm">
@@ -213,20 +220,18 @@ function RouteComponent() {
 				</Button>
 			</div>
 
-			<PendingTransferWidget />
-
 			{/* Search */}
 			<div className="relative">
-				<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
 				<Input
 					placeholder="Захиалгын дугаар, утас хайх..."
 					value={inputValue}
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-					className="h-12 border-2 border-border bg-card pl-10 pr-24 text-base shadow-hard-sm"
+					className="h-12 border-2 border-border bg-card pr-24 pl-10 text-base shadow-hard-sm"
 					disabled={mutation.isPending}
 				/>
-				<div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
+				<div className="-translate-y-1/2 absolute top-1/2 right-1.5 flex items-center gap-1">
 					{inputValue && (
 						<Button
 							size="icon"
@@ -262,7 +267,7 @@ function RouteComponent() {
 						<SlidersHorizontal className="h-4 w-4" />
 						Шүүлтүүр
 						{hasActiveFilters && (
-							<span className="ml-1 flex h-5 w-5 items-center justify-center bg-primary-foreground text-primary font-bold text-[10px]">
+							<span className="ml-1 flex h-5 w-5 items-center justify-center bg-primary-foreground font-bold text-[10px] text-primary">
 								!
 							</span>
 						)}

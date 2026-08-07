@@ -487,18 +487,23 @@ export const orderQueries = {
 			page: number;
 			pageSize: number;
 			paymentStatus?: PaymentStatusType;
+			includeAllStatuses?: boolean;
 			orderStatus?: OrderStatus;
+			orderStatuses?: OrderStatus[];
 			sortField?: string;
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
 			date?: string;
 		}) {
+			const database = db();
 			const conditions: (SQL<unknown> | undefined)[] = [];
 			conditions.push(isNull(OrdersTable.deletedAt));
 
-			if (params.orderStatus !== undefined) {
+			if (params.orderStatuses && params.orderStatuses.length > 0) {
+				conditions.push(inArray(OrdersTable.status, params.orderStatuses));
+			} else if (params.orderStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, params.orderStatus));
-			} else if (params.paymentStatus === undefined) {
+			} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
 				// Default: hide "created" (unpaid) orders from the admin list.
 				// When a paymentStatus filter is set, drop the exclusion so admins
 				// filtering by pending payments can still see "created" orders
@@ -556,7 +561,7 @@ export const orderQueries = {
 
 			const offset = (params.page - 1) * params.pageSize;
 
-			const orderResults = await db().query.OrdersTable.findMany({
+			const orderResults = await database.query.OrdersTable.findMany({
 				limit: params.pageSize,
 				offset: offset,
 				orderBy: orderByClauses,
@@ -608,7 +613,7 @@ export const orderQueries = {
 				});
 			}
 
-			const totalCountResult = await db()
+			const totalCountResult = await database
 				.select({ count: sql<number>`COUNT(*)` })
 				.from(OrdersTable)
 				.where(finalConditions.length > 0 ? and(...finalConditions) : undefined)

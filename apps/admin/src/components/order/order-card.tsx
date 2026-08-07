@@ -31,11 +31,12 @@ import { TransferPaymentActions } from "./pending-transfer-dialog";
 import ShipOrderDialog from "./ship-order-dialog";
 
 const statusBorderColor: Record<string, string> = {
-	pending: "border-t-[#ffa502]",
-	shipped: "border-t-[#3742fa]",
-	delivered: "border-t-[#00ff88]",
-	cancelled: "border-t-[#ff4757]",
-	refunded: "border-t-[#5f27cd]",
+	created: "border-t-[#64748b]",
+	pending: "border-t-[#d97706]",
+	shipped: "border-t-[#2563eb]",
+	delivered: "border-t-[#059669]",
+	cancelled: "border-t-[#dc2626]",
+	refunded: "border-t-[#7c3aed]",
 };
 
 interface OrderCardProps {
@@ -189,7 +190,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 			>
 				<CardContent className="flex flex-col gap-0 p-0">
 					{/* Header */}
-					<div className="flex items-start justify-between gap-3 p-4 pb-3">
+					<div className="p-4 pb-3">
 						<div className="flex min-w-0 flex-1 items-start gap-3">
 							{selection ? (
 								<div
@@ -210,11 +211,11 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 								</div>
 							) : null}
 							<div className="min-w-0 flex-1">
-								<div className="flex items-center gap-2">
-									<span className="font-black font-heading text-lg tracking-tight">
+								<div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+									<span className="truncate font-black font-heading text-lg tracking-tight">
 										#{order.orderNumber}
 									</span>
-									<span className="text-muted-foreground text-xs">
+									<span className="shrink-0 whitespace-nowrap text-muted-foreground text-xs">
 										{new Date(order.createdAt).toLocaleDateString("mn-MN", {
 											month: "short",
 											day: "numeric",
@@ -236,11 +237,11 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 								</div>
 							</div>
 						</div>
-						<div className="flex shrink-0 flex-col items-end gap-1.5">
+						<div className="mt-3 flex flex-wrap items-center gap-1.5">
 							<OrderStatusBadge status={order.status} />
 							{order.paymentStatus && order.paymentProvider && (
 								<span
-									className={`inline-flex items-center gap-1 border-2 px-1.5 py-0.5 font-bold text-[10px] ${getPaymentStatusColor(order.paymentStatus)}`}
+									className={`inline-flex items-center gap-1 whitespace-nowrap border px-2 py-1 font-bold text-[11px] ${getPaymentStatusColor(order.paymentStatus)}`}
 								>
 									{getPaymentProviderIcon(order.paymentProvider)}
 									{paymentStatusLabel[order.paymentStatus]}
