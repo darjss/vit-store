@@ -78,7 +78,11 @@ const request = async <T>(path: string, body: unknown): Promise<T> => {
 	return payload.result as T;
 };
 
-const command = <T>(args: RedisCommand) => request<T>("", args);
+const normalizeCommand = (args: RedisCommand) =>
+	args.map((arg) => String(arg));
+
+const command = <T>(args: RedisCommand) =>
+	request<T>("", normalizeCommand(args));
 
 const pipeline = async (commands: RedisCommand[]) => {
 	if (commands.length === 0) return;
@@ -89,7 +93,7 @@ const pipeline = async (commands: RedisCommand[]) => {
 			Authorization: `Bearer ${token}`,
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(commands),
+		body: JSON.stringify(commands.map(normalizeCommand)),
 	});
 	const payload = (await response.json()) as RestResult<unknown>[];
 	if (!response.ok) {
@@ -153,6 +157,8 @@ const createIndex = () =>
 		"description",
 		"TEXT",
 		"slug",
+		"KEYWORD",
+		"createdAt",
 		"KEYWORD",
 		"price",
 		"F64",
@@ -311,6 +317,15 @@ const parseFields = (fields: unknown[] | undefined) => {
 	return data;
 };
 
+const toBoolean = (value: unknown) =>
+	value === true || value === 1 || value === "1" || value === "true";
+
+const toOptionalId = (value: unknown) => {
+	if (value == null) return undefined;
+	const id = Number(value);
+	return Number.isFinite(id) && id >= 0 ? id : undefined;
+};
+
 const toSearchResult = (raw: RawSearchHit): SearchProductResult => {
 	const data = parseFields(raw[2]) as Partial<IndexedProductDocument>;
 	return {
@@ -325,15 +340,15 @@ const toSearchResult = (raw: RawSearchHit): SearchProductResult => {
 		category: data.category ?? "",
 		status: data.status ?? "draft",
 		stock: Number(data.stock ?? 0),
-		inStock: Boolean(data.inStock),
+		inStock: toBoolean(data.inStock),
 		amount: data.amount ?? "",
 		potency: data.potency ?? "",
 		dailyIntake: Number(data.dailyIntake ?? 0),
-		brandId: data.brandId,
-		categoryId: data.categoryId,
-		isFeatured: Boolean(data.isFeatured),
+		brandId: toOptionalId(data.brandId),
+		categoryId: toOptionalId(data.categoryId),
+		isFeatured: toBoolean(data.isFeatured),
 		image: data.image ?? "",
-		hasImage: Boolean(data.hasImage),
+		hasImage: toBoolean(data.hasImage),
 		ingredientPreview: Array.isArray(data.ingredientPreview)
 			? data.ingredientPreview
 			: [],
