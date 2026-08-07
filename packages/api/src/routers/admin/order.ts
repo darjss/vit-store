@@ -589,7 +589,10 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         }
     }),
     shipOrder: proc
-        .input(v.object({ orderId: v.number() }))
+        .input(v.object({
+            orderId: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+            addressZoneId: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+        }))
         .mutation(async ({ input, ctx }) => {
         const order = await orderQueries.admin.getOrderById(input.orderId);
         if (!order) {
@@ -605,9 +608,10 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             });
         }
         try {
-            const deliveryResult = await createDelivery(order.id, order.orderNumber, String(order.customerPhone), order.addressZoneId ?? 15, order.address, order.notes);
+            const deliveryResult = await createDelivery(order.id, order.orderNumber, String(order.customerPhone), input.addressZoneId, order.address, order.notes);
             await orderQueries.admin.updateOrderStatus(order.id, "shipped", {
                 deliveryProvider: "tu-delivery",
+                addressZoneId: input.addressZoneId,
             });
             ctx.log.info("order.status_changed", {
                 orderId: order.id,

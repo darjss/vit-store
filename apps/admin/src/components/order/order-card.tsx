@@ -28,6 +28,7 @@ import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import OrderForm from "./order-form";
 import { TransferPaymentActions } from "./pending-transfer-dialog";
+import ShipOrderDialog from "./ship-order-dialog";
 
 const statusBorderColor: Record<string, string> = {
 	pending: "border-t-[#ffa502]",
@@ -49,6 +50,7 @@ interface OrderCardProps {
 export default function OrderCard({ order, selection }: OrderCardProps) {
 	const navigate = useNavigate();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
 	const [productsExpanded, setProductsExpanded] = useState(false);
 	const [previewImage, setPreviewImage] = useState<{
 		src: string;
@@ -63,19 +65,6 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 				trpc.order.getPaginatedOrders.queryOptions({}),
 			);
 			toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
-		},
-	});
-
-	const shipOrder = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			toast.success("Захиалга амжилттай илгээгдлээ");
-		},
-		onError: (error) => {
-			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
 		},
 	});
 
@@ -150,6 +139,20 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 					</div>
 				</DialogContent>
 			</Dialog>
+
+			<ShipOrderDialog
+				open={isShipDialogOpen}
+				onOpenChange={setIsShipDialogOpen}
+				orderId={order.id}
+				orderNumber={order.orderNumber}
+				address={order.address}
+				addressZoneId={order.addressZoneId}
+				onSuccess={() => {
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+				}}
+			/>
 
 			<Dialog
 				open={previewImage !== null}
@@ -341,18 +344,13 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 									variant="default"
 									size="sm"
 									className="h-10 gap-2 text-xs"
-									disabled={shipOrder.isPending}
 									onClick={(e) => {
 										e.stopPropagation();
-										shipOrder.mutate({ orderId: order.id });
+										setIsShipDialogOpen(true);
 									}}
 								>
-									{shipOrder.isPending ? (
-										<Loader2 className="h-3.5 w-3.5 animate-spin" />
-									) : (
-										<Truck className="h-3.5 w-3.5" />
-									)}
-									{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
+									<Truck className="h-3.5 w-3.5" />
+									Илгээх
 								</Button>
 							)}
 							{order.status === "shipped" && (
