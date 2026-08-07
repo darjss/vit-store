@@ -6,11 +6,9 @@ import {
 	orderStatusLabels,
 } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
-import { Truck } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
@@ -64,28 +62,9 @@ const OrderForm = ({
 		phone && phone.length === 8 && phone.match("^[6-9]\\d{7}$");
 
 	const queryClient = useQueryClient();
-	const { data: addressZones } = useQuery({
-		...trpc.order.getDeliveryAddressZones.queryOptions(),
-	});
-
 	const isEditing = !!order;
 
 	const prevPhoneRef = useRef(order?.customerPhone ?? "");
-
-	const shipOrder = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
-			toast.success("Захиалга амжилттай илгээгдлээ");
-			onSuccess();
-		},
-		onError: (error) => {
-			toast.error(`Захиалга илгээхэд алдаа гарлаа: ${error.message}`);
-		},
-	});
 
 	const addMutation = useMutation({
 		...trpc.order.addOrder.mutationOptions(),
@@ -134,15 +113,6 @@ const OrderForm = ({
 				shouldDirty: true,
 				shouldTouch: true,
 			});
-			form.setValue(
-				"addressZoneId",
-				result.addressZoneId ? Number(result.addressZoneId) : undefined,
-				{
-					shouldValidate: true,
-					shouldDirty: true,
-					shouldTouch: true,
-				},
-			);
 			return;
 		}
 
@@ -190,42 +160,6 @@ const OrderForm = ({
 												inputMode="tel"
 											/>
 										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="addressZoneId"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Хаяг бүс</FormLabel>
-										<Select
-											onValueChange={(value) => field.onChange(Number(value))}
-											value={field.value ? field.value.toString() : undefined}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Хаяг бүс сонгох" />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												{(addressZones === undefined ||
-													addressZones.length === 0) && (
-													<div>Хаяг бүс байхгүй</div>
-												)}
-												{addressZones !== undefined &&
-													addressZones.length > 0 &&
-													addressZones.map((zone) => (
-														<SelectItem
-															key={zone.Id}
-															value={zone.Id.toString()}
-														>
-															{zone.zoneName}
-														</SelectItem>
-													))}
-											</SelectContent>
-										</Select>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -346,20 +280,7 @@ const OrderForm = ({
 						</CardContent>
 					</Card>
 
-					<div className="flex items-center gap-3 pt-1">
-						{isEditing && order?.status === "pending" && order?.id && (
-							<Button
-								type="button"
-								variant="default"
-								disabled={shipOrder.isPending}
-								onClick={() => shipOrder.mutate({ orderId: order.id! })}
-								className="gap-1.5 border-2 border-border font-bold text-sm uppercase tracking-wider"
-							>
-								<Truck className="h-4 w-4" />
-								{shipOrder.isPending ? "Илгээж байна..." : "Илгээх"}
-							</Button>
-						)}
-						<div className="flex-1" />
+					<div className="flex items-center justify-end pt-1">
 						<SubmitButton
 							isPending={isMutating}
 							className="border-2 border-border px-6 py-2.5 font-bold text-sm uppercase tracking-wider transition-colors duration-300 hover:bg-primary/90"

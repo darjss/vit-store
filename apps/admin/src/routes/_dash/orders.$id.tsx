@@ -1,5 +1,6 @@
 import {
 	useMutation,
+	useQuery,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import { OrderStatusBadge } from "@/components/dashboard/order-status-badge";
 import { EditableField } from "@/components/editable-field";
 import OrderForm from "@/components/order/order-form";
 import { TransferPaymentActions } from "@/components/order/pending-transfer-dialog";
+import ShipOrderDialog from "@/components/order/ship-order-dialog";
 import RowAction from "@/components/row-actions";
 import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
@@ -136,9 +138,15 @@ function OrderDetail({ orderId }: { orderId: number }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+	const [isShipDialogOpen, setIsShipDialogOpen] = useState(false);
 
 	const { data: order } = useSuspenseQuery({
 		...trpc.order.getOrderById.queryOptions({ id: orderId }),
+	});
+	const addressZonesQuery = useQuery({
+		...trpc.order.getDeliveryAddressZones.queryOptions(),
+		enabled: order?.addressZoneId !== undefined,
+		staleTime: 1000 * 60 * 60 * 24,
 	});
 
 	if (!order) {
@@ -183,18 +191,6 @@ function OrderDetail({ orderId }: { orderId: number }) {
 				toast.success("Төлөв шинэчлэгдлээ");
 			},
 		});
-
-	const { mutate: shipOrder, isPending: isShipOrderPending } = useMutation({
-		...trpc.order.shipOrder.mutationOptions(),
-		onSuccess: () => {
-			invalidateOrder();
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
-			);
-			toast.success("Захиалга илгээгдлээ");
-		},
-		onError: (error) => toast.error(error.message),
-	});
 
 	const { mutate: updateOrderField, isPending: isUpdateFieldPending } =
 		useMutation({
@@ -257,8 +253,8 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			? {
 					label: "TU руу илгээх",
 					icon: Truck,
-					pending: isShipOrderPending,
-					onClick: () => shipOrder({ orderId }),
+					pending: false,
+					onClick: () => setIsShipDialogOpen(true),
 				}
 			: order.status === "shipped"
 				? {
@@ -284,6 +280,21 @@ function OrderDetail({ orderId }: { orderId: number }) {
 
 	return (
 		<>
+			<ShipOrderDialog
+				open={isShipDialogOpen}
+				onOpenChange={setIsShipDialogOpen}
+				orderId={orderId}
+				orderNumber={order.orderNumber}
+				address={order.address}
+				addressZoneId={order.addressZoneId}
+				onSuccess={() => {
+					void invalidateOrder();
+					void queryClient.invalidateQueries(
+						trpc.order.getPaginatedOrders.queryOptions({}),
+					);
+				}}
+			/>
+
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
 				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[900px]">
 					<DialogHeader className="border-border border-b-2 px-6 pt-6 pb-4">
@@ -575,6 +586,16 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									})
 								}
 							/>
+							{order.addressZoneId !== undefined ? (
+								<div className="mt-4 border-border border-t pt-3 text-sm">
+									<span className="text-muted-foreground">Хүргэлтийн бүс</span>
+									<p className="mt-1 font-bold">
+										{addressZonesQuery.data?.find(
+											(zone) => zone.Id === order.addressZoneId,
+										)?.zoneName ?? `Бүс #${order.addressZoneId}`}
+									</p>
+								</div>
+							) : null}
 							<Button
 								variant="outline"
 								className="mt-4 h-11 w-full gap-2"

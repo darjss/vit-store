@@ -145,7 +145,12 @@ export const order = router({
                 const [customer] = existingCustomer
                     ? await tx
                         .update(CustomersTable)
-                        .set({ address: input.address, addressZoneId: input.addressZoneId })
+                        .set({
+                            address: input.address,
+                            ...(input.addressZoneId !== undefined && {
+                                addressZoneId: input.addressZoneId,
+                            }),
+                        })
                         .where(eq(CustomersTable.phone, customerPhone))
                         .returning()
                     : await tx
@@ -153,7 +158,7 @@ export const order = router({
                         .values({
                         phone: customerPhone,
                         address: input.address,
-                        addressZoneId: input.addressZoneId,
+                        addressZoneId: input.addressZoneId ?? null,
                     })
                         .returning();
                 if (!customer)
@@ -164,7 +169,7 @@ export const order = router({
                     orderNumber,
                     customerPhone,
                     address: input.address,
-                    addressZoneId: input.addressZoneId,
+                    addressZoneId: input.addressZoneId ?? null,
                     notes: input.notes ?? null,
                     total,
                     status: "created",
