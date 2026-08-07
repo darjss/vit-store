@@ -558,7 +558,17 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .mutation(async ({ input, ctx }) => {
         try {
-            await orderQueries.admin.updateOrderStatus(input.id, input.status);
+            const updated = await orderQueries.admin.updateOrderStatus(
+                input.id,
+                input.status,
+                input.status === "shipped" ? { fromStatus: "pending" } : undefined,
+            );
+            if (!updated && input.status === "shipped") {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Зөвхөн хүлээгдэж буй захиалгыг илгээсэн болгох боломжтой",
+                });
+            }
             ctx.log.info("order.status_changed", {
                 orderId: input.id,
                 order_status: input.status,
@@ -568,6 +578,8 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             };
         }
         catch (e) {
+            if (e instanceof TRPCError)
+                throw e;
             ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
                 event: "admin.order_status_update_failed",
                 orderId: input.id,
