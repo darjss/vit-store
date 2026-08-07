@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin V1 Solid Rewrite · Plan</title>
+  <style>
+    :root {
+      --cream: #f5efe4;
+      --paper: #fffdf9;
+      --espresso: #2e241e;
+      --cocoa: #765d4d;
+      --butter: #f4d96e;
+      --lavender: #d9c9eb;
+      --apricot: #f7d0ae;
+      --coral: #f2b0a9;
+      --lemon: #f5e89b;
+      --neutral: #ded6cc;
+      --line: #e2d6c8;
+      --muted: #827468;
+      --shadow: 0 12px 30px rgba(72, 48, 31, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--espresso);
+      background: var(--cream);
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--cream); }
+    body { margin: 0; min-width: 320px; background: var(--cream); }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5; background: radial-gradient(circle at 8% 2%, rgba(217,201,235,.42), transparent 24rem), radial-gradient(circle at 95% 22%, rgba(247,208,174,.32), transparent 23rem), radial-gradient(circle at 75% 92%, rgba(245,232,155,.23), transparent 28rem); }
+    body::after { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .07; background-image: radial-gradient(rgba(46,36,30,.6) .55px, transparent .7px); background-size: 6px 6px; }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--cocoa); outline-offset: 3px; }
+    .page { position: relative; z-index: 1; width: min(1180px, 100%); margin: 0 auto; padding: 28px 18px 72px; }
+    .hero { display: grid; grid-template-columns: 1.5fr .8fr; gap: 18px; align-items: end; margin-bottom: 20px; }
+    .eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { max-width: 760px; font-size: clamp(32px, 6vw, 64px); line-height: .94; letter-spacing: -.06em; }
+    h2 { font-size: 24px; line-height: 1.05; letter-spacing: -.035em; }
+    h3 { font-size: 16px; line-height: 1.15; }
+    .lede { max-width: 62ch; margin-top: 16px; color: var(--cocoa); font-size: 16px; line-height: 1.55; }
+    .hero-note { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--espresso); color: var(--paper); box-shadow: var(--shadow); }
+    .hero-note strong { display: block; margin-top: 10px; color: var(--butter); font-size: 32px; letter-spacing: -.05em; }
+    .hero-note span { color: #d9c9bc; font-size: 13px; }
+    .toolbar { position: sticky; z-index: 5; top: 12px; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; margin: 0 0 22px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,253,249,.9); box-shadow: var(--shadow); backdrop-filter: blur(14px); }
+    .filter { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); font-size: 12px; font-weight: 800; }
+    .filter.active { border-color: var(--espresso); background: var(--espresso); color: var(--paper); }
+    .progress { display: flex; align-items: center; gap: 9px; margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .progress-bar { width: 110px; height: 9px; overflow: hidden; border-radius: 99px; background: var(--neutral); }
+    .progress-bar span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--butter); transition: width .2s ease; }
+    .section { margin-top: 28px; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 12px; }
+    .section-head p { max-width: 60ch; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .panel { border: 1px solid var(--line); border-radius: 18px; background: rgba(255,253,249,.88); box-shadow: var(--shadow); }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .summary-card { min-height: 122px; padding: 16px; border-radius: 16px; }
+    .summary-card:nth-child(1) { background: var(--espresso); color: var(--paper); }
+    .summary-card:nth-child(2) { background: var(--butter); }
+    .summary-card:nth-child(3) { background: var(--lavender); }
+    .summary-card:nth-child(4) { background: var(--apricot); }
+    .summary-card strong { display: block; margin-top: 22px; font-size: 22px; letter-spacing: -.04em; }
+    .summary-card span { color: var(--cocoa); font-size: 12px; font-weight: 800; }
+    .summary-card:first-child span { color: #dacdc2; }
+    .track-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .track { position: relative; padding: 17px; overflow: hidden; }
+    .track::after { content: ""; position: absolute; right: -28px; bottom: -38px; width: 120px; height: 120px; border-radius: 50%; opacity: .65; background: var(--wash, var(--lavender)); }
+    .track:nth-child(2)::after, .track:nth-child(6)::after { --wash: var(--apricot); }
+    .track:nth-child(3)::after { --wash: var(--coral); }
+    .track:nth-child(4)::after { --wash: var(--lemon); }
+    .track:nth-child(5)::after { --wash: var(--neutral); }
+    .track > * { position: relative; z-index: 1; }
+    .track-top { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .track-code { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--espresso); color: var(--butter); font-size: 13px; font-weight: 900; }
+    .track p { margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .track small { display: inline-block; margin-top: 14px; padding: 5px 8px; border-radius: 8px; background: var(--neutral); color: var(--cocoa); font-size: 11px; font-weight: 850; }
+    .track details { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+    summary { color: var(--cocoa); font-size: 12px; font-weight: 850; cursor: pointer; }
+    .task-list, .check-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+    .task-list li, .check-list li { display: flex; gap: 9px; align-items: start; color: var(--cocoa); font-size: 13px; line-height: 1.4; }
+    .task-list li::before { content: "•"; color: var(--coral); font-size: 18px; line-height: 1; }
+    .phase-list { display: grid; gap: 0; padding: 0; margin: 0; list-style: none; }
+    .phase { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 15px 16px; border-bottom: 1px solid var(--line); }
+    .phase:last-child { border-bottom: 0; }
+    .phase-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--butter); font-weight: 900; }
+    .phase p { margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .dependency { padding: 16px; }
+    .dependency-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; align-items: center; }
+    .dependency-step { min-height: 62px; display: grid; place-items: center; padding: 10px; border-radius: 13px; background: var(--neutral); text-align: center; font-size: 12px; font-weight: 850; }
+    .dependency-step:nth-child(2) { background: var(--lavender); }
+    .dependency-step:nth-child(3) { background: var(--apricot); }
+    .dependency-step:nth-child(4) { background: var(--lemon); }
+    .arrow { color: var(--cocoa); text-align: center; font-weight: 900; }
+    .ownership { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .ownership-card { padding: 16px; }
+    code { padding: 2px 5px; border-radius: 5px; background: #eee4d7; color: var(--cocoa); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .path-list { display: grid; gap: 7px; margin-top: 12px; }
+    .path-list code { display: block; overflow-wrap: anywhere; }
+    .check-list li { align-items: center; }
+    .check-list input { width: 18px; height: 18px; accent-color: var(--cocoa); }
+    .notes { width: 100%; min-height: 120px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; resize: vertical; background: var(--cream); color: var(--espresso); }
+    .footer { margin-top: 30px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .hidden { display: none !important; }
+    @media (max-width: 760px) {
+      .page { padding: 18px 14px 52px; }
+      .hero { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .track-grid, .ownership { grid-template-columns: 1fr; }
+      .progress { width: 100%; margin-left: 0; }
+      .progress-bar { flex: 1; }
+      .dependency-row { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); }
+      .phase { grid-template-columns: 40px minmax(0, 1fr); }
+      .phase > small { grid-column: 2; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Vit Store · Plan review</p>
+        <h1>Admin V1 Solid rewrite</h1>
+        <p class="lede">A small mobile admin for one iPhone user. The plan keeps useful product and order work, removes unused pages, fixes persistence and cache behavior, and splits the build into parallel work tracks. The replacement stays on staging until explicit cutover approval.</p>
+      </div>
+      <aside class="hero-note"><span>V1 surface</span><strong>4 routes</strong><span>Home · Products · Orders · Analytics</span></aside>
+    </header>
+
+    <nav class="toolbar" aria-label="Plan filters">
+      <button class="filter active" data-filter="all">Everything</button>
+      <button class="filter" data-filter="parallel">Parallel tracks</button>
+      <button class="filter" data-filter="integration">Integration</button>
+      <button class="filter" data-filter="cutover">Cutover</button>
+      <div class="progress"><span id="progress-label">0 / 0 checked</span><span class="progress-bar"><span id="progress-fill"></span></span></div>
+    </nav>
+
+    <section class="section" data-kind="all">
+      <div class="section-head"><div><p class="eyebrow">The shape</p><h2>What we are building</h2></div><p>Card Workspace for list screens. Single-Task Flow for product and order detail screens.</p></div>
+      <div class="summary-grid">
+        <article class="summary-card"><p class="eyebrow">Runtime</p><strong>Solid</strong><span>Vite · TanStack Router · Query</span></article>
+        <article class="summary-card"><p class="eyebrow">Mobile</p><strong>393×852</strong><span>iPhone-first layout</span></article>
+        <article class="summary-card"><p class="eyebrow">Shared</p><strong>packages/ui</strong><span>Kobalte behavior and tokens</span></article>
+        <article class="summary-card"><p class="eyebrow">Cache</p><strong>Analytics only</strong><span>Workers Cache for historical reads</span></article>
+      </div>
+    </section>
+
+    <section class="section" data-kind="parallel">
+      <div class="section-head"><div><p class="eyebrow">Parallel work</p><h2>Tracks that can run together</h2></div><p>Each track owns a path. The integration owner handles shared files and route wiring.</p></div>
+      <div class="track-grid">
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 0</p><h3>Current API and data audit</h3></div><span class="track-code">API</span></div><p>Keep the current admin tRPC procedures. Fix writes, order IDs, analytics ranges, fallback data, and cache purge boundaries.</p><small>Blocks integration</small><details><summary>Tasks</summary><ul class="task-list"><li>Map current procedures and response shapes.</li><li>Fix product and order persistence.</li><li>Define analytics cache keys and purge tags.</li><li>Add real database integration checks.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 1</p><h3>Shared Solid UI package</h3></div><span class="track-code">UI</span></div><p>Build small Kobalte wrappers, tokens, form states, focus behavior, and status tones.</p><small>Can start now</small><details><summary>Tasks</summary><ul class="task-list"><li>Button, field, input, select, drawer, dialog.</li><li>Badge, skeleton, empty, alert, toast.</li><li>44px targets and reduced motion.</li><li>Do not add business cards or pages.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 2</p><h3>Solid app shell</h3></div><span class="track-code">APP</span></div><p>Build the providers, session boundary, mobile navigation, desktop frame, and app states.</p><small>Needs UI exports</small><details><summary>Tasks</summary><ul class="task-list"><li>QueryClient and router providers.</li><li>Home, Products, Orders, Analytics routes.</li><li>Loading, error, not-found, and recovery states.</li><li>320px through 1440px checks.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 3</p><h3>Products feature</h3></div><span class="track-code">P</span></div><p>Cards, search, filters, detail, inline edit, form, images, stock, and cache updates.</p><small>Needs API names</small><details><summary>Done when</summary><ul class="task-list"><li>Create and reload keeps the product.</li><li>Edit updates list and detail.</li><li>Stock and image changes persist.</li><li>Dirty form and failure states work.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 4</p><h3>Orders feature</h3></div><span class="track-code">O</span></div><p>Card list, search, filters, detail, product thumbnails, status progression, and next actions.</p><small>Needs API names</small><details><summary>Done when</summary><ul class="task-list"><li>Alphanumeric IDs open correctly.</li><li>Status changes persist after reload.</li><li>List and detail agree after mutation.</li><li>Pending actions never use Workers Cache.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Tracks 5 + 6</p><h3>Home and Analytics</h3></div><span class="track-code">H+A</span></div><p>Home work queue and historical metrics can run together after the API shapes settle.</p><small>Parallel after API</small><details><summary>Tasks</summary><ul class="task-list"><li>Home: work queue, recent orders, low stock, quick actions.</li><li>Analytics: ranges, snapshot, trend, top products.</li><li>No fake data or zero-valued failure fallback.</li></ul></details></article>
+        <article class="panel track"><div class="track-top"><div><p class="eyebrow">Track 7</p><h3>Browser verification</h3></div><span class="track-code">QA</span></div><p>Use real development data to prove workflows, persistence, mobile layout, and cache behavior.</p><small>Starts with prototype</small><details><summary>Tasks</summary><ul class="task-list"><li>393x852 and 1440px screenshots.</li><li>Product and order write reload checks.</li><li>Keyboard, reduced motion, zoom, overflow.</li></ul></details></article>
+      </div>
+    </section>
+
+    <section class="section" data-kind="integration">
+      <div class="section-head"><div><p class="eyebrow">Dependencies</p><h2>Integration order</h2></div><p>Keep shared-file ownership narrow so workers can merge without rewriting each other’s code.</p></div>
+      <div class="panel dependency"><div class="dependency-row"><div class="dependency-step">1. Current API<br><small>persistence first</small></div><div class="arrow">→</div><div class="dependency-step">2. UI + shell<br><small>providers and routes</small></div><div class="arrow">→</div><div class="dependency-step">3. Products + Orders<br><small>parallel features</small></div><div class="arrow">→</div><div class="dependency-step">4. Home + Analytics<br><small>then browser proof</small></div></div></div>
+    </section>
+
+    <section class="section" data-kind="integration">
+      <div class="section-head"><div><p class="eyebrow">Ownership</p><h2>Files that need one owner</h2></div><p>Feature workers should not edit these shared files.</p></div>
+      <div class="ownership">
+        <article class="panel ownership-card"><h3>Integration owner only</h3><div class="path-list"><code>apps/admin-v2/package.json</code><code>apps/admin-v2/vite.config.ts</code><code>apps/admin-v2/src/main.tsx</code><code>apps/admin-v2/src/routes/routeTree.tsx</code><code>packages/api/src/routers/admin/index.ts</code><code>packages/ui/package.json</code><code>bun.lock</code></div><p style="margin-top:12px;color:var(--muted);font-size:13px;line-height:1.4">No new <code>admin.v1</code> namespace. Use and repair the current admin procedures.</p></article>
+        <article class="panel ownership-card"><h3>Feature-owned directories</h3><div class="path-list"><code>apps/admin-v2/src/features/products/</code><code>apps/admin-v2/src/features/orders/</code><code>apps/admin-v2/src/features/home/</code><code>apps/admin-v2/src/features/analytics/</code><code>apps/admin-v2/e2e/</code></div></article>
+      </div>
+    </section>
+
+    <section class="section" data-kind="all">
+      <div class="section-head"><div><p class="eyebrow">Mechanical rules</p><h2>Data and cache behavior</h2></div></div>
+      <div class="panel ownership-card">
+        <ul class="check-list">
+          <li><input type="checkbox" data-check="db"> Database is authoritative for every write.</li>
+          <li><input type="checkbox" data-check="query"> Components use query option factories, not inline request functions.</li>
+          <li><input type="checkbox" data-check="draft"> Forms own local drafts and reset from the saved response.</li>
+          <li><input type="checkbox" data-check="invalidations"> Each domain has one cache update and invalidation helper.</li>
+          <li><input type="checkbox" data-check="analytics-cache"> Workers Cache only stores authenticated analytics snapshots after auth.</li>
+          <li><input type="checkbox" data-check="fresh"> Pending orders, inventory, payments, and mutations stay fresh.</li>
+          <li><input type="checkbox" data-check="errors"> Transport errors and expected domain errors render differently.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" data-kind="cutover">
+      <div class="section-head"><div><p class="eyebrow">Cutover</p><h2>Route completion checklist</h2></div><p>Check these before the new admin replaces the current one.</p></div>
+      <div class="panel ownership-card">
+        <ul class="check-list">
+          <li><input type="checkbox" data-check="staging"> Replacement deploys to staging only until explicit cutover approval.</li>
+          <li><input type="checkbox" data-check="mobile"> All V1 routes work at 393x852 with no horizontal scroll.</li>
+          <li><input type="checkbox" data-check="keyboard"> Keyboard traversal and visible focus work.</li>
+          <li><input type="checkbox" data-check="states"> Loading, empty, error, retry, and success states exist.</li>
+          <li><input type="checkbox" data-check="persist"> Product and order writes persist after a full reload.</li>
+          <li><input type="checkbox" data-check="localization"> No raw enums or library validation strings reach the UI.</li>
+          <li><input type="checkbox" data-check="analytics"> Analytics ranges produce correct values and cache invalidation works.</li>
+          <li><input type="checkbox" data-check="iphone"> The real admin completes the main workflows on the iPhone.</li>
+          <li><input type="checkbox" data-check="delete-old"> Old admin routes and unused procedures are removed after cutover.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" data-kind="all">
+      <div class="section-head"><div><p class="eyebrow">Review notes</p><h2>Write decisions here</h2></div></div>
+      <textarea class="notes" id="notes" placeholder="Questions, changes, or decisions..."></textarea>
+      <p class="footer">Plan source: <code>plans/admin-v1-solid-rewrite.md</code>. This review page stores checklist state and notes in this browser only.</p>
+    </section>
+  </main>
+  <script>
+    const filters = [...document.querySelectorAll('[data-filter]')];
+    const sections = [...document.querySelectorAll('[data-kind]')];
+    const checks = [...document.querySelectorAll('[data-check]')];
+    const notes = document.querySelector('#notes');
+    const progressLabel = document.querySelector('#progress-label');
+    const progressFill = document.querySelector('#progress-fill');
+    const storageKey = 'vit-admin-v1-plan';
+    const state = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    checks.forEach(check => { check.checked = state.checks?.[check.dataset.check] === true; });
+    notes.value = state.notes || '';
+    function save() {
+      localStorage.setItem(storageKey, JSON.stringify({ checks: Object.fromEntries(checks.map(check => [check.dataset.check, check.checked])), notes: notes.value }));
+      const done = checks.filter(check => check.checked).length;
+      progressLabel.textContent = `${done} / ${checks.length} checked`;
+      progressFill.style.width = `${checks.length ? done / checks.length * 100 : 0}%`;
+    }
+    function applyFilter(kind) {
+      filters.forEach(filter => filter.classList.toggle('active', filter.dataset.filter === kind));
+      sections.forEach(section => section.classList.toggle('hidden', kind !== 'all' && section.dataset.kind !== kind));
+    }
+    filters.forEach(filter => filter.addEventListener('click', () => applyFilter(filter.dataset.filter)));
+    checks.forEach(check => check.addEventListener('change', save));
+    notes.addEventListener('input', save);
+    save();
+  </script>
+</body>
+</html>
