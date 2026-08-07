@@ -4,7 +4,10 @@ import {
 	useSuspenseQuery,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
+import type {
+	orderStatus as orderStatusConstants,
+	paymentStatus as paymentStatusConstants,
+} from "@vit/shared/constants";
 import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +38,8 @@ import BatchShipOrderDialog, {
 	type BatchShipResult,
 } from "./batch-ship-order-dialog";
 import OrderCard from "./order-card";
+
+const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
 function trpcErrorMessage(error: unknown): string {
 	if (error instanceof Error) return error.message;
@@ -74,18 +79,24 @@ export default function OrdersList({
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
 			page,
+			includeAllStatuses: orderStatus === "all",
 			paymentStatus: paymentStatus as
 				| (typeof paymentStatusConstants)[number]
 				| undefined,
 			pageSize,
 			sortField,
 			sortDirection,
-			orderStatus: orderStatus as
-				| ("pending" | "shipped" | "delivered" | "cancelled" | "refunded")
-				| undefined,
+			orderStatus:
+				orderStatus === "all" || orderStatus === "active"
+					? undefined
+					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
+			orderStatuses:
+				orderStatus === "active" ? [...activeOrderStatuses] : undefined,
 			searchTerm,
 			date,
 		}),
+		refetchInterval: 15_000,
+		refetchOnWindowFocus: true,
 	});
 	const orders = ordersData.orders;
 	const pagination = ordersData.pagination;

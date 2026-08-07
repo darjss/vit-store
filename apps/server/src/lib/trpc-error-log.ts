@@ -1,3 +1,5 @@
+import type { RequestLogger } from "evlog";
+
 const MAX_CAUSE_DEPTH = 8;
 const MAX_STACK_FRAMES = 30;
 const MAX_STACK_FRAME_LENGTH = 500;
@@ -74,4 +76,27 @@ export function operatorTrpcError(error: Error): Error {
 		});
 	}
 	return projected;
+}
+
+export function logTrpcError(
+	log: RequestLogger,
+	event: string,
+	path: string | undefined,
+	error: Error & { code?: string },
+): void {
+	const context = log.getContext();
+	const fields = {
+		event,
+		trpc: { path, code: error.code },
+	};
+
+	// Procedure handlers may have already recorded the original database error.
+	// Logging its wrapped tRPC error again makes evlog recursively merge Error
+	// causes, including read-only properties on postgres errors.
+	if (context.error !== undefined) {
+		log.set(fields);
+		return;
+	}
+
+	log.error(operatorTrpcError(error), fields);
 }
