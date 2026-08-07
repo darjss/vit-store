@@ -632,13 +632,21 @@ export const orderQueries = {
 		async updateOrderStatus(
 			id: number,
 			status: OrderStatus,
-			options?: { deliveryProvider?: DeliveryProvider },
+			options?: {
+				deliveryProvider?: DeliveryProvider;
+				addressZoneId?: number | null;
+			},
 		) {
-			const patch: { status: OrderStatus; deliveryProvider?: DeliveryProvider } = {
-				status,
-			};
+			const patch: {
+				status: OrderStatus;
+				deliveryProvider?: DeliveryProvider;
+				addressZoneId?: number | null;
+			} = { status };
 			if (options?.deliveryProvider !== undefined) {
 				patch.deliveryProvider = options.deliveryProvider;
+			}
+			if (options?.addressZoneId !== undefined) {
+				patch.addressZoneId = options.addressZoneId;
 			}
 			await db()
 				.update(OrdersTable)

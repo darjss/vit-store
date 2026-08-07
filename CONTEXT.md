@@ -105,14 +105,15 @@ resolution → notes collection → customer confirmation, then the `addOrder`
 tool. The agent never computes totals itself — `addOrder` adds the 6,000 MNT
 delivery fee.
 
-**Delivery zone resolution**: customers should provide a natural address, not
-manually choose a TU Delivery zone. A shared resolver maps address text to
-`addressZoneId` using Google Maps/Places normalization, static Ulaanbaatar
-landmark/zone knowledge generated from historical orders, historical order
-examples, and a model ranker. Resolver accuracy and rollout are tested as a
-separate workstream from the Messenger chatbot. Until that workstream proves
-confidence thresholds, the Messenger chatbot shows top candidates for customer
-confirmation rather than silently choosing a zone.
+**Delivery zone resolution**: Storefront Customers provide a natural address
+and do not choose a TU Delivery zone. Storefront Orders keep `addressZoneId`
+NULL until an admin selects a zone while sending the Order to TU Delivery; that
+send stores the exact selected zone with no numeric fallback. Messenger may
+still collect and submit a Customer-confirmed zone. A shared resolver may rank
+or prefill zone choices using Google Maps/Places normalization, static
+Ulaanbaatar landmark knowledge, historical Order examples, and a model ranker,
+but the admin dispatch value remains explicit. Resolver accuracy stays a
+separate workstream from the Messenger chatbot.
 
 **Model**: one agent, one model — `cloudflare/@cf/moonshotai/kimi-k2.6` via
 Workers AI (no API key, AI Gateway on by default). Same model for the vision
