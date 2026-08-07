@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation } from "@tanstack/solid-query";
 import { Image } from "@unpic/solid";
 import type { CustomerSelectType, newOrderType } from "@vit/shared";
 import { phoneSchema } from "@vit/shared";
@@ -34,11 +34,6 @@ import CheckoutSubmitStatus, {
 } from "./checkout-submit-status";
 import DeliveryInfoSheet from "./delivery-info-sheet";
 
-type DeliveryZone = {
-	Id: number;
-	zoneName: string;
-};
-
 type Step = "delivery" | "payment";
 
 type PaymentInfo = {
@@ -61,11 +56,6 @@ const stepExit = { duration: 0.2, easing: EASE_IN_OUT };
 const checkoutValidators = v.object({
 	phoneNumber: phoneSchema,
 	address: v.pipe(v.string(), v.minLength(5, "Хаягаа бичнэ үү")),
-	addressZoneId: v.pipe(
-		v.number(),
-		v.integer(),
-		v.minValue(1, "Хаягийн бүс сонгоно уу"),
-	),
 	notes: v.string(),
 });
 
@@ -96,34 +86,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 	let invalidPulseTimer: number | undefined;
 
 	onCleanup(() => window.clearTimeout(invalidPulseTimer));
-
-	const addressZonesQuery = useQuery(
-		() => ({
-			queryKey: ["delivery-address-zones"],
-			queryFn: () => api.order.getDeliveryAddressZones.query(),
-			staleTime: 1000 * 60 * 60 * 24,
-		}),
-		() => queryClient,
-	);
-
-	const addressZoneOptions = createMemo(() =>
-		((addressZonesQuery.data || []) as DeliveryZone[]).map((zone) => ({
-			label: zone.zoneName,
-			value: zone.Id,
-		})),
-	);
-	const deliveryZonesUnavailable = createMemo(
-		() =>
-			addressZonesQuery.data === undefined || addressZoneOptions().length === 0,
-	);
-	const deliveryZonesReady = createMemo(
-		() => !addressZonesQuery.isLoading && addressZoneOptions().length > 0,
-	);
-	const deliveryZoneErrorMessage = createMemo(() =>
-		deliveryZonesReady()
-			? "Хүргэлтийн бүсүүдийг шинэчилж чадсангүй. Хадгалсан мэдээллийг ашиглаж байна."
-			: "Хүргэлтийн бүсүүдийг ачаалж чадсангүй.",
-	);
 
 	const mutation = useMutation(
 		() => ({
@@ -183,7 +145,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		defaultValues: {
 			phoneNumber: props.user?.phone?.toString() || "",
 			address: props.user?.address || "",
-			addressZoneId: props.user?.addressZoneId || 0,
 			notes: "",
 		},
 		// Keep the submit button enabled even when fields have validation errors.
@@ -230,7 +191,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		if (props.user) {
 			form.setFieldValue?.("phoneNumber", props.user.phone?.toString() || "");
 			form.setFieldValue?.("address", props.user.address || "");
-			form.setFieldValue?.("addressZoneId", props.user.addressZoneId || 0);
 		}
 	});
 
@@ -465,67 +425,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																)}
 															/>
 
-															{/* Zone + info */}
-															<div class="space-y-2">
-																<form.AppField
-																	name="addressZoneId"
-																	children={(field) => (
-																		<field.FormSelectField
-																			label="Хаягийн бүс"
-																			placeholder={
-																				addressZonesQuery.isLoading
-																					? "Бүсүүд уншиж байна..."
-																					: deliveryZonesUnavailable()
-																						? "Бүс сонгох боломжгүй"
-																						: "Хаягийн бүс сонгох"
-																			}
-																			options={addressZoneOptions()}
-																			disabled={!deliveryZonesReady()}
-																		/>
-																	)}
-																/>
-																<Show when={addressZonesQuery.isLoading}>
-																	<p
-																		class="text-muted-foreground text-xs"
-																		aria-live="polite"
-																	>
-																		Хүргэлтийн бүсүүдийг уншиж байна...
-																	</p>
-																</Show>
-																<Show when={addressZonesQuery.isError}>
-																	<div
-																		class="flex items-center justify-between gap-2 text-destructive text-xs"
-																		role="alert"
-																	>
-																		<span>{deliveryZoneErrorMessage()}</span>
-																		<button
-																			type="button"
-																			onClick={() =>
-																				addressZonesQuery.refetch()
-																			}
-																			class="min-h-11 shrink-0 font-bold underline underline-offset-2"
-																		>
-																			Дахин оролдох
-																		</button>
-																	</div>
-																</Show>
-																<Show
-																	when={
-																		!addressZonesQuery.isLoading &&
-																		!addressZonesQuery.isError &&
-																		addressZonesQuery.data !== undefined &&
-																		addressZoneOptions().length === 0
-																	}
-																>
-																	<p
-																		class="text-muted-foreground text-xs"
-																		aria-live="polite"
-																	>
-																		Одоогоор хүргэлтийн бүс алга байна.
-																	</p>
-																</Show>
-															</div>
-
 															{/* Address */}
 															<form.AppField
 																name="address"
@@ -597,8 +496,7 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																			loadingContent={<CheckoutSubmitStatus />}
 																			disabled={
 																				mutation.isPending ||
-																				Boolean(paymentInfo()) ||
-																				!deliveryZonesReady()
+																				Boolean(paymentInfo())
 																			}
 																		>
 																			<Show

@@ -1,18 +1,13 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import {
-	ChevronDown,
-	Loader2,
-	Package,
-	Truck,
-	X,
-} from "lucide-react";
+	useMutation,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import type { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
+import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-	paymentStatus as paymentStatusConstants,
-	PRODUCT_PER_PAGE,
-} from "@vit/shared/constants";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +31,9 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trpc } from "@/utils/trpc";
+import BatchShipOrderDialog, {
+	type BatchShipResult,
+} from "./batch-ship-order-dialog";
 import OrderCard from "./order-card";
 
 function trpcErrorMessage(error: unknown): string {
@@ -67,10 +65,11 @@ export default function OrdersList({
 	const queryClient = useQueryClient();
 	const navigate = useNavigate({ from: "/orders" });
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+	const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
 	const [batchFailed, setBatchFailed] = useState<
 		{ orderNumber: string; message: string }[] | null
 	>(null);
-	const [isBatchSending, setIsBatchSending] = useState(false);
+	const [isBatchUpdating, setIsBatchUpdating] = useState(false);
 
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
@@ -92,12 +91,16 @@ export default function OrdersList({
 	const pagination = ordersData.pagination;
 
 	const pendingOnPage = orders.filter((o) => o.status === "pending");
+	const selectedPendingOrders = pendingOnPage.filter((order) =>
+		selectedIds.has(order.id),
+	);
 	const allPendingSelected =
 		pendingOnPage.length > 0 &&
 		pendingOnPage.every((o) => selectedIds.has(o.id));
 
 	useEffect(() => {
 		setSelectedIds(new Set());
+		setIsBatchDialogOpen(false);
 	}, [
 		page,
 		pageSize,
@@ -109,9 +112,6 @@ export default function OrdersList({
 		sortDirection,
 	]);
 
-	const sendTuMutation = useMutation(
-		trpc.order.shipOrder.mutationOptions(),
-	);
 	const updateStatusMutation = useMutation(
 		trpc.order.updateOrderStatus.mutationOptions(),
 	);
@@ -132,65 +132,48 @@ export default function OrdersList({
 		});
 	};
 
+	const clearSelection = () => {
+		setSelectedIds(new Set());
+		setIsBatchDialogOpen(false);
+	};
+
 	const toggleSelectAllPending = () => {
-		setSelectedIds((prev) => {
-			if (allPendingSelected) return new Set();
-			return new Set(pendingOnPage.map((o) => o.id));
-		});
+		setSelectedIds(
+			allPendingSelected
+				? new Set()
+				: new Set(pendingOnPage.map((order) => order.id)),
+		);
 	};
 
-	const sendOneTuWithRetry = async (orderId: number) => {
-		let lastMessage = "";
-		for (let attempt = 1; attempt <= 2; attempt++) {
-			try {
-				await sendTuMutation.mutateAsync({ orderId });
-				return { ok: true as const };
-			} catch (e) {
-				lastMessage = trpcErrorMessage(e);
-				if (attempt < 2) {
-					await new Promise((r) => setTimeout(r, 1000));
-				}
-			}
-		}
-		return { ok: false as const, message: lastMessage };
-	};
-
-	const handleSendTuBatch = async () => {
-		if (selectedIds.size === 0) return;
-		setIsBatchSending(true);
-		const ids = [...selectedIds];
-		const failed: { orderNumber: string; message: string }[] = [];
-		for (const id of ids) {
-			const order = orders.find((o) => o.id === id);
-			const result = await sendOneTuWithRetry(id);
-			if (!result.ok) {
-				failed.push({
-					orderNumber: order?.orderNumber ?? String(id),
-					message: result.message,
-				});
-			}
-		}
+	const handleBatchShipComplete = async ({
+		total,
+		failed,
+	}: BatchShipResult) => {
 		await queryClient.invalidateQueries(
 			trpc.order.getPaginatedOrders.queryOptions({}),
 		);
-		setSelectedIds(new Set());
-		setIsBatchSending(false);
 
-		const okCount = ids.length - failed.length;
+		const okCount = total - failed.length;
 		if (failed.length === 0) {
+			clearSelection();
 			toast.success(`${okCount} захиалгыг TU руу илгээлээ`);
-		} else if (okCount === 0) {
+			return;
+		}
+
+		setSelectedIds(new Set(failed.map((row) => row.orderId)));
+		setBatchFailed(
+			failed.map(({ orderNumber, message }) => ({ orderNumber, message })),
+		);
+		if (okCount === 0) {
 			toast.error("Илгээлт амжилтгүй");
-			setBatchFailed(failed);
 		} else {
 			toast.warning(`${okCount} амжилттай, ${failed.length} алдаатай`);
-			setBatchFailed(failed);
 		}
 	};
 
 	const handleMarkSelfShipped = async () => {
 		if (selectedIds.size === 0) return;
-		setIsBatchSending(true);
+		setIsBatchUpdating(true);
 		const ids = [...selectedIds];
 		const failed: { orderNumber: string; message: string }[] = [];
 		await Promise.all(
@@ -209,8 +192,8 @@ export default function OrdersList({
 		await queryClient.invalidateQueries(
 			trpc.order.getPaginatedOrders.queryOptions({}),
 		);
-		setSelectedIds(new Set());
-		setIsBatchSending(false);
+		clearSelection();
+		setIsBatchUpdating(false);
 
 		if (failed.length === 0) {
 			toast.success("Сонгосон захиалгыг илгээсэн гэж тэмдэглэлээ");
@@ -220,7 +203,7 @@ export default function OrdersList({
 		}
 	};
 
-	const canTuSend = selectedIds.size > 0 && !isBatchSending;
+	const canTuSend = selectedIds.size > 0 && !isBatchUpdating;
 	const toolbarOpen = selectedIds.size > 0;
 
 	return (
@@ -228,8 +211,12 @@ export default function OrdersList({
 			{/* Batch select header */}
 			{pendingOnPage.length > 0 && (
 				<div className="flex items-center gap-3 border-2 border-border bg-card px-4 py-3 shadow-hard-sm">
-					<label className="flex cursor-pointer select-none items-center gap-3 text-sm">
+					<label
+						htmlFor="select-all-pending-orders"
+						className="flex cursor-pointer select-none items-center gap-3 text-sm"
+					>
 						<Checkbox
+							id="select-all-pending-orders"
 							checked={allPendingSelected}
 							onCheckedChange={() => toggleSelectAllPending()}
 							aria-label="Энэ хуудсан дээрх бүх хүлээгдэж буй захиалгыг сонгох"
@@ -255,16 +242,16 @@ export default function OrdersList({
 						selection={
 							order.status === "pending"
 								? {
-									checked: selectedIds.has(order.id),
-									onCheckedChange: (checked) => {
-										setSelectedIds((prev) => {
-											const next = new Set(prev);
-											if (checked) next.add(order.id);
-											else next.delete(order.id);
-											return next;
-										});
-									},
-								}
+										checked: selectedIds.has(order.id),
+										onCheckedChange: (checked) => {
+											setSelectedIds((prev) => {
+												const next = new Set(prev);
+												if (checked) next.add(order.id);
+												else next.delete(order.id);
+												return next;
+											});
+										},
+									}
 								: undefined
 						}
 					/>
@@ -273,9 +260,9 @@ export default function OrdersList({
 
 			{/* Empty state */}
 			{orders.length === 0 && (
-				<div className="flex flex-col items-center justify-center border-2 border-dashed border-border py-16">
+				<div className="flex flex-col items-center justify-center border-2 border-border border-dashed py-16">
 					<Package className="mb-3 h-12 w-12 text-muted-foreground" />
-					<p className="font-heading font-bold text-lg">Захиалга олдсонгүй</p>
+					<p className="font-bold font-heading text-lg">Захиалга олдсонгүй</p>
 					<p className="mt-1 text-muted-foreground text-sm">
 						Шүүлтүүр эсвэл хайлтаа өөрчлөөд дахин оролдоно уу
 					</p>
@@ -304,16 +291,16 @@ export default function OrdersList({
 					<TooltipProvider delayDuration={400}>
 						<div
 							className={[
-								"fixed z-40 border-t-2 border-border bg-card/95 backdrop-blur-md",
+								"fixed z-40 border-border border-t-2 bg-card/95 backdrop-blur-md",
 								"inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom,0px)]",
 								"shadow-[0_-8px_28px_rgba(0,0,0,0.08)]",
-								"sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(100%-2rem,28rem)] sm:-translate-x-1/2",
+								"sm:-translate-x-1/2 sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(100%-2rem,28rem)]",
 								"sm:rounded-none sm:border-2 sm:shadow-hard",
 							].join(" ")}
 						>
 							<div className="flex items-center justify-between gap-4 px-4 py-3">
 								<div className="min-w-0">
-									<p className="font-heading font-bold text-sm">
+									<p className="font-bold font-heading text-sm">
 										{selectedIds.size} сонгогдсон
 									</p>
 									<p className="text-muted-foreground text-xs">
@@ -324,8 +311,8 @@ export default function OrdersList({
 									<Button
 										variant="ghost"
 										size="sm"
-										disabled={isBatchSending}
-										onClick={() => setSelectedIds(new Set())}
+										disabled={isBatchUpdating}
+										onClick={clearSelection}
 										className="h-10"
 									>
 										Цэвэрлэх
@@ -336,16 +323,18 @@ export default function OrdersList({
 												<span className="inline-flex">
 													<Button
 														size="sm"
-														className="h-10 gap-2 rounded-r-none border-r-2 border-border"
+														className="h-10 gap-2 rounded-r-none border-border border-r-2"
 														disabled={!canTuSend}
-														onClick={() => void handleSendTuBatch()}
+														onClick={() => setIsBatchDialogOpen(true)}
 													>
-														{isBatchSending ? (
+														{isBatchUpdating ? (
 															<Loader2 className="h-4 w-4 animate-spin" />
 														) : (
 															<Truck className="h-4 w-4" />
 														)}
-														<span className="hidden sm:inline">TU руу илгээх</span>
+														<span className="hidden sm:inline">
+															TU руу илгээх
+														</span>
 														<span className="sm:hidden">Илгээх</span>
 													</Button>
 												</span>
@@ -366,9 +355,7 @@ export default function OrdersList({
 												<Button
 													size="sm"
 													className="h-10 rounded-l-none px-3"
-													disabled={
-														selectedIds.size === 0 || isBatchSending
-													}
+													disabled={selectedIds.size === 0 || isBatchUpdating}
 													aria-label="Нэмэлт сонголт"
 												>
 													<ChevronDown className="h-4 w-4" />
@@ -393,6 +380,13 @@ export default function OrdersList({
 					</TooltipProvider>
 				</>
 			)}
+
+			<BatchShipOrderDialog
+				open={isBatchDialogOpen}
+				orders={selectedPendingOrders}
+				onOpenChange={setIsBatchDialogOpen}
+				onComplete={handleBatchShipComplete}
+			/>
 
 			{/* Batch error dialog */}
 			<Dialog
