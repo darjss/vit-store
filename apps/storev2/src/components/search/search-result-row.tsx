@@ -29,8 +29,7 @@ interface SearchResultRowProps {
 
 const SearchResultRow = (props: SearchResultRowProps) => {
 	const [imageFailed, setImageFailed] = createSignal(false);
-	// Same canonical stock state as the catalog/PDP cards so a row that says
-	// "Нөөцтэй" never clicks through to a PDP that says "Цөөхөн үлдсэн".
+	// Keep low and out-of-stock states aligned with the catalog and product page.
 	const stockState = createMemo(() => productStockState(props.product.stock));
 	const isInStock = () => stockState() !== "out";
 	const isLowStock = () => stockState() === "low";
@@ -111,14 +110,7 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 							</span>
 						}
 					>
-						<Show
-							when={isLowStock()}
-							fallback={
-								<span class="rounded-full bg-success/30 px-2 py-0.5 font-semibold text-[10px] text-success uppercase tracking-wide">
-									Нөөцтэй
-								</span>
-							}
-						>
+						<Show when={isLowStock()}>
 							<span class="low-stock-indicator rounded-full px-2 py-0.5 font-semibold text-[10px]">
 								Цөөхөн үлдсэн
 							</span>
