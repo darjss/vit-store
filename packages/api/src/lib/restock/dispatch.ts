@@ -3,7 +3,6 @@ import type { RequestLogger } from "evlog";
 import { createLogger } from "evlog";
 import { db } from "~/db/client";
 import { ProductsTable, RestockSubscriptionsTable } from "~/db/schema";
-import { shouldRetryRestockDelivery } from "~/lib/restock/delivery-core";
 import { sendRestockNotification } from "~/lib/restock/send";
 
 const MAX_OPEN_PRODUCTS_PER_CONTACT = 5;
@@ -151,6 +150,13 @@ class ProviderTimeoutError extends Error {
 	}
 }
 
+function shouldRetryDelivery(input: {
+	channel: "sms" | "email";
+	providerResult: "failed" | "ambiguous";
+}) {
+	return input.channel === "email" && input.providerResult === "failed";
+}
+
 async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		let settled = false;
@@ -210,7 +216,7 @@ async function deliverCandidate(
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (
-			shouldRetryRestockDelivery({
+			shouldRetryDelivery({
 				channel: claimed.channel,
 				providerResult:
 					error instanceof ProviderTimeoutError ? "ambiguous" : "failed",
