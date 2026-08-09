@@ -62,7 +62,6 @@ async function claimSubscription(subscriptionId: number) {
 			id: RestockSubscriptionsTable.id,
 			channel: RestockSubscriptionsTable.channel,
 			contact: RestockSubscriptionsTable.contact,
-			deliveryKey: RestockSubscriptionsTable.deliveryKey,
 			attemptCount: RestockSubscriptionsTable.attemptCount,
 		});
 	return claimed ? { ...claimed, claimToken: token } : null;
@@ -215,7 +214,6 @@ async function deliverCandidate(
 				productName: candidate.productName,
 				productSlug: candidate.productSlug,
 				productId: candidate.productId,
-				deliveryKey: claimed.deliveryKey,
 			}),
 		);
 		await finishClaim({

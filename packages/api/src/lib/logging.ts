@@ -71,3 +71,36 @@ export function summarizeLogValue(value: unknown, depth = 0): unknown {
 export function summarizeTrpcPayload(value: unknown): unknown {
 	return summarizeLogValue(value);
 }
+
+export function summarizeTrpcInputForLog(path: string, input: unknown) {
+	if (!input || typeof input !== "object") return summarizeTrpcPayload(input);
+	if (path === "product.subscribeToRestock" && "productId" in input) {
+		return { product_id: input.productId };
+	}
+	if (
+		path === "product.requestGuestRestockConfirmation" &&
+		"productId" in input &&
+		"channel" in input
+	) {
+		return { product_id: input.productId, channel: input.channel };
+	}
+	if (path === "product.confirmGuestRestockSubscription") {
+		return { confirmation: "redacted" };
+	}
+	return summarizeTrpcPayload(input);
+}
+
+export function summarizeTrpcOutputForLog(path: string, output: unknown) {
+	if (path === "product.requestGuestRestockConfirmation") {
+		return { challenge_created: true };
+	}
+	if (
+		path === "product.confirmGuestRestockSubscription" ||
+		path === "product.subscribeToRestock"
+	) {
+		return output && typeof output === "object" && "alreadySubscribed" in output
+			? { success: true, already_subscribed: output.alreadySubscribed }
+			: { success: true };
+	}
+	return summarizeTrpcPayload(output);
+}

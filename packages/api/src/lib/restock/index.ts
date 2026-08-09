@@ -14,9 +14,10 @@ export {
 } from "~/lib/restock/normalize";
 export { sendRestockNotification } from "~/lib/restock/send";
 export {
+	createVerifiedRestockSubscription,
 	getRestockWaitCount,
 	listRestockWaitCounts,
 	listRestockWaitlist,
-	subscribeToRestock,
+	subscribeVerifiedPhoneToRestock,
 } from "~/lib/restock/subscribe";
 export { buildProductPdpUrl, getStorefrontBaseUrl } from "~/lib/restock/url";
