@@ -1,7 +1,7 @@
-import { env } from "cloudflare:workers";
-import { Redis, s, type InferFilterFromSchema } from "@upstash/redis";
+import { type InferFilterFromSchema, Redis, s } from "@upstash/redis";
 import {
 	expandBrandAliases,
+	expandSymptomIngredients,
 	expandVitaminLetters,
 	normalizeSearchText,
 } from "~/lib/product-search/text";
@@ -11,8 +11,8 @@ import type {
 	ProductSearchInput,
 	ProductSearchPage,
 	ProductSearchRebuildReason,
-	ProductSearchStatus,
 	ProductSearchSort,
+	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
 
@@ -104,14 +104,7 @@ const emptyStatus = (): ProductSearchStatus => ({
 const errorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : "Unknown error";
 
-const parseJson = <T>(value: unknown): T | null => {
-	if (value == null) return null;
-	if (typeof value === "string") return JSON.parse(value) as T;
-	return value as T;
-};
-
-const readJson = async <T>(redis: Redis, key: string) =>
-	parseJson<T>(await redis.get(key));
+const readJson = <T>(redis: Redis, key: string) => redis.get<T>(key);
 
 const prepareQuery = (query: string) => {
 	const normalized = normalizeSearchText(query);
@@ -137,6 +130,21 @@ const exactTokenFilter = (token: string): ProductSearchClause => ({
 	],
 });
 
+const prefixTokenFilter = (token: string): ProductSearchClause => ({
+	$should: [
+		{ nameWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 } },
+		{
+			nameMnWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 },
+		},
+		{ brand: { $phrase: { value: token, prefix: true }, $boost: 9 } },
+		{ dosage: { $phrase: { value: token, prefix: true }, $boost: 9 } },
+		{ aliases: { $phrase: { value: token, prefix: true }, $boost: 7 } },
+		{ category: { $phrase: { value: token, prefix: true }, $boost: 4 } },
+		{ intentTerms: { $phrase: { value: token, prefix: true }, $boost: 3 } },
+		{ tags: { $phrase: { value: token, prefix: true }, $boost: 2 } },
+	],
+});
+
 const smartTokenFilter = (token: string): ProductSearchClause => ({
 	$should: [
 		{ nameWithBrand: { $smart: token, $boost: 12 } },
@@ -158,14 +166,27 @@ export const buildProductSearchFilter = (
 	filters?: ProductSearchFilters,
 ): ProductSearchFilter => {
 	const { normalized, tokens } = prepareQuery(query);
+	const symptomBoosts: ProductSearchClause[] = expandSymptomIngredients(
+		query,
+	).flatMap((term, index) => {
+		const boost = Math.max(16 - index * 2, 6);
+		return [
+			{ nameWithBrand: { $smart: term, $boost: boost } },
+			{ nameMnWithBrand: { $smart: term, $boost: boost } },
+			{ aliases: { $smart: term, $boost: boost - 2 } },
+		];
+	});
 	const must: ProductSearchClause[] = [
 		{ generation: { $eq: generation } },
 		{ status: { $eq: "active" } },
-		...tokens.map((token) =>
-			token.length <= 1 || /^\d+$/.test(token)
-				? exactTokenFilter(token)
-				: smartTokenFilter(token),
-		),
+		...tokens.map((token) => {
+			if (token.length <= 1 || /^\d+$/.test(token)) {
+				return exactTokenFilter(token);
+			}
+			return token.length <= 3
+				? prefixTokenFilter(token)
+				: smartTokenFilter(token);
+		}),
 	];
 
 	if (filters?.brandId != null) {
@@ -199,6 +220,7 @@ export const buildProductSearchFilter = (
 			{ brand: { $phrase: { value: normalized, slop: 0 }, $boost: 14 } },
 			{ dosage: { $phrase: { value: normalized, slop: 0 }, $boost: 14 } },
 			{ aliases: { $phrase: { value: normalized, slop: 0 }, $boost: 10 } },
+			...symptomBoosts,
 			{ inStock: { $eq: true, $boost: 1.05 } },
 		],
 	};
@@ -284,6 +306,46 @@ const scanProductKeys = async (
 	return keys;
 };
 
+const writeGeneration = async (
+	redis: Redis,
+	namespace: ProductSearchNamespace,
+	documents: ProductSearchDocument[],
+	generation: string,
+) => {
+	for (let offset = 0; offset < documents.length; offset += WRITE_BATCH_SIZE) {
+		const pipeline = redis.pipeline();
+		for (const document of documents.slice(offset, offset + WRITE_BATCH_SIZE)) {
+			const indexed: IndexedProductSearchDocument = {
+				...document,
+				generation,
+			};
+			pipeline.set(
+				`${namespace.productKeyPrefix}${generation}:${document.id}`,
+				JSON.stringify(indexed),
+			);
+		}
+		await pipeline.exec();
+	}
+};
+
+const expireStaleGenerations = async (
+	redis: Redis,
+	namespace: ProductSearchNamespace,
+	activeGeneration: string,
+) => {
+	const staleKeys = (await scanProductKeys(redis, namespace)).filter(
+		(key) =>
+			!key.startsWith(`${namespace.productKeyPrefix}${activeGeneration}:`),
+	);
+	for (let offset = 0; offset < staleKeys.length; offset += WRITE_BATCH_SIZE) {
+		const pipeline = redis.pipeline();
+		for (const key of staleKeys.slice(offset, offset + WRITE_BATCH_SIZE)) {
+			pipeline.expire(key, STALE_GENERATION_TTL_SECONDS);
+		}
+		await pipeline.exec();
+	}
+};
+
 export const createProductSearchEngine = (
 	redis: Redis,
 	namespace: ProductSearchNamespace = productionNamespace,
@@ -332,9 +394,7 @@ export const createProductSearchEngine = (
 			const totalPages = Math.ceil(totalCount / pageSize);
 
 			return {
-				items: hits.map((hit) =>
-					toSearchResult(hit.data as IndexedProductSearchDocument),
-				),
+				items: hits.map((hit) => toSearchResult(hit.data)),
 				pagination: {
 					page,
 					pageSize,
@@ -374,27 +434,7 @@ export const createProductSearchEngine = (
 					existsOk: true,
 				});
 
-				for (
-					let offset = 0;
-					offset < documents.length;
-					offset += WRITE_BATCH_SIZE
-				) {
-					const pipeline = redis.pipeline();
-					for (const document of documents.slice(
-						offset,
-						offset + WRITE_BATCH_SIZE,
-					)) {
-						const indexed: IndexedProductSearchDocument = {
-							...document,
-							generation,
-						};
-						pipeline.set(
-							`${namespace.productKeyPrefix}${generation}:${document.id}`,
-							JSON.stringify(indexed),
-						);
-					}
-					await pipeline.exec();
-				}
+				await writeGeneration(redis, namespace, documents, generation);
 				await index().waitIndexing();
 
 				const generationFilter: ProductSearchFilter = {
@@ -431,26 +471,19 @@ export const createProductSearchEngine = (
 				transaction.set(namespace.statusKey, JSON.stringify(status));
 				await transaction.exec();
 
-				const staleKeys = (await scanProductKeys(redis, namespace)).filter(
-					(key) =>
-						!key.startsWith(`${namespace.productKeyPrefix}${generation}:`),
-				);
-				for (
-					let offset = 0;
-					offset < staleKeys.length;
-					offset += WRITE_BATCH_SIZE
-				) {
-					const pipeline = redis.pipeline();
-					for (const key of staleKeys.slice(
-						offset,
-						offset + WRITE_BATCH_SIZE,
-					)) {
-						pipeline.expire(key, STALE_GENERATION_TTL_SECONDS);
-					}
-					await pipeline.exec();
+				try {
+					await expireStaleGenerations(redis, namespace, generation);
+					return status;
+				} catch (cleanupError) {
+					const degradedStatus = {
+						...status,
+						lastError: `Stale index cleanup pending: ${errorMessage(cleanupError)}`,
+					};
+					await redis
+						.set(namespace.statusKey, JSON.stringify(degradedStatus))
+						.catch(() => undefined);
+					return degradedStatus;
 				}
-
-				return status;
 			} catch (error) {
 				const failedStatus: ProductSearchStatus = {
 					...previousStatus,
@@ -484,9 +517,9 @@ export const createProductSearchEngine = (
 	};
 };
 
-export const createProductSearchRedis = () =>
+export const createProductSearchRedis = (url: string, token: string) =>
 	new Redis({
-		url: env.UPSTASH_REDIS_REST_URL,
-		token: env.UPSTASH_REDIS_REST_TOKEN,
+		url,
+		token,
 		signal: () => AbortSignal.timeout(4_000),
 	});

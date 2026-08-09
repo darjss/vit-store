@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { db } from "~/db/client";
 import { loadProductSearchDocumentsFromDb } from "~/lib/product-search/db";
@@ -15,7 +16,12 @@ import {
 } from "~/lib/product-search/upstash";
 
 const productSearch = () =>
-	createProductSearchEngine(createProductSearchRedis());
+	createProductSearchEngine(
+		createProductSearchRedis(
+			env.UPSTASH_REDIS_REST_URL,
+			env.UPSTASH_REDIS_REST_TOKEN,
+		),
+	);
 
 export const searchProductPage = (input: {
 	query: string;
@@ -55,7 +61,7 @@ export const clearProductSearchIndex = () => productSearch().clear();
 
 type RebuildContext = {
 	c: { executionCtx: ExecutionContext };
-	log: RequestLogger<any>;
+	log: RequestLogger<Record<string, unknown>>;
 };
 
 export const scheduleProductSearchRebuild = (
