@@ -141,7 +141,7 @@ const SYMPTOM_INGREDIENT_ALIASES: Record<string, string[]> = {
 
 export const normalizeSearchText = (value: string | null | undefined) =>
 	(value ?? "")
-		.normalize("NFKD")
+		.normalize("NFKC")
 		.toLowerCase()
 		.replace(/(?<=\d),(?=\d)/g, "")
 		.replace(/[^\p{L}\p{N}\s]+/gu, " ")
