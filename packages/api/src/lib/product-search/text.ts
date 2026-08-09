@@ -198,16 +198,24 @@ const productSearchStrings = (product: ProductSearchSourceDocument) => [
 ];
 
 export const buildProductAliases = (product: ProductSearchSourceDocument) => {
-	const productStrings = productSearchStrings(product);
-	const aliases = uniqueText(productStrings);
-	const transliterated = uniqueText(
-		productStrings.map((value) => transliterateCyrillicToLatin(value)),
+	const productStrings = [
+		product.name,
+		product.nameMn,
+		product.brand,
+		`${product.brand} ${product.name}`,
+	];
+	const originals = new Set(uniqueText(productStrings));
+	const originalTokens = new Set(
+		[...originals].flatMap((value) => value.split(" ").filter(Boolean)),
 	);
-	const latinExpanded = uniqueText(
-		productStrings.flatMap((value) => expandLatinAliases(value)),
-	);
+	const alternatives = uniqueText([
+		...productStrings.map((value) => transliterateCyrillicToLatin(value)),
+		...productStrings.flatMap((value) => expandLatinAliases(value)),
+	]);
 
-	return Array.from(new Set([...aliases, ...transliterated, ...latinExpanded]));
+	return alternatives.filter(
+		(alias) => !originals.has(alias) && !originalTokens.has(alias),
+	);
 };
 
 export const buildProductIntentTerms = (

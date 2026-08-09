@@ -90,6 +90,8 @@ export interface ProductSearchDocument {
 	nameMn: string;
 	nameWithBrand: string;
 	nameMnWithBrand: string;
+	primaryName: string;
+	primaryNameMn: string;
 	description: string;
 	slug: string;
 	price: number;
@@ -115,6 +117,18 @@ export interface ProductSearchDocument {
 	tags: string;
 	aliases: string;
 	intentTerms: string;
+	rankingScore: number;
+}
+
+export interface ProductSearchAnalyticsSignal {
+	productId: number;
+	uniqueViewers: number;
+	addToCarts: number;
+	searchClickSessions: number;
+}
+
+export interface ProductSearchRanking {
+	rankingScore: number;
 }
 
 export interface ProductSearchSourceDocument {

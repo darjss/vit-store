@@ -16,11 +16,11 @@ import type {
 	SearchProductResult,
 } from "~/lib/product-search/types";
 
-const PRODUCT_SEARCH_INDEX = "vit-products-v2";
-const PRODUCT_KEY_PREFIX = "search:vit:v2:product:";
-const ACTIVE_GENERATION_KEY = "search:vit:v2:active";
-const STATUS_KEY = "search:vit:v2:status";
-const REBUILD_LOCK_KEY = "search:vit:v2:rebuild-lock";
+const PRODUCT_SEARCH_INDEX = "vit-products-v3";
+const PRODUCT_KEY_PREFIX = "search:vit:v3:product:";
+const ACTIVE_GENERATION_KEY = "search:vit:v3:active";
+const STATUS_KEY = "search:vit:v3:status";
+const REBUILD_LOCK_KEY = "search:vit:v3:rebuild-lock";
 const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
 const REBUILD_LOCK_TTL_MS = 30_000;
@@ -33,6 +33,8 @@ const PRODUCT_SEARCH_SCHEMA = s.object({
 	nameMn: s.string().noStem(),
 	nameWithBrand: s.string().noStem(),
 	nameMnWithBrand: s.string().noStem(),
+	primaryName: s.string().noStem(),
+	primaryNameMn: s.string().noStem(),
 	description: s.string(),
 	slug: s.keyword(),
 	price: s.number("F64"),
@@ -58,6 +60,7 @@ const PRODUCT_SEARCH_SCHEMA = s.object({
 	tags: s.string().noStem(),
 	aliases: s.string().noStem(),
 	intentTerms: s.string().noStem(),
+	rankingScore: s.number("F64"),
 });
 
 type ProductSearchFilter = InferFilterFromSchema<typeof PRODUCT_SEARCH_SCHEMA>;
@@ -150,28 +153,37 @@ const prepareQuery = (query: string) => {
 	const normalized = normalizeSearchText(query);
 	const brandExpanded = expandBrandAliases(normalized) || normalized;
 	const vitaminExpanded = expandVitaminLetters(brandExpanded) || brandExpanded;
-	const tokens = Array.from(
-		new Set(normalizeSearchText(vitaminExpanded).split(" ").filter(Boolean)),
-	);
-	return { normalized, tokens };
+	const phrase = normalizeSearchText(vitaminExpanded);
+	const tokens = Array.from(new Set(phrase.split(" ").filter(Boolean)));
+	return { phrase, tokens };
 };
 
-const exactTokenFilter = (token: string): ProductSearchClause => ({
+const exactTokenFilter = (
+	token: string,
+	includeIntent: boolean,
+): ProductSearchClause => ({
 	$should: [
+		{ primaryName: { $eq: token, $boost: 18 } },
+		{ primaryNameMn: { $eq: token, $boost: 18 } },
 		{ nameWithBrand: { $eq: token } },
 		{ nameMnWithBrand: { $eq: token } },
 		{ brand: { $eq: token } },
 		{ category: { $eq: token } },
 		{ dosage: { $eq: token } },
 		{ aliases: { $eq: token } },
-		{ intentTerms: { $eq: token } },
-		{ ingredients: { $eq: token } },
-		{ tags: { $eq: token } },
+		...(includeIntent ? [{ intentTerms: { $eq: token } }] : []),
 	],
 });
 
-const prefixTokenFilter = (token: string): ProductSearchClause => ({
+const prefixTokenFilter = (
+	token: string,
+	includeIntent: boolean,
+): ProductSearchClause => ({
 	$should: [
+		{ primaryName: { $phrase: { value: token, prefix: true }, $boost: 18 } },
+		{
+			primaryNameMn: { $phrase: { value: token, prefix: true }, $boost: 18 },
+		},
 		{ nameWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 } },
 		{
 			nameMnWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 },
@@ -180,23 +192,26 @@ const prefixTokenFilter = (token: string): ProductSearchClause => ({
 		{ dosage: { $phrase: { value: token, prefix: true }, $boost: 9 } },
 		{ aliases: { $phrase: { value: token, prefix: true }, $boost: 7 } },
 		{ category: { $phrase: { value: token, prefix: true }, $boost: 4 } },
-		{ intentTerms: { $phrase: { value: token, prefix: true }, $boost: 3 } },
-		{ tags: { $phrase: { value: token, prefix: true }, $boost: 2 } },
+		...(includeIntent
+			? [{ intentTerms: { $phrase: { value: token, prefix: true } } }]
+			: []),
 	],
 });
 
-const smartTokenFilter = (token: string): ProductSearchClause => ({
+const smartTokenFilter = (
+	token: string,
+	includeIntent: boolean,
+): ProductSearchClause => ({
 	$should: [
+		{ primaryName: { $smart: token, $boost: 18 } },
+		{ primaryNameMn: { $smart: token, $boost: 18 } },
 		{ nameWithBrand: { $smart: token, $boost: 12 } },
 		{ nameMnWithBrand: { $smart: token, $boost: 12 } },
 		{ brand: { $smart: token, $boost: 9 } },
 		{ dosage: { $smart: token, $boost: 9 } },
 		{ aliases: { $smart: token, $boost: 7 } },
 		{ category: { $smart: token, $boost: 4 } },
-		{ intentTerms: { $smart: token, $boost: 3 } },
-		{ ingredients: { $smart: token, $boost: 2 } },
-		{ tags: { $smart: token, $boost: 2 } },
-		{ description: { $smart: token, $boost: 0.5 } },
+		...(includeIntent ? [{ intentTerms: { $smart: token } }] : []),
 	],
 });
 
@@ -205,27 +220,29 @@ export const buildProductSearchFilter = (
 	generation: string,
 	filters?: ProductSearchFilters,
 ): ProductSearchFilter => {
-	const { normalized, tokens } = prepareQuery(query);
-	const symptomBoosts: ProductSearchClause[] = expandSymptomIngredients(
-		query,
-	).flatMap((term, index) => {
-		const boost = Math.max(16 - index * 2, 6);
-		return [
-			{ nameWithBrand: { $smart: term, $boost: boost } },
-			{ nameMnWithBrand: { $smart: term, $boost: boost } },
-			{ aliases: { $smart: term, $boost: boost - 2 } },
-		];
-	});
+	const { phrase, tokens } = prepareQuery(query);
+	const symptomIngredients = expandSymptomIngredients(query);
+	const symptomBoosts: ProductSearchClause[] = symptomIngredients.flatMap(
+		(term, index) => {
+			const boost = Math.max(16 - index * 2, 6);
+			return [
+				{ nameWithBrand: { $smart: term, $boost: boost } },
+				{ nameMnWithBrand: { $smart: term, $boost: boost } },
+				{ aliases: { $smart: term, $boost: boost - 2 } },
+			];
+		},
+	);
+	const includeIntent = symptomIngredients.length > 0;
 	const must: ProductSearchClause[] = [
 		{ generation: { $eq: generation } },
 		{ status: { $eq: "active" } },
 		...tokens.map((token) => {
 			if (token.length <= 1 || /^\d+$/.test(token)) {
-				return exactTokenFilter(token);
+				return exactTokenFilter(token, includeIntent);
 			}
 			return token.length <= 3
-				? prefixTokenFilter(token)
-				: smartTokenFilter(token);
+				? prefixTokenFilter(token, includeIntent)
+				: smartTokenFilter(token, includeIntent);
 		}),
 	];
 
@@ -249,19 +266,27 @@ export const buildProductSearchFilter = (
 		$must: must,
 		$should: [
 			{
-				nameWithBrand: { $phrase: { value: normalized, slop: 0 }, $boost: 24 },
+				primaryName: { $phrase: { value: phrase, slop: 0 }, $boost: 32 },
+			},
+			{
+				primaryNameMn: {
+					$phrase: { value: phrase, slop: 0 },
+					$boost: 32,
+				},
+			},
+			{
+				nameWithBrand: { $phrase: { value: phrase, slop: 0 }, $boost: 24 },
 			},
 			{
 				nameMnWithBrand: {
-					$phrase: { value: normalized, slop: 0 },
+					$phrase: { value: phrase, slop: 0 },
 					$boost: 24,
 				},
 			},
-			{ brand: { $phrase: { value: normalized, slop: 0 }, $boost: 14 } },
-			{ dosage: { $phrase: { value: normalized, slop: 0 }, $boost: 14 } },
-			{ aliases: { $phrase: { value: normalized, slop: 0 }, $boost: 10 } },
+			{ brand: { $phrase: { value: phrase, slop: 0 }, $boost: 14 } },
+			{ dosage: { $phrase: { value: phrase, slop: 0 }, $boost: 14 } },
+			{ aliases: { $phrase: { value: phrase, slop: 0 }, $boost: 10 } },
 			...symptomBoosts,
-			{ inStock: { $eq: true, $boost: 1.05 } },
 		],
 	};
 };
@@ -305,6 +330,7 @@ const queryIndex = (
 	filter: ProductSearchFilter,
 	pageSize: number,
 	offset: number,
+	rankByDemand: boolean,
 	sort?: ProductSearchSort,
 ) => {
 	const index = redis.search.index({
@@ -326,7 +352,14 @@ const queryIndex = (
 			},
 		});
 	}
-	return index.query(base);
+	if (!rankByDemand) return index.query(base);
+	return index.query({
+		...base,
+		scoreFunc: {
+			field: "rankingScore",
+			scoreMode: "replace",
+		},
+	});
 };
 
 const scanProductKeys = async (
@@ -427,8 +460,17 @@ export const createProductSearchEngine = (
 				input.filters,
 			);
 			const offset = (page - 1) * pageSize;
+			const rankByDemand = expandSymptomIngredients(query).length === 0;
 			const [hits, { count: totalCount }] = await Promise.all([
-				queryIndex(redis, namespace, filter, pageSize, offset, input.sort),
+				queryIndex(
+					redis,
+					namespace,
+					filter,
+					pageSize,
+					offset,
+					rankByDemand,
+					input.sort,
+				),
 				index().count({ filter }),
 			]);
 			const totalPages = Math.ceil(totalCount / pageSize);
