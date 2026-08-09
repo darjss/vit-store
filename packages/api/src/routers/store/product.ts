@@ -2,8 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { productQueries } from "@vit/api/queries";
 import {
 	CACHE_POLICY,
-	PRODUCTS_TAG,
 	inventoryTag,
+	PRODUCTS_TAG,
 	productTag,
 } from "@vit/shared";
 import { PRODUCT_SORT_DIRECTIONS } from "@vit/shared/domain/product";
@@ -11,9 +11,19 @@ import * as v from "valibot";
 import { runProductBenchmark } from "~/lib/benchmark/product-benchmark";
 import { markCacheable } from "~/lib/cache/workers-cache";
 import { PRODUCT_SEARCH_SORT_FIELDS } from "~/lib/product-search/types";
-import { subscribeToRestock } from "~/lib/restock";
-import { projectStorefrontCard } from "~/queries/products/storefront-card";
+import {
+	createVerifiedRestockSubscription,
+	subscribeVerifiedPhoneToRestock,
+} from "~/lib/restock";
+import {
+	getGuestRestockChallengeForAttempt,
+	requestGuestRestockConfirmation,
+	withConfirmedGuestRestockChallenge,
+} from "~/lib/restock/challenge";
+import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
+import { auth } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
+import { projectStorefrontCard } from "~/queries/products/storefront-card";
 import {
 	mapStockStatus,
 	performAssistantProductSearch,
@@ -51,6 +61,44 @@ const paginatedProductsInput = {
 	maxPrice: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
 	requireStock: v.optional(v.boolean(), false),
 };
+
+const guestRestockContactInput = {
+	productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	channel: v.picklist(["sms", "email"]),
+	contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
+};
+
+const guestRestockConfirmationInput = {
+	challengeId: v.pipe(v.string(), v.uuid()),
+	code: v.pipe(v.string(), v.regex(/^\d{6}$/)),
+};
+
+function requestIp(ctx: {
+	c: { req: { header: (name: string) => string | undefined } };
+}) {
+	return (
+		ctx.c.req.header("cf-connecting-ip") ??
+		ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+		"unknown"
+	);
+}
+
+async function assertProductOutOfStock(productId: number) {
+	const product = await productQueries.store.getProductStockStatus(productId);
+	if (!product) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+	}
+	if (product.status === "draft") {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+	}
+	if (product.stock > 0) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: "Product is already in stock",
+		});
+	}
+	return product;
+}
 
 const inventoryInput = {
 	productIds: v.pipe(
@@ -334,47 +382,52 @@ export const product = router({
 			}
 		}),
 
+	restockSubscriptionIdentity: publicProcedure.query(async ({ ctx }) => {
+		const session = await auth(ctx);
+		if (!session || !isPhoneVerifiedCustomer({ ...ctx, session })) return null;
+		const phone = String(session.user.phone);
+		return { maskedPhone: `••••${phone.slice(-4)}` };
+	}),
+
 	subscribeToRestock: verifiedCustomerProcedure
 		.input(
 			v.object({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
-				contacts: v.pipe(
-					v.array(
-						v.object({
-							channel: v.literal("sms"),
-							contact: v.pipe(v.string(), v.minLength(1), v.maxLength(256)),
-						}),
-					),
-					v.minLength(1),
-					v.maxLength(1),
-				),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
-			const q = productQueries.store;
-			const product = await q.getProductStockStatus(input.productId);
-
-			if (!product) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "Product not found",
-				});
-			}
-
-			if (product.stock > 0 && product.status !== "out_of_stock") {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Product is already in stock",
-				});
-			}
-
-			return subscribeToRestock({
-				...input,
+		.mutation(({ input, ctx }) => {
+			return subscribeVerifiedPhoneToRestock({
+				productId: input.productId,
 				verifiedPhone: String(ctx.session.user.phone),
-				requestIp:
-					ctx.c.req.header("cf-connecting-ip") ??
-					ctx.c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-					"unknown",
+				requestIp: requestIp(ctx),
+			});
+		}),
+
+	requestGuestRestockConfirmation: publicProcedure
+		.input(v.object(guestRestockContactInput))
+		.mutation(async ({ input, ctx }) => {
+			await assertProductOutOfStock(input.productId);
+			return requestGuestRestockConfirmation({
+				...input,
+				requestIp: requestIp(ctx),
+			});
+		}),
+
+	confirmGuestRestockSubscription: publicProcedure
+		.input(v.object(guestRestockConfirmationInput))
+		.mutation(async ({ input, ctx }) => {
+			await getGuestRestockChallengeForAttempt({
+				challengeId: input.challengeId,
+				requestIp: requestIp(ctx),
+			});
+			return withConfirmedGuestRestockChallenge({
+				...input,
+				action: (challenge) =>
+					createVerifiedRestockSubscription({
+						productId: challenge.productId,
+						channel: challenge.channel,
+						contact: challenge.contact,
+					}),
 			});
 		}),
 	getProductBenchmark: publicProcedure.query(async () => {
