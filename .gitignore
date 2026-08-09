@@ -33,3 +33,6 @@ delivery-zone.png
 .wrangler/
 # private real customer Messenger export data — never commit (see AGENTS.md)
 messenger-chat-history/
+
+# Local search audit exports and transcripts
+search-audit/
