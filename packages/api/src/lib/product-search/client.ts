@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
 import { db } from "~/db/client";
+import { createPostHogClient } from "~/lib/integrations/posthog";
 import { loadProductSearchDocumentsFromDb } from "~/lib/product-search/db";
 import type {
+	ProductSearchAnalyticsSignal,
 	ProductSearchFilters,
 	ProductSearchPage,
 	ProductSearchRebuildReason,
@@ -15,6 +17,39 @@ import {
 	createProductSearchRedis,
 	withProductSearchRebuildLock,
 } from "~/lib/product-search/upstash";
+
+const RANKING_SIGNALS_KEY = "search:vit:v3:ranking-signals";
+const RANKING_SIGNALS_FRESH_MS = 6 * 60 * 60 * 1000;
+
+type RankingSignalsCache = {
+	fetchedAt: string;
+	signals: ProductSearchAnalyticsSignal[];
+};
+
+const loadRankingSignals = async (
+	redis: ReturnType<typeof createProductSearchRedis>,
+) => {
+	const cached = await redis.get<RankingSignalsCache>(RANKING_SIGNALS_KEY);
+	if (
+		cached &&
+		Date.now() - Date.parse(cached.fetchedAt) < RANKING_SIGNALS_FRESH_MS
+	) {
+		return cached.signals;
+	}
+
+	try {
+		const signals =
+			await createPostHogClient(env).getProductSearchRankingSignals(90);
+		await redis.set(
+			RANKING_SIGNALS_KEY,
+			JSON.stringify({ fetchedAt: new Date().toISOString(), signals }),
+		);
+		return signals;
+	} catch (error) {
+		if (cached) return cached.signals;
+		throw error;
+	}
+};
 
 const productSearch = () =>
 	createProductSearchEngine(
@@ -56,7 +91,8 @@ export const rebuildProductSearchIndex = async (
 		env.UPSTASH_REDIS_REST_TOKEN,
 	);
 	return withProductSearchRebuildLock(redis, async () => {
-		const documents = await loadProductSearchDocumentsFromDb(db());
+		const signals = await loadRankingSignals(redis);
+		const documents = await loadProductSearchDocumentsFromDb(db(), signals);
 		return createProductSearchEngine(redis).replaceAll(documents, reason);
 	});
 };

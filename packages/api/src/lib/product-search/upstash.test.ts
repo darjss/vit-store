@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { buildProductSearchDocument } from "~/lib/product-search/document";
+import {
+	buildProductSearchDocument,
+	buildProductSearchRankings,
+} from "~/lib/product-search/document";
 import type { ProductSearchSourceDocument } from "~/lib/product-search/types";
 import { buildProductSearchFilter } from "~/lib/product-search/upstash";
 
@@ -72,6 +75,18 @@ describe("product search query", () => {
 		);
 		expect(serialized).toContain('"$smart":"5 htp"');
 	});
+
+	test("uses primary product fields for normal ingredient searches", () => {
+		const serialized = JSON.stringify(
+			buildProductSearchFilter("magnesium", "generation"),
+		);
+
+		expect(serialized).toContain(
+			'"primaryName":{"$smart":"magnesium","$boost":18}',
+		);
+		expect(serialized).not.toContain('"ingredients"');
+		expect(serialized).not.toContain('"intentTerms"');
+	});
 });
 
 describe("product search document", () => {
@@ -79,11 +94,48 @@ describe("product search document", () => {
 		const document = buildProductSearchDocument(sourceProduct());
 
 		expect(document.aliases).toContain("nature bell");
+		expect(document.aliases).not.toContain(
+			"naturebell magnesium glycinate 1000 mg 240 capsules",
+		);
 		expect(document.dosage).toBe("1000 mg 500 mg");
 		expect(document.intentTerms).toContain("нойр");
 		expect(document.intentTerms).toContain("stress");
 		expect(document.ingredientPreviewJson).toBe(
 			JSON.stringify(["Magnesium glycinate"]),
 		);
+	});
+
+	test("keeps secondary ingredients out of the primary product name", () => {
+		const document = buildProductSearchDocument(
+			sourceProduct({
+				name: "Naturebell, CoQ10 with Omega-3, 240 Capsules",
+			}),
+		);
+
+		expect(document.primaryName).toBe("coq10");
+	});
+
+	test("combines observed demand with bounded stock bands", () => {
+		const products = [
+			sourceProduct({ id: 1, stock: 28 }),
+			sourceProduct({ id: 2, stock: 0 }),
+		];
+		const rankings = buildProductSearchRankings(products, [
+			{
+				productId: 1,
+				uniqueViewers: 32,
+				addToCarts: 20,
+				searchClickSessions: 5,
+			},
+			{
+				productId: 2,
+				uniqueViewers: 4,
+				addToCarts: 2,
+				searchClickSessions: 1,
+			},
+		]);
+
+		expect(rankings.get(1)?.rankingScore).toBe(100);
+		expect(rankings.get(2)?.rankingScore).toBeLessThan(20);
 	});
 });
