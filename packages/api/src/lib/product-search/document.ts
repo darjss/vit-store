@@ -68,9 +68,11 @@ export const buildProductSearchRankings = (
 				product.id,
 				{
 					rankingScore: Number(
-						(demandScore * 45 + availabilityScore(product.stock) * 55).toFixed(
-							4,
-						),
+						(
+							1 +
+							demandScore * 44 +
+							availabilityScore(product.stock) * 55
+						).toFixed(4),
 					),
 				},
 			];
@@ -79,7 +81,7 @@ export const buildProductSearchRankings = (
 };
 
 const defaultRanking = (stock: number): ProductSearchRanking => ({
-	rankingScore: availabilityScore(stock) * 55,
+	rankingScore: 1 + availabilityScore(stock) * 55,
 });
 
 export const buildProductSearchDocument = (

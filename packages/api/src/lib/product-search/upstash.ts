@@ -161,39 +161,51 @@ const prepareQuery = (query: string) => {
 const exactTokenFilter = (
 	token: string,
 	includeIntent: boolean,
+	includeBroadFields: boolean,
 ): ProductSearchClause => ({
 	$should: [
 		{ primaryName: { $eq: token, $boost: 18 } },
 		{ primaryNameMn: { $eq: token, $boost: 18 } },
-		{ nameWithBrand: { $eq: token } },
-		{ nameMnWithBrand: { $eq: token } },
 		{ brand: { $eq: token } },
-		{ category: { $eq: token } },
 		{ dosage: { $eq: token } },
 		{ aliases: { $eq: token } },
 		...(includeIntent ? [{ intentTerms: { $eq: token } }] : []),
+		...(includeBroadFields
+			? [
+					{ nameWithBrand: { $eq: token } },
+					{ nameMnWithBrand: { $eq: token } },
+					{ category: { $eq: token } },
+					{ ingredients: { $eq: token } },
+					{ tags: { $eq: token } },
+				]
+			: []),
 	],
 });
 
 const prefixTokenFilter = (
 	token: string,
 	includeIntent: boolean,
+	includeBroadFields: boolean,
 ): ProductSearchClause => ({
 	$should: [
 		{ primaryName: { $phrase: { value: token, prefix: true }, $boost: 18 } },
 		{
 			primaryNameMn: { $phrase: { value: token, prefix: true }, $boost: 18 },
 		},
-		{ nameWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 } },
-		{
-			nameMnWithBrand: { $phrase: { value: token, prefix: true }, $boost: 12 },
-		},
 		{ brand: { $phrase: { value: token, prefix: true }, $boost: 9 } },
 		{ dosage: { $phrase: { value: token, prefix: true }, $boost: 9 } },
 		{ aliases: { $phrase: { value: token, prefix: true }, $boost: 7 } },
-		{ category: { $phrase: { value: token, prefix: true }, $boost: 4 } },
 		...(includeIntent
 			? [{ intentTerms: { $phrase: { value: token, prefix: true } } }]
+			: []),
+		...(includeBroadFields
+			? [
+					{ nameWithBrand: { $phrase: { value: token, prefix: true } } },
+					{ nameMnWithBrand: { $phrase: { value: token, prefix: true } } },
+					{ category: { $phrase: { value: token, prefix: true } } },
+					{ ingredients: { $phrase: { value: token, prefix: true } } },
+					{ tags: { $phrase: { value: token, prefix: true } } },
+				]
 			: []),
 	],
 });
@@ -201,17 +213,24 @@ const prefixTokenFilter = (
 const smartTokenFilter = (
 	token: string,
 	includeIntent: boolean,
+	includeBroadFields: boolean,
 ): ProductSearchClause => ({
 	$should: [
 		{ primaryName: { $smart: token, $boost: 18 } },
 		{ primaryNameMn: { $smart: token, $boost: 18 } },
-		{ nameWithBrand: { $smart: token, $boost: 12 } },
-		{ nameMnWithBrand: { $smart: token, $boost: 12 } },
 		{ brand: { $smart: token, $boost: 9 } },
-		{ dosage: { $smart: token, $boost: 9 } },
 		{ aliases: { $smart: token, $boost: 7 } },
-		{ category: { $smart: token, $boost: 4 } },
 		...(includeIntent ? [{ intentTerms: { $smart: token } }] : []),
+		...(includeBroadFields
+			? [
+					{ nameWithBrand: { $smart: token } },
+					{ nameMnWithBrand: { $smart: token } },
+					{ category: { $smart: token } },
+					{ ingredients: { $smart: token } },
+					{ tags: { $smart: token } },
+					{ description: { $smart: token } },
+				]
+			: []),
 	],
 });
 
@@ -219,6 +238,7 @@ export const buildProductSearchFilter = (
 	query: string,
 	generation: string,
 	filters?: ProductSearchFilters,
+	matchScope: "direct" | "broad" = "direct",
 ): ProductSearchFilter => {
 	const { phrase, tokens } = prepareQuery(query);
 	const symptomIngredients = expandSymptomIngredients(query);
@@ -233,16 +253,17 @@ export const buildProductSearchFilter = (
 		},
 	);
 	const includeIntent = symptomIngredients.length > 0;
+	const includeBroadFields = matchScope === "broad";
 	const must: ProductSearchClause[] = [
 		{ generation: { $eq: generation } },
 		{ status: { $eq: "active" } },
 		...tokens.map((token) => {
 			if (token.length <= 1 || /^\d+$/.test(token)) {
-				return exactTokenFilter(token, includeIntent);
+				return exactTokenFilter(token, includeIntent, includeBroadFields);
 			}
 			return token.length <= 3
-				? prefixTokenFilter(token, includeIntent)
-				: smartTokenFilter(token, includeIntent);
+				? prefixTokenFilter(token, includeIntent, includeBroadFields)
+				: smartTokenFilter(token, includeIntent, includeBroadFields);
 		}),
 	];
 
@@ -456,36 +477,53 @@ export const createProductSearchEngine = (
 			);
 			if (!active) throw new Error("Product search index is not initialized");
 
-			const filter = buildProductSearchFilter(
+			const offset = (page - 1) * pageSize;
+			const rankByDemand = expandSymptomIngredients(query).length === 0;
+			const runQuery = async (
+				filter: ProductSearchFilter,
+				useDemandRank: boolean,
+			) => {
+				const [hits, { count }] = await Promise.all([
+					queryIndex(
+						redis,
+						namespace,
+						filter,
+						pageSize,
+						offset,
+						useDemandRank,
+						input.sort,
+					),
+					index().count({ filter }),
+				]);
+				return { hits, count };
+			};
+
+			const directFilter = buildProductSearchFilter(
 				query,
 				active.generation,
 				input.filters,
 			);
-			const offset = (page - 1) * pageSize;
-			const rankByDemand = expandSymptomIngredients(query).length === 0;
-			const [hits, { count: totalCount }] = await Promise.all([
-				queryIndex(
-					redis,
-					namespace,
-					filter,
-					pageSize,
-					offset,
-					rankByDemand,
-					input.sort,
-				),
-				index().count({ filter }),
-			]);
-			const totalPages = Math.ceil(totalCount / pageSize);
+			let result = await runQuery(directFilter, rankByDemand);
+			if (result.count === 0 && rankByDemand) {
+				const broadFilter = buildProductSearchFilter(
+					query,
+					active.generation,
+					input.filters,
+					"broad",
+				);
+				result = await runQuery(broadFilter, false);
+			}
+			const totalPages = Math.ceil(result.count / pageSize);
 
 			return {
-				items: hits.map((hit) => toSearchResult(hit.data)),
+				items: result.hits.map((hit) => toSearchResult(hit.data)),
 				pagination: {
 					page,
 					pageSize,
-					totalCount,
+					totalCount: result.count,
 					totalPages,
 					hasNextPage: page < totalPages,
-					hasPreviousPage: page > 1 && totalCount > 0,
+					hasPreviousPage: page > 1 && result.count > 0,
 				},
 			};
 		},
