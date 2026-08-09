@@ -29,41 +29,9 @@ import {
 } from "~/queries/products/shared";
 
 export const adminQueries = {
-		async searchByName(
-			searchTerm: string,
-			limit = 3,
-			options?: { shape?: "full" | "order" },
-		) {
-			const shape = options?.shape ?? "full";
+		async searchByName(searchTerm: string, limit = 3) {
 			const ids = await searchProductIds(searchTerm, limit);
 			if (ids.length === 0) return [];
-
-			if (shape === "order") {
-				return hydrateProductsBySearchIds(ids, (productIds) =>
-					db().query.ProductsTable.findMany({
-						where: and(
-							isNull(ProductsTable.deletedAt),
-							inArray(ProductsTable.id, productIds),
-						),
-						columns: {
-							id: true,
-							name: true,
-							price: true,
-							stock: true,
-						},
-						with: {
-							images: {
-								columns: { url: true },
-								where: and(
-									eq(ProductImagesTable.isPrimary, true),
-									isNull(ProductImagesTable.deletedAt),
-								),
-							},
-						},
-					}),
-					limit,
-				);
-			}
 
 			return hydrateProductsBySearchIds(ids, (productIds) =>
 				db().query.ProductsTable.findMany({
@@ -77,10 +45,6 @@ export const adminQueries = {
 				}),
 				limit,
 			);
-		},
-
-		async searchByNameForOrder(searchTerm: string, limit = 3) {
-			return this.searchByName(searchTerm, limit, { shape: "order" });
 		},
 
 		async getBrandById(brandId: number) {
