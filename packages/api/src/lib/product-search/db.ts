@@ -6,11 +6,19 @@ import {
 	ProductImagesTable,
 	ProductsTable,
 } from "~/db/schema";
-import { buildProductSearchDocument } from "~/lib/product-search/core";
-import type { ProductSearchDocument } from "~/lib/product-search/types";
+import {
+	buildProductSearchDocument,
+	buildProductSearchRankings,
+} from "~/lib/product-search/document";
+import type {
+	ProductSearchAnalyticsSignal,
+	ProductSearchDocument,
+	ProductSearchSourceDocument,
+} from "~/lib/product-search/types";
 
 export const loadProductSearchDocumentsFromDb = async (
 	db: DB,
+	signals: ProductSearchAnalyticsSignal[] = [],
 ): Promise<ProductSearchDocument[]> => {
 	const products = await db
 		.select({
@@ -71,29 +79,32 @@ export const loadProductSearchDocumentsFromDb = async (
 		}
 	}
 
-	return products.map((product) =>
-		buildProductSearchDocument({
-			id: product.id,
-			name: product.name,
-			nameMn: product.nameMn,
-			description: product.description,
-			slug: product.slug,
-			price: product.price,
-			createdAt: product.createdAt,
-			discount: product.discount,
-			brand: brandMap.get(product.brandId) ?? "",
-			category: categoryMap.get(product.categoryId) ?? "",
-			status: product.status,
-			stock: product.stock,
-			amount: product.amount,
-			potency: product.potency,
-			dailyIntake: product.dailyIntake,
-			brandId: product.brandId,
-			categoryId: product.categoryId,
-			isFeatured: product.isFeatured,
-			ingredients: product.ingredients,
-			tags: product.tags,
-			image: primaryImageByProduct.get(product.id) ?? "",
-		}),
+	const sources: ProductSearchSourceDocument[] = products.map((product) => ({
+		id: product.id,
+		name: product.name,
+		nameMn: product.nameMn,
+		description: product.description,
+		slug: product.slug,
+		price: product.price,
+		createdAt: product.createdAt,
+		discount: product.discount,
+		brand: brandMap.get(product.brandId) ?? "",
+		category: categoryMap.get(product.categoryId) ?? "",
+		status: product.status,
+		stock: product.stock,
+		amount: product.amount,
+		potency: product.potency,
+		dailyIntake: product.dailyIntake,
+		brandId: product.brandId,
+		categoryId: product.categoryId,
+		isFeatured: product.isFeatured,
+		ingredients: product.ingredients,
+		tags: product.tags,
+		image: primaryImageByProduct.get(product.id) ?? "",
+	}));
+	const rankingByProduct = buildProductSearchRankings(sources, signals);
+
+	return sources.map((product) =>
+		buildProductSearchDocument(product, rankingByProduct.get(product.id)),
 	);
 };

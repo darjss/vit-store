@@ -31,6 +31,13 @@ interface PostHogQueryResponse {
 	error?: string;
 }
 
+export interface ProductSearchRankingSignal {
+	productId: number;
+	uniqueViewers: number;
+	addToCarts: number;
+	searchClickSessions: number;
+}
+
 export class PostHogClient {
 	private config: PostHogConfig;
 
@@ -228,6 +235,43 @@ export class PostHogClient {
 			avgResults: Number(row[2]) || 0,
 			noResultCount: Number(row[3]) || 0,
 		}));
+	}
+
+	/**
+	 * Get product demand for product-search ranking.
+	 * Click counts use unique sessions so repeated taps do not inflate demand.
+	 */
+	async getProductSearchRankingSignals(
+		daysBack = 90,
+	): Promise<ProductSearchRankingSignal[]> {
+		const totals = await this.query(`
+			SELECT
+				properties.product_id AS product_id,
+				uniqExactIf(person_id, event = 'product_viewed') AS unique_viewers,
+				countIf(event = 'add_to_cart') AS add_to_carts,
+				uniqExactIf(properties.$session_id, event = 'search_result_clicked') AS search_click_sessions
+			FROM events
+			WHERE timestamp >= now() - interval ${daysBack} day
+				AND timestamp <= now()
+				AND event IN ('product_viewed', 'add_to_cart', 'search_result_clicked')
+				AND properties.product_id IS NOT NULL
+			GROUP BY product_id
+			ORDER BY add_to_carts DESC, unique_viewers DESC
+			LIMIT 1000
+		`);
+		return totals.results.flatMap((row) => {
+			const productId = Number(row[0]);
+			return Number.isFinite(productId)
+				? [
+						{
+							productId,
+							uniqueViewers: Number(row[1]) || 0,
+							addToCarts: Number(row[2]) || 0,
+							searchClickSessions: Number(row[3]) || 0,
+						},
+					]
+				: [];
+		});
 	}
 
 	/**

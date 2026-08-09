@@ -53,8 +53,7 @@
 		"db:studio": "drizzle-kit studio",
 		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
-		"db:seed": "bun run src/lib/seed-postgres.ts",
-		"sync:upstash": "bun run scripts/sync-products-to-upstash.ts"
+		"db:seed": "bun run src/lib/seed-postgres.ts"
 	},
 	"devDependencies": {
 		"tsdown": "catalog:",
@@ -69,7 +68,7 @@
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"@trpc/server": "catalog:",
-		"@upstash/redis": "^1.36.1",
+		"@upstash/redis": "^1.38.2",
 		"@upstash/search": "^0.1.7",
 		"@vit/shared": "workspace:*",
 		"@warriorteam/messenger-sdk": "^1.5.3",
@@ -81,7 +80,6 @@
 		"evlog": "^2.11.0",
 		"hono": "catalog:",
 		"ky": "^1.14.2",
-		"minisearch": "^7.2.0",
 		"nanoid": "^5.1.5",
 		"postgres": "^3.4.7",
 		"posthog-node": "^5.38.4",

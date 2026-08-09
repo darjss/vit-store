@@ -84,6 +84,7 @@ export function normalizeProduct(
 
 interface ProductCardProps {
 	product: ProductCardData | SearchProductInput;
+	onInteract?: () => void;
 }
 
 const ProductCard = (props: ProductCardProps) => {
@@ -173,6 +174,7 @@ const ProductCard = (props: ProductCardProps) => {
 				</Show>
 				<a
 					href={productUrl}
+					onClick={props.onInteract}
 					class="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					aria-label={`${display().accessibleName}, ${formatCurrency(price())}`}
 				>
@@ -185,7 +187,9 @@ const ProductCard = (props: ProductCardProps) => {
 						{display().dose}
 					</p>
 				</Show>
-				<Show when={display().form || display().count || display().packageQuantity}>
+				<Show
+					when={display().form || display().count || display().packageQuantity}
+				>
 					<p class="text-[11px] text-muted-foreground leading-snug">
 						{[display().form, display().count, display().packageQuantity]
 							.filter(Boolean)
@@ -219,6 +223,7 @@ const ProductCard = (props: ProductCardProps) => {
 					<CardAddButton
 						outOfStock={isOutOfStock()}
 						productName={display().shortName}
+						onAdd={props.onInteract}
 						cartItem={{
 							productId: product().id,
 							quantity: 1,

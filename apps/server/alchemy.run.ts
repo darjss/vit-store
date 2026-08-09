@@ -13,7 +13,6 @@ import {
 	WorkerRef,
 } from "alchemy/cloudflare";
 import { createServerAlchemyEnv } from "../../env";
-import type { ProductSearchObject } from "./src/durable-objects/product-search-object";
 
 // Bun 1.3.14 crashes when Alchemy's async context crosses top-level await.
 async function main() {
@@ -48,14 +47,6 @@ async function main() {
 			remote: true,
 		},
 	});
-
-	const productSearch = DurableObjectNamespace<ProductSearchObject>(
-		"product-search",
-		{
-			className: "ProductSearchObject",
-			sqlite: true,
-		},
-	);
 
 	const transferReconciliation = DurableObjectNamespace(
 		"transfer-reconciliation",
@@ -105,7 +96,6 @@ async function main() {
 			STOREFRONT: WorkerRef<StorefrontCacheRpc>({
 				service: `storev2-front-${stage}`,
 			}),
-			PRODUCT_SEARCH: productSearch,
 			KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 			RATE_LIMITER: rateLimit,
 			DB: hyperdriveDB,
