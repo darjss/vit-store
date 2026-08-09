@@ -274,3 +274,66 @@ export function trackAssistantCheckoutClicked(productIds: number[]) {
 		product_count: productIds.length,
 	});
 }
+
+type RestockChannel = "sms" | "email";
+type RestockCustomerType = "guest" | "verified_customer";
+
+type RestockEvent = {
+	productId: number;
+	channel?: RestockChannel;
+	customerType: RestockCustomerType;
+};
+
+function restockProperties(event: RestockEvent) {
+	return {
+		product_id: event.productId,
+		...(event.channel ? { channel: event.channel } : {}),
+		customer_type: event.customerType,
+	};
+}
+
+export function trackRestockSheetOpened(event: RestockEvent) {
+	capture("restock_sheet_opened", restockProperties(event));
+}
+
+export function trackRestockChannelSelected(
+	event: RestockEvent & { channel: RestockChannel },
+) {
+	capture("restock_channel_selected", restockProperties(event));
+}
+
+export function trackRestockConfirmationRequested(
+	event: RestockEvent & { channel: RestockChannel },
+) {
+	capture("restock_confirmation_requested", restockProperties(event));
+}
+
+export function trackRestockConfirmationCompleted(
+	event: RestockEvent & { channel: RestockChannel },
+) {
+	capture("restock_confirmation_completed", restockProperties(event));
+}
+
+export function trackRestockSubscriptionCreated(
+	event: RestockEvent & {
+		channel: RestockChannel;
+		alreadySubscribed: boolean;
+	},
+) {
+	capture("restock_subscription_created", {
+		...restockProperties(event),
+		already_subscribed: event.alreadySubscribed,
+	});
+}
+
+export function trackRestockSubscriptionFailed(
+	event: RestockEvent & {
+		channel: RestockChannel;
+		errorCode: string;
+	},
+) {
+	capture("restock_subscription_failed", {
+		...restockProperties(event),
+		error_code: event.errorCode,
+	});
+}

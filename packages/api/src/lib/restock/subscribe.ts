@@ -7,19 +7,14 @@ import {
 	ProductsTable,
 	RestockSubscriptionsTable,
 } from "~/db/schema";
-import { redis } from "~/lib/redis";
 import { MAX_OPEN_PRODUCTS_PER_CONTACT } from "~/lib/restock/dispatch";
 import {
 	isValidRestockContact,
 	normalizeRestockContact,
 } from "~/lib/restock/normalize";
+import { enforceRestockRateLimit } from "~/lib/restock/rate-limit";
 
-export type RestockContactInput = {
-	channel: "sms" | "email";
-	contact: string;
-};
-
-type NormalizedContact = {
+type RestockContact = {
 	channel: "sms" | "email";
 	contact: string;
 };
@@ -39,42 +34,18 @@ const openSubscription = and(
 	sql`${RestockSubscriptionsTable.deliveryState} in ('pending', 'sending')`,
 );
 
-function normalizeAndValidateContacts(
-	contacts: RestockContactInput[],
-): NormalizedContact[] {
-	if (contacts.length === 0) {
+function normalizeAndValidateContact(input: RestockContact): RestockContact {
+	const contact = normalizeRestockContact(input.channel, input.contact);
+	if (!isValidRestockContact(input.channel, contact)) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message: "At least one contact is required",
+			message:
+				input.channel === "sms"
+					? "Invalid phone number"
+					: "Invalid email address",
 		});
 	}
-
-	const seenChannels = new Set<string>();
-	const normalized: NormalizedContact[] = [];
-
-	for (const item of contacts) {
-		if (seenChannels.has(item.channel)) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: `Duplicate channel: ${item.channel}`,
-			});
-		}
-		seenChannels.add(item.channel);
-
-		const contact = normalizeRestockContact(item.channel, item.contact);
-		if (!isValidRestockContact(item.channel, contact)) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message:
-					item.channel === "sms"
-						? "Invalid phone number"
-						: "Invalid email address",
-			});
-		}
-		normalized.push({ channel: item.channel, contact });
-	}
-
-	return normalized;
+	return { channel: input.channel, contact };
 }
 
 function isUniqueConflict(error: unknown): boolean {
@@ -91,7 +62,7 @@ type Tx = Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0];
 async function insertOneContact(
 	tx: Tx,
 	productId: number,
-	item: NormalizedContact,
+	item: RestockContact,
 ): Promise<SubscribeResult> {
 	const existing = await tx.query.RestockSubscriptionsTable.findFirst({
 		columns: { id: true },
@@ -151,75 +122,58 @@ async function insertOneContact(
 	}
 }
 
-export async function subscribeToRestock(input: {
+export async function createVerifiedRestockSubscription(input: {
 	productId: number;
-	contacts: RestockContactInput[];
-	verifiedPhone: string;
-	requestIp: string;
+	channel: "sms" | "email";
+	contact: string;
 }) {
-	const contacts = normalizeAndValidateContacts(input.contacts);
-	if (
-		contacts.length !== 1 ||
-		contacts[0]?.channel !== "sms" ||
-		contacts[0].contact !== normalizeRestockContact("sms", input.verifiedPhone)
-	) {
-		throw new TRPCError({
-			code: "UNAUTHORIZED",
-			message: "Verified phone ownership is required",
-		});
-	}
-	await Promise.all([
-		enforceRateLimit("contact", contacts[0].contact, CONTACT_RATE_LIMIT),
-		enforceRateLimit("ip", input.requestIp, IP_RATE_LIMIT),
-	]);
-
-	const results = await db().transaction(async (tx) => {
-		const contactsToLock = [
-			...new Set(contacts.map((item) => item.contact)),
-		].sort();
-		for (const contact of contactsToLock) {
-			await tx.execute(
-				sql`select pg_advisory_xact_lock(hashtextextended(${contact}, 0))`,
-			);
-		}
-		const out: SubscribeResult[] = [];
-		for (const item of contacts) {
-			out.push(await insertOneContact(tx, input.productId, item));
-		}
-		return out;
+	const contact = normalizeAndValidateContact(input);
+	const result = await db().transaction(async (tx) => {
+		await tx.execute(
+			sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`,
+		);
+		return insertOneContact(tx, input.productId, contact);
 	});
-
-	const allAlready = results.every((r) => r.alreadySubscribed);
 
 	return {
 		success: true as const,
-		message: allAlready ? "Already subscribed" : "Subscription created",
-		alreadySubscribed: allAlready,
-		results,
+		message: result.alreadySubscribed
+			? "Already subscribed"
+			: "Subscription created",
+		alreadySubscribed: result.alreadySubscribed,
+		results: [result],
 	};
 }
 
-async function enforceRateLimit(
-	scope: "contact" | "ip",
-	value: string,
-	limit: number,
-) {
-	const digest = await crypto.subtle.digest(
-		"SHA-256",
-		new TextEncoder().encode(value),
-	);
-	const hash = Array.from(new Uint8Array(digest), (byte) =>
-		byte.toString(16).padStart(2, "0"),
-	).join("");
-	const key = `restock:subscribe:${scope}:${hash}`;
-	const count = await redis().incr(key);
-	if (count === 1) await redis().expire(key, CONTACT_RATE_WINDOW_SECONDS);
-	if (count > limit) {
-		throw new TRPCError({
-			code: "TOO_MANY_REQUESTS",
-			message: "Too many restock subscription requests",
-		});
-	}
+export async function subscribeVerifiedPhoneToRestock(input: {
+	productId: number;
+	verifiedPhone: string;
+	requestIp: string;
+}) {
+	const contact = normalizeAndValidateContact({
+		channel: "sms",
+		contact: input.verifiedPhone,
+	});
+	await Promise.all([
+		enforceRestockRateLimit({
+			action: "subscribe",
+			scope: "contact",
+			value: contact.contact,
+			limit: CONTACT_RATE_LIMIT,
+			windowSeconds: CONTACT_RATE_WINDOW_SECONDS,
+		}),
+		enforceRestockRateLimit({
+			action: "subscribe",
+			scope: "ip",
+			value: input.requestIp,
+			limit: IP_RATE_LIMIT,
+			windowSeconds: CONTACT_RATE_WINDOW_SECONDS,
+		}),
+	]);
+	return createVerifiedRestockSubscription({
+		productId: input.productId,
+		...contact,
+	});
 }
 
 export async function getRestockWaitCount(productId: number): Promise<number> {

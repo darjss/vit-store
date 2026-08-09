@@ -12,9 +12,6 @@ function createRestockLogger() {
 /**
  * Safety-net cron: notify open Postgres restock subscriptions for products
  * that are already active with stock > 0 (covers missed event hooks / send failures).
- *
- * TODO(rate-limit): CF rate-limit binding for public subscribeToRestock if
- * wrangler/alchemy binding is added later. Not configured today.
  */
 export async function runRestockNotifier(_env: Env) {
 	const log = createRestockLogger();

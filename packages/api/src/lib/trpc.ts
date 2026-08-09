@@ -4,7 +4,11 @@ import superjson from "superjson";
 import * as v from "valibot";
 import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
-import { summarizeTrpcPayload, toError } from "~/lib/logging";
+import {
+	summarizeTrpcInputForLog,
+	summarizeTrpcOutputForLog,
+	toError,
+} from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
@@ -142,23 +146,7 @@ const loggingMiddleware = t.middleware(
 		const startTime = Date.now();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput =
-			path === "product.subscribeToRestock" &&
-			input &&
-			typeof input === "object" &&
-			"productId" in input &&
-			"contacts" in input &&
-			Array.isArray(input.contacts)
-				? {
-						product_id: input.productId,
-						contact_count: input.contacts.length,
-						channels: input.contacts.map((contact) =>
-							contact && typeof contact === "object" && "channel" in contact
-								? contact.channel
-								: "unknown",
-						),
-					}
-				: summarizeTrpcPayload(input);
+		const safeInput = summarizeTrpcInputForLog(path, input);
 
 		ctx.log.set({
 			trpc: {
@@ -175,6 +163,7 @@ const loggingMiddleware = t.middleware(
 				result && typeof result === "object" && "data" in result
 					? (result as { data?: unknown }).data
 					: result;
+			const safeOutput = summarizeTrpcOutputForLog(path, resultData);
 
 			ctx.log.set({
 				trpc: {
@@ -182,7 +171,7 @@ const loggingMiddleware = t.middleware(
 					type: procedureType,
 					duration_ms: durationMs,
 					outcome: "success",
-					output: summarizeTrpcPayload(resultData),
+					output: safeOutput,
 				},
 			});
 
