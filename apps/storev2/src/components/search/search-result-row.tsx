@@ -22,6 +22,7 @@ export interface SearchResultProduct {
 interface SearchResultRowProps {
 	product: SearchResultProduct;
 	query: string;
+	searchId: string | null;
 	position: number;
 	onNavigate?: () => void;
 }
@@ -39,13 +40,19 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 	const washClass = () => washBg(props.product.categoryId ?? "uncategorized");
 	const imageProps = () => getProductImageProps(props.product.image, "thumb");
 
-	const handleClick = () => {
+	const trackInteraction = () => {
+		if (!props.searchId) return;
 		trackSearchResultClicked(
+			props.searchId,
 			props.query,
 			props.product.id,
 			props.product.name,
 			props.position,
 		);
+	};
+
+	const handleClick = () => {
+		trackInteraction();
 		props.onNavigate?.();
 	};
 
@@ -122,6 +129,7 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 
 			<CardAddButton
 				productName={props.product.name}
+				onAdd={trackInteraction}
 				cartItem={{
 					productId: props.product.id,
 					quantity: 1,

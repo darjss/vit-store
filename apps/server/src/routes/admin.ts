@@ -1,55 +1,43 @@
-import { getProductSearchStatus, rebuildProductSearchIndex, } from "@vit/api/lib/product-search/client";
-import type { ServerHonoEnv } from "../lib/logging";
+import {
+	getProductSearchStatus,
+	rebuildProductSearchIndex,
+} from "@vit/api/lib/product-search/client";
 import { Hono } from "hono";
-import type { Context } from "hono";
 import { requireAdminSession } from "../lib/admin-session";
+import type { ServerHonoEnv } from "../lib/logging";
+
 const app = new Hono<ServerHonoEnv>();
 
 app.use("*", requireAdminSession);
-const syncProductSearch = async (c: Context<ServerHonoEnv>, legacy: boolean) => {
-    const log = c.get("log");
-    log.set({ user_type: "admin", operation: "product_search.sync" });
-    const startTime = Date.now();
-    try {
-        log.info("admin.sync_triggered", { type: "product_search" });
-        const result = await rebuildProductSearchIndex("manual");
-        const durationMs = Date.now() - startTime;
-        log.info("sync.complete", {
-            productCount: result.productCount,
-            generatedAt: result.generatedAt,
-            durationMs,
-        });
-        return c.json({
-            message: legacy
-                ? "Rebuilt product search index via legacy sync-upstash endpoint"
-                : "Rebuilt product search index",
-            productCount: result.productCount,
-            generatedAt: result.generatedAt,
-            lastRebuildFinishedAt: result.lastRebuildFinishedAt,
-            lastError: result.lastError,
-        });
-    }
-    catch (error) {
-        log.error(error instanceof Error ? error : new Error(String(error)), {
-            event: "sync.failed"
-        });
-        return c.json({
-            error: "Failed to rebuild product search index",
-            details: error instanceof Error ? error.message : "Unknown error",
-        }, 500);
-    }
-};
-app.post("/sync-search", (c) => syncProductSearch(c, false));
-app.post("/sync-upstash", (c) => syncProductSearch(c, true));
-app.get("/search-status", async (c) => {
-    try {
-        return c.json(await getProductSearchStatus());
-    }
-    catch (error) {
-        return c.json({
-            error: "Failed to get product search status",
-            details: error instanceof Error ? error.message : "Unknown error",
-        }, 500);
-    }
+
+app.post("/sync-search", async (c) => {
+	const log = c.get("log");
+	log.set({ user_type: "admin", operation: "product_search.sync" });
+	const startedAt = Date.now();
+
+	try {
+		const result = await rebuildProductSearchIndex("manual");
+		log.info("product_search.sync_complete", {
+			product_count: result.productCount,
+			generation: result.activeGeneration,
+			duration_ms: Date.now() - startedAt,
+		});
+		return c.json(result);
+	} catch (error) {
+		log.error(error instanceof Error ? error : new Error(String(error)), {
+			event: "product_search.sync_failed",
+			duration_ms: Date.now() - startedAt,
+		});
+		return c.json({ error: "Failed to rebuild product search index" }, 500);
+	}
 });
+
+app.get("/search-status", async (c) => {
+	try {
+		return c.json(await getProductSearchStatus());
+	} catch {
+		return c.json({ error: "Failed to get product search status" }, 500);
+	}
+});
+
 export default app;

@@ -21,7 +21,6 @@ import paymentRoutes from "./routes/payments";
 import uploadRoutes from "./routes/uploads";
 import webhookRoutes from "./routes/webhooks";
 
-export { ProductSearchObject } from "./durable-objects/product-search-object";
 export { TransferReconciliationObject } from "./durable-objects/transfer-reconciliation-object";
 
 const DEFAULT_CORS_ORIGINS = [

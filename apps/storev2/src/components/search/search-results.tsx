@@ -1,8 +1,14 @@
+import {
+	ArrowRightIcon as IconArrowRight,
+	SadCircleIcon as IconEmotionSad,
+	FolderIcon as IconFolder,
+	MinimalisticMagnifierIcon as IconSearch,
+	ShopIcon as IconStore,
+} from "@solar-icons/solid/linear";
 import type { Component } from "solid-js";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
 import ProductCard from "@/components/product/product-card";
 import { trackSearchResultClicked } from "@/lib/analytics";
-import { ArrowRightIcon as IconArrowRight, SadCircleIcon as IconEmotionSad, FolderIcon as IconFolder, MinimalisticMagnifierIcon as IconSearch, ShopIcon as IconStore } from "@solar-icons/solid/linear";
 import PopularCategories from "./popular-categories";
 import { useSearchStorefront } from "./use-search-storefront";
 
@@ -28,12 +34,16 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 		productName: string,
 		position: number,
 	) => {
-		trackSearchResultClicked(
-			props.searchQuery,
-			productId,
-			productName,
-			position,
-		);
+		const searchId = search.searchId();
+		if (searchId) {
+			trackSearchResultClicked(
+				searchId,
+				props.searchQuery,
+				productId,
+				productName,
+				position,
+			);
+		}
 		props.onProductClick?.();
 	};
 
@@ -82,7 +92,7 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				<Match
 					when={
 						search.data() &&
-						search.data()!.products.length === 0 &&
+						search.data()?.products.length === 0 &&
 						!hasNavigationResults()
 					}
 				>
@@ -104,7 +114,8 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 				<Match
 					when={
 						search.data() &&
-						(search.data()!.products.length > 0 || hasNavigationResults())
+						((search.data()?.products.length ?? 0) > 0 ||
+							hasNavigationResults())
 					}
 				>
 					<div>
@@ -193,11 +204,13 @@ const SearchResults: Component<SearchResultsProps> = (props) => {
 											"--enter-delay": `${Math.min(index(), 8) * 40}ms`,
 											"transition-duration": "250ms",
 										}}
-										onClick={() =>
-											handleProductClick(product.id, product.name, index())
-										}
 									>
-										<ProductCard product={product} />
+										<ProductCard
+											product={product}
+											onInteract={() =>
+												handleProductClick(product.id, product.name, index())
+											}
+										/>
 									</div>
 								)}
 							</For>

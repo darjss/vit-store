@@ -20,6 +20,7 @@ interface CardAddButtonProps {
 	outOfStock?: boolean;
 	productName?: string;
 	disabled?: boolean;
+	onAdd?: () => void;
 }
 
 const stateClass =
@@ -65,6 +66,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			return;
 		}
 		if (isAdded()) return;
+		props.onAdd?.();
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
 		playCartBurst(event.currentTarget as HTMLElement);

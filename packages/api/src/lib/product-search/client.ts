@@ -1,7 +1,10 @@
 import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
-import { logger } from "~/lib/logger";
+import { db } from "~/db/client";
+import { createPostHogClient } from "~/lib/integrations/posthog";
+import { loadProductSearchDocumentsFromDb } from "~/lib/product-search/db";
 import type {
+	ProductSearchAnalyticsSignal,
 	ProductSearchFilters,
 	ProductSearchPage,
 	ProductSearchRebuildReason,
@@ -9,23 +12,60 @@ import type {
 	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
-import { PRODUCT_SEARCH_OBJECT_NAME } from "~/lib/product-search/types";
+import {
+	createProductSearchEngine,
+	createProductSearchRedis,
+	withProductSearchRebuildLock,
+} from "~/lib/product-search/upstash";
 
-const getProductSearchService = () =>
-	env.PRODUCT_SEARCH.getByName(PRODUCT_SEARCH_OBJECT_NAME);
+const RANKING_SIGNALS_KEY = "search:vit:v3:ranking-signals";
+const RANKING_SIGNALS_FRESH_MS = 6 * 60 * 60 * 1000;
 
-const PRODUCT_SEARCH_TIMEOUT_MS = 4000;
+type RankingSignalsCache = {
+	fetchedAt: string;
+	signals: ProductSearchAnalyticsSignal[];
+};
 
-const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
-	Promise.race([
-		promise,
-		new Promise<T>((_resolve, reject) =>
-			setTimeout(
-				() => reject(new Error(`product_search timed out after ${ms}ms`)),
-				ms,
-			),
+const loadRankingSignals = async (
+	redis: ReturnType<typeof createProductSearchRedis>,
+) => {
+	const cached = await redis.get<RankingSignalsCache>(RANKING_SIGNALS_KEY);
+	if (
+		cached &&
+		Date.now() - Date.parse(cached.fetchedAt) < RANKING_SIGNALS_FRESH_MS
+	) {
+		return cached.signals;
+	}
+
+	try {
+		const signals =
+			await createPostHogClient(env).getProductSearchRankingSignals(90);
+		await redis.set(
+			RANKING_SIGNALS_KEY,
+			JSON.stringify({ fetchedAt: new Date().toISOString(), signals }),
+		);
+		return signals;
+	} catch (error) {
+		if (cached) return cached.signals;
+		throw error;
+	}
+};
+
+const productSearch = () =>
+	createProductSearchEngine(
+		createProductSearchRedis(
+			env.UPSTASH_REDIS_REST_URL,
+			env.UPSTASH_REDIS_REST_TOKEN,
 		),
-	]);
+	);
+
+export const searchProductPage = (input: {
+	query: string;
+	page: number;
+	pageSize: number;
+	filters?: ProductSearchFilters;
+	sort?: ProductSearchSort;
+}): Promise<ProductSearchPage> => productSearch().search(input);
 
 export const searchProducts = async (
 	query: string,
@@ -34,62 +74,37 @@ export const searchProducts = async (
 ): Promise<SearchProductResult[]> => {
 	const trimmed = query.trim();
 	if (!trimmed) return [];
-
-	try {
-		const result = await withTimeout(
-			getProductSearchService().search({
-				query: trimmed,
-				pageSize: limit,
-				filters,
-			}),
-			PRODUCT_SEARCH_TIMEOUT_MS,
-		);
-		return result.items;
-	} catch (error) {
-		logger.error("product_search.search_failed", error);
-		return [];
-	}
+	const result = await searchProductPage({
+		query: trimmed,
+		page: 1,
+		pageSize: limit,
+		filters,
+	});
+	return result.items;
 };
-
-export const searchProductPage = async (input: {
-	query: string;
-	page: number;
-	pageSize: number;
-	filters?: ProductSearchFilters;
-	sort?: ProductSearchSort;
-}): Promise<ProductSearchPage> =>
-	withTimeout(
-		getProductSearchService().search(input),
-		PRODUCT_SEARCH_TIMEOUT_MS,
-	);
 
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",
 ): Promise<ProductSearchStatus> => {
-	return getProductSearchService().rebuild(reason);
+	const redis = createProductSearchRedis(
+		env.UPSTASH_REDIS_REST_URL,
+		env.UPSTASH_REDIS_REST_TOKEN,
+	);
+	const signals = await loadRankingSignals(redis);
+	return withProductSearchRebuildLock(redis, async () => {
+		const documents = await loadProductSearchDocumentsFromDb(db(), signals);
+		return createProductSearchEngine(redis).replaceAll(documents, reason);
+	});
 };
 
-export const getProductSearchStatus =
-	async (): Promise<ProductSearchStatus> => {
-		return getProductSearchService().getStatus();
-	};
-
-export const clearProductSearchIndex = async () => {
-	await getProductSearchService().clear();
-};
+export const getProductSearchStatus = (): Promise<ProductSearchStatus> =>
+	productSearch().getStatus();
 
 type RebuildContext = {
 	c: { executionCtx: ExecutionContext };
-	log: RequestLogger<any>;
+	log: RequestLogger<Record<string, unknown>>;
 };
 
-/**
- * Schedule a product-search rebuild in the background via `waitUntil` so the
- * caller's response is not blocked. Errors are logged, never thrown.
- * Search results are never cached outside the Durable Object. The Workers
- * cache tag purge remains the canonical invalidation boundary for catalog
- * mutations; the rebuild only refreshes the index.
- */
 export const scheduleProductSearchRebuild = (
 	ctx: RebuildContext,
 	reason: ProductSearchRebuildReason,

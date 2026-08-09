@@ -1,7 +1,5 @@
 import type { ProductSortDirection } from "@vit/shared/domain/product";
 
-export const PRODUCT_SEARCH_OBJECT_NAME = "product-search-global";
-
 export type ProductSearchRebuildReason =
 	| "manual"
 	| "product_created"
@@ -9,8 +7,7 @@ export type ProductSearchRebuildReason =
 	| "product_stock_updated"
 	| "product_deleted"
 	| "brand_updated"
-	| "category_updated"
-	| "cold_missing_snapshot";
+	| "category_updated";
 
 export interface ProductSearchFilters {
 	brandId?: number;
@@ -93,10 +90,13 @@ export interface ProductSearchDocument {
 	nameMn: string;
 	nameWithBrand: string;
 	nameMnWithBrand: string;
+	primaryName: string;
+	primaryNameMn: string;
 	description: string;
 	slug: string;
 	price: number;
 	createdAt: string;
+	createdAtEpoch: number;
 	discount: number;
 	brand: string;
 	category: string;
@@ -105,17 +105,30 @@ export interface ProductSearchDocument {
 	inStock: boolean;
 	amount: string;
 	potency: string;
+	dosage: string;
 	dailyIntake: number;
-	brandId?: number;
-	categoryId?: number;
+	brandId: number;
+	categoryId: number;
 	isFeatured: boolean;
 	image: string;
 	hasImage: boolean;
-	ingredientPreview: string[];
+	ingredientPreviewJson: string;
 	ingredients: string;
 	tags: string;
 	aliases: string;
-	normalized: string;
+	intentTerms: string;
+	rankingScore: number;
+}
+
+export interface ProductSearchAnalyticsSignal {
+	productId: number;
+	uniqueViewers: number;
+	addToCarts: number;
+	searchClickSessions: number;
+}
+
+export interface ProductSearchRanking {
+	rankingScore: number;
 }
 
 export interface ProductSearchSourceDocument {
@@ -142,28 +155,13 @@ export interface ProductSearchSourceDocument {
 	image?: string | null;
 }
 
-export interface ProductSearchSnapshot {
-	version: 2;
-	generatedAt: string;
-	productCount: number;
-	documents: ProductSearchDocument[];
-	indexJson: string;
-}
-
 export interface ProductSearchStatus {
 	initialized: boolean;
-	memoryReady: boolean;
+	activeGeneration: string | null;
 	productCount: number;
 	generatedAt: string | null;
 	lastRebuildStartedAt: string | null;
 	lastRebuildFinishedAt: string | null;
 	lastRebuildReason: ProductSearchRebuildReason | null;
 	lastError: string | null;
-}
-
-export interface ProductSearchService {
-	search(input: ProductSearchInput): Promise<ProductSearchPage>;
-	rebuild(reason: ProductSearchRebuildReason): Promise<ProductSearchStatus>;
-	getStatus(): Promise<ProductSearchStatus>;
-	clear(): Promise<void>;
 }
