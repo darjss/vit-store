@@ -17,7 +17,7 @@ export type PurchaseDetailType = NonNullable<
 >;
 type UserType = RouterOutputs["auth"]["me"];
 export type ProductSearchForOrderType =
-	RouterOutputs["product"]["searchProductByNameForOrder"][number];
+	RouterOutputs["product"]["searchProductsInstant"][number];
 export interface Session {
 	id: string;
 	user: UserSelectType;
