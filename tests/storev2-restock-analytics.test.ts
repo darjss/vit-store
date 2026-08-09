@@ -6,7 +6,7 @@ import {
 	trackRestockSheetOpened,
 	trackRestockSubscriptionCreated,
 	trackRestockSubscriptionFailed,
-} from "../src/lib/analytics";
+} from "../apps/storev2/src/lib/analytics";
 
 type CapturedEvent = {
 	name: string;

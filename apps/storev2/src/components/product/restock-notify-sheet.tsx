@@ -56,6 +56,40 @@ function restockErrorMessage(error: unknown, stage: SheetStage) {
 	}
 }
 
+function restockDescription(productName?: string) {
+	return productName
+		? `${productName} дахин орвол танд мэдэгдэнэ.`
+		: "Бараа дахин орвол танд мэдэгдэнэ.";
+}
+
+function restockCustomerType(identity: unknown) {
+	return identity ? ("verified_customer" as const) : ("guest" as const);
+}
+
+type ValidatedContact =
+	| { valid: true; contact: string }
+	| { valid: false; error: string };
+
+function validatedContact(
+	channel: RestockChannel,
+	value: string,
+): ValidatedContact {
+	const contact =
+		channel === "sms" ? value.replace(/\D/g, "") : value.trim().toLowerCase();
+	const valid =
+		channel === "sms"
+			? /^[6-9]\d{7}$/.test(contact)
+			: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+	if (valid) return { valid: true, contact };
+	return {
+		valid: false,
+		error:
+			channel === "sms"
+				? "8 оронтой утасны дугаар оруулна уу."
+				: "И-мэйлийн хаягаа зөв оруулна уу.",
+	};
+}
+
 interface RestockNotifySheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -86,8 +120,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		() => queryClient,
 	);
 
-	const customerType = () =>
-		identityQuery.data ? ("verified_customer" as const) : ("guest" as const);
+	const customerType = () => restockCustomerType(identityQuery.data);
 	const verifiedPhoneFlow = () => Boolean(identityQuery.data) && !guestFlow();
 
 	const analyticsEvent = () => ({
@@ -213,24 +246,13 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 	};
 
 	const requestConfirmation = () => {
-		const normalized =
-			channel() === "sms"
-				? contact().replace(/\D/g, "")
-				: contact().trim().toLowerCase();
-		const valid =
-			channel() === "sms"
-				? /^[6-9]\d{7}$/.test(normalized)
-				: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
-		if (!valid) {
-			setErrorMessage(
-				channel() === "sms"
-					? "8 оронтой утасны дугаар оруулна уу."
-					: "И-мэйлийн хаягаа зөв оруулна уу.",
-			);
+		const result = validatedContact(channel(), contact());
+		if (!result.valid) {
+			setErrorMessage(result.error);
 			contactInput?.focus();
 			return;
 		}
-		setContact(normalized);
+		setContact(result.contact);
 		setErrorMessage("");
 		requestMutation.mutate();
 	};
@@ -273,9 +295,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						Мэдэгдэл авах
 					</SheetTitle>
 					<SheetDescription class="text-muted-foreground text-sm">
-						{props.productName
-							? `${props.productName} дахин орвол танд мэдэгдэнэ.`
-							: "Бараа дахин орвол танд мэдэгдэнэ."}
+						{restockDescription(props.productName)}
 					</SheetDescription>
 				</SheetHeader>
 
@@ -339,7 +359,9 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 										Баталгаажуулах код
 									</label>
 									<input
-										ref={codeInput}
+										ref={(element) => {
+											codeInput = element;
+										}}
 										id="restock-code"
 										name="restock-code"
 										type="text"
@@ -467,7 +489,9 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 										{channel() === "sms" ? "Утасны дугаар" : "И-мэйлийн хаяг"}
 									</label>
 									<input
-										ref={contactInput}
+										ref={(element) => {
+											contactInput = element;
+										}}
 										id="restock-contact"
 										name={channel() === "sms" ? "phone" : "email"}
 										type={channel() === "sms" ? "tel" : "email"}
