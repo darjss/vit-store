@@ -1,3 +1,8 @@
+import {
+	ArrowRightIcon as IconArrowRight,
+	AltArrowRightIcon as IconChevron,
+	FolderIcon as IconFolder,
+} from "@solar-icons/solid/linear";
 import { useQuery } from "@tanstack/solid-query";
 import type { JSX } from "solid-js";
 import {
@@ -19,7 +24,6 @@ import {
 import { parseSearchTokens } from "@/lib/search-parse";
 import { api } from "@/lib/trpc";
 import { washBg } from "@/lib/wash";
-import { ArrowRightIcon as IconArrowRight, AltArrowRightIcon as IconChevron, FolderIcon as IconFolder } from "@solar-icons/solid/linear";
 import SearchResultRow from "./search-result-row";
 import { getSearchTakeoverRequestState } from "./search-takeover-state";
 import { useSearchStorefront } from "./use-search-storefront";
@@ -411,6 +415,7 @@ const SearchTakeover = (props: SearchTakeoverProps) => {
 									<SearchResultRow
 										product={product}
 										query={props.query}
+										searchId={search.searchId()}
 										position={index()}
 										onNavigate={props.onClose}
 									/>
