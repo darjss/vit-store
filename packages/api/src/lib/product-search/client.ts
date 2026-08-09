@@ -64,8 +64,6 @@ export const rebuildProductSearchIndex = async (
 export const getProductSearchStatus = (): Promise<ProductSearchStatus> =>
 	productSearch().getStatus();
 
-export const clearProductSearchIndex = () => productSearch().clear();
-
 type RebuildContext = {
 	c: { executionCtx: ExecutionContext };
 	log: RequestLogger<Record<string, unknown>>;

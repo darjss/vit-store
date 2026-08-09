@@ -545,15 +545,6 @@ export const createProductSearchEngine = (
 				emptyStatus()
 			);
 		},
-
-		async clear() {
-			await redis.del(namespace.activeGenerationKey);
-			const keys = await scanProductKeys(redis, namespace);
-			for (let offset = 0; offset < keys.length; offset += WRITE_BATCH_SIZE) {
-				await redis.del(...keys.slice(offset, offset + WRITE_BATCH_SIZE));
-			}
-			await Promise.all([redis.del(namespace.statusKey), index().drop()]);
-		},
 	};
 };
 
