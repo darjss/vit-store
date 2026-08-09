@@ -47,6 +47,10 @@ function restockErrorMessage(error: unknown, stage: SheetStage) {
 			return "Хэт олон хүсэлт илгээлээ. Түр хүлээгээд дахин оролдоно уу.";
 		case "NOT_FOUND":
 			return "Бараа олдсонгүй. Хуудсаа шинэчлээд дахин оролдоно уу.";
+		case "CONFLICT":
+			return "Бараа дахин орсон байна. Хуудсаа шинэчлээд захиална уу.";
+		case "FORBIDDEN":
+			return "Та 5 барааны мэдэгдэл захиалсан байна. Нэг мэдэгдэл дууссаны дараа дахин оролдоно уу.";
 		case "BAD_REQUEST":
 			return stage === "confirmation"
 				? "Код буруу эсвэл хугацаа нь дууссан. Шалгаад дахин оруулна уу."
@@ -302,10 +306,11 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 				<div class="space-y-4 px-5 py-5">
 					<Switch>
 						<Match when={identityQuery.isPending || identityQuery.isFetching}>
-							<output class="block space-y-3" aria-label="Уншиж байна">
+							<div class="space-y-3" aria-busy="true">
+								<span class="sr-only">Уншиж байна</span>
 								<div class="h-5 w-2/3 animate-pulse rounded-lg bg-muted" />
 								<div class="h-12 w-full animate-pulse rounded-xl bg-muted" />
-							</output>
+							</div>
 						</Match>
 
 						<Match when={identityQuery.isError}>
@@ -325,7 +330,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						</Match>
 
 						<Match when={stage() === "success"}>
-							<output class="block space-y-5 text-center">
+							<div class="space-y-5 text-center" aria-live="polite">
 								<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-success text-success-foreground">
 									<IconCheckCircle class="size-6" aria-hidden="true" />
 								</div>
@@ -342,7 +347,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 								>
 									Хаах
 								</Button>
-							</output>
+							</div>
 						</Match>
 
 						<Match when={stage() === "confirmation"}>

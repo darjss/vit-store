@@ -94,7 +94,7 @@ async function insertOneContact(
 
 	if (Number(openProductCount?.c ?? 0) >= MAX_OPEN_PRODUCTS_PER_CONTACT) {
 		throw new TRPCError({
-			code: "BAD_REQUEST",
+			code: "FORBIDDEN",
 			message: "Too many open restock waitlists for this contact",
 		});
 	}
@@ -128,12 +128,21 @@ export async function createVerifiedRestockSubscription(input: {
 	contact: string;
 }) {
 	const contact = normalizeAndValidateContact(input);
-	const result = await db().transaction(async (tx) => {
-		await tx.execute(
-			sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`,
-		);
-		return insertOneContact(tx, input.productId, contact);
-	});
+	let result: SubscribeResult;
+	try {
+		result = await db().transaction(async (tx) => {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`,
+			);
+			return insertOneContact(tx, input.productId, contact);
+		});
+	} catch (error) {
+		if (error instanceof TRPCError) throw error;
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to create restock subscription",
+		});
+	}
 
 	return {
 		success: true as const,

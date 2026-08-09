@@ -110,29 +110,32 @@ describe("restock confirmation challenge", () => {
 	test("a valid challenge can be consumed only once", async () => {
 		const store = new MemoryChallengeStore();
 		const challengeId = await createStoredChallenge(store);
-
-		const first = await consumeRestockChallenge({
+		const confirmation = {
 			store,
 			challengeId,
 			code: "123456",
 			now,
-		});
-		expect(first.status).toBe("confirmed");
-		if (first.status === "confirmed") {
-			expect(first.challenge).toMatchObject({
+		};
+
+		const results = await Promise.all([
+			consumeRestockChallenge(confirmation),
+			consumeRestockChallenge(confirmation),
+		]);
+		expect(results.map((result) => result.status).sort()).toEqual([
+			"confirmed",
+			"missing",
+		]);
+		const confirmed = results.find((result) => result.status === "confirmed");
+		if (confirmed?.status === "confirmed") {
+			expect(confirmed.challenge).toMatchObject({
 				productId: 7283,
 				channel: "sms",
 				contact: "99112233",
 			});
 		}
 
-		expect(
-			await consumeRestockChallenge({
-				store,
-				challengeId,
-				code: "123456",
-				now,
-			}),
-		).toEqual({ status: "missing" });
+		expect(await consumeRestockChallenge(confirmation)).toEqual({
+			status: "missing",
+		});
 	});
 });
