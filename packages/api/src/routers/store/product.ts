@@ -94,7 +94,7 @@ async function assertProductOutOfStock(productId: number) {
 	}
 	if (product.stock > 0) {
 		throw new TRPCError({
-			code: "BAD_REQUEST",
+			code: "CONFLICT",
 			message: "Product is already in stock",
 		});
 	}
