@@ -36,7 +36,7 @@ Facebook Messenger AI shopping agent — plus shared packages, all deployed to C
 - **Agent**: Flue framework, Cloudflare Workers AI (`@cf/moonshotai/kimi-k2.6`)
 - **Database**: PostgreSQL 16 (Drizzle ORM, Hyperdrive connection pooling in prod)
 - **Storage**: Cloudflare R2 (product + inbound images), KV (sessions/cache)
-- **State**: Durable Objects (product search, Flue agent sessions, Messenger dedup/cart/checkout)
+- **State**: Upstash Redis Search (product discovery); Durable Objects (Flue agent sessions, Messenger dedup/cart/checkout)
 - **IaC/deploy**: Alchemy → Cloudflare Workers (server, agent) and Pages (storev2, admin)
 - **Lint/format**: Biome, oxlint; type checks via `tsc`
 
