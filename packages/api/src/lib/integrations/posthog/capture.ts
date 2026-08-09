@@ -1,5 +1,5 @@
-import { PostHog } from "posthog-node";
 import { env } from "cloudflare:workers";
+import { PostHog } from "posthog-node";
 
 let client: PostHog | null = null;
 
@@ -33,7 +33,9 @@ interface TrackOrderCreatedProps {
 	utmCampaign?: string;
 }
 
-export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
+export async function trackOrderCreatedServerSide(
+	props: TrackOrderCreatedProps,
+) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -92,6 +94,7 @@ interface TrackPaymentConfirmedProps {
 	orderNumber?: string;
 	provider: "qpay" | "transfer";
 	revenue: number;
+	products: Array<{ productId: number; quantity: number }>;
 	currency?: string;
 	referrer?: string;
 }
@@ -111,6 +114,8 @@ export async function trackPaymentConfirmedServerSide(
 				provider: props.provider,
 				$revenue: props.revenue,
 				currency: props.currency ?? "MNT",
+				product_ids: props.products.map(({ productId }) => productId),
+				products: props.products,
 				$referrer: props.referrer,
 			},
 		});

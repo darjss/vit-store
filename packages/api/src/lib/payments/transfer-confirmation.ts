@@ -1,12 +1,15 @@
-import { paymentQueries } from "~/queries/payments";
-import { KhaanTransactionAlreadyConsumedError } from "~/lib/payments/consumed-transaction";
+import { purgeCatalogCacheGlobal } from "~/lib/cache/workers-cache";
 import { persistMessengerNotificationFailure } from "~/lib/integrations/messenger/failed-notifications";
 import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/messenger/messages";
-import { trackOrderPlacedServerSide, trackPaymentConfirmedServerSide } from "~/lib/integrations/posthog";
-import { purgeCatalogCacheGlobal } from "~/lib/cache/workers-cache";
+import {
+	trackOrderPlacedServerSide,
+	trackPaymentConfirmedServerSide,
+} from "~/lib/integrations/posthog";
+import { KhaanTransactionAlreadyConsumedError } from "~/lib/payments/consumed-transaction";
+import { paymentQueries } from "~/queries/payments";
 
 // Canonical confirm + notify + analytics + cache-purge boundary (F2).
 //
@@ -137,6 +140,10 @@ export async function confirmPaymentAndNotify({
 		orderNumber: paymentInfo.order.orderNumber,
 		provider,
 		revenue: paymentInfo.order.total,
+		products: paymentInfo.order.orderDetails.map((detail) => ({
+			productId: detail.product.id,
+			quantity: detail.quantity,
+		})),
 		referrer,
 	}).catch(() => {});
 	trackOrderPlacedServerSide({

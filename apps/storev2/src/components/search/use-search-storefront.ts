@@ -47,6 +47,7 @@ export interface UseSearchStorefrontResult {
 	isError: () => boolean;
 	isLoadingError: () => boolean;
 	isRefetchError: () => boolean;
+	searchId: () => string | null;
 	refetch: () => void;
 }
 
@@ -104,6 +105,10 @@ export function useSearchStorefront(
 	const [lastTrackedQuery, setLastTrackedQuery] = createSignal<string | null>(
 		null,
 	);
+	const [trackedSearch, setTrackedSearch] = createSignal<{
+		term: string;
+		id: string;
+	} | null>(null);
 
 	createEffect(() => {
 		const term = query();
@@ -114,7 +119,14 @@ export function useSearchStorefront(
 			!searchQuery.isFetching &&
 			lastTrackedQuery() !== term
 		) {
-			trackSearchPerformed(term, data.products.length);
+			const searchId = crypto.randomUUID();
+			trackSearchPerformed(
+				term,
+				data.products.length,
+				searchId,
+				data.products.map(({ id }) => id),
+			);
+			setTrackedSearch({ term, id: searchId });
 			setLastTrackedQuery(term);
 		}
 	});
@@ -128,6 +140,10 @@ export function useSearchStorefront(
 		isError: () => searchQuery.isError,
 		isLoadingError: () => searchQuery.isLoadingError,
 		isRefetchError: () => searchQuery.isRefetchError,
+		searchId: () => {
+			const tracked = trackedSearch();
+			return tracked?.term === query() ? tracked.id : null;
+		},
 		refetch: () => searchQuery.refetch(),
 	};
 }
