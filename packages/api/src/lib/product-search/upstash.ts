@@ -20,8 +20,11 @@ const PRODUCT_SEARCH_INDEX = "vit-products-v2";
 const PRODUCT_KEY_PREFIX = "search:vit:v2:product:";
 const ACTIVE_GENERATION_KEY = "search:vit:v2:active";
 const STATUS_KEY = "search:vit:v2:status";
+const REBUILD_LOCK_KEY = "search:vit:v2:rebuild-lock";
 const WRITE_BATCH_SIZE = 50;
 const STALE_GENERATION_TTL_SECONDS = 10 * 60;
+const REBUILD_LOCK_TTL_MS = 30_000;
+const REBUILD_LOCK_WAIT_MS = 10_000;
 
 const PRODUCT_SEARCH_SCHEMA = s.object({
 	generation: s.keyword(),
@@ -81,6 +84,7 @@ export type ProductSearchNamespace = {
 	productKeyPrefix: string;
 	activeGenerationKey: string;
 	statusKey: string;
+	rebuildLockKey: string;
 };
 
 const productionNamespace: ProductSearchNamespace = {
@@ -88,6 +92,7 @@ const productionNamespace: ProductSearchNamespace = {
 	productKeyPrefix: PRODUCT_KEY_PREFIX,
 	activeGenerationKey: ACTIVE_GENERATION_KEY,
 	statusKey: STATUS_KEY,
+	rebuildLockKey: REBUILD_LOCK_KEY,
 };
 
 const emptyStatus = (): ProductSearchStatus => ({
@@ -105,6 +110,41 @@ const errorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : "Unknown error";
 
 const readJson = <T>(redis: Redis, key: string) => redis.get<T>(key);
+
+const wait = (milliseconds: number) =>
+	new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+export const withProductSearchRebuildLock = async <T>(
+	redis: Redis,
+	operation: () => Promise<T>,
+	namespace: ProductSearchNamespace = productionNamespace,
+) => {
+	const token = crypto.randomUUID();
+	const deadline = Date.now() + REBUILD_LOCK_WAIT_MS;
+	while (
+		(await redis.set(namespace.rebuildLockKey, token, {
+			nx: true,
+			px: REBUILD_LOCK_TTL_MS,
+		})) !== "OK"
+	) {
+		if (Date.now() >= deadline) {
+			throw new Error("Timed out waiting for the product search rebuild lock");
+		}
+		await wait(100);
+	}
+
+	try {
+		return await operation();
+	} finally {
+		await redis
+			.eval(
+				"if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+				[namespace.rebuildLockKey],
+				[token],
+			)
+			.catch(() => undefined);
+	}
+};
 
 const prepareQuery = (query: string) => {
 	const normalized = normalizeSearchText(query);

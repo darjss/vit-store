@@ -13,6 +13,7 @@ import type {
 import {
 	createProductSearchEngine,
 	createProductSearchRedis,
+	withProductSearchRebuildLock,
 } from "~/lib/product-search/upstash";
 
 const productSearch = () =>
@@ -50,8 +51,14 @@ export const searchProducts = async (
 export const rebuildProductSearchIndex = async (
 	reason: ProductSearchRebuildReason = "manual",
 ): Promise<ProductSearchStatus> => {
-	const documents = await loadProductSearchDocumentsFromDb(db());
-	return productSearch().replaceAll(documents, reason);
+	const redis = createProductSearchRedis(
+		env.UPSTASH_REDIS_REST_URL,
+		env.UPSTASH_REDIS_REST_TOKEN,
+	);
+	return withProductSearchRebuildLock(redis, async () => {
+		const documents = await loadProductSearchDocumentsFromDb(db());
+		return createProductSearchEngine(redis).replaceAll(documents, reason);
+	});
 };
 
 export const getProductSearchStatus = (): Promise<ProductSearchStatus> =>
