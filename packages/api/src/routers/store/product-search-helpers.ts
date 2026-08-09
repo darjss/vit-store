@@ -1,15 +1,10 @@
-import { productQueries } from "@vit/api/queries";
 import { brandQueries } from "~/queries/brands";
 import { categoryQueries } from "~/queries/categories";
-import {
-	searchProductPage,
-	searchProducts,
-} from "~/lib/product-search/client";
+import { searchProductPage, searchProducts } from "~/lib/product-search/client";
 import type {
 	ProductSearchFilters,
 	ProductSearchSort,
 } from "~/lib/product-search/types";
-import { projectStorefrontCard } from "~/queries/products/storefront-card";
 import {
 	normalizeSearchText,
 	transliterateCyrillicToLatin,
@@ -55,10 +50,8 @@ export const mapStockStatus = (
 	return "in_stock";
 };
 
-// Rich catalog row carrying the real stock state from whichever source served
-// the query (MiniSearch index or the DB name fallback). Both call sites below
-// project this down — the storefront drops stock, the assistant maps it — so
-// the two-phase search control flow lives in exactly one place.
+// Rich catalog row carrying the stock state returned by the search index.
+// Storefront and assistant callers project this shared row for their own UI.
 interface CatalogSearchRow {
 	id: number;
 	slug: string;
@@ -95,40 +88,23 @@ export const performCatalogSearch = async (
 				}
 			: undefined;
 	const searchResults = await searchProducts(query, safeLimit, filters);
-
-	if (searchResults.length > 0) {
-		return searchResults
-			.filter((result) => result.status === "active")
-			.map((result) => ({
-				id: result.id,
-				slug: result.slug,
-				name: result.name,
-				nameMn: result.nameMn,
-				potency: result.potency,
-				amount: result.amount,
-				price: result.price,
-				image: result.image,
-				brand: result.brand,
-				status: result.status,
-				stock: result.stock,
-				discount: result.discount,
-				categoryId: result.categoryId,
-			}));
-	}
-
-	const q = productQueries.store;
-	const fallbackResults = requireStock
-		? await q.searchByNameWithStock(query, safeLimit)
-		: await q.searchByName(query, safeLimit);
-
-	return fallbackResults
-		.map(projectStorefrontCard)
-		.sort((a, b) => {
-			const aIn = a.stock > 0;
-			const bIn = b.stock > 0;
-			if (aIn !== bIn) return aIn ? -1 : 1;
-			return b.stock - a.stock;
-		});
+	return searchResults
+		.filter((result) => result.status === "active")
+		.map((result) => ({
+			id: result.id,
+			slug: result.slug,
+			name: result.name,
+			nameMn: result.nameMn,
+			potency: result.potency,
+			amount: result.amount,
+			price: result.price,
+			image: result.image,
+			brand: result.brand,
+			status: result.status,
+			stock: result.stock,
+			discount: result.discount,
+			categoryId: result.categoryId,
+		}));
 };
 
 export const performProductSearch = async (

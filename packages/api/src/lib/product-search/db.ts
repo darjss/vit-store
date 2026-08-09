@@ -6,7 +6,7 @@ import {
 	ProductImagesTable,
 	ProductsTable,
 } from "~/db/schema";
-import { buildProductSearchDocument } from "~/lib/product-search/core";
+import { buildProductSearchDocument } from "~/lib/product-search/document";
 import type { ProductSearchDocument } from "~/lib/product-search/types";
 
 export const loadProductSearchDocumentsFromDb = async (

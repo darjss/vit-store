@@ -62,6 +62,7 @@ const LATIN_SEARCH_ALIASES: Record<string, string[]> = {
 	glucosamine: ["глюкозамин", "glucosamin"],
 	creatine: ["creatin", "kreatin", "креатин"],
 	blackmores: ["blackmore", "black mores", "black more", "блэкморс"],
+	naturebell: ["nature bell", "natures bell", "naturbell"],
 	tudca: ["tudka", "тудка", "тудца"],
 	ahcc: ["ахцц"],
 	reishi: ["рейши", "reishii"],
@@ -94,6 +95,7 @@ const BRAND_ALIASES: Record<string, string> = {
 	naturbell: "naturebell",
 	"black mores": "blackmores",
 	"black more": "blackmores",
+	blackmore: "blackmores",
 	"jarrow formula": "jarrow formulas",
 };
 
@@ -177,20 +179,26 @@ export const uniqueText = (values: Array<string | null | undefined>) =>
 		),
 	);
 
-export const buildProductAliases = (product: ProductSearchSourceDocument) => {
-	const productStrings = [
-		product.name,
-		product.nameMn,
-		product.brand,
-		product.category,
-		`${product.brand} ${product.name}`,
-		`${product.category} ${product.name}`,
-		product.amount,
-		product.potency,
-		...(product.ingredients ?? []),
-		...(product.tags ?? []),
-	];
+const toTextList = (value: string[] | string | null | undefined) => {
+	if (Array.isArray(value)) return value;
+	return value ? [value] : [];
+};
 
+const productSearchStrings = (product: ProductSearchSourceDocument) => [
+	product.name,
+	product.nameMn,
+	product.brand,
+	product.category,
+	`${product.brand} ${product.name}`,
+	`${product.category} ${product.name}`,
+	product.amount,
+	product.potency,
+	...toTextList(product.ingredients),
+	...toTextList(product.tags),
+];
+
+export const buildProductAliases = (product: ProductSearchSourceDocument) => {
+	const productStrings = productSearchStrings(product);
 	const aliases = uniqueText(productStrings);
 	const transliterated = uniqueText(
 		productStrings.map((value) => transliterateCyrillicToLatin(value)),
@@ -200,6 +208,24 @@ export const buildProductAliases = (product: ProductSearchSourceDocument) => {
 	);
 
 	return Array.from(new Set([...aliases, ...transliterated, ...latinExpanded]));
+};
+
+export const buildProductIntentTerms = (
+	product: ProductSearchSourceDocument,
+) => {
+	const haystack = normalizeSearchText(productSearchStrings(product).join(" "));
+	if (!haystack) return [];
+
+	return uniqueText(
+		Object.entries(SYMPTOM_INGREDIENT_ALIASES).flatMap(
+			([symptom, ingredients]) =>
+				ingredients.some((ingredient) =>
+					haystack.includes(normalizeSearchText(ingredient)),
+				)
+					? [symptom, transliterateCyrillicToLatin(symptom)]
+					: [],
+		),
+	);
 };
 
 export const expandBrandAliases = (value: string | null | undefined) => {
