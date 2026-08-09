@@ -255,6 +255,7 @@ export const expandVitaminLetters = (value: string | null | undefined) => {
 	const tokens = normalizeSearchText(value).split(" ").filter(Boolean);
 	let changed = false;
 	const expanded = tokens.map((token) => {
+		if ((token === "b" || token === "б") && tokens.length > 1) return token;
 		const alias = VITAMIN_LETTER_ALIASES[token];
 		if (alias) {
 			changed = true;

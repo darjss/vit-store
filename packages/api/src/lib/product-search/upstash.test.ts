@@ -50,7 +50,7 @@ describe("product search query", () => {
 			buildProductSearchFilter("b complex", "generation"),
 		);
 
-		expect(serialized).toContain('"$smart":"vitamin"');
+		expect(serialized).not.toContain('"$smart":"vitamin"');
 		expect(serialized).toContain('"$eq":"b"');
 		expect(serialized).not.toContain('"$smart":"b"');
 		expect(serialized).toContain('"$smart":"complex"');
@@ -86,6 +86,15 @@ describe("product search query", () => {
 		);
 		expect(serialized).not.toContain('"ingredients"');
 		expect(serialized).not.toContain('"intentTerms"');
+	});
+
+	test("adds descriptive fields only to the broad fallback", () => {
+		const serialized = JSON.stringify(
+			buildProductSearchFilter("magnesium", "generation", undefined, "broad"),
+		);
+
+		expect(serialized).toContain('"ingredients"');
+		expect(serialized).toContain('"description"');
 	});
 });
 
