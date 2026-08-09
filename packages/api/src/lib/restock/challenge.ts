@@ -7,6 +7,7 @@ import {
 	createRestockChallengeRecord,
 	type RestockChallengeRecord,
 	type RestockChallengeStore,
+	restoreRestockChallenge,
 } from "~/lib/restock/challenge-core";
 import {
 	isValidRestockContact,
@@ -27,6 +28,9 @@ const challengeStore: RestockChallengeStore = {
 		redis().get<RestockChallengeRecord>(challengeKey(challengeId)),
 	getdel: (challengeId) =>
 		redis().getdel<RestockChallengeRecord>(challengeKey(challengeId)),
+	restore: async (challengeId, record, ttlMs) => {
+		await redis().set(challengeKey(challengeId), record, { px: ttlMs });
+	},
 	delete: async (challengeId) => {
 		await redis().del(challengeKey(challengeId));
 	},
@@ -152,9 +156,10 @@ export async function getGuestRestockChallengeForAttempt(input: {
 	return challenge;
 }
 
-export async function confirmGuestRestockChallenge(input: {
+export async function withConfirmedGuestRestockChallenge<T>(input: {
 	challengeId: string;
 	code: string;
+	action: (challenge: RestockChallengeRecord) => Promise<T>;
 }) {
 	const result = await consumeRestockChallenge({
 		store: challengeStore,
@@ -163,7 +168,18 @@ export async function confirmGuestRestockChallenge(input: {
 		now: new Date(),
 	});
 	if (result.status !== "confirmed") return invalidConfirmation();
-	return result.challenge;
+
+	try {
+		return await input.action(result.challenge);
+	} catch (error) {
+		await restoreRestockChallenge({
+			store: challengeStore,
+			challengeId: input.challengeId,
+			challenge: result.challenge,
+			now: new Date(),
+		});
+		throw error;
+	}
 }
 
 export async function cancelGuestRestockChallenge(challengeId: string) {

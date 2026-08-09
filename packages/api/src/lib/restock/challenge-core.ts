@@ -10,6 +10,11 @@ export type RestockChallengeRecord = {
 export type RestockChallengeStore = {
 	get: (challengeId: string) => Promise<RestockChallengeRecord | null>;
 	getdel: (challengeId: string) => Promise<RestockChallengeRecord | null>;
+	restore: (
+		challengeId: string,
+		record: RestockChallengeRecord,
+		ttlMs: number,
+	) => Promise<void>;
 	delete: (challengeId: string) => Promise<void>;
 };
 
@@ -87,4 +92,15 @@ export async function consumeRestockChallenge(input: {
 	}
 
 	return { status: "confirmed" as const, challenge: consumed };
+}
+
+export async function restoreRestockChallenge(input: {
+	store: RestockChallengeStore;
+	challengeId: string;
+	challenge: RestockChallengeRecord;
+	now: Date;
+}) {
+	const ttlMs = input.challenge.expiresAt - input.now.getTime();
+	if (ttlMs <= 0) return;
+	await input.store.restore(input.challengeId, input.challenge, ttlMs);
 }

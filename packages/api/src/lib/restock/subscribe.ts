@@ -59,6 +59,25 @@ function isUniqueConflict(error: unknown): boolean {
 
 type Tx = Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0];
 
+async function assertProductOutOfStock(tx: Tx, productId: number) {
+	const [product] = await tx
+		.select({ stock: ProductsTable.stock, status: ProductsTable.status })
+		.from(ProductsTable)
+		.where(
+			and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
+		)
+		.for("update");
+	if (!product || product.status === "draft") {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+	}
+	if (product.stock > 0) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: "Product is already in stock",
+		});
+	}
+}
+
 async function insertOneContact(
 	tx: Tx,
 	productId: number,
@@ -131,6 +150,7 @@ export async function createVerifiedRestockSubscription(input: {
 	let result: SubscribeResult;
 	try {
 		result = await db().transaction(async (tx) => {
+			await assertProductOutOfStock(tx, input.productId);
 			await tx.execute(
 				sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`,
 			);

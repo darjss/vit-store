@@ -1,6 +1,5 @@
 export type RestockRateLimitStore = {
-	incr: (key: string) => Promise<number>;
-	expire: (key: string, windowSeconds: number) => Promise<unknown>;
+	incrementWithExpiry: (key: string, windowSeconds: number) => Promise<number>;
 };
 
 const encoder = new TextEncoder();
@@ -22,7 +21,6 @@ export async function checkRestockRateLimit(input: {
 }) {
 	const hash = await hashPrivateValue(input.value);
 	const key = `restock:${input.action}:${input.scope}:${hash}`;
-	const count = await input.store.incr(key);
-	if (count === 1) await input.store.expire(key, input.windowSeconds);
+	const count = await input.store.incrementWithExpiry(key, input.windowSeconds);
 	return count <= input.limit;
 }

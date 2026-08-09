@@ -3,6 +3,7 @@ import type { RequestLogger } from "evlog";
 import { createLogger } from "evlog";
 import { db } from "~/db/client";
 import { ProductsTable, RestockSubscriptionsTable } from "~/db/schema";
+import { shouldRetryRestockDelivery } from "~/lib/restock/delivery-core";
 import { sendRestockNotification } from "~/lib/restock/send";
 
 const MAX_OPEN_PRODUCTS_PER_CONTACT = 5;
@@ -121,7 +122,7 @@ async function retryClaim(input: {
 
 async function recoverExpiredClaims() {
 	const now = new Date();
-	const ambiguousSms = await db()
+	const ambiguousClaims = await db()
 		.update(RestockSubscriptionsTable)
 		.set({
 			deliveryState: "unknown",
@@ -129,11 +130,10 @@ async function recoverExpiredClaims() {
 			leaseExpiresAt: null,
 			terminalAt: now,
 			contact: null,
-			lastError: "SMS lease expired after an ambiguous provider call",
+			lastError: "Lease expired after an ambiguous provider call",
 		})
 		.where(
 			and(
-				eq(RestockSubscriptionsTable.channel, "sms"),
 				eq(RestockSubscriptionsTable.deliveryState, "sending"),
 				lt(RestockSubscriptionsTable.leaseExpiresAt, now),
 				isNull(RestockSubscriptionsTable.deletedAt),
@@ -141,29 +141,14 @@ async function recoverExpiredClaims() {
 		)
 		.returning({ id: RestockSubscriptionsTable.id });
 
-	const retryableEmail = await db()
-		.update(RestockSubscriptionsTable)
-		.set({
-			deliveryState: "pending",
-			claimToken: null,
-			leaseExpiresAt: null,
-			nextAttemptAt: now,
-			lastError: "Email lease expired before completion",
-		})
-		.where(
-			and(
-				eq(RestockSubscriptionsTable.channel, "email"),
-				eq(RestockSubscriptionsTable.deliveryState, "sending"),
-				lt(RestockSubscriptionsTable.leaseExpiresAt, now),
-				isNull(RestockSubscriptionsTable.deletedAt),
-			),
-		)
-		.returning({ id: RestockSubscriptionsTable.id });
+	return { ambiguousClaims: ambiguousClaims.length };
+}
 
-	return {
-		ambiguousSms: ambiguousSms.length,
-		retryableEmail: retryableEmail.length,
-	};
+class ProviderTimeoutError extends Error {
+	constructor() {
+		super("Restock provider timed out");
+		this.name = "ProviderTimeoutError";
+	}
 }
 
 async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
@@ -172,7 +157,7 @@ async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
 		const timeout = setTimeout(() => {
 			if (settled) return;
 			settled = true;
-			reject(new Error("Restock provider timed out"));
+			reject(new ProviderTimeoutError());
 		}, PROVIDER_TIMEOUT_MS);
 
 		operation.then(
@@ -224,18 +209,24 @@ async function deliverCandidate(
 		return { claimed: 1, notified: 1, failed: 0 };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		if (claimed.channel === "sms") {
-			await finishClaim({
-				id: claimed.id,
-				claimToken: claimed.claimToken,
-				state: "unknown",
-				error: message,
-			});
-		} else {
+		if (
+			shouldRetryRestockDelivery({
+				channel: claimed.channel,
+				providerResult:
+					error instanceof ProviderTimeoutError ? "ambiguous" : "failed",
+			})
+		) {
 			await retryClaim({
 				id: claimed.id,
 				claimToken: claimed.claimToken,
 				attemptCount: claimed.attemptCount,
+				error: message,
+			});
+		} else {
+			await finishClaim({
+				id: claimed.id,
+				claimToken: claimed.claimToken,
+				state: "unknown",
 				error: message,
 			});
 		}
