@@ -53,24 +53,6 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             });
         }
     }),
-    searchProductByNameForOrder: proc
-        .input(v.object({ searchTerm: v.string() }))
-        .query(async ({ ctx, input }) => {
-        try {
-            const products = await productQueries.admin.searchByNameForOrder(input.searchTerm, 3);
-            return products;
-        }
-        catch (error) {
-            ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-                event: "searchProductByNameForOrder"
-            });
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to search products for order",
-                cause: error,
-            });
-        }
-    }),
     searchProductsInstant: proc
         .input(v.object({
         query: v.pipe(v.string(), v.minLength(1)),
