@@ -4,6 +4,7 @@ import {
 	createRestockChallengeRecord,
 	type RestockChallengeRecord,
 	type RestockChallengeStore,
+	restoreRestockChallenge,
 } from "../src/lib/restock/challenge-core";
 import { checkRestockRateLimit } from "../src/lib/restock/rate-limit-core";
 
@@ -20,6 +21,14 @@ class MemoryChallengeStore implements RestockChallengeStore {
 		return record;
 	}
 
+	async restore(
+		challengeId: string,
+		record: RestockChallengeRecord,
+		_ttlMs: number,
+	) {
+		this.records.set(challengeId, record);
+	}
+
 	async delete(challengeId: string) {
 		this.records.delete(challengeId);
 	}
@@ -29,14 +38,13 @@ class MemoryRateLimitStore {
 	readonly counts = new Map<string, number>();
 	readonly expirations = new Map<string, number>();
 
-	async incr(key: string) {
+	async incrementWithExpiry(key: string, windowSeconds: number) {
 		const count = (this.counts.get(key) ?? 0) + 1;
 		this.counts.set(key, count);
+		if (!this.expirations.has(key)) {
+			this.expirations.set(key, windowSeconds);
+		}
 		return count;
-	}
-
-	async expire(key: string, windowSeconds: number) {
-		this.expirations.set(key, windowSeconds);
 	}
 }
 
@@ -105,6 +113,35 @@ describe("restock confirmation challenge", () => {
 		const [key] = store.counts.keys();
 		expect(key).not.toContain(input.value);
 		expect(store.expirations.get(key ?? "")).toBe(input.windowSeconds);
+	});
+
+	test("a consumed challenge can be restored after subscription failure", async () => {
+		const store = new MemoryChallengeStore();
+		const challengeId = await createStoredChallenge(store);
+		const result = await consumeRestockChallenge({
+			store,
+			challengeId,
+			code: "123456",
+			now,
+		});
+		expect(result.status).toBe("confirmed");
+		if (result.status !== "confirmed") return;
+
+		await restoreRestockChallenge({
+			store,
+			challengeId,
+			challenge: result.challenge,
+			now,
+		});
+
+		expect(
+			await consumeRestockChallenge({
+				store,
+				challengeId,
+				code: "123456",
+				now,
+			}),
+		).toMatchObject({ status: "confirmed" });
 	});
 
 	test("a valid challenge can be consumed only once", async () => {

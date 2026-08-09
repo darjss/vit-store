@@ -16,10 +16,9 @@ import {
 	subscribeVerifiedPhoneToRestock,
 } from "~/lib/restock";
 import {
-	cancelGuestRestockChallenge,
-	confirmGuestRestockChallenge,
 	getGuestRestockChallengeForAttempt,
 	requestGuestRestockConfirmation,
+	withConfirmedGuestRestockChallenge,
 } from "~/lib/restock/challenge";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
@@ -396,8 +395,7 @@ export const product = router({
 				productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			}),
 		)
-		.mutation(async ({ input, ctx }) => {
-			await assertProductOutOfStock(input.productId);
+		.mutation(({ input, ctx }) => {
 			return subscribeVerifiedPhoneToRestock({
 				productId: input.productId,
 				verifiedPhone: String(ctx.session.user.phone),
@@ -418,21 +416,18 @@ export const product = router({
 	confirmGuestRestockSubscription: publicProcedure
 		.input(v.object(guestRestockConfirmationInput))
 		.mutation(async ({ input, ctx }) => {
-			const pending = await getGuestRestockChallengeForAttempt({
+			await getGuestRestockChallengeForAttempt({
 				challengeId: input.challengeId,
 				requestIp: requestIp(ctx),
 			});
-			try {
-				await assertProductOutOfStock(pending.productId);
-			} catch (error) {
-				await cancelGuestRestockChallenge(input.challengeId);
-				throw error;
-			}
-			const challenge = await confirmGuestRestockChallenge(input);
-			return createVerifiedRestockSubscription({
-				productId: challenge.productId,
-				channel: challenge.channel,
-				contact: challenge.contact,
+			return withConfirmedGuestRestockChallenge({
+				...input,
+				action: (challenge) =>
+					createVerifiedRestockSubscription({
+						productId: challenge.productId,
+						channel: challenge.channel,
+						contact: challenge.contact,
+					}),
 			});
 		}),
 	getProductBenchmark: publicProcedure.query(async () => {
