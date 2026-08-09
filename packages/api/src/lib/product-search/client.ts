@@ -90,8 +90,8 @@ export const rebuildProductSearchIndex = async (
 		env.UPSTASH_REDIS_REST_URL,
 		env.UPSTASH_REDIS_REST_TOKEN,
 	);
+	const signals = await loadRankingSignals(redis);
 	return withProductSearchRebuildLock(redis, async () => {
-		const signals = await loadRankingSignals(redis);
 		const documents = await loadProductSearchDocumentsFromDb(db(), signals);
 		return createProductSearchEngine(redis).replaceAll(documents, reason);
 	});

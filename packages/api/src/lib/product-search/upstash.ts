@@ -262,6 +262,8 @@ export const buildProductSearchFilter = (
 		must.push({ price: { $lte: filters.maxPrice } });
 	}
 
+	if (!includeIntent) return { $must: must };
+
 	return {
 		$must: must,
 		$should: [
