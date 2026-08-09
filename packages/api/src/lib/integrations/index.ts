@@ -1,3 +1,4 @@
+export { sendEmail } from "~/lib/integrations/email";
 export {
 	type GenericWebhookPayload,
 	messenger,
@@ -5,7 +6,6 @@ export {
 } from "~/lib/integrations/messenger";
 export type { PostHogConfig } from "~/lib/integrations/posthog";
 export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog";
-export { resendClient, sendEmail } from "~/lib/integrations/resend";
 export type {
 	Device as SmsDevice,
 	DeviceSettings as SmsDeviceSettings,

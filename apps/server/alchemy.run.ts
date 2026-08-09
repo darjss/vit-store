@@ -4,6 +4,7 @@ import alchemy from "alchemy";
 import {
 	Ai,
 	DurableObjectNamespace,
+	EmailSender,
 	Hyperdrive,
 	Images,
 	KVNamespace,
@@ -20,6 +21,9 @@ async function main() {
 	const stage = app.stage;
 
 	const env = createServerAlchemyEnv(process.env);
+	const fromEmail =
+		env.RESTOCK_FROM_EMAIL.match(/<([^>]+)>/)?.[1] ?? env.RESTOCK_FROM_EMAIL;
+	const email = EmailSender({ allowedSenderAddresses: [fromEmail] });
 
 	const kv = await KVNamespace("kv", {
 		title: `vit-kv-${app.stage}`,
@@ -103,6 +107,7 @@ async function main() {
 			vitStoreKV: kv,
 			r2Bucket: r2,
 			images: images,
+			EMAIL: email,
 			CORS_ORIGIN: env.CORS_ORIGIN,
 			DASH_URL: env.DASH_URL,
 			GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
@@ -113,7 +118,6 @@ async function main() {
 			MESSENGER_VERIFY_TOKEN: env.MESSENGER_VERIFY_TOKEN,
 			SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
 			SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
-			RESEND_API_KEY: env.RESEND_API_KEY,
 			RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
 			FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
 			OPENCODE_GO_API_KEY: env.OPENCODE_GO_API_KEY,
