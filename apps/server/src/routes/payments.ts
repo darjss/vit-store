@@ -6,7 +6,7 @@ import {
 import { paymentQueries } from "@vit/api/queries";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 app.get("/qpay", async (c) => {
     const log = c.get("log");
     log.set({ user_type: "system", operation: "qpay.webhook" });

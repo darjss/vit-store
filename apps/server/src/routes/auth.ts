@@ -7,7 +7,7 @@ import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { google } from "../lib/oauth";
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 const COOKIE_MAX_AGE = 60 * 10;
 const OAUTH_TEMP_COOKIE = "google_oauth_temp";
 const BOOTSTRAP_ADMIN_GOOGLE_ID = "118271302696111351988";
