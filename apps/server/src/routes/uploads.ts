@@ -4,7 +4,7 @@ import { requireAdminSession } from "../lib/admin-session";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 const CDN_BASE_URL = "https://cdn.darjs.dev";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;

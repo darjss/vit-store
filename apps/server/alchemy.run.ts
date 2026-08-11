@@ -15,6 +15,13 @@ import {
 } from "alchemy/cloudflare";
 import { createServerAlchemyEnv } from "../../env";
 
+// Exported (not private) so the `server` Worker export can name the type of
+// its STOREFRONT WorkerRef binding; a private interface here trips declaration
+// emit in check-types.
+export interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
+	purgeCache(tags: string[]): Promise<void>;
+}
+
 // Bun 1.3.14 crashes when Alchemy's async context crosses top-level await.
 async function main() {
 	const app = await alchemy("server");
@@ -75,10 +82,6 @@ async function main() {
 		stage === "dev"
 			? `postgresql://${env.PLANETSCALE_USER}:${env.PLANETSCALE_PASSWORD}@${env.PLANETSCALE_HOST}:5432/${env.PLANETSCALE_DATABASE}?sslmode=require`
 			: "";
-
-	interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
-		purgeCache(tags: string[]): Promise<void>;
-	}
 
 	const server = await Worker("api", {
 		entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
