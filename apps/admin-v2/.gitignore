@@ -1,0 +1,23 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# Build outputs
+/dist/
+/dev-dist/
+/.tanstack/
+
+# Environment & local files
+.env*
+!.env.example
+.DS_Store
+*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Alchemy
+.alchemy/
+.wrangler/
+.dev.vars*

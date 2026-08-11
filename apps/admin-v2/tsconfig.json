@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"esModuleInterop": true,
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
+		"types": ["vite/client", "@cloudflare/workers-types"],
+		"rootDirs": [".", "../.."],
+		"paths": {
+			"~/*": ["../../packages/api/src/*"],
+			"@/*": ["./src/*"],
+			"@server/*": ["../server/src/*"],
+			"server/alchemy": ["../server/alchemy.run.ts"]
+		}
+	},
+	"include": ["**/*.ts", "**/*.tsx", "../../env.ts"]
+}
