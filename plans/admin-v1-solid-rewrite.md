@@ -48,11 +48,11 @@ The storefront (`apps/storev2`) already runs the Solid stack — Astro islands o
 
 The shared part is primitives and tokens, not the hard parts — the admin still owns its router, forms, and feature code. Sell this on consistency and UX, not on reuse savings.
 
-Charts: the current admin uses Recharts (React-only), which has no Solid equivalent. Track 6 must pick an approach up front — a small chart library or hand-rolled SVG — before writing analytics UI.
+Charts: the current admin uses Recharts (React-only), which has no Solid equivalent. Track 6 spikes `@tanstack/charts` (solid adapter, v0.9, MIT, 37–43 KiB) for the single trend view; if 0.x API friction is high, fall back to one hand-rolled SVG `TrendChart` component in `@vit/ui`. Metrics are numbers and top-products is a list — neither needs a chart library. Do not bring Chart.js/ECharts/uPlot into the stack.
 
 ### UI direction
 
-Use the approved B + C direction:
+Use the approved direction from the UI prototype (`plans/admin-v2-ui-prototype/`, committed as the primary source): **variant B — triage agenda** — no header, glance cards, a dark "next action" strip, state-driven order cards with one primary action each, product cards with tooltips and ••• action menus. Card Workspace for Products and Orders lists, Single-Task Flow for details.
 
 - Card Workspace for Products and Orders lists
 - Single-Task Flow for product and order details
