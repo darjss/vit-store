@@ -1,6 +1,6 @@
 import { BillListIcon } from "@solar-icons/solid/linear/bill-list";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 4 owns this directory. Placeholder until the orders feature lands.
 export function OrdersPage() {

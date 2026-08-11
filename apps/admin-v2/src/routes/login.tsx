@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 import { GoogleIcon } from "@/app/google-icon";
 import { ensureAdminSession } from "@/lib/auth";
-import { Button, InlineAlert } from "@/tmp-ui";
+import { Button, InlineAlert } from "@vit/ui";
 
 export const Route = createFileRoute("/login")({
 	component: LoginPage,
@@ -42,15 +42,13 @@ function LoginPage() {
 				</div>
 
 				<Show when={search().message}>
-					{(message) => (
-						<InlineAlert variant="warning">{message()}</InlineAlert>
-					)}
+					{(message) => <InlineAlert tone="warning">{message()}</InlineAlert>}
 				</Show>
 
 				<Button
 					as="a"
 					variant="primary"
-					size="md"
+					size="lg"
 					class="w-full"
 					href={`${import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000"}/admin/login/google`}
 				>

@@ -1,6 +1,6 @@
 import { ChartIcon } from "@solar-icons/solid/linear/chart";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 6 owns this directory. Placeholder until the analytics feature lands.
 export function AnalyticsPage() {

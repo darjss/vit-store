@@ -1,65 +1,11 @@
 @import "tailwindcss";
+@import "@vit/ui/styles.css";
+@source "../../../../packages/ui/src";
 
 /*
- * Admin V2 design tokens — variant B "triage agenda" prototype.
- * Source: plans/admin-v2-ui-prototype/index.html (approved, committed).
- *
- * Track 1 (@vit/ui) will own the shared token set. Until then the admin
- * palette lives here, one swap point when the package lands.
+ * Admin V2 — variant B "triage agenda" layout + app styles.
+ * Tokens now come from the shared @vit/ui package (see @vit/ui/styles.css).
  */
-@theme {
-	/* canvas + surfaces */
-	--color-canvas: #faf6ee;
-	--color-surface: #ffffff;
-	--color-surface-2: #f4ede0;
-
-	/* ink */
-	--color-ink: #2b2419;
-	--color-ink-2: #8a7d68;
-
-	/* primary action — butter, never blue/green */
-	--color-butter: #f2be22;
-	--color-butter-strong: #e0a90e;
-
-	/* status — lavender, apricot, coral, lemon, warm gray (no blue/green) */
-	--color-lavender: #cbb9f2;
-	--color-lavender-ink: #4a3a75;
-	--color-apricot: #ffc9a1;
-	--color-apricot-ink: #7a4320;
-	--color-coral: #f28c7b;
-	--color-coral-ink: #7a2418;
-	--color-lemon: #f5e08a;
-	--color-lemon-ink: #6b5710;
-	--color-gray: #e5dccb;
-	--color-gray-ink: #5d5242;
-
-	/* hairline rules */
-	--color-rule: #e9e1d0;
-
-	/* type */
-	--font-sans:
-		"Onest Variable", "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
-
-	/* radius — outer = inner + padding */
-	--radius-xs: 6px;
-	--radius-sm: 8px;
-	--radius: 10px;
-	--radius-md: 12px;
-	--radius-lg: 14px;
-	--radius-xl: 18px;
-	--radius-2xl: 24px;
-
-	/* elevation */
-	--shadow-card:
-		0 1px 2px rgb(43 36 25 / 0.06), 0 4px 12px rgb(43 36 25 / 0.05);
-	--shadow-lift:
-		0 2px 4px rgb(43 36 25 / 0.08), 0 12px 28px rgb(43 36 25 / 0.1);
-	--shadow-menu: 0 8px 28px rgb(43 36 25 / 0.16);
-
-	/* motion — strong custom curves (emil-design-eng) */
-	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-}
 
 @layer base {
 	html {

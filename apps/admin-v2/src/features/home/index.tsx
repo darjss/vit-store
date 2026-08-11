@@ -1,6 +1,6 @@
 import { HomeSmileIcon } from "@solar-icons/solid/linear/home-smile";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 5 owns this directory. Placeholder until the home API shape lands.
 export function HomePage() {

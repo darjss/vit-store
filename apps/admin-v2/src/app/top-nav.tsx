@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth";
 import { queryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/tmp-ui";
+import { Button } from "@vit/ui";
 import { isNavActive, NAV_ITEMS } from "./nav-items";
 
 // Desktop expansion of variant B: brand + the same four sections in the same
