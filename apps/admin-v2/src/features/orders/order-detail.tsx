@@ -1,7 +1,7 @@
 import { BillListIcon } from "@solar-icons/solid/linear/bill-list";
 import { useParams } from "@tanstack/solid-router";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 4 owns this directory. Placeholder until the order detail lands.
 export function OrderDetailPage() {

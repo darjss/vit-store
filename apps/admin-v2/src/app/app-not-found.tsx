@@ -1,7 +1,7 @@
 import { DangerTriangleIcon } from "@solar-icons/solid/linear/danger-triangle";
 import { Link } from "@tanstack/solid-router";
 
-import { Button, EmptyState } from "@/tmp-ui";
+import { Button, EmptyState } from "@vit/ui";
 
 export function AppNotFound() {
 	return (

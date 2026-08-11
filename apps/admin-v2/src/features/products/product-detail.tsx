@@ -1,7 +1,7 @@
 import { BoxIcon } from "@solar-icons/solid/linear/box";
 import { useParams } from "@tanstack/solid-router";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 3 owns this directory. Placeholder until the product detail lands.
 export function ProductDetailPage() {

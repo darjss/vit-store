@@ -1,6 +1,6 @@
 import { BoxIcon } from "@solar-icons/solid/linear/box";
 
-import { EmptyState } from "@/tmp-ui";
+import { EmptyState } from "@vit/ui";
 
 // Track 3 owns this directory. Placeholder until the products feature lands.
 export function ProductsPage() {
