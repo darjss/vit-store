@@ -1,0 +1,232 @@
+/*
+ * @vit/ui tokens — the approved admin v2 theme (variant B, triage agenda).
+ * Source: plans/admin-v2-ui-prototype/index.html
+ *
+ * Warm cream canvas, white record surfaces, warm ink text, butter primary
+ * (#f2be22), status colors lavender / apricot / coral / lemon / warm gray.
+ * Status never uses blue or green. Every status carries text + icon.
+ *
+ * Two ways to consume:
+ *   1. Tailwind v4 (admin-v2): `@import "@vit/ui/styles.css";` — the @theme
+ *      block below maps tokens to utilities (bg-butter, text-ink, border-rule,
+ *      shadow-card, rounded-ui, ...). Add `@source "../../../packages/ui/src";`
+ *      to your app CSS so Tailwind scans the package source for class names.
+ *   2. Plain CSS: use the `--ui-*` custom properties in :root.
+ */
+@theme {
+	--color-canvas: #faf6ee;
+	--color-surface: #ffffff;
+	--color-surface-2: #f4ede0;
+	--color-ink: #2b2419;
+	--color-ink-2: #8a7d68;
+	--color-butter: #f2be22;
+	--color-butter-strong: #e0a90e;
+	--color-butter-ink: #2b2419;
+	--color-lavender: #cbb9f2;
+	--color-lavender-ink: #4a3a75;
+	--color-apricot: #ffc9a1;
+	--color-apricot-ink: #7a4320;
+	--color-coral: #f28c7b;
+	--color-coral-ink: #7a2418;
+	--color-lemon: #f5e08a;
+	--color-lemon-ink: #6b5710;
+	--color-gray: #e5dccb;
+	--color-gray-ink: #5d5242;
+	--color-rule: #e9e1d0;
+	--color-ring: oklch(0.65 0.13 92);
+
+	--radius-ui: 10px;
+
+	--shadow-card:
+		0 1px 2px rgb(43 36 25 / 0.06), 0 4px 12px rgb(43 36 25 / 0.05);
+	--shadow-pop: 0 8px 28px rgb(43 36 25 / 0.16);
+	--shadow-lift: 0 2px 0 0 #e0a90e;
+
+	--font-sans:
+		"Onest Variable", "Onest", "Noto Sans", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+	--ui-canvas: #faf6ee;
+	--ui-surface: #ffffff;
+	--ui-surface-2: #f4ede0;
+	--ui-ink: #2b2419;
+	--ui-ink-2: #8a7d68;
+	--ui-butter: #f2be22;
+	--ui-butter-strong: #e0a90e;
+	--ui-butter-ink: #2b2419;
+	--ui-lavender: #cbb9f2;
+	--ui-lavender-ink: #4a3a75;
+	--ui-apricot: #ffc9a1;
+	--ui-apricot-ink: #7a4320;
+	--ui-coral: #f28c7b;
+	--ui-coral-ink: #7a2418;
+	--ui-lemon: #f5e08a;
+	--ui-lemon-ink: #6b5710;
+	--ui-gray: #e5dccb;
+	--ui-gray-ink: #5d5242;
+	--ui-rule: #e9e1d0;
+	--ui-ring: oklch(0.65 0.13 92);
+	--ui-shadow: 0 1px 2px rgb(43 36 25 / 0.06), 0 4px 12px rgb(43 36 25 / 0.05);
+	--ui-radius: 10px;
+	--ui-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ui-font-sans:
+		"Onest Variable", "Onest", "Noto Sans", system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Quiet cream stage: the canvas colour plus two warm hue washes (peach top
+ * right, lemon bottom left) at low alpha, so the admin reads warm but calm.
+ */
+.ui-canvas {
+	background-color: var(--ui-canvas);
+	background-image:
+		radial-gradient(
+			ellipse 85% 70% at 75% 10%,
+			oklch(0.94 0.045 60 / 0.28),
+			transparent
+		),
+		radial-gradient(
+			ellipse 70% 55% at 10% 95%,
+			oklch(0.95 0.05 100 / 0.2),
+			transparent
+		);
+	background-repeat: no-repeat;
+	color: var(--ui-ink);
+	font-family: var(--ui-font-sans);
+}
+
+/* Dither: a faint warm-ink dot grid layered over a surface. */
+.ui-dither {
+	background-image: radial-gradient(
+		circle,
+		rgb(43 36 25 / 0.04) 0.75px,
+		transparent 0.75px
+	);
+	background-size: 14px 14px;
+}
+
+/* Convenience: canvas + dither + font + ink in one class. */
+.ui-stage {
+	background-color: var(--ui-canvas);
+	background-image:
+		radial-gradient(
+			ellipse 85% 70% at 75% 10%,
+			oklch(0.94 0.045 60 / 0.28),
+			transparent
+		),
+		radial-gradient(
+			ellipse 70% 55% at 10% 95%,
+			oklch(0.95 0.05 100 / 0.2),
+			transparent
+		), radial-gradient(circle, rgb(43 36 25 / 0.04) 0.75px, transparent 0.75px);
+	background-repeat: no-repeat;
+	background-size:
+		100% 100%,
+		100% 100%,
+		14px 14px;
+	color: var(--ui-ink);
+	font-family: var(--ui-font-sans);
+}
+
+/* ---------- motion ---------- */
+
+@keyframes ui-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes ui-zoom-in {
+	from {
+		opacity: 0;
+		transform: scale(0.96);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes ui-rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes ui-slide-up {
+	from {
+		opacity: 0;
+		transform: translateY(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes ui-slide-right {
+	from {
+		opacity: 0;
+		transform: translateX(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes ui-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.ui-enter-fade {
+	animation: ui-fade-in 160ms var(--ui-ease-out) both;
+}
+
+.ui-enter-zoom {
+	animation: ui-zoom-in 180ms var(--ui-ease-out) both;
+}
+
+.ui-enter-rise {
+	animation: ui-rise-in 200ms var(--ui-ease-out) both;
+}
+
+.ui-enter-sheet {
+	animation: ui-slide-up 260ms var(--ui-ease-out) both;
+}
+
+.ui-enter-right {
+	animation: ui-slide-right 260ms var(--ui-ease-out) both;
+}
+
+.ui-spinner {
+	animation: ui-spin 700ms linear infinite;
+}
+
+/* Respect user motion preferences: transforms and slides go away, content
+   simply appears. Static cues (colour, icon, label) never depend on motion. */
+@media (prefers-reduced-motion: reduce) {
+	.ui-enter-fade,
+	.ui-enter-zoom,
+	.ui-enter-rise,
+	.ui-enter-sheet,
+	.ui-enter-right {
+		animation: none !important;
+	}
+
+	.ui-spinner {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+	}
+}
