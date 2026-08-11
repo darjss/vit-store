@@ -1,0 +1,213 @@
+# Track 2 — apps/admin-v2 manifest & workspace wiring patch
+
+Applies to: the admin-v2 shell built on branch `pi-workflow/wf_13fa075ee678/3`
+(committed `apps/admin-v2/`). This patch carries the manifest/config wiring that
+the track could not write into root manifests (`bun.lock`), and documents what
+the integrator must do after merging the branch.
+
+## What the branch already contains (no action needed)
+
+- Full `apps/admin-v2/` app: Solid + Vite SPA, TanStack Solid Router (file
+  routes), TanStack Solid Query, tRPC admin client, variant B shell, PWA config,
+  `src/routeTree.gen.ts` (generated, committed).
+- Root `package.json` needs **no edit**: the root workspace already globs
+  `apps/*`, so `admin-v2` joins the workspace automatically.
+- `turbo.json` needs no edit: `build` / `check-types` / `lint` tasks are
+  workspace-generic.
+
+## Step 1 — install (updates bun.lock)
+
+```sh
+bun install
+```
+
+`bun.lock` will gain one new direct dependency, `@tanstack/solid-router`
+(pinned **1.133.15** to match the already-locked `@tanstack/router-core@1.133.15`
+and `@tanstack/history@1.133.3`; a `^` would pull 1.17x and drag newer
+router-core in). All other deps already exist in the lockfile.
+
+## Step 2 — verify
+
+```sh
+bun run --filter admin-v2 check-types   # tsgo --noEmit
+bun run --filter admin-v2 build         # vite build
+bun run --filter admin-v2 check         # biome check
+```
+
+## apps/admin-v2/package.json (exact contents)
+
+```json
+{
+	"name": "admin-v2",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "alchemy dev --app admin-v2 --stage dev",
+		"dev:vite": "vite --port=3006",
+		"build": "vite build",
+		"serve": "vite preview",
+		"start": "vite",
+		"check-types": "tsgo --noEmit",
+		"generate-pwa-assets": "pwa-assets-generator",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"format": "biome format .",
+		"format:fix": "biome format --write .",
+		"check": "biome check .",
+		"check:fix": "biome check --write ."
+	},
+	"dependencies": {
+		"@fontsource-variable/onest": "^5.2.11",
+		"@kobalte/core": "^0.13.11",
+		"@solar-icons/solid": "2.0.0-beta.3",
+		"@tailwindcss/vite": "^4",
+		"@tanstack/solid-query": "^5.90.8",
+		"@tanstack/solid-router": "1.133.15",
+		"@trpc/client": "catalog:",
+		"@vit/api": "workspace:*",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"solid-js": "^1.9.13",
+		"superjson": "^2.2.2",
+		"tailwind-merge": "^3",
+		"tailwindcss": "^4",
+		"valibot": "^1.1.0",
+		"vite-plugin-pwa": "^1.0.1"
+	},
+	"devDependencies": {
+		"@tanstack/router-plugin": "^1.114.27",
+		"@types/node": "^22.13.13",
+		"@vite-pwa/assets-generator": "^1.0.0",
+		"alchemy": "catalog:",
+		"typescript": "^5.8.3",
+		"vite": "^6.2.2",
+		"vite-plugin-solid": "^2.11.8",
+		"vite-tsconfig-paths": "^5.1.4"
+	}
+}
+```
+
+## apps/admin-v2/vite.config.ts (exact contents)
+
+```ts
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { defineConfig } from "vite";
+import solid from "vite-plugin-solid";
+import { VitePWA } from "vite-plugin-pwa";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+	plugins: [
+		tailwindcss(),
+		tanstackRouter({ target: "solid", autoCodeSplitting: false }),
+		solid(),
+		tsconfigPaths(),
+		VitePWA({
+			registerType: "autoUpdate",
+			manifest: {
+				name: "vit-admin",
+				short_name: "vit-admin",
+				description: "vit-store удирдлагын хэсэг",
+				lang: "mn",
+				display: "standalone",
+				start_url: "/",
+				theme_color: "#faf6ee",
+				background_color: "#faf6ee",
+				icons: [
+					{ src: "/pwa/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+					{ src: "/pwa/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+					{
+						src: "/pwa/maskable-icon-512x512.png",
+						sizes: "512x512",
+						type: "image/png",
+						purpose: "maskable",
+					},
+				],
+			},
+			pwaAssets: { disabled: true, config: false },
+			devOptions: { enabled: false },
+		}),
+	],
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "./src"),
+			"@server": path.resolve(__dirname, "../server/src"),
+		},
+	},
+	server: {
+		host: true,
+		port: 3006,
+	},
+});
+```
+
+## src/main.tsx (exact contents)
+
+```tsx
+import "@fontsource-variable/onest";
+import { QueryClientProvider } from "@tanstack/solid-query";
+import { createRouter, RouterProvider } from "@tanstack/solid-router";
+import type { SolidNode } from "@tanstack/solid-router";
+import { render } from "solid-js/web";
+
+import { AppLoading } from "@/app/app-loading";
+import { queryClient } from "@/lib/query-client";
+import { routeTree } from "./routeTree.gen";
+import "./styles/app.css";
+
+const router = createRouter({
+	routeTree,
+	context: { queryClient },
+	defaultPreload: "intent",
+	defaultPreloadStaleTime: 30_000,
+	defaultPendingComponent: AppLoading,
+	defaultPendingMs: 100,
+	defaultPendingMinMs: 300,
+	scrollRestoration: true,
+	Wrap: (props: { children: SolidNode }) => (
+		<QueryClientProvider client={queryClient}>
+			{props.children}
+		</QueryClientProvider>
+	),
+});
+
+declare module "@tanstack/solid-router" {
+	interface Register {
+		router: typeof router;
+	}
+}
+
+const rootElement = document.getElementById("app");
+
+if (!rootElement) {
+	throw new Error("Root element not found");
+}
+
+render(() => <RouterProvider router={router} />, rootElement);
+```
+
+## src/routeTree.gen.ts
+
+Generated by the TanStack Router vite plugin (`tanstackRouter({ target: "solid" })`)
+from the files in `src/routes/`. Committed on the branch; the plugin rewrites it
+on every dev/build. No manual edits.
+
+## Deploy wiring (integration step 7 of the rewrite plan)
+
+`apps/admin-v2/alchemy.run.ts` mirrors `apps/admin/alchemy.run.ts` (app
+`admin-v2`, `VITE_SERVER_URL` binding, `bun run dev:vite`). Prod/staging domains
+are deliberately left unset — the integrator assigns them at cutover.
+
+## Notes
+
+- The worktree typecheck/build used a local, uncommitted copy of
+  `@tanstack/solid-router@1.133.15` under `apps/admin-v2/node_modules/`
+  (gitignored). After `bun install` the real lockfile entry replaces it.
+- `src/tmp-ui/` holds temporary Button/Badge/EmptyState/InlineAlert stubs, each
+  marked `TODO: SWAP TO @vit/ui`. Track 1 (`packages/ui`) lands the real
+  components; the swap is a mechanical import change through `src/tmp-ui/index.ts`.
+- Tokens (cream/butter/status/Onest) live in `src/styles/app.css` from the
+  approved prototype; Track 1 will own the canonical token set.
