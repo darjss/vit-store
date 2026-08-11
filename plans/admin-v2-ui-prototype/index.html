@@ -201,34 +201,16 @@
      VARIANT B — Triage agenda (no sidebar, inline actions)
      ============================================================ */
   .b-shell { min-height: 100vh; }
-  .b-top {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--rule);
-    position: sticky; top: 0; z-index: 5;
-  }
-  .b-brand { display: flex; align-items: center; gap: 10px; }
-  .b-brand .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--ink); color: var(--butter); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
-  .b-brand strong { font-size: 15px; }
-  .b-brand small { display: block; font-size: 11px; color: var(--ink-2); }
-  .b-top .right { display: flex; align-items: center; gap: 10px; }
-  .b-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--rule); display: grid; place-items: center; font-weight: 800; }
 
   .b-content { max-width: 760px; margin: 0 auto; padding: 18px 16px 110px; }
-  .b-hero {
-    background: var(--ink); color: #fff; border-radius: 14px; padding: 18px 18px 16px;
-    display: flex; flex-direction: column; gap: 14px;
+  .b-nextstrip {
+    background: var(--ink); color: #fff; border-radius: 14px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   }
-  .b-hero h1 { font-size: 20px; font-weight: 800; }
-  .b-hero .line { font-size: 14px; color: rgb(255 255 255 / 0.8); }
-  .b-next {
-    display: flex; align-items: center; gap: 12px; background: rgb(255 255 255 / 0.08);
-    border: 1px solid rgb(255 255 255 / 0.16); border-radius: 10px; padding: 12px;
-  }
-  .b-next .thumb { background: rgb(255 255 255 / 0.12); }
-  .b-next .tx { min-width: 0; flex: 1; }
-  .b-next .no { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
-  .b-next .desc { font-size: 12px; color: rgb(255 255 255 / 0.75); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .b-next .amt { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .b-nextstrip .tag { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.6); }
+  .b-nextstrip .no { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .b-nextstrip .desc { font-size: 13px; color: rgb(255 255 255 / 0.75); margin-top: 2px; }
+  .b-nextstrip .b-cta { margin-left: auto; }
   .b-cta {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     background: var(--butter); color: var(--butter-ink); border: 0; border-radius: 9px;
@@ -240,42 +222,101 @@
   .b-metric b { display: block; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .b-metric span { font-size: 12px; color: var(--ink-2); }
 
-  .b-section { margin-top: 22px; }
-  .b-section h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .b-section { margin-top: 24px; }
+  .b-section h2 { font-size: 15px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
   .b-section h2 .n { color: var(--ink-2); font-size: 13px; }
+  .b-caption { font-size: 12px; color: var(--ink-2); margin-bottom: 10px; }
   .b-agenda { display: flex; flex-direction: column; gap: 10px; }
+
   .b-card {
     background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 13px 14px;
-    box-shadow: var(--shadow); display: grid; gap: 10px;
+    box-shadow: var(--shadow); display: grid; gap: 10px; position: relative;
   }
-  .b-card .row1 { display: flex; align-items: center; gap: 12px; }
+  .b-card[data-state="cancelled"] { opacity: 0.72; }
+  .b-card .row1 { display: flex; align-items: center; gap: 10px; }
+  .b-card .state-ic {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; background: var(--surface-2); color: var(--ink);
+  }
+  .b-card .state-ic svg { width: 17px; height: 17px; }
   .b-card .no { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
   .b-card .cust { font-size: 13px; color: var(--ink-2); }
   .b-card .amt { margin-left: auto; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
   .b-card .row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .b-card .row2 .when { font-size: 12px; color: var(--ink-2); margin-left: auto; }
   .b-card .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .b-card .actions .single { grid-column: 1 / -1; }
   .b-card .btn {
     min-height: 42px; border-radius: 9px; border: 1.5px solid var(--rule);
     background: var(--surface); font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; color: var(--ink);
   }
   .b-card .btn.primary { background: var(--butter); border-color: var(--butter); color: var(--butter-ink); }
-  .b-hscroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
-  .b-hscroll::-webkit-scrollbar { display: none; }
-  .b-mini {
-    flex: none; width: 150px; background: var(--surface); border: 1px solid var(--rule);
-    border-radius: 10px; padding: 10px; box-shadow: var(--shadow);
+
+  /* more menu + popover */
+  .b-more {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--rule);
+    background: var(--surface); color: var(--ink-2); font-weight: 800; font-size: 14px; line-height: 1;
+    cursor: pointer; flex: none; font-family: inherit;
   }
-  .b-mini img { width: 100%; height: 84px; object-fit: cover; border-radius: 7px; background: var(--surface-2); }
-  .b-mini .nm { font-size: 12px; font-weight: 700; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
-  .b-mini .btm { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
-  .b-mini .pr { font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
-  .b-mini .st { font-size: 12px; font-weight: 700; }
+  .b-more:hover { border-color: var(--ink-2); color: var(--ink); }
+  .b-menu {
+    position: absolute; right: 12px; top: 46px; z-index: 30; min-width: 190px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    box-shadow: 0 8px 28px rgb(43 36 25 / 0.16); padding: 6px; display: none;
+  }
+  .b-menu.open { display: block; }
+  .b-menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    background: none; border: 0; border-radius: 7px; padding: 9px 10px;
+    font-size: 13px; font-weight: 700; font-family: inherit; color: var(--ink); cursor: pointer;
+  }
+  .b-menu button:hover { background: var(--surface-2); }
+  .b-menu button.danger { color: var(--coral-ink); }
+  .b-menu button[disabled] { opacity: 0.4; cursor: default; }
+  .b-menu button svg { width: 14px; height: 14px; }
+
+  /* tooltip (hover) */
+  .tip { position: relative; }
+  .tip::after {
+    content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 7px); transform: translateX(-50%);
+    background: var(--ink); color: #fff; font-size: 11.5px; font-weight: 600; line-height: 1.35;
+    padding: 5px 9px; border-radius: 7px; white-space: nowrap; z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+  }
+  .tip::before {
+    content: ""; position: absolute; left: 50%; bottom: calc(100% + 2px); transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: var(--ink); z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+  }
+  .tip:hover::after, .tip:hover::before, .tip:focus-visible::after, .tip:focus-visible::before { opacity: 1; }
+
+  /* product cards */
+  .b-prods { display: grid; gap: 10px; }
+  @media (min-width: 640px) { .b-prods { grid-template-columns: 1fr 1fr; } }
+  .b-prod {
+    display: grid; grid-template-columns: 68px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 12px; box-shadow: var(--shadow); position: relative;
+  }
+  .b-prod img { width: 68px; height: 68px; object-fit: cover; border-radius: 9px; background: var(--surface-2); }
+  .b-prod .nm { font-size: 13.5px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .b-prod .btm { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+  .b-prod .pr { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .b-prod .stock { font-size: 12px; font-weight: 700; color: var(--ink-2); border-bottom: 1.5px dotted var(--ink-2); cursor: help; }
+  .b-prod .stock.low { color: var(--coral-ink); border-color: var(--coral); }
+
+  /* legend */
+  .b-legend { display: grid; gap: 10px; }
+  @media (min-width: 640px) { .b-legend { grid-template-columns: 1fr 1fr; } }
+  .b-legend .col { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; }
+  .b-legend .col h3 { font-size: 13px; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; }
+  .b-legend ul { list-style: none; display: grid; gap: 5px; }
+  .b-legend li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+  .b-legend li svg { width: 14px; height: 14px; color: var(--ink-2); flex: none; }
+  .b-legend .primary { color: var(--butter-ink); background: var(--butter); border-radius: 5px; padding: 1px 7px; font-weight: 800; }
 
   @media (min-width: 760px) {
     .b-content { padding-top: 26px; }
-    .b-hero { flex-direction: row; align-items: center; justify-content: space-between; }
-    .b-next { flex: 1; }
     .b-agenda { grid-template-columns: 1fr 1fr; }
   }
 
@@ -502,56 +543,143 @@ const descFor = (k) =>
   ({ created: "Төлбөр болон хүргэлтийг шалгана", pending: "Төлбөрийг баталгаажуулна", shipped: "Хүргэлтийг шалгана", low_stock: "3-аас цөөн үлдсэн" }[k] ?? "");
 
 /* ============================================================
-   VARIANT B — Triage agenda
+   VARIANT B — Triage agenda (interactive state demo)
    ============================================================ */
-function variantB(d) {
-  const actionable = d.recentOrders.filter((o) => o.status === "created" || o.status === "pending" || (o.paymentStatus === "customer_claimed_paid"));
-  const first = actionable[0] ?? d.recentOrders[0];
-  const rows = actionable.slice(0, 6).map((o) => `
-    <div class="b-card">
-      <div class="row1">
-        ${img(o.items[0]?.image, "thumb")}
-        <div>
-          <div class="no">${o.number}</div>
-          <div class="cust">${o.customerPhone}</div>
-        </div>
-        <div class="amt">${mnt(o.totalMnt)}</div>
+// Demo order state chain. Pressing the primary action advances the card.
+const ORDER_STATES = {
+  claimed: {
+    pay:   { label: "Батлах шаардлагатай", pill: "pill-outline", icon: "alert" },
+    order: { label: "Төлбөр хүлээх",      pill: "pill-apricot", icon: "clock" },
+    primary: { label: "Төлбөр баталгаажуулах", next: "ready" },
+    stateIc: "alert",
+  },
+  new: {
+    pay:   { label: "Хүлээгдэж буй", pill: "pill-apricot", icon: "clock" },
+    order: { label: "Шинэ",           pill: "pill-lemon",   icon: "clock" },
+    primary: { label: "Бэлтгэж эхлэх", next: "ready" },
+    stateIc: "clock",
+  },
+  ready: {
+    pay:   { label: "Төлсөн",    pill: "pill-lavender", icon: "check" },
+    order: { label: "Бэлтгэсэн",  pill: "pill-lavender", icon: "box" },
+    primary: { label: "Хүргэлтэд гаргах", next: "shipped" },
+    stateIc: "box",
+  },
+  shipped: {
+    pay:   { label: "Төлсөн",    pill: "pill-lavender", icon: "check" },
+    order: { label: "Хүргэлтэд",  pill: "pill-lavender", icon: "truck" },
+    primary: { label: "Хүргэгдсэн тэмдэглэх", next: "delivered" },
+    stateIc: "truck",
+  },
+  delivered: {
+    pay:   { label: "Төлсөн",     pill: "pill-lavender", icon: "check" },
+    order: { label: "Хүргэгдсэн",  pill: "pill-gray",     icon: "check2" },
+    primary: null,
+    stateIc: "check2",
+  },
+  cancelled: {
+    pay:   { label: "Цуцлагдсан", pill: "pill-gray",  icon: "x" },
+    order: { label: "Цуцалсан",   pill: "pill-coral", icon: "x" },
+    primary: null,
+    stateIc: "x",
+  },
+};
+
+const MENU_ORDER = [
+  { id: "detail", label: "Дэлгэрэнгүй", icon: "chev", danger: false, always: true },
+  { id: "cancel", label: "Цуцлах",      icon: "x",    danger: true,  always: true },
+];
+
+const DEMO_ORDERS = [
+  { number: "Y5WDHJC0", customer: "95088123", total: 161000, state: "claimed",   items: 2, time: "өнөөдөр 08:39" },
+  { number: "G5I5526J", customer: "88046773", total: 141000, state: "new",       items: 1, time: "өнөөдөр 04:11" },
+  { number: "Q2XK9L1A", customer: "99114422", total: 98000,  state: "ready",     items: 3, time: "өчигдөр 21:07" },
+  { number: "M7PRW3TD", customer: "77005566", total: 235000, state: "shipped",   items: 2, time: "өчигдөр 16:32" },
+  { number: "H9VBN2XK", customer: "90337711", total: 60000,  state: "delivered", items: 1, time: "8 сарын 9" },
+];
+let bOrders = DEMO_ORDERS.map((o) => ({ ...o }));
+
+const PROD_ACTIONS = [
+  { id: "open",    label: "Нээх",       icon: "chev" },
+  { id: "edit",    label: "Засах",      icon: "box" },
+  { id: "restock", label: "Нөөц нэмэх", icon: "alert" },
+  { id: "archive", label: "Архивлах",   icon: "x" },
+];
+
+function orderCardHtml(o) {
+  const s = ORDER_STATES[o.state];
+  const done = !s.primary;
+  const primary = s.primary
+    ? `<button class="btn primary" data-act="advance" data-i="${o.number}">${s.primary.label}</button>`
+    : "";
+  const secondary = done
+    ? `<button class="btn single" data-act="detail" data-i="${o.number}">Дэлгэрэнгүй</button>`
+    : `<button class="btn" data-act="detail" data-i="${o.number}">Дэлгэрэнгүй</button>`;
+  const menu = MENU_ORDER.map((m) => {
+    const dis = m.id === "cancel" && (o.state === "delivered" || o.state === "cancelled") ? "disabled" : "";
+    return `<button class="${m.danger ? "danger" : ""}" data-act="menu-${m.id}" data-i="${o.number}" ${dis}>${ICONS[m.icon]}${m.label}</button>`;
+  }).join("");
+  return `
+  <div class="b-card" data-state="${o.state}">
+    <div class="row1">
+      <span class="state-ic" aria-hidden="true">${ICONS[s.stateIc]}</span>
+      <div>
+        <div class="no">${o.number}</div>
+        <div class="cust">${o.customer} · ${o.items} бараа</div>
       </div>
-      <div class="row2">
-        ${payPill(o.paymentStatus)}${orderPill(o.status)}
-        <span class="when">${when(o.createdAt)}</span>
-      </div>
-      <div class="actions">
-        <button class="btn primary">${o.paymentStatus === "customer_claimed_paid" ? "Төлбөр баталгаажуулах" : "Бэлтгэж эхлэх"}</button>
-        <button class="btn">Дэлгэрэнгүй</button>
-      </div>
-    </div>`).join("");
-  const low = d.lowStock.slice(0, 6).map((p) => `
-    <div class="b-mini">
-      ${img(p.image, "thumb", p.name)}
+      <div class="amt">${mnt(o.total)}</div>
+      <button class="b-more tip" data-tip="Үйлдлүүд" aria-label="Үйлдлүүд" data-act="menu-toggle" data-i="${o.number}">•••</button>
+      <div class="b-menu">${menu}</div>
+    </div>
+    <div class="row2">
+      <span class="pill ${s.pay.pill}">${ICONS[s.pay.icon]}${s.pay.label}</span>
+      <span class="pill ${s.order.pill}">${ICONS[s.order.icon]}${s.order.label}</span>
+      <span class="when">${o.time}</span>
+    </div>
+    ${s.primary ? `<div class="actions">${primary}${secondary}</div>` : `<div class="actions">${secondary}</div>`}
+  </div>`;
+}
+
+function productCardHtml(p) {
+  const low = p.stock <= 3;
+  const menu = PROD_ACTIONS.map((m) =>
+    `<button data-act="prod-${m.id}" data-id="${p.id}">${ICONS[m.icon]}${m.label}</button>`).join("");
+  const st = PRODUCT_META[p.status] ?? { label: p.status, pill: "pill-gray" };
+  return `
+  <div class="b-prod">
+    ${img(p.image, "thumb", p.name)}
+    <div>
       <div class="nm">${p.name}</div>
-      <div class="btm"><span class="pr">${mnt(p.price)}</span><span class="st">${p.stock === 0 ? "Дууссан" : p.stock + " ширхэг"}</span></div>
-    </div>`).join("");
+      <div class="btm">
+        <span class="pr">${mnt(p.price)}</span>
+        <span class="tip stock ${low ? "low" : ""}" data-tip="${low ? "3-аас цөөн үлдсэн — нөөц нэмэх" : "Үлдэгдэл сайн"}">Үлдэгдэл: ${p.stock}</span>
+        <span class="pill ${st.pill}">${st.label}</span>
+      </div>
+    </div>
+    <button class="b-more tip" data-tip="Үйлдлүүд" aria-label="Үйлдлүүд" data-act="menu-toggle" data-id="${p.id}">•••</button>
+    <div class="b-menu">${menu}</div>
+  </div>`;
+}
+
+function variantB(d) {
+  const next = bOrders[0];
+  const nextS = ORDER_STATES[next.state];
+  const products = d.lowStock.slice(0, 4);
+  const orderLegend = [
+    "Төлбөр баталгаажуулах", "Бэлтгэж эхлэх", "Хүргэлтэд гаргах",
+    "Хүргэгдсэн тэмдэглэх", "Цуцлах", "Дэлгэрэнгүй",
+  ];
+  const prodLegend = ["Нээх", "Засах", "Нөөц нэмэх", "Архивлах"];
   return `
   <div class="b-shell">
-    <header class="b-top">
-      <div class="b-brand"><span class="mark">AV</span><span><strong>${d.meta.storeName}</strong><small>Удирдлагын самбар</small></span></div>
-      <div class="right"><span class="b-avatar">А</span></div>
-    </header>
     <main class="b-content">
-      <div class="b-hero">
+      <div class="b-nextstrip">
         <div>
-          <h1>Өнөөдөр 2 захиалга, ${mnt(d.metrics.sales_today)}</h1>
-          <div class="line">Дараах захиалгыг эхлүүлэхэд бэлэн байна</div>
+          <div class="tag">Дараагийн үйлдэл</div>
+          <div class="no">${next.number} · ${mnt(next.total)}</div>
+          <div class="desc">${next.customer} · ${next.items} бараа · ${nextS.order.label}</div>
         </div>
-        <div class="b-next">
-          ${img(first.items[0]?.image, "thumb")}
-          <div class="tx">
-            <div class="no">${first.number} · ${mnt(first.totalMnt)}</div>
-            <div class="desc">${first.customerPhone} · ${first.items[0]?.name ?? ""}</div>
-          </div>
-          <span class="amt">${orderPill(first.status)}</span>
-        </div>
+        ${nextS.primary ? `<button class="b-cta" data-act="advance" data-i="${next.number}">${nextS.primary.label}</button>` : ""}
       </div>
       <div class="b-metrics">
         <div class="b-metric"><b>${d.metrics.orders_today}</b><span>Өнөөдрийн захиалга</span></div>
@@ -559,15 +687,69 @@ function variantB(d) {
         <div class="b-metric"><b>${d.metrics.orders_7d}</b><span>7 хоногийн захиалга</span></div>
       </div>
       <section class="b-section">
-        <h2>Хийх жагсаалт <span class="n">(${actionable.length} ширхэг)</span></h2>
-        <div class="b-agenda">${rows}</div>
+        <h2>Захиалга <span class="n">(${bOrders.length} ширхэг)</span></h2>
+        <p class="b-caption">Төлөвийн жишээ — гол товчлуурыг дарж карт дараагийн төлөвт шилжинэ.</p>
+        <div class="b-agenda">${bOrders.map(orderCardHtml).join("")}</div>
       </section>
       <section class="b-section">
-        <h2>Нөөц нөхөх бараа <span class="n">(${d.lowStock.length} ширхэг)</span></h2>
-        <div class="b-hscroll">${low}</div>
+        <h2>Бараа <span class="n">(${products.length} ширхэг)</span></h2>
+        <p class="b-caption">Үлдэгдэл дээр хулганаа авчирч зөвлөмж, ••• дээр дарж үйлдлийг харна уу.</p>
+        <div class="b-prods">${products.map(productCardHtml).join("")}</div>
+      </section>
+      <section class="b-section">
+        <h2>Карт дээрх үйлдлүүд</h2>
+        <div class="b-legend">
+          <div class="col">
+            <h3>${ICONS.box} Захиалга карт</h3>
+            <ul>${orderLegend.map((l) => `<li>${ICONS.chev}${l}</li>`).join("")}</ul>
+          </div>
+          <div class="col">
+            <h3>${ICONS.alert} Бараа карт</h3>
+            <ul>${prodLegend.map((l) => `<li>${ICONS.chev}${l}</li>`).join("")}</ul>
+          </div>
+        </div>
       </section>
     </main>
   </div>`;
+}
+
+let bWired = false;
+function wireB() {
+  if (bWired) return; // single delegated listener for all re-renders
+  bWired = true;
+  // close any open menu when clicking elsewhere
+  const closeMenus = () => document.querySelectorAll(".b-menu.open").forEach((m) => m.classList.remove("open"));
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-act]");
+    if (!t) { closeMenus(); return; }
+    const act = t.dataset.act;
+    const num = t.dataset.i;
+    if (act === "menu-toggle") {
+      e.stopPropagation();
+      closeMenus();
+      const menu = t.nextElementSibling;
+      menu.classList.toggle("open");
+      return;
+    }
+    closeMenus();
+    if (act === "advance") {
+      const o = bOrders.find((x) => x.number === num);
+      if (o) {
+        const s = ORDER_STATES[o.state];
+        if (s.primary) o.state = s.primary.next;
+        document.getElementById("app").innerHTML = RENDER.B(DATA);
+      }
+      return;
+    }
+    if (act === "menu-cancel") {
+      const o = bOrders.find((x) => x.number === num);
+      if (o && o.state !== "delivered" && o.state !== "cancelled") {
+        o.state = "cancelled";
+        document.getElementById("app").innerHTML = RENDER.B(DATA);
+      }
+    }
+    // detail / prod-* are static in the prototype
+  });
 }
 
 /* ============================================================
@@ -644,6 +826,7 @@ if (!RENDER[current]) current = "A";
 function render() {
   if (!DATA) return;
   document.getElementById("app").innerHTML = RENDER[current](DATA);
+  if (current === "B") wireB();
   const v = VARIANTS.find((x) => x.key === current);
   swLabel.textContent = `${v.key} — ${v.name}`;
   sw.hidden = false;
