@@ -15,9 +15,11 @@ bun serve.ts
 
 - **A — Удирдлагын төв (Command center):** warm sidebar + bottom nav, coral
   work-queue hero with linked counts, order cards with product thumbnails, low-stock panel.
-- **B — Шуурхай жагсаалт (Triage agenda):** no sidebar; a "next order" callout with a
-  big action button, an actionable agenda of orders with inline actions, horizontal
-  low-stock shelf. Mobile-first.
+- **B — Шуурхай жагсаалт (Triage agenda):** no header; a dark "next action" strip
+  (no duplicated metrics), glance cards, order cards as a live state demo — press the
+  primary button to advance the status chain (payment verify → prep → ship → delivered),
+  product cards with hover tooltips and ••• action menus, and a legend of card actions.
+  Mobile-first.
 - **C — Хүснэгт самбар (Ledger desk):** dense metric tiles, tab navigation, full
   scan-able tables with status pills. Desktop density.
 
