@@ -8,6 +8,7 @@ export {
 } from "~/lib/integrations/posthog/capture";
 export type {
 	PostHogConfig,
+	PostHogRange,
 	ProductSearchRankingSignal,
 } from "~/lib/integrations/posthog/client";
 export {

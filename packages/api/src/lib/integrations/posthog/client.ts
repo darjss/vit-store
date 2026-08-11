@@ -38,6 +38,14 @@ export interface ProductSearchRankingSignal {
 	searchClickSessions: number;
 }
 
+/**
+ * Explicit UTC instants of an Asia/Ulaanbaatar-aligned window. The admin
+ * analytics router computes these from the timeRange via getTimeRangeBounds;
+ * passing exact bounds instead of "last N days" keeps the queried window
+ * aligned to UB day boundaries instead of PostHog's own timezone.
+ */
+export type PostHogRange = { startIso: string; endIso: string };
+
 export class PostHogClient {
 	private config: PostHogConfig;
 
@@ -89,11 +97,20 @@ export class PostHogClient {
 	// ─── Convenience query methods ─────────────────────────────────────
 
 	/**
+	 * HogQL WHERE fragment pinning events to an explicit UTC instant window.
+	 * Bounds come from the admin's UB-aligned range; PostHog timestamps are
+	 * stored in UTC, so the ISO instants compare directly.
+	 */
+	private rangeClause(range: PostHogRange): string {
+		return `timestamp >= '${range.startIso}' AND timestamp < '${range.endIso}'`;
+	}
+
+	/**
 	 * Get web analytics overview: unique visitors, pageviews, and event-based funnel counts.
 	 *
-	 * @param daysBack - number of days to look back (1=today, 7=week, 30=month)
+	 * @param range - exact UTC instants of the UB-aligned window
 	 */
-	async getWebAnalytics(daysBack: number): Promise<{
+	async getWebAnalytics(range: PostHogRange): Promise<{
 		uniqueVisitors: number;
 		pageviews: number;
 		productViews: number;
@@ -114,8 +131,7 @@ export class PostHogClient {
 				countIf(event = 'payment_confirmed') AS payments,
 				countIf(event = 'search_performed') AS searches
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+			WHERE ${this.rangeClause(range)}
 		`;
 
 		const result = await this.query(hogql);
@@ -136,19 +152,23 @@ export class PostHogClient {
 	/**
 	 * Get web analytics for a previous period (for percentage change calculations).
 	 */
-	async getWebAnalyticsPrevious(daysBack: number): Promise<{
+	async getWebAnalyticsPrevious(range: PostHogRange): Promise<{
 		uniqueVisitors: number;
 		pageviews: number;
 		orders: number;
 	}> {
+		const startMs = Date.parse(range.startIso);
+		const endMs = Date.parse(range.endIso);
+		const windowMs = endMs - startMs;
+		const previousStartIso = new Date(startMs - windowMs).toISOString();
 		const hogql = `
 			SELECT
 				uniqExact(person_id) AS unique_visitors,
 				countIf(event = '$pageview') AS pageviews,
 				countIf(event = 'order_created') AS orders
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack * 2} day
-				AND timestamp < now() - interval ${daysBack} day
+			WHERE timestamp >= '${previousStartIso}'
+				AND timestamp < '${range.startIso}'
 		`;
 
 		const result = await this.query(hogql);
@@ -164,7 +184,7 @@ export class PostHogClient {
 	/**
 	 * Get conversion funnel data: how many unique users reached each step.
 	 */
-	async getConversionFunnel(daysBack: number): Promise<{
+	async getConversionFunnel(range: PostHogRange): Promise<{
 		visitors: number;
 		productViewers: number;
 		cartAdders: number;
@@ -181,8 +201,7 @@ export class PostHogClient {
 				uniqExactIf(person_id, event = 'order_created') AS order_placers,
 				uniqExactIf(person_id, event = 'payment_confirmed') AS payment_confirmers
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+			WHERE ${this.rangeClause(range)}
 		`;
 
 		const result = await this.query(hogql);
@@ -202,7 +221,7 @@ export class PostHogClient {
 	 * Get top search queries with result counts.
 	 */
 	async getTopSearches(
-		daysBack: number,
+		range: PostHogRange,
 		limit = 20,
 	): Promise<
 		Array<{
@@ -220,8 +239,7 @@ export class PostHogClient {
 				countIf(properties.results_count = 0) AS no_result_count
 			FROM events
 			WHERE event = 'search_performed'
-				AND timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+				AND ${this.rangeClause(range)}
 			GROUP BY search_query
 			ORDER BY search_count DESC
 			LIMIT ${limit}
@@ -278,7 +296,7 @@ export class PostHogClient {
 	 * Get most viewed products.
 	 */
 	async getMostViewedProducts(
-		daysBack: number,
+		range: PostHogRange,
 		limit = 20,
 	): Promise<
 		Array<{
@@ -300,8 +318,7 @@ export class PostHogClient {
 				0 AS atc_placeholder
 			FROM events
 			WHERE event = 'product_viewed'
-				AND timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+				AND ${this.rangeClause(range)}
 			GROUP BY product_id
 			ORDER BY view_count DESC
 			LIMIT ${limit}
@@ -321,8 +338,7 @@ export class PostHogClient {
 						count() AS atc_count
 					FROM events
 					WHERE event = 'add_to_cart'
-						AND timestamp >= now() - interval ${daysBack} day
-						AND timestamp <= now()
+						AND ${this.rangeClause(range)}
 						AND properties.product_id IN (${productIds.join(",")})
 					GROUP BY product_id
 				`;
@@ -352,7 +368,7 @@ export class PostHogClient {
 	 */
 	async getProductBehavior(
 		productId: number,
-		daysBack: number,
+		range: PostHogRange,
 	): Promise<{
 		views: number;
 		uniqueViewers: number;
@@ -368,8 +384,7 @@ export class PostHogClient {
 				countIf(event = 'add_to_cart') AS add_to_carts,
 				countIf(event = 'search_result_clicked') AS search_clicks
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+			WHERE ${this.rangeClause(range)}
 				AND properties.product_id = ${productId}
 		`;
 
@@ -383,8 +398,7 @@ export class PostHogClient {
 				countIf(event = 'product_viewed') AS views,
 				countIf(event = 'add_to_cart') AS add_to_carts
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+			WHERE ${this.rangeClause(range)}
 				AND properties.product_id = ${productId}
 			GROUP BY day
 			ORDER BY day ASC
@@ -409,7 +423,7 @@ export class PostHogClient {
 	 * Get daily visitor trend for chart display.
 	 */
 	async getDailyVisitorTrend(
-		daysBack: number,
+		range: PostHogRange,
 	): Promise<
 		Array<{ date: string; visitors: number; pageviews: number; orders: number }>
 	> {
@@ -420,8 +434,7 @@ export class PostHogClient {
 				countIf(event = '$pageview') AS pageviews,
 				countIf(event = 'order_created') AS orders
 			FROM events
-			WHERE timestamp >= now() - interval ${daysBack} day
-				AND timestamp <= now()
+			WHERE ${this.rangeClause(range)}
 			GROUP BY day
 			ORDER BY day ASC
 		`;
