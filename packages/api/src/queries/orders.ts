@@ -77,11 +77,10 @@ function resolveDateRange(date?: string): { start: Date; end: Date } | null {
 export const orderQueries = {
 	admin: {
 		async getOrderCountForWeek() {
-			try {
-				// 2 aggregate queries (orders + sales) with GROUP BY UB-day over
-				// the last 7 days, replacing the previous 14 parallel per-day
-				// queries. Buckets are computed by shifting createdAt into
-				// Asia/Ulaanbaatar (UTC+8) before DATE_TRUNC('day', ...).
+			// 2 aggregate queries (orders + sales) with GROUP BY UB-day over
+			// the last 7 days, replacing the previous 14 parallel per-day
+			// queries. Buckets are computed by shifting createdAt into
+			// Asia/Ulaanbaatar (UTC+8) before DATE_TRUNC('day', ...).
 				const weekStart = getStartAndEndofDayAgo(6).startDate;
 				const weekEnd = getStartAndEndofDayAgo(0).endDate;
 				const ubDayBucket = sql<Date>`DATE_TRUNC('day', ${OrdersTable.createdAt} + INTERVAL '8 hours')`;
@@ -151,9 +150,6 @@ export const orderQueries = {
 					});
 				}
 				return result;
-			} catch {
-				return [];
-			}
 		},
 
 		async getAverageOrderValue(timerange: "daily" | "weekly" | "monthly") {
@@ -176,8 +172,7 @@ export const orderQueries = {
 		},
 
 		async getOrderCount(timeRange: timeRangeType) {
-			try {
-				const result = await db()
+			const result = await db()
 					.select({
 						count: sql<number>`COUNT(*)`,
 					})
@@ -193,14 +188,10 @@ export const orderQueries = {
 				const count = result[0]?.count ?? 0;
 
 				return { count };
-			} catch {
-				return { count: 0 };
-			}
 		},
 
 		async getPendingOrders() {
-			try {
-				const result = await db().query.OrdersTable.findMany({
+			const result = await db().query.OrdersTable.findMany({
 					where: and(
 						eq(OrdersTable.status, "pending"),
 						isNull(OrdersTable.deletedAt),
@@ -245,9 +236,55 @@ export const orderQueries = {
 					},
 				});
 				return shapeOrderResults(result);
-			} catch {
-				return [];
-			}
+		},
+
+		// Home feed: most recent orders, newest first, with payment + product
+		// lines shaped for cards. Limit is small; the list view uses
+		// getPaginatedOrders.
+		async getRecentOrders(limit = 8) {
+			const result = await db().query.OrdersTable.findMany({
+				where: isNull(OrdersTable.deletedAt),
+				orderBy: desc(OrdersTable.createdAt),
+				limit,
+				with: {
+					orderDetails: {
+						columns: {
+							quantity: true,
+							price: true,
+						},
+						with: {
+							product: {
+								columns: {
+									name: true,
+									id: true,
+									price: true,
+								},
+								with: {
+									images: {
+										columns: {
+											url: true,
+										},
+										where: and(
+											eq(ProductImagesTable.isPrimary, true),
+											isNull(ProductImagesTable.deletedAt),
+										),
+									},
+								},
+							},
+						},
+					},
+					payments: {
+						columns: {
+							provider: true,
+							status: true,
+							paymentNumber: true,
+							createdAt: true,
+						},
+						where: isNull(PaymentsTable.deletedAt),
+					},
+				},
+			});
+			return shapeOrderResults(result);
 		},
 
 		async createOrder(data: {
