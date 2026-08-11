@@ -1,0 +1,49 @@
+{
+	"name": "admin-v2",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "alchemy dev --app admin-v2 --stage dev",
+		"dev:vite": "vite --port=3006",
+		"build": "vite build",
+		"serve": "vite preview",
+		"start": "vite",
+		"check-types": "tsgo --noEmit",
+		"generate-pwa-assets": "pwa-assets-generator",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"format": "biome format .",
+		"format:fix": "biome format --write .",
+		"check": "biome check .",
+		"check:fix": "biome check --write ."
+	},
+	"dependencies": {
+		"@fontsource-variable/onest": "^5.2.11",
+		"@kobalte/core": "^0.13.11",
+		"@solar-icons/solid": "2.0.0-beta.3",
+		"@tailwindcss/vite": "^4",
+		"@tanstack/solid-query": "^5.90.8",
+		"@tanstack/solid-router": "1.133.15",
+		"@trpc/client": "catalog:",
+		"@vit/api": "workspace:*",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"solid-js": "^1.9.13",
+		"superjson": "^2.2.2",
+		"tailwind-merge": "^3",
+		"tailwindcss": "^4",
+		"valibot": "^1.1.0",
+		"vite-plugin-pwa": "^1.0.1"
+	},
+	"devDependencies": {
+		"@tanstack/router-plugin": "^1.114.27",
+		"@types/node": "^22.13.13",
+		"@vite-pwa/assets-generator": "^1.0.0",
+		"alchemy": "catalog:",
+		"typescript": "^5.8.3",
+		"vite": "^6.2.2",
+		"vite-plugin-solid": "^2.11.8",
+		"vite-tsconfig-paths": "^5.1.4"
+	}
+}
