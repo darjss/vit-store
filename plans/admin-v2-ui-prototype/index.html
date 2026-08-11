@@ -547,12 +547,6 @@ const descFor = (k) =>
    ============================================================ */
 // Demo order state chain. Pressing the primary action advances the card.
 const ORDER_STATES = {
-  claimed: {
-    pay:   { label: "Батлах шаардлагатай", pill: "pill-outline", icon: "alert" },
-    order: { label: "Төлбөр хүлээх",      pill: "pill-apricot", icon: "clock" },
-    primary: { label: "Төлбөр баталгаажуулах", next: "ready" },
-    stateIc: "alert",
-  },
   new: {
     pay:   { label: "Хүлээгдэж буй", pill: "pill-apricot", icon: "clock" },
     order: { label: "Шинэ",           pill: "pill-lemon",   icon: "clock" },
@@ -591,7 +585,7 @@ const MENU_ORDER = [
 ];
 
 const DEMO_ORDERS = [
-  { number: "Y5WDHJC0", customer: "95088123", total: 161000, state: "claimed",   items: 2, time: "өнөөдөр 08:39" },
+  { number: "Y5WDHJC0", customer: "95088123", total: 161000, state: "new",       items: 2, time: "өнөөдөр 08:39" },
   { number: "G5I5526J", customer: "88046773", total: 141000, state: "new",       items: 1, time: "өнөөдөр 04:11" },
   { number: "Q2XK9L1A", customer: "99114422", total: 98000,  state: "ready",     items: 3, time: "өчигдөр 21:07" },
   { number: "M7PRW3TD", customer: "77005566", total: 235000, state: "shipped",   items: 2, time: "өчигдөр 16:32" },
@@ -666,7 +660,7 @@ function variantB(d) {
   const nextS = ORDER_STATES[next.state];
   const products = d.lowStock.slice(0, 4);
   const orderLegend = [
-    "Төлбөр баталгаажуулах", "Бэлтгэж эхлэх", "Хүргэлтэд гаргах",
+    "Бэлтгэж эхлэх", "Хүргэлтэд гаргах",
     "Хүргэгдсэн тэмдэглэх", "Цуцлах", "Дэлгэрэнгүй",
   ];
   const prodLegend = ["Нээх", "Засах", "Нөөц нэмэх", "Архивлах"];
