@@ -345,10 +345,12 @@ Preserve from the current admin (port the behavior, rebuild the presentation):
 
 - Contextual action per state: pending → ship dialog with delivery zone
   (`shipOrder`, `getDeliveryAddressZones`), shipped → delivered
-- Transfer payment-claim verification dialog (`customer_claimed_paid` + transfer)
 - Phone click-to-call, address copy-to-clipboard
 - Batch selection and batch ship
 - Edit (full order form) and delete with optimistic removal + rollback
+- Do not port the manual transfer payment-claim verification UI
+  (`customer_claimed_paid` is auto-reconciled from the bank feed via
+  `packages/api/src/lib/payments/transfer-confirmation.ts`)
 - Order cards do NOT show product thumbnails in V2; product names/count are
   enough on the card, images live on the detail page
 
@@ -385,8 +387,7 @@ apps/admin-v2/src/features/home/
 
 Tasks:
 
-- Work queue (orders needing action plus payment-claim verification;
-  `customer_claimed_paid` transfers are a queue item, not only a list filter)
+- Work queue (orders needing action: new, payment-waiting, to-ship, low stock)
 - Recent order cards (number, customer, total, statuses — no product images)
 - Low-stock product cards
 - Quick actions, pinned to: Шинэ бараа · Захиалга нэмэх · Нөөц нэмэх ·
