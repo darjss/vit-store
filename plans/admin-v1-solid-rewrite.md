@@ -25,7 +25,7 @@ Do not build these in V1:
 - Desktop-first tables
 - A full design system
 
-Unused admin pages should leave the navigation and then be deleted after cutover. Delete unused admin API procedures only after checking Messenger and storefront consumers.
+Unused admin pages should leave the navigation and then be deleted after cutover. Delete unused admin API procedures only after checking storefront consumers. The Messenger admin bot (`packages/api/src/routers/admin/bot.ts`) is WIP and not launched; do not gate V1 on it — re-point it at the new API shapes later.
 
 ## Core decisions
 
@@ -41,6 +41,14 @@ Unused admin pages should leave the navigation and then be deleted after cutover
 - PWA support retained for the admin
 
 Build the replacement in a temporary `apps/admin-v2` app so the current admin remains available during dogfood. Delete the old app after the replacement passes the cutover checks. Do not maintain both apps after cutover.
+
+### Why Solid
+
+The storefront (`apps/storev2`) already runs the Solid stack — Astro islands on Kobalte, TanStack Solid Query, TanStack Solid Form, solar icons, tailwind-v4 tokens. The current admin is React/Radix with a different theme: two UI worlds that share nothing, which is why the admin drifted away from the storefront identity. The rewrite consolidates the storefront and admin onto one component language, one shared UI package, and one token system, so a component fix or a theme change lands once. The admin ships the same patterns already proven in the store-kit admin (query option factories, hierarchical keys, cache helpers, local form drafts).
+
+The shared part is primitives and tokens, not the hard parts — the admin still owns its router, forms, and feature code. Sell this on consistency and UX, not on reuse savings.
+
+Charts: the current admin uses Recharts (React-only), which has no Solid equivalent. Track 6 must pick an approach up front — a small chart library or hand-rolled SVG — before writing analytics UI.
 
 ### UI direction
 
@@ -59,7 +67,7 @@ Use the approved B + C direction:
 
 ### Shared UI package
 
-Create `packages/ui` as a small Solid package. It owns reusable behavior and tokens, not business screens.
+Create `packages/ui` as a small Solid package by extracting the primitives the storefront already uses (buttons, inputs, badges, dialogs, toasts, fields) from `apps/storev2` into it. Admin and storefront consume the same package; do not build a second component set. It owns reusable behavior and tokens, not business screens.
 
 Initial exports:
 
@@ -269,7 +277,7 @@ Tasks:
 
 - Create the Solid Vite app
 - Add the QueryClient and router providers
-- Add the admin session boundary
+- Reuse the existing admin auth (`packages/api/src/routers/admin/auth.ts`) for sessions; wire the shell to the existing login and session boundary
 - Add mobile bottom navigation
 - Add desktop expansion without changing the mobile information order
 - Add app-level loading, error, not-found, and recovery states
@@ -445,12 +453,12 @@ Feature workers must add files under their own feature directories and export ro
 ## Integration order
 
 1. Track 0 API contract and persistence fixes
-2. Track 1 shared UI package
+2. Track 1 shared UI package (extract from `apps/storev2`)
 3. Track 2 app shell
 4. Track 3 Products and Track 4 Orders in parallel
 5. Track 5 Home and Track 6 Analytics in parallel
 6. Track 7 browser verification
-7. Deploy the replacement only to staging
+7. Deploy the replacement to the existing staging stage in `apps/storev2/alchemy.run.ts`
 8. Dogfood on the real iPhone
 9. Fix all staging findings
 10. Cut over the admin domain when explicitly approved
@@ -475,7 +483,7 @@ A route is complete only when:
 
 ## Cutover criteria
 
-Deploy the replacement only to staging until the owner approves the cutover. Do not deploy the replacement to production as part of V1 development.
+Deploy the replacement only to the existing staging stage in `apps/storev2/alchemy.run.ts` until the owner approves the cutover. Do not deploy the replacement to production as part of V1 development.
 
 Cut over only after:
 
