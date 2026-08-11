@@ -3,7 +3,7 @@ import type { GenericWebhookPayload } from "@vit/api/integrations";
 import { messengerWebhookHandler } from "@vit/api/integrations";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 app.post("/messenger", async (c) => {
     const log = c.get("log");
     log.set({ user_type: "system", operation: "messenger.webhook" });

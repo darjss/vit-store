@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { requireAdminSession } from "../lib/admin-session";
 import type { ServerHonoEnv } from "../lib/logging";
 
-const app = new Hono<ServerHonoEnv>();
+const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 
 app.use("*", requireAdminSession);
 

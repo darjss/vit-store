@@ -105,7 +105,7 @@ export function evlogMiddleware(): MiddlewareHandler<ServerHonoEnv> {
 			},
 		});
 
-		return middleware(c, next);
+		return (middleware as unknown as MiddlewareHandler<ServerHonoEnv>)(c, next);
 	};
 }
 
