@@ -1,0 +1,607 @@
+{
+  "meta": {
+    "storeName": "Америк Витамин",
+    "currency": "₮",
+    "timezone": "Asia/Ulaanbaatar",
+    "generatedAt": "2026-08-11T10:05:13.902Z",
+    "note": "Real data from the production database. Prototype only."
+  },
+  "workQueue": [
+    {
+      "kind": "created",
+      "label": "Шинэ захиалга",
+      "count": 125,
+      "route": "/orders?status=created"
+    },
+    {
+      "kind": "pending",
+      "label": "Төлбөр хүлээж буй",
+      "count": 28,
+      "route": "/orders?status=pending"
+    },
+    {
+      "kind": "shipped",
+      "label": "Хүргэлтэд гарсан",
+      "count": 88,
+      "route": "/orders?status=shipped"
+    },
+    {
+      "kind": "low_stock",
+      "label": "Бага үлдэгдэл",
+      "count": 12,
+      "route": "/products?inventory=low"
+    }
+  ],
+  "paymentStatus": {
+    "pending": 134,
+    "customer_claimed_paid": 18,
+    "success": 90,
+    "failed": 0
+  },
+  "metrics": {
+    "orders_today": 2,
+    "sales_today": 302000,
+    "orders_7d": 39,
+    "sales_7d": 8181100
+  },
+  "recentOrders": [
+    {
+      "id": 538,
+      "number": "Y5WDHJC0",
+      "customerPhone": "95088123",
+      "address": "СБД 1-р хороо Улсын драмын эрдмийн театрын байр",
+      "status": "pending",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-11T00:39:31.561Z",
+      "paymentStatus": "success",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-11T00:39:31.561Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin D3 & K2 MK-7, D3 50,000 IU, K2 MK-7 200 mcg, 240 Softgels",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/catalog/a341eefce38a4675a60a2db7a3c0d219.webp"
+        }
+      ]
+    },
+    {
+      "id": 537,
+      "number": "G5I5526J",
+      "customerPhone": "88046773",
+      "address": "Han-uul district, 23th khoroo, Happy residence, 884-r bair. 302toot",
+      "status": "pending",
+      "totalMnt": 141000,
+      "createdAt": "2026-08-10T20:11:41.063Z",
+      "paymentStatus": "success",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T20:11:41.063Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin D3 & K2, 5,000 IU D3 & 100 mcg K2 (MK-7), 300 Softgels",
+          "qty": 1,
+          "priceMnt": 135000,
+          "image": "https://cdn.darjs.dev/products/catalog/BREnGPu1VmM29KtHg2Y6y.webp"
+        }
+      ]
+    },
+    {
+      "id": 536,
+      "number": "K91BMQFA",
+      "customerPhone": "95554518",
+      "address": "Хан уул, мишээл экспогийн хажууд 92 а байр, цагаан орд хотхон. 2 давхар 19 тоот",
+      "status": "created",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-10T08:52:42.368Z",
+      "paymentStatus": "pending",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T08:52:42.368Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin C Powder, Unflavored, 1,000 mg per dose, 1 kg (2.2 lb)",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/X4Rbf0ZG3F1FreaYlLcl7.webp"
+        }
+      ]
+    },
+    {
+      "id": 535,
+      "number": "91INDGT0",
+      "customerPhone": "95554518",
+      "address": "Хан уул, мишээл экспогийн хажууд 92 а байр, цагаан орд хотхон. 2 давхар 19 тоот",
+      "status": "created",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-10T08:51:07.071Z",
+      "paymentStatus": "pending",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T08:51:07.071Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin C Powder, Unflavored, 1,000 mg per dose, 1 kg (2.2 lb)",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/X4Rbf0ZG3F1FreaYlLcl7.webp"
+        }
+      ]
+    },
+    {
+      "id": 534,
+      "number": "XMHS9QZ1",
+      "customerPhone": "95554518",
+      "address": "Хан уул, мишээл экспогийн хажууд 92 а байр, цагаан орд хотхон. 2 давхар 19 тоот",
+      "status": "created",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-10T08:48:38.679Z",
+      "paymentStatus": "pending",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T08:48:38.679Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin C Powder, Unflavored, 1,000 mg per dose, 1 kg (2.2 lb)",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/X4Rbf0ZG3F1FreaYlLcl7.webp"
+        }
+      ]
+    },
+    {
+      "id": 533,
+      "number": "WWYPZHFQ",
+      "customerPhone": "95554518",
+      "address": "Хан уул, мишээл экспогийн хажууд 92 а байр, цагаан орд хотхон. 2 давхар 19 тоот",
+      "status": "created",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-10T08:45:40.764Z",
+      "paymentStatus": "pending",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T08:45:40.764Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Vitamin C Powder, Unflavored, 1,000 mg per dose, 1 kg (2.2 lb)",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/X4Rbf0ZG3F1FreaYlLcl7.webp"
+        }
+      ]
+    },
+    {
+      "id": 532,
+      "number": "F4FH2SB4",
+      "customerPhone": "99000667",
+      "address": "Enkhtaivnii guurnii baruun door NCP 301 toot Bayarkhuu-99091071",
+      "status": "created",
+      "totalMnt": 136000,
+      "createdAt": "2026-08-10T00:33:40.707Z",
+      "paymentStatus": "pending",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T00:33:40.707Z",
+      "items": [
+        {
+          "name": "NOW Foods, Candida Support, 180 Veg Capsules",
+          "qty": 1,
+          "priceMnt": 130000,
+          "image": "https://cdn.darjs.dev/products/now-foods-supplements-candida-support-with-pau-darco-oregano-oil-black-walnut--caprylic-acid-180-veg-capsules/7PcLMKClpleqUZ-ImCh-G.webp"
+        }
+      ]
+    },
+    {
+      "id": 531,
+      "number": "2T00NZRK",
+      "customerPhone": "90500700",
+      "address": "19-р хороолол 42-р байр 2-р орц 24 ",
+      "status": "pending",
+      "totalMnt": 126000,
+      "createdAt": "2026-08-10T00:29:49.610Z",
+      "paymentStatus": "success",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-10T00:29:49.610Z",
+      "items": [
+        {
+          "name": "Micro Ingredients, Lutein & Zeaxanthin with Astaxanthin, Omega-3s & Phospholipids, 240 Softgels",
+          "qty": 1,
+          "priceMnt": 120000,
+          "image": "https://cdn.darjs.dev/products/catalog/micro-ingredients-lutein-zeaxanthin-40mg-softgels-240-count-with-astaxanthin-omega-3s-phospholipids-eye/byBuo_l_mmxtiWflDb4hq.webp"
+        }
+      ]
+    },
+    {
+      "id": 530,
+      "number": "PS9KD0FF",
+      "customerPhone": "99255635",
+      "address": "Bayanzurh duureg, 26 Horoo, Mandala 365.  21 davhar 211",
+      "status": "shipped",
+      "totalMnt": 161000,
+      "createdAt": "2026-08-09T23:30:25.370Z",
+      "paymentStatus": "success",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-09T23:30:25.370Z",
+      "items": [
+        {
+          "name": "Triple Strength Omega-3 Fish Oil 4,200 MG Per Serving 1,200 MG EPA + 900 MG DHA Lemon Flavor Burpless 240 Softgels",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/tWMoS1E7re5KndiwosnCq.webp"
+        }
+      ]
+    },
+    {
+      "id": 529,
+      "number": "BYTO9B8M",
+      "customerPhone": "99211120",
+      "address": "Narnii horoolol 13r bair 2r orts 9 dawhar 96 toot",
+      "status": "shipped",
+      "totalMnt": 271000,
+      "createdAt": "2026-08-09T20:09:28.628Z",
+      "paymentStatus": "success",
+      "paymentProvider": "qpay",
+      "paymentCreatedAt": "2026-08-09T20:09:28.628Z",
+      "items": [
+        {
+          "name": "Naturebell, Magnesium Complex, 10 Active Types, 500 mg, 300 Capsules",
+          "qty": 1,
+          "priceMnt": 110000,
+          "image": "https://cdn.darjs.dev/products/naturebell-magnesium-complex-supplement-500mg-300-capsules/_TqChpOFnXLFugC4SoXzG.webp"
+        },
+        {
+          "name": "Triple Strength Omega-3 Fish Oil 4,200 MG Per Serving 1,200 MG EPA + 900 MG DHA Lemon Flavor Burpless 240 Softgels",
+          "qty": 1,
+          "priceMnt": 155000,
+          "image": "https://cdn.darjs.dev/products/ai-extracted/tWMoS1E7re5KndiwosnCq.webp"
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": 7199,
+      "name": "Lovebug, Baby Probiotics, 6-12 Months, 4 Billion CFU, 60 Stick Packs",
+      "name_mn": "Нярай хүүхдийн Пробиотик - 6-12 сартай хүүхдийн дархлаа, хий, колик, суулгалт, өтгөн хаталтыг дэмжих Органик, Сахаргүй, Амтгүй Нунтаг, 60 уут",
+      "price": 120000,
+      "stock": 1,
+      "status": "active",
+      "brand": "Lovebug",
+      "category": "Хүүхдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/ai-extracted/nQm5HV7Xr4GgzSP9pH2wj.webp"
+    },
+    {
+      "id": 7490,
+      "name": "Lovebug, Organic Probiotic Powder for Babies, 4 Billion CFU, 30 Packets",
+      "name_mn": "Органик Нярайн Пробиотик Нунтаг 4 Тэрбум CFU 30 Пакет 6-12 Сар",
+      "price": 120000,
+      "stock": 2,
+      "status": "active",
+      "brand": "Lovebug",
+      "category": "Хүүхдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/2db2a09f134c40dc82e5b767994f5e28.jpg"
+    },
+    {
+      "id": 7473,
+      "name": "Micro Ingredients, Vitamin D3 & K2 MK-7, D3 50,000 IU, K2 MK-7 200 mcg, 240 Softgels",
+      "name_mn": "Витамин Д3 50,000 IU + К2 МК-7 200 мкг, 240 Зөөлөн Капсул | Цэвэр Кокосын Тос | 2-ын 1 Дэмжлэг | Залгихад Хялбар, ХОМ бус",
+      "price": 155000,
+      "stock": 50,
+      "status": "active",
+      "brand": "Micro Ingredients",
+      "category": "Витамин D",
+      "image": "https://cdn.darjs.dev/products/catalog/a341eefce38a4675a60a2db7a3c0d219.webp"
+    },
+    {
+      "id": 7258,
+      "name": "Micro Ingredients, Vitamin D3 & K2, 5,000 IU D3 & 100 mcg K2 (MK-7), 300 Softgels",
+      "name_mn": null,
+      "price": 135000,
+      "stock": 1000,
+      "status": "active",
+      "brand": "Micro Ingredients",
+      "category": "Витамин D",
+      "image": "https://cdn.darjs.dev/products/catalog/BREnGPu1VmM29KtHg2Y6y.webp"
+    },
+    {
+      "id": 7548,
+      "name": "LiveWise Naturals, Vitamin D3+K2 Baby, 400 IU D3, 5 mcg K2",
+      "name_mn": "LiveWise Naturals Хүүхдийн Витамин Д3+К2 400IU 5mcg",
+      "price": 120000,
+      "stock": 0,
+      "status": "active",
+      "brand": "LiveWise Naturals",
+      "category": "Хүүхдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/9bd0b5c250844020921436972176b77f.jpg"
+    },
+    {
+      "id": 7197,
+      "name": "Physician's Choice, Probiotic, 60 Billion CFU, 10 Strains, 60 Capsules",
+      "name_mn": null,
+      "price": 175000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Physician's Choice",
+      "category": "Гэдэс ба Пробиотик",
+      "image": "https://cdn.darjs.dev/products/catalog-v3/physician-s-choice-physician-s-choice-60-billion-probiotic-10-diverse-strains-60-billion-cfus-contai/O3Q5INAQ1Sj_NQArnf1XA.jpg"
+    },
+    {
+      "id": 7253,
+      "name": "NOW Foods, Candida Support, 180 Veg Capsules",
+      "name_mn": null,
+      "price": 130000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Now",
+      "category": "Гэдэс ба Пробиотик",
+      "image": "https://cdn.darjs.dev/products/now-foods-supplements-candida-support-with-pau-darco-oregano-oil-black-walnut--caprylic-acid-180-veg-capsules/7PcLMKClpleqUZ-ImCh-G.webp"
+    },
+    {
+      "id": 7265,
+      "name": "Nutricost, Potassium, from Potassium Citrate, 99 mg, 240 Capsules",
+      "name_mn": null,
+      "price": 95000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Nutricost",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/nutricost-potassium-citrate-99mg-240-capsules/zyQmEeAy8OD2ApLo7IfHJ.webp"
+    },
+    {
+      "id": 7357,
+      "name": "Double Wood Supplements, Magnesium Malate, 1,500 mg Per Serving, 420 Capsules",
+      "name_mn": "Магни Малат Капсул (420 Ширхэг) - Нэг Тун 1,500мг (Малийн Хүчилтэй Холбогдсон Магни), Гуравдагч Талын Баталгаажуулсан, Веган, Глютенгүй",
+      "price": 135000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Double Wood Supplements",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/catalog/96277f374d1e4c18bc434ecf89756bbd.webp"
+    },
+    {
+      "id": 7365,
+      "name": "Berrilys, Organic Bitter Apricot Kernels, 16 oz",
+      "name_mn": "Органик Гашуун Гүйлсний Самрын Үр - USDA Гэрчилгээтэй Органик Гашуун Гүйлсний Самрын Үр - Байгалийн ба ГМОгүй, Дээд Зэргийн Чанартай, Хүхэр эсвэл Нэмэлт Бодисгүй - 16 унц",
+      "price": 125000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Berrilys",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/berrilys-organic-bitter-apricot-kernels-usda-certified-organic-bitter-apricot-seeds-natural-non-gmo-pre/_xryTNAl7yv0BhrdTp4qw.webp"
+    },
+    {
+      "id": 7395,
+      "name": "Micro Ingredients, Lutein & Zeaxanthin with Astaxanthin, Omega-3s & Phospholipids, 240 Softgels",
+      "name_mn": "Лутеин ба Зеаксантин 40мг зөөлөн капсул, 240 ширхэг, Астаксантин, Омега-3, Фосфолипидтэй | Нүдний болон Харааны Эрүүл Мэндийн Витаминууд",
+      "price": 120000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Micro Ingredients",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/micro-ingredients-lutein-zeaxanthin-40mg-softgels-240-count-with-astaxanthin-omega-3s-phospholipids-eye/byBuo_l_mmxtiWflDb4hq.webp"
+    },
+    {
+      "id": 7414,
+      "name": "Naturebell, Vaginal Probiotics for Women, 10 Billion CFU, 120 Veggie Capsules",
+      "name_mn": "Эмэгтэйчүүдийн үтрээний пробиотик, 10 тэрбум CFU, 120 ургамлын капсул",
+      "price": 85000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Naturebell",
+      "category": "Эмэгтэйчүүдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/naturebell-vaginal-probiotics-for-women-10-billion-cfu-120-veggie-capsules-10-billion-cfu-120/cWgvUiqUbwAFBCiW50YJu.webp"
+    },
+    {
+      "id": 7415,
+      "name": "Nature's Plus, Copper, 3 mg, 90 Tablets",
+      "name_mn": "Зэс 3 мг - 90 шахмал - Ерөнхий эрүүл мэндийг дэмжинэ - Цавуулаггүй - 90 удаагийн хэрэглээ",
+      "price": 75000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Naturesplus",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/catalog/naturesplus-copper-3-mg-90-tablets-supports-overall-wellness-gluten-free-90-servings-3-mg-90-tablets/NnHXzO_zfxsTQVEz_YMTJ.webp"
+    },
+    {
+      "id": 7451,
+      "name": "Nutrivein, Berberine with Ceylon Cinnamon, 1,200 mg, 120 Capsules",
+      "name_mn": "Берберин 1200 мг Цейлон Шанцайтай - 120 Капсул",
+      "price": 140000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Nutrivein",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/nutrivein-berberine-1200-mg-with-ceylon-cinnamon-120-capsules-1200-mg-120/r1UcbU4gdNQbBnuCwkcnh.webp"
+    },
+    {
+      "id": 7467,
+      "name": "Zazzee, USDA Organic Vitex, Chaste Berry, 4:1 Extract, 120 Vegan Capsules",
+      "name_mn": "USDA Органик Витекс 4:1 ханд, 120 веган капсул, 4 сарын хэрэглээ, Част жимс, Эмэгтэйчүүдийн дааврын тэнцвэр ба мөчлөгийг дэмжих, Vitex Agnus-Castus",
+      "price": 130000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Zazzee",
+      "category": "Эмэгтэйчүүдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/zazzee-usda-organic-vitex-4-1-extract-120-vegan-capsules-4-month-supply-chaste-berry-hormonal-balance-c/UodmDWF-MkO2HaBQ2IoKO.webp"
+    },
+    {
+      "id": 7648,
+      "name": "Now QA TEST qa-products 1 cap 30 caps",
+      "name_mn": null,
+      "price": 100,
+      "stock": 4,
+      "status": "draft",
+      "brand": "Now",
+      "category": "Витамин C",
+      "image": null
+    }
+  ],
+  "lowStock": [
+    {
+      "id": 7548,
+      "name": "LiveWise Naturals, Vitamin D3+K2 Baby, 400 IU D3, 5 mcg K2",
+      "name_mn": "LiveWise Naturals Хүүхдийн Витамин Д3+К2 400IU 5mcg",
+      "price": 120000,
+      "stock": 0,
+      "status": "active",
+      "brand": "LiveWise Naturals",
+      "category": "Хүүхдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/9bd0b5c250844020921436972176b77f.jpg"
+    },
+    {
+      "id": 7197,
+      "name": "Physician's Choice, Probiotic, 60 Billion CFU, 10 Strains, 60 Capsules",
+      "name_mn": null,
+      "price": 175000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Physician's Choice",
+      "category": "Гэдэс ба Пробиотик",
+      "image": "https://cdn.darjs.dev/products/catalog-v3/physician-s-choice-physician-s-choice-60-billion-probiotic-10-diverse-strains-60-billion-cfus-contai/O3Q5INAQ1Sj_NQArnf1XA.jpg"
+    },
+    {
+      "id": 7253,
+      "name": "NOW Foods, Candida Support, 180 Veg Capsules",
+      "name_mn": null,
+      "price": 130000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Now",
+      "category": "Гэдэс ба Пробиотик",
+      "image": "https://cdn.darjs.dev/products/now-foods-supplements-candida-support-with-pau-darco-oregano-oil-black-walnut--caprylic-acid-180-veg-capsules/7PcLMKClpleqUZ-ImCh-G.webp"
+    },
+    {
+      "id": 7265,
+      "name": "Nutricost, Potassium, from Potassium Citrate, 99 mg, 240 Capsules",
+      "name_mn": null,
+      "price": 95000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Nutricost",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/nutricost-potassium-citrate-99mg-240-capsules/zyQmEeAy8OD2ApLo7IfHJ.webp"
+    },
+    {
+      "id": 7357,
+      "name": "Double Wood Supplements, Magnesium Malate, 1,500 mg Per Serving, 420 Capsules",
+      "name_mn": "Магни Малат Капсул (420 Ширхэг) - Нэг Тун 1,500мг (Малийн Хүчилтэй Холбогдсон Магни), Гуравдагч Талын Баталгаажуулсан, Веган, Глютенгүй",
+      "price": 135000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Double Wood Supplements",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/catalog/96277f374d1e4c18bc434ecf89756bbd.webp"
+    },
+    {
+      "id": 7365,
+      "name": "Berrilys, Organic Bitter Apricot Kernels, 16 oz",
+      "name_mn": "Органик Гашуун Гүйлсний Самрын Үр - USDA Гэрчилгээтэй Органик Гашуун Гүйлсний Самрын Үр - Байгалийн ба ГМОгүй, Дээд Зэргийн Чанартай, Хүхэр эсвэл Нэмэлт Бодисгүй - 16 унц",
+      "price": 125000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Berrilys",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/berrilys-organic-bitter-apricot-kernels-usda-certified-organic-bitter-apricot-seeds-natural-non-gmo-pre/_xryTNAl7yv0BhrdTp4qw.webp"
+    },
+    {
+      "id": 7395,
+      "name": "Micro Ingredients, Lutein & Zeaxanthin with Astaxanthin, Omega-3s & Phospholipids, 240 Softgels",
+      "name_mn": "Лутеин ба Зеаксантин 40мг зөөлөн капсул, 240 ширхэг, Астаксантин, Омега-3, Фосфолипидтэй | Нүдний болон Харааны Эрүүл Мэндийн Витаминууд",
+      "price": 120000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Micro Ingredients",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/micro-ingredients-lutein-zeaxanthin-40mg-softgels-240-count-with-astaxanthin-omega-3s-phospholipids-eye/byBuo_l_mmxtiWflDb4hq.webp"
+    },
+    {
+      "id": 7414,
+      "name": "Naturebell, Vaginal Probiotics for Women, 10 Billion CFU, 120 Veggie Capsules",
+      "name_mn": "Эмэгтэйчүүдийн үтрээний пробиотик, 10 тэрбум CFU, 120 ургамлын капсул",
+      "price": 85000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Naturebell",
+      "category": "Эмэгтэйчүүдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/naturebell-vaginal-probiotics-for-women-10-billion-cfu-120-veggie-capsules-10-billion-cfu-120/cWgvUiqUbwAFBCiW50YJu.webp"
+    },
+    {
+      "id": 7415,
+      "name": "Nature's Plus, Copper, 3 mg, 90 Tablets",
+      "name_mn": "Зэс 3 мг - 90 шахмал - Ерөнхий эрүүл мэндийг дэмжинэ - Цавуулаггүй - 90 удаагийн хэрэглээ",
+      "price": 75000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Naturesplus",
+      "category": "Магни ба Эрдэс",
+      "image": "https://cdn.darjs.dev/products/catalog/naturesplus-copper-3-mg-90-tablets-supports-overall-wellness-gluten-free-90-servings-3-mg-90-tablets/NnHXzO_zfxsTQVEz_YMTJ.webp"
+    },
+    {
+      "id": 7451,
+      "name": "Nutrivein, Berberine with Ceylon Cinnamon, 1,200 mg, 120 Capsules",
+      "name_mn": "Берберин 1200 мг Цейлон Шанцайтай - 120 Капсул",
+      "price": 140000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Nutrivein",
+      "category": "Ургамлын Ханд ба Антиоксидант",
+      "image": "https://cdn.darjs.dev/products/catalog/nutrivein-berberine-1200-mg-with-ceylon-cinnamon-120-capsules-1200-mg-120/r1UcbU4gdNQbBnuCwkcnh.webp"
+    },
+    {
+      "id": 7467,
+      "name": "Zazzee, USDA Organic Vitex, Chaste Berry, 4:1 Extract, 120 Vegan Capsules",
+      "name_mn": "USDA Органик Витекс 4:1 ханд, 120 веган капсул, 4 сарын хэрэглээ, Част жимс, Эмэгтэйчүүдийн дааврын тэнцвэр ба мөчлөгийг дэмжих, Vitex Agnus-Castus",
+      "price": 130000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Zazzee",
+      "category": "Эмэгтэйчүүдийн Эрүүл Мэнд",
+      "image": "https://cdn.darjs.dev/products/catalog/zazzee-usda-organic-vitex-4-1-extract-120-vegan-capsules-4-month-supply-chaste-berry-hormonal-balance-c/UodmDWF-MkO2HaBQ2IoKO.webp"
+    },
+    {
+      "id": 7305,
+      "name": "Micro Ingredients, Melatonin, Strawberry Flavor, 20 mg, 400 Tablets",
+      "name_mn": null,
+      "price": 115000,
+      "stock": 0,
+      "status": "active",
+      "brand": "Micro Ingredients",
+      "category": "Нойр ба Тайвшрал",
+      "image": "https://cdn.darjs.dev/products/micro-ingredients-melatonin-20mg-400-tablets/P3IQ6kWrdKsg1WT8qBozc.webp"
+    }
+  ],
+  "topProducts": [
+    {
+      "name": "Micro Ingredients, Vitamin D3 + K2, 5,000 IU D3 + 100 mcg K2 (MK-7), 300 Softgels",
+      "qtySold": 10,
+      "revenueMnt": 1100000
+    },
+    {
+      "name": "Naturebell, Magnesium Complex, 10 Active Types, 500 mg, 300 Capsules",
+      "qtySold": 9,
+      "revenueMnt": 990000
+    },
+    {
+      "name": "Triple Strength Omega-3 Fish Oil 4,200 MG Per Serving 1,200 MG EPA + 900 MG DHA Lemon Flavor Burpless 240 Softgels",
+      "qtySold": 8,
+      "revenueMnt": 1240000
+    },
+    {
+      "name": "Naturebell, D3 + K2, 10,000 IU D3 & 200 mcg K2, 240 Softgels",
+      "qtySold": 7,
+      "revenueMnt": 980000
+    },
+    {
+      "name": "Micro Ingredients, Vitamin D3 & K2, 5,000 IU D3 & 100 mcg K2 (MK-7), 300 Softgels",
+      "qtySold": 7,
+      "revenueMnt": 945000
+    },
+    {
+      "name": "Micro Ingredients, Vitamin D3 + K2, 2,000 IU D3 + 50 mcg K2 MK-7, 300 Softgels",
+      "qtySold": 6,
+      "revenueMnt": 750000
+    }
+  ],
+  "summary": {
+    "orderCounts": {
+      "created": 125,
+      "pending": 28,
+      "shipped": 88,
+      "delivered": 1
+    }
+  }
+}

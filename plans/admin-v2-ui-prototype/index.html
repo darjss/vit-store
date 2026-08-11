@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin V2 — UI prototype</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/onest@latest/index.css" />
+<style>
+  :root {
+    --canvas: #faf6ee;
+    --surface: #ffffff;
+    --surface-2: #f4ede0;
+    --ink: #2b2419;
+    --ink-2: #8a7d68;
+    --butter: #f2be22;
+    --butter-strong: #e0a90e;
+    --butter-ink: #2b2419;
+    --lavender: #cbb9f2;
+    --lavender-ink: #4a3a75;
+    --apricot: #ffc9a1;
+    --apricot-ink: #7a4320;
+    --coral: #f28c7b;
+    --coral-ink: #7a2418;
+    --lemon: #f5e08a;
+    --lemon-ink: #6b5710;
+    --gray: #e5dccb;
+    --gray-ink: #5d5242;
+    --rule: #e9e1d0;
+    --sidebar: #f0e7d2;
+    --shadow: 0 1px 2px rgb(43 36 25 / 0.06), 0 4px 12px rgb(43 36 25 / 0.05);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Onest Variable", "Noto Sans", system-ui, -apple-system, sans-serif;
+    background: var(--canvas);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { display: block; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .thumb { width: 44px; height: 44px; border-radius: 8px; background: var(--surface-2); object-fit: cover; flex: none; }
+  .thumb.thumb-sm { width: 34px; height: 34px; border-radius: 6px; }
+
+  /* status pills — text + icon, never color alone */
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; line-height: 1.6;
+  }
+  .pill svg { width: 11px; height: 11px; flex: none; }
+  .pill-lemon   { background: var(--lemon);   color: var(--lemon-ink); }
+  .pill-apricot { background: var(--apricot); color: var(--apricot-ink); }
+  .pill-lavender{ background: var(--lavender);color: var(--lavender-ink); }
+  .pill-coral   { background: var(--coral);   color: var(--coral-ink); }
+  .pill-gray    { background: var(--gray);    color: var(--gray-ink); }
+  .pill-outline { background: transparent; border: 1.5px dashed var(--coral); color: var(--coral-ink); }
+
+  .icon { width: 1em; height: 1em; fill: currentColor; flex: none; }
+
+  /* ---------- switcher ---------- */
+  #switcher {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    z-index: 99; display: flex; align-items: center; gap: 10px;
+    background: #241f17; color: #fff; border-radius: 999px;
+    padding: 6px 14px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+    font-size: 13px; font-weight: 700; user-select: none;
+  }
+  #switcher button {
+    background: none; border: 0; color: #fff; font-size: 16px; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 50%;
+  }
+  #switcher button:hover { background: rgb(255 255 255 / 0.15); }
+  #switcher .k { opacity: 0.55; font-weight: 500; }
+
+  /* ============================================================
+     VARIANT A — Command center (sidebar + work queue hero)
+     ============================================================ */
+  .a-shell { min-height: 100vh; display: flex; flex-direction: column; }
+  .a-sidebar {
+    display: none; width: 232px; background: var(--sidebar);
+    border-right: 1px solid var(--rule); flex: none; padding: 20px 14px;
+  }
+  .a-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; }
+  .a-brand .mark {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--ink);
+    color: var(--butter); display: grid; place-items: center; font-weight: 800; font-size: 13px;
+  }
+  .a-brand strong { display: block; font-size: 15px; }
+  .a-brand span { display: block; font-size: 11px; color: var(--ink-2); letter-spacing: 0.06em; text-transform: uppercase; }
+  .a-nav { display: flex; flex-direction: column; gap: 2px; }
+  .a-nav a {
+    display: flex; align-items: center; gap: 10px; padding: 11px 10px;
+    border-radius: 8px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px;
+  }
+  .a-nav a .glyph {
+    width: 26px; height: 26px; border: 1.5px solid currentColor; border-radius: 6px;
+    display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none;
+  }
+  .a-nav a.active { background: var(--surface); box-shadow: var(--shadow); }
+  .a-nav a.active .glyph { background: var(--ink); color: var(--butter); }
+  .a-main { flex: 1; min-width: 0; }
+  .a-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .a-top .crumb { font-size: 13px; font-weight: 700; }
+  .a-top .crumb b { font-size: 15px; }
+  .a-top .search {
+    display: none; align-items: center; gap: 8px; border: 1px solid var(--rule);
+    border-radius: 999px; padding: 8px 14px; color: var(--ink-2); font-size: 13px;
+  }
+  .a-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2);
+    border: 1px solid var(--rule); display: grid; place-items: center; font-weight: 800; font-size: 14px;
+  }
+  .a-content { max-width: 1080px; margin: 0 auto; padding: 18px 16px 96px; }
+  .a-hero { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .a-hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+  .a-hero .date { color: var(--ink-2); font-size: 13px; }
+
+  .queue { border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+  .queue-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--coral); color: var(--coral-ink); padding: 12px 16px;
+  }
+  .queue-head .tag { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; }
+  .queue-head h2 { font-size: 18px; font-weight: 800; }
+  .queue-head .count {
+    border: 1.5px solid currentColor; border-radius: 8px; padding: 4px 10px;
+    font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .queue a.row {
+    display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px;
+    align-items: center; padding: 13px 16px; min-height: 56px;
+    border-top: 1px solid var(--rule); text-decoration: none; color: inherit;
+  }
+  .queue a.row:hover { background: #fffdf7; }
+  .queue .glyph {
+    width: 32px; height: 32px; border: 1.5px solid var(--ink); border-radius: 7px;
+    display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: none;
+  }
+  .queue .row h3 { font-size: 15px; font-weight: 800; }
+  .queue .row p { font-size: 13px; color: var(--ink-2); }
+  .queue .row .n { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .a-cols { display: grid; gap: 14px; margin-top: 14px; }
+  @media (min-width: 900px) { .a-cols { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .panel-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; }
+  .panel-head h2 { font-size: 17px; font-weight: 800; }
+  .panel-head .sub { font-size: 13px; color: var(--ink-2); }
+  .panel-head a { font-size: 13px; font-weight: 700; color: var(--ink); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+  .a-order {
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px;
+    align-items: center; padding: 12px 16px; min-height: 68px; border-top: 1px solid var(--rule);
+  }
+  .a-order .meta { min-width: 0; }
+  .a-order .meta .top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .a-order .no { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .a-order .cust { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .a-order .right { text-align: right; }
+  .a-order .amt { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .a-order .when { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .a-order .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+  .stock-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 16px; min-height: 64px; border-top: 1px solid var(--rule); }
+  .stock-row .nm { font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .stock-row .sk { font-size: 12px; color: var(--ink-2); }
+  .stock-row .q { text-align: right; }
+  .stock-row .q b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .a-bottomnav {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 20;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--surface); border-top: 1px solid var(--rule);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .a-bottomnav a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px; font-size: 11px; font-weight: 700; color: var(--ink-2); text-decoration: none;
+  }
+  .a-bottomnav a .glyph { width: 24px; height: 24px; border: 1.5px solid currentColor; border-radius: 6px; display: grid; place-items: center; font-size: 10px; font-weight: 800; }
+  .a-bottomnav a.active { color: var(--ink); }
+  .a-bottomnav a.active .glyph { background: var(--ink); color: var(--butter); }
+  @media (min-width: 900px) {
+    .a-shell { flex-direction: row; }
+    .a-sidebar { display: block; position: sticky; top: 0; height: 100vh; }
+    .a-bottomnav { display: none; }
+    .a-content { padding: 24px 24px 48px; }
+    .a-top .search { display: flex; }
+  }
+
+  /* ============================================================
+     VARIANT B — Triage agenda (no sidebar, inline actions)
+     ============================================================ */
+  .b-shell { min-height: 100vh; }
+  .b-top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .b-brand { display: flex; align-items: center; gap: 10px; }
+  .b-brand .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--ink); color: var(--butter); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+  .b-brand strong { font-size: 15px; }
+  .b-brand small { display: block; font-size: 11px; color: var(--ink-2); }
+  .b-top .right { display: flex; align-items: center; gap: 10px; }
+  .b-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--rule); display: grid; place-items: center; font-weight: 800; }
+
+  .b-content { max-width: 760px; margin: 0 auto; padding: 18px 16px 110px; }
+  .b-hero {
+    background: var(--ink); color: #fff; border-radius: 14px; padding: 18px 18px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .b-hero h1 { font-size: 20px; font-weight: 800; }
+  .b-hero .line { font-size: 14px; color: rgb(255 255 255 / 0.8); }
+  .b-next {
+    display: flex; align-items: center; gap: 12px; background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.16); border-radius: 10px; padding: 12px;
+  }
+  .b-next .thumb { background: rgb(255 255 255 / 0.12); }
+  .b-next .tx { min-width: 0; flex: 1; }
+  .b-next .no { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .b-next .desc { font-size: 12px; color: rgb(255 255 255 / 0.75); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .b-next .amt { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .b-cta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--butter); color: var(--butter-ink); border: 0; border-radius: 9px;
+    min-height: 46px; padding: 0 18px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer;
+  }
+  .b-cta:active { transform: scale(0.98); }
+  .b-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .b-metric { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
+  .b-metric b { display: block; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .b-metric span { font-size: 12px; color: var(--ink-2); }
+
+  .b-section { margin-top: 22px; }
+  .b-section h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .b-section h2 .n { color: var(--ink-2); font-size: 13px; }
+  .b-agenda { display: flex; flex-direction: column; gap: 10px; }
+  .b-card {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 13px 14px;
+    box-shadow: var(--shadow); display: grid; gap: 10px;
+  }
+  .b-card .row1 { display: flex; align-items: center; gap: 12px; }
+  .b-card .no { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .b-card .cust { font-size: 13px; color: var(--ink-2); }
+  .b-card .amt { margin-left: auto; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .b-card .row2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .b-card .row2 .when { font-size: 12px; color: var(--ink-2); margin-left: auto; }
+  .b-card .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .b-card .btn {
+    min-height: 42px; border-radius: 9px; border: 1.5px solid var(--rule);
+    background: var(--surface); font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; color: var(--ink);
+  }
+  .b-card .btn.primary { background: var(--butter); border-color: var(--butter); color: var(--butter-ink); }
+  .b-hscroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .b-hscroll::-webkit-scrollbar { display: none; }
+  .b-mini {
+    flex: none; width: 150px; background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 10px; box-shadow: var(--shadow);
+  }
+  .b-mini img { width: 100%; height: 84px; object-fit: cover; border-radius: 7px; background: var(--surface-2); }
+  .b-mini .nm { font-size: 12px; font-weight: 700; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+  .b-mini .btm { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+  .b-mini .pr { font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .b-mini .st { font-size: 12px; font-weight: 700; }
+
+  @media (min-width: 760px) {
+    .b-content { padding-top: 26px; }
+    .b-hero { flex-direction: row; align-items: center; justify-content: space-between; }
+    .b-next { flex: 1; }
+    .b-agenda { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ============================================================
+     VARIANT C — Ledger desk (dense tables, metric tiles)
+     ============================================================ */
+  .c-shell { min-height: 100vh; }
+  .c-top {
+    display: flex; align-items: center; gap: 18px;
+    background: var(--surface); border-bottom: 1px solid var(--rule);
+    padding: 0 16px; height: 54px; position: sticky; top: 0; z-index: 5;
+  }
+  .c-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; white-space: nowrap; }
+  .c-brand .mark { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--butter); display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+  .c-tabs { display: flex; gap: 2px; height: 100%; overflow-x: auto; scrollbar-width: none; }
+  .c-tabs::-webkit-scrollbar { display: none; }
+  .c-tabs a {
+    display: flex; align-items: center; gap: 6px; padding: 0 12px; white-space: nowrap;
+    font-size: 13px; font-weight: 700; color: var(--ink-2); text-decoration: none; border-bottom: 3px solid transparent;
+  }
+  .c-tabs a.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .c-tabs a .n { font-size: 11px; background: var(--surface-2); border-radius: 999px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
+  .c-tabs a.active .n { background: var(--ink); color: var(--butter); }
+  .c-avatar { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--rule); display: grid; place-items: center; font-weight: 800; font-size: 12px; }
+
+  .c-content { max-width: 1240px; margin: 0 auto; padding: 16px 16px 90px; }
+  .c-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 760px) { .c-tiles { grid-template-columns: repeat(4, 1fr); } }
+  .c-tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px; }
+  .c-tile .lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-2); }
+  .c-tile b { display: block; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: -0.01em; }
+
+  .c-panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; margin-top: 14px; overflow: hidden; }
+  .c-panel > h2 { font-size: 14px; font-weight: 800; padding: 12px 14px; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; }
+  .c-panel > h2 .muted { color: var(--ink-2); font-size: 12px; font-weight: 600; }
+  .c-table { width: 100%; border-collapse: collapse; }
+  .c-table th {
+    text-align: left; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-2); background: var(--surface-2); padding: 8px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap;
+  }
+  .c-table td { padding: 9px 12px; border-bottom: 1px solid var(--rule); font-size: 13px; vertical-align: middle; }
+  .c-table tr:last-child td { border-bottom: 0; }
+  .c-table .num { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .c-table .mono { font-variant-numeric: tabular-nums; }
+  .c-table .right { text-align: right; }
+  .c-table .name { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-table .thumb { width: 30px; height: 30px; border-radius: 5px; }
+  .c-desk { display: grid; gap: 0; }
+  @media (min-width: 900px) { .c-desk { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; align-items: start; } .c-desk .c-panel { margin-top: 0; } }
+  @media (min-width: 900px) { .c-content { padding-bottom: 40px; } }
+</style>
+</head>
+<body>
+<div id="app"><p style="padding:40px;text-align:center;color:var(--ink-2)">Ачаалж байна…</p></div>
+<div id="switcher" hidden>
+  <button id="prev" aria-label="Өмнөх хувилбар">‹</button>
+  <span id="sw-label"></span>
+  <button id="next" aria-label="Дараах хувилбар">›</button>
+  <span class="k">← →</span>
+</div>
+<script>
+const VARIANTS = [
+  { key: "A", name: "Удирдлагын төв", desc: "хажуугийн цэс + ажлын жагсаалт" },
+  { key: "B", name: "Шуурхай жагсаалт", desc: "шууд үйлдэлтэй урсгал" },
+  { key: "C", name: "Хүснэгт самбар", desc: "нягт операторын ширээ" },
+];
+
+let DATA = null;
+
+/* ---------- shared helpers ---------- */
+const mn = new Intl.NumberFormat("mn-MN");
+const mnt = (n) => mn.format(n) + "₮";
+const ICONS = {
+  check: '<svg class="icon" viewBox="0 0 16 16"><path d="M13.5 4.5 6.6 11.4 2.5 7.3l1.1-1.1 3 3 5.8-5.8z"/></svg>',
+  clock: '<svg class="icon" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 1.6a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8Zm-.7 1.7h1.4v3.1l2.3 1.4-.7 1.1-3-1.8z"/></svg>',
+  box: '<svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2 14.5 4.6v6.8L8 14.8l-6.5-3.4V4.6L8 1.2Zm0 1.9L3.7 5.6 8 8l4.3-2.4L8 3.1ZM3.5 7 7.2 9v4.5L3.5 11.2V7Zm5.3 6.5V9l3.7-2v4.2L8.8 13.5Z"/></svg>',
+  truck: '<svg class="icon" viewBox="0 0 16 16"><path d="M1.5 3h8.2v8H1.5V3Zm1 1v6h6.2V4H2.5Zm8.7 1h2.2l1.6 2.6V11h-3.8V5Zm1 1v4h1.4V8.6L12.6 6h-.4Zm-7.3 6a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8Zm7.4 0a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8Z"/></svg>',
+  check2: '<svg class="icon" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm3.2 4.4-4.2 4.2-1.7-1.7-1.1 1.1 2.8 2.8 5.3-5.3-1.1-1.1Z"/></svg>',
+  alert: '<svg class="icon" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm0 1.6a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8Zm-.7 2.6h1.4v3.4H7.3V5.7Zm0 4.2h1.4v1.4H7.3V9.9Z"/></svg>',
+  x: '<svg class="icon" viewBox="0 0 16 16"><path d="m4 4 8 8m0-8-8 8"/></svg>',
+  search: '<svg class="icon" viewBox="0 0 16 16"><path d="M6.6 1.6a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 1.6a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 0 1 0-6.8Zm5.6 4.9 2.5 2.5-1.1 1.1-2.5-2.5z"/></svg>',
+  chev: '<svg class="icon" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5 4.9 11.4 8.3 8 4.9 4.6z"/></svg>',
+};
+
+const ORDER_META = {
+  created:    { label: "Шинэ",      pill: "pill-lemon",    icon: "clock" },
+  pending:    { label: "Төлбөр хүлээх", pill: "pill-apricot", icon: "clock" },
+  shipped:    { label: "Хүргэлтэд", pill: "pill-lavender", icon: "truck" },
+  delivered:  { label: "Хүргэгдсэн",pill: "pill-gray",     icon: "check2" },
+  cancelled:  { label: "Цуцалсан",  pill: "pill-coral",    icon: "x" },
+  refunded:   { label: "Буцаалт",   pill: "pill-coral",    icon: "x" },
+};
+const PAY_META = {
+  pending:               { label: "Хүлээгдэж буй",      pill: "pill-apricot", icon: "clock" },
+  customer_claimed_paid: { label: "Батлах шаардлагатай", pill: "pill-outline", icon: "alert" },
+  success:               { label: "Төлсөн",             pill: "pill-lavender", icon: "check" },
+  failed:                { label: "Амжилтгүй",          pill: "pill-coral",    icon: "x" },
+};
+const PRODUCT_META = {
+  active:       { label: "Зарагдаж буй", pill: "pill-gray" },
+  draft:        { label: "Ноорог",        pill: "pill-lemon" },
+  out_of_stock: { label: "Дууссан",       pill: "pill-coral" },
+};
+const pill = (key, meta) => {
+  const m = meta[key];
+  return `<span class="pill ${m.pill}">${ICONS[m.icon ?? "box"]}${m.label}</span>`;
+};
+const orderPill = (s) => pill(s, ORDER_META);
+const payPill = (s) => (s ? pill(s, PAY_META) : "");
+const when = (iso) => {
+  const d = new Date(iso);
+  const now = new Date();
+  const days = Math.floor((now - d) / 86400000);
+  if (days < 1) return "өнөөдөр " + d.toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" });
+  if (days === 1) return "өчигдөр " + d.toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("mn-MN", { month: "short", day: "numeric" });
+};
+const img = (src, cls = "thumb", alt = "") =>
+  `<img class="${cls}" src="${src || ""}" alt="${alt}" loading="lazy" onerror="this.style.visibility='hidden'">`;
+
+/* ============================================================
+   VARIANT A — Command center
+   ============================================================ */
+function variantA(d) {
+  const q = d.workQueue;
+  const queueRows = q.map((item) => `
+    <a class="row" href="${item.route}">
+      <span class="glyph">${glyphFor(item.kind)}</span>
+      <span>
+        <h3>${item.label}</h3>
+        <p>${descFor(item.kind)}</p>
+      </span>
+      <span class="n">${item.count}</span>
+    </a>`).join("");
+  const total = q.reduce((s, i) => s + i.count, 0);
+  const orders = d.recentOrders.map((o) => `
+    <div class="a-order">
+      ${img(o.items[0]?.image, "thumb")}
+      <div class="meta">
+        <span class="top"><span class="no">${o.number}</span><span class="cust">${o.customerPhone}</span></span>
+        <span class="pills">${payPill(o.paymentStatus)}${orderPill(o.status)}</span>
+      </div>
+      <div class="right">
+        <div class="amt">${mnt(o.totalMnt)}</div>
+        <div class="when">${when(o.createdAt)}</div>
+      </div>
+    </div>`).join("");
+  const low = d.lowStock.map((p) => `
+    <div class="stock-row">
+      ${img(p.image, "thumb thumb-sm")}
+      <div>
+        <div class="nm">${p.name}</div>
+        <div class="sk">${p.stock === 0 ? "Дууссан" : "Бага үлдэгдэл"}</div>
+      </div>
+      <div class="q"><b>${p.stock}</b></div>
+    </div>`).join("");
+  return `
+  <div class="a-shell">
+    <aside class="a-sidebar">
+      <div class="a-brand">
+        <span class="mark">AV</span>
+        <span><strong>${d.meta.storeName}</strong><span>Удирдлага</span></span>
+      </div>
+      <nav class="a-nav" aria-label="Цэс">
+        <a class="active" href="#"><span class="glyph">Н</span>Нүүр</a>
+        <a href="#"><span class="glyph">Б</span>Бараа <span style="margin-left:auto;color:var(--ink-2);font-size:12px">${d.products.length * 8}</span></a>
+        <a href="#"><span class="glyph">З</span>Захиалга <span style="margin-left:auto;color:var(--ink-2);font-size:12px">${q[0].count + q[1].count + q[2].count}</span></a>
+        <a href="#"><span class="glyph">Ш</span>Шинжилгээ</a>
+      </nav>
+      <div style="margin-top:auto;border-top:1px solid var(--rule);padding:14px 10px 4px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="a-avatar">А</span>
+          <span style="font-size:13px;font-weight:700">Админ</span>
+        </div>
+      </div>
+    </aside>
+    <div class="a-main">
+      <header class="a-top">
+        <div class="crumb"><b>Нүүр</b></div>
+        <div class="search">${ICONS.search}Үйлдэл хайх…</div>
+        <span class="a-avatar">А</span>
+      </header>
+      <main class="a-content">
+        <div class="a-hero">
+          <h1>Өнөөдрийн ажил</h1>
+          <span class="date">${new Date().toLocaleDateString("mn-MN", { weekday: "long", day: "numeric", month: "long" })}</span>
+        </div>
+        <section class="queue" aria-label="Анхаарах ажил">
+          <div class="queue-head">
+            <div><div class="tag">Шууд хийх</div><h2>Анхаарах ажил</h2></div>
+            <span class="count">${total} ажил</span>
+          </div>
+          ${queueRows}
+        </section>
+        <div class="a-cols">
+          <section class="panel" aria-label="Сүүлийн захиалга">
+            <div class="panel-head">
+              <div><h2>Сүүлийн захиалга</h2><div class="sub">Хамгийн сүүлд орсон захиалгууд</div></div>
+              <a href="#">Бүгдийг харах</a>
+            </div>
+            ${orders}
+          </section>
+          <section class="panel" aria-label="Нөөц нөхөх бараа">
+            <div class="panel-head">
+              <div><h2>Нөөц нөхөх бараа</h2><div class="sub">Хамгийн бага үлдэгдэлтэй</div></div>
+              <a href="#">Бүгдийг харах</a>
+            </div>
+            ${low}
+          </section>
+        </div>
+      </main>
+    </div>
+    <nav class="a-bottomnav" aria-label="Үндсэн цэс">
+      <a class="active" href="#"><span class="glyph">Н</span>Нүүр</a>
+      <a href="#"><span class="glyph">Б</span>Бараа</a>
+      <a href="#"><span class="glyph">З</span>Захиалга</a>
+      <a href="#"><span class="glyph">Ш</span>Шинжилгээ</a>
+    </nav>
+  </div>`;
+}
+const glyphFor = (k) =>
+  ({ created: "ШЗ", pending: "ТБ", shipped: "ХР", low_stock: "ҮЛ" }[k] ?? "??");
+const descFor = (k) =>
+  ({ created: "Төлбөр болон хүргэлтийг шалгана", pending: "Төлбөрийг баталгаажуулна", shipped: "Хүргэлтийг шалгана", low_stock: "3-аас цөөн үлдсэн" }[k] ?? "");
+
+/* ============================================================
+   VARIANT B — Triage agenda
+   ============================================================ */
+function variantB(d) {
+  const actionable = d.recentOrders.filter((o) => o.status === "created" || o.status === "pending" || (o.paymentStatus === "customer_claimed_paid"));
+  const first = actionable[0] ?? d.recentOrders[0];
+  const rows = actionable.slice(0, 6).map((o) => `
+    <div class="b-card">
+      <div class="row1">
+        ${img(o.items[0]?.image, "thumb")}
+        <div>
+          <div class="no">${o.number}</div>
+          <div class="cust">${o.customerPhone}</div>
+        </div>
+        <div class="amt">${mnt(o.totalMnt)}</div>
+      </div>
+      <div class="row2">
+        ${payPill(o.paymentStatus)}${orderPill(o.status)}
+        <span class="when">${when(o.createdAt)}</span>
+      </div>
+      <div class="actions">
+        <button class="btn primary">${o.paymentStatus === "customer_claimed_paid" ? "Төлбөр баталгаажуулах" : "Бэлтгэж эхлэх"}</button>
+        <button class="btn">Дэлгэрэнгүй</button>
+      </div>
+    </div>`).join("");
+  const low = d.lowStock.slice(0, 6).map((p) => `
+    <div class="b-mini">
+      ${img(p.image, "thumb", p.name)}
+      <div class="nm">${p.name}</div>
+      <div class="btm"><span class="pr">${mnt(p.price)}</span><span class="st">${p.stock === 0 ? "Дууссан" : p.stock + " ширхэг"}</span></div>
+    </div>`).join("");
+  return `
+  <div class="b-shell">
+    <header class="b-top">
+      <div class="b-brand"><span class="mark">AV</span><span><strong>${d.meta.storeName}</strong><small>Удирдлагын самбар</small></span></div>
+      <div class="right"><span class="b-avatar">А</span></div>
+    </header>
+    <main class="b-content">
+      <div class="b-hero">
+        <div>
+          <h1>Өнөөдөр 2 захиалга, ${mnt(d.metrics.sales_today)}</h1>
+          <div class="line">Дараах захиалгыг эхлүүлэхэд бэлэн байна</div>
+        </div>
+        <div class="b-next">
+          ${img(first.items[0]?.image, "thumb")}
+          <div class="tx">
+            <div class="no">${first.number} · ${mnt(first.totalMnt)}</div>
+            <div class="desc">${first.customerPhone} · ${first.items[0]?.name ?? ""}</div>
+          </div>
+          <span class="amt">${orderPill(first.status)}</span>
+        </div>
+      </div>
+      <div class="b-metrics">
+        <div class="b-metric"><b>${d.metrics.orders_today}</b><span>Өнөөдрийн захиалга</span></div>
+        <div class="b-metric"><b>${mnt(d.metrics.sales_today)}</b><span>Өнөөдрийн борлуулалт</span></div>
+        <div class="b-metric"><b>${d.metrics.orders_7d}</b><span>7 хоногийн захиалга</span></div>
+      </div>
+      <section class="b-section">
+        <h2>Хийх жагсаалт <span class="n">(${actionable.length} ширхэг)</span></h2>
+        <div class="b-agenda">${rows}</div>
+      </section>
+      <section class="b-section">
+        <h2>Нөөц нөхөх бараа <span class="n">(${d.lowStock.length} ширхэг)</span></h2>
+        <div class="b-hscroll">${low}</div>
+      </section>
+    </main>
+  </div>`;
+}
+
+/* ============================================================
+   VARIANT C — Ledger desk
+   ============================================================ */
+function variantC(d) {
+  const orderRows = d.recentOrders.map((o) => `
+    <tr>
+      <td class="num">${o.number}</td>
+      <td>${img(o.items[0]?.image, "thumb thumb-sm")}</td>
+      <td class="name">${o.items[0]?.name ?? ""}<span style="color:var(--ink-2)">${o.items.length > 1 ? " +" + (o.items.length - 1) : ""}</span></td>
+      <td class="mono">${o.customerPhone}</td>
+      <td class="right num">${mnt(o.totalMnt)}</td>
+      <td>${payPill(o.paymentStatus)}</td>
+      <td>${orderPill(o.status)}</td>
+      <td class="mono" style="color:var(--ink-2);white-space:nowrap">${when(o.createdAt)}</td>
+    </tr>`).join("");
+  const prodRows = d.products.slice(0, 10).map((p) => `
+    <tr>
+      <td>${img(p.image, "thumb thumb-sm")}</td>
+      <td class="name">${p.name}</td>
+      <td class="mono" style="color:var(--ink-2)">${p.brand}</td>
+      <td class="right num">${mnt(p.price)}</td>
+      <td class="right num">${p.stock}</td>
+      <td>${pill(p.status, PRODUCT_META)}</td>
+    </tr>`).join("");
+  return `
+  <div class="c-shell">
+    <header class="c-top">
+      <div class="c-brand"><span class="mark">AV</span>${d.meta.storeName}</div>
+      <nav class="c-tabs" aria-label="Хэсэг">
+        <a class="active" href="#">Нүүр</a>
+        <a href="#">Захиалга <span class="n">${d.recentOrders.length * 14}</span></a>
+        <a href="#">Бараа <span class="n">${d.products.length * 11}</span></a>
+        <a href="#">Шинжилгээ</a>
+        <a href="#">Нөөц <span class="n">${d.lowStock.length}</span></a>
+      </nav>
+      <span class="c-avatar">А</span>
+    </header>
+    <main class="c-content">
+      <div class="c-tiles">
+        <div class="c-tile"><div class="lbl">Өнөөдрийн захиалга</div><b>${d.metrics.orders_today}</b></div>
+        <div class="c-tile"><div class="lbl">Өнөөдрийн борлуулалт</div><b>${mnt(d.metrics.sales_today)}</b></div>
+        <div class="c-tile"><div class="lbl">7 хоногийн захиалга</div><b>${d.metrics.orders_7d}</b></div>
+        <div class="c-tile"><div class="lbl">7 хоногийн борлуулалт</div><b>${mnt(d.metrics.sales_7d)}</b></div>
+      </div>
+      <div class="c-desk">
+        <section class="c-panel">
+          <h2>Сүүлийн захиалга <span class="muted">хамгийн сүүлд орсон 10</span></h2>
+          <table class="c-table">
+            <thead><tr><th>№</th><th></th><th>Бараа</th><th>Хэрэглэгч</th><th class="right">Дүн</th><th>Төлбөр</th><th>Төлөв</th><th>Огноо</th></tr></thead>
+            <tbody>${orderRows}</tbody>
+          </table>
+        </section>
+        <section class="c-panel">
+          <h2>Бага үлдэгдэл <span class="muted">3-аас цөөн</span></h2>
+          <table class="c-table">
+            <thead><tr><th></th><th>Бараа</th><th>Брэнд</th><th class="right">Үнэ</th><th class="right">Үлдэгдэл</th><th>Төлөв</th></tr></thead>
+            <tbody>${prodRows}</tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  </div>`;
+}
+
+/* ---------- switcher ---------- */
+const RENDER = { A: variantA, B: variantB, C: variantC };
+const sw = document.getElementById("switcher");
+const swLabel = document.getElementById("sw-label");
+let current = (new URLSearchParams(location.search).get("variant") || "A").toUpperCase();
+if (!RENDER[current]) current = "A";
+
+function render() {
+  if (!DATA) return;
+  document.getElementById("app").innerHTML = RENDER[current](DATA);
+  const v = VARIANTS.find((x) => x.key === current);
+  swLabel.textContent = `${v.key} — ${v.name}`;
+  sw.hidden = false;
+  const url = new URL(location.href);
+  url.searchParams.set("variant", current);
+  history.replaceState(null, "", url);
+}
+function cycle(dir) {
+  const keys = Object.keys(RENDER);
+  const i = keys.indexOf(current);
+  current = keys[(i + dir + keys.length) % keys.length];
+  render();
+}
+document.getElementById("prev").onclick = () => cycle(-1);
+document.getElementById("next").onclick = () => cycle(1);
+window.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); cycle(-1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); cycle(1); }
+});
+
+fetch("data.json").then((r) => r.json()).then((d) => {
+  DATA = d;
+  render();
+}).catch((e) => {
+  document.getElementById("app").innerHTML =
+    `<p style="padding:40px;text-align:center;color:var(--ink-2)">data.json уншиж чадсангүй. Энэ хавтас дотор <code>serve.ts</code> ажиллуулна уу.<br><small>${e}</small></p>`;
+});
+</script>
+</body>
+</html>
