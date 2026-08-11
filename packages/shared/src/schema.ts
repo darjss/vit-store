@@ -125,10 +125,12 @@ export const addProductSchema = v.object({
 	amount: v.pipe(
 		v.string(),
 		v.minLength(3, "Хэмжээ хамгийн багадаа 3 тэмдэгт байх ёстой"),
+		v.maxLength(128, "Хэмжээ 128 тэмдэгтээс хэтрэхгүй байх ёстой"),
 	),
 	potency: v.pipe(
 		v.string(),
 		v.minLength(2, "Агууламж хамгийн багадаа 2 тэмдэгт байх ёстой"),
+		v.maxLength(128, "Агууламж 128 тэмдэгтээс хэтрэхгүй байх ёстой"),
 	),
 	status: v.picklist(["active", "draft", "out_of_stock"] as const),
 	stock: v.pipe(

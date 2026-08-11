@@ -8,6 +8,7 @@ import { status } from "@vit/shared/constants";
 import * as v from "valibot";
 import { db } from "~/db/client";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { purgeAnalyticsCache } from "~/lib/cache/kv-cache-key";
 import { PRODUCT_PER_PAGE, editableProductFields } from "~/lib/constants";
 import { scheduleProductSearchRebuild, searchProducts } from "~/lib/product-search/client";
 import {
@@ -33,6 +34,39 @@ const normalizeExpirationDate = (value?: string | null) => {
         return `${mmYyyyMatch[2]}-${mmYyyyMatch[1]}`;
     return null;
 };
+// The composed product name (`brand name + name + potency + amount`) is stored
+// in `name varchar(256)` and its slug in `slug varchar(256)`. Guard both BEFORE
+// the insert: an over-long value used to reach the database, fail with a raw
+// varchar error, and surface as a silent 500 (the production error sanitizer
+// strips the message). Rejecting with a typed BAD_REQUEST keeps the write path
+// honest and the client informed.
+const MAX_PRODUCT_NAME_LENGTH = 256;
+const MAX_PRODUCT_SLUG_LENGTH = 256;
+function composeProductIdentity(input: {
+    name: string;
+    potency: string;
+    amount: string;
+    brandName: string;
+}): { productName: string; slug: string } {
+    const productName = `${input.brandName} ${input.name} ${input.potency} ${input.amount}`;
+    const slug = productName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    if (productName.length > MAX_PRODUCT_NAME_LENGTH) {
+        throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Product name exceeds ${MAX_PRODUCT_NAME_LENGTH} characters`,
+        });
+    }
+    if (slug.length > MAX_PRODUCT_SLUG_LENGTH) {
+        throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Product slug exceeds ${MAX_PRODUCT_SLUG_LENGTH} characters`,
+        });
+    }
+    return { productName, slug };
+}
 export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
     return router({
     searchProductByName: proc
@@ -117,11 +151,12 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Brand not found",
                 });
             }
-            const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
-            const slug = productName
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "");
+            const { productName, slug } = composeProductIdentity({
+                name: input.name,
+                potency: input.potency,
+                amount: input.amount,
+                brandName: brand.name,
+            });
             const productResult = await db().transaction(async (tx) => {
                 const created = await productQueries.admin.createProduct({
                     name: productName,
@@ -162,7 +197,16 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             });
             await purgeCatalogCache(ctx, [productResult.id]);
             scheduleProductSearchRebuild(ctx, "product_created");
-            return { message: "Product added successfully", id: productResult.id };
+            void purgeAnalyticsCache(ctx);
+            // Return the authoritative saved entity so the client can render it
+            // without a follow-up read, and so stale-edit detection has a
+            // fresh updatedAt to compare against.
+            const product = await productQueries.admin.getProductById(productResult.id);
+            return {
+                message: "Product added successfully",
+                id: productResult.id,
+                product,
+            };
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
@@ -245,11 +289,12 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
-            const productName = `${brand.name} ${input.name} ${input.potency} ${input.amount}`;
-            const slug = productName
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "");
+            const { productName, slug } = composeProductIdentity({
+                name: input.name,
+                potency: input.potency,
+                amount: input.amount,
+                brandName: brand.name,
+            });
             const stockChange = await productQueries.admin.updateProduct(input.id, {
                 ...productData,
                 expirationDate: normalizedExpirationDate,
@@ -274,7 +319,9 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             scheduleProductSearchRebuild(ctx, "product_updated");
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);
-            return { message: "Product updated successfully" };
+            void purgeAnalyticsCache(ctx);
+            const product = await productQueries.admin.getProductById(input.id);
+            return { message: "Product updated successfully", product };
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
@@ -311,6 +358,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 });
             await purgeCatalogCache(ctx, [input.productId]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
+            void purgeAnalyticsCache(ctx);
             if (input.type === "add") {
                 scheduleRestockDispatch(ctx, {
                     productId: input.productId,
@@ -346,6 +394,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             await productQueries.admin.deleteProduct(input.id);
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_deleted");
+            void purgeAnalyticsCache(ctx);
             return { message: "Product deleted successfully" };
         }
         catch (error) {
@@ -424,6 +473,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 });
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
+            void purgeAnalyticsCache(ctx);
             scheduleRestockDispatch(ctx, {
                 productId: input.id,
                 previousStock: stockChange.previousStock,
@@ -527,6 +577,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             const stockChange = await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_updated");
+            void purgeAnalyticsCache(ctx);
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);
             return { message: "Product field updated successfully" };

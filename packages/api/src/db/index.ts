@@ -7,12 +7,13 @@ export type DB = PostgresJsDatabase<typeof schema>;
 
 // Hyperdrive binding type - connectionString is the main property
 
+const cachedDbsByConnStr = new Map<string, DB>();
+
 /**
- * Creates a database instance from a Hyperdrive binding.
- * This must be called within a request handler, not at module scope.
- *
- * In Cloudflare Workers, postgres-js will automatically use the global fetch,
- * and Hyperdrive handles the connection pooling and routing.
+ * Creates a database instance from a Hyperdrive binding or a connection
+ * string. Called from createContext once per request; the client is cached
+ * per connection string so requests reuse one pool instead of leaking one
+ * (see db/client.ts for the same rationale).
  */
 export function createDb(binding: Hyperdrive): DB;
 export function createDb(connectionString: string): DB;
@@ -32,14 +33,26 @@ export function createDb(bindingOrConnectionString: Hyperdrive | string): DB {
 	// Direct connections have normal usernames like postgres.5xhixrjzaz36
 	const isHyperdriveProxy = /^postgres(ql)?:\/\/[a-f0-9]{32}:/.test(connStr);
 
+	const cache = cachedDbsByConnStr.get(connStr);
+	if (cache) return cache;
+
 	const client = postgres(connStr, {
 		// Only require SSL for direct connections (dev mode), not Hyperdrive proxy (prod)
 		ssl: isHyperdriveProxy ? false : "require",
-		// Limit connections due to Workers' limits on concurrent external connections
-		max: 5,
+		// Cap the pool and reap idle/stale connections. Cloud proxies close
+		// idle sockets without notice; leaving them pooled made the next query
+		// on that socket fail with a bare "Failed query" error and a 500.
+		// max 2 keeps a direct (non-Hyperdrive) connection modest: the
+		// PlanetScale connection budget is small and shared with production;
+		// parallel reads serialize inside the pool instead of exhausting it.
+		max: 2,
+		idle_timeout: 20,
+		connect_timeout: 10,
+		max_lifetime: 300,
 		// Disable fetch_types to avoid an extra round-trip if not using array types
 		fetch_types: false,
 	});
-
-	return drizzle(client, { schema });
+	const database = drizzle(client, { schema });
+	cachedDbsByConnStr.set(connStr, database);
+	return database;
 }
