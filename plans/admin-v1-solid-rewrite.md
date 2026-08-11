@@ -299,6 +299,17 @@ Can begin once the API contract names are stable. Own this directory only:
 apps/admin-v2/src/features/products/
 ```
 
+Preserve from the current admin (port the behavior, rebuild the presentation):
+
+- Inline stock editor on the card with optimistic update synced across the
+  list and instant-search results (current: `components/product/product-card.tsx`)
+- Inline expiration-date editor (`product-card-editors.tsx`)
+- Activate-with-confirm (draft/out-of-stock → active) and zero-stock-with-confirm
+- Instant search (`searchProductsInstant`), brand/category/status filters, sort,
+  infinite scroll — filters move to typed URL search params
+- Full edit form (current field set, validation, image upload), delete with
+  optimistic removal and rollback on error
+
 Tasks:
 
 - Products card list
@@ -329,6 +340,17 @@ Can begin once the API contract names are stable. Own this directory only:
 ```text
 apps/admin-v2/src/features/orders/
 ```
+
+Preserve from the current admin (port the behavior, rebuild the presentation):
+
+- Contextual action per state: pending → ship dialog with delivery zone
+  (`shipOrder`, `getDeliveryAddressZones`), shipped → delivered
+- Transfer payment-claim verification dialog (`customer_claimed_paid` + transfer)
+- Phone click-to-call, address copy-to-clipboard
+- Batch selection and batch ship
+- Edit (full order form) and delete with optimistic removal + rollback
+- Order cards do NOT show product thumbnails in V2; product names/count are
+  enough on the card, images live on the detail page
 
 Tasks:
 
@@ -363,11 +385,14 @@ apps/admin-v2/src/features/home/
 
 Tasks:
 
-- Work queue
-- Recent order cards with product images
+- Work queue (orders needing action plus payment-claim verification;
+  `customer_claimed_paid` transfers are a queue item, not only a list filter)
+- Recent order cards (number, customer, total, statuses — no product images)
 - Low-stock product cards
-- Quick actions
-- Small historical metrics section
+- Quick actions, pinned to: Шинэ бараа · Захиалга нэмэх · Нөөц нэмэх ·
+  Дэлгүүр урьдчилан харах
+- Small historical metrics section (real values only, no hard-coded growth)
+- Compact top-products row (last 30 days) — data already exists; keep it small
 - Loading, empty, error, and retry states
 
 Rules:
