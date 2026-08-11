@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
@@ -27,9 +27,12 @@ import {
 	DialogTitle,
 } from "../ui/dialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
-import ProductForm from "./product-form";
+import {
+	ProductExpirationEditor,
+	ProductStockEditor,
+} from "./product-card-editors";
 import { ProductSummary } from "./product-card-summary";
-import { ProductExpirationEditor, ProductStockEditor } from "./product-card-editors";
+import ProductForm from "./product-form";
 
 interface ProductCardProps {
 	product: ProductType;
@@ -67,7 +70,11 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 				queryClient.setQueriesData(
 					{ queryKey: ["admin-products-infinite"], type: "all" },
-					(old: { pages: { products: { id: number; stock: number }[] }[] } | undefined) => {
+					(
+						old:
+							| { pages: { products: { id: number; stock: number }[] }[] }
+							| undefined,
+					) => {
 						if (!old) return old;
 						return {
 							...old,
@@ -83,6 +90,19 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					},
 				);
 
+				// Also patch the instant-search result cards (they render the same
+				// ProductCard but come from a separate searchProductsInstant query
+				// that the admin-products-infinite key never touches).
+				queryClient.setQueriesData(
+					trpc.product.searchProductsInstant.pathFilter(),
+					(old: Array<{ id: number; stock: number }> | undefined) => {
+						if (!old) return old;
+						return old.map((p) =>
+							p.id === variables.id ? { ...p, stock: variables.newStock } : p,
+						);
+					},
+				);
+
 				setIsStockEditing(false);
 				return undefined;
 			},
@@ -94,6 +114,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					queryKey: ["admin-products-infinite"],
 					type: "all",
 				});
+				void queryClient.invalidateQueries(
+					trpc.product.searchProductsInstant.pathFilter(),
+				);
 			},
 		});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
