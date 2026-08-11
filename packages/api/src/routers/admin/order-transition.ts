@@ -1,3 +1,35 @@
+import type { OrderStatusType } from "@vit/shared/types/order";
+
+/**
+ * Legal order-status transitions.
+ *
+ * Lifecycle: created (unpaid) → pending (paid, awaiting shipment) → shipped →
+ * delivered → refunded. Cancellation is allowed until delivery; a cancelled
+ * order is terminal (undelete goes through restoreOrder). Same-status calls
+ * are treated as no-ops by the caller, not transitions.
+ *
+ * This is the single source of truth for quick status actions. The full-edit
+ * path (updateOrder) remains an admin override and may set any status.
+ */
+export const ORDER_STATUS_TRANSITIONS: Record<
+	OrderStatusType,
+	readonly OrderStatusType[]
+> = {
+	created: ["pending", "cancelled"],
+	pending: ["shipped", "cancelled"],
+	shipped: ["delivered", "cancelled"],
+	delivered: ["refunded"],
+	cancelled: [],
+	refunded: [],
+};
+
+export function canTransitionOrderStatus(
+	from: OrderStatusType,
+	to: OrderStatusType,
+): boolean {
+	return (ORDER_STATUS_TRANSITIONS[from] ?? []).includes(to);
+}
+
 /**
  * Pure transition planner for payment-status changes in updateOrder.
  *

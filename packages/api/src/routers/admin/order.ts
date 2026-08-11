@@ -12,13 +12,14 @@ import { PRODUCT_PER_PAGE, paymentStatus } from "~/lib/constants";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 import { createDelivery, getDeliveryAddressZones } from "~/lib/integrations/delivery";
-import { planPaymentTransition } from "./order-transition";
+import { planPaymentTransition, canTransitionOrderStatus } from "./order-transition";
 import { db } from "~/db/client";
 import { SalesTable, } from "~/db/schema";
 import { getAverageCostOfProduct } from "~/queries/payments";
 import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
 import { scheduleRestockDispatches } from "~/lib/restock";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
+import { purgeAnalyticsCache } from "~/lib/cache/kv-cache-key";
 
 // Factory: the order router is identical for every caller — only the procedure
 // wrapper (admin session auth vs bot token auth) differs. Resolver bodies stay
@@ -100,6 +101,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 ctx,
                 stockTransitions.map((transition) => transition.productId),
             );
+            void purgeAnalyticsCache(ctx);
             ctx.log.info("payment.created", {
                 paymentNumber,
                 orderId,
@@ -257,6 +259,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
+            void purgeAnalyticsCache(ctx);
             return { message: "Order updated successfully" };
         }
         catch (e) {
@@ -288,6 +291,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 patch.customerPhone = Number(customerPhone);
             }
             await orderQueries.admin.patchOrderHeader(id, patch);
+            void purgeAnalyticsCache(ctx);
             ctx.log.info("order.header_patched", {
                 orderId: id,
                 fields: Object.keys(rest),
@@ -328,6 +332,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
+            void purgeAnalyticsCache(ctx);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
         }
@@ -363,6 +368,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             });
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
+            void purgeAnalyticsCache(ctx);
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",
@@ -558,6 +564,25 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
     }))
         .mutation(async ({ input, ctx }) => {
         try {
+            const current = await orderQueries.admin.getOrderById(input.id);
+            if (!current) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Захиалга олдсонгүй",
+                });
+            }
+            // Same-status calls are no-ops; everything else must be a legal
+            // transition (created → pending, pending → shipped/cancelled,
+            // shipped → delivered/cancelled, delivered → refunded).
+            if (
+                current.status !== input.status &&
+                !canTransitionOrderStatus(current.status, input.status)
+            ) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `Захиалгын төлөв ${current.status}-аас ${input.status} болж өөрчлөгдөх боломжгүй`,
+                });
+            }
             const updated = await orderQueries.admin.updateOrderStatus(
                 input.id,
                 input.status,
@@ -569,6 +594,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Зөвхөн хүлээгдэж буй захиалгыг илгээсэн болгох боломжтой",
                 });
             }
+            void purgeAnalyticsCache(ctx);
             ctx.log.info("order.status_changed", {
                 orderId: input.id,
                 order_status: input.status,
@@ -636,6 +662,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 deliveryProvider: "tu-delivery",
                 addressZoneId: input.addressZoneId,
             });
+            void purgeAnalyticsCache(ctx);
             ctx.log.info("order.status_changed", {
                 orderId: order.id,
                 order_status: "shipped",
