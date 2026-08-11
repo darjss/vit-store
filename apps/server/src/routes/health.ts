@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-const app = new Hono<{ Bindings: Env }>();
+const app: Hono<{ Bindings: Env }> = new Hono<{ Bindings: Env }>();
 
 app.get("/", (c) => {
 	return c.text("OK");
