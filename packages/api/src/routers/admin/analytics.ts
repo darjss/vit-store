@@ -1,19 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { analyticsQueries, orderQueries, salesQueries } from "@vit/api/queries";
-import { timeRangeSchema } from "@vit/shared/schema";
+import { timeRangeSchema, type timeRangeType } from "@vit/shared/schema";
 import * as v from "valibot";
-import { createPostHogClient } from "~/lib/integrations/posthog";
+import { createPostHogClient, type PostHogRange } from "~/lib/integrations/posthog";
 import { adminCachedProcedure, adminProcedure, baseProcedure, botCachedProcedure, botProcedure, router } from "~/lib/trpc";
-/** Convert timeRange to days for PostHog queries */
-function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {
-    switch (timeRange) {
-        case "daily":
-            return 1;
-        case "weekly":
-            return 7;
-        case "monthly":
-            return 30;
-    }
+import { getTimeRangeBounds } from "~/lib/utils";
+
+/** Exact Asia/Ulaanbaatar-aligned window for a time range, as UTC instants. */
+function ubRange(timeRange: timeRangeType): PostHogRange {
+	const { start, end } = getTimeRangeBounds(timeRange);
+	return { startIso: start.toISOString(), endIso: end.toISOString() };
 }
 export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, cachedProc: P) {
     return router({
@@ -113,7 +109,7 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             });
         }
     }),
-    getInventoryStatus: cachedProc.query(async ({ ctx }) => {
+    getInventoryStatus: proc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getInventoryStatus();
             return result;
@@ -149,7 +145,7 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             });
         }
     }),
-    getLowInventoryProducts: cachedProc.query(async ({ ctx }) => {
+    getLowInventoryProducts: proc.query(async ({ ctx }) => {
         try {
             const result = await analyticsQueries.admin.getLowInventoryProducts();
             return result;
@@ -221,20 +217,37 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             });
         }
     }),
-    getHomePageData: cachedProc
+    getHomePageData: proc
         .input(v.object({
         timeRange: timeRangeSchema,
     }))
         .query(async ({ ctx, input }) => {
         try {
             const timeRange = input.timeRange;
-            const _pendingOrders = await orderQueries.admin.getPendingOrders();
-            const _revenue = await salesQueries.admin.getRevenue(timeRange);
-            const _orderCount = await orderQueries.admin.getOrderCount(timeRange);
+            // Home is the work queue + glance cards: pending orders and low
+            // stock must be fresh (uncached), historical metrics may lag.
+            const [
+                pendingOrders,
+                revenue,
+                orderCount,
+                lowStockProducts,
+                topProducts,
+                recentOrders,
+            ] = await Promise.all([
+                orderQueries.admin.getPendingOrders(),
+                salesQueries.admin.getRevenue(timeRange),
+                orderQueries.admin.getOrderCount(timeRange),
+                analyticsQueries.admin.getLowInventoryProducts(),
+                salesQueries.admin.getMostSoldProducts("monthly", 5),
+                orderQueries.admin.getRecentOrders(8),
+            ]);
             return {
-                pendingOrders: _pendingOrders,
-                revenue: _revenue,
-                orderCount: _orderCount,
+                pendingOrders,
+                revenue,
+                orderCount,
+                lowStockProducts,
+                topProducts,
+                recentOrders,
             };
         }
         catch (e) {
@@ -259,10 +272,10 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
+            const range = ubRange(input.timeRange);
             // Run sequentially to stay within PostHog's concurrent query limit (3)
-            const current = await posthog.getWebAnalytics(days);
-            const previous = await posthog.getWebAnalyticsPrevious(days);
+            const current = await posthog.getWebAnalytics(range);
+            const previous = await posthog.getWebAnalyticsPrevious(range);
             const calcChange = (curr: number, prev: number) => {
                 if (prev === 0)
                     return curr > 0 ? 100 : 0;
@@ -282,29 +295,12 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getWebAnalytics"
             });
-            // Return zeros instead of throwing — graceful fallback
-            return {
-                current: {
-                    uniqueVisitors: 0,
-                    pageviews: 0,
-                    productViews: 0,
-                    addToCarts: 0,
-                    checkouts: 0,
-                    orders: 0,
-                    payments: 0,
-                    searches: 0,
-                },
-                previous: {
-                    uniqueVisitors: 0,
-                    pageviews: 0,
-                    orders: 0,
-                },
-                changes: {
-                    visitors: 0,
-                    pageviews: 0,
-                    orders: 0,
-                },
-            };
+            // No fabricated zero fallback: the caller shows an unavailable state.
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Web analytics unavailable",
+                cause: error,
+            });
         }
     }),
     /**
@@ -317,21 +313,17 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
-            return await posthog.getConversionFunnel(days);
+            return await posthog.getConversionFunnel(ubRange(input.timeRange));
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getConversionFunnel"
             });
-            return {
-                visitors: 0,
-                productViewers: 0,
-                cartAdders: 0,
-                checkoutStarters: 0,
-                orderPlacers: 0,
-                paymentConfirmers: 0,
-            };
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Conversion funnel unavailable",
+                cause: error,
+            });
         }
     }),
     /**
@@ -345,14 +337,17 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
-            return await posthog.getTopSearches(days, input.limit);
+            return await posthog.getTopSearches(ubRange(input.timeRange), input.limit);
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getTopSearches"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Top searches unavailable",
+                cause: error,
+            });
         }
     }),
     /**
@@ -366,14 +361,17 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
-            return await posthog.getMostViewedProducts(days, input.limit);
+            return await posthog.getMostViewedProducts(ubRange(input.timeRange), input.limit);
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getMostViewedProducts"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Most-viewed products unavailable",
+                cause: error,
+            });
         }
     }),
     /**
@@ -387,20 +385,17 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
-            return await posthog.getProductBehavior(input.productId, days);
+            return await posthog.getProductBehavior(input.productId, ubRange(input.timeRange));
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getProductBehavior"
             });
-            return {
-                views: 0,
-                uniqueViewers: 0,
-                addToCartCount: 0,
-                searchClicks: 0,
-                dailyTrend: [],
-            };
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Product behavior unavailable",
+                cause: error,
+            });
         }
     }),
     /**
@@ -413,14 +408,17 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
         .query(async ({ ctx, input }) => {
         try {
             const posthog = createPostHogClient(ctx.c.env);
-            const days = timeRangeToDays(input.timeRange);
-            return await posthog.getDailyVisitorTrend(days);
+            return await posthog.getDailyVisitorTrend(ubRange(input.timeRange));
         }
         catch (error) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "getDailyVisitorTrend"
             });
-            return [];
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Visitor trend unavailable",
+                cause: error,
+            });
         }
     }),
 });

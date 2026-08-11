@@ -96,6 +96,29 @@ export const getStartAndEndofDayAgo = (days: number) => {
 	const endDate = new Date(startDate.getTime() + DAY_MS - 1);
 	return { startDate, endDate };
 };
+
+export type TimeRangeBounds = { start: Date; end: Date };
+
+// UB-aligned calendar windows with a pinned end. `end` is the Asia/Ulaanbaatar
+// midnight AFTER the window (never "now"), so analytics cache keys built from
+// these bounds are stable for the whole day and never cross a UB day boundary.
+// The `start` matches getDaysFromTimeRange exactly (same instants the DB
+// analytics queries use), so a cache key built from these bounds describes the
+// same range the query computes.
+export const getTimeRangeBounds = (
+	timeRange: timeRangeType,
+): TimeRangeBounds => {
+	const todayStart = getStartOfDay();
+	const tomorrowStart = new Date(todayStart.getTime() + DAY_MS);
+	switch (timeRange) {
+		case "daily":
+			return { start: todayStart, end: tomorrowStart };
+		case "weekly":
+			return { start: getDaysAgo(7), end: tomorrowStart };
+		case "monthly":
+			return { start: getDaysAgo(30), end: tomorrowStart };
+	}
+};
 export const calculateExpiration = (timerange: timeRangeType) => {
 	switch (timerange) {
 		case "daily":
@@ -119,11 +142,11 @@ export const slugify = (text: string): string => {
 export const getTtlForTimeRange = (timeRange?: timeRangeType) => {
 	switch (timeRange) {
 		case "daily":
-			return 60 * 60;
+			return 5 * 60;
 		case "weekly":
-			return 60 * 60 * 24;
+			return 15 * 60;
 		case "monthly":
-			return 60 * 60 * 24 * 7;
+			return 30 * 60;
 		default:
 			return 300;
 	}

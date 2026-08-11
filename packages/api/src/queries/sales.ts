@@ -21,8 +21,7 @@ export const salesQueries = {
 		async getAnalyticsForHome(
 			timeRange: "daily" | "weekly" | "monthly" = "daily",
 		) {
-			try {
-				const result = await db()
+			const result = await db()
 					.select({
 						revenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						cost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
@@ -43,10 +42,6 @@ export const salesQueries = {
 				const salesCount = result[0]?.salesCount ?? 0;
 
 				return { revenue, salesCount, profit };
-			} catch (e) {
-				logger.error("getAnalyticsForHome", e);
-				return { revenue: 0, salesCount: 0, profit: 0 };
-			}
 		},
 
 		async getMostSoldProducts(timeRange: timeRangeType, productCount = 5) {
@@ -90,8 +85,7 @@ export const salesQueries = {
 		},
 
 		async getRevenue(timeRange: timeRangeType) {
-			try {
-				const startDate = getDaysFromTimeRange(timeRange);
+			const startDate = getDaysFromTimeRange(timeRange);
 				const result = await db()
 					.select({
 						revenue: sql<number>`SUM(${SalesTable.sellingPrice}*${SalesTable.quantitySold})`,
@@ -104,10 +98,6 @@ export const salesQueries = {
 						),
 					);
 				return result[0]?.revenue ?? 0;
-			} catch (e) {
-				logger.error("getRevenue", e);
-				return 0;
-			}
 		},
 	},
 };

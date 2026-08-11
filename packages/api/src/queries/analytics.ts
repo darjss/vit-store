@@ -292,8 +292,7 @@ export const analyticsQueries = {
 							notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
 						),
 					)
-					.then((orders) => orders[0]?.avg || 0)
-					.catch(() => 0),
+					.then((orders) => orders[0]?.avg || 0),
 
 				// Total Profit
 				db()
@@ -314,8 +313,7 @@ export const analyticsQueries = {
 						const cost = sales[0]?.totalCost || 0;
 						const discount = sales[0]?.totalDiscount || 0;
 						return revenue - cost - discount;
-					})
-					.catch(() => 0),
+					}),
 
 				// Sales by Category
 				db()
@@ -338,8 +336,7 @@ export const analyticsQueries = {
 							isNull(SalesTable.deletedAt),
 						),
 					)
-					.groupBy(CategoriesTable.name, BrandsTable.name)
-					.catch(() => []),
+					.groupBy(CategoriesTable.name, BrandsTable.name),
 
 				// Customer Lifetime Value
 				db()
@@ -388,13 +385,7 @@ export const analyticsQueries = {
 							maxLifetimeValue: result[0].maxLifetimeValue,
 							minLifetimeValue: result[0].minLifetimeValue,
 						};
-					})
-					.catch(() => ({
-						averageLifetimeValue: 0,
-						totalCustomers: 0,
-						maxLifetimeValue: 0,
-						minLifetimeValue: 0,
-					})),
+					}),
 
 				// Repeat Customers Count
 				db()
@@ -418,8 +409,7 @@ export const analyticsQueries = {
 							.having(sql`COUNT(*) > 1`)
 							.as("customer_orders"),
 					)
-					.then((repeatCustomers) => repeatCustomers[0]?.count || 0)
-					.catch(() => 0),
+					.then((repeatCustomers) => repeatCustomers[0]?.count || 0),
 
 				// Inventory Status
 				db()
@@ -433,8 +423,7 @@ export const analyticsQueries = {
 					ELSE 'In Stock'
 				END`,
 					})
-					.from(ProductsTable)
-					.catch(() => []),
+					.from(ProductsTable),
 
 				// Failed Payments
 				db()
@@ -453,8 +442,7 @@ export const analyticsQueries = {
 					.then((result) => ({
 						count: result[0]?.count || 0,
 						total: result[0]?.total || 0,
-					}))
-					.catch(() => ({ count: 0, total: 0 })),
+					})),
 
 				// Low Inventory Products
 				db()
@@ -479,8 +467,7 @@ export const analyticsQueries = {
 						),
 					)
 					.where(or(eq(ProductsTable.stock, 0), lt(ProductsTable.stock, 10)))
-					.orderBy(ProductsTable.stock)
-					.catch(() => []),
+					.orderBy(ProductsTable.stock),
 
 				// Top Brands by Sales
 				db()
@@ -504,16 +491,7 @@ export const analyticsQueries = {
 							sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						),
 					)
-					.limit(5)
-					.then((result) => result)
-					.catch(
-						() =>
-							[] as Array<{
-								brandName: string;
-								total: number;
-								quantity: number;
-							}>,
-					),
+					.limit(5),
 
 				// Current Products Value
 				db()
@@ -521,8 +499,7 @@ export const analyticsQueries = {
 						total: sql<number>`SUM(${ProductsTable.price} * ${ProductsTable.stock})`,
 					})
 					.from(ProductsTable)
-					.then((result) => result[0]?.total || 0)
-					.catch(() => 0),
+					.then((result) => result[0]?.total || 0),
 			]);
 
 			return {
