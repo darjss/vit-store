@@ -1,5 +1,7 @@
 # Admin audit remediation plan
 
+> Superseded by `plans/admin-v1-solid-rewrite.md` (2026-08-11). The approved direction is the Solid rewrite in a parallel `apps/admin-v2`; this plan's React-first remediation is not being pursued. Kept as the record of the audit findings it was written from.
+
 ## Context
 
 The admin audit (`apps/admin/admin-audit.html`) records 30 verified findings: 6 High, 17 Medium, and 7 Low. The immediate risks are data integrity and broken write workflows; the broader goal is to redesign the admin around the storefront v2's warm, accessible visual foundations without copying its retail-only patterns or mixing its Solid/Kobalte runtime into the React/Radix admin.
