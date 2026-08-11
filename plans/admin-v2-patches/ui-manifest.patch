@@ -1,0 +1,75 @@
+# @vit/ui — manifest/workspace patch for the integrator
+
+Track 1 delivered `packages/ui/` (committed). The workspace glob already
+covers it, so no root `package.json` edit is required. The only remaining
+integrator step is registering the new workspace in `bun.lock`.
+
+## Required action (integrator)
+
+```sh
+bun install
+```
+
+This registers `packages/ui` as the `@vit/ui` workspace in `bun.lock`,
+creates the `node_modules/@vit/ui` symlink, and installs nothing new — every
+dependency is already in the lockfile at these exact versions:
+
+| package | version | reason |
+| --- | --- | --- |
+| `solid-js` | ^1.8.0 (peer; repo runs 1.9.14) | peer |
+| `@kobalte/core` | ^0.13.11 (peer; repo runs 0.13.11) | peer |
+| `@solar-icons/solid` | 2.0.0-beta.3 | already patched in root `patchedDependencies` |
+| `class-variance-authority` | ^0.7.1 | storefront dep |
+| `clsx` | ^2.1.1 | storefront dep |
+| `tailwind-merge` | ^3 | storefront dep |
+| `tsdown` | catalog: | dev |
+| `typescript` | ^5 (peer) | peer |
+
+No existing package.json is touched. `bun.lock` changes are expected and are
+the only lockfile diff from this track.
+
+## What was created (committed in this branch)
+
+```
+packages/ui/
+  package.json        # @vit/ui, source-exported (like @vit/shared)
+  tsconfig.json
+  tsdown.config.ts
+  README.md
+  src/
+    index.ts                      # barrel: Button, IconButton, Input, Field,
+                                  # Select, Combobox, Dialog, Drawer, Menu,
+                                  # Tabs, Toast, Badge, Skeleton, EmptyState,
+                                  # InlineAlert, FormSection + cn
+    lib/cn.ts
+    styles/tokens.css             # Tailwind v4 @theme tokens + --ui-* vars +
+                                  # hue/dither stage + motion + reduced-motion
+    components/{button,badge,input,field,select,combobox,dialog,drawer,menu,tabs,toast,skeleton,empty-state,inline-alert,form-section}.tsx
+    examples/usage-demo.tsx       # route-free demo, typechecked, not exported
+```
+
+## Exports contract (what Track 2 imports)
+
+- `import { Button, Field, Input, Select, ... } from "@vit/ui"`
+- `import "@vit/ui/styles.css"` — app global CSS entry
+- Tokens become Tailwind utilities (`bg-butter`, `text-ink`, `border-rule`,
+  `rounded-ui`, `shadow-card`, `shadow-pop`, `shadow-lift`, `outline-ring`)
+  and raw CSS vars (`--ui-*`).
+
+## Consumer setup Track 2 must add (in its global CSS)
+
+```css
+@import "@vit/ui/styles.css";
+@source "../../../packages/ui/src";   /* so Tailwind scans package classes */
+```
+
+`@source` paths are relative to the app's CSS file. Without it, utility
+classes inside the package are not generated.
+
+## Verification (this track)
+
+- `bunx turbo check-types --filter @vit/ui` — 1 successful task
+- `bunx tsc --noEmit -p packages/ui/tsconfig.json` — clean
+- `tsdown` build — dist/index.js 32.25 kB, dist/index.d.ts 22.83 kB
+- `bunx biome check packages/ui` — clean (22 files)
+- `bunx oxlint packages/ui` — 0 warnings, 0 errors
