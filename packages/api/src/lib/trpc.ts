@@ -196,7 +196,12 @@ const loggingMiddleware = t.middleware(
 	},
 );
 
-const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
+const cacheMiddleware = t.middleware(async ({ ctx, next, path, getRawInput }) => {
+	// `getRawInput` — not the middleware `input` param — because this
+	// middleware is registered before `.input()` validation runs, so `input`
+	// is undefined here. Using it would collapse every analytics time range
+	// onto ONE cache entry (the first range computed wins for all).
+	const input = await getRawInput();
 	const cacheKey = await createKvCacheKey(path, input);
 
 	const cached = await ctx.kv.get(cacheKey);

@@ -401,7 +401,7 @@ export function ProductForm(props: ProductFormProps) {
 					{advancedOpen() ? <AltArrowUpIcon /> : <AltArrowDownIcon />}
 				</button>
 				<Show when={advancedOpen()}>
-					<div class="grid gap-4">
+					<div class="grid grid-cols-1 gap-4">
 						<Field label="Жин (грамм)">
 							<Input
 								type="number"
@@ -416,7 +416,7 @@ export function ProductForm(props: ProductFormProps) {
 								}
 							/>
 						</Field>
-						<div class="grid gap-1.5">
+						<div class="grid grid-cols-1 gap-1.5">
 							<p class="font-bold text-ink text-sm">Найрлага</p>
 							<StringListField
 								label="Найрлага"
@@ -432,7 +432,7 @@ export function ProductForm(props: ProductFormProps) {
 								}
 							/>
 						</div>
-						<div class="grid gap-1.5">
+						<div class="grid grid-cols-1 gap-1.5">
 							<p class="font-bold text-ink text-sm">Таг</p>
 							<StringListField
 								label="Таг"

@@ -4,15 +4,14 @@
  * stock). No manual transfer payment-claim UI: paymentStatus is a plain
  * select and customer_claimed_paid is auto-reconciled server-side.
  */
-import { createMutation, createQuery } from "@tanstack/solid-query";
+
 import { Bag2Icon } from "@solar-icons/solid/linear/bag-2";
 import { CloseCircleIcon } from "@solar-icons/solid/linear/close-circle";
-import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
-import { createStore, produce } from "solid-js/store";
+import { createMutation, createQuery } from "@tanstack/solid-query";
 import {
+	deliveryProvider,
 	orderStatus,
 	paymentStatus,
-	deliveryProvider,
 } from "@vit/shared/constants";
 import { updateOrderSchema } from "@vit/shared/schema";
 import type {
@@ -20,8 +19,6 @@ import type {
 	OrderStatusType,
 	PaymentStatusType,
 } from "@vit/shared/types";
-import * as v from "valibot";
-
 import {
 	Button,
 	Dialog,
@@ -40,9 +37,12 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	TextArea,
 	showToast,
+	TextArea,
 } from "@vit/ui";
+import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { createStore, produce } from "solid-js/store";
+import * as v from "valibot";
 
 import { orderErrorMessage } from "./errors";
 import {
@@ -51,9 +51,9 @@ import {
 	ORDER_STATUS_META,
 	PAYMENT_STATUS_META,
 } from "./labels";
-import { productInstantSearchQueryOptions } from "./queries";
-import type { OrderListItem } from "./queries";
 import { updateOrderMutationOptions } from "./mutations";
+import type { OrderListItem } from "./queries";
+import { productInstantSearchQueryOptions } from "./queries";
 
 export interface OrderFormLine {
 	productId: number;
@@ -256,7 +256,7 @@ export function OrderFormDialog(props: OrderFormDialogProps) {
 					<DialogDescription>#{props.order.orderNumber}</DialogDescription>
 				</DialogHeader>
 
-				<div class="grid gap-6">
+				<div class="grid grid-cols-1 gap-6">
 					<FormSection
 						title="Харилцагчийн мэдээлэл"
 						description="Утас, хүргэлтийн хаяг"
@@ -297,7 +297,7 @@ export function OrderFormDialog(props: OrderFormDialogProps) {
 								}
 							/>
 						</Field>
-						<div class="grid gap-4 sm:grid-cols-2">
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<Field label="Захиалгын төлөв">
 								<Select
 									options={[...orderStatus]}
@@ -491,7 +491,7 @@ export function OrderFormDialog(props: OrderFormDialogProps) {
 							</div>
 						</Field>
 
-						<div class="grid gap-2.5">
+						<div class="grid grid-cols-1 gap-2.5">
 							<For each={draft.products}>
 								{(line) => (
 									<div class="rounded-ui border border-rule bg-surface-2/60 p-3">

@@ -2,6 +2,7 @@
 
 export type { DB } from "~/db";
 export { createDb } from "~/db";
+export { runWithDevDb, getDevScopedDb } from "~/db/client";
 export type {
 	BrandInsertType,
 	BrandSelectType,

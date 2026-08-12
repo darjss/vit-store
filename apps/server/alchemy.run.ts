@@ -30,7 +30,12 @@ async function main() {
 	const env = createServerAlchemyEnv(process.env);
 	const fromEmail =
 		env.RESTOCK_FROM_EMAIL.match(/<([^>]+)>/)?.[1] ?? env.RESTOCK_FROM_EMAIL;
-	const email = EmailSender({ allowedSenderAddresses: [fromEmail] });
+	const email = EmailSender({
+		allowedSenderAddresses: [fromEmail],
+		// Local miniflare needs the send-email binding in remote mode (dev-only;
+		// prod keeps the plain binding).
+		...(stage === "dev" ? { dev: { remote: true } } : {}),
+	});
 
 	const kv = await KVNamespace("kv", {
 		title: `vit-kv-${app.stage}`,
@@ -86,7 +91,7 @@ async function main() {
 	const server = await Worker("api", {
 		entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 		compatibility: "node",
-		compatibilityDate: "2026-07-07",
+		compatibilityDate: stage === "dev" ? "2026-05-01" : "2026-07-07",
 		cache: { enabled: true },
 		// Durable restock batches/retries run independently of request lifetimes.
 		crons: ["*/5 * * * *"],

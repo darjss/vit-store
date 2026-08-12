@@ -23,7 +23,10 @@ export function TopBrands(props: TopBrandsProps) {
 		props.brands.reduce((max, brand) => Math.max(max, brand.total), 0);
 
 	return (
-		<section aria-labelledby="top-brands-heading" class="grid gap-2.5">
+		<section
+			aria-labelledby="top-brands-heading"
+			class="grid grid-cols-1 gap-2.5"
+		>
 			<div class="flex items-end justify-between gap-2">
 				<div>
 					<h2
@@ -52,7 +55,7 @@ export function TopBrands(props: TopBrandsProps) {
 					/>
 				}
 			>
-				<ol class="grid gap-2">
+				<ol class="grid grid-cols-1 gap-2">
 					<For each={props.brands}>
 						{(brand, index) => (
 							<li class="flex items-center gap-3 rounded-ui border border-rule bg-surface p-3 shadow-card">

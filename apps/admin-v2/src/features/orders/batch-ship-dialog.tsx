@@ -3,11 +3,10 @@
  * zone per order. Sends sequentially with a single retry (legacy behaviour)
  * and reports per-order failures so the caller can resurface them.
  */
-import { createMutation, createQuery } from "@tanstack/solid-query";
+
 import { MapPointIcon } from "@solar-icons/solid/linear/map-point";
 import { RefreshIcon } from "@solar-icons/solid/linear/refresh";
-import { createEffect, createSignal, For, Show } from "solid-js";
-
+import { createMutation, createQuery } from "@tanstack/solid-query";
 import {
 	Button,
 	Dialog,
@@ -20,12 +19,13 @@ import {
 	InlineAlert,
 	Skeleton,
 } from "@vit/ui";
+import { createEffect, createSignal, For, Show } from "solid-js";
 
 import { DeliveryZoneSelect } from "./delivery-zone-select";
 import { orderErrorMessage } from "./errors";
-import { deliveryZonesQueryOptions } from "./queries";
-import type { OrderListItem } from "./queries";
 import { shipOrderMutationOptions } from "./mutations";
+import type { OrderListItem } from "./queries";
+import { deliveryZonesQueryOptions } from "./queries";
 
 export interface BatchShipFailure {
 	orderId: number;
@@ -133,9 +133,9 @@ export function BatchShipOrderDialog(props: BatchShipOrderDialogProps) {
 					</DialogDescription>
 				</DialogHeader>
 
-				<div class="grid gap-4">
+				<div class="grid grid-cols-1 gap-4">
 					<Show when={zonesQuery.isPending}>
-						<div class="grid gap-2">
+						<div class="grid grid-cols-1 gap-2">
 							<Skeleton class="h-11 w-full" />
 							<p class="text-ink-2 text-xs">
 								Хүргэлтийн бүсүүдийг уншиж байна…
@@ -164,7 +164,7 @@ export function BatchShipOrderDialog(props: BatchShipOrderDialogProps) {
 
 					<For each={props.orders}>
 						{(order) => (
-							<div class="grid gap-3 rounded-ui border border-rule bg-surface-2/60 p-4">
+							<div class="grid grid-cols-1 gap-3 rounded-ui border border-rule bg-surface-2/60 p-4">
 								<div>
 									<p class="font-bold text-ink">#{order.orderNumber}</p>
 									<p class="mt-1 flex items-start gap-1.5 break-words text-ink-2 text-sm leading-relaxed">

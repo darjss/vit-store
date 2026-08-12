@@ -35,7 +35,10 @@ export function LowStockSection() {
 		items().filter((item) => item.stock === 0).length;
 
 	return (
-		<section aria-labelledby="low-stock-heading" class="grid gap-2.5">
+		<section
+			aria-labelledby="low-stock-heading"
+			class="grid grid-cols-1 gap-2.5"
+		>
 			<div class="flex items-end justify-between gap-2">
 				<div>
 					<h2
@@ -55,7 +58,7 @@ export function LowStockSection() {
 			</div>
 
 			<Show when={lowInventoryQuery.isPending}>
-				<div class="grid gap-2">
+				<div class="grid grid-cols-1 gap-2">
 					<For each={[0, 1, 2]}>
 						{() => <Skeleton class="h-16 w-full rounded-ui" />}
 					</For>
@@ -63,7 +66,7 @@ export function LowStockSection() {
 			</Show>
 
 			<Show when={lowInventoryQuery.isError && !lowInventoryQuery.isFetching}>
-				<div class="grid gap-2">
+				<div class="grid grid-cols-1 gap-2">
 					<InlineAlert
 						tone="error"
 						title="Бага үлдэгдэл барааг ачаалж чадсангүй"
@@ -99,7 +102,7 @@ export function LowStockSection() {
 						/>
 					}
 				>
-					<div class="grid gap-2">
+					<div class="grid grid-cols-1 gap-2">
 						<For each={items()}>
 							{(item) => {
 								const out = item.stock === 0;
