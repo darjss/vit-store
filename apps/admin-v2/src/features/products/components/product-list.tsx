@@ -97,7 +97,7 @@ export function ProductList(props: ProductListProps) {
 			</Show>
 
 			<Show when={!query.isPending && !query.isError && products().length > 0}>
-				<div class="grid gap-2.5">
+				<div class="grid grid-cols-1 gap-2.5">
 					<For each={products()}>
 						{(product) => <ProductCard product={product} />}
 					</For>

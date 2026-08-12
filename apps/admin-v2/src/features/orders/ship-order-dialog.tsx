@@ -2,11 +2,10 @@
  * Ship dialog — one order. Loads delivery zones, picks one, calls shipOrder.
  * Only pending orders can be shipped (server enforces this too).
  */
-import { createQuery, createMutation } from "@tanstack/solid-query";
+
 import { MapPointIcon } from "@solar-icons/solid/linear/map-point";
 import { RefreshIcon } from "@solar-icons/solid/linear/refresh";
-import { createEffect, createSignal, Show } from "solid-js";
-
+import { createMutation, createQuery } from "@tanstack/solid-query";
 import {
 	Button,
 	Dialog,
@@ -19,11 +18,12 @@ import {
 	InlineAlert,
 	Skeleton,
 } from "@vit/ui";
+import { createEffect, createSignal, Show } from "solid-js";
 
 import { DeliveryZoneSelect } from "./delivery-zone-select";
 import { orderErrorMessage } from "./errors";
-import { deliveryZonesQueryOptions } from "./queries";
 import { shipOrderMutationOptions } from "./mutations";
+import { deliveryZonesQueryOptions } from "./queries";
 
 interface ShipOrderDialogProps {
 	open: boolean;
@@ -82,7 +82,7 @@ export function ShipOrderDialog(props: ShipOrderDialogProps) {
 					</DialogDescription>
 				</DialogHeader>
 
-				<div class="grid gap-4">
+				<div class="grid grid-cols-1 gap-4">
 					<div class="flex items-start gap-2.5 rounded-ui border border-rule bg-surface-2 p-3 text-ink text-sm">
 						<MapPointIcon class="mt-0.5 size-4 shrink-0 text-ink-2" />
 						<p class="min-w-0 break-words leading-relaxed">
@@ -91,7 +91,7 @@ export function ShipOrderDialog(props: ShipOrderDialogProps) {
 					</div>
 
 					<Show when={zonesQuery.isPending}>
-						<div class="grid gap-2">
+						<div class="grid grid-cols-1 gap-2">
 							<Skeleton class="h-11 w-full" />
 							<p class="text-ink-2 text-xs">
 								Хүргэлтийн бүсүүдийг уншиж байна…

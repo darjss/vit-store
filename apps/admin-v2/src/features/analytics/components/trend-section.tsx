@@ -37,7 +37,7 @@ export function TrendSection(props: TrendSectionProps) {
 			: [];
 
 	return (
-		<section aria-labelledby="trend-heading" class="grid gap-2.5">
+		<section aria-labelledby="trend-heading" class="grid grid-cols-1 gap-2.5">
 			<div>
 				<h2 id="trend-heading" class="font-extrabold text-[15px] text-ink">
 					Зочдын чиг хандлага
@@ -50,7 +50,7 @@ export function TrendSection(props: TrendSectionProps) {
 			</Show>
 
 			<Show when={trendQuery.isError && !trendQuery.isFetching}>
-				<div class="grid gap-2">
+				<div class="grid grid-cols-1 gap-2">
 					<InlineAlert
 						tone="error"
 						title="Зочдын чиг хандлага одоогоор авах боломжгүй"

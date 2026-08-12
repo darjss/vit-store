@@ -64,8 +64,8 @@ export function AnalyticsPage() {
 	};
 
 	return (
-		<div class="grid gap-5">
-			<header class="grid gap-3">
+		<div class="grid grid-cols-1 gap-5">
+			<header class="grid grid-cols-1 gap-3">
 				<h1 class="font-extrabold text-2xl text-ink tracking-tight">
 					Шинжилгээ
 				</h1>
@@ -75,7 +75,7 @@ export function AnalyticsPage() {
 
 			{/* Snapshot: loading / error / success */}
 			<Show when={snapshot.isPending}>
-				<div class="grid gap-2.5">
+				<div class="grid grid-cols-1 gap-2.5">
 					<div class="grid grid-cols-3 gap-2.5">
 						<For each={[0, 1, 2]}>
 							{() => <Skeleton class="h-20 w-full rounded-ui" />}
@@ -87,7 +87,7 @@ export function AnalyticsPage() {
 			</Show>
 
 			<Show when={snapshot.isError && !snapshot.isFetching}>
-				<div class="grid gap-2">
+				<div class="grid grid-cols-1 gap-2">
 					<InlineAlert
 						tone="error"
 						title="Шинжилгээний мэдээлэл ачаалж чадсангүй"
@@ -106,7 +106,7 @@ export function AnalyticsPage() {
 
 			<Show when={snapshot.data}>
 				{(data) => (
-					<div class="grid gap-5">
+					<div class="grid grid-cols-1 gap-5">
 						{/* Cache freshness — snapshot time in the business timezone */}
 						<p class="flex items-center gap-1.5 text-ink-2 text-xs">
 							<ClockCircleIcon class="size-3.5 shrink-0" />

@@ -260,9 +260,10 @@ export const analyticsQueries = {
 		async getCurrentProductsValue() {
 			const result = await db()
 				.select({
-					total: sql<number>`SUM(${ProductsTable.price} * ${ProductsTable.stock})`,
+					total: sql<number>`SUM(CAST(${ProductsTable.price} AS bigint) * ${ProductsTable.stock})`,
 				})
-				.from(ProductsTable);
+				.from(ProductsTable)
+				.where(isNull(ProductsTable.deletedAt));
 			return result[0]?.total || 0;
 		},
 
@@ -496,9 +497,10 @@ export const analyticsQueries = {
 				// Current Products Value
 				db()
 					.select({
-						total: sql<number>`SUM(${ProductsTable.price} * ${ProductsTable.stock})`,
+						total: sql<number>`SUM(CAST(${ProductsTable.price} AS bigint) * ${ProductsTable.stock})`,
 					})
 					.from(ProductsTable)
+					.where(isNull(ProductsTable.deletedAt))
 					.then((result) => result[0]?.total || 0),
 			]);
 

@@ -7,12 +7,7 @@
  * products (images live ONLY here), payment, delivery, history, and one
  * next-action button following the legal transition graph.
  */
-import {
-	createMutation,
-	createQuery,
-	useQueryClient,
-} from "@tanstack/solid-query";
-import { useNavigate, useParams } from "@tanstack/solid-router";
+
 import { ArrowLeftIcon } from "@solar-icons/solid/linear/arrow-left";
 import { BoxIcon } from "@solar-icons/solid/linear/box";
 import { CalendarIcon } from "@solar-icons/solid/linear/calendar";
@@ -24,9 +19,13 @@ import { RefreshIcon } from "@solar-icons/solid/linear/refresh";
 import { RouteIcon } from "@solar-icons/solid/linear/route";
 import { UserIcon } from "@solar-icons/solid/linear/user";
 import { WalletIcon } from "@solar-icons/solid/linear/wallet";
-import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
-import type { JSX } from "solid-js";
-
+import {
+	createMutation,
+	createQuery,
+	useQueryClient,
+} from "@tanstack/solid-query";
+import { useNavigate, useParams } from "@tanstack/solid-router";
+import { isTRPCClientError } from "@trpc/client";
 import {
 	Button,
 	EmptyState,
@@ -40,7 +39,8 @@ import {
 	Skeleton,
 	showToast,
 } from "@vit/ui";
-import { isTRPCClientError } from "@trpc/client";
+import type { JSX } from "solid-js";
+import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 
 import {
 	invalidateOrderCaches,
@@ -229,7 +229,7 @@ export function OrderDetailPage() {
 			</Match>
 
 			<Match when={detailQuery.isPending}>
-				<div class="grid gap-4">
+				<div class="grid grid-cols-1 gap-4">
 					<Skeleton class="h-10 w-40" />
 					<Skeleton class="h-28 w-full" />
 					<Skeleton class="h-56 w-full" />
@@ -256,9 +256,9 @@ export function OrderDetailPage() {
 						(sum, product) => sum + product.quantity,
 						0,
 					);
-					const nextAction = primaryAction();
+					const nextAction = createMemo(() => primaryAction());
 					return (
-						<div class="grid gap-4">
+						<div class="grid grid-cols-1 gap-4">
 							<ShipOrderDialog
 								open={shipOpen()}
 								onOpenChange={setShipOpen}
@@ -331,7 +331,7 @@ export function OrderDetailPage() {
 							</header>
 
 							{/* Next-action strip */}
-							<Show when={nextAction}>
+							<Show when={nextAction()}>
 								{(action) => (
 									<div class="rounded-xl bg-ink p-4 text-canvas">
 										<p class="font-bold text-[11px] text-canvas/60 uppercase tracking-[0.08em]">
@@ -364,7 +364,7 @@ export function OrderDetailPage() {
 
 							{/* Customer */}
 							<section
-								class="grid gap-4 rounded-xl border border-rule bg-surface p-4 shadow-card"
+								class="grid grid-cols-1 gap-4 rounded-xl border border-rule bg-surface p-4 shadow-card"
 								aria-labelledby="customer-heading"
 							>
 								<h2
@@ -373,7 +373,7 @@ export function OrderDetailPage() {
 								>
 									<UserIcon class="size-5 text-ink-2" /> Харилцагч
 								</h2>
-								<div class="grid gap-3">
+								<div class="grid grid-cols-1 gap-3">
 									<div class="flex flex-wrap items-center justify-between gap-2">
 										<span class="font-bold text-ink-2 text-xs uppercase tracking-wide">
 											Утас
@@ -417,7 +417,7 @@ export function OrderDetailPage() {
 
 							{/* Products */}
 							<section
-								class="grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
+								class="grid grid-cols-1 gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
 								aria-labelledby="products-heading"
 							>
 								<h2
@@ -429,7 +429,7 @@ export function OrderDetailPage() {
 										{orderData().products.length} төрөл, {itemCount} ширхэг
 									</span>
 								</h2>
-								<ul class="grid gap-2.5">
+								<ul class="grid grid-cols-1 gap-2.5">
 									<For each={orderData().products}>
 										{(product) => (
 											<li class="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-ui border border-rule bg-surface-2/50 p-2.5 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto]">
@@ -469,7 +469,7 @@ export function OrderDetailPage() {
 
 							{/* Payment */}
 							<section
-								class="grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
+								class="grid grid-cols-1 gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
 								aria-labelledby="payment-heading"
 							>
 								<h2
@@ -478,7 +478,7 @@ export function OrderDetailPage() {
 								>
 									<WalletIcon class="size-5 text-ink-2" /> Төлбөр ба дүн
 								</h2>
-								<div class="grid gap-2.5 text-sm">
+								<div class="grid grid-cols-1 gap-2.5 text-sm">
 									<div class="flex items-center justify-between gap-2">
 										<span class="text-ink-2">Төлбөрийн төлөв</span>
 										<PaymentStatusBadge status={orderData().paymentStatus} />
@@ -517,7 +517,7 @@ export function OrderDetailPage() {
 
 							{/* Delivery */}
 							<section
-								class="grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
+								class="grid grid-cols-1 gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
 								aria-labelledby="delivery-heading"
 							>
 								<h2
@@ -526,7 +526,7 @@ export function OrderDetailPage() {
 								>
 									<RouteIcon class="size-5 text-ink-2" /> Хүргэлт
 								</h2>
-								<div class="grid gap-2.5 text-sm">
+								<div class="grid grid-cols-1 gap-2.5 text-sm">
 									<div class="flex items-center justify-between gap-2">
 										<span class="text-ink-2">Арга</span>
 										<span class="font-bold text-ink">
@@ -555,7 +555,7 @@ export function OrderDetailPage() {
 
 							{/* History */}
 							<section
-								class="grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
+								class="grid grid-cols-1 gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card"
 								aria-labelledby="history-heading"
 							>
 								<h2
@@ -564,7 +564,7 @@ export function OrderDetailPage() {
 								>
 									<CalendarIcon class="size-5 text-ink-2" /> Түүх
 								</h2>
-								<ul class="grid gap-2.5 text-sm">
+								<ul class="grid grid-cols-1 gap-2.5 text-sm">
 									<TimelineRow
 										label="Захиалга үүссэн"
 										value={dateTimeText(orderData().createdAt)}

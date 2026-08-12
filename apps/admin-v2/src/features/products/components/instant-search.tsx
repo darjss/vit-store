@@ -66,7 +66,7 @@ export function InstantSearch(props: InstantSearchProps) {
 						Бүх барааг үзэх
 					</Button>
 				</div>
-				<div class="grid gap-2.5">
+				<div class="grid grid-cols-1 gap-2.5">
 					<For each={results()}>
 						{(item) => <ProductCard product={toCardData(item)} />}
 					</For>

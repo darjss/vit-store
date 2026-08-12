@@ -8,6 +8,32 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { google } from "../lib/oauth";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
+
+// TEMP dev-only login for Track 7 local verification (revert after):
+app.get("/dev-login", async (c) => {
+	const log = c.get("log");
+	// Dev-only: never mounted on prod/staging (no DIRECT_DB_URL binding there).
+	if (!(c.env as Record<string, unknown>).DIRECT_DB_URL) {
+		return c.json({ error: "not available" }, 404);
+	}
+	const q = userQueries.admin;
+	const user = await q.getUserFromGoogleId(BOOTSTRAP_ADMIN_GOOGLE_ID);
+	if (!user || !user.isApproved) {
+		log.warn("auth.dev_login_failed", { hasUser: !!user });
+		return c.json({ error: "no approved user" }, 400);
+	}
+	const session = await createAdminSession(user, c.env.vitStoreKV);
+	setCookie(c, "admin_session", session.token, {
+		httpOnly: true,
+		sameSite: "Lax",
+		secure: false,
+		path: "/",
+		maxAge: 60 * 60 * 48,
+	});
+	log.info("auth.dev_login", { adminId: user.id });
+	return c.json({ ok: true, adminId: user.id });
+});
+
 const COOKIE_MAX_AGE = 60 * 10;
 const OAUTH_TEMP_COOKIE = "google_oauth_temp";
 const BOOTSTRAP_ADMIN_GOOGLE_ID = "118271302696111351988";

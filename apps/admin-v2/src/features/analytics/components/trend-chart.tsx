@@ -88,7 +88,7 @@ export function TrendChart(props: TrendChartProps) {
 				</Show>
 			}
 		>
-			<figure class="grid gap-2.5 rounded-ui border border-rule bg-surface p-4 shadow-card">
+			<figure class="grid grid-cols-1 gap-2.5 rounded-ui border border-rule bg-surface p-4 shadow-card">
 				<div class="min-w-0">
 					<svg
 						viewBox={`0 0 ${W} ${H}`}

@@ -9,14 +9,13 @@
  * The ••• menu holds Дэлгэрэнгүй / Засах / Цуцлах (legal until delivery) /
  * Устгах (with confirmation). No product images on cards — names/count only.
  */
-import { createMutation, useQueryClient } from "@tanstack/solid-query";
-import { useNavigate } from "@tanstack/solid-router";
+
 import { BoxIcon } from "@solar-icons/solid/linear/box";
 import { CopyIcon } from "@solar-icons/solid/linear/copy";
 import { MapPointIcon } from "@solar-icons/solid/linear/map-point";
 import { PhoneIcon } from "@solar-icons/solid/linear/phone";
-import { createSignal, Show } from "solid-js";
-
+import { createMutation, useQueryClient } from "@tanstack/solid-query";
+import { useNavigate } from "@tanstack/solid-router";
 import {
 	Button,
 	IconButton,
@@ -27,6 +26,7 @@ import {
 	MenuTrigger,
 	showToast,
 } from "@vit/ui";
+import { createSignal, Show } from "solid-js";
 
 import {
 	invalidateOrderCaches,
@@ -44,13 +44,13 @@ import {
 	ORDER_STATUS_META,
 	whenText,
 } from "./labels";
-import { orderKeys } from "./queries";
-import type { OrderListItem } from "./queries";
 import {
 	deleteOrderMutationOptions,
 	updateOrderStatusMutationOptions,
 } from "./mutations";
 import { OrderFormDialog } from "./order-form";
+import type { OrderListItem } from "./queries";
+import { orderKeys } from "./queries";
 import { ShipOrderDialog } from "./ship-order-dialog";
 import { OrderStatusBadge, PaymentStatusBadge } from "./status-badge";
 
@@ -183,7 +183,7 @@ export function OrderCard(props: OrderCardProps) {
 
 			<article
 				data-status={order().status}
-				class="grid gap-3 rounded-xl border border-rule bg-surface p-3.5 shadow-card"
+				class="grid grid-cols-1 gap-3 rounded-xl border border-rule bg-surface p-3.5 shadow-card"
 			>
 				{/* Row 1: status chip, number + customer, amount, menu */}
 				<div class="flex items-center gap-3">

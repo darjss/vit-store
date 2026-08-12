@@ -7,6 +7,7 @@ import type {
 	WorkersCache,
 } from "@vit/api";
 import { createDb } from "@vit/api/db";
+import { getDevScopedDb } from "@vit/api";
 import type { AppRequestLogger } from "./logging";
 
 function resolveWorkersCache(
@@ -29,10 +30,12 @@ export async function createContext({
 
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
 	const directDbUrl = (context.env as EnvWithDirectDbUrl).DIRECT_DB_URL;
+	const scopedDevDb = getDevScopedDb();
 	const db =
-		directDbUrl && directDbUrl.length > 0
+		scopedDevDb ??
+		(directDbUrl && directDbUrl.length > 0
 			? createDb(directDbUrl)
-			: createDb(context.env.DB);
+			: createDb(context.env.DB));
 
 	const log = context.get("log") as AppRequestLogger;
 	log.set({ user_type: "anonymous" });

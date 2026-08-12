@@ -6,23 +6,15 @@
  * for batch ship. Loading / empty / error / retry states throughout, and
  * filtered-empty states explain what happened.
  */
-import { createQuery, useQueryClient } from "@tanstack/solid-query";
-import { useNavigate, useSearch } from "@tanstack/solid-router";
+
 import { BillListIcon } from "@solar-icons/solid/linear/bill-list";
 import { CloseCircleIcon } from "@solar-icons/solid/linear/close-circle";
 import { RefreshIcon } from "@solar-icons/solid/linear/refresh";
 import { RoundedMagnifierIcon } from "@solar-icons/solid/linear/rounded-magnifier";
+import { createQuery, useQueryClient } from "@tanstack/solid-query";
+import { useNavigate, useSearch } from "@tanstack/solid-router";
 import { PRODUCT_PER_PAGE, paymentStatus } from "@vit/shared/constants";
 import type { OrderStatusType, PaymentStatusType } from "@vit/shared/types";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	on,
-	Show,
-} from "solid-js";
-
 import {
 	Button,
 	Dialog,
@@ -41,14 +33,21 @@ import {
 	Skeleton,
 	showToast,
 } from "@vit/ui";
-
-import { BatchShipOrderDialog } from "./batch-ship-dialog";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	on,
+	Show,
+} from "solid-js";
 import type { BatchShipFailure, BatchShipResult } from "./batch-ship-dialog";
+import { BatchShipOrderDialog } from "./batch-ship-dialog";
 import { invalidateOrderCaches } from "./cache";
 import { PAYMENT_STATUS_META } from "./labels";
-import { orderListQueryOptions } from "./queries";
-import type { OrderListInput } from "./queries";
 import { OrderCard } from "./order-card";
+import type { OrderListInput } from "./queries";
+import { orderListQueryOptions } from "./queries";
 
 const ACTIVE_STATUSES: OrderStatusType[] = ["created", "pending", "shipped"];
 
@@ -387,7 +386,7 @@ function BatchFailuresDialog(props: {
 						Дараах захиалгуудыг дахин оролдоно уу.
 					</DialogDescription>
 				</DialogHeader>
-				<ul class="grid gap-2">
+				<ul class="grid grid-cols-1 gap-2">
 					<For each={props.failed ?? []}>
 						{(row) => (
 							<li class="rounded-ui border border-rule bg-surface-2/60 px-3 py-2">
@@ -593,7 +592,7 @@ export function OrdersPage() {
 	});
 
 	return (
-		<div class="grid gap-4">
+		<div class="grid grid-cols-1 gap-4">
 			<header>
 				<h1 class="font-extrabold text-2xl text-ink tracking-tight">
 					Захиалгууд
@@ -604,7 +603,7 @@ export function OrdersPage() {
 			</header>
 
 			{/* Search */}
-			<div class="grid gap-2">
+			<div class="grid grid-cols-1 gap-2">
 				<div class="relative">
 					<RoundedMagnifierIcon class="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 size-4 text-ink-2" />
 					<input
@@ -678,7 +677,7 @@ export function OrdersPage() {
 
 			{/* List states */}
 			<Show when={listQuery.isPending}>
-				<div class="grid gap-3">
+				<div class="grid grid-cols-1 gap-3">
 					<For each={[0, 1, 2, 3]}>
 						{() => <Skeleton class="h-48 w-full" />}
 					</For>
@@ -710,7 +709,7 @@ export function OrdersPage() {
 			</Show>
 
 			<Show when={listQuery.isSuccess && orders().length > 0}>
-				<div class="grid gap-3 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<For each={orders()}>
 						{(order) => (
 							<OrderCard

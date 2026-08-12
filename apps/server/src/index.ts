@@ -13,6 +13,7 @@ import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
+import { runWithDevDb } from "@vit/api";
 import { logTrpcError, operatorTrpcError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
@@ -55,6 +56,12 @@ function scheduledJobFailure(
 const app = new Hono<ServerHonoEnv>();
 
 app.use(evlogMiddleware());
+
+app.use("/*", async (c, next) => {
+	// Dev-only: fresh per-request DB client — see runWithDevDb in
+	// packages/api/src/db/client.ts. No-op outside DIRECT_DB_URL dev runs.
+	await runWithDevDb(() => next());
+});
 
 app.use("/*", (c, next) => {
 	const rateLimitMiddleware = rateLimit({

@@ -59,7 +59,7 @@ export function LowStockProducts(props: LowStockProductsProps) {
 			</Show>
 
 			<Show when={props.products.length > 0}>
-				<div class="grid gap-2.5 sm:grid-cols-2">
+				<div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
 					<For each={props.products}>
 						{(product) => (
 							<article class="flex items-center gap-3 rounded-2xl border border-rule bg-surface p-3 shadow-card">

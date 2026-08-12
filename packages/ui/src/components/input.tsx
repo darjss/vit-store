@@ -46,14 +46,20 @@ const Input = <T extends ValidComponent = "input">(
 	const props = mergeProps<InputProps<T>[]>({ type: "text" }, rawProps);
 	const [local, others] = splitProps(props as InputProps, ["type", "class"]);
 	return (
-		<TextFieldPrimitive.Input
-			type={local.type}
-			class={cn(
-				"ui-motion h-12 w-full rounded-ui border border-rule bg-surface px-4 font-medium text-base text-ink transition-[background-color,border-color,box-shadow] duration-[140ms] ease-out placeholder:text-ink-2/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-coral data-[invalid]:bg-coral/5 data-[invalid]:focus-visible:outline-coral",
-				local.class,
-			)}
-			{...others}
-		/>
+		// Self-contained: Kobalte's TextField.Input requires a Root ancestor
+		// for its form-control context. Consumers use <Input /> directly (and
+		// <InputRoot> only when composing label/error around a Field), so the
+		// bare control wraps its own Root.
+		<TextFieldPrimitive.Root class="block w-full">
+			<TextFieldPrimitive.Input
+				type={local.type}
+				class={cn(
+					"ui-motion h-12 w-full rounded-ui border border-rule bg-surface px-4 font-medium text-base text-ink transition-[background-color,border-color,box-shadow] duration-[140ms] ease-out placeholder:text-ink-2/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-coral data-[invalid]:bg-coral/5 data-[invalid]:focus-visible:outline-coral",
+					local.class,
+				)}
+				{...others}
+			/>
+		</TextFieldPrimitive.Root>
 	);
 };
 

@@ -21,7 +21,7 @@ export function ProductCardSkeleton() {
 
 export function ProductListSkeleton(props: { count?: number }) {
 	return (
-		<div class="grid gap-2.5">
+		<div class="grid grid-cols-1 gap-2.5">
 			<For each={Array.from({ length: props.count ?? 5 })}>
 				{() => <ProductCardSkeleton />}
 			</For>
