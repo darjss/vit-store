@@ -12,8 +12,12 @@ const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 // TEMP dev-only login for Track 7 local verification (revert after):
 app.get("/dev-login", async (c) => {
 	const log = c.get("log");
-	// Dev-only: never mounted on prod/staging (no DIRECT_DB_URL binding there).
-	if (!(c.env as Record<string, unknown>).DIRECT_DB_URL) {
+	// Local dev only: explicit dev stage + dev DB binding. Never reachable on
+	// prod/staging (stage gate) and inert without the dev database.
+	if (
+		c.env.STAGE !== "dev" ||
+		!(c.env as Record<string, unknown>).DIRECT_DB_URL
+	) {
 		return c.json({ error: "not available" }, 404);
 	}
 	const q = userQueries.admin;

@@ -197,7 +197,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             });
             await purgeCatalogCache(ctx, [productResult.id]);
             scheduleProductSearchRebuild(ctx, "product_created");
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             // Return the authoritative saved entity so the client can render it
             // without a follow-up read, and so stale-edit detection has a
             // fresh updatedAt to compare against.
@@ -319,7 +319,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             scheduleProductSearchRebuild(ctx, "product_updated");
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             const product = await productQueries.admin.getProductById(input.id);
             return { message: "Product updated successfully", product };
         }
@@ -358,7 +358,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 });
             await purgeCatalogCache(ctx, [input.productId]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             if (input.type === "add") {
                 scheduleRestockDispatch(ctx, {
                     productId: input.productId,
@@ -394,7 +394,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             await productQueries.admin.deleteProduct(input.id);
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_deleted");
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             return { message: "Product deleted successfully" };
         }
         catch (error) {
@@ -473,7 +473,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
                 });
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_stock_updated");
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             scheduleRestockDispatch(ctx, {
                 productId: input.id,
                 previousStock: stockChange.previousStock,
@@ -577,7 +577,7 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             const stockChange = await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_updated");
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             if (stockChange)
                 scheduleRestockDispatch(ctx, stockChange);
             return { message: "Product field updated successfully" };

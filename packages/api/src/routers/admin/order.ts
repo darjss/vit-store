@@ -101,7 +101,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 ctx,
                 stockTransitions.map((transition) => transition.productId),
             );
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.info("payment.created", {
                 paymentNumber,
                 orderId,
@@ -259,7 +259,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             return { message: "Order updated successfully" };
         }
         catch (e) {
@@ -291,7 +291,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 patch.customerPhone = Number(customerPhone);
             }
             await orderQueries.admin.patchOrderHeader(id, patch);
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.info("order.header_patched", {
                 orderId: id,
                 fields: Object.keys(rest),
@@ -332,7 +332,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
             scheduleRestockDispatches(ctx, restockCandidates);
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.warn("order.cancelled", { orderId: input.id });
             return { message: "Order deleted successfully" };
         }
@@ -368,7 +368,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
             });
             const changedProductIds = [...new Set(restockCandidates.map((item) => item.productId))];
             await purgeCatalogCache(ctx, changedProductIds);
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.info("admin.action", {
                 action: "restore_order",
                 targetType: "order",
@@ -594,7 +594,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                     message: "Зөвхөн хүлээгдэж буй захиалгыг илгээсэн болгох боломжтой",
                 });
             }
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.info("order.status_changed", {
                 orderId: input.id,
                 order_status: input.status,
@@ -662,7 +662,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 deliveryProvider: "tu-delivery",
                 addressZoneId: input.addressZoneId,
             });
-            void purgeAnalyticsCache(ctx);
+            await purgeAnalyticsCache(ctx);
             ctx.log.info("order.status_changed", {
                 orderId: order.id,
                 order_status: "shipped",
