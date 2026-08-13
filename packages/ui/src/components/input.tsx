@@ -40,25 +40,39 @@ type InputProps<T extends ValidComponent = "input"> =
 			| "week";
 	};
 
+/** True when a Kobalte TextField Root already exists above (e.g. <Field>). */
+function hasTextFieldRoot(): boolean {
+	try {
+		TextFieldPrimitive.useTextFieldContext();
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 const Input = <T extends ValidComponent = "input">(
 	rawProps: PolymorphicProps<T, InputProps<T>>,
 ) => {
 	const props = mergeProps<InputProps<T>[]>({ type: "text" }, rawProps);
 	const [local, others] = splitProps(props as InputProps, ["type", "class"]);
-	return (
-		// Self-contained: Kobalte's TextField.Input requires a Root ancestor
-		// for its form-control context. Consumers use <Input /> directly (and
-		// <InputRoot> only when composing label/error around a Field), so the
-		// bare control wraps its own Root.
+	// Kobalte's control requires a TextField Root above it. <Field> already
+	// provides one — nesting another Root would split the label/error/invalid
+	// wiring. Self-wrap only when the control is used bare.
+	const input = (
+		<TextFieldPrimitive.Input
+			type={local.type}
+			class={cn(
+				"ui-motion h-12 w-full rounded-ui border border-rule bg-surface px-4 font-medium text-base text-ink transition-[background-color,border-color,box-shadow] duration-[140ms] ease-out placeholder:text-ink-2/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-coral data-[invalid]:bg-coral/5 data-[invalid]:focus-visible:outline-coral",
+				local.class,
+			)}
+			{...others}
+		/>
+	);
+	return hasTextFieldRoot() ? (
+		input
+	) : (
 		<TextFieldPrimitive.Root class="block w-full">
-			<TextFieldPrimitive.Input
-				type={local.type}
-				class={cn(
-					"ui-motion h-12 w-full rounded-ui border border-rule bg-surface px-4 font-medium text-base text-ink transition-[background-color,border-color,box-shadow] duration-[140ms] ease-out placeholder:text-ink-2/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-coral data-[invalid]:bg-coral/5 data-[invalid]:focus-visible:outline-coral",
-					local.class,
-				)}
-				{...others}
-			/>
+			{input}
 		</TextFieldPrimitive.Root>
 	);
 };
@@ -70,7 +84,9 @@ const TextArea = <T extends ValidComponent = "textarea">(
 	props: PolymorphicProps<T, TextAreaProps<T>>,
 ) => {
 	const [local, others] = splitProps(props as TextAreaProps, ["class"]);
-	return (
+	// Same Root requirement as Input: bare usage self-wraps, <Field> usage
+	// renders the bare control inside the Field's Root.
+	const textarea = (
 		<TextFieldPrimitive.TextArea
 			class={cn(
 				"ui-motion min-h-28 w-full rounded-ui border border-rule bg-surface px-4 py-3 font-medium text-base text-ink transition-[background-color,border-color,box-shadow] duration-[140ms] ease-out placeholder:text-ink-2/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-coral data-[invalid]:bg-coral/5 data-[invalid]:focus-visible:outline-coral",
@@ -78,6 +94,13 @@ const TextArea = <T extends ValidComponent = "textarea">(
 			)}
 			{...others}
 		/>
+	);
+	return hasTextFieldRoot() ? (
+		textarea
+	) : (
+		<TextFieldPrimitive.Root class="block w-full">
+			{textarea}
+		</TextFieldPrimitive.Root>
 	);
 };
 
@@ -144,7 +167,7 @@ export type {
 	InputDescriptionProps,
 	InputErrorProps,
 	InputLabelProps,
-	InputProps,
 	InputRootProps,
+	InputProps,
 	TextAreaProps,
 };

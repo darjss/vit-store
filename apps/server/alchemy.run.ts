@@ -111,6 +111,7 @@ async function main() {
 			KHAAN_TRANSFER_RECONCILER: transferReconciliation,
 			RATE_LIMITER: rateLimit,
 			DB: hyperdriveDB,
+			STAGE: stage,
 			...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
 			vitStoreKV: kv,
 			r2Bucket: r2,
