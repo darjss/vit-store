@@ -473,19 +473,7 @@ export function OrdersPage() {
 
 	const updateSearch = (patch: Partial<OrdersSearchState>) => {
 		const current = state();
-		navigate({
-			to: "/orders",
-			search: {
-				page: patch.page ?? current.page,
-				pageSize: patch.pageSize ?? current.pageSize,
-				searchTerm: patch.searchTerm ?? current.searchTerm,
-				orderStatus: patch.orderStatus ?? current.orderStatus,
-				paymentStatus: patch.paymentStatus ?? current.paymentStatus,
-				date: patch.date ?? current.date,
-				sortField: patch.sortField ?? current.sortField,
-				sortDirection: patch.sortDirection ?? current.sortDirection,
-			},
-		});
+		navigate({ to: "/orders", search: { ...current, ...patch } });
 	};
 
 	const handleSearchSubmit = () => {
