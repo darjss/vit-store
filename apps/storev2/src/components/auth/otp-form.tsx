@@ -1,5 +1,6 @@
+import { CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
 import { useMutation } from "@tanstack/solid-query";
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
 	OTPField,
 	OTPFieldGroup,
@@ -10,7 +11,6 @@ import { identifyUser } from "@/lib/analytics";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
-import { CloseCircleIcon as IconCloseCircle } from "@solar-icons/solid/bold";
 import { Button } from "../ui/button";
 import { showToast } from "../ui/toast";
 
@@ -93,14 +93,6 @@ const OtpForm = (props: {
 		startTimer(59);
 	};
 
-	// Auto-submit when OTP is complete (4 digits)
-	createEffect(() => {
-		const otpValue = otp();
-		if (otpValue.length === 4 && !loginMutation.isPending) {
-			loginMutation.mutate(otpValue);
-		}
-	});
-
 	return (
 		<div class="space-y-6">
 			<div class="space-y-2 text-center">
@@ -115,6 +107,7 @@ const OtpForm = (props: {
 				<OTPField
 					value={otp()}
 					onValueChange={(value) => setOtp(value)}
+					onComplete={(value) => loginMutation.mutate(value)}
 					maxLength={4}
 				>
 					<OTPFieldInput autofocus />
