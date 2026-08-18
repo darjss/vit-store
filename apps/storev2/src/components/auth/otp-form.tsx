@@ -107,7 +107,11 @@ const OtpForm = (props: {
 				<OTPField
 					value={otp()}
 					onValueChange={(value) => setOtp(value)}
-					onComplete={(value) => loginMutation.mutate(value)}
+					onComplete={(value) => {
+						if (!loginMutation.isPending) {
+							loginMutation.mutate(value);
+						}
+					}}
 					maxLength={4}
 				>
 					<OTPFieldInput autofocus />
