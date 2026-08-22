@@ -20,9 +20,6 @@ const BrandCard = (brand: BrandSelectType) => {
 			);
 		},
 	});
-	const deleteHelper = async (id: number) => {
-		deleteMutation.mutate({ id });
-	};
 
 	return (
 		<>
@@ -62,7 +59,7 @@ const BrandCard = (brand: BrandSelectType) => {
 							<RowAction
 								id={brand.id}
 								setIsEditDialogOpen={setIsEditDialogOpen}
-								deleteMutation={deleteHelper}
+								deleteMutation={(id) => deleteMutation.mutate({ id })}
 								isDeletePending={deleteMutation.isPending}
 							/>
 						</div>

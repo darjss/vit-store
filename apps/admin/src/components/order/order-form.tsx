@@ -70,7 +70,6 @@ const OrderForm = ({
 		...trpc.order.addOrder.mutationOptions(),
 		onSuccess: async () => {
 			form.reset();
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
 			onSuccess();
 		},
 		onError: (_error) => {
@@ -81,7 +80,11 @@ const OrderForm = ({
 	const updateMutation = useMutation({
 		...trpc.order.updateOrder.mutationOptions(),
 		onSuccess: async () => {
-			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
+			if (order?.id) {
+				void queryClient.invalidateQueries(
+					trpc.order.getOrderById.queryOptions({ id: order.id }),
+				);
+			}
 			void queryClient.invalidateQueries(
 				trpc.order.getPaginatedOrders.pathFilter(),
 			);

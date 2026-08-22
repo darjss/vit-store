@@ -90,9 +90,6 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			await invalidateProductCaches(queryClient);
 		},
 	});
-	const deleteHelper = async (id: number) => {
-		deleteProduct({ id });
-	};
 	const primaryImage =
 		product.images.find((img) => img.isPrimary)?.url ||
 		product.images[0]?.url ||
@@ -248,7 +245,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 							<RowActions
 								id={product.id}
 								setIsEditDialogOpen={setIsEditDialogOpen}
-								deleteMutation={deleteHelper}
+								deleteMutation={(id) => deleteProduct({ id })}
 								isDeletePending={isDeletePending}
 								extraActions={
 									<>
