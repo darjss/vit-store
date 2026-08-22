@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -105,10 +104,6 @@ function RouteComponent() {
 		date !== "all";
 
 	const navigate = useNavigate({ from: Route.fullPath });
-	const mutation = useMutation({
-		...Route.useRouteContext().trpc.order.searchOrder.mutationOptions(),
-		onSuccess: () => {},
-	});
 
 	const handleSearch = () => {
 		navigate({
@@ -210,7 +205,6 @@ function RouteComponent() {
 				<Button
 					className="h-11 gap-2 shadow-hard"
 					asChild
-					disabled={mutation.isPending}
 				>
 					<Link to="/orders/add">
 						<PlusCircle className="h-4 w-4" />
@@ -229,7 +223,6 @@ function RouteComponent() {
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
 					className="h-12 border-2 border-border bg-card pr-24 pl-10 text-base shadow-hard-sm"
-					disabled={mutation.isPending}
 				/>
 				<div className="-translate-y-1/2 absolute top-1/2 right-1.5 flex items-center gap-1">
 					{inputValue && (
@@ -238,7 +231,6 @@ function RouteComponent() {
 							variant="ghost"
 							className="h-8 w-8"
 							onClick={clearSearch}
-							disabled={mutation.isPending}
 							aria-label="Хайлтыг цэвэрлэх"
 						>
 							<X className="h-4 w-4" />
@@ -247,7 +239,6 @@ function RouteComponent() {
 					<SubmitButton
 						onClick={handleSearch}
 						className="h-9 px-3 text-xs"
-						isPending={mutation.isPending}
 						aria-label="Хайх"
 					>
 						<Search className="h-4 w-4" />
