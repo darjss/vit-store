@@ -1,3 +1,4 @@
+import { TRPCClientError } from "@trpc/client";
 import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import * as v from "valibot";
@@ -17,8 +18,12 @@ export const Route = createFileRoute("/login")({
 				gcTime: 1000 * 60 * 30,
 				retry: false,
 			});
-		} catch {
-			session = null;
+		} catch (error) {
+			if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
+				session = null;
+			} else {
+				throw error;
+			}
 		}
 		if (session) {
 			throw redirect({ to: "/" });
