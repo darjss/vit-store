@@ -52,6 +52,13 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		setStockValue(product.stock);
 		setPriceValue(product.price);
 	}, [product.stock, product.price]);
+	// Sync drafts from the cache only while their editor is closed, so an
+	// unrelated refetch (e.g. saving stock) can't wipe a price being typed,
+	// and vice versa.
+	useEffect(() => {
+		if (!isStockEditing) setStockValue(product.stock);
+		if (!isPriceEditing) setPriceValue(product.price);
+	}, [product.stock, product.price, isStockEditing, isPriceEditing]);
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -80,12 +87,14 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		...trpc.product.updateProductField.mutationOptions(),
 		onError: () => {
 			toast.error("Үнэ шинэчлэхэд алдаа гарлаа");
+			setPriceValue(product.price);
 		},
-		onSuccess: () => {
+		// Close the editor only once the cache reflects the saved price, so
+		// the collapsed button never shows a stale value next to a fresh one
+		// in the summary.
+		onSettled: async () => {
+			await invalidateProductCaches(queryClient, product.id);
 			setIsPriceEditing(false);
-		},
-		onSettled: () => {
-			invalidateProductCaches(queryClient, product.id);
 		},
 	});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
