@@ -29,10 +29,7 @@ import {
 	DialogTitle,
 } from "../ui/dialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
-import {
-	ProductExpirationEditor,
-	ProductStockEditor,
-} from "./product-card-editors";
+import { ProductPriceEditor, ProductStockEditor } from "./product-card-editors";
 import { ProductSummary } from "./product-card-summary";
 import ProductForm from "./product-form";
 
@@ -45,16 +42,16 @@ interface ProductCardProps {
 const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isStockEditing, setIsStockEditing] = useState(false);
-	const [isExpEditing, setIsExpEditing] = useState(false);
+	const [isPriceEditing, setIsPriceEditing] = useState(false);
 	const [isOutOfStockAlertOpen, setIsOutOfStockAlertOpen] = useState(false);
 	const [isActivateConfirmOpen, setIsActivateConfirmOpen] = useState(false);
 	const [stockValue, setStockValue] = useState(product.stock);
-	const [expValue, setExpValue] = useState(product.expirationDate ?? "");
+	const [priceValue, setPriceValue] = useState(product.price);
 
 	useEffect(() => {
 		setStockValue(product.stock);
-		setExpValue(product.expirationDate ?? "");
-	}, [product.stock, product.expirationDate]);
+		setPriceValue(product.price);
+	}, [product.stock, product.price]);
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -75,12 +72,27 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			invalidateProductCaches(queryClient, product.id);
 		},
 	});
+	const {
+		mutate: setProductPrice,
+		isPending: isSetPricePending,
+		variables: setPriceVariables,
+	} = useMutation({
+		...trpc.product.updateProductField.mutationOptions(),
+		onError: () => {
+			toast.error("Үнэ шинэчлэхэд алдаа гарлаа");
+		},
+		onSuccess: () => {
+			setIsPriceEditing(false);
+		},
+		onSettled: () => {
+			invalidateProductCaches(queryClient, product.id);
+		},
+	});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
 		useMutation({
 			...trpc.product.updateProductField.mutationOptions(),
 			onSuccess: async () => {
 				await invalidateProductCaches(queryClient, product.id);
-				setIsExpEditing(false);
 				setIsActivateConfirmOpen(false);
 			},
 		});
@@ -104,16 +116,22 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			: stockValue;
 	const isOutOfStock = displayStock === 0 || product.status === "out_of_stock";
 	const statusLabel = formatProductStatusMn(product.status, isOutOfStock);
+	// Show the attempted value while the save is in flight; on failure this
+	// reverts automatically because priceValue is only synced from the cache.
+	const displayPrice =
+		isSetPricePending && setPriceVariables
+			? (setPriceVariables.numberValue ?? priceValue)
+			: priceValue;
 
 	const handleSaveStock = () => {
 		setProductStock({ id: product.id, newStock: stockValue });
 	};
 
-	const handleSaveExpDate = () => {
-		updateProductField({
+	const handleSavePrice = () => {
+		setProductPrice({
 			id: product.id,
-			field: "expirationDate",
-			stringValue: expValue || undefined,
+			field: "price",
+			numberValue: priceValue,
 		});
 	};
 
@@ -173,6 +191,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 					<ProductSummary
 						product={product}
 						currentStock={displayStock}
+						currentPrice={displayPrice}
 						primaryImage={primaryImage}
 						brandName={brand?.name}
 						categoryName={category?.name}
@@ -231,15 +250,15 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								onSave={handleSaveStock}
 							/>
 
-							<ProductExpirationEditor
-								isEditing={isExpEditing}
-								expirationDate={product.expirationDate}
-								value={expValue}
-								isPending={isUpdateFieldPending}
-								onValueChange={setExpValue}
-								onEdit={() => setIsExpEditing(true)}
-								onCancel={() => setIsExpEditing(false)}
-								onSave={handleSaveExpDate}
+							<ProductPriceEditor
+								isEditing={isPriceEditing}
+								price={product.price}
+								value={priceValue}
+								isPending={isSetPricePending}
+								onValueChange={setPriceValue}
+								onEdit={() => setIsPriceEditing(true)}
+								onCancel={() => setIsPriceEditing(false)}
+								onSave={handleSavePrice}
 							/>
 
 							<RowActions
