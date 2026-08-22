@@ -19,9 +19,6 @@ const CategoryCard = (category: CategorySelectType) => {
 			);
 		},
 	});
-	const deleteHelper = async (id: number) => {
-		deleteMutation.mutate({ id });
-	};
 
 	return (
 		<>
@@ -52,7 +49,7 @@ const CategoryCard = (category: CategorySelectType) => {
 							<RowAction
 								id={category.id}
 								setIsEditDialogOpen={setIsEditDialogOpen}
-								deleteMutation={deleteHelper}
+								deleteMutation={(id) => deleteMutation.mutate({ id })}
 								isDeletePending={deleteMutation.isPending}
 							/>
 						</div>
