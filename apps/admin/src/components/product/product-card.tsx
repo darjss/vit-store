@@ -48,10 +48,6 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const [stockValue, setStockValue] = useState(product.stock);
 	const [priceValue, setPriceValue] = useState(product.price);
 
-	useEffect(() => {
-		setStockValue(product.stock);
-		setPriceValue(product.price);
-	}, [product.stock, product.price]);
 	// Sync drafts from the cache only while their editor is closed, so an
 	// unrelated refetch (e.g. saving stock) can't wipe a price being typed,
 	// and vice versa.
