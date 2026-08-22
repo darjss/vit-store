@@ -125,7 +125,6 @@ const DashOrdersIdRoute = DashOrdersIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof DashIndexRoute
   '/login': typeof LoginRoute
   '/analytics': typeof DashAnalyticsRoute
   '/brands': typeof DashBrandsRoute
@@ -135,14 +134,15 @@ export interface FileRoutesByFullPath {
   '/review-products': typeof DashReviewProductsRoute
   '/sandbox': typeof DashSandboxRoute
   '/products/add': typeof ProductsAddRoute
+  '/': typeof DashIndexRoute
   '/orders/$id': typeof DashOrdersIdRoute
   '/orders/add': typeof DashOrdersAddRoute
   '/products/$id': typeof DashProductsIdRoute
   '/purchases/$id': typeof DashPurchasesIdRoute
   '/purchases/add': typeof DashPurchasesAddRoute
-  '/orders/': typeof DashOrdersIndexRoute
-  '/products/': typeof DashProductsIndexRoute
-  '/purchases/': typeof DashPurchasesIndexRoute
+  '/orders': typeof DashOrdersIndexRoute
+  '/products': typeof DashProductsIndexRoute
+  '/purchases': typeof DashPurchasesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -189,7 +189,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/login'
     | '/analytics'
     | '/brands'
@@ -199,14 +198,15 @@ export interface FileRouteTypes {
     | '/review-products'
     | '/sandbox'
     | '/products/add'
+    | '/'
     | '/orders/$id'
     | '/orders/add'
     | '/products/$id'
     | '/purchases/$id'
     | '/purchases/add'
-    | '/orders/'
-    | '/products/'
-    | '/purchases/'
+    | '/orders'
+    | '/products'
+    | '/purchases'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -268,7 +268,7 @@ declare module '@tanstack/react-router' {
     '/_dash': {
       id: '/_dash'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof DashRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -338,21 +338,21 @@ declare module '@tanstack/react-router' {
     '/_dash/purchases/': {
       id: '/_dash/purchases/'
       path: '/purchases'
-      fullPath: '/purchases/'
+      fullPath: '/purchases'
       preLoaderRoute: typeof DashPurchasesIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/products/': {
       id: '/_dash/products/'
       path: '/products'
-      fullPath: '/products/'
+      fullPath: '/products'
       preLoaderRoute: typeof DashProductsIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
     '/_dash/orders/': {
       id: '/_dash/orders/'
       path: '/orders'
-      fullPath: '/orders/'
+      fullPath: '/orders'
       preLoaderRoute: typeof DashOrdersIndexRouteImport
       parentRoute: typeof DashRouteRoute
     }
