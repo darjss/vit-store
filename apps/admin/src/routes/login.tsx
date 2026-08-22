@@ -1,3 +1,4 @@
+import { TRPCClientError } from "@trpc/client";
 import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import * as v from "valibot";
@@ -7,12 +8,23 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/login")({
 	component: RouteComponent,
 	beforeLoad: async ({ context: ctx }) => {
-		const session = await ctx.queryClient.ensureQueryData({
-			...ctx.trpc.auth.me.queryOptions(),
-			staleTime: 1000 * 60 * 15,
-			gcTime: 1000 * 60 * 30,
-			retry: false,
-		});
+		// Logged-out visitors get a 401 from auth.me; ensureQueryData rejects on
+		// it and would otherwise blow up the route instead of rendering the form.
+		let session = null;
+		try {
+			session = await ctx.queryClient.ensureQueryData({
+				...ctx.trpc.auth.me.queryOptions(),
+				staleTime: 1000 * 60 * 15,
+				gcTime: 1000 * 60 * 30,
+				retry: false,
+			});
+		} catch (error) {
+			if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
+				session = null;
+			} else {
+				throw error;
+			}
+		}
 		if (session) {
 			throw redirect({ to: "/" });
 		}

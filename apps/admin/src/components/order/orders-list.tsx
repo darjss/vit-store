@@ -136,7 +136,12 @@ export default function OrdersList({
 	}, [orders]);
 
 	const updateStatusMutation = useMutation(
-		trpc.order.updateOrderStatus.mutationOptions(),
+		{
+			...trpc.order.updateOrderStatus.mutationOptions(),
+			// Failures are summarized in the batch dialog; a no-op onError keeps
+			// the global MutationCache from toasting once per failed order too.
+			onError: () => {},
+		},
 	);
 
 	const handlePageChange = (nextPage: number) => {
