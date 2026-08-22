@@ -45,6 +45,15 @@ function formatExpirationMonthYear(value?: string | null) {
 	return `${month}/${year}`;
 }
 
+function parseNonNegativeNumber(raw: string): number {
+	const n = Number.parseFloat(raw);
+	return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function parseNonNegativeInt(raw: string): number {
+	const n = Number.parseInt(raw, 10);
+	return Number.isFinite(n) && n > 0 ? n : 0;
+}
 export function ProductDetailPage({ productId }: { productId: number }) {
 	const queryClient = useQueryClient();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -65,6 +74,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 
 	const {
 		isDeletePending,
+		deleteProduct,
 		updateProductField,
 		isUpdateProductFieldPending,
 		deleteImage,
@@ -74,7 +84,6 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 		isRegenerateProductImagesPending,
 		setPrimaryImage,
 		isSetPrimaryImagePending,
-		deleteHelper,
 	} = useProductDetailMutations(productId, {
 		onRegenerateSuccess: () => setFeaturedImageIndex(0),
 	});
@@ -104,13 +113,6 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 									}}
 									onSuccess={() => {
 										setIsEditDialogOpen(false);
-										queryClient.invalidateQueries({
-											queryKey: ["admin-products-infinite"],
-											type: "all",
-										});
-										queryClient.invalidateQueries(
-											trpc.product.getAllProducts.queryOptions(),
-										);
 									}}
 								/>
 							</Suspense>
@@ -170,7 +172,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 								<RowAction
 									id={productId}
 									setIsEditDialogOpen={setIsEditDialogOpen}
-									deleteMutation={deleteHelper}
+									deleteMutation={(id) => deleteProduct({ id })}
 									isDeletePending={isDeletePending}
 								/>
 							</div>
@@ -368,9 +370,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												type="number"
 												value={product.price}
 												format={(v) => formatCurrency(Number(v))}
-												parse={(raw) =>
-													Number.parseFloat(raw || "0") as never
-												}
+												parse={(raw) => parseNonNegativeNumber(raw)}
 												isLoading={isUpdateProductFieldPending}
 												onSave={async (next) => {
 													await updateProductField({
@@ -386,12 +386,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												label="Нөөц:"
 												type="number"
 												value={product.stock}
-												parse={(raw) =>
-													Number.parseInt(
-														raw || "0",
-														10,
-													) as unknown as string as never
-												}
+												parse={(raw) => parseNonNegativeInt(raw)}
 												isLoading={isUpdateProductFieldPending}
 												onSave={async (next) => {
 													await updateProductField({
@@ -469,11 +464,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												label="Өдрийн хэрэглээ:"
 												type="number"
 												value={product.dailyIntake}
-												parse={(raw) =>
-													Number.parseFloat(
-														raw || "0",
-													) as unknown as string as never
-												}
+												parse={(raw) => parseNonNegativeNumber(raw)}
 												isLoading={isUpdateProductFieldPending}
 												onSave={async (next) => {
 													await updateProductField({
@@ -490,12 +481,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												type="number"
 												value={product.discount}
 												format={(value) => `${value}%`}
-												parse={(raw) =>
-													Number.parseInt(
-														raw || "0",
-														10,
-													) as unknown as string as never
-												}
+												parse={(raw) => parseNonNegativeInt(raw)}
 												isLoading={isUpdateProductFieldPending}
 												onSave={async (next) => {
 													await updateProductField({

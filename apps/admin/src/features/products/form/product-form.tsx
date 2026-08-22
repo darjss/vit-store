@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { invalidateProductCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "@/components/submit-button";
 import { Form } from "@/components/ui/form";
@@ -66,11 +67,7 @@ const ProductForm = ({
 		...trpc.product.addProduct.mutationOptions(),
 		onSuccess: async () => {
 			form.reset();
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
+			await invalidateProductCaches(queryClient);
 			onSuccess();
 		},
 		onError: (_error) => {
@@ -81,14 +78,7 @@ const ProductForm = ({
 	const updateMutation = useMutation({
 		...trpc.product.updateProduct.mutationOptions(),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId! }),
-			);
+			await invalidateProductCaches(queryClient, productId);
 			onSuccess();
 		},
 		onError: (_error) => {

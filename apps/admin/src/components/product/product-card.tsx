@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
+import { invalidateProductCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
@@ -56,77 +58,28 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
-	const previousStockRef = useRef<number>(0);
-	const { mutate: setProductStock, isPending: isSetProductStockPending } =
-		useMutation({
-			...trpc.product.setProductStock.mutationOptions(),
-			onMutate: async (variables) => {
-				await queryClient.cancelQueries({
-					queryKey: ["admin-products-infinite"],
-				});
-
-				previousStockRef.current = stockValue;
-				setStockValue(variables.newStock);
-
-				queryClient.setQueriesData(
-					{ queryKey: ["admin-products-infinite"], type: "all" },
-					(
-						old:
-							| { pages: { products: { id: number; stock: number }[] }[] }
-							| undefined,
-					) => {
-						if (!old) return old;
-						return {
-							...old,
-							pages: old.pages.map((page) => ({
-								...page,
-								products: page.products.map((p) =>
-									p.id === variables.id
-										? { ...p, stock: variables.newStock }
-										: p,
-								),
-							})),
-						};
-					},
-				);
-
-				// Also patch the instant-search result cards (they render the same
-				// ProductCard but come from a separate searchProductsInstant query
-				// that the admin-products-infinite key never touches).
-				queryClient.setQueriesData(
-					trpc.product.searchProductsInstant.pathFilter(),
-					(old: Array<{ id: number; stock: number }> | undefined) => {
-						if (!old) return old;
-						return old.map((p) =>
-							p.id === variables.id ? { ...p, stock: variables.newStock } : p,
-						);
-					},
-				);
-
-				setIsStockEditing(false);
-				return undefined;
-			},
-			onError: () => {
-				setStockValue(previousStockRef.current);
-			},
-			onSettled: () => {
-				void queryClient.invalidateQueries({
-					queryKey: ["admin-products-infinite"],
-					type: "all",
-				});
-				void queryClient.invalidateQueries(
-					trpc.product.searchProductsInstant.pathFilter(),
-				);
-			},
-		});
+	const {
+		mutate: setProductStock,
+		isPending: isSetStockPending,
+		variables: setStockVariables,
+	} = useMutation({
+		...trpc.product.setProductStock.mutationOptions(),
+		onError: () => {
+			toast.error("Үлдэгдэл шинэчлэхэд алдаа гарлаа");
+			setStockValue(product.stock);
+		},
+		onSuccess: () => {
+			setIsStockEditing(false);
+		},
+		onSettled: () => {
+			invalidateProductCaches(queryClient, product.id);
+		},
+	});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
 		useMutation({
 			...trpc.product.updateProductField.mutationOptions(),
 			onSuccess: async () => {
-				await queryClient.invalidateQueries({
-					queryKey: ["admin-products-infinite"],
-					type: "all",
-				});
+				await invalidateProductCaches(queryClient, product.id);
 				setIsExpEditing(false);
 				setIsActivateConfirmOpen(false);
 			},
@@ -134,10 +87,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
+			await invalidateProductCaches(queryClient);
 		},
 	});
 	const deleteHelper = async (id: number) => {
@@ -149,7 +99,13 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		"/placeholder.jpg";
 	const brand = brands.find((b) => b.id === product.brandId);
 	const category = categories.find((c) => c.id === product.categoryId);
-	const isOutOfStock = stockValue === 0 || product.status === "out_of_stock";
+	// Show the attempted value while the save is in flight; on failure this
+	// reverts automatically because stockValue is only synced from the cache.
+	const displayStock =
+		isSetStockPending && setStockVariables
+			? setStockVariables.newStock
+			: stockValue;
+	const isOutOfStock = displayStock === 0 || product.status === "out_of_stock";
 	const statusLabel = formatProductStatusMn(product.status, isOutOfStock);
 
 	const handleSaveStock = () => {
@@ -159,7 +115,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const handleSaveExpDate = () => {
 		updateProductField({
 			id: product.id,
-			field: "expirationDate" as never,
+			field: "expirationDate",
 			stringValue: expValue || undefined,
 		});
 	};
@@ -180,7 +136,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	const handleConfirmActivateProduct = () => {
 		updateProductField({
 			id: product.id,
-			field: "status" as never,
+			field: "status",
 			stringValue: "active",
 		});
 	};
@@ -209,10 +165,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 							}}
 							onSuccess={() => {
 								setIsEditDialogOpen(false);
-								void queryClient.invalidateQueries({
-									queryKey: ["admin-products-infinite"],
-									type: "all",
-								});
+								void invalidateProductCaches(queryClient, product.id);
 							}}
 						/>
 					</div>
@@ -222,7 +175,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 				<CardContent className="p-0">
 					<ProductSummary
 						product={product}
-						currentStock={stockValue}
+						currentStock={displayStock}
 						primaryImage={primaryImage}
 						brandName={brand?.name}
 						categoryName={category?.name}
@@ -274,7 +227,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 								isEditing={isStockEditing}
 								stock={product.stock}
 								value={stockValue}
-								isPending={isSetProductStockPending}
+								isPending={isSetStockPending}
 								onValueChange={setStockValue}
 								onEdit={() => setIsStockEditing(true)}
 								onCancel={() => setIsStockEditing(false)}
@@ -306,9 +259,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 											<AlertDialogTrigger asChild>
 												<DropdownMenuItem
 													className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-													disabled={
-														isSetProductStockPending || product.stock === 0
-													}
+													disabled={isSetStockPending || product.stock === 0}
 													onSelect={(e) => {
 														e.stopPropagation();
 														e.preventDefault();
@@ -338,7 +289,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 														<Button
 															className="flex-1"
 															onClick={handleMarkOutOfStock}
-															disabled={isSetProductStockPending}
+															disabled={isSetStockPending}
 														>
 															Тэглэх
 														</Button>

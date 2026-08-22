@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { invalidateProductCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
 
 export function useProductDetailMutations(
@@ -11,11 +12,7 @@ export function useProductDetailMutations(
 	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
-			queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions());
+			invalidateProductCaches(queryClient);
 		},
 	});
 
@@ -25,13 +22,7 @@ export function useProductDetailMutations(
 	} = useMutation({
 		...trpc.product.updateProductField.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
-			queryClient.invalidateQueries({
-				queryKey: ["admin-products-infinite"],
-				type: "all",
-			});
+			invalidateProductCaches(queryClient, productId);
 		},
 		onError: (error) => {
 			toast.error(error.message || "Талбар шинэчлэхэд алдаа гарлаа");
@@ -41,18 +32,14 @@ export function useProductDetailMutations(
 	const { mutate: deleteImage, isPending: isDeleteImagePending } = useMutation({
 		...trpc.image.deleteImage.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
+			invalidateProductCaches(queryClient, productId);
 		},
 	});
 
 	const { mutate: addImage } = useMutation({
 		...trpc.image.addImage.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
+			invalidateProductCaches(queryClient, productId);
 		},
 	});
 
@@ -63,9 +50,7 @@ export function useProductDetailMutations(
 		...trpc.aiProduct.regenerateProductImages.mutationOptions(),
 		onSuccess: (result) => {
 			options?.onRegenerateSuccess?.();
-			queryClient.invalidateQueries(
-				trpc.product.getProductById.queryOptions({ id: productId }),
-			);
+			invalidateProductCaches(queryClient, productId);
 
 			if (result.count > 0) {
 				toast.success(`AI зураг амжилттай шинэчлэгдлээ (${result.count})`);
@@ -87,15 +72,9 @@ export function useProductDetailMutations(
 		useMutation({
 			...trpc.image.setPrimaryImage.mutationOptions(),
 			onSuccess: () => {
-				queryClient.invalidateQueries(
-					trpc.product.getProductById.queryOptions({ id: productId }),
-				);
+				invalidateProductCaches(queryClient, productId);
 			},
 		});
-
-	const deleteHelper = async (id: number) => {
-		deleteProduct({ id });
-	};
 
 	return {
 		deleteProduct,
@@ -109,6 +88,5 @@ export function useProductDetailMutations(
 		isRegenerateProductImagesPending,
 		setPrimaryImage,
 		isSetPrimaryImagePending,
-		deleteHelper,
 	};
 }

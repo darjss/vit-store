@@ -413,7 +413,10 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
         }
     }),
     setProductStock: proc
-        .input(v.object({ id: v.number(), newStock: v.number() }))
+        .input(v.object({
+        id: v.number(),
+        newStock: v.pipe(v.number(), v.integer(), v.minValue(0)),
+    }))
         .mutation(async ({ ctx, input }) => {
         try {
             const stockChange = await productQueries.admin.setProductStock(input.id, input.newStock);
@@ -524,6 +527,20 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             const value = String(input.field) === "expirationDate"
                 ? normalizeExpirationDate(input.stringValue)
                 : (input.stringValue ?? input.numberValue);
+            if (input.field === "price" || input.field === "stock" || input.field === "discount") {
+                if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: `${input.field} must be a non-negative number`,
+                    });
+                }
+                if (input.field !== "price" && !Number.isInteger(value)) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: `${input.field} must be an integer`,
+                    });
+                }
+            }
             const stockChange = await productQueries.admin.updateProductField(input.id, input.field, value ?? null);
             await purgeCatalogCache(ctx, [input.id]);
             scheduleProductSearchRebuild(ctx, "product_updated");
@@ -535,6 +552,8 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "updateProductField"
             });
+            if (error instanceof TRPCError)
+                throw error;
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to update product field",
