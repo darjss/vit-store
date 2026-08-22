@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Button } from "./ui/button";
 
 interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-	isPending: boolean;
+	isPending?: boolean;
 	children: ReactNode;
 	className?: string;
 	spinnerSize?: number;
