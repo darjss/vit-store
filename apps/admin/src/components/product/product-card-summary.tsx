@@ -40,6 +40,7 @@ function ProductStatusBadge({
 export function ProductSummary({
 	product,
 	currentStock,
+	currentPrice,
 	primaryImage,
 	brandName,
 	categoryName,
@@ -50,6 +51,8 @@ export function ProductSummary({
 }: {
 	product: ProductType;
 	currentStock: number;
+	/** Price to display, including an in-flight optimistic edit. */
+	currentPrice: number;
 	primaryImage: string;
 	brandName?: string;
 	categoryName?: string;
@@ -122,7 +125,7 @@ export function ProductSummary({
 			className="flex w-full cursor-pointer flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:flex-row"
 		>
 			{/* Image */}
-			<div className="relative w-full border-border border-b-2 bg-background sm:w-44 sm:shrink-0 sm:border-b-0 sm:border-r-2">
+			<div className="relative w-full border-border border-b-2 bg-background sm:w-44 sm:shrink-0 sm:border-r-2 sm:border-b-0">
 				<div className="aspect-square w-full overflow-hidden sm:aspect-auto sm:h-full">
 					<img
 						src={primaryImage || "/placeholder.jpg"}
@@ -142,7 +145,9 @@ export function ProductSummary({
 						</h3>
 						<div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs sm:text-sm">
 							{brandName && <span>{brandName}</span>}
-							{brandName && categoryName && <span className="text-border">|</span>}
+							{brandName && categoryName && (
+								<span className="text-border">|</span>
+							)}
 							{categoryName && <span>{categoryName}</span>}
 						</div>
 					</div>
@@ -151,7 +156,7 @@ export function ProductSummary({
 
 				<div className="mt-1.5 flex items-center gap-3">
 					<div className="font-bold text-sm tabular-nums sm:text-base">
-						₮{product.price.toLocaleString()}
+						₮{currentPrice.toLocaleString()}
 					</div>
 					<div
 						className={cn(
@@ -161,7 +166,11 @@ export function ProductSummary({
 								: getStockColor(currentStock),
 						)}
 					>
-						{isOutOfStock ? <PackageX className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+						{isOutOfStock ? (
+							<PackageX className="h-3.5 w-3.5" />
+						) : (
+							<Package className="h-3.5 w-3.5" />
+						)}
 						<span className="font-bold text-xs tabular-nums sm:text-sm">
 							{isOutOfStock ? "0" : currentStock}
 						</span>
