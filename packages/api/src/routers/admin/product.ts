@@ -552,6 +552,8 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
             ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                 event: "updateProductField"
             });
+            if (error instanceof TRPCError)
+                throw error;
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to update product field",

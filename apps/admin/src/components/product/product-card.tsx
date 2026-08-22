@@ -66,12 +66,13 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 		...trpc.product.setProductStock.mutationOptions(),
 		onError: () => {
 			toast.error("Үлдэгдэл шинэчлэхэд алдаа гарлаа");
+			setStockValue(product.stock);
 		},
 		onSuccess: () => {
 			setIsStockEditing(false);
 		},
 		onSettled: () => {
-			invalidateProductCaches(queryClient);
+			invalidateProductCaches(queryClient, product.id);
 		},
 	});
 	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
