@@ -31,7 +31,7 @@ function OrderAddContent() {
 				onSuccess={() => {
 					toast.success("Захиалга амжилттай нэмэгдлээ");
 					queryClient.invalidateQueries(
-						trpc.order.getPaginatedOrders.queryOptions({}),
+						trpc.order.getPaginatedOrders.pathFilter(),
 					);
 					navigate({ to: "/orders" });
 				}}

@@ -173,7 +173,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 		...trpc.order.deleteOrder.mutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
+				trpc.order.getPaginatedOrders.pathFilter(),
 			);
 			navigate({ to: "/orders" });
 			toast.success("Захиалга устгагдлаа");
@@ -186,7 +186,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			onSuccess: () => {
 				invalidateOrder();
 				queryClient.invalidateQueries(
-					trpc.order.getPaginatedOrders.queryOptions({}),
+					trpc.order.getPaginatedOrders.pathFilter(),
 				);
 				toast.success("Төлөв шинэчлэгдлээ");
 			},
@@ -290,7 +290,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 				onSuccess={() => {
 					void invalidateOrder();
 					void queryClient.invalidateQueries(
-						trpc.order.getPaginatedOrders.queryOptions({}),
+						trpc.order.getPaginatedOrders.pathFilter(),
 					);
 				}}
 			/>

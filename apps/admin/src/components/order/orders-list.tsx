@@ -95,7 +95,7 @@ export default function OrdersList({
 			searchTerm,
 			date,
 		}),
-		refetchInterval: 15_000,
+		refetchInterval: 60_000,
 		refetchOnWindowFocus: true,
 	});
 	const orders = ordersData.orders;
@@ -173,7 +173,7 @@ export default function OrdersList({
 		failed,
 	}: BatchShipResult) => {
 		await queryClient.invalidateQueries(
-			trpc.order.getPaginatedOrders.queryOptions({}),
+			trpc.order.getPaginatedOrders.pathFilter(),
 		);
 
 		const okCount = total - failed.length;
@@ -213,7 +213,7 @@ export default function OrdersList({
 			}),
 		);
 		await queryClient.invalidateQueries(
-			trpc.order.getPaginatedOrders.queryOptions({}),
+			trpc.order.getPaginatedOrders.pathFilter(),
 		);
 		clearSelection();
 		setIsBatchUpdating(false);

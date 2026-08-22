@@ -62,8 +62,8 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 	const updateOrderStatus = useMutation({
 		...trpc.order.updateOrderStatus.mutationOptions(),
 		onSuccess: () => {
-			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
+			void queryClient.invalidateQueries(
+				trpc.order.getPaginatedOrders.pathFilter(),
 			);
 			toast.success("Захиалгын төлөв амжилттай шинэчлэгдлээ");
 		},
@@ -71,27 +71,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 
 	const deleteOrder = useMutation({
 		...trpc.order.deleteOrder.mutationOptions(),
-		onMutate: async (variables) => {
-			const qk = trpc.order.getPaginatedOrders.queryKey({});
-			await queryClient.cancelQueries({ queryKey: qk });
-			const previous = queryClient.getQueriesData({ queryKey: qk });
-			for (const [key, data] of previous) {
-				if (data && typeof data === "object" && "orders" in data) {
-					const typed = data as { orders: OrderType[]; pagination: unknown };
-					queryClient.setQueryData(key, {
-						...typed,
-						orders: typed.orders.filter((o) => o.id !== variables.id),
-					});
-				}
-			}
-			return { previous };
-		},
-		onError: (_error, _variables, context) => {
-			if (context?.previous) {
-				for (const [key, data] of context.previous) {
-					queryClient.setQueryData(key, data);
-				}
-			}
+		onError: () => {
 			toast.error("Захиалга устгахад алдаа гарлаа");
 		},
 		onSuccess: () => {
@@ -99,7 +79,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 		},
 		onSettled: () => {
 			void queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
+				trpc.order.getPaginatedOrders.pathFilter(),
 			);
 		},
 	});
@@ -150,7 +130,7 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 				addressZoneId={order.addressZoneId}
 				onSuccess={() => {
 					void queryClient.invalidateQueries(
-						trpc.order.getPaginatedOrders.queryOptions({}),
+						trpc.order.getPaginatedOrders.pathFilter(),
 					);
 				}}
 			/>
