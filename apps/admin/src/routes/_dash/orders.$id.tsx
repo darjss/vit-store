@@ -168,12 +168,14 @@ function OrderDetail({ orderId }: { orderId: number }) {
 		queryClient.invalidateQueries(
 			trpc.order.getOrderById.queryOptions({ id: orderId }),
 		);
+	const invalidateOrderLists = () =>
+		queryClient.invalidateQueries(trpc.order.getPaginatedOrders.pathFilter());
 
 	const { mutate: deleteOrder, isPending: isDeletePending } = useMutation({
 		...trpc.order.deleteOrder.mutationOptions(),
 		onSuccess: () => {
 			queryClient.invalidateQueries(
-				trpc.order.getPaginatedOrders.queryOptions({}),
+				trpc.order.getPaginatedOrders.pathFilter(),
 			);
 			navigate({ to: "/orders" });
 			toast.success("Захиалга устгагдлаа");
@@ -186,7 +188,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			onSuccess: () => {
 				invalidateOrder();
 				queryClient.invalidateQueries(
-					trpc.order.getPaginatedOrders.queryOptions({}),
+					trpc.order.getPaginatedOrders.pathFilter(),
 				);
 				toast.success("Төлөв шинэчлэгдлээ");
 			},
@@ -197,6 +199,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			...trpc.order.updateOrder.mutationOptions(),
 			onSuccess: () => {
 				invalidateOrder();
+				void invalidateOrderLists();
 				toast.success("Мэдээлэл хадгалагдлаа");
 			},
 		});
@@ -206,6 +209,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			...trpc.order.patchOrderHeader.mutationOptions(),
 			onSuccess: () => {
 				invalidateOrder();
+				void invalidateOrderLists();
 				toast.success("Мэдээлэл хадгалагдлаа");
 			},
 		});
@@ -289,9 +293,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 				addressZoneId={order.addressZoneId}
 				onSuccess={() => {
 					void invalidateOrder();
-					void queryClient.invalidateQueries(
-						trpc.order.getPaginatedOrders.queryOptions({}),
-					);
+					void invalidateOrderLists();
 				}}
 			/>
 

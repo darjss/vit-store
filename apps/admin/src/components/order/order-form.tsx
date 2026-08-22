@@ -82,9 +82,9 @@ const OrderForm = ({
 		...trpc.order.updateOrder.mutationOptions(),
 		onSuccess: async () => {
 			queryClient.invalidateQueries(trpc.order.getAllOrders.queryOptions());
-			queryClient.invalidateQueries({
-				...trpc.order.getPaginatedOrders.queryKey,
-			});
+			void queryClient.invalidateQueries(
+				trpc.order.getPaginatedOrders.pathFilter(),
+			);
 			onSuccess();
 		},
 		onError: (_error) => {
