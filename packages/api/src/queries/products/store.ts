@@ -202,18 +202,16 @@ export const storeQueries = {
 			});
 		},
 
-		async getPrerenderProducts() {
+		async getPrerenderCatalog() {
 			return db().query.ProductsTable.findMany({
 				columns: {
 					id: true,
 					slug: true,
-					stock: true,
 					oldSlugs: true,
 				},
 				where: and(
 					isNull(ProductsTable.deletedAt),
 					eq(ProductsTable.status, "active"),
-					gt(ProductsTable.stock, 0),
 				),
 			});
 		},

@@ -2,7 +2,7 @@
 import SearchPage from "@/components/search/search-page";
 import Layout from "@/layouts/Layout.astro";
 
-export const prerender = false;
+export const prerender = true;
 
 const title = "Хайлт";
 const description = "Америк Витамин дэлгүүрээс бүтээгдэхүүн хайх.";
@@ -10,7 +10,7 @@ const description = "Америк Витамин дэлгүүрээс бүтээ
 
 <Layout title={title} description={description} noindex>
 	<div class="min-h-[calc(100vh-200px)]">
-		<SearchPage client:load>
+		<SearchPage client:only="solid-js">
 			<div slot="fallback" class="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6">
 				<div class="border border-border bg-primary/10 px-4 py-4 rounded-lg shadow-soft sm:px-6">
 					<div class="h-8 w-48 mb-4 animate-pulse bg-foreground/10"></div>
