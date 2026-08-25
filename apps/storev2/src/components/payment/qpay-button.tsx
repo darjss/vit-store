@@ -39,6 +39,11 @@ interface QpayPaymentPanelProps {
 	checkoutToken?: string;
 }
 
+// QPay returns Social Pay with description "Голомт банк"; its link leads to
+// an extra hosted "step 2/2" QR screen we bypass by showing our own QR.
+const isSocialPay = (link: { name: string; description: string }) =>
+	/social/i.test(link.name) || /голомт/i.test(link.description);
+
 interface BankLogoProps {
 	logo?: string;
 	name?: string;
@@ -315,35 +320,53 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 					{/* Bank deeplinks grid — scheme links are dead clicks on desktop
 					    (no protocol handler), so desktop leads with QR only. */}
-					<Show
-						when={
-							(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()
-						}
-					>
+					<Show when={(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()}>
 						<div class="space-y-3">
 							<p class="font-semibold text-muted-foreground text-xs">
 								Банкаа сонгоно уу
 							</p>
 							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
 								<For each={invoiceData()?.urls ?? []}>
-									{(link) => (
-										<a
-											href={link.link}
-											onClick={() => handleBankClick(link)}
-											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
-										>
-											<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
-												<BankLogo
-													logo={link.logo}
-													name={link.name}
-													description={link.description}
-												/>
-											</div>
-											<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
-												{link.name || link.description || "Банк"}
-											</span>
-										</a>
-									)}
+									{(link) =>
+										isSocialPay(link) ? (
+											// Social Pay's target page is an extra "step 2/2"
+											// QR screen — a replay-observed abandonment point.
+											// Show our QR inline instead of navigating there.
+											<button
+												type="button"
+												onClick={() => setShowQr(true)}
+												class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
+											>
+												<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
+													<BankLogo
+														logo={link.logo}
+														name={link.name}
+														description={link.description}
+													/>
+												</div>
+												<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
+													{link.name || link.description || "Банк"}
+												</span>
+											</button>
+										) : (
+											<a
+												href={link.link}
+												onClick={() => handleBankClick(link)}
+												class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
+											>
+												<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
+													<BankLogo
+														logo={link.logo}
+														name={link.name}
+														description={link.description}
+													/>
+												</div>
+												<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
+													{link.name || link.description || "Банк"}
+												</span>
+											</a>
+										)
+									}
 								</For>
 							</div>
 							<Show when={isHandoffState(handoff(), "opening")}>
