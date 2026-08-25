@@ -16,8 +16,13 @@ export const HandoffState = createUnion({
 
 export type HandoffState = InferUnion<typeof HandoffState>;
 
-/** How long we wait for the browser to be backgrounded before giving up. */
-export const HANDOFF_TIMEOUT_MS = 2500;
+/**
+ * How long we wait for the browser to be backgrounded before giving up. iOS
+ * shows a consent dialog before a webview may open another app, and the page
+ * stays visible while it's up — 2.5s produced false `no_handoff` for users
+ * who simply took a moment to read and approve the dialog.
+ */
+export const HANDOFF_TIMEOUT_MS = 8000;
 
 /**
  * Starts visibility-based handoff detection for a tap already moved to
