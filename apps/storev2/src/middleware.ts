@@ -26,11 +26,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	}
 
 	const isPublicHtml = isPublicHtmlPath(url.pathname);
-	const hasPersonalization =
-		context.request.headers.has("cookie") ||
-		context.request.headers.has("authorization");
-	const mustBypass =
-		context.request.method !== "GET" || !isPublicHtml || hasPersonalization;
+	const mustBypass = context.request.method !== "GET" || !isPublicHtml;
 
 	if (mustBypass) {
 		context.cache.set(false);
@@ -44,9 +40,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	) {
 		context.cache.set(false);
 		setNoStore(response);
-	} else {
-		const vary = response.headers.get("Vary");
-		response.headers.set("Vary", vary ? `${vary}, Cookie` : "Cookie");
 	}
 	return response;
 });

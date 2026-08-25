@@ -1,4 +1,15 @@
 ---
+import { api } from "@/lib/trpc";
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+	const brands = await api.brand.getAllBrandsWithStock.query();
+	return brands
+		.filter((brand) => brand.slug)
+		.map((brand) => ({ params: { slug: brand.slug } }));
+}
+
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/404");
 return Astro.redirect(`/products/brand/${slug}/1/`, 301);
