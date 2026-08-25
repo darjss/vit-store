@@ -128,7 +128,7 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					</span>
 				</Show>
 			</button>
-			<Show when={isOutOfStock()}>
+			<Show when={isOutOfStock() && notifyOpen()}>
 				<RestockNotifySheet
 					open={notifyOpen()}
 					onOpenChange={setNotifyOpen}

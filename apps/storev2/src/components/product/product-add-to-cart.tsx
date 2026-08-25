@@ -1,8 +1,11 @@
+import {
+	DangerTriangleIcon as IconAlertTriangle,
+	BellIcon as IconNotification,
+} from "@solar-icons/solid/bold";
 import type { CartItems } from "@vit/shared/types";
-import { createEffect, createSignal, Match, Switch } from "solid-js";
+import { createEffect, createSignal, Match, Show, Switch } from "solid-js";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
-import { DangerTriangleIcon as IconAlertTriangle, BellIcon as IconNotification } from "@solar-icons/solid/bold";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
 import {
@@ -148,13 +151,15 @@ export default function ProductQuantitySelector(
 						Мэдэгдэл авах
 					</Button>
 
-					<RestockNotifySheet
-						open={notifyOpen()}
-						onOpenChange={setNotifyOpen}
-						productId={props.cartItem.productId}
-						productName={props.cartItem.name}
-						focusRestore={restockSheetFocusRestore}
-					/>
+					<Show when={notifyOpen()}>
+						<RestockNotifySheet
+							open
+							onOpenChange={setNotifyOpen}
+							productId={props.cartItem.productId}
+							productName={props.cartItem.name}
+							focusRestore={restockSheetFocusRestore}
+						/>
+					</Show>
 				</div>
 			</Match>
 		</Switch>

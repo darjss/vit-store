@@ -134,13 +134,15 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 					</Motion.div>
 				</Show>
 			</Presence>
-			<RestockNotifySheet
-				open={notifyOpen()}
-				onOpenChange={setNotifyOpen}
-				productId={props.cartItem.productId}
-				productName={props.cartItem.name}
-				focusRestore={restockSheetFocusRestore}
-			/>
+			<Show when={notifyOpen()}>
+				<RestockNotifySheet
+					open
+					onOpenChange={setNotifyOpen}
+					productId={props.cartItem.productId}
+					productName={props.cartItem.name}
+					focusRestore={restockSheetFocusRestore}
+				/>
+			</Show>
 		</>
 	);
 }
