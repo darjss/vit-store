@@ -4,7 +4,14 @@ import {
 	Wallet2Icon as IconWallet,
 } from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
-import { createEffect, createSignal, For, onMount, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import {
 	trackBankDeeplinkClicked,
@@ -86,12 +93,14 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		description: string;
 		link: string;
 	}) => {
-		if (!isHandoffState(handoff(), "idle")) return;
+		const current = handoff();
+		if (!isHandoffState(current, "idle") && !isHandoffState(current, "failed"))
+			return;
 		const bank = link.name || link.description || "Банк";
 		const opening = HandoffState.opening(bank, Date.now());
 		setHandoff(opening);
 		trackBankDeeplinkClicked(bank, props.paymentNumber);
-		watchHandoff(opening, {
+		const stopWatch = watchHandoff(opening, {
 			onOpened: () => {
 				trackBankDeeplinkOpened(
 					bank,
@@ -99,7 +108,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					Date.now() - opening.startedAt,
 				);
 				setHandoff(HandoffState.opened(bank));
-				watchReturnFromBankApp(() => setHandoff(HandoffState.idle()));
+				const stopReturnWatch = watchReturnFromBankApp(() =>
+					setHandoff(HandoffState.idle()),
+				);
+				onCleanup(stopReturnWatch);
 			},
 			onFailed: () => {
 				trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
@@ -107,6 +119,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				setShowQr(true);
 			},
 		});
+		onCleanup(stopWatch);
 	};
 
 	const isDesktop = () =>
