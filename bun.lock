@@ -8,6 +8,7 @@
         "@ai-sdk/google": "^3.0.80",
         "@corvu/drawer": "^0.2.4",
         "@t3-oss/env-core": "catalog:",
+        "dismatch": "^2.6.0",
         "dotenv": "^17.2.3",
         "string-similarity": "^4.0.4",
         "valibot": "catalog:",
@@ -1908,6 +1909,8 @@
     "devlop": ["devlop@1.1.0", "", { "dependencies": { "dequal": "^2.0.0" } }, "sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA=="],
 
     "diff": ["diff@8.0.2", "", {}, "sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg=="],
+
+    "dismatch": ["dismatch@2.6.0", "", {}, "sha512-5u3Z5WLApiZ4p+hGPzhGPE+SteVbVkfk1zTChX5TBv6SXHbgjyUBWtz1TVA8HrgqKEsak+yW5i6gDFazB8bfYA=="],
 
     "dlv": ["dlv@1.1.3", "", {}, "sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA=="],
 
