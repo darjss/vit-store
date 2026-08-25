@@ -187,6 +187,12 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					checkoutToken: props.checkoutToken,
 				});
 			},
+			// The global mutations.onError toast would surface the raw fetch
+			// message ("Load failed") on transient network blips and inside FB's
+			// webview. Invoice creation already has a dedicated retryable error
+			// card below plus trackQpayError/MutationCache reporting, so swallow
+			// the toast here; analytics still fire.
+			onError: () => {},
 		}),
 		() => queryClient,
 	);
@@ -232,7 +238,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					checkoutToken: props.checkoutToken,
 				}),
 			enabled: Boolean(invoiceData()?.invoice_id),
-			refetchInterval: 5000,
+			refetchInterval: (query) => (query.state.error ? 15000 : 5000),
 			staleTime: 0,
 		}),
 		() => queryClient,
