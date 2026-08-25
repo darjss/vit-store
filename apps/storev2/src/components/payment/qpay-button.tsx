@@ -6,8 +6,20 @@ import {
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
-import { trackQpayError } from "@/lib/analytics";
+import {
+	trackBankDeeplinkClicked,
+	trackBankDeeplinkNoHandoff,
+	trackBankDeeplinkOpened,
+	trackQpayError,
+} from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
+import {
+	HandoffState,
+	type HandoffState as HandoffStateType,
+	isHandoffState,
+	watchHandoff,
+	watchReturnFromBankApp,
+} from "@/lib/deeplink-handoff";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -62,6 +74,40 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	// previous view transition is still in-flight (or while the tab is hidden
 	// after the user switched to a bank app), which throws InvalidStateError.
 	const [navigated, setNavigated] = createSignal(false);
+	// Bank deep link tap lifecycle: idle → opening → opened | failed. Failed
+	// means the bank app never took over (common inside social-app webviews),
+	// so we surface QR/transfer as the recovery path.
+	const [handoff, setHandoff] = createSignal<HandoffStateType>(
+		HandoffState.idle(),
+	);
+
+	const handleBankClick = (link: {
+		name: string;
+		description: string;
+		link: string;
+	}) => {
+		if (!isHandoffState(handoff(), "idle")) return;
+		const bank = link.name || link.description || "Банк";
+		const opening = HandoffState.opening(bank, Date.now());
+		setHandoff(opening);
+		trackBankDeeplinkClicked(bank, props.paymentNumber);
+		watchHandoff(opening, {
+			onOpened: () => {
+				trackBankDeeplinkOpened(
+					bank,
+					props.paymentNumber,
+					Date.now() - opening.startedAt,
+				);
+				setHandoff(HandoffState.opened(bank));
+				watchReturnFromBankApp(() => setHandoff(HandoffState.idle()));
+			},
+			onFailed: () => {
+				trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
+				setHandoff(HandoffState.failed(bank));
+				setShowQr(true);
+			},
+		});
+	};
 
 	const isDesktop = () =>
 		typeof window !== "undefined" &&
@@ -259,6 +305,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									{(link) => (
 										<a
 											href={link.link}
+											onClick={() => handleBankClick(link)}
 											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
 										>
 											<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
@@ -275,6 +322,23 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									)}
 								</For>
 							</div>
+							<Show when={isHandoffState(handoff(), "opening")}>
+								<p class="flex animate-handoff-reveal items-center justify-center gap-2 text-muted-foreground text-xs">
+									<span
+										class="checkout-loader-ring size-3.5 rounded-full border-2 border-current/20 border-t-current"
+										aria-hidden="true"
+									/>
+									Апп нээж байна…
+								</p>
+							</Show>
+							<Show when={isHandoffState(handoff(), "failed")}>
+								<div class="flex animate-handoff-reveal items-start gap-2.5 rounded-xl bg-wash-lemon px-3 py-2.5">
+									<p class="text-[11px] text-foreground leading-snug">
+										Апп нээгдсэнгүй бол доорх QR кодоор төлж болно, эсвэл "Данс"
+										табыг сонгоод гарын үсгээр шилжүүлнэ үү.
+									</p>
+								</div>
+							</Show>
 						</div>
 					</Show>
 

@@ -138,6 +138,56 @@ export function trackCartOpened(cartCount: number, cartTotal: number) {
 }
 
 /**
+ * Detects social-app in-app browsers from the user agent. Deep links to bank
+ * apps frequently fail inside these webviews, so payment events carry this so
+ * failures can be attributed to a specific host app.
+ */
+export function detectInAppBrowser(): string {
+	if (typeof window === "undefined") return "unknown";
+	const ua = navigator.userAgent;
+	if (/FB_IAB|FBAN\/FBIOS/.test(ua)) return "facebook";
+	if (/Instagram/i.test(ua)) return "instagram";
+	if (/\bwv\b/.test(ua)) return "android_webview";
+	return "none";
+}
+
+/**
+ * Tracks the three moments of a bank deep link tap. Outcome detection lives
+ * in `deeplink-handoff.ts`; these just record it.
+ */
+export function trackBankDeeplinkClicked(bank: string, paymentNumber: string) {
+	capture("bank_deeplink_clicked", {
+		bank,
+		payment_number: paymentNumber,
+		in_app_browser: detectInAppBrowser(),
+	});
+}
+
+export function trackBankDeeplinkOpened(
+	bank: string,
+	paymentNumber: string,
+	elapsedMs: number,
+) {
+	capture("bank_deeplink_app_opened", {
+		bank,
+		payment_number: paymentNumber,
+		in_app_browser: detectInAppBrowser(),
+		elapsed_ms: elapsedMs,
+	});
+}
+
+export function trackBankDeeplinkNoHandoff(
+	bank: string,
+	paymentNumber: string,
+) {
+	capture("bank_deeplink_no_handoff", {
+		bank,
+		payment_number: paymentNumber,
+		in_app_browser: detectInAppBrowser(),
+	});
+}
+
+/**
  * Track when checkout page is loaded
  */
 export function trackCheckoutStarted(
