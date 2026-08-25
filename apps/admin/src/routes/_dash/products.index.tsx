@@ -9,6 +9,7 @@ import {
 	useNavigate,
 	useSearch,
 } from "@tanstack/react-router";
+import { status as productStatuses } from "@vit/shared/constants";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -32,7 +33,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { trpc, trpcClient } from "@/utils/trpc";
 import {
 	DEFAULT_PRODUCTS_PAGE_SIZE,
 	getScrollParent,
@@ -42,7 +42,7 @@ import {
 	type ProductListStatus,
 	type ProductsSearch,
 } from "@/features/products/list/products-list.helpers";
-import { status as productStatuses } from "@vit/shared/constants";
+import { trpc, trpcClient } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -225,7 +225,7 @@ function RouteComponent() {
 					placeholder="Бүтээгдэхүүн хайх..."
 					value={searchInput}
 					onChange={(e) => handleSearchChange(e.target.value)}
-					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-none focus:shadow-none focus:translate-y-0"
+					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-none focus:translate-y-0 focus:shadow-none"
 				/>
 				{searchInput && (
 					<button
@@ -446,9 +446,7 @@ function ProductsFilters({
 				</Select>
 				<Select
 					value={status}
-					onValueChange={(value) =>
-						onStatusChange(value as ProductListStatus)
-					}
+					onValueChange={(value) => onStatusChange(value as ProductListStatus)}
 				>
 					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[140px]">
 						<SelectValue placeholder="Төлөв" />
@@ -503,12 +501,12 @@ function ProductsFilters({
 					</Button>
 					<Button
 						size="sm"
-						variant={sortField === "createdAt" ? "default" : "outline"}
+						variant={sortField === "updatedAt" ? "default" : "outline"}
 						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => onSort("createdAt")}
+						onClick={() => onSort("updatedAt")}
 					>
 						Огноо
-						{sortField === "createdAt" &&
+						{sortField === "updatedAt" &&
 							(sortDirection === "asc" ? (
 								<ChevronUp className="ml-1 h-4 w-4" />
 							) : (
