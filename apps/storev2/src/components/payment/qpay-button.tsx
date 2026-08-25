@@ -1,20 +1,59 @@
+import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
+import {
+	QrCodeIcon as IconQrCode,
+	Wallet2Icon as IconWallet,
+} from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { trackQpayError } from "@/lib/analytics";
+import { resolveBankLogo } from "@/lib/bank-logos";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { QrCodeIcon as IconQrCode } from "@solar-icons/solid/linear";
-import { DangerCircleIcon as IconErrorWarning } from "@solar-icons/solid/bold";
 
 interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
 	checkoutToken?: string;
 }
+
+interface BankLogoProps {
+	logo?: string;
+	name?: string;
+	description?: string;
+}
+
+// QPay hotlinks bank logos from their CDN and most of them 404 in production.
+// Prefer a locally mapped asset; otherwise fall back to a generic wallet icon
+// when the remote logo fails to load so one broken image never breaks the grid.
+const BankLogo = (props: BankLogoProps) => {
+	const [failed, setFailed] = createSignal(false);
+	const localLogo = () => resolveBankLogo(props.name, props.description);
+	const src = () => localLogo() ?? props.logo;
+
+	return (
+		<Show
+			when={src() && !failed()}
+			fallback={
+				<IconWallet
+					class="h-full w-full p-1 text-muted-foreground sm:p-1.5"
+					aria-hidden="true"
+				/>
+			}
+		>
+			<img
+				src={src()}
+				alt={props.name || props.description}
+				class="h-full w-full object-contain p-1 sm:p-1.5"
+				loading="lazy"
+				onError={() => setFailed(true)}
+			/>
+		</Show>
+	);
+};
 
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
@@ -196,7 +235,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</button>
 
 						<Show when={showQr()}>
-							<div class="animate-qpay-qr-pop flex flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
+							<div class="flex animate-qpay-qr-pop flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
 								<img
 									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
 									alt="QPay QR"
@@ -223,11 +262,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
 										>
 											<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
-												<img
-													src={link.logo}
-													alt={link.name || link.description}
-													class="h-full w-full object-contain p-1 sm:p-1.5"
-													loading="lazy"
+												<BankLogo
+													logo={link.logo}
+													name={link.name}
+													description={link.description}
 												/>
 											</div>
 											<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
