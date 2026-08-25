@@ -4,10 +4,30 @@ import {
 	Wallet2Icon as IconWallet,
 } from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
-import { createEffect, createSignal, For, onMount, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
+import { supportPhone } from "@vit/shared/constants";
 import { buttonVariants } from "@/components/ui/button";
-import { trackQpayError } from "@/lib/analytics";
+import {
+	trackBankDeeplinkClicked,
+	trackBankDeeplinkNoHandoff,
+	trackBankDeeplinkOpened,
+	trackQpayError,
+} from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
+import {
+	HandoffState,
+	type HandoffState as HandoffStateType,
+	isHandoffState,
+	watchHandoff,
+	watchReturnFromBankApp,
+} from "@/lib/deeplink-handoff";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -20,10 +40,23 @@ interface QpayPaymentPanelProps {
 	checkoutToken?: string;
 }
 
+// QPay returns Social Pay with description "Голомт банк"; its link leads to
+// an extra hosted "step 2/2" QR screen we bypass by showing our own QR.
+const isSocialPay = (link: { name: string; description: string }) =>
+	/social/i.test(link.name) || /голомт/i.test(link.description);
+
 interface BankLogoProps {
 	logo?: string;
 	name?: string;
 	description?: string;
+}
+
+interface BankTileProps {
+	link: { name: string; description: string; logo: string; link: string };
+	// Social Pay renders as a button that reveals the inline QR; every other
+	// bank navigates its scheme link.
+	onSelect: () => void;
+	href?: string;
 }
 
 // QPay hotlinks bank logos from their CDN and most of them 404 in production.
@@ -55,6 +88,35 @@ const BankLogo = (props: BankLogoProps) => {
 	);
 };
 
+const tileClasses =
+	"group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2";
+
+const BankTile = (props: BankTileProps) => {
+	const children = (
+		<>
+			<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
+				<BankLogo
+					logo={props.link.logo}
+					name={props.link.name}
+					description={props.link.description}
+				/>
+			</div>
+			<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
+				{props.link.name || props.link.description || "Банк"}
+			</span>
+		</>
+	);
+	return props.href ? (
+		<a href={props.href} onClick={props.onSelect} class={tileClasses}>
+			{children}
+		</a>
+	) : (
+		<button type="button" onClick={props.onSelect} class={tileClasses}>
+			{children}
+		</button>
+	);
+};
+
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
 	// Guards the success redirect so the polling effect only fires it once.
@@ -62,6 +124,52 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	// previous view transition is still in-flight (or while the tab is hidden
 	// after the user switched to a bank app), which throws InvalidStateError.
 	const [navigated, setNavigated] = createSignal(false);
+	// Bank deep link tap lifecycle: idle → opening → opened | failed. Failed
+	// means the bank app never took over (common inside social-app webviews),
+	// so we surface QR/transfer as the recovery path.
+	const [handoff, setHandoff] = createSignal<HandoffStateType>(
+		HandoffState.idle(),
+	);
+	// Watcher stops accumulate here because onCleanup inside event handlers
+	// never registers: click handlers run outside any Solid reactive owner.
+	const stops: Array<() => void> = [];
+	onCleanup(() => {
+		for (const stop of stops) stop();
+	});
+
+	const handleBankClick = (link: {
+		name: string;
+		description: string;
+		link: string;
+	}) => {
+		const current = handoff();
+		if (!isHandoffState(current, "idle") && !isHandoffState(current, "failed"))
+			return;
+		const bank = link.name || link.description || "Банк";
+		const opening = HandoffState.opening(bank, Date.now());
+		setHandoff(opening);
+		trackBankDeeplinkClicked(bank, props.paymentNumber);
+		stops.push(
+			watchHandoff(opening, {
+				onOpened: () => {
+					trackBankDeeplinkOpened(
+						bank,
+						props.paymentNumber,
+						Date.now() - opening.startedAt,
+					);
+					setHandoff(HandoffState.opened(bank));
+					stops.push(
+						watchReturnFromBankApp(() => setHandoff(HandoffState.idle())),
+					);
+				},
+				onFailed: () => {
+					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
+					setHandoff(HandoffState.failed(bank));
+					setShowQr(true);
+				},
+			}),
+		);
+	};
 
 	const isDesktop = () =>
 		typeof window !== "undefined" &&
@@ -248,38 +356,64 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</Show>
 					</div>
 
-					{/* Bank deeplinks grid */}
-					<Show when={(invoiceData()?.urls?.length ?? 0) > 0}>
+					{/* Bank deeplinks grid — scheme links are dead clicks on desktop
+					    (no protocol handler), so desktop leads with QR only. */}
+					<Show when={(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()}>
 						<div class="space-y-3">
 							<p class="font-semibold text-muted-foreground text-xs">
 								Банкаа сонгоно уу
 							</p>
 							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
 								<For each={invoiceData()?.urls ?? []}>
-									{(link) => (
-										<a
-											href={link.link}
-											class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
-										>
-											<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
-												<BankLogo
-													logo={link.logo}
-													name={link.name}
-													description={link.description}
-												/>
-											</div>
-											<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
-												{link.name || link.description || "Банк"}
-											</span>
-										</a>
-									)}
+									{(link) =>
+										isSocialPay(link) ? (
+											// Social Pay's target page is an extra "step 2/2"
+											// QR screen — a replay-observed abandonment point.
+											// Show our QR inline instead of navigating there.
+											<BankTile link={link} onSelect={() => setShowQr(true)} />
+										) : (
+											<BankTile
+												link={link}
+												href={link.link}
+												onSelect={() => handleBankClick(link)}
+											/>
+										)
+									}
 								</For>
 							</div>
+							<Show when={isHandoffState(handoff(), "opening")}>
+								<p class="flex animate-handoff-reveal items-center justify-center gap-2 text-muted-foreground text-xs">
+									<span
+										class="checkout-loader-ring size-3.5 rounded-full border-2 border-current/20 border-t-current"
+										aria-hidden="true"
+									/>
+									Апп нээж байна…
+								</p>
+							</Show>
+							<Show when={isHandoffState(handoff(), "failed")}>
+								<div class="flex animate-handoff-reveal items-start gap-2.5 rounded-xl bg-wash-lemon px-3 py-2.5">
+									<p class="text-[11px] text-foreground leading-snug">
+										Апп нээгдсэнгүй бол доорх QR кодоор төлж болно, эсвэл "Данс"
+										табыг сонгоод гарын үсгээр шилжүүлнэ үү.
+									</p>
+								</div>
+							</Show>
 						</div>
 					</Show>
 
 					<p class="text-center text-[11px] text-muted-foreground">
 						Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.
+					</p>
+
+					<p class="text-center text-[11px] text-muted-foreground">
+						Төлбөр хийгдэхгүй байвал{" "}
+						<a
+							href={supportPhone.href}
+							class="font-medium text-foreground underline underline-offset-2"
+						>
+							{supportPhone.display}
+						</a>{" "}
+						дугаарт холбогдоно уу
 					</p>
 				</div>
 			</Show>

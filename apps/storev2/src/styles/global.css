@@ -544,6 +544,21 @@
         animation: qpay-qr-pop 600ms var(--ease-playful-spring) both;
     }
 
+    @keyframes handoff-reveal {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-handoff-reveal {
+        animation: handoff-reveal 300ms var(--ease-out-expo) both;
+    }
+
     @keyframes quantity-pop {
         50% {
             color: var(--color-destructive);
