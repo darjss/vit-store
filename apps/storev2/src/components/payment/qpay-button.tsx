@@ -87,6 +87,12 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [handoff, setHandoff] = createSignal<HandoffStateType>(
 		HandoffState.idle(),
 	);
+	// Watcher stops accumulate here because onCleanup inside event handlers
+	// never registers: click handlers run outside any Solid reactive owner.
+	const stops: Array<() => void> = [];
+	onCleanup(() => {
+		for (const stop of stops) stop();
+	});
 
 	const handleBankClick = (link: {
 		name: string;
@@ -100,26 +106,26 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		const opening = HandoffState.opening(bank, Date.now());
 		setHandoff(opening);
 		trackBankDeeplinkClicked(bank, props.paymentNumber);
-		const stopWatch = watchHandoff(opening, {
-			onOpened: () => {
-				trackBankDeeplinkOpened(
-					bank,
-					props.paymentNumber,
-					Date.now() - opening.startedAt,
-				);
-				setHandoff(HandoffState.opened(bank));
-				const stopReturnWatch = watchReturnFromBankApp(() =>
-					setHandoff(HandoffState.idle()),
-				);
-				onCleanup(stopReturnWatch);
-			},
-			onFailed: () => {
-				trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
-				setHandoff(HandoffState.failed(bank));
-				setShowQr(true);
-			},
-		});
-		onCleanup(stopWatch);
+		stops.push(
+			watchHandoff(opening, {
+				onOpened: () => {
+					trackBankDeeplinkOpened(
+						bank,
+						props.paymentNumber,
+						Date.now() - opening.startedAt,
+					);
+					setHandoff(HandoffState.opened(bank));
+					stops.push(
+						watchReturnFromBankApp(() => setHandoff(HandoffState.idle())),
+					);
+				},
+				onFailed: () => {
+					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
+					setHandoff(HandoffState.failed(bank));
+					setShowQr(true);
+				},
+			}),
+		);
 	};
 
 	const isDesktop = () =>
