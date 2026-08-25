@@ -12,6 +12,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { supportPhone } from "@vit/shared/constants";
 import { buttonVariants } from "@/components/ui/button";
 import {
 	trackBankDeeplinkClicked,
@@ -402,6 +403,17 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 					<p class="text-center text-[11px] text-muted-foreground">
 						Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.
+					</p>
+
+					<p class="text-center text-[11px] text-muted-foreground">
+						Төлбөр хийгдэхгүй байвал{" "}
+						<a
+							href={supportPhone.href}
+							class="font-medium text-foreground underline underline-offset-2"
+						>
+							{supportPhone.display}
+						</a>{" "}
+						дугаарт холбогдоно уу
 					</p>
 				</div>
 			</Show>

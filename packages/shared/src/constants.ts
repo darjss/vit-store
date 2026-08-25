@@ -18,6 +18,12 @@ export const paymentProvider = ["qpay", "transfer", "cash"] as const;
  */
 export const BANK_TRANSFER_ENABLED = true;
 
+/** Customer support phone: tel: href and its display form. */
+export const supportPhone = {
+	href: "tel:+97699993950",
+	display: "9999-3950",
+} as const;
+
 export const deliveryProvider = [
 	"tu-delivery",
 	"self",
