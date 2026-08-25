@@ -50,6 +50,14 @@ interface BankLogoProps {
 	description?: string;
 }
 
+interface BankTileProps {
+	link: { name: string; description: string; logo: string; link: string };
+	// Social Pay renders as a button that reveals the inline QR; every other
+	// bank navigates its scheme link.
+	onSelect: () => void;
+	href?: string;
+}
+
 // QPay hotlinks bank logos from their CDN and most of them 404 in production.
 // Prefer a locally mapped asset; otherwise fall back to a generic wallet icon
 // when the remote logo fails to load so one broken image never breaks the grid.
@@ -76,6 +84,35 @@ const BankLogo = (props: BankLogoProps) => {
 				onError={() => setFailed(true)}
 			/>
 		</Show>
+	);
+};
+
+const tileClasses =
+	"group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2";
+
+const BankTile = (props: BankTileProps) => {
+	const children = (
+		<>
+			<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
+				<BankLogo
+					logo={props.link.logo}
+					name={props.link.name}
+					description={props.link.description}
+				/>
+			</div>
+			<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
+				{props.link.name || props.link.description || "Банк"}
+			</span>
+		</>
+	);
+	return props.href ? (
+		<a href={props.href} onClick={props.onSelect} class={tileClasses}>
+			{children}
+		</a>
+	) : (
+		<button type="button" onClick={props.onSelect} class={tileClasses}>
+			{children}
+		</button>
 	);
 };
 
@@ -332,39 +369,13 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 											// Social Pay's target page is an extra "step 2/2"
 											// QR screen — a replay-observed abandonment point.
 											// Show our QR inline instead of navigating there.
-											<button
-												type="button"
-												onClick={() => setShowQr(true)}
-												class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
-											>
-												<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
-													<BankLogo
-														logo={link.logo}
-														name={link.name}
-														description={link.description}
-													/>
-												</div>
-												<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
-													{link.name || link.description || "Банк"}
-												</span>
-											</button>
+											<BankTile link={link} onSelect={() => setShowQr(true)} />
 										) : (
-											<a
+											<BankTile
+												link={link}
 												href={link.link}
-												onClick={() => handleBankClick(link)}
-												class="group flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/50 active:scale-[0.97] sm:p-2"
-											>
-												<div class="group-hover:-translate-y-0.5 size-12 overflow-hidden rounded-xl border border-border bg-background shadow-soft-sm transition-[transform,box-shadow] duration-[140ms] ease-out group-hover:shadow-soft sm:size-16">
-													<BankLogo
-														logo={link.logo}
-														name={link.name}
-														description={link.description}
-													/>
-												</div>
-												<span class="line-clamp-2 text-center font-medium text-[10px] text-foreground leading-tight sm:text-xs">
-													{link.name || link.description || "Банк"}
-												</span>
-											</a>
+												onSelect={() => handleBankClick(link)}
+											/>
 										)
 									}
 								</For>
