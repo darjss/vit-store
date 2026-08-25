@@ -2,6 +2,8 @@
 import OrderTrackingForm from "@/components/order-tracking-form";
 import Layout from "@/layouts/Layout.astro";
 
+export const prerender = true;
+
 const title = "Захиалга хянах";
 const description = "Amerik Vitamin - захиалгынхаа төлөвийг хянах. Утасны дугаар, захиалгын дугаараа оруулан мэдээлэл авах.";
 ---
@@ -15,6 +17,6 @@ const description = "Amerik Vitamin - захиалгынхаа төлөвийг 
       </p>
     </div>
 
-    <OrderTrackingForm client:load />
+    <OrderTrackingForm client:only="solid-js" />
   </div>
 </Layout>

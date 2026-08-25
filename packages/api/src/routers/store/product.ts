@@ -217,9 +217,9 @@ export const product = router({
 		}
 	}),
 
-	getPrerenderProducts: publicProcedure.query(async ({ ctx }) => {
+	getPrerenderCatalog: publicProcedure.query(async ({ ctx }) => {
 		const q = productQueries.store;
-		const products = await q.getPrerenderProducts();
+		const products = await q.getPrerenderCatalog();
 		markCacheable(ctx, CACHE_POLICY.productsList, [PRODUCTS_TAG]);
 		return products;
 	}),

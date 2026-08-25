@@ -7,6 +7,8 @@ import { dehydrateSeeds } from "@/lib/hydration";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
 
+export const prerender = true;
+
 const INITIAL_PAGE_SIZE = 12;
 const SITE_URL = "https://amerikvitamin.mn";
 
@@ -62,12 +64,6 @@ const itemListSchema = {
 		name: product.name,
 	})),
 };
-
-Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
-	tags: ["site-shell", "catalog"],
-});
 ---
 
 <Layout title={title} description={description}>

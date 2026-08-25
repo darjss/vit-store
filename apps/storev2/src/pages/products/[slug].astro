@@ -1,11 +1,4 @@
 ---
-
-
-
-
-
-
-
 import Breadcrumb from "@/components/product/breadcrumb.astro";
 import ProductDetails from "@/components/product/product-details.astro";
 import ProductImageCarousel from "@/components/product/product-image-carousel.tsx";
@@ -15,13 +8,38 @@ import StickyMobileCta from "@/components/product/sticky-mobile-cta";
 import Layout from "@/layouts/Layout.astro";
 import { washBg } from "@/lib/wash";
 
-export const prerender = false;
+export const prerender = true;
 
 const SITE_URL = "https://amerikvitamin.mn";
 
 import { api } from "@/lib/trpc";
 
+export async function getStaticPaths() {
+	const products = await api.product.getPrerenderCatalog.query();
+
+	return products.flatMap((product) => {
+		const canonicalSlug = `${product.slug}-${product.id}`;
+		return [
+			{
+				params: { slug: canonicalSlug },
+				props: { redirectTo: null },
+			},
+			...product.oldSlugs
+				.filter((oldSlug) => oldSlug && oldSlug !== product.slug)
+				.map((oldSlug) => ({
+					params: { slug: `${oldSlug}-${product.id}` },
+					props: { redirectTo: canonicalSlug },
+				})),
+		];
+	});
+}
+
 const { slug } = Astro.params;
+const { redirectTo } = Astro.props as { redirectTo: string | null };
+
+if (redirectTo) {
+	return Astro.redirect(`/products/${redirectTo}/`, 301);
+}
 
 const slugParts = slug?.split("-") ?? [];
 const productId = Number(slugParts[slugParts.length - 1]);
@@ -39,15 +57,14 @@ if (!productData) {
 
 const product = productData;
 
-// Old or non-canonical slugs redirect at request time so the stock-sensitive
-// PDP remains on-demand instead of freezing a build-time path list.
+// Keep the generated canonical path honest if catalog data changes during a build.
 const canonicalSlug = `${product.slug}-${product.id}`;
 if (slug !== canonicalSlug) {
 	return Astro.redirect(`/products/${canonicalSlug}/`, 301);
 }
 
-// This is last-known server data for first paint. The client reconciler fetches
-// the authoritative short-lived inventory snapshot after hydration.
+// This is build-time data for first paint. The client reconciler fetches the
+// authoritative short-lived inventory snapshot before enabling purchase actions.
 const isInStock = product.status === "active" && product.stock > 0;
 
 const categoryHref = product.category?.slug
@@ -151,12 +168,6 @@ const breadcrumbSchema = {
 		}
 	]
 };
-
-Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
-	tags: ["site-shell", "catalog", `product-${product.id}`],
-});
 ---
 
 <Layout 
