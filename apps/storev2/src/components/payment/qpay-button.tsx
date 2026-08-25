@@ -313,8 +313,13 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						</Show>
 					</div>
 
-					{/* Bank deeplinks grid */}
-					<Show when={(invoiceData()?.urls?.length ?? 0) > 0}>
+					{/* Bank deeplinks grid — scheme links are dead clicks on desktop
+					    (no protocol handler), so desktop leads with QR only. */}
+					<Show
+						when={
+							(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()
+						}
+					>
 						<div class="space-y-3">
 							<p class="font-semibold text-muted-foreground text-xs">
 								Банкаа сонгоно уу
