@@ -3,8 +3,9 @@ import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
 import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 import * as v from "valibot";
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, ProductsTable, } from "~/db/schema";
+import { cartFingerprint } from "~/lib/order/cart-fingerprint";
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
@@ -138,6 +139,8 @@ export const order = router({
             const orderNumber = generateOrderNumber();
             const paymentNumberGenerated = generatePaymentNumber();
             const customerPhone = Number(input.phoneNumber);
+            const submittedFingerprint = cartFingerprint(normalizedProducts);
+            const reuseAfter = new Date(Date.now() - 2 * 60 * 60 * 1000);
             const txResult = await ctx.db.transaction(async (tx) => {
                 const existingCustomer = await tx.query.CustomersTable.findFirst({
                     where: eq(CustomersTable.phone, customerPhone),
@@ -163,6 +166,50 @@ export const order = router({
                         .returning();
                 if (!customer)
                     throw new Error("No customer returned");
+                const pendingOrder = await tx.query.OrdersTable.findFirst({
+                    where: and(
+                        eq(OrdersTable.customerPhone, customerPhone),
+                        eq(OrdersTable.status, "created"),
+                        isNull(OrdersTable.deletedAt),
+                        gte(OrdersTable.createdAt, reuseAfter),
+                    ),
+                    orderBy: desc(OrdersTable.createdAt),
+                    with: {
+                        orderDetails: {
+                            columns: { productId: true, quantity: true },
+                            where: isNull(OrderDetailsTable.deletedAt),
+                        },
+                        payments: {
+                            columns: { paymentNumber: true, status: true },
+                            where: isNull(PaymentsTable.deletedAt),
+                            orderBy: desc(PaymentsTable.createdAt),
+                        },
+                    },
+                });
+                const pendingPayment = pendingOrder?.payments.find(
+                    (payment) => payment.status === "pending" && payment.paymentNumber,
+                );
+                if (
+                    pendingOrder &&
+                    pendingPayment &&
+                    cartFingerprint(pendingOrder.orderDetails) === submittedFingerprint
+                ) {
+                    await tx
+                        .update(OrdersTable)
+                        .set({
+                            address: input.address,
+                            addressZoneId: input.addressZoneId ?? pendingOrder.addressZoneId,
+                            notes: input.notes ?? null,
+                        })
+                        .where(eq(OrdersTable.id, pendingOrder.id));
+                    return {
+                        customer,
+                        reused: true as const,
+                        orderId: pendingOrder.id,
+                        orderNumber: pendingOrder.orderNumber,
+                        paymentNumber: pendingPayment.paymentNumber,
+                    };
+                }
                 const [createdOrder] = await tx
                     .insert(OrdersTable)
                     .values({
@@ -196,21 +243,35 @@ export const order = router({
                     .returning({ paymentNumber: PaymentsTable.paymentNumber });
                 return {
                     customer,
+                    reused: false as const,
                     orderId: createdOrder.orderId,
+                    orderNumber,
                     paymentNumber: payment?.paymentNumber ?? null,
                 };
             });
             const orderId = txResult.orderId;
-            ctx.log.info("order.created", {
-                orderId,
-                orderNumber,
-                customerPhone: Number(input.phoneNumber),
-                total,
-                itemCount: normalizedProducts.length,
-                status_text: "created",
-            });
+            const reused = txResult.reused;
+            const resolvedOrderNumber = txResult.orderNumber;
+            if (reused) {
+                ctx.log.info("order.checkout_reused", {
+                    orderId,
+                    orderNumber: resolvedOrderNumber,
+                    customerPhone: Number(input.phoneNumber),
+                    total,
+                    itemCount: normalizedProducts.length,
+                });
+            } else {
+                ctx.log.info("order.created", {
+                    orderId,
+                    orderNumber: resolvedOrderNumber,
+                    customerPhone: Number(input.phoneNumber),
+                    total,
+                    itemCount: normalizedProducts.length,
+                    status_text: "created",
+                });
+            }
             const paymentNumber = txResult.paymentNumber;
-            if (paymentNumber) {
+            if (paymentNumber && !reused) {
                 ctx.log.info("payment.created", {
                     paymentNumber,
                     orderId,
@@ -222,7 +283,7 @@ export const order = router({
 
             // Keep speculative QPay invoice creation alive after the response.
             // Failure is non-fatal — createQr is the fallback.
-            if (paymentNumber) {
+            if (paymentNumber && !reused) {
                 ctx.c.executionCtx.waitUntil(precreateQpayInvoice(paymentNumber).catch((error) => {
                     ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
                         event: "qpay.invoice_precreate_failed",
@@ -232,19 +293,21 @@ export const order = router({
             }
 
             // Fire-and-forget server-side PostHog tracking
-            trackOrderCreatedServerSide({
-                phone: input.phoneNumber,
-                orderNumber,
-                paymentNumber: paymentNumber ?? undefined,
-                itemCount: normalizedProducts.length,
-                total,
-                referrer: ctx.c.req.header("referer") ?? undefined,
-            }).catch(() => {});
+            if (!reused) {
+                trackOrderCreatedServerSide({
+                    phone: input.phoneNumber,
+                    orderNumber: resolvedOrderNumber,
+                    paymentNumber: paymentNumber ?? undefined,
+                    itemCount: normalizedProducts.length,
+                    total,
+                    referrer: ctx.c.req.header("referer") ?? undefined,
+                }).catch(() => {});
+            }
 
             const checkoutToken = paymentNumber
                 ? await createCheckoutAccessToken(ctx, {
                     orderId,
-                    orderNumber,
+                    orderNumber: resolvedOrderNumber,
                     paymentNumber,
                     phone: Number(input.phoneNumber),
                 })
@@ -253,7 +316,7 @@ export const order = router({
                 ...txResult.customer,
                 trust: "checkout_guest" as const,
                 checkout: paymentNumber
-                    ? { orderId, orderNumber, paymentNumber }
+                    ? { orderId, orderNumber: resolvedOrderNumber, paymentNumber }
                     : undefined,
             } satisfies typeof txResult.customer & CustomerSessionClaims;
             const { session, token } = await createSession(checkoutGuestUser, kv());
@@ -265,11 +328,12 @@ export const order = router({
             });
             ctx.log.info("order.flow_complete", {
                 orderId,
-                orderNumber,
+                orderNumber: resolvedOrderNumber,
                 paymentNumber,
+                reused,
                 durationMs,
             });
-            if (paymentNumber) {
+            if (paymentNumber && !reused) {
                 try {
                     const paymentInfo = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
                     if (paymentInfo) {
@@ -293,7 +357,7 @@ export const order = router({
                     ctx.log.error(notificationError instanceof Error ? notificationError : new Error(String(notificationError)), {
                         event: "order.notification_failed",
                         paymentNumber,
-                        orderNumber
+                        orderNumber: resolvedOrderNumber
                     });
                 }
             }
@@ -301,8 +365,9 @@ export const order = router({
             // need a second getPaymentByNumber round-trip after addOrder.
             return {
                 paymentNumber,
-                orderNumber,
+                orderNumber: resolvedOrderNumber,
                 checkoutToken,
+                reused,
                 total,
                 customerPhone: input.phoneNumber,
                 accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,

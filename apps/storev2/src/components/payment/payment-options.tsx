@@ -6,7 +6,19 @@ import ConfirmPaymentButton from "@/components/payment/confirm-payment-button";
 import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { buttonVariants } from "@/components/ui/button";
+import {
+	createSheetFocusRestore,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { showToast } from "@/components/ui/toast";
+import {
+	trackPaymentRecoveryChosen,
+	trackPaymentRecoverySheetShown,
+} from "@/lib/analytics";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -58,6 +70,10 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 	const [tab, setTab] = createSignal<"transfer" | "qpay">(
 		props.provider === "transfer" ? "transfer" : "qpay",
 	);
+	const [recoveryOpen, setRecoveryOpen] = createSignal(false);
+	const [forceShowQr, setForceShowQr] = createSignal(false);
+	const recoveryFocusRestore = createSheetFocusRestore();
+	let recoveryReason: "no_handoff" | "returned_unpaid" = "no_handoff";
 
 	const selectTransferMutation = useMutation(
 		() => ({
@@ -99,6 +115,30 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 			keySuffix: "transfer-tab",
 		},
 	);
+
+	createEffect(() => {
+		if (!recoveryOpen()) return;
+		trackPaymentRecoverySheetShown(props.paymentNumber, recoveryReason);
+	});
+
+	const openRecovery = (reason: "no_handoff" | "returned_unpaid") => {
+		recoveryReason = reason;
+		setRecoveryOpen(true);
+	};
+
+	const chooseRecovery = (choice: "qr" | "transfer" | "dismiss") => {
+		if (!recoveryOpen()) return;
+		setRecoveryOpen(false);
+		trackPaymentRecoveryChosen(props.paymentNumber, choice);
+		if (choice === "qr") {
+			setTab("qpay");
+			setForceShowQr(true);
+			return;
+		}
+		if (choice === "transfer") {
+			selectTab("transfer");
+		}
+	};
 
 	createEffect(() => {
 		if (advanced() || transferStatusQuery.data?.status !== "success") {
@@ -285,10 +325,62 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							paymentNumber={props.paymentNumber}
 							amount={props.total}
 							checkoutToken={props.checkoutToken}
+							forceShowQr={forceShowQr()}
+							onRecovery={openRecovery}
 						/>
 					</div>
 				</div>
 			</Show>
+
+			<Sheet
+				open={recoveryOpen()}
+				onOpenChange={(open) => {
+					if (!open) {
+						chooseRecovery("dismiss");
+						return;
+					}
+					setRecoveryOpen(true);
+				}}
+			>
+				<SheetContent
+					position="bottom"
+					closeLabel="Хаах"
+					focusRestore={recoveryFocusRestore}
+					class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+				>
+					<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
+						<SheetTitle class="font-display font-bold text-lg tracking-tight">
+							Апп нээгдсэнгүй
+						</SheetTitle>
+						<SheetDescription class="text-muted-foreground text-sm">
+							QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?
+						</SheetDescription>
+					</SheetHeader>
+					<div class="space-y-2 px-5 py-5">
+						<button
+							type="button"
+							class={cn(buttonVariants())}
+							onClick={() => chooseRecovery("qr")}
+						>
+							QR код уншуулах
+						</button>
+						<button
+							type="button"
+							class={cn(buttonVariants({ variant: "dark" }))}
+							onClick={() => chooseRecovery("transfer")}
+						>
+							Дансаар шилжүүлэх
+						</button>
+						<button
+							type="button"
+							class="w-full py-2 text-center text-muted-foreground text-xs"
+							onClick={() => chooseRecovery("dismiss")}
+						>
+							Банкаа дахин сонгох
+						</button>
+					</div>
+				</SheetContent>
+			</Sheet>
 		</div>
 	);
 };

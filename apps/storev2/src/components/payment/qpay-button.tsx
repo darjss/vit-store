@@ -38,6 +38,8 @@ interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
 	checkoutToken?: string;
+	forceShowQr?: boolean;
+	onRecovery?: (reason: "no_handoff" | "returned_unpaid") => void;
 }
 
 // QPay returns Social Pay with description "Голомт банк"; its link leads to
@@ -119,6 +121,7 @@ const BankTile = (props: BankTileProps) => {
 
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
+	let qrSection: HTMLDivElement | undefined;
 	// Guards the success redirect so the polling effect only fires it once.
 	// Without this, the 5s refetchInterval re-runs the effect while the
 	// previous view transition is still in-flight (or while the tab is hidden
@@ -159,13 +162,16 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					);
 					setHandoff(HandoffState.opened(bank));
 					stops.push(
-						watchReturnFromBankApp(() => setHandoff(HandoffState.idle())),
+						watchReturnFromBankApp(() => {
+							setHandoff(HandoffState.idle());
+							props.onRecovery?.("returned_unpaid");
+						}),
 					);
 				},
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
-					setShowQr(true);
+					props.onRecovery?.("no_handoff");
 				},
 			}),
 		);
@@ -177,6 +183,14 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	onMount(() => {
 		setShowQr(isDesktop());
+	});
+
+	createEffect(() => {
+		if (!props.forceShowQr) return;
+		setShowQr(true);
+		queueMicrotask(() => {
+			qrSection?.scrollIntoView({ behavior: "smooth", block: "center" });
+		});
 	});
 
 	const mutation = useMutation(
@@ -332,7 +346,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					</Show>
 
 					{/* QR Code toggle */}
-					<div class="space-y-3">
+					<div class="space-y-3" ref={qrSection}>
 						<button
 							type="button"
 							onClick={() => setShowQr((v) => !v)}
@@ -389,14 +403,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									/>
 									Апп нээж байна…
 								</p>
-							</Show>
-							<Show when={isHandoffState(handoff(), "failed")}>
-								<div class="flex animate-handoff-reveal items-start gap-2.5 rounded-xl bg-wash-lemon px-3 py-2.5">
-									<p class="text-[11px] text-foreground leading-snug">
-										Апп нээгдсэнгүй бол доорх QR кодоор төлж болно, эсвэл "Данс"
-										табыг сонгоод гарын үсгээр шилжүүлнэ үү.
-									</p>
-								</div>
 							</Show>
 						</div>
 					</Show>

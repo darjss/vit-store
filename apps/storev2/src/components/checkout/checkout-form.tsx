@@ -19,9 +19,12 @@ import { Motion, Presence } from "solid-motionone";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import PaymentOptions from "@/components/payment/payment-options";
+import { writeActivePayment } from "@/lib/active-payment";
 import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
+import { paymentUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { cart, createCartState } from "@/store/cart";
@@ -105,17 +108,28 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 				}
 
 				identifyUser(variables.phoneNumber);
-				showToast({
-					title: "Амжилттай",
-					description: "Захиалга амжилттай үүслээ",
-					variant: "success",
-					duration: 5000,
-				});
+				writeActivePayment(paymentNumber, data.checkoutToken ?? undefined);
 
-				// F9/H5: addOrder now returns the full PaymentOptions props
-				// (total, orderNumber, customerPhone, accountNumber,
-				// accountName), so the redundant getPaymentByNumber round-trip
-				// and its silent catch are gone.
+				if (data.reused) {
+					showToast({
+						title: "Үргэлжлүүлнэ үү",
+						description: "Өмнөх төлбөрөө дуусгана уу",
+						variant: "success",
+						duration: 4000,
+					});
+				} else {
+					showToast({
+						title: "Амжилттай",
+						description: "Захиалга амжилттай үүслээ",
+						variant: "success",
+						duration: 5000,
+					});
+					celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
+				}
+
+				void safeNavigate(
+					paymentUrl(paymentNumber, data.checkoutToken ?? undefined),
+				);
 				setPaymentInfo({
 					paymentNumber,
 					checkoutToken: data.checkoutToken ?? undefined,
@@ -126,8 +140,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					accountName: data.accountName,
 				});
 				setStep("payment");
-				window.scrollTo({ top: 0, behavior: "smooth" });
-				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
 			},
 			onError: () => {
 				showToast({
