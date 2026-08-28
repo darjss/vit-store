@@ -1,5 +1,6 @@
 ---
 import HomeProductCard from "@/components/product/home-product-card.astro";
+import ResumePendingPayment from "@/components/payment/resume-pending-payment";
 import MobileSearchBar from "@/components/search/mobile-search-bar";
 import Layout from "@/layouts/Layout.astro";
 import { toProductImageUrl } from "@/lib/image";
@@ -62,6 +63,7 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
   image="/og-landing.png"
   imageAlt="Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл"
 >
+  <ResumePendingPayment client:load />
   <!-- Persistent mobile search bar (below header) -->
   <div class="md:hidden border-b border-border bg-background px-4 py-3">
     <MobileSearchBar client:idle />

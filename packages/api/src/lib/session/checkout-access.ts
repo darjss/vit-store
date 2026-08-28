@@ -1,7 +1,8 @@
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeHexLowerCase } from "@oslojs/encoding";
 import { TRPCError } from "@trpc/server";
-import type { Context, CustomerSelectType } from "~/lib/context";
+import type { Context, CustomerSelectType, UserSelectType } from "~/lib/context";
+import { auth } from "~/lib/session/store";
 import { paymentQueries } from "~/queries/payments";
 import { orderQueries } from "~/queries/orders";
 
@@ -61,14 +62,25 @@ async function validateCheckoutToken(
 	return record.tokenHash === hashToken(checkoutToken) ? record : null;
 }
 
-function getCustomerClaims(ctx: Context): CustomerSessionClaims | null {
-	const user = ctx.session?.user;
-	if (!user || !("phone" in user)) return null;
-	return user as CustomerSessionClaims;
+function customerClaimsFromUser(
+	user: CustomerSelectType | UserSelectType | null | undefined,
+): CustomerSessionClaims | null {
+	if (!user) return null;
+	if (!("phone" in user)) return null;
+	return user;
+}
+
+async function resolveCustomerClaims(
+	ctx: Context,
+): Promise<CustomerSessionClaims | null> {
+	if (!ctx.session) {
+		ctx.session = await auth(ctx);
+	}
+	return customerClaimsFromUser(ctx.session?.user);
 }
 
 export function isPhoneVerifiedCustomer(ctx: Context): boolean {
-	return getCustomerClaims(ctx)?.trust === "phone_verified";
+	return customerClaimsFromUser(ctx.session?.user)?.trust === "phone_verified";
 }
 
 export async function assertCanAccessPayment(
@@ -81,7 +93,7 @@ export async function assertCanAccessPayment(
 		throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
 	}
 
-	const claims = getCustomerClaims(ctx);
+	const claims = await resolveCustomerClaims(ctx);
 	if (
 		claims?.trust === "phone_verified" &&
 		claims.phone === payment.order.customerPhone
@@ -118,7 +130,7 @@ export async function assertCanAccessOrder(
 	}
 
 	const paymentNumber = order.payments[0]?.paymentNumber;
-	const claims = getCustomerClaims(ctx);
+	const claims = await resolveCustomerClaims(ctx);
 	if (claims?.trust === "phone_verified" && claims.phone === order.customerPhone) {
 		return order;
 	}

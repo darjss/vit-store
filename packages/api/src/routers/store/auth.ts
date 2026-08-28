@@ -183,13 +183,13 @@ export const storeAuthRouter = router({
     me: customerProcedure.query(async ({ ctx }) => {
         return ctx.session.user;
     }),
-    check: publicProcedure.query(async ({ ctx }) => {
+    check: publicProcedure.query(async ({ ctx }): Promise<CustomerSessionClaims | null> => {
         try {
             const session = await authCheck(ctx);
             if (session === null) {
                 return null;
             }
-            return session?.user;
+            return session.user;
         }
         catch (e) {
             ctx.log.error(e instanceof Error ? e : new Error(String(e)), {

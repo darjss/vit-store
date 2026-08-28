@@ -1,6 +1,7 @@
-import { createCustomerSessionManager } from "~/lib/session/index";
+import { createSessionManager } from "~/lib/session/index";
+import type { CustomerSessionClaims } from "~/lib/session/checkout-access";
 
-const storeSessionManager = createCustomerSessionManager({
+const storeSessionManager = createSessionManager<CustomerSessionClaims>({
 	kvSessionPrefix: "store_session",
 	kvUserSessionPrefix: "store_user_sessions",
 	cookieName: "store_session",

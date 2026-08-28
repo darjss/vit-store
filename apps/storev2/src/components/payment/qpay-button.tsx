@@ -4,6 +4,7 @@ import {
 	Wallet2Icon as IconWallet,
 } from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
+import { BANK_TRANSFER_ENABLED, supportPhone } from "@vit/shared/constants";
 import {
 	createEffect,
 	createSignal,
@@ -12,12 +13,21 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { supportPhone } from "@vit/shared/constants";
 import { buttonVariants } from "@/components/ui/button";
+import {
+	createSheetFocusRestore,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import {
 	trackBankDeeplinkClicked,
 	trackBankDeeplinkNoHandoff,
 	trackBankDeeplinkOpened,
+	trackPaymentRecoveryChosen,
+	trackPaymentRecoverySheetShown,
 	trackQpayError,
 } from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
@@ -38,8 +48,7 @@ interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
 	checkoutToken?: string;
-	forceShowQr?: boolean;
-	onRecovery?: (reason: "no_handoff" | "returned_unpaid") => void;
+	onChooseTransfer?: () => void;
 }
 
 // QPay returns Social Pay with description "Голомт банк"; its link leads to
@@ -133,6 +142,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [handoff, setHandoff] = createSignal<HandoffStateType>(
 		HandoffState.idle(),
 	);
+	const [recoveryReason, setRecoveryReason] = createSignal<
+		"no_handoff" | "returned_unpaid" | null
+	>(null);
+	const recoveryFocusRestore = createSheetFocusRestore();
 	// Watcher stops accumulate here because onCleanup inside event handlers
 	// never registers: click handlers run outside any Solid reactive owner.
 	const stops: Array<() => void> = [];
@@ -164,14 +177,14 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					stops.push(
 						watchReturnFromBankApp(() => {
 							setHandoff(HandoffState.idle());
-							props.onRecovery?.("returned_unpaid");
+							setRecoveryReason("returned_unpaid");
 						}),
 					);
 				},
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
-					props.onRecovery?.("no_handoff");
+					setRecoveryReason("no_handoff");
 				},
 			}),
 		);
@@ -186,12 +199,26 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	});
 
 	createEffect(() => {
-		if (!props.forceShowQr) return;
-		setShowQr(true);
-		queueMicrotask(() => {
-			qrSection?.scrollIntoView({ behavior: "smooth", block: "center" });
-		});
+		const reason = recoveryReason();
+		if (!reason) return;
+		trackPaymentRecoverySheetShown(props.paymentNumber, reason);
 	});
+
+	const chooseRecovery = (choice: "qr" | "transfer" | "dismiss") => {
+		if (!recoveryReason()) return;
+		setRecoveryReason(null);
+		trackPaymentRecoveryChosen(props.paymentNumber, choice);
+		if (choice === "qr") {
+			setShowQr(true);
+			queueMicrotask(() => {
+				qrSection?.scrollIntoView({ behavior: "smooth", block: "center" });
+			});
+			return;
+		}
+		if (choice === "transfer") {
+			props.onChooseTransfer?.();
+		}
+	};
 
 	const mutation = useMutation(
 		() => ({
@@ -263,6 +290,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	});
 
 	return (
+		<>
 		<div class="flex w-full flex-col items-center gap-4">
 			<Show when={mutation.isPending}>
 				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-8 text-center">
@@ -424,6 +452,56 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				</div>
 			</Show>
 		</div>
+		<Sheet
+			open={recoveryReason() !== null}
+			onOpenChange={(open) => {
+				if (!open) {
+					chooseRecovery("dismiss");
+				}
+			}}
+		>
+			<SheetContent
+				position="bottom"
+				closeLabel="Хаах"
+				focusRestore={recoveryFocusRestore}
+				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+			>
+				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
+					<SheetTitle class="font-display font-bold text-lg tracking-tight">
+						Апп нээгдсэнгүй
+					</SheetTitle>
+					<SheetDescription class="text-muted-foreground text-sm">
+						QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?
+					</SheetDescription>
+				</SheetHeader>
+				<div class="space-y-2 px-5 py-5">
+					<button
+						type="button"
+						class={cn(buttonVariants())}
+						onClick={() => chooseRecovery("qr")}
+					>
+						QR код уншуулах
+					</button>
+					<Show when={BANK_TRANSFER_ENABLED && props.onChooseTransfer}>
+						<button
+							type="button"
+							class={cn(buttonVariants({ variant: "dark" }))}
+							onClick={() => chooseRecovery("transfer")}
+						>
+							Дансаар шилжүүлэх
+						</button>
+					</Show>
+					<button
+						type="button"
+						class="w-full py-2 text-center text-muted-foreground text-xs"
+						onClick={() => chooseRecovery("dismiss")}
+					>
+						Банкаа дахин сонгох
+					</button>
+				</div>
+			</SheetContent>
+		</Sheet>
+		</>
 	);
 };
 

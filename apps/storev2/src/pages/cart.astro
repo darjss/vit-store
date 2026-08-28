@@ -1,5 +1,6 @@
 ---
 import CartList from "@/components/cart/cart-list";
+import ResumePendingPayment from "@/components/payment/resume-pending-payment";
 import Layout from "@/layouts/Layout.astro";
 
 export const prerender = true;
@@ -9,6 +10,7 @@ const description = "Таны сагсанд байгаа бүтээгдэхүү
 ---
 
 <Layout title={title} description={description} noindex>
+    <ResumePendingPayment client:load />
     <div class="container mx-auto px-4 py-8 min-h-screen">
         <CartList client:load>
             <div slot="fallback" class="space-y-6 min-h-[calc(100vh-200px)]">
