@@ -5,6 +5,7 @@ import Layout from "@/layouts/Layout.astro";
 import ServerProductCard from "@/components/product/server-product-card.astro";
 import Pagination from "@/components/product/pagination.astro";
 import SortBar from "@/components/product/sort-bar.astro";
+import { resolveCategorySeo } from "@/lib/category-seo";
 import { api } from "@/lib/trpc";
 import { WASH_BG, washFor } from "@/lib/wash";
 
@@ -55,14 +56,18 @@ if (page > pagination.totalPages) {
 
 const baseUrl = `/products/category/${slug}`;
 const washClass = WASH_BG[washFor(category.id)];
+const pageUrl = `${SITE_URL}${baseUrl}/${page}/`;
 
-const seoTitle = page === 1
-	? (category.seoTitle || `${category.name} - Витамин, нэмэлт тэжээл`)
-	: (category.seoTitle || `${category.name} - Хуудас ${page}`);
-const seoDescription = category.seoDescription ||
-	`${category.name} ангилалд ${pagination.totalCount} бүтээгдэхүүн байна.${page > 1 ? ` Хуудас ${page}/${pagination.totalPages}.` : ""}`;
-const categoryIntro = category.description ||
-	`${category.name} ангиллын АНУ-ын витамин, нэмэлт тэжээлүүдийг Америк Витамин дэлгүүрээс сонгон захиалаарай. Бүтээгдэхүүний найрлага, хэмжээ, үнэ болон брэндийн мэдээллийг харьцуулж өөрт тохирох сонголтоо олоорой.`;
+const { seoTitle, seoDescription, intro, faqs } = resolveCategorySeo({
+	slug,
+	name: category.name,
+	seoTitle: category.seoTitle,
+	seoDescription: category.seoDescription,
+	description: category.description,
+	totalCount: pagination.totalCount,
+	page,
+	totalPages: pagination.totalPages,
+});
 
 const breadcrumbSchema = {
 	"@context": "https://schema.org",
@@ -70,9 +75,20 @@ const breadcrumbSchema = {
 	itemListElement: [
 		{ "@type": "ListItem", position: 1, name: "Нүүр", item: SITE_URL },
 		{ "@type": "ListItem", position: 2, name: "Бүтээгдэхүүн", item: `${SITE_URL}/products` },
-		{ "@type": "ListItem", position: 3, name: category.name, item: `${SITE_URL}${baseUrl}/1` },
-		...(page > 1 ? [{ "@type": "ListItem", position: 4, name: `Хуудас ${page}`, item: `${SITE_URL}${baseUrl}/${page}` }] : []),
+		{ "@type": "ListItem", position: 3, name: category.name, item: `${SITE_URL}${baseUrl}/1/` },
+		...(page > 1 ? [{ "@type": "ListItem", position: 4, name: `Хуудас ${page}`, item: pageUrl }] : []),
 	],
+};
+
+const collectionSchema = {
+	"@context": "https://schema.org",
+	"@type": "CollectionPage",
+	name: seoTitle,
+	description: seoDescription,
+	url: pageUrl,
+	isPartOf: { "@type": "WebSite", name: "Америк Витамин", url: SITE_URL },
+	about: category.name,
+	inLanguage: "mn-MN",
 };
 
 const itemListSchema = {
@@ -88,6 +104,21 @@ const itemListSchema = {
 	})),
 };
 
+const faqSchema =
+	faqs.length > 0
+		? {
+				"@context": "https://schema.org",
+				"@type": "FAQPage",
+				mainEntity: faqs.map((faq) => ({
+					"@type": "Question",
+					name: faq.question,
+					acceptedAnswer: {
+						"@type": "Answer",
+						text: faq.answer,
+					},
+				})),
+			}
+		: null;
 Astro.cache.set({
 	maxAge: 86400,
 	swr: 604800,
@@ -95,9 +126,13 @@ Astro.cache.set({
 });
 ---
 
-<Layout title={seoTitle} description={seoDescription}>
+<Layout title={seoTitle} description={seoDescription} canonical={pageUrl}>
 	<script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	<script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} />
 	<script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />
+	{faqSchema && (
+		<script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+	)}
 
 	<div class="mx-auto max-w-screen-2xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
 		<!-- Breadcrumb -->
@@ -106,7 +141,7 @@ Astro.cache.set({
 			<span>/</span>
 			<a href="/products" class="hover:text-foreground hover:underline">Бүтээгдэхүүн</a>
 			<span>/</span>
-			<a href={`${baseUrl}/1`} class="hover:text-foreground hover:underline">{category.name}</a>
+			<a href={`${baseUrl}/1/`} class="hover:text-foreground hover:underline">{category.name}</a>
 			{page > 1 && (
 				<>
 					<span>/</span>
@@ -138,9 +173,13 @@ Astro.cache.set({
 			</div>
 		)}
 
-		<div class="mb-4 rounded-2xl border border-border bg-card p-3 shadow-soft-sm sm:mb-5 sm:p-4">
-			<p class="text-sm leading-relaxed sm:text-base">{categoryIntro}</p>
-		</div>
+		{page === 1 && (
+			<div class="mb-4 space-y-3 rounded-2xl border border-border bg-card p-3 shadow-soft-sm sm:mb-5 sm:p-4">
+				{intro.map((paragraph) => (
+					<p class="text-sm leading-relaxed text-foreground/90 sm:text-base">{paragraph}</p>
+				))}
+			</div>
+		)}
 
 		<SortBar baseUrl={baseUrl} sort={sortField ?? null} dir={sortDirection ?? null} />
 
@@ -159,6 +198,26 @@ Astro.cache.set({
 		<!-- Pagination -->
 		{pagination.totalPages > 1 && (
 			<Pagination page={page} totalPages={pagination.totalPages} baseUrl={baseUrl} search={sortQuery} />
+		)}
+
+		{faqs.length > 0 && (
+			<section class="mt-8 border-border border-t pt-6 sm:mt-10 sm:pt-8" aria-labelledby="category-faq-heading">
+				<h2 id="category-faq-heading" class="font-bold font-display text-lg tracking-tight sm:text-xl">
+					Түгээмэл асуулт
+				</h2>
+				<div class="mt-4 space-y-3">
+					{faqs.map((faq) => (
+						<details class="group rounded-2xl border border-border bg-card px-4 py-3 shadow-soft-sm open:pb-4">
+							<summary class="cursor-pointer list-none font-medium text-sm sm:text-base [&::-webkit-details-marker]:hidden">
+								{faq.question}
+							</summary>
+							<p class="mt-2 text-foreground/80 text-sm leading-relaxed sm:text-base">
+								{faq.answer}
+							</p>
+						</details>
+					))}
+				</div>
+			</section>
 		)}
 	</div>
 </Layout>
