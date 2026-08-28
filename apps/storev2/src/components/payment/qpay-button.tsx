@@ -177,7 +177,32 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					stops.push(
 						watchReturnFromBankApp(() => {
 							setHandoff(HandoffState.idle());
-							setRecoveryReason("returned_unpaid");
+							void (async () => {
+								if (navigated()) return;
+								try {
+									const result = await api.payment.checkQpayPayment.mutate(
+										{
+											paymentNumber: props.paymentNumber,
+											checkoutToken: props.checkoutToken,
+										},
+									);
+									if (result.paid) {
+										setNavigated(true);
+										void safeNavigate(
+											paymentSuccessUrl(
+												props.paymentNumber,
+												props.checkoutToken,
+											),
+										);
+										return;
+									}
+								} catch {
+									// Check failed or invoice is not QPay yet. Fall through
+									// to the unpaid recovery sheet.
+								}
+								if (navigated()) return;
+								setRecoveryReason("returned_unpaid");
+							})();
 						}),
 					);
 				},
