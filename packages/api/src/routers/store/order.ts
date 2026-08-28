@@ -12,7 +12,7 @@ import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/mess
 import { trackOrderCreatedServerSide, trackQpayInvoiceCreatedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
 import { createQpayInvoice } from "~/lib/payments/qpay";
-import { createSession, setSessionTokenCookie } from "~/lib/session/store";
+import { auth, createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
 
@@ -139,6 +139,11 @@ export const order = router({
             const orderNumber = generateOrderNumber();
             const paymentNumberGenerated = generatePaymentNumber();
             const customerPhone = Number(input.phoneNumber);
+            const existingSession = await auth(ctx);
+            const sessionPhone =
+                existingSession?.user && "phone" in existingSession.user
+                    ? Number(existingSession.user.phone)
+                    : undefined;
             const submittedFingerprint = cartFingerprint(normalizedProducts);
             const reuseAfter = new Date(Date.now() - 2 * 60 * 60 * 1000);
             const txResult = await ctx.db.transaction(async (tx) => {
@@ -192,6 +197,7 @@ export const order = router({
                 if (
                     pendingOrder &&
                     pendingPayment &&
+                    sessionPhone === customerPhone &&
                     cartFingerprint(pendingOrder.orderDetails) === submittedFingerprint
                 ) {
                     await tx
