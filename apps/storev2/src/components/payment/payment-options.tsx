@@ -285,6 +285,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 							paymentNumber={props.paymentNumber}
 							amount={props.total}
 							checkoutToken={props.checkoutToken}
+							onChooseTransfer={() => selectTab("transfer")}
 						/>
 					</div>
 				</div>

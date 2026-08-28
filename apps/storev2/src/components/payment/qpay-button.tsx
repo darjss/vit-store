@@ -4,6 +4,7 @@ import {
 	Wallet2Icon as IconWallet,
 } from "@solar-icons/solid/linear";
 import { useMutation, useQuery } from "@tanstack/solid-query";
+import { BANK_TRANSFER_ENABLED, supportPhone } from "@vit/shared/constants";
 import {
 	createEffect,
 	createSignal,
@@ -12,12 +13,21 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { supportPhone } from "@vit/shared/constants";
 import { buttonVariants } from "@/components/ui/button";
+import {
+	createSheetFocusRestore,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import {
 	trackBankDeeplinkClicked,
 	trackBankDeeplinkNoHandoff,
 	trackBankDeeplinkOpened,
+	trackPaymentRecoveryChosen,
+	trackPaymentRecoverySheetShown,
 	trackQpayError,
 } from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
@@ -38,6 +48,7 @@ interface QpayPaymentPanelProps {
 	paymentNumber: string;
 	amount?: number;
 	checkoutToken?: string;
+	onChooseTransfer?: () => void;
 }
 
 // QPay returns Social Pay with description "Голомт банк"; its link leads to
@@ -119,6 +130,7 @@ const BankTile = (props: BankTileProps) => {
 
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
+	let qrSection: HTMLDivElement | undefined;
 	// Guards the success redirect so the polling effect only fires it once.
 	// Without this, the 5s refetchInterval re-runs the effect while the
 	// previous view transition is still in-flight (or while the tab is hidden
@@ -130,6 +142,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [handoff, setHandoff] = createSignal<HandoffStateType>(
 		HandoffState.idle(),
 	);
+	const [recoveryReason, setRecoveryReason] = createSignal<
+		"no_handoff" | "returned_unpaid" | null
+	>(null);
+	const recoveryFocusRestore = createSheetFocusRestore();
 	// Watcher stops accumulate here because onCleanup inside event handlers
 	// never registers: click handlers run outside any Solid reactive owner.
 	const stops: Array<() => void> = [];
@@ -159,13 +175,41 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					);
 					setHandoff(HandoffState.opened(bank));
 					stops.push(
-						watchReturnFromBankApp(() => setHandoff(HandoffState.idle())),
+						watchReturnFromBankApp(() => {
+							setHandoff(HandoffState.idle());
+							void (async () => {
+								if (navigated()) return;
+								try {
+									const result = await api.payment.checkQpayPayment.mutate(
+										{
+											paymentNumber: props.paymentNumber,
+											checkoutToken: props.checkoutToken,
+										},
+									);
+									if (result.paid) {
+										setNavigated(true);
+										void safeNavigate(
+											paymentSuccessUrl(
+												props.paymentNumber,
+												props.checkoutToken,
+											),
+										);
+										return;
+									}
+								} catch {
+									// Check failed or invoice is not QPay yet. Fall through
+									// to the unpaid recovery sheet.
+								}
+								if (navigated()) return;
+								setRecoveryReason("returned_unpaid");
+							})();
+						}),
 					);
 				},
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
-					setShowQr(true);
+					setRecoveryReason("no_handoff");
 				},
 			}),
 		);
@@ -178,6 +222,28 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	onMount(() => {
 		setShowQr(isDesktop());
 	});
+
+	createEffect(() => {
+		const reason = recoveryReason();
+		if (!reason) return;
+		trackPaymentRecoverySheetShown(props.paymentNumber, reason);
+	});
+
+	const chooseRecovery = (choice: "qr" | "transfer" | "dismiss") => {
+		if (!recoveryReason()) return;
+		setRecoveryReason(null);
+		trackPaymentRecoveryChosen(props.paymentNumber, choice);
+		if (choice === "qr") {
+			setShowQr(true);
+			queueMicrotask(() => {
+				qrSection?.scrollIntoView({ behavior: "smooth", block: "center" });
+			});
+			return;
+		}
+		if (choice === "transfer") {
+			props.onChooseTransfer?.();
+		}
+	};
 
 	const mutation = useMutation(
 		() => ({
@@ -249,6 +315,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	});
 
 	return (
+		<>
 		<div class="flex w-full flex-col items-center gap-4">
 			<Show when={mutation.isPending}>
 				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-8 text-center">
@@ -332,7 +399,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 					</Show>
 
 					{/* QR Code toggle */}
-					<div class="space-y-3">
+					<div class="space-y-3" ref={qrSection}>
 						<button
 							type="button"
 							onClick={() => setShowQr((v) => !v)}
@@ -390,14 +457,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									Апп нээж байна…
 								</p>
 							</Show>
-							<Show when={isHandoffState(handoff(), "failed")}>
-								<div class="flex animate-handoff-reveal items-start gap-2.5 rounded-xl bg-wash-lemon px-3 py-2.5">
-									<p class="text-[11px] text-foreground leading-snug">
-										Апп нээгдсэнгүй бол доорх QR кодоор төлж болно, эсвэл "Данс"
-										табыг сонгоод гарын үсгээр шилжүүлнэ үү.
-									</p>
-								</div>
-							</Show>
 						</div>
 					</Show>
 
@@ -418,6 +477,56 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				</div>
 			</Show>
 		</div>
+		<Sheet
+			open={recoveryReason() !== null}
+			onOpenChange={(open) => {
+				if (!open) {
+					chooseRecovery("dismiss");
+				}
+			}}
+		>
+			<SheetContent
+				position="bottom"
+				closeLabel="Хаах"
+				focusRestore={recoveryFocusRestore}
+				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+			>
+				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
+					<SheetTitle class="font-display font-bold text-lg tracking-tight">
+						Апп нээгдсэнгүй
+					</SheetTitle>
+					<SheetDescription class="text-muted-foreground text-sm">
+						QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?
+					</SheetDescription>
+				</SheetHeader>
+				<div class="space-y-2 px-5 py-5">
+					<button
+						type="button"
+						class={cn(buttonVariants())}
+						onClick={() => chooseRecovery("qr")}
+					>
+						QR код уншуулах
+					</button>
+					<Show when={BANK_TRANSFER_ENABLED && props.onChooseTransfer}>
+						<button
+							type="button"
+							class={cn(buttonVariants({ variant: "dark" }))}
+							onClick={() => chooseRecovery("transfer")}
+						>
+							Дансаар шилжүүлэх
+						</button>
+					</Show>
+					<button
+						type="button"
+						class="w-full py-2 text-center text-muted-foreground text-xs"
+						onClick={() => chooseRecovery("dismiss")}
+					>
+						Банкаа дахин сонгох
+					</button>
+				</div>
+			</SheetContent>
+		</Sheet>
+		</>
 	);
 };
 

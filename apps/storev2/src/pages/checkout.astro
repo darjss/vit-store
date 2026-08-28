@@ -1,5 +1,6 @@
 ---
 import CheckoutForm from "@/components/checkout/checkout-form";
+import ResumePendingPayment from "@/components/payment/resume-pending-payment";
 import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
 import { createServerClient } from "@/lib/trpc";
@@ -21,6 +22,7 @@ const description = "Захиалгаа баталгаажуулж, төлбөр
 ---
 
 <Layout title={title} description={description} noindex nofollow>
+    <ResumePendingPayment client:load />
     <div class="min-h-screen bg-checkout">
         <div class="container mx-auto px-4 py-8">
         <CheckoutForm user={user} client:only="solid-js">

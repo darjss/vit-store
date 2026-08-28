@@ -18,14 +18,15 @@ import {
 import { Motion, Presence } from "solid-motionone";
 import * as v from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
-import PaymentOptions from "@/components/payment/payment-options";
 import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
+import { paymentUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
+import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { cart, createCartState } from "@/store/cart";
-import { BoxIcon as IconPackage, AltArrowDownIcon as IconChevronDown, AltArrowLeftIcon as IconChevronLeft, AltArrowUpIcon as IconChevronUp, CardIcon as IconBankCard, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
+import { BoxIcon as IconPackage, AltArrowDownIcon as IconChevronDown, AltArrowUpIcon as IconChevronUp, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
@@ -36,14 +37,16 @@ import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type Step = "delivery" | "payment";
 
-type PaymentInfo = {
-	paymentNumber: string;
-	checkoutToken?: string;
-	total: number;
-	orderNumber: string;
-	customerPhone: string;
-	accountNumber?: string;
-	accountName?: string;
+const unpaidCheckoutPaymentNumber = async (paymentNumber?: string) => {
+	if (!paymentNumber) return;
+	try {
+		const payment = await api.payment.getPaymentByNumber.query({
+			paymentNumber,
+		});
+		if (payment.status === "pending") return payment.paymentNumber;
+	} catch {
+		return;
+	}
 };
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
@@ -59,27 +62,42 @@ const checkoutValidators = v.object({
 	notes: v.string(),
 });
 
-const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
+const CheckoutForm = (props: {
+	user:
+		| (CustomerSelectType & {
+				checkout?: { paymentNumber?: string };
+		  })
+		| null;
+}) => {
 	onMount(() => {
-		if (cart.items().length === 0) return;
-		// Only fire once per browser session per cart signature
-		const cartSignature = cart
-			.items()
-			.map((i) => i.productId)
-			.sort()
-			.join(",");
-		const key = `checkout_started:${cartSignature}`;
-		if (sessionStorage.getItem(key)) return;
-		sessionStorage.setItem(key, "1");
-		trackCheckoutStarted(
-			cart.total(),
-			cart.count(),
-			cart.items().map((item) => item.productId),
-		);
+		void (async () => {
+			const sessionUser =
+				props.user ?? (await api.auth.check.query().catch(() => null));
+			const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
+				sessionUser?.checkout?.paymentNumber,
+			);
+			if (pendingPaymentNumber) {
+				void safeNavigate(paymentUrl(pendingPaymentNumber));
+				return;
+			}
+			if (cart.items().length === 0) return;
+			const cartSignature = cart
+				.items()
+				.map((i) => i.productId)
+				.sort()
+				.join(",");
+			const key = `checkout_started:${cartSignature}`;
+			if (sessionStorage.getItem(key)) return;
+			sessionStorage.setItem(key, "1");
+			trackCheckoutStarted(
+				cart.total(),
+				cart.count(),
+				cart.items().map((item) => item.productId),
+			);
+		})();
 	});
 
-	const [step, setStep] = createSignal<Step>("delivery");
-	const [paymentInfo, setPaymentInfo] = createSignal<PaymentInfo | null>(null);
+	const [step] = createSignal<Step>("delivery");
 	const [summaryOpen, setSummaryOpen] = createSignal(false);
 	const [invalidPulse, setInvalidPulse] = createSignal(false);
 	let checkoutFormEl: HTMLFormElement | undefined;
@@ -111,23 +129,10 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 					variant: "success",
 					duration: 5000,
 				});
-
-				// F9/H5: addOrder now returns the full PaymentOptions props
-				// (total, orderNumber, customerPhone, accountNumber,
-				// accountName), so the redundant getPaymentByNumber round-trip
-				// and its silent catch are gone.
-				setPaymentInfo({
-					paymentNumber,
-					checkoutToken: data.checkoutToken ?? undefined,
-					total: data.total ?? cart.total() + deliveryFee,
-					orderNumber: data.orderNumber ?? paymentNumber,
-					customerPhone: data.customerPhone ?? variables.phoneNumber,
-					accountNumber: data.accountNumber,
-					accountName: data.accountName,
-				});
-				setStep("payment");
-				window.scrollTo({ top: 0, behavior: "smooth" });
 				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
+				void safeNavigate(
+					paymentUrl(paymentNumber, data.checkoutToken ?? undefined),
+				);
 			},
 			onError: () => {
 				showToast({
@@ -159,10 +164,17 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 			onSubmit: checkoutValidators,
 		},
 		onSubmit: async (values) => {
-			if (paymentInfo()) {
-				setStep("payment");
-				window.scrollTo({ top: 0, behavior: "smooth" });
-				return;
+			try {
+				const sessionUser = await api.auth.check.query();
+				const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
+					sessionUser?.checkout?.paymentNumber,
+				);
+				if (pendingPaymentNumber) {
+					void safeNavigate(paymentUrl(pendingPaymentNumber));
+					return;
+				}
+			} catch {
+				// Fall through to create a new order when session check fails.
 			}
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
@@ -206,11 +218,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 		const isBeforeCutoff = ulaanbaatarMin < 10 * 60 + 30;
 		return isBeforeCutoff ? "today" : "tomorrow";
 	});
-
-	const goBackToDelivery = () => {
-		setStep("delivery");
-		window.scrollTo({ top: 0, behavior: "smooth" });
-	};
 
 	const OrderSummary = () => (
 		<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft-sm">
@@ -483,9 +490,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 
 																<form.AppForm>
 																	<div class="w-full">
-																		{/* F8: once addOrder succeeded (paymentInfo set), the delivery
-																	step is review-only — resubmitting would just bounce back to
-																	payment. Disable and relabel so the no-op is explicit. */}
 																		<form.SubmitButton
 																			size="lg"
 																			class={cn(
@@ -494,18 +498,11 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																					"animate-submit-working",
 																			)}
 																			loadingContent={<CheckoutSubmitStatus />}
-																			disabled={
-																				mutation.isPending ||
-																				Boolean(paymentInfo())
-																			}
+																			disabled={mutation.isPending}
 																		>
 																			<Show
 																				when={mutation.isPending}
-																				fallback={
-																					paymentInfo()
-																						? "Захиалга үүссэн — төлбөр хүлээж байна"
-																						: "Төлбөр төлөх →"
-																				}
+																				fallback={"Төлбөр төлөх →"}
 																			>
 																				<CheckoutSubmitStatus />
 																			</Show>
@@ -522,64 +519,6 @@ const CheckoutForm = (props: { user: CustomerSelectType | null }) => {
 																</p>
 															</div>
 														</form>
-													</div>
-												</div>
-											</Motion.div>
-										</Match>
-
-										{/* PAYMENT STEP */}
-										<Match when={step() === "payment" && paymentInfo()}>
-											<Motion.div
-												initial={{ opacity: 0, x: 24, scale: 0.97 }}
-												animate={{
-													opacity: 1,
-													x: 0,
-													transition: stepEnter,
-												}}
-												exit={{
-													opacity: 0,
-													x: 24,
-													scale: 0.97,
-													transition: stepExit,
-												}}
-											>
-												<button
-													type="button"
-													onClick={goBackToDelivery}
-													class="mb-3 inline-flex h-11 items-center gap-1 rounded-full pr-4 pl-2.5 font-medium text-muted-foreground text-sm transition-colors duration-[140ms] ease-out hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-												>
-													<IconChevronLeft class="h-4 w-4" aria-hidden="true" />
-													Буцах
-												</button>
-
-												<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-													<div class="flex items-center gap-2.5 border-border border-b px-4 py-3.5">
-														<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-wash-mint">
-															<IconBankCard
-																class="h-4 w-4 text-foreground"
-																aria-hidden="true"
-															/>
-														</span>
-														<div>
-															<h2 class="font-semibold text-foreground text-sm">
-																Төлбөр төлөх
-															</h2>
-															<p class="text-muted-foreground text-xs">
-																Төлбөрийн хэлбэрээ сонгоно уу
-															</p>
-														</div>
-													</div>
-
-													<div class="p-4">
-														<PaymentOptions
-															paymentNumber={paymentInfo()!.paymentNumber}
-															orderNumber={paymentInfo()!.orderNumber}
-															total={paymentInfo()!.total}
-															customerPhone={paymentInfo()!.customerPhone}
-															accountNumber={paymentInfo()!.accountNumber}
-															accountName={paymentInfo()!.accountName}
-															checkoutToken={paymentInfo()!.checkoutToken}
-														/>
 													</div>
 												</div>
 											</Motion.div>

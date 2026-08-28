@@ -187,6 +187,28 @@ export function trackBankDeeplinkNoHandoff(
 	});
 }
 
+export function trackPaymentRecoverySheetShown(
+	paymentNumber: string,
+	reason: "no_handoff" | "returned_unpaid",
+) {
+	capture("payment_recovery_sheet_shown", {
+		payment_number: paymentNumber,
+		reason,
+		in_app_browser: detectInAppBrowser(),
+	});
+}
+
+export function trackPaymentRecoveryChosen(
+	paymentNumber: string,
+	choice: "qr" | "transfer" | "dismiss",
+) {
+	capture("payment_recovery_chosen", {
+		payment_number: paymentNumber,
+		choice,
+		in_app_browser: detectInAppBrowser(),
+	});
+}
+
 /**
  * Track when checkout page is loaded
  */
