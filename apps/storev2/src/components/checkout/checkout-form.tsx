@@ -37,6 +37,18 @@ import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type Step = "delivery" | "payment";
 
+const unpaidCheckoutPaymentNumber = async (paymentNumber?: string) => {
+	if (!paymentNumber) return;
+	try {
+		const payment = await api.payment.getPaymentByNumber.query({
+			paymentNumber,
+		});
+		if (payment.status === "pending") return payment.paymentNumber;
+	} catch {
+		return;
+	}
+};
+
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
 const stepEnter = { duration: 0.44, easing: EASE_OUT_QUART };
@@ -58,26 +70,31 @@ const CheckoutForm = (props: {
 		| null;
 }) => {
 	onMount(() => {
-		const pendingPaymentNumber = props.user?.checkout?.paymentNumber;
-		if (pendingPaymentNumber) {
-			void safeNavigate(paymentUrl(pendingPaymentNumber));
-			return;
-		}
-		if (cart.items().length === 0) return;
-		// Only fire once per browser session per cart signature
-		const cartSignature = cart
-			.items()
-			.map((i) => i.productId)
-			.sort()
-			.join(",");
-		const key = `checkout_started:${cartSignature}`;
-		if (sessionStorage.getItem(key)) return;
-		sessionStorage.setItem(key, "1");
-		trackCheckoutStarted(
-			cart.total(),
-			cart.count(),
-			cart.items().map((item) => item.productId),
-		);
+		void (async () => {
+			const sessionUser =
+				props.user ?? (await api.auth.check.query().catch(() => null));
+			const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
+				sessionUser?.checkout?.paymentNumber,
+			);
+			if (pendingPaymentNumber) {
+				void safeNavigate(paymentUrl(pendingPaymentNumber));
+				return;
+			}
+			if (cart.items().length === 0) return;
+			const cartSignature = cart
+				.items()
+				.map((i) => i.productId)
+				.sort()
+				.join(",");
+			const key = `checkout_started:${cartSignature}`;
+			if (sessionStorage.getItem(key)) return;
+			sessionStorage.setItem(key, "1");
+			trackCheckoutStarted(
+				cart.total(),
+				cart.count(),
+				cart.items().map((item) => item.productId),
+			);
+		})();
 	});
 
 	const [step] = createSignal<Step>("delivery");
@@ -149,7 +166,9 @@ const CheckoutForm = (props: {
 		onSubmit: async (values) => {
 			try {
 				const sessionUser = await api.auth.check.query();
-				const pendingPaymentNumber = sessionUser?.checkout?.paymentNumber;
+				const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
+					sessionUser?.checkout?.paymentNumber,
+				);
 				if (pendingPaymentNumber) {
 					void safeNavigate(paymentUrl(pendingPaymentNumber));
 					return;

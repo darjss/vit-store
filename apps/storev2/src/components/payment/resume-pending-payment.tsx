@@ -1,5 +1,5 @@
 import { onMount } from "solid-js";
-import { paymentSuccessUrl, paymentUrl } from "@/lib/payment-url";
+import { paymentUrl } from "@/lib/payment-url";
 import { api } from "@/lib/trpc";
 
 const ResumePendingPayment = () => {
@@ -13,12 +13,6 @@ const ResumePendingPayment = () => {
 				const payment = await api.payment.getPaymentByNumber.query({
 					paymentNumber,
 				});
-				if (payment.status === "success") {
-					window.location.replace(
-						paymentSuccessUrl(payment.paymentNumber),
-					);
-					return;
-				}
 				if (payment.status !== "pending") return;
 				window.location.replace(paymentUrl(payment.paymentNumber));
 			} catch {
