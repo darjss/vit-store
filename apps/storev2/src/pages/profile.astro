@@ -95,8 +95,12 @@ const paymentStatusColors: Record<string, string> = {
 	failed: "bg-error text-error-foreground",
 };
 
-const canContinuePayment = (status: string | null | undefined) =>
-	status === "pending" || status === "customer_claimed_paid";
+const canContinuePayment = (
+	orderStatus: string,
+	paymentStatus: string | null | undefined,
+) =>
+	orderStatus === "created" &&
+	(paymentStatus === "pending" || paymentStatus === "customer_claimed_paid");
 
 ---
 
@@ -188,7 +192,7 @@ const canContinuePayment = (status: string | null | undefined) =>
 								</div>
 
 								<div class="flex items-center gap-4">
-									{order.paymentStatus ? (
+									{order.status === "created" && order.paymentStatus ? (
 										<span
 											class={`rounded-full px-3 py-1 font-semibold text-xs ${paymentStatusColors[order.paymentStatus] ?? statusColors[order.status] ?? "bg-muted text-muted-foreground"}`}
 										>
@@ -264,7 +268,7 @@ const canContinuePayment = (status: string | null | undefined) =>
 									</div>
 								)}
 
-								{canContinuePayment(order.paymentStatus) && order.paymentNumber && (
+								{canContinuePayment(order.status, order.paymentStatus) && order.paymentNumber && (
 									<a
 										href={paymentUrl(order.paymentNumber)}
 										class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-6 py-3 font-semibold text-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97]"
