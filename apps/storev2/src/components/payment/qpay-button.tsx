@@ -51,11 +51,6 @@ interface QpayPaymentPanelProps {
 	onChooseTransfer?: () => void;
 }
 
-// QPay returns Social Pay with description "Голомт банк"; its link leads to
-// an extra hosted "step 2/2" QR screen we bypass by showing our own QR.
-const isSocialPay = (link: { name: string; description: string }) =>
-	/social/i.test(link.name) || /голомт/i.test(link.description);
-
 interface BankLogoProps {
 	logo?: string;
 	name?: string;
@@ -64,8 +59,6 @@ interface BankLogoProps {
 
 interface BankTileProps {
 	link: { name: string; description: string; logo: string; link: string };
-	// Social Pay renders as a button that reveals the inline QR; every other
-	// bank navigates its scheme link.
 	onSelect: () => void;
 	href?: string;
 }
@@ -432,20 +425,13 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							</p>
 							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
 								<For each={invoiceData()?.urls ?? []}>
-									{(link) =>
-										isSocialPay(link) ? (
-											// Social Pay's target page is an extra "step 2/2"
-											// QR screen — a replay-observed abandonment point.
-											// Show our QR inline instead of navigating there.
-											<BankTile link={link} onSelect={() => setShowQr(true)} />
-										) : (
-											<BankTile
-												link={link}
-												href={link.link}
-												onSelect={() => handleBankClick(link)}
-											/>
-										)
-									}
+									{(link) => (
+										<BankTile
+											link={link}
+											href={link.link}
+											onSelect={() => handleBankClick(link)}
+										/>
+									)}
 								</For>
 							</div>
 							<Show when={isHandoffState(handoff(), "opening")}>
