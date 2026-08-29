@@ -29,9 +29,8 @@ const serverApi = createServerClient(
 	Astro.redirect, // Pass redirect function - will automatically redirect on unauthorized
 );
 
-// Auth guard: profile is auth-gated. On 401, the tRPC link calls
-// redirectFn("/login") but the client still throws TRPCClientError.
-// Redirect ONLY on UNAUTHORIZED; any other auth.check error is fatal.
+// Auth guard: profile needs a session. Guests only see their scoped unpaid
+// checkout; full history requires OTP (phone_verified).
 let user;
 try {
 	user = await serverApi.auth.check.query();
@@ -40,14 +39,59 @@ try {
 	if (code === "UNAUTHORIZED") return Astro.redirect("/login");
 	throw err;
 }
+if (!user) return Astro.redirect("/login");
 
-// Orders query is non-fatal: degrade gracefully (empty orders) instead of 500
-// if order.getOrdersByCustomerId throws (e.g. INTERNAL_SERVER_ERROR).
-let orders: Awaited<ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>> = [];
-try {
-	orders = await serverApi.order.getOrdersByCustomerId.query();
-} catch (err) {
-	console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", err);
+type ProfileOrder = Awaited<
+	ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>
+>[number];
+
+const PAYABLE = new Set(["pending", "customer_claimed_paid"]);
+
+let orders: ProfileOrder[] = [];
+/** Guest cookie shows only the unpaid checkout it owns — never phone history. */
+const unpaidOnly = user.trust === "checkout_guest";
+
+if (user.trust === "phone_verified") {
+	try {
+		orders = await serverApi.order.getOrdersByCustomerId.query();
+	} catch (err) {
+		console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", err);
+	}
+} else if (unpaidOnly && user.checkout?.paymentNumber) {
+	try {
+		const payment = await serverApi.payment.getPaymentByNumber.query({
+			paymentNumber: user.checkout.paymentNumber,
+		});
+		if (
+			PAYABLE.has(payment.status) &&
+			payment.order.status === "created"
+		) {
+			orders = [
+				{
+					orderNumber: payment.order.orderNumber,
+					status: payment.order.status,
+					total: payment.total,
+					notes: payment.order.notes,
+					address: payment.order.address,
+					createdAt: payment.order.createdAt,
+					products: payment.order.products.map((product) => ({
+						name: product.name,
+						brandName: product.brandName,
+						imageUrl: product.imageUrl,
+						quantity: product.quantity,
+						sellingPrice: product.price,
+					})),
+					paymentNumber: payment.paymentNumber,
+					paymentStatus: payment.status,
+					paymentProvider: payment.provider,
+				},
+			];
+		}
+	} catch (err) {
+		console.error("[profile] scoped unpaid payment failed; rendering empty", err);
+	}
+} else {
+	return Astro.redirect("/login");
 }
 
 const title = "Миний профайл";
@@ -116,23 +160,23 @@ const canContinuePayment = (
 			<div class="bg-wash-lemon/70 p-6">
 				<div class="flex items-center gap-4">
 					<div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary font-display text-foreground text-lg">
-						{user?.phone.toString().slice(-2)}
+						{user.phone.toString().slice(-2)}
 					</div>
 					<div class="min-w-0 flex-1">
 						<h2 class="truncate font-semibold text-foreground text-lg">
-							{formatPhone(user?.phone)}
+							{formatPhone(user.phone)}
 						</h2>
 					</div>
 					<div class="text-right">
 						<div class="text-muted-foreground text-xs uppercase tracking-wide">
-							Нийт захиалга
+							{unpaidOnly ? "Төлөөгүй" : "Нийт захиалга"}
 						</div>
 						<div class="font-display text-foreground text-xl">{orders.length}</div>
 					</div>
 				</div>
 			</div>
 
-			{user?.address && (
+			{user.address && (
 				<div class="border-border border-t p-6">
 					<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
 						Хүргэлтийн хаяг
@@ -144,7 +188,9 @@ const canContinuePayment = (
 
 		<!-- Orders Section -->
 		<section class="enter-rise stagger-2">
-			<h2 class="mb-4 font-display text-foreground text-h3">Захиалгын түүх</h2>
+			<h2 class="mb-4 font-display text-foreground text-h3">
+				{unpaidOnly ? "Төлбөр хүлээгдэж буй" : "Захиалгын түүх"}
+			</h2>
 
 			{orders.length === 0 ? (
 				<div class="rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-soft">
@@ -152,16 +198,18 @@ const canContinuePayment = (
 						<IconShoppingBag class="h-8 w-8" />
 					</div>
 					<h3 class="mb-2 font-display text-foreground text-lg">
-						Захиалга олдсонгүй
+						{unpaidOnly ? "Төлбөр олдсонгүй" : "Захиалга олдсонгүй"}
 					</h3>
 					<p class="mb-6 text-muted-foreground text-sm">
-						Та одоохондоо ямар ч захиалга хийгээгүй байна
+						{unpaidOnly
+							? "Төлөөгүй захиалга байхгүй байна. Бүх захиалгаа харахын тулд нэвтэрнэ үү."
+							: "Та одоохондоо ямар ч захиалга хийгээгүй байна"}
 					</p>
 					<a
-						href="/products"
+						href={unpaidOnly ? "/login" : "/products"}
 						class="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-6 py-3 font-semibold text-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97]"
 					>
-						Бүтээгдэхүүн үзэх
+						{unpaidOnly ? "Нэвтрэх" : "Бүтээгдэхүүн үзэх"}
 					</a>
 				</div>
 			) : (
