@@ -37,18 +37,6 @@ import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type Step = "delivery" | "payment";
 
-const unpaidCheckoutPaymentNumber = async (paymentNumber?: string) => {
-	if (!paymentNumber) return;
-	try {
-		const payment = await api.payment.getPaymentByNumber.query({
-			paymentNumber,
-		});
-		if (payment.status === "pending") return payment.paymentNumber;
-	} catch {
-		return;
-	}
-};
-
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 const EASE_IN_OUT: [number, number, number, number] = [0.65, 0, 0.35, 1];
 const stepEnter = { duration: 0.44, easing: EASE_OUT_QUART };
@@ -71,15 +59,6 @@ const CheckoutForm = (props: {
 }) => {
 	onMount(() => {
 		void (async () => {
-			const sessionUser =
-				props.user ?? (await api.auth.check.query().catch(() => null));
-			const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
-				sessionUser?.checkout?.paymentNumber,
-			);
-			if (pendingPaymentNumber) {
-				void safeNavigate(paymentUrl(pendingPaymentNumber));
-				return;
-			}
 			if (cart.items().length === 0) return;
 			const cartSignature = cart
 				.items()
@@ -164,18 +143,6 @@ const CheckoutForm = (props: {
 			onSubmit: checkoutValidators,
 		},
 		onSubmit: async (values) => {
-			try {
-				const sessionUser = await api.auth.check.query();
-				const pendingPaymentNumber = await unpaidCheckoutPaymentNumber(
-					sessionUser?.checkout?.paymentNumber,
-				);
-				if (pendingPaymentNumber) {
-					void safeNavigate(paymentUrl(pendingPaymentNumber));
-					return;
-				}
-			} catch {
-				// Fall through to create a new order when session check fails.
-			}
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
 				quantity: item.quantity,
