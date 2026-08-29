@@ -349,6 +349,7 @@ export const paymentQueries = {
 							orderDetails: {
 								columns: {
 									quantity: true,
+									price: true,
 								},
 								with: {
 									product: {
@@ -358,6 +359,11 @@ export const paymentQueries = {
 											price: true,
 										},
 										with: {
+											brand: {
+												columns: {
+													name: true,
+												},
+											},
 											images: {
 												columns: {
 													url: true,

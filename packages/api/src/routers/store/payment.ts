@@ -80,7 +80,9 @@ export const payment = router({
 						products: payment.order.orderDetails.map((detail) => ({
 							productId: detail.product.id,
 							name: detail.product.name,
-							price: detail.product.price,
+							brandName: detail.product.brand.name,
+							// Prefer the price captured on the order line — catalog can drift.
+							price: detail.price ?? detail.product.price,
 							quantity: detail.quantity,
 							imageUrl: detail.product.images[0]?.url,
 						})),

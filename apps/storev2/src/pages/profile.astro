@@ -76,7 +76,7 @@ if (user.trust === "phone_verified") {
 					createdAt: payment.order.createdAt,
 					products: payment.order.products.map((product) => ({
 						name: product.name,
-						brandName: "",
+						brandName: product.brandName,
 						imageUrl: product.imageUrl,
 						quantity: product.quantity,
 						sellingPrice: product.price,
