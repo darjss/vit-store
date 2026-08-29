@@ -357,53 +357,43 @@
         }
     }
 
-    @keyframes checkout-loader-ring {
+    @keyframes working-spin {
         to {
             transform: rotate(360deg);
         }
     }
 
-    .checkout-loader-ring {
-        transform-origin: center;
-        animation: checkout-loader-ring 800ms linear infinite;
+    .working-spinner {
+        animation: working-spin 700ms linear infinite;
     }
 
-    .checkout-loader-ring-slow {
-        transform-origin: center;
-        animation: checkout-loader-ring 1400ms linear infinite reverse;
-    }
-
-    @keyframes checkout-loader-dot {
+    @keyframes working-enter {
+        from {
+            opacity: 0;
+            transform: scale(0.94);
+        }
         to {
-            opacity: 0.3;
-            transform: translateY(-5px);
+            opacity: 1;
+            transform: scale(1);
         }
     }
 
-    .checkout-loader-dot {
-        animation: checkout-loader-dot 650ms ease-in-out infinite alternate;
+    .working-status {
+        animation: working-enter 320ms var(--ease-out-expo) both;
     }
 
-    .checkout-loader-dot:nth-child(2) {
-        animation-delay: 100ms;
-    }
-
-    .checkout-loader-dot:nth-child(3) {
-        animation-delay: 200ms;
-    }
-
-    @keyframes checkout-car-drive {
+    @keyframes working-icon-pulse {
         0%,
         100% {
-            transform: translateX(-5px) rotate(-2deg);
+            opacity: 1;
         }
         50% {
-            transform: translateX(5px) rotate(2deg);
+            opacity: 0.55;
         }
     }
 
-    .animate-checkout-car {
-        animation: checkout-car-drive 800ms var(--ease-in-out) infinite;
+    .working-status-icon {
+        animation: working-icon-pulse 1.4s var(--ease-in-out) infinite;
     }
 
     @keyframes checkout-nudge {
@@ -432,7 +422,7 @@
     @keyframes error-pop {
         from {
             opacity: 0;
-            transform: translateY(-8px) scale(0.85);
+            transform: translateY(-8px) scale(0.92);
         }
         to {
             opacity: 1;
@@ -441,47 +431,7 @@
     }
 
     .animate-error-pop {
-        animation: error-pop 420ms var(--ease-playful-spring) both;
-    }
-
-    @keyframes submit-celebrate {
-        50% {
-            transform: scale(1.06) rotate(-1deg);
-        }
-    }
-
-    @keyframes pulse-halo {
-        0% {
-            box-shadow: 0 0 0 0 oklch(0.9 0.14 95 / 0.65);
-        }
-        70% {
-            box-shadow: 0 0 0 18px oklch(0.9 0.14 95 / 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 oklch(0.9 0.14 95 / 0);
-        }
-    }
-
-    .animate-submit-working {
-        animation:
-            submit-celebrate 550ms var(--ease-playful-spring),
-            pulse-halo 1500ms ease-out 550ms infinite;
-    }
-
-    @keyframes checkout-car-track {
-        0% {
-            transform: translateX(-7px) rotate(-2deg);
-        }
-        55% {
-            transform: translateX(7px) rotate(2deg);
-        }
-        100% {
-            transform: translateX(-7px) rotate(-2deg);
-        }
-    }
-
-    .animate-checkout-car-track {
-        animation: checkout-car-track 900ms var(--ease-out-expo) infinite;
+        animation: error-pop 360ms var(--ease-out-expo) both;
     }
 
     @keyframes payment-panel-enter-left {
@@ -517,31 +467,31 @@
     @keyframes payment-state-pop {
         from {
             opacity: 0;
-            transform: scale(0.85) rotate(-5deg);
+            transform: scale(0.94);
         }
         to {
             opacity: 1;
-            transform: scale(1) rotate(0deg);
+            transform: scale(1);
         }
     }
 
     .animate-payment-state-pop {
-        animation: payment-state-pop 450ms var(--ease-playful-spring) both;
+        animation: payment-state-pop 320ms var(--ease-out-expo) both;
     }
 
     @keyframes qpay-qr-pop {
         from {
             opacity: 0;
-            transform: scale(0.55) rotate(-8deg);
+            transform: scale(0.92);
         }
         to {
             opacity: 1;
-            transform: scale(1) rotate(0deg);
+            transform: scale(1);
         }
     }
 
     .animate-qpay-qr-pop {
-        animation: qpay-qr-pop 600ms var(--ease-playful-spring) both;
+        animation: qpay-qr-pop 380ms var(--ease-out-expo) both;
     }
 
     @keyframes handoff-reveal {

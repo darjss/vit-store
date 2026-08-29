@@ -14,6 +14,7 @@ import {
 	Show,
 } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
+import { WorkingStatus } from "@/components/ui/working-status";
 import {
 	createSheetFocusRestore,
 	Sheet,
@@ -311,51 +312,13 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		<>
 		<div class="flex w-full flex-col items-center gap-4">
 			<Show when={mutation.isPending}>
-				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-8 text-center">
-					<div
-						class="relative grid size-16 place-items-center text-cocoa"
-						aria-hidden="true"
-					>
-						<svg class="absolute inset-0 size-16" viewBox="0 0 64 64">
-							<title>QPay холболт үүсгэж байна</title>
-							<circle
-								cx="32"
-								cy="32"
-								r="25"
-								fill="none"
-								stroke="currentColor"
-								stroke-opacity="0.16"
-								stroke-width="4"
-							/>
-							<path
-								class="checkout-loader-ring"
-								d="M32 7a25 25 0 0 1 25 25"
-								fill="none"
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-width="5"
-							/>
-							<path
-								class="checkout-loader-ring-slow"
-								d="M32 16a16 16 0 0 0-16 16"
-								fill="none"
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-width="3"
-							/>
-						</svg>
-						<IconQrCode class="size-6" />
-					</div>
-					<p class="font-semibold text-foreground text-sm">
-						QPay холболт үүсгэж байна
-					</p>
-					<span class="flex gap-1.5 text-cocoa" aria-hidden="true">
-						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
-						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
-						<i class="checkout-loader-dot size-2 rounded-full bg-current" />
-					</span>
-					<p class="text-muted-foreground text-xs">Түр хүлээнэ үү</p>
-				</div>
+				<WorkingStatus
+					layout="stack"
+					class="w-full py-8"
+					label="QPay холболт үүсгэж байна"
+					hint="Түр хүлээнэ үү"
+					icon={<IconQrCode />}
+				/>
 			</Show>
 
 			<Show when={mutation.isError}>
@@ -437,7 +400,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							<Show when={isHandoffState(handoff(), "opening")}>
 								<p class="flex animate-handoff-reveal items-center justify-center gap-2 text-muted-foreground text-xs">
 									<span
-										class="checkout-loader-ring size-3.5 rounded-full border-2 border-current/20 border-t-current"
+										class="working-spinner size-3.5 rounded-full border-2 border-current/20 border-t-current"
 										aria-hidden="true"
 									/>
 									Апп нээж байна…

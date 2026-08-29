@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import { Show } from "solid-js";
+import { WorkingStatus } from "@/components/ui/working-status";
 import { orderConfirmUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -59,47 +60,15 @@ const ConfirmPaymentButton = (props: {
 	return (
 		<Button
 			size="lg"
-			class={mutation.isPending ? "w-full animate-submit-working" : "w-full"}
+			class="w-full"
 			disabled={mutation.isPending}
 			onClick={handleConfirmPayment}
 		>
 			<Show when={mutation.isPending}>
-				<span class="flex animate-payment-state-pop items-center gap-3">
-					<span
-						class="relative grid size-7 place-items-center"
-						aria-hidden="true"
-					>
-						<svg class="absolute inset-0 size-7" viewBox="0 0 28 28">
-							<title>Төлбөр шалгаж байна</title>
-							<circle
-								cx="14"
-								cy="14"
-								r="10"
-								fill="none"
-								stroke="currentColor"
-								stroke-opacity="0.2"
-								stroke-width="2.5"
-							/>
-							<path
-								class="checkout-loader-ring"
-								d="M14 4a10 10 0 0 1 10 10"
-								fill="none"
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-width="3"
-							/>
-						</svg>
-						<IconBankCard class="size-3.5" />
-					</span>
-					<span class="text-left leading-tight">
-						<span class="block">Төлбөр шалгаж байна</span>
-						<span class="mt-1 flex gap-1" aria-hidden="true">
-							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
-							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
-							<i class="checkout-loader-dot size-1.5 rounded-full bg-current" />
-						</span>
-					</span>
-				</span>
+				<WorkingStatus
+					label="Төлбөр шалгаж байна"
+					icon={<IconBankCard />}
+				/>
 			</Show>
 			<Show when={mutation.isSuccess}>
 				<span class="flex animate-payment-state-pop items-center gap-2">

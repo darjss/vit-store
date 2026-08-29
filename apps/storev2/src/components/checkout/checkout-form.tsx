@@ -24,15 +24,12 @@ import { paymentUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
-import { cn } from "@/lib/utils";
 import { cart, createCartState } from "@/store/cart";
 import { BoxIcon as IconPackage, AltArrowDownIcon as IconChevronDown, AltArrowUpIcon as IconChevronUp, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
-import CheckoutSubmitStatus, {
-	CheckoutDeliveryTrack,
-} from "./checkout-submit-status";
+import { WorkingStatus } from "../ui/working-status";
 import DeliveryInfoSheet from "./delivery-info-sheet";
 
 type Step = "delivery" | "payment";
@@ -459,27 +456,19 @@ const CheckoutForm = (props: {
 																	<div class="w-full">
 																		<form.SubmitButton
 																			size="lg"
-																			class={cn(
-																				"w-full",
-																				mutation.isPending &&
-																					"animate-submit-working",
-																			)}
-																			loadingContent={<CheckoutSubmitStatus />}
+																			class="w-full"
+																			loadingContent={
+																				<WorkingStatus
+																					label="Захиалга үүсгэж байна…"
+																					icon={<IconTruck />}
+																				/>
+																			}
 																			disabled={mutation.isPending}
 																		>
-																			<Show
-																				when={mutation.isPending}
-																				fallback={"Төлбөр төлөх →"}
-																			>
-																				<CheckoutSubmitStatus />
-																			</Show>
+																			Төлбөр төлөх →
 																		</form.SubmitButton>
 																	</div>
 																</form.AppForm>
-
-																<Show when={mutation.isPending}>
-																	<CheckoutDeliveryTrack />
-																</Show>
 
 																<p class="text-center text-muted-foreground text-xs">
 																	Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
