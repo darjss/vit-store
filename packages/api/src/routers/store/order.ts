@@ -3,7 +3,7 @@ import { orderQueries, paymentQueries } from "@vit/api/queries";
 import { newOrderSchema } from "@vit/shared";
 import { bankTransfer, deliveryFee } from "@vit/shared/constants";
 import * as v from "valibot";
-import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, ProductsTable, } from "~/db/schema";
 import { cartFingerprint } from "~/lib/order/cart-fingerprint";
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
@@ -142,7 +142,8 @@ export const order = router({
             const submittedFingerprint = cartFingerprint(normalizedProducts);
             // Facebook iOS often kills the guest session before retry. Phone + cart
             // identity owns the unpaid slot; a client checkout id does not survive.
-            const reuseAfter = new Date(Date.now() - 2 * 60 * 60 * 1000);
+            // No age window: an older unpaid Payment must still be reused or retired
+            // so we keep one payable checkout per phone.
             const txResult = await ctx.db.transaction(async (tx) => {
                 const existingCustomer = await tx.query.CustomersTable.findFirst({
                     where: eq(CustomersTable.phone, customerPhone),
@@ -174,7 +175,6 @@ export const order = router({
                         eq(OrdersTable.customerPhone, customerPhone),
                         eq(OrdersTable.status, "created"),
                         isNull(OrdersTable.deletedAt),
-                        gte(OrdersTable.createdAt, reuseAfter),
                     ),
                     orderBy: desc(OrdersTable.createdAt),
                     with: {
