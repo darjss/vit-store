@@ -53,7 +53,7 @@ export const order = router({
                 itemCount: orders.length,
             });
             return orders.map((order) => {
-                const { orderDetails, sales, ...orderInfo } = order;
+                const { orderDetails, sales, payments, ...orderInfo } = order;
                 const salesPriceMap = new Map<number, number>();
                 for (const sale of sales) {
                     salesPriceMap.set(sale.productId, sale.sellingPrice);
@@ -65,9 +65,13 @@ export const order = router({
                     quantity: detail.quantity,
                     sellingPrice: salesPriceMap.get(detail.productId) ?? 0,
                 }));
+                const latestPayment = payments[0];
                 return {
                     ...orderInfo,
                     products,
+                    paymentNumber: latestPayment?.paymentNumber ?? null,
+                    paymentStatus: latestPayment?.status ?? null,
+                    paymentProvider: latestPayment?.provider ?? null,
                 };
             });
         }

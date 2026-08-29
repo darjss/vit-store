@@ -805,6 +805,16 @@ export const orderQueries = {
 							productId: true,
 						},
 					},
+					payments: {
+						columns: {
+							paymentNumber: true,
+							status: true,
+							provider: true,
+							createdAt: true,
+						},
+						where: isNull(PaymentsTable.deletedAt),
+						orderBy: [desc(PaymentsTable.createdAt)],
+					},
 					orderDetails: {
 						columns: {
 							productId: true,

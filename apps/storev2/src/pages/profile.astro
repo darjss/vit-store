@@ -17,6 +17,8 @@
 import Layout from "@/layouts/Layout.astro";
 import { env } from "cloudflare:workers";
 import { createServerClient } from "@/lib/trpc";
+import { paymentUrl } from "@/lib/payment-url";
+import { orderStatusLabels } from "@vit/shared/order-status";
 import { BagIcon as IconShoppingBag } from "@solar-icons/solid/linear";
 
 // Get cookies from Astro's request context
@@ -67,20 +69,35 @@ const formatPhone = (phone?: number) => {
 	return `+976 ${phoneStr.slice(0, 4)} ${phoneStr.slice(4)}`;
 };
 
-// Status badges
+// Status badges — payment state wins when the Order is still awaiting pay.
 const statusColors: Record<string, string> = {
-	pending: "bg-warning text-warning-foreground",
+	created: "bg-warning text-warning-foreground",
+	pending: "bg-info text-info-foreground",
+	shipped: "bg-info text-info-foreground",
+	delivered: "bg-success text-success-foreground",
+	cancelled: "bg-error text-error-foreground",
+	refunded: "bg-muted text-muted-foreground",
 	processing: "bg-info text-info-foreground",
 	completed: "bg-success text-success-foreground",
-	cancelled: "bg-error text-error-foreground",
 };
 
-const statusLabels: Record<string, string> = {
-	pending: "Хүлээгдэж буй",
-	processing: "Боловсруулж байна",
-	completed: "Дууссан",
-	cancelled: "Цуцлагдсан",
+const paymentStatusLabels: Record<string, string> = {
+	pending: "Төлөөгүй",
+	customer_claimed_paid: "Шалгаж байна",
+	success: "Төлсөн",
+	failed: "Төлбөр амжилтгүй",
 };
+
+const paymentStatusColors: Record<string, string> = {
+	pending: "bg-warning text-warning-foreground",
+	customer_claimed_paid: "bg-info text-info-foreground",
+	success: "bg-success text-success-foreground",
+	failed: "bg-error text-error-foreground",
+};
+
+const canContinuePayment = (status: string | null | undefined) =>
+	status === "pending" || status === "customer_claimed_paid";
+
 ---
 
 <Layout title={title} description={description} noindex nofollow>
@@ -171,11 +188,19 @@ const statusLabels: Record<string, string> = {
 								</div>
 
 								<div class="flex items-center gap-4">
-									<span
-										class={`rounded-full px-3 py-1 font-semibold text-xs ${statusColors[order.status]}`}
-									>
-										{statusLabels[order.status]}
-									</span>
+									{order.paymentStatus ? (
+										<span
+											class={`rounded-full px-3 py-1 font-semibold text-xs ${paymentStatusColors[order.paymentStatus] ?? statusColors[order.status] ?? "bg-muted text-muted-foreground"}`}
+										>
+											{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+										</span>
+									) : (
+										<span
+											class={`rounded-full px-3 py-1 font-semibold text-xs ${statusColors[order.status] ?? "bg-muted text-muted-foreground"}`}
+										>
+											{orderStatusLabels[order.status as keyof typeof orderStatusLabels] ?? order.status}
+										</span>
+									)}
 									<div class="text-right">
 										<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
 											Нийт дүн
@@ -237,6 +262,15 @@ const statusLabels: Record<string, string> = {
 										</div>
 										<div class="text-foreground text-sm">{order.notes}</div>
 									</div>
+								)}
+
+								{canContinuePayment(order.paymentStatus) && order.paymentNumber && (
+									<a
+										href={paymentUrl(order.paymentNumber)}
+										class="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-primary px-6 py-3 font-semibold text-foreground text-sm shadow-lift transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lift-lg active:scale-[0.97]"
+									>
+										Төлбөр үргэлжлүүлэх
+									</a>
 								)}
 							</div>
 						</article>
