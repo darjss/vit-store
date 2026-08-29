@@ -183,7 +183,11 @@ export const order = router({
                             where: isNull(OrderDetailsTable.deletedAt),
                         },
                         payments: {
-                            columns: { paymentNumber: true, status: true },
+                            columns: {
+                                paymentNumber: true,
+                                status: true,
+                                amount: true,
+                            },
                             where: isNull(PaymentsTable.deletedAt),
                             orderBy: desc(PaymentsTable.createdAt),
                         },
@@ -214,6 +218,7 @@ export const order = router({
                         orderId: pendingOrder.id,
                         orderNumber: pendingOrder.orderNumber,
                         paymentNumber: openPayment.paymentNumber,
+                        total: openPayment.amount ?? pendingOrder.total,
                     };
                 }
                 // Different cart: retire only a still-pending Payment. Do not auto-
@@ -224,7 +229,7 @@ export const order = router({
                     openPayment.status === "pending" &&
                     openPayment.paymentNumber
                 ) {
-                    await tx
+                    const [failedPayment] = await tx
                         .update(PaymentsTable)
                         .set({ status: "failed" })
                         .where(
@@ -233,23 +238,28 @@ export const order = router({
                                 eq(PaymentsTable.status, "pending"),
                                 isNull(PaymentsTable.deletedAt),
                             ),
-                        );
-                    await tx
-                        .update(OrdersTable)
-                        .set({ status: "cancelled" })
-                        .where(
-                            and(
-                                eq(OrdersTable.id, pendingOrder.id),
-                                eq(OrdersTable.status, "created"),
-                                isNull(OrdersTable.deletedAt),
-                            ),
-                        );
-                    ctx.log.info("order.prior_unpaid_cancelled", {
-                        orderId: pendingOrder.id,
-                        orderNumber: pendingOrder.orderNumber,
-                        paymentNumber: openPayment.paymentNumber,
-                        customerPhone,
-                    });
+                        )
+                        .returning({ paymentNumber: PaymentsTable.paymentNumber });
+                    // Only cancel the Order if we actually failed the Payment. A concurrent
+                    // claim→customer_claimed_paid would make the update match 0 rows.
+                    if (failedPayment) {
+                        await tx
+                            .update(OrdersTable)
+                            .set({ status: "cancelled" })
+                            .where(
+                                and(
+                                    eq(OrdersTable.id, pendingOrder.id),
+                                    eq(OrdersTable.status, "created"),
+                                    isNull(OrdersTable.deletedAt),
+                                ),
+                            );
+                        ctx.log.info("order.prior_unpaid_cancelled", {
+                            orderId: pendingOrder.id,
+                            orderNumber: pendingOrder.orderNumber,
+                            paymentNumber: openPayment.paymentNumber,
+                            customerPhone,
+                        });
+                    }
                 }
 
                 const [createdOrder] = await tx
@@ -289,11 +299,13 @@ export const order = router({
                     orderId: createdOrder.orderId,
                     orderNumber,
                     paymentNumber: payment?.paymentNumber ?? null,
+                    total,
                 };
             });
             const orderId = txResult.orderId;
             const reused = txResult.reused;
             const resolvedOrderNumber = txResult.orderNumber;
+            const resolvedTotal = txResult.total;
             if (reused) {
                 ctx.log.info("order.checkout_reused", {
                     orderId,
@@ -409,7 +421,7 @@ export const order = router({
                 paymentNumber,
                 orderNumber: resolvedOrderNumber,
                 checkoutToken,
-                total,
+                total: resolvedTotal,
                 customerPhone: input.phoneNumber,
                 accountNumber: ctx.c.env.KHAAN_ACCOUNT_NUMBER || bankTransfer.accountNumber,
                 accountName: ctx.c.env.KHAAN_ACCOUNT_NAME || bankTransfer.accountName,
