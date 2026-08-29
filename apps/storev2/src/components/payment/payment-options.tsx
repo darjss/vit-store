@@ -133,7 +133,7 @@ const PaymentOptions = (props: PaymentOptionsProps) => {
 								}
 							>
 								<span
-									class="checkout-loader-ring size-4 rounded-full border-2 border-current/20 border-t-current sm:size-5"
+									class="working-spinner size-4 rounded-full border-2 border-current/20 border-t-current sm:size-5"
 									aria-hidden="true"
 								/>
 							</Show>
