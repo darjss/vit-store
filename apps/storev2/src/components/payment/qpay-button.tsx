@@ -24,6 +24,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import {
+	detectInAppBrowser,
 	trackBankDeeplinkClicked,
 	trackBankDeeplinkNoHandoff,
 	trackBankDeeplinkOpened,
@@ -203,6 +204,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
+					setShowQr(true);
 					setRecoveryReason("no_handoff");
 				},
 			}),
@@ -259,6 +261,34 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	};
 
 	const invoiceData = () => mutation.data;
+
+	const failedHandoffBank = () => {
+		if (recoveryReason() !== "no_handoff") return null;
+		const current = handoff();
+		if (!isHandoffState(current, "failed")) return null;
+		return current.bank;
+	};
+
+	const recoveryCopy = () => {
+		const bank = failedHandoffBank();
+		if (!bank) {
+			return {
+				title: "Апп нээгдсэнгүй",
+				description: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?",
+			};
+		}
+		if (detectInAppBrowser() === "facebook") {
+			return {
+				title: `${bank} нээгдсэнгүй`,
+				description:
+					"Facebook дотор банкны апп ихэвчлэн нээгддэггүй. QR код уншуулж эсвэл дахин оролдоно уу.",
+			};
+		}
+		return {
+			title: `${bank} нээгдсэнгүй`,
+			description: `${bank} апп нээгдсэнгүй. QR код уншуулж эсвэл өөр банкаар төлнө үү.`,
+		};
+	};
 
 	createEffect(() => {
 		if (mutation.isError) {
@@ -442,10 +472,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			>
 				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
 					<SheetTitle class="font-display font-bold text-lg tracking-tight">
-						Апп нээгдсэнгүй
+						{recoveryCopy().title}
 					</SheetTitle>
 					<SheetDescription class="text-muted-foreground text-sm">
-						QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?
+						{recoveryCopy().description}
 					</SheetDescription>
 				</SheetHeader>
 				<div class="space-y-2 px-5 py-5">
