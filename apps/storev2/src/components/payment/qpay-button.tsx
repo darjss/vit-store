@@ -14,6 +14,7 @@ import {
 	Show,
 } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
+import { WorkingStatus } from "@/components/ui/working-status";
 import {
 	createSheetFocusRestore,
 	Sheet,
@@ -22,9 +23,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { WorkingStatus } from "@/components/ui/working-status";
 import {
-	isFacebookIosBrowser,
 	trackBankDeeplinkClicked,
 	trackBankDeeplinkNoHandoff,
 	trackBankDeeplinkOpened,
@@ -32,7 +31,7 @@ import {
 	trackPaymentRecoverySheetShown,
 	trackQpayError,
 } from "@/lib/analytics";
-import { isKhanBank, resolveBankLogo } from "@/lib/bank-logos";
+import { resolveBankLogo } from "@/lib/bank-logos";
 import {
 	HandoffState,
 	type HandoffState as HandoffStateType,
@@ -140,10 +139,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [recoveryReason, setRecoveryReason] = createSignal<
 		"no_handoff" | "returned_unpaid" | null
 	>(null);
-	const [recoveryVariant, setRecoveryVariant] = createSignal<
-		"generic" | "khan_facebook"
-	>("generic");
-	const [hideKhanInFacebook, setHideKhanInFacebook] = createSignal(false);
+	const [failedBanks, setFailedBanks] = createSignal<string[]>([]);
 	const recoveryFocusRestore = createSheetFocusRestore();
 	// Watcher stops accumulate here because onCleanup inside event handlers
 	// never registers: click handlers run outside any Solid reactive owner.
@@ -179,10 +175,12 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 							void (async () => {
 								if (navigated()) return;
 								try {
-									const result = await api.payment.checkQpayPayment.mutate({
-										paymentNumber: props.paymentNumber,
-										checkoutToken: props.checkoutToken,
-									});
+									const result = await api.payment.checkQpayPayment.mutate(
+										{
+											paymentNumber: props.paymentNumber,
+											checkoutToken: props.checkoutToken,
+										},
+									);
 									if (result.paid) {
 										setNavigated(true);
 										void safeNavigate(
@@ -198,7 +196,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 									// to the unpaid recovery sheet.
 								}
 								if (navigated()) return;
-								setRecoveryVariant("generic");
 								setRecoveryReason("returned_unpaid");
 							})();
 						}),
@@ -207,13 +204,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
-					const khanFacebook =
-						isFacebookIosBrowser() && isKhanBank(link.name, link.description);
-					setRecoveryVariant(khanFacebook ? "khan_facebook" : "generic");
-					if (khanFacebook) {
-						setHideKhanInFacebook(true);
-						setShowQr(true);
-					}
+					setFailedBanks((prev) =>
+						prev.includes(bank) ? prev : [...prev, bank],
+					);
+					setShowQr(true);
 					setRecoveryReason("no_handoff");
 				},
 			}),
@@ -273,11 +267,20 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	const bankLinks = () => {
 		const urls = invoiceData()?.urls ?? [];
-		if (!hideKhanInFacebook()) return urls;
-		return urls.filter((link) => !isKhanBank(link.name, link.description));
+		const blocked = failedBanks();
+		if (blocked.length === 0) return urls;
+		return urls.filter((link) => {
+			const name = link.name || link.description || "Банк";
+			return !blocked.includes(name);
+		});
 	};
 
-	const khanFacebookRecovery = () => recoveryVariant() === "khan_facebook";
+	const failedHandoffBank = () => {
+		if (recoveryReason() !== "no_handoff") return null;
+		const current = handoff();
+		if (!isHandoffState(current, "failed")) return null;
+		return current.bank;
+	};
 
 	createEffect(() => {
 		if (mutation.isError) {
@@ -329,183 +332,182 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	return (
 		<>
-			<div class="flex w-full flex-col items-center gap-4">
-				<Show when={mutation.isPending}>
-					<WorkingStatus
-						layout="stack"
-						class="w-full py-8"
-						label="QPay холболт үүсгэж байна"
-						hint="Түр хүлээнэ үү"
-						icon={<IconQrCode />}
-					/>
-				</Show>
+		<div class="flex w-full flex-col items-center gap-4">
+			<Show when={mutation.isPending}>
+				<WorkingStatus
+					layout="stack"
+					class="w-full py-8"
+					label="QPay холболт үүсгэж байна"
+					hint="Түр хүлээнэ үү"
+					icon={<IconQrCode />}
+				/>
+			</Show>
 
-				<Show when={mutation.isError}>
-					<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-6">
-						<IconErrorWarning class="h-10 w-10 text-destructive" />
-						<div class="text-center">
-							<p class="font-semibold text-destructive text-sm">Алдаа гарлаа</p>
-							<p class="mt-1 text-muted-foreground text-xs">
-								{mutation.error?.message ?? "Төлбөр үүсгэхэд алдаа гарлаа"}
-							</p>
+			<Show when={mutation.isError}>
+				<div class="flex animate-payment-state-pop flex-col items-center gap-3 py-6">
+					<IconErrorWarning class="h-10 w-10 text-destructive" />
+					<div class="text-center">
+						<p class="font-semibold text-destructive text-sm">Алдаа гарлаа</p>
+						<p class="mt-1 text-muted-foreground text-xs">
+							{mutation.error?.message ?? "Төлбөр үүсгэхэд алдаа гарлаа"}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={() => mutation.mutate()}
+						class={cn(buttonVariants({ size: "sm" }))}
+					>
+						Дахин оролдох
+					</button>
+				</div>
+			</Show>
+
+			<Show when={mutation.isSuccess && invoiceData()}>
+				<div class="w-full animate-payment-panel-right space-y-4">
+					{/* Amount display */}
+					<Show when={amountLabel()}>
+						<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-3.5 py-2.5">
+							<span class="font-semibold text-foreground/70 text-xs">
+								Төлөх дүн
+							</span>
+							<span class="font-display text-foreground text-lg">
+								{amountLabel()}
+							</span>
 						</div>
+					</Show>
+
+					{/* QR Code toggle */}
+					<div class="space-y-3" ref={qrSection}>
 						<button
 							type="button"
-							onClick={() => mutation.mutate()}
-							class={cn(buttonVariants({ size: "sm" }))}
+							onClick={() => setShowQr((v) => !v)}
+							class="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border bg-muted/30 px-3 font-semibold text-xs transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/60 active:scale-[0.98]"
 						>
-							Дахин оролдох
+							<IconQrCode class="h-4 w-4" aria-hidden="true" />
+							{showQr() ? "QR код хаах" : "QR код харах"}
 						</button>
-					</div>
-				</Show>
 
-				<Show when={mutation.isSuccess && invoiceData()}>
-					<div class="w-full animate-payment-panel-right space-y-4">
-						{/* Amount display */}
-						<Show when={amountLabel()}>
-							<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-3.5 py-2.5">
-								<span class="font-semibold text-foreground/70 text-xs">
-									Төлөх дүн
-								</span>
-								<span class="font-display text-foreground text-lg">
-									{amountLabel()}
-								</span>
+						<Show when={showQr()}>
+							<div class="flex animate-qpay-qr-pop flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
+								<img
+									src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
+									alt="QPay QR"
+									class="h-48 w-48 rounded-lg object-contain sm:h-56 sm:w-56"
+								/>
+								<p class="text-center text-[11px] text-muted-foreground">
+									QPay апп эсвэл мобайл банк ашиглан QR кодыг уншуулна уу
+								</p>
 							</div>
 						</Show>
+					</div>
 
-						{/* QR Code toggle */}
-						<div class="space-y-3" ref={qrSection}>
-							<button
-								type="button"
-								onClick={() => setShowQr((v) => !v)}
-								class="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border bg-muted/30 px-3 font-semibold text-xs transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted/60 active:scale-[0.98]"
-							>
-								<IconQrCode class="h-4 w-4" aria-hidden="true" />
-								{showQr() ? "QR код хаах" : "QR код харах"}
-							</button>
-
-							<Show when={showQr()}>
-								<div class="flex animate-qpay-qr-pop flex-col items-center gap-3 rounded-xl border border-border bg-background p-4">
-									<img
-										src={`data:image/png;base64,${invoiceData()?.qr_image ?? ""}`}
-										alt="QPay QR"
-										class="h-48 w-48 rounded-lg object-contain sm:h-56 sm:w-56"
+					{/* Bank deeplinks grid — scheme links are dead clicks on desktop
+					    (no protocol handler), so desktop leads with QR only. */}
+					<Show when={bankLinks().length > 0 && !isDesktop()}>
+						<div class="space-y-3">
+							<p class="font-semibold text-muted-foreground text-xs">
+								Банкаа сонгоно уу
+							</p>
+							<Show when={failedBanks().length > 0}>
+								<p class="text-center text-[11px] text-muted-foreground">
+									Апп нээгдсэнгүй. QR эсвэл өөр банкаа сонгоно уу.
+								</p>
+							</Show>
+							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
+								<For each={bankLinks()}>
+									{(link) => (
+										<BankTile
+											link={link}
+											href={link.link}
+											onSelect={() => handleBankClick(link)}
+										/>
+									)}
+								</For>
+							</div>
+							<Show when={isHandoffState(handoff(), "opening")}>
+								<p class="flex animate-handoff-reveal items-center justify-center gap-2 text-muted-foreground text-xs">
+									<span
+										class="working-spinner size-3.5 rounded-full border-2 border-current/20 border-t-current"
+										aria-hidden="true"
 									/>
-									<p class="text-center text-[11px] text-muted-foreground">
-										QPay апп эсвэл мобайл банк ашиглан QR кодыг уншуулна уу
-									</p>
-								</div>
+									Апп нээж байна…
+								</p>
 							</Show>
 						</div>
+					</Show>
 
-						{/* Bank deeplinks grid — scheme links are dead clicks on desktop
-					    (no protocol handler), so desktop leads with QR only. */}
-						<Show when={bankLinks().length > 0 && !isDesktop()}>
-							<div class="space-y-3">
-								<p class="font-semibold text-muted-foreground text-xs">
-									Банкаа сонгоно уу
-								</p>
-								<Show when={hideKhanInFacebook()}>
-									<p class="text-center text-[11px] text-muted-foreground">
-										Facebook-ээс Хаан банк нээгдсэнгүй. QR эсвэл өөр банкаа
-										сонгоно уу.
-									</p>
-								</Show>
-								<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-									<For each={bankLinks()}>
-										{(link) => (
-											<BankTile
-												link={link}
-												href={link.link}
-												onSelect={() => handleBankClick(link)}
-											/>
-										)}
-									</For>
-								</div>
-								<Show when={isHandoffState(handoff(), "opening")}>
-									<p class="flex animate-handoff-reveal items-center justify-center gap-2 text-muted-foreground text-xs">
-										<span
-											class="working-spinner size-3.5 rounded-full border-2 border-current/20 border-t-current"
-											aria-hidden="true"
-										/>
-										Апп нээж байна…
-									</p>
-								</Show>
-							</div>
-						</Show>
+					<p class="text-center text-[11px] text-muted-foreground">
+						Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.
+					</p>
 
-						<p class="text-center text-[11px] text-muted-foreground">
-							Төлбөр амжилттай хийгдмэгц таны төлөв автоматаар шинэчлэгдэнэ.
-						</p>
-
-						<p class="text-center text-[11px] text-muted-foreground">
-							Төлбөр хийгдэхгүй байвал{" "}
-							<a
-								href={supportPhone.href}
-								class="font-medium text-foreground underline underline-offset-2"
-							>
-								{supportPhone.display}
-							</a>{" "}
-							дугаарт холбогдоно уу
-						</p>
-					</div>
-				</Show>
-			</div>
-			<Sheet
-				open={recoveryReason() !== null}
-				onOpenChange={(open) => {
-					if (!open) {
-						chooseRecovery("dismiss");
-					}
-				}}
+					<p class="text-center text-[11px] text-muted-foreground">
+						Төлбөр хийгдэхгүй байвал{" "}
+						<a
+							href={supportPhone.href}
+							class="font-medium text-foreground underline underline-offset-2"
+						>
+							{supportPhone.display}
+						</a>{" "}
+						дугаарт холбогдоно уу
+					</p>
+				</div>
+			</Show>
+		</div>
+		<Sheet
+			open={recoveryReason() !== null}
+			onOpenChange={(open) => {
+				if (!open) {
+					chooseRecovery("dismiss");
+				}
+			}}
+		>
+			<SheetContent
+				position="bottom"
+				closeLabel="Хаах"
+				focusRestore={recoveryFocusRestore}
+				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 			>
-				<SheetContent
-					position="bottom"
-					closeLabel="Хаах"
-					focusRestore={recoveryFocusRestore}
-					class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
-				>
-					<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
-						<SheetTitle class="font-bold font-display text-lg tracking-tight">
-							{khanFacebookRecovery()
-								? "Хаан банк нээгдсэнгүй"
-								: "Апп нээгдсэнгүй"}
-						</SheetTitle>
-						<SheetDescription class="text-muted-foreground text-sm">
-							{khanFacebookRecovery()
-								? "Facebook дотор Хаан банкны апп ихэвчлэн нээгддэггүй. QR код уншуулж эсвэл өөр банкаар төлнө үү."
-								: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?"}
-						</SheetDescription>
-					</SheetHeader>
-					<div class="space-y-2 px-5 py-5">
+				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
+					<SheetTitle class="font-display font-bold text-lg tracking-tight">
+						{failedHandoffBank()
+							? `${failedHandoffBank()} нээгдсэнгүй`
+							: "Апп нээгдсэнгүй"}
+					</SheetTitle>
+					<SheetDescription class="text-muted-foreground text-sm">
+						{failedHandoffBank()
+							? `${failedHandoffBank()} апп нээгдсэнгүй. QR код уншуулж эсвэл өөр банкаар төлнө үү.`
+							: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?"}
+					</SheetDescription>
+				</SheetHeader>
+				<div class="space-y-2 px-5 py-5">
+					<button
+						type="button"
+						class={cn(buttonVariants())}
+						onClick={() => chooseRecovery("qr")}
+					>
+						QR код уншуулах
+					</button>
+					<Show when={BANK_TRANSFER_ENABLED && props.onChooseTransfer}>
 						<button
 							type="button"
-							class={cn(buttonVariants())}
-							onClick={() => chooseRecovery("qr")}
+							class={cn(buttonVariants({ variant: "dark" }))}
+							onClick={() => chooseRecovery("transfer")}
 						>
-							QR код уншуулах
+							Дансаар шилжүүлэх
 						</button>
-						<Show when={BANK_TRANSFER_ENABLED && props.onChooseTransfer}>
-							<button
-								type="button"
-								class={cn(buttonVariants({ variant: "dark" }))}
-								onClick={() => chooseRecovery("transfer")}
-							>
-								Дансаар шилжүүлэх
-							</button>
-						</Show>
-						<button
-							type="button"
-							class="w-full py-2 text-center text-muted-foreground text-xs"
-							onClick={() => chooseRecovery("dismiss")}
-						>
-							{khanFacebookRecovery()
-								? "Өөр банк сонгох"
-								: "Банкаа дахин сонгох"}
-						</button>
-					</div>
-				</SheetContent>
-			</Sheet>
+					</Show>
+					<button
+						type="button"
+						class="w-full py-2 text-center text-muted-foreground text-xs"
+						onClick={() => chooseRecovery("dismiss")}
+					>
+						{failedBanks().length > 0
+							? "Өөр банк сонгох"
+							: "Банкаа дахин сонгох"}
+					</button>
+				</div>
+			</SheetContent>
+		</Sheet>
 		</>
 	);
 };

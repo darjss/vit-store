@@ -91,15 +91,6 @@ const BANK_LOGOS: Record<string, string> = {
 
 const normalize = (value?: string) => value?.trim().toLowerCase() ?? "";
 
-const KHAN_BANK_KEYS = new Set(["khan", "khan bank", "хаан банк"]);
-
-export function isKhanBank(name?: string, description?: string) {
-	return (
-		KHAN_BANK_KEYS.has(normalize(name)) ||
-		KHAN_BANK_KEYS.has(normalize(description))
-	);
-}
-
 export function resolveBankLogo(
 	name?: string,
 	description?: string,
