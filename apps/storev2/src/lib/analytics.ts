@@ -151,6 +151,13 @@ export function detectInAppBrowser(): string {
 	return "none";
 }
 
+/** Facebook iOS in-app browser. Khan Bank custom-scheme handoff often fails here. */
+export function isFacebookIosBrowser() {
+	if (typeof window === "undefined") return false;
+	const ua = navigator.userAgent;
+	return detectInAppBrowser() === "facebook" && /iPhone|iPad|iPod/i.test(ua);
+}
+
 /**
  * Tracks the three moments of a bank deep link tap. Outcome detection lives
  * in `deeplink-handoff.ts`; these just record it.
