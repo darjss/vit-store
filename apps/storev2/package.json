@@ -10,7 +10,8 @@
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"destroy": "alchemy destroy",
 		"dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --app storev2 --stage dev",
-		"preview": "astro preview"
+		"preview": "astro preview",
+		"preview:og": "bun scripts/preview-og-images.ts"
 	},
 	"dependencies": {
 		"@astrojs/check": "^0.9.9",
@@ -20,6 +21,7 @@
 		"@fontsource-variable/onest": "^5.2.11",
 		"@fontsource-variable/unbounded": "^5.2.8",
 		"@kobalte/core": "^0.13.11",
+		"@resvg/resvg-wasm": "^2.6.2",
 		"@solar-icons/solid": "2.0.0-beta.3",
 		"@solid-primitives/storage": "^4.3.3",
 		"@tailwindcss/vite": "^4",
@@ -36,6 +38,7 @@
 		"clsx": "^2.1.1",
 		"embla-carousel-solid": "^8.6.0",
 		"motion": "^12.42.2",
+		"satori": "^0.29.0",
 		"server": "workspace:*",
 		"sharp": "^0.34.4",
 		"solid-js": "^1.9.13",
