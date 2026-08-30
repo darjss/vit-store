@@ -1,6 +1,6 @@
 # Khan Bank Handoff Fails Inside Facebook iOS
 
-Status: storefront recovery now drops any bank that fails handoff
+Status: storefront names the failed bank, opens QR, and mentions Facebook when the UA is Facebook
 
 ## Problem
 
@@ -116,9 +116,9 @@ distinguish a first failure from repeated Khan failures.
 
 `apps/storev2/src/lib/analytics.ts` detects Facebook for analytics properties.
 
-After any `no_handoff`, the storefront names that bank, opens QR, and removes
-its tile for the rest of the page. Khan in Facebook is the production case that
-forced the change. The recovery path is the same for every bank.
+After `no_handoff`, the storefront names that bank, opens QR, and keeps the
+tile. Eight seconds of a visible page is not proof the scheme is unusable.
+If the UA is Facebook, the sheet says bank apps often fail to open there.
 
 ## Comparison With Other QPay Apps
 

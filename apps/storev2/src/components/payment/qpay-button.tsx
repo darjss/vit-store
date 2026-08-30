@@ -24,6 +24,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import {
+	detectInAppBrowser,
 	trackBankDeeplinkClicked,
 	trackBankDeeplinkNoHandoff,
 	trackBankDeeplinkOpened,
@@ -139,7 +140,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [recoveryReason, setRecoveryReason] = createSignal<
 		"no_handoff" | "returned_unpaid" | null
 	>(null);
-	const [failedBanks, setFailedBanks] = createSignal<string[]>([]);
 	const recoveryFocusRestore = createSheetFocusRestore();
 	// Watcher stops accumulate here because onCleanup inside event handlers
 	// never registers: click handlers run outside any Solid reactive owner.
@@ -204,9 +204,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 				onFailed: () => {
 					trackBankDeeplinkNoHandoff(bank, props.paymentNumber);
 					setHandoff(HandoffState.failed(bank));
-					setFailedBanks((prev) =>
-						prev.includes(bank) ? prev : [...prev, bank],
-					);
 					setShowQr(true);
 					setRecoveryReason("no_handoff");
 				},
@@ -265,21 +262,32 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 	const invoiceData = () => mutation.data;
 
-	const bankLinks = () => {
-		const urls = invoiceData()?.urls ?? [];
-		const blocked = failedBanks();
-		if (blocked.length === 0) return urls;
-		return urls.filter((link) => {
-			const name = link.name || link.description || "Банк";
-			return !blocked.includes(name);
-		});
-	};
-
 	const failedHandoffBank = () => {
 		if (recoveryReason() !== "no_handoff") return null;
 		const current = handoff();
 		if (!isHandoffState(current, "failed")) return null;
 		return current.bank;
+	};
+
+	const recoveryCopy = () => {
+		const bank = failedHandoffBank();
+		if (!bank) {
+			return {
+				title: "Апп нээгдсэнгүй",
+				description: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?",
+			};
+		}
+		if (detectInAppBrowser() === "facebook") {
+			return {
+				title: `${bank} нээгдсэнгүй`,
+				description:
+					"Facebook дотор банкны апп ихэвчлэн нээгддэггүй. QR код уншуулж эсвэл дахин оролдоно уу.",
+			};
+		}
+		return {
+			title: `${bank} нээгдсэнгүй`,
+			description: `${bank} апп нээгдсэнгүй. QR код уншуулж эсвэл өөр банкаар төлнө үү.`,
+		};
 	};
 
 	createEffect(() => {
@@ -403,18 +411,13 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 
 					{/* Bank deeplinks grid — scheme links are dead clicks on desktop
 					    (no protocol handler), so desktop leads with QR only. */}
-					<Show when={bankLinks().length > 0 && !isDesktop()}>
+					<Show when={(invoiceData()?.urls?.length ?? 0) > 0 && !isDesktop()}>
 						<div class="space-y-3">
 							<p class="font-semibold text-muted-foreground text-xs">
 								Банкаа сонгоно уу
 							</p>
-							<Show when={failedBanks().length > 0}>
-								<p class="text-center text-[11px] text-muted-foreground">
-									Апп нээгдсэнгүй. QR эсвэл өөр банкаа сонгоно уу.
-								</p>
-							</Show>
 							<div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
-								<For each={bankLinks()}>
+								<For each={invoiceData()?.urls ?? []}>
 									{(link) => (
 										<BankTile
 											link={link}
@@ -469,14 +472,10 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			>
 				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
 					<SheetTitle class="font-display font-bold text-lg tracking-tight">
-						{failedHandoffBank()
-							? `${failedHandoffBank()} нээгдсэнгүй`
-							: "Апп нээгдсэнгүй"}
+						{recoveryCopy().title}
 					</SheetTitle>
 					<SheetDescription class="text-muted-foreground text-sm">
-						{failedHandoffBank()
-							? `${failedHandoffBank()} апп нээгдсэнгүй. QR код уншуулж эсвэл өөр банкаар төлнө үү.`
-							: "QPay-ийн банкны апп ажилласангүй. Өөрөөр төлье?"}
+						{recoveryCopy().description}
 					</SheetDescription>
 				</SheetHeader>
 				<div class="space-y-2 px-5 py-5">
@@ -501,9 +500,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 						class="w-full py-2 text-center text-muted-foreground text-xs"
 						onClick={() => chooseRecovery("dismiss")}
 					>
-						{failedBanks().length > 0
-							? "Өөр банк сонгох"
-							: "Банкаа дахин сонгох"}
+						Банкаа дахин сонгох
 					</button>
 				</div>
 			</SheetContent>
