@@ -110,7 +110,6 @@ export async function handleTelegramCallback(input: {
 				input.env.ADMIN_BOT_TOKEN ?? process.env.ADMIN_BOT_TOKEN
 			)?.trim();
 			if (!storeApiUrl || !botToken) {
-				await releaseInboundClaim(dedupeKey, input.env);
 				await api.sendMessage(
 					chatId,
 					"Илгээх тохиргоо дутуу байна (STORE_API_URL, ADMIN_BOT_TOKEN).",

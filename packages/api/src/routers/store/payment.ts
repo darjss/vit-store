@@ -3,7 +3,6 @@ import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
-import { sendTransferClaimedNotification } from "~/lib/integrations/admin-notifications";
 import {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
@@ -18,25 +17,6 @@ import {
 	parseQpayInvoiceResponse,
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
-
-async function sendTransferClaimAlert(paymentNumber: string) {
-	const paymentInfo =
-		await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
-	if (!paymentInfo) return;
-	await sendTransferClaimedNotification({
-		paymentNumber,
-		customerPhone: paymentInfo.order.customerPhone,
-		address: paymentInfo.order.address,
-		notes: paymentInfo.order.notes,
-		total: paymentInfo.order.total,
-		products: paymentInfo.order.orderDetails.map((detail) => ({
-			name: detail.product.name,
-			quantity: detail.quantity,
-			price: detail.product.price,
-			imageUrl: detail.product.images[0]?.url,
-		})),
-	});
-}
 
 export const payment = router({
 	getPaymentByNumber: publicProcedure
@@ -119,21 +99,6 @@ export const payment = router({
 					input.checkoutToken,
 				);
 				const claim = await q.claimTransferPaid(input.paymentNumber);
-				if (claim.outcome === "changed") {
-					try {
-						await sendTransferClaimAlert(input.paymentNumber);
-					} catch (notificationError) {
-						ctx.log.error(
-							notificationError instanceof Error
-								? notificationError
-								: new Error(String(notificationError)),
-							{
-								event: "payment.claim_notification_failed",
-								paymentNumber: input.paymentNumber,
-							},
-						);
-					}
-				}
 				ctx.log.info("payment.transfer_claimed", {
 					paymentNumber: input.paymentNumber,
 					provider: "transfer",
@@ -220,22 +185,6 @@ export const payment = router({
 									? reconciliationError.message
 									: String(reconciliationError),
 						});
-					}
-				}
-
-				if (claim.outcome === "changed") {
-					try {
-						await sendTransferClaimAlert(input.paymentNumber);
-					} catch (notificationError) {
-						ctx.log.error(
-							notificationError instanceof Error
-								? notificationError
-								: new Error(String(notificationError)),
-							{
-								event: "payment.transfer_notification_failed",
-								paymentNumber: input.paymentNumber,
-							},
-						);
 					}
 				}
 

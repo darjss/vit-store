@@ -3,7 +3,7 @@ import {
 	buildTransferClaimedText,
 } from "./format";
 import {
-	sendTelegramPhoto,
+	sendTelegramProductImages,
 	sendTelegramText,
 } from "./telegram";
 import type {
@@ -17,42 +17,24 @@ const dashUrl = () => {
 	return url.replace(/\/$/, "");
 };
 
-const sendProductPhotos = async (
-	products: DetailedOrderNotificationInput["products"],
-) => {
-	for (const product of products) {
-		if (!product.imageUrl) continue;
-		try {
-			await sendTelegramPhoto(
-				product.imageUrl,
-				`${product.name} x${product.quantity}`,
-			);
-		} catch {
-			// Skip broken/missing images; order text already sent.
-		}
-	}
-};
-
 export const sendDetailedOrderNotification = async (
 	data: DetailedOrderNotificationInput,
 ) => {
-	if (data.status === "payment_confirmed") {
-		await sendTelegramText("Төлбөр амжилттай баталгаажлаа.");
+	await sendTelegramText(buildOrderDetailsText(data, dashUrl()));
+	try {
+		await sendTelegramProductImages(data.products);
+	} catch {
+		// Photos are best-effort; order text was already delivered.
 	}
-
-	const body = [
-		buildOrderDetailsText(data),
-		"",
-		`Admin: ${dashUrl()}/orders`,
-	].join("\n");
-
-	await sendTelegramText(body);
-	await sendProductPhotos(data.products);
 };
 
 export const sendTransferClaimedNotification = async (
 	data: TransferClaimedNotificationInput,
 ) => {
 	await sendTelegramText(buildTransferClaimedText(data, dashUrl()));
-	await sendProductPhotos(data.products);
+	try {
+		await sendTelegramProductImages(data.products);
+	} catch {
+		// Photos are best-effort; order text was already delivered.
+	}
 };
