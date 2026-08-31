@@ -304,7 +304,9 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 ```
 
 Inbound text from the allowlisted user dispatches to `admin-assistant` (same Codemode
-`query` tool as Messenger admin). Customer shopping stays on Messenger only.
+`query` tool as Messenger admin). Inbound photos are staged to the same
+`messenger-inbound/` R2 prefix with `imageKeys` on the dispatch (invoice extraction via
+`aiPurchase.extractPurchaseFromImageKeys`). Customer shopping stays on Messenger only.
 
 The R2 bucket (`vit-store-bucket-prod`) and Workers AI binding already exist on the
 account; no secret is needed for those. Teardown is manual via

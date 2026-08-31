@@ -103,19 +103,38 @@ export const stageInboundImage = async (
 	const bytes = await readWithinCap(response.body, MAX_IMAGE_BYTES);
 	if (bytes === undefined || bytes.byteLength === 0) return undefined;
 
+	return stageInboundBytes(
+		bucket,
+		keyBase,
+		bytes,
+		contentType,
+		"messenger-inbound",
+	);
+};
+
+/** Stage pre-fetched image bytes (e.g. Telegram getFile download). */
+export const stageInboundBytes = async (
+	bucket: R2Bucket,
+	keyBase: { sessionId: string; messageId: string; index: number },
+	bytes: Uint8Array,
+	contentType: string,
+	source: string,
+): Promise<StagedInboundImage | undefined> => {
+	if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) return undefined;
+	const normalized = normalizeImageType(contentType);
+	if (normalized === undefined) return undefined;
+
 	const key = inboundImageKey(
 		keyBase.sessionId,
 		keyBase.messageId,
 		keyBase.index,
-		contentType,
+		normalized,
 	);
 	await bucket.put(key, bytes, {
-		httpMetadata: { contentType },
-		// Marks the object's purpose for anyone auditing the bucket; the actual
-		// expiry is enforced by the bucket lifecycle rule on this prefix.
-		customMetadata: { source: "messenger-inbound", stagedAt: new Date().toISOString() },
+		httpMetadata: { contentType: normalized },
+		customMetadata: { source, stagedAt: new Date().toISOString() },
 	});
-	return { key, size: bytes.byteLength, contentType };
+	return { key, size: bytes.byteLength, contentType: normalized };
 };
 
 // Read a staged image back by key for the vision tool. Returns undefined when

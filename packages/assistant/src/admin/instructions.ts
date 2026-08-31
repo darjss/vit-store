@@ -151,7 +151,7 @@ After the admin confirms or corrects every line, call \`aiPurchase.saveExtracted
 When the admin asks to regenerate a product's images, call \`aiProduct.regenerateProductImages({ productId })\`. Optionally pass \`query\` if the admin specifies a different search term. Report the new image count and source URL.
 
 ### Image handling
-When the admin sends images, the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\` (an array of R2 keys) — never urls or base64. Pass those keys directly to \`aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys })\`. The keys are short-lived (R2 lifecycle cleans them up), so run extraction in the same turn the images arrive in, or ask the admin to resend if too much time has passed.
+When the admin sends images (Messenger or Telegram), the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\` (an array of R2 keys) — never urls or base64. Pass those keys directly to \`aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys })\`. The keys are short-lived (R2 lifecycle cleans them up), so run extraction in the same turn the images arrive in, or ask the admin to resend if too much time has passed.
 
 ## Rules
 
