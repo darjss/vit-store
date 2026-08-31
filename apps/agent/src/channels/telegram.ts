@@ -10,6 +10,7 @@ import adminAssistant from "../agents/admin-assistant";
 import { createAdminBotClient } from "../lib/admin-bot-client";
 import { bindTelegramButtonCallbacks } from "@vit/api/lib/integrations/admin-notifications/telegram-callback-data";
 import { stageInboundBytes } from "../lib/messenger-inbound";
+import { withTelegramTyping } from "../lib/telegram-typing";
 import { handleTelegramCallback } from "./telegram-callbacks";
 import {
 	claimInboundOnce,
@@ -100,15 +101,29 @@ export const channel = createTelegramChannel({
 		}
 
 		try {
-			await dispatch(adminAssistant, {
-				id: sessionId,
-				input: {
-					type: "telegram.message",
-					text,
-					updateId: update.update_id,
-					...(imageKeys.length > 0 ? { imageKeys } : {}),
-				},
-			});
+			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+			const dispatchTurn = () =>
+				dispatch(adminAssistant, {
+					id: sessionId,
+					input: {
+						type: "telegram.message",
+						text,
+						updateId: update.update_id,
+						...(imageKeys.length > 0 ? { imageKeys } : {}),
+					},
+				});
+
+			if (token) {
+				const api = telegramApi(token);
+				await withTelegramTyping(
+					api,
+					message.chat.id,
+					dispatchTurn,
+					imageKeys.length > 0 ? "upload_photo" : "typing",
+				);
+			} else {
+				await dispatchTurn();
+			}
 		} catch (error) {
 			await releaseInboundClaim(dedupeKey, env);
 			throw error;

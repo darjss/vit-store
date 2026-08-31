@@ -7,6 +7,7 @@ import {
 } from "@vit/api/lib/integrations/admin-notifications/telegram-callback-data";
 import adminAssistant from "../agents/admin-assistant";
 import { shipAllPaidPendingOrders } from "../lib/ship-paid-orders";
+import { withTelegramTyping } from "../lib/telegram-typing";
 import {
 	claimInboundOnce,
 } from "./messenger-admission";
@@ -80,7 +81,12 @@ export async function handleTelegramCallback(input: {
 	if (!token) return undefined;
 
 	const api = new Api(token);
-	await api.answerCallbackQuery(query.id);
+	const previewAction = parseTelegramCallbackData(query.data?.trim() ?? "").action;
+	if (previewAction === TELEGRAM_CALLBACK.SHIP_ALL) {
+		await api.answerCallbackQuery(query.id, { text: "Илгээж байна…" });
+	} else {
+		await api.answerCallbackQuery(query.id);
+	}
 
 	const data = query.data?.trim();
 	if (!data) return undefined;
@@ -117,10 +123,12 @@ export async function handleTelegramCallback(input: {
 				return undefined;
 			}
 
-			const result = await shipAllPaidPendingOrders({
-				storeApiUrl,
-				botToken,
-			});
+			const result = await withTelegramTyping(api, chatId, () =>
+				shipAllPaidPendingOrders({
+					storeApiUrl,
+					botToken,
+				}),
+			);
 			await clearInlineButtons(api, chatId, boundMessageId);
 			await api.sendMessage(chatId, formatShipAllResult(result), {
 				link_preview_options: { is_disabled: true },
@@ -148,14 +156,16 @@ export async function handleTelegramCallback(input: {
 				),
 			);
 			await clearInlineButtons(api, chatId, boundMessageId);
-			await dispatch(adminAssistant, {
-				id: sessionId,
-				input: {
-					type: "telegram.message",
-					text: buildConfirmText(boundMessageId),
-					updateId: input.update.update_id,
-				},
-			});
+			await withTelegramTyping(api, chatId, () =>
+				dispatch(adminAssistant, {
+					id: sessionId,
+					input: {
+						type: "telegram.message",
+						text: buildConfirmText(boundMessageId),
+						updateId: input.update.update_id,
+					},
+				}),
+			);
 		}
 	} catch (error) {
 		throw error;
