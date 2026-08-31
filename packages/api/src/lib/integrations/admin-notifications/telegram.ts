@@ -39,12 +39,37 @@ const getApi = async () => {
 	return { api: bot.api, chatId: config.chatId };
 };
 
+export type TelegramInlineButton = {
+	text: string;
+	callback_data: string;
+};
+
 export const sendTelegramText = async (text: string) => {
 	const { api, chatId } = await getApi();
 	await api.sendMessage({
 		chat_id: chatId,
 		text,
 		link_preview_options: { is_disabled: true },
+	});
+};
+
+export const sendTelegramTextWithButtons = async (
+	text: string,
+	buttons: TelegramInlineButton[],
+) => {
+	const { api, chatId } = await getApi();
+	await api.sendMessage({
+		chat_id: chatId,
+		text,
+		link_preview_options: { is_disabled: true },
+		reply_markup: {
+			inline_keyboard: [
+				buttons.map((button) => ({
+					text: button.text,
+					callback_data: button.callback_data,
+				})),
+			],
+		},
 	});
 };
 

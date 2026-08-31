@@ -12,6 +12,7 @@ import {
 import {
 	channel as telegramChannel,
 	postTelegramMessage,
+	postTelegramProductPhoto,
 } from "../channels/telegram";
 
 type AgentEnv = {
@@ -32,11 +33,22 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			: undefined;
 
 	const isTelegram = id.startsWith("telegram:");
+	const telegramRef = isTelegram
+		? telegramChannel.parseConversationKey(id)
+		: undefined;
 	const replyTool = isTelegram
-		? postTelegramMessage(telegramChannel.parseConversationKey(id))
+		? postTelegramMessage(telegramRef!)
 		: postMessengerMessage(
 				messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")),
 			);
+	const productPhotoTool =
+		isTelegram && telegramRef && env.ADMIN_BOT_TOKEN
+			? postTelegramProductPhoto({
+					ref: telegramRef,
+					storeApiUrl,
+					botToken: env.ADMIN_BOT_TOKEN,
+				})
+			: undefined;
 
 	return {
 		model: ADMIN_ASSISTANT_MODEL,
@@ -46,6 +58,10 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			reserveTokens: 20_000,
 			keepRecentTokens: 8_000,
 		},
-		tools: [...(queryTool ? [queryTool] : []), replyTool],
+		tools: [
+			...(queryTool ? [queryTool] : []),
+			replyTool,
+			...(productPhotoTool ? [productPhotoTool] : []),
+		],
 	};
 });

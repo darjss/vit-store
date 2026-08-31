@@ -4,28 +4,42 @@ import {
 	type Update,
 } from "@flue/telegram";
 import { defineTool, dispatch } from "@flue/runtime";
-import { Api } from "grammy";
+import { Api, InputFile } from "grammy";
 import * as v from "valibot";
 import adminAssistant from "../agents/admin-assistant";
+import { createAdminBotClient } from "../lib/admin-bot-client";
 import { stageInboundBytes } from "../lib/messenger-inbound";
+import { handleTelegramCallback } from "./telegram-callbacks";
 import {
 	claimInboundOnce,
 	releaseInboundClaim,
 } from "./messenger-admission";
 
-type WebhookEnv = {
+export type TelegramWebhookEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 	TELEGRAM_ADMIN_BOT_TOKEN?: string;
 	TELEGRAM_ADMIN_CHAT_ID?: string;
+	ADMIN_BOT_TOKEN?: string;
+	STORE_API_URL?: string;
 };
 
 const telegramApi = (token: string) => new Api(token);
 
+const telegramButtonSchema = v.object({
+	text: v.pipe(v.string(), v.minLength(1)),
+	callback_data: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
+});
+
 export const channel = createTelegramChannel({
 	secretToken: requiredEnv("TELEGRAM_WEBHOOK_SECRET"),
 	async webhook({ c, update }) {
-		const env = c.env as WebhookEnv;
+		const env = c.env as TelegramWebhookEnv;
+
+		if (update.callback_query) {
+			return handleTelegramCallback({ update, env, channel });
+		}
+
 		const message = update.message;
 		if (!message) return undefined;
 
@@ -102,14 +116,14 @@ export const channel = createTelegramChannel({
 	},
 });
 
-function isAdminUser(userId: number, env: WebhookEnv) {
+export function isAdminUser(userId: number, env: TelegramWebhookEnv) {
 	const raw = env.TELEGRAM_ADMIN_CHAT_ID?.trim();
 	if (!raw) return false;
 	const allowed = Number(raw);
 	return Number.isSafeInteger(allowed) && allowed === userId;
 }
 
-function conversationFromMessage(
+export function conversationFromMessage(
 	message: NonNullable<Update["message"]>,
 ): TelegramConversationRef {
 	const topic = {
@@ -130,25 +144,93 @@ function conversationFromMessage(
 		: { type: "chat", chatId: message.chat.id, ...topic };
 }
 
+const sendOptions = (ref: TelegramConversationRef) => ({
+	...(ref.type === "business-chat"
+		? { business_connection_id: ref.businessConnectionId }
+		: {}),
+	...(ref.messageThreadId ? { message_thread_id: ref.messageThreadId } : {}),
+	...(ref.directMessagesTopicId
+		? { direct_messages_topic_id: ref.directMessagesTopicId }
+		: {}),
+});
+
 export function postTelegramMessage(ref: TelegramConversationRef) {
 	const token = requiredEnv("TELEGRAM_ADMIN_BOT_TOKEN");
 	return defineTool({
 		name: "post_telegram_message",
 		description:
-			"Post a text reply to the bound Telegram admin conversation.",
-		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
+			"Post a text reply to the bound Telegram admin conversation. Optional inline buttons for confirmations.",
+		input: v.object({
+			text: v.pipe(v.string(), v.minLength(1)),
+			buttons: v.optional(v.array(telegramButtonSchema)),
+		}),
 		async run({ input }) {
 			const sent = await telegramApi(token).sendMessage(ref.chatId, input.text, {
-				...(ref.type === "business-chat"
-					? { business_connection_id: ref.businessConnectionId }
-					: {}),
-				...(ref.messageThreadId
-					? { message_thread_id: ref.messageThreadId }
-					: {}),
-				...(ref.directMessagesTopicId
-					? { direct_messages_topic_id: ref.directMessagesTopicId }
+				...sendOptions(ref),
+				link_preview_options: { is_disabled: true },
+				...(input.buttons?.length
+					? {
+							reply_markup: {
+								inline_keyboard: [
+									input.buttons.map((button) => ({
+										text: button.text,
+										callback_data: button.callback_data,
+									})),
+								],
+							},
+						}
 					: {}),
 			});
+			return { ok: true, messageId: sent.message_id };
+		},
+	});
+}
+
+export function postTelegramProductPhoto(input: {
+	ref: TelegramConversationRef;
+	storeApiUrl: string;
+	botToken: string;
+}) {
+	const token = requiredEnv("TELEGRAM_ADMIN_BOT_TOKEN");
+	return defineTool({
+		name: "post_telegram_product_photo",
+		description:
+			"Send a product's image with an optional caption to the admin Telegram chat.",
+		input: v.object({
+			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
+			caption: v.optional(v.string()),
+		}),
+		async run({ input: toolInput }) {
+			const client = createAdminBotClient(
+				input.storeApiUrl,
+				input.botToken,
+			);
+			const product = await client.product.getProductById.query({
+				id: toolInput.productId,
+			});
+			if (!product) {
+				throw new Error(`Product ${toolInput.productId} not found`);
+			}
+			const imageUrl =
+				product.images.find((image) => image.isPrimary)?.url ??
+				product.images[0]?.url;
+			if (!imageUrl) {
+				throw new Error(`Product ${toolInput.productId} has no image`);
+			}
+			const response = await fetch(imageUrl);
+			if (!response.ok) {
+				throw new Error(
+					`Product image fetch failed: ${response.status} ${imageUrl}`,
+				);
+			}
+			const sent = await telegramApi(token).sendPhoto(
+				input.ref.chatId,
+				new InputFile(await response.bytes(), "product.jpg"),
+				{
+					...sendOptions(input.ref),
+					...(toolInput.caption ? { caption: toolInput.caption } : {}),
+				},
+			);
 			return { ok: true, messageId: sent.message_id };
 		},
 	});

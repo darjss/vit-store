@@ -89,7 +89,7 @@ async function main() {
 		compatibilityDate: "2026-07-07",
 		cache: { enabled: true },
 		// Durable restock batches/retries run independently of request lifetimes.
-		crons: ["*/5 * * * *"],
+		crons: ["*/5 * * * *", "0 2 * * *"],
 		domains:
 			stage === "prod"
 				? ["api.amerikvitamin.mn"]
