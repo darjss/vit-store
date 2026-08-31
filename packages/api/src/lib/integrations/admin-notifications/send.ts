@@ -21,12 +21,20 @@ export const sendDetailedOrderNotification = async (
 	data: DetailedOrderNotificationInput,
 ) => {
 	await sendTelegramText(buildOrderDetailsText(data, dashUrl()));
-	await sendTelegramProductImages(data.products);
+	try {
+		await sendTelegramProductImages(data.products);
+	} catch {
+		// Photos are best-effort; order text was already delivered.
+	}
 };
 
 export const sendTransferClaimedNotification = async (
 	data: TransferClaimedNotificationInput,
 ) => {
 	await sendTelegramText(buildTransferClaimedText(data, dashUrl()));
-	await sendTelegramProductImages(data.products);
+	try {
+		await sendTelegramProductImages(data.products);
+	} catch {
+		// Photos are best-effort; order text was already delivered.
+	}
 };

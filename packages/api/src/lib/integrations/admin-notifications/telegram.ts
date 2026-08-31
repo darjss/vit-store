@@ -92,6 +92,34 @@ const sendPhotoAlbum = async (blobs: Blob[]) => {
 	});
 };
 
+const safeSendSinglePhoto = async (
+	blob: Blob,
+	caption: string | undefined,
+) => {
+	try {
+		await sendSinglePhoto(blob, caption);
+	} catch {
+		// Skip broken/oversized images; other products may still send.
+	}
+};
+
+const safeSendPhotoChunk = async (
+	chunk: Array<{ product: ProductImageInput; blob: Blob }>,
+) => {
+	if (chunk.length === 1) {
+		const { product, blob } = chunk[0];
+		await safeSendSinglePhoto(blob, `${product.name} x${product.quantity}`);
+		return;
+	}
+	try {
+		await sendPhotoAlbum(chunk.map(({ blob }) => blob));
+	} catch {
+		for (const { product, blob } of chunk) {
+			await safeSendSinglePhoto(blob, `${product.name} x${product.quantity}`);
+		}
+	}
+};
+
 export const sendTelegramProductImages = async (
 	products: ProductImageInput[],
 ) => {
@@ -111,20 +139,7 @@ export const sendTelegramProductImages = async (
 
 	if (loaded.length === 0) return;
 
-	if (loaded.length === 1) {
-		const { product, blob } = loaded[0];
-		await sendSinglePhoto(blob, `${product.name} x${product.quantity}`);
-		return;
-	}
-
 	for (let index = 0; index < loaded.length; index += 10) {
-		const chunk = loaded.slice(index, index + 10);
-		if (chunk.length === 1) {
-			const { product, blob } = chunk[0];
-			await sendSinglePhoto(blob, `${product.name} x${product.quantity}`);
-			continue;
-		}
-
-		await sendPhotoAlbum(chunk.map(({ blob }) => blob));
+		await safeSendPhotoChunk(loaded.slice(index, index + 10));
 	}
 };
