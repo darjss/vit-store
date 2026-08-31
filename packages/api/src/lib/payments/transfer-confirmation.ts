@@ -3,7 +3,7 @@ import { persistMessengerNotificationFailure } from "~/lib/integrations/messenge
 import {
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
-} from "~/lib/integrations/messenger/messages";
+} from "~/lib/integrations/admin-notifications";
 import {
 	trackOrderPlacedServerSide,
 	trackPaymentConfirmedServerSide,

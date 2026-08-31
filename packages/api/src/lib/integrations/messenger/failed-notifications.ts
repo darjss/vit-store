@@ -1,8 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { MessengerNotificationFailuresTable } from "~/db/schema";
-import type { DetailedOrderNotificationInput } from "~/lib/integrations/messenger/messages";
-import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
+import {
+	type DetailedOrderNotificationInput,
+	sendDetailedOrderNotification,
+} from "~/lib/integrations/admin-notifications";
 
 export const ORDER_CONFIRMATION_PURPOSE = "order_payment_confirmed";
 

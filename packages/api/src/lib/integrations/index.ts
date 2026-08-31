@@ -1,3 +1,10 @@
+export {
+	getTelegramAdminConfig,
+	sendDetailedOrderNotification,
+	sendTransferClaimedNotification,
+	type DetailedOrderNotificationInput,
+	type TransferClaimedNotificationInput,
+} from "~/lib/integrations/admin-notifications";
 export { sendEmail } from "~/lib/integrations/email";
 export {
 	type GenericWebhookPayload,

@@ -3,7 +3,7 @@ import { paymentQueries } from "@vit/api/queries";
 import { confirmPaymentAndNotify } from "@vit/api/lib/payments/transfer-confirmation";
 import { bankTransfer } from "@vit/shared/constants";
 import * as v from "valibot";
-import { sendTransferClaimedNotification } from "~/lib/integrations/messenger/messages";
+import { sendTransferClaimedNotification } from "~/lib/integrations/admin-notifications";
 import {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
