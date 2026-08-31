@@ -26,13 +26,15 @@
 		"r2:lifecycle:apply": "bun run r2:lifecycle:inbound && bun run r2:lifecycle:assert"
 	},
 	"dependencies": {
-		"@flue/runtime": "^1.0.0-beta.3",
 		"@flue/messenger": "^1.0.0-beta.1",
+		"@flue/runtime": "^1.0.0-beta.3",
+		"@flue/telegram": "1.0.0-beta.1",
 		"@trpc/client": "catalog:",
 		"@vit/assistant": "workspace:*",
 		"@vit/shared": "workspace:*",
 		"@warriorteam/messenger-sdk": "^1.5.3",
 		"agents": "^0.14.1",
+		"grammy": "^1.46.0",
 		"hono": "catalog:",
 		"superjson": "^2.2.3",
 		"valibot": "catalog:"

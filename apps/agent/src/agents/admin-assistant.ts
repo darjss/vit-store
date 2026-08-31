@@ -6,23 +6,20 @@ import {
 	buildAdminQueryTool,
 } from "@vit/assistant";
 import {
-	channel,
-	postMessage,
+	channel as messengerChannel,
+	postMessage as postMessengerMessage,
 } from "../channels/messenger";
+import {
+	channel as telegramChannel,
+	postTelegramMessage,
+} from "../channels/telegram";
 
-// Admin agent env: the Worker Loader binding (Codemode sandbox), the bot token
-// (auths the tRPC bot client), plus the existing bindings the channel needs.
 type AgentEnv = {
 	LOADER?: WorkerLoader;
 	ADMIN_BOT_TOKEN?: string;
 };
 
 export default defineAgent<AgentEnv>(({ id, env }) => {
-	// Strip optional session-version suffix (e.g. ":v2") appended by the webhook
-	// to rotate the DO instance. The conversation key must match the canonical
-	// messenger:v1:page:...:page-scoped-id:... format for parseConversationKey.
-	const conversationKey = id.replace(/:v\d+$/, "");
-	const conversation = channel.parseConversationKey(conversationKey);
 	const storeApiUrl =
 		process.env.STORE_API_URL ?? "http://localhost:3000";
 	const queryTool =
@@ -33,20 +30,22 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 					storeApiUrl,
 				})
 			: undefined;
+
+	const isTelegram = id.startsWith("telegram:");
+	const replyTool = isTelegram
+		? postTelegramMessage(telegramChannel.parseConversationKey(id))
+		: postMessengerMessage(
+				messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")),
+			);
+
 	return {
 		model: ADMIN_ASSISTANT_MODEL,
 		thinkingLevel: "medium" as const,
 		instructions: adminAssistantInstructions,
-		// Auto-compact conversation history when context grows large.
-		// Tool results (order lists, product catalogs) can bloat context;
-		// compaction summarizes older turns while keeping recent ones verbatim.
 		compaction: {
 			reserveTokens: 20_000,
 			keepRecentTokens: 8_000,
 		},
-		tools: [
-			...(queryTool ? [queryTool] : []),
-			postMessage(conversation),
-		],
+		tools: [...(queryTool ? [queryTool] : []), replyTool],
 	};
 });

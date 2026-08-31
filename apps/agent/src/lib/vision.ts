@@ -1,20 +1,7 @@
 import { type InboundImage, KIMI_VISION_MODEL } from "@vit/assistant";
 
-// Workers AI binding adapter for the photo-identification tool. Reads the
-// staged image bytes (already loaded from R2 by the tool's `loadImage`) and
-// runs Kimi vision via the AI binding, returning the model's raw text for the
-// channel-neutral domain to parse. env.AI is only available on the remote
-// Workers AI binding (unsupported under local miniflare), so the photo path is
-// a remote-only capability — see README "Photo identification".
-//
-// The binding speaks the OpenAI-compatible chat shape for kimi-k2.6 (same shape
-// the flue Cloudflare provider uses): a user message whose content array
-// carries the prompt text plus an image_url data-url.
-//
-// kimi-k2.6 is a REASONING model: it spends completion tokens on hidden
-// `reasoning_content` before emitting the answer `content`. A budget that is
-// too small is consumed entirely by reasoning, leaving an empty answer — so
-// this is sized to leave ample room for the JSON answer after reasoning.
+// Workers AI binding adapter for the photo-identification tool. Reads staged
+// image bytes from R2 and runs glm-5.3-flash vision via the AI binding.
 const MAX_VISION_TOKENS = 1536;
 
 export const buildKimiVision =

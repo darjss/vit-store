@@ -1,5 +1,6 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
+import { ASSISTANT_VISION_MODEL } from "./model";
 
 // Channel-neutral product-photo identification domain (ADR 0003). The R2
 // fetch/put and the Workers AI binding call are app/channel concerns and are
@@ -9,11 +10,9 @@ import * as v from "valibot";
 // `search_products` path (the model chains identify -> search), so no catalog
 // or card logic is duplicated here.
 
-// Bare Workers AI model id for the binding (`env.AI.run(...)`). The agent's
-// chat model is the flue-prefixed `cloudflare/@cf/moonshotai/kimi-k2.6`; the
-// binding wants the unprefixed slug. kimi-k2.6 advertises `input: ["text",
-// "image"]`, so the same model serves vision.
-export const KIMI_VISION_MODEL = "@cf/moonshotai/kimi-k2.6";
+// Bare Workers AI model id for the binding (`env.AI.run(...)`). Matches
+// FLUE_ASSISTANT_MODEL; glm-5.3-flash is multimodal (text + image).
+export const KIMI_VISION_MODEL = ASSISTANT_VISION_MODEL;
 
 export const PHOTO_IDENTIFY_TOOL_NAME = "identify_product_photo";
 

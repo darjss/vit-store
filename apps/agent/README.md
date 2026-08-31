@@ -34,7 +34,7 @@ The channel ignores echoes/non-text events in this slice, dedupes admission by P
 
 ## Tracer-bullet scope
 
-- Uses Kimi through the Flue Cloudflare Workers AI provider: `cloudflare/@cf/moonshotai/kimi-k2.6`.
+- Uses GLM 5.3 Flash through the Flue Cloudflare Workers AI provider: `cloudflare/@cf/zai-org/glm-5.3-flash`.
 - Mounts verified Messenger ingress at `GET/POST /channels/messenger/webhook`.
 - Imports prompts/tools from `@vit/assistant` to prove the app/package boundary.
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.
@@ -285,6 +285,28 @@ real values):
 - `MESSENGER_PAGE_ACCESS_TOKEN` — Page token for typing indicators and replies.
 - `STORE_API_URL` — storefront/server API base URL (defaults to `http://localhost:3000`
   in dev; set to the deployed server origin in prod).
+- `TELEGRAM_ADMIN_BOT_TOKEN` — same `@darjsorderbot` token used for outbound order alerts.
+- `TELEGRAM_WEBHOOK_SECRET` — `secret_token` for `setWebhook` (letters, numbers, `_`, `-` only).
+- `TELEGRAM_ADMIN_CHAT_ID` — allowlisted admin Telegram user/chat id for inbound admin agent.
+
+### Telegram admin webhook
+
+Register once (same bot as server-side order notifications):
+
+```txt
+https://agent.amerikvitamin.mn/channels/telegram/webhook
+```
+
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -d "url=https://agent.amerikvitamin.mn/channels/telegram/webhook" \
+  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+Inbound text from the allowlisted user dispatches to `admin-assistant` (same Codemode
+`query` tool as Messenger admin). Inbound photos are staged to the same
+`messenger-inbound/` R2 prefix with `imageKeys` on the dispatch (invoice extraction via
+`aiPurchase.extractPurchaseFromImageKeys`). Customer shopping stays on Messenger only.
 
 The R2 bucket (`vit-store-bucket-prod`) and Workers AI binding already exist on the
 account; no secret is needed for those. Teardown is manual via

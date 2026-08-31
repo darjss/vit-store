@@ -1,4 +1,4 @@
-export const CUSTOMER_ASSISTANT_MODEL = "cloudflare/@cf/moonshotai/kimi-k2.6";
+export { CUSTOMER_ASSISTANT_MODEL, FLUE_ASSISTANT_MODEL, ASSISTANT_VISION_MODEL } from "./model";
 
 import { customerFaq } from "./faq";
 
