@@ -34,7 +34,7 @@ The channel ignores echoes/non-text events in this slice, dedupes admission by P
 
 ## Tracer-bullet scope
 
-- Uses Kimi through the Flue Cloudflare Workers AI provider: `cloudflare/@cf/moonshotai/kimi-k2.6`.
+- Uses GLM 5.3 Flash through the Flue Cloudflare Workers AI provider: `cloudflare/@cf/zai-org/glm-5.3-flash`.
 - Mounts verified Messenger ingress at `GET/POST /channels/messenger/webhook`.
 - Imports prompts/tools from `@vit/assistant` to prove the app/package boundary.
 - Declares Flue Durable Object migrations with `new_sqlite_classes` for `FlueRegistry` and `FlueCustomerAssistantAgent`.

@@ -1,5 +1,6 @@
 import type { ChannelRoute } from "@flue/messenger";
 import { flue } from "@flue/runtime/routing";
+import { FLUE_ASSISTANT_MODEL } from "@vit/assistant";
 import { Hono } from "hono";
 import { channel as messengerChannel } from "../src/channels/messenger";
 import { channel as telegramChannel } from "../src/channels/telegram";
@@ -37,7 +38,7 @@ app.get("/health", (c) =>
 	c.json({
 		ok: true,
 		app: "vit-store-agent",
-		model: "cloudflare/@cf/moonshotai/kimi-k2.6",
+		model: FLUE_ASSISTANT_MODEL,
 	}),
 );
 
