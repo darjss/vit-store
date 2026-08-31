@@ -47,23 +47,23 @@ measurement.
 
 ## Industry Comparison
 
-The closest public benchmark with a clear checkout denominator is Littledata's
-Shopify checkout completion rate. Its 2023 sample of 2,800 ecommerce sites
-reports:
+Public checkout benchmarks vary by event definition and store mix:
 
-| Segment | Average checkout completion |
-| --- | ---: |
-| All Shopify | 45% |
-| Mobile | 44% |
-| Desktop | 49% |
-| Best 20% | More than 59% |
-| Best 10% | More than 66% |
+| Source | Completion | Sample and limit |
+| --- | ---: | --- |
+| Littledata, all Shopify | 45% average | 2,800 ecommerce sites benchmarked in 2023; the public page does not publish the exact formula or Shopify sample size |
+| Littledata, mobile | 44% average | Same sample and method limit |
+| Littledata, desktop | 49% average | Same sample and method limit |
+| Top Growth Marketing, DTC Shopify | 65.1% median | 423,978 checkout starts from 16 agency clients, July 2025 through June 2026; exact `orders / checkouts started` denominator but a small, selected store panel |
+| Zuko, purchase forms | 54.4% | 20,179,282 purchase-form sessions; completion means form submission, not confirmed payment |
 
 Our observed 40% post-Order payment rate is 5 percentage points below the 45%
-average. This is not an equal comparison: Littledata measures from checkout
-start, while our cohort has already submitted checkout and created an Order.
-Our later-stage payment rate should normally be higher, but five Orders cannot
-establish a stable baseline.
+Littledata average and 25.1 points below the 65.1% DTC Shopify median. These are
+not equal comparisons: both industry funnels start before ours, while our
+cohort has already submitted checkout and created an Order. Our later-stage
+payment rate should normally be higher, but five Orders cannot establish a
+stable baseline. The figures show cause to improve the payment path, not a
+reliable estimate of how much QPay-first will improve it.
 
 Baymard reports 70.22% average cart abandonment across 50 studies. That is not
 the target for this change because cart creation happens earlier than both
@@ -74,6 +74,8 @@ denominator.
 Sources:
 
 - [Littledata: average website performance](https://www.littledata.io/average-website-performance)
+- [Top Growth Marketing: 2026 DTC checkout benchmark](https://topgrowthmarketing.com/dtc-ecommerce-benchmarks/checkout-abandonment-rate/)
+- [Zuko: form-purpose benchmark](https://www.zuko.io/benchmarking/form-type-benchmarking)
 - [Baymard: cart abandonment rate statistics](https://baymard.com/lists/cart-abandonment-rate)
 
 ## Invariant
