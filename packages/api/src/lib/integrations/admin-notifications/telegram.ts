@@ -24,7 +24,16 @@ const getApi = async () => {
 	}
 
 	bot ??= new Bot(config.token);
-	initPromise ??= bot.init().then(() => undefined);
+	if (!initPromise) {
+		initPromise = bot
+			.init()
+			.then(() => undefined)
+			.catch((error) => {
+				initPromise = undefined;
+				bot = undefined;
+				throw error;
+			});
+	}
 	await initPromise;
 
 	return { api: bot.api, chatId: config.chatId };
