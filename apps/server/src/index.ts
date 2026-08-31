@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createContext } from "./lib/context";
 import { evlogMiddleware, type ServerHonoEnv } from "./lib/logging";
+import { runMorningOrderBrief } from "./lib/morning-brief";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
@@ -139,12 +140,28 @@ app.route("/admin", adminRoutes);
 
 export default {
 	fetch: app.fetch,
-	scheduled: async (_controller: ScheduledController, env: Env) => {
+	scheduled: async (controller: ScheduledController, env: Env) => {
 		const log = createLogger({
 			operation: "scheduled.jobs",
 			request_id: crypto.randomUUID(),
 			user_type: "system",
 		});
+
+		if (controller.cron === "0 2 * * *") {
+			try {
+				await runMorningOrderBrief();
+				log.info("scheduled.morning_brief_complete");
+				log.emit();
+			} catch (error) {
+				log.error(error instanceof Error ? error : new Error(String(error)), {
+					event: "scheduled.morning_brief_failed",
+				});
+				log.emit();
+				throw error;
+			}
+			return;
+		}
+
 		const restock = runRestockNotifier(env);
 		const paymentNotifications = runPaymentNotificationOutbox();
 		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
