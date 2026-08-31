@@ -106,7 +106,9 @@ export async function confirmPaymentAndNotify({
 	await purgeCatalogCacheGlobal(stockedProductIds);
 
 	const notificationPayload: DetailedOrderNotificationInput = {
+		orderNumber: paymentInfo.order.orderNumber,
 		paymentNumber,
+		provider,
 		customerPhone: paymentInfo.order.customerPhone,
 		address: paymentInfo.order.address,
 		notes: paymentInfo.order.notes,
@@ -117,7 +119,6 @@ export async function confirmPaymentAndNotify({
 			price: detail.product.price,
 			imageUrl: detail.product.images[0]?.url,
 		})),
-		status: "payment_confirmed",
 	};
 
 	try {

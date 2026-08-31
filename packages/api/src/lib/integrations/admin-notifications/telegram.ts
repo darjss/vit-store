@@ -5,6 +5,12 @@ type TelegramAdminConfig = {
 	chatId: string;
 };
 
+type ProductImageInput = {
+	name: string;
+	quantity: number;
+	imageUrl?: string;
+};
+
 let bot: Bot | undefined;
 let initPromise: Promise<void> | undefined;
 
@@ -39,6 +45,14 @@ const getApi = async () => {
 	return { api: bot.api, chatId: config.chatId };
 };
 
+const fetchImageBlob = async (photoUrl: string) => {
+	const response = await fetch(photoUrl);
+	if (!response.ok) {
+		throw new Error(`product image fetch failed: ${response.status} ${photoUrl}`);
+	}
+	return response.blob();
+};
+
 export const sendTelegramText = async (text: string) => {
 	const { api, chatId } = await getApi();
 	await api.sendMessage({
@@ -50,14 +64,67 @@ export const sendTelegramText = async (text: string) => {
 
 export const sendTelegramPhoto = async (photoUrl: string, caption?: string) => {
 	const { api, chatId } = await getApi();
-	const response = await fetch(photoUrl);
-	if (!response.ok) {
-		throw new Error(`product image fetch failed: ${response.status} ${photoUrl}`);
-	}
-	const photo = await response.blob();
+	const photo = await fetchImageBlob(photoUrl);
 	await api.sendPhoto({
 		chat_id: chatId,
 		photo,
 		...(caption ? { caption } : {}),
 	});
+};
+
+const sendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
+	const { api, chatId } = await getApi();
+	await api.sendPhoto({
+		chat_id: chatId,
+		photo: blob,
+		...(caption ? { caption } : {}),
+	});
+};
+
+const sendPhotoAlbum = async (blobs: Blob[]) => {
+	const { api, chatId } = await getApi();
+	await api.sendMediaGroup({
+		chat_id: chatId,
+		media: blobs.map((blob) => ({
+			type: "photo" as const,
+			media: blob,
+		})),
+	});
+};
+
+export const sendTelegramProductImages = async (
+	products: ProductImageInput[],
+) => {
+	const loaded = (
+		await Promise.all(
+			products.map(async (product) => {
+				if (!product.imageUrl) return null;
+				try {
+					const blob = await fetchImageBlob(product.imageUrl);
+					return { product, blob };
+				} catch {
+					return null;
+				}
+			}),
+		)
+	).filter((item) => item !== null);
+
+	if (loaded.length === 0) return;
+
+	if (loaded.length === 1) {
+		const { product, blob } = loaded[0];
+		await sendSinglePhoto(blob, `${product.name} x${product.quantity}`);
+		return;
+	}
+
+	for (let index = 0; index < loaded.length; index += 10) {
+		const chunk = loaded.slice(index, index + 10);
+		if (chunk.length === 1) {
+			const { product, blob } = chunk[0];
+			await sendSinglePhoto(blob, `${product.name} x${product.quantity}`);
+			continue;
+		}
+
+		await sendPhotoAlbum(chunk.map(({ blob }) => blob));
+	}
 };

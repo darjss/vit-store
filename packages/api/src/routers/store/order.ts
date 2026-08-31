@@ -8,7 +8,6 @@ import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, Products
 import { cartFingerprint } from "~/lib/order/cart-fingerprint";
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
-import { sendDetailedOrderNotification } from "~/lib/integrations/admin-notifications";
 import { trackOrderCreatedServerSide, trackQpayInvoiceCreatedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
 import { createQpayInvoice } from "~/lib/payments/qpay";
@@ -391,34 +390,7 @@ export const order = router({
                 reused,
                 durationMs,
             });
-            if (paymentNumber && !reused) {
-                try {
-                    const paymentInfo = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
-                    if (paymentInfo) {
-                        await sendDetailedOrderNotification({
-                            paymentNumber,
-                            customerPhone: paymentInfo.order.customerPhone,
-                            address: paymentInfo.order.address,
-                            notes: paymentInfo.order.notes,
-                            total: paymentInfo.order.total,
-                            products: paymentInfo.order.orderDetails.map((detail) => ({
-                                name: detail.product.name,
-                                quantity: detail.quantity,
-                                price: detail.product.price,
-                                imageUrl: detail.product.images[0]?.url,
-                            })),
-                            status: "pending_transfer",
-                        });
-                    }
-                }
-                catch (notificationError) {
-                    ctx.log.error(notificationError instanceof Error ? notificationError : new Error(String(notificationError)), {
-                        event: "order.notification_failed",
-                        paymentNumber,
-                        orderNumber: resolvedOrderNumber
-                    });
-                }
-            }
+
             // F9/H5: return the full PaymentOptions props so the client does not
             // need a second getPaymentByNumber round-trip after addOrder.
             return {

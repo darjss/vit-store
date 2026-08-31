@@ -1,5 +1,7 @@
 export type DetailedOrderNotificationInput = {
+	orderNumber: string;
 	paymentNumber: string;
+	provider: "qpay" | "transfer" | "cash";
 	customerPhone: number;
 	address: string;
 	notes: string | null;
@@ -10,7 +12,6 @@ export type DetailedOrderNotificationInput = {
 		price: number;
 		imageUrl?: string;
 	}>;
-	status: "pending_transfer" | "payment_confirmed";
 };
 
 export type TransferClaimedNotificationInput = {
