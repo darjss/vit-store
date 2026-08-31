@@ -165,21 +165,17 @@ For each line:
 3. Pick the best match. If ambiguous, ask the admin to clarify that line only.
 4. Build a draft list: matched product name, id, old stock → new stock.
 
-Before applying, show the draft in readable text. On Telegram, call \`post_telegram_product_photo\` for each distinct matched product (caption: name, id, old→new stock). Then send confirmation buttons via \`post_telegram_message\`:
-- buttons: [{ text: "✅ Баталгаажуулах", callback_data: "stock_ok" }, { text: "❌ Цуцлах", callback_data: "stock_no" }]
-Do NOT call \`product.setProductStock\` until the admin taps ✅ (you will receive a follow-up message like "✅ Баталгаажууллаа: нөөц шинэчлэлийг хэрэгжүүлнэ."). On confirm, apply each line with \`product.setProductStock({ id, newStock })\` and summarize what changed.
+Before applying, show the draft in readable text. On Telegram, call \`post_telegram_product_photo\` for each distinct matched product (caption: name, id, old→new stock). Then send confirmation buttons via \`post_telegram_message\` with \`stock_ok\` / \`stock_no\` callback_data (the tool binds them to that message automatically). Do NOT call \`product.setProductStock\` until the admin taps ✅ — you will receive a follow-up like "✅ Баталгаажууллаа (draft message 12345): ...". Apply only the draft from that message id in conversation history.
 
 ### Price changes
 When the admin sends price updates (one product per line or a short list), same informal naming as stock paste. Quantity suffixes may appear but the price is what matters:
 - \`100k\` / \`100к\` / \`100,000\` → 100000₮
 - \`45k\` → 45000₮
 
-For each line: search product, parse target price, show draft (name, id, old price → new price). On Telegram send \`post_telegram_product_photo\` per product, then confirmation buttons:
-- buttons: [{ text: "✅ Баталгаажуулах", callback_data: "price_ok" }, { text: "❌ Цуцлах", callback_data: "price_no" }]
-Apply with \`product.updateProductField({ id, field: "price", numberValue })\` only after ✅ confirm message.
+For each line: search product, parse target price, show draft (name, id, old price → new price). On Telegram send \`post_telegram_product_photo\` per product, then confirmation buttons with \`price_ok\` / \`price_no\` (bound to that message automatically). Apply with \`product.updateProductField({ id, field: "price", numberValue })\` only after ✅ confirm that names the draft message id.
 
 ### Morning briefing / ship all
-A cron sends the morning order brief at 10:00 ULAT with a "📦 Бүгдийг илгээх" button (\`ship_all\`). That button ships all paid pending orders server-side — you do not need to handle it. If the admin asks to ship all pending paid orders in chat, use \`order.getPaginatedOrders({ orderStatus: "pending", paymentStatus: "success" })\`, summarize, and only ship after explicit yes — each order needs \`order.shipOrder({ orderId, addressZoneId })\` using the order's \`addressZoneId\`.
+A cron sends the morning order brief at 10:00 ULAT with a one-time "📦 Бүгдийг илгээх" button bound to that message. That button ships all paid pending orders server-side — you do not need to handle it.
 
 ### Image handling
 When the admin sends images (Messenger or Telegram), the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\` (an array of R2 keys) — never urls or base64. Pass those keys directly to \`aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys })\`. The keys are short-lived (R2 lifecycle cleans them up), so run extraction in the same turn the images arrive in, or ask the admin to resend if too much time has passed.

@@ -8,6 +8,7 @@ import { Api, InputFile } from "grammy";
 import * as v from "valibot";
 import adminAssistant from "../agents/admin-assistant";
 import { createAdminBotClient } from "../lib/admin-bot-client";
+import { bindTelegramButtonCallbacks } from "@vit/api/lib/integrations/admin-notifications/telegram-callback-data";
 import { stageInboundBytes } from "../lib/messenger-inbound";
 import { handleTelegramCallback } from "./telegram-callbacks";
 import {
@@ -168,19 +169,23 @@ export function postTelegramMessage(ref: TelegramConversationRef) {
 			const sent = await telegramApi(token).sendMessage(ref.chatId, input.text, {
 				...sendOptions(ref),
 				link_preview_options: { is_disabled: true },
-				...(input.buttons?.length
-					? {
-							reply_markup: {
-								inline_keyboard: [
-									input.buttons.map((button) => ({
-										text: button.text,
-										callback_data: button.callback_data,
-									})),
-								],
-							},
-						}
-					: {}),
 			});
+			if (input.buttons?.length) {
+				await telegramApi(token).editMessageReplyMarkup(
+					ref.chatId,
+					sent.message_id,
+					{
+						reply_markup: {
+							inline_keyboard: [
+								bindTelegramButtonCallbacks(
+									input.buttons,
+									sent.message_id,
+								),
+							],
+						},
+					},
+				);
+			}
 			return { ok: true, messageId: sent.message_id };
 		},
 	});
