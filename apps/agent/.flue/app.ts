@@ -2,6 +2,7 @@ import type { ChannelRoute } from "@flue/messenger";
 import { flue } from "@flue/runtime/routing";
 import { Hono } from "hono";
 import { channel as messengerChannel } from "../src/channels/messenger";
+import { channel as telegramChannel } from "../src/channels/telegram";
 import {
 	type PhotoProbeEnv,
 	type PhotoProbeInput,
@@ -19,13 +20,18 @@ function mountChannel(
 	channel: { routes: readonly ChannelRoute[] },
 ): void {
 	for (const route of channel.routes) {
-		// Single bridge cast: the channel ships its own pinned Hono copy, so its
-		// Handler is structurally distinct from this app's Hono Handler.
+		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
+	}
+}
+
+function mountTelegramChannel(hono: Hono, prefix: string): void {
+	for (const route of telegramChannel.routes) {
 		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
 	}
 }
 
 mountChannel(app, "/channels/messenger", messengerChannel);
+mountTelegramChannel(app, "/channels/telegram");
 
 app.get("/health", (c) =>
 	c.json({
