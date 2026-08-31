@@ -28,7 +28,7 @@ const sendProductPhotos = async (
 				`${product.name} x${product.quantity}`,
 			);
 		} catch {
-			await sendTelegramText(`${product.name} зураг: ${product.imageUrl}`);
+			// Skip broken/missing images; order text already sent.
 		}
 	}
 };

@@ -50,9 +50,14 @@ export const sendTelegramText = async (text: string) => {
 
 export const sendTelegramPhoto = async (photoUrl: string, caption?: string) => {
 	const { api, chatId } = await getApi();
+	const response = await fetch(photoUrl);
+	if (!response.ok) {
+		throw new Error(`product image fetch failed: ${response.status} ${photoUrl}`);
+	}
+	const photo = await response.blob();
 	await api.sendPhoto({
 		chat_id: chatId,
-		photo: photoUrl,
+		photo,
 		...(caption ? { caption } : {}),
 	});
 };
