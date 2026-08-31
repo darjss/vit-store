@@ -55,6 +55,8 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: requiredString(),
 			DELIVERY_SENDERID: requiredString(),
 			ADMIN_BOT_TOKEN: v.optional(v.string()),
+			TELEGRAM_ADMIN_BOT_TOKEN: v.optional(requiredString()),
+			TELEGRAM_ADMIN_CHAT_ID: v.optional(requiredString()),
 			IMAGE_UPLOAD_TOKEN: requiredString(),
 		},
 		runtimeEnvStrict: {
@@ -99,6 +101,8 @@ export const createServerAlchemyEnv = (
 			DELIVERY_PASSWORD: runtimeEnv.DELIVERY_PASSWORD,
 			DELIVERY_SENDERID: runtimeEnv.DELIVERY_SENDERID,
 			ADMIN_BOT_TOKEN: runtimeEnv.ADMIN_BOT_TOKEN,
+			TELEGRAM_ADMIN_BOT_TOKEN: runtimeEnv.TELEGRAM_ADMIN_BOT_TOKEN,
+			TELEGRAM_ADMIN_CHAT_ID: runtimeEnv.TELEGRAM_ADMIN_CHAT_ID,
 			IMAGE_UPLOAD_TOKEN: runtimeEnv.IMAGE_UPLOAD_TOKEN,
 		},
 	});

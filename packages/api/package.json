@@ -78,6 +78,7 @@
 		"drizzle-orm": "catalog:",
 		"drizzle-valibot": "^0.4.2",
 		"evlog": "^2.11.0",
+		"gramio": "^0.14.0",
 		"hono": "catalog:",
 		"ky": "^1.14.2",
 		"nanoid": "^5.1.5",

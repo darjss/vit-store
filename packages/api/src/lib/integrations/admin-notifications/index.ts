@@ -1,8 +1,9 @@
 export type {
 	DetailedOrderNotificationInput,
 	TransferClaimedNotificationInput,
-} from "~/lib/integrations/admin-notifications";
+} from "./types";
 export {
 	sendDetailedOrderNotification,
 	sendTransferClaimedNotification,
-} from "~/lib/integrations/admin-notifications";
+} from "./send";
+export { getTelegramAdminConfig } from "./telegram";

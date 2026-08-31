@@ -8,7 +8,7 @@ import { CustomersTable, OrderDetailsTable, OrdersTable, PaymentsTable, Products
 import { cartFingerprint } from "~/lib/order/cart-fingerprint";
 import { assertCanAccessOrder, createCheckoutAccessToken, type CustomerSessionClaims, } from "~/lib/session/checkout-access";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
-import { sendDetailedOrderNotification } from "~/lib/integrations/messenger/messages";
+import { sendDetailedOrderNotification } from "~/lib/integrations/admin-notifications";
 import { trackOrderCreatedServerSide, trackQpayInvoiceCreatedServerSide } from "~/lib/integrations/posthog";
 import { kv } from "~/lib/kv";
 import { createQpayInvoice } from "~/lib/payments/qpay";
