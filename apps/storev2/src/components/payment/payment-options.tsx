@@ -7,6 +7,7 @@ import CopyFieldButton from "@/components/payment/copy-field-button";
 import QpayPaymentPanel from "@/components/payment/qpay-button";
 import { buttonVariants } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
+import { detectInAppBrowser } from "@/lib/analytics";
 import { paymentSuccessUrl } from "@/lib/payment-url";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
@@ -53,10 +54,12 @@ const FieldLabel = (props: { children: JSX.Element }) => (
 );
 
 const PaymentOptions = (props: PaymentOptionsProps) => {
-	// F5: default tab honors the existing payment provider so a customer who
-	// already chose transfer lands back on the transfer tab on revisit.
+	const isFacebookIos =
+		typeof navigator !== "undefined" &&
+		detectInAppBrowser() === "facebook" &&
+		/iPhone|iPad|iPod/.test(navigator.userAgent);
 	const [tab, setTab] = createSignal<"transfer" | "qpay">(
-		props.provider === "transfer" ? "transfer" : "qpay",
+		isFacebookIos ? "transfer" : "qpay",
 	);
 
 	const selectTransferMutation = useMutation(
