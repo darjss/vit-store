@@ -1,5 +1,5 @@
 import { WorkerEntrypoint, cache } from "cloudflare:workers";
-import * as v from "valibot";
+import { is, string } from "valibot";
 import astro from "./dist/server/entry.mjs";
 
 const CACHE_TAG = /^[!-~]{1,128}$/;
@@ -14,7 +14,7 @@ export default class Storefront extends WorkerEntrypoint {
 			!Array.isArray(tags) ||
 			tags.length === 0 ||
 			tags.length > 64 ||
-			tags.some((tag) => !v.is(v.string(), tag) || !CACHE_TAG.test(tag))
+			tags.some((tag) => !is(string(), tag) || !CACHE_TAG.test(tag))
 		) {
 			throw new TypeError("Invalid cache tags");
 		}

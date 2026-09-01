@@ -7,7 +7,9 @@ export const safeStorage: Storage = {
 		}
 		try {
 			localStorage.clear();
-		} catch {}
+		} catch {
+			// localStorage unavailable
+		}
 	},
 	getItem: (key: string) => {
 		if (isServer) {
@@ -45,7 +47,9 @@ export const safeStorage: Storage = {
 		}
 		try {
 			localStorage.removeItem(key);
-		} catch {}
+		} catch {
+			// localStorage unavailable
+		}
 	},
 	setItem: (key: string, value: string) => {
 		if (isServer) {
@@ -53,6 +57,8 @@ export const safeStorage: Storage = {
 		}
 		try {
 			localStorage.setItem(key, value);
-		} catch {}
+		} catch {
+			// localStorage unavailable
+		}
 	},
 };

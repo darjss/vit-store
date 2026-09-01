@@ -40,6 +40,13 @@ const paymentStatusLabels = {
 	success: "Амжилттай",
 } satisfies Record<string, string>;
 
+const formatOrderDate = (timestamp: Date | string) =>
+	new Date(timestamp).toLocaleDateString("mn-MN", {
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+
 const OrderTrackingForm = () => {
 	const [step, setStep] = createSignal<"input" | "otp" | "result">("input");
 	const [phone, setPhone] = createSignal("");
@@ -166,17 +173,17 @@ const OrderTrackingForm = () => {
 		verifyOtpMutation.mutate({ otp: otp(), phone: phone() });
 	};
 
-	const formatDate = (timestamp: Date | string) => {
-		return new Date(timestamp).toLocaleDateString("mn-MN", {
-			day: "numeric",
-			month: "long",
-			year: "numeric",
-		});
-	};
-
 	const trackedOrderStatus = () => parseOrderStatus(trackMutation.data?.status ?? "pending");
 
 	const currentStepIndex = () => timelineSteps.indexOf(trackedOrderStatus());
+
+	const resetSearch = () => {
+		setStep("input");
+		trackMutation.reset();
+		setOrderNumber("");
+		setPhone("");
+		setOtp("");
+	};
 
 	return (
 		<div class="space-y-6">
@@ -303,246 +310,285 @@ const OrderTrackingForm = () => {
 				</Match>
 
 				<Match when={step() === "result"}>
-					<Show when={trackMutation.isPending}>
-						<Card class="enter-scale">
-							<CardContent class="p-8 pt-8 text-center">
-								<IconLoader class="text-cocoa mx-auto mb-4 h-10 w-10 animate-spin" />
-								<p class="text-foreground text-sm font-semibold">Захиалгыг хайж байна...</p>
-							</CardContent>
-						</Card>
-					</Show>
-
-					<Show when={trackMutation.isError}>
-						<Card class="enter-scale">
-							<CardContent class="p-6 pt-6 text-center md:p-8 md:pt-8">
-								<div class="bg-error text-error-foreground mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
-									<IconAlert class="h-7 w-7" />
-								</div>
-								<h3 class="font-display text-foreground mb-2 text-lg">Захиалга олдсонгүй</h3>
-								<p class="text-muted-foreground mb-5 text-sm">
-									Захиалгын дугаар эсвэл утасны дугаар буруу байж магадгүй.
-								</p>
-								<Button
-									onClick={() => {
-										setStep("input");
-										trackMutation.reset();
-									}}
-								>
-									Дахин оролдох
-								</Button>
-							</CardContent>
-						</Card>
-					</Show>
-
-					<Show when={trackMutation.isSuccess && trackMutation.data}>
-						<div class="space-y-4">
-							{/* Order header */}
-							<Card class="enter-rise overflow-hidden">
-								<div class="border-border bg-wash-lemon/70 border-b p-5 md:p-6">
-									<div class="flex flex-wrap items-center justify-between gap-3">
-										<div class="flex items-center gap-3">
-											<div class="bg-card text-foreground shadow-soft-sm flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full">
-												<IconPackage class="h-5 w-5" />
-											</div>
-											<div>
-												<div class="text-muted-foreground text-xs tracking-wide uppercase">
-													Захиалга №
-												</div>
-												<div class="font-display text-foreground text-lg">
-													{trackMutation.data?.orderNumber}
-												</div>
-											</div>
-										</div>
-										<Badge
-											variant={
-												statusBadgeVariant[trackMutation.data?.status || "pending"] ?? "outline"
-											}
-										>
-											{orderStatusLabels[trackedOrderStatus()] ??
-												trackMutation.data?.status ??
-												"Хүлээгдэж буй"}
-										</Badge>
-									</div>
-								</div>
-								<CardContent class="space-y-4 p-5 pt-5 md:p-6 md:pt-6">
-									{/* Status timeline */}
-									<Show when={currentStepIndex() >= 0}>
-										<div class="bg-wash-mint/40 rounded-xl p-4">
-											<div class="flex items-start">
-												<For each={timelineSteps}>
-													{(timelineStep, index) => {
-														const done = () => index() < currentStepIndex();
-														const current = () => index() === currentStepIndex();
-														return (
-															<>
-																<Show when={index() > 0}>
-																	<div
-																		class={`mt-4 h-px flex-1 ${
-																			index() <= currentStepIndex()
-																				? "bg-success-foreground/40"
-																				: "bg-border"
-																		}`}
-																	/>
-																</Show>
-																<div class="flex w-16 flex-col items-center gap-1.5">
-																	<div
-																		class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${
-																			done() || current()
-																				? "bg-success text-success-foreground"
-																				: "border-border bg-card text-muted-foreground border"
-																		}`}
-																	>
-																		{done() || current() ? (
-																			<IconCheck class="h-4 w-4" />
-																		) : (
-																			<span class="font-semibold">{index() + 1}</span>
-																		)}
-																	</div>
-																	<span
-																		class={`text-center text-[11px] leading-tight ${
-																			current()
-																				? "text-foreground font-semibold"
-																				: "text-muted-foreground"
-																		}`}
-																	>
-																		{orderStatusLabels[timelineStep]}
-																	</span>
-																</div>
-															</>
-														);
-													}}
-												</For>
-											</div>
-										</div>
-									</Show>
-
-									<div class="grid grid-cols-2 gap-3">
-										<div class="bg-muted/50 rounded-xl p-3">
-											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
-												Огноо
-											</div>
-											<div class="text-foreground text-sm font-medium">
-												{formatDate(trackMutation.data?.createdAt || new Date())}
-											</div>
-										</div>
-										<div class="bg-muted/50 rounded-xl p-3">
-											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
-												Нийт дүн
-											</div>
-											<div class="font-display text-foreground text-sm">
-												{trackMutation.data?.total?.toLocaleString()}₮
-											</div>
-										</div>
-									</div>
-
-									<div class="bg-muted/50 rounded-xl p-3">
-										<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
-											Хүргэлтийн хаяг
-										</div>
-										<div class="text-foreground text-sm">{trackMutation.data?.address}</div>
-									</div>
-
-									{trackMutation.data?.notes && (
-										<div class="bg-wash-lemon/50 rounded-xl p-3">
-											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
-												Тэмдэглэл
-											</div>
-											<div class="text-foreground text-sm">{trackMutation.data?.notes}</div>
-										</div>
-									)}
-
-									{/* Payment status */}
-									<div class="bg-muted/50 rounded-xl p-3">
-										<div class="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
-											Төлбөрийн төлөв
-										</div>
-										<div class="flex flex-wrap items-center gap-2">
-											{trackMutation.data?.payments?.map(
-												(payment: { provider: string; status: string }) => (
-													<Badge variant={payment.status === "success" ? "success" : "warning"}>
-														{payment.provider === "qpay"
-															? "QPay"
-															: payment.provider === "transfer"
-																? "Данс"
-																: payment.provider}{" "}
-														- {paymentStatusLabels[payment.status] || payment.status}
-													</Badge>
-												),
-											)}
-											{(!trackMutation.data?.payments ||
-												trackMutation.data.payments.length === 0) && (
-												<span class="text-muted-foreground text-sm">
-													Төлбөрийн мэдээлэл олдсонгүй
-												</span>
-											)}
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							{/* Products */}
-							<Card class="enter-rise stagger-1">
-								<div class="border-border border-b p-5 md:p-6">
-									<h3 class="font-display text-foreground text-base">Захиалсан бүтээгдэхүүнүүд</h3>
-								</div>
-								<CardContent class="space-y-3 p-5 pt-5 md:p-6 md:pt-6">
-									{trackMutation.data?.orderDetails?.map(
-										(detail: {
-											product: {
-												brand?: { name: string };
-												images?: Array<{ url: string }>;
-												name: string;
-											};
-											quantity: number;
-										}) => (
-											<div class="flex items-center gap-3">
-												{detail.product?.images?.[0]?.url && (
-													<img
-														alt={detail.product.name}
-														class="bg-muted h-14 w-14 shrink-0 rounded-xl object-cover"
-														loading="lazy"
-														src={detail.product.images[0].url}
-													/>
-												)}
-												<div class="min-w-0 flex-1">
-													<div class="text-foreground truncate text-sm font-semibold">
-														{detail.product?.name}
-													</div>
-													{detail.product?.brand?.name && (
-														<div class="text-muted-foreground text-xs">
-															{detail.product.brand.name}
-														</div>
-													)}
-												</div>
-												<div class="bg-muted text-foreground shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold">
-													{detail.quantity}x
-												</div>
-											</div>
-										),
-									)}
-								</CardContent>
-							</Card>
-
-							{/* New search */}
-							<Button
-								class="w-full"
-								onClick={() => {
-									setStep("input");
-									trackMutation.reset();
-									setOrderNumber("");
-									setPhone("");
-									setOtp("");
-								}}
-								variant="outline"
-							>
-								Өөр захиалга хайх
-							</Button>
-						</div>
-					</Show>
+					<OrderTrackingResult
+						currentStepIndex={currentStepIndex}
+						onRetry={() => {
+							setStep("input");
+							trackMutation.reset();
+						}}
+						onSearchAgain={resetSearch}
+						trackedOrderStatus={trackedOrderStatus}
+						trackMutation={trackMutation}
+					/>
 				</Match>
 			</Switch>
 		</div>
 	);
 };
+
+type TrackMutation = ReturnType<typeof useMutation>;
+
+function OrderTrackingResult(props: {
+	currentStepIndex: () => number;
+	onRetry: () => void;
+	onSearchAgain: () => void;
+	trackedOrderStatus: () => OrderStatusType;
+	trackMutation: TrackMutation;
+}) {
+	return (
+		<>
+			<Show when={props.trackMutation.isPending}>
+				<OrderTrackingPending />
+			</Show>
+
+			<Show when={props.trackMutation.isError}>
+				<OrderTrackingError onRetry={props.onRetry} />
+			</Show>
+
+			<Show when={props.trackMutation.isSuccess && props.trackMutation.data}>
+				<OrderTrackingSuccess
+					currentStepIndex={props.currentStepIndex}
+					onSearchAgain={props.onSearchAgain}
+					trackedOrderStatus={props.trackedOrderStatus}
+					trackMutation={props.trackMutation}
+				/>
+			</Show>
+		</>
+	);
+}
+
+function OrderTrackingPending() {
+	return (
+		<Card class="enter-scale">
+			<CardContent class="p-8 pt-8 text-center">
+				<IconLoader class="text-cocoa mx-auto mb-4 h-10 w-10 animate-spin" />
+				<p class="text-foreground text-sm font-semibold">Захиалгыг хайж байна...</p>
+			</CardContent>
+		</Card>
+	);
+}
+
+function OrderTrackingError(props: { onRetry: () => void }) {
+	return (
+		<Card class="enter-scale">
+			<CardContent class="p-6 pt-6 text-center md:p-8 md:pt-8">
+				<div class="bg-error text-error-foreground mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+					<IconAlert class="h-7 w-7" />
+				</div>
+				<h3 class="font-display text-foreground mb-2 text-lg">Захиалга олдсонгүй</h3>
+				<p class="text-muted-foreground mb-5 text-sm">
+					Захиалгын дугаар эсвэл утасны дугаар буруу байж магадгүй.
+				</p>
+				<Button onClick={props.onRetry}>Дахин оролдох</Button>
+			</CardContent>
+		</Card>
+	);
+}
+
+function OrderTrackingTimeline(props: { currentStepIndex: () => number }) {
+	return (
+		<Show when={props.currentStepIndex() >= 0}>
+			<div class="bg-wash-mint/40 rounded-xl p-4">
+				<div class="flex items-start">
+					<For each={timelineSteps}>
+						{(timelineStep, index) => {
+							const done = () => index() < props.currentStepIndex();
+							const current = () => index() === props.currentStepIndex();
+							return (
+								<>
+									<Show when={index() > 0}>
+										<div
+											class={`mt-4 h-px flex-1 ${
+												index() <= props.currentStepIndex()
+													? "bg-success-foreground/40"
+													: "bg-border"
+											}`}
+										/>
+									</Show>
+									<div class="flex w-16 flex-col items-center gap-1.5">
+										<div
+											class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${
+												done() || current()
+													? "bg-success text-success-foreground"
+													: "border-border bg-card text-muted-foreground border"
+											}`}
+										>
+											{done() || current() ? (
+												<IconCheck class="h-4 w-4" />
+											) : (
+												<span class="font-semibold">{index() + 1}</span>
+											)}
+										</div>
+										<span
+											class={`text-center text-[11px] leading-tight ${
+												current() ? "text-foreground font-semibold" : "text-muted-foreground"
+											}`}
+										>
+											{orderStatusLabels[timelineStep]}
+										</span>
+									</div>
+								</>
+							);
+						}}
+					</For>
+				</div>
+			</div>
+		</Show>
+	);
+}
+
+function OrderTrackingProductList(props: {
+	orderDetails: TrackMutation["data"] extends infer D
+		? D extends { orderDetails?: infer O }
+			? O
+			: never
+		: never;
+}) {
+	return (
+		<Card class="enter-rise stagger-1">
+			<div class="border-border border-b p-5 md:p-6">
+				<h3 class="font-display text-foreground text-base">Захиалсан бүтээгдэхүүнүүд</h3>
+			</div>
+			<CardContent class="space-y-3 p-5 pt-5 md:p-6 md:pt-6">
+				{props.orderDetails?.map(
+					(detail: {
+						product: {
+							brand?: { name: string };
+							images?: Array<{ url: string }>;
+							name: string;
+						};
+						quantity: number;
+					}) => (
+						<div class="flex items-center gap-3">
+							{detail.product?.images?.[0]?.url && (
+								<img
+									alt={detail.product.name}
+									class="bg-muted h-14 w-14 shrink-0 rounded-xl object-cover"
+									loading="lazy"
+									src={detail.product.images[0].url}
+								/>
+							)}
+							<div class="min-w-0 flex-1">
+								<div class="text-foreground truncate text-sm font-semibold">
+									{detail.product?.name}
+								</div>
+								{detail.product?.brand?.name && (
+									<div class="text-muted-foreground text-xs">{detail.product.brand.name}</div>
+								)}
+							</div>
+							<div class="bg-muted text-foreground shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold">
+								{detail.quantity}x
+							</div>
+						</div>
+					),
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+// ponytail: order result card bundles timeline, payment badges, and line items; split on next tracking UX pass
+// oxlint-disable-next-line complexity -- see ponytail comment above
+function OrderTrackingSuccess(props: {
+	currentStepIndex: () => number;
+	onSearchAgain: () => void;
+	trackedOrderStatus: () => OrderStatusType;
+	trackMutation: TrackMutation;
+}) {
+	return (
+		<div class="space-y-4">
+			<Card class="enter-rise overflow-hidden">
+				<div class="border-border bg-wash-lemon/70 border-b p-5 md:p-6">
+					<div class="flex flex-wrap items-center justify-between gap-3">
+						<div class="flex items-center gap-3">
+							<div class="bg-card text-foreground shadow-soft-sm flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full">
+								<IconPackage class="h-5 w-5" />
+							</div>
+							<div>
+								<div class="text-muted-foreground text-xs tracking-wide uppercase">Захиалга №</div>
+								<div class="font-display text-foreground text-lg">
+									{props.trackMutation.data?.orderNumber}
+								</div>
+							</div>
+						</div>
+						<Badge
+							variant={
+								statusBadgeVariant[props.trackMutation.data?.status || "pending"] ?? "outline"
+							}
+						>
+							{orderStatusLabels[props.trackedOrderStatus()] ??
+								props.trackMutation.data?.status ??
+								"Хүлээгдэж буй"}
+						</Badge>
+					</div>
+				</div>
+				<CardContent class="space-y-4 p-5 pt-5 md:p-6 md:pt-6">
+					<OrderTrackingTimeline currentStepIndex={props.currentStepIndex} />
+
+					<div class="grid grid-cols-2 gap-3">
+						<div class="bg-muted/50 rounded-xl p-3">
+							<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">Огноо</div>
+							<div class="text-foreground text-sm font-medium">
+								{formatOrderDate(props.trackMutation.data?.createdAt || new Date())}
+							</div>
+						</div>
+						<div class="bg-muted/50 rounded-xl p-3">
+							<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">Нийт дүн</div>
+							<div class="font-display text-foreground text-sm">
+								{props.trackMutation.data?.total?.toLocaleString()}₮
+							</div>
+						</div>
+					</div>
+
+					<div class="bg-muted/50 rounded-xl p-3">
+						<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
+							Хүргэлтийн хаяг
+						</div>
+						<div class="text-foreground text-sm">{props.trackMutation.data?.address}</div>
+					</div>
+
+					{props.trackMutation.data?.notes && (
+						<div class="bg-wash-lemon/50 rounded-xl p-3">
+							<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
+								Тэмдэглэл
+							</div>
+							<div class="text-foreground text-sm">{props.trackMutation.data?.notes}</div>
+						</div>
+					)}
+
+					<div class="bg-muted/50 rounded-xl p-3">
+						<div class="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
+							Төлбөрийн төлөв
+						</div>
+						<div class="flex flex-wrap items-center gap-2">
+							{props.trackMutation.data?.payments?.map(
+								(payment: { provider: string; status: string }) => (
+									<Badge variant={payment.status === "success" ? "success" : "warning"}>
+										{payment.provider === "qpay"
+											? "QPay"
+											: payment.provider === "transfer"
+												? "Данс"
+												: payment.provider}{" "}
+										- {paymentStatusLabels[payment.status] || payment.status}
+									</Badge>
+								),
+							)}
+							{(!props.trackMutation.data?.payments ||
+								props.trackMutation.data.payments.length === 0) && (
+								<span class="text-muted-foreground text-sm">Төлбөрийн мэдээлэл олдсонгүй</span>
+							)}
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			<OrderTrackingProductList orderDetails={props.trackMutation.data?.orderDetails} />
+
+			<Button class="w-full" onClick={props.onSearchAgain} variant="outline">
+				Өөр захиалга хайх
+			</Button>
+		</div>
+	);
+}
 
 export default OrderTrackingForm;

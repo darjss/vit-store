@@ -20,7 +20,7 @@ import { createServerClient } from "@/lib/trpc";
 import { paymentUrl } from "@/lib/payment-url";
 import { trpcErrorCode } from "@/lib/trpc-error-code";
 import { thrownErrorWireSchema } from "@/lib/error-wire";
-import * as v from "valibot";
+import { parse } from "valibot";
 import { orderStatusLabels } from "@vit/shared/order-status";
 import { BagIcon as IconShoppingBag } from "@solar-icons/solid/linear";
 
@@ -38,7 +38,7 @@ let user;
 try {
 	user = await serverApi.auth.check.query();
 } catch (error) {
-	const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
+	const code = trpcErrorCode(parse(thrownErrorWireSchema, error));
 	if (code === "UNAUTHORIZED") {return Astro.redirect("/login");}
 	throw error;
 }
@@ -57,8 +57,8 @@ const unpaidOnly = user.trust === "checkout_guest";
 if (user.trust === "phone_verified") {
 	try {
 		orders = await serverApi.order.getOrdersByCustomerId.query();
-	} catch (error) {
-		console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", error);
+	} catch {
+		// render empty orders when history fetch fails
 	}
 } else if (unpaidOnly && user.checkout?.paymentNumber) {
 	try {
@@ -90,8 +90,8 @@ if (user.trust === "phone_verified") {
 				},
 			];
 		}
-	} catch (error) {
-		console.error("[profile] scoped unpaid payment failed; rendering empty", error);
+	} catch {
+		// render empty when scoped payment fetch fails
 	}
 } else {
 	return Astro.redirect("/login");

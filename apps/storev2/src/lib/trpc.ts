@@ -1,7 +1,7 @@
 import { createTRPCClient, httpLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
 import { sanitizePublicTrpcResponse, trpcResponseWireSchema } from "@vit/shared";
-import * as v from "valibot";
+import { parse } from "valibot";
 import { SuperJSON } from "superjson";
 
 import { isServer } from "@/lib/runtime";
@@ -14,7 +14,7 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 
 	const clonedResponse = response.clone();
 	try {
-		const data = v.parse(trpcResponseWireSchema, await clonedResponse.json());
+		const data = parse(trpcResponseWireSchema, await clonedResponse.json());
 		const { hasError, payload } = sanitizePublicTrpcResponse(data);
 		if (!hasError) {
 			return false;

@@ -22,8 +22,8 @@ const CopyFieldButton = (props: CopyFieldButtonProps) => {
 			setCopied(true);
 			window.clearTimeout(timer);
 			timer = window.setTimeout(() => setCopied(false), 1600);
-		} catch (error) {
-			console.error("Failed to copy text:", error);
+		} catch {
+			// clipboard unavailable
 		}
 	};
 

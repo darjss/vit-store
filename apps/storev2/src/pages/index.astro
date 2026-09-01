@@ -388,7 +388,7 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
       // transition-delay per item.
       if (el.hasAttribute("data-reveal-group")) {
         Array.from(el.children).forEach((child, i) => {
-          if (child instanceof HTMLElement) {
+          if (child.nodeType === 1) {
             child.style.setProperty("--stagger-i", String(i));
           }
         });

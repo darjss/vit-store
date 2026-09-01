@@ -1,4 +1,4 @@
-import * as v from "valibot";
+import { parse, safeParse, type InferOutput } from "valibot";
 
 import type { AnalyticsProperties } from "@/lib/analytics-props";
 import { thrownErrorWireSchema, type ThrownErrorWire } from "@/lib/error-wire";
@@ -16,13 +16,15 @@ const SEARCH_ATTRIBUTION_KEY = "vit-search-attribution";
 const SEARCH_ATTRIBUTION_MAX_AGE_MS = 30 * 60 * 1000;
 const trackedSearchClicks = new Set<string>();
 
-const rememberSearchAttribution = (attribution: v.InferOutput<typeof searchAttributionSchema>) => {
+const rememberSearchAttribution = (attribution: InferOutput<typeof searchAttributionSchema>) => {
 	if (isServer) {
 		return;
 	}
 	try {
 		sessionStorage.setItem(SEARCH_ATTRIBUTION_KEY, JSON.stringify(attribution));
-	} catch {}
+	} catch {
+		// sessionStorage unavailable
+	}
 };
 
 const currentSearchAttribution = (productId: number) => {
@@ -30,7 +32,7 @@ const currentSearchAttribution = (productId: number) => {
 		return null;
 	}
 	try {
-		const parsed = v.safeParse(
+		const parsed = safeParse(
 			searchAttributionSchema,
 			JSON.parse(sessionStorage.getItem(SEARCH_ATTRIBUTION_KEY) ?? "null"),
 		);
@@ -74,7 +76,7 @@ function identify(distinctId: string, properties?: AnalyticsProperties) {
 
 export function captureException(error: ThrownErrorWire, properties?: AnalyticsProperties) {
 	if (!isServer && window.posthog) {
-		window.posthog.captureException(v.parse(thrownErrorWireSchema, error), properties);
+		window.posthog.captureException(parse(thrownErrorWireSchema, error), properties);
 	}
 }
 

@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/solid-query";
 import type { StoreRouter } from "@vit/api";
 import type { inferRouterOutputs } from "@trpc/server";
 import { createEffect, createSignal, Match, Show, Switch } from "solid-js";
-import * as v from "valibot";
+import { parse, type InferOutput } from "valibot";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,10 +34,7 @@ type RestockChannel = "sms" | "email";
 type SheetStage = "contact" | "confirmation" | "success";
 type RestockIdentity = inferRouterOutputs<StoreRouter>["product"]["restockSubscriptionIdentity"];
 
-function restockErrorMessage(
-	error: v.InferOutput<typeof thrownErrorWireSchema>,
-	stage: SheetStage,
-) {
+function restockErrorMessage(error: InferOutput<typeof thrownErrorWireSchema>, stage: SheetStage) {
 	switch (trpcErrorCode(error)) {
 		case "TOO_MANY_REQUESTS":
 			return "Хэт олон хүсэлт илгээлээ. Түр хүлээгээд дахин оролдоно уу.";
@@ -92,6 +89,8 @@ interface RestockNotifySheetProps {
 	productName?: string;
 }
 
+// ponytail: restock sheet stage machine; split stages into subcomponents after v2 sheet redesign
+// oxlint-disable-next-line complexity -- see ponytail comment above
 export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 	const [stage, setStage] = createSignal<SheetStage>("contact");
 	const [channel, setChannel] = createSignal<RestockChannel>("sms");
@@ -152,7 +151,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		() => ({
 			mutationFn: () => api.product.subscribeToRestock.mutate({ productId: props.productId }),
 			onError: (error) => {
-				const parsed = v.parse(thrownErrorWireSchema, error);
+				const parsed = parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
 					channel: "sms",
@@ -182,7 +181,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					productId: props.productId,
 				}),
 			onError: (error) => {
-				const parsed = v.parse(thrownErrorWireSchema, error);
+				const parsed = parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
 					errorCode: trpcErrorCode(parsed),
@@ -209,7 +208,7 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					code: code(),
 				}),
 			onError: (error) => {
-				const parsed = v.parse(thrownErrorWireSchema, error);
+				const parsed = parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
 					errorCode: trpcErrorCode(parsed),

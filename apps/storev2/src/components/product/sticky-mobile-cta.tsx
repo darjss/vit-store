@@ -73,8 +73,9 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 		}
 		if (!isInStock()) {
 			const target = event.currentTarget;
-			if (target instanceof HTMLElement) {
-				restockSheetFocusRestore.register(target);
+			if (target && "style" in target) {
+				// SAFETY: CTA button currentTarget exposes HTMLElement.style.
+				restockSheetFocusRestore.register(target as HTMLElement);
 			}
 			setNotifyOpen(true);
 			return;

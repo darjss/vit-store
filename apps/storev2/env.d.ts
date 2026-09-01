@@ -24,7 +24,7 @@ interface PostHog {
 declare global {
 	type Env = CloudflareEnv;
 	namespace App {
-		interface Locals extends Runtime {}
+		type Locals = Runtime;
 	}
 	interface Window {
 		posthog?: PostHog;
@@ -33,6 +33,6 @@ declare global {
 
 declare module "cloudflare:workers" {
 	namespace Cloudflare {
-		export interface Env extends CloudflareEnv {}
+		export type Env = CloudflareEnv;
 	}
 }

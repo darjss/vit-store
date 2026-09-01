@@ -1,6 +1,6 @@
 import type { StoreRouter } from "@vit/api";
 import type { TRPCClient } from "@trpc/client";
-import * as v from "valibot";
+import { parse } from "valibot";
 
 import { thrownErrorWireSchema } from "@/lib/error-wire";
 import { withCt } from "@/lib/payment-url";
@@ -26,7 +26,7 @@ export async function loadPaymentOrRedirect(
 			paymentNumber,
 		});
 	} catch (error) {
-		const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
+		const code = trpcErrorCode(parse(thrownErrorWireSchema, error));
 		if (code === "UNAUTHORIZED") {
 			return { redirect: redirect("/order-tracking") };
 		}
@@ -58,7 +58,7 @@ export async function loadOrderOrRedirect(
 			orderNumber,
 		});
 	} catch (error) {
-		const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
+		const code = trpcErrorCode(parse(thrownErrorWireSchema, error));
 		if (code === "UNAUTHORIZED") {
 			return { redirect: redirect("/order-tracking") };
 		}

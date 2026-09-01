@@ -1,4 +1,4 @@
-import * as v from "valibot";
+import { array, number, object, safeParse, string } from "valibot";
 
 import { isServer } from "@/lib/runtime";
 
@@ -10,10 +10,10 @@ export interface SearchHistoryItem {
 	timestamp: number;
 }
 
-const searchHistorySchema = v.array(
-	v.object({
-		term: v.string(),
-		timestamp: v.number(),
+const searchHistorySchema = array(
+	object({
+		term: string(),
+		timestamp: number(),
 	}),
 );
 
@@ -31,7 +31,7 @@ export function getRecentSearches(): Array<SearchHistoryItem> {
 			return [];
 		}
 
-		const parsed = v.safeParse(searchHistorySchema, JSON.parse(stored));
+		const parsed = safeParse(searchHistorySchema, JSON.parse(stored));
 		if (!parsed.success) {
 			return [];
 		}

@@ -3,9 +3,10 @@ import { parseSort } from "@vit/shared/domain/product";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { hydrateServerState } from "@/lib/hydration";
-import { errorKind, thrownErrorWireSchema } from "@/lib/error-wire";
+import { captureException } from "@/lib/analytics";
+import { errorKind, isNativeError, thrownErrorWireSchema } from "@/lib/error-wire";
 import { queryClient } from "@/lib/query";
-import * as v from "valibot";
+import { parse } from "valibot";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
@@ -234,17 +235,16 @@ const ProductsList = (props: ProductsListProps) => {
 
 		setLastLoggedProductsError(error);
 		const sort = filters.selectedSort();
-		const details =
-			error instanceof Error
-				? {
-						message: error.message,
-						name: error.name,
-						stack: error.stack,
-					}
-				: {
-						message: String(error),
-						name: errorKind(v.parse(thrownErrorWireSchema, error)),
-					};
+		const details = isNativeError(error)
+			? {
+					message: error.message,
+					name: error.name,
+					stack: error.stack,
+				}
+			: {
+					message: String(error),
+					name: errorKind(parse(thrownErrorWireSchema, error)),
+				};
 		const queryName = filters.includeOutOfStock()
 			? "product.getInfiniteProducts"
 			: "product.getInfiniteProducts (requireStock)";
@@ -270,7 +270,7 @@ const ProductsList = (props: ProductsListProps) => {
 			viewportWidth: window.innerWidth,
 		};
 
-		console.error("[ProductsList] Infinite products query failed", context);
+		captureException(parse(thrownErrorWireSchema, error), context);
 	});
 
 	const shouldShowEmptyState = createMemo(() => {

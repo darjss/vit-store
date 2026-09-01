@@ -1,27 +1,41 @@
-import * as v from "valibot";
+import {
+	boolean,
+	custom,
+	is,
+	null as nullSchema,
+	number,
+	record,
+	string,
+	union,
+	type InferOutput,
+} from "valibot";
 
-export const thrownErrorWireSchema = v.union([
-	v.custom<Error>((input): input is Error => input instanceof Error),
-	v.string(),
-	v.number(),
-	v.boolean(),
-	v.null(),
-	v.record(v.string(), v.union([v.string(), v.number(), v.boolean(), v.null()])),
+export function isNativeError(wire: ThrownErrorWire): wire is Error {
+	return Object.prototype.toString.call(wire) === "[object Error]";
+}
+
+export const thrownErrorWireSchema = union([
+	custom<Error>(isNativeError),
+	string(),
+	number(),
+	boolean(),
+	nullSchema(),
+	record(string(), union([string(), number(), boolean(), nullSchema()])),
 ]);
 
-export type ThrownErrorWire = v.InferOutput<typeof thrownErrorWireSchema>;
+export type ThrownErrorWire = InferOutput<typeof thrownErrorWireSchema>;
 
 export function errorKind(wire: ThrownErrorWire): string {
-	if (wire instanceof Error) {
+	if (isNativeError(wire)) {
 		return wire.name;
 	}
-	if (v.is(v.string(), wire)) {
+	if (is(string(), wire)) {
 		return "string";
 	}
-	if (v.is(v.number(), wire)) {
+	if (is(number(), wire)) {
 		return "number";
 	}
-	if (v.is(v.boolean(), wire)) {
+	if (is(boolean(), wire)) {
 		return "boolean";
 	}
 	if (wire === null) {

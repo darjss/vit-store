@@ -16,7 +16,7 @@ import {
 	Switch,
 } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
-import * as v from "valibot";
+import { minLength, object, pipe, string } from "valibot";
 import EmptyCart from "@/components/cart/empty-cart";
 import { identifyUser, trackCheckoutStarted } from "@/lib/analytics";
 import { celebrateOnce, orderCreatedCelebrationKey } from "@/lib/celebration";
@@ -46,11 +46,13 @@ const stepExit = { duration: 0.2, easing: EASE_IN_OUT };
 
 // F12: single checkout validator schema referenced by onChange/onBlur/onSubmit
 // instead of three byte-identical tripled copies.
-const checkoutValidators = v.object({
-	address: v.pipe(v.string(), v.minLength(5, "Хаягаа бичнэ үү")),
-	notes: v.string(),
+const checkoutValidators = object({
+	address: pipe(string(), minLength(5, "Хаягаа бичнэ үү")),
+	notes: string(),
 	phoneNumber: phoneSchema,
 });
+
+const totalWithDelivery = () => cart.total() + deliveryFee;
 
 const CheckoutForm = (props: {
 	user:
@@ -176,7 +178,6 @@ const CheckoutForm = (props: {
 	});
 
 	const cartState = createCartState();
-	const totalWithDelivery = () => cart.total() + deliveryFee;
 
 	// Delivery estimate: orders before 10:30 Ulaanbaatar time deliver today,
 	// otherwise tomorrow. ULAST is UTC+8.
@@ -359,8 +360,10 @@ const CheckoutForm = (props: {
 															onSubmit={async (e) => {
 																e.preventDefault();
 																e.stopPropagation();
-																if (document.activeElement instanceof HTMLElement) {
-																	document.activeElement.blur();
+																const active = document.activeElement;
+																if (active && "blur" in active) {
+																	// SAFETY: focused form control with blur() is an HTMLElement.
+																	(active as HTMLElement).blur();
 																}
 																await form.handleSubmit();
 															}}
