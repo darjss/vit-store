@@ -236,7 +236,19 @@ app.post("/images/urls", async (c) => {
 	const startTime = Date.now();
 	try {
 		const uploadPrefix = sanitizePrefix(c.req.query("prefix"));
-		const body = v.parse(imageUrlArraySchema, await c.req.json());
+		let json: unknown;
+		try {
+			json = await c.req.json();
+		} catch {
+			log.warn("upload.urls_validation_failed", { reason: "invalid_json" });
+			return c.json({ message: "Array of image URLs required" }, 400);
+		}
+		const parsed = v.safeParse(imageUrlArraySchema, json);
+		if (!parsed.success) {
+			log.warn("upload.urls_validation_failed", { reason: "invalid_body" });
+			return c.json({ message: "Array of image URLs required" }, 400);
+		}
+		const body = parsed.output;
 		if (body.length === 0) {
 			log.warn("upload.urls_validation_failed", { reason: "empty_array" });
 			return c.json({ message: "Array of image URLs required" }, 400);
