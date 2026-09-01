@@ -2,6 +2,7 @@ import * as v from "valibot";
 import type { FirecrawlExtractedProduct } from "@vit/shared";
 
 const amazonPriceUsdSchema = v.pipe(v.number(), v.finite(), v.minValue(0.01), v.maxValue(1000));
+const nullableAmazonPriceUsdSchema = v.nullable(amazonPriceUsdSchema);
 
 export const firecrawlAmazonJsonSchema = v.object({
 	brand: v.optional(v.nullable(v.string())),
@@ -16,13 +17,21 @@ export const firecrawlAmazonJsonSchema = v.object({
 
 export type FirecrawlAmazonJson = v.InferOutput<typeof firecrawlAmazonJsonSchema>;
 
+export const firecrawlExtractedProductSchema: v.GenericSchema<FirecrawlExtractedProduct> =
+	v.object({
+		brand: v.nullable(v.string()),
+		description: v.nullable(v.string()),
+		features: v.array(v.string()),
+		images: v.array(v.string()),
+		ingredients: v.array(v.string()),
+		priceUsd: nullableAmazonPriceUsdSchema,
+		servingSize: v.nullable(v.string()),
+		servingsPerContainer: v.nullable(v.number()),
+		title: v.string(),
+	});
+
 export const amazonScrapeCacheSchema = v.object({
-	extracted: v.custom<FirecrawlExtractedProduct>(
-		(input): input is FirecrawlExtractedProduct =>
-			input !== null &&
-			Object.prototype.toString.call(input) === "[object Object]" &&
-			"title" in input,
-	),
+	extracted: firecrawlExtractedProductSchema,
 });
 
 export const amazonSearchCacheSchema = v.nullable(v.string());

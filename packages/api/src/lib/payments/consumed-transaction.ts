@@ -13,14 +13,27 @@ export class KhaanTransactionAlreadyConsumedError extends Error {
 	}
 }
 
-const postgresErrorWireSchema = v.object({
+const postgresErrorWireSchema = v.looseObject({
 	code: v.optional(v.string()),
 });
 
 export type PostgresErrorWire = v.InferOutput<typeof postgresErrorWireSchema>;
 
-export function isUniqueViolation(error: PostgresErrorWire): boolean {
-	return error.code === "23505";
+type PostgresCatchError = Error | PostgresErrorWire;
+
+const readPostgresErrorCode = (error: PostgresCatchError): string | undefined => {
+	if (error instanceof Error) {
+		const parsed = v.safeParse(postgresErrorWireSchema, error);
+		if (parsed.success && parsed.output.code != null) {
+			return parsed.output.code;
+		}
+		return undefined;
+	}
+	return error.code;
+};
+
+export function isUniqueViolation(error: PostgresCatchError): boolean {
+	return readPostgresErrorCode(error) === "23505";
 }
 
 // Records a fingerprint as consumed by a payment, idempotently.
@@ -57,7 +70,9 @@ export async function recordConsumedKhaanTransaction(
 			});
 		});
 	} catch (error) {
-		if (!isUniqueViolation(v.parse(postgresErrorWireSchema, error))) {
+		const postgresError: PostgresCatchError =
+			error instanceof Error ? error : v.parse(postgresErrorWireSchema, error);
+		if (!isUniqueViolation(postgresError)) {
 			throw error;
 		}
 		const existing = await tx

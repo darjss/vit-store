@@ -36,10 +36,7 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 	const sessionKvRecordSchema = v.object({
 		expires_at: v.number(),
 		id: v.string(),
-		user: v.custom<TUser>(
-			(input): input is TUser =>
-				input !== null && Object.prototype.toString.call(input) === "[object Object]",
-		),
+		user: config.userSchema,
 	});
 
 	function getUserIdentifier(user: TUser): string {
