@@ -50,7 +50,6 @@ export default defineConfig({
 		"**/.cursor/**",
 		"apps/agent/.flue/**",
 		"packages/api/src/db/schema.d.ts",
-		"**/worker.mjs",
 	],
 	jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
 	overrides: [
