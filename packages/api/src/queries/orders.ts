@@ -40,30 +40,32 @@ import {
 type OrderStatus = (typeof orderStatus)[number];
 type DeliveryProvider = (typeof deliveryProvider)[number];
 
-function resolveDateRange(date?: string): { start: Date; end: Date } | null {
-	if (date === undefined || date === "all") return null;
+function resolveDateRange(date?: string): { end: Date; start: Date } | null {
+	if (date === undefined || date === "all") {
+		return null;
+	}
 
 	// All ranges are computed in Asia/Ulaanbaatar (UTC+8, no DST) using the
 	// shared UB-aware helpers from ~/lib/utils. The previous implementation
 	// used runtime-local setHours (UTC on Workers) and a hardcoded "+08:00"
 	// string for specific dates, which diverged from the rest of the app.
 	if (date === "today") {
-		const { startDate, endDate } = getStartAndEndofDayAgo(0);
-		return { start: startDate, end: endDate };
+		const { endDate, startDate } = getStartAndEndofDayAgo(0);
+		return { end: endDate, start: startDate };
 	}
 	if (date === "yesterday") {
-		const { startDate, endDate } = getStartAndEndofDayAgo(1);
-		return { start: startDate, end: endDate };
+		const { endDate, startDate } = getStartAndEndofDayAgo(1);
+		return { end: endDate, start: startDate };
 	}
 	if (date === "last7days") {
 		const start = getStartAndEndofDayAgo(6).startDate;
 		const end = getStartAndEndofDayAgo(0).endDate;
-		return { start, end };
+		return { end, start };
 	}
 	if (date === "last30days") {
 		const start = getStartAndEndofDayAgo(29).startDate;
 		const end = getStartAndEndofDayAgo(0).endDate;
-		return { start, end };
+		return { end, start };
 	}
 	// specific date "YYYY-MM-DD" — interpret as a UB-local calendar date and
 	// return the UTC instants for UB midnight start and UB 23:59:59.999 end.
@@ -71,11 +73,211 @@ function resolveDateRange(date?: string): { start: Date; end: Date } | null {
 	const epochUtcMidnight = Date.UTC(y, m - 1, d);
 	const ubMidnightUtc = epochUtcMidnight - UB_OFFSET_MS;
 	const DAY_MS = 24 * 60 * 60 * 1000;
-	return { start: new Date(ubMidnightUtc), end: new Date(ubMidnightUtc + DAY_MS - 1) };
+	return { end: new Date(ubMidnightUtc + DAY_MS - 1), start: new Date(ubMidnightUtc) };
 }
 
 export const orderQueries = {
 	admin: {
+		async createOrder(data: {
+			address: string;
+			customerPhone: number;
+			deliveryProvider: DeliveryProvider;
+			notes: string | null;
+			orderNumber: string;
+			status: OrderStatus;
+			total: number;
+		}) {
+			const result = await db()
+				.insert(OrdersTable)
+				.values(data)
+				.returning({ orderId: OrdersTable.id });
+			return result[0];
+		},
+
+		async createOrderDetails(
+			orderId: number,
+			products: Array<{ price: number; productId: number; quantity: number; }>,
+		) {
+			const values = products.map((p) => ({
+				orderId,
+				price: p.price,
+				productId: p.productId,
+				quantity: p.quantity,
+			}));
+			await db().insert(OrderDetailsTable).values(values);
+		},
+
+		async createOrderDetailsTx(
+			tx: TransactionType,
+			orderId: number,
+			products: Array<{ price: number; productId: number; quantity: number; }>,
+		) {
+			const values = products.map((p) => ({
+				orderId,
+				price: p.price,
+				productId: p.productId,
+				quantity: p.quantity,
+			}));
+			await tx.insert(OrderDetailsTable).values(values);
+		},
+
+		async createOrderTx(
+			tx: TransactionType,
+			data: {
+				address: string;
+				customerPhone: number;
+				deliveryProvider: DeliveryProvider;
+				notes: string | null;
+				orderNumber: string;
+				status: OrderStatus;
+				total: number;
+			},
+		) {
+			const result = await tx
+				.insert(OrdersTable)
+				.values(data)
+				.returning({ orderId: OrdersTable.id });
+			return result[0];
+		},
+
+		async deleteOrderDetailsTx(tx: TransactionType, orderId: number) {
+			await tx.delete(OrderDetailsTable).where(eq(OrderDetailsTable.orderId, orderId));
+		},
+
+		async getAllOrders() {
+			const result = await db().query.OrdersTable.findMany({
+				where: isNull(OrdersTable.deletedAt),
+				with: {
+					orderDetails: {
+						columns: {
+							quantity: true,
+						},
+						with: {
+							product: {
+								columns: {
+									id: true,
+									name: true,
+								},
+								with: {
+									images: {
+										columns: {
+											url: true,
+										},
+										where: and(
+											eq(ProductImagesTable.isPrimary, true),
+											isNull(ProductImagesTable.deletedAt),
+										),
+									},
+								},
+							},
+						},
+					},
+				},
+			});
+			return result.map((order) => ({
+				createdAt: order.createdAt,
+				customerPhone: order.customerPhone,
+				id: order.id,
+				notes: order.notes,
+				orderNumber: order.orderNumber,
+				products: order.orderDetails.map((orderDetail) => ({
+					id: orderDetail.product.id,
+					imageUrl: orderDetail.product.images[0]?.url,
+					name: orderDetail.product.name,
+					quantity: orderDetail.quantity,
+				})),
+				status: order.status,
+				total: order.total,
+				updatedAt: order.updatedAt,
+			}));
+		},
+
+		async getAverageOrderValue(timerange: "daily" | "weekly" | "monthly") {
+			const order = await db().query.OrdersTable.findMany({
+				columns: {
+					createdAt: true,
+					total: true,
+				},
+				where: and(
+					gte(OrdersTable.createdAt, getDaysFromTimeRange(timerange)),
+					isNull(OrdersTable.deletedAt),
+				),
+			});
+
+			const total = order.reduce((acc, order) => {
+				return acc + order.total;
+			}, 0);
+
+			return order.length > 0 ? total / order.length : 0;
+		},
+
+		async getOrderById(id: number) {
+			const result = await db().query.OrdersTable.findFirst({
+				where: and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)),
+				with: {
+					orderDetails: {
+						columns: {
+							price: true,
+							quantity: true,
+						},
+						with: {
+							product: {
+								columns: {
+									id: true,
+									name: true,
+									price: true,
+								},
+								with: {
+									images: {
+										columns: {
+											url: true,
+										},
+										where: and(
+											eq(ProductImagesTable.isPrimary, true),
+											isNull(ProductImagesTable.deletedAt),
+										),
+									},
+								},
+							},
+						},
+					},
+					payments: {
+						columns: {
+							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
+						},
+						where: isNull(PaymentsTable.deletedAt),
+					},
+				},
+			});
+			return result ? shapeOrderResult(result) : null;
+		},
+
+		async getOrderCount(timeRange: timeRangeType) {
+			try {
+				const result = await db()
+					.select({
+						count: sql<number>`COUNT(*)`,
+					})
+					.from(OrdersTable)
+					.where(
+						and(
+							gte(OrdersTable.createdAt, getDaysFromTimeRange(timeRange)),
+							isNull(OrdersTable.deletedAt),
+						),
+					)
+					.limit(1);
+
+				const count = result[0]?.count ?? 0;
+
+				return { count };
+			} catch {
+				return { count: 0 };
+			}
+		},
+
 		async getOrderCountForWeek() {
 			try {
 				// 2 aggregate queries (orders + sales) with GROUP BY UB-day over
@@ -108,10 +310,7 @@ export const orderQueries = {
 						})
 						.from(SalesTable)
 						.where(
-							and(
-								between(SalesTable.createdAt, weekStart, weekEnd),
-								isNull(SalesTable.deletedAt),
-							),
+							and(between(SalesTable.createdAt, weekStart, weekEnd), isNull(SalesTable.deletedAt)),
 						)
 						.groupBy(ubSalesDayBucket),
 				]);
@@ -136,18 +335,18 @@ export const orderQueries = {
 				// Emit today-first (i=0) through 6-days-ago (i=6), matching the
 				// previous ordering.
 				const result: Array<{
+					date: string;
 					orderCount: number;
 					salesCount: number;
-					date: string;
 				}> = [];
 				for (let i = 0; i < 7; i++) {
 					const { startDate } = getStartAndEndofDayAgo(i);
 					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
 					const label = `${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`;
 					result.push({
+						date: label,
 						orderCount: ordersByDay.get(label) ?? 0,
 						salesCount: salesByDay.get(label) ?? 0,
-						date: label,
 					});
 				}
 				return result;
@@ -156,348 +355,25 @@ export const orderQueries = {
 			}
 		},
 
-		async getAverageOrderValue(timerange: "daily" | "weekly" | "monthly") {
-			const order = await db().query.OrdersTable.findMany({
-				columns: {
-					total: true,
-					createdAt: true,
-				},
-				where: and(
-					gte(OrdersTable.createdAt, getDaysFromTimeRange(timerange)),
-					isNull(OrdersTable.deletedAt),
-				),
-			});
-
-			const total = order.reduce((acc, order) => {
-				return acc + order.total;
-			}, 0);
-
-			return order.length > 0 ? total / order.length : 0;
-		},
-
-		async getOrderCount(timeRange: timeRangeType) {
-			try {
-				const result = await db()
-					.select({
-						count: sql<number>`COUNT(*)`,
-					})
-					.from(OrdersTable)
-					.where(
-						and(
-							gte(OrdersTable.createdAt, getDaysFromTimeRange(timeRange)),
-							isNull(OrdersTable.deletedAt),
-						),
-					)
-					.limit(1);
-
-				const count = result[0]?.count ?? 0;
-
-				return { count };
-			} catch {
-				return { count: 0 };
-			}
-		},
-
-		async getPendingOrders() {
-			try {
-				const result = await db().query.OrdersTable.findMany({
-					where: and(
-						eq(OrdersTable.status, "pending"),
-						isNull(OrdersTable.deletedAt),
-					),
-					orderBy: desc(OrdersTable.createdAt),
-					with: {
-						orderDetails: {
-							columns: {
-								quantity: true,
-								price: true,
-							},
-							with: {
-								product: {
-									columns: {
-										name: true,
-										id: true,
-										price: true,
-									},
-									with: {
-										images: {
-											columns: {
-												url: true,
-											},
-											where: and(
-												eq(ProductImagesTable.isPrimary, true),
-												isNull(ProductImagesTable.deletedAt),
-											),
-										},
-									},
-								},
-							},
-						},
-						payments: {
-							columns: {
-								provider: true,
-								status: true,
-								paymentNumber: true,
-								createdAt: true,
-							},
-							where: isNull(PaymentsTable.deletedAt),
-						},
-					},
-				});
-				return shapeOrderResults(result);
-			} catch {
-				return [];
-			}
-		},
-
-		async createOrder(data: {
-			orderNumber: string;
-			customerPhone: number;
-			status: OrderStatus;
-			notes: string | null;
-			total: number;
-			address: string;
-			deliveryProvider: DeliveryProvider;
-		}) {
-			const result = await db()
-				.insert(OrdersTable)
-				.values(data)
-				.returning({ orderId: OrdersTable.id });
-			return result[0];
-		},
-
-		async createOrderTx(
-			tx: TransactionType,
-			data: {
-				orderNumber: string;
-				customerPhone: number;
-				status: OrderStatus;
-				notes: string | null;
-				total: number;
-				address: string;
-				deliveryProvider: DeliveryProvider;
-			},
-		) {
-			const result = await tx
-				.insert(OrdersTable)
-				.values(data)
-				.returning({ orderId: OrdersTable.id });
-			return result[0];
-		},
-
-		async createOrderDetails(
-			orderId: number,
-			products: Array<{ productId: number; quantity: number; price: number }>,
-		) {
-			const values = products.map((p) => ({
-				orderId,
-				productId: p.productId,
-				quantity: p.quantity,
-				price: p.price,
-			}));
-			await db().insert(OrderDetailsTable).values(values);
-		},
-
-		async createOrderDetailsTx(
-			tx: TransactionType,
-			orderId: number,
-			products: Array<{ productId: number; quantity: number; price: number }>,
-		) {
-			const values = products.map((p) => ({
-				orderId,
-				productId: p.productId,
-				quantity: p.quantity,
-				price: p.price,
-			}));
-			await tx.insert(OrderDetailsTable).values(values);
-		},
-
-		async searchOrder(searchTerm: string) {
-			const orders = await db().query.OrdersTable.findMany({
-				where: and(
-					isNull(OrdersTable.deletedAt),
-					or(
-						ilike(OrdersTable.orderNumber, `%${searchTerm}%`),
-						ilike(OrdersTable.address, `%${searchTerm}%`),
-						like(
-							sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
-							`%${searchTerm}%`,
-						),
-					),
-				),
-				with: {
-					orderDetails: {
-						columns: {
-							quantity: true,
-							price: true,
-						},
-						with: {
-							product: {
-								columns: {
-									name: true,
-									id: true,
-									price: true,
-								},
-								with: {
-									images: {
-										columns: {
-											url: true,
-										},
-										where: and(
-											eq(ProductImagesTable.isPrimary, true),
-											isNull(ProductImagesTable.deletedAt),
-										),
-									},
-								},
-							},
-						},
-					},
-					payments: {
-						columns: {
-							provider: true,
-							status: true,
-							paymentNumber: true,
-							createdAt: true,
-						},
-						where: isNull(PaymentsTable.deletedAt),
-					},
-				},
-			});
-			return shapeOrderResults(orders);
-		},
-
-		async searchOrdersQuick(searchTerm: string, limit = 5) {
-			const term = searchTerm.trim();
-			if (!term) return [];
-
-			return db().query.OrdersTable.findMany({
-				where: and(
-					isNull(OrdersTable.deletedAt),
-					or(
-						ilike(OrdersTable.orderNumber, `%${term}%`),
-						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
-					),
-				),
-				columns: {
-					id: true,
-					orderNumber: true,
-					customerPhone: true,
-					status: true,
-					total: true,
-					createdAt: true,
-				},
-				orderBy: desc(OrdersTable.createdAt),
-				limit,
-			});
-		},
-
-		async getAllOrders() {
-			const result = await db().query.OrdersTable.findMany({
-				where: isNull(OrdersTable.deletedAt),
-				with: {
-					orderDetails: {
-						columns: {
-							quantity: true,
-						},
-						with: {
-							product: {
-								columns: {
-									name: true,
-									id: true,
-								},
-								with: {
-									images: {
-										columns: {
-											url: true,
-										},
-										where: and(
-											eq(ProductImagesTable.isPrimary, true),
-											isNull(ProductImagesTable.deletedAt),
-										),
-									},
-								},
-							},
-						},
-					},
-				},
-			});
-			return result.map((order) => ({
-				id: order.id,
-				orderNumber: order.orderNumber,
-				customerPhone: order.customerPhone,
-				status: order.status,
-				total: order.total,
-				notes: order.notes,
-				createdAt: order.createdAt,
-				updatedAt: order.updatedAt,
-				products: order.orderDetails.map((orderDetail) => ({
-					quantity: orderDetail.quantity,
-					name: orderDetail.product.name,
-					id: orderDetail.product.id,
-					imageUrl: orderDetail.product.images[0]?.url,
-				})),
-			}));
-		},
-
-		async getOrderById(id: number) {
-			const result = await db().query.OrdersTable.findFirst({
-				where: and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)),
-				with: {
-					orderDetails: {
-						columns: {
-							quantity: true,
-							price: true,
-						},
-						with: {
-							product: {
-								columns: {
-									name: true,
-									id: true,
-									price: true,
-								},
-								with: {
-									images: {
-										columns: {
-											url: true,
-										},
-										where: and(
-											eq(ProductImagesTable.isPrimary, true),
-											isNull(ProductImagesTable.deletedAt),
-										),
-									},
-								},
-							},
-						},
-					},
-					payments: {
-						columns: {
-							provider: true,
-							status: true,
-							paymentNumber: true,
-							createdAt: true,
-						},
-						where: isNull(PaymentsTable.deletedAt),
-					},
-				},
-			});
-			return result ? shapeOrderResult(result) : null;
+		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {
+			return tx.select().from(OrderDetailsTable).where(eq(OrderDetailsTable.orderId, orderId));
 		},
 
 		async getPaginatedOrders(params: {
+			createdAfter?: Date;
+			date?: string;
+			includeAllStatuses?: boolean;
+			orderStatus?: OrderStatus;
+			orderStatuses?: Array<OrderStatus>;
 			page: number;
 			pageSize: number;
 			paymentStatus?: PaymentStatusType;
-			includeAllStatuses?: boolean;
-			orderStatus?: OrderStatus;
-			orderStatuses?: OrderStatus[];
-			sortField?: string;
-			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
-			date?: string;
-			createdAfter?: Date;
+			sortDirection?: "asc" | "desc";
+			sortField?: string;
 		}) {
 			const database = db();
-			const conditions: (SQL<unknown> | undefined)[] = [];
+			const conditions: Array<SQL<unknown> | undefined> = [];
 			conditions.push(isNull(OrdersTable.deletedAt));
 
 			if (params.orderStatuses && params.orderStatuses.length > 0) {
@@ -517,10 +393,7 @@ export const orderQueries = {
 					.select({ orderId: PaymentsTable.orderId })
 					.from(PaymentsTable)
 					.where(
-						and(
-							eq(PaymentsTable.status, params.paymentStatus),
-							isNull(PaymentsTable.deletedAt),
-						),
+						and(eq(PaymentsTable.status, params.paymentStatus), isNull(PaymentsTable.deletedAt)),
 					);
 				conditions.push(inArray(OrdersTable.id, paidOrderIds));
 			}
@@ -530,56 +403,44 @@ export const orderQueries = {
 					or(
 						ilike(OrdersTable.orderNumber, `%${params.searchTerm}%`),
 						ilike(OrdersTable.address, `%${params.searchTerm}%`),
-						ilike(
-							sql`CAST(${OrdersTable.customerPhone} AS TEXT)`,
-							`%${params.searchTerm}%`,
-						),
+						ilike(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${params.searchTerm}%`),
 					),
 				);
 			}
 
 			const dateRange = resolveDateRange(params.date);
 			if (dateRange) {
-				conditions.push(
-					between(OrdersTable.createdAt, dateRange.start, dateRange.end),
-				);
+				conditions.push(between(OrdersTable.createdAt, dateRange.start, dateRange.end));
 			}
 
 			if (params.createdAfter !== undefined) {
 				conditions.push(gte(OrdersTable.createdAt, params.createdAfter));
 			}
 
-			const orderByClauses: SQL<unknown>[] = [];
+			const orderByClauses: Array<SQL<unknown>> = [];
 			const primarySortColumn =
-				params.sortField === "total"
-					? OrdersTable.total
-					: OrdersTable.createdAt;
+				params.sortField === "total" ? OrdersTable.total : OrdersTable.createdAt;
 
 			const primaryOrderBy =
-				params.sortDirection === "asc"
-					? asc(primarySortColumn)
-					: desc(primarySortColumn);
+				params.sortDirection === "asc" ? asc(primarySortColumn) : desc(primarySortColumn);
 
-			orderByClauses.push(primaryOrderBy);
-			orderByClauses.push(asc(OrdersTable.id));
+			orderByClauses.push(primaryOrderBy, asc(OrdersTable.id));
 
-			const finalConditions = conditions.filter(
-				(c): c is SQL<unknown> => c !== undefined,
-			);
+			const finalConditions = conditions.filter((c): c is SQL<unknown> => c !== undefined);
 
 			const offset = (params.page - 1) * params.pageSize;
 
 			const orderResults = await database.query.OrdersTable.findMany({
 				limit: params.pageSize,
-				offset: offset,
+				offset,
 				orderBy: orderByClauses,
 				where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 				with: {
 					orderDetails: {
-						columns: { quantity: true, price: true },
+						columns: { price: true, quantity: true },
 						with: {
 							product: {
-								columns: { name: true, id: true, price: true },
+								columns: { id: true, name: true, price: true },
 								with: {
 									images: {
 										columns: { url: true },
@@ -594,10 +455,10 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
+							createdAt: true,
+							paymentNumber: true,
 							provider: true,
 							status: true,
-							paymentNumber: true,
-							createdAt: true,
 						},
 						where:
 							params.paymentStatus === undefined
@@ -634,27 +495,218 @@ export const orderQueries = {
 				orders: shapeOrderResults(orderResults),
 				pagination: {
 					currentPage: params.page,
-					totalPages,
-					totalCount,
 					hasNextPage: params.page < totalPages,
 					hasPreviousPage: params.page > 1,
+					totalCount,
+					totalPages,
 				},
 			};
+		},
+
+		async getPendingOrders() {
+			try {
+				const result = await db().query.OrdersTable.findMany({
+					orderBy: desc(OrdersTable.createdAt),
+					where: and(eq(OrdersTable.status, "pending"), isNull(OrdersTable.deletedAt)),
+					with: {
+						orderDetails: {
+							columns: {
+								price: true,
+								quantity: true,
+							},
+							with: {
+								product: {
+									columns: {
+										id: true,
+										name: true,
+										price: true,
+									},
+									with: {
+										images: {
+											columns: {
+												url: true,
+											},
+											where: and(
+												eq(ProductImagesTable.isPrimary, true),
+												isNull(ProductImagesTable.deletedAt),
+											),
+										},
+									},
+								},
+							},
+						},
+						payments: {
+							columns: {
+								createdAt: true,
+								paymentNumber: true,
+								provider: true,
+								status: true,
+							},
+							where: isNull(PaymentsTable.deletedAt),
+						},
+					},
+				});
+				return shapeOrderResults(result);
+			} catch {
+				return [];
+			}
+		},
+
+		async getRecentOrdersByProductId(productId: number) {
+			const orderDetails = await db().query.OrderDetailsTable.findMany({
+				limit: 5,
+				orderBy: [asc(OrdersTable.createdAt)],
+				where: eq(OrderDetailsTable.productId, productId),
+				with: {
+					order: {
+						columns: {
+							createdAt: true,
+							customerPhone: true,
+							id: true,
+							orderNumber: true,
+							status: true,
+							total: true,
+						},
+					},
+				},
+			});
+
+			return orderDetails.map((detail) => detail.order);
+		},
+
+		async patchOrderHeader(
+			id: number,
+			data: {
+				address?: string;
+				addressZoneId?: number | null;
+				customerPhone?: number;
+				deliveryProvider?: DeliveryProvider;
+				notes?: string | null;
+				status?: OrderStatusType;
+			},
+		) {
+			await db()
+				.update(OrdersTable)
+				.set(data)
+				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
+		},
+
+		async restoreOrderTx(tx: TransactionType, id: number) {
+			await tx
+				.update(OrderDetailsTable)
+				.set({ deletedAt: null })
+				.where(eq(OrderDetailsTable.orderId, id));
+
+			await tx.update(SalesTable).set({ deletedAt: null }).where(eq(SalesTable.orderId, id));
+
+			await tx.update(PaymentsTable).set({ deletedAt: null }).where(eq(PaymentsTable.orderId, id));
+
+			await tx.update(OrdersTable).set({ deletedAt: null }).where(eq(OrdersTable.id, id));
+		},
+
+		async searchOrder(searchTerm: string) {
+			const orders = await db().query.OrdersTable.findMany({
+				where: and(
+					isNull(OrdersTable.deletedAt),
+					or(
+						ilike(OrdersTable.orderNumber, `%${searchTerm}%`),
+						ilike(OrdersTable.address, `%${searchTerm}%`),
+						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${searchTerm}%`),
+					),
+				),
+				with: {
+					orderDetails: {
+						columns: {
+							price: true,
+							quantity: true,
+						},
+						with: {
+							product: {
+								columns: {
+									id: true,
+									name: true,
+									price: true,
+								},
+								with: {
+									images: {
+										columns: {
+											url: true,
+										},
+										where: and(
+											eq(ProductImagesTable.isPrimary, true),
+											isNull(ProductImagesTable.deletedAt),
+										),
+									},
+								},
+							},
+						},
+					},
+					payments: {
+						columns: {
+							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
+						},
+						where: isNull(PaymentsTable.deletedAt),
+					},
+				},
+			});
+			return shapeOrderResults(orders);
+		},
+
+		async searchOrdersQuick(searchTerm: string, limit = 5) {
+			const term = searchTerm.trim();
+			if (!term) {return [];}
+
+			return db().query.OrdersTable.findMany({
+				columns: {
+					createdAt: true,
+					customerPhone: true,
+					id: true,
+					orderNumber: true,
+					status: true,
+					total: true,
+				},
+				limit,
+				orderBy: desc(OrdersTable.createdAt),
+				where: and(
+					isNull(OrdersTable.deletedAt),
+					or(
+						ilike(OrdersTable.orderNumber, `%${term}%`),
+						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
+					),
+				),
+			});
+		},
+
+		async softDeleteOrderTx(tx: TransactionType, id: number) {
+			const now = new Date();
+			await tx
+				.update(OrderDetailsTable)
+				.set({ deletedAt: now })
+				.where(eq(OrderDetailsTable.orderId, id));
+
+			await tx.update(SalesTable).set({ deletedAt: now }).where(eq(SalesTable.orderId, id));
+
+			await tx.update(PaymentsTable).set({ deletedAt: now }).where(eq(PaymentsTable.orderId, id));
+
+			await tx.update(OrdersTable).set({ deletedAt: now }).where(eq(OrdersTable.id, id));
 		},
 
 		async updateOrderStatus(
 			id: number,
 			status: OrderStatus,
 			options?: {
-				deliveryProvider?: DeliveryProvider;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
 				fromStatus?: OrderStatus;
 			},
 		) {
 			const patch: {
-				status: OrderStatus;
-				deliveryProvider?: DeliveryProvider;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
+				status: OrderStatus;
 			} = { status };
 			if (options?.deliveryProvider !== undefined) {
 				patch.deliveryProvider = options.deliveryProvider;
@@ -662,10 +714,7 @@ export const orderQueries = {
 			if (options?.addressZoneId !== undefined) {
 				patch.addressZoneId = options.addressZoneId;
 			}
-			const conditions = [
-				eq(OrdersTable.id, id),
-				isNull(OrdersTable.deletedAt),
-			];
+			const conditions = [eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)];
 			if (options?.fromStatus !== undefined) {
 				conditions.push(eq(OrdersTable.status, options.fromStatus));
 			}
@@ -681,148 +730,101 @@ export const orderQueries = {
 			tx: TransactionType,
 			id: number,
 			data: {
-				customerPhone?: number;
-				status?: OrderStatusType;
-				notes?: string | null;
-				total?: number;
 				address?: string;
 				addressZoneId?: number | null;
+				customerPhone?: number;
 				deliveryProvider?: DeliveryProvider;
+				notes?: string | null;
+				status?: OrderStatusType;
+				total?: number;
 			},
 		) {
 			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
 		},
-
-		async patchOrderHeader(
-			id: number,
-			data: {
-				customerPhone?: number;
-				status?: OrderStatusType;
-				notes?: string | null;
-				address?: string;
-				addressZoneId?: number | null;
-				deliveryProvider?: DeliveryProvider;
-			},
-		) {
-			await db()
-				.update(OrdersTable)
-				.set(data)
-				.where(and(eq(OrdersTable.id, id), isNull(OrdersTable.deletedAt)));
-		},
-
-		async getOrderDetailsByOrderIdTx(tx: TransactionType, orderId: number) {
-			return tx
-				.select()
-				.from(OrderDetailsTable)
-				.where(eq(OrderDetailsTable.orderId, orderId));
-		},
-
-		async deleteOrderDetailsTx(tx: TransactionType, orderId: number) {
-			await tx
-				.delete(OrderDetailsTable)
-				.where(eq(OrderDetailsTable.orderId, orderId));
-		},
-
-		async softDeleteOrderTx(tx: TransactionType, id: number) {
-			const now = new Date();
-			await tx
-				.update(OrderDetailsTable)
-				.set({ deletedAt: now })
-				.where(eq(OrderDetailsTable.orderId, id));
-
-			await tx
-				.update(SalesTable)
-				.set({ deletedAt: now })
-				.where(eq(SalesTable.orderId, id));
-
-			await tx
-				.update(PaymentsTable)
-				.set({ deletedAt: now })
-				.where(eq(PaymentsTable.orderId, id));
-
-			await tx
-				.update(OrdersTable)
-				.set({ deletedAt: now })
-				.where(eq(OrdersTable.id, id));
-		},
-
-		async restoreOrderTx(tx: TransactionType, id: number) {
-			await tx
-				.update(OrderDetailsTable)
-				.set({ deletedAt: null })
-				.where(eq(OrderDetailsTable.orderId, id));
-
-			await tx
-				.update(SalesTable)
-				.set({ deletedAt: null })
-				.where(eq(SalesTable.orderId, id));
-
-			await tx
-				.update(PaymentsTable)
-				.set({ deletedAt: null })
-				.where(eq(PaymentsTable.orderId, id));
-
-			await tx
-				.update(OrdersTable)
-				.set({ deletedAt: null })
-				.where(eq(OrdersTable.id, id));
-		},
-
-		async getRecentOrdersByProductId(productId: number) {
-			const orderDetails = await db().query.OrderDetailsTable.findMany({
-				where: eq(OrderDetailsTable.productId, productId),
-				with: {
-					order: {
-						columns: {
-							customerPhone: true,
-							status: true,
-							orderNumber: true,
-							total: true,
-							createdAt: true,
-							id: true,
-						},
-					},
-				},
-				limit: 5,
-				orderBy: [asc(OrdersTable.createdAt)],
-			});
-
-			return orderDetails.map((detail) => detail.order);
-		},
 	},
 
 	store: {
-		async getOrdersByCustomerPhone(phone: number) {
-			const orders = await db().query.OrdersTable.findMany({
-				where: and(
-					eq(OrdersTable.customerPhone, phone),
-					isNull(OrdersTable.deletedAt),
-				),
-				columns: {
-					address: true,
-					orderNumber: true,
-					status: true,
-					total: true,
-					notes: true,
-					createdAt: true,
-				},
+		async createOrder(data: {
+			address: string;
+			addressZoneId: number;
+			customerPhone: number;
+			deliveryProvider: DeliveryProvider;
+			notes: string | null;
+			orderNumber: string;
+			status: OrderStatus;
+			total: number;
+		}) {
+			const result = await db()
+				.insert(OrdersTable)
+				.values(data)
+				.returning({ orderId: OrdersTable.id });
+			return result[0];
+		},
+
+		async createOrderDetails(
+			orderId: number,
+			products: Array<{ productId: number; quantity: number }>,
+		) {
+			const values = products.map((p) => ({
+				orderId,
+				productId: p.productId,
+				quantity: p.quantity,
+			}));
+			await db().insert(OrderDetailsTable).values(values);
+		},
+
+		async getOrderByOrderNumber(orderNumber: string) {
+			const order = await db().query.OrdersTable.findFirst({
+				where: eq(OrdersTable.orderNumber, orderNumber),
 				with: {
-					sales: {
-						columns: {
-							sellingPrice: true,
-							productId: true,
+					orderDetails: {
+						with: {
+							product: {
+								columns: {
+									name: true,
+									price: true,
+								},
+								with: {
+									brand: {
+										columns: {
+											name: true,
+										},
+									},
+									images: {
+										columns: {
+											url: true,
+										},
+										where: eq(ProductImagesTable.isPrimary, true),
+									},
+								},
+							},
 						},
 					},
 					payments: {
 						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
 							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
 						},
-						where: isNull(PaymentsTable.deletedAt),
-						orderBy: [desc(PaymentsTable.createdAt)],
 					},
+				},
+			});
+			return order;
+		},
+
+		async getOrdersByCustomerPhone(phone: number) {
+			const orders = await db().query.OrdersTable.findMany({
+				columns: {
+					address: true,
+					createdAt: true,
+					notes: true,
+					orderNumber: true,
+					status: true,
+					total: true,
+				},
+				where: and(eq(OrdersTable.customerPhone, phone), isNull(OrdersTable.deletedAt)),
+				with: {
 					orderDetails: {
 						columns: {
 							productId: true,
@@ -849,90 +851,37 @@ export const orderQueries = {
 							},
 						},
 					},
+					payments: {
+						columns: {
+							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
+						},
+						orderBy: [desc(PaymentsTable.createdAt)],
+						where: isNull(PaymentsTable.deletedAt),
+					},
+					sales: {
+						columns: {
+							productId: true,
+							sellingPrice: true,
+						},
+					},
 				},
 			});
 			return orders;
 		},
 
-		async getProductsByIds(productIds: number[]) {
+		async getProductsByIds(productIds: Array<number>) {
 			const products = await db().query.ProductsTable.findMany({
-				where: inArray(ProductsTable.id, productIds),
 				columns: {
 					id: true,
 					name: true,
 					price: true,
 				},
+				where: inArray(ProductsTable.id, productIds),
 			});
 			return products;
-		},
-
-		async createOrder(data: {
-			orderNumber: string;
-			customerPhone: number;
-			address: string;
-			addressZoneId: number;
-			notes: string | null;
-			total: number;
-			status: OrderStatus;
-			deliveryProvider: DeliveryProvider;
-		}) {
-			const result = await db()
-				.insert(OrdersTable)
-				.values(data)
-				.returning({ orderId: OrdersTable.id });
-			return result[0];
-		},
-
-		async createOrderDetails(
-			orderId: number,
-			products: Array<{ productId: number; quantity: number }>,
-		) {
-			const values = products.map((p) => ({
-				orderId,
-				productId: p.productId,
-				quantity: p.quantity,
-			}));
-			await db().insert(OrderDetailsTable).values(values);
-		},
-
-		async getOrderByOrderNumber(orderNumber: string) {
-			const order = await db().query.OrdersTable.findFirst({
-				where: eq(OrdersTable.orderNumber, orderNumber),
-				with: {
-					payments: {
-						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
-							createdAt: true,
-						},
-					},
-					orderDetails: {
-						with: {
-							product: {
-								columns: {
-									name: true,
-									price: true,
-								},
-								with: {
-									brand: {
-										columns: {
-											name: true,
-										},
-									},
-									images: {
-										columns: {
-											url: true,
-										},
-										where: eq(ProductImagesTable.isPrimary, true),
-									},
-								},
-							},
-						},
-					},
-				},
-			});
-			return order;
 		},
 	},
 };

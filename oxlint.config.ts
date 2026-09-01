@@ -20,6 +20,8 @@ const antiSlopRules = {
 } as const;
 
 const storev2ReactOff = {
+	"react-hooks/exhaustive-deps": "off",
+	"react-hooks/rules-of-hooks": "off",
 	"react/exhaustive-deps": "off",
 	"react/immutability": "off",
 	"react/incompatible-library": "off",
@@ -33,8 +35,6 @@ const storev2ReactOff = {
 	"react/set-state-in-effect": "off",
 	"react/static-components": "off",
 	"react/use-memo": "off",
-	"react-hooks/exhaustive-deps": "off",
-	"react-hooks/rules-of-hooks": "off",
 } as const;
 
 export default defineConfig({

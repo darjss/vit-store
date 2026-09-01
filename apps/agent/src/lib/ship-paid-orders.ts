@@ -19,11 +19,11 @@ export const shipAllPaidPendingOrders = async (input: {
 
 	for (let page = 1; ; page += 1) {
 		const result = await client.order.getPaginatedOrders.query({
+			createdAfter,
 			orderStatus: "pending",
 			page,
 			pageSize: PAGE_SIZE,
 			paymentStatus: "success",
-			createdAfter,
 		});
 
 		for (const order of result.orders) {
