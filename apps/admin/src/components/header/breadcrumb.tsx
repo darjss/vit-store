@@ -7,7 +7,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { breadcrumbLabels } from "@/lib/constants";
+import { labelForBreadcrumb } from "@/lib/constants";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 
 const BreadCrumbs = () => {
@@ -34,7 +34,7 @@ const BreadCrumbs = () => {
 						const isLast = index === breadcrumb_routes.length - 1;
 
 						const formattedName =
-							breadcrumbLabels[crumb.name] ??
+							labelForBreadcrumb(crumb.name) ??
 							crumb.name.replaceAll("-", " ").replaceAll(/\b\w/g, (l) => l.toUpperCase());
 
 						if (isLast) {

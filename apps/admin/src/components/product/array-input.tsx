@@ -5,6 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+function setStringArrayField<
+	TFieldValues extends FieldValues,
+	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
+>(
+	form: UseFormReturn<TFieldValues>,
+	name: TName,
+	value: Array<string>,
+	options?: Parameters<UseFormReturn<TFieldValues>["setValue"]>[2],
+) {
+	// SAFETY: `name` is constrained to form paths whose value is `Array<string> | undefined`.
+	form.setValue(name, value as FieldPathValue<TFieldValues, TName>, options);
+}
+
 interface ArrayInputProps<
 	TFieldValues extends FieldValues,
 	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
@@ -27,7 +40,7 @@ export function ArrayInput<
 	placeholder = "Шинэ утга...",
 }: ArrayInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
-	const values = (form.watch(name) ?? []) as Array<string>;
+	const values: Array<string> = form.watch(name) ?? [];
 
 	const handleAdd = () => {
 		if (!newValue.trim()) {
@@ -38,7 +51,7 @@ export function ArrayInput<
 		}
 
 		const updated = [...values, newValue.trim()];
-		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+		setStringArrayField(form, name, updated, {
 			shouldValidate: true,
 		});
 		setNewValue("");
@@ -46,7 +59,7 @@ export function ArrayInput<
 
 	const handleRemove = (index: number) => {
 		const updated = values.filter((_, i) => i !== index);
-		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+		setStringArrayField(form, name, updated, {
 			shouldValidate: true,
 		});
 	};
@@ -142,7 +155,7 @@ export function TagsInput<
 }: TagsInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
-	const values = (form.watch(name) ?? []) as Array<string>;
+	const values: Array<string> = form.watch(name) ?? [];
 
 	const filteredSuggestions = suggestions.filter(
 		(s) => s.toLowerCase().includes(newValue.toLowerCase()) && !values.includes(s),
@@ -161,7 +174,7 @@ export function TagsInput<
 		}
 
 		const updated = [...values, trimmed];
-		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+		setStringArrayField(form, name, updated, {
 			shouldValidate: true,
 		});
 		setNewValue("");
@@ -170,7 +183,7 @@ export function TagsInput<
 
 	const handleRemove = (index: number) => {
 		const updated = values.filter((_, i) => i !== index);
-		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
+		setStringArrayField(form, name, updated, {
 			shouldValidate: true,
 		});
 	};

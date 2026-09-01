@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { timeRangeSchema } from "@vit/shared";
+import type { timeRangeType } from "@vit/shared";
 import {
 	AlertTriangle,
 	ArrowRight,
@@ -23,38 +24,41 @@ import { ProductPerformance } from "@/components/analytics/product-performance";
 import { WebAnalytics } from "@/components/analytics/web-analytics";
 import { AnalyticsPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Badge } from "@/components/ui/badge";
+import { chartTooltipNumber } from "@/lib/chart-tooltip";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
+
+const analyticsSearchSchema = v.object({
+	timeRange: v.optional(timeRangeSchema, "monthly"),
+});
 
 export const Route = createFileRoute("/_dash/analytics")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const timeRange = (location.search as { timeRange?: string })?.timeRange || "monthly";
-		const tr = timeRange as "daily" | "weekly" | "monthly";
+		const search = v.parse(analyticsSearchSchema, location.search);
+		const timeRange = search.timeRange ?? "monthly";
 
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getAnalyticsData.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getAnalyticsData.queryOptions({ timeRange }),
 		);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getWebAnalytics.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getWebAnalytics.queryOptions({ timeRange }),
 		);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getConversionFunnel.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getConversionFunnel.queryOptions({ timeRange }),
 		);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getDailyVisitorTrend.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getDailyVisitorTrend.queryOptions({ timeRange }),
 		);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getTopSearches.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getTopSearches.queryOptions({ timeRange }),
 		);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.analytics.getMostViewedProducts.queryOptions({ timeRange: tr }),
+			ctx.trpc.analytics.getMostViewedProducts.queryOptions({ timeRange }),
 		);
 	},
 	pendingComponent: AnalyticsPageSkeleton,
-	validateSearch: v.object({
-		timeRange: v.optional(timeRangeSchema, "monthly"),
-	}),
+	validateSearch: analyticsSearchSchema,
 });
 
 const COLORS = [
@@ -166,7 +170,7 @@ function SectionShell({
 function RouteComponent() {
 	const { timeRange = "monthly" } = Route.useSearch();
 	const navigate = useNavigate({ from: "/analytics" });
-	const tr = timeRange as "daily" | "weekly" | "monthly";
+	const tr: timeRangeType = timeRange;
 
 	const { data } = useSuspenseQuery(
 		trpc.analytics.getAnalyticsData.queryOptions({ timeRange: tr }),
@@ -462,7 +466,7 @@ function RouteComponent() {
 													<div className="border-border bg-card shadow-hard-sm border-2 p-2 text-[10px]">
 														<p className="font-black">{payload[0].name}</p>
 														<p className="font-mono">
-															{formatCurrency(payload[0].value as number)}
+															{formatCurrency(chartTooltipNumber(payload[0]?.value))}
 														</p>
 													</div>
 												);

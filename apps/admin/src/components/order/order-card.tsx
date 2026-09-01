@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { paymentStatusLabel } from "@/lib/enum-labels";
+import { labelForOrderStatus } from "@/lib/order-status-display";
 import type { OrderType } from "@/lib/types";
 import { getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -17,14 +18,14 @@ import OrderForm from "./order-form";
 import { TransferPaymentActions } from "./pending-transfer-dialog";
 import ShipOrderDialog from "./ship-order-dialog";
 
-const statusBorderColor: Record<string, string> = {
+const statusBorderColor = {
 	cancelled: "border-t-[#dc2626]",
 	created: "border-t-[#64748b]",
 	delivered: "border-t-[#059669]",
 	pending: "border-t-[#d97706]",
 	refunded: "border-t-[#7c3aed]",
 	shipped: "border-t-[#2563eb]",
-};
+} satisfies Partial<Record<OrderType["status"], string>>;
 
 interface OrderCardProps {
 	order: OrderType;
@@ -76,8 +77,8 @@ export default function OrderCard({ order, selection }: OrderCardProps) {
 		order.paymentStatus === "customer_claimed_paid" && order.paymentProvider === "transfer";
 
 	const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-		const target = e.target as HTMLElement;
-		if (target.closest("[data-no-nav]")) {
+		const target = e.target;
+		if (target instanceof HTMLElement && target.closest("[data-no-nav]")) {
 			return;
 		}
 		void navigate({

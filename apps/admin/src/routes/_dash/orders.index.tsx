@@ -18,50 +18,46 @@ import OrdersList from "@/components/order/orders-list";
 const orderStatusFilterValues = [...orderStatusConstants, "active", "all"] as const;
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
+const ordersSearchSchema = v.object({
+	date: v.optional(v.string(), "all"),
+	orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
+	page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+	pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+	paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
+	searchTerm: v.optional(v.string()),
+	sortDirection: v.optional(v.picklist(["asc", "desc"])),
+	sortField: v.optional(v.string()),
+});
+
+function paginatedOrdersQueryFilters(search: v.InferOutput<typeof ordersSearchSchema>) {
+	const requestedOrderStatus = search.orderStatus ?? "active";
+	return {
+		date: search.date ?? "all",
+		includeAllStatuses: requestedOrderStatus === "all",
+		orderStatus:
+			requestedOrderStatus === "all" || requestedOrderStatus === "active"
+				? undefined
+				: requestedOrderStatus,
+		orderStatuses: requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
+		page: search.page ?? 1,
+		pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+		paymentStatus: search.paymentStatus,
+		searchTerm: search.searchTerm,
+		sortDirection: search.sortDirection,
+		sortField: search.sortField,
+	};
+}
+
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const search = location.search as {
-			date?: string;
-			orderStatus?: string;
-			page?: number;
-			pageSize?: number;
-			paymentStatus?: string;
-			searchTerm?: string;
-			sortDirection?: "asc" | "desc";
-			sortField?: string;
-		};
-		const requestedOrderStatus = search.orderStatus ?? "active";
-		const requestedDate = search.date ?? "all";
+		const search = v.parse(ordersSearchSchema, location.search);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getPaginatedOrders.queryOptions({
-				date: requestedDate,
-				includeAllStatuses: requestedOrderStatus === "all",
-				orderStatus:
-					requestedOrderStatus === "all" || requestedOrderStatus === "active"
-						? undefined
-						: (requestedOrderStatus as (typeof orderStatusConstants)[number]),
-				orderStatuses: requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
-				page: search.page ?? 1,
-				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
-				paymentStatus: search.paymentStatus as (typeof paymentStatusConstants)[number] | undefined,
-				searchTerm: search.searchTerm,
-				sortDirection: search.sortDirection,
-				sortField: search.sortField,
-			}),
+			ctx.trpc.order.getPaginatedOrders.queryOptions(paginatedOrdersQueryFilters(search)),
 		);
 	},
 	pendingComponent: OrdersPageSkeleton,
-	validateSearch: v.object({
-		date: v.optional(v.string(), "all"),
-		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
-		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
-		searchTerm: v.optional(v.string()),
-		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		sortField: v.optional(v.string()),
-	}),
+	validateSearch: ordersSearchSchema,
 });
 
 function RouteComponent() {

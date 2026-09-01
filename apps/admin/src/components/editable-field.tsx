@@ -12,17 +12,20 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useEditableField } from "@/hooks/use-editable-field";
 
-type EditableFieldProps<T> = {
+type EditableFieldBaseProps<T> = {
 	className?: string;
 	format?: (value: T) => string;
 	isLoading?: boolean;
 	label?: string;
 	onSave: (next: T) => void | Promise<void>;
 	options?: Array<{ label: string; value: string }>;
-	parse?: (raw: string) => T;
 	renderDisplay?: (value: T) => React.ReactNode;
 	type?: "text" | "number" | "textarea" | "select" | "month";
 	value: T;
+};
+
+type EditableFieldProps<T> = EditableFieldBaseProps<T> & {
+	parse?: (raw: string) => T;
 };
 
 export function EditableField<T>({
@@ -38,7 +41,10 @@ export function EditableField<T>({
 	value,
 }: EditableFieldProps<T>) {
 	const { cancel, isEditing, isSaving, save, setTempValue, start, tempValue } = useEditableField<T>(
-		{ initialValue: value, onSave },
+		{
+			initialValue: value,
+			onSave,
+		},
 	);
 
 	const isLoading = isSaving || externalLoading;
@@ -48,6 +54,15 @@ export function EditableField<T>({
 		: format
 			? format(value)
 			: String(value ?? "");
+
+	const applyRawValue = (raw: string) => {
+		if (parse) {
+			setTempValue(parse(raw));
+			return;
+		}
+		// SAFETY: omitted `parse` is only valid when T is string (conditional prop type).
+		setTempValue(raw as T);
+	};
 
 	return (
 		<div className={`group flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6 ${className}`}>
@@ -78,7 +93,7 @@ export function EditableField<T>({
 							className="text-foreground min-w-0 flex-1 text-base font-medium disabled:opacity-60"
 							disabled={isLoading}
 							onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-								setTempValue(parse ? parse(e.target.value) : (e.target.value as unknown as T))
+								applyRawValue(e.target.value)
 							}
 							rows={3}
 							value={String(tempValue ?? "")}
@@ -86,9 +101,7 @@ export function EditableField<T>({
 					) : type === "select" ? (
 						<Select
 							disabled={isLoading}
-							onValueChange={(value) =>
-								setTempValue(parse ? parse(value) : (value as unknown as T))
-							}
+							onValueChange={applyRawValue}
 							value={String(tempValue ?? "")}
 						>
 							<SelectTrigger className="text-foreground min-w-0 flex-1 text-base font-medium disabled:opacity-60">
@@ -106,9 +119,7 @@ export function EditableField<T>({
 						<Input
 							className="text-foreground min-w-0 flex-1 text-base font-medium disabled:opacity-60"
 							disabled={isLoading}
-							onChange={(e) =>
-								setTempValue(parse ? parse(e.target.value) : (e.target.value as unknown as T))
-							}
+							onChange={(e) => applyRawValue(e.target.value)}
 							step={type === "number" ? "0.01" : undefined}
 							type={type}
 							value={String(tempValue ?? "")}

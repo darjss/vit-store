@@ -1,7 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { orderStatusLabels } from "@vit/shared";
 import { paymentStatus as paymentStatusConstants } from "@vit/shared/constants";
-import type { OrderStatusType } from "@vit/shared/types";
 import { Calendar as CalendarIcon, ChevronDown, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +19,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { paymentStatusLabel } from "@/lib/enum-labels";
+import { labelForOrderStatus } from "@/lib/order-status-display";
 
 const primaryStatuses = ["active", "pending", "shipped", "delivered", "all"] as const;
 const issueStatuses = ["created", "cancelled", "refunded"] as const;
@@ -40,7 +39,7 @@ function formatStatusLabel(status?: string) {
 	if (status === "active") {
 		return "Явагдаж буй";
 	}
-	return orderStatusLabels[status as OrderStatusType] ?? status;
+	return labelForOrderStatus(status);
 }
 
 interface OrdersFiltersProps {

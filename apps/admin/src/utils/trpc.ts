@@ -10,6 +10,7 @@ import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AdminRouter } from "@vit/api";
 import { toast } from "sonner";
 import superjson from "superjson";
+import { responseHasUnauthorizedTrpcError } from "@/lib/trpc-unauthorized";
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
@@ -44,35 +45,16 @@ export const queryClient = new QueryClient({
 	}),
 });
 
-async function checkUnauthorized(response: Response): Promise<boolean> {
-	if (response.status === 401) {
-		return true;
-	}
-	const cloned = response.clone();
-	try {
-		const data = (await cloned.json()) as
-			| {
-					error?: { code?: string; data?: { code?: string } };
-			  }
-			| Array<{ error?: { code?: string; data?: { code?: string } } }>;
-		if (Array.isArray(data)) {
-			return data.some(
-				(item) =>
-					item?.error?.data?.code === "UNAUTHORIZED" || item?.error?.code === "UNAUTHORIZED",
-			);
-		}
-		return data?.error?.data?.code === "UNAUTHORIZED" || data?.error?.code === "UNAUTHORIZED";
-	} catch {
-		return false;
-	}
+function isBrowser(): boolean {
+	return "window" in globalThis && globalThis.window != null;
 }
 
 function createAuthenticatedFetch(fetchFn: typeof fetch): typeof fetch {
 	return async (url, options) => {
 		const response = await fetchFn(url, options);
-		if (await checkUnauthorized(response)) {
-			if (typeof window !== "undefined" && window.location.pathname !== "/login") {
-				window.location.href = "/login";
+		if (await responseHasUnauthorizedTrpcError(response)) {
+			if (isBrowser() && globalThis.window.location.pathname !== "/login") {
+				globalThis.window.location.href = "/login";
 			}
 		}
 		return response;
@@ -90,7 +72,7 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 						credentials: "include",
 						headers: {
 							...options?.headers,
-							Origin: window.location.origin,
+							Origin: globalThis.window.location.origin,
 						},
 					}),
 				),
@@ -104,7 +86,7 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 						credentials: "include",
 						headers: {
 							...options?.headers,
-							Origin: window.location.origin,
+							Origin: globalThis.window.location.origin,
 						},
 					}),
 				),
@@ -119,6 +101,6 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 });
 
 export const trpc = createTRPCOptionsProxy<AdminRouter>({
-	client: trpcClient as never,
+	client: trpcClient,
 	queryClient,
 });

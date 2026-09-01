@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
-import type { CategorySelectType } from "@vit/api/db/schema";
+import type { CategoryType } from "@/lib/types";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/utils/trpc";
@@ -8,7 +8,7 @@ import RowAction from "../row-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import CategoryForm from "./category-form";
 
-const CategoryCard = (category: CategorySelectType) => {
+const CategoryCard = (category: CategoryType) => {
 	const context = useRouteContext({ from: "/_dash/categories" });
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const deleteMutation = useMutation({

@@ -22,10 +22,15 @@ import {
 	INFINITE_PRODUCTS_PAGE_SIZE,
 	INSTANT_SEARCH_GC_TIME_MS,
 	INSTANT_SEARCH_STALE_TIME_MS,
+	instantSearchToProductCard,
 	type ProductListStatus,
 	type ProductsSearch,
 } from "@/features/products/list/products-list.helpers";
+import { parsePicklistValue } from "@/lib/parse-select";
+import type { RouterOutputs } from "@/lib/types";
 import { trpc, trpcClient } from "@/utils/trpc";
+
+type PaginatedProductsPage = RouterOutputs["product"]["getPaginatedProducts"];
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
@@ -63,7 +68,7 @@ function RouteComponent() {
 		sortDirection,
 		sortField,
 		status: productStatus,
-	} = useSearch({ from: "/_dash/products/" }) as ProductsSearch;
+	} = useSearch({ from: "/_dash/products/" });
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
 	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
 	const hasActiveFilters =
@@ -277,39 +282,7 @@ function RouteComponent() {
 										brands={[]}
 										categories={[]}
 										key={product.id}
-										product={
-											{
-												amount: "",
-												brandId: 0,
-												categoryId: 0,
-												createdAt: new Date(),
-												dailyIntake: 0,
-												deletedAt: null,
-												description: "",
-												discount: 0,
-												expirationDate: null,
-												id: product.id,
-												images: product.images.map((image, index) => ({
-													id: index,
-													isPrimary: index === 0,
-													url: image.url,
-												})),
-												ingredients: [],
-												isFeatured: false,
-												name: product.name,
-												name_mn: null,
-												potency: "",
-												price: product.price,
-												seoDescription: null,
-												seoTitle: null,
-												slug: product.slug,
-												status: product.status as ProductListStatus,
-												stock: product.stock,
-												tags: [],
-												updatedAt: null,
-												weightGrams: 0,
-											} as never
-										}
+										product={instantSearchToProductCard(product)}
 									/>
 								))}
 							</div>
@@ -408,7 +381,12 @@ function ProductsFilters({
 					</SelectContent>
 				</Select>
 				<Select
-					onValueChange={(value) => onStatusChange(value as ProductListStatus)}
+					onValueChange={(value) => {
+						const parsed = parsePicklistValue(productStatuses, value);
+						if (parsed) {
+							onStatusChange(parsed);
+						}
+					}}
 					value={status}
 				>
 					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[140px]">
@@ -518,12 +496,12 @@ function ProductsList({
 		hasNextPage,
 		isFetchingNextPage,
 		isPending,
-	} = useInfiniteQuery({
+	} = useInfiniteQuery<PaginatedProductsPage>({
 		gcTime: 15 * 60 * 1000,
 		getNextPageParam: (lastPage) =>
 			lastPage.pagination.hasNextPage ? lastPage.pagination.currentPage + 1 : undefined,
 		initialPageParam: 1,
-		queryFn: async ({ pageParam }) =>
+		queryFn: async ({ pageParam }): Promise<PaginatedProductsPage> =>
 			trpcClient.product.getPaginatedProducts.query({
 				brandId,
 				categoryId,
