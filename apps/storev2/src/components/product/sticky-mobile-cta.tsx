@@ -6,10 +6,7 @@ import { Motion, Presence } from "solid-motionone";
 import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { cart } from "@/store/cart";
-import {
-	useInventorySnapshot,
-	useInventoryVerification,
-} from "./inventory-reconciler";
+import { useInventorySnapshot, useInventoryVerification } from "./inventory-reconciler";
 import RestockNotifySheet from "./restock-notify-sheet";
 
 interface StickyMobileCtaProps {
@@ -34,16 +31,16 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 		const stackMeasure = document.querySelector<HTMLElement>(
 			"[data-mobile-purchase-stack-measure]",
 		);
-		if (!mainCta || !stackMeasure) return;
+		if (!mainCta || !stackMeasure) {
+			return;
+		}
 
 		let observer: IntersectionObserver | undefined;
 		const observePurchaseAction = () => {
 			observer?.disconnect();
 
 			const action =
-				mainCta.querySelector<HTMLElement>(
-					"[data-product-main-purchase-action]",
-				) ?? mainCta;
+				mainCta.querySelector<HTMLElement>("[data-product-main-purchase-action]") ?? mainCta;
 			const stackHeight = stackMeasure.getBoundingClientRect().height;
 
 			observer = new IntersectionObserver(
@@ -52,8 +49,8 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 					setVisible(entry.intersectionRatio < 1);
 				},
 				{
-					threshold: 1,
 					rootMargin: `0px 0px -${stackHeight}px 0px`,
+					threshold: 1,
 				},
 			);
 			observer.observe(action);
@@ -71,7 +68,9 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	});
 
 	const handleAdd = (event: MouseEvent) => {
-		if (verification().status !== "verified") return;
+		if (verification().status !== "verified") {
+			return;
+		}
 		if (!isInStock()) {
 			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
@@ -83,39 +82,34 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 	return (
 		<>
 			<div
-				data-mobile-purchase-stack-measure
-				class="pointer-events-none invisible fixed inset-x-0 bottom-0 h-[var(--mobile-purchase-stack-height)] md:hidden"
 				aria-hidden="true"
+				class="pointer-events-none invisible fixed inset-x-0 bottom-0 h-[var(--mobile-purchase-stack-height)] md:hidden"
+				data-mobile-purchase-stack-measure
 			/>
 			<Presence>
 				<Show when={visible()}>
 					<Motion.div
-						data-pdp-sticky-cta
-						initial={{ opacity: 0, y: 24 }}
 						animate={{ opacity: 1, y: 0 }}
+						class="border-border bg-card shadow-soft-lg fixed inset-x-3 bottom-[var(--mobile-purchase-offset)] z-50 h-[var(--mobile-purchase-height)] rounded-full border px-4 py-2 md:hidden"
+						data-pdp-sticky-cta
 						exit={{ opacity: 0, y: 24 }}
+						initial={{ opacity: 0, y: 24 }}
 						transition={{ duration: 0.3, easing: [0.23, 1, 0.32, 1] }}
-						class="fixed inset-x-3 bottom-[var(--mobile-purchase-offset)] z-50 h-[var(--mobile-purchase-height)] rounded-full border border-border bg-card px-4 py-2 shadow-soft-lg md:hidden"
 					>
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 pl-1">
-								<p class="truncate text-muted-foreground text-xs">
-									{props.cartItem.name}
-								</p>
-								<p class="font-display text-base text-foreground">
-									{formatCurrency(price())}
-								</p>
+								<p class="text-muted-foreground truncate text-xs">{props.cartItem.name}</p>
+								<p class="font-display text-foreground text-base">{formatCurrency(price())}</p>
 							</div>
 							<Button
-								type="button"
-								size="default"
 								class="shrink-0"
-								onClick={handleAdd}
-								disabled={verification().status !== "verified"}
 								data-inventory-verification={verification().status}
+								disabled={verification().status !== "verified"}
+								onClick={handleAdd}
+								size="default"
+								type="button"
 							>
 								<Show
-									when={verification().status === "verified"}
 									fallback={
 										<span>
 											{verification().status === "degraded"
@@ -123,8 +117,9 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 												: "Нөөц шалгаж байна"}
 										</span>
 									}
+									when={verification().status === "verified"}
 								>
-									<Show when={isInStock()} fallback={<span>Дууссан</span>}>
+									<Show fallback={<span>Дууссан</span>} when={isInStock()}>
 										<IconShoppingCart class="h-4 w-4" strokeWidth={2} />
 										Сагслах
 									</Show>
@@ -136,11 +131,11 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 			</Presence>
 			<Show when={notifyOpen()}>
 				<RestockNotifySheet
-					open
+					focusRestore={restockSheetFocusRestore}
 					onOpenChange={setNotifyOpen}
+					open
 					productId={props.cartItem.productId}
 					productName={props.cartItem.name}
-					focusRestore={restockSheetFocusRestore}
 				/>
 			</Show>
 		</>

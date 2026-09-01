@@ -11,23 +11,18 @@ export async function translateAndStructureProduct(
 	ai: ProductAi,
 	extractedData: FirecrawlExtractedProduct,
 	visionData: VisionAnalysisResult,
-	brands: { id: number; name: string }[],
-	categories: { id: number; name: string }[],
+	brands: Array<{ id: number; name: string }>,
+	categories: Array<{ id: number; name: string }>,
 ): Promise<TranslationResult | null> {
-	const allIngredients = [
-		...new Set([...extractedData.ingredients, ...visionData.ingredients]),
-	];
+	const allIngredients = [...new Set([...extractedData.ingredients, ...visionData.ingredients])];
 
 	try {
 		const brandList = brands.map((b) => `  ID ${b.id}: ${b.name}`).join("\n");
-		const categoryList = categories
-			.map((c) => `  ID ${c.id}: ${c.name}`)
-			.join("\n");
+		const categoryList = categories.map((c) => `  ID ${c.id}: ${c.name}`).join("\n");
 
 		const output = await runProductAi(ai, {
-			name: "translated_product",
-			schema: translationSchema,
 			maxCompletionTokens: 3072,
+			name: "translated_product",
 			prompt: `You are a product specialist for a Mongolian supplement store. Translate this product for Mongolian customers who search in both Cyrillic and Latin scripts.
 
 PRODUCT: ${extractedData.title}
@@ -62,12 +57,13 @@ INSTRUCTIONS:
 8. brandId: Match the product brand "${extractedData.brand || "Unknown"}" to one of the AVAILABLE BRANDS above.
 9. categoryId: Based on the product type and ingredients, pick the single best matching category.
 10. Do not add nutrients, doses, forms, or counts that are absent from the source data.`,
+			schema: translationSchema,
 		});
 
 		logger.info("translateAndStructureProduct.done", {
-			name: output.name,
 			brandId: output.brandId,
 			categoryId: output.categoryId,
+			name: output.name,
 		});
 
 		return output;

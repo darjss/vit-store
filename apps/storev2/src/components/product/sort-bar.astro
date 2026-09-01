@@ -1,17 +1,17 @@
 ---
 interface Props {
 	baseUrl: string;
-	sort: string | null;
 	dir: string | null;
+	sort: string | null;
 }
 
-const { baseUrl, sort, dir } = Astro.props;
+const { baseUrl, dir, sort } = Astro.props;
 
 const options = [
-	{ label: "Онцлох", sort: null, dir: null },
-	{ label: "Шинэ", sort: "createdAt", dir: "desc" },
-	{ label: "Хямд", sort: "price", dir: "asc" },
-	{ label: "Үнэтэй", sort: "price", dir: "desc" },
+	{ dir: null, label: "Онцлох", sort: null },
+	{ dir: "desc", label: "Шинэ", sort: "createdAt" },
+	{ dir: "asc", label: "Хямд", sort: "price" },
+	{ dir: "desc", label: "Үнэтэй", sort: "price" },
 ] as const;
 
 const hrefFor = (o: (typeof options)[number]) =>

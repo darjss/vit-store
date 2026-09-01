@@ -15,51 +15,42 @@ export function ProductOrdersSection({ productId }: { productId: number }) {
 	});
 
 	return (
-		<div className="border-2 border-border bg-card shadow-hard">
+		<div className="border-border bg-card shadow-hard border-2">
 			<div className="border-border border-b-2 px-4 py-3">
-				<h2 className="flex items-center gap-2 font-heading text-base">
+				<h2 className="font-heading flex items-center gap-2 text-base">
 					<Calendar className="h-4 w-4" />
 					Сүүлийн захиалгууд
 				</h2>
 			</div>
 
-			<div className="divide-y-2 divide-border">
+			<div className="divide-border divide-y-2">
 				{orders.length > 0 ? (
 					orders.map((order) => (
-						<div
-							key={order.orderNumber}
-							className="px-4 py-3 transition-colors hover:bg-muted/20"
-						>
+						<div className="hover:bg-muted/20 px-4 py-3 transition-colors" key={order.orderNumber}>
 							<div className="mb-1.5 flex items-center justify-between">
 								<div className="flex items-center gap-1.5">
-									<Phone className="h-3 w-3 text-muted-foreground" />
-									<span className="font-medium text-sm">
-										{order.customerPhone}
-									</span>
+									<Phone className="text-muted-foreground h-3 w-3" />
+									<span className="text-sm font-medium">{order.customerPhone}</span>
 								</div>
-								<Badge className="bg-green-100 text-green-800 text-xs">
-									{orderStatusLabel[
-										order.status as keyof typeof orderStatusLabel
-									] ?? order.status}
+								<Badge className="bg-green-100 text-xs text-green-800">
+									{orderStatusLabel[order.status as keyof typeof orderStatusLabel] ?? order.status}
 								</Badge>
 							</div>
 							<div className="flex items-center justify-between">
-								<div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+								<div className="text-muted-foreground flex items-center gap-1.5 text-xs">
 									<Calendar className="h-3 w-3" />
 									<span>{formatDateToText(order.createdAt)}</span>
 								</div>
-								<span className="font-bold font-heading text-primary-foreground text-sm">
+								<span className="font-heading text-primary-foreground text-sm font-bold">
 									{formatCurrency(order.total)}
 								</span>
 							</div>
-							<p className="mt-0.5 font-mono text-muted-foreground text-xs">
-								{order.orderNumber}
-							</p>
+							<p className="text-muted-foreground mt-0.5 font-mono text-xs">{order.orderNumber}</p>
 						</div>
 					))
 				) : (
 					<div className="px-4 py-8 text-center">
-						<ShoppingCart className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" />
+						<ShoppingCart className="text-muted-foreground/40 mx-auto mb-2 h-6 w-6" />
 						<p className="text-muted-foreground text-sm">Захиалга байхгүй</p>
 					</div>
 				)}
@@ -67,7 +58,7 @@ export function ProductOrdersSection({ productId }: { productId: number }) {
 
 			{orders.length > 0 && (
 				<div className="border-border border-t-2 p-3">
-					<Button variant="outline" size="sm" className="w-full text-xs">
+					<Button className="w-full text-xs" size="sm" variant="outline">
 						Бүх захиалгыг харах
 					</Button>
 				</div>
@@ -78,16 +69,16 @@ export function ProductOrdersSection({ productId }: { productId: number }) {
 
 export function OrdersSkeleton() {
 	return (
-		<div className="border-2 border-border bg-card shadow-hard">
+		<div className="border-border bg-card shadow-hard border-2">
 			<div className="border-border border-b-2 px-4 py-3">
-				<h2 className="flex items-center gap-2 font-heading text-base">
+				<h2 className="font-heading flex items-center gap-2 text-base">
 					<Calendar className="h-4 w-4" />
 					Сүүлийн захиалгууд
 				</h2>
 			</div>
-			<div className="divide-y-2 divide-border">
+			<div className="divide-border divide-y-2">
 				{Array.from({ length: 3 }).map((_, i) => (
-					<div key={i} className="px-4 py-3">
+					<div className="px-4 py-3" key={i}>
 						<div className="mb-1.5 flex items-center justify-between">
 							<div className="flex items-center gap-1.5">
 								<Skeleton className="h-3 w-3" />

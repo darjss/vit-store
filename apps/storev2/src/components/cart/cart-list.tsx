@@ -21,53 +21,48 @@ const CartList = () => {
 				<EmptyCart />
 			</Match>
 			<Match when={cartState() === "ready"}>
-				<h1 class="enter-fade mb-5 font-display text-foreground text-xl md:text-2xl">
-					Таны сагс
-				</h1>
+				<h1 class="enter-fade font-display text-foreground mb-5 text-xl md:text-2xl">Таны сагс</h1>
 				<div class="flex w-full flex-col gap-3">
 					<For each={cart.items()}>
 						{(item, index) => (
 							<div
 								class={cn(
-									"enter-rise rounded-2xl border border-border bg-card p-4 shadow-soft md:p-5",
+									"enter-rise border-border bg-card shadow-soft rounded-2xl border p-4 md:p-5",
 									index() < 8 && `stagger-${index() + 1}`,
 								)}
 							>
 								<div class="hidden md:flex md:items-center md:gap-6">
 									<div class="flex w-1/2 items-center gap-5">
 										<a
-											href={`/products/${item.slug}-${item.productId}/`}
 											class={cn(
 												"block size-24 flex-shrink-0 overflow-hidden rounded-xl",
 												washBg(item.productId),
 											)}
+											href={`/products/${item.slug}-${item.productId}/`}
 										>
 											<Image
-												src={item.image}
 												alt={`${item.name} `}
-												width={96}
+												class="h-full w-full object-cover object-center"
 												height={96}
 												layout="fixed"
-												class="h-full w-full object-cover object-center"
+												src={item.image}
+												width={96}
 											/>
 										</a>
 										<div class="flex-1">
 											<a href={`/products/${item.slug}-${item.productId}/`}>
-												<h2 class="font-semibold text-foreground text-lg transition-colors duration-[140ms] ease-out hover:text-cocoa">
+												<h2 class="text-foreground hover:text-cocoa text-lg font-semibold transition-colors duration-[140ms] ease-out">
 													{item.name}
 												</h2>
 											</a>
-											<p class="mt-1 text-muted-foreground text-sm">
+											<p class="text-muted-foreground mt-1 text-sm">
 												₮{item.price.toLocaleString()} / ширхэг
 											</p>
 										</div>
 									</div>
 
 									<div class="flex w-1/4 justify-center">
-										<CartActions
-											quantity={() => item.quantity}
-											productId={item.productId}
-										/>
+										<CartActions productId={item.productId} quantity={() => item.quantity} />
 									</div>
 
 									<div class="flex w-1/4 justify-end">
@@ -80,24 +75,24 @@ const CartList = () => {
 								<div class="flex flex-col md:hidden">
 									<div class="mb-4 flex gap-4">
 										<a
-											href={`/products/${item.slug}-${item.productId}/`}
 											class={cn(
 												"block size-24 flex-shrink-0 overflow-hidden rounded-xl",
 												washBg(item.productId),
 											)}
+											href={`/products/${item.slug}-${item.productId}/`}
 										>
 											<Image
-												src={item.image}
 												alt={`${item.name}`}
-												width={96}
+												class="h-full w-full object-cover object-center"
 												height={96}
 												layout="fixed"
-												class="h-full w-full object-cover object-center"
+												src={item.image}
+												width={96}
 											/>
 										</a>
 										<div class="flex flex-1 flex-col justify-between">
 											<a href={`/products/${item.slug}-${item.productId}/`}>
-												<h2 class="font-semibold text-base text-foreground leading-snug">
+												<h2 class="text-foreground text-base leading-snug font-semibold">
 													{item.name}
 												</h2>
 											</a>
@@ -107,11 +102,8 @@ const CartList = () => {
 										</div>
 									</div>
 
-									<div class="flex items-center justify-between border-border border-t pt-3">
-										<CartActions
-											quantity={() => item.quantity}
-											productId={item.productId}
-										/>
+									<div class="border-border flex items-center justify-between border-t pt-3">
+										<CartActions productId={item.productId} quantity={() => item.quantity} />
 
 										<div class="font-display text-foreground text-lg">
 											₮{(item.price * item.quantity).toLocaleString()}
@@ -122,43 +114,36 @@ const CartList = () => {
 						)}
 					</For>
 				</div>
-				<div class="enter-rise stagger-3 mt-6 rounded-2xl border border-border bg-card p-5 shadow-soft md:p-8">
+				<div class="enter-rise stagger-3 border-border bg-card shadow-soft mt-6 rounded-2xl border p-5 md:p-8">
 					<div class="md:ml-auto md:w-2/3 lg:w-1/2">
-						<h2 class="mb-5 border-border border-b pb-3 font-display text-foreground text-lg">
+						<h2 class="border-border font-display text-foreground mb-5 border-b pb-3 text-lg">
 							Захиалгын дүн
 						</h2>
 
 						<div class="space-y-3">
 							<div class="flex items-center justify-between text-sm">
 								<p class="text-muted-foreground">Нийт бүтээгдэхүүн</p>
-								<p class="font-medium text-foreground">{cart.count()}</p>
+								<p class="text-foreground font-medium">{cart.count()}</p>
 							</div>
 
 							<div class="flex items-center justify-between text-sm">
 								<p class="text-muted-foreground">Дэд дүн</p>
-								<p class="font-medium text-foreground">
-									₮{cart.total().toLocaleString()}
-								</p>
+								<p class="text-foreground font-medium">₮{cart.total().toLocaleString()}</p>
 							</div>
 
 							<div class="flex items-center justify-between text-sm">
 								<p class="text-muted-foreground">Хүргэлт</p>
-								<p class="font-medium text-foreground">
-									₮{deliveryFee.toLocaleString()}
-								</p>
+								<p class="text-foreground font-medium">₮{deliveryFee.toLocaleString()}</p>
 							</div>
 						</div>
 
-						<div class="mt-4 flex items-baseline justify-between border-border border-t pt-4">
-							<p class="font-semibold text-foreground">Нийт дүн</p>
-							<p class="font-display text-2xl text-foreground md:text-3xl">
+						<div class="border-border mt-4 flex items-baseline justify-between border-t pt-4">
+							<p class="text-foreground font-semibold">Нийт дүн</p>
+							<p class="font-display text-foreground text-2xl md:text-3xl">
 								₮{(cart.total() + deliveryFee).toLocaleString()}
 							</p>
 						</div>
-						<a
-							href="/checkout"
-							class={cn(buttonVariants({ size: "lg" }), "mt-6 w-full")}
-						>
+						<a class={cn(buttonVariants({ size: "lg" }), "mt-6 w-full")} href="/checkout">
 							Худалдан авах
 						</a>
 					</div>

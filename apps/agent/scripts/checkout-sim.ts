@@ -52,8 +52,8 @@ process.env.STORE_API_URL = `http://127.0.0.1:${STORE_PORT}`;
 
 // ── Simulated store catalog (for the stub's total math only) ─────────────────
 const CATALOG: Record<number, { name: string; price: number }> = {
-	101: { name: "Magnesium Glycinate 400mg", price: 54900 },
-	202: { name: "Omega-3 1000mg", price: 39900 },
+	101: { name: "Magnesium Glycinate 400mg", price: 54_900 },
+	202: { name: "Omega-3 1000mg", price: 39_900 },
 };
 
 // ── Simulated live delivery zones (real ranker consumes these) ───────────────
@@ -71,7 +71,7 @@ const rnd = (len: number): string => {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	let out = "";
 	for (let i = 0; i < len; i++) {
-		rndSeed = (rndSeed * 1103515245 + 12345) & 0x7fffffff;
+		rndSeed = (rndSeed * 1_103_515_245 + 12_345) & 0x7f_ff_ff_ff;
 		out += alphabet[rndSeed % alphabet.length];
 	}
 	return out;
@@ -79,26 +79,21 @@ const rnd = (len: number): string => {
 
 // ── Stub store API (stands in for the real tRPC store router) ────────────────
 const storeApi = Bun.serve({
-	port: STORE_PORT,
-	hostname: "127.0.0.1",
 	async fetch(req) {
 		const url = new URL(req.url);
 		const trpcBody = (data: unknown) =>
-			new Response(
-				JSON.stringify({ result: { data: SuperJSON.serialize(data) } }),
-				{ headers: { "content-type": "application/json" } },
-			);
+			new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
+				headers: { "content-type": "application/json" },
+			});
 
 		if (url.pathname.endsWith("/order.getDeliveryAddressZones")) {
 			return trpcBody(ZONES);
 		}
 
 		if (url.pathname.endsWith("/order.addOrder")) {
-			const raw = (await req.json()) as Parameters<
-				typeof SuperJSON.deserialize
-			>[0];
+			const raw = (await req.json()) as Parameters<typeof SuperJSON.deserialize>[0];
 			const input = SuperJSON.deserialize(raw) as {
-				products: { productId: number; quantity: number }[];
+				products: Array<{ productId: number; quantity: number }>;
 			};
 			// Mirror the real API: it totals itself (products + delivery fee). The
 			// CLI never sends a total; the stub computes it exactly as addOrder does.
@@ -111,14 +106,16 @@ const storeApi = Bun.serve({
 				`\n[stub store API] order.addOrder computed total = ${total.toLocaleString("en-US")}₮ (products ${productsTotal.toLocaleString("en-US")}₮ + delivery ${deliveryFee.toLocaleString("en-US")}₮)`,
 			);
 			return trpcBody({
+				checkoutToken: `ct_${rnd(24)}`,
 				orderNumber: rnd(8),
 				paymentNumber: rnd(10),
-				checkoutToken: `ct_${rnd(24)}`,
 			});
 		}
 
 		return new Response("not found", { status: 404 });
 	},
+	hostname: "127.0.0.1",
+	port: STORE_PORT,
 });
 
 const hr = () => console.log("─".repeat(64));
@@ -135,58 +132,57 @@ type Tool = ReturnType<typeof buildCheckoutTools>[number];
 
 interface Harness {
 	cart: { current: Cart };
-	tool: (name: string) => (input?: Record<string, unknown>) => Promise<unknown>;
-	orderCalls: () => number;
-	lastSent: () => string | undefined;
 	checkout: () => CheckoutState | undefined;
+	lastSent: () => string | undefined;
+	orderCalls: () => number;
 	setCheckout: (state: CheckoutState) => void;
+	tool: (name: string) => (input?: Record<string, unknown>) => Promise<unknown>;
 }
 
 const makeHarness = (initialCart: Cart): Harness => {
 	const cart = { current: initialCart };
 	let checkout: CheckoutState | undefined;
 	let orderCalls = 0;
-	const sent: string[] = [];
+	const sent: Array<string> = [];
 	const deps: CheckoutToolDeps = {
-		getCart: async () => cart.current,
-		getCheckout: async () => checkout,
-		saveCheckout: async (state) => {
-			checkout = state;
-			return state;
-		},
-		resolveZoneCandidates: async (addressText) =>
-			rankZoneCandidates(addressText, ZONE_INPUTS),
 		createOrder: async (): Promise<CreatedOrder> => {
 			orderCalls += 1;
 			return {
+				checkoutToken: `ct_${orderCalls}`,
 				orderNumber: `ORD-${orderCalls}`,
 				paymentNumber: `PAY-${orderCalls}`,
-				checkoutToken: `ct_${orderCalls}`,
 			};
+		},
+		getCart: async () => cart.current,
+		getCheckout: async () => checkout,
+		resolveZoneCandidates: async (addressText) => rankZoneCandidates(addressText, ZONE_INPUTS),
+		saveCheckout: async (state) => {
+			checkout = state;
+			return state;
 		},
 		sendText: async (text) => {
 			sent.push(text);
 			return undefined;
 		},
 	};
-	const byName = new Map<string, Tool>(
-		buildCheckoutTools(deps).map((t) => [t.name, t]),
-	);
+	const byName = new Map<string, Tool>(buildCheckoutTools(deps).map((t) => [t.name, t]));
 	return {
 		cart,
-		tool: (name) => (input = {}) => {
-			const t = byName.get(name);
-			if (!t) throw new Error(`no such tool: ${name}`);
-			return (t.run as (ctx: { input: Record<string, unknown> }) => Promise<unknown>)(
-				{ input },
-			);
-		},
-		orderCalls: () => orderCalls,
-		lastSent: () => sent[sent.length - 1],
 		checkout: () => checkout,
+		lastSent: () => sent.at(-1),
+		orderCalls: () => orderCalls,
 		setCheckout: (state) => {
 			checkout = state;
 		},
+		tool:
+			(name) =>
+			(input = {}) => {
+				const t = byName.get(name);
+				if (!t) {
+					throw new Error(`no such tool: ${name}`);
+				}
+				return (t.run as (ctx: { input: Record<string, unknown> }) => Promise<unknown>)({ input });
+			},
 	};
 };
 
@@ -199,7 +195,9 @@ const driveToConfirming = async (h: Harness): Promise<void> => {
 		address: "Баянзүрх дүүрэг, 26-р хороо, 45-р байр",
 	});
 	const candidates = h.checkout()?.candidates ?? [];
-	if (candidates.length === 0) throw new Error("no zone candidates resolved");
+	if (candidates.length === 0) {
+		throw new Error("no zone candidates resolved");
+	}
 	await h.tool("confirm_delivery_zone")({ zoneId: candidates[0].zoneId });
 	await h.tool("provide_notes")({ notes: "" });
 };
@@ -214,7 +212,9 @@ const confirmedCart = (): Cart => {
 let guardFailures = 0;
 const check = (label: string, ok: boolean): void => {
 	console.log(`  ${ok ? "✓" : "✗ FAIL"} ${label}`);
-	if (!ok) guardFailures += 1;
+	if (!ok) {
+		guardFailures += 1;
+	}
 };
 
 async function runGuardProofs(): Promise<void> {
@@ -233,10 +233,7 @@ async function runGuardProofs(): Promise<void> {
 		const result = (await h.tool("place_order")()) as { ok: boolean };
 		check("place_order REFUSED (ok=false)", result.ok === false);
 		check("NO order created (createOrder calls = 0)", h.orderCalls() === 0);
-		check(
-			"re-confirm nudge sent",
-			(h.lastSent() ?? "").includes("баталгаажуул"),
-		);
+		check("re-confirm nudge sent", (h.lastSent() ?? "").includes("баталгаажуул"));
 	}
 
 	// B) Normal confirmed flow still creates EXACTLY ONE order.
@@ -283,7 +280,10 @@ async function runGuardProofs(): Promise<void> {
 		});
 		const candidates = h.checkout()?.candidates ?? [];
 		await h.tool("confirm_delivery_zone")({ zoneId: candidates[0].zoneId });
-		check("phase is 'collecting_notes' (ready, not confirmed)", h.checkout()?.phase === "collecting_notes");
+		check(
+			"phase is 'collecting_notes' (ready, not confirmed)",
+			h.checkout()?.phase === "collecting_notes",
+		);
 		const result = (await h.tool("place_order")()) as { ok: boolean };
 		check("place_order REFUSED (ok=false)", result.ok === false);
 		check("NO order created (calls = 0)", h.orderCalls() === 0);
@@ -299,12 +299,8 @@ async function runGuardProofs(): Promise<void> {
 
 async function main(): Promise<void> {
 	console.log("CHECKOUT SIMULATION (issue #23)\n");
-	console.log(
-		"REAL: @vit/assistant checkout domain + ranker + src/lib/order.ts transport.",
-	);
-	console.log(
-		"STUBBED: upstream store API/DB (order.addOrder + getDeliveryAddressZones).\n",
-	);
+	console.log("REAL: @vit/assistant checkout domain + ranker + src/lib/order.ts transport.");
+	console.log("STUBBED: upstream store API/DB (order.addOrder + getDeliveryAddressZones).\n");
 
 	// 1) A confirmed cart (the #21 checkout gate), built with the real reducers.
 	let cart: Cart = { ...EMPTY_CART };
@@ -317,7 +313,9 @@ async function main(): Promise<void> {
 
 	const begin = canBeginCheckout(cart);
 	console.log(`\nbegin_checkout guard → ${begin.ok ? "OK" : begin.error}`);
-	if (!begin.ok) throw new Error("cart should be confirmed");
+	if (!begin.ok) {
+		throw new Error("cart should be confirmed");
+	}
 
 	let state = initialCheckoutState();
 	console.log(`phase: ${state.phase}`);
@@ -325,12 +323,12 @@ async function main(): Promise<void> {
 	// 2) Phone — invalid first (validation only fires at checkout), then valid.
 	hr();
 	const bad = validatePhone("123");
-	console.log(
-		`STEP 1a — provide_phone "123" → ${bad.ok ? "ok" : `REJECTED: ${bad.error}`}`,
-	);
+	console.log(`STEP 1a — provide_phone "123" → ${bad.ok ? "ok" : `REJECTED: ${bad.error}`}`);
 
 	const phoneStep = applyPhone(state, "9911-2233");
-	if (!phoneStep.ok) throw new Error(phoneStep.error);
+	if (!phoneStep.ok) {
+		throw new Error(phoneStep.error);
+	}
 	state = phoneStep.state;
 	console.log(
 		`STEP 1b — provide_phone "9911-2233" → accepted as ${state.phone} (phase: ${state.phase})`,
@@ -338,23 +336,20 @@ async function main(): Promise<void> {
 
 	// 3) Natural address text.
 	hr();
-	const addressText =
-		"Баянзүрх дүүрэг, 26-р хороо, 120 мянгат, 45-р байр, 12 тоот";
+	const addressText = "Баянзүрх дүүрэг, 26-р хороо, 120 мянгат, 45-р байр, 12 тоот";
 	const addrStep = applyAddress(state, addressText);
-	if (!addrStep.ok) throw new Error(addrStep.error);
+	if (!addrStep.ok) {
+		throw new Error(addrStep.error);
+	}
 	state = addrStep.state;
-	console.log(
-		`STEP 2 — provide_address → "${state.address}" (phase: ${state.phase})`,
-	);
+	console.log(`STEP 2 — provide_address → "${state.address}" (phase: ${state.phase})`);
 
 	// 4) Delivery-zone candidates via the REAL boundary + REAL ranker; confirm.
 	const zones = await fetchDeliveryZones();
 	const candidates = rankZoneCandidates(addressText, zones);
 	state = setZoneCandidates(state, candidates);
 	hr();
-	console.log(
-		"STEP 3 — delivery-zone candidates (customer confirms one; never auto-picked):",
-	);
+	console.log("STEP 3 — delivery-zone candidates (customer confirms one; never auto-picked):");
 	console.log(formatZoneCandidates(candidates));
 	console.log("\ncandidate scores/evidence:");
 	for (const c of candidates) {
@@ -365,7 +360,9 @@ async function main(): Promise<void> {
 
 	const chosen = candidates[0];
 	const zoneStep = applyZoneSelection(state, chosen.zoneId);
-	if (!zoneStep.ok) throw new Error(zoneStep.error);
+	if (!zoneStep.ok) {
+		throw new Error(zoneStep.error);
+	}
 	state = zoneStep.state;
 	console.log(
 		`\ncustomer confirms zone [${chosen.zoneId}] ${chosen.zoneName} (phase: ${state.phase})`,
@@ -374,9 +371,7 @@ async function main(): Promise<void> {
 	// 5) Optional notes.
 	hr();
 	state = applyNotes(state, "Үдээс хойш авна, орц 2");
-	console.log(
-		`STEP 4 — provide_notes → "${state.notes}" (phase: ${state.phase})`,
-	);
+	console.log(`STEP 4 — provide_notes → "${state.notes}" (phase: ${state.phase})`);
 
 	// 6) Final summary before creation.
 	hr();
@@ -392,20 +387,14 @@ async function main(): Promise<void> {
 	// 8) Create the order via the REAL transport against the stub store API.
 	const created = await createOrder(payload);
 	hr();
-	console.log(
-		"STEP 7 — order created (response surfaced for payment slices #24/#25):\n",
-	);
+	console.log("STEP 7 — order created (response surfaced for payment slices #24/#25):\n");
 	console.log(`  orderNumber:   ${created.orderNumber}`);
 	console.log(`  paymentNumber: ${created.paymentNumber}`);
 	console.log(`  checkoutToken: ${created.checkoutToken}`);
 	console.log("\ncustomer-facing confirmation:\n");
 	console.log(formatOrderCreated(created.orderNumber, created.paymentNumber));
 
-	if (
-		!created.orderNumber ||
-		!created.paymentNumber ||
-		!created.checkoutToken
-	) {
+	if (!created.orderNumber || !created.paymentNumber || !created.checkoutToken) {
 		throw new Error("missing order/payment/checkout identifiers");
 	}
 
@@ -420,9 +409,6 @@ async function main(): Promise<void> {
 
 main().catch((error) => {
 	storeApi.stop();
-	console.error(
-		"\n✗ SIMULATION FAILED:",
-		error instanceof Error ? error.message : error,
-	);
+	console.error("\n✗ SIMULATION FAILED:", error instanceof Error ? error.message : error);
 	process.exit(1);
 });

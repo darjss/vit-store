@@ -1,3 +1,1 @@
-export {
-	productColors,
-} from "@vit/shared/constants";
+export { productColors } from "@vit/shared/constants";

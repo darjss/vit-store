@@ -34,12 +34,12 @@ const serverApi = createServerClient(
 let user;
 try {
 	user = await serverApi.auth.check.query();
-} catch (err) {
-	const code = (err as { data?: { code?: string } })?.data?.code ?? (err as { code?: string })?.code;
-	if (code === "UNAUTHORIZED") return Astro.redirect("/login");
-	throw err;
+} catch (error) {
+	const code = (error as { data?: { code?: string } })?.data?.code ?? (error as { code?: string })?.code;
+	if (code === "UNAUTHORIZED") {return Astro.redirect("/login");}
+	throw error;
 }
-if (!user) return Astro.redirect("/login");
+if (!user) {return Astro.redirect("/login");}
 
 type ProfileOrder = Awaited<
 	ReturnType<typeof serverApi.order.getOrdersByCustomerId.query>
@@ -47,15 +47,15 @@ type ProfileOrder = Awaited<
 
 const PAYABLE = new Set(["pending", "customer_claimed_paid"]);
 
-let orders: ProfileOrder[] = [];
+let orders: Array<ProfileOrder> = [];
 /** Guest cookie shows only the unpaid checkout it owns — never phone history. */
 const unpaidOnly = user.trust === "checkout_guest";
 
 if (user.trust === "phone_verified") {
 	try {
 		orders = await serverApi.order.getOrdersByCustomerId.query();
-	} catch (err) {
-		console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", err);
+	} catch (error) {
+		console.error("[profile] order.getOrdersByCustomerId failed; rendering empty orders", error);
 	}
 } else if (unpaidOnly && user.checkout?.paymentNumber) {
 	try {
@@ -68,27 +68,27 @@ if (user.trust === "phone_verified") {
 		) {
 			orders = [
 				{
-					orderNumber: payment.order.orderNumber,
-					status: payment.order.status,
-					total: payment.total,
-					notes: payment.order.notes,
 					address: payment.order.address,
 					createdAt: payment.order.createdAt,
+					notes: payment.order.notes,
+					orderNumber: payment.order.orderNumber,
+					paymentNumber: payment.paymentNumber,
+					paymentProvider: payment.provider,
+					paymentStatus: payment.status,
 					products: payment.order.products.map((product) => ({
-						name: product.name,
 						brandName: product.brandName,
 						imageUrl: product.imageUrl,
+						name: product.name,
 						quantity: product.quantity,
 						sellingPrice: product.price,
 					})),
-					paymentNumber: payment.paymentNumber,
-					paymentStatus: payment.status,
-					paymentProvider: payment.provider,
+					status: payment.order.status,
+					total: payment.total,
 				},
 			];
 		}
-	} catch (err) {
-		console.error("[profile] scoped unpaid payment failed; rendering empty", err);
+	} catch (error) {
+		console.error("[profile] scoped unpaid payment failed; rendering empty", error);
 	}
 } else {
 	return Astro.redirect("/login");
@@ -100,43 +100,43 @@ const description = "Таны захиалгын түүх, профайлын м
 // Format date helper
 const formatDate = (timestamp: Date) => {
 	return new Date(timestamp).toLocaleDateString("mn-MN", {
-		year: "numeric",
-		month: "long",
 		day: "numeric",
+		month: "long",
+		year: "numeric",
 	});
 };
 
 // Format phone helper
 const formatPhone = (phone?: number) => {
-	if (!phone) return "";
+	if (!phone) {return "";}
 	const phoneStr = phone.toString();
 	return `+976 ${phoneStr.slice(0, 4)} ${phoneStr.slice(4)}`;
 };
 
 // Status badges — payment state wins when the Order is still awaiting pay.
 const statusColors: Record<string, string> = {
-	created: "bg-warning text-warning-foreground",
-	pending: "bg-info text-info-foreground",
-	shipped: "bg-info text-info-foreground",
-	delivered: "bg-success text-success-foreground",
 	cancelled: "bg-error text-error-foreground",
-	refunded: "bg-muted text-muted-foreground",
-	processing: "bg-info text-info-foreground",
 	completed: "bg-success text-success-foreground",
+	created: "bg-warning text-warning-foreground",
+	delivered: "bg-success text-success-foreground",
+	pending: "bg-info text-info-foreground",
+	processing: "bg-info text-info-foreground",
+	refunded: "bg-muted text-muted-foreground",
+	shipped: "bg-info text-info-foreground",
 };
 
 const paymentStatusLabels: Record<string, string> = {
-	pending: "Төлөөгүй",
 	customer_claimed_paid: "Шалгаж байна",
-	success: "Төлсөн",
 	failed: "Төлбөр амжилтгүй",
+	pending: "Төлөөгүй",
+	success: "Төлсөн",
 };
 
 const paymentStatusColors: Record<string, string> = {
-	pending: "bg-warning text-warning-foreground",
 	customer_claimed_paid: "bg-info text-info-foreground",
-	success: "bg-success text-success-foreground",
 	failed: "bg-error text-error-foreground",
+	pending: "bg-warning text-warning-foreground",
+	success: "bg-success text-success-foreground",
 };
 
 const canContinuePayment = (

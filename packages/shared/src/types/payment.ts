@@ -1,94 +1,94 @@
 export interface TokenResponse {
-	token_type: string;
-	refresh_expires_in: number;
-	refresh_token: string;
 	access_token: string;
 	expires_in: number;
-	scope: string;
 	"not-before-policy": string;
+	refresh_expires_in: number;
+	refresh_token: string;
+	scope: string;
 	session_state: string;
+	token_type: string;
 }
 
 export interface PaymentUrl {
-	name: string;
 	description: string;
-	logo: string;
 	link: string;
+	logo: string;
+	name: string;
 }
 
 export interface InvoiceResponse {
 	invoice_id: string;
-	qr_text: string;
-	qr_image: string;
 	qPay_shortUrl: string;
-	urls: PaymentUrl[];
+	qr_image: string;
+	qr_text: string;
+	urls: Array<PaymentUrl>;
 }
 
 export interface P2PTransaction {
-	id: string;
-	transaction_bank_code: string;
 	account_bank_code: string;
 	account_bank_name: string;
 	account_number: string;
-	status: string;
 	amount: string;
 	currency: string;
+	id: string;
 	settlement_status: string;
+	status: string;
+	transaction_bank_code: string;
 }
 
 export interface PaymentRow {
-	payment_id: string;
-	payment_status: string;
-	payment_amount: string;
-	trx_fee: string;
-	payment_currency: string;
-	payment_wallet: string;
-	payment_type: string;
+	card_transactions: Array<unknown>;
 	next_payment_date: string | null;
 	next_payment_datetime: string | null;
-	card_transactions: unknown[];
-	p2p_transactions: P2PTransaction[];
+	p2p_transactions: Array<P2PTransaction>;
+	payment_amount: string;
+	payment_currency: string;
+	payment_id: string;
+	payment_status: string;
+	payment_type: string;
+	payment_wallet: string;
+	trx_fee: string;
 }
 
 export interface PaymentResponse {
 	count: number;
 	paid_amount: number;
-	rows: PaymentRow[];
+	rows: Array<PaymentRow>;
 }
 
 export interface BonumAuthResponse {
-	tokenType: string;
 	accessToken: string;
 	expiresIn: number;
-	refreshToken: string;
 	refreshExpiresIn: number;
+	refreshToken: string;
+	tokenType: string;
 	unit: "SECONDS" | string;
 }
 
 export interface BonumInvoiceProduct {
-	image: string;
-	title: string;
 	amount: number;
-	remark: string;
 	count: number;
+	image: string;
+	remark: string;
+	title: string;
 }
 
 export interface BonumInvoiceRequestBody {
+	products: Array<BonumInvoiceProduct>;
 	totalAmount: number;
 	transactionId: string;
-	products: BonumInvoiceProduct[];
 }
 
 export interface BonumInvoiceResponse {
-	invoiceId: string;
 	followUpLink: string;
+	invoiceId: string;
 }
 
 export interface BonumErrorResponse {
 	code?: string;
-	message?: string;
 	error?: string;
-	errors?: Record<string, string[]>;
+	errors?: Record<string, Array<string>>;
+	message?: string;
 }
 
 export class BonumApiError extends Error {

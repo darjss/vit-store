@@ -17,7 +17,9 @@ const SearchPage: Component = () => {
 	const [isSearching, setIsSearching] = createSignal(false);
 
 	const readQueryFromUrl = () => {
-		if (typeof window === "undefined") return "";
+		if (typeof window === "undefined") {
+			return "";
+		}
 		return new URL(window.location.href).searchParams.get("q") ?? "";
 	};
 
@@ -69,19 +71,19 @@ const SearchPage: Component = () => {
 	return (
 		<div class="flex flex-col">
 			{/* Header */}
-			<div class="border-border border-b bg-wash-lemon px-4 py-4 sm:px-6 sm:py-6">
+			<div class="border-border bg-wash-lemon border-b px-4 py-4 sm:px-6 sm:py-6">
 				<div class="mx-auto max-w-screen-2xl">
-					<h1 class="mb-4 flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
-						<IconSearch class="h-6 w-6 text-foreground/60" />
+					<h1 class="font-display mb-4 flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
+						<IconSearch class="text-foreground/60 h-6 w-6" />
 						Бүтээгдэхүүн хайх
 					</h1>
 					<SearchInput
-						value={searchQuery()}
+						autofocus
+						isLoading={isSearching() && searchQuery().length >= 2}
 						onSearch={handleSearch}
 						onSubmitSearch={handleSubmitSearch}
-						isLoading={isSearching() && searchQuery().length >= 2}
-						autofocus
 						placeholder="Витамин, нэмэлт тэжээл хайх..."
+						value={searchQuery()}
 					/>
 				</div>
 			</div>
@@ -89,15 +91,10 @@ const SearchPage: Component = () => {
 			{/* Content */}
 			<div class="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 sm:py-8">
 				<Show
+					fallback={<SearchSuggestions onSelectSearch={handleSelectSuggestion} />}
 					when={searchQuery().length >= 2}
-					fallback={
-						<SearchSuggestions onSelectSearch={handleSelectSuggestion} />
-					}
 				>
-					<SearchResults
-						searchQuery={searchQuery()}
-						onLoadingChange={setIsSearching}
-					/>
+					<SearchResults onLoadingChange={setIsSearching} searchQuery={searchQuery()} />
 				</Show>
 			</div>
 		</div>

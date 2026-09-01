@@ -46,25 +46,28 @@ Coordinate directly with open CI issue #139.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- .github/workflows/ci.yml` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                     | Expected on success                                      |
+| -------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- .github/workflows/ci.yml` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                       | exit 0, no type errors                                   |
+| Build          | `bun run build`                                             | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                      | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - read-only required-status check
 - remove only the unconsumed install job
 
 **Files/path families allowed**
+
 - `.github/workflows/ci.yml`
 
 **Out of scope**
+
 - branch protection changes
 - CI redesign
 - removing install from the retained check

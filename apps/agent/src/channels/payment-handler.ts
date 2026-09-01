@@ -17,16 +17,14 @@ import {
 //      stays pending until admin/bank verification.
 
 export interface PaymentHandlerDeps {
-	// Order total (transfer amount) + reference (customer phone) for the chosen
-	// payment. Backed by the store `payment.getPaymentByNumber` boundary.
-	fetchPaymentSummary: (
-		ref: PaymentRef,
-	) => Promise<{ amount: number; reference: string }>;
 	// Records the transfer CLAIM (status → customer_claimed_paid + admin notify).
 	// NOT a confirmation. Backed by `payment.claimTransferPaid`.
 	claimTransfer: (ref: PaymentRef) => Promise<{
 		outcome: "changed" | "already_claimed" | "already_confirmed" | "refused";
 	}>;
+	// Order total (transfer amount) + reference (customer phone) for the chosen
+	// payment. Backed by the store `payment.getPaymentByNumber` boundary.
+	fetchPaymentSummary: (ref: PaymentRef) => Promise<{ amount: number; reference: string }>;
 	// Sends the bank details text PLUS the `Шилжүүлсэн` claim button.
 	sendBankDetails: (text: string, ref: PaymentRef) => Promise<unknown>;
 	// Plain text reply (the claim acknowledgement).
@@ -67,9 +65,7 @@ export const handleTransferClaim = async (
 		return;
 	}
 	if (claim.outcome === "refused") {
-		await deps.sendText(
-			"Амжилтгүй болсон төлбөр дээр шилжүүлгийн мэдэгдэл хүлээн авах боломжгүй.",
-		);
+		await deps.sendText("Амжилтгүй болсон төлбөр дээр шилжүүлгийн мэдэгдэл хүлээн авах боломжгүй.");
 		return;
 	}
 	await deps.setTransferStatus?.("transfer_claimed");

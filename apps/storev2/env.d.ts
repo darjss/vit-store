@@ -11,14 +11,11 @@ export type CloudflareEnv = Storev2Env & {
 type Runtime = import("@astrojs/cloudflare").Runtime<CloudflareEnv>;
 
 interface PostHog {
-	init: (apiKey: string, options?: Record<string, unknown>) => void;
 	capture: (event: string, properties?: Record<string, unknown>) => void;
-	identify: (distinctId: string, properties?: Record<string, unknown>) => void;
-	captureException: (
-		error: unknown,
-		properties?: Record<string, unknown>,
-	) => void;
+	captureException: (error: unknown, properties?: Record<string, unknown>) => void;
 	get_distinct_id: () => string;
+	identify: (distinctId: string, properties?: Record<string, unknown>) => void;
+	init: (apiKey: string, options?: Record<string, unknown>) => void;
 }
 
 declare global {

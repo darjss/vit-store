@@ -46,22 +46,24 @@ Coordinate with operational command context in #125.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- package.json README.md apps/admin/package.json apps/agent/package.json apps/server/package.json apps/storev2/package.json packages/api/package.json` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                | Expected on success                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- package.json README.md apps/admin/package.json apps/agent/package.json apps/server/package.json apps/storev2/package.json packages/api/package.json` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                  | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                        | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                 | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - complete manifest target/filter inventory
 - remove only proven-broken command names and matching docs
 
 **Files/path families allowed**
+
 - `package.json`
 - `README.md`
 - `apps/admin/package.json`
@@ -71,6 +73,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `packages/api/package.json`
 
 **Out of scope**
+
 - recreating absent scripts
 - changing working commands
 - deleting dated operator scripts without approval

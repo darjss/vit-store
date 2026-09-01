@@ -6,11 +6,5 @@ export {
 	trackQpayInvoiceCreatedServerSide,
 	trackQpayInvoiceFailedServerSide,
 } from "~/lib/integrations/posthog/capture";
-export type {
-	PostHogConfig,
-	ProductSearchRankingSignal,
-} from "~/lib/integrations/posthog/client";
-export {
-	createPostHogClient,
-	PostHogClient,
-} from "~/lib/integrations/posthog/client";
+export type { PostHogConfig, ProductSearchRankingSignal } from "~/lib/integrations/posthog/client";
+export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog/client";

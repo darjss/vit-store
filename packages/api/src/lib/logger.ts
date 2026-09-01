@@ -11,22 +11,22 @@ export const logger = {
 	debug(event: string, data?: LogData) {
 		evlog.debug(withEvent(event, data));
 	},
+	error(event: string, error?: unknown, data?: LogData) {
+		const err = toError(error ?? event);
+		evlog.error({
+			error: {
+				message: err.message,
+				name: err.name,
+				stack: err.stack,
+			},
+			event,
+			...(data ? (summarizeLogValue(data) as LogData) : {}),
+		});
+	},
 	info(event: string, data?: LogData) {
 		evlog.info(withEvent(event, data));
 	},
 	warn(event: string, data?: LogData) {
 		evlog.warn(withEvent(event, data));
-	},
-	error(event: string, error?: unknown, data?: LogData) {
-		const err = toError(error ?? event);
-		evlog.error({
-			event,
-			error: {
-				name: err.name,
-				message: err.message,
-				stack: err.stack,
-			},
-			...(data ? (summarizeLogValue(data) as LogData) : {}),
-		});
 	},
 };

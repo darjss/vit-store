@@ -13,22 +13,22 @@ import {
 export interface InventorySnapshot {
 	id: number;
 	price: number;
-	stock: number;
 	status: string;
+	stock: number;
 }
 
 // Cached/SSR product data stays visible for discovery, but every stock-sensitive
 // purchase control requires `verified` before it can add stock to the cart.
 export type InventoryVerification =
-	| { status: "checking"; lastVerifiedAt?: number }
+	| { lastVerifiedAt?: number; status: "checking" }
 	| { status: "verified"; verifiedAt: number }
-	| { status: "degraded"; failedAt: number; lastVerifiedAt?: number };
+	| { failedAt: number; lastVerifiedAt?: number; status: "degraded" };
 
 type InventoryListener = (snapshot: InventorySnapshot) => void;
 type VerificationListener = (state: InventoryVerification) => void;
 type StoredSnapshot = {
-	value: InventorySnapshot;
 	fetchedAt: number;
+	value: InventorySnapshot;
 };
 
 type ActiveInventoryRequest = {
@@ -37,17 +37,17 @@ type ActiveInventoryRequest = {
 };
 
 type InventoryCoordinator = {
-	snapshots: Map<number, StoredSnapshot>;
-	listeners: Map<number, Set<InventoryListener>>;
-	verificationStates: Map<number, InventoryVerification>;
-	verificationListeners: Map<number, Set<VerificationListener>>;
-	registrationCounts: Map<number, number>;
-	requestGenerations: Map<number, number>;
-	pendingRequests: Map<number, number>;
-	warningListeners: Set<(count: number) => void>;
 	activeRequests: Set<ActiveInventoryRequest>;
 	flushTimer?: number;
+	listeners: Map<number, Set<InventoryListener>>;
+	pendingRequests: Map<number, number>;
+	registrationCounts: Map<number, number>;
+	requestGenerations: Map<number, number>;
 	retryListenerInstalled?: boolean;
+	snapshots: Map<number, StoredSnapshot>;
+	verificationListeners: Map<number, Set<VerificationListener>>;
+	verificationStates: Map<number, InventoryVerification>;
+	warningListeners: Set<(count: number) => void>;
 };
 
 type InventoryWindow = Window & {
@@ -56,22 +56,24 @@ type InventoryWindow = Window & {
 
 function createInventoryCoordinator(): InventoryCoordinator {
 	return {
-		snapshots: new Map(),
+		activeRequests: new Set(),
 		listeners: new Map(),
-		verificationStates: new Map(),
-		verificationListeners: new Map(),
+		pendingRequests: new Map(),
 		registrationCounts: new Map(),
 		requestGenerations: new Map(),
-		pendingRequests: new Map(),
+		snapshots: new Map(),
+		verificationListeners: new Map(),
+		verificationStates: new Map(),
 		warningListeners: new Set(),
-		activeRequests: new Set(),
 	};
 }
 
 const serverCoordinator = createInventoryCoordinator();
 
 function getInventoryCoordinator(): InventoryCoordinator {
-	if (typeof window === "undefined") return serverCoordinator;
+	if (typeof window === "undefined") {
+		return serverCoordinator;
+	}
 	const inventoryWindow = window as InventoryWindow;
 	inventoryWindow.__vitInventoryCoordinatorV2 ??= createInventoryCoordinator();
 	return inventoryWindow.__vitInventoryCoordinatorV2;
@@ -80,33 +82,29 @@ function getInventoryCoordinator(): InventoryCoordinator {
 const INVENTORY_SNAPSHOT_TTL_MS = 10_000;
 const coordinator = getInventoryCoordinator();
 const {
-	snapshots,
+	activeRequests,
 	listeners,
-	verificationStates,
-	verificationListeners,
+	pendingRequests,
 	registrationCounts,
 	requestGenerations,
-	pendingRequests,
+	snapshots,
+	verificationListeners,
+	verificationStates,
 	warningListeners,
-	activeRequests,
 } = coordinator;
 
 function lastVerifiedAt(productId: number): number | undefined {
 	const current = verificationStates.get(productId);
-	if (current?.status === "verified") return current.verifiedAt;
+	if (current?.status === "verified") {
+		return current.verifiedAt;
+	}
 	return current?.lastVerifiedAt;
 }
 
-function publishVerification(
-	productId: number,
-	state: InventoryVerification,
-): void {
+function publishVerification(productId: number, state: InventoryVerification): void {
 	verificationStates.set(productId, state);
 	if (state.status !== "verified") {
-		reconcileServerProductCards(
-			productId,
-			unverifiedInventoryCardPresentation(state.status),
-		);
+		reconcileServerProductCards(productId, unverifiedInventoryCardPresentation(state.status));
 	}
 	for (const listener of verificationListeners.get(productId) ?? []) {
 		listener(state);
@@ -116,22 +114,24 @@ function publishVerification(
 
 function markInventoryChecking(productId: number): void {
 	publishVerification(productId, {
-		status: "checking",
 		lastVerifiedAt: lastVerifiedAt(productId),
+		status: "checking",
 	});
 }
 
 function markInventoryDegraded(productId: number): void {
 	publishVerification(productId, {
-		status: "degraded",
 		failedAt: Date.now(),
 		lastVerifiedAt: lastVerifiedAt(productId),
+		status: "degraded",
 	});
 }
 
 function getFreshSnapshot(productId: number): InventorySnapshot | undefined {
 	const stored = snapshots.get(productId);
-	if (!stored) return;
+	if (!stored) {
+		return;
+	}
 	if (Date.now() - stored.fetchedAt >= INVENTORY_SNAPSHOT_TTL_MS) {
 		snapshots.delete(productId);
 		return;
@@ -141,7 +141,7 @@ function getFreshSnapshot(productId: number): InventorySnapshot | undefined {
 
 function publishInventory(snapshot: InventorySnapshot): void {
 	const fetchedAt = Date.now();
-	snapshots.set(snapshot.id, { value: snapshot, fetchedAt });
+	snapshots.set(snapshot.id, { fetchedAt, value: snapshot });
 	reconcileDocument(snapshot);
 	for (const listener of listeners.get(snapshot.id) ?? []) {
 		listener(snapshot);
@@ -152,21 +152,21 @@ function publishInventory(snapshot: InventorySnapshot): void {
 	});
 }
 
-export function subscribeInventory(
-	productId: number,
-	listener: InventoryListener,
-): () => void {
-	const productListeners =
-		listeners.get(productId) ?? new Set<InventoryListener>();
+export function subscribeInventory(productId: number, listener: InventoryListener): () => void {
+	const productListeners = listeners.get(productId) ?? new Set<InventoryListener>();
 	productListeners.add(listener);
 	listeners.set(productId, productListeners);
 
 	const current = getFreshSnapshot(productId);
-	if (current) listener(current);
+	if (current) {
+		listener(current);
+	}
 
 	return () => {
 		productListeners.delete(listener);
-		if (productListeners.size === 0) listeners.delete(productId);
+		if (productListeners.size === 0) {
+			listeners.delete(productId);
+		}
 	};
 }
 
@@ -194,23 +194,31 @@ export function useInventoryVerification(productId: number) {
 		const unregister = registerInventoryProduct(productId);
 
 		const current = verificationStates.get(productId);
-		if (current) setVerification(current);
+		if (current) {
+			setVerification(current);
+		}
 
 		onCleanup(() => {
 			unregister();
 			productListeners.delete(setVerification);
-			if (productListeners.size === 0) verificationListeners.delete(productId);
+			if (productListeners.size === 0) {
+				verificationListeners.delete(productId);
+			}
 		});
 	});
 	return verification;
 }
 
 function setTextIfChanged(element: HTMLElement, value: string): void {
-	if (element.textContent !== value) element.textContent = value;
+	if (element.textContent !== value) {
+		element.textContent = value;
+	}
 }
 
 function setHiddenIfChanged(element: HTMLElement, hidden: boolean): void {
-	if (element.hidden !== hidden) element.hidden = hidden;
+	if (element.hidden !== hidden) {
+		element.hidden = hidden;
+	}
 }
 
 function reconcileServerProductCards(
@@ -226,34 +234,35 @@ function reconcileServerProductCards(
 		const stock = card.querySelector<HTMLElement>("[data-card-stock]");
 		if (stock) {
 			setTextIfChanged(stock, presentation.availabilityLabel);
-			stock.classList.toggle(
-				"low-stock-indicator",
-				presentation.state === "low",
-			);
+			stock.classList.toggle("low-stock-indicator", presentation.state === "low");
 		}
 	}
 }
 
 function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
-	const script = document.querySelector<HTMLScriptElement>(
-		"script[data-product-jsonld]",
-	);
-	if (!script?.textContent) return;
+	const script = document.querySelector<HTMLScriptElement>("script[data-product-jsonld]");
+	if (!script?.textContent) {
+		return;
+	}
 
 	try {
 		const jsonLd = JSON.parse(script.textContent) as {
 			offers?: {
-				price?: number;
 				availability?: string;
+				price?: number;
 			};
 		};
-		if (!jsonLd.offers) return;
+		if (!jsonLd.offers) {
+			return;
+		}
 		jsonLd.offers.price = snapshot.price;
 		jsonLd.offers.availability = inStock
 			? "https://schema.org/InStock"
 			: "https://schema.org/OutOfStock";
 		const nextJsonLd = JSON.stringify(jsonLd);
-		if (script.textContent !== nextJsonLd) script.textContent = nextJsonLd;
+		if (script.textContent !== nextJsonLd) {
+			script.textContent = nextJsonLd;
+		}
 	} catch {
 		// A malformed optional JSON-LD block must not affect the purchase UI.
 	}
@@ -298,10 +307,7 @@ function reconcileDocument(snapshot: InventorySnapshot): void {
 function degradedRegistrationCount(): number {
 	let count = 0;
 	for (const [productId, registrations] of registrationCounts) {
-		if (
-			registrations > 0 &&
-			verificationStates.get(productId)?.status === "degraded"
-		) {
+		if (registrations > 0 && verificationStates.get(productId)?.status === "degraded") {
 			count += 1;
 		}
 	}
@@ -309,26 +315,33 @@ function degradedRegistrationCount(): number {
 }
 
 function syncWarningHost(count: number): void {
-	if (typeof document === "undefined") return;
+	if (typeof document === "undefined") {
+		return;
+	}
 	const host = document.querySelector<HTMLElement>("[data-inventory-warning]");
-	if (host) host.hidden = count === 0;
+	if (host) {
+		host.hidden = count === 0;
+	}
 }
 
 function notifyWarningListeners(): void {
 	const count = degradedRegistrationCount();
 	syncWarningHost(count);
-	for (const listener of warningListeners) listener(count);
+	for (const listener of warningListeners) {
+		listener(count);
+	}
 }
 
 function isCurrentRequest(productId: number, generation: number): boolean {
 	return (
-		(registrationCounts.get(productId) ?? 0) > 0 &&
-		requestGenerations.get(productId) === generation
+		(registrationCounts.get(productId) ?? 0) > 0 && requestGenerations.get(productId) === generation
 	);
 }
 
 function scheduleQueueFlush(): void {
-	if (coordinator.flushTimer !== undefined) return;
+	if (coordinator.flushTimer !== undefined) {
+		return;
+	}
 	coordinator.flushTimer = window.setTimeout(() => {
 		coordinator.flushTimer = undefined;
 		void flushInventoryQueue();
@@ -345,15 +358,12 @@ function queueInventoryRequest(productId: number): void {
 
 function publishCurrentSnapshots(
 	entries: Map<number, number>,
-	inventory: InventorySnapshot[],
+	inventory: Array<InventorySnapshot>,
 ): Set<number> {
 	const receivedIds = new Set<number>();
 	for (const snapshot of inventory) {
 		const generation = entries.get(snapshot.id);
-		if (
-			generation === undefined ||
-			!isCurrentRequest(snapshot.id, generation)
-		) {
+		if (generation === undefined || !isCurrentRequest(snapshot.id, generation)) {
 			continue;
 		}
 		receivedIds.add(snapshot.id);
@@ -367,10 +377,7 @@ function markMissingSnapshotsDegraded(
 	receivedIds: Set<number>,
 ): void {
 	for (const [productId, generation] of entries) {
-		if (
-			!receivedIds.has(productId) &&
-			isCurrentRequest(productId, generation)
-		) {
+		if (!receivedIds.has(productId) && isCurrentRequest(productId, generation)) {
 			markInventoryDegraded(productId);
 		}
 	}
@@ -386,8 +393,12 @@ function markCurrentEntriesDegraded(entries: Map<number, number>): void {
 
 async function flushInventoryQueue(): Promise<void> {
 	const entries = new Map([...pendingRequests].slice(0, 100));
-	for (const productId of entries.keys()) pendingRequests.delete(productId);
-	if (entries.size === 0) return;
+	for (const productId of entries.keys()) {
+		pendingRequests.delete(productId);
+	}
+	if (entries.size === 0) {
+		return;
+	}
 
 	const controller = new AbortController();
 	const request = { controller, entries };
@@ -407,12 +418,16 @@ async function flushInventoryQueue(): Promise<void> {
 		}
 	} finally {
 		activeRequests.delete(request);
-		if (pendingRequests.size > 0) scheduleQueueFlush();
+		if (pendingRequests.size > 0) {
+			scheduleQueueFlush();
+		}
 	}
 }
 
 function registerInventoryProduct(productId: number): () => void {
-	if (!Number.isInteger(productId) || productId <= 0) return () => {};
+	if (!Number.isInteger(productId) || productId <= 0) {
+		return () => {};
+	}
 
 	const registrations = registrationCounts.get(productId) ?? 0;
 	registrationCounts.set(productId, registrations + 1);
@@ -435,15 +450,14 @@ function registerInventoryProduct(productId: number): () => void {
 
 		registrationCounts.delete(productId);
 		pendingRequests.delete(productId);
-		requestGenerations.set(
-			productId,
-			(requestGenerations.get(productId) ?? 0) + 1,
-		);
+		requestGenerations.set(productId, (requestGenerations.get(productId) ?? 0) + 1);
 		for (const request of activeRequests) {
 			const hasRegisteredProduct = [...request.entries.keys()].some(
 				(id) => (registrationCounts.get(id) ?? 0) > 0,
 			);
-			if (!hasRegisteredProduct) request.controller.abort();
+			if (!hasRegisteredProduct) {
+				request.controller.abort();
+			}
 		}
 		notifyWarningListeners();
 	};
@@ -451,10 +465,7 @@ function registerInventoryProduct(productId: number): () => void {
 
 function retryDegradedInventory(): void {
 	for (const [productId, registrations] of registrationCounts) {
-		if (
-			registrations > 0 &&
-			verificationStates.get(productId)?.status === "degraded"
-		) {
+		if (registrations > 0 && verificationStates.get(productId)?.status === "degraded") {
 			snapshots.delete(productId);
 			queueInventoryRequest(productId);
 		}
@@ -475,9 +486,7 @@ function ensureInventoryBrowserContract(): void {
 }
 
 export default function InventoryReconciler() {
-	const [degradedCount, setDegradedCount] = createSignal(
-		degradedRegistrationCount(),
-	);
+	const [degradedCount, setDegradedCount] = createSignal(degradedRegistrationCount());
 
 	onMount(() => {
 		ensureInventoryBrowserContract();
@@ -490,27 +499,27 @@ export default function InventoryReconciler() {
 
 	return (
 		<>
-			<span hidden aria-hidden="true" data-inventory-reconciler />
+			<span aria-hidden="true" data-inventory-reconciler hidden />
 			<div
-				class="fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-lg flex-wrap items-start gap-3 rounded-2xl border border-border bg-warning p-3 text-warning-foreground shadow-soft-lg sm:flex-nowrap sm:p-4"
-				role="alert"
+				class="border-border bg-warning text-warning-foreground shadow-soft-lg fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-lg flex-wrap items-start gap-3 rounded-2xl border p-3 sm:flex-nowrap sm:p-4"
 				data-inventory-warning
 				hidden={degradedCount() === 0}
+				role="alert"
 			>
-				<IconAlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+				<IconAlertTriangle aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="min-w-0 flex-1">
-					<p class="font-semibold text-sm">Нөөцийг шинэчилж чадсангүй</p>
+					<p class="text-sm font-semibold">Нөөцийг шинэчилж чадсангүй</p>
 					<p class="mt-1 text-xs leading-relaxed sm:text-sm">
-						Хуудсыг нээх үеийн мэдээлэл харагдаж байна. Одоогийн нөөц
-						баталгаажаагүй тул сагслахыг түр зогсоолоо.
+						Хуудсыг нээх үеийн мэдээлэл харагдаж байна. Одоогийн нөөц баталгаажаагүй тул сагслахыг
+						түр зогсоолоо.
 					</p>
 				</div>
 				<Button
-					type="button"
-					variant="secondary"
-					size="compact"
 					class="ml-8 basis-full sm:ml-0 sm:basis-auto"
 					data-inventory-retry
+					size="compact"
+					type="button"
+					variant="secondary"
 				>
 					<IconRefresh aria-hidden="true" />
 					Дахин шалгах

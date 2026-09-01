@@ -4,23 +4,23 @@ import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { api } from "../lib/trpc";
 
 interface BenchmarkComparisonProps {
-	serverFetchTime: number;
-	serverDbTime: number;
-	productCount: number;
-	kvWriteTime?: number;
 	kvReadTime?: number;
-	redisWriteTime?: number;
+	kvWriteTime?: number;
+	productCount: number;
 	redisReadTime?: number;
+	redisWriteTime?: number;
+	serverDbTime: number;
+	serverFetchTime: number;
 }
 
 interface BenchmarkResult {
 	dbElapsed: number;
-	productCount: number;
 	fetchTime: number;
-	kvWriteElapsed?: number;
 	kvReadElapsed?: number;
-	redisWriteElapsed?: number;
+	kvWriteElapsed?: number;
+	productCount: number;
 	redisReadElapsed?: number;
+	redisWriteElapsed?: number;
 }
 
 export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
@@ -31,12 +31,12 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 		return {
 			dbElapsed: result.dbElapsed,
-			productCount: result.product.length,
 			fetchTime,
-			kvWriteElapsed: result.kvWriteElapsed,
 			kvReadElapsed: result.kvReadElapsed,
-			redisWriteElapsed: result.redisWriteElapsed,
+			kvWriteElapsed: result.kvWriteElapsed,
+			productCount: result.product.length,
 			redisReadElapsed: result.redisReadElapsed,
+			redisWriteElapsed: result.redisWriteElapsed,
 		};
 	};
 
@@ -50,99 +50,86 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 	const difference = createMemo(() => {
 		const result = data();
-		if (!result) return null;
+		if (!result) {
+			return null;
+		}
 
 		const diff = result.fetchTime - props.serverFetchTime;
 		const percentage = ((diff / props.serverFetchTime) * 100).toFixed(1);
 
 		return {
-			value: diff,
-			percentage,
 			isFaster: diff < 0,
+			percentage,
+			value: diff,
 		};
 	});
 
 	return (
 		<>
 			{/* Control Panel */}
-			<div class="bg-background p-6 rounded-lg shadow-soft">
+			<div class="bg-background shadow-soft rounded-lg p-6">
 				<button
-					type="button"
-					onClick={refetch}
+					class="bg-foreground hover:bg-foreground/80 disabled:bg-muted-foreground w-full px-6 py-3 font-semibold text-white transition-colors"
 					disabled={data.loading}
-					class="w-full bg-foreground px-6 py-3 font-semibold text-white transition-colors hover:bg-foreground/80 disabled:bg-muted-foreground"
+					onClick={refetch}
+					type="button"
 				>
 					{data.loading ? "Fetching..." : "Run Client-Side Benchmark"}
 				</button>
 
 				<Show when={data.error}>
-					<div class="mt-4 border border-border bg-error/10 p-4 text-destructive">
-						Error:{" "}
-						{data.error instanceof Error
-							? data.error.message
-							: "Failed to fetch data"}
+					<div class="border-border bg-error/10 text-destructive mt-4 border p-4">
+						Error: {data.error instanceof Error ? data.error.message : "Failed to fetch data"}
 					</div>
 				</Show>
 			</div>
 
 			{/* Client-Side Results */}
-			<div class="rounded-lg border border-border bg-card p-6 shadow-soft">
+			<div class="border-border bg-card shadow-soft rounded-lg border p-6">
 				<div class="mb-4 flex items-center gap-2">
-					<IconComputer class="h-6 w-6 text-primary" />
-					<h2 class="font-bold text-2xl text-foreground">Client-Side (CSR)</h2>
+					<IconComputer class="text-primary h-6 w-6" />
+					<h2 class="text-foreground text-2xl font-bold">Client-Side (CSR)</h2>
 				</div>
 
 				<Show
-					when={!data.loading && data()}
 					fallback={
 						<div class="flex h-64 items-center justify-center">
 							<div class="text-center">
 								<Show
+									fallback={<p class="text-muted-foreground">Click the button to run benchmark</p>}
 									when={data.loading}
-									fallback={
-										<p class="text-muted-foreground">
-											Click the button to run benchmark
-										</p>
-									}
 								>
-									<div class="mx-auto size-12 animate-spin border-[3px] border-border border-t-primary" />
-									<p class="mt-4 text-muted-foreground">Fetching data...</p>
+									<div class="border-border border-t-primary mx-auto size-12 animate-spin border-[3px]" />
+									<p class="text-muted-foreground mt-4">Fetching data...</p>
 								</Show>
 							</div>
 						</div>
 					}
+					when={!data.loading && data()}
 				>
 					<div class="space-y-3">
 						<div class="bg-background p-4">
-							<p class="mb-1 text-muted-foreground text-sm">Total Fetch Time</p>
-							<p class="font-bold text-3xl text-foreground">
-								{formatTime(data()?.fetchTime ?? 0)}
-							</p>
+							<p class="text-muted-foreground mb-1 text-sm">Total Fetch Time</p>
+							<p class="text-foreground text-3xl font-bold">{formatTime(data()?.fetchTime ?? 0)}</p>
 						</div>
 
 						<div class="bg-background p-4">
-							<p class="mb-1 text-muted-foreground text-sm">Database Query Time</p>
-							<p class="font-semibold text-2xl text-foreground">
+							<p class="text-muted-foreground mb-1 text-sm">Database Query Time</p>
+							<p class="text-foreground text-2xl font-semibold">
 								{formatTime(data()?.dbElapsed ?? 0)}
 							</p>
 						</div>
 
 						<div class="bg-background p-4">
-							<p class="mb-1 text-muted-foreground text-sm">Products Fetched</p>
-							<p class="font-semibold text-2xl text-foreground">
-								{data()?.productCount}
-							</p>
+							<p class="text-muted-foreground mb-1 text-sm">Products Fetched</p>
+							<p class="text-foreground text-2xl font-semibold">{data()?.productCount}</p>
 						</div>
 
 						<Show when={data()?.kvReadElapsed}>
 							{(elapsed) => (
 								<div class="bg-background p-4">
-									<p class="mb-1 text-muted-foreground text-sm">
-										KV Read Time (Client)
-									</p>
-									<p class="font-semibold text-2xl text-foreground">
-										{formatTime(elapsed())}
-									</p>
+									<p class="text-muted-foreground mb-1 text-sm">KV Read Time (Client)</p>
+									<p class="text-foreground text-2xl font-semibold">{formatTime(elapsed())}</p>
 								</div>
 							)}
 						</Show>
@@ -150,24 +137,18 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 						<Show when={data()?.redisReadElapsed}>
 							{(elapsed) => (
 								<div class="bg-background p-4">
-									<p class="mb-1 text-muted-foreground text-sm">
-										Redis Read Time (Client)
-									</p>
-									<p class="font-semibold text-2xl text-foreground">
-										{formatTime(elapsed())}
-									</p>
+									<p class="text-muted-foreground mb-1 text-sm">Redis Read Time (Client)</p>
+									<p class="text-foreground text-2xl font-semibold">{formatTime(elapsed())}</p>
 								</div>
 							)}
 						</Show>
 					</div>
 
-					<div class="mt-4 bg-primary/20 p-3">
-						<p class="flex items-center gap-1 font-medium text-foreground text-sm">
+					<div class="bg-primary/20 mt-4 p-3">
+						<p class="text-foreground flex items-center gap-1 text-sm font-medium">
 							<IconCheck class="h-4 w-4" /> Rendered in browser
 						</p>
-						<p class="mt-1 text-foreground text-xs">
-							Includes network latency + processing time
-						</p>
+						<p class="text-foreground mt-1 text-xs">Includes network latency + processing time</p>
 					</div>
 				</Show>
 			</div>
@@ -175,14 +156,14 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 			{/* Comparison Summary */}
 			<Show when={data() && difference()}>
 				{(diff) => (
-					<div class="bg-background p-6 rounded-lg shadow-soft">
-						<h3 class="mb-4 font-bold text-xl">Performance Analysis</h3>
+					<div class="bg-background shadow-soft rounded-lg p-6">
+						<h3 class="mb-4 text-xl font-bold">Performance Analysis</h3>
 
 						<div class="grid gap-4 md:grid-cols-3">
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Time Difference</p>
+								<p class="text-muted-foreground mb-1 text-sm">Time Difference</p>
 								<p
-									class={`font-bold text-2xl ${
+									class={`text-2xl font-bold ${
 										diff().isFaster ? "text-foreground" : "text-destructive"
 									}`}
 								>
@@ -192,9 +173,9 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</div>
 
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Percentage Difference</p>
+								<p class="text-muted-foreground mb-1 text-sm">Percentage Difference</p>
 								<p
-									class={`font-bold text-2xl ${
+									class={`text-2xl font-bold ${
 										diff().isFaster ? "text-foreground" : "text-destructive"
 									}`}
 								>
@@ -203,53 +184,38 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 							</div>
 
 							<div class="bg-muted/30 p-4">
-								<p class="mb-1 text-muted-foreground text-sm">Network Overhead</p>
-								<p class="font-bold text-2xl text-foreground">
+								<p class="text-muted-foreground mb-1 text-sm">Network Overhead</p>
+								<p class="text-foreground text-2xl font-bold">
 									{formatTime(
-										(data()?.fetchTime ?? 0) -
-											(data()?.dbElapsed ?? 0) -
-											props.serverDbTime,
+										(data()?.fetchTime ?? 0) - (data()?.dbElapsed ?? 0) - props.serverDbTime,
 									)}
 								</p>
 							</div>
 						</div>
 
-						<div class="mt-6 border border-border bg-primary/10 p-4">
-							<h4 class="mb-2 font-semibold text-foreground">Key Insights:</h4>
-							<ul class="space-y-2 text-sm text-foreground">
-								<li>
-									• Server-side rendering delivers content immediately with the
-									initial HTML
-								</li>
-								<li>
-									• Client-side fetching includes additional network round-trip
-									time
-								</li>
+						<div class="border-border bg-primary/10 mt-6 border p-4">
+							<h4 class="text-foreground mb-2 font-semibold">Key Insights:</h4>
+							<ul class="text-foreground space-y-2 text-sm">
+								<li>• Server-side rendering delivers content immediately with the initial HTML</li>
+								<li>• Client-side fetching includes additional network round-trip time</li>
 								<li>
 									• Database query time is similar for both approaches (~
 									{formatTime(props.serverDbTime)})
 								</li>
-								<li>
-									• The main difference is network latency from browser to
-									server
-								</li>
-								{data()?.kvReadElapsed !== undefined &&
-									props.kvReadTime !== undefined && (
-										<li>
-											• KV read time: {formatTime(data()?.kvReadElapsed ?? 0)}{" "}
-											(client) vs {formatTime(props.kvReadTime ?? 0)} (server) -
-											typically very fast
-										</li>
-									)}
-								{data()?.redisReadElapsed !== undefined &&
-									props.redisReadTime !== undefined && (
-										<li>
-											• Redis read time:{" "}
-											{formatTime(data()?.redisReadElapsed ?? 0)} (client) vs{" "}
-											{formatTime(props.redisReadTime ?? 0)} (server) - often
-											faster than KV for simple operations
-										</li>
-									)}
+								<li>• The main difference is network latency from browser to server</li>
+								{data()?.kvReadElapsed !== undefined && props.kvReadTime !== undefined && (
+									<li>
+										• KV read time: {formatTime(data()?.kvReadElapsed ?? 0)} (client) vs{" "}
+										{formatTime(props.kvReadTime ?? 0)} (server) - typically very fast
+									</li>
+								)}
+								{data()?.redisReadElapsed !== undefined && props.redisReadTime !== undefined && (
+									<li>
+										• Redis read time: {formatTime(data()?.redisReadElapsed ?? 0)} (client) vs{" "}
+										{formatTime(props.redisReadTime ?? 0)} (server) - often faster than KV for
+										simple operations
+									</li>
+								)}
 							</ul>
 						</div>
 					</div>

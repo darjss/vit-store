@@ -3,21 +3,21 @@ import { api } from "@/lib/trpc";
 export interface StaticNavigationCategory {
 	id: number;
 	name: string;
-	slug: string;
 	productCount?: number;
+	slug: string;
 }
 
 export interface StaticNavigationBrand {
 	id: number;
-	name: string;
-	slug: string;
 	logoUrl?: string | null;
+	name: string;
 	productCount?: number;
+	slug: string;
 }
 
 interface StaticNavigationData {
-	categories: StaticNavigationCategory[];
-	brands: StaticNavigationBrand[];
+	brands: Array<StaticNavigationBrand>;
+	categories: Array<StaticNavigationCategory>;
 }
 
 let navigationDataPromise: Promise<StaticNavigationData> | undefined;
@@ -42,14 +42,14 @@ export function getStaticNavigationData() {
 		getWithBuildFallback(
 			"categories",
 			api.category.getAllCategoriesWithStock.query(),
-			[] as StaticNavigationCategory[],
+			[] as Array<StaticNavigationCategory>,
 		),
 		getWithBuildFallback(
 			"brands",
 			api.brand.getAllBrandsWithStock.query(),
-			[] as StaticNavigationBrand[],
+			[] as Array<StaticNavigationBrand>,
 		),
-	]).then(([categories, brands]) => ({ categories, brands }));
+	]).then(([categories, brands]) => ({ brands, categories }));
 
 	return navigationDataPromise;
 }

@@ -16,12 +16,12 @@ import type { CartSession } from "./cart-session";
 // flow runs under local miniflare where `env.AI` is unavailable.
 
 export type CartEvent =
-	| { kind: "add"; productId: number; mid: string }
-	| { kind: "command"; command: CartCommand; mid: string };
+	| { kind: "add"; mid: string; productId: number }
+	| { command: CartCommand; kind: "command"; mid: string };
 
 const payloadFromEvent = (
 	event: MessengerMessagingEvent,
-): { payload: string; mid: string } | undefined => {
+): { mid: string; payload: string } | undefined => {
 	// Postbacks (the Захиалах card button) carry NO message id, so a mid-only
 	// dedup key is empty and Meta's webhook retries bypass dedup → the cart
 	// summary double-sends. Meta re-delivers the SAME payload + timestamp on a
@@ -31,15 +31,15 @@ const payloadFromEvent = (
 		mid && mid.length > 0 ? mid : `syn:${event.timestamp ?? 0}:${payload}`;
 	if (event.postback?.payload) {
 		return {
-			payload: event.postback.payload,
 			mid: stableMid(event.postback.payload, event.postback.mid),
+			payload: event.postback.payload,
 		};
 	}
 	const quickReply = event.message?.quick_reply?.payload;
 	if (quickReply) {
 		return {
-			payload: quickReply,
 			mid: stableMid(quickReply, event.message?.mid),
+			payload: quickReply,
 		};
 	}
 	return undefined;
@@ -48,20 +48,22 @@ const payloadFromEvent = (
 // Classifies an incoming event as a cart event, or `undefined` when it is not
 // one (a plain text turn, an echo, a non-cart postback) so the caller can fall
 // through to the normal text-dispatch path.
-export const detectCartEvent = (
-	event: MessengerMessagingEvent,
-): CartEvent | undefined => {
-	if (event.message?.is_echo) return undefined;
+export const detectCartEvent = (event: MessengerMessagingEvent): CartEvent | undefined => {
+	if (event.message?.is_echo) {
+		return undefined;
+	}
 	const found = payloadFromEvent(event);
-	if (!found) return undefined;
+	if (!found) {
+		return undefined;
+	}
 
 	const orderId = parseOrderPayload(found.payload);
 	if (orderId !== undefined) {
-		return { kind: "add", productId: orderId, mid: found.mid };
+		return { kind: "add", mid: found.mid, productId: orderId };
 	}
 	const command = parseCartPayload(found.payload);
 	if (command !== undefined) {
-		return { kind: "command", command, mid: found.mid };
+		return { command, kind: "command", mid: found.mid };
 	}
 	return undefined;
 };
@@ -76,8 +78,7 @@ export interface CartEventDeps {
 	sendText: (text: string) => Promise<unknown>;
 }
 
-const PRODUCT_GONE_MESSAGE =
-	"Уучлаарай, энэ бараа одоо боломжгүй байна. Өөр бараа сонгоно уу.";
+const PRODUCT_GONE_MESSAGE = "Уучлаарай, энэ бараа одоо боломжгүй байна. Өөр бараа сонгоно уу.";
 
 // The DO mutation (addProduct/applyCommand) is the commit point and the webhook
 // dedupe claim is held against it. A failure AFTER the commit must NOT propagate
@@ -90,20 +91,14 @@ const bestEffortSend = async (send: () => Promise<unknown>): Promise<void> => {
 	try {
 		await send();
 	} catch (error) {
-		console.warn(
-			"[cart] post-commit send failed (cart state is durable):",
-			error,
-		);
+		console.warn("[cart] post-commit send failed (cart state is durable):", error);
 	}
 };
 
 // Applies a detected cart event and sends the resulting summary. Returns the
 // new cart (handy for tests/CLIs). Drives the whole add → view → adjust →
 // confirm lifecycle deterministically.
-export const handleCartEvent = async (
-	event: CartEvent,
-	deps: CartEventDeps,
-): Promise<Cart> => {
+export const handleCartEvent = async (event: CartEvent, deps: CartEventDeps): Promise<Cart> => {
 	if (event.kind === "add") {
 		// Pre-commit: a resolve failure may throw so the claim is released and the
 		// retry can re-resolve (no mutation has happened yet).

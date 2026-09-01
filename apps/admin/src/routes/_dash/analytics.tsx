@@ -28,13 +28,8 @@ import { trpc } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/analytics")({
 	component: RouteComponent,
-	pendingComponent: AnalyticsPageSkeleton,
-	validateSearch: v.object({
-		timeRange: v.optional(timeRangeSchema, "monthly"),
-	}),
 	loader: ({ context: ctx, location }) => {
-		const timeRange =
-			(location.search as { timeRange?: string })?.timeRange || "monthly";
+		const timeRange = (location.search as { timeRange?: string })?.timeRange || "monthly";
 		const tr = timeRange as "daily" | "weekly" | "monthly";
 
 		void ctx.queryClient.prefetchQuery(
@@ -56,6 +51,10 @@ export const Route = createFileRoute("/_dash/analytics")({
 			ctx.trpc.analytics.getMostViewedProducts.queryOptions({ timeRange: tr }),
 		);
 	},
+	pendingComponent: AnalyticsPageSkeleton,
+	validateSearch: v.object({
+		timeRange: v.optional(timeRangeSchema, "monthly"),
+	}),
 });
 
 const COLORS = [
@@ -68,21 +67,21 @@ const COLORS = [
 
 const TIME_RANGE_LABELS = {
 	daily: "Өнөөдөр",
-	weekly: "7 хоног",
 	monthly: "Сар",
+	weekly: "7 хоног",
 } as const;
 
 const TIME_RANGE_BUTTON_LABELS = {
 	daily: "Өдөр",
-	weekly: "7 хоног",
 	monthly: "Сар",
+	weekly: "7 хоног",
 } as const;
 
 const STAT_INTENT_CLASSES = {
-	neutral: "bg-muted text-muted-foreground",
-	good: "bg-green-100 text-green-700",
-	warn: "bg-primary text-primary-foreground",
 	bad: "bg-red-100 text-red-700",
+	good: "bg-green-100 text-green-700",
+	neutral: "bg-muted text-muted-foreground",
+	warn: "bg-primary text-primary-foreground",
 } as const;
 
 function safePercent(value: number, total: number) {
@@ -94,74 +93,70 @@ function formatPercent(value: number) {
 }
 
 function findBiggestDrop(steps: Array<{ label: string; value: number }>) {
-	let biggestDrop = { from: "", to: "", lost: 0 };
+	let biggestDrop = { from: "", lost: 0, to: "" };
 	for (let index = 1; index < steps.length; index++) {
 		const previous = steps[index - 1];
 		const current = steps[index];
 		const lost = Math.max(previous.value - current.value, 0);
 		if (lost > biggestDrop.lost) {
-			biggestDrop = { from: previous.label, to: current.label, lost };
+			biggestDrop = { from: previous.label, lost, to: current.label };
 		}
 	}
 	return biggestDrop;
 }
 
 function CompactStat({
-	label,
-	value,
 	caption,
 	icon: Icon,
 	intent = "neutral",
+	label,
+	value,
 }: {
-	label: string;
-	value: string;
 	caption: string;
 	icon: typeof BarChart3;
 	intent?: "neutral" | "good" | "warn" | "bad";
+	label: string;
+	value: string;
 }) {
 	const intentClass = STAT_INTENT_CLASSES[intent];
 
 	return (
-		<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+		<div className="border-border bg-card shadow-hard-sm border-2 p-3">
 			<div className="flex items-center justify-between gap-2">
-				<span className="font-black text-[10px] text-muted-foreground uppercase tracking-[0.12em]">
+				<span className="text-muted-foreground text-[10px] font-black tracking-[0.12em] uppercase">
 					{label}
 				</span>
 				<span
-					className={`flex h-7 w-7 shrink-0 items-center justify-center border-2 border-border ${intentClass}`}
+					className={`border-border flex h-7 w-7 shrink-0 items-center justify-center border-2 ${intentClass}`}
 				>
 					<Icon className="h-3.5 w-3.5" />
 				</span>
 			</div>
-			<p className="mt-2 font-black font-heading text-xl leading-none">{value}</p>
-			<p className="mt-1 text-[11px] text-muted-foreground leading-tight">
-				{caption}
-			</p>
+			<p className="font-heading mt-2 text-xl leading-none font-black">{value}</p>
+			<p className="text-muted-foreground mt-1 text-[11px] leading-tight">{caption}</p>
 		</div>
 	);
 }
 
 function SectionShell({
-	title,
 	caption,
-	icon: Icon,
 	children,
+	icon: Icon,
+	title,
 }: {
-	title: string;
 	caption?: string;
-	icon: typeof BarChart3;
 	children: React.ReactNode;
+	icon: typeof BarChart3;
+	title: string;
 }) {
 	return (
-		<section className="border-2 border-border bg-card shadow-hard-sm">
-			<div className="flex items-center justify-between gap-3 border-border border-b-2 bg-muted/30 px-3 py-2.5">
+		<section className="border-border bg-card shadow-hard-sm border-2">
+			<div className="border-border bg-muted/30 flex items-center justify-between gap-3 border-b-2 px-3 py-2.5">
 				<div className="flex min-w-0 items-center gap-2">
-					<Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-					<h2 className="truncate font-black font-heading text-sm">{title}</h2>
+					<Icon className="text-muted-foreground h-4 w-4 shrink-0" />
+					<h2 className="font-heading truncate text-sm font-black">{title}</h2>
 				</div>
-				{caption && (
-					<span className="shrink-0 text-muted-foreground text-xs">{caption}</span>
-				)}
+				{caption && <span className="text-muted-foreground shrink-0 text-xs">{caption}</span>}
 			</div>
 			{children}
 		</section>
@@ -205,8 +200,8 @@ function RouteComponent() {
 	const brandData = data.topBrands
 		.map((brand) => ({
 			name: brand.brandName,
-			revenue: brand.total,
 			qty: brand.quantity,
+			revenue: brand.total,
 		}))
 		.slice(0, 5);
 
@@ -219,17 +214,9 @@ function RouteComponent() {
 		webAnalytics.current.addToCarts,
 		webAnalytics.current.productViews,
 	);
-	const checkoutToPaymentRate = safePercent(
-		funnel.paymentConfirmers,
-		funnel.checkoutStarters,
-	);
-	const noResultSearches = topSearches.reduce(
-		(sum, search) => sum + search.noResultCount,
-		0,
-	);
-	const topSearchWithNoResults = topSearches.find(
-		(search) => search.noResultCount > 0,
-	);
+	const checkoutToPaymentRate = safePercent(funnel.paymentConfirmers, funnel.checkoutStarters);
+	const noResultSearches = topSearches.reduce((sum, search) => sum + search.noResultCount, 0);
+	const topSearchWithNoResults = topSearches.find((search) => search.noResultCount > 0);
 
 	const funnelSteps = [
 		{ label: "Зочин", value: funnel.visitors },
@@ -249,37 +236,36 @@ function RouteComponent() {
 
 	return (
 		<div className="space-y-3 pb-6">
-			<header className="border-2 border-border bg-card shadow-hard-sm">
-				<div className="flex items-start justify-between gap-3 border-border border-b-2 bg-primary p-3">
+			<header className="border-border bg-card shadow-hard-sm border-2">
+				<div className="border-border bg-primary flex items-start justify-between gap-3 border-b-2 p-3">
 					<div className="min-w-0">
-						<div className="mb-2 inline-flex items-center gap-1.5 border-2 border-border bg-card px-2 py-1 font-black text-[10px] uppercase tracking-[0.14em]">
+						<div className="border-border bg-card mb-2 inline-flex items-center gap-1.5 border-2 px-2 py-1 text-[10px] font-black tracking-[0.14em] uppercase">
 							<BarChart3 className="h-3 w-3" />
 							Дэлгүүрийн пульс
 						</div>
-						<h1 className="font-black font-heading text-2xl leading-none tracking-tight">
+						<h1 className="font-heading text-2xl leading-none font-black tracking-tight">
 							Аналитик
 						</h1>
-						<p className="mt-1 max-w-[42ch] font-medium text-sm leading-snug">
-							Юу зарагдаж байна, хаана алдаж байна, юуг өнөөдөр
-							нөхөх вэ.
+						<p className="mt-1 max-w-[42ch] text-sm leading-snug font-medium">
+							Юу зарагдаж байна, хаана алдаж байна, юуг өнөөдөр нөхөх вэ.
 						</p>
 					</div>
-					<div className="flex shrink-0 border-2 border-border bg-card shadow-hard-sm">
+					<div className="border-border bg-card shadow-hard-sm flex shrink-0 border-2">
 						{(["daily", "weekly", "monthly"] as const).map((range) => (
 							<button
-								key={range}
-								type="button"
-								onClick={() =>
-									navigate({
-										to: "/analytics",
-										search: { timeRange: range },
-									})
-								}
-								className={`px-3 py-2 font-black text-xs transition-colors active:translate-y-px ${
+								className={`px-3 py-2 text-xs font-black transition-colors active:translate-y-px ${
 									timeRange === range
 										? "bg-secondary text-secondary-foreground"
 										: "bg-card hover:bg-muted"
 								}`}
+								key={range}
+								onClick={() =>
+									navigate({
+										search: { timeRange: range },
+										to: "/analytics",
+									})
+								}
+								type="button"
 							>
 								{TIME_RANGE_BUTTON_LABELS[range]}
 							</button>
@@ -289,74 +275,70 @@ function RouteComponent() {
 
 				<div className="grid grid-cols-2 gap-2 p-2 md:grid-cols-4">
 					<CompactStat
-						label="Зочин → захиалга"
-						value={formatPercent(visitorToOrderRate)}
 						caption={`${funnel.orderPlacers.toLocaleString()} захиалга, ${funnel.visitors.toLocaleString()} зочиноос`}
 						icon={Target}
 						intent={visitorToOrderRate >= 2 ? "good" : "warn"}
+						label="Зочин → захиалга"
+						value={formatPercent(visitorToOrderRate)}
 					/>
 					<CompactStat
-						label="Ашиг"
-						value={formatCurrency(data.totalProfit)}
 						caption={`${timeRangeLabel} хугацааны цэвэр ашиг`}
 						icon={TrendingUp}
 						intent="good"
+						label="Ашиг"
+						value={formatCurrency(data.totalProfit)}
 					/>
 					<CompactStat
-						label="Дундаж сагс"
-						value={formatCurrency(Math.round(data.averageOrderValue / 1000) * 1000)}
 						caption="Нэг захиалгын дундаж дүн"
 						icon={DollarSign}
+						label="Дундаж сагс"
+						value={formatCurrency(Math.round(data.averageOrderValue / 1000) * 1000)}
 					/>
 					<CompactStat
-						label="Агуулах"
-						value={data.metrics.lowStockCount.toLocaleString()}
 						caption={stockCaption}
 						icon={Warehouse}
 						intent={data.metrics.lowStockCount > 0 ? "bad" : "good"}
+						label="Агуулах"
+						value={data.metrics.lowStockCount.toLocaleString()}
 					/>
 				</div>
 			</header>
 
 			<section className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-				<div className="border-2 border-border bg-card shadow-hard-sm">
-					<div className="border-border border-b-2 bg-secondary px-3 py-2.5 text-secondary-foreground">
+				<div className="border-border bg-card shadow-hard-sm border-2">
+					<div className="border-border bg-secondary text-secondary-foreground border-b-2 px-3 py-2.5">
 						<div className="flex items-center justify-between gap-2">
 							<div className="flex items-center gap-2">
 								<CheckCircle2 className="h-4 w-4" />
-								<h2 className="font-black font-heading text-sm">
-									Өнөөдрийн шийдвэрүүд
-								</h2>
+								<h2 className="font-heading text-sm font-black">Өнөөдрийн шийдвэрүүд</h2>
 							</div>
-							<span className="font-mono text-[10px] opacity-80">
-								{timeRangeLabel}
-							</span>
+							<span className="font-mono text-[10px] opacity-80">{timeRangeLabel}</span>
 						</div>
 					</div>
-					<div className="divide-y-2 divide-border">
+					<div className="divide-border divide-y-2">
 						<div className="grid gap-2 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
 							<div>
-								<p className="font-black text-sm">Хамгийн том алдагдал</p>
-								<p className="mt-1 text-muted-foreground text-xs leading-snug">
+								<p className="text-sm font-black">Хамгийн том алдагдал</p>
+								<p className="text-muted-foreground mt-1 text-xs leading-snug">
 									{biggestDrop.lost > 0
 										? `${biggestDrop.from} → ${biggestDrop.to} алхамд ${biggestDrop.lost.toLocaleString()} хэрэглэгч алдагдсан.`
 										: "Юүлүүрийн алхмууд тогтвортой байна."}
 								</p>
 							</div>
-							<Badge variant="secondary" className="w-fit font-mono text-xs">
+							<Badge className="w-fit font-mono text-xs" variant="secondary">
 								{formatPercent(checkoutToPaymentRate)} төлбөр баталсан
 							</Badge>
 						</div>
 
 						<div className="grid gap-2 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
 							<div>
-								<p className="font-black text-sm">Бараа үзэлт сагс болж байна уу?</p>
-								<p className="mt-1 text-muted-foreground text-xs leading-snug">
+								<p className="text-sm font-black">Бараа үзэлт сагс болж байна уу?</p>
+								<p className="text-muted-foreground mt-1 text-xs leading-snug">
 									{formatPercent(viewToCartRate)} үзэлт сагсанд нэмэгдсэн. Топ үзэгдсэн
 									бүтээгдэхүүнүүдийн үнэ, зураг, үлдэгдлийг шалга.
 								</p>
 							</div>
-							<div className="flex items-center gap-1 font-black text-sm">
+							<div className="flex items-center gap-1 text-sm font-black">
 								<ShoppingCart className="h-4 w-4" />
 								{webAnalytics.current.addToCarts.toLocaleString()}
 							</div>
@@ -364,14 +346,14 @@ function RouteComponent() {
 
 						<div className="grid gap-2 p-3 sm:grid-cols-[1fr_auto] sm:items-center">
 							<div>
-								<p className="font-black text-sm">Хайлт юуг хэлж байна?</p>
-								<p className="mt-1 text-muted-foreground text-xs leading-snug">
+								<p className="text-sm font-black">Хайлт юуг хэлж байна?</p>
+								<p className="text-muted-foreground mt-1 text-xs leading-snug">
 									{noResultSearches > 0 && topSearchWithNoResults
 										? `"${topSearchWithNoResults.query}" хайлт үр дүнгүй байна. Нэршил, синоним эсвэл шинэ бараа нэмэх боломжтой.`
 										: "Топ хайлтууд үр дүнтэй байна. Эрэлттэй үгсийг нүүр хуудас, категори дээр ашигла."}
 								</p>
 							</div>
-							<div className="flex items-center gap-1 font-black text-sm">
+							<div className="flex items-center gap-1 text-sm font-black">
 								<Search className="h-4 w-4" />
 								{noResultSearches.toLocaleString()}
 							</div>
@@ -381,20 +363,18 @@ function RouteComponent() {
 
 				<div className="space-y-3">
 					{failedCount > 0 && (
-						<div className="border-2 border-red-500 bg-red-50 shadow-hard-sm">
-							<div className="flex items-center gap-2 border-red-500 border-b-2 bg-red-100 px-3 py-2">
+						<div className="shadow-hard-sm border-2 border-red-500 bg-red-50">
+							<div className="flex items-center gap-2 border-b-2 border-red-500 bg-red-100 px-3 py-2">
 								<TrendingDown className="h-4 w-4 text-red-700" />
-								<span className="font-black text-red-800 text-sm">
-									Амжилтгүй төлбөр
-								</span>
+								<span className="text-sm font-black text-red-800">Амжилтгүй төлбөр</span>
 							</div>
 							<div className="grid grid-cols-[auto_1fr] items-center gap-3 p-3">
-								<p className="font-black font-heading text-4xl text-red-700 leading-none">
+								<p className="font-heading text-4xl leading-none font-black text-red-700">
 									{failedCount}
 								</p>
 								<div>
-									<p className="font-black text-sm">{formatCurrency(failedTotal)}</p>
-									<p className="text-red-700 text-xs">
+									<p className="text-sm font-black">{formatCurrency(failedTotal)}</p>
+									<p className="text-xs text-red-700">
 										Дахин холбогдож төлбөр баталгаажуулах боломжтой.
 									</p>
 								</div>
@@ -403,46 +383,44 @@ function RouteComponent() {
 					)}
 
 					{lowStockItems.length > 0 && (
-						<div className="border-2 border-border bg-primary shadow-hard-sm">
-							<div className="flex items-center justify-between border-border border-b-2 px-3 py-2">
+						<div className="border-border bg-primary shadow-hard-sm border-2">
+							<div className="border-border flex items-center justify-between border-b-2 px-3 py-2">
 								<div className="flex items-center gap-2">
 									<AlertTriangle className="h-4 w-4" />
-									<span className="font-black text-sm">Дуусах гэж буй бараа</span>
+									<span className="text-sm font-black">Дуусах гэж буй бараа</span>
 								</div>
 								<Link
+									className="flex items-center gap-1 text-xs font-black underline decoration-2 underline-offset-2"
 									to="/products"
-									className="flex items-center gap-1 font-black text-xs underline decoration-2 underline-offset-2"
 								>
 									Бүгд
 									<ArrowRight className="h-3 w-3" />
 								</Link>
 							</div>
-							<div className="divide-y-2 divide-border bg-card">
+							<div className="divide-border bg-card divide-y-2">
 								{lowStockItems.map((item) => (
 									<div
-										key={item.productId}
 										className="grid grid-cols-[auto_1fr_auto] items-center gap-2 p-2.5"
+										key={item.productId}
 									>
 										{item.imageUrl ? (
 											<img
-												src={item.imageUrl}
 												alt={item.name}
-												className="h-10 w-10 border-2 border-border object-cover"
+												className="border-border h-10 w-10 border-2 object-cover"
+												src={item.imageUrl}
 											/>
 										) : (
-											<div className="flex h-10 w-10 items-center justify-center border-2 border-border bg-muted">
-												<Package className="h-4 w-4 text-muted-foreground" />
+											<div className="border-border bg-muted flex h-10 w-10 items-center justify-center border-2">
+												<Package className="text-muted-foreground h-4 w-4" />
 											</div>
 										)}
 										<div className="min-w-0">
-											<p className="truncate font-black text-sm leading-tight">
-												{item.name}
-											</p>
-											<p className="font-mono text-[10px] text-muted-foreground">
+											<p className="truncate text-sm leading-tight font-black">{item.name}</p>
+											<p className="text-muted-foreground font-mono text-[10px]">
 												{formatCurrency(item.price)}
 											</p>
 										</div>
-										<Badge variant="outline" className="bg-primary font-black text-[10px]">
+										<Badge className="bg-primary text-[10px] font-black" variant="outline">
 											{item.stock} үлдсэн
 										</Badge>
 									</div>
@@ -454,35 +432,34 @@ function RouteComponent() {
 			</section>
 
 			<section className="grid gap-3 lg:grid-cols-2">
-				<SectionShell title="Ангиллын орлого" caption={timeRangeLabel} icon={BarChart3}>
+				<SectionShell caption={timeRangeLabel} icon={BarChart3} title="Ангиллын орлого">
 					{categoryData.length > 0 ? (
 						<div className="grid gap-3 p-3 sm:grid-cols-[140px_1fr] sm:items-center">
 							<div className="mx-auto h-[140px] w-[140px]">
-								<ResponsiveContainer width="100%" height="100%">
+								<ResponsiveContainer height="100%" width="100%">
 									<PieChart>
 										<Pie
-											data={categoryData}
 											cx="50%"
 											cy="50%"
+											data={categoryData}
+											dataKey="value"
 											innerRadius={34}
 											outerRadius={64}
 											paddingAngle={2}
-											dataKey="value"
 											stroke="var(--color-border)"
 											strokeWidth={2}
 										>
 											{categoryData.map((cat, index) => (
-												<Cell
-													key={cat.name}
-													fill={COLORS[index % COLORS.length]}
-												/>
+												<Cell fill={COLORS[index % COLORS.length]} key={cat.name} />
 											))}
 										</Pie>
 										<Tooltip
 											content={({ active, payload }) => {
-												if (!active || !payload?.length) return null;
+												if (!active || !payload?.length) {
+													return null;
+												}
 												return (
-													<div className="border-2 border-border bg-card p-2 text-[10px] shadow-hard-sm">
+													<div className="border-border bg-card shadow-hard-sm border-2 p-2 text-[10px]">
 														<p className="font-black">{payload[0].name}</p>
 														<p className="font-mono">
 															{formatCurrency(payload[0].value as number)}
@@ -495,11 +472,11 @@ function RouteComponent() {
 								</ResponsiveContainer>
 							</div>
 							<div className="space-y-2">
-								<div className="border-2 border-border bg-primary p-2">
-									<p className="font-black text-[10px] uppercase tracking-[0.12em]">
+								<div className="border-border bg-primary border-2 p-2">
+									<p className="text-[10px] font-black tracking-[0.12em] uppercase">
 										Тэргүүлэх ангилал
 									</p>
-									<p className="mt-1 font-black font-heading text-xl leading-none">
+									<p className="font-heading mt-1 text-xl leading-none font-black">
 										{categoryData[0]?.name}
 									</p>
 									<p className="mt-1 text-xs">
@@ -507,13 +484,16 @@ function RouteComponent() {
 									</p>
 								</div>
 								{categoryData.map((cat, i) => (
-									<div key={cat.name} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs">
+									<div
+										className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs"
+										key={cat.name}
+									>
 										<div
-											className="h-3 w-3 border border-border"
+											className="border-border h-3 w-3 border"
 											style={{ backgroundColor: COLORS[i % COLORS.length] }}
 										/>
 										<span className="truncate font-bold">{cat.name}</span>
-										<span className="font-mono text-muted-foreground">
+										<span className="text-muted-foreground font-mono">
 											₮{(cat.value / 1000).toFixed(0)}k
 										</span>
 									</div>
@@ -521,41 +501,39 @@ function RouteComponent() {
 							</div>
 						</div>
 					) : (
-						<div className="p-6 text-center text-muted-foreground text-sm">
+						<div className="text-muted-foreground p-6 text-center text-sm">
 							Ангиллын борлуулалтын өгөгдөл байхгүй.
 						</div>
 					)}
 				</SectionShell>
 
-				<SectionShell title="Брэндийн хүч" caption={timeRangeLabel} icon={Award}>
+				<SectionShell caption={timeRangeLabel} icon={Award} title="Брэндийн хүч">
 					{brandData.length > 0 ? (
-						<div className="divide-y-2 divide-border">
+						<div className="divide-border divide-y-2">
 							{brandData.map((brand, index) => {
 								const maxRevenue = brandData[0]?.revenue || 1;
 								const percentage = safePercent(brand.revenue, maxRevenue);
 								return (
-									<div key={brand.name} className="p-3">
+									<div className="p-3" key={brand.name}>
 										<div className="mb-2 flex items-center justify-between gap-3">
 											<div className="flex min-w-0 items-center gap-2">
-												<div className="flex h-7 w-7 shrink-0 items-center justify-center border-2 border-border bg-primary font-black font-heading text-xs">
+												<div className="border-border bg-primary font-heading flex h-7 w-7 shrink-0 items-center justify-center border-2 text-xs font-black">
 													{index + 1}
 												</div>
 												<div className="min-w-0">
-													<p className="truncate font-black text-sm leading-tight">
-														{brand.name}
-													</p>
-													<p className="text-[10px] text-muted-foreground">
+													<p className="truncate text-sm leading-tight font-black">{brand.name}</p>
+													<p className="text-muted-foreground text-[10px]">
 														{brand.qty} ширхэг зарагдсан
 													</p>
 												</div>
 											</div>
-											<span className="shrink-0 font-black font-mono text-xs">
+											<span className="shrink-0 font-mono text-xs font-black">
 												₮{(brand.revenue / 1000).toFixed(0)}k
 											</span>
 										</div>
-										<div className="h-3 border-2 border-border bg-muted">
+										<div className="border-border bg-muted h-3 border-2">
 											<div
-												className="h-full border-border border-r-2 bg-primary"
+												className="border-border bg-primary h-full border-r-2"
 												style={{ width: `${percentage}%` }}
 											/>
 										</div>
@@ -564,7 +542,7 @@ function RouteComponent() {
 							})}
 						</div>
 					) : (
-						<div className="p-6 text-center text-muted-foreground text-sm">
+						<div className="text-muted-foreground p-6 text-center text-sm">
 							Брэндийн борлуулалтын өгөгдөл байхгүй.
 						</div>
 					)}
@@ -572,30 +550,30 @@ function RouteComponent() {
 			</section>
 
 			<WebAnalytics
-				webAnalytics={webAnalytics}
-				funnel={funnel}
 				dailyTrend={dailyTrend}
+				funnel={funnel}
 				timeRangeLabel={timeRangeLabel}
+				webAnalytics={webAnalytics}
 			/>
 
 			<ProductPerformance
 				mostViewedProducts={mostViewedProducts}
-				topSearches={topSearches}
 				timeRangeLabel={timeRangeLabel}
+				topSearches={topSearches}
 			/>
 
 			<div className="grid grid-cols-2 gap-2">
 				<CompactStat
-					label="Давтан худалдан авагч"
-					value={data.repeatCustomers.toLocaleString()}
 					caption="Ижил хугацаанд дахин захиалсан хэрэглэгч"
 					icon={Users}
+					label="Давтан худалдан авагч"
+					value={data.repeatCustomers.toLocaleString()}
 				/>
 				<CompactStat
-					label="Барааны үнэлгээ"
-					value={`${data.metrics.currentProductsValue.toLocaleString("en-US")}₮`}
 					caption="Одоогийн агуулахын нийт үнэ"
 					icon={Package}
+					label="Барааны үнэлгээ"
+					value={`${data.metrics.currentProductsValue.toLocaleString("en-US")}₮`}
 				/>
 			</div>
 		</div>

@@ -1,18 +1,6 @@
 import { PRODUCT_REVIEW_CUTOFF_DATE, type status } from "@vit/shared/constants";
 import type { SQL } from "drizzle-orm";
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	gt,
-	inArray,
-	isNull,
-	like,
-	lt,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
@@ -23,60 +11,31 @@ type DbOrTx = ReturnType<typeof db> | TransactionType;
 
 type ProductStatus = (typeof status)[number];
 
-import {
-	hydrateProductsBySearchIds,
-	searchProductIds,
-} from "~/queries/products/shared";
+import { hydrateProductsBySearchIds, searchProductIds } from "~/queries/products/shared";
 
 export const adminQueries = {
-	async searchByName(searchTerm: string, limit = 3) {
-		const ids = await searchProductIds(searchTerm, limit);
-		if (ids.length === 0) return [];
-
-		return hydrateProductsBySearchIds(
-			ids,
-			(productIds) =>
-				db().query.ProductsTable.findMany({
-					where: and(
-						isNull(ProductsTable.deletedAt),
-						inArray(ProductsTable.id, productIds),
-					),
-					with: {
-						images: { where: isNull(ProductImagesTable.deletedAt) },
-					},
-				}),
-			limit,
-		);
-	},
-
-	async getBrandById(brandId: number) {
-		return db().query.BrandsTable.findFirst({
-			where: eq(BrandsTable.id, brandId),
-		});
-	},
-
 	async createProduct(
 		data: {
-			name: string;
-			slug: string;
+			amount: string;
+			brandId: number;
+			categoryId: number;
+			dailyIntake: number;
 			description: string;
 			discount: number;
-			amount: string;
-			potency: string;
-			stock: number;
-			price: number;
-			dailyIntake: number;
-			categoryId: number;
-			brandId: number;
-			status: ProductStatus;
+			expirationDate?: string | null;
+			ingredients?: Array<string>;
+			name: string;
 			// Optional AI-extracted fields
 			name_mn?: string | null;
-			ingredients?: string[];
-			tags?: string[];
-			seoTitle?: string | null;
+			potency: string;
+			price: number;
 			seoDescription?: string | null;
+			seoTitle?: string | null;
+			slug: string;
+			status: ProductStatus;
+			stock: number;
+			tags?: Array<string>;
 			weightGrams?: number;
-			expirationDate?: string | null;
 		},
 		tx?: DbOrTx,
 	) {
@@ -87,145 +46,19 @@ export const adminQueries = {
 
 	async createProductImages(
 		productId: number,
-		images: Array<{ url: string; isPrimary: boolean }>,
+		images: Array<{ isPrimary: boolean; url: string }>,
 		tx?: DbOrTx,
 	) {
-		if (images.length === 0) return;
+		if (images.length === 0) {
+			return;
+		}
 		const conn = tx ?? db();
 		const values = images.map((img) => ({
+			isPrimary: img.isPrimary,
 			productId,
 			url: img.url,
-			isPrimary: img.isPrimary,
 		}));
 		await conn.insert(ProductImagesTable).values(values);
-	},
-
-	async getProductBenchmark() {
-		return db().query.ProductsTable.findMany({
-			with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
-		});
-	},
-
-	async getProductById(id: number) {
-		return db().query.ProductsTable.findFirst({
-			where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
-			with: {
-				images: {
-					columns: { id: true, url: true, isPrimary: true },
-					where: isNull(ProductImagesTable.deletedAt),
-				},
-				category: { columns: { name: true } },
-				brand: { columns: { name: true } },
-			},
-		});
-	},
-
-	async getProductBySlug(slug: string) {
-		return db().query.ProductsTable.findFirst({
-			where: and(eq(ProductsTable.slug, slug), isNull(ProductsTable.deletedAt)),
-			columns: { id: true, slug: true },
-		});
-	},
-
-	async updateProduct(
-		id: number,
-		data: {
-			name: string;
-			slug: string;
-			description?: string;
-			discount?: number;
-			amount?: string;
-			potency?: string;
-			stock?: number;
-			price?: number;
-			dailyIntake?: number;
-			categoryId?: number;
-			brandId?: number;
-			status?: ProductStatus;
-			expirationDate?: string | null;
-		},
-	) {
-		return db().transaction(async (tx) => {
-			const [currentProduct] = await tx
-				.select({ slug: ProductsTable.slug, oldSlugs: ProductsTable.oldSlugs })
-				.from(ProductsTable)
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
-				.for("update");
-			if (!currentProduct) return null;
-
-			const { stock, ...productData } = data;
-			const oldSlugs = [
-				...new Set(
-					currentProduct.oldSlugs.filter((slug) => slug !== data.slug),
-				),
-			];
-			if (
-				currentProduct.slug !== data.slug &&
-				!oldSlugs.includes(currentProduct.slug)
-			) {
-				oldSlugs.push(currentProduct.slug);
-			}
-			await tx
-				.update(ProductsTable)
-				.set({ ...productData, oldSlugs })
-				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
-			return stock === undefined
-				? null
-				: applyStockTransition(tx, { productId: id, setTo: stock });
-		});
-	},
-
-	async getProductImages(productId: number) {
-		return db()
-			.select({ id: ProductImagesTable.id, url: ProductImagesTable.url })
-			.from(ProductImagesTable)
-			.where(
-				and(
-					eq(ProductImagesTable.productId, productId),
-					isNull(ProductImagesTable.deletedAt),
-				),
-			);
-	},
-
-	async softDeleteProductImages(productId: number) {
-		const images = await this.getProductImages(productId);
-		const deletePromises = images.map((image) =>
-			db()
-				.update(ProductImagesTable)
-				.set({ deletedAt: new Date() })
-				.where(
-					and(
-						eq(ProductImagesTable.id, image.id),
-						isNull(ProductImagesTable.deletedAt),
-					),
-				),
-		);
-		await Promise.allSettled(deletePromises);
-	},
-
-	async updateStock(
-		productId: number,
-		numberToUpdate: number,
-		type: "add" | "minus",
-	) {
-		return db().transaction((tx) =>
-			applyStockTransition(tx, {
-				productId,
-				delta: type === "add" ? numberToUpdate : -numberToUpdate,
-			}),
-		);
-	},
-
-	async updateStockTx(
-		tx: TransactionType,
-		productId: number,
-		numberToUpdate: number,
-		type: "add" | "minus",
-	) {
-		return applyStockTransition(tx, {
-			productId,
-			delta: type === "add" ? numberToUpdate : -numberToUpdate,
-		});
 	},
 
 	async deleteProduct(id: number) {
@@ -240,63 +73,72 @@ export const adminQueries = {
 			where: isNull(ProductsTable.deletedAt),
 			with: {
 				images: {
-					columns: { id: true, url: true, isPrimary: true },
+					columns: { id: true, isPrimary: true, url: true },
 					where: isNull(ProductImagesTable.deletedAt),
 				},
 			},
 		});
 	},
 
+	async getAllProductValue() {
+		const result = await db()
+			.select({ price: ProductsTable.price, stock: ProductsTable.stock })
+			.from(ProductsTable)
+			.where(isNull(ProductsTable.deletedAt));
+		return result.reduce((acc, product) => acc + product.price * product.stock, 0);
+	},
+
+	async getBrandById(brandId: number) {
+		return db().query.BrandsTable.findFirst({
+			where: eq(BrandsTable.id, brandId),
+		});
+	},
+
 	async getPaginatedProducts(params: {
-		page: number;
-		pageSize: number;
 		brandId?: number;
 		categoryId?: number;
-		status?: ProductStatus;
-		sortField?: string;
-		sortDirection?: "asc" | "desc";
+		page: number;
+		pageSize: number;
 		searchTerm?: string;
+		sortDirection?: "asc" | "desc";
+		sortField?: string;
+		status?: ProductStatus;
 	}) {
-		const conditions: (SQL<unknown> | undefined)[] = [];
-		let searchIds: number[] | undefined;
-		if (params.brandId !== undefined && params.brandId !== 0)
+		const conditions: Array<SQL<unknown> | undefined> = [];
+		let searchIds: Array<number> | undefined;
+		if (params.brandId !== undefined && params.brandId !== 0) {
 			conditions.push(eq(ProductsTable.brandId, params.brandId));
-		if (params.categoryId !== undefined && params.categoryId !== 0)
+		}
+		if (params.categoryId !== undefined && params.categoryId !== 0) {
 			conditions.push(eq(ProductsTable.categoryId, params.categoryId));
+		}
 		if (params.status !== undefined) {
 			conditions.push(eq(ProductsTable.status, params.status));
 		}
 		if (params.searchTerm !== undefined && params.searchTerm.trim() !== "") {
-			const searchResults = await searchProducts(
-				params.searchTerm.trim(),
-				1000,
-				{
-					brandId:
-						params.brandId !== undefined && params.brandId !== 0
-							? params.brandId
-							: undefined,
-					categoryId:
-						params.categoryId !== undefined && params.categoryId !== 0
-							? params.categoryId
-							: undefined,
-				},
-			);
+			const searchResults = await searchProducts(params.searchTerm.trim(), 1000, {
+				brandId: params.brandId !== undefined && params.brandId !== 0 ? params.brandId : undefined,
+				categoryId:
+					params.categoryId !== undefined && params.categoryId !== 0
+						? params.categoryId
+						: undefined,
+			});
 			searchIds = searchResults.map((result) => result.id);
 
 			if (searchIds.length === 0) {
 				return {
-					products: [],
 					pagination: {
 						currentPage: params.page,
 						hasNextPage: false,
 						hasPreviousPage: params.page > 1,
 					},
+					products: [],
 				};
 			}
 
 			conditions.push(inArray(ProductsTable.id, searchIds));
 		}
-		const orderByClauses: SQL<unknown>[] = [];
+		const orderByClauses: Array<SQL<unknown>> = [];
 		// Date sort uses last-modified time; never-updated products fall
 		// back to created_at since updated_at is NULL until first update.
 		const primarySortColumn =
@@ -306,14 +148,9 @@ export const adminQueries = {
 					? ProductsTable.stock
 					: sql`coalesce(${ProductsTable.updatedAt}, ${ProductsTable.createdAt})`;
 		const primaryOrderBy =
-			params.sortDirection === "asc"
-				? asc(primarySortColumn)
-				: desc(primarySortColumn);
-		orderByClauses.push(primaryOrderBy);
-		orderByClauses.push(asc(ProductsTable.id));
-		const finalConditions = conditions.filter(
-			(c): c is SQL<unknown> => c !== undefined,
-		);
+			params.sortDirection === "asc" ? asc(primarySortColumn) : desc(primarySortColumn);
+		orderByClauses.push(primaryOrderBy, asc(ProductsTable.id));
+		const finalConditions = conditions.filter((c): c is SQL<unknown> => c !== undefined);
 		const offset = (params.page - 1) * params.pageSize;
 
 		if (searchIds !== undefined && params.sortField === undefined) {
@@ -327,23 +164,21 @@ export const adminQueries = {
 			const byId = new Map(products.map((product) => [product.id, product]));
 			const orderedProducts = searchIds
 				.map((id) => byId.get(id))
-				.filter((product): product is NonNullable<typeof product> =>
-					Boolean(product),
-				);
+				.filter((product): product is NonNullable<typeof product> => Boolean(product));
 
 			return {
-				products: orderedProducts.slice(offset, offset + params.pageSize),
 				pagination: {
 					currentPage: params.page,
 					hasNextPage: offset + params.pageSize < orderedProducts.length,
 					hasPreviousPage: params.page > 1,
 				},
+				products: orderedProducts.slice(offset, offset + params.pageSize),
 			};
 		}
 
 		const items = await db().query.ProductsTable.findMany({
 			limit: params.pageSize + 1,
-			offset: offset,
+			offset,
 			orderBy: orderByClauses,
 			where: and(
 				isNull(ProductsTable.deletedAt),
@@ -356,37 +191,146 @@ export const adminQueries = {
 		const products = hasNextPage ? items.slice(0, params.pageSize) : items;
 
 		return {
-			products,
 			pagination: {
 				currentPage: params.page,
 				hasNextPage,
 				hasPreviousPage: params.page > 1,
 			},
+			products,
 		};
 	},
 
+	async getProductBenchmark() {
+		return db().query.ProductsTable.findMany({
+			with: { images: { where: isNull(ProductImagesTable.deletedAt) } },
+		});
+	},
+
+	async getProductById(id: number) {
+		return db().query.ProductsTable.findFirst({
+			where: and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)),
+			with: {
+				brand: { columns: { name: true } },
+				category: { columns: { name: true } },
+				images: {
+					columns: { id: true, isPrimary: true, url: true },
+					where: isNull(ProductImagesTable.deletedAt),
+				},
+			},
+		});
+	},
+
+	async getProductBySlug(slug: string) {
+		return db().query.ProductsTable.findFirst({
+			columns: { id: true, slug: true },
+			where: and(eq(ProductsTable.slug, slug), isNull(ProductsTable.deletedAt)),
+		});
+	},
+
+	async getProductImages(productId: number) {
+		return db()
+			.select({ id: ProductImagesTable.id, url: ProductImagesTable.url })
+			.from(ProductImagesTable)
+			.where(
+				and(eq(ProductImagesTable.productId, productId), isNull(ProductImagesTable.deletedAt)),
+			);
+	},
+
+	async getReviewProducts() {
+		const reviewCutoff = new Date(PRODUCT_REVIEW_CUTOFF_DATE);
+		return db().query.ProductsTable.findMany({
+			orderBy: sql`${ProductsTable.updatedAt} ASC NULLS FIRST`,
+			where: and(
+				isNull(ProductsTable.deletedAt),
+				eq(ProductsTable.status, "active"),
+				or(isNull(ProductsTable.updatedAt), lt(ProductsTable.updatedAt, reviewCutoff)),
+			),
+			with: {
+				brand: { columns: { name: true } },
+				category: { columns: { name: true } },
+				images: {
+					where: isNull(ProductImagesTable.deletedAt),
+				},
+			},
+		});
+	},
+
+	async searchByName(searchTerm: string, limit = 3) {
+		const ids = await searchProductIds(searchTerm, limit);
+		if (ids.length === 0) {
+			return [];
+		}
+
+		return hydrateProductsBySearchIds(
+			ids,
+			(productIds) =>
+				db().query.ProductsTable.findMany({
+					where: and(isNull(ProductsTable.deletedAt), inArray(ProductsTable.id, productIds)),
+					with: {
+						images: { where: isNull(ProductImagesTable.deletedAt) },
+					},
+				}),
+			limit,
+		);
+	},
+
 	async setProductStock(id: number, newStock: number) {
-		return db().transaction((tx) =>
-			applyStockTransition(tx, { productId: id, setTo: newStock }),
-		);
+		return db().transaction((tx) => applyStockTransition(tx, { productId: id, setTo: newStock }));
 	},
 
-	async getAllProductValue() {
-		const result = await db()
-			.select({ stock: ProductsTable.stock, price: ProductsTable.price })
-			.from(ProductsTable)
-			.where(isNull(ProductsTable.deletedAt));
-		return result.reduce(
-			(acc, product) => acc + product.price * product.stock,
-			0,
+	async softDeleteProductImages(productId: number) {
+		const images = await this.getProductImages(productId);
+		const deletePromises = images.map((image) =>
+			db()
+				.update(ProductImagesTable)
+				.set({ deletedAt: new Date() })
+				.where(and(eq(ProductImagesTable.id, image.id), isNull(ProductImagesTable.deletedAt))),
 		);
+		await Promise.allSettled(deletePromises);
 	},
 
-	async updateProductField(
+	async updateProduct(
 		id: number,
-		field: string,
-		value: string | number | null,
+		data: {
+			amount?: string;
+			brandId?: number;
+			categoryId?: number;
+			dailyIntake?: number;
+			description?: string;
+			discount?: number;
+			expirationDate?: string | null;
+			name: string;
+			potency?: string;
+			price?: number;
+			slug: string;
+			status?: ProductStatus;
+			stock?: number;
+		},
 	) {
+		return db().transaction(async (tx) => {
+			const [currentProduct] = await tx
+				.select({ oldSlugs: ProductsTable.oldSlugs, slug: ProductsTable.slug })
+				.from(ProductsTable)
+				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)))
+				.for("update");
+			if (!currentProduct) {
+				return null;
+			}
+
+			const { stock, ...productData } = data;
+			const oldSlugs = [...new Set(currentProduct.oldSlugs.filter((slug) => slug !== data.slug))];
+			if (currentProduct.slug !== data.slug && !oldSlugs.includes(currentProduct.slug)) {
+				oldSlugs.push(currentProduct.slug);
+			}
+			await tx
+				.update(ProductsTable)
+				.set({ ...productData, oldSlugs })
+				.where(and(eq(ProductsTable.id, id), isNull(ProductsTable.deletedAt)));
+			return stock === undefined ? null : applyStockTransition(tx, { productId: id, setTo: stock });
+		});
+	},
+
+	async updateProductField(id: number, field: string, value: string | number | null) {
 		if (field === "stock" && typeof value === "number") {
 			return this.setProductStock(id, value);
 		}
@@ -397,25 +341,24 @@ export const adminQueries = {
 		return null;
 	},
 
-	async getReviewProducts() {
-		const reviewCutoff = new Date(PRODUCT_REVIEW_CUTOFF_DATE);
-		return db().query.ProductsTable.findMany({
-			where: and(
-				isNull(ProductsTable.deletedAt),
-				eq(ProductsTable.status, "active"),
-				or(
-					isNull(ProductsTable.updatedAt),
-					lt(ProductsTable.updatedAt, reviewCutoff),
-				),
-			),
-			orderBy: sql`${ProductsTable.updatedAt} ASC NULLS FIRST`,
-			with: {
-				images: {
-					where: isNull(ProductImagesTable.deletedAt),
-				},
-				category: { columns: { name: true } },
-				brand: { columns: { name: true } },
-			},
+	async updateStock(productId: number, numberToUpdate: number, type: "add" | "minus") {
+		return db().transaction((tx) =>
+			applyStockTransition(tx, {
+				delta: type === "add" ? numberToUpdate : -numberToUpdate,
+				productId,
+			}),
+		);
+	},
+
+	async updateStockTx(
+		tx: TransactionType,
+		productId: number,
+		numberToUpdate: number,
+		type: "add" | "minus",
+	) {
+		return applyStockTransition(tx, {
+			delta: type === "add" ? numberToUpdate : -numberToUpdate,
+			productId,
 		});
 	},
 };

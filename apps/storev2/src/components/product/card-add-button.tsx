@@ -9,18 +9,15 @@ import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
-import {
-	useInventorySnapshot,
-	useInventoryVerification,
-} from "./inventory-reconciler";
+import { useInventorySnapshot, useInventoryVerification } from "./inventory-reconciler";
 import RestockNotifySheet from "./restock-notify-sheet";
 
 interface CardAddButtonProps {
 	cartItem: CartItems;
-	outOfStock?: boolean;
-	productName?: string;
 	disabled?: boolean;
 	onAdd?: () => void;
+	outOfStock?: boolean;
+	productName?: string;
 }
 
 const stateClass =
@@ -32,10 +29,18 @@ const cardAddLabel = (
 	added: boolean,
 	productName: string,
 ) => {
-	if (verificationStatus === "degraded") return "Нөөц баталгаажаагүй";
-	if (verificationStatus === "checking") return "Нөөц шалгаж байна";
-	if (outOfStock) return `Мэдэгдэл авах: ${productName}`;
-	if (added) return `Сагсанд нэмэгдлээ: ${productName}`;
+	if (verificationStatus === "degraded") {
+		return "Нөөц баталгаажаагүй";
+	}
+	if (verificationStatus === "checking") {
+		return "Нөөц шалгаж байна";
+	}
+	if (outOfStock) {
+		return `Мэдэгдэл авах: ${productName}`;
+	}
+	if (added) {
+		return `Сагсанд нэмэгдлээ: ${productName}`;
+	}
 	return `Сагслах: ${productName}`;
 };
 
@@ -59,13 +64,17 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	const price = () => inventory()?.price ?? props.cartItem.price;
 
 	const handleAdd = (event: MouseEvent) => {
-		if (props.disabled || !isInventoryVerified()) return;
+		if (props.disabled || !isInventoryVerified()) {
+			return;
+		}
 		if (isOutOfStock()) {
 			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
 			setNotifyOpen(true);
 			return;
 		}
-		if (isAdded()) return;
+		if (isAdded()) {
+			return;
+		}
 		props.onAdd?.();
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
@@ -76,14 +85,6 @@ const CardAddButton = (props: CardAddButtonProps) => {
 	return (
 		<>
 			<button
-				type="button"
-				onClick={handleAdd}
-				disabled={
-					props.disabled ||
-					!isInventoryVerified() ||
-					(!isOutOfStock() && isAdded())
-				}
-				data-inventory-verification={verification().status}
 				aria-label={cardAddLabel(
 					verification().status,
 					isOutOfStock(),
@@ -91,37 +92,30 @@ const CardAddButton = (props: CardAddButtonProps) => {
 					props.productName ?? props.cartItem.name,
 				)}
 				class={cn(
-					"flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cocoa bg-primary text-primary-foreground shadow-pop-sm transition-[transform,box-shadow,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+					"border-cocoa bg-primary text-primary-foreground shadow-pop-sm focus-visible:ring-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-[transform,box-shadow,background-color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
 					"active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
 					isAdded() &&
 						!isOutOfStock() &&
 						"animate-cart-add-stamp bg-success text-success-foreground",
-					isOutOfStock() &&
-						"border-border bg-card text-foreground shadow-soft-sm",
-					!isInventoryVerified() &&
-						"border-border bg-muted text-muted-foreground shadow-none",
+					isOutOfStock() && "border-border bg-card text-foreground shadow-soft-sm",
+					!isInventoryVerified() && "border-border bg-muted text-muted-foreground shadow-none",
 				)}
+				data-inventory-verification={verification().status}
+				disabled={props.disabled || !isInventoryVerified() || (!isOutOfStock() && isAdded())}
+				onClick={handleAdd}
+				type="button"
 			>
-				<Show
-					when={!isOutOfStock()}
-					fallback={<IconNotification class="h-5 w-5" />}
-				>
+				<Show fallback={<IconNotification class="h-5 w-5" />} when={!isOutOfStock()}>
 					<span class="grid place-items-center">
 						<span
-							class={cn(
-								stateClass,
-								isAdded() && "-rotate-[100deg] scale-25 opacity-0 blur-[2px]",
-							)}
 							aria-hidden={isAdded()}
+							class={cn(stateClass, isAdded() && "scale-25 -rotate-[100deg] opacity-0 blur-[2px]")}
 						>
 							<IconShoppingCart class="h-5 w-5" strokeWidth={2} />
 						</span>
 						<span
-							class={cn(
-								stateClass,
-								!isAdded() && "rotate-[100deg] scale-25 opacity-0 blur-[2px]",
-							)}
 							aria-hidden={!isAdded()}
+							class={cn(stateClass, !isAdded() && "scale-25 rotate-[100deg] opacity-0 blur-[2px]")}
 						>
 							<IconCheck class="h-5 w-5" />
 						</span>
@@ -130,11 +124,11 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			</button>
 			<Show when={isOutOfStock() && notifyOpen()}>
 				<RestockNotifySheet
-					open={notifyOpen()}
+					focusRestore={restockSheetFocusRestore}
 					onOpenChange={setNotifyOpen}
+					open={notifyOpen()}
 					productId={props.cartItem.productId}
 					productName={props.productName ?? props.cartItem.name}
-					focusRestore={restockSheetFocusRestore}
 				/>
 			</Show>
 		</>

@@ -1,19 +1,9 @@
 import { makePersisted } from "@solid-primitives/storage";
 import type { CartItems } from "@vit/shared/types";
-import {
-	createEffect,
-	createMemo,
-	createRoot,
-	createSignal,
-	type Accessor,
-} from "solid-js";
+import { createEffect, createMemo, createRoot, createSignal, type Accessor } from "solid-js";
 import { createStore } from "solid-js/store";
 import { onMount } from "solid-js";
-import {
-	trackAddToCart,
-	trackCartOpened,
-	trackRemoveFromCart,
-} from "@/lib/analytics";
+import { trackAddToCart, trackCartOpened, trackRemoveFromCart } from "@/lib/analytics";
 import { safeStorage } from "@/lib/safe-storage";
 
 /**
@@ -40,13 +30,13 @@ export const cart = createRoot(() => {
 	const [isDrawerOpen, setIsDrawerOpen] = createSignal(false);
 
 	const [cartStore, setCart] = makePersisted(
-		createStore<{ items: CartItems[] }>({
+		createStore<{ items: Array<CartItems> }>({
 			items: [],
 		}),
 		{
+			deferInit: true,
 			name: "cart-items",
 			storage: safeStorage,
-			deferInit: true,
 		},
 	);
 
@@ -64,9 +54,7 @@ export const cart = createRoot(() => {
 		cartStore.items.reduce((acc, item) => acc + item.price * item.quantity, 0),
 	);
 
-	const count = createMemo(() =>
-		cartStore.items.reduce((acc, item) => acc + item.quantity, 0),
-	);
+	const count = createMemo(() => cartStore.items.reduce((acc, item) => acc + item.quantity, 0));
 
 	const isEmpty = createMemo(() => cartStore.items.length === 0);
 
@@ -75,37 +63,15 @@ export const cart = createRoot(() => {
 	// fire inside islands), so `createCartState()` below mirrors the proven
 	// local-`onMount` pattern and feeds this same derivation.
 	const state = createMemo<"loading" | "empty" | "ready">(() => {
-		if (!isHydrated()) return "loading";
+		if (!isHydrated()) {
+			return "loading";
+		}
 		return isEmpty() ? "empty" : "ready";
 	});
 
 	return {
-		items() {
-			return cartStore.items;
-		},
-		isHydrated() {
-			return isHydrated();
-		},
-		isEmpty() {
-			return isEmpty();
-		},
-		state() {
-			return state();
-		},
-		isDrawerOpen() {
-			return isDrawerOpen();
-		},
-		openDrawer: () => {
-			trackCartOpened(count(), total());
-			setIsDrawerOpen(true);
-		},
-		closeDrawer: () => setIsDrawerOpen(false),
-		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
-
 		add: (product: CartItems, options?: { openDrawer?: boolean }) => {
-			const index = cartStore.items.findIndex(
-				(item) => item.productId === product.productId,
-			);
+			const index = cartStore.items.findIndex((item) => item.productId === product.productId);
 
 			if (index !== -1) {
 				setCart("items", index, "quantity", (q) => q + 1);
@@ -116,9 +82,9 @@ export const cart = createRoot(() => {
 			}
 
 			trackAddToCart({
+				price: product.price,
 				product_id: product.productId,
 				product_name: product.name,
-				price: product.price,
 				quantity: product.quantity,
 			});
 
@@ -126,19 +92,43 @@ export const cart = createRoot(() => {
 				setIsDrawerOpen(true);
 			}
 		},
+		closeDrawer: () => setIsDrawerOpen(false),
+		isDrawerOpen() {
+			return isDrawerOpen();
+		},
+		isEmpty() {
+			return isEmpty();
+		},
+		isHydrated() {
+			return isHydrated();
+		},
+		items() {
+			return cartStore.items;
+		},
+		openDrawer: () => {
+			trackCartOpened(count(), total());
+			setIsDrawerOpen(true);
+		},
 		remove: (productId: number) => {
 			const item = cartStore.items.find((i) => i.productId === productId);
 			trackRemoveFromCart(productId);
-			setCart("items", (items) =>
-				items.filter((item) => item.productId !== productId),
-			);
+			setCart("items", (items) => items.filter((item) => item.productId !== productId));
 			if (item) {
 				announceCart(`${item.name} сагснаас хасагдлаа`);
 			}
 		},
+
+		state() {
+			return state();
+		},
+		toggleDrawer: () => setIsDrawerOpen((prev) => !prev),
 		// Canonical quantity policy: floor at 1. Call sites (cart page,
 		// drawer) just call updateQuantity(id, ±1) without re-implementing
 		// the decrement-or-remove decision. Explicit removal uses `remove`.
+		clearCart: () => setCart("items", []),
+		count,
+
+		total,
 		updateQuantity: (productId: number, quantityChange: number) => {
 			setCart(
 				"items",
@@ -150,10 +140,6 @@ export const cart = createRoot(() => {
 				},
 			);
 		},
-		clearCart: () => setCart("items", []),
-
-		total,
-		count,
 	};
 });
 
@@ -170,7 +156,9 @@ export function createCartState(): Accessor<CartState> {
 	const [hydrated, setHydrated] = createSignal(false);
 	onMount(() => setHydrated(true));
 	return createMemo<CartState>(() => {
-		if (!hydrated()) return "loading";
+		if (!hydrated()) {
+			return "loading";
+		}
 		return cart.items().length === 0 ? "empty" : "ready";
 	});
 }

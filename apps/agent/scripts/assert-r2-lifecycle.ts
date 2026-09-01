@@ -14,15 +14,14 @@
  * r2-lifecycle.messenger-inbound.json so the check can't drift from the source.
  */
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const AGENT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const AGENT_ROOT = join(import.meta.dirname, "..");
 const WRANGLER_CONFIG = join(AGENT_ROOT, "wrangler.jsonc");
 const LIFECYCLE_FILE = join(AGENT_ROOT, "r2-lifecycle.messenger-inbound.json");
 
 const stripJsonc = (text: string): string =>
-	text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+	text.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/(^|[^:])\/\/.*$/gm, "$1");
 
 const bucketName = (() => {
 	const config = JSON.parse(stripJsonc(readFileSync(WRANGLER_CONFIG, "utf8")));
@@ -34,7 +33,7 @@ const bucketName = (() => {
 	return name as string;
 })();
 
-const expectedRuleIds: string[] = (() => {
+const expectedRuleIds: Array<string> = (() => {
 	const spec = JSON.parse(readFileSync(LIFECYCLE_FILE, "utf8"));
 	const ids = (spec?.rules ?? [])
 		.map((rule: { id?: unknown }) => rule.id)
@@ -58,7 +57,7 @@ const list = Bun.spawnSync(
 		"--config",
 		WRANGLER_CONFIG,
 	],
-	{ cwd: AGENT_ROOT, stdout: "pipe", stderr: "pipe" },
+	{ cwd: AGENT_ROOT, stderr: "pipe", stdout: "pipe" },
 );
 
 const stdout = list.stdout.toString();
@@ -84,6 +83,4 @@ if (missing.length > 0) {
 	process.exit(1);
 }
 
-console.log(
-	`✓ R2 bucket "${bucketName}" carries cleanup rule(s): ${expectedRuleIds.join(", ")}.`,
-);
+console.log(`✓ R2 bucket "${bucketName}" carries cleanup rule(s): ${expectedRuleIds.join(", ")}.`);

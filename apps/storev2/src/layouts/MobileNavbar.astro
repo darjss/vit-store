@@ -78,7 +78,7 @@ import { HomeAngleIcon as IconHome, ShopIcon as IconStore } from "@solar-icons/s
 
     function updateOverlayState() {
         const mobileNavbar = document.querySelector("[data-mobile-navbar]");
-        if (!mobileNavbar) return;
+        if (!mobileNavbar) {return;}
 
         const hasOpenOverlay = Boolean(
             document.querySelector("dialog[open], [data-expanded]")
@@ -96,8 +96,8 @@ import { HomeAngleIcon as IconHome, ShopIcon as IconStore } from "@solar-icons/s
 
     const overlayObserver = new MutationObserver(updateOverlayState);
     overlayObserver.observe(document.body, {
-        attributes: true,
         attributeFilter: ["open", "data-expanded", "data-state"],
+        attributes: true,
         childList: true,
         subtree: true,
     });

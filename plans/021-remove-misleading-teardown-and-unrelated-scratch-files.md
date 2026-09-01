@@ -44,23 +44,25 @@ Coordinate with operational issue #125.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- package.json turbo.json bts.jsonc temp-design.md README.md` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                       | Expected on success                                      |
+| -------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- package.json turbo.json bts.jsonc temp-design.md README.md` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                         | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                               | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                        | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - runbook/archive ownership check
 - remove ambiguous root alias/docs
 - delete only two confirmed-unowned scratch files
 
 **Files/path families allowed**
+
 - `package.json`
 - `turbo.json`
 - `bts.jsonc`
@@ -68,6 +70,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `README.md`
 
 **Out of scope**
+
 - app-specific teardown behavior
 - new Agent teardown
 - retention policy

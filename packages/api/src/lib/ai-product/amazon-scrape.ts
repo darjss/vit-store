@@ -1,9 +1,6 @@
 import type Firecrawl from "@mendable/firecrawl-js";
 import type { FirecrawlExtractedProduct } from "@vit/shared";
-import {
-	extractAmazonPriceUsd,
-	extractProductImageIds,
-} from "~/lib/ai-product/amazon-html";
+import { extractAmazonPriceUsd, extractProductImageIds } from "~/lib/ai-product/amazon-html";
 import {
 	isAmazonUrl,
 	productTitleMatchesQuery,
@@ -29,15 +26,15 @@ export async function searchAmazonProduct(
 		const cached = await kv().get(cacheKey, "json");
 		if (cached) {
 			logger.info("searchAmazonProduct.cacheHit", {
-				query,
 				elapsedMs: Date.now() - startTime,
+				query,
 			});
 			return cached as string | null;
 		}
 	} catch (cacheError) {
 		logger.warn("searchAmazonProduct.cacheReadFailed", {
-			query,
 			error: cacheError instanceof Error ? cacheError.message : "unknown",
+			query,
 		});
 	}
 
@@ -60,7 +57,7 @@ export async function searchAmazonProduct(
 				return [];
 			}
 			const title = "title" in result ? result.title : undefined;
-			return [{ url, title }];
+			return [{ title, url }];
 		});
 		const matchingResult = productResults.find(
 			(result) => result.title && productTitleMatchesQuery(query, result.title),
@@ -70,7 +67,9 @@ export async function searchAmazonProduct(
 		if (!resultUrl) {
 			const firstResult = searchResponse.web[0];
 			const firstUrl = "url" in firstResult ? firstResult.url : undefined;
-			if (firstUrl?.includes("amazon.com")) resultUrl = firstUrl;
+			if (firstUrl?.includes("amazon.com")) {
+				resultUrl = firstUrl;
+			}
 		}
 
 		await kv().put(cacheKey, JSON.stringify(resultUrl), {
@@ -98,14 +97,14 @@ export async function scrapeAmazonProduct(
 		}
 	} catch (cacheError) {
 		logger.warn("scrapeAmazonProduct.cacheReadFailed", {
-			url,
 			error: cacheError instanceof Error ? cacheError.message : "unknown",
+			url,
 		});
 	}
 
 	try {
 		const scrapeResponse = await firecrawl.scrape(url, {
-			formats: [{ type: "json", schema: amazonProductSchema }, "rawHtml"],
+			formats: [{ schema: amazonProductSchema, type: "json" }, "rawHtml"],
 		});
 
 		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
@@ -124,15 +123,15 @@ export async function scrapeAmazonProduct(
 
 		const result = {
 			extracted: {
-				title: (jsonData.title as string) || "",
 				brand: (jsonData.brand as string) || null,
 				description: (jsonData.description as string) || null,
-				features: (jsonData.features as string[]) || [],
+				features: (jsonData.features as Array<string>) || [],
 				images,
+				ingredients: (jsonData.ingredients as Array<string>) || [],
+				priceUsd,
 				servingSize: (jsonData.servingSize as string) || null,
 				servingsPerContainer: (jsonData.servingsPerContainer as number) || null,
-				ingredients: (jsonData.ingredients as string[]) || [],
-				priceUsd,
+				title: (jsonData.title as string) || "",
 			},
 		};
 
@@ -141,9 +140,9 @@ export async function scrapeAmazonProduct(
 		});
 
 		logger.info("scrapeAmazonProduct.done", {
-			url,
-			title: result.extracted.title,
 			elapsedMs: Date.now() - startTime,
+			title: result.extracted.title,
+			url,
 		});
 
 		return result;
@@ -153,10 +152,7 @@ export async function scrapeAmazonProduct(
 	}
 }
 
-export async function resolveProductUrl(
-	firecrawl: Firecrawl,
-	query: string,
-): Promise<string> {
+export async function resolveProductUrl(firecrawl: Firecrawl, query: string): Promise<string> {
 	if (isAmazonUrl(query)) {
 		return query;
 	}

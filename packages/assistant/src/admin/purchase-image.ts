@@ -5,10 +5,9 @@ import { extractJsonObject } from "../photo";
 
 export const PURCHASE_IMAGE_EXTRACT_TOOL_NAME = "extract_purchase_from_image_keys";
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+type Json = null | boolean | number | string | Array<Json> | { [key: string]: Json };
 
-const asJson = (value: unknown): Json =>
-	JSON.parse(JSON.stringify(value)) as Json;
+const asJson = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 
 const purchaseProvider = ["amazon", "iherb", "naturebell", "unknown"] as const;
 
@@ -48,47 +47,41 @@ Read every visible line item. If unreadable, set extractionStatus to "partial" o
 
 export type PurchaseImageExtractDeps = {
 	loadImage: (imageKey: string) => Promise<InboundImage | undefined>;
-	runVision: (image: InboundImage, prompt: string) => Promise<string>;
 	matchExtracted: (input: {
-		provider: (typeof purchaseProvider)[number];
 		extraction: Record<string, unknown>;
+		provider: (typeof purchaseProvider)[number];
 	}) => Promise<unknown>;
+	runVision: (image: InboundImage, prompt: string) => Promise<string>;
 };
 
 export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 	defineTool({
-		name: PURCHASE_IMAGE_EXTRACT_TOOL_NAME,
 		description:
 			"Extract a supplier invoice from admin-sent screenshot(s) using Workers AI vision on the agent, then match line items to the catalog. Call when dispatch input includes imageKeys (Telegram/Messenger photos). Pass provider (amazon/iherb/naturebell/unknown) and the imageKeys array from the dispatch payload.",
 		input: v.object({
+			imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
 			provider: v.picklist(purchaseProvider),
-			imageKeys: v.pipe(
-				v.array(v.pipe(v.string(), v.minLength(1))),
-				v.minLength(1),
-			),
 		}),
+		name: PURCHASE_IMAGE_EXTRACT_TOOL_NAME,
 		async run({ input }) {
-			const visionParts: string[] = [];
+			const visionParts: Array<string> = [];
 			for (const imageKey of input.imageKeys) {
 				const image = await deps.loadImage(imageKey);
 				if (image === undefined) {
 					return asJson({
-						ok: false,
 						error: `Image no longer available: ${imageKey}`,
+						ok: false,
 					});
 				}
-				const text = await deps.runVision(
-					image,
-					purchaseInvoiceVisionPrompt(input.provider),
-				);
+				const text = await deps.runVision(image, purchaseInvoiceVisionPrompt(input.provider));
 				visionParts.push(text);
 			}
 
 			const rawJson = extractJsonObject(visionParts.join("\n"));
 			if (rawJson === undefined) {
 				return asJson({
-					ok: false,
 					error: "Vision model did not return parseable invoice JSON.",
+					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
 				});
 			}
@@ -98,15 +91,15 @@ export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 				extraction = JSON.parse(rawJson) as Record<string, unknown>;
 			} catch {
 				return asJson({
-					ok: false,
 					error: "Vision JSON parse failed.",
+					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
 				});
 			}
 
 			const matched = await deps.matchExtracted({
-				provider: input.provider,
 				extraction,
+				provider: input.provider,
 			});
 			return asJson({ ok: true, result: matched });
 		},

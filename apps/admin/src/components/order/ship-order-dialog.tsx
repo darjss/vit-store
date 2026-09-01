@@ -15,23 +15,23 @@ import { trpc } from "@/utils/trpc";
 import { DeliveryZoneSelect } from "./delivery-zone-select";
 
 interface ShipOrderDialogProps {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	orderId: number;
-	orderNumber: string;
 	address: string;
 	addressZoneId?: number;
+	onOpenChange: (open: boolean) => void;
 	onSuccess: () => void;
+	open: boolean;
+	orderId: number;
+	orderNumber: string;
 }
 
 export default function ShipOrderDialog({
-	open,
-	onOpenChange,
-	orderId,
-	orderNumber,
 	address,
 	addressZoneId,
+	onOpenChange,
 	onSuccess,
+	open,
+	orderId,
+	orderNumber,
 }: ShipOrderDialogProps) {
 	const [selectedZoneId, setSelectedZoneId] = useState<number>();
 	const zonesQuery = useQuery({
@@ -50,7 +50,9 @@ export default function ShipOrderDialog({
 	);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			return;
+		}
 		setSelectedZoneId(addressZoneId);
 		shipOrder.reset();
 	}, [open, addressZoneId, shipOrder.reset]);
@@ -61,45 +63,37 @@ export default function ShipOrderDialog({
 	const canSubmit = zonesReady && selectedZoneExists && !shipOrder.isPending;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 border-border bg-card shadow-hard sm:max-w-lg">
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 sm:max-w-lg">
 				<DialogHeader className="px-4 sm:px-6">
 					<DialogTitle>Хүргэлтийн бүс сонгох</DialogTitle>
-					<DialogDescription>
-						#{orderNumber} захиалгыг TU руу илгээх
-					</DialogDescription>
+					<DialogDescription>#{orderNumber} захиалгыг TU руу илгээх</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4 p-4 sm:p-6">
-					<div className="flex gap-2 border-2 border-border bg-muted p-3 text-sm">
-						<MapPin
-							className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-							aria-hidden="true"
-						/>
+					<div className="border-border bg-muted flex gap-2 border-2 p-3 text-sm">
+						<MapPin aria-hidden="true" className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
 						<p>{address || "Хаяг оруулаагүй"}</p>
 					</div>
 
 					{zonesQuery.isLoading ? (
-						<output className="flex items-center text-muted-foreground text-sm">
-							<Loader2
-								className="mr-2 h-4 w-4 animate-spin"
-								aria-hidden="true"
-							/>
+						<output className="text-muted-foreground flex items-center text-sm">
+							<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
 							Хүргэлтийн бүсүүдийг уншиж байна...
 						</output>
 					) : null}
 
 					{zonesQuery.isError ? (
 						<div
-							className="flex items-center justify-between gap-3 text-destructive text-sm"
+							className="text-destructive flex items-center justify-between gap-3 text-sm"
 							role="alert"
 						>
 							<span>Хүргэлтийн бүсүүдийг уншиж чадсангүй.</span>
 							<Button
+								onClick={() => void zonesQuery.refetch()}
+								size="sm"
 								type="button"
 								variant="outline"
-								size="sm"
-								onClick={() => void zonesQuery.refetch()}
 							>
 								Дахин оролдох
 							</Button>
@@ -113,12 +107,12 @@ export default function ShipOrderDialog({
 					) : null}
 
 					<DeliveryZoneSelect
+						disabled={!zonesReady || shipOrder.isPending}
 						id={`order-${orderId}-delivery-zone`}
 						label="Хүргэлтийн бүс"
-						zones={zones}
-						value={selectedZoneId}
 						onValueChange={setSelectedZoneId}
-						disabled={!zonesReady || shipOrder.isPending}
+						value={selectedZoneId}
+						zones={zones}
 					/>
 
 					{shipOrder.isError ? (
@@ -128,28 +122,27 @@ export default function ShipOrderDialog({
 					) : null}
 				</div>
 
-				<DialogFooter position="static" className="px-4 py-3 sm:px-6">
+				<DialogFooter className="px-4 py-3 sm:px-6" position="static">
 					<Button
+						disabled={shipOrder.isPending}
+						onClick={() => onOpenChange(false)}
 						type="button"
 						variant="outline"
-						onClick={() => onOpenChange(false)}
-						disabled={shipOrder.isPending}
 					>
 						Болих
 					</Button>
 					<Button
-						type="button"
 						disabled={!canSubmit}
 						onClick={() => {
-							if (!selectedZoneId) return;
-							shipOrder.mutate({ orderId, addressZoneId: selectedZoneId });
+							if (!selectedZoneId) {
+								return;
+							}
+							shipOrder.mutate({ addressZoneId: selectedZoneId, orderId });
 						}}
+						type="button"
 					>
 						{shipOrder.isPending ? (
-							<Loader2
-								className="mr-2 h-4 w-4 animate-spin"
-								aria-hidden="true"
-							/>
+							<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
 						) : null}
 						{shipOrder.isPending ? "Илгээж байна..." : "TU руу илгээх"}
 					</Button>

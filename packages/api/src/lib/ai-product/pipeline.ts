@@ -1,11 +1,7 @@
 import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
 import { brandQueries, categoryQueries } from "@vit/api/queries";
-import type {
-	AiProductSessionState,
-	ExtractedProductData,
-	ExtractionStepId,
-} from "@vit/shared";
+import type { AiProductSessionState, ExtractedProductData, ExtractionStepId } from "@vit/shared";
 import { calculatePriceMntFromUsd } from "~/lib/ai/pricing";
 import {
 	resolveProductUrl,
@@ -17,15 +13,9 @@ import {
 	productTitleMatchesBrand,
 	productTitleMatchesQuery,
 } from "~/lib/ai-product/amazon-url";
-import {
-	assembleExtractedProductData,
-	noteImageUploadIssues,
-} from "~/lib/ai-product/assemble";
+import { assembleExtractedProductData, noteImageUploadIssues } from "~/lib/ai-product/assemble";
 import { resolveOrCreateBrandId } from "~/lib/ai-product/brand-resolve";
-import {
-	analyzeProductImages,
-	filterProductImages,
-} from "~/lib/ai-product/image-pipeline";
+import { analyzeProductImages, filterProductImages } from "~/lib/ai-product/image-pipeline";
 import {
 	createInitialSession,
 	createSessionId,
@@ -50,7 +40,9 @@ function getFirecrawl(ctx: Context): Firecrawl {
 }
 
 function trpcFromError(error: unknown): never {
-	if (error instanceof TRPCError) throw error;
+	if (error instanceof TRPCError) {
+		throw error;
+	}
 	if (error instanceof Error && error.message.includes("Amazon")) {
 		throw new TRPCError({ code: "NOT_FOUND", message: error.message });
 	}
@@ -60,7 +52,7 @@ function trpcFromError(error: unknown): never {
 export async function startExtractionStage(
 	ctx: Context,
 	query: string,
-): Promise<{ sessionId: string; step: ExtractionStepId; productUrl: string }> {
+): Promise<{ productUrl: string; sessionId: string; step: ExtractionStepId }> {
 	const sessionId = createSessionId();
 	const session = createInitialSession(query);
 
@@ -71,12 +63,10 @@ export async function startExtractionStage(
 		session.status = "extracting";
 		await writeSession(sessionId, session);
 
-		return { sessionId, step: "searching", productUrl };
+		return { productUrl, sessionId, step: "searching" };
 	} catch (error) {
 		session.status = "failed";
-		session.errors.push(
-			error instanceof Error ? error.message : "URL resolution failed",
-		);
+		session.errors.push(error instanceof Error ? error.message : "URL resolution failed");
 		await writeSession(sessionId, session);
 		trpcFromError(error);
 	}
@@ -99,10 +89,7 @@ export async function scrapeAndAnalyzeStage(
 
 	try {
 		const firecrawl = getFirecrawl(ctx);
-		const scrapeResult = await scrapeAmazonProduct(
-			firecrawl,
-			session.productUrl,
-		);
+		const scrapeResult = await scrapeAmazonProduct(firecrawl, session.productUrl);
 		if (!scrapeResult?.extracted.title) {
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
@@ -122,9 +109,7 @@ export async function scrapeAndAnalyzeStage(
 
 		session.scraped = scrapeResult.extracted;
 		if (typeof scrapeResult.extracted.priceUsd === "number") {
-			session.calculatedPriceMnt = calculatePriceMntFromUsd(
-				scrapeResult.extracted.priceUsd,
-			);
+			session.calculatedPriceMnt = calculatePriceMntFromUsd(scrapeResult.extracted.priceUsd);
 		} else {
 			errors.push("Could not extract Amazon USD price.");
 			extractionStatus = "partial";
@@ -133,19 +118,13 @@ export async function scrapeAndAnalyzeStage(
 		const imageFilter = filterProductImages(scrapeResult.extracted.images);
 		session.filteredImages = imageFilter.images;
 
-		if (
-			imageFilter.images.length === 0 &&
-			scrapeResult.extracted.images.length > 0
-		) {
+		if (imageFilter.images.length === 0 && scrapeResult.extracted.images.length > 0) {
 			errors.push("Image filtering removed all candidates.");
 			extractionStatus = "partial";
 		}
 
 		if (imageFilter.images.length > 0) {
-			session.vision = await analyzeProductImages(
-				ctx.c.env.AI,
-				imageFilter.images,
-			);
+			session.vision = await analyzeProductImages(ctx.c.env.AI, imageFilter.images);
 			if (
 				session.vision.ingredients.length === 0 &&
 				scrapeResult.extracted.ingredients.length === 0
@@ -155,9 +134,9 @@ export async function scrapeAndAnalyzeStage(
 			}
 		} else {
 			session.vision = {
+				dailyIntake: null,
 				ingredients: [],
 				servingSize: null,
-				dailyIntake: null,
 				supplementFacts: null,
 			};
 			errors.push("No product images found.");
@@ -216,8 +195,7 @@ export async function translateStage(
 			? structuredData.brandId
 			: null;
 	const matchedCategoryId =
-		structuredData?.categoryId != null &&
-		validCategoryIds.has(structuredData.categoryId)
+		structuredData?.categoryId != null && validCategoryIds.has(structuredData.categoryId)
 			? structuredData.categoryId
 			: null;
 
@@ -260,31 +238,27 @@ export async function finalizeExtractionStage(
 	let extractionStatus = session.extractionStatus ?? "success";
 	const filteredImages = session.filteredImages ?? [];
 
-	let uploadedImages: { url: string }[] = [];
+	let uploadedImages: Array<{ url: string }> = [];
 	if (filteredImages.length > 0) {
 		uploadedImages = await uploadImagesToR2(filteredImages, ctx);
-		const uploadStatus = noteImageUploadIssues(
-			filteredImages,
-			uploadedImages,
-			errors,
-		);
+		const uploadStatus = noteImageUploadIssues(filteredImages, uploadedImages, errors);
 		if (uploadStatus === "partial") {
 			extractionStatus = "partial";
 		}
 	}
 
 	const result = assembleExtractedProductData({
+		calculatedPriceMnt: session.calculatedPriceMnt ?? null,
+		errors,
 		extractedData: session.scraped,
-		visionData: session.vision,
-		structuredData: session.translation ?? null,
-		productUrl: session.productUrl,
-		uploadedImages,
+		extractionStatus,
 		filteredImages,
 		finalBrandId: session.brandId ?? null,
 		matchedCategoryId: session.categoryId ?? null,
-		calculatedPriceMnt: session.calculatedPriceMnt ?? null,
-		extractionStatus,
-		errors,
+		productUrl: session.productUrl,
+		structuredData: session.translation ?? null,
+		uploadedImages,
+		visionData: session.vision,
 	});
 
 	await deleteSession(sessionId);
@@ -310,11 +284,9 @@ export async function extractAndUploadProductImages(
 	ctx: Context,
 	query: string,
 	expectedBrand?: string,
-): Promise<{ images: { url: string }[]; sourceUrl: string }> {
+): Promise<{ images: Array<{ url: string }>; sourceUrl: string }> {
 	const firecrawl = getFirecrawl(ctx);
-	const productUrl = isAmazonUrl(query)
-		? query
-		: await searchAmazonProduct(firecrawl, query);
+	const productUrl = isAmazonUrl(query) ? query : await searchAmazonProduct(firecrawl, query);
 
 	if (!productUrl) {
 		throw new TRPCError({
@@ -332,10 +304,8 @@ export async function extractAndUploadProductImages(
 	}
 
 	const title = scrapeResult.extracted.title;
-	const brandMatches =
-		!expectedBrand || productTitleMatchesBrand(title, expectedBrand);
-	const queryMatches =
-		isAmazonUrl(query) || productTitleMatchesQuery(query, title);
+	const brandMatches = !expectedBrand || productTitleMatchesBrand(title, expectedBrand);
+	const queryMatches = isAmazonUrl(query) || productTitleMatchesQuery(query, title);
 	if (!brandMatches || !queryMatches) {
 		throw new TRPCError({
 			code: "NOT_FOUND",

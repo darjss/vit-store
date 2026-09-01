@@ -1,14 +1,8 @@
-import type {
-	DetailedOrderNotificationInput,
-	TransferClaimedNotificationInput,
-} from "./types";
+import type { DetailedOrderNotificationInput, TransferClaimedNotificationInput } from "./types";
 
-export const formatMoney = (amount: number) =>
-	`${amount.toLocaleString("en-US")}₮`;
+export const formatMoney = (amount: number) => `${amount.toLocaleString("en-US")}₮`;
 
-const paymentMethodLabel = (
-	provider: DetailedOrderNotificationInput["provider"],
-) => {
+const paymentMethodLabel = (provider: DetailedOrderNotificationInput["provider"]) => {
 	switch (provider) {
 		case "qpay":
 			return "QPay";
@@ -19,10 +13,7 @@ const paymentMethodLabel = (
 	}
 };
 
-export const buildOrderDetailsText = (
-	data: DetailedOrderNotificationInput,
-	dashUrl: string,
-) => {
+export const buildOrderDetailsText = (data: DetailedOrderNotificationInput, dashUrl: string) => {
 	const productLines = data.products.map(
 		(product, index) =>
 			`${index + 1}. ${product.name} x${product.quantity} - ${formatMoney(product.price)}`,
@@ -45,7 +36,13 @@ export const buildOrderDetailsText = (
 		lines.push("", "📝 Тэмдэглэл:", notes);
 	}
 
-	lines.push("", "📦 Бүтээгдэхүүн:", ...productLines, "", `🔗 ${dashUrl}/orders/${data.orderNumber}`);
+	lines.push(
+		"",
+		"📦 Бүтээгдэхүүн:",
+		...productLines,
+		"",
+		`🔗 ${dashUrl}/orders/${data.orderNumber}`,
+	);
 
 	return lines.join("\n");
 };

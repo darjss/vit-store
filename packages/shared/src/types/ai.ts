@@ -1,87 +1,80 @@
-export type ExtractionStepId =
-	| "searching"
-	| "extracting"
-	| "translating"
-	| "uploading";
+export type ExtractionStepId = "searching" | "extracting" | "translating" | "uploading";
 
-export type AiProductSessionStatus =
-	| ExtractionStepId
-	| "done"
-	| "failed";
+export type AiProductSessionStatus = ExtractionStepId | "done" | "failed";
 
 export interface FirecrawlExtractedProduct {
-	title: string;
 	brand: string | null;
 	description: string | null;
-	features: string[];
-	images: string[];
+	features: Array<string>;
+	images: Array<string>;
+	ingredients: Array<string>;
+	priceUsd: number | null;
 	servingSize: string | null;
 	servingsPerContainer: number | null;
-	ingredients: string[];
-	priceUsd: number | null;
+	title: string;
 }
 
 export interface VisionAnalysisResult {
-	ingredients: string[];
-	servingSize: string | null;
 	dailyIntake: number | null;
+	ingredients: Array<string>;
+	servingSize: string | null;
 	supplementFacts: string | null;
 }
 
 export interface TranslationResult {
-	name: string;
-	name_mn: string;
-	description: string;
 	amount: string;
-	potency: string;
-	dailyIntake: number;
-	weightGrams: number;
-	seoTitle: string;
-	seoDescription: string;
-	ingredients: string[];
 	brandId: number | null;
 	categoryId: number | null;
+	dailyIntake: number;
+	description: string;
+	ingredients: Array<string>;
+	name: string;
+	name_mn: string;
+	potency: string;
+	seoDescription: string;
+	seoTitle: string;
+	weightGrams: number;
 }
 
 export interface ExtractedProductData {
-	originalTitle: string;
-	originalDescription: string | null;
-	originalFeatures: string[];
-	originalIngredients: string[];
-	name: string;
-	name_mn: string;
-	description: string;
+	amazonPriceUsd: number | null;
+	amount: string;
 	brand: string | null;
 	brandId: number | null;
-	categoryId: number | null;
-	amount: string;
-	potency: string;
-	dailyIntake: number;
-	weightGrams: number;
-	seoTitle: string;
-	seoDescription: string;
-	tags?: string[];
-	ingredients: string[];
-	images: { url: string }[];
-	sourceUrl: string | null;
-	amazonPriceUsd: number | null;
 	calculatedPriceMnt: number | null;
+	categoryId: number | null;
+	dailyIntake: number;
+	description: string;
+	errors: Array<string>;
 	extractionStatus: "success" | "partial" | "failed";
-	errors: string[];
+	images: Array<{ url: string }>;
+	ingredients: Array<string>;
+	name: string;
+	name_mn: string;
+	originalDescription: string | null;
+	originalFeatures: Array<string>;
+	originalIngredients: Array<string>;
+	originalTitle: string;
+	potency: string;
+	seoDescription: string;
+	seoTitle: string;
 	slug: string;
+	sourceUrl: string | null;
+	tags?: Array<string>;
+	weightGrams: number;
 }
 
 export interface AiProductSessionState {
-	query: string;
-	productUrl?: string;
-	scraped?: FirecrawlExtractedProduct;
-	filteredImages?: string[];
-	vision?: VisionAnalysisResult;
-	translation?: TranslationResult;
 	brandId?: number | null;
-	categoryId?: number | null;
 	calculatedPriceMnt?: number | null;
+	categoryId?: number | null;
+	errors: Array<string>;
 	extractionStatus?: "success" | "partial" | "failed";
-	errors: string[];
+	filteredImages?: Array<string>;
+	productUrl?: string;
+	query: string;
+	scraped?: FirecrawlExtractedProduct;
 	status: AiProductSessionStatus;
+	translation?: TranslationResult;
+	vision?: VisionAnalysisResult;
 }

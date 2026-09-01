@@ -1,24 +1,7 @@
-import {
-	useInfiniteQuery,
-	useQuery,
-	useSuspenseQueries,
-} from "@tanstack/react-query";
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useSearch,
-} from "@tanstack/react-router";
+import { useInfiniteQuery, useQuery, useSuspenseQueries } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { status as productStatuses } from "@vit/shared/constants";
-import {
-	ChevronDown,
-	ChevronUp,
-	Loader2,
-	PlusCircle,
-	RotateCcw,
-	Search,
-	X,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, PlusCircle, RotateCcw, Search, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import * as v from "valibot";
 import ProductCard from "@/components/product/product-card";
@@ -46,7 +29,6 @@ import { trpc, trpcClient } from "@/utils/trpc";
 
 export const Route = createFileRoute("/_dash/products/")({
 	component: RouteComponent,
-	pendingComponent: ProductsPageSkeleton,
 	loader: ({ context: ctx }) => {
 		void ctx.queryClient.prefetchQuery({
 			...ctx.trpc.category.getAllCategories.queryOptions(),
@@ -57,18 +39,19 @@ export const Route = createFileRoute("/_dash/products/")({
 			staleTime: 15 * 60 * 1000,
 		});
 	},
+	pendingComponent: ProductsPageSkeleton,
 	validateSearch: v.object({
+		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
 		pageSize: v.optional(
 			v.pipe(v.number(), v.integer(), v.minValue(1)),
 			DEFAULT_PRODUCTS_PAGE_SIZE,
 		),
-		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-		status: v.optional(v.picklist(productStatuses), "active"),
-		sortField: v.optional(v.string()),
-		sortDirection: v.optional(v.picklist(["asc", "desc"])),
 		searchTerm: v.optional(v.string()),
+		sortDirection: v.optional(v.picklist(["asc", "desc"])),
+		sortField: v.optional(v.string()),
+		status: v.optional(v.picklist(productStatuses), "active"),
 	}),
 });
 
@@ -76,9 +59,9 @@ function RouteComponent() {
 	const {
 		brandId,
 		categoryId,
-		sortField,
-		sortDirection,
 		searchTerm,
+		sortDirection,
+		sortField,
 		status: productStatus,
 	} = useSearch({ from: "/_dash/products/" }) as ProductsSearch;
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
@@ -108,13 +91,13 @@ function RouteComponent() {
 		}
 
 		navigate({
-			to: "/products",
 			replace: true,
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				searchTerm: normalizedDebouncedSearch || undefined,
 				page: 1,
+				searchTerm: normalizedDebouncedSearch || undefined,
 			}),
+			to: "/products",
 		});
 	}, [debouncedSearch, navigate, searchTerm]);
 
@@ -131,12 +114,12 @@ function RouteComponent() {
 		setSearchInput("");
 		setDebouncedSearch("");
 		navigate({
-			to: "/products",
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				searchTerm: undefined,
 				page: 1,
+				searchTerm: undefined,
 			}),
+			to: "/products",
 		});
 	};
 
@@ -144,102 +127,96 @@ function RouteComponent() {
 
 	const instantSearchQuery = useQuery({
 		...trpc.product.searchProductsInstant.queryOptions({
-			query: normalizedDebouncedSearch,
-			limit: 10,
 			brandId,
 			categoryId,
+			limit: 10,
+			query: normalizedDebouncedSearch,
 			status: productStatus ?? "active",
 		}),
 		enabled: normalizedDebouncedSearch.length >= 2,
-		staleTime: INSTANT_SEARCH_STALE_TIME_MS,
 		gcTime: INSTANT_SEARCH_GC_TIME_MS,
 		refetchOnWindowFocus: false,
+		staleTime: INSTANT_SEARCH_STALE_TIME_MS,
 	});
 
-	const hasInstantResults =
-		instantSearchQuery.data && instantSearchQuery.data.length > 0;
+	const hasInstantResults = instantSearchQuery.data && instantSearchQuery.data.length > 0;
 	const isSearching = instantSearchQuery.isFetching;
 	const isInstantSearchActive = normalizedDebouncedSearch.length >= 2;
 	const isTypingSearch =
-		searchInput.trim() !== debouncedSearch.trim() &&
-		searchInput.trim().length >= 2;
+		searchInput.trim() !== debouncedSearch.trim() && searchInput.trim().length >= 2;
 
-	const handleFilterChange = (
-		field: "brandId" | "categoryId",
-		value: number | undefined,
-	) => {
+	const handleFilterChange = (field: "brandId" | "categoryId", value: number | undefined) => {
 		navigate({
-			to: "/products",
 			search: (prev: ProductsSearch) => ({
 				...prev,
 				[field]: value ?? undefined,
 				page: 1,
 			}),
+			to: "/products",
 		});
 	};
 
 	const handleStatusChange = (value: ProductListStatus) => {
 		navigate({
-			to: "/products",
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				status: value === "active" ? undefined : value,
 				page: 1,
+				status: value === "active" ? undefined : value,
 			}),
+			to: "/products",
 		});
 	};
 
 	const handleResetFilters = () => {
 		navigate({
-			to: "/products",
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				sortField: undefined,
-				sortDirection: "asc",
-				searchTerm: undefined,
-				page: 1,
 				brandId: undefined,
 				categoryId: undefined,
+				page: 1,
+				searchTerm: undefined,
+				sortDirection: "asc",
+				sortField: undefined,
 				status: undefined,
 			}),
+			to: "/products",
 		});
 	};
 	const handleSort = (field: string) => {
-		const newDirection =
-			sortField === field && sortDirection === "asc" ? "desc" : "asc";
+		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
-			to: "/products",
 			search: (prev: ProductsSearch) => ({
 				...prev,
-				sortField: field,
 				sortDirection: newDirection,
+				sortField: field,
 			}),
+			to: "/products",
 		});
 	};
 
 	return (
 		<div className="space-y-3">
 			<div className="relative">
-				<Search className="-translate-y-1/2 absolute top-1/2 left-4 h-6 w-6 text-muted-foreground" />
+				<Search className="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2" />
 				<Input
+					className="rounded-base border-border bg-background h-12 w-full border-2 pr-14 pl-14 shadow-none focus:translate-y-0 focus:shadow-none"
+					onChange={(e) => handleSearchChange(e.target.value)}
 					placeholder="Бүтээгдэхүүн хайх..."
 					value={searchInput}
-					onChange={(e) => handleSearchChange(e.target.value)}
-					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-none focus:translate-y-0 focus:shadow-none"
 				/>
 				{searchInput && (
 					<button
-						type="button"
-						className="-translate-y-1/2 absolute top-1/2 right-14 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-base border-2 border-border bg-secondary text-secondary-foreground transition-colors hover:bg-muted"
-						onClick={handleClearSearch}
 						aria-label="Хайлт цэвэрлэх"
+						className="rounded-base border-border bg-secondary text-secondary-foreground hover:bg-muted absolute top-1/2 right-14 z-10 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center border-2 transition-colors"
+						onClick={handleClearSearch}
+						type="button"
 					>
 						<X className="h-4 w-4" />
 					</button>
 				)}
 				{(isSearching || isTypingSearch) && (
-					<div className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-1 flex h-10 w-12 items-center justify-center">
-						<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+					<div className="pointer-events-none absolute top-1/2 right-1 flex h-10 w-12 -translate-y-1/2 items-center justify-center">
+						<Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
 					</div>
 				)}
 			</div>
@@ -247,23 +224,23 @@ function RouteComponent() {
 			<Suspense
 				fallback={
 					<div className="flex w-full flex-row flex-wrap gap-2">
-						<Skeleton className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]" />
-						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]" />
-						<Skeleton className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[140px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[140px] border-2 sm:w-[160px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[160px]" />
+						<Skeleton className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[140px]" />
 					</div>
 				}
 			>
 				<ProductsFilters
 					brandId={brandId}
 					categoryId={categoryId}
-					status={productStatus ?? "active"}
-					onStatusChange={handleStatusChange}
-					onFilterChange={handleFilterChange}
 					hasActiveFilters={hasActiveFilters}
-					sortField={sortField}
-					sortDirection={sortDirection}
-					onSort={handleSort}
+					onFilterChange={handleFilterChange}
 					onResetFilters={handleResetFilters}
+					onSort={handleSort}
+					onStatusChange={handleStatusChange}
+					sortDirection={sortDirection}
+					sortField={sortField}
+					status={productStatus ?? "active"}
 				/>
 			</Suspense>
 
@@ -271,7 +248,7 @@ function RouteComponent() {
 				<div className="space-y-3">
 					{(isSearching || isTypingSearch) && !hasInstantResults ? (
 						<>
-							<div className="flex items-center gap-2 text-muted-foreground text-sm">
+							<div className="text-muted-foreground flex items-center gap-2 text-sm">
 								<Loader2 className="h-4 w-4 animate-spin" />
 								<span>Хайж байна...</span>
 							</div>
@@ -285,15 +262,10 @@ function RouteComponent() {
 										{instantSearchQuery.data?.length} үр дүн олдсон
 									</p>
 									{isSearching && (
-										<Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+										<Loader2 className="text-muted-foreground h-3.5 w-3.5 animate-spin" />
 									)}
 								</div>
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={handleClearSearch}
-									className="h-8"
-								>
+								<Button className="h-8" onClick={handleClearSearch} size="sm" variant="ghost">
 									Бүх бүтээгдэхүүн үзэх
 								</Button>
 							</div>
@@ -302,48 +274,48 @@ function RouteComponent() {
 							>
 								{instantSearchQuery.data?.map((product) => (
 									<ProductCard
+										brands={[]}
+										categories={[]}
 										key={product.id}
 										product={
 											{
-												id: product.id,
-												name: product.name,
-												slug: product.slug,
-												price: product.price,
-												stock: product.stock,
-												status: product.status as ProductListStatus,
-												discount: 0,
+												amount: "",
 												brandId: 0,
 												categoryId: 0,
-												description: "",
-												amount: "",
-												potency: "",
-												dailyIntake: 0,
 												createdAt: new Date(),
-												updatedAt: null,
+												dailyIntake: 0,
 												deletedAt: null,
-												tags: [],
-												isFeatured: false,
-												ingredients: [],
-												seoTitle: null,
-												seoDescription: null,
-												name_mn: null,
-												weightGrams: 0,
+												description: "",
+												discount: 0,
 												expirationDate: null,
+												id: product.id,
 												images: product.images.map((image, index) => ({
 													id: index,
-													url: image.url,
 													isPrimary: index === 0,
+													url: image.url,
 												})),
+												ingredients: [],
+												isFeatured: false,
+												name: product.name,
+												name_mn: null,
+												potency: "",
+												price: product.price,
+												seoDescription: null,
+												seoTitle: null,
+												slug: product.slug,
+												status: product.status as ProductListStatus,
+												stock: product.stock,
+												tags: [],
+												updatedAt: null,
+												weightGrams: 0,
 											} as never
 										}
-										brands={[]}
-										categories={[]}
 									/>
 								))}
 							</div>
 						</>
 					) : !isSearching && !isTypingSearch ? (
-						<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+						<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
 							"{normalizedDebouncedSearch}" хайлтаар үр дүн олдсонгүй
 						</div>
 					) : null}
@@ -355,9 +327,9 @@ function RouteComponent() {
 					<ProductsList
 						brandId={brandId}
 						categoryId={categoryId}
-						sortField={sortField}
-						sortDirection={sortDirection}
 						searchTerm={searchTerm}
+						sortDirection={sortDirection}
+						sortField={sortField}
 						status={productStatus ?? "active"}
 					/>
 				</Suspense>
@@ -369,28 +341,25 @@ function RouteComponent() {
 function ProductsFilters({
 	brandId,
 	categoryId,
-	status,
-	onStatusChange,
-	onFilterChange,
 	hasActiveFilters,
-	sortField,
-	sortDirection,
-	onSort,
+	onFilterChange,
 	onResetFilters,
+	onSort,
+	onStatusChange,
+	sortDirection,
+	sortField,
+	status,
 }: {
 	brandId?: number;
 	categoryId?: number;
-	status: ProductListStatus;
-	onStatusChange: (value: ProductListStatus) => void;
-	onFilterChange: (
-		field: "brandId" | "categoryId",
-		value: number | undefined,
-	) => void;
 	hasActiveFilters: boolean;
-	sortField?: string;
-	sortDirection?: "asc" | "desc";
-	onSort: (field: string) => void;
+	onFilterChange: (field: "brandId" | "categoryId", value: number | undefined) => void;
 	onResetFilters: () => void;
+	onSort: (field: string) => void;
+	onStatusChange: (value: ProductListStatus) => void;
+	sortDirection?: "asc" | "desc";
+	sortField?: string;
+	status: ProductListStatus;
 }) {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
 		queries: [
@@ -403,15 +372,12 @@ function ProductsFilters({
 		<>
 			<div className="flex w-full flex-row gap-2">
 				<Select
-					value={categoryId === undefined ? "all" : categoryId.toString()}
 					onValueChange={(value) =>
-						onFilterChange(
-							"categoryId",
-							value === "all" ? undefined : Number.parseInt(value, 10),
-						)
+						onFilterChange("categoryId", value === "all" ? undefined : Number.parseInt(value, 10))
 					}
+					value={categoryId === undefined ? "all" : categoryId.toString()}
 				>
-					<SelectTrigger className="h-10 w-full min-w-[140px] rounded-base border-2 border-border sm:w-[160px]">
+					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[140px] border-2 sm:w-[160px]">
 						<SelectValue placeholder="Бүх ангилал" />
 					</SelectTrigger>
 					<SelectContent>
@@ -424,15 +390,12 @@ function ProductsFilters({
 					</SelectContent>
 				</Select>
 				<Select
-					value={brandId === undefined ? "all" : brandId.toString()}
 					onValueChange={(value) =>
-						onFilterChange(
-							"brandId",
-							value === "all" ? undefined : Number.parseInt(value, 10),
-						)
+						onFilterChange("brandId", value === "all" ? undefined : Number.parseInt(value, 10))
 					}
+					value={brandId === undefined ? "all" : brandId.toString()}
 				>
-					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[160px]">
+					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[160px]">
 						<SelectValue placeholder="Бүх брэнд" />
 					</SelectTrigger>
 					<SelectContent>
@@ -445,10 +408,10 @@ function ProductsFilters({
 					</SelectContent>
 				</Select>
 				<Select
-					value={status}
 					onValueChange={(value) => onStatusChange(value as ProductListStatus)}
+					value={status}
 				>
-					<SelectTrigger className="h-10 w-full min-w-[120px] rounded-base border-2 border-border sm:w-[140px]">
+					<SelectTrigger className="rounded-base border-border h-10 w-full min-w-[120px] border-2 sm:w-[140px]">
 						<SelectValue placeholder="Төлөв" />
 					</SelectTrigger>
 					<SelectContent>
@@ -463,19 +426,19 @@ function ProductsFilters({
 				<div className="flex flex-wrap gap-2">
 					{(hasActiveFilters || sortField !== "") && (
 						<Button
-							variant="outline"
-							size="sm"
-							className="h-10 rounded-base border-2 border-border px-3"
+							className="rounded-base border-border h-10 border-2 px-3"
 							onClick={onResetFilters}
+							size="sm"
+							variant="outline"
 						>
 							<RotateCcw className="mr-1 h-4 w-4" />
 						</Button>
 					)}
 					<Button
+						className="rounded-base border-border h-10 border-2 px-3"
+						onClick={() => onSort("stock")}
 						size="sm"
 						variant={sortField === "stock" ? "default" : "outline"}
-						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => onSort("stock")}
 					>
 						үлдэгдэл
 						{sortField === "stock" &&
@@ -486,10 +449,10 @@ function ProductsFilters({
 							))}
 					</Button>
 					<Button
+						className="rounded-base border-border h-10 border-2 px-3"
+						onClick={() => onSort("price")}
 						size="sm"
 						variant={sortField === "price" ? "default" : "outline"}
-						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => onSort("price")}
 					>
 						Үнэ
 						{sortField === "price" &&
@@ -500,10 +463,10 @@ function ProductsFilters({
 							))}
 					</Button>
 					<Button
+						className="rounded-base border-border h-10 border-2 px-3"
+						onClick={() => onSort("updatedAt")}
 						size="sm"
 						variant={sortField === "updatedAt" ? "default" : "outline"}
-						className="h-10 rounded-base border-2 border-border px-3"
-						onClick={() => onSort("updatedAt")}
 					>
 						Огноо
 						{sortField === "updatedAt" &&
@@ -516,7 +479,7 @@ function ProductsFilters({
 				</div>
 
 				<Link to="/products/add">
-					<Button className="h-10 gap-2 rounded-base border-2 border-border bg-primary px-4 shadow-shadow hover:bg-primary/90">
+					<Button className="rounded-base border-border bg-primary shadow-shadow hover:bg-primary/90 h-10 gap-2 border-2 px-4">
 						<PlusCircle className="h-5 w-5" />
 						<span className="hidden sm:inline">Бүтээгдэхүүн нэмэх</span>
 						<span className="sm:hidden">Нэмэх</span>
@@ -530,16 +493,16 @@ function ProductsFilters({
 function ProductsList({
 	brandId,
 	categoryId,
-	sortField,
-	sortDirection,
 	searchTerm,
+	sortDirection,
+	sortField,
 	status,
 }: {
 	brandId?: number;
 	categoryId?: number;
-	sortField?: string;
-	sortDirection?: "asc" | "desc";
 	searchTerm?: string;
+	sortDirection?: "asc" | "desc";
+	sortField?: string;
 	status: ProductListStatus;
 }) {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
@@ -551,11 +514,26 @@ function ProductsList({
 
 	const {
 		data: productsData,
-		isPending,
-		isFetchingNextPage,
-		hasNextPage,
 		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isPending,
 	} = useInfiniteQuery({
+		gcTime: 15 * 60 * 1000,
+		getNextPageParam: (lastPage) =>
+			lastPage.pagination.hasNextPage ? lastPage.pagination.currentPage + 1 : undefined,
+		initialPageParam: 1,
+		queryFn: async ({ pageParam }) =>
+			trpcClient.product.getPaginatedProducts.query({
+				brandId,
+				categoryId,
+				page: Number(pageParam),
+				pageSize: INFINITE_PRODUCTS_PAGE_SIZE,
+				searchTerm,
+				sortDirection,
+				sortField,
+				status,
+			}),
 		queryKey: [
 			"admin-products-infinite",
 			INFINITE_PRODUCTS_PAGE_SIZE,
@@ -566,31 +544,16 @@ function ProductsList({
 			searchTerm,
 			status,
 		],
-		initialPageParam: 1,
-		queryFn: async ({ pageParam }) =>
-			trpcClient.product.getPaginatedProducts.query({
-				page: Number(pageParam),
-				pageSize: INFINITE_PRODUCTS_PAGE_SIZE,
-				brandId,
-				categoryId,
-				status,
-				sortField,
-				sortDirection,
-				searchTerm,
-			}),
-		getNextPageParam: (lastPage) =>
-			lastPage.pagination.hasNextPage
-				? lastPage.pagination.currentPage + 1
-				: undefined,
 		staleTime: 60_000,
-		gcTime: 15 * 60 * 1000,
 	});
 
 	const products = productsData?.pages.flatMap((page) => page.products) ?? [];
 
 	useEffect(() => {
 		const sentinel = document.getElementById("products-infinite-sentinel");
-		if (!sentinel || !hasNextPage) return;
+		if (!sentinel || !hasNextPage) {
+			return;
+		}
 
 		const observerRoot = getScrollParent(sentinel);
 		const observer = new IntersectionObserver(
@@ -617,7 +580,7 @@ function ProductsList({
 
 	if (products.length === 0) {
 		return (
-			<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+			<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
 				{searchTerm
 					? `"${searchTerm}" олдсонгүй`
 					: "Бүтээгдэхүүн олдсонгүй. Шүүлтүүрээ өөрчилнө үү."}
@@ -629,20 +592,13 @@ function ProductsList({
 		<div className="space-y-4">
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 				{products.map((product) => (
-					<ProductCard
-						key={product.id}
-						product={product}
-						brands={brands}
-						categories={categories}
-					/>
+					<ProductCard brands={brands} categories={categories} key={product.id} product={product} />
 				))}
 			</div>
 			{isFetchingNextPage && <SearchResultsSkeleton />}
-			{hasNextPage && (
-				<div id="products-infinite-sentinel" className="h-2 w-full" />
-			)}
+			{hasNextPage && <div className="h-2 w-full" id="products-infinite-sentinel" />}
 			{!hasNextPage && (
-				<div className="py-4 text-center text-muted-foreground text-sm">
+				<div className="text-muted-foreground py-4 text-center text-sm">
 					Нийт {products.length} бүтээгдэхүүн
 				</div>
 			)}
@@ -655,32 +611,32 @@ function SearchResultsSkeleton() {
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 			{Array.from({ length: 6 }).map((_, index) => (
 				<div
+					className="rounded-base border-border bg-card overflow-hidden border-2 shadow-none"
 					key={index}
-					className="overflow-hidden rounded-base border-2 border-border bg-card shadow-none"
 				>
 					<div className="flex flex-row">
-						<div className="flex h-20 w-20 shrink-0 items-center justify-center border-border border-r-2 bg-background p-2">
-							<Skeleton className="h-full w-full rounded-base" />
+						<div className="border-border bg-background flex h-20 w-20 shrink-0 items-center justify-center border-r-2 p-2">
+							<Skeleton className="rounded-base h-full w-full" />
 						</div>
 						<div className="flex flex-1 flex-col p-3">
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0 flex-1 space-y-2">
-									<Skeleton className="h-5 w-3/4 rounded-base" />
+									<Skeleton className="rounded-base h-5 w-3/4" />
 									<div className="flex items-center gap-2">
-										<Skeleton className="h-4 w-16 rounded-base" />
-										<Skeleton className="h-4 w-20 rounded-base" />
+										<Skeleton className="rounded-base h-4 w-16" />
+										<Skeleton className="rounded-base h-4 w-20" />
 									</div>
 								</div>
 								<Skeleton className="h-6 w-20 rounded-full" />
 							</div>
 							<div className="mt-1 flex items-center gap-3">
-								<Skeleton className="h-6 w-16 rounded-base" />
-								<Skeleton className="h-4 w-12 rounded-base" />
+								<Skeleton className="rounded-base h-6 w-16" />
+								<Skeleton className="rounded-base h-4 w-12" />
 							</div>
 							<div className="mt-2 flex gap-2">
-								<Skeleton className="h-8 w-24 rounded-base" />
-								<Skeleton className="h-8 w-8 rounded-base" />
-								<Skeleton className="h-8 w-8 rounded-base" />
+								<Skeleton className="rounded-base h-8 w-24" />
+								<Skeleton className="rounded-base h-8 w-8" />
+								<Skeleton className="rounded-base h-8 w-8" />
 							</div>
 						</div>
 					</div>

@@ -1,8 +1,5 @@
 import { paymentQueries } from "@vit/api/queries";
-import {
-	type GenericWebhookPayload,
-	processWebhookEvents,
-} from "@warriorteam/messenger-sdk";
+import { type GenericWebhookPayload, processWebhookEvents } from "@warriorteam/messenger-sdk";
 import { logger } from "~/lib/logger";
 import { confirmPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
 
@@ -13,8 +10,8 @@ export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
 			const userId = event.sender.id;
 			const text = event.message.text?.trim();
 			logger.info("messengerWebhook.onMessage", {
-				userId,
 				text,
+				userId,
 			});
 		},
 		onMessageEdit: async (event) => {

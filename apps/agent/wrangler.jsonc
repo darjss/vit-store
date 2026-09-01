@@ -16,7 +16,7 @@
 	// admin/api: https://agent.amerikvitamin.mn/channels/messenger/webhook
 	"routes": [{ "pattern": "agent.amerikvitamin.mn", "custom_domain": true }],
 	"ai": {
-		"binding": "AI"
+		"binding": "AI",
 	},
 	// Inbound Messenger photos are staged under the `messenger-inbound/` prefix
 	// (#20). R2 lifecycle rules are not expressible here (no `lifecycle` key in
@@ -27,57 +27,57 @@
 		{
 			"binding": "MESSENGER_INBOUND_BUCKET",
 			"bucket_name": "vit-store-bucket-prod",
-			"preview_bucket_name": "vit-store-bucket-prod"
-		}
+			"preview_bucket_name": "vit-store-bucket-prod",
+		},
 	],
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "FLUE_REGISTRY",
-				"class_name": "FlueRegistry"
+				"class_name": "FlueRegistry",
 			},
 			{
 				"name": "FLUE_CUSTOMER_ASSISTANT_AGENT",
-				"class_name": "FlueCustomerAssistantAgent"
+				"class_name": "FlueCustomerAssistantAgent",
 			},
 			{
 				"name": "FLUE_ADMIN_ASSISTANT_AGENT",
-				"class_name": "FlueAdminAssistantAgent"
+				"class_name": "FlueAdminAssistantAgent",
 			},
 			{
 				"name": "MESSENGER_ADMISSION_STORE",
-				"class_name": "MessengerAdmissionStore"
+				"class_name": "MessengerAdmissionStore",
 			},
 			{
 				"name": "CART_STORE",
-				"class_name": "CartStore"
+				"class_name": "CartStore",
 			},
 			{
 				"name": "CHECKOUT_STORE",
-				"class_name": "CheckoutStore"
-			}
-		]
+				"class_name": "CheckoutStore",
+			},
+		],
 	},
 	"migrations": [
 		{
 			"tag": "v1_flue_customer_assistant",
-			"new_sqlite_classes": ["FlueRegistry", "FlueCustomerAssistantAgent"]
+			"new_sqlite_classes": ["FlueRegistry", "FlueCustomerAssistantAgent"],
 		},
 		{
 			"tag": "v2_messenger_admission_store",
-			"new_sqlite_classes": ["MessengerAdmissionStore"]
+			"new_sqlite_classes": ["MessengerAdmissionStore"],
 		},
 		{
 			"tag": "v3_cart_store",
-			"new_sqlite_classes": ["CartStore"]
+			"new_sqlite_classes": ["CartStore"],
 		},
 		{
 			"tag": "v4_checkout_store",
-			"new_sqlite_classes": ["CheckoutStore"]
+			"new_sqlite_classes": ["CheckoutStore"],
 		},
 		{
 			"tag": "v5_flue_admin_assistant",
-			"new_sqlite_classes": ["FlueAdminAssistantAgent"]
-		}
-	]
+			"new_sqlite_classes": ["FlueAdminAssistantAgent"],
+		},
+	],
 }

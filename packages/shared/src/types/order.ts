@@ -6,66 +6,58 @@ export type OrderStatusType =
 	| "cancelled"
 	| "refunded";
 export type PaymentProviderType = "qpay" | "transfer" | "cash";
-export type PaymentStatusType =
-	| "pending"
-	| "customer_claimed_paid"
-	| "success"
-	| "failed";
-export type OrderDeliveryProviderType =
-	| "tu-delivery"
-	| "self"
-	| "avidaa"
-	| "pick-up";
+export type PaymentStatusType = "pending" | "customer_claimed_paid" | "success" | "failed";
+export type OrderDeliveryProviderType = "tu-delivery" | "self" | "avidaa" | "pick-up";
 
 export interface OrderResult {
-	id: number;
-	orderNumber: string;
-	customerPhone: number;
-	status: OrderStatusType;
-	total: number;
-	notes: string | null;
 	address: string;
-	deliveryProvider: OrderDeliveryProviderType;
 	createdAt: Date;
-	updatedAt: Date | null;
+	customerPhone: number;
+	deliveryProvider: OrderDeliveryProviderType;
+	id: number;
+	notes: string | null;
 	orderDetails: Array<{
-		quantity: number;
 		product: {
-			name: string;
-			price: number;
 			id: number;
 			images: Array<{
 				url: string;
 			}>;
+			name: string;
+			price: number;
 		};
+		quantity: number;
 	}>;
+	orderNumber: string;
 	payments: Array<{
-		status: PaymentStatusType;
-		provider: PaymentProviderType;
-		paymentNumber: string;
 		createdAt: Date;
+		paymentNumber: string;
+		provider: PaymentProviderType;
+		status: PaymentStatusType;
 	}>;
+	status: OrderStatusType;
+	total: number;
+	updatedAt: Date | null;
 }
 
 export interface ShapedOrder {
-	id: number;
-	orderNumber: string;
-	customerPhone: number;
-	status: OrderStatusType;
-	total: number;
-	notes: string | null;
-	createdAt: Date;
 	address: string;
-	updatedAt: Date | null;
+	createdAt: Date;
+	customerPhone: number;
 	deliveryProvider: OrderDeliveryProviderType;
+	id: number;
+	notes: string | null;
+	orderNumber: string;
+	paymentNumber?: string;
+	paymentProvider: PaymentProviderType;
+	paymentStatus: PaymentStatusType;
 	products: Array<{
-		quantity: number;
+		imageUrl: string | undefined;
 		name: string;
 		price: number;
 		productId: number;
-		imageUrl: string | undefined;
+		quantity: number;
 	}>;
-	paymentStatus: PaymentStatusType;
-	paymentProvider: PaymentProviderType;
-	paymentNumber?: string;
+	status: OrderStatusType;
+	total: number;
+	updatedAt: Date | null;
 }

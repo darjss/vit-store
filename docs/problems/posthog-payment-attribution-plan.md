@@ -134,10 +134,10 @@ Use these bounded `confirmation_source` values:
 
 Add only two browser events:
 
-| Event | When it fires | Required properties |
-| --- | --- | --- |
-| `payment_method_viewed` | Once when a Payment page is shown | `payment_number`, `default_provider`, `default_reason`, `is_revisit`, `in_app_browser` |
-| `payment_method_selected` | Only when the customer explicitly changes method | `payment_number`, `provider`, `previous_provider`, `in_app_browser` |
+| Event                     | When it fires                                    | Required properties                                                                    |
+| ------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `payment_method_viewed`   | Once when a Payment page is shown                | `payment_number`, `default_provider`, `default_reason`, `is_revisit`, `in_app_browser` |
+| `payment_method_selected` | Only when the customer explicitly changes method | `payment_number`, `provider`, `previous_provider`, `in_app_browser`                    |
 
 Use `facebook_ios` and `standard` as the only `default_reason` values. Do not
 emit `payment_method_selected` for the initial render. That keeps exposure and
@@ -240,12 +240,12 @@ From the deployment cutoff forward:
 Database query: successful, non-deleted Payments grouped by `updated_at` in
 UTC.
 
-| Month | Paid Payments | Revenue | AOV | QPay revenue share |
-| --- | ---: | ---: | ---: | ---: |
-| 2026-05 | 37 | 8,426,000 MNT | 227,730 MNT | 97.4% |
-| 2026-06 | 12 | 2,552,000 MNT | 212,667 MNT | 100.0% |
-| 2026-07 | 26 | 6,266,000 MNT | 241,000 MNT | 85.9% |
-| 2026-08 | 60 | 14,735,100 MNT | 245,585 MNT | 83.1% |
+| Month   | Paid Payments |        Revenue |         AOV | QPay revenue share |
+| ------- | ------------: | -------------: | ----------: | -----------------: |
+| 2026-05 |            37 |  8,426,000 MNT | 227,730 MNT |              97.4% |
+| 2026-06 |            12 |  2,552,000 MNT | 212,667 MNT |             100.0% |
+| 2026-07 |            26 |  6,266,000 MNT | 241,000 MNT |              85.9% |
+| 2026-08 |            60 | 14,735,100 MNT | 245,585 MNT |              83.1% |
 
 Lifetime available in the production database:
 

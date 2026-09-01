@@ -3,27 +3,27 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Button } from "./ui/button";
 
 interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-	isPending?: boolean;
 	children: ReactNode;
 	className?: string;
+	isPending?: boolean;
 	spinnerSize?: number;
 	variant?: "default" | "outline" | "link" | "destructive" | null | undefined;
 }
 
 const SubmitButton = ({
-	isPending,
 	children,
 	className,
+	isPending,
 	spinnerSize = 20,
 	variant = "default",
 	...props
 }: SubmitButtonProps) => {
 	return (
 		<Button
-			type="submit"
 			className={`flex gap-2 ${className}`}
-			variant={variant}
 			disabled={isPending}
+			type="submit"
+			variant={variant}
 			{...props}
 		>
 			{isPending && <Loader2 className="animate-spin" size={spinnerSize} />}

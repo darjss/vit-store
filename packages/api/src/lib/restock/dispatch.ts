@@ -7,15 +7,11 @@ import { sendRestockNotification } from "~/lib/restock/send";
 
 const MAX_OPEN_PRODUCTS_PER_CONTACT = 5;
 const DELIVERY_BATCH_SIZE = 3;
-const PROVIDER_TIMEOUT_MS = 8_000;
+const PROVIDER_TIMEOUT_MS = 8000;
 const MAX_DELIVERY_ATTEMPTS = 5;
 const CLAIM_LEASE_MS = 10 * 60 * 1000;
 
-export {
-	DELIVERY_BATCH_SIZE,
-	MAX_OPEN_PRODUCTS_PER_CONTACT,
-	PROVIDER_TIMEOUT_MS,
-};
+export { DELIVERY_BATCH_SIZE, MAX_OPEN_PRODUCTS_PER_CONTACT, PROVIDER_TIMEOUT_MS };
 
 function createRestockLogger() {
 	return createLogger({
@@ -25,17 +21,12 @@ function createRestockLogger() {
 	});
 }
 
-export function shouldDispatchRestock(input: {
-	previousStock: number;
-	newStock: number;
-}): boolean {
+export function shouldDispatchRestock(input: { newStock: number; previousStock: number }): boolean {
 	return input.previousStock === 0 && input.newStock > 0;
 }
 
 function retryAt(attemptCount: number): Date {
-	return new Date(
-		Date.now() + Math.min(60, 5 * 2 ** Math.max(0, attemptCount - 1)) * 60_000,
-	);
+	return new Date(Date.now() + Math.min(60, 5 * 2 ** Math.max(0, attemptCount - 1)) * 60_000);
 }
 
 async function claimSubscription(subscriptionId: number) {
@@ -44,10 +35,10 @@ async function claimSubscription(subscriptionId: number) {
 	const [claimed] = await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			deliveryState: "sending",
-			claimToken: token,
-			leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
 			attemptCount: sql`${RestockSubscriptionsTable.attemptCount} + 1`,
+			claimToken: token,
+			deliveryState: "sending",
+			leaseExpiresAt: new Date(now.getTime() + CLAIM_LEASE_MS),
 		})
 		.where(
 			and(
@@ -59,29 +50,29 @@ async function claimSubscription(subscriptionId: number) {
 			),
 		)
 		.returning({
-			id: RestockSubscriptionsTable.id,
+			attemptCount: RestockSubscriptionsTable.attemptCount,
 			channel: RestockSubscriptionsTable.channel,
 			contact: RestockSubscriptionsTable.contact,
-			attemptCount: RestockSubscriptionsTable.attemptCount,
+			id: RestockSubscriptionsTable.id,
 		});
 	return claimed ? { ...claimed, claimToken: token } : null;
 }
 
 async function finishClaim(input: {
-	id: number;
 	claimToken: string;
-	state: "sent" | "failed" | "unknown";
 	error?: string;
+	id: number;
+	state: "sent" | "failed" | "unknown";
 }) {
 	await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			deliveryState: input.state,
 			claimToken: null,
+			contact: null,
+			deliveryState: input.state,
+			lastError: input.error?.slice(0, 500) ?? null,
 			leaseExpiresAt: null,
 			terminalAt: new Date(),
-			lastError: input.error?.slice(0, 500) ?? null,
-			contact: null,
 		})
 		.where(
 			and(
@@ -93,10 +84,10 @@ async function finishClaim(input: {
 }
 
 async function retryClaim(input: {
-	id: number;
-	claimToken: string;
 	attemptCount: number;
+	claimToken: string;
 	error: string;
+	id: number;
 }) {
 	if (input.attemptCount >= MAX_DELIVERY_ATTEMPTS) {
 		return finishClaim({ ...input, state: "failed" });
@@ -104,11 +95,11 @@ async function retryClaim(input: {
 	await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			deliveryState: "pending",
 			claimToken: null,
+			deliveryState: "pending",
+			lastError: input.error.slice(0, 500),
 			leaseExpiresAt: null,
 			nextAttemptAt: retryAt(input.attemptCount),
-			lastError: input.error.slice(0, 500),
 		})
 		.where(
 			and(
@@ -124,12 +115,12 @@ async function recoverExpiredClaims() {
 	const ambiguousClaims = await db()
 		.update(RestockSubscriptionsTable)
 		.set({
-			deliveryState: "unknown",
 			claimToken: null,
+			contact: null,
+			deliveryState: "unknown",
+			lastError: "Lease expired after an ambiguous provider call",
 			leaseExpiresAt: null,
 			terminalAt: now,
-			contact: null,
-			lastError: "Lease expired after an ambiguous provider call",
 		})
 		.where(
 			and(
@@ -161,20 +152,26 @@ async function withProviderTimeout<T>(operation: Promise<T>): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		let settled = false;
 		const timeout = setTimeout(() => {
-			if (settled) return;
+			if (settled) {
+				return;
+			}
 			settled = true;
 			reject(new ProviderTimeoutError());
 		}, PROVIDER_TIMEOUT_MS);
 
 		operation.then(
 			(value) => {
-				if (settled) return;
+				if (settled) {
+					return;
+				}
 				settled = true;
 				clearTimeout(timeout);
 				resolve(value);
 			},
 			(error) => {
-				if (settled) return;
+				if (settled) {
+					return;
+				}
 				settled = true;
 				clearTimeout(timeout);
 				reject(error);
@@ -195,54 +192,54 @@ async function deliverCandidate(
 	log: RequestLogger<Record<string, unknown>>,
 ) {
 	const claimed = await claimSubscription(candidate.id);
-	if (!claimed || !claimed.contact)
-		return { claimed: 0, notified: 0, failed: 0 };
+	if (!claimed || !claimed.contact) {
+		return { claimed: 0, failed: 0, notified: 0 };
+	}
 	try {
 		await withProviderTimeout(
 			sendRestockNotification({
 				channel: claimed.channel,
 				contact: claimed.contact,
+				productId: candidate.productId,
 				productName: candidate.productName,
 				productSlug: candidate.productSlug,
-				productId: candidate.productId,
 			}),
 		);
 		await finishClaim({
-			id: claimed.id,
 			claimToken: claimed.claimToken,
+			id: claimed.id,
 			state: "sent",
 		});
-		return { claimed: 1, notified: 1, failed: 0 };
+		return { claimed: 1, failed: 0, notified: 1 };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (
 			shouldRetryDelivery({
 				channel: claimed.channel,
-				providerResult:
-					error instanceof ProviderTimeoutError ? "ambiguous" : "failed",
+				providerResult: error instanceof ProviderTimeoutError ? "ambiguous" : "failed",
 			})
 		) {
 			await retryClaim({
-				id: claimed.id,
-				claimToken: claimed.claimToken,
 				attemptCount: claimed.attemptCount,
+				claimToken: claimed.claimToken,
 				error: message,
+				id: claimed.id,
 			});
 		} else {
 			await finishClaim({
-				id: claimed.id,
 				claimToken: claimed.claimToken,
-				state: "unknown",
 				error: message,
+				id: claimed.id,
+				state: "unknown",
 			});
 		}
 		log.error(error instanceof Error ? error : new Error(message), {
+			channel: claimed.channel,
 			event: "restock.notify_failed",
 			product_id: candidate.productId,
 			subscription_id: claimed.id,
-			channel: claimed.channel,
 		});
-		return { claimed: 1, notified: 0, failed: 1 };
+		return { claimed: 1, failed: 1, notified: 0 };
 	}
 }
 
@@ -256,10 +253,7 @@ export async function runRestockDeliveryBatch(productId?: number) {
 			productSlug: ProductsTable.slug,
 		})
 		.from(RestockSubscriptionsTable)
-		.innerJoin(
-			ProductsTable,
-			eq(ProductsTable.id, RestockSubscriptionsTable.productId),
-		)
+		.innerJoin(ProductsTable, eq(ProductsTable.id, RestockSubscriptionsTable.productId))
 		.where(
 			and(
 				productId === undefined ? undefined : eq(ProductsTable.id, productId),
@@ -272,10 +266,7 @@ export async function runRestockDeliveryBatch(productId?: number) {
 				isNull(ProductsTable.deletedAt),
 			),
 		)
-		.orderBy(
-			RestockSubscriptionsTable.nextAttemptAt,
-			RestockSubscriptionsTable.id,
-		)
+		.orderBy(RestockSubscriptionsTable.nextAttemptAt, RestockSubscriptionsTable.id)
 		.limit(DELIVERY_BATCH_SIZE);
 
 	let claimed = 0;
@@ -288,13 +279,13 @@ export async function runRestockDeliveryBatch(productId?: number) {
 		failed += result.failed;
 	}
 	log.info("restock.dispatch_complete", {
-		claimed,
-		notified,
-		failed,
 		batch_limit: DELIVERY_BATCH_SIZE,
+		claimed,
+		failed,
+		notified,
 	});
 	log.emit();
-	return { claimed, notified, failed };
+	return { claimed, failed, notified };
 }
 
 export async function notifyRestockSubscribers(productId: number) {
@@ -302,12 +293,13 @@ export async function notifyRestockSubscribers(productId: number) {
 }
 
 export async function dispatchRestockIfCrossedZero(input: {
-	productId: number;
-	previousStock: number;
 	newStock: number;
+	previousStock: number;
+	productId: number;
 }) {
-	if (!shouldDispatchRestock(input))
-		return { claimed: 0, notified: 0, failed: 0, skipped: true as const };
+	if (!shouldDispatchRestock(input)) {
+		return { claimed: 0, failed: 0, notified: 0, skipped: true as const };
+	}
 	return {
 		...(await runRestockDeliveryBatch(input.productId)),
 		skipped: false as const,
@@ -321,9 +313,11 @@ type WaitUntilContext = {
 
 export function scheduleRestockDispatch(
 	ctx: WaitUntilContext,
-	input: { productId: number; previousStock: number; newStock: number },
+	input: { newStock: number; previousStock: number; productId: number },
 ): void {
-	if (!shouldDispatchRestock(input)) return;
+	if (!shouldDispatchRestock(input)) {
+		return;
+	}
 	ctx.c.executionCtx.waitUntil(
 		runRestockDeliveryBatch(input.productId).catch((error) =>
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
@@ -337,12 +331,14 @@ export function scheduleRestockDispatch(
 export function scheduleRestockDispatches(
 	ctx: WaitUntilContext,
 	candidates: Array<{
-		productId: number;
-		previousStock: number;
 		newStock: number;
+		previousStock: number;
+		productId: number;
 	}>,
 ): void {
-	if (!candidates.some(shouldDispatchRestock)) return;
+	if (!candidates.some(shouldDispatchRestock)) {
+		return;
+	}
 	ctx.c.executionCtx.waitUntil(
 		runRestockDeliveryBatch().catch((error) =>
 			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {

@@ -1,14 +1,6 @@
-export type Wash =
-	| "peach"
-	| "blush"
-	| "mint"
-	| "sky"
-	| "lilac"
-	| "lemon"
-	| "sage"
-	| "apricot";
+export type Wash = "peach" | "blush" | "mint" | "sky" | "lilac" | "lemon" | "sage" | "apricot";
 
-export const WASH_ORDER: Wash[] = [
+export const WASH_ORDER: Array<Wash> = [
 	"peach",
 	"blush",
 	"mint",
@@ -20,25 +12,25 @@ export const WASH_ORDER: Wash[] = [
 ];
 
 export const WASH_BG: Record<Wash, string> = {
-	peach: "bg-wash-peach",
-	blush: "bg-wash-blush",
-	mint: "bg-wash-mint",
-	sky: "bg-wash-sky",
-	lilac: "bg-wash-lilac",
-	lemon: "bg-wash-lemon",
-	sage: "bg-wash-sage",
 	apricot: "bg-wash-apricot",
+	blush: "bg-wash-blush",
+	lemon: "bg-wash-lemon",
+	lilac: "bg-wash-lilac",
+	mint: "bg-wash-mint",
+	peach: "bg-wash-peach",
+	sage: "bg-wash-sage",
+	sky: "bg-wash-sky",
 };
 
 export const WASH_VAR: Record<Wash, string> = {
-	peach: "var(--color-wash-peach)",
-	blush: "var(--color-wash-blush)",
-	mint: "var(--color-wash-mint)",
-	sky: "var(--color-wash-sky)",
-	lilac: "var(--color-wash-lilac)",
-	lemon: "var(--color-wash-lemon)",
-	sage: "var(--color-wash-sage)",
 	apricot: "var(--color-wash-apricot)",
+	blush: "var(--color-wash-blush)",
+	lemon: "var(--color-wash-lemon)",
+	lilac: "var(--color-wash-lilac)",
+	mint: "var(--color-wash-mint)",
+	peach: "var(--color-wash-peach)",
+	sage: "var(--color-wash-sage)",
+	sky: "var(--color-wash-sky)",
 };
 
 export function washFor(key: string | number): Wash {

@@ -1,8 +1,4 @@
-import {
-	buildPhotoIdentifyTool,
-	formatProductCards,
-	type ProductCard,
-} from "@vit/assistant";
+import { buildPhotoIdentifyTool, formatProductCards, type ProductCard } from "@vit/assistant";
 import { searchAssistantProducts } from "./catalog";
 import { loadInboundImage, stageInboundImage } from "./messenger-inbound";
 import { buildKimiVision } from "./vision";
@@ -25,28 +21,28 @@ export interface PhotoProbeEnv {
 
 export interface PhotoProbeInput {
 	imageUrl: string;
-	sessionId?: string;
-	messageId?: string;
 	limit?: number;
+	messageId?: string;
+	sessionId?: string;
 }
 
 export interface PhotoProbeResult {
-	key: string;
+	cards: Array<ProductCard>;
 	contentType: string;
-	size: number;
 	facts: string;
-	queries: string[];
-	usedQuery?: string;
+	key: string;
 	matchCount: number;
-	cards: ProductCard[];
+	queries: Array<string>;
 	searchError?: string;
+	size: number;
+	usedQuery?: string;
 }
 
 type IdentifyOutput = {
-	imageKey: string;
 	available: boolean;
 	facts: string;
-	queries: string[];
+	imageKey: string;
+	queries: Array<string>;
 };
 
 export async function runPhotoProbe(
@@ -64,7 +60,7 @@ export async function runPhotoProbe(
 	const messageId = input.messageId ?? "probe-message";
 	const staged = await stageInboundImage(
 		bucket,
-		{ sessionId, messageId, index: 0 },
+		{ index: 0, messageId, sessionId },
 		input.imageUrl,
 	);
 	if (staged === undefined) {
@@ -82,15 +78,12 @@ export async function runPhotoProbe(
 
 	// Feed the top suggested query into the SAME #19 search + card formatter.
 	const usedQuery = identified.queries[0];
-	let cards: ProductCard[] = [];
+	let cards: Array<ProductCard> = [];
 	let matchCount = 0;
 	let searchError: string | undefined;
 	if (usedQuery) {
 		try {
-			const products = await searchAssistantProducts(
-				usedQuery,
-				input.limit ?? 8,
-			);
+			const products = await searchAssistantProducts(usedQuery, input.limit ?? 8);
 			matchCount = products.length;
 			cards = formatProductCards(products);
 		} catch (error) {
@@ -99,14 +92,14 @@ export async function runPhotoProbe(
 	}
 
 	return {
-		key: staged.key,
-		contentType: staged.contentType,
-		size: staged.size,
-		facts: identified.facts,
-		queries: identified.queries,
-		usedQuery,
-		matchCount,
 		cards,
+		contentType: staged.contentType,
+		facts: identified.facts,
+		key: staged.key,
+		matchCount,
+		queries: identified.queries,
 		searchError,
+		size: staged.size,
+		usedQuery,
 	};
 }

@@ -13,11 +13,11 @@ export async function runProductBenchmark() {
 		columns: {
 			id: true,
 			name: true,
-			slug: true,
 			price: true,
+			slug: true,
 		},
-		where: isNull(ProductsTable.deletedAt),
 		limit: 5,
+		where: isNull(ProductsTable.deletedAt),
 		with: {
 			images: {
 				columns: { url: true },
@@ -29,10 +29,10 @@ export async function runProductBenchmark() {
 
 	const product = products.map((p) => ({
 		id: p.id,
-		name: p.name,
-		slug: p.slug,
-		price: p.price,
 		images: p.images.map((img) => ({ url: img.url })),
+		name: p.name,
+		price: p.price,
+		slug: p.slug,
 	}));
 
 	const kvWriteStartTime = performance.now();
@@ -57,10 +57,10 @@ export async function runProductBenchmark() {
 
 	return {
 		dbElapsed,
-		kvWriteElapsed,
 		kvReadElapsed,
-		redisWriteElapsed,
-		redisReadElapsed,
+		kvWriteElapsed,
 		product: kvReadProduct || product,
+		redisReadElapsed,
+		redisWriteElapsed,
 	};
 }

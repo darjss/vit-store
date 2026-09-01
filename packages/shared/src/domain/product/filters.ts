@@ -4,9 +4,9 @@ export const productPresetFilterLabels = {
 } as const;
 
 export const productSortOptions = [
-	{ label: "Шинэ", field: "createdAt", direction: "desc" },
-	{ label: "Хямд", field: "price", direction: "asc" },
-	{ label: "Үнэтэй", field: "price", direction: "desc" },
+	{ direction: "desc", field: "createdAt", label: "Шинэ" },
+	{ direction: "asc", field: "price", label: "Хямд" },
+	{ direction: "desc", field: "price", label: "Үнэтэй" },
 ] as const;
 
 export const trendingProductSearches = [

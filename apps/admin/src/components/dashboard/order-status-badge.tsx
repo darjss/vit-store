@@ -8,12 +8,12 @@ interface OrderStatusBadgeProps {
 }
 
 const statusIcons: Record<string, typeof Clock> = {
-	created: Clock,
-	pending: Clock,
-	shipped: Truck,
-	delivered: CheckCircle,
 	cancelled: XCircle,
+	created: Clock,
+	delivered: CheckCircle,
+	pending: Clock,
 	refunded: XCircle,
+	shipped: Truck,
 };
 
 export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
@@ -27,9 +27,9 @@ export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
 
 	return (
 		<Badge
-			variant="outline"
+			className={`flex w-fit items-center gap-1.5 px-2 py-1 text-[11px] font-bold whitespace-nowrap shadow-none ${className}`}
 			size="sm"
-			className={`flex w-fit items-center gap-1.5 whitespace-nowrap px-2 py-1 font-bold text-[11px] shadow-none ${className}`}
+			variant="outline"
 		>
 			<Icon className="h-3 w-3" />
 			{label}

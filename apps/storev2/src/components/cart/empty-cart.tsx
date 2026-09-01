@@ -7,29 +7,20 @@ const EmptyCart = () => {
 	return (
 		<div class="enter-rise flex flex-col items-center justify-center px-6 py-14 text-center md:py-20">
 			<div class="relative mb-6">
-				<div class="flex size-24 items-center justify-center rounded-full bg-wash-peach">
-					<IconShoppingBag
-						class="h-10 w-10 text-cocoa"
-						aria-hidden="true"
-					/>
+				<div class="bg-wash-peach flex size-24 items-center justify-center rounded-full">
+					<IconShoppingBag aria-hidden="true" class="text-cocoa h-10 w-10" />
 				</div>
-				<Badge
-					variant="sticker"
-					class="-rotate-6 -top-2 -right-6 absolute"
-				>
+				<Badge class="absolute -top-2 -right-6 -rotate-6" variant="sticker">
 					Хоосон!
 				</Badge>
 			</div>
 
-			<h2 class="mb-2 font-display text-foreground text-xl md:text-2xl">
-				Сагс хоосон байна
-			</h2>
-			<p class="mb-6 max-w-xs text-muted-foreground text-sm leading-relaxed">
-				Танд хэрэгтэй витаминууд дэлгүүрт хүлээж байна. Эрүүл өдрөө эндээс
-				эхлүүлээрэй.
+			<h2 class="font-display text-foreground mb-2 text-xl md:text-2xl">Сагс хоосон байна</h2>
+			<p class="text-muted-foreground mb-6 max-w-xs text-sm leading-relaxed">
+				Танд хэрэгтэй витаминууд дэлгүүрт хүлээж байна. Эрүүл өдрөө эндээс эхлүүлээрэй.
 			</p>
 
-			<a href="/products/" class={cn(buttonVariants({ size: "lg" }))}>
+			<a class={cn(buttonVariants({ size: "lg" }))} href="/products/">
 				Дэлгүүр үзэх
 			</a>
 		</div>

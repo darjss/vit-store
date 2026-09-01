@@ -25,13 +25,13 @@ export const createTable = pgTableCreator((name) => `ecom_vit_${name}`);
 export const UsersTable = createTable(
 	"user",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		username: varchar("username", { length: 256 }).notNull(),
-		googleId: varchar("google_id", { length: 256 }).unique(),
-		isApproved: boolean("is_approved").default(false).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
+		googleId: varchar("google_id", { length: 256 }).unique(),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		isApproved: boolean("is_approved").default(false).notNull(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+		username: varchar("username", { length: 256 }).notNull(),
 	},
 	(table) => [
 		index("username_idx").on(table.username),
@@ -44,15 +44,15 @@ export const UsersTable = createTable(
 export const CustomersTable = createTable(
 	"customer",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		phone: integer("phone").notNull().unique(),
 		address: varchar("address", { length: 256 }),
 		addressZoneId: integer("address_zone_id"),
-		facebook_username: varchar("facebook_username", { length: 256 }),
-		instagram_username: varchar("instagram_username", { length: 256 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
+		facebook_username: varchar("facebook_username", { length: 256 }),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		instagram_username: varchar("instagram_username", { length: 256 }),
+		phone: integer("phone").notNull().unique(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
 		index("phone_idx").on(table.phone),
@@ -64,17 +64,17 @@ export const CustomersTable = createTable(
 export const BrandsTable = createTable(
 	"brand",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		name: varchar("name", { length: 256 }).notNull().unique(),
-		slug: varchar("slug", { length: 256 }).notNull().unique(),
-		logoUrl: varchar("logo_url", { length: 512 }).notNull(),
-		description: text("description"),
 		bannerImage: varchar("banner_image", { length: 512 }),
-		seoTitle: varchar("seo_title", { length: 256 }),
-		seoDescription: varchar("seo_description", { length: 512 }),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
+		description: text("description"),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		logoUrl: varchar("logo_url", { length: 512 }).notNull(),
+		name: varchar("name", { length: 256 }).notNull().unique(),
+		seoDescription: varchar("seo_description", { length: 512 }),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		slug: varchar("slug", { length: 256 }).notNull().unique(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
 		index("brand_name_idx").on(table.name),
@@ -87,16 +87,16 @@ export const BrandsTable = createTable(
 export const CategoriesTable = createTable(
 	"category",
 	{
+		bannerImage: varchar("banner_image", { length: 512 }),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
+		description: text("description"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		name: varchar("name", { length: 256 }).notNull().unique(),
-		slug: varchar("slug", { length: 256 }).notNull().unique(),
-		description: text("description"),
-		bannerImage: varchar("banner_image", { length: 512 }),
-		seoTitle: varchar("seo_title", { length: 256 }),
 		seoDescription: varchar("seo_description", { length: 512 }),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		slug: varchar("slug", { length: 256 }).notNull().unique(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("category_name_idx").on(table.name),
@@ -109,45 +109,48 @@ export const CategoriesTable = createTable(
 export const ProductsTable = createTable(
 	"product",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
-		name: varchar("name", { length: 256 }).notNull(),
-		slug: varchar("slug", { length: 256 }).notNull(),
-		description: text("description").notNull(),
-		status: text("status", { enum: status }).default("draft").notNull(),
-		discount: integer("discount").default(0).notNull(),
 		amount: varchar("amount", { length: 256 }).notNull(),
-		potency: varchar("potency", { length: 256 }).notNull(),
-		stock: integer("stock").default(0).notNull(),
-		price: integer("price").notNull(),
-		dailyIntake: integer("daily_intake").default(0).notNull(),
-		categoryId: integer("category_id")
-			.references(() => CategoriesTable.id)
-			.notNull(),
 		brandId: integer("brand_id")
 			.references(() => BrandsTable.id)
 			.notNull(),
-		tags: text("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-		isFeatured: boolean("is_featured").default(false).notNull(),
+		categoryId: integer("category_id")
+			.references(() => CategoriesTable.id)
+			.notNull(),
+		dailyIntake: integer("daily_intake").default(0).notNull(),
+		description: text("description").notNull(),
+		discount: integer("discount").default(0).notNull(),
+		expirationDate: varchar("expiration_date", { length: 7 }),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
 		ingredients: jsonb("ingredients")
-			.$type<string[]>()
+			.$type<Array<string>>()
 			.default(sql`'[]'::jsonb`)
 			.notNull(),
-		seoTitle: varchar("seo_title", { length: 256 }),
-		seoDescription: varchar("seo_description", { length: 512 }),
+		isFeatured: boolean("is_featured").default(false).notNull(),
+		name: varchar("name", { length: 256 }).notNull(),
 		name_mn: varchar("name_mn", { length: 256 }),
+		potency: varchar("potency", { length: 256 }).notNull(),
+		price: integer("price").notNull(),
+		seoDescription: varchar("seo_description", { length: 512 }),
+		seoTitle: varchar("seo_title", { length: 256 }),
+		slug: varchar("slug", { length: 256 }).notNull(),
+		status: text("status", { enum: status }).default("draft").notNull(),
+		stock: integer("stock").default(0).notNull(),
+		tags: text("tags")
+			.$type<Array<string>>()
+			.notNull()
+			.default(sql`'[]'::jsonb`),
 		weightGrams: integer("weight_grams").default(0).notNull(),
-		expirationDate: varchar("expiration_date", { length: 7 }),
 		// Slugs previously used by this product. When a product name is
 		// cleaned (e.g. dedup of a duplicated brand prefix) and the slug is
 		// regenerated, the prior slug is appended here so the storefront can
 		// 301-redirect old URLs to the canonical one. See issue #78.
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		oldSlugs: jsonb("old_slugs")
-			.$type<string[]>()
+			.$type<Array<string>>()
 			.default(sql`'[]'::jsonb`)
 			.notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("product_id_idx").on(table.id),
@@ -168,18 +171,8 @@ export const ProductsTable = createTable(
 			table.createdAt,
 			table.id,
 		),
-		index("product_store_list_price_idx").on(
-			table.deletedAt,
-			table.status,
-			table.price,
-			table.id,
-		),
-		index("product_store_list_stock_idx").on(
-			table.deletedAt,
-			table.status,
-			table.stock,
-			table.id,
-		),
+		index("product_store_list_price_idx").on(table.deletedAt, table.status, table.price, table.id),
+		index("product_store_list_stock_idx").on(table.deletedAt, table.status, table.stock, table.id),
 		index("product_featured_store_idx").on(
 			table.isFeatured,
 			table.status,
@@ -204,14 +197,14 @@ export const ProductsTable = createTable(
 export const ProductImagesTable = createTable(
 	"product_image",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity().notNull(),
+		isPrimary: boolean("is_primary").default(false).notNull(),
 		productId: integer("product_id")
 			.references(() => ProductsTable.id, { onDelete: "cascade" })
 			.notNull(),
 		url: varchar("url", { length: 512 }).notNull(),
-		isPrimary: boolean("is_primary").default(false).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("image_product_idx").on(table.productId),
@@ -227,67 +220,60 @@ export const ProductImagesTable = createTable(
 export const OrdersTable = createTable(
 	"order",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		orderNumber: varchar("order_number", { length: 8 }).notNull(),
+		address: varchar("address", { length: 256 }).notNull(),
+		addressZoneId: integer("address_zone_id"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		customerPhone: integer("customer_phone")
 			.references(() => CustomersTable.phone)
 			.notNull(),
-		status: text("status", {
-			enum: orderStatus,
-		}).notNull(),
-		address: varchar("address", { length: 256 }).notNull(),
-		addressZoneId: integer("address_zone_id"),
+		deletedAt: timestamp("deleted_at"),
 		deliveryProvider: text("delivery_provider", {
 			enum: deliveryProvider,
 		}).notNull(),
-		total: integer("total").notNull(),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		notes: text("notes"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
+		orderNumber: varchar("order_number", { length: 8 }).notNull(),
+		status: text("status", {
+			enum: orderStatus,
+		}).notNull(),
+		total: integer("total").notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("order_id_idx").on(table.id),
 		index("order_customer_idx").on(table.customerPhone),
 		uniqueIndex("order_number_unique_idx").on(table.orderNumber),
 		index("order_status_idx").on(table.status),
-		index("order_admin_list_idx").on(
-			table.deletedAt,
-			table.status,
-			table.createdAt,
-		),
+		index("order_admin_list_idx").on(table.deletedAt, table.status, table.createdAt),
 		index("order_date_range_idx").on(table.deletedAt, table.createdAt),
-		index("order_customer_deleted_idx").on(
-			table.customerPhone,
-			table.deletedAt,
-		),
+		index("order_customer_deleted_idx").on(table.customerPhone, table.deletedAt),
 	],
 );
 
 export const DeliveryDispatchesTable = createTable("delivery_dispatch", {
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	deliveryDate: varchar("delivery_date", { length: 10 }).notNull(),
+	fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
 	orderId: integer("order_id")
 		.primaryKey()
 		.references(() => OrdersTable.id, { onDelete: "cascade" }),
-	fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
-	deliveryDate: varchar("delivery_date", { length: 10 }).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const OrderDetailsTable = createTable(
 	"order_detail",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		orderId: integer("order_id")
 			.references(() => OrdersTable.id, { onDelete: "cascade" })
 			.notNull(),
+		price: integer("price"),
 		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
 		quantity: integer("quantity").notNull(),
-		price: integer("price"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("detail_order_idx").on(table.orderId),
@@ -299,22 +285,20 @@ export const OrderDetailsTable = createTable(
 export const PaymentsTable = createTable(
 	"payment",
 	{
+		amount: integer("amount").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		paymentNumber: varchar("payment_number", { length: 10 })
-			.default("")
-			.notNull(),
+		invoiceId: varchar("invoice_id", { length: 64 }),
 		orderId: integer("order_id")
 			.references(() => OrdersTable.id)
 			.notNull(),
+		paymentNumber: varchar("payment_number", { length: 10 }).default("").notNull(),
 		provider: text("provider", { enum: paymentProvider }).notNull(),
 		status: text("status", {
 			enum: paymentStatus,
 		}).notNull(),
-		invoiceId: varchar("invoice_id", { length: 64 }),
-		amount: integer("amount").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("payment_order_idx").on(table.orderId),
@@ -328,18 +312,18 @@ export const PaymentsTable = createTable(
 export const MessengerNotificationFailuresTable = createTable(
 	"messenger_notification_failure",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		errorCode: varchar("error_code", { length: 64 }),
+		errorMessage: text("error_message"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		lastAttemptAt: timestamp("last_attempt_at"),
+		payload: jsonb("payload").notNull(),
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
+		retryCount: integer("retry_count").notNull().default(0),
 		status: text("status", { enum: ["pending", "sent", "failed"] })
 			.notNull()
 			.default("pending"),
-		payload: jsonb("payload").notNull(),
-		errorMessage: text("error_message"),
-		errorCode: varchar("error_code", { length: 64 }),
-		retryCount: integer("retry_count").notNull().default(0),
-		lastAttemptAt: timestamp("last_attempt_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -347,17 +331,21 @@ export const MessengerNotificationFailuresTable = createTable(
 			table.paymentNumber,
 			table.purpose,
 		),
-		index("messenger_notification_status_created_idx").on(
-			table.status,
-			table.createdAt,
-		),
+		index("messenger_notification_status_created_idx").on(table.status, table.createdAt),
 	],
 );
 
 export const PaymentNotificationOutboxTable = createTable(
 	"payment_notification_outbox",
 	{
+		attemptCount: integer("attempt_count").notNull().default(0),
+		claimToken: varchar("claim_token", { length: 64 }),
+		claimUntil: timestamp("claim_until"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		lastErrorAt: timestamp("last_error_at"),
+		lastErrorCode: varchar("last_error_code", { length: 64 }),
+		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
 		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		purpose: varchar("purpose", { length: 64 }).notNull(),
 		status: text("status", {
@@ -365,13 +353,6 @@ export const PaymentNotificationOutboxTable = createTable(
 		})
 			.notNull()
 			.default("pending"),
-		claimToken: varchar("claim_token", { length: 64 }),
-		claimUntil: timestamp("claim_until"),
-		attemptCount: integer("attempt_count").notNull().default(0),
-		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
-		lastErrorCode: varchar("last_error_code", { length: 64 }),
-		lastErrorAt: timestamp("last_error_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
@@ -379,40 +360,34 @@ export const PaymentNotificationOutboxTable = createTable(
 			table.paymentNumber,
 			table.purpose,
 		),
-		index("payment_notification_dispatch_idx").on(
-			table.status,
-			table.nextAttemptAt,
-		),
+		index("payment_notification_dispatch_idx").on(table.status, table.nextAttemptAt),
 	],
 );
 
 export const PaymentNotificationAttemptsTable = createTable(
 	"payment_notification_attempt",
 	{
+		attemptNumber: integer("attempt_number").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		errorCode: varchar("error_code", { length: 64 }),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		outboxId: integer("outbox_id")
 			.references(() => PaymentNotificationOutboxTable.id)
 			.notNull(),
-		attemptNumber: integer("attempt_number").notNull(),
 		outcome: varchar("outcome", { length: 32 }).notNull(),
-		errorCode: varchar("error_code", { length: 64 }),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(table) => [
-		uniqueIndex("payment_notification_attempt_unique_idx").on(
-			table.outboxId,
-			table.attemptNumber,
-		),
+		uniqueIndex("payment_notification_attempt_unique_idx").on(table.outboxId, table.attemptNumber),
 	],
 );
 
 export const KhaanConsumedTransactionsTable = createTable(
 	"khaan_consumed_transaction",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
-		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 		confirmedAt: timestamp("confirmed_at").defaultNow().notNull(),
+		fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		paymentNumber: varchar("payment_number", { length: 10 }).notNull(),
 	},
 	(table) => [
 		uniqueIndex("khaan_consumed_fingerprint_unique_idx").on(table.fingerprint),
@@ -423,32 +398,32 @@ export const KhaanConsumedTransactionsTable = createTable(
 export const RestockSubscriptionsTable = createTable(
 	"restock_subscription",
 	{
+		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
-		channel: text("channel", { enum: ["sms", "email"] }).notNull(),
 		// Erased on every terminal state; only pending/sending deliveries retain it.
-		contact: text("contact"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		deliveryState: text("delivery_state", {
-			enum: ["pending", "sending", "sent", "failed", "unknown", "cancelled"],
-		})
-			.default("pending")
-			.notNull(),
+		attemptCount: integer("attempt_count").default(0).notNull(),
+		claimToken: varchar("claim_token", { length: 64 }),
 		consentState: text("consent_state", {
 			enum: ["pending", "verified"],
 		})
 			.default("pending")
 			.notNull(),
+		contact: text("contact"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		deliveryKey: varchar("delivery_key", { length: 96 }).notNull(),
-		claimToken: varchar("claim_token", { length: 64 }),
+		deliveryState: text("delivery_state", {
+			enum: ["pending", "sending", "sent", "failed", "unknown", "cancelled"],
+		})
+			.default("pending")
+			.notNull(),
+		lastError: text("last_error"),
 		leaseExpiresAt: timestamp("lease_expires_at"),
-		attemptCount: integer("attempt_count").default(0).notNull(),
 		nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
 		terminalAt: timestamp("terminal_at"),
-		lastError: text("last_error"),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		uniqueIndex("restock_sub_open_unique_idx")
@@ -468,22 +443,20 @@ export const RestockSubscriptionsTable = createTable(
 			),
 		index("restock_sub_lease_idx")
 			.on(table.leaseExpiresAt)
-			.where(
-				sql`${table.deletedAt} is null and ${table.deliveryState} = 'sending'`,
-			),
+			.where(sql`${table.deletedAt} is null and ${table.deliveryState} = 'sending'`),
 	],
 );
 
 export const CartsTable = createTable(
 	"cart",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		customerId: integer("customer_id")
 			.references(() => CustomersTable.phone)
 			.notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 		deletedAt: timestamp("deleted_at"),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 	},
 	(table) => [
 		index("cart_customer_idx").on(table.customerId),
@@ -495,17 +468,17 @@ export const CartsTable = createTable(
 export const CartItemsTable = createTable(
 	"cart_item",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		cartId: integer("cart_id")
 			.references(() => CartsTable.id, { onDelete: "cascade" })
 			.notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		productId: integer("product_variant_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
 		quantity: integer("quantity").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("cart_item_cart_idx").on(table.cartId),
@@ -517,20 +490,20 @@ export const CartItemsTable = createTable(
 export const SalesTable = createTable(
 	"sales",
 	{
+		createdAt: timestamp("created_at").defaultNow(),
+		deletedAt: timestamp("deleted_at"),
+		discountApplied: integer("discount_applied").default(0),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		productId: integer("product_id")
-			.references(() => ProductsTable.id)
-			.notNull(),
 		orderId: integer("order_id")
 			.references(() => OrdersTable.id)
 			.notNull(),
-		quantitySold: integer("quantity_sold").notNull(),
 		productCost: integer("product_cost").notNull(),
+		productId: integer("product_id")
+			.references(() => ProductsTable.id)
+			.notNull(),
+		quantitySold: integer("quantity_sold").notNull(),
 		sellingPrice: integer("selling_price").notNull(),
-		discountApplied: integer("discount_applied").default(0),
-		createdAt: timestamp("created_at").defaultNow(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("sales_product_idx").on(table.productId),
@@ -543,24 +516,22 @@ export const SalesTable = createTable(
 export const PurchasesTable = createTable(
 	"purchase",
 	{
-		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		provider: text("provider", { enum: purchaseProvider })
-			.default("unknown")
-			.notNull(),
+		cancelledAt: timestamp("cancelled_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		externalOrderNumber: varchar("external_order_number", {
 			length: 128,
 		}).notNull(),
-		trackingNumber: varchar("tracking_number", { length: 128 }),
-		shippingCost: integer("shipping_cost").default(0).notNull(),
+		forwarderReceivedAt: timestamp("forwarder_received_at"),
+		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
 		notes: text("notes"),
 		orderedAt: timestamp("ordered_at"),
-		shippedAt: timestamp("shipped_at"),
-		forwarderReceivedAt: timestamp("forwarder_received_at"),
+		provider: text("provider", { enum: purchaseProvider }).default("unknown").notNull(),
 		receivedAt: timestamp("received_at"),
-		cancelledAt: timestamp("cancelled_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
+		shippedAt: timestamp("shipped_at"),
+		shippingCost: integer("shipping_cost").default(0).notNull(),
+		trackingNumber: varchar("tracking_number", { length: 128 }),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_id_idx").on(table.id),
@@ -577,45 +548,39 @@ export const PurchasesTable = createTable(
 export const PurchaseItemsTable = createTable(
 	"purchase_item",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		purchaseId: integer("purchase_id")
-			.references(() => PurchasesTable.id, { onDelete: "cascade" })
-			.notNull(),
 		productId: integer("product_id")
 			.references(() => ProductsTable.id)
 			.notNull(),
+		purchaseId: integer("purchase_id")
+			.references(() => PurchasesTable.id, { onDelete: "cascade" })
+			.notNull(),
 		quantityOrdered: integer("quantity_ordered").notNull(),
 		unitCost: integer("unit_cost").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_item_purchase_idx").on(table.purchaseId),
 		index("purchase_item_product_idx").on(table.productId),
-		index("purchase_item_purchase_deleted_idx").on(
-			table.purchaseId,
-			table.deletedAt,
-		),
-		index("purchase_item_product_deleted_idx").on(
-			table.productId,
-			table.deletedAt,
-		),
+		index("purchase_item_purchase_deleted_idx").on(table.purchaseId, table.deletedAt),
+		index("purchase_item_product_deleted_idx").on(table.productId, table.deletedAt),
 	],
 );
 
 export const PurchaseReceiptsTable = createTable(
 	"purchase_receipt",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+		notes: text("notes"),
 		purchaseId: integer("purchase_id")
 			.references(() => PurchasesTable.id, { onDelete: "cascade" })
 			.notNull(),
 		receivedAt: timestamp("received_at").notNull(),
-		notes: text("notes"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_receipt_purchase_idx").on(table.purchaseId),
@@ -627,17 +592,17 @@ export const PurchaseReceiptsTable = createTable(
 export const PurchaseReceiptItemsTable = createTable(
 	"purchase_receipt_item",
 	{
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		deletedAt: timestamp("deleted_at"),
 		id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-		receiptId: integer("receipt_id")
-			.references(() => PurchaseReceiptsTable.id, { onDelete: "cascade" })
-			.notNull(),
 		purchaseItemId: integer("purchase_item_id")
 			.references(() => PurchaseItemsTable.id, { onDelete: "cascade" })
 			.notNull(),
 		quantityReceived: integer("quantity_received").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
+		receiptId: integer("receipt_id")
+			.references(() => PurchaseReceiptsTable.id, { onDelete: "cascade" })
+			.notNull(),
 		updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
-		deletedAt: timestamp("deleted_at"),
 	},
 	(table) => [
 		index("purchase_receipt_item_receipt_idx").on(table.receiptId),
@@ -659,85 +624,70 @@ export const paymentsRelations = relations(PaymentsTable, ({ one }) => ({
 	}),
 }));
 
-export const orderDetailsRelations = relations(
-	OrderDetailsTable,
-	({ one }) => ({
-		order: one(OrdersTable, {
-			fields: [OrderDetailsTable.orderId],
-			references: [OrdersTable.id],
-		}),
-		product: one(ProductsTable, {
-			fields: [OrderDetailsTable.productId],
-			references: [ProductsTable.id],
-		}),
+export const orderDetailsRelations = relations(OrderDetailsTable, ({ one }) => ({
+	order: one(OrdersTable, {
+		fields: [OrderDetailsTable.orderId],
+		references: [OrdersTable.id],
 	}),
-);
+	product: one(ProductsTable, {
+		fields: [OrderDetailsTable.productId],
+		references: [ProductsTable.id],
+	}),
+}));
 
 export const productsRelations = relations(ProductsTable, ({ many, one }) => ({
-	images: many(ProductImagesTable),
-	category: one(CategoriesTable, {
-		fields: [ProductsTable.categoryId],
-		references: [CategoriesTable.id],
-	}),
 	brand: one(BrandsTable, {
 		fields: [ProductsTable.brandId],
 		references: [BrandsTable.id],
 	}),
+	category: one(CategoriesTable, {
+		fields: [ProductsTable.categoryId],
+		references: [CategoriesTable.id],
+	}),
+	images: many(ProductImagesTable),
 }));
 
-export const productImagesRelations = relations(
-	ProductImagesTable,
-	({ one }) => ({
-		product: one(ProductsTable, {
-			fields: [ProductImagesTable.productId],
-			references: [ProductsTable.id],
-		}),
+export const productImagesRelations = relations(ProductImagesTable, ({ one }) => ({
+	product: one(ProductsTable, {
+		fields: [ProductImagesTable.productId],
+		references: [ProductsTable.id],
 	}),
-);
+}));
 export const purchaseRelations = relations(PurchasesTable, ({ many }) => ({
 	items: many(PurchaseItemsTable),
 	receipts: many(PurchaseReceiptsTable),
 }));
 
-export const purchaseItemsRelations = relations(
-	PurchaseItemsTable,
-	({ one, many }) => ({
-		purchase: one(PurchasesTable, {
-			fields: [PurchaseItemsTable.purchaseId],
-			references: [PurchasesTable.id],
-		}),
-		product: one(ProductsTable, {
-			fields: [PurchaseItemsTable.productId],
-			references: [ProductsTable.id],
-		}),
-		receiptItems: many(PurchaseReceiptItemsTable),
+export const purchaseItemsRelations = relations(PurchaseItemsTable, ({ many, one }) => ({
+	product: one(ProductsTable, {
+		fields: [PurchaseItemsTable.productId],
+		references: [ProductsTable.id],
 	}),
-);
+	purchase: one(PurchasesTable, {
+		fields: [PurchaseItemsTable.purchaseId],
+		references: [PurchasesTable.id],
+	}),
+	receiptItems: many(PurchaseReceiptItemsTable),
+}));
 
-export const purchaseReceiptsRelations = relations(
-	PurchaseReceiptsTable,
-	({ one, many }) => ({
-		purchase: one(PurchasesTable, {
-			fields: [PurchaseReceiptsTable.purchaseId],
-			references: [PurchasesTable.id],
-		}),
-		items: many(PurchaseReceiptItemsTable),
+export const purchaseReceiptsRelations = relations(PurchaseReceiptsTable, ({ many, one }) => ({
+	items: many(PurchaseReceiptItemsTable),
+	purchase: one(PurchasesTable, {
+		fields: [PurchaseReceiptsTable.purchaseId],
+		references: [PurchasesTable.id],
 	}),
-);
+}));
 
-export const purchaseReceiptItemsRelations = relations(
-	PurchaseReceiptItemsTable,
-	({ one }) => ({
-		receipt: one(PurchaseReceiptsTable, {
-			fields: [PurchaseReceiptItemsTable.receiptId],
-			references: [PurchaseReceiptsTable.id],
-		}),
-		purchaseItem: one(PurchaseItemsTable, {
-			fields: [PurchaseReceiptItemsTable.purchaseItemId],
-			references: [PurchaseItemsTable.id],
-		}),
+export const purchaseReceiptItemsRelations = relations(PurchaseReceiptItemsTable, ({ one }) => ({
+	purchaseItem: one(PurchaseItemsTable, {
+		fields: [PurchaseReceiptItemsTable.purchaseItemId],
+		references: [PurchaseItemsTable.id],
 	}),
-);
+	receipt: one(PurchaseReceiptsTable, {
+		fields: [PurchaseReceiptItemsTable.receiptId],
+		references: [PurchaseReceiptsTable.id],
+	}),
+}));
 
 export const salesRelations = relations(SalesTable, ({ one }) => ({
 	order: one(OrdersTable, {
@@ -750,15 +700,12 @@ export const salesRelations = relations(SalesTable, ({ one }) => ({
 	}),
 }));
 
-export const restockSubscriptionsRelations = relations(
-	RestockSubscriptionsTable,
-	({ one }) => ({
-		product: one(ProductsTable, {
-			fields: [RestockSubscriptionsTable.productId],
-			references: [ProductsTable.id],
-		}),
+export const restockSubscriptionsRelations = relations(RestockSubscriptionsTable, ({ one }) => ({
+	product: one(ProductsTable, {
+		fields: [RestockSubscriptionsTable.productId],
+		references: [ProductsTable.id],
 	}),
-);
+}));
 
 export type UserSelectType = InferSelectModel<typeof UsersTable>;
 export type CustomerSelectType = InferSelectModel<typeof CustomersTable>;
@@ -766,9 +713,7 @@ export type BrandSelectType = InferSelectModel<typeof BrandsTable>;
 export type CategorySelectType = InferSelectModel<typeof CategoriesTable>;
 export type ProductSelectType = InferSelectModel<typeof ProductsTable>;
 
-export type ProductImageSelectType = InferSelectModel<
-	typeof ProductImagesTable
->;
+export type ProductImageSelectType = InferSelectModel<typeof ProductImagesTable>;
 export type OrderSelectType = InferSelectModel<typeof OrdersTable>;
 export type OrderDetailSelectType = InferSelectModel<typeof OrderDetailsTable>;
 export type PaymentSelectType = InferSelectModel<typeof PaymentsTable>;
@@ -776,28 +721,18 @@ export type CartSelectType = InferSelectModel<typeof CartsTable>;
 export type CartItemSelectType = InferSelectModel<typeof CartItemsTable>;
 
 export type PurchaseSelectType = InferSelectModel<typeof PurchasesTable>;
-export type PurchaseItemSelectType = InferSelectModel<
-	typeof PurchaseItemsTable
->;
-export type PurchaseReceiptSelectType = InferSelectModel<
-	typeof PurchaseReceiptsTable
->;
-export type PurchaseReceiptItemSelectType = InferSelectModel<
-	typeof PurchaseReceiptItemsTable
->;
+export type PurchaseItemSelectType = InferSelectModel<typeof PurchaseItemsTable>;
+export type PurchaseReceiptSelectType = InferSelectModel<typeof PurchaseReceiptsTable>;
+export type PurchaseReceiptItemSelectType = InferSelectModel<typeof PurchaseReceiptItemsTable>;
 export type SalesSelectType = InferSelectModel<typeof SalesTable>;
-export type RestockSubscriptionSelectType = InferSelectModel<
-	typeof RestockSubscriptionsTable
->;
+export type RestockSubscriptionSelectType = InferSelectModel<typeof RestockSubscriptionsTable>;
 
 export type UserInsertType = InferInsertModel<typeof UsersTable>;
 export type CustomerInsertType = InferInsertModel<typeof CustomersTable>;
 export type BrandInsertType = InferInsertModel<typeof BrandsTable>;
 export type CategoryInsertType = InferInsertModel<typeof CategoriesTable>;
 export type ProductInsertType = InferInsertModel<typeof ProductsTable>;
-export type ProductImageInsertType = InferInsertModel<
-	typeof ProductImagesTable
->;
+export type ProductImageInsertType = InferInsertModel<typeof ProductImagesTable>;
 export type OrderInsertType = InferInsertModel<typeof OrdersTable>;
 export type OrderDetailInsertType = InferInsertModel<typeof OrderDetailsTable>;
 export type PaymentInsertType = InferInsertModel<typeof PaymentsTable>;
@@ -805,16 +740,8 @@ export type CartInsertType = InferInsertModel<typeof CartsTable>;
 export type CartItemInsertType = InferInsertModel<typeof CartItemsTable>;
 
 export type PurchaseInsertType = InferInsertModel<typeof PurchasesTable>;
-export type PurchaseItemInsertType = InferInsertModel<
-	typeof PurchaseItemsTable
->;
-export type PurchaseReceiptInsertType = InferInsertModel<
-	typeof PurchaseReceiptsTable
->;
-export type PurchaseReceiptItemInsertType = InferInsertModel<
-	typeof PurchaseReceiptItemsTable
->;
+export type PurchaseItemInsertType = InferInsertModel<typeof PurchaseItemsTable>;
+export type PurchaseReceiptInsertType = InferInsertModel<typeof PurchaseReceiptsTable>;
+export type PurchaseReceiptItemInsertType = InferInsertModel<typeof PurchaseReceiptItemsTable>;
 export type SalesInsertType = InferInsertModel<typeof SalesTable>;
-export type RestockSubscriptionInsertType = InferInsertModel<
-	typeof RestockSubscriptionsTable
->;
+export type RestockSubscriptionInsertType = InferInsertModel<typeof RestockSubscriptionsTable>;

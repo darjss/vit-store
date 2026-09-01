@@ -4,21 +4,21 @@ import Layout from "@/layouts/Layout.astro";
 export const prerender = false;
 
 const scoreLabel = (s: number | null) => {
-  if (s === null) return "N/A";
-  if (s >= 0.9) return "Good";
-  if (s >= 0.5) return "Needs Work";
+  if (s === null) {return "N/A";}
+  if (s >= 0.9) {return "Good";}
+  if (s >= 0.5) {return "Needs Work";}
   return "Poor";
 };
 const scoreColor = (s: number | null) => {
-  if (s === null) return "text-gray-400";
-  if (s >= 0.9) return "text-green-500";
-  if (s >= 0.5) return "text-orange-500";
+  if (s === null) {return "text-gray-400";}
+  if (s >= 0.9) {return "text-green-500";}
+  if (s >= 0.5) {return "text-orange-500";}
   return "text-red-500";
 };
 const scoreBg = (s: number | null) => {
-  if (s === null) return "bg-gray-100";
-  if (s >= 0.9) return "bg-green-100";
-  if (s >= 0.5) return "bg-orange-100";
+  if (s === null) {return "bg-gray-100";}
+  if (s >= 0.9) {return "bg-green-100";}
+  if (s >= 0.5) {return "bg-orange-100";}
   return "bg-red-100";
 };
 const priorityBadge = (p: number) => {
@@ -26,43 +26,24 @@ const priorityBadge = (p: number) => {
   return colors[p] || "bg-gray-400";
 };
 const effortBadge = (e: string) => {
-  const m: Record<string, string> = { low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800", high: "bg-red-100 text-red-800" };
+  const m: Record<string, string> = { high: "bg-red-100 text-red-800", low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800" };
   return m[e] || "bg-gray-100 text-gray-800";
 };
 
 const data = {
-  metadata: {
-    url: "https://amerikvitamin.mn",
-    api_url: "https://api.amerikvitamin.mn",
-    date: "2026-05-13",
-  },
-  lighthouse: {
-    home: { url: "/", scores: { performance: 0.74, bestPractices: 1.0, seo: 1.0 }, metrics: { lcp: 3557, fcp: 1211, si: 2787, tbt: 637, cls: 0, ttfb: 34 }, transfer_bytes: 670551, unused_js_bytes: 85000 },
-    products: { url: "/products", scores: { performance: 0.53, bestPractices: null, seo: 1.0 }, metrics: { lcp: 5871, fcp: 1125, si: 2785, tbt: 1372, cls: 0, ttfb: 88 }, transfer_bytes: 630498, unused_js_bytes: 84000 },
-    product_detail: { url: "/products/[slug]", scores: { performance: 0.57, bestPractices: null, seo: 1.0 }, metrics: { lcp: 5021, fcp: 1726, si: 5094, tbt: 875, cls: 0, ttfb: 110 }, transfer_bytes: 438406, unused_js_bytes: 83000 },
-    cart: { url: "/cart", scores: { performance: 0.99, bestPractices: null, seo: null }, metrics: { lcp: 1378, fcp: 1378, si: 1446, tbt: 124, cls: 0, ttfb: 187 }, transfer_bytes: null, unused_js_bytes: 0 },
-    checkout: { url: "/checkout", scores: { performance: 0.86, bestPractices: null, seo: null }, metrics: { lcp: 3820, fcp: 1096, si: 1988, tbt: 161, cls: 0, ttfb: 434 }, transfer_bytes: null, unused_js_bytes: 250 },
-  },
   api_latency: {
-    endpoints: [
-      { name: "GET /", ttfb: 265, total: 265, size: 2 },
-      { name: "GET /health-check (cold)", ttfb: 661, total: 661, size: 17 },
-      { name: "GET /trpc/store/healthCheck", ttfb: 214, total: 214, size: 33 },
-      { name: "GET /trpc/store/healthCheck (proxy)", ttfb: 341, total: 341, size: 33, note: "+130ms proxy" },
-      { name: "GET product.getProductsForHome", ttfb: 1071, total: 1071, size: 4377 },
-      { name: "GET category.getAllCategories", ttfb: 843, total: 844, size: 1852 },
-      { name: "GET category.getAllCategoryNames", ttfb: 451, total: 452, size: 687 },
-      { name: "GET product.getAllProducts", ttfb: 612, total: 674, size: 41518 },
-    ],
     cold_start_penalty_ms: 400,
+    endpoints: [
+      { name: "GET /", size: 2, total: 265, ttfb: 265 },
+      { name: "GET /health-check (cold)", size: 17, total: 661, ttfb: 661 },
+      { name: "GET /trpc/store/healthCheck", size: 33, total: 214, ttfb: 214 },
+      { name: "GET /trpc/store/healthCheck (proxy)", note: "+130ms proxy", size: 33, total: 341, ttfb: 341 },
+      { name: "GET product.getProductsForHome", size: 4377, total: 1071, ttfb: 1071 },
+      { name: "GET category.getAllCategories", size: 1852, total: 844, ttfb: 843 },
+      { name: "GET category.getAllCategoryNames", size: 687, total: 452, ttfb: 451 },
+      { name: "GET product.getAllProducts", size: 41_518, total: 674, ttfb: 612 },
+    ],
   },
-  recommendations: [
-    { priority: 1, id: "PH-001", title: "Defer/async PostHog scripts", effort: "low", impact: "high", description: "Add async/defer to PostHog script tags to eliminate 637-1372ms TBT overhead" },
-    { priority: 2, id: "LCP-001", title: "Optimize LCP with image preloading", effort: "medium", impact: "high", description: "Preload hero images, use fetchpriority=high, implement CDN image transforms for WebP/AVIF" },
-    { priority: 3, id: "API-001", title: "Cache API responses at edge", effort: "medium", impact: "medium", description: "Cache tRPC responses in KV with stale-while-revalidate. Categories 5min, products 1min." },
-    { priority: 4, id: "TBT-001", title: "Reduce main thread blocking", effort: "high", impact: "medium", description: "Split Solid.js hydration, defer non-critical JS, reduce third-party impact" },
-    { priority: 5, id: "SEO-001", title: "Fix search page SSR", effort: "low", impact: "low", description: "Ensure /search has SSR fallback content and proper meta tags" },
-  ],
   good_findings: [
     "Excellent TTFB on static pages (34-187ms) — CF Workers edge is fast",
     "Zero CLS across all pages (0.000)",
@@ -70,12 +51,31 @@ const data = {
     "Cart page near-perfect (0.99 perf) with minimal JS",
     "Best Practices 1.0 on homepage",
   ],
+  lighthouse: {
+    cart: { metrics: { cls: 0, fcp: 1378, lcp: 1378, si: 1446, tbt: 124, ttfb: 187 }, scores: { bestPractices: null, performance: 0.99, seo: null }, transfer_bytes: null, unused_js_bytes: 0, url: "/cart" },
+    checkout: { metrics: { cls: 0, fcp: 1096, lcp: 3820, si: 1988, tbt: 161, ttfb: 434 }, scores: { bestPractices: null, performance: 0.86, seo: null }, transfer_bytes: null, unused_js_bytes: 250, url: "/checkout" },
+    home: { metrics: { cls: 0, fcp: 1211, lcp: 3557, si: 2787, tbt: 637, ttfb: 34 }, scores: { bestPractices: 1.0, performance: 0.74, seo: 1.0 }, transfer_bytes: 670_551, unused_js_bytes: 85_000, url: "/" },
+    product_detail: { metrics: { cls: 0, fcp: 1726, lcp: 5021, si: 5094, tbt: 875, ttfb: 110 }, scores: { bestPractices: null, performance: 0.57, seo: 1.0 }, transfer_bytes: 438_406, unused_js_bytes: 83_000, url: "/products/[slug]" },
+    products: { metrics: { cls: 0, fcp: 1125, lcp: 5871, si: 2785, tbt: 1372, ttfb: 88 }, scores: { bestPractices: null, performance: 0.53, seo: 1.0 }, transfer_bytes: 630_498, unused_js_bytes: 84_000, url: "/products" },
+  },
+  metadata: {
+    api_url: "https://api.amerikvitamin.mn",
+    date: "2026-05-13",
+    url: "https://amerikvitamin.mn",
+  },
+  recommendations: [
+    { description: "Add async/defer to PostHog script tags to eliminate 637-1372ms TBT overhead", effort: "low", id: "PH-001", impact: "high", priority: 1, title: "Defer/async PostHog scripts" },
+    { description: "Preload hero images, use fetchpriority=high, implement CDN image transforms for WebP/AVIF", effort: "medium", id: "LCP-001", impact: "high", priority: 2, title: "Optimize LCP with image preloading" },
+    { description: "Cache tRPC responses in KV with stale-while-revalidate. Categories 5min, products 1min.", effort: "medium", id: "API-001", impact: "medium", priority: 3, title: "Cache API responses at edge" },
+    { description: "Split Solid.js hydration, defer non-critical JS, reduce third-party impact", effort: "high", id: "TBT-001", impact: "medium", priority: 4, title: "Reduce main thread blocking" },
+    { description: "Ensure /search has SSR fallback content and proper meta tags", effort: "low", id: "SEO-001", impact: "low", priority: 5, title: "Fix search page SSR" },
+  ],
 };
 
-const pages = Object.entries(data.lighthouse) as [string, any][];
-const pageLabels: Record<string, string> = { home: "Home", products: "Products", product_detail: "Product Detail", cart: "Cart", checkout: "Checkout" };
-const metricUnits: Record<string, string> = { lcp: "ms", fcp: "ms", si: "ms", tbt: "ms", cls: "", ttfb: "ms" };
-const metricNames: Record<string, string> = { lcp: "LCP", fcp: "FCP", si: "Speed Index", tbt: "TBT", cls: "CLS", ttfb: "TTFB" };
+const pages = Object.entries(data.lighthouse) as Array<[string, any]>;
+const pageLabels: Record<string, string> = { cart: "Cart", checkout: "Checkout", home: "Home", product_detail: "Product Detail", products: "Products" };
+const metricUnits: Record<string, string> = { cls: "", fcp: "ms", lcp: "ms", si: "ms", tbt: "ms", ttfb: "ms" };
+const metricNames: Record<string, string> = { cls: "CLS", fcp: "FCP", lcp: "LCP", si: "Speed Index", tbt: "TBT", ttfb: "TTFB" };
 const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key === "tbt" ? 1500 : 6000;
 ---
 

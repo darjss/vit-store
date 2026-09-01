@@ -12,119 +12,118 @@ export type ProductSearchRebuildReason =
 export interface ProductSearchFilters {
 	brandId?: number;
 	categoryId?: number;
-	requireStock?: boolean;
-	minPrice?: number;
 	maxPrice?: number;
+	minPrice?: number;
+	requireStock?: boolean;
 }
 
 export const PRODUCT_SEARCH_SORT_FIELDS = ["price", "createdAt"] as const;
-export type ProductSearchSortField =
-	(typeof PRODUCT_SEARCH_SORT_FIELDS)[number];
+export type ProductSearchSortField = (typeof PRODUCT_SEARCH_SORT_FIELDS)[number];
 
 export interface ProductSearchSort {
-	field: ProductSearchSortField;
 	direction: ProductSortDirection;
+	field: ProductSearchSortField;
 }
 
 export interface ProductSearchInput {
-	query: string;
+	filters?: ProductSearchFilters;
 	page?: number;
 	pageSize?: number;
-	filters?: ProductSearchFilters;
+	query: string;
 	sort?: ProductSearchSort;
 }
 
 export interface ProductSearchPage {
-	items: SearchProductResult[];
+	items: Array<SearchProductResult>;
 	pagination: {
+		hasNextPage: boolean;
+		hasPreviousPage: boolean;
 		page: number;
 		pageSize: number;
 		totalCount: number;
 		totalPages: number;
-		hasNextPage: boolean;
-		hasPreviousPage: boolean;
 	};
 }
 
 export interface SearchProductResult {
+	amount: string;
+	brand: string;
+	brandId?: number;
+	category: string;
+	categoryId?: number;
+	createdAt: string;
+	dailyIntake: number;
+	discount: number;
+	hasImage: boolean;
 	id: number;
+	image: string;
+	ingredientPreview: Array<string>;
+	inStock: boolean;
+	isFeatured: boolean;
 	name: string;
 	nameMn?: string;
-	slug: string;
+	potency: string;
 	price: number;
-	createdAt: string;
-	discount: number;
-	brand: string;
-	category: string;
+	slug: string;
 	status: string;
 	stock: number;
-	inStock: boolean;
-	amount: string;
-	potency: string;
-	dailyIntake: number;
-	brandId?: number;
-	categoryId?: number;
-	isFeatured: boolean;
-	image: string;
-	hasImage: boolean;
-	ingredientPreview: string[];
 }
 
 export interface SearchNavigationResult {
 	id: number;
-	name: string;
-	type: "brand" | "category";
-	productCount?: number;
 	logoUrl?: string | null;
+	name: string;
+	productCount?: number;
+	type: "brand" | "category";
 }
 
 export interface StorefrontSearchResult {
-	products: SearchProductResult[];
-	brands: SearchNavigationResult[];
-	categories: SearchNavigationResult[];
+	brands: Array<SearchNavigationResult>;
+	categories: Array<SearchNavigationResult>;
+	products: Array<SearchProductResult>;
 }
 
 export interface ProductSearchDocument {
-	id: number;
-	name: string;
-	nameMn: string;
-	nameWithBrand: string;
-	nameMnWithBrand: string;
-	primaryName: string;
-	primaryNameMn: string;
-	description: string;
-	slug: string;
-	price: number;
+	aliases: string;
+	amount: string;
+	brand: string;
+	brandId: number;
+	category: string;
+	categoryId: number;
 	createdAt: string;
 	createdAtEpoch: number;
-	discount: number;
-	brand: string;
-	category: string;
-	status: string;
-	stock: number;
-	inStock: boolean;
-	amount: string;
-	potency: string;
-	dosage: string;
 	dailyIntake: number;
-	brandId: number;
-	categoryId: number;
-	isFeatured: boolean;
-	image: string;
+	description: string;
+	discount: number;
+	dosage: string;
 	hasImage: boolean;
+	id: number;
+	image: string;
 	ingredientPreviewJson: string;
 	ingredients: string;
-	tags: string;
-	aliases: string;
+	inStock: boolean;
 	intentTerms: string;
+	isFeatured: boolean;
+	name: string;
+	nameMn: string;
+	nameMnWithBrand: string;
+	nameWithBrand: string;
+	potency: string;
+	price: number;
+	primaryName: string;
+	primaryNameMn: string;
 	rankingScore: number;
+	slug: string;
+	status: string;
+	stock: number;
+	tags: string;
 }
 
 export interface ProductSearchAnalyticsSignal {
-	productId: number;
-	uniqueViewers: number;
 	addToCarts: number;
+	productId: number;
 	searchClickSessions: number;
+	uniqueViewers: number;
 }
 
 export interface ProductSearchRanking {
@@ -132,36 +131,36 @@ export interface ProductSearchRanking {
 }
 
 export interface ProductSearchSourceDocument {
+	amount?: string | null;
+	brand: string;
+	brandId?: number;
+	category: string;
+	categoryId?: number;
+	createdAt: Date | string;
+	dailyIntake?: number | null;
+	description?: string | null;
+	discount?: number | null;
 	id: number;
+	image?: string | null;
+	ingredients?: Array<string> | string | null;
+	isFeatured?: boolean;
 	name: string;
 	nameMn?: string | null;
-	description?: string | null;
-	slug: string;
+	potency?: string | null;
 	price: number;
-	createdAt: Date | string;
-	discount?: number | null;
-	brand: string;
-	category: string;
+	slug: string;
 	status: string;
 	stock: number;
-	amount?: string | null;
-	potency?: string | null;
-	dailyIntake?: number | null;
-	brandId?: number;
-	categoryId?: number;
-	isFeatured?: boolean;
-	ingredients?: string[] | string | null;
-	tags?: string[] | string | null;
-	image?: string | null;
+	tags?: Array<string> | string | null;
 }
 
 export interface ProductSearchStatus {
-	initialized: boolean;
 	activeGeneration: string | null;
-	productCount: number;
 	generatedAt: string | null;
-	lastRebuildStartedAt: string | null;
+	initialized: boolean;
+	lastError: string | null;
 	lastRebuildFinishedAt: string | null;
 	lastRebuildReason: ProductSearchRebuildReason | null;
-	lastError: string | null;
+	lastRebuildStartedAt: string | null;
+	productCount: number;
 }

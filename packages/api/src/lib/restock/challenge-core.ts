@@ -1,37 +1,30 @@
 export type RestockChallengeRecord = {
-	version: 1;
-	productId: number;
 	channel: "sms" | "email";
-	contact: string;
 	codeHash: string;
+	contact: string;
 	expiresAt: number;
+	productId: number;
+	version: 1;
 };
 
 export type RestockChallengeStore = {
+	delete: (challengeId: string) => Promise<void>;
 	get: (challengeId: string) => Promise<RestockChallengeRecord | null>;
 	getdel: (challengeId: string) => Promise<RestockChallengeRecord | null>;
-	restore: (
-		challengeId: string,
-		record: RestockChallengeRecord,
-		ttlMs: number,
-	) => Promise<void>;
-	delete: (challengeId: string) => Promise<void>;
+	restore: (challengeId: string, record: RestockChallengeRecord, ttlMs: number) => Promise<void>;
 };
 
 const encoder = new TextEncoder();
 
 async function hashCode(challengeId: string, code: string) {
-	const digest = await crypto.subtle.digest(
-		"SHA-256",
-		encoder.encode(`${challengeId}:${code}`),
-	);
-	return Array.from(new Uint8Array(digest), (byte) =>
-		byte.toString(16).padStart(2, "0"),
-	).join("");
+	const digest = await crypto.subtle.digest("SHA-256", encoder.encode(`${challengeId}:${code}`));
+	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function constantTimeEqual(left: string, right: string) {
-	if (left.length !== right.length) return false;
+	if (left.length !== right.length) {
+		return false;
+	}
 	let difference = 0;
 	for (let index = 0; index < left.length; index++) {
 		difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
@@ -41,39 +34,37 @@ function constantTimeEqual(left: string, right: string) {
 
 export async function createRestockChallengeRecord(input: {
 	challengeId: string;
-	code: string;
-	productId: number;
 	channel: "sms" | "email";
+	code: string;
 	contact: string;
 	now: Date;
+	productId: number;
 	ttlMs: number;
 }) {
 	return {
-		version: 1,
-		productId: input.productId,
 		channel: input.channel,
-		contact: input.contact,
 		codeHash: await hashCode(input.challengeId, input.code),
+		contact: input.contact,
 		expiresAt: input.now.getTime() + input.ttlMs,
+		productId: input.productId,
+		version: 1,
 	} satisfies RestockChallengeRecord;
 }
 
-async function matchesCode(
-	challengeId: string,
-	code: string,
-	record: RestockChallengeRecord,
-) {
+async function matchesCode(challengeId: string, code: string, record: RestockChallengeRecord) {
 	return constantTimeEqual(record.codeHash, await hashCode(challengeId, code));
 }
 
 export async function consumeRestockChallenge(input: {
-	store: RestockChallengeStore;
 	challengeId: string;
 	code: string;
 	now: Date;
+	store: RestockChallengeStore;
 }) {
 	const record = await input.store.get(input.challengeId);
-	if (!record) return { status: "missing" as const };
+	if (!record) {
+		return { status: "missing" as const };
+	}
 	if (record.expiresAt <= input.now.getTime()) {
 		await input.store.delete(input.challengeId);
 		return { status: "expired" as const };
@@ -83,7 +74,9 @@ export async function consumeRestockChallenge(input: {
 	}
 
 	const consumed = await input.store.getdel(input.challengeId);
-	if (!consumed) return { status: "missing" as const };
+	if (!consumed) {
+		return { status: "missing" as const };
+	}
 	if (
 		consumed.expiresAt <= input.now.getTime() ||
 		!(await matchesCode(input.challengeId, input.code, consumed))
@@ -91,16 +84,18 @@ export async function consumeRestockChallenge(input: {
 		return { status: "invalid" as const };
 	}
 
-	return { status: "confirmed" as const, challenge: consumed };
+	return { challenge: consumed, status: "confirmed" as const };
 }
 
 export async function restoreRestockChallenge(input: {
-	store: RestockChallengeStore;
-	challengeId: string;
 	challenge: RestockChallengeRecord;
+	challengeId: string;
 	now: Date;
+	store: RestockChallengeStore;
 }) {
 	const ttlMs = input.challenge.expiresAt - input.now.getTime();
-	if (ttlMs <= 0) return;
+	if (ttlMs <= 0) {
+		return;
+	}
 	await input.store.restore(input.challengeId, input.challenge, ttlMs);
 }

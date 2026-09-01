@@ -38,7 +38,7 @@ One failed Khan tap in Facebook now needs two signals, a derived helper, and a f
 2. Prefer QR (or transfer) as the lead path in environments where custom schemes are known-unreliable, instead of spending eight seconds proving it again.
 3. Universal links / `https` handoff / "Open in Safari" are the actual ways to beat Facebook IAB. Those are QPay/Khan/Facebook, not a Solid flag. This PR does not attempt them, which is honest, but then the storefront-side fix should be the smallest general recovery change, not a vendor special case.
 
-Hiding Khan *up front* in Facebook iOS is also not first principles. The same table shows 6 of 19 Facebook taps did handoff. Pre-hiding would throw away working Khan opens. The PR at least waits for one observed failure. That part is defensible. The special-case architecture around it is not.
+Hiding Khan _up front_ in Facebook iOS is also not first principles. The same table shows 6 of 19 Facebook taps did handoff. Pre-hiding would throw away working Khan opens. The PR at least waits for one observed failure. That part is defensible. The special-case architecture around it is not.
 
 **Could the same UX be: on any `no_handoff`, name the bank, open QR, stop re-offering that bank?** Yes. That deletes `recoveryVariant`, `hideKhanInFacebook`, `khanFacebookRecovery`, `isKhanBank`, and `isFacebookIosBrowser`. Copy becomes `{bank} нээгдсэнгүй`. If you still want Facebook in the sentence, interpolate `detectInAppBrowser()` into the existing description. You do not need a variant enum for one string.
 
@@ -48,14 +48,14 @@ The four-tap replay would still be fixed. Sono or TDB failing the same way would
 
 For "after one dead Khan tap in Facebook iOS, don't show Khan again and show QR," the PR adds:
 
-| Piece | Needed? |
-| --- | --- |
-| `recoveryVariant` union | No. Sheet copy can use `handoff().bank` |
-| `hideKhanInFacebook` | No. `failedBanks` or filter `handoff().bank` |
-| `khanFacebookRecovery()` | Identity wrapper around the union |
-| `bankLinks()` | One filter on failed bank names is enough |
-| `isKhanBank` + `KHAN_BANK_KEYS` | Feature predicate in the logo map |
-| `isFacebookIosBrowser` | Payment policy in analytics |
+| Piece                           | Needed?                                      |
+| ------------------------------- | -------------------------------------------- |
+| `recoveryVariant` union         | No. Sheet copy can use `handoff().bank`      |
+| `hideKhanInFacebook`            | No. `failedBanks` or filter `handoff().bank` |
+| `khanFacebookRecovery()`        | Identity wrapper around the union            |
+| `bankLinks()`                   | One filter on failed bank names is enough    |
+| `isKhanBank` + `KHAN_BANK_KEYS` | Feature predicate in the logo map            |
+| `isFacebookIosBrowser`          | Payment policy in analytics                  |
 
 `setShowQr(true)` on the special-case fail duplicates what "QR код уншуулах" already does, and generic `no_handoff` still does not auto-open QR. Inconsistent.
 

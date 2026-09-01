@@ -5,14 +5,11 @@ import { HTTPException } from "hono/http-exception";
 const RATE_LIMIT_CONTEXT_KEY = "rate_limit_passed";
 
 type RateLimitMiddlewareOptions = {
-	rateLimiter: (c: Context) => RateLimit;
 	getRateLimitKey: (c: Context) => string;
+	rateLimiter: (c: Context) => RateLimit;
 };
 
-export const rateLimit = ({
-	rateLimiter,
-	getRateLimitKey,
-}: RateLimitMiddlewareOptions) => {
+export const rateLimit = ({ getRateLimitKey, rateLimiter }: RateLimitMiddlewareOptions) => {
 	return createMiddleware(async (c, next) => {
 		const key = getRateLimitKey(c);
 		if (!key) {

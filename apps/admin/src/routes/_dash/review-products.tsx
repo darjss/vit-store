@@ -24,9 +24,9 @@ export const Route = createFileRoute("/_dash/review-products")({
 });
 
 const remainingWork = {
-	priceMismatches: 5,
 	extractedOnly: 26,
 	possibleMatches: 60,
+	priceMismatches: 5,
 };
 
 function RouteComponent() {
@@ -41,31 +41,26 @@ function RouteComponent() {
 	);
 
 	const viewProduct = (id: number) => {
-		navigate({ to: "/products/$id", params: { id: String(id) } });
+		navigate({ params: { id: String(id) }, to: "/products/$id" });
 	};
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-col gap-3 border-2 border-border bg-card p-4 md:flex-row md:items-end md:justify-between">
+			<div className="border-border bg-card flex flex-col gap-3 border-2 p-4 md:flex-row md:items-end md:justify-between">
 				<div>
-					<p className="mb-1 font-black text-muted-foreground text-xs uppercase tracking-[0.16em]">
+					<p className="text-muted-foreground mb-1 text-xs font-black tracking-[0.16em] uppercase">
 						VIT импортын хяналт
 					</p>
-					<h1 className="font-heading text-2xl font-black">
-						Хянах бүтээгдэхүүнүүд
-					</h1>
-					<p className="max-w-2xl text-muted-foreground text-sm">
-						Шинээр ноорог болгож нэмсэн бүтээгдэхүүн болон үнэ өөрчилсөн
-						бүтээгдэхүүнийг хоёр баганаар харуулж байна.
+					<h1 className="font-heading text-2xl font-black">Хянах бүтээгдэхүүнүүд</h1>
+					<p className="text-muted-foreground max-w-2xl text-sm">
+						Шинээр ноорог болгож нэмсэн бүтээгдэхүүн болон үнэ өөрчилсөн бүтээгдэхүүнийг хоёр
+						баганаар харуулж байна.
 					</p>
 				</div>
-				<div className="grid grid-cols-3 border-2 border-border text-center text-xs">
+				<div className="border-border grid grid-cols-3 border-2 text-center text-xs">
 					<MetricCell label="Нэмсэн" value={addedProducts.length} />
 					<MetricCell label="Үнэ" value={priceChangedProducts.length} />
-					<MetricCell
-						label="Зөрүү"
-						value={formatMoney(totalNewPrice - totalOldPrice)}
-					/>
+					<MetricCell label="Зөрүү" value={formatMoney(totalNewPrice - totalOldPrice)} />
 				</div>
 			</div>
 
@@ -73,8 +68,8 @@ function RouteComponent() {
 				<StatusPanel
 					icon={<CheckCircle2 className="h-4 w-4" />}
 					label="Оруулсан ноорог"
-					value={`${addedProducts.length} бүтээгдэхүүн`}
 					tone="primary"
+					value={`${addedProducts.length} бүтээгдэхүүн`}
 				/>
 				<StatusPanel
 					icon={<TrendingUp className="h-4 w-4" />}
@@ -90,29 +85,29 @@ function RouteComponent() {
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 				<ReviewColumn
-					title="Нэмсэн ноорог"
 					count={addedProducts.length}
 					icon={<PackagePlus className="h-4 w-4" />}
+					title="Нэмсэн ноорог"
 				>
 					{addedProducts.map((product) => (
 						<AddedProductRow
 							key={product.id}
-							product={product}
 							onView={() => viewProduct(product.id)}
+							product={product}
 						/>
 					))}
 				</ReviewColumn>
 
 				<ReviewColumn
-					title="Үнэ өөрчилсөн"
 					count={priceChangedProducts.length}
 					icon={<Tags className="h-4 w-4" />}
+					title="Үнэ өөрчилсөн"
 				>
 					{priceChangedProducts.map((product) => (
 						<PriceChangedRow
 							key={product.id}
-							product={product}
 							onView={() => viewProduct(product.id)}
+							product={product}
 						/>
 					))}
 				</ReviewColumn>
@@ -121,19 +116,11 @@ function RouteComponent() {
 	);
 }
 
-function MetricCell({
-	label,
-	value,
-}: {
-	label: string;
-	value: number | string;
-}) {
+function MetricCell({ label, value }: { label: string; value: number | string }) {
 	return (
-		<div className="min-w-24 border-border border-r-2 p-2 last:border-r-0">
-			<div className="font-black text-lg tabular-nums">{value}</div>
-			<div className="font-bold text-muted-foreground uppercase tracking-wide">
-				{label}
-			</div>
+		<div className="border-border min-w-24 border-r-2 p-2 last:border-r-0">
+			<div className="text-lg font-black tabular-nums">{value}</div>
+			<div className="text-muted-foreground font-bold tracking-wide uppercase">{label}</div>
 		</div>
 	);
 }
@@ -141,28 +128,28 @@ function MetricCell({
 function StatusPanel({
 	icon,
 	label,
-	value,
 	tone = "plain",
+	value,
 }: {
 	icon: ReactNode;
 	label: string;
-	value: string;
 	tone?: "plain" | "primary";
+	value: string;
 }) {
 	return (
 		<div
 			className={
 				tone === "primary"
-					? "flex items-center gap-3 border-2 border-border bg-primary p-3"
-					: "flex items-center gap-3 border-2 border-border bg-card p-3"
+					? "border-border bg-primary flex items-center gap-3 border-2 p-3"
+					: "border-border bg-card flex items-center gap-3 border-2 p-3"
 			}
 		>
-			<div className="flex h-9 w-9 items-center justify-center border-2 border-border bg-background">
+			<div className="border-border bg-background flex h-9 w-9 items-center justify-center border-2">
 				{icon}
 			</div>
 			<div className="min-w-0">
-				<div className="font-black text-sm">{value}</div>
-				<div className="font-bold text-muted-foreground text-xs uppercase tracking-wide">
+				<div className="text-sm font-black">{value}</div>
+				<div className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
 					{label}
 				</div>
 			</div>
@@ -171,70 +158,60 @@ function StatusPanel({
 }
 
 function ReviewColumn({
-	title,
+	children,
 	count,
 	icon,
-	children,
+	title,
 }: {
-	title: string;
+	children: ReactNode;
 	count: number;
 	icon: ReactNode;
-	children: ReactNode;
+	title: string;
 }) {
 	return (
-		<Card className="rounded-none border-2 border-border shadow-none">
+		<Card className="border-border rounded-none border-2 shadow-none">
 			<CardHeader className="border-border border-b-2 p-3">
 				<CardTitle className="flex items-center justify-between gap-3 text-base">
 					<span className="flex min-w-0 items-center gap-2">
-						<span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-border bg-primary">
+						<span className="border-border bg-primary flex h-8 w-8 shrink-0 items-center justify-center border-2">
 							{icon}
 						</span>
 						<span className="truncate font-black">{title}</span>
 					</span>
-					<span className="shrink-0 border-2 border-border bg-background px-2 py-1 font-black text-xs tabular-nums">
+					<span className="border-border bg-background shrink-0 border-2 px-2 py-1 text-xs font-black tabular-nums">
 						{count}
 					</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="max-h-[72vh] overflow-auto p-0">
-				<div className="divide-y-2 divide-border">{children}</div>
+				<div className="divide-border divide-y-2">{children}</div>
 			</CardContent>
 		</Card>
 	);
 }
 
-function AddedProductRow({
-	product,
-	onView,
-}: {
-	product: AddedProduct;
-	onView: () => void;
-}) {
+function AddedProductRow({ onView, product }: { onView: () => void; product: AddedProduct }) {
 	return (
-		<div className="grid grid-cols-[88px_1fr] gap-3 bg-card p-3">
-			<ProductThumb src={product.imageUrl} alt={product.name} />
+		<div className="bg-card grid grid-cols-[88px_1fr] gap-3 p-3">
+			<ProductThumb alt={product.name} src={product.imageUrl} />
 			<div className="grid min-w-0 gap-2">
 				<RowTopline
 					id={product.id}
-					status={product.status}
-					score={product.confidence}
 					onView={onView}
+					score={product.confidence}
+					status={product.status}
 				/>
 				<div>
-					<div className="font-black text-sm leading-snug">{product.name}</div>
-					<div className="mt-1 flex flex-wrap gap-1.5 text-muted-foreground text-xs">
+					<div className="text-sm leading-snug font-black">{product.name}</div>
+					<div className="text-muted-foreground mt-1 flex flex-wrap gap-1.5 text-xs">
 						<span>{product.brandName}</span>
 						{product.amount && <span>хэмжээ: {product.amount}</span>}
-						{product.potency && product.potency !== "N/A" && (
-							<span>хүч: {product.potency}</span>
-						)}
+						{product.potency && product.potency !== "N/A" && <span>хүч: {product.potency}</span>}
 					</div>
 				</div>
 				<div className="flex items-center justify-between gap-3">
-					<div className="font-black text-lg tabular-nums">
-						{formatMoney(product.price)}
-					</div>
-					<div className="truncate text-muted-foreground text-xs">
+					<div className="text-lg font-black tabular-nums">{formatMoney(product.price)}</div>
+					<div className="text-muted-foreground truncate text-xs">
 						{product.source ?? "эх сурвалж алга"}
 					</div>
 				</div>
@@ -244,40 +221,31 @@ function AddedProductRow({
 }
 
 function PriceChangedRow({
-	product,
 	onView,
+	product,
 }: {
-	product: PriceChangedProduct;
 	onView: () => void;
+	product: PriceChangedProduct;
 }) {
 	const delta = product.newPrice - product.oldPrice;
 
 	return (
-		<div className="grid grid-cols-[88px_1fr] gap-3 bg-card p-3">
-			<ProductThumb src={product.imageUrl} alt={product.name} />
+		<div className="bg-card grid grid-cols-[88px_1fr] gap-3 p-3">
+			<ProductThumb alt={product.name} src={product.imageUrl} />
 			<div className="grid min-w-0 gap-2">
-				<RowTopline
-					id={product.id}
-					status={product.status}
-					score={product.score}
-					onView={onView}
-				/>
+				<RowTopline id={product.id} onView={onView} score={product.score} status={product.status} />
 				<div>
-					<div className="font-black text-sm leading-snug">{product.name}</div>
-					<div className="mt-1 text-muted-foreground text-xs">
-						{product.brandName}
-					</div>
+					<div className="text-sm leading-snug font-black">{product.name}</div>
+					<div className="text-muted-foreground mt-1 text-xs">{product.brandName}</div>
 				</div>
 				<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
 					<PriceBox label="Өмнө" value={product.oldPrice} />
-					<ArrowRight className="h-4 w-4 text-muted-foreground" />
-					<PriceBox label="Одоо" value={product.newPrice} emphatic />
+					<ArrowRight className="text-muted-foreground h-4 w-4" />
+					<PriceBox emphatic label="Одоо" value={product.newPrice} />
 				</div>
 				<div className="flex items-center justify-between gap-3 text-xs">
-					<span className="font-black text-emerald-700">
-						+{formatMoney(delta)}
-					</span>
-					<span className="truncate text-muted-foreground">
+					<span className="font-black text-emerald-700">+{formatMoney(delta)}</span>
+					<span className="text-muted-foreground truncate">
 						{product.sourceImage ?? "эх зураг алга"}
 					</span>
 				</div>
@@ -286,18 +254,13 @@ function PriceChangedRow({
 	);
 }
 
-function ProductThumb({ src, alt }: { src: string | null; alt: string }) {
+function ProductThumb({ alt, src }: { alt: string; src: string | null }) {
 	return (
-		<div className="flex h-[88px] w-[88px] items-center justify-center overflow-hidden border-2 border-border bg-background">
+		<div className="border-border bg-background flex h-[88px] w-[88px] items-center justify-center overflow-hidden border-2">
 			{src ? (
-				<img
-					src={src}
-					alt={alt}
-					className="h-full w-full object-contain"
-					loading="lazy"
-				/>
+				<img alt={alt} className="h-full w-full object-contain" loading="lazy" src={src} />
 			) : (
-				<PackagePlus className="h-7 w-7 text-muted-foreground" />
+				<PackagePlus className="text-muted-foreground h-7 w-7" />
 			)}
 		</div>
 	);
@@ -305,37 +268,31 @@ function ProductThumb({ src, alt }: { src: string | null; alt: string }) {
 
 function RowTopline({
 	id,
-	status,
-	score,
 	onView,
+	score,
+	status,
 }: {
 	id: number;
-	status: string;
-	score: number | null;
 	onView: () => void;
+	score: number | null;
+	status: string;
 }) {
 	return (
 		<div className="flex items-center justify-between gap-2">
 			<div className="flex flex-wrap items-center gap-1.5">
-				<span className="border-2 border-border bg-background px-1.5 py-0.5 font-black text-[10px] uppercase">
+				<span className="border-border bg-background border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
 					#{id}
 				</span>
-				<span className="border-2 border-border bg-muted px-1.5 py-0.5 font-black text-[10px] uppercase">
-					{productStatusLabel[status as keyof typeof productStatusLabel] ??
-						status}
+				<span className="border-border bg-muted border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
+					{productStatusLabel[status as keyof typeof productStatusLabel] ?? status}
 				</span>
 				{score !== null && (
-					<span className="border-2 border-border bg-background px-1.5 py-0.5 font-black text-[10px] uppercase">
+					<span className="border-border bg-background border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
 						{Math.round(score * 100)}%
 					</span>
 				)}
 			</div>
-			<Button
-				variant="ghost"
-				size="sm"
-				onClick={onView}
-				className="h-8 shrink-0 px-2 text-xs"
-			>
+			<Button className="h-8 shrink-0 px-2 text-xs" onClick={onView} size="sm" variant="ghost">
 				<ExternalLink className="mr-1 h-3 w-3" />
 				Нээх
 			</Button>
@@ -344,28 +301,26 @@ function RowTopline({
 }
 
 function PriceBox({
+	emphatic = false,
 	label,
 	value,
-	emphatic = false,
 }: {
+	emphatic?: boolean;
 	label: string;
 	value: number;
-	emphatic?: boolean;
 }) {
 	return (
 		<div
 			className={
 				emphatic
-					? "border-2 border-border bg-primary p-2"
-					: "border-2 border-border bg-background p-2"
+					? "border-border bg-primary border-2 p-2"
+					: "border-border bg-background border-2 p-2"
 			}
 		>
-			<div className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+			<div className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 				{label}
 			</div>
-			<div className="font-black text-sm tabular-nums">
-				{formatMoney(value)}
-			</div>
+			<div className="text-sm font-black tabular-nums">{formatMoney(value)}</div>
 		</div>
 	);
 }

@@ -27,47 +27,42 @@ type PaymentStatusType = (typeof paymentStatus)[number];
 // (purchase.getAverageCostOfProduct).
 type DbOrTx = ReturnType<typeof db> | TransactionType;
 
-export async function getAverageCostOfProduct(
-	tx: DbOrTx,
-	productId: number,
-	createdAt: Date,
-) {
+export async function getAverageCostOfProduct(tx: DbOrTx, productId: number, createdAt: Date) {
 	const purchaseItems = await tx.query.PurchaseItemsTable.findMany({
-		where: and(
-			eq(PurchaseItemsTable.productId, productId),
-			isNull(PurchaseItemsTable.deletedAt),
-		),
+		where: and(eq(PurchaseItemsTable.productId, productId), isNull(PurchaseItemsTable.deletedAt)),
 		with: {
 			purchase: {
 				columns: {
-					orderedAt: true,
-					createdAt: true,
 					cancelledAt: true,
+					createdAt: true,
 					deletedAt: true,
+					orderedAt: true,
 				},
 			},
 			receiptItems: {
-				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 				columns: {
 					quantityReceived: true,
 				},
+				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 			},
 		},
 	});
 
 	const totals = purchaseItems.reduce(
 		(acc, item) => {
-			if (item.purchase.deletedAt) return acc;
+			if (item.purchase.deletedAt) {
+				return acc;
+			}
 			const effectiveDate = item.purchase.orderedAt ?? item.purchase.createdAt;
-			if (effectiveDate >= createdAt) return acc;
+			if (effectiveDate >= createdAt) {
+				return acc;
+			}
 
 			const receivedQuantity = item.receiptItems.reduce(
 				(sum, receiptItem) => sum + receiptItem.quantityReceived,
 				0,
 			);
-			const effectiveQuantity = item.purchase.cancelledAt
-				? receivedQuantity
-				: item.quantityOrdered;
+			const effectiveQuantity = item.purchase.cancelledAt ? receivedQuantity : item.quantityOrdered;
 			acc.totalCost += effectiveQuantity * item.unitCost;
 			acc.totalQuantity += effectiveQuantity;
 			return acc;
@@ -81,11 +76,11 @@ export async function getAverageCostOfProduct(
 export const paymentQueries = {
 	admin: {
 		async createPayment(data: {
-			paymentNumber: string;
+			amount: number;
 			orderId: number;
+			paymentNumber: string;
 			provider: PaymentProviderType;
 			status: PaymentStatusType;
-			amount: number;
 		}) {
 			return db().transaction((tx) => this.createPaymentTx(tx, data));
 		},
@@ -93,21 +88,21 @@ export const paymentQueries = {
 		async createPaymentTx(
 			tx: DbOrTx,
 			data: {
-				paymentNumber: string;
+				amount: number;
 				orderId: number;
+				paymentNumber: string;
 				provider: PaymentProviderType;
 				status: PaymentStatusType;
-				amount: number;
 			},
 		) {
 			const result = await tx
 				.insert(PaymentsTable)
 				.values({
-					paymentNumber: data.paymentNumber,
+					amount: data.amount,
 					orderId: data.orderId,
+					paymentNumber: data.paymentNumber,
 					provider: data.provider,
 					status: data.status,
-					amount: data.amount,
 				})
 				.returning({
 					id: PaymentsTable.id,
@@ -124,136 +119,6 @@ export const paymentQueries = {
 					.onConflictDoNothing();
 			}
 			return payment;
-		},
-
-		async getPayments() {
-			return db()
-				.select({
-					id: PaymentsTable.id,
-					paymentNumber: PaymentsTable.paymentNumber,
-					orderId: PaymentsTable.orderId,
-					provider: PaymentsTable.provider,
-					status: PaymentsTable.status,
-					amount: PaymentsTable.amount,
-					createdAt: PaymentsTable.createdAt,
-					updatedAt: PaymentsTable.updatedAt,
-				})
-				.from(PaymentsTable);
-		},
-
-		async getPendingPayments() {
-			return db()
-				.select({
-					id: PaymentsTable.id,
-					paymentNumber: PaymentsTable.paymentNumber,
-					orderId: PaymentsTable.orderId,
-					provider: PaymentsTable.provider,
-					status: PaymentsTable.status,
-					amount: PaymentsTable.amount,
-					createdAt: PaymentsTable.createdAt,
-					updatedAt: PaymentsTable.updatedAt,
-				})
-				.from(PaymentsTable)
-				.where(eq(PaymentsTable.status, "pending"));
-		},
-
-		async updatePaymentStatus(orderId: number, status: PaymentStatusType) {
-			const latest = await db().query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.orderId, orderId),
-					isNull(PaymentsTable.deletedAt),
-				),
-				orderBy: desc(PaymentsTable.createdAt),
-				columns: { id: true },
-			});
-			if (!latest) return;
-			await db()
-				.update(PaymentsTable)
-				.set({ status })
-				.where(eq(PaymentsTable.id, latest.id));
-		},
-
-		async getLatestPaymentByOrderId(orderId: number) {
-			return db().query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.orderId, orderId),
-					isNull(PaymentsTable.deletedAt),
-				),
-				orderBy: desc(PaymentsTable.createdAt),
-				columns: {
-					id: true,
-					status: true,
-					paymentNumber: true,
-					provider: true,
-				},
-			});
-		},
-
-		async getLatestPaymentByOrderIdTx(tx: TransactionType, orderId: number) {
-			return tx.query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.orderId, orderId),
-					isNull(PaymentsTable.deletedAt),
-				),
-				orderBy: desc(PaymentsTable.createdAt),
-				columns: {
-					id: true,
-					status: true,
-					paymentNumber: true,
-					provider: true,
-				},
-			});
-		},
-
-		async updatePaymentStatusTx(
-			tx: TransactionType,
-			orderId: number,
-			status: PaymentStatusType,
-		) {
-			const latest = await tx.query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.orderId, orderId),
-					isNull(PaymentsTable.deletedAt),
-				),
-				orderBy: desc(PaymentsTable.createdAt),
-				columns: { id: true },
-			});
-			if (!latest) return;
-			await tx
-				.update(PaymentsTable)
-				.set({ status })
-				.where(eq(PaymentsTable.id, latest.id));
-			if (status === "success") {
-				const payment = await tx.query.PaymentsTable.findFirst({
-					where: eq(PaymentsTable.id, latest.id),
-					columns: { paymentNumber: true },
-				});
-				if (payment)
-					await tx
-						.insert(PaymentNotificationOutboxTable)
-						.values({
-							paymentNumber: payment.paymentNumber,
-							purpose: "order_payment_confirmed_sms",
-						})
-						.onConflictDoNothing();
-			}
-		},
-
-		async getPendingMessengerNotifications() {
-			return db()
-				.select({
-					id: MessengerNotificationFailuresTable.id,
-					paymentNumber: MessengerNotificationFailuresTable.paymentNumber,
-					purpose: MessengerNotificationFailuresTable.purpose,
-					status: MessengerNotificationFailuresTable.status,
-					errorMessage: MessengerNotificationFailuresTable.errorMessage,
-					errorCode: MessengerNotificationFailuresTable.errorCode,
-					retryCount: MessengerNotificationFailuresTable.retryCount,
-					lastAttemptAt: MessengerNotificationFailuresTable.lastAttemptAt,
-					createdAt: MessengerNotificationFailuresTable.createdAt,
-				})
-				.from(MessengerNotificationFailuresTable)
-				.where(eq(MessengerNotificationFailuresTable.status, "pending"));
 		},
 
 		async getClaimedTransferCount() {
@@ -273,25 +138,25 @@ export const paymentQueries = {
 
 		async getClaimedTransferPayments() {
 			const payments = await db().query.PaymentsTable.findMany({
+				columns: {
+					amount: true,
+					createdAt: true,
+					orderId: true,
+					paymentNumber: true,
+					updatedAt: true,
+				},
+				orderBy: desc(PaymentsTable.updatedAt),
 				where: and(
 					eq(PaymentsTable.status, "customer_claimed_paid"),
 					eq(PaymentsTable.provider, "transfer"),
 					isNull(PaymentsTable.deletedAt),
 				),
-				orderBy: desc(PaymentsTable.updatedAt),
-				columns: {
-					paymentNumber: true,
-					orderId: true,
-					amount: true,
-					createdAt: true,
-					updatedAt: true,
-				},
 				with: {
 					order: {
 						columns: {
+							customerPhone: true,
 							id: true,
 							orderNumber: true,
-							customerPhone: true,
 							total: true,
 						},
 						with: {
@@ -310,98 +175,193 @@ export const paymentQueries = {
 			});
 
 			return payments.map((payment) => ({
-				paymentNumber: payment.paymentNumber,
-				orderId: payment.orderId,
-				orderNumber: payment.order.orderNumber,
-				customerPhone: `${payment.order.customerPhone}`,
-				total: payment.order.total,
 				amount: payment.amount,
 				createdAt: payment.createdAt,
-				updatedAt: payment.updatedAt,
+				customerPhone: `${payment.order.customerPhone}`,
+				orderId: payment.orderId,
+				orderNumber: payment.order.orderNumber,
+				paymentNumber: payment.paymentNumber,
 				products: payment.order.orderDetails.map((detail) => ({
 					name: detail.product.name,
 					quantity: detail.quantity,
 				})),
+				total: payment.order.total,
+				updatedAt: payment.updatedAt,
 			}));
+		},
+
+		async getLatestPaymentByOrderId(orderId: number) {
+			return db().query.PaymentsTable.findFirst({
+				columns: {
+					id: true,
+					paymentNumber: true,
+					provider: true,
+					status: true,
+				},
+				orderBy: desc(PaymentsTable.createdAt),
+				where: and(eq(PaymentsTable.orderId, orderId), isNull(PaymentsTable.deletedAt)),
+			});
+		},
+
+		async getLatestPaymentByOrderIdTx(tx: TransactionType, orderId: number) {
+			return tx.query.PaymentsTable.findFirst({
+				columns: {
+					id: true,
+					paymentNumber: true,
+					provider: true,
+					status: true,
+				},
+				orderBy: desc(PaymentsTable.createdAt),
+				where: and(eq(PaymentsTable.orderId, orderId), isNull(PaymentsTable.deletedAt)),
+			});
+		},
+
+		async getPayments() {
+			return db()
+				.select({
+					amount: PaymentsTable.amount,
+					createdAt: PaymentsTable.createdAt,
+					id: PaymentsTable.id,
+					orderId: PaymentsTable.orderId,
+					paymentNumber: PaymentsTable.paymentNumber,
+					provider: PaymentsTable.provider,
+					status: PaymentsTable.status,
+					updatedAt: PaymentsTable.updatedAt,
+				})
+				.from(PaymentsTable);
+		},
+
+		async getPendingMessengerNotifications() {
+			return db()
+				.select({
+					createdAt: MessengerNotificationFailuresTable.createdAt,
+					errorCode: MessengerNotificationFailuresTable.errorCode,
+					errorMessage: MessengerNotificationFailuresTable.errorMessage,
+					id: MessengerNotificationFailuresTable.id,
+					lastAttemptAt: MessengerNotificationFailuresTable.lastAttemptAt,
+					paymentNumber: MessengerNotificationFailuresTable.paymentNumber,
+					purpose: MessengerNotificationFailuresTable.purpose,
+					retryCount: MessengerNotificationFailuresTable.retryCount,
+					status: MessengerNotificationFailuresTable.status,
+				})
+				.from(MessengerNotificationFailuresTable)
+				.where(eq(MessengerNotificationFailuresTable.status, "pending"));
+		},
+
+		async getPendingPayments() {
+			return db()
+				.select({
+					amount: PaymentsTable.amount,
+					createdAt: PaymentsTable.createdAt,
+					id: PaymentsTable.id,
+					orderId: PaymentsTable.orderId,
+					paymentNumber: PaymentsTable.paymentNumber,
+					provider: PaymentsTable.provider,
+					status: PaymentsTable.status,
+					updatedAt: PaymentsTable.updatedAt,
+				})
+				.from(PaymentsTable)
+				.where(eq(PaymentsTable.status, "pending"));
+		},
+
+		async updatePaymentStatus(orderId: number, status: PaymentStatusType) {
+			const latest = await db().query.PaymentsTable.findFirst({
+				columns: { id: true },
+				orderBy: desc(PaymentsTable.createdAt),
+				where: and(eq(PaymentsTable.orderId, orderId), isNull(PaymentsTable.deletedAt)),
+			});
+			if (!latest) {
+				return;
+			}
+			await db().update(PaymentsTable).set({ status }).where(eq(PaymentsTable.id, latest.id));
+		},
+
+		async updatePaymentStatusTx(tx: TransactionType, orderId: number, status: PaymentStatusType) {
+			const latest = await tx.query.PaymentsTable.findFirst({
+				columns: { id: true },
+				orderBy: desc(PaymentsTable.createdAt),
+				where: and(eq(PaymentsTable.orderId, orderId), isNull(PaymentsTable.deletedAt)),
+			});
+			if (!latest) {
+				return;
+			}
+			await tx.update(PaymentsTable).set({ status }).where(eq(PaymentsTable.id, latest.id));
+			if (status === "success") {
+				const payment = await tx.query.PaymentsTable.findFirst({
+					columns: { paymentNumber: true },
+					where: eq(PaymentsTable.id, latest.id),
+				});
+				if (payment) {
+					await tx
+						.insert(PaymentNotificationOutboxTable)
+						.values({
+							paymentNumber: payment.paymentNumber,
+							purpose: "order_payment_confirmed_sms",
+						})
+						.onConflictDoNothing();
+				}
+			}
 		},
 	},
 
 	store: {
-		async getPaymentInfoByNumber(paymentNumber: string) {
-			return db().query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.paymentNumber, paymentNumber),
-					isNull(PaymentsTable.deletedAt),
-				),
-				with: {
-					order: {
-						columns: {
-							id: true,
-							orderNumber: true,
-							total: true,
-							status: true,
-							address: true,
-							customerPhone: true,
-							notes: true,
-							createdAt: true,
-						},
-						with: {
-							orderDetails: {
-								columns: {
-									quantity: true,
-									price: true,
-								},
-								with: {
-									product: {
-										columns: {
-											id: true,
-											name: true,
-											price: true,
-										},
-										with: {
-											brand: {
-												columns: {
-													name: true,
-												},
-											},
-											images: {
-												columns: {
-													url: true,
-												},
-												where: and(
-													eq(ProductImagesTable.isPrimary, true),
-													isNull(ProductImagesTable.deletedAt),
-												),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			});
+		async changePaymentToQpay(paymentNumber: string, invoiceId: string) {
+			await db()
+				.update(PaymentsTable)
+				.set({
+					invoiceId,
+					provider: sql<PaymentProviderType>`case
+						when ${PaymentsTable.status} = 'success' then ${PaymentsTable.provider}
+						else 'qpay'
+					end`,
+				})
+				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 
-		async getConsumedKhaanFingerprints(
-			fingerprints: string[],
-		): Promise<Set<string>> {
-			if (fingerprints.length === 0) {
-				return new Set();
-			}
-			const rows = await db()
-				.select({ fingerprint: KhaanConsumedTransactionsTable.fingerprint })
-				.from(KhaanConsumedTransactionsTable)
+		async changePaymentToTransfer(paymentNumber: string) {
+			await db()
+				.update(PaymentsTable)
+				.set({ provider: "transfer" })
+				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
+		},
+
+		async claimTransferPaid(paymentNumber: string) {
+			const [changed] = await db()
+				.update(PaymentsTable)
+				.set({ status: "customer_claimed_paid" })
 				.where(
-					inArray(KhaanConsumedTransactionsTable.fingerprint, fingerprints),
-				);
-			return new Set(rows.map((row) => row.fingerprint));
+					and(
+						eq(PaymentsTable.paymentNumber, paymentNumber),
+						eq(PaymentsTable.status, "pending"),
+						isNull(PaymentsTable.deletedAt),
+					),
+				)
+				.returning({ id: PaymentsTable.id });
+
+			if (changed) {
+				return { outcome: "changed" as const };
+			}
+
+			const payment = await db().query.PaymentsTable.findFirst({
+				columns: { status: true },
+				where: and(eq(PaymentsTable.paymentNumber, paymentNumber), isNull(PaymentsTable.deletedAt)),
+			});
+			if (!payment) {
+				throw new Error("Payment not found");
+			}
+			if (payment.status === "customer_claimed_paid") {
+				return { outcome: "already_claimed" as const };
+			}
+			if (payment.status === "success") {
+				return { outcome: "already_confirmed" as const };
+			}
+			return { outcome: "refused" as const };
 		},
 
 		async confirmPaymentAndApplyStock(
 			paymentNumber: string,
 			provider: PaymentProviderType,
-			consumedKhaanTransactions?: { fingerprint: string }[],
+			consumedKhaanTransactions?: Array<{ fingerprint: string }>,
 		) {
 			const confirmed = await db().transaction(async (tx) => {
 				// Record consumed Khaan fingerprints BEFORE the status flip and
@@ -422,14 +382,11 @@ export const paymentQueries = {
 				}
 				const [claimedPayment] = await tx
 					.update(PaymentsTable)
-					.set({ status: "success", provider })
+					.set({ provider, status: "success" })
 					.where(
 						and(
 							eq(PaymentsTable.paymentNumber, paymentNumber),
-							inArray(PaymentsTable.status, [
-								"pending",
-								"customer_claimed_paid",
-							]),
+							inArray(PaymentsTable.status, ["pending", "customer_claimed_paid"]),
 							isNull(PaymentsTable.deletedAt),
 						),
 					)
@@ -470,29 +427,23 @@ export const paymentQueries = {
 				// races, so it is intentionally omitted (F6).
 				for (const detail of orderDetails) {
 					const updatedProduct = await applyStockTransition(tx, {
-						productId: detail.product.id,
 						delta: -detail.quantity,
+						productId: detail.product.id,
 						requireActive: true,
 						requireNonNegative: true,
 					});
 
 					if (!updatedProduct) {
-						throw new Error(
-							`Insufficient stock for product ${detail.product.id}`,
-						);
+						throw new Error(`Insufficient stock for product ${detail.product.id}`);
 					}
 
-					const productCost = await getAverageCostOfProduct(
-						tx,
-						detail.product.id,
-						new Date(),
-					);
+					const productCost = await getAverageCostOfProduct(tx, detail.product.id, new Date());
 
 					await tx.insert(SalesTable).values({
 						orderId: claimedPayment.orderId,
+						productCost,
 						productId: detail.product.id,
 						quantitySold: detail.quantity,
-						productCost,
 						sellingPrice: detail.price ?? detail.product.price,
 					});
 				}
@@ -505,10 +456,7 @@ export const paymentQueries = {
 					.update(OrdersTable)
 					.set({ status: "pending" })
 					.where(
-						and(
-							eq(OrdersTable.id, claimedPayment.orderId),
-							eq(OrdersTable.status, "created"),
-						),
+						and(eq(OrdersTable.id, claimedPayment.orderId), eq(OrdersTable.status, "created")),
 					);
 
 				return true;
@@ -517,12 +465,26 @@ export const paymentQueries = {
 			return confirmed;
 		},
 
+		async createPayment(data: PaymentInsertType) {
+			const result = await db().insert(PaymentsTable).values(data).returning({
+				id: PaymentsTable.id,
+				paymentNumber: PaymentsTable.paymentNumber,
+			});
+			return result[0];
+		},
+		async getConsumedKhaanFingerprints(fingerprints: Array<string>): Promise<Set<string>> {
+			if (fingerprints.length === 0) {
+				return new Set();
+			}
+			const rows = await db()
+				.select({ fingerprint: KhaanConsumedTransactionsTable.fingerprint })
+				.from(KhaanConsumedTransactionsTable)
+				.where(inArray(KhaanConsumedTransactionsTable.fingerprint, fingerprints));
+			return new Set(rows.map((row) => row.fingerprint));
+		},
 		async getPaymentByNumber(paymentNumber: string) {
 			return await db().query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.paymentNumber, paymentNumber),
-					isNull(PaymentsTable.deletedAt),
-				),
+				where: and(eq(PaymentsTable.paymentNumber, paymentNumber), isNull(PaymentsTable.deletedAt)),
 				with: {
 					order: {
 						columns: {
@@ -532,53 +494,57 @@ export const paymentQueries = {
 				},
 			});
 		},
-
-		async claimTransferPaid(paymentNumber: string) {
-			const [changed] = await db()
-				.update(PaymentsTable)
-				.set({ status: "customer_claimed_paid" })
-				.where(
-					and(
-						eq(PaymentsTable.paymentNumber, paymentNumber),
-						eq(PaymentsTable.status, "pending"),
-						isNull(PaymentsTable.deletedAt),
-					),
-				)
-				.returning({ id: PaymentsTable.id });
-
-			if (changed) return { outcome: "changed" as const };
-
-			const payment = await db().query.PaymentsTable.findFirst({
-				where: and(
-					eq(PaymentsTable.paymentNumber, paymentNumber),
-					isNull(PaymentsTable.deletedAt),
-				),
-				columns: { status: true },
+		async getPaymentInfoByNumber(paymentNumber: string) {
+			return db().query.PaymentsTable.findFirst({
+				where: and(eq(PaymentsTable.paymentNumber, paymentNumber), isNull(PaymentsTable.deletedAt)),
+				with: {
+					order: {
+						columns: {
+							address: true,
+							createdAt: true,
+							customerPhone: true,
+							id: true,
+							notes: true,
+							orderNumber: true,
+							status: true,
+							total: true,
+						},
+						with: {
+							orderDetails: {
+								columns: {
+									price: true,
+									quantity: true,
+								},
+								with: {
+									product: {
+										columns: {
+											id: true,
+											name: true,
+											price: true,
+										},
+										with: {
+											brand: {
+												columns: {
+													name: true,
+												},
+											},
+											images: {
+												columns: {
+													url: true,
+												},
+												where: and(
+													eq(ProductImagesTable.isPrimary, true),
+													isNull(ProductImagesTable.deletedAt),
+												),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			});
-			if (!payment) throw new Error("Payment not found");
-			if (payment.status === "customer_claimed_paid") {
-				return { outcome: "already_claimed" as const };
-			}
-			if (payment.status === "success") {
-				return { outcome: "already_confirmed" as const };
-			}
-			return { outcome: "refused" as const };
-		},
-		async updatePaymentStatus(
-			paymentNumber: string,
-			status: PaymentStatusType,
-		) {
-			await db()
-				.update(PaymentsTable)
-				.set({ status })
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
-		},
-		async createPayment(data: PaymentInsertType) {
-			const result = await db().insert(PaymentsTable).values(data).returning({
-				id: PaymentsTable.id,
-				paymentNumber: PaymentsTable.paymentNumber,
-			});
-			return result[0];
 		},
 		async storeQpayInvoice(paymentNumber: string, invoiceId: string) {
 			await db()
@@ -586,22 +552,10 @@ export const paymentQueries = {
 				.set({ invoiceId })
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
-		async changePaymentToQpay(paymentNumber: string, invoiceId: string) {
+		async updatePaymentStatus(paymentNumber: string, status: PaymentStatusType) {
 			await db()
 				.update(PaymentsTable)
-				.set({
-					provider: sql<PaymentProviderType>`case
-						when ${PaymentsTable.status} = 'success' then ${PaymentsTable.provider}
-						else 'qpay'
-					end`,
-					invoiceId,
-				})
-				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
-		},
-		async changePaymentToTransfer(paymentNumber: string) {
-			await db()
-				.update(PaymentsTable)
-				.set({ provider: "transfer" })
+				.set({ status })
 				.where(eq(PaymentsTable.paymentNumber, paymentNumber));
 		},
 	},

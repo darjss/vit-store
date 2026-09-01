@@ -13,7 +13,7 @@ export const INBOUND_PREFIX = "messenger-inbound/";
 // photo.
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-const IMAGE_FETCH_TIMEOUT_MS = 8_000;
+const IMAGE_FETCH_TIMEOUT_MS = 8000;
 
 // Defense-in-depth host allowlist for the server-side attachment fetch. The url
 // is already signature-gated (it only arrives inside an HMAC-verified Meta
@@ -26,7 +26,9 @@ const isAllowedImageHost = (rawUrl: string): boolean => {
 	let host: string;
 	try {
 		const parsed = new URL(rawUrl);
-		if (parsed.protocol !== "https:") return false;
+		if (parsed.protocol !== "https:") {
+			return false;
+		}
 		host = parsed.hostname.toLowerCase();
 	} catch {
 		return false;
@@ -37,10 +39,10 @@ const isAllowedImageHost = (rawUrl: string): boolean => {
 };
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
+	"image/gif": "gif",
 	"image/jpeg": "jpg",
 	"image/png": "png",
 	"image/webp": "webp",
-	"image/gif": "gif",
 };
 
 // Build a stable, collision-free R2 key for one attachment of one message.
@@ -57,9 +59,9 @@ export const inboundImageKey = (
 };
 
 export interface StagedInboundImage {
+	contentType: string;
 	key: string;
 	size: number;
-	contentType: string;
 }
 
 // Fetch the Meta CDN attachment and stage it in R2 under `key`. Runs in the
@@ -68,13 +70,15 @@ export interface StagedInboundImage {
 // the caller can skip that attachment without failing the whole webhook.
 export const stageInboundImage = async (
 	bucket: R2Bucket,
-	keyBase: { sessionId: string; messageId: string; index: number },
+	keyBase: { index: number; messageId: string; sessionId: string },
 	metaUrl: string,
 	signal?: AbortSignal,
 ): Promise<StagedInboundImage | undefined> => {
 	// Defense in depth: only ever fetch Meta/Facebook CDN hosts (the url is
 	// already signature-gated upstream).
-	if (!isAllowedImageHost(metaUrl)) return undefined;
+	if (!isAllowedImageHost(metaUrl)) {
+		return undefined;
+	}
 
 	const timeout = AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS);
 	const fetchSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -85,56 +89,57 @@ export const stageInboundImage = async (
 	} catch {
 		return undefined;
 	}
-	if (!response.ok || response.body === null) return undefined;
+	if (!response.ok || response.body === null) {
+		return undefined;
+	}
 
 	// Reject a non-image content-type outright rather than coercing it to jpeg —
 	// a non-image payload should be skipped, not stored and shipped to vision as
 	// a bogus jpeg.
 	const contentType = normalizeImageType(response.headers.get("content-type"));
-	if (contentType === undefined) return undefined;
+	if (contentType === undefined) {
+		return undefined;
+	}
 
 	// Cap the body BEFORE buffering it: reject on a declared Content-Length over
 	// the cap, then read through a length-limited reader that aborts the stream
 	// the moment it crosses the cap — so an oversized/hostile body is never fully
 	// pulled into Worker memory.
 	const declared = Number(response.headers.get("content-length"));
-	if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) return undefined;
+	if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+		return undefined;
+	}
 
 	const bytes = await readWithinCap(response.body, MAX_IMAGE_BYTES);
-	if (bytes === undefined || bytes.byteLength === 0) return undefined;
+	if (bytes === undefined || bytes.byteLength === 0) {
+		return undefined;
+	}
 
-	return stageInboundBytes(
-		bucket,
-		keyBase,
-		bytes,
-		contentType,
-		"messenger-inbound",
-	);
+	return stageInboundBytes(bucket, keyBase, bytes, contentType, "messenger-inbound");
 };
 
 /** Stage pre-fetched image bytes (e.g. Telegram getFile download). */
 export const stageInboundBytes = async (
 	bucket: R2Bucket,
-	keyBase: { sessionId: string; messageId: string; index: number },
+	keyBase: { index: number; messageId: string; sessionId: string },
 	bytes: Uint8Array,
 	contentType: string,
 	source: string,
 ): Promise<StagedInboundImage | undefined> => {
-	if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) return undefined;
+	if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) {
+		return undefined;
+	}
 	const normalized = normalizeImageType(contentType);
-	if (normalized === undefined) return undefined;
+	if (normalized === undefined) {
+		return undefined;
+	}
 
-	const key = inboundImageKey(
-		keyBase.sessionId,
-		keyBase.messageId,
-		keyBase.index,
-		normalized,
-	);
+	const key = inboundImageKey(keyBase.sessionId, keyBase.messageId, keyBase.index, normalized);
 	await bucket.put(key, bytes, {
-		httpMetadata: { contentType: normalized },
 		customMetadata: { source, stagedAt: new Date().toISOString() },
+		httpMetadata: { contentType: normalized },
 	});
-	return { key, size: bytes.byteLength, contentType: normalized };
+	return { contentType: normalized, key, size: bytes.byteLength };
 };
 
 // Read a staged image back by key for the vision tool. Returns undefined when
@@ -144,13 +149,14 @@ export const loadInboundImage = async (
 	key: string,
 ): Promise<InboundImage | undefined> => {
 	const object = await bucket.get(key);
-	if (object === null) return undefined;
+	if (object === null) {
+		return undefined;
+	}
 	const bytes = new Uint8Array(await object.arrayBuffer());
 	// The stored object already passed the image-type gate at stage time, so a
 	// missing/odd stored content-type falls back to jpeg here rather than failing
 	// a read-back of bytes we know are an image.
-	const contentType =
-		normalizeImageType(object.httpMetadata?.contentType ?? null) ?? "image/jpeg";
+	const contentType = normalizeImageType(object.httpMetadata?.contentType ?? null) ?? "image/jpeg";
 	return { bytes, contentType };
 };
 
@@ -162,13 +168,17 @@ const readWithinCap = async (
 	cap: number,
 ): Promise<Uint8Array | undefined> => {
 	const reader = body.getReader();
-	const chunks: Uint8Array[] = [];
+	const chunks: Array<Uint8Array> = [];
 	let total = 0;
 	try {
 		while (true) {
 			const { done, value } = await reader.read();
-			if (done) break;
-			if (value === undefined) continue;
+			if (done) {
+				break;
+			}
+			if (value === undefined) {
+				continue;
+			}
 			total += value.byteLength;
 			if (total > cap) {
 				await reader.cancel();
@@ -192,7 +202,9 @@ const readWithinCap = async (
 // is missing or not an image — callers skip non-image payloads rather than
 // fabricating a type.
 const normalizeImageType = (value: string | null): string | undefined => {
-	if (!value) return undefined;
+	if (!value) {
+		return undefined;
+	}
 	const type = value.split(";")[0]?.trim().toLowerCase() ?? "";
 	return type.startsWith("image/") ? type : undefined;
 };

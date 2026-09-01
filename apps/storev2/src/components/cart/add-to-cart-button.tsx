@@ -22,7 +22,9 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 	let drawerTimer: number | undefined;
 
 	onCleanup(() => {
-		if (typeof window === "undefined") return;
+		if (typeof window === "undefined") {
+			return;
+		}
 		window.clearTimeout(resetTimer);
 		window.clearTimeout(drawerTimer);
 	});
@@ -41,40 +43,31 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 
 	return (
 		<Button
+			aria-label="Сагслах"
 			class={cn(
 				props.compact ? "" : "w-full",
-				isAdded() &&
-					"animate-cart-add-stamp bg-success text-success-foreground shadow-none",
+				isAdded() && "animate-cart-add-stamp bg-success text-success-foreground shadow-none",
 			)}
+			disabled={isAdded()}
+			onClick={handleAddToCart}
+			size={props.compact ? "compact" : "default"}
 			type="button"
 			variant="default"
-			size={props.compact ? "compact" : "default"}
-			onClick={handleAddToCart}
-			disabled={isAdded()}
-			aria-label="Сагслах"
 		>
 			<span class="grid place-items-center">
 				<span
-					class={cn(
-						stateClass,
-						isAdded() && "-rotate-[100deg] scale-25 opacity-0 blur-[2px]",
-					)}
 					aria-hidden={isAdded()}
+					class={cn(stateClass, isAdded() && "scale-25 -rotate-[100deg] opacity-0 blur-[2px]")}
 				>
 					<IconShoppingCart class="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
 					<span class="hidden text-[11px] sm:inline sm:text-xs">Сагслах</span>
 				</span>
 				<span
-					class={cn(
-						stateClass,
-						!isAdded() && "rotate-[100deg] scale-25 opacity-0 blur-[2px]",
-					)}
 					aria-hidden={!isAdded()}
+					class={cn(stateClass, !isAdded() && "scale-25 rotate-[100deg] opacity-0 blur-[2px]")}
 				>
 					<IconCheck class="h-4 w-4 sm:h-5 sm:w-5" />
-					<span class="hidden text-[11px] sm:inline sm:text-xs">
-						Нэмэгдлээ!
-					</span>
+					<span class="hidden text-[11px] sm:inline sm:text-xs">Нэмэгдлээ!</span>
 				</span>
 			</span>
 		</Button>

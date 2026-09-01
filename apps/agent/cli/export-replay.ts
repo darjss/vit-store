@@ -44,8 +44,7 @@
  */
 import { createHmac } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import {
 	buildPaymentChoice,
 	buildQpayPageUrl,
@@ -66,14 +65,15 @@ import {
 } from "../src/channels/payment-handler";
 import { claimTransfer, fetchPaymentSummary } from "../src/lib/payment";
 
-const AGENT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const AGENT_ROOT = join(import.meta.dirname, "..");
 const REPO_ROOT = join(AGENT_ROOT, "..", "..");
 const FIXTURE_PORT = 8799; // must match STORE_API_URL in scripts/with-worker.ts
 const CAPTURE_PORT = 8788; // must match MESSENGER_GRAPH_BASE_URL (Graph Send API)
 const FIXTURE_BASE = `http://127.0.0.1:${FIXTURE_PORT}`;
-const WORKER_URL = (
-	process.env.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583"
-).replace(/\/$/, "");
+const WORKER_URL = (process.env.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583").replace(
+	/\/$/,
+	"",
+);
 const WEBHOOK_URL = `${WORKER_URL}/channels/messenger/webhook`;
 
 // Payment-domain lib calls run in THIS process; point them at the fixture too.
@@ -83,25 +83,31 @@ process.env.STORE_PUBLIC_URL ??= FIXTURE_BASE;
 const NO_MODEL = process.argv.includes("--no-model");
 
 const C = {
-	dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
-	bold: (s: string) => `\x1b[1m${s}\x1b[0m`,
-	green: (s: string) => `\x1b[32m${s}\x1b[0m`,
-	red: (s: string) => `\x1b[31m${s}\x1b[0m`,
-	yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
-	cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
-	magenta: (s: string) => `\x1b[35m${s}\x1b[0m`,
+	bold: (s: string) => `\u001b[1m${s}\u001b[0m`,
+	cyan: (s: string) => `\u001b[36m${s}\u001b[0m`,
+	dim: (s: string) => `\u001b[2m${s}\u001b[0m`,
+	green: (s: string) => `\u001b[32m${s}\u001b[0m`,
+	magenta: (s: string) => `\u001b[35m${s}\u001b[0m`,
+	red: (s: string) => `\u001b[31m${s}\u001b[0m`,
+	yellow: (s: string) => `\u001b[33m${s}\u001b[0m`,
 };
 
 // ─── .dev.vars (signature + ids, same as the dev console) ────────────────────
 
 function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) return {};
+	if (!existsSync(file)) {
+		return {};
+	}
 	const out: Record<string, string> = {};
 	for (const line of readFileSync(file, "utf8").split("\n")) {
 		const trimmed = line.trim();
-		if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
+		if (trimmed.length === 0 || trimmed.startsWith("#")) {
+			continue;
+		}
 		const eq = trimmed.indexOf("=");
-		if (eq === -1) continue;
+		if (eq === -1) {
+			continue;
+		}
 		out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
 	}
 	return out;
@@ -118,8 +124,7 @@ const PAGE_ID = vars.MESSENGER_PAGE_ID ?? "DEV_PAGE_ID";
 // Latin-1 — the classic FB "mojibake"); decodeFb() repairs it. The store page
 // is one participant; every other participant is the customer.
 
-const EXPORT_DIR =
-	process.env.MESSENGER_EXPORT_DIR ?? join(REPO_ROOT, "messenger-chat-history");
+const EXPORT_DIR = process.env.MESSENGER_EXPORT_DIR ?? join(REPO_ROOT, "messenger-chat-history");
 const INBOX_DIR = join(EXPORT_DIR, "messages", "inbox");
 const STORE_PARTICIPANT = process.env.MESSENGER_EXPORT_PAGE ?? "Amerik huns baraa";
 
@@ -132,29 +137,35 @@ function decodeFb(s: string): string {
 }
 
 interface ExportMsg {
-	text: string;
 	hasPhoto: boolean;
+	text: string;
 }
 
-function loadCustomerMessages(limitThreads: number): ExportMsg[] {
-	if (!existsSync(INBOX_DIR)) return [];
-	const out: ExportMsg[] = [];
+function loadCustomerMessages(limitThreads: number): Array<ExportMsg> {
+	if (!existsSync(INBOX_DIR)) {
+		return [];
+	}
+	const out: Array<ExportMsg> = [];
 	const threads = readdirSync(INBOX_DIR).slice(0, limitThreads);
 	for (const thread of threads) {
 		const file = join(INBOX_DIR, thread, "message_1.json");
-		if (!existsSync(file)) continue;
-		let data: { messages?: Record<string, unknown>[] };
+		if (!existsSync(file)) {
+			continue;
+		}
+		let data: { messages?: Array<Record<string, unknown>> };
 		try {
 			data = JSON.parse(readFileSync(file, "utf8"));
 		} catch {
 			continue;
 		}
 		for (const m of data.messages ?? []) {
-			if (m.sender_name === STORE_PARTICIPANT) continue; // skip the page side
+			if (m.sender_name === STORE_PARTICIPANT) {
+				continue;
+			} // skip the page side
 			const raw = typeof m.content === "string" ? m.content : "";
 			out.push({
-				text: decodeFb(raw).trim(),
 				hasPhoto: Array.isArray(m.photos),
+				text: decodeFb(raw).trim(),
 			});
 		}
 	}
@@ -173,7 +184,7 @@ interface Slice {
 	match: (t: string) => boolean;
 }
 
-const SLICES: Slice[] = [
+const SLICES: Array<Slice> = [
 	{
 		key: "product",
 		label: "text product lookup (#19)",
@@ -193,37 +204,36 @@ const SLICES: Slice[] = [
 	{
 		key: "cart",
 		label: "cart intent (#21)",
-		match: (t) =>
-			/захиал|\bavya|\bavyaa|\bawya|\bav'?ya|order|сагс|худалдаж ав|авмаар/i.test(
-				t,
-			),
+		match: (t) => /захиал|\bavya|\bavyaa|\bawya|\bav'?ya|order|сагс|худалдаж ав|авмаар/i.test(t),
 	},
 	{
 		key: "payment",
 		label: "payment intent (#25)",
 		match: (t) =>
-			/данс|шилжүүл|qpay|төл|\btol\b|\btöl|данс(аа)?|шилжүүлэг|төлбөр|данс уу|дугаар/i.test(
-				t,
-			),
+			/данс|шилжүүл|qpay|төл|\btol\b|\btöl|данс(аа)?|шилжүүлэг|төлбөр|данс уу|дугаар/i.test(t),
 	},
 ];
 
-function pickExamples(
-	msgs: ExportMsg[],
-	slice: Slice,
-	n: number,
-): string[] {
+function pickExamples(msgs: Array<ExportMsg>, slice: Slice, n: number): Array<string> {
 	const seen = new Set<string>();
-	const picked: string[] = [];
+	const picked: Array<string> = [];
 	for (const m of msgs) {
 		const t = m.text;
-		if (t.length < 4 || t.length > 140) continue;
-		if (!slice.match(t)) continue;
+		if (t.length < 4 || t.length > 140) {
+			continue;
+		}
+		if (!slice.match(t)) {
+			continue;
+		}
 		const norm = t.toLowerCase();
-		if (seen.has(norm)) continue;
+		if (seen.has(norm)) {
+			continue;
+		}
 		seen.add(norm);
 		picked.push(t);
-		if (picked.length >= n) break;
+		if (picked.length >= n) {
+			break;
+		}
 	}
 	return picked;
 }
@@ -231,7 +241,7 @@ function pickExamples(
 // Redact: the harness only ever echoes the message TEXT (never names/PSIDs), and
 // truncates long lines so a stray phone number can't sprawl into the transcript.
 function redact(t: string): string {
-	const oneLine = t.replace(/\s+/g, " ").trim();
+	const oneLine = t.replaceAll(/\s+/g, " ").trim();
 	return oneLine.length > 110 ? `${oneLine.slice(0, 107)}…` : oneLine;
 }
 
@@ -241,57 +251,141 @@ function redact(t: string): string {
 // SuperJSON tRPC envelope the worker's lib/catalog.ts + lib/payment.ts expect.
 
 type StockStatus = "in_stock" | "low_stock" | "out_of_stock";
-const SEARCH_FIXTURE: {
+const SEARCH_FIXTURE: Array<{
+	brand: string;
 	id: number;
-	slug: string;
+	image: string;
 	name: string;
 	price: number;
-	image: string;
-	brand: string;
+	slug: string;
 	stockStatus: StockStatus;
-}[] = [
-	{ id: 101, slug: "now-magnesium-glycinate-200", name: "NOW Foods Magnesium Glycinate 200mg", price: 89000, image: "https://example.com/maggly.jpg", brand: "NOW Foods", stockStatus: "in_stock" },
-	{ id: 104, slug: "now-magnesium-citrate-400", name: "NOW Foods Magnesium Citrate 400mg", price: 72000, image: "https://example.com/magcit.jpg", brand: "NOW Foods", stockStatus: "in_stock" },
-	{ id: 102, slug: "solgar-omega-3-950", name: "Solgar Omega-3 Fish Oil 950mg", price: 145000, image: "https://example.com/omega.jpg", brand: "Solgar", stockStatus: "low_stock" },
-	{ id: 103, slug: "now-vitamin-d3-5000", name: "NOW Foods Vitamin D-3 5000 IU", price: 62000, image: "https://example.com/d3.jpg", brand: "NOW Foods", stockStatus: "in_stock" },
+}> = [
+	{
+		brand: "NOW Foods",
+		id: 101,
+		image: "https://example.com/maggly.jpg",
+		name: "NOW Foods Magnesium Glycinate 200mg",
+		price: 89_000,
+		slug: "now-magnesium-glycinate-200",
+		stockStatus: "in_stock",
+	},
+	{
+		brand: "NOW Foods",
+		id: 104,
+		image: "https://example.com/magcit.jpg",
+		name: "NOW Foods Magnesium Citrate 400mg",
+		price: 72_000,
+		slug: "now-magnesium-citrate-400",
+		stockStatus: "in_stock",
+	},
+	{
+		brand: "Solgar",
+		id: 102,
+		image: "https://example.com/omega.jpg",
+		name: "Solgar Omega-3 Fish Oil 950mg",
+		price: 145_000,
+		slug: "solgar-omega-3-950",
+		stockStatus: "low_stock",
+	},
+	{
+		brand: "NOW Foods",
+		id: 103,
+		image: "https://example.com/d3.jpg",
+		name: "NOW Foods Vitamin D-3 5000 IU",
+		price: 62_000,
+		slug: "now-vitamin-d3-5000",
+		stockStatus: "in_stock",
+	},
 ];
 
-const ADVICE_FIXTURE: {
-	id: number;
-	name: string;
+const ADVICE_FIXTURE: Array<{
+	amount: string;
 	brand: string;
 	category: string;
-	description: string;
-	ingredients: string[];
-	amount: string;
-	potency: string;
 	dailyIntake: number;
+	description: string;
+	id: number;
+	ingredients: Array<string>;
+	name: string;
+	potency: string;
 	price: number;
-}[] = [
-	{ id: 101, name: "NOW Foods Magnesium Glycinate 200mg", brand: "NOW Foods", category: "Эрдэс бодис", description: "Магни глицинат нь шингэц сайтай, ходоодонд зөөлөн магнийн хэлбэр. Булчингийн тайвшрал, нойрны чанар, өдөр тутмын тонусыг дэмжихэд түгээмэл сонгодог.", ingredients: ["Магни (бисглицинат хэлбэрээр) 200мг"], amount: "120 капсул", potency: "200мг", dailyIntake: 2, price: 89000 },
-	{ id: 104, name: "NOW Foods Magnesium Citrate 400mg", brand: "NOW Foods", category: "Эрдэс бодис", description: "Магни цитрат нь өргөн хэрэглэгддэг, хямд магнийн хэлбэр. Шингэц сайтай бөгөөд гэдэсний хэвийн хөдөлгөөнийг дэмжихэд түгээмэл хэрэглэдэг.", ingredients: ["Магни (цитрат хэлбэрээр) 400мг"], amount: "100 шахмал", potency: "400мг", dailyIntake: 1, price: 72000 },
-	{ id: 102, name: "Solgar Omega-3 Fish Oil 950mg", brand: "Solgar", category: "Тосны хүчил", description: "Загасны тосны омега-3 (EPA/DHA). Зүрх судас, тархи, нүдний эрүүл мэндийг дэмжихэд түгээмэл хэрэглэдэг.", ingredients: ["Загасны тос 1000мг", "EPA 600мг", "DHA 300мг"], amount: "100 капсул", potency: "950мг омега-3", dailyIntake: 1, price: 145000 },
-	{ id: 103, name: "NOW Foods Vitamin D-3 5000 IU", brand: "NOW Foods", category: "Витамин", description: "Витамин D3 (холекальциферол) 5000 IU. Ясны эрүүл мэнд, дархлааг дэмжихэд түгээмэл хэрэглэдэг өндөр тунтай хэлбэр.", ingredients: ["Витамин D3 (холекальциферол) 5000 IU"], amount: "120 капсул", potency: "5000 IU", dailyIntake: 1, price: 62000 },
+}> = [
+	{
+		amount: "120 капсул",
+		brand: "NOW Foods",
+		category: "Эрдэс бодис",
+		dailyIntake: 2,
+		description:
+			"Магни глицинат нь шингэц сайтай, ходоодонд зөөлөн магнийн хэлбэр. Булчингийн тайвшрал, нойрны чанар, өдөр тутмын тонусыг дэмжихэд түгээмэл сонгодог.",
+		id: 101,
+		ingredients: ["Магни (бисглицинат хэлбэрээр) 200мг"],
+		name: "NOW Foods Magnesium Glycinate 200mg",
+		potency: "200мг",
+		price: 89_000,
+	},
+	{
+		amount: "100 шахмал",
+		brand: "NOW Foods",
+		category: "Эрдэс бодис",
+		dailyIntake: 1,
+		description:
+			"Магни цитрат нь өргөн хэрэглэгддэг, хямд магнийн хэлбэр. Шингэц сайтай бөгөөд гэдэсний хэвийн хөдөлгөөнийг дэмжихэд түгээмэл хэрэглэдэг.",
+		id: 104,
+		ingredients: ["Магни (цитрат хэлбэрээр) 400мг"],
+		name: "NOW Foods Magnesium Citrate 400mg",
+		potency: "400мг",
+		price: 72_000,
+	},
+	{
+		amount: "100 капсул",
+		brand: "Solgar",
+		category: "Тосны хүчил",
+		dailyIntake: 1,
+		description:
+			"Загасны тосны омега-3 (EPA/DHA). Зүрх судас, тархи, нүдний эрүүл мэндийг дэмжихэд түгээмэл хэрэглэдэг.",
+		id: 102,
+		ingredients: ["Загасны тос 1000мг", "EPA 600мг", "DHA 300мг"],
+		name: "Solgar Omega-3 Fish Oil 950mg",
+		potency: "950мг омега-3",
+		price: 145_000,
+	},
+	{
+		amount: "120 капсул",
+		brand: "NOW Foods",
+		category: "Витамин",
+		dailyIntake: 1,
+		description:
+			"Витамин D3 (холекальциферол) 5000 IU. Ясны эрүүл мэнд, дархлааг дэмжихэд түгээмэл хэрэглэдэг өндөр тунтай хэлбэр.",
+		id: 103,
+		ingredients: ["Витамин D3 (холекальциферол) 5000 IU"],
+		name: "NOW Foods Vitamin D-3 5000 IU",
+		potency: "5000 IU",
+		price: 62_000,
+	},
 ];
 
 // The simulated order/payment record the payment-slice stub serves.
 const PAYMENT = {
-	paymentNumber: "PMT-7K2QX",
 	checkoutToken: "ct_test_9f3ab21c",
 	customerPhone: "99112233",
-	total: 145_800,
 	orderNumber: "ORD-5521",
+	paymentNumber: "PMT-7K2QX",
 	status: "pending" as "pending" | "customer_claimed_paid" | "success",
+	total: 145_800,
 };
 const paymentCalls = { confirmPayment: 0, confirmPaymentAndApplyStock: 0 };
 
-function decodeInput(raw: string | null): { query?: string; limit?: number; ids?: number[] } | undefined {
-	if (!raw) return undefined;
+function decodeInput(
+	raw: string | null,
+): { ids?: Array<number>; limit?: number; query?: string } | undefined {
+	if (!raw) {
+		return undefined;
+	}
 	try {
 		return SuperJSON.deserialize(JSON.parse(raw)) as {
-			query?: string;
+			ids?: Array<number>;
 			limit?: number;
-			ids?: number[];
+			query?: string;
 		};
 	} catch {
 		return undefined;
@@ -299,13 +393,16 @@ function decodeInput(raw: string | null): { query?: string; limit?: number; ids?
 }
 
 function searchFixture(query: string, limit: number) {
-	const tokens = query.toLowerCase().split(/\s+/).filter((t) => t.length > 0);
+	const tokens = query
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((t) => t.length > 0);
 	const matches = SEARCH_FIXTURE.filter((p) => {
 		const hay = `${p.name} ${p.brand} ${p.slug}`.toLowerCase();
 		const norm = hay
-			.replace(/магни/g, "магни magnesium magni")
-			.replace(/омега/g, "омега omega")
-			.replace(/витамин d|d-3|d3/g, "vitamin d d3 d-3");
+			.replaceAll("магни", "магни magnesium magni")
+			.replaceAll("омега", "омега omega")
+			.replaceAll(/витамин d|d-3|d3/g, "vitamin d d3 d-3");
 		return tokens.some((t) => norm.includes(t));
 	});
 	return (matches.length > 0 ? matches : SEARCH_FIXTURE).slice(0, limit);
@@ -313,13 +410,10 @@ function searchFixture(query: string, limit: number) {
 
 function startFixtureServer() {
 	const trpc = (data: unknown) =>
-		new Response(
-			JSON.stringify({ result: { data: SuperJSON.serialize(data) } }),
-			{ headers: { "content-type": "application/json" } },
-		);
+		new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
+			headers: { "content-type": "application/json" },
+		});
 	return Bun.serve({
-		port: FIXTURE_PORT,
-		hostname: "127.0.0.1",
 		fetch(req) {
 			const url = new URL(req.url);
 			const path = url.pathname;
@@ -339,24 +433,26 @@ function startFixtureServer() {
 			// Payment-slice procedures (lib/payment.ts hits these from THIS process).
 			if (path.endsWith("/payment.getPaymentByNumber")) {
 				return trpc({
-					paymentNumber: PAYMENT.paymentNumber,
-					status: PAYMENT.status,
-					provider: "transfer",
 					createdAt: "2026-06-25T00:00:00.000Z",
-					total: PAYMENT.total,
 					order: {
-						orderNumber: PAYMENT.orderNumber,
-						customerPhone: PAYMENT.customerPhone,
-						status: "pending",
 						address: "Баянзүрх дүүрэг",
-						notes: "",
 						createdAt: "2026-06-25T00:00:00.000Z",
+						customerPhone: PAYMENT.customerPhone,
+						notes: "",
+						orderNumber: PAYMENT.orderNumber,
 						products: [],
+						status: "pending",
 					},
+					paymentNumber: PAYMENT.paymentNumber,
+					provider: "transfer",
+					status: PAYMENT.status,
+					total: PAYMENT.total,
 				});
 			}
 			if (path.endsWith("/payment.claimTransferPaid")) {
-				if (PAYMENT.status === "pending") PAYMENT.status = "customer_claimed_paid";
+				if (PAYMENT.status === "pending") {
+					PAYMENT.status = "customer_claimed_paid";
+				}
 				return trpc({ orderNumber: PAYMENT.orderNumber });
 			}
 			// Confirmation procedures must NEVER be hit on a claim (ADR-0004).
@@ -370,29 +466,31 @@ function startFixtureServer() {
 			}
 			return new Response("not found", { status: 404 });
 		},
+		hostname: "127.0.0.1",
+		port: FIXTURE_PORT,
 	});
 }
 
 // ─── Capture server (stands in for Graph Send API) ───────────────────────────
 
 interface Captured {
-	text?: string;
 	attachment?: string;
-	quickReplies: string[];
-	buttons: string[];
+	buttons: Array<string>;
+	quickReplies: Array<string>;
+	text?: string;
 }
 // Append-only capture log tagged with the recipient PSID. The worker dispatches
 // model turns asynchronously (waitUntil), so a slow reply from an earlier turn
 // can land while a later turn is running; tagging by recipient lets each turn
 // read back ONLY the sends addressed to its own session, with no cross-bleed.
-const captures: { recipient: string; cap: Captured }[] = [];
+const captures: Array<{ cap: Captured; recipient: string }> = [];
 
 function startCaptureServer() {
 	return Bun.serve({
-		port: CAPTURE_PORT,
-		hostname: "127.0.0.1",
 		async fetch(req) {
-			if (req.method !== "POST") return Response.json({ id: PAGE_ID });
+			if (req.method !== "POST") {
+				return Response.json({ id: PAGE_ID });
+			}
 			let body: Record<string, unknown> = {};
 			try {
 				body = (await req.json()) as Record<string, unknown>;
@@ -401,35 +499,52 @@ function startCaptureServer() {
 				const message = (body.message ?? {}) as Record<string, unknown>;
 				const recipient = (body.recipient ?? {}) as Record<string, unknown>;
 				const qr = Array.isArray(message.quick_replies)
-					? (message.quick_replies as Record<string, unknown>[]).map((q) => String(q.payload ?? ""))
+					? (message.quick_replies as Array<Record<string, unknown>>).map((q) =>
+							String(q.payload ?? ""),
+						)
 					: [];
 				const att = message.attachment as Record<string, unknown> | undefined;
 				const payload = att?.payload as Record<string, unknown> | undefined;
-				const btns: string[] = [];
+				const btns: Array<string> = [];
 				const collect = (b: unknown) => {
-					if (!Array.isArray(b)) return;
-					for (const x of b as Record<string, unknown>[]) {
-						if (x.type === "postback" && typeof x.payload === "string") btns.push(`${x.title} → ${x.payload}`);
-						else if (x.type === "web_url" && typeof x.url === "string") btns.push(`${x.title} → ${x.url}`);
+					if (!Array.isArray(b)) {
+						return;
+					}
+					for (const x of b as Array<Record<string, unknown>>) {
+						if (x.type === "postback" && typeof x.payload === "string") {
+							btns.push(`${x.title} → ${x.payload}`);
+						} else if (x.type === "web_url" && typeof x.url === "string") {
+							btns.push(`${x.title} → ${x.url}`);
+						}
 					}
 				};
 				if (payload) {
 					collect(payload.buttons);
-					if (Array.isArray(payload.elements))
-						for (const el of payload.elements as Record<string, unknown>[]) collect(el.buttons);
+					if (Array.isArray(payload.elements)) {
+						for (const el of payload.elements as Array<Record<string, unknown>>) {
+							collect(el.buttons);
+						}
+					}
 				}
 				captures.push({
-					recipient: String(recipient.id ?? ""),
 					cap: {
-						text: message.text as string | undefined,
-						attachment: att ? `${String(att.type)} ${String(payload?.template_type ?? "")}` : undefined,
-						quickReplies: qr,
+						attachment: att
+							? `${String(att.type)} ${String(payload?.template_type ?? "")}`
+							: undefined,
 						buttons: btns,
+						quickReplies: qr,
+						text: message.text as string | undefined,
 					},
+					recipient: String(recipient.id ?? ""),
 				});
 			}
-			return Response.json({ recipient_id: String((body.recipient as Record<string, unknown>)?.id ?? PAGE_ID), message_id: `cap-${captures.length}` });
+			return Response.json({
+				message_id: `cap-${captures.length}`,
+				recipient_id: String((body.recipient as Record<string, unknown>)?.id ?? PAGE_ID),
+			});
 		},
+		hostname: "127.0.0.1",
+		port: CAPTURE_PORT,
 	});
 }
 
@@ -441,25 +556,40 @@ function sign(bodyText: string): string {
 }
 async function postWebhook(event: Record<string, unknown>): Promise<number> {
 	const bodyText = JSON.stringify({
+		entry: [{ id: PAGE_ID, messaging: [event], time: Date.now() }],
 		object: "page",
-		entry: [{ id: PAGE_ID, time: Date.now(), messaging: [event] }],
 	});
 	const res = await fetch(WEBHOOK_URL, {
-		method: "POST",
+		body: bodyText,
 		headers: {
 			"content-type": "application/json",
 			"x-hub-signature-256": `sha256=${sign(bodyText)}`,
 		},
-		body: bodyText,
+		method: "POST",
 	});
 	return res.status;
 }
 const sendText = (psid: string, text: string) =>
-	postWebhook({ sender: { id: psid }, recipient: { id: PAGE_ID }, timestamp: Date.now(), message: { mid: `m-${(mid += 1)}`, text } });
+	postWebhook({
+		message: { mid: `m-${(mid += 1)}`, text },
+		recipient: { id: PAGE_ID },
+		sender: { id: psid },
+		timestamp: Date.now(),
+	});
 const firePostback = (psid: string, payload: string) =>
-	postWebhook({ sender: { id: psid }, recipient: { id: PAGE_ID }, timestamp: Date.now(), postback: { mid: `m-${(mid += 1)}`, title: payload, payload } });
+	postWebhook({
+		postback: { mid: `m-${(mid += 1)}`, payload, title: payload },
+		recipient: { id: PAGE_ID },
+		sender: { id: psid },
+		timestamp: Date.now(),
+	});
 const fireQuickReply = (psid: string, payload: string) =>
-	postWebhook({ sender: { id: psid }, recipient: { id: PAGE_ID }, timestamp: Date.now(), message: { mid: `m-${(mid += 1)}`, text: payload, quick_reply: { payload } } });
+	postWebhook({
+		message: { mid: `m-${(mid += 1)}`, quick_reply: { payload }, text: payload },
+		recipient: { id: PAGE_ID },
+		sender: { id: psid },
+		timestamp: Date.now(),
+	});
 
 // Collect every send addressed to `psid` that lands after `sinceLen` (a cursor
 // snapshotted BEFORE firing the event), settling once at least one has arrived
@@ -470,34 +600,47 @@ async function collectReplies(
 	psid: string,
 	timeoutMs: number,
 	quietMs: number,
-): Promise<Captured[]> {
+): Promise<Array<Captured>> {
 	const deadline = Date.now() + timeoutMs;
 	let lastSeen = 0;
 	let lastAt = Date.now();
 	const mine = () =>
-		captures.slice(sinceLen).filter((c) => c.recipient === psid).map((c) => c.cap);
+		captures
+			.slice(sinceLen)
+			.filter((c) => c.recipient === psid)
+			.map((c) => c.cap);
 	while (Date.now() < deadline) {
 		const count = mine().length;
 		if (count > lastSeen) {
 			lastSeen = count;
 			lastAt = Date.now();
 		}
-		if (count > 0 && Date.now() - lastAt > quietMs) break;
+		if (count > 0 && Date.now() - lastAt > quietMs) {
+			break;
+		}
 		await Bun.sleep(300);
 	}
 	return mine();
 }
 
-function printCaptured(caps: Captured[]): void {
+function printCaptured(caps: Array<Captured>): void {
 	if (caps.length === 0) {
 		console.log(`    ${C.red("(no reply captured)")}`);
 		return;
 	}
 	for (const c of caps) {
-		if (c.text) console.log(`    ${C.green("bot ›")} ${redact(c.text)}`);
-		if (c.attachment) console.log(`    ${C.dim(`[attachment ${c.attachment}]`)}`);
-		for (const b of c.buttons) console.log(`    ${C.dim(`  [button] ${b}`)}`);
-		if (c.quickReplies.length > 0) console.log(`    ${C.dim(`  [quick replies] ${c.quickReplies.join(", ")}`)}`);
+		if (c.text) {
+			console.log(`    ${C.green("bot ›")} ${redact(c.text)}`);
+		}
+		if (c.attachment) {
+			console.log(`    ${C.dim(`[attachment ${c.attachment}]`)}`);
+		}
+		for (const b of c.buttons) {
+			console.log(`    ${C.dim(`  [button] ${b}`)}`);
+		}
+		if (c.quickReplies.length > 0) {
+			console.log(`    ${C.dim(`  [quick replies] ${c.quickReplies.join(", ")}`)}`);
+		}
 	}
 }
 
@@ -507,7 +650,7 @@ function hr(): void {
 	console.log(C.dim("─".repeat(72)));
 }
 
-async function runTextSlice(label: string, examples: string[]): Promise<void> {
+async function runTextSlice(label: string, examples: Array<string>): Promise<void> {
 	hr();
 	console.log(C.bold(`▶ ${label}`));
 	if (examples.length === 0) {
@@ -515,8 +658,12 @@ async function runTextSlice(label: string, examples: string[]): Promise<void> {
 		return;
 	}
 	if (NO_MODEL) {
-		console.log(C.yellow("  --no-model: selected real export inputs (model turn is the documented split):"));
-		for (const ex of examples) console.log(`    ${C.cyan("you ›")} ${redact(ex)}`);
+		console.log(
+			C.yellow("  --no-model: selected real export inputs (model turn is the documented split):"),
+		);
+		for (const ex of examples) {
+			console.log(`    ${C.cyan("you ›")} ${redact(ex)}`);
+		}
 		return;
 	}
 	for (const ex of examples) {
@@ -528,7 +675,7 @@ async function runTextSlice(label: string, examples: string[]): Promise<void> {
 			console.log(`    ${C.red(`✗ webhook → ${status || "unreachable"}`)}`);
 			continue;
 		}
-		printCaptured(await collectReplies(since, psid, 90_000, 4_000));
+		printCaptured(await collectReplies(since, psid, 90_000, 4000));
 		console.log("");
 	}
 }
@@ -536,15 +683,29 @@ async function runTextSlice(label: string, examples: string[]): Promise<void> {
 async function runCartSlice(anchor: string | undefined): Promise<void> {
 	hr();
 	console.log(C.bold("▶ cart buttons (#21) — real signed webhook → CartStore DO"));
-	if (anchor) console.log(`  ${C.dim(`anchored on real export intent:`)} ${C.cyan(redact(anchor))}`);
+	if (anchor) {
+		console.log(`  ${C.dim(`anchored on real export intent:`)} ${C.cyan(redact(anchor))}`);
+	}
 	const psid = `DEV_PSID_cart_${Date.now().toString(36)}`;
-	const steps: { label: string; fire: () => Promise<number> }[] = [
-		{ label: 'tap "Захиалах" on Magnesium (order_product:101)', fire: () => firePostback(psid, "order_product:101") },
-		{ label: "tap it again → qty merges (order_product:101)", fire: () => firePostback(psid, "order_product:101") },
-		{ label: "add Omega-3 (order_product:102)", fire: () => firePostback(psid, "order_product:102") },
-		{ label: "increment Omega-3 (cart_inc:102)", fire: () => fireQuickReply(psid, "cart_inc:102") },
-		{ label: "remove Magnesium (cart_remove:101)", fire: () => fireQuickReply(psid, "cart_remove:101") },
-		{ label: "confirm cart (cart_confirm)", fire: () => fireQuickReply(psid, "cart_confirm") },
+	const steps: Array<{ fire: () => Promise<number>; label: string }> = [
+		{
+			fire: () => firePostback(psid, "order_product:101"),
+			label: 'tap "Захиалах" on Magnesium (order_product:101)',
+		},
+		{
+			fire: () => firePostback(psid, "order_product:101"),
+			label: "tap it again → qty merges (order_product:101)",
+		},
+		{
+			fire: () => firePostback(psid, "order_product:102"),
+			label: "add Omega-3 (order_product:102)",
+		},
+		{ fire: () => fireQuickReply(psid, "cart_inc:102"), label: "increment Omega-3 (cart_inc:102)" },
+		{
+			fire: () => fireQuickReply(psid, "cart_remove:101"),
+			label: "remove Magnesium (cart_remove:101)",
+		},
+		{ fire: () => fireQuickReply(psid, "cart_confirm"), label: "confirm cart (cart_confirm)" },
 	];
 	for (const step of steps) {
 		console.log(`  ${C.magenta("⊳")} ${step.label}`);
@@ -556,7 +717,7 @@ async function runCartSlice(anchor: string | undefined): Promise<void> {
 		}
 		// The cart path is deterministic (no model): its summary lands during the
 		// webhook call, so a short window is plenty.
-		printCaptured(await collectReplies(since, psid, 8_000, 1_200));
+		printCaptured(await collectReplies(since, psid, 8000, 1200));
 	}
 	console.log("");
 }
@@ -566,10 +727,12 @@ async function runCartSlice(anchor: string | undefined): Promise<void> {
 async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	hr();
 	console.log(C.bold("▶ payment buttons (#25) — real @vit/assistant payment domain"));
-	if (anchor) console.log(`  ${C.dim("anchored on real export intent:")} ${C.cyan(redact(anchor))}`);
+	if (anchor) {
+		console.log(`  ${C.dim("anchored on real export intent:")} ${C.cyan(redact(anchor))}`);
+	}
 	const ref: PaymentRef = {
-		paymentNumber: PAYMENT.paymentNumber,
 		checkoutToken: PAYMENT.checkoutToken,
+		paymentNumber: PAYMENT.paymentNumber,
 	};
 
 	// 1) Order-created → the two payment-choice buttons (QPay url + transfer postback).
@@ -586,18 +749,22 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	// 2) Customer taps "Дансаар шилжүүлэх" → real decode → real choose-transfer handler.
 	console.log(`  ${C.magenta("⊳")} tap "${transferBtn?.title}" (${transferBtn?.payload})`);
 	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref)) as PaymentRef;
-	const cap: { texts: string[]; bank: { text: string; payload: string }[]; status?: string } = {
-		texts: [],
+	const cap: {
+		bank: Array<{ payload: string; text: string }>;
+		status?: string;
+		texts: Array<string>;
+	} = {
 		bank: [],
+		texts: [],
 	};
 	const deps: PaymentHandlerDeps = {
+		claimTransfer: (r) => claimTransfer(r.paymentNumber, r.checkoutToken),
 		fetchPaymentSummary: async (r) => {
 			const s = await fetchPaymentSummary(r.paymentNumber, r.checkoutToken);
 			return { amount: s.total, reference: s.order.customerPhone };
 		},
-		claimTransfer: (r) => claimTransfer(r.paymentNumber, r.checkoutToken),
 		sendBankDetails: async (text, paymentRef) => {
-			cap.bank.push({ text, payload: claimTransferPayload(paymentRef) });
+			cap.bank.push({ payload: claimTransferPayload(paymentRef), text });
 			return undefined;
 		},
 		sendText: async (text) => {
@@ -612,7 +779,9 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	const bank = cap.bank[0];
 	if (bank) {
 		console.log(`    ${C.green("bot ›")} bank transfer details:`);
-		for (const l of bank.text.split("\n")) console.log(`        ${C.dim(l)}`);
+		for (const l of bank.text.split("\n")) {
+			console.log(`        ${C.dim(l)}`);
+		}
 		console.log(`    ${C.dim(`[button] Шилжүүлсэн → postback ${bank.payload}`)}`);
 		console.log(
 			`    ${C.dim(`shows account ${bankTransfer.accountNumber} · amount ${PAYMENT.total.toLocaleString("en-US")} · ref ${PAYMENT.customerPhone}`)}`,
@@ -622,11 +791,23 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	// 3) Customer taps "Шилжүүлсэн" (claim) → real claim handler → ack, still pending.
 	console.log(`  ${C.magenta("⊳")} tap "Шилжүүлсэн" claim button (${bank?.payload})`);
 	const claimRef = parseClaimTransferPayload(claimTransferPayload(ref)) ?? ref;
-	const cap2: typeof cap = { texts: [], bank: [] };
-	await handleTransferClaim(claimRef, { ...deps, sendText: async (t) => { cap2.texts.push(t); }, setTransferStatus: async (s) => { cap2.status = s; } });
+	const cap2: typeof cap = { bank: [], texts: [] };
+	await handleTransferClaim(claimRef, {
+		...deps,
+		sendText: async (t) => {
+			cap2.texts.push(t);
+		},
+		setTransferStatus: async (s) => {
+			cap2.status = s;
+		},
+	});
 	console.log(`    ${C.green("bot ›")} ${redact(cap2.texts[0] ?? "")}`);
-	console.log(`    ${C.dim(`ack matches TRANSFER_CLAIM_ACK_MESSAGE: ${cap2.texts[0] === TRANSFER_CLAIM_ACK_MESSAGE}`)}`);
-	console.log(`    ${C.dim(`"хийсэн" / "hiisen" also claim: ${isTransferDoneText("хийсэн")} / ${isTransferDoneText("hiisen")}`)}`);
+	console.log(
+		`    ${C.dim(`ack matches TRANSFER_CLAIM_ACK_MESSAGE: ${cap2.texts[0] === TRANSFER_CLAIM_ACK_MESSAGE}`)}`,
+	);
+	console.log(
+		`    ${C.dim(`"хийсэн" / "hiisen" also claim: ${isTransferDoneText("хийсэн")} / ${isTransferDoneText("hiisen")}`)}`,
+	);
 	console.log(
 		`    ${C.dim(`ADR-0004 invariant — status is "${PAYMENT.status}" (a claim, NOT success); confirmation api calls: ${paymentCalls.confirmPayment + paymentCalls.confirmPaymentAndApplyStock}`)}`,
 	);
@@ -641,7 +822,11 @@ async function main(): Promise<void> {
 	console.log(C.dim(`  worker   ${WEBHOOK_URL}`));
 	console.log(C.dim(`  catalog  fixture on :${FIXTURE_PORT}`));
 	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Graph Send API)`));
-	console.log(C.dim(`  model    ${NO_MODEL ? "OFF (--no-model: text slice is the documented split)" : "real Workers AI (Kimi)"}`));
+	console.log(
+		C.dim(
+			`  model    ${NO_MODEL ? "OFF (--no-model: text slice is the documented split)" : "real Workers AI (Kimi)"}`,
+		),
+	);
 
 	const msgs = loadCustomerMessages(400);
 	if (msgs.length === 0) {
@@ -667,8 +852,14 @@ async function main(): Promise<void> {
 	const fixture = startFixtureServer();
 	const capture = startCaptureServer();
 	try {
-		await runTextSlice("text product lookup (#19) — real signed webhook → search_products → cards", product);
-		await runTextSlice("product advice (#22) — real signed webhook → get_product_advice → reply", advice);
+		await runTextSlice(
+			"text product lookup (#19) — real signed webhook → search_products → cards",
+			product,
+		);
+		await runTextSlice(
+			"product advice (#22) — real signed webhook → get_product_advice → reply",
+			advice,
+		);
 		await runCartSlice(cartAnchor);
 		await runPaymentSlice(payAnchor);
 

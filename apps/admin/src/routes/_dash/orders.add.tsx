@@ -8,10 +8,10 @@ import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 
 export const Route = createFileRoute("/_dash/orders/add")({
 	component: RouteComponent,
-	pendingComponent: FormPageSkeleton,
 	loader: () => {
 		// Form doesn't need initial data
 	},
+	pendingComponent: FormPageSkeleton,
 });
 
 function RouteComponent() {
@@ -30,9 +30,7 @@ function OrderAddContent() {
 			<OrderForm
 				onSuccess={() => {
 					toast.success("Захиалга амжилттай нэмэгдлээ");
-					queryClient.invalidateQueries(
-						trpc.order.getPaginatedOrders.pathFilter(),
-					);
+					queryClient.invalidateQueries(trpc.order.getPaginatedOrders.pathFilter());
 					navigate({ to: "/orders" });
 				}}
 			/>

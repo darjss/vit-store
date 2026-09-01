@@ -24,7 +24,7 @@ const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
 let cachedClient: TRPCClient<StoreRouter> | undefined;
 export const storeClient = (): TRPCClient<StoreRouter> => {
 	cachedClient ??= createTRPCClient<StoreRouter>({
-		links: [httpLink({ url: storeApiUrl(), transformer: SuperJSON })],
+		links: [httpLink({ transformer: SuperJSON, url: storeApiUrl() })],
 	});
 	return cachedClient;
 };

@@ -4,10 +4,7 @@ import type { AIExtractedData, ExtractedProductData } from "@vit/shared";
 import { ArrowLeft, Bot, PenLine, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	AIProductInput,
-	AIProductPreview,
-} from "@/components/product/ai-product-input";
+import { AIProductInput, AIProductPreview } from "@/components/product/ai-product-input";
 import ProductForm from "@/components/product/product-form";
 import { trpc } from "@/utils/trpc";
 
@@ -17,8 +14,8 @@ export const Route = createFileRoute("/products/add")({
 
 type AIState =
 	| { mode: "input" }
-	| { mode: "preview"; data: ExtractedProductData }
-	| { mode: "form"; data: AIExtractedData };
+	| { data: ExtractedProductData; mode: "preview" }
+	| { data: AIExtractedData; mode: "form" };
 
 function RouteComponent() {
 	const navigate = useNavigate();
@@ -29,39 +26,39 @@ function RouteComponent() {
 
 	const handleSuccess = () => {
 		toast.success("Бүтээгдэхүүн амжилттай нэмэгдлээ");
-		queryClient.invalidateQueries(
-			trpc.product.getPaginatedProducts.queryOptions({}),
-		);
+		queryClient.invalidateQueries(trpc.product.getPaginatedProducts.queryOptions({}));
 		navigate({ to: "/products" });
 	};
 
 	const handleAIExtracted = (data: ExtractedProductData) => {
-		setAiState({ mode: "preview", data });
+		setAiState({ data, mode: "preview" });
 	};
 
 	const handleConfirmPreview = () => {
-		if (aiState.mode !== "preview") return;
+		if (aiState.mode !== "preview") {
+			return;
+		}
 
 		const formData: AIExtractedData = {
-			name: aiState.data.name,
-			name_mn: aiState.data.name_mn,
-			description: aiState.data.description,
+			amount: aiState.data.amount,
 			brand: aiState.data.brand,
 			brandId: aiState.data.brandId,
 			categoryId: aiState.data.categoryId,
-			amount: aiState.data.amount,
-			potency: aiState.data.potency,
 			dailyIntake: aiState.data.dailyIntake,
-			weightGrams: aiState.data.weightGrams,
-			price: aiState.data.calculatedPriceMnt ?? undefined,
-			seoTitle: aiState.data.seoTitle,
-			seoDescription: aiState.data.seoDescription,
-			tags: aiState.data.tags,
-			ingredients: aiState.data.ingredients,
+			description: aiState.data.description,
 			images: aiState.data.images,
+			ingredients: aiState.data.ingredients,
+			name: aiState.data.name,
+			name_mn: aiState.data.name_mn,
+			potency: aiState.data.potency,
+			price: aiState.data.calculatedPriceMnt ?? undefined,
+			seoDescription: aiState.data.seoDescription,
+			seoTitle: aiState.data.seoTitle,
+			tags: aiState.data.tags,
+			weightGrams: aiState.data.weightGrams,
 		};
 
-		setAiState({ mode: "form", data: formData });
+		setAiState({ data: formData, mode: "form" });
 	};
 
 	const handleEditFromPreview = () => {
@@ -82,10 +79,10 @@ function RouteComponent() {
 			<div className="mx-auto w-full max-w-5xl">
 				{/* Page Header */}
 				<div className="mb-6 sm:mb-8">
-					<div className="mb-4 flex items-center gap-2 text-muted-foreground text-sm">
+					<div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
 						<Link
+							className="hover:text-foreground flex items-center gap-1.5 transition-colors"
 							to="/products"
-							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
 						>
 							<ArrowLeft className="h-3.5 w-3.5" />
 							Бүтээгдэхүүн
@@ -93,10 +90,8 @@ function RouteComponent() {
 						<span>/</span>
 						<span className="text-foreground">Шинэ нэмэх</span>
 					</div>
-					<h1 className="font-heading text-2xl sm:text-3xl">
-						Бүтээгдэхүүн нэмэх
-					</h1>
-					<p className="mt-1 text-muted-foreground text-sm">
+					<h1 className="font-heading text-2xl sm:text-3xl">Бүтээгдэхүүн нэмэх</h1>
+					<p className="text-muted-foreground mt-1 text-sm">
 						Гараар эсвэл AI ашиглан бүтээгдэхүүн нэмнэ үү
 					</p>
 				</div>
@@ -104,17 +99,17 @@ function RouteComponent() {
 				{/* Mode Switcher */}
 				<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<button
-						type="button"
-						onClick={() => setActiveTab("manual")}
-						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
+						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
 							activeTab === "manual"
 								? "bg-primary shadow-hard"
-								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
+								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
 						}`}
+						onClick={() => setActiveTab("manual")}
+						type="button"
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
 									activeTab === "manual"
 										? "bg-primary-foreground text-primary"
 										: "bg-muted text-muted-foreground"
@@ -124,19 +119,15 @@ function RouteComponent() {
 							</div>
 							<div className="min-w-0 flex-1">
 								<p
-									className={`font-bold font-heading ${
-										activeTab === "manual"
-											? "text-primary-foreground"
-											: "text-foreground"
+									className={`font-heading font-bold ${
+										activeTab === "manual" ? "text-primary-foreground" : "text-foreground"
 									}`}
 								>
 									Гараар нэмэх
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
-										activeTab === "manual"
-											? "text-primary-foreground/70"
-											: "text-muted-foreground"
+										activeTab === "manual" ? "text-primary-foreground/70" : "text-muted-foreground"
 									}`}
 								>
 									Бүх мэдээллийг өөрөө оруулах
@@ -144,22 +135,22 @@ function RouteComponent() {
 							</div>
 						</div>
 						{activeTab === "manual" && (
-							<div className="absolute top-2 right-2 h-2 w-2 bg-primary-foreground" />
+							<div className="bg-primary-foreground absolute top-2 right-2 h-2 w-2" />
 						)}
 					</button>
 
 					<button
-						type="button"
-						onClick={() => setActiveTab("ai")}
-						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
+						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
 							activeTab === "ai"
 								? "bg-secondary text-secondary-foreground shadow-hard"
-								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
+								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
 						}`}
+						onClick={() => setActiveTab("ai")}
+						type="button"
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
 									activeTab === "ai"
 										? "bg-secondary-foreground text-secondary"
 										: "bg-muted text-muted-foreground"
@@ -169,19 +160,15 @@ function RouteComponent() {
 							</div>
 							<div className="min-w-0 flex-1">
 								<p
-									className={`font-bold font-heading ${
-										activeTab === "ai"
-											? "text-secondary-foreground"
-											: "text-foreground"
+									className={`font-heading font-bold ${
+										activeTab === "ai" ? "text-secondary-foreground" : "text-foreground"
 									}`}
 								>
 									AI-аар нэмэх
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
-										activeTab === "ai"
-											? "text-secondary-foreground/70"
-											: "text-muted-foreground"
+										activeTab === "ai" ? "text-secondary-foreground/70" : "text-muted-foreground"
 									}`}
 								>
 									Amazon-оос автомат татах
@@ -189,7 +176,7 @@ function RouteComponent() {
 							</div>
 						</div>
 						{activeTab === "ai" && (
-							<div className="absolute top-2 right-2 h-2 w-2 bg-secondary-foreground" />
+							<div className="bg-secondary-foreground absolute top-2 right-2 h-2 w-2" />
 						)}
 					</button>
 				</div>
@@ -203,37 +190,30 @@ function RouteComponent() {
 					{activeTab === "ai" && (
 						<>
 							{aiState.mode === "input" && (
-								<AIProductInput
-									onExtracted={handleAIExtracted}
-									onCancel={handleSwitchToManual}
-								/>
+								<AIProductInput onCancel={handleSwitchToManual} onExtracted={handleAIExtracted} />
 							)}
 
 							{aiState.mode === "preview" && (
 								<AIProductPreview
 									data={aiState.data}
+									onCancel={handleCancelAI}
 									onConfirm={handleConfirmPreview}
 									onEdit={handleEditFromPreview}
-									onCancel={handleCancelAI}
 								/>
 							)}
 
 							{aiState.mode === "form" && (
 								<div className="space-y-4">
 									<button
-										type="button"
+										className="border-border bg-muted/30 font-heading text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1.5 border-2 px-3 py-1.5 text-sm transition-colors"
 										onClick={handleCancelAI}
-										className="flex items-center gap-1.5 border-2 border-border bg-muted/30 px-3 py-1.5 font-heading text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
+										type="button"
 									>
 										<Bot className="h-3.5 w-3.5" />
 										<span>Дахин AI татах</span>
 									</button>
 
-									<ProductForm
-										aiData={aiState.data}
-										onSuccess={handleSuccess}
-										showAIFields
-									/>
+									<ProductForm aiData={aiState.data} onSuccess={handleSuccess} showAIFields />
 								</div>
 							)}
 						</>

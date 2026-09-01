@@ -7,14 +7,7 @@ import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -28,43 +21,39 @@ const CategoryForm = ({
 	onSuccess: () => void;
 }) => {
 	const form = useForm({
-		resolver: valibotResolver(addCategorySchema),
 		defaultValues: {
+			bannerImage: category?.bannerImage || "",
+			description: category?.description || "",
 			id: category?.id,
 			name: category?.name || "",
-			slug: category?.slug || "",
-			description: category?.description || "",
-			bannerImage: category?.bannerImage || "",
-			seoTitle: category?.seoTitle || "",
 			seoDescription: category?.seoDescription || "",
+			seoTitle: category?.seoTitle || "",
+			slug: category?.slug || "",
 		},
+		resolver: valibotResolver(addCategorySchema),
 	});
 
 	const queryClient = useQueryClient();
 	const addMutation = useMutation({
 		...trpc.category.addCategory.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
-			onSuccess();
-		},
 		onError: () => {
 			toast.error("Ангилал нэмэхэд алдаа гарлаа");
+		},
+		onSuccess: async () => {
+			form.reset();
+			queryClient.invalidateQueries(trpc.category.getAllCategories.queryOptions());
+			onSuccess();
 		},
 	});
 
 	const updateMutation = useMutation({
 		...trpc.category.updateCategory.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
-			onSuccess();
-		},
 		onError: () => {
 			toast.error("Ангилал шинэчлэхэд алдаа гарлаа");
+		},
+		onSuccess: async () => {
+			queryClient.invalidateQueries(trpc.category.getAllCategories.queryOptions());
+			onSuccess();
 		},
 	});
 
@@ -80,12 +69,12 @@ const CategoryForm = ({
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+			<form className="relative" onSubmit={form.handleSubmit(onSubmit)}>
 				<FormLoadingOverlay isLoading={form.formState.isSubmitting} />
 				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Ангиллын мэдээлэл</h3>
+							<h3 className="text-xl font-semibold">Ангиллын мэдээлэл</h3>
 							<FormField
 								control={form.control}
 								name="name"
@@ -118,7 +107,7 @@ const CategoryForm = ({
 
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">SEO ба баннер</h3>
+							<h3 className="text-xl font-semibold">SEO ба баннер</h3>
 
 							<FormField
 								control={form.control}
@@ -149,23 +138,21 @@ const CategoryForm = ({
 												{bannerImageUrl ? (
 													<div className="group relative">
 														<button
-															type="button"
-															className="-top-2 -right-2 absolute z-10 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+															className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 z-10 flex h-6 w-6 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100"
 															onClick={() => form.setValue("bannerImage", "")}
+															type="button"
 														>
 															<X className="h-3 w-3" />
 														</button>
 														<img
-															src={bannerImageUrl}
 															alt="Баннер"
-															className="h-24 w-full rounded-lg border-2 border-border bg-background object-cover shadow-sm"
+															className="border-border bg-background h-24 w-full rounded-lg border-2 object-cover shadow-sm"
+															src={bannerImageUrl}
 														/>
 													</div>
 												) : (
-													<div className="flex h-24 w-full items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
-														<p className="text-muted-foreground text-xs">
-															Баннер байршуулах
-														</p>
+													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border-2 border-dashed">
+														<p className="text-muted-foreground text-xs">Баннер байршуулах</p>
 													</div>
 												)}
 												<UploadButton
@@ -186,11 +173,7 @@ const CategoryForm = ({
 									<FormItem>
 										<FormLabel>SEO гарчиг</FormLabel>
 										<FormControl>
-											<Input
-												placeholder="SEO гарчиг..."
-												{...field}
-												value={field.value ?? ""}
-											/>
+											<Input placeholder="SEO гарчиг..." {...field} value={field.value ?? ""} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -204,11 +187,7 @@ const CategoryForm = ({
 									<FormItem>
 										<FormLabel>SEO тайлбар</FormLabel>
 										<FormControl>
-											<Textarea
-												placeholder="SEO тайлбар..."
-												{...field}
-												value={field.value ?? ""}
-											/>
+											<Textarea placeholder="SEO тайлбар..." {...field} value={field.value ?? ""} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -219,8 +198,8 @@ const CategoryForm = ({
 
 					<div className="flex justify-end">
 						<SubmitButton
+							className="hover:bg-primary/90 w-full px-8 py-3 text-lg font-semibold transition-colors duration-300 sm:w-auto"
 							isPending={form.formState.isSubmitting}
-							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{category ? "Ангилал шинэчлэх" : "Ангилал нэмэх"}
 						</SubmitButton>

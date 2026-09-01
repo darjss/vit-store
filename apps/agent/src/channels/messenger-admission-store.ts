@@ -7,11 +7,15 @@ export class MessengerAdmissionStore implements DurableObject {
 
 	async fetch(request: Request): Promise<Response> {
 		const key = decodeURIComponent(new URL(request.url).pathname.slice(1));
-		if (key.length === 0) return new Response("Missing key", { status: 400 });
+		if (key.length === 0) {
+			return new Response("Missing key", { status: 400 });
+		}
 
 		if (request.method === "POST") {
 			const existing = await this.state.storage.get(key);
-			if (existing !== undefined) return Response.json({ admitted: false });
+			if (existing !== undefined) {
+				return Response.json({ admitted: false });
+			}
 
 			await this.state.storage.put(key, 1);
 			await this.state.storage.setAlarm(Date.now() + RETENTION_MS);

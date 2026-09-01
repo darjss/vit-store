@@ -1,16 +1,16 @@
 interface CartItemProperties {
+	price: number;
 	product_id: number;
 	product_name: string;
-	price: number;
 	quantity: number;
 }
 
 type SearchAttribution = {
-	searchId: string;
-	query: string;
-	productId: number;
-	position: number;
 	clickedAt: number;
+	position: number;
+	productId: number;
+	query: string;
+	searchId: string;
 };
 
 const SEARCH_ATTRIBUTION_KEY = "vit-search-attribution";
@@ -18,18 +18,20 @@ const SEARCH_ATTRIBUTION_MAX_AGE_MS = 30 * 60 * 1000;
 const trackedSearchClicks = new Set<string>();
 
 const rememberSearchAttribution = (attribution: SearchAttribution) => {
-	if (typeof window === "undefined") return;
+	if (typeof window === "undefined") {
+		return;
+	}
 	try {
 		sessionStorage.setItem(SEARCH_ATTRIBUTION_KEY, JSON.stringify(attribution));
 	} catch {}
 };
 
 const currentSearchAttribution = (productId: number) => {
-	if (typeof window === "undefined") return null;
+	if (typeof window === "undefined") {
+		return null;
+	}
 	try {
-		const value: unknown = JSON.parse(
-			sessionStorage.getItem(SEARCH_ATTRIBUTION_KEY) ?? "null",
-		);
+		const value: unknown = JSON.parse(sessionStorage.getItem(SEARCH_ATTRIBUTION_KEY) ?? "null");
 		if (
 			typeof value !== "object" ||
 			value === null ||
@@ -49,11 +51,11 @@ const currentSearchAttribution = (productId: number) => {
 			return null;
 		}
 		return {
-			searchId: value.searchId,
-			query: value.query,
-			productId: value.productId,
-			position: value.position,
 			clickedAt: value.clickedAt,
+			position: value.position,
+			productId: value.productId,
+			query: value.query,
+			searchId: value.searchId,
 		};
 	} catch {
 		return null;
@@ -61,9 +63,15 @@ const currentSearchAttribution = (productId: number) => {
 };
 
 const currentPageSource = () => {
-	if (typeof window === "undefined") return "unknown";
-	if (window.location.pathname === "/") return "home";
-	if (/^\/products\/[^/]+/.test(window.location.pathname)) return "product";
+	if (typeof window === "undefined") {
+		return "unknown";
+	}
+	if (window.location.pathname === "/") {
+		return "home";
+	}
+	if (/^\/products\/[^/]+/.test(window.location.pathname)) {
+		return "product";
+	}
 	return "catalog";
 };
 
@@ -79,10 +87,7 @@ function identify(distinctId: string, properties?: Record<string, unknown>) {
 	}
 }
 
-export function captureException(
-	error: unknown,
-	properties?: Record<string, unknown>,
-) {
+export function captureException(error: unknown, properties?: Record<string, unknown>) {
 	if (typeof window !== "undefined" && window.posthog) {
 		window.posthog.captureException(error, properties);
 	}
@@ -105,16 +110,15 @@ async function hashString(str: string): Promise<string> {
 export function trackAddToCart(item: CartItemProperties) {
 	const attribution = currentSearchAttribution(item.product_id);
 	capture("add_to_cart", {
+		page_path: typeof window === "undefined" ? undefined : window.location.pathname,
+		price: item.price,
 		product_id: item.product_id,
 		product_name: item.product_name,
-		price: item.price,
 		quantity: item.quantity,
-		source: attribution ? "search" : currentPageSource(),
-		page_path:
-			typeof window === "undefined" ? undefined : window.location.pathname,
 		search_id: attribution?.searchId,
-		search_query: attribution?.query,
 		search_position: attribution?.position,
+		search_query: attribution?.query,
+		source: attribution ? "search" : currentPageSource(),
 	});
 }
 
@@ -143,11 +147,19 @@ export function trackCartOpened(cartCount: number, cartTotal: number) {
  * failures can be attributed to a specific host app.
  */
 export function detectInAppBrowser(): string {
-	if (typeof window === "undefined") return "unknown";
+	if (typeof window === "undefined") {
+		return "unknown";
+	}
 	const ua = navigator.userAgent;
-	if (/FB_IAB|FBAN\/FBIOS/.test(ua)) return "facebook";
-	if (/Instagram/i.test(ua)) return "instagram";
-	if (/\bwv\b/.test(ua)) return "android_webview";
+	if (/FB_IAB|FBAN\/FBIOS/.test(ua)) {
+		return "facebook";
+	}
+	if (/Instagram/i.test(ua)) {
+		return "instagram";
+	}
+	if (/\bwv\b/.test(ua)) {
+		return "android_webview";
+	}
 	return "none";
 }
 
@@ -158,32 +170,25 @@ export function detectInAppBrowser(): string {
 export function trackBankDeeplinkClicked(bank: string, paymentNumber: string) {
 	capture("bank_deeplink_clicked", {
 		bank,
-		payment_number: paymentNumber,
 		in_app_browser: detectInAppBrowser(),
+		payment_number: paymentNumber,
 	});
 }
 
-export function trackBankDeeplinkOpened(
-	bank: string,
-	paymentNumber: string,
-	elapsedMs: number,
-) {
+export function trackBankDeeplinkOpened(bank: string, paymentNumber: string, elapsedMs: number) {
 	capture("bank_deeplink_app_opened", {
 		bank,
-		payment_number: paymentNumber,
-		in_app_browser: detectInAppBrowser(),
 		elapsed_ms: elapsedMs,
+		in_app_browser: detectInAppBrowser(),
+		payment_number: paymentNumber,
 	});
 }
 
-export function trackBankDeeplinkNoHandoff(
-	bank: string,
-	paymentNumber: string,
-) {
+export function trackBankDeeplinkNoHandoff(bank: string, paymentNumber: string) {
 	capture("bank_deeplink_no_handoff", {
 		bank,
-		payment_number: paymentNumber,
 		in_app_browser: detectInAppBrowser(),
+		payment_number: paymentNumber,
 	});
 }
 
@@ -192,9 +197,9 @@ export function trackPaymentRecoverySheetShown(
 	reason: "no_handoff" | "returned_unpaid",
 ) {
 	capture("payment_recovery_sheet_shown", {
+		in_app_browser: detectInAppBrowser(),
 		payment_number: paymentNumber,
 		reason,
-		in_app_browser: detectInAppBrowser(),
 	});
 }
 
@@ -203,9 +208,9 @@ export function trackPaymentRecoveryChosen(
 	choice: "qr" | "transfer" | "dismiss",
 ) {
 	capture("payment_recovery_chosen", {
-		payment_number: paymentNumber,
 		choice,
 		in_app_browser: detectInAppBrowser(),
+		payment_number: paymentNumber,
 	});
 }
 
@@ -215,7 +220,7 @@ export function trackPaymentRecoveryChosen(
 export function trackCheckoutStarted(
 	cartTotal: number,
 	itemCount: number,
-	productIds: number[],
+	productIds: Array<number>,
 ) {
 	capture("checkout_started", {
 		cart_total: cartTotal,
@@ -230,8 +235,8 @@ export function trackCheckoutStarted(
 export function trackQpayError(paymentNumber: string, errorMessage: string) {
 	if (typeof window !== "undefined" && window.posthog) {
 		window.posthog.capture("qpay_error", {
-			payment_number: paymentNumber,
 			error_message: errorMessage,
+			payment_number: paymentNumber,
 		});
 	}
 }
@@ -263,13 +268,13 @@ export function trackSearchPerformed(
 	query: string,
 	resultsCount: number,
 	searchId: string,
-	productIds: number[],
+	productIds: Array<number>,
 ) {
 	capture("search_performed", {
-		search_id: searchId,
 		query,
-		results_count: resultsCount,
 		result_product_ids: productIds,
+		results_count: resultsCount,
+		search_id: searchId,
 		zero_result: resultsCount === 0,
 	});
 }
@@ -285,21 +290,23 @@ export function trackSearchResultClicked(
 	position: number,
 ) {
 	rememberSearchAttribution({
-		searchId,
-		query,
-		productId,
-		position,
 		clickedAt: Date.now(),
+		position,
+		productId,
+		query,
+		searchId,
 	});
 	const clickKey = `${searchId}:${productId}`;
-	if (trackedSearchClicks.has(clickKey)) return;
+	if (trackedSearchClicks.has(clickKey)) {
+		return;
+	}
 	trackedSearchClicks.add(clickKey);
 	capture("search_result_clicked", {
-		search_id: searchId,
-		query,
+		position,
 		product_id: productId,
 		product_name: productName,
-		position,
+		query,
+		search_id: searchId,
 	});
 }
 
@@ -321,29 +328,26 @@ export function trackAssistantStarterPromptClicked(prompt: string) {
 
 export function trackAssistantProductsShown(
 	displayType: "single-product" | "product-carousel",
-	productIds: number[],
+	productIds: Array<number>,
 ) {
 	capture("assistant_products_shown", {
 		display_type: displayType,
-		product_ids: productIds,
 		product_count: productIds.length,
+		product_ids: productIds,
 	});
 }
 
-export function trackAssistantAddToCart(
-	productId: number,
-	productName: string,
-) {
+export function trackAssistantAddToCart(productId: number, productName: string) {
 	capture("assistant_add_to_cart", {
 		product_id: productId,
 		product_name: productName,
 	});
 }
 
-export function trackAssistantCheckoutClicked(productIds: number[]) {
+export function trackAssistantCheckoutClicked(productIds: Array<number>) {
 	capture("assistant_checkout_clicked", {
-		product_ids: productIds,
 		product_count: productIds.length,
+		product_ids: productIds,
 	});
 }
 
@@ -351,9 +355,9 @@ type RestockChannel = "sms" | "email";
 type RestockCustomerType = "guest" | "verified_customer";
 
 type RestockEvent = {
-	productId: number;
 	channel?: RestockChannel;
 	customerType: RestockCustomerType;
+	productId: number;
 };
 
 function restockProperties(event: RestockEvent) {
@@ -368,9 +372,7 @@ export function trackRestockSheetOpened(event: RestockEvent) {
 	capture("restock_sheet_opened", restockProperties(event));
 }
 
-export function trackRestockChannelSelected(
-	event: RestockEvent & { channel: RestockChannel },
-) {
+export function trackRestockChannelSelected(event: RestockEvent & { channel: RestockChannel }) {
 	capture("restock_channel_selected", restockProperties(event));
 }
 
@@ -388,8 +390,8 @@ export function trackRestockConfirmationCompleted(
 
 export function trackRestockSubscriptionCreated(
 	event: RestockEvent & {
-		channel: RestockChannel;
 		alreadySubscribed: boolean;
+		channel: RestockChannel;
 	},
 ) {
 	capture("restock_subscription_created", {

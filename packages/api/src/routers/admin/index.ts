@@ -17,9 +17,6 @@ import { sales } from "~/routers/admin/sales";
 export { type BotRouter, botRouter } from "~/routers/admin/bot";
 
 export const adminRouter = router({
-	healthCheck: publicProcedure.query(() => {
-		return "OK";
-	}),
 	aiProduct,
 	aiPurchase,
 	analytics,
@@ -27,11 +24,14 @@ export const adminRouter = router({
 	brands,
 	category,
 	customer,
+	healthCheck: publicProcedure.query(() => {
+		return "OK";
+	}),
 	image,
-	productImages,
 	order,
 	payment,
 	product,
+	productImages,
 	purchase,
 	sales,
 });

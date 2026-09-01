@@ -6,20 +6,16 @@ export type RouterInputs = inferRouterInputs<AdminRouter>;
 
 export type BrandType = RouterOutputs["brands"]["getAllBrands"][number];
 export type OrderType = RouterOutputs["order"]["getOrderById"];
-export type CategoryType =
-	RouterOutputs["category"]["getAllCategories"][number];
+export type CategoryType = RouterOutputs["category"]["getAllCategories"][number];
 export type BrandsType = RouterOutputs["brands"]["getAllBrands"];
 export type CategoriesType = RouterOutputs["category"]["getAllCategories"];
 export type ProductType = RouterOutputs["product"]["getAllProducts"][number];
 type PurchaseType = RouterOutputs["purchase"]["getAllPurchases"][number];
-export type PurchaseDetailType = NonNullable<
-	RouterOutputs["purchase"]["getPurchaseById"]
->;
+export type PurchaseDetailType = NonNullable<RouterOutputs["purchase"]["getPurchaseById"]>;
 type UserType = RouterOutputs["auth"]["me"];
-export type ProductSearchForOrderType =
-	RouterOutputs["product"]["searchProductsInstant"][number];
+export type ProductSearchForOrderType = RouterOutputs["product"]["searchProductsInstant"][number];
 export interface Session {
+	expiresAt: Date;
 	id: string;
 	user: UserSelectType;
-	expiresAt: Date;
 }

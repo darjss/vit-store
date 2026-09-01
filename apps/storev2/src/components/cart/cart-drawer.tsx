@@ -3,12 +3,7 @@ import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/ca
 import { deliveryFee } from "@vit/shared/constants";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import CartCrossSells from "./cart-cross-sells";
@@ -25,7 +20,9 @@ const CartDrawer = () => {
 		on(
 			() => cart.total(),
 			(total, previous) => {
-				if (previous === undefined || total === previous) return;
+				if (previous === undefined || total === previous) {
+					return;
+				}
 				setTotalPulse(false);
 				requestAnimationFrame(() => setTotalPulse(true));
 				window.clearTimeout(totalPulseTimer);
@@ -41,27 +38,23 @@ const CartDrawer = () => {
 	});
 
 	return (
-		<Sheet open={cart.isDrawerOpen()} onOpenChange={cart.closeDrawer}>
+		<Sheet onOpenChange={cart.closeDrawer} open={cart.isDrawerOpen()}>
 			<SheetContent
-				position="right"
+				class="border-border bg-background shadow-soft-xl flex w-full flex-col gap-0 border-l p-0 ease-(--ease-drawer) data-[closed=]:duration-[260ms] data-[expanded=]:duration-[520ms] sm:max-w-md"
 				closeLabel="Сагсыг хаах"
 				focusRestore={cartSheetFocusRestore}
-				class="flex w-full flex-col gap-0 border-border border-l bg-background p-0 shadow-soft-xl ease-(--ease-drawer) data-[closed=]:duration-[260ms] data-[expanded=]:duration-[520ms] sm:max-w-md"
+				position="right"
 			>
-				<SheetHeader class="space-y-0.5 border-border border-b px-5 pt-5 pb-4 text-left sm:text-left">
-					<SheetTitle class="flex items-center gap-2.5 font-display text-foreground text-xl">
-						<span class="flex size-9 items-center justify-center rounded-full bg-wash-lemon">
-							<IconShoppingCart
-								class="h-5 w-5"
-								strokeWidth={2}
-								aria-hidden="true"
-							/>
+				<SheetHeader class="border-border space-y-0.5 border-b px-5 pt-5 pb-4 text-left sm:text-left">
+					<SheetTitle class="font-display text-foreground flex items-center gap-2.5 text-xl">
+						<span class="bg-wash-lemon flex size-9 items-center justify-center rounded-full">
+							<IconShoppingCart aria-hidden="true" class="h-5 w-5" strokeWidth={2} />
 						</span>
 						Таны сагс
 					</SheetTitle>
 					<p
 						class={cn(
-							"font-medium text-muted-foreground text-sm",
+							"text-muted-foreground text-sm font-medium",
 							totalPulse() && "animate-quantity-pop",
 						)}
 					>
@@ -71,46 +64,37 @@ const CartDrawer = () => {
 
 				<div class="flex min-h-0 flex-1 flex-col">
 					<Show
-						when={!isEmpty()}
 						fallback={
 							<div class="flex flex-1 items-center justify-center p-6">
 								<EmptyCart />
 							</div>
 						}
+						when={!isEmpty()}
 					>
 						<div class="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
 							<div class="space-y-3 px-4 py-4">
 								<For each={cart.items()}>
-									{(item) => (
-										<CartDrawerItem
-											item={item}
-											onNavigate={() => cart.closeDrawer()}
-										/>
-									)}
+									{(item) => <CartDrawerItem item={item} onNavigate={() => cart.closeDrawer()} />}
 								</For>
 							</div>
 							<CartCrossSells />
 						</div>
 
-						<div class="border-border border-t bg-card px-5 pt-4 pb-5">
+						<div class="border-border bg-card border-t px-5 pt-4 pb-5">
 							<div class="space-y-2">
 								<div class="flex items-center justify-between text-sm">
 									<span class="text-muted-foreground">Дэд дүн</span>
-									<span class="font-medium text-foreground">
-										₮{cart.total().toLocaleString()}
-									</span>
+									<span class="text-foreground font-medium">₮{cart.total().toLocaleString()}</span>
 								</div>
 								<div class="flex items-center justify-between text-sm">
 									<span class="text-muted-foreground">Хүргэлт</span>
-									<span class="font-medium text-foreground">
-										₮{deliveryFee.toLocaleString()}
-									</span>
+									<span class="text-foreground font-medium">₮{deliveryFee.toLocaleString()}</span>
 								</div>
-								<div class="flex items-baseline justify-between border-border border-t pt-3">
-									<span class="font-semibold text-foreground">Нийт дүн</span>
+								<div class="border-border flex items-baseline justify-between border-t pt-3">
+									<span class="text-foreground font-semibold">Нийт дүн</span>
 									<span
 										class={cn(
-											"rounded-lg px-1 font-display text-2xl text-foreground",
+											"font-display text-foreground rounded-lg px-1 text-2xl",
 											totalPulse() && "animate-cart-total-flash",
 										)}
 									>
@@ -120,17 +104,17 @@ const CartDrawer = () => {
 							</div>
 
 							<a
-								href="/checkout"
 								class={cn(buttonVariants({ size: "lg" }), "mt-4 w-full")}
+								href="/checkout"
 								onClick={() => cart.closeDrawer()}
 							>
 								Худалдан авах <IconArrowRight aria-hidden="true" />
 							</a>
 
 							<button
-								type="button"
-								onClick={() => cart.closeDrawer()}
 								class={cn(buttonVariants({ variant: "ghost" }), "mt-2 w-full")}
+								onClick={() => cart.closeDrawer()}
+								type="button"
 							>
 								Үргэлжлүүлэх
 							</button>

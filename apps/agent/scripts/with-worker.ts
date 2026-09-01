@@ -17,9 +17,8 @@
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const AGENT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const AGENT_ROOT = join(import.meta.dirname, "..");
 const DIST_WRANGLER = join(AGENT_ROOT, "dist/vit_store_agent/wrangler.json");
 const DEV_VARS = join(AGENT_ROOT, ".dev.vars");
 const PORT = 3583; // the CLI's default worker URL
@@ -62,8 +61,8 @@ if (process.env.WITH_WORKER_SKIP_BUILD !== "1") {
 	if (
 		Bun.spawnSync(["bun", "run", "build"], {
 			cwd: AGENT_ROOT,
-			stdout: "inherit",
 			stderr: "inherit",
+			stdout: "inherit",
 		}).exitCode !== 0
 	) {
 		console.error("✗ build failed");
@@ -90,17 +89,32 @@ if (!local) {
 	writeFileSync(DIST_WRANGLER, JSON.stringify(cfg, null, 2));
 }
 
-console.log(`• booting worker on :${PORT}${local ? " (--local, no Workers AI)" : " (real Workers AI)"}…`);
+console.log(
+	`• booting worker on :${PORT}${local ? " (--local, no Workers AI)" : " (real Workers AI)"}…`,
+);
 const worker = Bun.spawn(
-	["bunx", "wrangler", "dev", "--config", DIST_WRANGLER, "--port", String(PORT), ...(local ? ["--local"] : [])],
-	{ cwd: AGENT_ROOT, stdout: "pipe", stderr: "pipe" },
+	[
+		"bunx",
+		"wrangler",
+		"dev",
+		"--config",
+		DIST_WRANGLER,
+		"--port",
+		String(PORT),
+		...(local ? ["--local"] : []),
+	],
+	{ cwd: AGENT_ROOT, stderr: "pipe", stdout: "pipe" },
 );
 
 async function healthy(timeoutMs: number): Promise<boolean> {
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		try {
-			if ((await fetch(`http://127.0.0.1:${PORT}/health`, { signal: AbortSignal.timeout(2000) })).ok) return true;
+			if (
+				(await fetch(`http://127.0.0.1:${PORT}/health`, { signal: AbortSignal.timeout(2000) })).ok
+			) {
+				return true;
+			}
 		} catch {}
 		await Bun.sleep(1000);
 	}
@@ -109,16 +123,16 @@ async function healthy(timeoutMs: number): Promise<boolean> {
 
 let code = 1;
 try {
-	if (!(await healthy(45000))) {
+	if (!(await healthy(45_000))) {
 		console.error("✗ worker did not become healthy");
 	} else {
 		console.log("• worker ready\n");
 		const child = Bun.spawn(command, {
 			cwd: AGENT_ROOT,
+			env: { ...process.env, ...(local ? { SMOKE_EXPECT_REPLY: "0" } : {}) },
+			stderr: "inherit",
 			stdin: "inherit",
 			stdout: "inherit",
-			stderr: "inherit",
-			env: { ...process.env, ...(local ? { SMOKE_EXPECT_REPLY: "0" } : {}) },
 		});
 		code = await child.exited;
 	}

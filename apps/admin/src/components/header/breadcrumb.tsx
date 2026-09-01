@@ -18,8 +18,8 @@ const BreadCrumbs = () => {
 				<BreadcrumbList className="gap-1">
 					<BreadcrumbItem>
 						<Link
+							className="text-foreground hover:text-primary flex items-center gap-2 text-lg font-bold transition-colors duration-200"
 							to="/"
-							className="flex items-center gap-2 font-bold text-foreground text-lg transition-colors duration-200 hover:text-primary"
 						>
 							<Home className="h-5 w-5" />
 							<span className="hidden sm:inline">Нүүр</span>
@@ -27,7 +27,7 @@ const BreadCrumbs = () => {
 					</BreadcrumbItem>
 
 					{breadcrumb_routes.length > 0 && (
-						<BreadcrumbSeparator className="font-bold text-foreground text-lg" />
+						<BreadcrumbSeparator className="text-foreground text-lg font-bold" />
 					)}
 
 					{breadcrumb_routes.map((crumb, index) => {
@@ -35,14 +35,12 @@ const BreadCrumbs = () => {
 
 						const formattedName =
 							breadcrumbLabels[crumb.name] ??
-							crumb.name
-								.replace(/-/g, " ")
-								.replace(/\b\w/g, (l) => l.toUpperCase());
+							crumb.name.replaceAll("-", " ").replaceAll(/\b\w/g, (l) => l.toUpperCase());
 
 						if (isLast) {
 							return (
 								<BreadcrumbItem key={crumb.path}>
-									<BreadcrumbPage className="font-bold text-foreground text-lg">
+									<BreadcrumbPage className="text-foreground text-lg font-bold">
 										{formattedName}
 									</BreadcrumbPage>
 								</BreadcrumbItem>
@@ -53,13 +51,13 @@ const BreadCrumbs = () => {
 							<div className="flex items-center gap-2" key={crumb.path}>
 								<BreadcrumbItem>
 									<Link
+										className="text-muted-foreground hover:text-foreground text-lg font-bold transition-colors duration-200"
 										to={crumb.path}
-										className="font-bold text-lg text-muted-foreground transition-colors duration-200 hover:text-foreground"
 									>
 										{formattedName}
 									</Link>
 								</BreadcrumbItem>
-								<BreadcrumbSeparator className="font-bold text-foreground text-lg" />
+								<BreadcrumbSeparator className="text-foreground text-lg font-bold" />
 							</div>
 						);
 					})}

@@ -9,39 +9,32 @@ export type AppRequestLogger = RequestLogger<any>;
 export type ServerHonoEnv = {
 	Bindings: Env;
 	Variables: {
-		log: AppRequestLogger;
 		catalogCache?: CatalogCacheAccumulator;
+		log: AppRequestLogger;
 	};
 };
 
 type AxiomEnv = Env & {
 	AXIOM_API_KEY?: string;
-	AXIOM_TOKEN?: string;
+	AXIOM_BASE_URL?: string;
 	AXIOM_DATASET?: string;
 	AXIOM_EDGE_URL?: string;
-	AXIOM_BASE_URL?: string;
 	AXIOM_ORG_ID?: string;
-	SERVICE_VERSION?: string;
+	AXIOM_TOKEN?: string;
+	CF_REGION?: string;
 	COMMIT_SHA?: string;
 	GIT_COMMIT?: string;
-	CF_REGION?: string;
+	SERVICE_VERSION?: string;
 };
 
 initLogger({
 	env: {
-		service: "vit-store-server",
 		environment: process.env.NODE_ENV ?? "production",
+		service: "vit-store-server",
 	},
-	redact: false,
 	pretty: false,
-	stringify: true,
+	redact: false,
 	sampling: {
-		rates: {
-			debug: 0,
-			info: 100,
-			warn: 100,
-			error: 100,
-		},
 		keep: [
 			{ status: 400 },
 			{ duration: 1000 },
@@ -50,7 +43,14 @@ initLogger({
 			{ path: "/upload/**" },
 			{ path: "/admin/**" },
 		],
+		rates: {
+			debug: 0,
+			error: 100,
+			info: 100,
+			warn: 100,
+		},
 	},
+	stringify: true,
 });
 
 const axiomDrains = new Map<string, ReturnType<typeof createAxiomDrain>>();
@@ -66,13 +66,15 @@ function getAxiomDrain(env: Env) {
 
 	const cacheKey = JSON.stringify({
 		apiKey,
+		baseUrl: axiomEnv.AXIOM_BASE_URL,
 		dataset,
 		edgeUrl: axiomEnv.AXIOM_EDGE_URL,
-		baseUrl: axiomEnv.AXIOM_BASE_URL,
 		orgId: axiomEnv.AXIOM_ORG_ID,
 	});
 	const cached = axiomDrains.get(cacheKey);
-	if (cached) return cached;
+	if (cached) {
+		return cached;
+	}
 
 	const drain = createAxiomDrain({
 		apiKey,
@@ -90,7 +92,6 @@ export function evlogMiddleware(): MiddlewareHandler<ServerHonoEnv> {
 	return async (c, next) => {
 		const axiomEnv = c.env as AxiomEnv;
 		const middleware = evlog({
-			exclude: ["/health-check", "/favicon.ico", "/"],
 			drain: getAxiomDrain(c.env),
 			enrich: (ctx) => {
 				ctx.event.runtime = "cloudflare-workers";
@@ -98,10 +99,17 @@ export function evlogMiddleware(): MiddlewareHandler<ServerHonoEnv> {
 				ctx.event.commit_hash = axiomEnv.COMMIT_SHA ?? axiomEnv.GIT_COMMIT;
 				ctx.event.region = axiomEnv.CF_REGION;
 			},
+			exclude: ["/health-check", "/favicon.ico", "/"],
 			keep: (ctx) => {
-				if (ctx.status && ctx.status >= 400) ctx.shouldKeep = true;
-				if (ctx.duration && ctx.duration >= 1000) ctx.shouldKeep = true;
-				if (ctx.context?.user_type === "admin") ctx.shouldKeep = true;
+				if (ctx.status && ctx.status >= 400) {
+					ctx.shouldKeep = true;
+				}
+				if (ctx.duration && ctx.duration >= 1000) {
+					ctx.shouldKeep = true;
+				}
+				if (ctx.context?.user_type === "admin") {
+					ctx.shouldKeep = true;
+				}
 			},
 		});
 

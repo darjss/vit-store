@@ -20,40 +20,40 @@ export interface AppliedChip {
 }
 
 export interface ApplyFiltersPayload {
-	sortField: string | null;
-	sortDirection: string | null;
-	categoryId: number | null;
 	brandId: number | null;
-	priceRange: [number, number];
+	categoryId: number | null;
 	includeOutOfStock: boolean;
+	priceRange: [number, number];
+	sortDirection: string | null;
+	sortField: string | null;
 }
 
 export interface ProductFilters {
-	effectiveSearchTerm: () => string | null;
-	setSearchTerm: (value: string | null) => void;
-	sortField: () => string | null;
-	sortDirection: () => string | null;
-	listFilter: () => ListFilter | null;
-	categoryId: () => number | null;
-	brandId: () => number | null;
-	priceRange: () => [number, number];
-	minPrice: () => number | undefined;
-	maxPrice: () => number | undefined;
-	inStockOnly: () => boolean;
-	includeOutOfStock: () => boolean;
-	selectedSort: () => SortSelection | null;
-	isSearchMode: () => boolean;
-	isBrowsingAll: () => boolean;
-	hasActiveFilters: () => boolean;
 	activeFilterCount: () => number;
-	appliedChips: () => AppliedChip[];
-	categoryLabel: () => string | null;
-	brandLabel: () => string | null;
-	presetLabel: () => string | null;
-	pageTitle: () => string;
+	appliedChips: () => Array<AppliedChip>;
 	applyFilters: (next: ApplyFiltersPayload) => void;
-	resetDrawerFilters: () => void;
+	brandId: () => number | null;
+	brandLabel: () => string | null;
+	categoryId: () => number | null;
+	categoryLabel: () => string | null;
+	effectiveSearchTerm: () => string | null;
 	handleClearFilters: () => void;
+	hasActiveFilters: () => boolean;
+	includeOutOfStock: () => boolean;
+	inStockOnly: () => boolean;
+	isBrowsingAll: () => boolean;
+	isSearchMode: () => boolean;
+	listFilter: () => ListFilter | null;
+	maxPrice: () => number | undefined;
+	minPrice: () => number | undefined;
+	pageTitle: () => string;
+	presetLabel: () => string | null;
+	priceRange: () => [number, number];
+	resetDrawerFilters: () => void;
+	selectedSort: () => SortSelection | null;
+	setSearchTerm: (value: string | null) => void;
+	sortDirection: () => string | null;
+	sortField: () => string | null;
 }
 
 /**
@@ -69,8 +69,8 @@ export interface ProductFilters {
  * broke on renames/Cyrillic-vs-Latin/multi-word names.
  */
 export function useProductFilters(args: {
-	categories: () => { id: number; name: string }[] | undefined;
-	brands: () => { id: number; name: string }[] | undefined;
+	brands: () => Array<{ id: number; name: string }> | undefined;
+	categories: () => Array<{ id: number; name: string }> | undefined;
 }): ProductFilters {
 	const [searchTerm, setSearchTerm] = useSearchParam("q", {
 		defaultValue: undefined,
@@ -97,9 +97,7 @@ export function useProductFilters(args: {
 		defaultValue: undefined,
 	});
 
-	const effectiveSearchTerm = createMemo(() =>
-		getEffectiveProductSearchTerm(searchTerm()),
-	);
+	const effectiveSearchTerm = createMemo(() => getEffectiveProductSearchTerm(searchTerm()));
 	const isSearchMode = createMemo(() => effectiveSearchTerm() !== null);
 
 	const listFilter = createMemo<ListFilter | null>(() => {
@@ -114,28 +112,31 @@ export function useProductFilters(args: {
 	// instead of flashing all products while a name lookup query resolves.
 	const categoryId = createMemo(() => {
 		const val = categoryIdParam();
-		if (!val) return null;
+		if (!val) {
+			return null;
+		}
 		const parsed = Number.parseInt(val, 10);
 		return Number.isNaN(parsed) ? null : parsed;
 	});
 
 	const brandId = createMemo(() => {
 		const val = brandIdParam();
-		if (!val) return null;
+		if (!val) {
+			return null;
+		}
 		const parsed = Number.parseInt(val, 10);
 		return Number.isNaN(parsed) ? null : parsed;
 	});
 
 	const priceRange = createMemo<[number, number]>(() => {
 		const raw = priceParam();
-		if (!raw) return [PRICE_MIN, PRICE_MAX];
+		if (!raw) {
+			return [PRICE_MIN, PRICE_MAX];
+		}
 		const [minStr, maxStr] = raw.split("-");
 		const min = Number.parseInt(minStr ?? "", 10);
 		const max = Number.parseInt(maxStr ?? "", 10);
-		return [
-			Number.isNaN(min) ? PRICE_MIN : min,
-			Number.isNaN(max) ? PRICE_MAX : max,
-		];
+		return [Number.isNaN(min) ? PRICE_MIN : min, Number.isNaN(max) ? PRICE_MAX : max];
 	});
 
 	const minPrice = createMemo(() => {
@@ -164,8 +165,7 @@ export function useProductFilters(args: {
 	};
 
 	const applyFilters = (next: ApplyFiltersPayload) => {
-		const validSort =
-			parseSort(next.sortField, next.sortDirection) !== null;
+		const validSort = parseSort(next.sortField, next.sortDirection) !== null;
 		batch(() => {
 			setSortField(validSort ? next.sortField : null);
 			setSortDirection(validSort ? next.sortDirection : null);
@@ -212,37 +212,49 @@ export function useProductFilters(args: {
 		if (min > PRICE_MIN && max < PRICE_MAX) {
 			return `${formatCurrency(min)}–${formatCurrency(max)}`;
 		}
-		if (max < PRICE_MAX) return `≤ ${formatCurrency(max)}`;
+		if (max < PRICE_MAX) {
+			return `≤ ${formatCurrency(max)}`;
+		}
 		return `≥ ${formatCurrency(min)}`;
 	});
 
 	const activeFilterCount = createMemo(() => {
 		let count = 0;
-		if (categoryId()) count += 1;
-		if (brandId()) count += 1;
-		if (minPrice() !== undefined || maxPrice() !== undefined) count += 1;
-		if (selectedSort()) count += 1;
-		if (listFilter()) count += 1;
-		if (inStockOnly()) count += 1;
+		if (categoryId()) {
+			count += 1;
+		}
+		if (brandId()) {
+			count += 1;
+		}
+		if (minPrice() !== undefined || maxPrice() !== undefined) {
+			count += 1;
+		}
+		if (selectedSort()) {
+			count += 1;
+		}
+		if (listFilter()) {
+			count += 1;
+		}
+		if (inStockOnly()) {
+			count += 1;
+		}
 		return count;
 	});
 
 	const categoryLabel = createMemo(
-		() =>
-			args.categories()?.find((c) => c.id === categoryId())?.name ?? null,
+		() => args.categories()?.find((c) => c.id === categoryId())?.name ?? null,
 	);
 
-	const brandLabel = createMemo(
-		() => args.brands()?.find((b) => b.id === brandId())?.name ?? null,
-	);
+	const brandLabel = createMemo(() => args.brands()?.find((b) => b.id === brandId())?.name ?? null);
 
 	const sortLabel = createMemo(() => {
 		const sort = selectedSort();
-		if (!sort) return null;
+		if (!sort) {
+			return null;
+		}
 		return (
-			productSortOptions.find(
-				(o) => o.field === sort.field && o.direction === sort.direction,
-			)?.label ?? null
+			productSortOptions.find((o) => o.field === sort.field && o.direction === sort.direction)
+				?.label ?? null
 		);
 	});
 
@@ -252,16 +264,12 @@ export function useProductFilters(args: {
 	});
 
 	const priceChipLabel = createMemo(() =>
-		minPrice() !== undefined || maxPrice() !== undefined
-			? priceLabel()
-			: null,
+		minPrice() !== undefined || maxPrice() !== undefined ? priceLabel() : null,
 	);
 
-	const stockLabel = createMemo(() =>
-		inStockOnly() ? "Зөвхөн нөөцтэй" : null,
-	);
+	const stockLabel = createMemo(() => (inStockOnly() ? "Зөвхөн нөөцтэй" : null));
 
-	const appliedChips = createMemo<AppliedChip[]>(() =>
+	const appliedChips = createMemo<Array<AppliedChip>>(() =>
 		[
 			{
 				key: "search",
@@ -294,10 +302,7 @@ export function useProductFilters(args: {
 				label: stockLabel(),
 				onRemove: () => setStockParam(null),
 			},
-		].filter(
-			(chip): chip is AppliedChip =>
-				chip.label != null && chip.label !== "",
-		),
+		].filter((chip): chip is AppliedChip => chip.label != null && chip.label !== ""),
 	);
 
 	const hasActiveFilters = () =>
@@ -310,46 +315,41 @@ export function useProductFilters(args: {
 		maxPrice() !== undefined ||
 		inStockOnly();
 
-	const isBrowsingAll = createMemo(
-		() => !isSearchMode() && !hasActiveFilters(),
-	);
+	const isBrowsingAll = createMemo(() => !isSearchMode() && !hasActiveFilters());
 
 	const pageTitle = () => {
 		const term = effectiveSearchTerm();
-		if (term) return `"${term}" хайлтын үр дүн`;
-		return (
-			presetLabel() ??
-			categoryLabel() ??
-			brandLabel() ??
-			"Бүх бүтээгдэхүүн"
-		);
+		if (term) {
+			return `"${term}" хайлтын үр дүн`;
+		}
+		return presetLabel() ?? categoryLabel() ?? brandLabel() ?? "Бүх бүтээгдэхүүн";
 	};
 
 	return {
-		effectiveSearchTerm,
-		setSearchTerm,
-		sortField,
-		sortDirection,
-		listFilter,
-		categoryId,
-		brandId,
-		priceRange,
-		minPrice,
-		maxPrice,
-		inStockOnly,
-		includeOutOfStock,
-		selectedSort,
-		isSearchMode,
-		isBrowsingAll,
-		hasActiveFilters,
 		activeFilterCount,
 		appliedChips,
-		categoryLabel,
-		brandLabel,
-		presetLabel,
-		pageTitle,
 		applyFilters,
-		resetDrawerFilters,
+		brandId,
+		brandLabel,
+		categoryId,
+		categoryLabel,
+		effectiveSearchTerm,
 		handleClearFilters,
+		hasActiveFilters,
+		includeOutOfStock,
+		inStockOnly,
+		isBrowsingAll,
+		isSearchMode,
+		listFilter,
+		maxPrice,
+		minPrice,
+		pageTitle,
+		presetLabel,
+		priceRange,
+		resetDrawerFilters,
+		selectedSort,
+		setSearchTerm,
+		sortDirection,
+		sortField,
 	};
 }

@@ -18,8 +18,8 @@ import {
 // unit-testable without a worker. `applyCommand` must apply atomically on the
 // store so concurrent turns cannot clobber each other.
 export interface CartToolDeps {
-	getCart: () => Promise<Cart>;
 	applyCommand: (command: CartCommand) => Promise<Cart>;
+	getCart: () => Promise<Cart>;
 	// Sends the rendered summary out on the bound channel (mirrors how the
 	// product-search tool sends cards itself), so the model does not have to
 	// re-type the cart contents into a separate reply.
@@ -27,15 +27,15 @@ export interface CartToolDeps {
 }
 
 const cartFacts = (cart: Cart) => ({
-	itemCount: cartItemCount(cart),
-	subtotal: cartSubtotal(cart),
 	confirmed: cart.confirmed,
+	itemCount: cartItemCount(cart),
 	items: cart.items.map((item) => ({
-		productId: item.productId,
 		name: item.name,
 		price: item.price,
+		productId: item.productId,
 		quantity: item.quantity,
 	})),
+	subtotal: cartSubtotal(cart),
 });
 
 const respond = (cart: Cart) => ({
@@ -50,23 +50,23 @@ export const buildCartTools = (deps: CartToolDeps) => {
 	};
 
 	const viewCart = defineTool({
-		name: "view_cart",
 		description:
 			"Show the customer their current shopping cart: every item with quantity, unit price, line total, and the subtotal. Call this whenever the customer asks what is in their cart or to review their order before confirming. Sends the cart summary to the customer directly.",
 		input: v.object({}),
+		name: "view_cart",
 		async run() {
 			return sendAndReport(await deps.getCart());
 		},
 	});
 
 	const updateCartItem = defineTool({
-		name: "update_cart_item",
 		description:
 			"Set the quantity of a product already in the cart to an absolute number. Use when the customer asks to change how many of an item they want (e.g. 'make it 3'). A quantity of 0 removes the item. The productId must be one already shown in the cart.",
 		input: v.object({
 			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 			quantity: v.pipe(v.number(), v.integer(), v.minValue(0)),
 		}),
+		name: "update_cart_item",
 		async run({ input }) {
 			const cart = await deps.applyCommand({
 				kind: "set",
@@ -78,12 +78,12 @@ export const buildCartTools = (deps: CartToolDeps) => {
 	});
 
 	const removeCartItem = defineTool({
-		name: "remove_cart_item",
 		description:
 			"Remove a product from the cart entirely. Use when the customer asks to drop or delete an item. The productId must be one already shown in the cart.",
 		input: v.object({
 			productId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 		}),
+		name: "remove_cart_item",
 		async run({ input }) {
 			const cart = await deps.applyCommand({
 				kind: "remove",
@@ -94,10 +94,10 @@ export const buildCartTools = (deps: CartToolDeps) => {
 	});
 
 	const confirmCartTool = defineTool({
-		name: "confirm_cart",
 		description:
 			"Mark the cart as confirmed once the customer has EXPLICITLY agreed to place the order (e.g. they said yes/confirm). This is the checkout gate: only call it on an explicit confirmation, never preemptively. Order creation itself happens in a later step.",
 		input: v.object({}),
+		name: "confirm_cart",
 		async run() {
 			const cart = await deps.applyCommand({ kind: "confirm" });
 			return sendAndReport(cart);

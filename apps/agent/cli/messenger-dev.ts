@@ -18,22 +18,12 @@
  * Run the worker first (`bun run dev`), then this CLI (`bun run dev:messenger`).
  */
 import { createHmac } from "node:crypto";
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import type {
-	MessengerMessagingEvent,
-	MessengerWebhookPayload,
-} from "@flue/messenger";
+import { join } from "node:path";
+import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
 
-const AGENT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const AGENT_ROOT = join(import.meta.dirname, "..");
 const DEV_DIR = join(AGENT_ROOT, ".dev");
 const SENT_DIR = join(DEV_DIR, "sent");
 const STATE_FILE = join(DEV_DIR, "state.json");
@@ -43,13 +33,19 @@ const HISTORY_DIR = join(AGENT_ROOT, "..", "..", "messenger-chat-history");
 // ─── Config (.dev.vars / env) ────────────────────────────────────────────────
 
 function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) return {};
+	if (!existsSync(file)) {
+		return {};
+	}
 	const out: Record<string, string> = {};
 	for (const line of readFileSync(file, "utf8").split("\n")) {
 		const trimmed = line.trim();
-		if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
+		if (trimmed.length === 0 || trimmed.startsWith("#")) {
+			continue;
+		}
 		const eq = trimmed.indexOf("=");
-		if (eq === -1) continue;
+		if (eq === -1) {
+			continue;
+		}
 		out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
 	}
 	return out;
@@ -60,9 +56,7 @@ const vars = { ...loadDotVars(join(AGENT_ROOT, ".dev.vars")), ...process.env };
 function reqVar(name: string): string {
 	const value = vars[name];
 	if (!value) {
-		console.error(
-			`Missing ${name}. Set it in apps/agent/.dev.vars (see README).`,
-		);
+		console.error(`Missing ${name}. Set it in apps/agent/.dev.vars (see README).`);
 		process.exit(1);
 	}
 	return value;
@@ -70,24 +64,21 @@ function reqVar(name: string): string {
 
 const APP_SECRET = reqVar("MESSENGER_APP_SECRET");
 const PAGE_ID = reqVar("MESSENGER_PAGE_ID");
-const WORKER_URL = (
-	vars.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583"
-).replace(/\/$/, "");
+const WORKER_URL = (vars.MESSENGER_DEV_WORKER_URL ?? "http://127.0.0.1:3583").replace(/\/$/, "");
 const WEBHOOK_URL = `${WORKER_URL}/channels/messenger/webhook`;
 const CAPTURE_PORT = Number(
-	new URL(vars.MESSENGER_GRAPH_BASE_URL ?? "http://127.0.0.1:8788").port ||
-		"8788",
+	new URL(vars.MESSENGER_GRAPH_BASE_URL ?? "http://127.0.0.1:8788").port || "8788",
 );
 
 // ─── Persistent state ────────────────────────────────────────────────────────
 
-type Button = { title: string; kind: "postback" | "quick_reply" | "url"; value: string };
+type Button = { kind: "postback" | "quick_reply" | "url"; title: string; value: string };
 type Session = { psid: string };
 type State = {
 	current: string;
-	sessions: Record<string, Session>;
 	inboundSeq: number;
-	lastButtons: Button[];
+	lastButtons: Array<Button>;
+	sessions: Record<string, Session>;
 };
 
 function freshPsid(name: string): string {
@@ -105,9 +96,9 @@ function loadState(): State {
 	}
 	return {
 		current: "default",
-		sessions: { default: { psid: freshPsid("default") } },
 		inboundSeq: 0,
 		lastButtons: [],
+		sessions: { default: { psid: freshPsid("default") } },
 	};
 }
 
@@ -119,7 +110,9 @@ function saveState(state: State): void {
 const state = loadState();
 function psid(): string {
 	const session = state.sessions[state.current];
-	if (session) return session.psid;
+	if (session) {
+		return session.psid;
+	}
 	const created: Session = { psid: freshPsid(state.current) };
 	state.sessions[state.current] = created;
 	return created.psid;
@@ -131,18 +124,18 @@ function sessionId(): string {
 // ─── Terminal helpers ────────────────────────────────────────────────────────
 
 const C = {
-	dim: (s: string) => `\x1b[2m${s}\x1b[0m`,
-	cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
-	green: (s: string) => `\x1b[32m${s}\x1b[0m`,
-	yellow: (s: string) => `\x1b[33m${s}\x1b[0m`,
-	red: (s: string) => `\x1b[31m${s}\x1b[0m`,
-	bold: (s: string) => `\x1b[1m${s}\x1b[0m`,
+	bold: (s: string) => `\u001b[1m${s}\u001b[0m`,
+	cyan: (s: string) => `\u001b[36m${s}\u001b[0m`,
+	dim: (s: string) => `\u001b[2m${s}\u001b[0m`,
+	green: (s: string) => `\u001b[32m${s}\u001b[0m`,
+	red: (s: string) => `\u001b[31m${s}\u001b[0m`,
+	yellow: (s: string) => `\u001b[33m${s}\u001b[0m`,
 };
 
 let rl: ReturnType<typeof createInterface>;
 function printAbovePrompt(line: string): void {
 	// Clear the current input line, print, then restore the prompt.
-	process.stdout.write("\r\x1b[K");
+	process.stdout.write("\r\u001b[K");
 	process.stdout.write(`${line}\n`);
 	rl?.prompt(true);
 }
@@ -151,39 +144,48 @@ function printAbovePrompt(line: string): void {
 
 let outboundSeq = 0;
 
-function extractButtons(message: Record<string, unknown>): Button[] {
-	const buttons: Button[] = [];
+function extractButtons(message: Record<string, unknown>): Array<Button> {
+	const buttons: Array<Button> = [];
 	const quickReplies = message.quick_replies;
 	if (Array.isArray(quickReplies)) {
 		for (const qr of quickReplies) {
 			if (qr && typeof qr === "object") {
 				const title = String((qr as Record<string, unknown>).title ?? "");
 				const payload = (qr as Record<string, unknown>).payload;
-				if (typeof payload === "string")
-					buttons.push({ title, kind: "quick_reply", value: payload });
+				if (typeof payload === "string") {
+					buttons.push({ kind: "quick_reply", title, value: payload });
+				}
 			}
 		}
 	}
 	const attachment = message.attachment as Record<string, unknown> | undefined;
 	const payload = attachment?.payload as Record<string, unknown> | undefined;
 	const collect = (btns: unknown) => {
-		if (!Array.isArray(btns)) return;
+		if (!Array.isArray(btns)) {
+			return;
+		}
 		for (const b of btns) {
-			if (!b || typeof b !== "object") continue;
+			if (!b || typeof b !== "object") {
+				continue;
+			}
 			const btn = b as Record<string, unknown>;
 			const title = String(btn.title ?? "");
-			if (btn.type === "postback" && typeof btn.payload === "string")
-				buttons.push({ title, kind: "postback", value: btn.payload });
-			else if (btn.type === "web_url" && typeof btn.url === "string")
-				buttons.push({ title, kind: "url", value: btn.url });
+			if (btn.type === "postback" && typeof btn.payload === "string") {
+				buttons.push({ kind: "postback", title, value: btn.payload });
+			} else if (btn.type === "web_url" && typeof btn.url === "string") {
+				buttons.push({ kind: "url", title, value: btn.url });
+			}
 		}
 	};
 	if (payload) {
 		collect(payload.buttons);
-		if (Array.isArray(payload.elements))
-			for (const el of payload.elements)
-				if (el && typeof el === "object")
+		if (Array.isArray(payload.elements)) {
+			for (const el of payload.elements) {
+				if (el && typeof el === "object") {
 					collect((el as Record<string, unknown>).buttons);
+				}
+			}
+		}
 	}
 	return buttons;
 }
@@ -198,7 +200,9 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 		printAbovePrompt(C.dim(`  · bot ${String(body.sender_action)}`));
 		return;
 	}
-	if (!message) return;
+	if (!message) {
+		return;
+	}
 	const buttons = extractButtons(message);
 	if (typeof message.text === "string") {
 		lastBotReply = message.text;
@@ -215,9 +219,7 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 		state.lastButtons = buttons;
 		saveState(state);
 		buttons.forEach((b, i) =>
-			printAbovePrompt(
-				C.dim(`  [${i + 1}] ${b.title} (${b.kind}: ${b.value})`),
-			),
+			printAbovePrompt(C.dim(`  [${i + 1}] ${b.title} (${b.kind}: ${b.value})`)),
 		);
 		printAbovePrompt(C.dim("  fire one with: /fire <n>"));
 	}
@@ -229,18 +231,16 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 let pendingImage: { bytes: Uint8Array; contentType: string } | null = null;
 
 const IMAGE_CONTENT_TYPE_BY_EXT: Record<string, string> = {
-	jpg: "image/jpeg",
+	gif: "image/gif",
 	jpeg: "image/jpeg",
+	jpg: "image/jpeg",
 	png: "image/png",
 	webp: "image/webp",
-	gif: "image/gif",
 };
 
 function startCaptureServer(): void {
 	mkdirSync(SENT_DIR, { recursive: true });
 	Bun.serve({
-		port: CAPTURE_PORT,
-		hostname: "127.0.0.1",
 		async fetch(req) {
 			const url = new URL(req.url);
 			if (req.method !== "POST") {
@@ -261,14 +261,13 @@ function startCaptureServer(): void {
 				// ignore non-JSON
 			}
 			const recipient = body.recipient as Record<string, unknown> | undefined;
-			const recipientId =
-				(recipient?.id as string | undefined) ?? psid();
+			const recipientId = (recipient?.id as string | undefined) ?? psid();
 			// Only persist real outbound messages (skip typing/mark_seen noise).
 			if (!body.sender_action) {
 				outboundSeq += 1;
 				const file = join(
 					SENT_DIR,
-					`${String(outboundSeq).padStart(4, "0")}-${url.pathname.replace(/\W+/g, "_")}.json`,
+					`${String(outboundSeq).padStart(4, "0")}-${url.pathname.replaceAll(/\W+/g, "_")}.json`,
 				);
 				writeFileSync(file, JSON.stringify(body, null, 2));
 				renderOutbound(body, file);
@@ -276,10 +275,12 @@ function startCaptureServer(): void {
 				renderOutbound(body, "");
 			}
 			return Response.json({
-				recipient_id: recipientId,
 				message_id: `dev-out-${Date.now().toString(36)}-${outboundSeq}`,
+				recipient_id: recipientId,
 			});
 		},
+		hostname: "127.0.0.1",
+		port: CAPTURE_PORT,
 	});
 }
 
@@ -287,47 +288,41 @@ function startCaptureServer(): void {
 
 function buildPayload(event: MessengerMessagingEvent): MessengerWebhookPayload {
 	return {
-		object: "page",
 		entry: [
 			{
 				id: PAGE_ID,
-				time: Date.now(),
 				messaging: [event],
+				time: Date.now(),
 			},
 		],
+		object: "page",
 	};
 }
 
 async function postWebhook(event: MessengerMessagingEvent): Promise<void> {
 	const bodyText = JSON.stringify(buildPayload(event));
-	const signature = createHmac("sha256", APP_SECRET)
-		.update(bodyText)
-		.digest("hex");
+	const signature = createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
 	let res: Response;
 	try {
 		res = await fetch(WEBHOOK_URL, {
-			method: "POST",
+			body: bodyText,
 			headers: {
 				"content-type": "application/json",
 				"x-hub-signature-256": `sha256=${signature}`,
 			},
-			body: bodyText,
+			method: "POST",
 		});
-	} catch (err) {
+	} catch (error) {
 		lastWebhookStatus = 0;
 		printAbovePrompt(
-			C.red(
-				`  ✗ could not reach worker at ${WEBHOOK_URL} — is \`bun run dev\` running?`,
-			),
+			C.red(`  ✗ could not reach worker at ${WEBHOOK_URL} — is \`bun run dev\` running?`),
 		);
-		printAbovePrompt(C.dim(`  ${err instanceof Error ? err.message : String(err)}`));
+		printAbovePrompt(C.dim(`  ${error instanceof Error ? error.message : String(error)}`));
 		return;
 	}
 	lastWebhookStatus = res.status;
 	if (!res.ok) {
-		printAbovePrompt(
-			C.red(`  ✗ webhook ${res.status} ${res.statusText}`),
-		);
+		printAbovePrompt(C.red(`  ✗ webhook ${res.status} ${res.statusText}`));
 		return;
 	}
 	printAbovePrompt(C.dim(`  · webhook ${res.status} ${await res.text()}`));
@@ -342,10 +337,10 @@ function nextMid(): string {
 async function sendText(text: string): Promise<void> {
 	printAbovePrompt(`${C.cyan("you ›")} ${text}`);
 	await postWebhook({
-		sender: { id: psid() },
-		recipient: { id: PAGE_ID },
-		timestamp: Date.now(),
 		message: { mid: nextMid(), text },
+		recipient: { id: PAGE_ID },
+		sender: { id: psid() },
+		timestamp: Date.now(),
 	});
 }
 
@@ -368,13 +363,13 @@ async function sendImage(path: string): Promise<void> {
 		`${C.cyan("you ›")} ${C.dim(`[image ${path} (${contentType}, ${pendingImage.bytes.byteLength} bytes)]`)}`,
 	);
 	await postWebhook({
-		sender: { id: psid() },
-		recipient: { id: PAGE_ID },
-		timestamp: Date.now(),
 		message: {
+			attachments: [{ payload: { url: imageUrl }, type: "image" }],
 			mid: nextMid(),
-			attachments: [{ type: "image", payload: { url: imageUrl } }],
 		},
+		recipient: { id: PAGE_ID },
+		sender: { id: psid() },
+		timestamp: Date.now(),
 	});
 }
 
@@ -385,9 +380,7 @@ async function fireButton(index: number): Promise<void> {
 		return;
 	}
 	if (button.kind === "url") {
-		printAbovePrompt(
-			C.yellow(`  web_url button → would open ${button.value} (no webhook event)`),
-		);
+		printAbovePrompt(C.yellow(`  web_url button → would open ${button.value} (no webhook event)`));
 		return;
 	}
 	printAbovePrompt(
@@ -397,30 +390,32 @@ async function fireButton(index: number): Promise<void> {
 		// Quick replies arrive as a normal message event carrying the payload —
 		// exactly what admission reads via message.quick_reply.payload.
 		await postWebhook({
-			sender: { id: psid() },
-			recipient: { id: PAGE_ID },
-			timestamp: Date.now(),
 			message: {
 				mid: nextMid(),
-				text: button.title,
 				quick_reply: { payload: button.value },
+				text: button.title,
 			},
+			recipient: { id: PAGE_ID },
+			sender: { id: psid() },
+			timestamp: Date.now(),
 		});
 		return;
 	}
 	// Postback button → native postback event on the same real webhook route.
 	await postWebhook({
-		sender: { id: psid() },
+		postback: { mid: nextMid(), payload: button.value, title: button.title },
 		recipient: { id: PAGE_ID },
+		sender: { id: psid() },
 		timestamp: Date.now(),
-		postback: { mid: nextMid(), title: button.title, payload: button.value },
 	});
 }
 
 // ─── Seed replay from private export ─────────────────────────────────────────
 
-function listHistory(): string[] {
-	if (!existsSync(HISTORY_DIR)) return [];
+function listHistory(): Array<string> {
+	if (!existsSync(HISTORY_DIR)) {
+		return [];
+	}
 	return readdirSync(HISTORY_DIR).filter((f) => f.endsWith(".json"));
 }
 
@@ -448,8 +443,8 @@ async function seed(arg: string | undefined): Promise<void> {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(readFileSync(join(HISTORY_DIR, target), "utf8"));
-	} catch (err) {
-		printAbovePrompt(C.red(`  ✗ could not parse ${target}: ${String(err)}`));
+	} catch (error) {
+		printAbovePrompt(C.red(`  ✗ could not parse ${target}: ${String(error)}`));
 		return;
 	}
 	// Best-effort: pull human/customer text lines out of a few common shapes.
@@ -465,11 +460,13 @@ async function seed(arg: string | undefined): Promise<void> {
 	}
 }
 
-function extractSeedTexts(data: unknown): string[] {
-	const out: string[] = [];
+function extractSeedTexts(data: unknown): Array<string> {
+	const out: Array<string> = [];
 	const visit = (node: unknown) => {
 		if (Array.isArray(node)) {
-			for (const item of node) visit(item);
+			for (const item of node) {
+				visit(item);
+			}
 			return;
 		}
 		if (node && typeof node === "object") {
@@ -481,11 +478,13 @@ function extractSeedTexts(data: unknown): string[] {
 				"";
 			const sender = String(obj.from ?? obj.sender ?? obj.role ?? "").toLowerCase();
 			const isCustomer =
-				sender.includes("customer") ||
-				sender.includes("user") ||
-				sender.includes("human");
-			if (text && (isCustomer || sender === "")) out.push(text);
-			for (const value of Object.values(obj)) visit(value);
+				sender.includes("customer") || sender.includes("user") || sender.includes("human");
+			if (text && (isCustomer || sender === "")) {
+				out.push(text);
+			}
+			for (const value of Object.values(obj)) {
+				visit(value);
+			}
 		}
 	};
 	visit(data);
@@ -515,8 +514,9 @@ function help(): void {
 		"/seed [list|<file>]   replay a private messenger-chat-history example",
 		"/image <path>         attach a photo → R2 key → Kimi vision → product cards (#20)",
 		"/quit                 exit",
-	])
+	]) {
 		printAbovePrompt(C.dim(`  ${line}`));
+	}
 }
 
 function listPayloads(): void {
@@ -529,7 +529,9 @@ function listPayloads(): void {
 		printAbovePrompt(C.dim("  (no payloads captured yet)"));
 		return;
 	}
-	printAbovePrompt(C.dim(`  ${files.length} payload(s) in ${SENT_DIR.replace(`${AGENT_ROOT}/`, "")}:`));
+	printAbovePrompt(
+		C.dim(`  ${files.length} payload(s) in ${SENT_DIR.replace(`${AGENT_ROOT}/`, "")}:`),
+	);
 	files.slice(-10).forEach((f) => printAbovePrompt(C.dim(`   - ${f}`)));
 }
 
@@ -547,14 +549,17 @@ async function handleCommand(line: string): Promise<void> {
 		case "session": {
 			if (!arg) {
 				printAbovePrompt(C.dim("  sessions:"));
-				for (const [name, s] of Object.entries(state.sessions))
+				for (const [name, s] of Object.entries(state.sessions)) {
 					printAbovePrompt(
 						C.dim(`   ${name === state.current ? "*" : " "} ${name}  psid=${s.psid}`),
 					);
+				}
 				printAbovePrompt(C.dim("  switch/create with: /session <name>"));
 				return;
 			}
-			if (!state.sessions[arg]) state.sessions[arg] = { psid: freshPsid(arg) };
+			if (!state.sessions[arg]) {
+				state.sessions[arg] = { psid: freshPsid(arg) };
+			}
 			state.current = arg;
 			state.lastButtons = [];
 			saveState(state);
@@ -565,9 +570,7 @@ async function handleCommand(line: string): Promise<void> {
 			state.sessions[state.current] = { psid: freshPsid(state.current) };
 			state.lastButtons = [];
 			saveState(state);
-			printAbovePrompt(
-				C.dim(`  reset session "${state.current}" → new psid=${psid()}`),
-			);
+			printAbovePrompt(C.dim(`  reset session "${state.current}" → new psid=${psid()}`));
 			return;
 		}
 		case "psid":
@@ -603,13 +606,9 @@ async function handleCommand(line: string): Promise<void> {
 			if (!arg) {
 				printAbovePrompt(C.red("  usage: /image <path-to-photo>"));
 				printAbovePrompt(
-					C.dim(
-						"  sends a real image webhook → R2 key → Kimi vision → product cards (#20).",
-					),
+					C.dim("  sends a real image webhook → R2 key → Kimi vision → product cards (#20)."),
 				);
-				printAbovePrompt(
-					C.dim("  needs the worker booted with real Workers AI (not --local)."),
-				);
+				printAbovePrompt(C.dim("  needs the worker booted with real Workers AI (not --local)."));
 				return;
 			}
 			await sendImage(arg);
@@ -627,7 +626,7 @@ async function handleCommand(line: string): Promise<void> {
 async function runSmoke(): Promise<void> {
 	const expectReply = process.env.SMOKE_EXPECT_REPLY !== "0";
 	const replyTimeoutMs = Number(process.env.SMOKE_REPLY_TIMEOUT_MS ?? "45000");
-	const checks: { name: string; ok: boolean; detail: string }[] = [];
+	const checks: Array<{ detail: string; name: string; ok: boolean }> = [];
 	startCaptureServer();
 	console.log(`\n  Messenger agent smoke (worker ${WEBHOOK_URL})\n`);
 
@@ -637,23 +636,27 @@ async function runSmoke(): Promise<void> {
 
 	await sendText("Сайн байна уу");
 	checks.push({
+		detail: `webhook → ${lastWebhookStatus || "unreachable"}`,
 		name: "signed text dispatches (no 500)",
 		ok: lastWebhookStatus === 200,
-		detail: `webhook → ${lastWebhookStatus || "unreachable"}`,
 	});
 
 	if (expectReply) {
 		const deadline = Date.now() + replyTimeoutMs;
-		while (Date.now() < deadline && lastBotReply === null) await Bun.sleep(500);
+		while (Date.now() < deadline && lastBotReply === null) {
+			await Bun.sleep(500);
+		}
 		checks.push({
+			detail: lastBotReply ? `bot › ${lastBotReply.slice(0, 60)}…` : "no reply in time",
 			name: "bot reply received",
 			ok: lastBotReply !== null,
-			detail: lastBotReply ? `bot › ${lastBotReply.slice(0, 60)}…` : "no reply in time",
 		});
 	}
 
 	console.log("");
-	for (const c of checks) console.log(`  ${c.ok ? "✓" : "✗"} ${c.name} — ${c.detail}`);
+	for (const c of checks) {
+		console.log(`  ${c.ok ? "✓" : "✗"} ${c.name} — ${c.detail}`);
+	}
 	const failed = checks.some((c) => !c.ok);
 	console.log(`\n  ${failed ? "✗ SMOKE FAILED" : "✓ SMOKE PASSED"}\n`);
 	process.exit(failed ? 1 : 0);
@@ -672,10 +675,10 @@ function main(): void {
 	rl.on("line", (raw) => {
 		const line = raw.trim();
 		const done = () => rl.prompt();
-		if (line.length === 0) return done();
-		const work = line.startsWith("/")
-			? handleCommand(line)
-			: sendText(line);
+		if (line.length === 0) {
+			return done();
+		}
+		const work = line.startsWith("/") ? handleCommand(line) : sendText(line);
 		work.finally(done);
 	});
 	rl.on("close", () => {

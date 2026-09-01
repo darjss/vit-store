@@ -20,22 +20,19 @@ import {
 	sendProductCards,
 	sendTextReply,
 } from "../channels/messenger";
-import {
-	getAdviceProductsByIds,
-	searchAssistantProducts,
-} from "../lib/catalog";
+import { getAdviceProductsByIds, searchAssistantProducts } from "../lib/catalog";
 import { loadInboundImage } from "../lib/messenger-inbound";
 import { createOrder, fetchDeliveryZones } from "../lib/order";
 import { buildKimiVision } from "../lib/vision";
 
 type AgentEnv = {
+	AI?: Ai;
 	CART_STORE?: DurableObjectNamespace;
 	CHECKOUT_STORE?: DurableObjectNamespace;
-	AI?: Ai;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
-export default defineAgent<AgentEnv>(({ id, env }) => {
+export default defineAgent<AgentEnv>(({ env, id }) => {
 	const conversation = channel.parseConversationKey(id);
 	// Same per-session CartStore the deterministic button path writes to, keyed
 	// by the assistant session id — so conversational edits and button taps act
@@ -52,16 +49,15 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 		env.AI && env.MESSENGER_INBOUND_BUCKET
 			? [
 					buildPhotoIdentifyTool({
-						loadImage: (key) =>
-							loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
+						loadImage: (key) => loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
 						runVision: buildKimiVision(env.AI),
 					}),
 				]
 			: [];
 	return {
+		instructions: customerAssistantInstructions,
 		model: CUSTOMER_ASSISTANT_MODEL,
 		thinkingLevel: "low" as const,
-		instructions: customerAssistantInstructions,
 		tools: [
 			buildProductSearchTool({
 				searchProducts: searchAssistantProducts,
@@ -80,8 +76,8 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			...photoTools,
 			...(cart
 				? buildCartTools({
-						getCart: cart.getCart,
 						applyCommand: cart.applyCommand,
+						getCart: cart.getCart,
 						sendCartSummary: sendCartSummary(conversation),
 					})
 				: []),
@@ -97,9 +93,9 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 						// the suggestion order is best-effort. Safe because the customer
 						// always explicitly confirms one candidate — the bot never
 						// auto-picks. Pass the mined aliases here once #26 ships.
+						createOrder,
 						resolveZoneCandidates: async (addressText) =>
 							rankZoneCandidates(addressText, await fetchDeliveryZones()),
-						createOrder,
 						sendText: sendTextReply(conversation),
 						// After the order is created, offer the QPay/transfer payment
 						// choices (#25) on the same conversation.

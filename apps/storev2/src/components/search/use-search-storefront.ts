@@ -5,50 +5,50 @@ import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 
 export interface SearchStorefrontData {
-	products: {
+	brands: Array<{
 		id: number;
+		logoUrl?: string | null;
+		name: string;
+		productCount: number;
 		slug: string;
+	}>;
+	categories: Array<{
+		id: number;
+		name: string;
+		productCount: number;
+		slug: string;
+	}>;
+	products: Array<{
+		brand: string;
+		categoryId?: number;
+		discount?: number;
+		id: number;
+		image: string;
 		name: string;
 		price: number;
-		image: string;
-		brand: string;
+		slug: string;
 		stock?: number;
-		discount?: number;
-		categoryId?: number;
-	}[];
-	brands: {
-		id: number;
-		name: string;
-		slug: string;
-		productCount: number;
-		logoUrl?: string | null;
-	}[];
-	categories: {
-		id: number;
-		name: string;
-		slug: string;
-		productCount: number;
-	}[];
+	}>;
 }
 
 export interface UseSearchStorefrontOptions {
-	/** Minimum query length before the search fires. */
-	minQueryLength?: number;
 	/** Result cap passed to the API. */
 	limit?: number;
+	/** Minimum query length before the search fires. */
+	minQueryLength?: number;
 }
 
 export interface UseSearchStorefrontResult {
 	data: () => SearchStorefrontData | undefined;
-	status: () => "pending" | "error" | "success";
 	fetchStatus: () => "fetching" | "paused" | "idle";
-	isLoading: () => boolean;
-	isFetching: () => boolean;
 	isError: () => boolean;
+	isFetching: () => boolean;
+	isLoading: () => boolean;
 	isLoadingError: () => boolean;
 	isRefetchError: () => boolean;
-	searchId: () => string | null;
 	refetch: () => void;
+	searchId: () => string | null;
+	status: () => "pending" | "error" | "success";
 }
 
 /**
@@ -71,27 +71,27 @@ export function useSearchStorefront(
 
 	const searchQuery = useQuery(
 		() => ({
-			queryKey: ["search-storefront", query(), limit] as const,
+			enabled: query().length >= minQueryLength,
 			queryFn: async ({ queryKey }) => {
 				const [, term, requestLimit] = queryKey;
 				const data =
 					term.length < minQueryLength
 						? {
-								products: [],
 								brands: [],
 								categories: [],
+								products: [],
 							}
 						: await api.product.searchStorefront.query({
-								query: term,
 								limit: requestLimit,
+								query: term,
 							});
 
-				return { term, data } satisfies {
-					term: string;
+				return { data, term } satisfies {
 					data: SearchStorefrontData;
+					term: string;
 				};
 			},
-			enabled: query().length >= minQueryLength,
+			queryKey: ["search-storefront", query(), limit] as const,
 			staleTime: 1000 * 60 * 5,
 		}),
 		() => queryClient,
@@ -102,12 +102,10 @@ export function useSearchStorefront(
 		return result?.term === query() ? result.data : undefined;
 	};
 
-	const [lastTrackedQuery, setLastTrackedQuery] = createSignal<string | null>(
-		null,
-	);
+	const [lastTrackedQuery, setLastTrackedQuery] = createSignal<string | null>(null);
 	const [trackedSearch, setTrackedSearch] = createSignal<{
-		term: string;
 		id: string;
+		term: string;
 	} | null>(null);
 
 	createEffect(() => {
@@ -126,24 +124,24 @@ export function useSearchStorefront(
 				searchId,
 				data.products.map(({ id }) => id),
 			);
-			setTrackedSearch({ term, id: searchId });
+			setTrackedSearch({ id: searchId, term });
 			setLastTrackedQuery(term);
 		}
 	});
 
 	return {
 		data: currentData,
-		status: () => searchQuery.status,
 		fetchStatus: () => searchQuery.fetchStatus,
-		isLoading: () => searchQuery.isLoading,
-		isFetching: () => searchQuery.isFetching,
 		isError: () => searchQuery.isError,
+		isFetching: () => searchQuery.isFetching,
+		isLoading: () => searchQuery.isLoading,
 		isLoadingError: () => searchQuery.isLoadingError,
 		isRefetchError: () => searchQuery.isRefetchError,
+		refetch: () => searchQuery.refetch(),
 		searchId: () => {
 			const tracked = trackedSearch();
 			return tracked?.term === query() ? tracked.id : null;
 		},
-		refetch: () => searchQuery.refetch(),
+		status: () => searchQuery.status,
 	};
 }

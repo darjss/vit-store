@@ -4,7 +4,7 @@ import { logger } from "~/lib/logger";
 import { slugify } from "~/lib/utils";
 
 export function normalizeBrandName(name: string): string {
-	return name.trim().replace(/\s+/g, " ").toLowerCase();
+	return name.trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 export function generateCleanSlug(
@@ -16,32 +16,34 @@ export function generateCleanSlug(
 	const fullName = `${brandName || ""} ${productName} ${potency} ${amount}`;
 	return fullName
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replaceAll(/[^a-z0-9]+/g, "-")
+		.replaceAll(/^-+|-+$/g, "");
 }
 
 export async function resolveOrCreateBrandId(
 	brandName: string | null,
-	brands: { id: number; name: string }[],
+	brands: Array<{ id: number; name: string }>,
 ): Promise<number | null> {
-	if (!brandName?.trim()) return null;
+	if (!brandName?.trim()) {
+		return null;
+	}
 
 	const normalizedTarget = normalizeBrandName(brandName);
-	const existing = brands.find(
-		(brand) => normalizeBrandName(brand.name) === normalizedTarget,
-	);
-	if (existing) return existing.id;
+	const existing = brands.find((brand) => normalizeBrandName(brand.name) === normalizedTarget);
+	if (existing) {
+		return existing.id;
+	}
 
-	const cleanBrandName = brandName.trim().replace(/\s+/g, " ");
+	const cleanBrandName = brandName.trim().replaceAll(/\s+/g, " ");
 	try {
 		const created = await brandQueries.admin.createBrand({
+			logoUrl: DEFAULT_BRAND_LOGO_URL,
 			name: cleanBrandName,
 			slug: slugify(cleanBrandName),
-			logoUrl: DEFAULT_BRAND_LOGO_URL,
 		});
 		logger.info("aiProduct.brandAutoCreate", {
-			brandName: cleanBrandName,
 			brandId: created?.id ?? null,
+			brandName: cleanBrandName,
 		});
 		return created?.id ?? null;
 	} catch (error) {

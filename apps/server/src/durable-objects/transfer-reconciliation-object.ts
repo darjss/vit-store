@@ -36,13 +36,10 @@ const terminalStatuses = new Set<TransferReconciliationStatus>([
 	"failed",
 ]);
 
-const errorMessage = (error: unknown) =>
-	error instanceof Error ? error.message : String(error);
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 const retryDelayMs = (error: unknown) =>
-	error instanceof KhaanRateLimitError
-		? RATE_LIMIT_BACKOFF_MS
-		: POLL_INTERVAL_MS;
+	error instanceof KhaanRateLimitError ? RATE_LIMIT_BACKOFF_MS : POLL_INTERVAL_MS;
 
 const isConfirmablePaymentStatus = (status: string) =>
 	status === "pending" || status === "customer_claimed_paid";
@@ -61,12 +58,12 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			return this.client;
 		}
 		const client = new KhaanClient({
-			username: this.appEnv.KHAAN_USERNAME,
-			password: this.appEnv.KHAAN_PASSWORD,
-			deviceId: this.appEnv.KHAAN_DEVICE_ID,
-			userAgent: this.appEnv.KHAAN_USER_AGENT,
 			accountNumber: this.appEnv.KHAAN_ACCOUNT_NUMBER,
 			branchCode: this.appEnv.KHAAN_BRANCH_CODE,
+			deviceId: this.appEnv.KHAAN_DEVICE_ID,
+			password: this.appEnv.KHAAN_PASSWORD,
+			userAgent: this.appEnv.KHAAN_USER_AGENT,
+			username: this.appEnv.KHAAN_USERNAME,
 		});
 		await client.login();
 		this.client = client;
@@ -75,22 +72,19 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 
 	async start(input: StartInput): Promise<TransferReconciliationState> {
 		const current = await this.getStoredState();
-		if (
-			current?.paymentNumber === input.paymentNumber &&
-			!terminalStatuses.has(current.status)
-		) {
+		if (current?.paymentNumber === input.paymentNumber && !terminalStatuses.has(current.status)) {
 			return current;
 		}
 
 		const now = Date.now();
 		const state: TransferReconciliationState = {
-			paymentNumber: input.paymentNumber,
-			status: "polling",
 			attempts: 0,
-			startedAt: new Date(now).toISOString(),
 			expiresAt: new Date(now + MAX_POLL_MS).toISOString(),
-			nextPollAt: new Date(now + 1000).toISOString(),
 			lastError: null,
+			nextPollAt: new Date(now + 1000).toISOString(),
+			paymentNumber: input.paymentNumber,
+			startedAt: new Date(now).toISOString(),
+			status: "polling",
 		};
 
 		await this.writeState(state);
@@ -108,13 +102,9 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 	// (Khaan auth, fetch, payment not found) — the caller must NOT block the
 	// admin confirm on a null return. Returns [] when no matching transactions
 	// are found (tx scrolled out of the recent list, or a cash/override).
-	async collectMatchingKhaanFingerprints(
-		paymentNumber: string,
-	): Promise<string[] | null> {
+	async collectMatchingKhaanFingerprints(paymentNumber: string): Promise<Array<string> | null> {
 		try {
-			const payment = await paymentQueries.store.getPaymentInfoByNumber(
-				paymentNumber,
-			);
+			const payment = await paymentQueries.store.getPaymentInfoByNumber(paymentNumber);
 			if (!payment || payment.provider !== "transfer") {
 				return null;
 			}
@@ -124,21 +114,19 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			// consumed-lookup → eligible-filter in one pass. Fingerprints are
 			// computed once and reused by collectMatchingKhaanFingerprints via
 			// the identity map (F7).
-			const { eligible, fingerprintByIdentity } =
-				await prepareEligibleKhaanTransactions({
-					transactions,
-					paymentCreatedAtMs: payment.createdAt.getTime(),
-					getConsumedFingerprints:
-						paymentQueries.store.getConsumedKhaanFingerprints.bind(
-							paymentQueries.store,
-						),
-				});
+			const { eligible, fingerprintByIdentity } = await prepareEligibleKhaanTransactions({
+				getConsumedFingerprints: paymentQueries.store.getConsumedKhaanFingerprints.bind(
+					paymentQueries.store,
+				),
+				paymentCreatedAtMs: payment.createdAt.getTime(),
+				transactions,
+			});
 			return await collectMatchingKhaanFingerprints({
 				eligible,
+				expectedAmount: payment.amount,
 				fingerprintByIdentity,
 				paymentNumber,
 				phone: String(payment.order.customerPhone),
-				expectedAmount: payment.amount,
 			});
 		} catch {
 			// Khaan fetch/auth failure or payment lookup failure — do not block
@@ -164,9 +152,9 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		if (now >= Date.parse(state.expiresAt)) {
 			await this.writeState({
 				...state,
-				status: "timeout",
-				nextPollAt: null,
 				lastError: null,
+				nextPollAt: null,
+				status: "timeout",
 			});
 			return;
 		}
@@ -174,39 +162,34 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		const attempts = state.attempts + 1;
 
 		try {
-			const payment = await paymentQueries.store.getPaymentInfoByNumber(
-				state.paymentNumber,
-			);
+			const payment = await paymentQueries.store.getPaymentInfoByNumber(state.paymentNumber);
 			if (!payment) {
 				await this.writeState({
 					...state,
-					status: "failed",
 					attempts,
-					nextPollAt: null,
 					lastError: "Payment not found",
+					nextPollAt: null,
+					status: "failed",
 				});
 				return;
 			}
 			if (payment.status === "success") {
 				await this.writeState({
 					...state,
-					status: "confirmed",
 					attempts,
-					nextPollAt: null,
 					lastError: null,
+					nextPollAt: null,
+					status: "confirmed",
 				});
 				return;
 			}
-			if (
-				payment.provider !== "transfer" ||
-				!isConfirmablePaymentStatus(payment.status)
-			) {
+			if (payment.provider !== "transfer" || !isConfirmablePaymentStatus(payment.status)) {
 				await this.writeState({
 					...state,
-					status: "failed",
 					attempts,
-					nextPollAt: null,
 					lastError: `Payment is not confirmable (${payment.provider}/${payment.status})`,
+					nextPollAt: null,
+					status: "failed",
 				});
 				return;
 			}
@@ -217,20 +200,18 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			// consumed-lookup → eligible-filter in one pass. The identity→
 			// fingerprint map is reused by confirmMatch to record the matched
 			// transaction's fingerprint without recomputing SHA-256 (F7).
-			const { eligible, fingerprintByIdentity } =
-				await prepareEligibleKhaanTransactions({
-					transactions,
-					paymentCreatedAtMs: payment.createdAt.getTime(),
-					getConsumedFingerprints:
-						paymentQueries.store.getConsumedKhaanFingerprints.bind(
-							paymentQueries.store,
-						),
-				});
+			const { eligible, fingerprintByIdentity } = await prepareEligibleKhaanTransactions({
+				getConsumedFingerprints: paymentQueries.store.getConsumedKhaanFingerprints.bind(
+					paymentQueries.store,
+				),
+				paymentCreatedAtMs: payment.createdAt.getTime(),
+				transactions,
+			});
 			const matchResult = matchKhaanTransfer({
-				transactions: eligible,
+				expectedAmount: payment.amount,
 				paymentNumber: state.paymentNumber,
 				phone: String(payment.order.customerPhone),
-				expectedAmount: payment.amount,
+				transactions: eligible,
 			});
 
 			if (matchResult.status === "none") {
@@ -241,30 +222,25 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 			if (matchResult.status === "ambiguous") {
 				await this.writeState({
 					...state,
-					status: "ambiguous",
 					attempts,
-					nextPollAt: null,
 					lastError: null,
 					matchedTransaction: matchResult.matches[0],
+					nextPollAt: null,
+					status: "ambiguous",
 				});
 				return;
 			}
 
-			await this.confirmMatch(
-				state,
-				attempts,
-				matchResult.match,
-				fingerprintByIdentity,
-			);
+			await this.confirmMatch(state, attempts, matchResult.match, fingerprintByIdentity);
 		} catch (error) {
 			if (error instanceof KhaanAuthError) {
 				this.client = null;
 				await this.writeState({
 					...state,
-					status: "auth_required",
 					attempts,
-					nextPollAt: null,
 					lastError: errorMessage(error),
+					nextPollAt: null,
+					status: "auth_required",
 				});
 				return;
 			}
@@ -291,76 +267,62 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 		// left a transient stuck-looking state if confirm threw a non-Khaan
 		// error before the recovery path ran.
 		const matchedFingerprint =
-			fingerprintOf(fingerprintByIdentity, match) ??
-			(await khaanTransactionFingerprint(match));
+			fingerprintOf(fingerprintByIdentity, match) ?? (await khaanTransactionFingerprint(match));
 		const confirmation = await confirmPaymentAndNotify({
+			consumedKhaanTransactions: [{ fingerprint: matchedFingerprint }],
 			paymentNumber: state.paymentNumber,
 			provider: "transfer",
 			source: "auto_reconciliation",
-			consumedKhaanTransactions: [{ fingerprint: matchedFingerprint }],
 		});
 
-		if (
-			!confirmation.confirmed &&
-			confirmation.reason === "khaan_transaction_already_consumed"
-		) {
+		if (!confirmation.confirmed && confirmation.reason === "khaan_transaction_already_consumed") {
 			await this.writeState({
 				...state,
-				status: "ambiguous",
 				attempts,
-				nextPollAt: null,
 				lastError: confirmation.reason,
 				matchedTransaction: match,
+				nextPollAt: null,
+				status: "ambiguous",
 			});
 			return;
 		}
 
 		const paymentAfterConfirmation = confirmation.confirmed
 			? null
-			: await paymentQueries.store.getPaymentInfoByNumber(
-					state.paymentNumber,
-				);
+			: await paymentQueries.store.getPaymentInfoByNumber(state.paymentNumber);
 		const reason = confirmation.confirmed ? null : confirmation.reason;
-		const succeeded =
-			confirmation.confirmed ||
-			paymentAfterConfirmation?.status === "success";
+		const succeeded = confirmation.confirmed || paymentAfterConfirmation?.status === "success";
 		await this.writeState({
 			...state,
-			status: succeeded ? "confirmed" : "failed",
 			attempts,
-			nextPollAt: null,
 			lastError: succeeded ? null : reason,
 			matchedTransaction: match,
+			nextPollAt: null,
+			status: succeeded ? "confirmed" : "failed",
 		});
 	}
 
-	private async scheduleNext(
-		state: TransferReconciliationState,
-		delayMs = POLL_INTERVAL_MS,
-	) {
+	private async scheduleNext(state: TransferReconciliationState, delayMs = POLL_INTERVAL_MS) {
 		const nextPollAt = Date.now() + delayMs;
 		if (nextPollAt >= Date.parse(state.expiresAt)) {
 			await this.writeState({
 				...state,
-				status: "timeout",
 				nextPollAt: null,
+				status: "timeout",
 			});
 			return;
 		}
 
 		await this.writeState({
 			...state,
-			status: "polling",
 			nextPollAt: new Date(nextPollAt).toISOString(),
+			status: "polling",
 		});
 		await this.ctx.storage.setAlarm(nextPollAt);
 	}
 
 	private async getStoredState() {
-		return (
-			(await this.ctx.storage.get<TransferReconciliationState>(STATE_KEY)) ??
-			null
-		);
+		return (await this.ctx.storage.get<TransferReconciliationState>(STATE_KEY)) ?? null;
 	}
 
 	private async writeState(state: TransferReconciliationState) {

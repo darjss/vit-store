@@ -16,18 +16,16 @@ export default function NotFound() {
 						radial-gradient(circle at center, #FFF991 0%, transparent 70%)
 					`,
 					backgroundSize: "40px 40px, 40px 40px, 100% 100%",
-					opacity: 0.6,
 					mixBlendMode: "multiply",
+					opacity: 0.6,
 				}}
 			/>
-			<div className="relative z-10 w-full max-w-xl space-y-6 rounded-base border-2 border-border bg-card p-8 text-center shadow-shadow">
-				<div className="mx-auto flex size-16 items-center justify-center rounded-base border-2 border-border bg-yellow-200 text-yellow-900">
+			<div className="rounded-base border-border bg-card shadow-shadow relative z-10 w-full max-w-xl space-y-6 border-2 p-8 text-center">
+				<div className="rounded-base border-border mx-auto flex size-16 items-center justify-center border-2 bg-yellow-200 text-yellow-900">
 					<MapPinX className="h-8 w-8" />
 				</div>
 				<Text as="h1">404 - Хуудас олдсонгүй</Text>
-				<Text className="text-muted-foreground">
-					Та зөв хаяг оруулсан эсэхээ шалгана уу.
-				</Text>
+				<Text className="text-muted-foreground">Та зөв хаяг оруулсан эсэхээ шалгана уу.</Text>
 				<div className="flex items-center justify-center gap-2">
 					<Link to="/">
 						<Button>

@@ -1,18 +1,14 @@
 import { sha256 } from "@oslojs/crypto/sha2";
-import {
-	encodeBase32LowerCaseNoPadding,
-	encodeHexLowerCase,
-} from "@oslojs/encoding";
+import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from "@oslojs/encoding";
 
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { Context, CustomerSelectType, UserSelectType } from "~/lib/context";
 import type { HonoContextType, SessionConfig } from "~/lib/types";
 
-
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
+	expiresAt: Date;
 	id: string;
 	user: TUser;
-	expiresAt: Date;
 }
 
 export function generateSessionToken(): string {
@@ -21,15 +17,15 @@ export function generateSessionToken(): string {
 	return encodeBase32LowerCaseNoPadding(bytes);
 }
 
-export function createSessionManager<
-	TUser extends CustomerSelectType | UserSelectType,
->(config: SessionConfig) {
+export function createSessionManager<TUser extends CustomerSelectType | UserSelectType>(
+	config: SessionConfig,
+) {
 	const {
+		cookieName,
 		kvSessionPrefix,
 		kvUserSessionPrefix,
-		cookieName,
-		sessionDurationMs,
 		renewalThresholdMs,
+		sessionDurationMs,
 	} = config;
 
 	function getUserIdentifier(user: TUser): string {
@@ -47,13 +43,11 @@ export function createSessionManager<
 		kv: KVNamespace,
 	): Promise<{ session: Session<TUser>; token: string }> {
 		const token = generateSessionToken();
-		const sessionId = encodeHexLowerCase(
-			sha256(new TextEncoder().encode(token)),
-		);
+		const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 		const session: Session<TUser> = {
+			expiresAt: new Date(Date.now() + sessionDurationMs),
 			id: sessionId,
 			user,
-			expiresAt: new Date(Date.now() + sessionDurationMs),
 		};
 
 		const userIdentifier = getUserIdentifier(user);
@@ -61,9 +55,9 @@ export function createSessionManager<
 		await kv.put(
 			`${kvSessionPrefix}:${session.id}`,
 			JSON.stringify({
+				expires_at: Math.floor(session.expiresAt.getTime() / 1000),
 				id: session.id,
 				user: session.user,
-				expires_at: Math.floor(session.expiresAt.getTime() / 1000),
 			}),
 			{
 				expirationTtl: Math.ceil(sessionDurationMs / 1000),
@@ -76,13 +70,8 @@ export function createSessionManager<
 		return { session, token };
 	}
 
-	async function validateSessionToken(
-		token: string,
-		ctx: Context,
-	): Promise<Session<TUser> | null> {
-		const sessionId = encodeHexLowerCase(
-			sha256(new TextEncoder().encode(token)),
-		);
+	async function validateSessionToken(token: string, ctx: Context): Promise<Session<TUser> | null> {
+		const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
 		const rawSession = await ctx.kv.get(`${kvSessionPrefix}:${sessionId}`);
 
 		if (!rawSession) {
@@ -90,15 +79,15 @@ export function createSessionManager<
 		}
 
 		const result = JSON.parse(rawSession) as {
+			expires_at: number;
 			id: string;
 			user: TUser;
-			expires_at: number;
 		};
 
 		const session: Session<TUser> = {
+			expiresAt: new Date(result.expires_at * 1000),
 			id: result.id,
 			user: result.user,
-			expiresAt: new Date(result.expires_at * 1000),
 		};
 
 		if (
@@ -116,9 +105,7 @@ export function createSessionManager<
 
 		if (Date.now() >= expiresAt.getTime()) {
 			await ctx.kv.delete(`${kvSessionPrefix}:${sessionId}`);
-			await ctx.kv.delete(
-				`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`,
-			);
+			await ctx.kv.delete(`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`);
 			ctx.log.info("auth.session_expired", { sessionId });
 			return null;
 		}
@@ -131,19 +118,17 @@ export function createSessionManager<
 			await ctx.kv.put(
 				`${kvSessionPrefix}:${session.id}`,
 				JSON.stringify({
+					expires_at: Math.floor(updatedSession.expiresAt.getTime() / 1000),
 					id: updatedSession.id,
 					user: updatedSession.user,
-					expires_at: Math.floor(updatedSession.expiresAt.getTime() / 1000),
 				}),
 				{
 					expirationTtl: Math.ceil(sessionDurationMs / 1000),
 				},
 			);
-			await ctx.kv.put(
-				`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`,
-				session.id,
-				{ expirationTtl: Math.ceil(sessionDurationMs / 1000) },
-			);
+			await ctx.kv.put(`${kvUserSessionPrefix}:${getUserIdentifier(session.user)}`, session.id, {
+				expirationTtl: Math.ceil(sessionDurationMs / 1000),
+			});
 			setSessionTokenCookie(ctx.c, token, updatedSession.expiresAt);
 			ctx.log.info("auth.session_renewed", { sessionId: session.id });
 			return updatedSession;
@@ -173,42 +158,34 @@ export function createSessionManager<
 		deleteSessionTokenCookie(ctx);
 	}
 
-	function setSessionTokenCookie(
-		c: HonoContextType,
-		token: string,
-		expiresAt: Date,
-	): void {
+	function setSessionTokenCookie(c: HonoContextType, token: string, expiresAt: Date): void {
 		const cookieDomain = c.env.DOMAIN;
 		const cookieDomainOption =
-			typeof cookieDomain === "string" && cookieDomain.length > 0
-				? cookieDomain
-				: undefined;
+			typeof cookieDomain === "string" && cookieDomain.length > 0 ? cookieDomain : undefined;
 
 		setCookie(c, cookieName, token, {
+			domain: cookieDomainOption,
+			expires: expiresAt,
 			httpOnly: true,
+			path: "/",
 			sameSite: "None",
 			secure: true,
-			expires: expiresAt,
-			path: "/",
-			domain: cookieDomainOption,
 		});
 	}
 
 	function deleteSessionTokenCookie(ctx: Context): void {
 		const cookieDomain = ctx.c.env.DOMAIN;
 		const cookieDomainOption =
-			typeof cookieDomain === "string" && cookieDomain.length > 0
-				? cookieDomain
-				: undefined;
+			typeof cookieDomain === "string" && cookieDomain.length > 0 ? cookieDomain : undefined;
 
 		deleteCookie(ctx.c, cookieName, {
-			httpOnly: true,
-			sameSite: "None",
-			secure: true,
+			domain: cookieDomainOption,
 			expires: new Date(0),
+			httpOnly: true,
 			maxAge: 0,
 			path: "/",
-			domain: cookieDomainOption,
+			sameSite: "None",
+			secure: true,
 		});
 	}
 
@@ -223,12 +200,12 @@ export function createSessionManager<
 	};
 
 	return {
+		auth,
 		createSession,
-		validateSessionToken,
+		deleteSessionTokenCookie,
 		invalidateSession,
 		setSessionTokenCookie,
-		deleteSessionTokenCookie,
-		auth,
+		validateSessionToken,
 	};
 }
 

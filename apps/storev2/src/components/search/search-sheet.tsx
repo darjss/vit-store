@@ -1,26 +1,20 @@
 import { navigate } from "astro:transitions/client";
 import type { JSX } from "solid-js";
 import { createSignal, onCleanup, onMount } from "solid-js";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { addSearch } from "@/lib/search-history";
 import { MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
 import SearchInput from "./search-input";
 import SearchTakeover from "./search-takeover";
 
 interface SearchSheetProps {
-	position: "top" | "bottom";
-	triggerClass: string;
-	triggerAriaLabel: string;
-	triggerContent: JSX.Element;
 	contentClass?: string;
 	headerClass?: string;
 	inputPlaceholder?: string;
+	position: "top" | "bottom";
+	triggerAriaLabel: string;
+	triggerClass: string;
+	triggerContent: JSX.Element;
 }
 
 const DEFAULT_CONTENT_CLASS =
@@ -36,10 +30,7 @@ const SearchSheet = (props: SearchSheetProps) => {
 		const handleNavigation = () => setIsOpen(false);
 		document.addEventListener("astro:before-preparation", handleNavigation);
 		onCleanup(() => {
-			document.removeEventListener(
-				"astro:before-preparation",
-				handleNavigation,
-			);
+			document.removeEventListener("astro:before-preparation", handleNavigation);
 		});
 	});
 
@@ -73,49 +64,49 @@ const SearchSheet = (props: SearchSheetProps) => {
 	};
 
 	return (
-		<Sheet open={isOpen()} onOpenChange={setIsOpen}>
+		<Sheet onOpenChange={setIsOpen} open={isOpen()}>
 			<SheetTrigger
-				as="button"
-				type="button"
 				aria-label={props.triggerAriaLabel}
+				as="button"
 				class={props.triggerClass}
+				type="button"
 			>
 				{props.triggerContent}
 			</SheetTrigger>
 
 			<SheetContent
-				position={props.position}
-				closeLabel="Хайлтыг хаах"
 				class={props.contentClass ?? DEFAULT_CONTENT_CLASS}
+				closeLabel="Хайлтыг хаах"
+				position={props.position}
 			>
 				<div class="flex h-full flex-col">
 					<div
 						class={`border-border border-b px-4 py-4 sm:px-6 ${props.headerClass ?? "bg-wash-lemon"}`}
 					>
 						<SheetHeader class="mb-4">
-							<SheetTitle class="flex items-center gap-2 font-bold font-display text-xl tracking-tight sm:text-2xl">
-								<IconSearch class="h-6 w-6 text-foreground/60" />
+							<SheetTitle class="font-display flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
+								<IconSearch class="text-foreground/60 h-6 w-6" />
 								Бүтээгдэхүүн хайх
 							</SheetTitle>
 						</SheetHeader>
 
 						<SearchInput
-							value={searchQuery()}
-							onSearch={handleSearch}
-							onSubmitSearch={handleSubmitSearch}
-							isLoading={isSearching() && searchQuery().length >= 2}
 							autofocus
 							focusKey={isOpen()}
+							isLoading={isSearching() && searchQuery().length >= 2}
+							onSearch={handleSearch}
+							onSubmitSearch={handleSubmitSearch}
 							placeholder={props.inputPlaceholder ?? DEFAULT_PLACEHOLDER}
+							value={searchQuery()}
 						/>
 					</div>
 
 					<div class="flex-1 overflow-y-auto px-4 pb-6 sm:px-6">
 						<SearchTakeover
-							query={searchQuery()}
-							onSelectSuggestion={handleSelectSuggestion}
 							onClose={handleClose}
 							onSearchLoadingChange={setIsSearching}
+							onSelectSuggestion={handleSelectSuggestion}
+							query={searchQuery()}
 						/>
 					</div>
 				</div>

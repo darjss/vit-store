@@ -1,42 +1,41 @@
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
-import type {
-	FieldPathByValue,
-	FieldPathValue,
-	FieldValues,
-	UseFormReturn,
-} from "react-hook-form";
+import type { FieldPathByValue, FieldPathValue, FieldValues, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface ArrayInputProps<
 	TFieldValues extends FieldValues,
-	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
 > {
 	form: UseFormReturn<TFieldValues>;
-	name: TName;
 	label: string;
-	placeholder?: string;
 	maxItems?: number;
+	name: TName;
+	placeholder?: string;
 }
 
 export function ArrayInput<
 	TFieldValues extends FieldValues,
-	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
 >({
 	form,
-	name,
 	label,
-	placeholder = "Шинэ утга...",
 	maxItems = 50,
+	name,
+	placeholder = "Шинэ утга...",
 }: ArrayInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
-	const values = (form.watch(name) ?? []) as string[];
+	const values = (form.watch(name) ?? []) as Array<string>;
 
 	const handleAdd = () => {
-		if (!newValue.trim()) return;
-		if (values.length >= maxItems) return;
+		if (!newValue.trim()) {
+			return;
+		}
+		if (values.length >= maxItems) {
+			return;
+		}
 
 		const updated = [...values, newValue.trim()];
 		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
@@ -63,25 +62,25 @@ export function ArrayInput<
 
 	return (
 		<div className="space-y-2">
-			<label htmlFor={inputId} className="font-bold text-sm">
+			<label className="text-sm font-bold" htmlFor={inputId}>
 				{label}
 			</label>
 
 			<div className="flex gap-2">
 				<Input
+					className="flex-1"
 					id={inputId}
-					value={newValue}
 					onChange={(e) => setNewValue(e.target.value)}
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
-					className="flex-1"
+					value={newValue}
 				/>
 				<Button
+					disabled={!newValue.trim() || values.length >= maxItems}
+					onClick={handleAdd}
+					size="icon"
 					type="button"
 					variant="outline"
-					size="icon"
-					onClick={handleAdd}
-					disabled={!newValue.trim() || values.length >= maxItems}
 				>
 					<Plus className="h-4 w-4" />
 				</Button>
@@ -91,17 +90,17 @@ export function ArrayInput<
 				<div className="flex flex-wrap gap-1.5">
 					{values.map((value, index) => (
 						<div
-							key={`${value}-${index}`}
 							className={cn(
-								"group flex items-center gap-1 border-2 border-border bg-muted/50 px-2 py-1 text-sm",
+								"group border-border bg-muted/50 flex items-center gap-1 border-2 px-2 py-1 text-sm",
 								"hover:border-destructive hover:bg-destructive/10",
 							)}
+							key={`${value}-${index}`}
 						>
 							<span className="max-w-[200px] truncate">{value}</span>
 							<button
-								type="button"
+								className="text-muted-foreground hover:text-destructive ml-0.5 opacity-50 transition-opacity group-hover:opacity-100"
 								onClick={() => handleRemove(index)}
-								className="ml-0.5 text-muted-foreground opacity-50 transition-opacity hover:text-destructive group-hover:opacity-100"
+								type="button"
 							>
 								<X className="h-3 w-3" />
 							</button>
@@ -120,41 +119,46 @@ export function ArrayInput<
 
 interface TagsInputProps<
 	TFieldValues extends FieldValues,
-	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
 > {
 	form: UseFormReturn<TFieldValues>;
-	name: TName;
 	label: string;
-	placeholder?: string;
-	suggestions?: string[];
 	maxItems?: number;
+	name: TName;
+	placeholder?: string;
+	suggestions?: Array<string>;
 }
 
 export function TagsInput<
 	TFieldValues extends FieldValues,
-	TName extends FieldPathByValue<TFieldValues, string[] | undefined>,
+	TName extends FieldPathByValue<TFieldValues, Array<string> | undefined>,
 >({
 	form,
-	name,
 	label,
+	maxItems = 20,
+	name,
 	placeholder = "Таг нэмэх...",
 	suggestions = [],
-	maxItems = 20,
 }: TagsInputProps<TFieldValues, TName>) {
 	const [newValue, setNewValue] = useState("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
-	const values = (form.watch(name) ?? []) as string[];
+	const values = (form.watch(name) ?? []) as Array<string>;
 
 	const filteredSuggestions = suggestions.filter(
-		(s) =>
-			s.toLowerCase().includes(newValue.toLowerCase()) && !values.includes(s),
+		(s) => s.toLowerCase().includes(newValue.toLowerCase()) && !values.includes(s),
 	);
 
 	const handleAdd = (value: string) => {
 		const trimmed = value.trim();
-		if (!trimmed) return;
-		if (values.includes(trimmed)) return;
-		if (values.length >= maxItems) return;
+		if (!trimmed) {
+			return;
+		}
+		if (values.includes(trimmed)) {
+			return;
+		}
+		if (values.length >= maxItems) {
+			return;
+		}
 
 		const updated = [...values, trimmed];
 		form.setValue(name, updated as FieldPathValue<TFieldValues, TName>, {
@@ -182,7 +186,7 @@ export function TagsInput<
 
 	return (
 		<div className="space-y-2">
-			<label htmlFor={inputId} className="font-bold text-sm">
+			<label className="text-sm font-bold" htmlFor={inputId}>
 				{label}
 			</label>
 
@@ -190,24 +194,24 @@ export function TagsInput<
 			<div className="relative">
 				<div className="flex gap-2">
 					<Input
+						className="flex-1"
 						id={inputId}
-						value={newValue}
+						onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
 						onChange={(e) => {
 							setNewValue(e.target.value);
 							setShowSuggestions(true);
 						}}
 						onFocus={() => setShowSuggestions(true)}
-						onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
 						onKeyDown={handleKeyDown}
 						placeholder={placeholder}
-						className="flex-1"
+						value={newValue}
 					/>
 					<Button
+						disabled={!newValue.trim() || values.length >= maxItems}
+						onClick={() => handleAdd(newValue)}
+						size="icon"
 						type="button"
 						variant="outline"
-						size="icon"
-						onClick={() => handleAdd(newValue)}
-						disabled={!newValue.trim() || values.length >= maxItems}
 					>
 						<Plus className="h-4 w-4" />
 					</Button>
@@ -215,13 +219,13 @@ export function TagsInput<
 
 				{/* Suggestions dropdown */}
 				{showSuggestions && filteredSuggestions.length > 0 && (
-					<div className="absolute top-full right-0 left-0 z-10 mt-1 max-h-40 overflow-y-auto border-2 border-border bg-background shadow-hard-sm">
+					<div className="border-border bg-background shadow-hard-sm absolute top-full right-0 left-0 z-10 mt-1 max-h-40 overflow-y-auto border-2">
 						{filteredSuggestions.slice(0, 8).map((suggestion) => (
 							<button
+								className="hover:bg-muted block w-full px-3 py-2 text-left text-sm"
 								key={suggestion}
-								type="button"
 								onClick={() => handleAdd(suggestion)}
-								className="block w-full px-3 py-2 text-left text-sm hover:bg-muted"
+								type="button"
 							>
 								{suggestion}
 							</button>
@@ -235,19 +239,17 @@ export function TagsInput<
 				<div className="flex flex-wrap gap-1.5">
 					{values.map((value, index) => (
 						<div
-							key={`${value}-${index}`}
 							className={cn(
-								"group flex items-center gap-1 border-2 border-primary bg-primary/20 px-2 py-0.5 text-sm",
+								"group border-primary bg-primary/20 flex items-center gap-1 border-2 px-2 py-0.5 text-sm",
 								"hover:border-destructive hover:bg-destructive/10",
 							)}
+							key={`${value}-${index}`}
 						>
-							<span className="max-w-[150px] truncate font-medium">
-								#{value}
-							</span>
+							<span className="max-w-[150px] truncate font-medium">#{value}</span>
 							<button
-								type="button"
+								className="text-muted-foreground hover:text-destructive ml-0.5 opacity-50 transition-opacity group-hover:opacity-100"
 								onClick={() => handleRemove(index)}
-								className="ml-0.5 text-muted-foreground opacity-50 transition-opacity hover:text-destructive group-hover:opacity-100"
+								type="button"
 							>
 								<X className="h-3 w-3" />
 							</button>

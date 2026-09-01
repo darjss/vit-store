@@ -50,14 +50,21 @@ export function useSearchParam(
 	});
 
 	const setParam = (next: string | null) => {
-		if (typeof window === "undefined") return;
+		if (typeof window === "undefined") {
+			return;
+		}
 		const url = new URL(window.location.href);
 		const prev = url.searchParams.get(key);
 		const normalized = next == null || next === "" ? null : next;
-		if ((prev ?? null) === normalized) return; // avoid redundant nav
+		if ((prev ?? null) === normalized) {
+			return;
+		} // avoid redundant nav
 
-		if (normalized == null) url.searchParams.delete(key);
-		else url.searchParams.set(key, normalized);
+		if (normalized == null) {
+			url.searchParams.delete(key);
+		} else {
+			url.searchParams.set(key, normalized);
+		}
 
 		// Default to skipping transitions to prevent blank screens during filter changes
 		const shouldSkipTransition = options?.skipTransition ?? true;
@@ -65,11 +72,7 @@ export function useSearchParam(
 		if (shouldSkipTransition) {
 			const state = window.history.state ?? {};
 			// Use replaceState directly to avoid triggering view transition
-			window.history.replaceState(
-				state,
-				"",
-				url.pathname + url.search + url.hash,
-			);
+			window.history.replaceState(state, "", url.pathname + url.search + url.hash);
 			// Manually update the signal since replaceState doesn't trigger popstate
 			setValue(normalized);
 		} else {

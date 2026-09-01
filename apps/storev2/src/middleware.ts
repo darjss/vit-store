@@ -33,11 +33,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	}
 
 	const response = await next();
-	if (
-		mustBypass ||
-		response.status >= 300 ||
-		response.headers.has("set-cookie")
-	) {
+	if (mustBypass || response.status >= 300 || response.headers.has("set-cookie")) {
 		context.cache.set(false);
 		setNoStore(response);
 	}

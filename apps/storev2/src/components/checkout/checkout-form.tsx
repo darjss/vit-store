@@ -25,7 +25,12 @@ import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
 import { cart, createCartState } from "@/store/cart";
-import { BoxIcon as IconPackage, AltArrowDownIcon as IconChevronDown, AltArrowUpIcon as IconChevronUp, DeliveryIcon as IconTruck } from "@solar-icons/solid/linear";
+import {
+	BoxIcon as IconPackage,
+	AltArrowDownIcon as IconChevronDown,
+	AltArrowUpIcon as IconChevronUp,
+	DeliveryIcon as IconTruck,
+} from "@solar-icons/solid/linear";
 import { useAppForm } from "../form/form";
 import Loading from "../loading";
 import { showToast } from "../ui/toast";
@@ -42,9 +47,9 @@ const stepExit = { duration: 0.2, easing: EASE_IN_OUT };
 // F12: single checkout validator schema referenced by onChange/onBlur/onSubmit
 // instead of three byte-identical tripled copies.
 const checkoutValidators = v.object({
-	phoneNumber: phoneSchema,
 	address: v.pipe(v.string(), v.minLength(5, "Хаягаа бичнэ үү")),
 	notes: v.string(),
+	phoneNumber: phoneSchema,
 });
 
 const CheckoutForm = (props: {
@@ -56,14 +61,18 @@ const CheckoutForm = (props: {
 }) => {
 	onMount(() => {
 		void (async () => {
-			if (cart.items().length === 0) return;
+			if (cart.items().length === 0) {
+				return;
+			}
 			const cartSignature = cart
 				.items()
 				.map((i) => i.productId)
 				.sort()
 				.join(",");
 			const key = `checkout_started:${cartSignature}`;
-			if (sessionStorage.getItem(key)) return;
+			if (sessionStorage.getItem(key)) {
+				return;
+			}
 			sessionStorage.setItem(key, "1");
 			trackCheckoutStarted(
 				cart.total(),
@@ -86,37 +95,35 @@ const CheckoutForm = (props: {
 			mutationFn: async (values: newOrderType) => {
 				return await api.order.addOrder.mutate({ ...values });
 			},
+			onError: () => {
+				showToast({
+					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
+					duration: 5000,
+					title: "Алдаа",
+					variant: "error",
+				});
+			},
 			onSuccess: async (data, variables) => {
 				const paymentNumber = data?.paymentNumber;
 				if (!paymentNumber) {
 					showToast({
-						title: "Алдаа",
 						description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
-						variant: "error",
 						duration: 5000,
+						title: "Алдаа",
+						variant: "error",
 					});
 					return;
 				}
 
 				identifyUser(variables.phoneNumber);
 				showToast({
-					title: "Амжилттай",
 					description: "Захиалга амжилттай үүслээ",
-					variant: "success",
 					duration: 5000,
+					title: "Амжилттай",
+					variant: "success",
 				});
 				celebrateOnce(orderCreatedCelebrationKey(paymentNumber), "light");
-				void safeNavigate(
-					paymentUrl(paymentNumber, data.checkoutToken ?? undefined),
-				);
-			},
-			onError: () => {
-				showToast({
-					title: "Алдаа",
-					description: "Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.",
-					variant: "error",
-					duration: 5000,
-				});
+				void safeNavigate(paymentUrl(paymentNumber, data.checkoutToken ?? undefined));
 			},
 		}),
 		() => queryClient,
@@ -124,9 +131,9 @@ const CheckoutForm = (props: {
 
 	const form = useAppForm(() => ({
 		defaultValues: {
-			phoneNumber: props.user?.phone?.toString() || "",
 			address: props.user?.address || "",
 			notes: "",
+			phoneNumber: props.user?.phone?.toString() || "",
 		},
 		// Keep the submit button enabled even when fields have validation errors.
 		// This prevents the silent-button-disabling bug where canSubmit goes false
@@ -134,11 +141,6 @@ const CheckoutForm = (props: {
 		// tap submit; invalid attempts trigger onSubmitInvalid which focuses the
 		// first invalid field and reveals all errors.
 		canSubmitWhenInvalid: true,
-		validators: {
-			onChange: checkoutValidators,
-			onBlur: checkoutValidators,
-			onSubmit: checkoutValidators,
-		},
 		onSubmit: async (values) => {
 			const products = cart.items().map((item) => ({
 				productId: item.productId,
@@ -155,11 +157,14 @@ const CheckoutForm = (props: {
 			// Focus the first invalid field so the user can fix it.
 			// queueMicrotask lets Solid flush aria-invalid attributes before we query.
 			queueMicrotask(() => {
-				const invalid = checkoutFormEl?.querySelector<HTMLElement>(
-					'[aria-invalid="true"]',
-				);
+				const invalid = checkoutFormEl?.querySelector<HTMLElement>('[aria-invalid="true"]');
 				invalid?.focus();
 			});
+		},
+		validators: {
+			onBlur: checkoutValidators,
+			onChange: checkoutValidators,
+			onSubmit: checkoutValidators,
 		},
 	}));
 
@@ -184,18 +189,16 @@ const CheckoutForm = (props: {
 	});
 
 	const OrderSummary = () => (
-		<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft-sm">
+		<div class="border-border bg-card shadow-soft-sm overflow-hidden rounded-2xl border">
 			<button
-				type="button"
-				onClick={() => setSummaryOpen((v) => !v)}
 				class="flex w-full items-center justify-between gap-3 p-3.5 text-left"
+				onClick={() => setSummaryOpen((v) => !v)}
+				type="button"
 			>
 				<div class="flex min-w-0 items-center gap-2">
-					<IconPackage class="h-5 w-5 shrink-0 text-muted-foreground" />
-					<span class="font-semibold text-foreground text-sm">
-						Таны захиалга
-					</span>
-					<span class="rounded-full bg-primary px-2 py-0.5 font-bold text-foreground text-xs tabular-nums">
+					<IconPackage class="text-muted-foreground h-5 w-5 shrink-0" />
+					<span class="text-foreground text-sm font-semibold">Таны захиалга</span>
+					<span class="bg-primary text-foreground rounded-full px-2 py-0.5 text-xs font-bold tabular-nums">
 						{cart.count()}
 					</span>
 				</div>
@@ -204,10 +207,10 @@ const CheckoutForm = (props: {
 						₮{totalWithDelivery().toLocaleString()}
 					</span>
 					<Show
+						fallback={<IconChevronDown class="text-muted-foreground h-5 w-5" />}
 						when={summaryOpen()}
-						fallback={<IconChevronDown class="h-5 w-5 text-muted-foreground" />}
 					>
-						<IconChevronUp class="h-5 w-5 text-muted-foreground" />
+						<IconChevronUp class="text-muted-foreground h-5 w-5" />
 					</Show>
 				</div>
 			</button>
@@ -219,29 +222,29 @@ const CheckoutForm = (props: {
 							{(item) => (
 								<div class="flex gap-2.5">
 									<a
+										class="bg-muted block size-14 flex-shrink-0 overflow-hidden rounded-lg"
 										href={`/products/${item.slug}-${item.productId}/`}
-										class="block size-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted"
 									>
 										<Image
-											src={item.image}
 											alt={`${item.name}`}
-											width={56}
+											class="h-full w-full object-cover"
 											height={56}
 											layout="fixed"
-											class="h-full w-full object-cover"
+											src={item.image}
+											width={56}
 										/>
 									</a>
 									<div class="flex min-w-0 flex-1 flex-col justify-between py-0.5">
 										<a href={`/products/${item.slug}-${item.productId}/`}>
-											<h3 class="line-clamp-2 font-medium text-foreground text-xs leading-tight">
+											<h3 class="text-foreground line-clamp-2 text-xs leading-tight font-medium">
 												{item.name}
 											</h3>
 										</a>
 										<div class="flex items-center justify-between gap-2">
-											<p class="text-[11px] text-muted-foreground">
+											<p class="text-muted-foreground text-[11px]">
 												₮{item.price.toLocaleString()} × {item.quantity}
 											</p>
-											<p class="font-semibold text-foreground text-xs">
+											<p class="text-foreground text-xs font-semibold">
 												₮{(item.price * item.quantity).toLocaleString()}
 											</p>
 										</div>
@@ -251,21 +254,17 @@ const CheckoutForm = (props: {
 						</For>
 					</div>
 
-					<div class="mt-3 space-y-2 border-border border-t pt-3">
+					<div class="border-border mt-3 space-y-2 border-t pt-3">
 						<div class="flex items-center justify-between text-xs">
 							<p class="text-muted-foreground">Бараа</p>
-							<p class="font-medium text-foreground">
-								₮{cart.total().toLocaleString()}
-							</p>
+							<p class="text-foreground font-medium">₮{cart.total().toLocaleString()}</p>
 						</div>
 						<div class="flex items-center justify-between text-xs">
 							<p class="text-muted-foreground">Хүргэлт</p>
-							<p class="font-medium text-foreground">
-								₮{deliveryFee.toLocaleString()}
-							</p>
+							<p class="text-foreground font-medium">₮{deliveryFee.toLocaleString()}</p>
 						</div>
-						<div class="flex items-baseline justify-between border-border border-t pt-2">
-							<p class="font-semibold text-foreground text-sm">Нийт</p>
+						<div class="border-border flex items-baseline justify-between border-t pt-2">
+							<p class="text-foreground text-sm font-semibold">Нийт</p>
 							<p class="font-display text-foreground text-lg">
 								₮{totalWithDelivery().toLocaleString()}
 							</p>
@@ -288,33 +287,27 @@ const CheckoutForm = (props: {
 				<Suspense fallback={<Loading />}>
 					<div class="min-h-screen pb-24 md:pb-0">
 						{/* Sticky header */}
-						<div class="sticky top-0 z-30 border-border border-b bg-background/90 backdrop-blur-sm">
+						<div class="border-border bg-background/90 sticky top-0 z-30 border-b backdrop-blur-sm">
 							<div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
 								<div>
 									<h1 class="font-display text-foreground text-lg">
-										<Show
-											when={step() === "payment"}
-											fallback={"Захиалга баталгаажуулах"}
-										>
+										<Show fallback={"Захиалга баталгаажуулах"} when={step() === "payment"}>
 											Төлбөр төлөх
 										</Show>
 									</h1>
 									<p class="text-muted-foreground text-xs">
-										<Show
-											when={step() === "payment"}
-											fallback={"Алхам 1/2 · Хүргэлт"}
-										>
+										<Show fallback={"Алхам 1/2 · Хүргэлт"} when={step() === "payment"}>
 											Алхам 2/2 · Төлбөр
 										</Show>
 									</p>
 								</div>
 								<div class="flex gap-1.5">
-									<div class="h-1.5 w-8 rounded-full bg-primary" />
+									<div class="bg-primary h-1.5 w-8 rounded-full" />
 									<div
 										class="h-1.5 w-8 rounded-full transition-colors duration-200 ease-out"
 										classList={{
-											"bg-primary": step() === "payment",
 											"bg-border": step() === "delivery",
+											"bg-primary": step() === "payment",
 										}}
 									/>
 								</div>
@@ -329,105 +322,96 @@ const CheckoutForm = (props: {
 										{/* DELIVERY STEP */}
 										<Match when={step() === "delivery"}>
 											<Motion.div
-												initial={{ opacity: 0, x: -24, scale: 0.97 }}
 												animate={{
 													opacity: 1,
-													x: 0,
 													transition: stepEnter,
+													x: 0,
 												}}
 												exit={{
 													opacity: 0,
-													x: -24,
 													scale: 0.97,
 													transition: stepExit,
+													x: -24,
 												}}
+												initial={{ opacity: 0, scale: 0.97, x: -24 }}
 											>
 												<div
-													class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft"
+													class="border-border bg-card shadow-soft overflow-hidden rounded-2xl border"
 													classList={{
 														"animate-checkout-nudge": invalidPulse(),
 													}}
 												>
-													<div class="flex items-center gap-2.5 border-border border-b px-4 py-3.5">
-														<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-wash-sky">
-															<IconTruck
-																class="h-4 w-4 text-foreground"
-																aria-hidden="true"
-															/>
+													<div class="border-border flex items-center gap-2.5 border-b px-4 py-3.5">
+														<span class="bg-wash-sky flex size-9 shrink-0 items-center justify-center rounded-full">
+															<IconTruck aria-hidden="true" class="text-foreground h-4 w-4" />
 														</span>
 														<div>
-															<h2 class="font-semibold text-foreground text-sm">
+															<h2 class="text-foreground text-sm font-semibold">
 																Хүргэлтийн мэдээлэл
 															</h2>
-															<p class="text-muted-foreground text-xs">
-																Бүх талбарыг бөглөнө үү
-															</p>
+															<p class="text-muted-foreground text-xs">Бүх талбарыг бөглөнө үү</p>
 														</div>
 													</div>
 
 													<div class="p-4">
 														<form
-															ref={(element) => {
-																checkoutFormEl = element;
-															}}
 															class="space-y-5"
 															onSubmit={async (e) => {
 																e.preventDefault();
 																e.stopPropagation();
-																if (
-																	document.activeElement instanceof HTMLElement
-																) {
+																if (document.activeElement instanceof HTMLElement) {
 																	document.activeElement.blur();
 																}
 																await form.handleSubmit();
 															}}
+															ref={(element) => {
+																checkoutFormEl = element;
+															}}
 														>
 															{/* Phone */}
 															<form.AppField
-																name="phoneNumber"
 																children={(field) => (
 																	<field.FormTextField
+																		autoComplete="tel"
+																		inputMode="numeric"
 																		label="Утасны дугаар"
 																		placeholder="88889999"
 																		type="tel"
-																		autoComplete="tel"
-																		inputMode="numeric"
 																	/>
 																)}
+																name="phoneNumber"
 															/>
 
 															{/* Address */}
 															<form.AppField
-																name="address"
 																children={(field) => (
 																	<field.FormTextArea
+																		autoComplete="street-address"
 																		label="Хаяг"
 																		placeholder="Байр, тоот, давхар"
-																		autoComplete="street-address"
 																	/>
 																)}
+																name="address"
 															/>
 
 															{/* Notes */}
 															<form.AppField
-																name="notes"
 																children={(field) => (
 																	<field.FormTextArea
 																		label="Нэмэлт мэдээлэл (заавал биш)"
 																		placeholder="Орцны код, жижүүрт үлдээх гэх мэт"
 																	/>
 																)}
+																name="notes"
 															/>
 
 															{/* Delivery estimate */}
-															<div class="flex items-center gap-2.5 rounded-xl bg-muted/50 px-3.5 py-2.5">
-																<IconTruck class="h-4 w-4 shrink-0 text-muted-foreground" />
-																<p class="font-medium text-muted-foreground text-xs leading-snug">
+															<div class="bg-muted/50 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5">
+																<IconTruck class="text-muted-foreground h-4 w-4 shrink-0" />
+																<p class="text-muted-foreground text-xs leading-snug font-medium">
 																	<Show
+																		fallback={<>Хүргэлт маргааш 12:00-аас хойш</>}
 																		when={deliveryEstimate() === "today"}
-																		fallback={
-																			<>Хүргэлт маргааш 12:00-аас хойш</>
-																		}
 																	>
 																		Хүргэлт өнөөдөр 12:00-аас хойш
 																	</Show>
@@ -438,11 +422,9 @@ const CheckoutForm = (props: {
 
 															{/* Submit */}
 															<div class="space-y-3 pt-1">
-																<div class="flex items-center justify-between rounded-xl bg-wash-lemon px-4 py-3">
+																<div class="bg-wash-lemon flex items-center justify-between rounded-xl px-4 py-3">
 																	<div>
-																		<p class="font-semibold text-foreground text-sm">
-																			Төлөх дүн
-																		</p>
+																		<p class="text-foreground text-sm font-semibold">Төлөх дүн</p>
 																		<p class="text-foreground/60 text-xs">
 																			Хүргэлтийн хураамж орсон
 																		</p>
@@ -455,22 +437,22 @@ const CheckoutForm = (props: {
 																<form.AppForm>
 																	<div class="w-full">
 																		<form.SubmitButton
-																			size="lg"
 																			class="w-full"
+																			disabled={mutation.isPending}
 																			loadingContent={
 																				<WorkingStatus
-																					label="Захиалга үүсгэж байна…"
 																					icon={<IconTruck />}
+																					label="Захиалга үүсгэж байна…"
 																				/>
 																			}
-																			disabled={mutation.isPending}
+																			size="lg"
 																		>
 																			Төлбөр төлөх →
 																		</form.SubmitButton>
 																	</div>
 																</form.AppForm>
 
-																<p class="text-center text-muted-foreground text-xs">
+																<p class="text-muted-foreground text-center text-xs">
 																	Дараагийн алхамд төлбөрийн хуудас руу шилжинэ
 																</p>
 															</div>

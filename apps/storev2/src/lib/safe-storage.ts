@@ -1,30 +1,4 @@
 export const safeStorage: Storage = {
-	getItem: (key: string) => {
-		if (typeof window === "undefined") {
-			return null;
-		}
-		try {
-			return localStorage.getItem(key);
-		} catch {
-			return null;
-		}
-	},
-	setItem: (key: string, value: string) => {
-		if (typeof window === "undefined") {
-			return;
-		}
-		try {
-			localStorage.setItem(key, value);
-		} catch {}
-	},
-	removeItem: (key: string) => {
-		if (typeof window === "undefined") {
-			return;
-		}
-		try {
-			localStorage.removeItem(key);
-		} catch {}
-	},
 	clear: () => {
 		if (typeof window === "undefined") {
 			return;
@@ -33,14 +7,14 @@ export const safeStorage: Storage = {
 			localStorage.clear();
 		} catch {}
 	},
-	get length() {
+	getItem: (key: string) => {
 		if (typeof window === "undefined") {
-			return 0;
+			return null;
 		}
 		try {
-			return localStorage.length;
+			return localStorage.getItem(key);
 		} catch {
-			return 0;
+			return null;
 		}
 	},
 	key: (index: number) => {
@@ -52,5 +26,31 @@ export const safeStorage: Storage = {
 		} catch {
 			return null;
 		}
+	},
+	get length() {
+		if (typeof window === "undefined") {
+			return 0;
+		}
+		try {
+			return localStorage.length;
+		} catch {
+			return 0;
+		}
+	},
+	removeItem: (key: string) => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		try {
+			localStorage.removeItem(key);
+		} catch {}
+	},
+	setItem: (key: string, value: string) => {
+		if (typeof window === "undefined") {
+			return;
+		}
+		try {
+			localStorage.setItem(key, value);
+		} catch {}
 	},
 };

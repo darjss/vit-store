@@ -44,23 +44,25 @@ Coordinate with open package-boundary/CI issue #139; do not absorb its broader s
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- tsconfig.base.json apps/agent/tsconfig.json apps/admin/tsconfig.json packages/shared/package.json packages/api/package.json turbo.json` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                   | Expected on success                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- tsconfig.base.json apps/agent/tsconfig.json apps/admin/tsconfig.json packages/shared/package.json packages/api/package.json turbo.json` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                     | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                           | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                    | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - resolution matrix and owner decision
 - only aliases/exports required for one proven model
 - documentation of selected model
 
 **Files/path families allowed**
+
 - `tsconfig.base.json`
 - `apps/agent/tsconfig.json`
 - `apps/admin/tsconfig.json`
@@ -69,6 +71,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `turbo.json`
 
 **Out of scope**
+
 - package redesign/publishing
 - half-mixed per-consumer workaround
 - unapproved package output changes

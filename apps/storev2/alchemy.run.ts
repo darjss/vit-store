@@ -20,8 +20,8 @@ config({
 const env = createStoreAlchemyEnv(process.env);
 
 type StoreBindings = {
-	server: ReturnType<typeof WorkerRef>;
 	PUBLIC_API_URL: string;
+	server: ReturnType<typeof WorkerRef>;
 };
 
 console.log("stage", stage, env.PUBLIC_API_URL);
@@ -37,23 +37,23 @@ export const storev2 = await Astro<StoreBindings>("front", {
 	},
 	// Wrap the official Astro handler to expose a private cache-purge RPC method;
 	// the wrapper imports dist/server/entry.mjs after the build completes.
-	entrypoint: "worker.mjs",
+	adopt: true,
 	assets: "dist/client",
-	cache: { enabled: true },
 	bindings: {
 		// Reference the already-deployed server Worker by physical service name.
 		// Importing server/alchemy here causes store deploys to evaluate/deploy the
 		// server app first, which can hang when Cloudflare's API is degraded.
-		server: WorkerRef({ service: `server-api-${stage}` }),
 		PUBLIC_API_URL: env.PUBLIC_API_URL,
+		server: WorkerRef({ service: `server-api-${stage}` }),
 	},
-	adopt: true,
+	cache: { enabled: true },
 	domains:
 		stage === "prod"
 			? ["amerikvitamin.mn"]
 			: stage === "staging"
 				? ["staging.amerikvitamin.mn"]
 				: undefined,
+	entrypoint: "worker.mjs",
 	observability: {
 		enabled: false,
 		logs: {

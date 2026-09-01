@@ -21,8 +21,8 @@ const STORAGE_KEY = "checkout";
 // (discriminator then state) so the nested `checkoutStateSchema` keeps its
 // precise type.
 const checkoutRequestSchema = v.object({
-	type: v.picklist(["put"]),
 	state: v.optional(checkoutStateSchema),
+	type: v.picklist(["put"]),
 });
 
 export class CheckoutStore implements DurableObject {
@@ -30,7 +30,9 @@ export class CheckoutStore implements DurableObject {
 
 	private async read(): Promise<CheckoutState | undefined> {
 		const stored = await this.state.storage.get(STORAGE_KEY);
-		if (stored === undefined) return undefined;
+		if (stored === undefined) {
+			return undefined;
+		}
 		// Tolerate a legacy/garbled record by resetting rather than throwing the
 		// customer's whole turn.
 		const parsed = v.safeParse(checkoutStateSchema, stored);

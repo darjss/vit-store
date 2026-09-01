@@ -6,29 +6,29 @@ import { logger } from "~/lib/logger";
 export const PRODUCT_AI_MODEL = "@cf/moonshotai/kimi-k2.6" as const;
 
 type ProductAiInput = {
+	chat_template_kwargs: { thinking: false };
+	max_completion_tokens: number;
 	messages: Array<{
-		role: "user";
 		content:
 			| string
 			| Array<
-					| { type: "text"; text: string }
+					| { text: string; type: "text" }
 					| {
+							image_url: { detail: "high"; url: string };
 							type: "image_url";
-							image_url: { url: string; detail: "high" };
 					  }
 			  >;
+		role: "user";
 	}>;
 	response_format: {
-		type: "json_schema";
 		json_schema: {
 			name: string;
 			schema: Record<string, unknown>;
 			strict: true;
 		};
+		type: "json_schema";
 	};
-	chat_template_kwargs: { thinking: false };
 	temperature: 0;
-	max_completion_tokens: number;
 };
 
 type ProductAiResponse = {
@@ -36,18 +36,15 @@ type ProductAiResponse = {
 };
 
 export interface ProductAi {
-	run(
-		model: typeof PRODUCT_AI_MODEL,
-		inputs: ProductAiInput,
-	): Promise<ProductAiResponse>;
+	run(model: typeof PRODUCT_AI_MODEL, inputs: ProductAiInput): Promise<ProductAiResponse>;
 }
 
 const MAX_AI_IMAGE_BYTES = 3_000_000;
 
 function toBase64(bytes: Uint8Array): string {
 	let binary = "";
-	for (let i = 0; i < bytes.length; i += 0x8000) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+	for (let i = 0; i < bytes.length; i += 0x80_00) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + 0x80_00));
 	}
 	return btoa(binary);
 }
@@ -61,7 +58,9 @@ async function imageUrlToDataUrl(url: string): Promise<string> {
 		},
 		signal: AbortSignal.timeout(15_000),
 	});
-	if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
+	if (!response.ok) {
+		throw new Error(`Image fetch failed: ${response.status}`);
+	}
 
 	const contentType = response.headers.get("content-type") ?? "";
 	if (!contentType.startsWith("image/")) {
@@ -83,8 +82,8 @@ async function prepareImageUrl(url: string): Promise<string> {
 		return await imageUrlToDataUrl(url);
 	} catch (error) {
 		logger.warn("productAi.imageDataUrlFailed", {
-			url,
 			error: error instanceof Error ? error.message : "unknown",
+			url,
 		});
 		return url;
 	}
@@ -104,11 +103,11 @@ async function runWithRetry(ai: ProductAi, inputs: ProductAiInput) {
 export async function runProductAi<T extends z.ZodType>(
 	ai: ProductAi,
 	params: {
-		name: string;
-		schema: T;
-		prompt: string;
-		imageUrls?: string[];
+		imageUrls?: Array<string>;
 		maxCompletionTokens?: number;
+		name: string;
+		prompt: string;
+		schema: T;
 	},
 ): Promise<z.infer<T>> {
 	const preparedImageUrls = params.imageUrls?.length
@@ -116,27 +115,27 @@ export async function runProductAi<T extends z.ZodType>(
 		: [];
 	const content = preparedImageUrls.length
 		? [
-				{ type: "text" as const, text: params.prompt },
+				{ text: params.prompt, type: "text" as const },
 				...preparedImageUrls.map((url) => ({
+					image_url: { detail: "high" as const, url },
 					type: "image_url" as const,
-					image_url: { url, detail: "high" as const },
 				})),
 			]
 		: params.prompt;
 
 	const response = await runWithRetry(ai, {
-		messages: [{ role: "user", content }],
+		chat_template_kwargs: { thinking: false },
+		max_completion_tokens: params.maxCompletionTokens ?? 2048,
+		messages: [{ content, role: "user" }],
 		response_format: {
-			type: "json_schema",
 			json_schema: {
 				name: params.name,
 				schema: z.toJSONSchema(params.schema),
 				strict: true,
 			},
+			type: "json_schema",
 		},
-		chat_template_kwargs: { thinking: false },
 		temperature: 0,
-		max_completion_tokens: params.maxCompletionTokens ?? 2048,
 	});
 
 	const text = response.choices[0]?.message.content;
@@ -152,9 +151,9 @@ export async function runProductAi<T extends z.ZodType>(
 	} catch (error) {
 		if (error instanceof SyntaxError) {
 			throw new TRPCError({
+				cause: error,
 				code: "INTERNAL_SERVER_ERROR",
 				message: "Workers AI returned invalid product data",
-				cause: error,
 			});
 		}
 		throw error;

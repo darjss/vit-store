@@ -1,6 +1,6 @@
 import type { Api } from "grammy";
 
-const TYPING_REFRESH_MS = 4_000;
+const TYPING_REFRESH_MS = 4000;
 
 export type TelegramChatAction = "typing" | "upload_photo";
 
@@ -21,7 +21,9 @@ export const withTelegramTyping = async <T>(
 
 	await pulse();
 	const timer = setInterval(() => {
-		if (!stopped) void pulse();
+		if (!stopped) {
+			void pulse();
+		}
 	}, TYPING_REFRESH_MS);
 
 	try {

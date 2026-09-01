@@ -6,22 +6,14 @@
  * across payment pages, polling effects, and mutation callbacks.
  */
 export function withCt(path: string, checkoutToken?: string): string {
-	return checkoutToken
-		? `${path}?ct=${encodeURIComponent(checkoutToken)}`
-		: path;
+	return checkoutToken ? `${path}?ct=${encodeURIComponent(checkoutToken)}` : path;
 }
 
-export const paymentSuccessUrl = (
-	paymentNumber: string,
-	checkoutToken?: string,
-) => withCt(`/payment/success/${paymentNumber}`, checkoutToken);
+export const paymentSuccessUrl = (paymentNumber: string, checkoutToken?: string) =>
+	withCt(`/payment/success/${paymentNumber}`, checkoutToken);
 
-export const orderConfirmUrl = (
-	orderNumber: string,
-	checkoutToken?: string,
-) => withCt(`/order/confirm/${orderNumber}`, checkoutToken);
+export const orderConfirmUrl = (orderNumber: string, checkoutToken?: string) =>
+	withCt(`/order/confirm/${orderNumber}`, checkoutToken);
 
-export const paymentUrl = (
-	paymentNumber: string,
-	checkoutToken?: string,
-) => withCt(`/payment/${paymentNumber}`, checkoutToken);
+export const paymentUrl = (paymentNumber: string, checkoutToken?: string) =>
+	withCt(`/payment/${paymentNumber}`, checkoutToken);

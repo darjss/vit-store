@@ -24,7 +24,7 @@ const serverApi = createServerClient(cookieHeader, env.server);
 let user = null;
 try {
 	user = await serverApi.auth.check.query();
-} catch (error) {
+} catch {
 }
 ---
 

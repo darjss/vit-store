@@ -14,12 +14,22 @@ import superjson from "superjson";
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			staleTime: 30 * 1000,
 			gcTime: 5 * 60 * 1000,
 			refetchOnWindowFocus: false,
 			retry: 1,
+			staleTime: 30 * 1000,
 		},
 	},
+	mutationCache: new MutationCache({
+		onError: (error, _variables, _context, mutation) => {
+			// Skip when the mutation defines its own onError (TanStack runs both;
+			// avoid double-toast by deferring to the local handler).
+			if (mutation.options.onError) {
+				return;
+			}
+			toast.error(error.message);
+		},
+	}),
 	queryCache: new QueryCache({
 		onError: (error) => {
 			toast.error(error.message, {
@@ -32,49 +42,36 @@ export const queryClient = new QueryClient({
 			});
 		},
 	}),
-	mutationCache: new MutationCache({
-		onError: (error, _variables, _context, mutation) => {
-			// Skip when the mutation defines its own onError (TanStack runs both;
-			// avoid double-toast by deferring to the local handler).
-			if (mutation.options.onError) return;
-			toast.error(error.message);
-		},
-	}),
 });
 
 async function checkUnauthorized(response: Response): Promise<boolean> {
-	if (response.status === 401) return true;
+	if (response.status === 401) {
+		return true;
+	}
 	const cloned = response.clone();
 	try {
-		const data = (await cloned.json()) as {
-			error?: { data?: { code?: string }; code?: string };
-		} | Array<{ error?: { data?: { code?: string }; code?: string } }>;
+		const data = (await cloned.json()) as
+			| {
+					error?: { code?: string; data?: { code?: string } };
+			  }
+			| Array<{ error?: { code?: string; data?: { code?: string } } }>;
 		if (Array.isArray(data)) {
 			return data.some(
 				(item) =>
-					item?.error?.data?.code === "UNAUTHORIZED" ||
-					item?.error?.code === "UNAUTHORIZED",
+					item?.error?.data?.code === "UNAUTHORIZED" || item?.error?.code === "UNAUTHORIZED",
 			);
 		}
-		return (
-			data?.error?.data?.code === "UNAUTHORIZED" ||
-			data?.error?.code === "UNAUTHORIZED"
-		);
+		return data?.error?.data?.code === "UNAUTHORIZED" || data?.error?.code === "UNAUTHORIZED";
 	} catch {
 		return false;
 	}
 }
 
-function createAuthenticatedFetch(
-	fetchFn: typeof fetch,
-): typeof fetch {
+function createAuthenticatedFetch(fetchFn: typeof fetch): typeof fetch {
 	return async (url, options) => {
 		const response = await fetchFn(url, options);
 		if (await checkUnauthorized(response)) {
-			if (
-				typeof window !== "undefined" &&
-				window.location.pathname !== "/login"
-			) {
+			if (typeof window !== "undefined" && window.location.pathname !== "/login") {
 				window.location.href = "/login";
 			}
 		}
@@ -86,8 +83,21 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 	links: [
 		splitLink({
 			condition: (op) => isNonJsonSerializable(op.input),
-			true: httpLink({
+			false: httpBatchLink({
+				fetch: createAuthenticatedFetch((url, options) =>
+					fetch(url, {
+						...options,
+						credentials: "include",
+						headers: {
+							...options?.headers,
+							Origin: window.location.origin,
+						},
+					}),
+				),
+				transformer: superjson,
 				url: `${import.meta.env.VITE_SERVER_URL}/trpc/admin`,
+			}),
+			true: httpLink({
 				fetch: createAuthenticatedFetch((url, options) =>
 					fetch(url, {
 						...options,
@@ -99,23 +109,10 @@ export const trpcClient = createTRPCClient<AdminRouter>({
 					}),
 				),
 				transformer: {
-					serialize: (data) => data,
 					deserialize: superjson.deserialize,
+					serialize: (data) => data,
 				},
-			}),
-			false: httpBatchLink({
 				url: `${import.meta.env.VITE_SERVER_URL}/trpc/admin`,
-				transformer: superjson,
-				fetch: createAuthenticatedFetch((url, options) =>
-					fetch(url, {
-						...options,
-						credentials: "include",
-						headers: {
-							...options?.headers,
-							Origin: window.location.origin,
-						},
-					}),
-				),
 			}),
 		}),
 	],

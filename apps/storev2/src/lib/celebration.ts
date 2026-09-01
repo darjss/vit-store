@@ -2,41 +2,39 @@ export type CelebrationIntensity = "light" | "strong";
 
 const STORAGE_PREFIX = "celebrate:";
 
-const COLORS = [
-	"#f5d76e",
-	"#e8c04a",
-	"#f0c9a0",
-	"#f0c4c8",
-	"#b8e0c8",
-	"#f5e8a0",
-	"#e8d4a8",
-];
+const COLORS = ["#f5d76e", "#e8c04a", "#f0c9a0", "#f0c4c8", "#b8e0c8", "#f5e8a0", "#e8d4a8"];
 
 const inMemoryFired = new Set<string>();
 
 type Particle = {
-	x: number;
-	y: number;
+	color: string;
+	h: number;
+	opacity: number;
+	rotation: number;
+	shape: "rect" | "circle";
+	vr: number;
 	vx: number;
 	vy: number;
 	w: number;
-	h: number;
-	rotation: number;
-	vr: number;
-	color: string;
-	opacity: number;
-	shape: "rect" | "circle";
+	x: number;
+	y: number;
 };
 
 function prefersReducedMotion(): boolean {
-	if (typeof window === "undefined") return true;
+	if (typeof window === "undefined") {
+		return true;
+	}
 	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function hasFired(key: string): boolean {
 	const storageKey = STORAGE_PREFIX + key;
-	if (inMemoryFired.has(storageKey)) return true;
-	if (typeof window === "undefined") return true;
+	if (inMemoryFired.has(storageKey)) {
+		return true;
+	}
+	if (typeof window === "undefined") {
+		return true;
+	}
 	try {
 		return sessionStorage.getItem(storageKey) === "1";
 	} catch {
@@ -47,7 +45,9 @@ function hasFired(key: string): boolean {
 function markFired(key: string): void {
 	const storageKey = STORAGE_PREFIX + key;
 	inMemoryFired.add(storageKey);
-	if (typeof window === "undefined") return;
+	if (typeof window === "undefined") {
+		return;
+	}
 	try {
 		sessionStorage.setItem(storageKey, "1");
 	} catch {
@@ -68,24 +68,24 @@ function spawnParticles(
 	originX: number,
 	originY: number,
 	spread: number,
-): Particle[] {
-	const particles: Particle[] = [];
+): Array<Particle> {
+	const particles: Array<Particle> = [];
 	for (let i = 0; i < count; i++) {
 		const angle = rand(-Math.PI * 0.85, -Math.PI * 0.15);
 		const speed = rand(4, spread);
 		const size = rand(5, 10);
 		particles.push({
-			x: originX + rand(-24, 24),
-			y: originY + rand(-8, 8),
+			color: pickColor(),
+			h: size * rand(0.45, 1.15),
+			opacity: 1,
+			rotation: rand(0, Math.PI * 2),
+			shape: Math.random() > 0.35 ? "rect" : "circle",
+			vr: rand(-0.18, 0.18),
 			vx: Math.cos(angle) * speed + rand(-1.5, 1.5),
 			vy: Math.sin(angle) * speed,
 			w: size,
-			h: size * rand(0.45, 1.15),
-			rotation: rand(0, Math.PI * 2),
-			vr: rand(-0.18, 0.18),
-			color: pickColor(),
-			opacity: 1,
-			shape: Math.random() > 0.35 ? "rect" : "circle",
+			x: originX + rand(-24, 24),
+			y: originY + rand(-8, 8),
 		});
 	}
 	return particles;
@@ -104,9 +104,11 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 	canvas.height = Math.floor(h * dpr);
 
 	const ctx = canvas.getContext("2d");
-	if (!ctx) return;
+	if (!ctx) {
+		return;
+	}
 	ctx.scale(dpr, dpr);
-	document.body.appendChild(canvas);
+	document.body.append(canvas);
 
 	const isStrong = intensity === "strong";
 	const count = isStrong
@@ -145,7 +147,9 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 			p.rotation += p.vr;
 			p.opacity = fade;
 
-			if (p.opacity <= 0.02) continue;
+			if (p.opacity <= 0.02) {
+				continue;
+			}
 
 			ctx.save();
 			ctx.translate(p.x, p.y);
@@ -173,18 +177,23 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 
 	window.setTimeout(() => {
 		cancelAnimationFrame(frame);
-		if (canvas.isConnected) canvas.remove();
+		if (canvas.isConnected) {
+			canvas.remove();
+		}
 	}, durationMs + 400);
 }
 
-export function celebrateOnce(
-	key: string,
-	intensity: CelebrationIntensity = "strong",
-): boolean {
-	if (typeof window === "undefined") return false;
-	if (hasFired(key)) return false;
+export function celebrateOnce(key: string, intensity: CelebrationIntensity = "strong"): boolean {
+	if (typeof window === "undefined") {
+		return false;
+	}
+	if (hasFired(key)) {
+		return false;
+	}
 	markFired(key);
-	if (prefersReducedMotion()) return false;
+	if (prefersReducedMotion()) {
+		return false;
+	}
 	runCanvasBurst(intensity);
 	return true;
 }

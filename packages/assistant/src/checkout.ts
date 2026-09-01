@@ -37,10 +37,10 @@ export type CheckoutPhase = v.InferOutput<typeof checkoutPhaseSchema>;
 // so the confirmation prompt and any debugging can explain why a zone was
 // suggested.
 export const zoneCandidateSchema = v.object({
+	evidence: v.array(v.string()),
+	score: v.number(),
 	zoneId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 	zoneName: v.string(),
-	score: v.number(),
-	evidence: v.array(v.string()),
 });
 
 export type ZoneCandidate = v.InferOutput<typeof zoneCandidateSchema>;
@@ -53,17 +53,13 @@ export type ZoneCandidate = v.InferOutput<typeof zoneCandidateSchema>;
 // transfer and saw the account; `transfer_claimed` = they reported paying. NONE
 // of these is a confirmed payment — that is owned by admin/bank tooling (ADR
 // 0004), and the checkout layer never advances the payment to success.
-export const transferStatusSchema = v.picklist([
-	"offered",
-	"transfer_pending",
-	"transfer_claimed",
-]);
+export const transferStatusSchema = v.picklist(["offered", "transfer_pending", "transfer_claimed"]);
 
 export type TransferStatus = v.InferOutput<typeof transferStatusSchema>;
 
 export const paymentContextSchema = v.object({
-	paymentNumber: v.string(),
 	checkoutToken: v.optional(v.string()),
+	paymentNumber: v.string(),
 	transferStatus: transferStatusSchema,
 });
 
@@ -72,32 +68,32 @@ export type PaymentContext = v.InferOutput<typeof paymentContextSchema>;
 // The whole checkout's collected state. Persisted verbatim by the per-session
 // CheckoutStore DO, so it is a plain valibot-validatable record.
 export const checkoutStateSchema = v.object({
-	phase: checkoutPhaseSchema,
-	phone: v.optional(v.string()),
 	address: v.optional(v.string()),
 	candidates: v.array(zoneCandidateSchema),
-	selectedZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-	selectedZoneName: v.optional(v.string()),
 	notes: v.optional(v.string()),
 	payment: v.optional(paymentContextSchema),
+	phase: checkoutPhaseSchema,
+	phone: v.optional(v.string()),
+	selectedZoneId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+	selectedZoneName: v.optional(v.string()),
 });
 
 export type CheckoutState = v.InferOutput<typeof checkoutStateSchema>;
 
 export const initialCheckoutState = (): CheckoutState => ({
-	phase: "collecting_phone",
 	candidates: [],
+	phase: "collecting_phone",
 });
 
 // The exact input shape `order.addOrder` accepts (mirrors `newOrderSchema` in
 // @vit/shared). Kept structural here so the channel-neutral domain does not
 // import the api/db type graph; the agent boundary validates the wire response.
 export interface CheckoutOrderPayload {
-	phoneNumber: string;
 	address: string;
 	addressZoneId: number;
 	notes?: string;
-	products: { productId: number; quantity: number }[];
+	phoneNumber: string;
+	products: Array<{ productId: number; quantity: number }>;
 }
 
 // ── Phone validation ─────────────────────────────────────────────────────────
@@ -112,22 +108,21 @@ export const PHONE_INVALID_MESSAGE =
 	"Утасны дугаар буруу байна. 8 оронтой, 6-9-өөр эхэлсэн дугаараа бичнэ үү (ж: 99112233).";
 
 export const normalizePhone = (raw: string): string => {
-	let digits = raw.replace(/\D/g, "");
-	if (digits.length === 11 && digits.startsWith("976"))
+	let digits = raw.replaceAll(/\D/g, "");
+	if (digits.length === 11 && digits.startsWith("976")) {
 		digits = digits.slice(3);
-	if (digits.length === 9 && digits.startsWith("0")) digits = digits.slice(1);
+	}
+	if (digits.length === 9 && digits.startsWith("0")) {
+		digits = digits.slice(1);
+	}
 	return digits;
 };
 
-export type PhoneValidation =
-	| { ok: true; phone: string }
-	| { ok: false; error: string };
+export type PhoneValidation = { ok: true; phone: string } | { error: string; ok: false };
 
 export const validatePhone = (raw: string): PhoneValidation => {
 	const phone = normalizePhone(raw);
-	return PHONE_RE.test(phone)
-		? { ok: true, phone }
-		: { ok: false, error: PHONE_INVALID_MESSAGE };
+	return PHONE_RE.test(phone) ? { ok: true, phone } : { error: PHONE_INVALID_MESSAGE, ok: false };
 };
 
 // ── Transitions (pure) ───────────────────────────────────────────────────────
@@ -138,11 +133,9 @@ export const validatePhone = (raw: string): PhoneValidation => {
 export const CHECKOUT_NEEDS_CONFIRMED_CART_MESSAGE =
 	"Захиалга эхлүүлэхийн өмнө сагсаа баталгаажуулна уу.";
 
-export const canBeginCheckout = (
-	cart: Cart,
-): { ok: true } | { ok: false; error: string } => {
+export const canBeginCheckout = (cart: Cart): { ok: true } | { error: string; ok: false } => {
 	if (isCartEmpty(cart) || !cart.confirmed) {
-		return { ok: false, error: CHECKOUT_NEEDS_CONFIRMED_CART_MESSAGE };
+		return { error: CHECKOUT_NEEDS_CONFIRMED_CART_MESSAGE, ok: false };
 	}
 	return { ok: true };
 };
@@ -152,15 +145,17 @@ export const canBeginCheckout = (
 export const applyPhone = (
 	state: CheckoutState,
 	raw: string,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
+): { ok: true; state: CheckoutState } | { error: string; ok: false } => {
 	const result = validatePhone(raw);
-	if (!result.ok) return result;
+	if (!result.ok) {
+		return result;
+	}
 	return {
 		ok: true,
 		state: {
 			...state,
-			phone: result.phone,
 			phase: "collecting_address",
+			phone: result.phone,
 		},
 	};
 };
@@ -170,23 +165,23 @@ export const applyPhone = (
 export const applyAddress = (
 	state: CheckoutState,
 	text: string,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
+): { ok: true; state: CheckoutState } | { error: string; ok: false } => {
 	const address = text.trim();
 	if (address.length === 0) {
 		return {
-			ok: false,
 			error: "Хүргэлтийн хаягаа бичнэ үү (дүүрэг, хороо, байр/тоот).",
+			ok: false,
 		};
 	}
 	return {
 		ok: true,
-		state: { ...state, address, phase: "confirming_zone", candidates: [] },
+		state: { ...state, address, candidates: [], phase: "confirming_zone" },
 	};
 };
 
 export const setZoneCandidates = (
 	state: CheckoutState,
-	candidates: ZoneCandidate[],
+	candidates: Array<ZoneCandidate>,
 ): CheckoutState => ({ ...state, candidates });
 
 export const ZONE_NOT_A_CANDIDATE_MESSAGE =
@@ -198,26 +193,25 @@ export const ZONE_NOT_A_CANDIDATE_MESSAGE =
 export const applyZoneSelection = (
 	state: CheckoutState,
 	zoneId: number,
-): { ok: true; state: CheckoutState } | { ok: false; error: string } => {
+): { ok: true; state: CheckoutState } | { error: string; ok: false } => {
 	const candidate = state.candidates.find((c) => c.zoneId === zoneId);
-	if (!candidate) return { ok: false, error: ZONE_NOT_A_CANDIDATE_MESSAGE };
+	if (!candidate) {
+		return { error: ZONE_NOT_A_CANDIDATE_MESSAGE, ok: false };
+	}
 	return {
 		ok: true,
 		state: {
 			...state,
+			phase: "collecting_notes",
 			selectedZoneId: candidate.zoneId,
 			selectedZoneName: candidate.zoneName,
-			phase: "collecting_notes",
 		},
 	};
 };
 
 // Records optional notes (empty/skip → no notes) and advances to the final
 // confirmation summary.
-export const applyNotes = (
-	state: CheckoutState,
-	notes: string | undefined,
-): CheckoutState => {
+export const applyNotes = (state: CheckoutState, notes: string | undefined): CheckoutState => {
 	const trimmed = notes?.trim();
 	return {
 		...state,
@@ -246,7 +240,7 @@ export const markCreated = (state: CheckoutState): CheckoutState => ({
 // recognise a bank-transfer claim for this exact payment. Starts at `offered`.
 export const attachPayment = (
 	state: CheckoutState,
-	payment: { paymentNumber: string; checkoutToken: string | null },
+	payment: { checkoutToken: string | null; paymentNumber: string },
 ): CheckoutState => ({
 	...state,
 	payment: {
@@ -265,9 +259,7 @@ export const setTransferStatus = (
 	state: CheckoutState,
 	transferStatus: TransferStatus,
 ): CheckoutState =>
-	state.payment
-		? { ...state, payment: { ...state.payment, transferStatus } }
-		: state;
+	state.payment ? { ...state, payment: { ...state.payment, transferStatus } } : state;
 
 // Whether every field the order API requires is present. Used as the guard
 // before building the payload / creating the order.
@@ -289,9 +281,9 @@ export const buildCheckoutOrderPayload = (
 		throw new Error("checkout is not ready: missing phone, address, or zone");
 	}
 	return {
-		phoneNumber: state.phone as string,
 		address: state.address as string,
 		addressZoneId: state.selectedZoneId as number,
+		phoneNumber: state.phone as string,
 		...(state.notes ? { notes: state.notes } : {}),
 		products: cart.items.map((item) => ({
 			productId: item.productId,
@@ -302,14 +294,12 @@ export const buildCheckoutOrderPayload = (
 
 // ── Formatting (Mongolian, channel-neutral text) ─────────────────────────────
 
-const formatPrice = (price: number): string =>
-	`${Math.round(price).toLocaleString("en-US")}₮`;
+const formatPrice = (price: number): string => `${Math.round(price).toLocaleString("en-US")}₮`;
 
 export const CHECKOUT_PHONE_PROMPT =
 	"За 🙏 Захиалгаа авъя. Утасны дугаар, хүргэлтийн хаягаа (дүүрэг, хороо, байр/тоот) бичээд илгээгээрэй.";
 
-export const CHECKOUT_ADDRESS_PROMPT =
-	"За. Хүргэлтийн хаягаа бичээрэй (дүүрэг, хороо, байр/тоот).";
+export const CHECKOUT_ADDRESS_PROMPT = "За. Хүргэлтийн хаягаа бичээрэй (дүүрэг, хороо, байр/тоот).";
 
 export const CHECKOUT_NOTES_PROMPT =
 	"Захиалгад нэмэлт тэмдэглэл байвал бичнэ үү, эсвэл «алга» гэж бичээд алгасаарай.";
@@ -317,7 +307,7 @@ export const CHECKOUT_NOTES_PROMPT =
 // Renders the ranked candidates as a numbered list the customer confirms one
 // of. Never auto-picks: even a single strong candidate is shown for an explicit
 // yes (ADR 0005).
-export const formatZoneCandidates = (candidates: ZoneCandidate[]): string => {
+export const formatZoneCandidates = (candidates: Array<ZoneCandidate>): string => {
 	if (candidates.length === 0) {
 		return "Уучлаарай, таны хаягт тохирох хүргэлтийн бүс олдсонгүй. Хаягаа дэлгэрэнгүй бичиж үзнэ үү.";
 	}
@@ -334,10 +324,7 @@ export const formatZoneCandidates = (candidates: ZoneCandidate[]): string => {
 // ESTIMATED total (subtotal + delivery fee) labelled as such, and the collected
 // phone/address/zone/notes so the customer can confirm before the order is
 // created. The API computes the binding total.
-export const formatOrderSummary = (
-	state: CheckoutState,
-	cart: Cart,
-): string => {
+export const formatOrderSummary = (state: CheckoutState, cart: Cart): string => {
 	const lines = cart.items.map((item, index) => {
 		const lineTotal = item.price * item.quantity;
 		return `${index + 1}. ${item.name} — ${formatPrice(item.price)} × ${item.quantity} = ${formatPrice(lineTotal)}`;
@@ -363,15 +350,11 @@ export const formatOrderSummary = (
 
 // Confirmation text after the order is created. Surfaces the order/payment
 // numbers the customer (and the later payment slices #24/#25) need.
-export const formatOrderCreated = (
-	orderNumber: string,
-	paymentNumber: string | null,
-): string => {
-	const lines = [
-		"✅ Захиалга амжилттай үүслээ!",
-		`Захиалгын дугаар: ${orderNumber}`,
-	];
-	if (paymentNumber) lines.push(`Төлбөрийн дугаар: ${paymentNumber}`);
+export const formatOrderCreated = (orderNumber: string, paymentNumber: string | null): string => {
+	const lines = ["✅ Захиалга амжилттай үүслээ!", `Захиалгын дугаар: ${orderNumber}`];
+	if (paymentNumber) {
+		lines.push(`Төлбөрийн дугаар: ${paymentNumber}`);
+	}
 	lines.push("Төлбөрийн мэдээллийг удахгүй илгээх болно. Баярлалаа!");
 	return lines.join("\n");
 };

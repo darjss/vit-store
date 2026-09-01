@@ -14,17 +14,17 @@ Migrate vit-store to **full Vite+** like [store-kit](https://github.com/darjss/s
 
 store-kit is the template. Key pieces:
 
-| Piece | store-kit | vit-store today |
-| --- | --- | --- |
-| Root config | `vite.config.ts` → `defineConfig` from `vite-plus` | none |
-| Lint/fmt | `oxlint.config.ts` + `oxfmt.config.ts`; `@nkzw/oxlint-config` + vendored anti-slop | Biome + `.oxlintrc.json` |
-| Vite alias | `vite: npm:@voidzero-dev/vite-plus-core@^0.2.5` | admin Vite 6 (→ 028 fixes) |
-| Scripts | `"build": "vp run -r build"`, `"prepare": "vp config"` | Turbo + per-package scripts |
-| Tasks | `run.tasks` for db, deploy, astro dev | Turbo `deploy` dependsOn chain |
-| Staged | `staged: { '*': 'vp check --fix' }` | none |
-| Type lint | `typeAware: true`, `typeCheck: true` | oxlint warn-only; tsgo separate |
-| Astro app | `vp exec astro dev` in `run.tasks` | Alchemy dev |
-| PM | pnpm + catalog | Bun workspaces + catalog |
+| Piece       | store-kit                                                                          | vit-store today                 |
+| ----------- | ---------------------------------------------------------------------------------- | ------------------------------- |
+| Root config | `vite.config.ts` → `defineConfig` from `vite-plus`                                 | none                            |
+| Lint/fmt    | `oxlint.config.ts` + `oxfmt.config.ts`; `@nkzw/oxlint-config` + vendored anti-slop | Biome + `.oxlintrc.json`        |
+| Vite alias  | `vite: npm:@voidzero-dev/vite-plus-core@^0.2.5`                                    | admin Vite 6 (→ 028 fixes)      |
+| Scripts     | `"build": "vp run -r build"`, `"prepare": "vp config"`                             | Turbo + per-package scripts     |
+| Tasks       | `run.tasks` for db, deploy, astro dev                                              | Turbo `deploy` dependsOn chain  |
+| Staged      | `staged: { '*': 'vp check --fix' }`                                                | none                            |
+| Type lint   | `typeAware: true`, `typeCheck: true`                                               | oxlint warn-only; tsgo separate |
+| Astro app   | `vp exec astro dev` in `run.tasks`                                                 | Alchemy dev                     |
+| PM          | pnpm + catalog                                                                     | Bun workspaces + catalog        |
 
 vit-store won't copy store-kit 1:1 — **Alchemy deploy** and **agent (flue)** stay — but lint/fmt/run surface should match.
 
@@ -166,63 +166,61 @@ vit-store/
 
 ```ts
 // oxlint.config.ts
-import nkzw from '@nkzw/oxlint-config'
-import { defineConfig } from 'oxlint'
+import nkzw from "@nkzw/oxlint-config";
+import { defineConfig } from "oxlint";
 
-import { vitStoreOverrides } from './tooling/lint/vit-store-overrides'
+import { vitStoreOverrides } from "./tooling/lint/vit-store-overrides";
 
 export default defineConfig({
-  extends: [nkzw],
-  ignorePatterns: [
-    '**/dist/**',
-    '**/.alchemy/**',
-    '**/routeTree.gen.ts',
-    '**/components/ui/**',
-    'apps/storev2/src/components/starwind/**',
-    'tools/oxlint/anti-slop/**',
-    '.cursor/**',
-  ],
-  jsPlugins: [
-    { name: 'anti-slop', specifier: './tools/oxlint/anti-slop/index.ts' },
-  ],
-  rules: {
-    complexity: ['error', { max: 15 }],
-    // anti-slop rules (see Layer 2)
-    // vite-plus rule added in vite.config.ts lint merge
-  },
-  overrides: vitStoreOverrides,
-})
+	extends: [nkzw],
+	ignorePatterns: [
+		"**/dist/**",
+		"**/.alchemy/**",
+		"**/routeTree.gen.ts",
+		"**/components/ui/**",
+		"apps/storev2/src/components/starwind/**",
+		"tools/oxlint/anti-slop/**",
+		".cursor/**",
+	],
+	jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
+	rules: {
+		complexity: ["error", { max: 15 }],
+		// anti-slop rules (see Layer 2)
+		// vite-plus rule added in vite.config.ts lint merge
+	},
+	overrides: vitStoreOverrides,
+});
 ```
 
 ```ts
 // vite.config.ts (lint block excerpt)
-import lintConfig from './oxlint.config'
+import lintConfig from "./oxlint.config";
 
 export default defineConfig({
-  lint: {
-    ...lintConfig,
-    jsPlugins: [
-      ...(lintConfig.jsPlugins ?? []),
-      { name: 'vite-plus', specifier: 'vite-plus/oxlint-plugin' },
-    ],
-    rules: {
-      ...lintConfig.rules,
-      'vite-plus/prefer-vite-plus-imports': 'error',
-    },
-    options: { typeAware: true, typeCheck: true },
-  },
-  // fmt, staged, run ...
-})
+	lint: {
+		...lintConfig,
+		jsPlugins: [
+			...(lintConfig.jsPlugins ?? []),
+			{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
+		],
+		rules: {
+			...lintConfig.rules,
+			"vite-plus/prefer-vite-plus-imports": "error",
+		},
+		options: { typeAware: true, typeCheck: true },
+	},
+	// fmt, staged, run ...
+});
 ```
 
 ### Lint dependencies (Phase 2)
 
-| Package | Purpose |
-| --- | --- |
-| `@nkzw/oxlint-config` | Base strict rules |
-| `@oxlint/plugins` | anti-slop plugin host; **exact version = oxlint** |
-| `vite-plus` | `vp lint`, vite-plus oxlint plugin, type-aware lint |
-| `tools/oxlint/anti-slop/` | Vendored; no npm package |
+| Package                   | Purpose                                             |
+| ------------------------- | --------------------------------------------------- |
+| `@nkzw/oxlint-config`     | Base strict rules                                   |
+| `@oxlint/plugins`         | anti-slop plugin host; **exact version = oxlint**   |
+| `vite-plus`               | `vp lint`, vite-plus oxlint plugin, type-aware lint |
+| `tools/oxlint/anti-slop/` | Vendored; no npm package                            |
 
 **Remove:** `@biomejs/biome`, `biome.json`, `.oxlintrc.json`, admin biome scripts.
 
@@ -278,21 +276,21 @@ Implement the [Lint stack](#lint-stack) section:
 
 **Biome → Oxfmt mapping:**
 
-| Biome | Oxfmt |
-| --- | --- |
-| tabs | `useTabs: true` |
-| double quotes | `singleQuote: false` |
-| `useSortedClasses` on cn/clsx/cva | `sortTailwindcss: { functions: ['clsx','cva','cn'] }` |
-| ignore `components/ui`, `starwind`, `.alchemy`, `routeTree.gen.ts` | `ignorePatterns` |
+| Biome                                                              | Oxfmt                                                 |
+| ------------------------------------------------------------------ | ----------------------------------------------------- |
+| tabs                                                               | `useTabs: true`                                       |
+| double quotes                                                      | `singleQuote: false`                                  |
+| `useSortedClasses` on cn/clsx/cva                                  | `sortTailwindcss: { functions: ['clsx','cva','cn'] }` |
+| ignore `components/ui`, `starwind`, `.alchemy`, `routeTree.gen.ts` | `ignorePatterns`                                      |
 
 **Biome rule replacements:**
 
-| Biome | Replacement |
-| --- | --- |
-| `noExcessiveCognitiveComplexity` (15) | `complexity: ['error', { max: 15 }]` |
-| `useExhaustiveDependencies` | nkzw `react/exhaustive-deps` (admin only) |
-| recommended + style rules | `@nkzw/oxlint-config` superset |
-| low-evidence TS patterns | anti-slop rules |
+| Biome                                 | Replacement                               |
+| ------------------------------------- | ----------------------------------------- |
+| `noExcessiveCognitiveComplexity` (15) | `complexity: ['error', { max: 15 }]`      |
+| `useExhaustiveDependencies`           | nkzw `react/exhaustive-deps` (admin only) |
+| recommended + style rules             | `@nkzw/oxlint-config` superset            |
+| low-evidence TS patterns              | anti-slop rules                           |
 
 Astro template lint → still `astro check`; Oxlint only frontmatter.
 
@@ -349,12 +347,12 @@ run: {
 
 Four tsdown configs today:
 
-| Package | Entry | Notes |
-| --- | --- | --- |
-| `apps/server` | `./src/index.ts`, ESM, noExternal `@vit/*` | worker bundle |
-| `packages/api` | `src/**/*.ts`, dts | library |
-| `packages/shared` | (tsdown.config) | library |
-| `packages/assistant` | (tsdown.config) | library |
+| Package              | Entry                                      | Notes         |
+| -------------------- | ------------------------------------------ | ------------- |
+| `apps/server`        | `./src/index.ts`, ESM, noExternal `@vit/*` | worker bundle |
+| `packages/api`       | `src/**/*.ts`, dts                         | library       |
+| `packages/shared`    | (tsdown.config)                            | library       |
+| `packages/assistant` | (tsdown.config)                            | library       |
 
 Per [viteplus pack migration](https://viteplus.dev/guide/migrate#tsdown):
 
@@ -376,7 +374,7 @@ quality:
     - bun install --frozen-lockfile
     - bunx vp fmt --check
     - bunx vp lint
-    - bun run check-types   # tsgo + astro check via turbo until vp typeCheck trusted
+    - bun run check-types # tsgo + astro check via turbo until vp typeCheck trusted
     - bun run --filter storev2 build
     - bun run --filter admin build
 ```
@@ -390,9 +388,9 @@ store-kit runs `typeCheck: true` in lint; vit-store also has `astro check` for s
 ```json
 // .vscode/settings.json
 {
-  "oxc.enable": true,
-  "oxc.fmt.disableNestedConfig": true,
-  "typescript.experimental.useTsgo": true
+	"oxc.enable": true,
+	"oxc.fmt.disableNestedConfig": true,
+	"typescript.experimental.useTsgo": true
 }
 ```
 
@@ -414,31 +412,31 @@ Update `AGENTS.md`: agents run `vp check` before PR; document `vp -C apps/admin 
 
 ## What stays non-Vite+
 
-| Component | Reason |
-| --- | --- |
+| Component                        | Reason                                            |
+| -------------------------------- | ------------------------------------------------- |
 | Alchemy deploy/dev orchestration | Production infra; wrap in `vp run`, don't replace |
-| Agent `flue build` | Not a Vite app |
-| `astro check` | Astro semantics beyond tsgolint |
-| fallow / knip | Separate quality tools |
-| Patched `alchemy@0.93.12` | Keep until upstream fix |
+| Agent `flue build`               | Not a Vite app                                    |
+| `astro check`                    | Astro semantics beyond tsgolint                   |
+| fallow / knip                    | Separate quality tools                            |
+| Patched `alchemy@0.93.12`        | Keep until upstream fix                           |
 
 ---
 
 ## Risk register
 
-| Risk | Mit | 
-| --- | --- |
-| Vite 8 plugin break (admin) | 028 gate |
-| Astro + forced vite alias | Explicit vite catalog dep on storev2; build CI |
-| Alchemy `Vite()` + vite-plus import | Keep `dev:vite` script; test alchemy dev post-migrate |
-| tsdown → pack parity (server noExternal) | Spike server in isolation |
-| Turbo vs vp run duplication | Run parallel until vp run proven; then deprecate turbo tasks one by one |
-| Huge fmt PR | Dedicated PR, no logic changes |
-| Bun vs pnpm migrate assumptions | Use Bun overrides not pnpm-workspace; test `vp install` |
-| anti-slop baseline violations | Subset spike + fix/suppress pass before repo-wide enable |
-| nkzw react rules on Solid storev2 | Override `react/*` off for `apps/storev2/**` |
-| cyclomatic vs cognitive complexity | Document delta; fallow cognitive 15 stays as second check |
-| Type assertion churn (anti-slop) | `require-safety-comment-for-type-assertion` — budget comment pass |
+| Risk                                     | Mit                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| Vite 8 plugin break (admin)              | 028 gate                                                                |
+| Astro + forced vite alias                | Explicit vite catalog dep on storev2; build CI                          |
+| Alchemy `Vite()` + vite-plus import      | Keep `dev:vite` script; test alchemy dev post-migrate                   |
+| tsdown → pack parity (server noExternal) | Spike server in isolation                                               |
+| Turbo vs vp run duplication              | Run parallel until vp run proven; then deprecate turbo tasks one by one |
+| Huge fmt PR                              | Dedicated PR, no logic changes                                          |
+| Bun vs pnpm migrate assumptions          | Use Bun overrides not pnpm-workspace; test `vp install`                 |
+| anti-slop baseline violations            | Subset spike + fix/suppress pass before repo-wide enable                |
+| nkzw react rules on Solid storev2        | Override `react/*` off for `apps/storev2/**`                            |
+| cyclomatic vs cognitive complexity       | Document delta; fallow cognitive 15 stays as second check               |
+| Type assertion churn (anti-slop)         | `require-safety-comment-for-type-assertion` — budget comment pass       |
 
 ---
 

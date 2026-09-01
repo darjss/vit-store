@@ -2,26 +2,26 @@ import { morningBriefOrderSince } from "@vit/api/lib/integrations/admin-notifica
 import { createAdminBotClient } from "./admin-bot-client";
 
 type ShipPaidOrdersResult = {
-	shipped: string[];
-	skipped: { orderNumber: string; reason: string }[];
+	shipped: Array<string>;
+	skipped: Array<{ orderNumber: string; reason: string }>;
 };
 
 const PAGE_SIZE = 50;
 
 export const shipAllPaidPendingOrders = async (input: {
-	storeApiUrl: string;
 	botToken: string;
+	storeApiUrl: string;
 }): Promise<ShipPaidOrdersResult> => {
 	const client = createAdminBotClient(input.storeApiUrl, input.botToken);
-	const shipped: string[] = [];
+	const shipped: Array<string> = [];
 	const skipped: ShipPaidOrdersResult["skipped"] = [];
 	const createdAfter = morningBriefOrderSince();
 
 	for (let page = 1; ; page += 1) {
 		const result = await client.order.getPaginatedOrders.query({
+			orderStatus: "pending",
 			page,
 			pageSize: PAGE_SIZE,
-			orderStatus: "pending",
 			paymentStatus: "success",
 			createdAfter,
 		});
@@ -36,20 +36,21 @@ export const shipAllPaidPendingOrders = async (input: {
 			}
 			try {
 				await client.order.shipOrder.mutate({
-					orderId: order.id,
 					addressZoneId: order.addressZoneId,
+					orderId: order.id,
 				});
 				shipped.push(order.orderNumber);
 			} catch (error) {
 				skipped.push({
 					orderNumber: order.orderNumber,
-					reason:
-						error instanceof Error ? error.message : "илгээхэд алдаа гарлаа",
+					reason: error instanceof Error ? error.message : "илгээхэд алдаа гарлаа",
 				});
 			}
 		}
 
-		if (!result.pagination.hasNextPage) break;
+		if (!result.pagination.hasNextPage) {
+			break;
+		}
 	}
 
 	return { shipped, skipped };

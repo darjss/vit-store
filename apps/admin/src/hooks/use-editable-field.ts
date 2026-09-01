@@ -5,10 +5,7 @@ type UseEditableOptions<T> = {
 	onSave: (next: T) => void | Promise<void>;
 };
 
-export function useEditableField<T>({
-	initialValue,
-	onSave,
-}: UseEditableOptions<T>) {
+export function useEditableField<T>({ initialValue, onSave }: UseEditableOptions<T>) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [tempValue, setTempValue] = useState<T>(initialValue);
@@ -19,17 +16,21 @@ export function useEditableField<T>({
 	};
 
 	const cancel = () => {
-		if (isSaving) return;
+		if (isSaving) {
+			return;
+		}
 		setIsEditing(false);
 	};
 
 	const save = async () => {
-		if (isSaving) return;
+		if (isSaving) {
+			return;
+		}
 		setIsSaving(true);
 		try {
 			await onSave(tempValue);
 			setIsEditing(false);
-		} catch (_error) {
+		} catch {
 			// Keep editing on error so the user can retry/adjust.
 			// The caller's mutation onError is responsible for surfacing the toast.
 			setIsSaving(false);
@@ -39,12 +40,12 @@ export function useEditableField<T>({
 	};
 
 	return {
+		cancel,
 		isEditing,
 		isSaving,
-		tempValue,
+		save,
 		setTempValue,
 		start,
-		cancel,
-		save,
+		tempValue,
 	} as const;
 }

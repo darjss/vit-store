@@ -8,10 +8,7 @@ import { trpc } from "./trpc";
  * and optionally the detail entry for one product. Invalidate all of them or
  * none — patching some is how stale stock/price leaked between views.
  */
-export async function invalidateProductCaches(
-	queryClient: QueryClient,
-	productId?: number,
-) {
+export async function invalidateProductCaches(queryClient: QueryClient, productId?: number) {
 	// Returns a promise that settles when every refetch triggered by these
 	// invalidations has completed, so callers can await confirmed cache.
 	await Promise.all([
@@ -19,14 +16,10 @@ export async function invalidateProductCaches(
 			queryKey: ["admin-products-infinite"],
 			type: "all",
 		}),
-		queryClient.invalidateQueries(
-			trpc.product.searchProductsInstant.pathFilter(),
-		),
+		queryClient.invalidateQueries(trpc.product.searchProductsInstant.pathFilter()),
 		queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions()),
 		productId !== undefined
-			? queryClient.invalidateQueries(
-					trpc.product.getProductById.queryOptions({ id: productId }),
-				)
+			? queryClient.invalidateQueries(trpc.product.getProductById.queryOptions({ id: productId }))
 			: Promise.resolve(),
 	]);
 }

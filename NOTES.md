@@ -6,6 +6,7 @@ https://developers.cloudflare.com/workers/cache/ and /workers/cache/configuratio
 ## Research answers (evidence)
 
 ### (a) Script-upload API metadata field
+
 Wrangler config `cache: { enabled: true }` maps to the upload-form metadata field
 **`cache_options`** (value `{ enabled: boolean; cross_version_cache?: boolean }`).
 Evidence: cloudflare/workers-sdk `packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts`
@@ -13,10 +14,12 @@ destructures `cache` from worker config (~L82) and emits `...(cache && { cache_o
 into the metadata object (~L851). Per-entrypoint override via `exports[name].cache` (Wrangler 4.107+).
 
 ### (b) Minimum compatibility_date
+
 Docs example / changelog: `2026-07-07` ("set to today's date"; requires >= 2026-07-07).
 Basic config needs Wrangler >= 4.69.0. We set `compatibilityDate: "2026-07-07"`.
 
 ### (c) Runtime API
+
 - `ctx.cache.purge({ tags: [...] })` and `ctx.cache.purge({ purgeEverything: true })`.
 - Also `import { cache } from "cloudflare:workers"` for non-ctx scope.
 - `Cache-Tag` response header (comma-separated) tags an entry for later tag purge.
@@ -25,16 +28,18 @@ Basic config needs Wrangler >= 4.69.0. We set `compatibilityDate: "2026-07-07"`.
 - `ctx.cache` (execution context) is undefined on old compat / miniflare → guard.
 
 ### (d) Automatic bypass
+
 - Request with `Authorization` header → automatic bypass (not cached).
 - Response with `Set-Cookie` → automatic bypass.
 - `Cache-Control: private` / no-store → not cached.
 
 ## What landed
+
 - alchemy 0.93.12 patched (bun patch): `cache?: {enabled;cross_version_cache?}` on
   BaseWorkerProps (src/cloudflare/worker.ts) + `cache_options` in WorkerMetadata &
   metadata payload (src/cloudflare/worker-metadata.ts). patches/alchemy@0.93.12.patch.
-  NOTE: alchemy `./cloudflare` export is dual (bun→src, import→lib/*.d.ts). Runtime under
-  bun uses src (patched). tsgo types resolve lib/*.d.ts → the patch MUST also cover
+  NOTE: alchemy `./cloudflare` export is dual (bun→src, import→lib/_.d.ts). Runtime under
+  bun uses src (patched). tsgo types resolve lib/_.d.ts → the patch MUST also cover
   lib/cloudflare/worker.d.ts (WIP: extending patch to lib d.ts).
 - packages/shared/src/cache.ts: CACHE_POLICY (products/home 6h+24h SWR, categories/brands
   24h+7d SWR), cacheControlHeader(), CatalogCacheAccumulator, PRODUCTS_TAG/BRANDS_TAG/
@@ -53,17 +58,20 @@ Basic config needs Wrangler >= 4.69.0. We set `compatibilityDate: "2026-07-07"`.
 - Storefront: home un-prerendered (SSR); middleware edge TTL 6h/24h-SWR for `/` + `/products*`.
 
 ## KV kept (documented exceptions — can't map to Workers Cache)
+
 - trpc.ts `cacheMiddleware`/`cachedProcedure` (admin analytics/sales only): admin requests
   carry auth cookie/Authorization → Workers Cache auto-bypasses, so KV stays.
 - Sessions, checkout-access, OTP, QPay token, payment, ai-product session, delivery-zone
   cache, restock notifier (scheduled, no HTTP response): non-cache or non-HTTP, unchanged.
 
 ## Cookie audit
+
 publicProcedure = baseProcedure (errorHandling+logging only); auth()/session only in
 customer/admin middlewares. Public catalog GET reads never call session → no Set-Cookie →
 not bypassed. Safe.
 
 ## Remaining / TODO
+
 - Extend alchemy patch to lib/cloudflare/worker.d.ts (type-level cache prop) — IN PROGRESS.
 - @vit/assistant check-types errors (Cannot find module '~/db', BotRouter, @cloudflare/codemode)
   are PRE-EXISTING on base (unrelated to this change) — verify & exclude.

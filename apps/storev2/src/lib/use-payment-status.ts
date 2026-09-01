@@ -4,11 +4,11 @@ import { api } from "@/lib/trpc";
 
 interface UsePaymentStatusOptions {
 	enabled?: boolean;
-	refetchInterval?: number;
+	// Seed the first render with server-provided status (payment-status page).
+	initialData?: { provider: string; status: string };
 	// Extra key segment to scope cache per-invoice (qpay) vs per-payment.
 	keySuffix?: unknown;
-	// Seed the first render with server-provided status (payment-status page).
-	initialData?: { status: string; provider: string };
+	refetchInterval?: number;
 }
 
 /**
@@ -25,20 +25,16 @@ export function usePaymentStatus(
 ) {
 	return useQuery(
 		() => ({
-			queryKey: [
-				"payment-status",
-				paymentNumber(),
-				opts.keySuffix,
-			],
+			enabled: opts.enabled ?? true,
+			initialData: opts.initialData,
 			queryFn: () =>
 				api.payment.getPaymentStatus.query({
-					paymentNumber: paymentNumber(),
 					checkoutToken: checkoutToken(),
+					paymentNumber: paymentNumber(),
 				}),
+			queryKey: ["payment-status", paymentNumber(), opts.keySuffix],
 			refetchInterval: opts.refetchInterval ?? 5000,
-			enabled: opts.enabled ?? true,
 			staleTime: 0,
-			initialData: opts.initialData,
 		}),
 		() => queryClient,
 	);
