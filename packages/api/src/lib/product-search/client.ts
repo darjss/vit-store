@@ -1,7 +1,8 @@
-import { env } from "cloudflare:workers";
 import type { RequestLogger } from "evlog";
+import { env } from "cloudflare:workers";
 import { db } from "~/db/client";
 import { createPostHogClient } from "~/lib/integrations/posthog";
+import type { SummarizedLogObject } from "~/lib/logging";
 import { loadProductSearchDocumentsFromDb } from "~/lib/product-search/db";
 import type {
 	ProductSearchAnalyticsSignal,
@@ -94,7 +95,7 @@ export const getProductSearchStatus = (): Promise<ProductSearchStatus> =>
 
 type RebuildContext = {
 	c: { executionCtx: ExecutionContext };
-	log: RequestLogger<Record<string, unknown>>;
+	log: RequestLogger<SummarizedLogObject>;
 };
 
 export const scheduleProductSearchRebuild = (

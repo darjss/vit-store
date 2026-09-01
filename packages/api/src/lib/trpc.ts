@@ -1,10 +1,17 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { sanitizePublicTrpcError, type timeRangeType } from "@vit/shared";
+import { sanitizePublicTrpcError } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
+import { parseCacheKvInput } from "~/lib/cache/cache-input";
 import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
-import { summarizeTrpcInputForLog, summarizeTrpcOutputForLog, toError } from "~/lib/logging";
+import {
+	parseLogWire,
+	summarizeTrpcInputForLog,
+	summarizeTrpcOutputForLog,
+	thrownErrorWireSchema,
+	toError,
+} from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
@@ -13,18 +20,20 @@ import { getTtlForTimeRange } from "~/lib/utils";
 const isLocalDevelopment = process.env.NODE_ENV === "development";
 
 const t = initTRPC.context<Context>().create({
-	errorFormatter({ error, shape }) {
+	errorFormatter(payload) {
+		const trpcErrorPayload = payload["shape"];
+		const { error } = payload;
 		if (isLocalDevelopment) {
 			return {
-				...shape,
+				...trpcErrorPayload,
 				data: {
-					...shape.data,
+					...trpcErrorPayload.data,
 					valibotError: error.cause instanceof v.ValiError ? error.cause.issues : null,
 				},
 			};
 		}
 
-		const publicError = sanitizePublicTrpcError(shape, shape.data.httpStatus);
+		const publicError = sanitizePublicTrpcError(trpcErrorPayload, trpcErrorPayload.data.httpStatus);
 		return {
 			...publicError,
 			data: { ...publicError.data, valibotError: null },
@@ -92,34 +101,28 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 });
 
 function ensureTRPCError(
-	error: unknown,
+	error: v.InferOutput<typeof thrownErrorWireSchema> | TRPCError,
 	fallbackMessage = "An unexpected error occurred",
 ): TRPCError {
-	// Already a TRPCError - return as-is
 	if (error instanceof TRPCError) {
 		return error;
 	}
-
-	// Regular Error - wrap it
-	if (error instanceof Error) {
+	const parsed = v.parse(thrownErrorWireSchema, error);
+	if (parsed instanceof Error) {
 		return new TRPCError({
-			cause: error,
+			cause: parsed,
 			code: "INTERNAL_SERVER_ERROR",
-			message: error.message || fallbackMessage,
+			message: parsed.message || fallbackMessage,
 		});
 	}
-
-	// String error
-	if (typeof error === "string") {
+	if (v.is(v.string(), parsed)) {
 		return new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
-			message: error || fallbackMessage,
+			message: parsed || fallbackMessage,
 		});
 	}
-
-	// Unknown error type - use fallback
 	return new TRPCError({
-		cause: error,
+		cause: parsed,
 		code: "INTERNAL_SERVER_ERROR",
 		message: fallbackMessage,
 	});
@@ -129,14 +132,24 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	try {
 		return await next();
 	} catch (error) {
-		throw ensureTRPCError(error);
+		if (error instanceof TRPCError) {
+			throw error;
+		}
+		throw ensureTRPCError(v.parse(thrownErrorWireSchema, error));
 	}
+});
+
+const procedureTypeSchema = v.picklist(["QUERY", "MUTATION", "SUBSCRIPTION", "PROCEDURE"]);
+
+const middlewareOkResultSchema = v.object({
+	data: v.optional(v.unknown()),
+	ok: v.literal(true),
 });
 
 const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) => {
 	const startTime = Date.now();
-	const procedureType = (type as string | undefined)?.toUpperCase() || "PROCEDURE";
-	const safeInput = summarizeTrpcInputForLog(path, input);
+	const procedureType = v.parse(procedureTypeSchema, type?.toUpperCase() ?? "PROCEDURE");
+	const safeInput = summarizeTrpcInputForLog(path, parseLogWire(input));
 
 	ctx.log.set({
 		trpc: {
@@ -149,11 +162,12 @@ const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) 
 	try {
 		const result = await next();
 		const durationMs = Date.now() - startTime;
-		const resultData =
-			result && typeof result === "object" && "data" in result
-				? (result as { data?: unknown }).data
-				: result;
-		const safeOutput = summarizeTrpcOutputForLog(path, resultData);
+		const parsedResult = v.safeParse(middlewareOkResultSchema, result);
+		const resultData = parsedResult.success ? parsedResult.output.data : result;
+		const safeOutput = summarizeTrpcOutputForLog(
+			path,
+			parseLogWire(resultData === undefined ? null : resultData),
+		);
 
 		ctx.log.set({
 			trpc: {
@@ -169,7 +183,7 @@ const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) 
 	} catch (error) {
 		const durationMs = Date.now() - startTime;
 
-		ctx.log.error(toError(error), {
+		ctx.log.error(toError(v.parse(thrownErrorWireSchema, error)), {
 			event: "trpc.procedure_error",
 			trpc: {
 				duration_ms: durationMs,
@@ -185,16 +199,29 @@ const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) 
 	}
 });
 
+const resolveCacheTtl = (input: ReturnType<typeof parseCacheKvInput>): number => {
+	if (input === null || input === undefined) {
+		return 3000;
+	}
+	if (input.timeRange !== undefined) {
+		return getTtlForTimeRange(input.timeRange);
+	}
+	if (input.ttl !== undefined) {
+		return input.ttl;
+	}
+	return 3000;
+};
+
 const cacheMiddleware = t.middleware(async ({ ctx, input, next, path }) => {
-	const cacheKey = await createKvCacheKey(path, input);
+	const cacheInput = parseCacheKvInput(parseLogWire(input));
+	const cacheKey = await createKvCacheKey(path, parseLogWire(input));
 
 	const cached = await ctx.kv.get(cacheKey);
 	if (cached) {
 		ctx.log.info("cache.hit", { cache_key: cacheKey, path });
-		// Return in the same format as next() returns
-		// Using type assertion because the middleware marker type is branded and can't be created directly
+		// SAFETY: tRPC cache middleware returns the same `{ ok: true, data, marker }` envelope as `next()`.
 		return {
-			data: JSON.parse(cached),
+			data: parseLogWire(JSON.parse(cached)),
 			marker: "middlewareMarker" as "middlewareMarker" & {
 				__brand: "middlewareMarker";
 			},
@@ -205,23 +232,10 @@ const cacheMiddleware = t.middleware(async ({ ctx, input, next, path }) => {
 	ctx.log.info("cache.miss", { cache_key: cacheKey, path });
 
 	const result = await next();
-	if (result && typeof result === "object" && "data" in result) {
-		let ttl: number;
-
-		if (input && typeof input === "object" && "timeRange" in input) {
-			ttl = getTtlForTimeRange((input as Record<string, unknown>).timeRange as timeRangeType);
-		} else if (
-			input &&
-			typeof input === "object" &&
-			"ttl" in input &&
-			typeof (input as Record<string, unknown>).ttl === "number"
-		) {
-			ttl = (input as Record<string, unknown>).ttl as number;
-		} else {
-			ttl = 3000;
-		}
-
-		await ctx.kv.put(cacheKey, JSON.stringify(result.data), {
+	const parsedResult = v.safeParse(middlewareOkResultSchema, result);
+	if (parsedResult.success) {
+		const ttl = resolveCacheTtl(cacheInput);
+		await ctx.kv.put(cacheKey, JSON.stringify(parsedResult.output.data), {
 			expirationTtl: ttl,
 		});
 

@@ -17,6 +17,14 @@ import { getDaysFromTimeRange } from "~/lib/utils";
 // derived from OrdersTable (cancelled and refunded orders never realized revenue).
 export const EXCLUDED_ORDER_STATUSES = ["cancelled", "refunded"] as const;
 
+type TopBrandSalesRow = {
+	brandName: string;
+	quantity: number;
+	total: number;
+};
+
+const EMPTY_TOP_BRAND_SALES: TopBrandSalesRow[] = [];
+
 export const analyticsQueries = {
 	admin: {
 		async getAnalyticsData(timeRange: timeRangeType) {
@@ -223,14 +231,7 @@ export const analyticsQueries = {
 					.orderBy(desc(sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`))
 					.limit(5)
 					.then((result) => result)
-					.catch(
-						() =>
-							[] as Array<{
-								brandName: string;
-								quantity: number;
-								total: number;
-							}>,
-					),
+					.catch(() => EMPTY_TOP_BRAND_SALES),
 
 				// Current Products Value
 				db()

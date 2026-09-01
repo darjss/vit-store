@@ -2,6 +2,7 @@ import Firecrawl from "@mendable/firecrawl-js";
 import { TRPCError } from "@trpc/server";
 import { brandQueries, categoryQueries } from "@vit/api/queries";
 import type { AiProductSessionState, ExtractedProductData, ExtractionStepId } from "@vit/shared";
+import * as v from "valibot";
 import { calculatePriceMntFromUsd } from "~/lib/ai/pricing";
 import {
 	resolveProductUrl,
@@ -27,6 +28,7 @@ import { translateAndStructureProduct } from "~/lib/ai-product/translate";
 import { uploadImagesToR2 } from "~/lib/ai-product/upload-r2";
 import type { Context } from "~/lib/context";
 import { logger } from "~/lib/logger";
+import { thrownErrorWireSchema } from "~/lib/logging";
 
 function getFirecrawl(ctx: Context): Firecrawl {
 	const firecrawlApiKey = ctx.c.env.FIRECRAWL_API_KEY;
@@ -39,7 +41,7 @@ function getFirecrawl(ctx: Context): Firecrawl {
 	return new Firecrawl({ apiKey: firecrawlApiKey });
 }
 
-function trpcFromError(error: unknown): never {
+function trpcFromError(error: v.InferOutput<typeof thrownErrorWireSchema>): never {
 	if (error instanceof TRPCError) {
 		throw error;
 	}
@@ -68,7 +70,7 @@ export async function startExtractionStage(
 		session.status = "failed";
 		session.errors.push(error instanceof Error ? error.message : "URL resolution failed");
 		await writeSession(sessionId, session);
-		trpcFromError(error);
+		trpcFromError(v.parse(thrownErrorWireSchema, error));
 	}
 }
 
@@ -108,7 +110,7 @@ export async function scrapeAndAnalyzeStage(
 		}
 
 		session.scraped = scrapeResult.extracted;
-		if (typeof scrapeResult.extracted.priceUsd === "number") {
+		if (scrapeResult.extracted.priceUsd !== null) {
 			session.calculatedPriceMnt = calculatePriceMntFromUsd(scrapeResult.extracted.priceUsd);
 		} else {
 			errors.push("Could not extract Amazon USD price.");

@@ -1,29 +1,79 @@
 import { eq, sql } from "drizzle-orm";
+import * as v from "valibot";
 import { db } from "~/db/client";
 import { MessengerNotificationFailuresTable } from "~/db/schema";
 import {
+	detailedOrderNotificationInputSchema,
 	type DetailedOrderNotificationInput,
 	sendDetailedOrderNotification,
 } from "~/lib/integrations/admin-notifications";
 
 export const ORDER_CONFIRMATION_PURPOSE = "order_payment_confirmed";
 
+const integrationFailureErrorSchema = v.looseObject({
+	code: v.optional(v.union([v.string(), v.number()])),
+	message: v.optional(v.string()),
+});
+
+type IntegrationFailureError = Error | v.InferOutput<typeof integrationFailureErrorSchema>;
+
 type PersistFailureInput = {
-	error: unknown;
+	error: IntegrationFailureError;
 	payload: DetailedOrderNotificationInput;
 	paymentNumber: string;
 };
 
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const parseIntegrationFailureError = (
+	rawError: IntegrationFailureError,
+): IntegrationFailureError => {
+	if (rawError instanceof Error) {
+		return rawError;
+	}
+	const parsed = v.safeParse(integrationFailureErrorSchema, rawError);
+	if (parsed.success) {
+		return parsed.output;
+	}
+	return { message: String(rawError) };
+};
 
-const errorCode = (error: unknown) => {
-	if (error && typeof error === "object" && "code" in error) {
-		return String((error as { code?: unknown }).code ?? "");
+const errorMessage = (error: IntegrationFailureError) => {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return error.message ?? "Unknown error";
+};
+
+const errorCode = (error: IntegrationFailureError) => {
+	if (error instanceof Error) {
+		const parsed = v.safeParse(integrationFailureErrorSchema, error);
+		if (parsed.success && parsed.output.code != null) {
+			return String(parsed.output.code);
+		}
+		return null;
+	}
+	if (error.code != null) {
+		return String(error.code);
 	}
 	return null;
 };
 
 export async function persistMessengerNotificationFailure({
+	error: rawError,
+	payload,
+	paymentNumber,
+}: {
+	error: IntegrationFailureError;
+	payload: DetailedOrderNotificationInput;
+	paymentNumber: string;
+}) {
+	await persistNormalizedMessengerNotificationFailure({
+		error: parseIntegrationFailureError(rawError),
+		payload,
+		paymentNumber,
+	});
+}
+
+async function persistNormalizedMessengerNotificationFailure({
 	error,
 	payload,
 	paymentNumber,
@@ -70,23 +120,27 @@ export async function retryMessengerNotificationFailure(id: number) {
 	}
 
 	try {
-		await sendDetailedOrderNotification(failure.payload as DetailedOrderNotificationInput);
+		const payload = v.parse(detailedOrderNotificationInputSchema, failure.payload);
+		await sendDetailedOrderNotification(payload);
 		await db()
 			.update(MessengerNotificationFailuresTable)
 			.set({ errorCode: null, errorMessage: null, lastAttemptAt: new Date(), status: "sent" })
 			.where(eq(MessengerNotificationFailuresTable.id, id));
 		return { ok: true as const };
-	} catch (error) {
+	} catch (rawError) {
+		const normalizedError = parseIntegrationFailureError(
+			rawError instanceof Error ? rawError : { message: String(rawError) },
+		);
 		await db()
 			.update(MessengerNotificationFailuresTable)
 			.set({
-				errorCode: errorCode(error),
-				errorMessage: errorMessage(error),
+				errorCode: errorCode(normalizedError),
+				errorMessage: errorMessage(normalizedError),
 				lastAttemptAt: new Date(),
 				retryCount: sql`${MessengerNotificationFailuresTable.retryCount} + 1`,
 				status: "pending",
 			})
 			.where(eq(MessengerNotificationFailuresTable.id, id));
-		return { error, ok: false as const, reason: "send_failed" as const };
+		return { error: rawError, ok: false as const, reason: "send_failed" as const };
 	}
 }

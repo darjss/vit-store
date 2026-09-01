@@ -2,9 +2,15 @@ import type { VisionAnalysisResult } from "@vit/shared";
 import { isLikelyJunkImage, normalizedImageKey, uniqueStable } from "~/lib/ai-product/amazon-html";
 import { visionAnalysisSchema } from "~/lib/ai-product/schemas";
 import { type ProductAi, runProductAi } from "~/lib/ai-product/workers-ai";
+import { thrownErrorWireSchema } from "~/lib/logging";
 import { logger } from "~/lib/logger";
+import * as v from "valibot";
 
-export function filterProductImages(imageUrls: Array<string>): { images: Array<string> } {
+type FilteredProductImages = {
+	images: Array<string>;
+};
+
+export function filterProductImages(imageUrls: Array<string>): FilteredProductImages {
 	return {
 		images: uniqueStable(
 			imageUrls.filter((url) => !isLikelyJunkImage(url)),
@@ -53,7 +59,7 @@ Do not infer missing facts. Use empty or null values when the label is not reada
 			supplementFacts: output.supplementFacts,
 		};
 	} catch (error) {
-		logger.error("analyzeProductImages", error);
+		logger.error("analyzeProductImages", v.parse(thrownErrorWireSchema, error));
 		return {
 			dailyIntake: null,
 			ingredients: [],

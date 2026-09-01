@@ -70,7 +70,7 @@ function derivePurchaseStatus(purchase: PurchaseRecord): PurchaseStatus {
 	return "draft";
 }
 
-function shapePurchase(purchase: PurchaseRecord) {
+function projectPurchaseRecord(purchase: PurchaseRecord) {
 	const items = purchase.items
 		.filter((item) => !item.deletedAt)
 		.map((item) => {
@@ -212,9 +212,7 @@ async function syncPurchaseItems(
 	});
 
 	const existingById = new Map(existingItems.map((item) => [item.id, item]));
-	const incomingIds = new Set(
-		items.map((item) => item.id).filter((itemId): itemId is number => typeof itemId === "number"),
-	);
+	const incomingIds = new Set(items.flatMap((item) => (item.id !== undefined ? [item.id] : [])));
 
 	for (const existingItem of existingItems) {
 		if (incomingIds.has(existingItem.id)) {
@@ -391,7 +389,7 @@ export const purchaseQueries = {
 				and(isNull(PurchasesTable.deletedAt), isNull(PurchasesTable.cancelledAt)),
 			);
 			return purchases
-				.map(shapePurchase)
+				.map(projectPurchaseRecord)
 				.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 		},
 
@@ -420,7 +418,7 @@ export const purchaseQueries = {
 			}
 
 			const records = await fetchPurchases(conditions.length > 0 ? and(...conditions) : undefined);
-			let purchases = records.map(shapePurchase);
+			let purchases = records.map(projectPurchaseRecord);
 
 			if (params.status) {
 				purchases = purchases.filter((purchase) => purchase.status === params.status);
@@ -468,7 +466,7 @@ export const purchaseQueries = {
 				and(eq(PurchasesTable.id, id), isNull(PurchasesTable.deletedAt)),
 			);
 			const purchase = result[0];
-			return purchase ? shapePurchase(purchase) : null;
+			return purchase ? projectPurchaseRecord(purchase) : null;
 		},
 
 		async markPurchaseForwarderReceived(
@@ -602,7 +600,7 @@ export const purchaseQueries = {
 					),
 				),
 			);
-			return records.map(shapePurchase).slice(0, 50);
+			return records.map(projectPurchaseRecord).slice(0, 50);
 		},
 
 		async updatePurchase(tx: Transaction, purchaseId: number, input: editPurchaseType) {

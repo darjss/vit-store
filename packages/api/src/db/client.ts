@@ -1,17 +1,21 @@
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import * as v from "valibot";
 import type { DB } from "~/db/index";
 import * as schema from "~/db/schema";
 
-export function db(): DB {
-	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
-	const workerEnv = env as typeof env & { DIRECT_DB_URL?: string };
-	const directDbUrl = workerEnv.DIRECT_DB_URL;
-	const connStr = directDbUrl && directDbUrl.length > 0 ? directDbUrl : env.DB.connectionString;
+const workerEnvSchema = v.object({
+	DIRECT_DB_URL: v.optional(v.string()),
+});
 
-	// Hyperdrive proxy URLs use a 32-char hex string as username
-	// Direct connections have normal usernames - need SSL
+export function db(): DB {
+	const workerEnv = v.parse(workerEnvSchema, env);
+	const connStr =
+		workerEnv.DIRECT_DB_URL && workerEnv.DIRECT_DB_URL.length > 0
+			? workerEnv.DIRECT_DB_URL
+			: env.DB.connectionString;
+
 	const isHyperdriveProxy = /^postgres(ql)?:\/\/[a-f0-9]{32}:/.test(connStr);
 
 	const client = postgres(connStr, {

@@ -12,16 +12,18 @@
  *   after success, restore for removed lines).
  * - !wasSuccess && !transitioned: pending/other — no stock changes at all.
  */
-export function planPaymentTransition(
-	prevPaymentStatus: string | undefined,
-	newPaymentStatus: string,
-): {
+export type PaymentTransitionPlan = {
 	shouldAdjustStockDiff: boolean;
 	shouldDeductFullStock: boolean;
 	shouldRecordSale: boolean;
 	transitionedToSuccess: boolean;
 	wasSuccess: boolean;
-} {
+};
+
+export function planPaymentTransition(
+	prevPaymentStatus: string | undefined,
+	newPaymentStatus: string,
+): PaymentTransitionPlan {
 	const wasSuccess = prevPaymentStatus === "success";
 	const transitionedToSuccess = !wasSuccess && newPaymentStatus === "success";
 	return {
@@ -30,5 +32,5 @@ export function planPaymentTransition(
 		shouldRecordSale: transitionedToSuccess,
 		transitionedToSuccess,
 		wasSuccess,
-	};
+	} satisfies PaymentTransitionPlan;
 }

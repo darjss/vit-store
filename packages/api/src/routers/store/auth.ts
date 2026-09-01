@@ -20,6 +20,7 @@ const OTP_SEND_LIMIT = 3;
 const OTP_ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const OTP_ATTEMPT_LIMIT = 5;
 const phoneInputSchema = v.pipe(v.string(), v.regex(/^[6-9]\d{7}$/));
+const otpKvValueSchema = v.string();
 async function enforceRateLimit(key: string, windowSeconds: number): Promise<number> {
 	const count = await redis().incr(key);
 	if (count === 1) {
@@ -67,8 +68,11 @@ export const storeAuthRouter = router({
 				if (process.env.NODE_ENV === "development") {
 					isValidOtp = true;
 				} else {
-					const otpFromKv = (await kv().get(`otp:code:${input.phone}`)) as string;
-					isValidOtp = otpFromKv === input.otp;
+					const otpParsed = v.safeParse(
+						otpKvValueSchema,
+						await kv().get(`otp:code:${input.phone}`),
+					);
+					isValidOtp = otpParsed.success && otpParsed.output === input.otp;
 					if (isValidOtp) {
 						await Promise.all([kv().delete(`otp:code:${input.phone}`), redis().del(attemptKey)]);
 					}

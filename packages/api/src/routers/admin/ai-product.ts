@@ -110,9 +110,9 @@ export function buildAiProductRouter<P extends typeof baseProcedure>(proc: P) {
 				const duplicates = results.filter((r) => r.status === "duplicate_flag").length;
 				const failed = results.filter((r) => r.status === "failed").length;
 
-				const createdProductIds = results
-					.filter((r) => r.status !== "failed" && r.productId !== null)
-					.map((r) => r.productId as number);
+				const createdProductIds = results.flatMap((r) =>
+					r.status !== "failed" && r.productId !== null ? [r.productId] : [],
+				);
 				if (createdProductIds.length > 0) {
 					await purgeCatalogCache(ctx, createdProductIds);
 					scheduleProductSearchRebuild(ctx, "product_created");
