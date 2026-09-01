@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { sanitizePublicTrpcErrorShape, type timeRangeType } from "@vit/shared";
+import { sanitizePublicTrpcError, type timeRangeType } from "@vit/shared";
 import superjson from "superjson";
 import * as v from "valibot";
 import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
@@ -24,10 +24,10 @@ const t = initTRPC.context<Context>().create({
 			};
 		}
 
-		const publicShape = sanitizePublicTrpcErrorShape(shape, shape.data.httpStatus);
+		const publicError = sanitizePublicTrpcError(shape, shape.data.httpStatus);
 		return {
-			...publicShape,
-			data: { ...publicShape.data, valibotError: null },
+			...publicError,
+			data: { ...publicError.data, valibotError: null },
 		};
 	},
 	isDev: isLocalDevelopment,

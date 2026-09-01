@@ -1,9 +1,10 @@
 import { paymentQueries } from "@vit/api/queries";
-import { type GenericWebhookPayload, processWebhookEvents } from "@warriorteam/messenger-sdk";
+import { processWebhookEvents } from "@warriorteam/messenger-sdk";
 import { logger } from "~/lib/logger";
 import { confirmPaymentAndNotify } from "~/lib/payments/transfer-confirmation";
+import type { MessengerWebhookPayload } from "~/lib/integrations/messenger/webhook-payload";
 
-export async function messengerWebhookHandler(payload: GenericWebhookPayload) {
+export async function messengerWebhookHandler(payload: MessengerWebhookPayload) {
 	const q = paymentQueries.store;
 	return await processWebhookEvents(payload, {
 		onMessage: async (event) => {

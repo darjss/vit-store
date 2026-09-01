@@ -7,9 +7,10 @@ export {
 } from "~/lib/integrations/admin-notifications";
 export { sendEmail } from "~/lib/integrations/email";
 export {
-	type GenericWebhookPayload,
+	type MessengerWebhookPayload,
 	messenger,
 	messengerWebhookHandler,
+	messengerWebhookPayloadSchema,
 } from "~/lib/integrations/messenger";
 export type { PostHogConfig } from "~/lib/integrations/posthog";
 export { createPostHogClient, PostHogClient } from "~/lib/integrations/posthog";

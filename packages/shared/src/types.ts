@@ -4,6 +4,7 @@ export * from "./types/payment";
 export * from "./types/product";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import * as v from "valibot";
 import type { CustomerSelectType, UserSelectType } from "../../api/src/db/schema";
 
 export interface AIExtractedData {
@@ -152,7 +153,6 @@ export interface Session<TUser = CustomerSelectType | UserSelectType> {
 export type { CustomerSelectType, UserSelectType };
 export interface PaymentWebhookResponse {
 	body: {
-		[key: string]: unknown;
 		amount: number;
 		completedAt: string;
 		currency: string;
@@ -178,19 +178,25 @@ export interface RestockSubscription {
 	productId: number;
 }
 
-export interface OAuthCookieData {
-	codeVerifier?: string;
-	state?: string;
-}
+export const oauthCookieDataSchema = v.object({
+	codeVerifier: v.optional(v.string()),
+	state: v.optional(v.string()),
+});
 
-export interface GoogleIdTokenClaims {
-	aud?: string | Array<string>;
-	email?: string;
-	email_verified?: boolean;
-	exp?: number;
-	iss?: string;
-	name?: string;
-	sub: string;
-}
+export type OAuthCookieData = v.InferOutput<typeof oauthCookieDataSchema>;
 
-export type ImageUrlArray = Array<{ url: string }>;
+export const googleIdTokenClaimsSchema = v.object({
+	aud: v.optional(v.union([v.string(), v.array(v.string())])),
+	email: v.optional(v.string()),
+	email_verified: v.optional(v.boolean()),
+	exp: v.number(),
+	iss: v.string(),
+	name: v.optional(v.string()),
+	sub: v.pipe(v.string(), v.minLength(1)),
+});
+
+export type GoogleIdTokenClaims = v.InferOutput<typeof googleIdTokenClaimsSchema>;
+
+export const imageUrlArraySchema = v.array(v.object({ url: v.string() }));
+
+export type ImageUrlArray = v.InferOutput<typeof imageUrlArraySchema>;

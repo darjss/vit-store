@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 export const PRODUCT_SORT_FIELDS = ["price", "createdAt"] as const;
 export const PRODUCT_SORT_DIRECTIONS = ["asc", "desc"] as const;
 
@@ -9,8 +11,10 @@ export interface SortSelection {
 	field: ProductSortField;
 }
 
-const SORT_FIELDS = new Set<string>(PRODUCT_SORT_FIELDS);
-const SORT_DIRECTIONS = new Set<string>(PRODUCT_SORT_DIRECTIONS);
+const sortSelectionSchema = v.object({
+	direction: v.picklist(PRODUCT_SORT_DIRECTIONS),
+	field: v.picklist(PRODUCT_SORT_FIELDS),
+});
 
 /**
  * Parse and validate a sort field + direction pair (typically from URL params)
@@ -22,18 +26,9 @@ export const parseSort = (
 	field?: string | null,
 	direction?: string | null,
 ): SortSelection | null => {
-	if (
-		field !== undefined &&
-		field !== null &&
-		SORT_FIELDS.has(field) &&
-		direction !== undefined &&
-		direction !== null &&
-		SORT_DIRECTIONS.has(direction)
-	) {
-		return {
-			direction: direction as ProductSortDirection,
-			field: field as ProductSortField,
-		};
+	if (field == null || direction == null) {
+		return null;
 	}
-	return null;
+	const parsed = v.safeParse(sortSelectionSchema, { direction, field });
+	return parsed.success ? parsed.output : null;
 };
