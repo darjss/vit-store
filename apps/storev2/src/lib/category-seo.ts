@@ -4,7 +4,7 @@ export type CategoryFaq = {
 };
 
 /** Code-only FAQs for high-intent hubs. Title, description, and intro come from the DB. */
-export const CATEGORY_FAQS: Record<string, Array<CategoryFaq>> = {
+export const CATEGORY_FAQS = {
 	"magni-ba-erdes": [
 		{
 			answer:
@@ -73,7 +73,7 @@ export const CATEGORY_FAQS: Record<string, Array<CategoryFaq>> = {
 			question: "Витамин D 50000 IU гэж юу вэ?",
 		},
 	],
-};
+} satisfies Record<string, Array<CategoryFaq>>;
 
 const DEFAULT_INTRO = (name: string) =>
 	`${name} ангиллын АНУ-ын витамин, нэмэлт тэжээлүүдийг Америк Витамин дэлгүүрээс сонгон захиалаарай. Бүтээгдэхүүн бүрийн найрлага, хэмжээ, үнэ болон брэндийг харьцуулж өөрт тохирох сонголтоо олоорой.`;

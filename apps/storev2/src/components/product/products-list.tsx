@@ -3,7 +3,9 @@ import { parseSort } from "@vit/shared/domain/product";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { hydrateServerState } from "@/lib/hydration";
+import { errorKind, thrownErrorWireSchema } from "@/lib/error-wire";
 import { queryClient } from "@/lib/query";
+import * as v from "valibot";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
@@ -140,7 +142,7 @@ const ProductsList = (props: ProductsListProps) => {
 		() => ({
 			enabled: !filters.isSearchMode(),
 			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-			initialPageParam: undefined as string | undefined,
+			initialPageParam: undefined,
 			placeholderData: keepPreviousData,
 			queryFn: async ({ pageParam }) => {
 				const sort = filters.selectedSort();
@@ -239,7 +241,10 @@ const ProductsList = (props: ProductsListProps) => {
 						name: error.name,
 						stack: error.stack,
 					}
-				: { message: String(error), name: typeof error };
+				: {
+						message: String(error),
+						name: errorKind(v.parse(thrownErrorWireSchema, error)),
+					};
 		const queryName = filters.includeOutOfStock()
 			? "product.getInfiniteProducts"
 			: "product.getInfiniteProducts (requireStock)";

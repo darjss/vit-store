@@ -1,13 +1,12 @@
 import type { StoreRouter } from "@vit/api";
 import type { TRPCClient } from "@trpc/client";
+import * as v from "valibot";
+
+import { thrownErrorWireSchema } from "@/lib/error-wire";
 import { withCt } from "@/lib/payment-url";
+import { trpcErrorCode } from "@/lib/trpc-error-code";
 
 type ServerApi = TRPCClient<StoreRouter>;
-
-const errorCode = (err: unknown): string | undefined => {
-	const e = err as { code?: string; data?: { code?: string } };
-	return e?.data?.code ?? e?.code;
-};
 
 /**
  * Load a payment by number via the server tRPC client, redirecting on the
@@ -27,7 +26,7 @@ export async function loadPaymentOrRedirect(
 			paymentNumber,
 		});
 	} catch (error) {
-		const code = errorCode(error);
+		const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
 		if (code === "UNAUTHORIZED") {
 			return { redirect: redirect("/order-tracking") };
 		}
@@ -59,7 +58,7 @@ export async function loadOrderOrRedirect(
 			orderNumber,
 		});
 	} catch (error) {
-		const code = errorCode(error);
+		const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
 		if (code === "UNAUTHORIZED") {
 			return { redirect: redirect("/order-tracking") };
 		}

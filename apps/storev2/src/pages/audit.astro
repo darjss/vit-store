@@ -22,11 +22,11 @@ const scoreBg = (s: number | null) => {
   return "bg-red-100";
 };
 const priorityBadge = (p: number) => {
-  const colors: Record<number, string> = { 1: "bg-red-600", 2: "bg-orange-500", 3: "bg-yellow-500", 4: "bg-blue-500", 5: "bg-gray-500" };
+  const colors = { 1: "bg-red-600", 2: "bg-orange-500", 3: "bg-yellow-500", 4: "bg-blue-500", 5: "bg-gray-500" } satisfies Record<number, string>;
   return colors[p] || "bg-gray-400";
 };
 const effortBadge = (e: string) => {
-  const m: Record<string, string> = { high: "bg-red-100 text-red-800", low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800" };
+  const m = { high: "bg-red-100 text-red-800", low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800" } satisfies Record<string, string>;
   return m[e] || "bg-gray-100 text-gray-800";
 };
 
@@ -72,10 +72,10 @@ const data = {
   ],
 };
 
-const pages = Object.entries(data.lighthouse) as Array<[string, any]>;
-const pageLabels: Record<string, string> = { cart: "Cart", checkout: "Checkout", home: "Home", product_detail: "Product Detail", products: "Products" };
-const metricUnits: Record<string, string> = { cls: "", fcp: "ms", lcp: "ms", si: "ms", tbt: "ms", ttfb: "ms" };
-const metricNames: Record<string, string> = { cls: "CLS", fcp: "FCP", lcp: "LCP", si: "Speed Index", tbt: "TBT", ttfb: "TTFB" };
+const pages = Object.entries(data.lighthouse);
+const pageLabels = { cart: "Cart", checkout: "Checkout", home: "Home", product_detail: "Product Detail", products: "Products" } satisfies Record<string, string>;
+const metricUnits = { cls: "", fcp: "ms", lcp: "ms", si: "ms", tbt: "ms", ttfb: "ms" } satisfies Record<string, string>;
+const metricNames = { cls: "CLS", fcp: "FCP", lcp: "LCP", si: "Speed Index", tbt: "TBT", ttfb: "TTFB" } satisfies Record<string, string>;
 const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key === "tbt" ? 1500 : 6000;
 ---
 

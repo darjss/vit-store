@@ -51,7 +51,7 @@ const { canonical, description, image, imageAlt, nofollow, noindex, title } = As
             coverage if Astro's transition timing doesn't trigger it. */}
         <script is:inline>
             document.addEventListener('astro:after-swap', () => {
-                if (window.posthog && typeof window.posthog.capture === 'function') {
+                if (window.posthog?.capture) {
                     window.posthog.capture('$pageview');
                 }
             });

@@ -2,6 +2,7 @@ import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { CartLarge2Icon as IconShoppingCart } from "@solar-icons/solid/linear/cart-large-2";
 import type { CartItems } from "@vit/shared/types";
 import { createSignal, onCleanup } from "solid-js";
+import { isServer } from "@/lib/runtime";
 import { playCartBurst } from "@/lib/cart-burst";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
@@ -22,7 +23,7 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 	let drawerTimer: number | undefined;
 
 	onCleanup(() => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return;
 		}
 		window.clearTimeout(resetTimer);
@@ -33,7 +34,10 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 		const openDrawer = props.openDrawer ?? true;
 		cart.add(props.cartItem, { openDrawer: false });
 		setIsAdded(true);
-		playCartBurst(event.currentTarget as HTMLElement);
+		const target = event.currentTarget;
+		if (target instanceof HTMLElement) {
+			playCartBurst(target);
+		}
 
 		if (openDrawer) {
 			drawerTimer = window.setTimeout(() => cart.openDrawer(), 520);

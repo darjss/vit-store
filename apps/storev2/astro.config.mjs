@@ -27,15 +27,17 @@ const posthogSourceMapPlugin =
 
 const isDev = process.argv.includes("dev");
 
+const devAdapterOptions = isDev
+	? {
+			configPath: ".alchemy/local/wrangler.jsonc",
+			persistState: { path: "../../.alchemy/miniflare/v3" },
+		}
+	: undefined;
+
 export default defineConfig({
 	adapter: cloudflare({
 		imageService: "cloudflare",
-		...(isDev
-			? {
-					configPath: ".alchemy/local/wrangler.jsonc",
-					persistState: { path: "../../.alchemy/miniflare/v3" },
-				}
-			: {}),
+		...(devAdapterOptions ?? {}),
 	}),
 	cache: {
 		provider: cacheCloudflare(),

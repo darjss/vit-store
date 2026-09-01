@@ -4,6 +4,7 @@ import { createEffect, createMemo, createRoot, createSignal, type Accessor } fro
 import { createStore } from "solid-js/store";
 import { onMount } from "solid-js";
 import { trackAddToCart, trackCartOpened, trackRemoveFromCart } from "@/lib/analytics";
+import { isServer } from "@/lib/runtime";
 import { safeStorage } from "@/lib/safe-storage";
 
 /**
@@ -11,7 +12,7 @@ import { safeStorage } from "@/lib/safe-storage";
  * Safe to call from any cart operation.
  */
 function announceCart(message: string) {
-	if (typeof document !== "undefined") {
+	if (!isServer) {
 		const region = document.getElementById("cart-live-region");
 		if (region) {
 			region.textContent = message;

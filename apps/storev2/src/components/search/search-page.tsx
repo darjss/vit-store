@@ -16,12 +16,7 @@ const SearchPage: Component = () => {
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [isSearching, setIsSearching] = createSignal(false);
 
-	const readQueryFromUrl = () => {
-		if (typeof window === "undefined") {
-			return "";
-		}
-		return new URL(window.location.href).searchParams.get("q") ?? "";
-	};
+	const readQueryFromUrl = () => new URL(window.location.href).searchParams.get("q") ?? "";
 
 	onMount(() => {
 		const initial = readQueryFromUrl();

@@ -1,3 +1,5 @@
+import { isServer } from "@/lib/runtime";
+
 export type CelebrationIntensity = "light" | "strong";
 
 const STORAGE_PREFIX = "celebrate:";
@@ -11,7 +13,7 @@ type Particle = {
 	h: number;
 	opacity: number;
 	rotation: number;
-	shape: "rect" | "circle";
+	particleKind: "rect" | "circle";
 	vr: number;
 	vx: number;
 	vy: number;
@@ -21,7 +23,7 @@ type Particle = {
 };
 
 function prefersReducedMotion(): boolean {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return true;
 	}
 	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -32,7 +34,7 @@ function hasFired(key: string): boolean {
 	if (inMemoryFired.has(storageKey)) {
 		return true;
 	}
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return true;
 	}
 	try {
@@ -45,7 +47,7 @@ function hasFired(key: string): boolean {
 function markFired(key: string): void {
 	const storageKey = STORAGE_PREFIX + key;
 	inMemoryFired.add(storageKey);
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 	try {
@@ -79,7 +81,7 @@ function spawnParticles(
 			h: size * rand(0.45, 1.15),
 			opacity: 1,
 			rotation: rand(0, Math.PI * 2),
-			shape: Math.random() > 0.35 ? "rect" : "circle",
+			particleKind: Math.random() > 0.35 ? "rect" : "circle",
 			vr: rand(-0.18, 0.18),
 			vx: Math.cos(angle) * speed + rand(-1.5, 1.5),
 			vy: Math.sin(angle) * speed,
@@ -156,7 +158,7 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 			ctx.rotate(p.rotation);
 			ctx.globalAlpha = p.opacity;
 			ctx.fillStyle = p.color;
-			if (p.shape === "circle") {
+			if (p.particleKind === "circle") {
 				ctx.beginPath();
 				ctx.arc(0, 0, p.w * 0.45, 0, Math.PI * 2);
 				ctx.fill();
@@ -184,7 +186,7 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 }
 
 export function celebrateOnce(key: string, intensity: CelebrationIntensity = "strong"): boolean {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return false;
 	}
 	if (hasFired(key)) {

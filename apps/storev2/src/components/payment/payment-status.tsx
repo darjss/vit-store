@@ -35,7 +35,7 @@ const PaymentStatus = (props: {
 		initialData: {
 			provider: props.payment.provider,
 			status: props.payment.status,
-		} as { provider: PaymentProviderType; status: PaymentStatusType },
+		} satisfies { provider: PaymentProviderType; status: PaymentStatusType },
 		refetchInterval: 5000,
 	});
 

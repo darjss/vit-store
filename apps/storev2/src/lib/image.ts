@@ -2,10 +2,7 @@ type ProductImageVariant = "thumb" | "card" | "feature" | "hero" | "sm" | "md";
 
 const CDN_HOST = "https://cdn.darjs.dev";
 
-const PRODUCT_IMAGE_VARIANTS: Record<
-	ProductImageVariant,
-	{ height: number; sizes: string; transform: string; width: number }
-> = {
+const PRODUCT_IMAGE_VARIANTS = {
 	card: {
 		height: 450,
 		sizes: "(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 50vw",
@@ -42,7 +39,10 @@ const PRODUCT_IMAGE_VARIANTS: Record<
 		transform: "width=160,height=160,quality=70,fit=contain,format=auto",
 		width: 120,
 	},
-};
+} satisfies Record<
+	ProductImageVariant,
+	{ height: number; sizes: string; transform: string; width: number }
+>;
 
 function toCdnImageSource(url: string | null | undefined, variant: ProductImageVariant) {
 	if (!url) {

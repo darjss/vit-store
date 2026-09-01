@@ -4,6 +4,7 @@ import { deliveryFee } from "@vit/shared/constants";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { isServer } from "@/lib/runtime";
 import { cn } from "@/lib/utils";
 import { cart } from "@/store/cart";
 import CartCrossSells from "./cart-cross-sells";
@@ -32,7 +33,7 @@ const CartDrawer = () => {
 	);
 
 	onCleanup(() => {
-		if (typeof window !== "undefined") {
+		if (!isServer) {
 			window.clearTimeout(totalPulseTimer);
 		}
 	});

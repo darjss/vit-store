@@ -72,7 +72,10 @@ export default function StickyMobileCta(props: StickyMobileCtaProps) {
 			return;
 		}
 		if (!isInStock()) {
-			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
+			const target = event.currentTarget;
+			if (target instanceof HTMLElement) {
+				restockSheetFocusRestore.register(target);
+			}
 			setNotifyOpen(true);
 			return;
 		}

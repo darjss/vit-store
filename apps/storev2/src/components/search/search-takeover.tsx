@@ -38,11 +38,11 @@ interface CategoryStock {
 	slug: string;
 }
 
-const TOKEN_KEY: Record<"dose" | "form" | "type", string> = {
+const TOKEN_KEY = {
 	dose: "Тун",
 	form: "Хэлбэр",
 	type: "Төрөл",
-};
+} satisfies Record<"dose" | "form" | "type", string>;
 
 const SectionLabel = (props: { children: JSX.Element }) => (
 	<div class="text-muted-foreground mt-5 mb-2.5 flex items-center gap-2 text-[11px] font-extrabold tracking-wide uppercase">
