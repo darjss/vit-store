@@ -4,20 +4,20 @@ import type { OrderStatusType } from "./types/order";
  * Canonical Mongolian labels for order statuses. Single source of truth —
  * import this instead of hand-copying the map. Used by admin and storefront.
  */
-export const orderStatusLabels: Record<OrderStatusType, string> = {
+export const orderStatusLabels = {
 	cancelled: "Цуцлагдсан",
 	created: "Төлбөр хүлээж буй",
 	delivered: "Хүргэгдсэн",
 	pending: "Илгээхэд бэлэн",
 	refunded: "Буцаан олгосон",
 	shipped: "Хүргэлтэд гарсан",
-};
+} satisfies Record<OrderStatusType, string>;
 
 /**
  * Canonical badge color classes per order status. Single source of truth.
  * `badge` is the background/text class, `border` is the left-border accent.
  */
-export const orderStatusStyles: Record<OrderStatusType, { badge: string; border: string }> = {
+export const orderStatusStyles = {
 	cancelled: {
 		badge: "border-[#dc2626] bg-[#fee2e2] text-[#7f1d1d]",
 		border: "border-l-[#dc2626]",
@@ -42,4 +42,4 @@ export const orderStatusStyles: Record<OrderStatusType, { badge: string; border:
 		badge: "border-[#2563eb] bg-[#dbeafe] text-[#1e3a8a]",
 		border: "border-l-[#2563eb]",
 	},
-};
+} satisfies Record<OrderStatusType, { badge: string; border: string }>;

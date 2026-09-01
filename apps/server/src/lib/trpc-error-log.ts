@@ -31,6 +31,11 @@ function safeStack(name: string, stack: string | undefined): string {
 	return [`${name}: [message redacted]`, ...frames].join("\n");
 }
 
+export type OperatorProjectedError = Error & {
+	cause?: SafeDiagnostic;
+	code?: string | number;
+};
+
 /**
  * Project an error for operator logs without retaining submitted values.
  *
@@ -39,7 +44,7 @@ function safeStack(name: string, stack: string | undefined): string {
  * eight Error causes. Validation issues, error data, and non-Error causes are
  * intentionally excluded because they can embed request/customer payloads.
  */
-export function operatorTrpcError(error: Error): Error {
+export function operatorTrpcError(error: Error): OperatorProjectedError {
 	const seen = new Set<Error>();
 
 	const project = (current: Error, depth: number): SafeDiagnostic => {
@@ -62,20 +67,14 @@ export function operatorTrpcError(error: Error): Error {
 	};
 
 	const diagnostic = project(error, 0);
-	const projected = new Error("Error details redacted");
+	const projected: OperatorProjectedError = new Error("Error details redacted");
 	projected.name = diagnostic.name;
 	projected.stack = diagnostic.stack;
 	if (diagnostic.code !== undefined) {
-		Object.defineProperty(projected, "code", {
-			enumerable: true,
-			value: diagnostic.code,
-		});
+		projected.code = diagnostic.code;
 	}
-	if (diagnostic.cause) {
-		Object.defineProperty(projected, "cause", {
-			enumerable: true,
-			value: diagnostic.cause,
-		});
+	if (diagnostic.cause !== undefined) {
+		projected.cause = diagnostic.cause;
 	}
 	return projected;
 }

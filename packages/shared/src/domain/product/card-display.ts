@@ -49,12 +49,12 @@ const FORM_DEFINITIONS: Array<{ label: string; pattern: RegExp }> = [
 	{ label: "Ширхэг", pattern: /(?:pieces?|count|ct|ширхэг)/iu },
 ];
 
-const BRAND_ALIASES: Record<string, Array<string>> = {
+const BRAND_ALIASES = {
 	drtobias: ["Dr. Tobias", "DR TOBIAS"],
 	maryruths: ["MaryRuth Organics", "Mary Ruth Organics", "Mary Ruth's"],
 	microingredients: ["Micro Ingredients", "Microingredients"],
 	now: ["NOW Foods Supplements", "NOW Foods", "NOW"],
-};
+} satisfies Record<string, Array<string>>;
 
 const compactKey = (value: string) => value.toLocaleLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
 

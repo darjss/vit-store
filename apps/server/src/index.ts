@@ -9,7 +9,7 @@ import { runMorningOrderBrief } from "./lib/morning-brief";
 import { runPaymentNotificationOutbox } from "./lib/payment-notification-outbox";
 import { rateLimit } from "./lib/rate-limit";
 import { runRestockNotifier } from "./lib/restock-notifier";
-import { logTrpcError, operatorTrpcError } from "./lib/trpc-error-log";
+import { logTrpcError, operatorTrpcError, type OperatorProjectedError } from "./lib/trpc-error-log";
 import adminRoutes from "./routes/admin";
 import authRoutes from "./routes/auth";
 import healthRoutes from "./routes/health";
@@ -25,14 +25,9 @@ function scheduledJobFailure(job: string, result: PromiseSettledResult<unknown>)
 	if (result.status === "fulfilled") {
 		return;
 	}
-	const error =
-		result.reason instanceof Error
-			? result.reason
-			: Object.assign(new Error(), { name: "NonErrorRejection" });
-	const projected = operatorTrpcError(error) as Error & {
-		cause?: unknown;
-		code?: string | number;
-	};
+	const normalized =
+		result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+	const projected: OperatorProjectedError = operatorTrpcError(normalized);
 	return {
 		error: {
 			cause: projected.cause,
