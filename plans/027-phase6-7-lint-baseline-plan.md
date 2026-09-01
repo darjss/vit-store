@@ -24,6 +24,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 | **#323** | `feat/027-phase6b-anti-slop-api` | anti-slop: `packages/api` |
 | **#324** | `feat/027-phase6c-anti-slop-apps` | anti-slop: `apps/admin`, `apps/storev2`, `apps/agent`, `packages/assistant` |
 | **#325** | `feat/027-phase7-nkzw-baseline` | nkzw: complexity, admin react, env.d.ts, worker.mjs, unused vars |
+| **#325b** | `feat/027-phase7b-typecheck-baseline` | optional: tsc clean for api/shared/server (see Typecheck baseline) |
 | **#326** | `feat/027-phase8-ci-lint-gate` | CI: `vp fmt --check` + `vp lint` in workflow |
 | **#327** | `feat/027-phase9-solid-lint` | Solid plugin for storev2 (spike + enable) |
 | **#328** | `feat/027-phase10-type-aware-lint` | Type-aware oxlint spike → curated rules |
@@ -137,6 +138,7 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 | Category | Count | Approach |
 |----------|------:|----------|
+| **TS7 `baseUrl` removal** | 3 tsconfigs | Done in #323 (`packages/api`, `packages/shared`, `apps/storev2`). |
 | **complexity >15** | ~46 | Refactor hotspots OR `// oxlint-disable-next-line complexity` with ponytail comment on legacy UI (admin order forms) |
 | **admin react** | ~10 | Fix set-state-in-effect properly (derive state, key reset) — do not disable |
 | **env.d.ts empty interfaces** | 4 | Extend override: `typescript/no-empty-object-type: off` for `**/env.d.ts` only |
@@ -155,7 +157,53 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 - [ ] `bunx vp lint` exit 0
 - [ ] `bunx vp fmt --check`
-- [ ] `turbo check-types`
+- [ ] `turbo check-types` (see **Typecheck baseline** below — not green yet after #322/#323)
+
+### Typecheck baseline (after #322 + #323)
+
+`bunx tsc --noEmit -p packages/api` reports **~39 errors** (Mar 2026). Not a CI gate until this table is cleared or scoped per-package `check-types` is wired.
+
+| Category | Files | Fix approach |
+|----------|-------|--------------|
+| **Log wire circular type** | `packages/api/src/lib/logging.ts` | Break `LogWire` ↔ `logWireSchema` cycle; infer wire type from schema without `GenericSchema<LogWire>` self-reference |
+| **Catch → `logger.error`** | `translate.ts`, `workers-cache.ts`, `analytics.ts`, `sales.ts`, … | Parse with `parseThrownError` / `thrownErrorWireSchema` at catch boundary before logging |
+| **Order patch narrowing** | `packages/api/src/queries/orders.ts` | Widen `projectOrderResult` patch type or parse patch through valibot schema (W4 regression) |
+| **AI wire guards** | `wire-schemas.ts`, `workers-ai.ts` | Replace `v.custom` + `in` on possibly-primitive with `v.object` / `v.record` parse |
+| **Hyperdrive connection** | `packages/api/src/db/index.ts` | Type `HyperdriveConnection` union at env boundary; may predate #323 |
+| **SMS generic cast** | `integrations/sms/client.ts:107` | Replace `body as T` with per-endpoint parsed schemas (see gauntlet) |
+| **Shared tRPC batch payload** | `packages/shared/src/trpc-error.ts` | Fix `sanitizePublicTrpcResponse` array branch return type |
+| **Server projected error** | `apps/server/src/lib/trpc-error-log.ts` | `OperatorProjectedError` assignability without assertion |
+| **Server DOM types** | `apps/server/src/routes/uploads.ts` | Add `"DOM"` to server `tsconfig` lib or use `FormData` entry type without `FormDataEntryValue` |
+| **Restock logger generic** | `restock/dispatch.ts` | Align `AuditableLogger` with `SummarizedLogObject` |
+| **Project reference noise** | `shared` → `api/schema`, `api` → `alchemy.run` | tsconfig `references` / `include` hygiene (may need Phase 10 type-aware prep) |
+
+**Phase 7b (optional stacked PR #325b):** typecheck baseline → 0 for `packages/api`, `packages/shared`, `apps/server` before enabling `turbo check-types` in CI.
+
+---
+
+## Anti-slop gauntlet review (#322 + #323)
+
+Coordinator + subagent review against `scripts/anti-slop-worker-brief.md` (Mar 2026).
+
+### #322 (`shared` + `server`) — **PASS with minor follow-ups**
+
+| Verdict | Notes |
+|---------|--------|
+| No rule disables | Clean |
+| No SAFETY comments | Clean |
+| Boundary parsing | valibot at auth, webhooks, uploads, trpc-proxy |
+| Follow-up | `FormDataEntryValue` needs DOM lib or inline union type; `trpc-error.ts` batch payload tsc error |
+
+### #323 (`packages/api`) — **ISSUES (2)**
+
+| File | Issue | Recommended fix |
+|------|--------|-----------------|
+| `lib/integrations/sms/client.ts:106-107` | `as T` after wire parse; SAFETY names parse but generic `T` is not established | Per-endpoint return schemas; drop generic `handleResponse<T>` |
+| `lib/trpc.ts:222-228` | SAFETY on envelope, but `middlewareMarker` still uses branded `as` | Type cache hit return as `MiddlewareResult` from tRPC types or parsed schema; no brand assertion |
+
+**Clean:** No `oxlint-disable`, `as any`, or chained `as unknown as` in #323 diff. Integrations/queries/routers use valibot at boundaries. Two SAFETY comments total; SMS one is borderline, trpc cache one is partial.
+
+**Do not merge #323 as "type-perfect"** until Typecheck baseline rows above are triaged (at minimum `logging.ts` + `orders.ts`).
 
 ---
 
@@ -312,6 +360,7 @@ Apply during 9–11 PRs, not as drive-by in Phase 6–7:
 - [ ] Merge #315 → #321 in order (or stack-merge)
 - [ ] Approve Phase 6 swarm execution ("go" on anti-slop PRs)
 - [ ] Phase 7 after Phase 6 merges
+- [ ] Phase 7b (optional) if `tsc -p packages/api` still fails after #323
 - [ ] Phase 8 after `vp lint` exit 0 locally
 - [ ] Phase 9 after Phase 6c storev2 anti-slop clean
 - [ ] Phase 10 after Phase 8 CI gate green
