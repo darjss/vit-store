@@ -41,6 +41,14 @@ async function precreateQpayInvoice(paymentNumber: string): Promise<void> {
     }).catch(() => {});
 }
 
+/** Facebook iOS webviews often fail bank-app handoff, so those Payments start on transfer. Everyone else starts on QPay. Chosen once at insert. */
+function initialPaymentProvider(userAgent: string | undefined) {
+    const ua = userAgent ?? "";
+    const facebookIos =
+        /FB_IAB|FBAN\/FBIOS/.test(ua) && /iPhone|iPad|iPod/.test(ua);
+    return facebookIos ? ("transfer" as const) : ("qpay" as const);
+}
+
 export const order = router({
     getOrdersByCustomerId: verifiedCustomerProcedure.query(async ({ ctx }) => {
         try {
@@ -143,6 +151,7 @@ export const order = router({
             const paymentNumberGenerated = generatePaymentNumber();
             const customerPhone = Number(input.phoneNumber);
             const submittedFingerprint = cartFingerprint(normalizedProducts);
+            const provider = initialPaymentProvider(ctx.c.req.header("user-agent"));
             // Facebook iOS often kills the guest session before retry. Phone + cart
             // identity owns the unpaid slot; a client checkout id does not survive.
             // No age window: an older unpaid Payment must still be reused or retired
@@ -291,7 +300,7 @@ export const order = router({
                     .values({
                     paymentNumber: paymentNumberGenerated,
                     orderId: createdOrder.orderId,
-                    provider: "transfer",
+                    provider,
                     status: "pending",
                     amount: total,
                 })
@@ -333,7 +342,7 @@ export const order = router({
                     paymentNumber,
                     orderId,
                     amount: total,
-                    provider: "transfer",
+                    provider,
                     status_text: "pending",
                 });
             }
