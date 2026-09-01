@@ -2,10 +2,12 @@ import { timingSafeEqual } from "@vit/api";
 import { imageUrlArraySchema } from "@vit/shared";
 import { requireAdminSession } from "../lib/admin-session";
 import type { ServerHonoEnv } from "../lib/logging";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import * as v from "valibot";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
+type UploadContext = Context<ServerHonoEnv>;
 const CDN_BASE_URL = "https://cdn.darjs.dev";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
@@ -52,6 +54,82 @@ function sanitizePrefix(prefix: string | undefined): string {
 		.replaceAll(/^\/+|\/+$/g, "")
 		.slice(0, 120);
 }
+
+async function uploadImageFromRemoteUrl(
+	c: UploadContext,
+	log: UploadContext["var"]["log"],
+	uploadPrefix: string,
+	url: string,
+	isPrimary: boolean,
+) {
+	const imageResponse = await fetch(url, {
+		headers: {
+			Accept: "image/*",
+			"User-Agent":
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		},
+	});
+	if (!imageResponse.ok) {
+		log.warn("upload.url_fetch_failed", { status: imageResponse.status, url });
+		return { url };
+	}
+	const contentType = imageResponse.headers.get("content-type");
+	if (!contentType?.startsWith("image/")) {
+		log.warn("upload.url_invalid_type", { contentType, url });
+		return { url };
+	}
+	const generatedId = nanoid();
+	const rawExt = extensionFromContentType(contentType);
+	let carouselKey = `${uploadPrefix}/${generatedId}.webp`;
+	const imageArrayBuffer = await imageResponse.arrayBuffer();
+	const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
+	let wrotePrimaryWithTransform = false;
+	try {
+		const carouselImageResult = c.env.images
+			.input(imageBlob.stream())
+			.transform({ fit: "contain", height: 600, width: 800 })
+			.output({ format: "image/webp" });
+		const carouselImage = await carouselImageResult;
+		const carouselResponse = carouselImage.response();
+		const carouselArrayBuffer = await carouselResponse.arrayBuffer();
+		await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
+			httpMetadata: {
+				cacheControl: "public, max-age=31536000, immutable",
+				contentType: "image/webp",
+			},
+		});
+		wrotePrimaryWithTransform = true;
+	} catch (transformError) {
+		log.warn("upload.images_transform_unavailable", {
+			error: transformError instanceof Error ? transformError.message : "unknown",
+			url,
+		});
+		carouselKey = `${uploadPrefix}/${generatedId}.${rawExt}`;
+		await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
+			httpMetadata: { cacheControl: "public, max-age=31536000, immutable", contentType },
+		});
+	}
+	const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
+	if (isPrimary && wrotePrimaryWithTransform) {
+		const thumbnailKey = `${uploadPrefix}/${generatedId}-thumbnail.webp`;
+		const thumbnailBlob = new Blob([imageArrayBuffer], { type: contentType });
+		const thumbnailImageResult = c.env.images
+			.input(thumbnailBlob.stream())
+			.transform({ fit: "contain", height: 300, width: 400 })
+			.output({ format: "image/webp" });
+		const thumbnailImage = await thumbnailImageResult;
+		const thumbnailResponse = thumbnailImage.response();
+		const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
+		await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
+			httpMetadata: {
+				cacheControl: "public, max-age=31536000, immutable",
+				contentType: "image/webp",
+			},
+		});
+	}
+	return { url: carouselUrl };
+}
+
 app.use("/products", requireAdminSession);
 app.use("/brands", requireAdminSession);
 app.use("/images/urls", async (c, next) => {
@@ -265,89 +343,8 @@ app.post("/images/urls", async (c) => {
 		}> = [];
 		for (let i = 0; i < body.length; i++) {
 			const { url } = body[i];
-			const isPrimary = i === 0;
 			try {
-				const imageResponse = await fetch(url, {
-					headers: {
-						Accept: "image/*",
-						"User-Agent":
-							"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					},
-				});
-				if (!imageResponse.ok) {
-					log.warn("upload.url_fetch_failed", {
-						status: imageResponse.status,
-						url,
-					});
-					uploadedImages.push({ url });
-					continue;
-				}
-				const contentType = imageResponse.headers.get("content-type");
-				if (!contentType?.startsWith("image/")) {
-					log.warn("upload.url_invalid_type", { contentType, url });
-					uploadedImages.push({ url });
-					continue;
-				}
-				const generatedId = nanoid();
-				const rawExt = extensionFromContentType(contentType);
-				let carouselKey = `${uploadPrefix}/${generatedId}.webp`;
-				const imageArrayBuffer = await imageResponse.arrayBuffer();
-				const imageBlob = new Blob([imageArrayBuffer], { type: contentType });
-				let wrotePrimaryWithTransform = false;
-				try {
-					const carouselImageResult = c.env.images
-						.input(imageBlob.stream())
-						.transform({
-							fit: "contain",
-							height: 600,
-							width: 800,
-						})
-						.output({ format: "image/webp" });
-					const carouselImage = await carouselImageResult;
-					const carouselResponse = carouselImage.response();
-					const carouselArrayBuffer = await carouselResponse.arrayBuffer();
-					await c.env.r2Bucket.put(carouselKey, carouselArrayBuffer, {
-						httpMetadata: {
-							cacheControl: "public, max-age=31536000, immutable",
-							contentType: "image/webp",
-						},
-					});
-					wrotePrimaryWithTransform = true;
-				} catch (transformError) {
-					log.warn("upload.images_transform_unavailable", {
-						error: transformError instanceof Error ? transformError.message : "unknown",
-						url,
-					});
-					carouselKey = `${uploadPrefix}/${generatedId}.${rawExt}`;
-					await c.env.r2Bucket.put(carouselKey, imageArrayBuffer, {
-						httpMetadata: { cacheControl: "public, max-age=31536000, immutable", contentType },
-					});
-				}
-				const carouselUrl = `${CDN_BASE_URL}/${carouselKey}`;
-				if (isPrimary && wrotePrimaryWithTransform) {
-					const thumbnailKey = `${uploadPrefix}/${generatedId}-thumbnail.webp`;
-					const thumbnailBlob = new Blob([imageArrayBuffer], {
-						type: contentType,
-					});
-					const thumbnailImageResult = c.env.images
-						.input(thumbnailBlob.stream())
-						.transform({
-							fit: "contain",
-							height: 300,
-							width: 400,
-						})
-						.output({ format: "image/webp" });
-					const thumbnailImage = await thumbnailImageResult;
-					const thumbnailResponse = thumbnailImage.response();
-					const thumbnailArrayBuffer = await thumbnailResponse.arrayBuffer();
-					await c.env.r2Bucket.put(thumbnailKey, thumbnailArrayBuffer, {
-						httpMetadata: {
-							cacheControl: "public, max-age=31536000, immutable",
-							contentType: "image/webp",
-						},
-					});
-				}
-				uploadedImages.push({ url: carouselUrl });
+				uploadedImages.push(await uploadImageFromRemoteUrl(c, log, uploadPrefix, url, i === 0));
 			} catch (imageError) {
 				log.error(imageError instanceof Error ? imageError : new Error(String(imageError)), {
 					event: "upload.url_processing_failed",

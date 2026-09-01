@@ -64,7 +64,10 @@ function requireNonNegativeNumberField(
 			message: `${field} must be a non-negative number`,
 		});
 	}
-	if ((field === "brandId" || field === "categoryId") && (!Number.isInteger(numberValue) || numberValue < 1)) {
+	if (
+		(field === "brandId" || field === "categoryId") &&
+		(!Number.isInteger(numberValue) || numberValue < 1)
+	) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: `${field} must be a positive integer`,

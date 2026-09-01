@@ -3,13 +3,14 @@ import type { RequestLogger } from "evlog";
 import type { Context as HonoContext } from "hono";
 import type { DB } from "~/db";
 import type { CustomerSelectType, UserSelectType } from "~/db/schema";
+import type { SummarizedLogObject } from "~/lib/logging";
 import type { Session } from "~/lib/session";
 
 export type { CustomerSelectType, UserSelectType } from "~/db/schema";
 
 export type ServerHonoVariables = {
 	catalogCache?: CatalogCacheAccumulator;
-	log: RequestLogger<any>;
+	log: RequestLogger<SummarizedLogObject>;
 };
 
 export type CreateContextOptions = {
@@ -32,7 +33,7 @@ export type Context = {
 	db: DB;
 	kv: KVNamespace;
 	/** Request-scoped wide-event logger */
-	log: RequestLogger<any>;
+	log: RequestLogger<SummarizedLogObject>;
 	r2: R2Bucket;
 	session: Session<CustomerSelectType | UserSelectType> | null;
 };

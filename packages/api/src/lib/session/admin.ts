@@ -20,7 +20,6 @@ const {
 	deleteSessionTokenCookie: deleteAdminSessionTokenCookie,
 	invalidateSession: invalidateAdminSession,
 	setSessionTokenCookie: setAdminSessionTokenCookie,
-	validateSessionToken: validateAdminSessionToken,
 } = adminSessionManager;
 
 export {

@@ -22,6 +22,14 @@ function timeRangeToDays(timeRange: "daily" | "weekly" | "monthly"): number {
 			return 30;
 	}
 }
+
+function calcAnalyticsChange(curr: number, prev: number) {
+	if (prev === 0) {
+		return curr > 0 ? 100 : 0;
+	}
+	return Math.round(((curr - prev) / prev) * 100 * 10) / 10;
+}
+
 export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, cachedProc: P) {
 	return router({
 		getAnalyticsData: cachedProc
@@ -276,17 +284,11 @@ export function buildAnalyticsRouter<P extends typeof baseProcedure>(proc: P, ca
 					// Run sequentially to stay within PostHog's concurrent query limit (3)
 					const current = await posthog.getWebAnalytics(days);
 					const previous = await posthog.getWebAnalyticsPrevious(days);
-					const calcChange = (curr: number, prev: number) => {
-						if (prev === 0) {
-							return curr > 0 ? 100 : 0;
-						}
-						return Math.round(((curr - prev) / prev) * 100 * 10) / 10;
-					};
 					return {
 						changes: {
-							orders: calcChange(current.orders, previous.orders),
-							pageviews: calcChange(current.pageviews, previous.pageviews),
-							visitors: calcChange(current.uniqueVisitors, previous.uniqueVisitors),
+							orders: calcAnalyticsChange(current.orders, previous.orders),
+							pageviews: calcAnalyticsChange(current.pageviews, previous.pageviews),
+							visitors: calcAnalyticsChange(current.uniqueVisitors, previous.uniqueVisitors),
 						},
 						current,
 						previous,

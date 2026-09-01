@@ -6,6 +6,75 @@ import type {
 } from "@vit/shared";
 import { generateCleanSlug } from "~/lib/ai-product/brand-resolve";
 
+function pickTruthy<T>(...values: Array<T | undefined | null>): T | undefined {
+	for (const value of values) {
+		if (value) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+function buildTranslatedIdentity(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+) {
+	const name = pickTruthy(structuredData?.name, extractedData.title) ?? extractedData.title;
+	const amount = pickTruthy(structuredData?.amount) ?? "Unknown";
+	const potency = pickTruthy(structuredData?.potency) ?? "Unknown";
+	return {
+		amount,
+		name,
+		potency,
+		slug: generateCleanSlug(name, extractedData.brand, amount, potency),
+	};
+}
+
+function buildTranslatedCoreFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+	visionData: VisionAnalysisResult,
+	allOriginalIngredients: Array<string>,
+) {
+	const identity = buildTranslatedIdentity(structuredData, extractedData);
+	return {
+		...identity,
+		dailyIntake: pickTruthy(structuredData?.dailyIntake, visionData.dailyIntake) ?? 1,
+		description:
+			pickTruthy(structuredData?.description, extractedData.description) ?? "Тайлбар байхгүй",
+		ingredients:
+			pickTruthy(structuredData?.ingredients, allOriginalIngredients) ?? allOriginalIngredients,
+		name_mn: pickTruthy(structuredData?.name_mn) ?? `${extractedData.title} (орчуулаагүй)`,
+		weightGrams: pickTruthy(structuredData?.weightGrams) ?? 200,
+	};
+}
+
+function buildTranslatedSeoFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+) {
+	return {
+		seoDescription:
+			pickTruthy(structuredData?.seoDescription, extractedData.description?.slice(0, 155)) ??
+			(extractedData.description || "").slice(0, 155),
+		seoTitle:
+			pickTruthy(structuredData?.seoTitle, extractedData.title.slice(0, 60)) ??
+			extractedData.title.slice(0, 60),
+	};
+}
+
+function buildTranslatedProductFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+	visionData: VisionAnalysisResult,
+	allOriginalIngredients: Array<string>,
+) {
+	return {
+		...buildTranslatedCoreFields(structuredData, extractedData, visionData, allOriginalIngredients),
+		...buildTranslatedSeoFields(structuredData, extractedData),
+	};
+}
+
 export function assembleExtractedProductData(params: {
 	calculatedPriceMnt: number | null;
 	errors: Array<string>;
@@ -24,7 +93,6 @@ export function assembleExtractedProductData(params: {
 		errors,
 		extractedData,
 		extractionStatus,
-		filteredImages,
 		finalBrandId,
 		matchedCategoryId,
 		productUrl,
@@ -36,37 +104,28 @@ export function assembleExtractedProductData(params: {
 	const allOriginalIngredients = [
 		...new Set([...extractedData.ingredients, ...visionData.ingredients]),
 	];
-
-	const name = structuredData?.name || extractedData.title;
-	const amount = structuredData?.amount || "Unknown";
-	const potency = structuredData?.potency || "Unknown";
+	const translated = buildTranslatedProductFields(
+		structuredData,
+		extractedData,
+		visionData,
+		allOriginalIngredients,
+	);
 
 	return {
 		amazonPriceUsd: extractedData.priceUsd,
-		amount,
+		...translated,
 		brand: extractedData.brand,
 		brandId: finalBrandId,
 		calculatedPriceMnt,
 		categoryId: matchedCategoryId,
-		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
-		description: structuredData?.description || extractedData.description || "Тайлбар байхгүй",
 		errors,
 		extractionStatus,
 		images: uploadedImages,
-		ingredients: structuredData?.ingredients || allOriginalIngredients,
-		name,
-		name_mn: structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
 		originalDescription: extractedData.description,
 		originalFeatures: extractedData.features,
 		originalIngredients: allOriginalIngredients,
 		originalTitle: extractedData.title,
-		potency,
-		seoDescription:
-			structuredData?.seoDescription || (extractedData.description || "").slice(0, 155),
-		seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
-		slug: generateCleanSlug(name, extractedData.brand, amount, potency),
 		sourceUrl: productUrl,
-		weightGrams: structuredData?.weightGrams || 200,
 	};
 }
 

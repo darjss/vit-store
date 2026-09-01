@@ -30,9 +30,9 @@ export function createDb(bindingOrConnectionString: Hyperdrive | string): DB {
 	const isHyperdriveProxy = /^postgres(ql)?:\/\/[a-f0-9]{32}:/.test(connStr);
 
 	const client = postgres(connStr, {
-		ssl: isHyperdriveProxy ? false : "require",
-		max: 5,
 		fetch_types: false,
+		max: 5,
+		ssl: isHyperdriveProxy ? false : "require",
 	});
 
 	return drizzle(client, { schema });

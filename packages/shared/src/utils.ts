@@ -84,8 +84,11 @@ function pad(n: number) {
 	return n.toString().padStart(2, "0");
 }
 
+function startOfDay(dt: Date) {
+	return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
 export function formatDateToText(d: Date, now = new Date()): string {
-	const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 	const msPerDay = 24 * 60 * 60 * 1000;
 
 	const dayDiff = Math.floor((startOfDay(now).getTime() - startOfDay(d).getTime()) / msPerDay);

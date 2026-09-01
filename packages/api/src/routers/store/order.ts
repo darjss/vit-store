@@ -26,7 +26,339 @@ import { kv } from "~/lib/kv";
 import { createQpayInvoice } from "~/lib/payments/qpay";
 import { createSession, setSessionTokenCookie } from "~/lib/session/store";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
+import type { Context } from "~/lib/context";
 import { generateOrderNumber, generatePaymentNumber } from "~/lib/utils";
+
+type CartLine = { productId: number; quantity: number };
+type CheckoutProduct = {
+	id: number;
+	name: string;
+	price: number;
+	status: string;
+	stock: number;
+};
+
+function normalizeCartProducts(products: Array<{ productId: number; quantity: number }>) {
+	const productsById = new Map<number, number>();
+	for (const item of products) {
+		const productId = Math.trunc(item.productId);
+		const quantity = Math.trunc(item.quantity);
+		if (productId <= 0 || quantity <= 0) {
+			continue;
+		}
+		productsById.set(productId, (productsById.get(productId) ?? 0) + quantity);
+	}
+	return Array.from(productsById.entries()).map(([productId, quantity]) => ({
+		productId,
+		quantity,
+	}));
+}
+
+async function prepareOrderCheckout(ctx: Context, normalizedProducts: Array<CartLine>) {
+	if (normalizedProducts.length === 0) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Сагс хоосон эсвэл буруу байна. Дахин оролдоно уу.",
+		});
+	}
+	const productIds = normalizedProducts.map((product) => product.productId);
+	const products = await ctx.db.query.ProductsTable.findMany({
+		columns: { id: true, name: true, price: true, status: true, stock: true },
+		where: inArray(ProductsTable.id, productIds),
+	});
+	const existingProductIds = new Set(products.map((product) => product.id));
+	const missingProductIds = normalizedProducts
+		.filter((product) => !existingProductIds.has(product.productId))
+		.map((product) => product.productId);
+	if (missingProductIds.length > 0) {
+		ctx.log.warn("order.invalid_products", { missingProductIds });
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Зарим бараа олдсонгүй. Сагсаа шинэчлээд дахин оролдоно уу.",
+		});
+	}
+	const productById = new Map<number, CheckoutProduct>(
+		products.map((product) => [product.id, product]),
+	);
+	for (const item of normalizedProducts) {
+		const product = productById.get(item.productId);
+		if (!product || product.status !== "active" || product.stock < item.quantity) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `${product?.name ?? "Бараа"} үлдэгдэл хүрэлцэхгүй байна.`,
+			});
+		}
+	}
+	const productsTotal = normalizedProducts.reduce((acc, item) => {
+		return acc + (productById.get(item.productId)?.price ?? 0) * item.quantity;
+	}, 0);
+	return { productById, total: productsTotal + deliveryFee };
+}
+
+type CheckoutTx = Parameters<Parameters<Context["db"]["transaction"]>[0]>[0];
+
+async function upsertCheckoutCustomer(
+	tx: CheckoutTx,
+	input: v.InferOutput<typeof newOrderSchema>,
+	customerPhone: number,
+) {
+	const existingCustomer = await tx.query.CustomersTable.findFirst({
+		where: eq(CustomersTable.phone, customerPhone),
+	});
+	const [customer] = existingCustomer
+		? await tx
+				.update(CustomersTable)
+				.set({
+					address: input.address,
+					...(input.addressZoneId !== undefined && { addressZoneId: input.addressZoneId }),
+				})
+				.where(eq(CustomersTable.phone, customerPhone))
+				.returning()
+		: await tx
+				.insert(CustomersTable)
+				.values({
+					address: input.address,
+					addressZoneId: input.addressZoneId ?? null,
+					phone: customerPhone,
+				})
+				.returning();
+	if (!customer) {
+		throw new Error("No customer returned");
+	}
+	return customer;
+}
+
+async function loadPendingCheckout(tx: CheckoutTx, customerPhone: number) {
+	const pendingOrder = await tx.query.OrdersTable.findFirst({
+		orderBy: desc(OrdersTable.createdAt),
+		where: and(
+			eq(OrdersTable.customerPhone, customerPhone),
+			eq(OrdersTable.status, "created"),
+			isNull(OrdersTable.deletedAt),
+		),
+		with: {
+			orderDetails: {
+				columns: { productId: true, quantity: true },
+				where: isNull(OrderDetailsTable.deletedAt),
+			},
+			payments: {
+				columns: { amount: true, paymentNumber: true, status: true },
+				orderBy: desc(PaymentsTable.createdAt),
+				where: isNull(PaymentsTable.deletedAt),
+			},
+		},
+	});
+	const openPayment = pendingOrder?.payments.find(
+		(payment) =>
+			(payment.status === "pending" || payment.status === "customer_claimed_paid") &&
+			payment.paymentNumber,
+	);
+	return { openPayment, pendingOrder };
+}
+
+async function reuseMatchingCheckout(
+	tx: CheckoutTx,
+	input: v.InferOutput<typeof newOrderSchema>,
+	customer: Awaited<ReturnType<typeof upsertCheckoutCustomer>>,
+	pendingOrder: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["pendingOrder"]>,
+	openPayment: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["openPayment"]>,
+	submittedFingerprint: string,
+) {
+	await tx
+		.update(OrdersTable)
+		.set({
+			address: input.address,
+			addressZoneId: input.addressZoneId ?? pendingOrder.addressZoneId,
+			notes: input.notes ?? null,
+		})
+		.where(eq(OrdersTable.id, pendingOrder.id));
+	return {
+		customer,
+		orderId: pendingOrder.id,
+		orderNumber: pendingOrder.orderNumber,
+		paymentNumber: openPayment.paymentNumber,
+		reused: true as const,
+		total: openPayment.amount ?? pendingOrder.total,
+	};
+}
+
+async function cancelStalePendingCheckout(
+	ctx: Context,
+	tx: CheckoutTx,
+	customerPhone: number,
+	pendingOrder: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["pendingOrder"]>,
+	openPayment: NonNullable<Awaited<ReturnType<typeof loadPendingCheckout>>["openPayment"]>,
+) {
+	const [failedPayment] = await tx
+		.update(PaymentsTable)
+		.set({ status: "failed" })
+		.where(
+			and(
+				eq(PaymentsTable.paymentNumber, openPayment.paymentNumber),
+				eq(PaymentsTable.status, "pending"),
+				isNull(PaymentsTable.deletedAt),
+			),
+		)
+		.returning({ paymentNumber: PaymentsTable.paymentNumber });
+	if (!failedPayment) {
+		return;
+	}
+	await tx
+		.update(OrdersTable)
+		.set({ status: "cancelled" })
+		.where(
+			and(
+				eq(OrdersTable.id, pendingOrder.id),
+				eq(OrdersTable.status, "created"),
+				isNull(OrdersTable.deletedAt),
+			),
+		);
+	ctx.log.info("order.prior_unpaid_cancelled", {
+		customerPhone,
+		orderId: pendingOrder.id,
+		orderNumber: pendingOrder.orderNumber,
+		paymentNumber: openPayment.paymentNumber,
+	});
+}
+
+async function insertFreshCheckout(
+	tx: CheckoutTx,
+	input: v.InferOutput<typeof newOrderSchema>,
+	params: {
+		customer: Awaited<ReturnType<typeof upsertCheckoutCustomer>>;
+		customerPhone: number;
+		normalizedProducts: Array<CartLine>;
+		orderNumber: string;
+		paymentNumberGenerated: string;
+		productById: Map<number, CheckoutProduct>;
+		provider: "qpay" | "transfer";
+		total: number;
+	},
+) {
+	const [createdOrder] = await tx
+		.insert(OrdersTable)
+		.values({
+			address: input.address,
+			addressZoneId: input.addressZoneId ?? null,
+			customerPhone: params.customerPhone,
+			deliveryProvider: "tu-delivery",
+			notes: input.notes ?? null,
+			orderNumber: params.orderNumber,
+			status: "created",
+			total: params.total,
+		})
+		.returning({ orderId: OrdersTable.id });
+	if (!createdOrder) {
+		throw new Error("No order ID returned");
+	}
+	await tx.insert(OrderDetailsTable).values(
+		params.normalizedProducts.map((product) => ({
+			orderId: createdOrder.orderId,
+			price: params.productById.get(product.productId)?.price ?? null,
+			productId: product.productId,
+			quantity: product.quantity,
+		})),
+	);
+	const [payment] = await tx
+		.insert(PaymentsTable)
+		.values({
+			amount: params.total,
+			orderId: createdOrder.orderId,
+			paymentNumber: params.paymentNumberGenerated,
+			provider: params.provider,
+			status: "pending",
+		})
+		.returning({ paymentNumber: PaymentsTable.paymentNumber });
+	return {
+		customer: params.customer,
+		orderId: createdOrder.orderId,
+		orderNumber: params.orderNumber,
+		paymentNumber: payment?.paymentNumber ?? null,
+		reused: false as const,
+		total: params.total,
+	};
+}
+
+async function executeCheckoutTransaction(
+	ctx: Context,
+	input: v.InferOutput<typeof newOrderSchema>,
+	params: {
+		customerPhone: number;
+		normalizedProducts: Array<CartLine>;
+		orderNumber: string;
+		paymentNumberGenerated: string;
+		productById: Map<number, CheckoutProduct>;
+		provider: "qpay" | "transfer";
+		submittedFingerprint: string;
+		total: number;
+	},
+) {
+	return ctx.db.transaction(async (tx) => {
+		const customer = await upsertCheckoutCustomer(tx, input, params.customerPhone);
+		const { openPayment, pendingOrder } = await loadPendingCheckout(tx, params.customerPhone);
+		if (
+			pendingOrder &&
+			openPayment &&
+			cartFingerprint(pendingOrder.orderDetails) === params.submittedFingerprint
+		) {
+			return reuseMatchingCheckout(
+				tx,
+				input,
+				customer,
+				pendingOrder,
+				openPayment,
+				params.submittedFingerprint,
+			);
+		}
+		if (
+			pendingOrder &&
+			openPayment &&
+			openPayment.status === "pending" &&
+			openPayment.paymentNumber
+		) {
+			await cancelStalePendingCheckout(ctx, tx, params.customerPhone, pendingOrder, openPayment);
+		}
+		return insertFreshCheckout(tx, input, { ...params, customer });
+	});
+}
+
+function logCheckoutOutcome(
+	ctx: Context,
+	input: v.InferOutput<typeof newOrderSchema>,
+	txResult: Awaited<ReturnType<typeof executeCheckoutTransaction>>,
+	normalizedProducts: Array<CartLine>,
+	total: number,
+	provider: "qpay" | "transfer",
+) {
+	const { orderId, paymentNumber, reused } = txResult;
+	if (reused) {
+		ctx.log.info("order.checkout_reused", {
+			customerPhone: Number(input.phoneNumber),
+			itemCount: normalizedProducts.length,
+			orderId,
+			orderNumber: txResult.orderNumber,
+			total,
+		});
+		return;
+	}
+	ctx.log.info("order.created", {
+		customerPhone: Number(input.phoneNumber),
+		itemCount: normalizedProducts.length,
+		orderId,
+		orderNumber: txResult.orderNumber,
+		status_text: "created",
+		total,
+	});
+	if (paymentNumber) {
+		ctx.log.info("payment.created", {
+			amount: total,
+			orderId,
+			paymentNumber,
+			provider,
+			status_text: "pending",
+		});
+	}
+}
 
 /**
  * Pre-create the QPay invoice so the QR is ready in KV before the user
@@ -65,259 +397,28 @@ export const order = router({
 	addOrder: publicProcedure.input(newOrderSchema).mutation(async ({ ctx, input }) => {
 		const startTime = performance.now();
 		try {
-			const productsById = new Map<number, number>();
-			for (const item of input.products) {
-				const productId = Math.trunc(item.productId);
-				const quantity = Math.trunc(item.quantity);
-				if (productId <= 0 || quantity <= 0) {
-					continue;
-				}
-				productsById.set(productId, (productsById.get(productId) ?? 0) + quantity);
-			}
-			const normalizedProducts = Array.from(productsById.entries()).map(
-				([productId, quantity]) => ({ productId, quantity }),
-			);
-			if (normalizedProducts.length === 0) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Сагс хоосон эсвэл буруу байна. Дахин оролдоно уу.",
-				});
-			}
-			const productIds = normalizedProducts.map((p) => p.productId);
-			const products = await ctx.db.query.ProductsTable.findMany({
-				columns: { id: true, name: true, price: true, status: true, stock: true },
-				where: inArray(ProductsTable.id, productIds),
-			});
-			const existingProductIds = new Set(products.map((p) => p.id));
-			const missingProductIds = normalizedProducts
-				.filter((p) => !existingProductIds.has(p.productId))
-				.map((p) => p.productId);
-			if (missingProductIds.length > 0) {
-				ctx.log.warn("order.invalid_products", {
-					missingProductIds,
-				});
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: "Зарим бараа олдсонгүй. Сагсаа шинэчлээд дахин оролдоно уу.",
-				});
-			}
-			const productById = new Map(products.map((p) => [p.id, p]));
-			for (const item of normalizedProducts) {
-				const product = productById.get(item.productId);
-				if (!product || product.status !== "active" || product.stock < item.quantity) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: `${product?.name ?? "Бараа"} үлдэгдэл хүрэлцэхгүй байна.`,
-					});
-				}
-			}
-			const productsTotal = normalizedProducts.reduce((acc, item) => {
-				const price = productById.get(item.productId)?.price ?? 0;
-				return acc + price * item.quantity;
-			}, 0);
-			const total = productsTotal + deliveryFee;
+			const normalizedProducts = normalizeCartProducts(input.products);
+			const { productById, total } = await prepareOrderCheckout(ctx, normalizedProducts);
 			const orderNumber = generateOrderNumber();
 			const paymentNumberGenerated = generatePaymentNumber();
 			const customerPhone = Number(input.phoneNumber);
 			const submittedFingerprint = cartFingerprint(normalizedProducts);
 			const provider = initialPaymentProvider(ctx.c.req.header("user-agent"));
-			// Facebook iOS often kills the guest session before retry. Phone + cart
-			// identity owns the unpaid slot; a client checkout id does not survive.
-			// No age window: an older unpaid Payment must still be reused or retired
-			// so we keep one payable checkout per phone.
-			const txResult = await ctx.db.transaction(async (tx) => {
-				const existingCustomer = await tx.query.CustomersTable.findFirst({
-					where: eq(CustomersTable.phone, customerPhone),
-				});
-				const [customer] = existingCustomer
-					? await tx
-							.update(CustomersTable)
-							.set({
-								address: input.address,
-								...(input.addressZoneId !== undefined && {
-									addressZoneId: input.addressZoneId,
-								}),
-							})
-							.where(eq(CustomersTable.phone, customerPhone))
-							.returning()
-					: await tx
-							.insert(CustomersTable)
-							.values({
-								address: input.address,
-								addressZoneId: input.addressZoneId ?? null,
-								phone: customerPhone,
-							})
-							.returning();
-				if (!customer) {
-					throw new Error("No customer returned");
-				}
-
-				const pendingOrder = await tx.query.OrdersTable.findFirst({
-					orderBy: desc(OrdersTable.createdAt),
-					where: and(
-						eq(OrdersTable.customerPhone, customerPhone),
-						eq(OrdersTable.status, "created"),
-						isNull(OrdersTable.deletedAt),
-					),
-					with: {
-						orderDetails: {
-							columns: { productId: true, quantity: true },
-							where: isNull(OrderDetailsTable.deletedAt),
-						},
-						payments: {
-							columns: {
-								amount: true,
-								paymentNumber: true,
-								status: true,
-							},
-							orderBy: desc(PaymentsTable.createdAt),
-							where: isNull(PaymentsTable.deletedAt),
-						},
-					},
-				});
-				const openPayment = pendingOrder?.payments.find(
-					(payment) =>
-						(payment.status === "pending" || payment.status === "customer_claimed_paid") &&
-						payment.paymentNumber,
-				);
-				if (
-					pendingOrder &&
-					openPayment &&
-					cartFingerprint(pendingOrder.orderDetails) === submittedFingerprint
-				) {
-					await tx
-						.update(OrdersTable)
-						.set({
-							address: input.address,
-							addressZoneId: input.addressZoneId ?? pendingOrder.addressZoneId,
-							notes: input.notes ?? null,
-						})
-						.where(eq(OrdersTable.id, pendingOrder.id));
-					return {
-						customer,
-						orderId: pendingOrder.id,
-						orderNumber: pendingOrder.orderNumber,
-						paymentNumber: openPayment.paymentNumber,
-						reused: true as const,
-						total: openPayment.amount ?? pendingOrder.total,
-					};
-				}
-				// Different cart: retire only a still-pending Payment. Do not auto-
-				// fail customer_claimed_paid — support must review those.
-				if (
-					pendingOrder &&
-					openPayment &&
-					openPayment.status === "pending" &&
-					openPayment.paymentNumber
-				) {
-					const [failedPayment] = await tx
-						.update(PaymentsTable)
-						.set({ status: "failed" })
-						.where(
-							and(
-								eq(PaymentsTable.paymentNumber, openPayment.paymentNumber),
-								eq(PaymentsTable.status, "pending"),
-								isNull(PaymentsTable.deletedAt),
-							),
-						)
-						.returning({ paymentNumber: PaymentsTable.paymentNumber });
-					// Only cancel the Order if we actually failed the Payment. A concurrent
-					// claim→customer_claimed_paid would make the update match 0 rows.
-					if (failedPayment) {
-						await tx
-							.update(OrdersTable)
-							.set({ status: "cancelled" })
-							.where(
-								and(
-									eq(OrdersTable.id, pendingOrder.id),
-									eq(OrdersTable.status, "created"),
-									isNull(OrdersTable.deletedAt),
-								),
-							);
-						ctx.log.info("order.prior_unpaid_cancelled", {
-							customerPhone,
-							orderId: pendingOrder.id,
-							orderNumber: pendingOrder.orderNumber,
-							paymentNumber: openPayment.paymentNumber,
-						});
-					}
-				}
-
-				const [createdOrder] = await tx
-					.insert(OrdersTable)
-					.values({
-						address: input.address,
-						addressZoneId: input.addressZoneId ?? null,
-						customerPhone,
-						deliveryProvider: "tu-delivery",
-						notes: input.notes ?? null,
-						orderNumber,
-						status: "created",
-						total,
-					})
-					.returning({ orderId: OrdersTable.id });
-				if (!createdOrder) {
-					throw new Error("No order ID returned");
-				}
-				await tx.insert(OrderDetailsTable).values(
-					normalizedProducts.map((p) => ({
-						orderId: createdOrder.orderId,
-						price: productById.get(p.productId)?.price ?? null,
-						productId: p.productId,
-						quantity: p.quantity,
-					})),
-				);
-				const [payment] = await tx
-					.insert(PaymentsTable)
-					.values({
-						amount: total,
-						orderId: createdOrder.orderId,
-						paymentNumber: paymentNumberGenerated,
-						provider,
-						status: "pending",
-					})
-					.returning({ paymentNumber: PaymentsTable.paymentNumber });
-				return {
-					customer,
-					orderId: createdOrder.orderId,
-					orderNumber,
-					paymentNumber: payment?.paymentNumber ?? null,
-					reused: false as const,
-					total,
-				};
+			const txResult = await executeCheckoutTransaction(ctx, input, {
+				customerPhone,
+				normalizedProducts,
+				orderNumber,
+				paymentNumberGenerated,
+				productById,
+				provider,
+				submittedFingerprint,
+				total,
 			});
 			const orderId = txResult.orderId;
 			const reused = txResult.reused;
 			const resolvedOrderNumber = txResult.orderNumber;
-			const resolvedTotal = txResult.total;
-			if (reused) {
-				ctx.log.info("order.checkout_reused", {
-					customerPhone: Number(input.phoneNumber),
-					itemCount: normalizedProducts.length,
-					orderId,
-					orderNumber: resolvedOrderNumber,
-					total,
-				});
-			} else {
-				ctx.log.info("order.created", {
-					customerPhone: Number(input.phoneNumber),
-					itemCount: normalizedProducts.length,
-					orderId,
-					orderNumber: resolvedOrderNumber,
-					status_text: "created",
-					total,
-				});
-			}
 			const paymentNumber = txResult.paymentNumber;
-			if (paymentNumber && !reused) {
-				ctx.log.info("payment.created", {
-					amount: total,
-					orderId,
-					paymentNumber,
-					provider,
-					status_text: "pending",
-				});
-			}
+			logCheckoutOutcome(ctx, input, txResult, normalizedProducts, total, provider);
 
 			// Keep speculative QPay invoice creation alive after the response.
 			// Failure is non-fatal — createQr is the fallback.

@@ -13,6 +13,50 @@ type ProductStatus = (typeof status)[number];
 
 import { hydrateProductsBySearchIds, searchProductIds } from "~/queries/products/shared";
 
+async function resolveProductSearchIds(params: {
+	brandId?: number;
+	categoryId?: number;
+	page: number;
+	searchTerm?: string;
+}) {
+	if (params.searchTerm === undefined || params.searchTerm.trim() === "") {
+		return undefined;
+	}
+
+	const searchResults = await searchProducts(params.searchTerm.trim(), 1000, {
+		brandId: params.brandId !== undefined && params.brandId !== 0 ? params.brandId : undefined,
+		categoryId:
+			params.categoryId !== undefined && params.categoryId !== 0 ? params.categoryId : undefined,
+	});
+	const searchIds = searchResults.map((result) => result.id);
+	if (searchIds.length === 0) {
+		return { empty: true as const, searchIds };
+	}
+	return { empty: false as const, searchIds };
+}
+
+function buildProductFilterConditions(params: {
+	brandId?: number;
+	categoryId?: number;
+	searchIds?: Array<number>;
+	status?: ProductStatus;
+}) {
+	const conditions: Array<SQL<unknown> | undefined> = [];
+	if (params.brandId !== undefined && params.brandId !== 0) {
+		conditions.push(eq(ProductsTable.brandId, params.brandId));
+	}
+	if (params.categoryId !== undefined && params.categoryId !== 0) {
+		conditions.push(eq(ProductsTable.categoryId, params.categoryId));
+	}
+	if (params.status !== undefined) {
+		conditions.push(eq(ProductsTable.status, params.status));
+	}
+	if (params.searchIds !== undefined) {
+		conditions.push(inArray(ProductsTable.id, params.searchIds));
+	}
+	return conditions.filter((condition): condition is SQL<unknown> => condition !== undefined);
+}
+
 export const adminQueries = {
 	async createProduct(
 		data: {
@@ -104,40 +148,19 @@ export const adminQueries = {
 		sortField?: string;
 		status?: ProductStatus;
 	}) {
-		const conditions: Array<SQL<unknown> | undefined> = [];
-		let searchIds: Array<number> | undefined;
-		if (params.brandId !== undefined && params.brandId !== 0) {
-			conditions.push(eq(ProductsTable.brandId, params.brandId));
+		const searchResult = await resolveProductSearchIds(params);
+		if (searchResult?.empty) {
+			return {
+				pagination: {
+					currentPage: params.page,
+					hasNextPage: false,
+					hasPreviousPage: params.page > 1,
+				},
+				products: [],
+			};
 		}
-		if (params.categoryId !== undefined && params.categoryId !== 0) {
-			conditions.push(eq(ProductsTable.categoryId, params.categoryId));
-		}
-		if (params.status !== undefined) {
-			conditions.push(eq(ProductsTable.status, params.status));
-		}
-		if (params.searchTerm !== undefined && params.searchTerm.trim() !== "") {
-			const searchResults = await searchProducts(params.searchTerm.trim(), 1000, {
-				brandId: params.brandId !== undefined && params.brandId !== 0 ? params.brandId : undefined,
-				categoryId:
-					params.categoryId !== undefined && params.categoryId !== 0
-						? params.categoryId
-						: undefined,
-			});
-			searchIds = searchResults.map((result) => result.id);
-
-			if (searchIds.length === 0) {
-				return {
-					pagination: {
-						currentPage: params.page,
-						hasNextPage: false,
-						hasPreviousPage: params.page > 1,
-					},
-					products: [],
-				};
-			}
-
-			conditions.push(inArray(ProductsTable.id, searchIds));
-		}
+		const searchIds = searchResult?.searchIds;
+		const finalConditions = buildProductFilterConditions({ ...params, searchIds });
 		const orderByClauses: Array<SQL<unknown>> = [];
 		// Date sort uses last-modified time; never-updated products fall
 		// back to created_at since updated_at is NULL until first update.
@@ -150,7 +173,6 @@ export const adminQueries = {
 		const primaryOrderBy =
 			params.sortDirection === "asc" ? asc(primarySortColumn) : desc(primarySortColumn);
 		orderByClauses.push(primaryOrderBy, asc(ProductsTable.id));
-		const finalConditions = conditions.filter((c): c is SQL<unknown> => c !== undefined);
 		const offset = (params.page - 1) * params.pageSize;
 
 		if (searchIds !== undefined && params.sortField === undefined) {

@@ -174,30 +174,6 @@ interface OrderResult {
 	updatedAt: Date | null;
 }
 
-interface OrderListItem {
-	address: string;
-	addressZoneId: number | undefined;
-	createdAt: Date;
-	customerPhone: number;
-	deliveryProvider: OrderDeliveryProviderType;
-	id: number;
-	notes: string | null;
-	orderNumber: string;
-	paymentNumber: string | undefined;
-	paymentProvider: PaymentProviderType;
-	paymentStatus: PaymentStatusType;
-	products: Array<{
-		imageUrl: string | undefined;
-		name: string;
-		price: number;
-		productId: number;
-		quantity: number;
-	}>;
-	status: OrderStatusType;
-	total: number;
-	updatedAt: Date | null;
-}
-
 export const projectOrderResult = (result: OrderResult) => {
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 	const latestPayment = result.payments[0];
