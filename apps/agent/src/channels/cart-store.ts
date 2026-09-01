@@ -28,34 +28,33 @@ const STORAGE_KEY = "cart";
 // (the channel resolves the catalog before calling); `command` carries a parsed
 // cart-control command (inc/dec/set/remove/confirm/clear/view).
 const addRequestSchema = v.object({
-	type: v.literal("add"),
 	product: v.object({
+		brand: v.optional(v.string()),
 		id: v.number(),
+		image: v.optional(v.string()),
 		name: v.string(),
 		price: v.number(),
-		image: v.optional(v.string()),
-		brand: v.optional(v.string()),
 		stockStatus: v.optional(assistantStockStatusSchema),
 	}),
 	quantity: v.optional(v.number()),
+	type: v.literal("add"),
 });
 
 const commandRequestSchema = v.object({
-	type: v.literal("command"),
 	command: cartCommandSchema,
+	type: v.literal("command"),
 });
 
-const cartRequestSchema = v.variant("type", [
-	addRequestSchema,
-	commandRequestSchema,
-]);
+const cartRequestSchema = v.variant("type", [addRequestSchema, commandRequestSchema]);
 
 export class CartStore implements DurableObject {
 	constructor(private readonly state: DurableObjectState) {}
 
 	private async read(): Promise<Cart> {
 		const stored = await this.state.storage.get(STORAGE_KEY);
-		if (stored === undefined) return { ...EMPTY_CART };
+		if (stored === undefined) {
+			return { ...EMPTY_CART };
+		}
 		// Tolerate a legacy/garbled record by falling back to an empty cart rather
 		// than throwing the customer's whole turn.
 		const parsed = v.safeParse(cartSchema, stored);
@@ -92,11 +91,7 @@ export class CartStore implements DurableObject {
 		const current = await this.read();
 		const next =
 			parsed.output.type === "add"
-				? addToCart(
-						current,
-						parsed.output.product as CartProductInput,
-						parsed.output.quantity,
-					)
+				? addToCart(current, parsed.output.product as CartProductInput, parsed.output.quantity)
 				: applyCartCommand(current, parsed.output.command);
 		await this.write(next);
 		return Response.json({ cart: next });

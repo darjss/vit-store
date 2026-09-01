@@ -4,11 +4,7 @@ import { CustomersTable } from "~/db/schema";
 
 export const customerQueries = {
 	admin: {
-		async createCustomer(data: {
-			phone: number;
-			address?: string;
-			addressZoneId?: number;
-		}) {
+		async createCustomer(data: { address?: string; addressZoneId?: number; phone: number }) {
 			const result = await db()
 				.insert(CustomersTable)
 				.values(data)
@@ -16,16 +12,26 @@ export const customerQueries = {
 			return result;
 		},
 
+		async deleteCustomer(phone: number) {
+			await db()
+				.update(CustomersTable)
+				.set({ deletedAt: new Date() })
+				.where(and(eq(CustomersTable.phone, phone), isNull(CustomersTable.deletedAt)));
+		},
+
+		async getAllCustomers() {
+			return db()
+				.select(getTableColumns(CustomersTable))
+				.from(CustomersTable)
+				.where(isNull(CustomersTable.deletedAt))
+				.orderBy(CustomersTable.createdAt);
+		},
+
 		async getCustomerByPhone(phone: number) {
 			const result = await db()
 				.select(getTableColumns(CustomersTable))
 				.from(CustomersTable)
-				.where(
-					and(
-						eq(CustomersTable.phone, phone),
-						isNull(CustomersTable.deletedAt),
-					),
-				)
+				.where(and(eq(CustomersTable.phone, phone), isNull(CustomersTable.deletedAt)))
 				.limit(1);
 			return result[0] || null;
 		},
@@ -46,65 +52,31 @@ export const customerQueries = {
 					count: sql<number>`COUNT(*)`,
 				})
 				.from(CustomersTable)
-				.where(
-					and(
-						gte(CustomersTable.createdAt, startDate),
-						isNull(CustomersTable.deletedAt),
-					),
-				)
+				.where(and(gte(CustomersTable.createdAt, startDate), isNull(CustomersTable.deletedAt)))
 				.limit(1);
 			return result[0]?.count ?? 0;
-		},
-
-		async getAllCustomers() {
-			return db()
-				.select(getTableColumns(CustomersTable))
-				.from(CustomersTable)
-				.where(isNull(CustomersTable.deletedAt))
-				.orderBy(CustomersTable.createdAt);
 		},
 
 		async updateCustomer(phone: number, data: { address?: string }) {
 			const result = await db()
 				.update(CustomersTable)
 				.set(data)
-				.where(
-					and(
-						eq(CustomersTable.phone, phone),
-						isNull(CustomersTable.deletedAt),
-					),
-				)
+				.where(and(eq(CustomersTable.phone, phone), isNull(CustomersTable.deletedAt)))
 				.returning({ phone: CustomersTable.phone });
 			return result[0] || null;
-		},
-
-		async deleteCustomer(phone: number) {
-			await db()
-				.update(CustomersTable)
-				.set({ deletedAt: new Date() })
-				.where(
-					and(
-						eq(CustomersTable.phone, phone),
-						isNull(CustomersTable.deletedAt),
-					),
-				);
 		},
 	},
 
 	store: {
+		async createCustomer(data: { address?: string; addressZoneId?: number; phone: number }) {
+			const result = await db().insert(CustomersTable).values(data).returning();
+			return result[0];
+		},
+
 		async getCustomerByPhone(phone: number) {
 			return db().query.CustomersTable.findFirst({
 				where: eq(CustomersTable.phone, phone),
 			});
-		},
-
-		async createCustomer(data: {
-			phone: number;
-			address?: string;
-			addressZoneId?: number;
-		}) {
-			const result = await db().insert(CustomersTable).values(data).returning();
-			return result[0];
 		},
 
 		async updateCustomerAddress(
@@ -112,7 +84,9 @@ export const customerQueries = {
 			address: string | null | undefined,
 			addressZoneId?: number,
 		) {
-			if (address === undefined || address === null) return;
+			if (address === undefined || address === null) {
+				return;
+			}
 			await db()
 				.update(CustomersTable)
 				.set({ address, addressZoneId })

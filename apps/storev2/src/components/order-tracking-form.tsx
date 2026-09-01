@@ -8,33 +8,38 @@ import { showToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { TextField, TextFieldInput, TextFieldLabel } from "@/components/ui/text-field";
 import {
-	TextField,
-	TextFieldInput,
-	TextFieldLabel,
-} from "@/components/ui/text-field";
-import { BoxIcon as IconPackage, LockPasswordIcon as IconLock, MinimalisticMagnifierIcon as IconSearch, RefreshIcon as IconLoader } from "@solar-icons/solid/linear";
-import { CheckCircleIcon as IconCheck, CheckReadIcon as IconCheckDouble, DangerCircleIcon as IconAlert } from "@solar-icons/solid/bold";
+	BoxIcon as IconPackage,
+	LockPasswordIcon as IconLock,
+	MinimalisticMagnifierIcon as IconSearch,
+	RefreshIcon as IconLoader,
+} from "@solar-icons/solid/linear";
+import {
+	CheckCircleIcon as IconCheck,
+	CheckReadIcon as IconCheckDouble,
+	DangerCircleIcon as IconAlert,
+} from "@solar-icons/solid/bold";
 
 const statusBadgeVariant: Record<
 	string,
 	"outline" | "warning" | "info" | "success" | "error" | "secondary"
 > = {
-	created: "outline",
-	pending: "warning",
-	shipped: "info",
-	delivered: "success",
 	cancelled: "error",
+	created: "outline",
+	delivered: "success",
+	pending: "warning",
 	refunded: "secondary",
+	shipped: "info",
 };
 
-const timelineSteps: OrderStatusType[] = ["pending", "shipped", "delivered"];
+const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 
 const paymentStatusLabels: Record<string, string> = {
-	pending: "Хүлээгдэж буй",
 	customer_claimed_paid: "Төлсөн гэж мэдэгдсэн",
-	success: "Амжилттай",
 	failed: "Амжилтгүй",
+	pending: "Хүлээгдэж буй",
+	success: "Амжилттай",
 };
 
 const OrderTrackingForm = () => {
@@ -46,8 +51,8 @@ const OrderTrackingForm = () => {
 	// Check auth status
 	const authQuery = useQuery(
 		() => ({
-			queryKey: ["auth-check"],
 			queryFn: () => api.auth.check.query(),
+			queryKey: ["auth-check"],
 		}),
 		() => queryClient,
 	);
@@ -62,10 +67,10 @@ const OrderTrackingForm = () => {
 			},
 			onError: (error: { message?: string }) => {
 				showToast({
-					title: "Алдаа",
 					description: error?.message || "Захиалгыг хянахад алдаа гарлаа",
-					variant: "error",
 					duration: 5000,
+					title: "Алдаа",
+					variant: "error",
 				});
 			},
 		}),
@@ -78,21 +83,21 @@ const OrderTrackingForm = () => {
 			mutationFn: async (phoneNumber: string) => {
 				return await api.auth.sendOtp.mutate({ phone: phoneNumber });
 			},
+			onError: (error: { message?: string }) => {
+				showToast({
+					description: error?.message || "Код илгээхэд алдаа гарлаа",
+					duration: 5000,
+					title: "Алдаа",
+					variant: "error",
+				});
+			},
 			onSuccess: () => {
 				setStep("otp");
 				showToast({
-					title: "Амжилттай",
 					description: "Таны утсанд баталгаажуулах код илгээгдлээ",
+					duration: 5000,
+					title: "Амжилттай",
 					variant: "success",
-					duration: 5000,
-				});
-			},
-			onError: (error: { message?: string }) => {
-				showToast({
-					title: "Алдаа",
-					description: error?.message || "Код илгээхэд алдаа гарлаа",
-					variant: "error",
-					duration: 5000,
 				});
 			},
 		}),
@@ -102,27 +107,27 @@ const OrderTrackingForm = () => {
 	// OTP verify mutation
 	const verifyOtpMutation = useMutation(
 		() => ({
-			mutationFn: async (input: { phone: string; otp: string }) => {
-				return await api.auth.login.mutate({ phone: input.phone, otp: input.otp });
+			mutationFn: async (input: { otp: string; phone: string }) => {
+				return await api.auth.login.mutate({ otp: input.otp, phone: input.phone });
+			},
+			onError: (error: { message?: string }) => {
+				showToast({
+					description: error?.message || "Баталгаажуулалт амжилтгүй",
+					duration: 5000,
+					title: "Алдаа",
+					variant: "error",
+				});
 			},
 			onSuccess: () => {
 				showToast({
-					title: "Амжилттай",
 					description: "Баталгаажлаа. Захиалгыг хайж байна...",
-					variant: "success",
 					duration: 3000,
+					title: "Амжилттай",
+					variant: "success",
 				});
 				// Now track the order
 				trackMutation.mutate({ orderNumber: orderNumber(), phone: phone() });
 				setStep("result");
-			},
-			onError: (error: { message?: string }) => {
-				showToast({
-					title: "Алдаа",
-					description: error?.message || "Баталгаажуулалт амжилтгүй",
-					variant: "error",
-					duration: 5000,
-				});
 			},
 		}),
 		() => queryClient,
@@ -131,10 +136,10 @@ const OrderTrackingForm = () => {
 	const handleSearch = () => {
 		if (!orderNumber().trim() || !phone().trim()) {
 			showToast({
-				title: "Анхааруулга",
 				description: "Захиалгын дугаар болон утасны дугаараа оруулна уу",
-				variant: "default",
 				duration: 3000,
+				title: "Анхааруулга",
+				variant: "default",
 			});
 			return;
 		}
@@ -153,28 +158,26 @@ const OrderTrackingForm = () => {
 	const handleVerifyOtp = () => {
 		if (!otp().trim()) {
 			showToast({
-				title: "Анхааруулга",
 				description: "Баталгаажуулах кодоо оруулна уу",
-				variant: "default",
 				duration: 3000,
+				title: "Анхааруулга",
+				variant: "default",
 			});
 			return;
 		}
-		verifyOtpMutation.mutate({ phone: phone(), otp: otp() });
+		verifyOtpMutation.mutate({ otp: otp(), phone: phone() });
 	};
 
 	const formatDate = (timestamp: Date | string) => {
 		return new Date(timestamp).toLocaleDateString("mn-MN", {
-			year: "numeric",
-			month: "long",
 			day: "numeric",
+			month: "long",
+			year: "numeric",
 		});
 	};
 
 	const currentStepIndex = () =>
-		timelineSteps.indexOf(
-			(trackMutation.data?.status ?? "pending") as OrderStatusType,
-		);
+		timelineSteps.indexOf((trackMutation.data?.status ?? "pending") as OrderStatusType);
 
 	return (
 		<div class="space-y-6">
@@ -184,11 +187,11 @@ const OrderTrackingForm = () => {
 						<CardContent class="p-6 pt-6 md:p-8 md:pt-8">
 							<div class="space-y-5">
 								<div class="flex items-center gap-3">
-									<div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-wash-sky text-foreground">
+									<div class="bg-wash-sky text-foreground flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full">
 										<IconSearch class="h-5 w-5" />
 									</div>
 									<div>
-										<h2 class="font-display text-base text-foreground">Захиалга хайх</h2>
+										<h2 class="font-display text-foreground text-base">Захиалга хайх</h2>
 										<p class="text-muted-foreground text-xs">
 											Захиалгын дугаар, утасны дугаараа оруулна уу
 										</p>
@@ -199,34 +202,30 @@ const OrderTrackingForm = () => {
 									<TextField>
 										<TextFieldLabel>Захиалгын дугаар</TextFieldLabel>
 										<TextFieldInput
-											type="text"
-											value={orderNumber()}
 											onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) =>
 												setOrderNumber(e.currentTarget.value)
 											}
 											placeholder="Жишээ: ORD12345"
+											type="text"
+											value={orderNumber()}
 										/>
 									</TextField>
 
 									<TextField>
 										<TextFieldLabel>Утасны дугаар</TextFieldLabel>
 										<TextFieldInput
-											type="tel"
-											value={phone()}
+											maxLength={8}
 											onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) =>
 												setPhone(e.currentTarget.value)
 											}
 											placeholder="88889999"
-											maxLength={8}
+											type="tel"
+											value={phone()}
 										/>
 									</TextField>
 								</div>
 
-								<Button
-									class="w-full"
-									onClick={handleSearch}
-									disabled={sendOtpMutation.isPending}
-								>
+								<Button class="w-full" disabled={sendOtpMutation.isPending} onClick={handleSearch}>
 									{sendOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
 											<IconLoader class="h-4 w-4 animate-spin" />
@@ -241,7 +240,7 @@ const OrderTrackingForm = () => {
 								</Button>
 
 								<Show when={authQuery.data}>
-									<div class="flex items-center gap-2 rounded-xl bg-wash-mint/60 p-3 text-foreground text-xs">
+									<div class="bg-wash-mint/60 text-foreground flex items-center gap-2 rounded-xl p-3 text-xs">
 										<IconCheckDouble class="h-4 w-4 shrink-0" />
 										<span>Та нэвтэрсэн байна. Захиалгын дугаараа оруулан шууд хайна уу.</span>
 									</div>
@@ -256,11 +255,11 @@ const OrderTrackingForm = () => {
 						<CardContent class="p-6 pt-6 md:p-8 md:pt-8">
 							<div class="space-y-5">
 								<div class="flex items-center gap-3">
-									<div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-wash-lilac text-foreground">
+									<div class="bg-wash-lilac text-foreground flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full">
 										<IconLock class="h-5 w-5" />
 									</div>
 									<div>
-										<h2 class="font-display text-base text-foreground">Баталгаажуулалт</h2>
+										<h2 class="font-display text-foreground text-base">Баталгаажуулалт</h2>
 										<p class="text-muted-foreground text-xs">
 											{phone()} дугаарт илгээгдсэн кодыг оруулна уу
 										</p>
@@ -270,21 +269,21 @@ const OrderTrackingForm = () => {
 								<TextField>
 									<TextFieldLabel>Баталгаажуулах код</TextFieldLabel>
 									<TextFieldInput
-										type="text"
-										value={otp()}
+										class="font-display text-center text-lg tracking-[0.5em]"
+										maxLength={6}
 										onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) =>
 											setOtp(e.currentTarget.value)
 										}
 										placeholder="XXXX"
-										maxLength={6}
-										class="text-center font-display text-lg tracking-[0.5em]"
+										type="text"
+										value={otp()}
 									/>
 								</TextField>
 
 								<Button
 									class="w-full"
-									onClick={handleVerifyOtp}
 									disabled={verifyOtpMutation.isPending}
+									onClick={handleVerifyOtp}
 								>
 									{verifyOtpMutation.isPending ? (
 										<span class="flex items-center justify-center gap-2">
@@ -296,12 +295,7 @@ const OrderTrackingForm = () => {
 									)}
 								</Button>
 
-								<Button
-									variant="ghost"
-									size="sm"
-									class="w-full"
-									onClick={() => setStep("input")}
-								>
+								<Button class="w-full" onClick={() => setStep("input")} size="sm" variant="ghost">
 									Буцах
 								</Button>
 							</div>
@@ -313,8 +307,8 @@ const OrderTrackingForm = () => {
 					<Show when={trackMutation.isPending}>
 						<Card class="enter-scale">
 							<CardContent class="p-8 pt-8 text-center">
-								<IconLoader class="mx-auto mb-4 h-10 w-10 animate-spin text-cocoa" />
-								<p class="font-semibold text-foreground text-sm">Захиалгыг хайж байна...</p>
+								<IconLoader class="text-cocoa mx-auto mb-4 h-10 w-10 animate-spin" />
+								<p class="text-foreground text-sm font-semibold">Захиалгыг хайж байна...</p>
 							</CardContent>
 						</Card>
 					</Show>
@@ -322,11 +316,11 @@ const OrderTrackingForm = () => {
 					<Show when={trackMutation.isError}>
 						<Card class="enter-scale">
 							<CardContent class="p-6 pt-6 text-center md:p-8 md:pt-8">
-								<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-error text-error-foreground">
+								<div class="bg-error text-error-foreground mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
 									<IconAlert class="h-7 w-7" />
 								</div>
-								<h3 class="mb-2 font-display text-foreground text-lg">Захиалга олдсонгүй</h3>
-								<p class="mb-5 text-muted-foreground text-sm">
+								<h3 class="font-display text-foreground mb-2 text-lg">Захиалга олдсонгүй</h3>
+								<p class="text-muted-foreground mb-5 text-sm">
 									Захиалгын дугаар эсвэл утасны дугаар буруу байж магадгүй.
 								</p>
 								<Button
@@ -345,14 +339,14 @@ const OrderTrackingForm = () => {
 						<div class="space-y-4">
 							{/* Order header */}
 							<Card class="enter-rise overflow-hidden">
-								<div class="border-border border-b bg-wash-lemon/70 p-5 md:p-6">
+								<div class="border-border bg-wash-lemon/70 border-b p-5 md:p-6">
 									<div class="flex flex-wrap items-center justify-between gap-3">
 										<div class="flex items-center gap-3">
-											<div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-card text-foreground shadow-soft-sm">
+											<div class="bg-card text-foreground shadow-soft-sm flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full">
 												<IconPackage class="h-5 w-5" />
 											</div>
 											<div>
-												<div class="text-muted-foreground text-xs uppercase tracking-wide">
+												<div class="text-muted-foreground text-xs tracking-wide uppercase">
 													Захиалга №
 												</div>
 												<div class="font-display text-foreground text-lg">
@@ -362,13 +356,10 @@ const OrderTrackingForm = () => {
 										</div>
 										<Badge
 											variant={
-												statusBadgeVariant[trackMutation.data?.status || "pending"] ??
-												"outline"
+												statusBadgeVariant[trackMutation.data?.status || "pending"] ?? "outline"
 											}
 										>
-											{orderStatusLabels[
-												trackMutation.data?.status as OrderStatusType
-											] ??
+											{orderStatusLabels[trackMutation.data?.status as OrderStatusType] ??
 												trackMutation.data?.status ??
 												"Хүлээгдэж буй"}
 										</Badge>
@@ -377,7 +368,7 @@ const OrderTrackingForm = () => {
 								<CardContent class="space-y-4 p-5 pt-5 md:p-6 md:pt-6">
 									{/* Status timeline */}
 									<Show when={currentStepIndex() >= 0}>
-										<div class="rounded-xl bg-wash-mint/40 p-4">
+										<div class="bg-wash-mint/40 rounded-xl p-4">
 											<div class="flex items-start">
 												<For each={timelineSteps}>
 													{(timelineStep, index) => {
@@ -399,7 +390,7 @@ const OrderTrackingForm = () => {
 																		class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${
 																			done() || current()
 																				? "bg-success text-success-foreground"
-																				: "border border-border bg-card text-muted-foreground"
+																				: "border-border bg-card text-muted-foreground border"
 																		}`}
 																	>
 																		{done() || current() ? (
@@ -411,7 +402,7 @@ const OrderTrackingForm = () => {
 																	<span
 																		class={`text-center text-[11px] leading-tight ${
 																			current()
-																				? "font-semibold text-foreground"
+																				? "text-foreground font-semibold"
 																				: "text-muted-foreground"
 																		}`}
 																	>
@@ -427,16 +418,16 @@ const OrderTrackingForm = () => {
 									</Show>
 
 									<div class="grid grid-cols-2 gap-3">
-										<div class="rounded-xl bg-muted/50 p-3">
-											<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+										<div class="bg-muted/50 rounded-xl p-3">
+											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
 												Огноо
 											</div>
-											<div class="font-medium text-foreground text-sm">
+											<div class="text-foreground text-sm font-medium">
 												{formatDate(trackMutation.data?.createdAt || new Date())}
 											</div>
 										</div>
-										<div class="rounded-xl bg-muted/50 p-3">
-											<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+										<div class="bg-muted/50 rounded-xl p-3">
+											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
 												Нийт дүн
 											</div>
 											<div class="font-display text-foreground text-sm">
@@ -445,16 +436,16 @@ const OrderTrackingForm = () => {
 										</div>
 									</div>
 
-									<div class="rounded-xl bg-muted/50 p-3">
-										<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+									<div class="bg-muted/50 rounded-xl p-3">
+										<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
 											Хүргэлтийн хаяг
 										</div>
 										<div class="text-foreground text-sm">{trackMutation.data?.address}</div>
 									</div>
 
 									{trackMutation.data?.notes && (
-										<div class="rounded-xl bg-wash-lemon/50 p-3">
-											<div class="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+										<div class="bg-wash-lemon/50 rounded-xl p-3">
+											<div class="text-muted-foreground mb-1 text-xs tracking-wide uppercase">
 												Тэмдэглэл
 											</div>
 											<div class="text-foreground text-sm">{trackMutation.data?.notes}</div>
@@ -462,16 +453,14 @@ const OrderTrackingForm = () => {
 									)}
 
 									{/* Payment status */}
-									<div class="rounded-xl bg-muted/50 p-3">
-										<div class="mb-2 text-muted-foreground text-xs uppercase tracking-wide">
+									<div class="bg-muted/50 rounded-xl p-3">
+										<div class="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
 											Төлбөрийн төлөв
 										</div>
 										<div class="flex flex-wrap items-center gap-2">
 											{trackMutation.data?.payments?.map(
 												(payment: { provider: string; status: string }) => (
-													<Badge
-														variant={payment.status === "success" ? "success" : "warning"}
-													>
+													<Badge variant={payment.status === "success" ? "success" : "warning"}>
 														{payment.provider === "qpay"
 															? "QPay"
 															: payment.provider === "transfer"
@@ -495,31 +484,29 @@ const OrderTrackingForm = () => {
 							{/* Products */}
 							<Card class="enter-rise stagger-1">
 								<div class="border-border border-b p-5 md:p-6">
-									<h3 class="font-display text-base text-foreground">
-										Захиалсан бүтээгдэхүүнүүд
-									</h3>
+									<h3 class="font-display text-foreground text-base">Захиалсан бүтээгдэхүүнүүд</h3>
 								</div>
 								<CardContent class="space-y-3 p-5 pt-5 md:p-6 md:pt-6">
 									{trackMutation.data?.orderDetails?.map(
 										(detail: {
 											product: {
-												name: string;
-												images?: Array<{ url: string }>;
 												brand?: { name: string };
+												images?: Array<{ url: string }>;
+												name: string;
 											};
 											quantity: number;
 										}) => (
 											<div class="flex items-center gap-3">
 												{detail.product?.images?.[0]?.url && (
 													<img
-														src={detail.product.images[0].url}
 														alt={detail.product.name}
-														class="h-14 w-14 shrink-0 rounded-xl bg-muted object-cover"
+														class="bg-muted h-14 w-14 shrink-0 rounded-xl object-cover"
 														loading="lazy"
+														src={detail.product.images[0].url}
 													/>
 												)}
 												<div class="min-w-0 flex-1">
-													<div class="truncate font-semibold text-foreground text-sm">
+													<div class="text-foreground truncate text-sm font-semibold">
 														{detail.product?.name}
 													</div>
 													{detail.product?.brand?.name && (
@@ -528,7 +515,7 @@ const OrderTrackingForm = () => {
 														</div>
 													)}
 												</div>
-												<div class="shrink-0 rounded-full bg-muted px-2.5 py-1 font-semibold text-foreground text-xs">
+												<div class="bg-muted text-foreground shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold">
 													{detail.quantity}x
 												</div>
 											</div>
@@ -539,7 +526,6 @@ const OrderTrackingForm = () => {
 
 							{/* New search */}
 							<Button
-								variant="outline"
 								class="w-full"
 								onClick={() => {
 									setStep("input");
@@ -548,6 +534,7 @@ const OrderTrackingForm = () => {
 									setPhone("");
 									setOtp("");
 								}}
+								variant="outline"
 							>
 								Өөр захиалга хайх
 							</Button>

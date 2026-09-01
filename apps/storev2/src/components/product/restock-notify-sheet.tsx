@@ -70,34 +70,28 @@ function restockCustomerType(identity: unknown) {
 	return identity ? ("verified_customer" as const) : ("guest" as const);
 }
 
-type ValidatedContact =
-	| { valid: true; contact: string }
-	| { valid: false; error: string };
+type ValidatedContact = { contact: string; valid: true } | { error: string; valid: false };
 
-function validatedContact(
-	channel: RestockChannel,
-	value: string,
-): ValidatedContact {
-	const contact =
-		channel === "sms" ? value.replace(/\D/g, "") : value.trim().toLowerCase();
+function validatedContact(channel: RestockChannel, value: string): ValidatedContact {
+	const contact = channel === "sms" ? value.replaceAll(/\D/g, "") : value.trim().toLowerCase();
 	const valid =
-		channel === "sms"
-			? /^[6-9]\d{7}$/.test(contact)
-			: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
-	if (valid) return { valid: true, contact };
+		channel === "sms" ? /^[6-9]\d{7}$/.test(contact) : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+	if (valid) {
+		return { contact, valid: true };
+	}
 	return {
-		valid: false,
 		error:
 			channel === "sms"
 				? "8 оронтой утасны дугаар оруулна уу."
 				: "И-мэйлийн хаягаа зөв оруулна уу.",
+		valid: false,
 	};
 }
 
 interface RestockNotifySheetProps {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
 	focusRestore: SheetFocusRestore;
+	onOpenChange: (open: boolean) => void;
+	open: boolean;
 	productId: number;
 	productName?: string;
 }
@@ -116,9 +110,9 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 
 	const identityQuery = useQuery(
 		() => ({
-			queryKey: ["restock-subscription-identity"],
-			queryFn: () => api.product.restockSubscriptionIdentity.query(),
 			enabled: props.open,
+			queryFn: () => api.product.restockSubscriptionIdentity.query(),
+			queryKey: ["restock-subscription-identity"],
 			staleTime: 0,
 		}),
 		() => queryClient,
@@ -128,9 +122,9 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 	const verifiedPhoneFlow = () => Boolean(identityQuery.data) && !guestFlow();
 
 	const analyticsEvent = () => ({
-		productId: props.productId,
 		channel: channel(),
 		customerType: customerType(),
+		productId: props.productId,
 	});
 
 	const reset = () => {
@@ -152,25 +146,15 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		if (identityQuery.isSuccess && !identityQuery.isFetching && !trackedOpen) {
 			trackedOpen = true;
 			trackRestockSheetOpened({
-				productId: props.productId,
 				customerType: customerType(),
+				productId: props.productId,
 			});
 		}
 	});
 
 	const verifiedMutation = useMutation(
 		() => ({
-			mutationFn: () =>
-				api.product.subscribeToRestock.mutate({ productId: props.productId }),
-			onSuccess: (result) => {
-				trackRestockSubscriptionCreated({
-					...analyticsEvent(),
-					channel: "sms",
-					alreadySubscribed: result.alreadySubscribed,
-				});
-				setStage("success");
-				setErrorMessage("");
-			},
+			mutationFn: () => api.product.subscribeToRestock.mutate({ productId: props.productId }),
 			onError: (error) => {
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
@@ -178,6 +162,15 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					errorCode: errorCode(error),
 				});
 				setErrorMessage(restockErrorMessage(error, "contact"));
+			},
+			onSuccess: (result) => {
+				trackRestockSubscriptionCreated({
+					...analyticsEvent(),
+					alreadySubscribed: result.alreadySubscribed,
+					channel: "sms",
+				});
+				setStage("success");
+				setErrorMessage("");
 			},
 		}),
 		() => queryClient,
@@ -187,10 +180,17 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		() => ({
 			mutationFn: () =>
 				api.product.requestGuestRestockConfirmation.mutate({
-					productId: props.productId,
 					channel: channel(),
 					contact: contact(),
+					productId: props.productId,
 				}),
+			onError: (error) => {
+				trackRestockSubscriptionFailed({
+					...analyticsEvent(),
+					errorCode: errorCode(error),
+				});
+				setErrorMessage(restockErrorMessage(error, "contact"));
+			},
 			onSuccess: (result) => {
 				setChallengeId(result.challengeId);
 				setCode("");
@@ -198,13 +198,6 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 				setStage("confirmation");
 				trackRestockConfirmationRequested(analyticsEvent());
 				queueMicrotask(() => codeInput?.focus());
-			},
-			onError: (error) => {
-				trackRestockSubscriptionFailed({
-					...analyticsEvent(),
-					errorCode: errorCode(error),
-				});
-				setErrorMessage(restockErrorMessage(error, "contact"));
 			},
 		}),
 		() => queryClient,
@@ -217,6 +210,14 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					challengeId: challengeId(),
 					code: code(),
 				}),
+			onError: (error) => {
+				trackRestockSubscriptionFailed({
+					...analyticsEvent(),
+					errorCode: errorCode(error),
+				});
+				setErrorMessage(restockErrorMessage(error, "confirmation"));
+				queueMicrotask(() => codeInput?.focus());
+			},
 			onSuccess: (result) => {
 				trackRestockConfirmationCompleted(analyticsEvent());
 				trackRestockSubscriptionCreated({
@@ -225,14 +226,6 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 				});
 				setErrorMessage("");
 				setStage("success");
-			},
-			onError: (error) => {
-				trackRestockSubscriptionFailed({
-					...analyticsEvent(),
-					errorCode: errorCode(error),
-				});
-				setErrorMessage(restockErrorMessage(error, "confirmation"));
-				queueMicrotask(() => codeInput?.focus());
 			},
 		}),
 		() => queryClient,
@@ -243,9 +236,9 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		setContact("");
 		setErrorMessage("");
 		trackRestockChannelSelected({
-			productId: props.productId,
 			channel: nextChannel,
 			customerType: customerType(),
+			productId: props.productId,
 		});
 	};
 
@@ -287,15 +280,15 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 	};
 
 	return (
-		<Sheet open={props.open} onOpenChange={props.onOpenChange}>
+		<Sheet onOpenChange={props.onOpenChange} open={props.open}>
 			<SheetContent
-				position="bottom"
+				class="border-border bg-card flex max-h-[88vh] flex-col rounded-t-2xl border-t p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 				closeLabel="Мэдэгдлийн цонхыг хаах"
 				focusRestore={props.focusRestore}
-				class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+				position="bottom"
 			>
 				<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
-					<SheetTitle class="font-bold font-display text-lg tracking-tight">
+					<SheetTitle class="font-display text-lg font-bold tracking-tight">
 						Мэдэгдэл авах
 					</SheetTitle>
 					<SheetDescription class="text-muted-foreground text-sm">
@@ -306,45 +299,34 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 				<div class="space-y-4 px-5 py-5">
 					<Switch>
 						<Match when={identityQuery.isPending || identityQuery.isFetching}>
-							<div class="space-y-3" aria-busy="true">
+							<div aria-busy="true" class="space-y-3">
 								<span class="sr-only">Уншиж байна</span>
-								<div class="h-5 w-2/3 animate-pulse rounded-lg bg-muted" />
-								<div class="h-12 w-full animate-pulse rounded-xl bg-muted" />
+								<div class="bg-muted h-5 w-2/3 animate-pulse rounded-lg" />
+								<div class="bg-muted h-12 w-full animate-pulse rounded-xl" />
 							</div>
 						</Match>
 
 						<Match when={identityQuery.isError}>
 							<div class="space-y-4">
 								<p class="text-sm" role="alert">
-									Мэдэгдлийн тохиргоог уншиж чадсангүй. Холболтоо шалгаад дахин
-									оролдоно уу.
+									Мэдэгдлийн тохиргоог уншиж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.
 								</p>
-								<Button
-									type="button"
-									class="w-full"
-									onClick={() => identityQuery.refetch()}
-								>
+								<Button class="w-full" onClick={() => identityQuery.refetch()} type="button">
 									Дахин оролдох
 								</Button>
 							</div>
 						</Match>
 
 						<Match when={stage() === "success"}>
-							<div class="space-y-5 text-center" aria-live="polite">
-								<div class="mx-auto flex size-12 items-center justify-center rounded-full bg-success text-success-foreground">
-									<IconCheckCircle class="size-6" aria-hidden="true" />
+							<div aria-live="polite" class="space-y-5 text-center">
+								<div class="bg-success text-success-foreground mx-auto flex size-12 items-center justify-center rounded-full">
+									<IconCheckCircle aria-hidden="true" class="size-6" />
 								</div>
 								<div class="space-y-1">
-									<p class="font-semibold text-base">Мэдэгдэл бэлэн боллоо</p>
-									<p class="text-muted-foreground text-sm">
-										Бараа дахин ормогц танд мэдэгдэнэ.
-									</p>
+									<p class="text-base font-semibold">Мэдэгдэл бэлэн боллоо</p>
+									<p class="text-muted-foreground text-sm">Бараа дахин ормогц танд мэдэгдэнэ.</p>
 								</div>
-								<Button
-									type="button"
-									class="w-full"
-									onClick={() => props.onOpenChange(false)}
-								>
+								<Button class="w-full" onClick={() => props.onOpenChange(false)} type="button">
 									Хаах
 								</Button>
 							</div>
@@ -353,45 +335,43 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						<Match when={stage() === "confirmation"}>
 							<div class="space-y-4">
 								<div class="space-y-1">
-									<p class="font-semibold text-sm">Кодоо оруулна уу</p>
+									<p class="text-sm font-semibold">Кодоо оруулна уу</p>
 									<p class="text-muted-foreground text-sm">
-										{channel() === "sms" ? "Утас" : "И-мэйл"} рүү илгээсэн 6
-										оронтой код 10 минут хүчинтэй.
+										{channel() === "sms" ? "Утас" : "И-мэйл"} рүү илгээсэн 6 оронтой код 10 минут
+										хүчинтэй.
 									</p>
 								</div>
 								<div class="space-y-2">
-									<label class="font-medium text-sm" for="restock-code">
+									<label class="text-sm font-medium" for="restock-code">
 										Баталгаажуулах код
 									</label>
 									<input
+										aria-describedby={errorMessage() ? "restock-error" : undefined}
+										aria-invalid={Boolean(errorMessage())}
+										autocomplete="one-time-code"
+										class="border-border bg-background shadow-soft-sm focus-visible:shadow-soft focus-visible:ring-ring aria-invalid:border-destructive h-12 w-full rounded-xl border px-4 text-center text-base font-semibold tracking-[0.25em] transition-[box-shadow,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:outline-none"
+										id="restock-code"
+										inputMode="numeric"
+										maxLength={6}
+										name="restock-code"
+										onInput={(event) => setCode(event.currentTarget.value.replaceAll(/\D/g, ""))}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") {
+												submitCode();
+											}
+										}}
+										placeholder="123456"
 										ref={(element) => {
 											codeInput = element;
 										}}
-										id="restock-code"
-										name="restock-code"
 										type="text"
-										inputMode="numeric"
-										autocomplete="one-time-code"
-										maxLength={6}
 										value={code()}
-										onInput={(event) =>
-											setCode(event.currentTarget.value.replace(/\D/g, ""))
-										}
-										onKeyDown={(event) => {
-											if (event.key === "Enter") submitCode();
-										}}
-										aria-invalid={Boolean(errorMessage())}
-										aria-describedby={
-											errorMessage() ? "restock-error" : undefined
-										}
-										placeholder="123456"
-										class="h-12 w-full rounded-xl border border-border bg-background px-4 text-center font-semibold text-base tracking-[0.25em] shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive"
 									/>
 								</div>
 								<Show when={errorMessage()}>
 									<p
+										class="bg-error text-error-foreground rounded-xl px-4 py-3 text-sm"
 										id="restock-error"
-										class="rounded-xl bg-error px-4 py-3 text-error-foreground text-sm"
 										role="alert"
 									>
 										{errorMessage()}
@@ -399,22 +379,20 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 								</Show>
 								<div class="space-y-2">
 									<Button
-										type="button"
 										class="w-full"
-										size="lg"
 										disabled={confirmMutation.isPending}
 										onClick={submitCode}
+										size="lg"
+										type="button"
 									>
-										{confirmMutation.isPending
-											? "Баталгаажуулж байна..."
-											: "Код баталгаажуулах"}
+										{confirmMutation.isPending ? "Баталгаажуулж байна..." : "Код баталгаажуулах"}
 									</Button>
 									<Button
-										type="button"
-										variant="outline"
 										class="w-full"
 										disabled={confirmMutation.isPending}
 										onClick={startNewConfirmation}
+										type="button"
+										variant="outline"
 									>
 										Шинэ код авах
 									</Button>
@@ -425,13 +403,12 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						<Match when={verifiedPhoneFlow()}>
 							<div class="space-y-4">
 								<p class="text-sm">
-									Мэдэгдлийг баталгаажсан {identityQuery.data?.maskedPhone}{" "}
-									дугаарт SMS-ээр илгээнэ.
+									Мэдэгдлийг баталгаажсан {identityQuery.data?.maskedPhone} дугаарт SMS-ээр илгээнэ.
 								</p>
 								<Show when={errorMessage()}>
 									<p
+										class="bg-error text-error-foreground rounded-xl px-4 py-3 text-sm"
 										id="restock-error"
-										class="rounded-xl bg-error px-4 py-3 text-error-foreground text-sm"
 										role="alert"
 									>
 										{errorMessage()}
@@ -439,23 +416,21 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 								</Show>
 								<div class="space-y-2">
 									<Button
-										type="button"
 										class="w-full"
-										size="lg"
 										disabled={verifiedMutation.isPending}
 										onClick={() => verifiedMutation.mutate()}
+										size="lg"
+										type="button"
 									>
 										<IconNotification aria-hidden="true" />
-										{verifiedMutation.isPending
-											? "Захиалж байна..."
-											: "Утсаар мэдэгдэл авах"}
+										{verifiedMutation.isPending ? "Захиалж байна..." : "Утсаар мэдэгдэл авах"}
 									</Button>
 									<Button
-										type="button"
-										variant="outline"
 										class="w-full"
 										disabled={verifiedMutation.isPending}
 										onClick={startVerifiedEmailFlow}
+										type="button"
+										variant="outline"
 									>
 										И-мэйлээр авах
 									</Button>
@@ -466,23 +441,23 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 						<Match when>
 							<div class="space-y-4">
 								<div class="space-y-2">
-									<p class="font-medium text-sm">Мэдэгдэл авах суваг</p>
+									<p class="text-sm font-medium">Мэдэгдэл авах суваг</p>
 									<div class="grid grid-cols-2 gap-2">
 										<Button
-											type="button"
-											variant={channel() === "sms" ? "dark" : "outline"}
 											aria-pressed={channel() === "sms"}
 											disabled={requestMutation.isPending}
 											onClick={() => selectChannel("sms")}
+											type="button"
+											variant={channel() === "sms" ? "dark" : "outline"}
 										>
 											Утас
 										</Button>
 										<Button
-											type="button"
-											variant={channel() === "email" ? "dark" : "outline"}
 											aria-pressed={channel() === "email"}
 											disabled={requestMutation.isPending}
 											onClick={() => selectChannel("email")}
+											type="button"
+											variant={channel() === "email" ? "dark" : "outline"}
 										>
 											И-мэйл
 										</Button>
@@ -490,52 +465,48 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 								</div>
 
 								<div class="space-y-2">
-									<label class="font-medium text-sm" for="restock-contact">
+									<label class="text-sm font-medium" for="restock-contact">
 										{channel() === "sms" ? "Утасны дугаар" : "И-мэйлийн хаяг"}
 									</label>
 									<input
+										aria-describedby={errorMessage() ? "restock-error" : undefined}
+										aria-invalid={Boolean(errorMessage())}
+										autocomplete={channel() === "sms" ? "tel" : "email"}
+										class="border-border bg-background shadow-soft-sm focus-visible:shadow-soft focus-visible:ring-ring aria-invalid:border-destructive h-12 w-full rounded-xl border px-4 text-base font-medium transition-[box-shadow,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:outline-none"
+										id="restock-contact"
+										inputMode={channel() === "sms" ? "numeric" : "email"}
+										name={channel() === "sms" ? "phone" : "email"}
+										onInput={(event) => setContact(event.currentTarget.value)}
+										onKeyDown={(event) => {
+											if (event.key === "Enter") {
+												requestConfirmation();
+											}
+										}}
+										placeholder={channel() === "sms" ? "88889999" : "name@example.com"}
 										ref={(element) => {
 											contactInput = element;
 										}}
-										id="restock-contact"
-										name={channel() === "sms" ? "phone" : "email"}
 										type={channel() === "sms" ? "tel" : "email"}
-										inputMode={channel() === "sms" ? "numeric" : "email"}
-										autocomplete={channel() === "sms" ? "tel" : "email"}
 										value={contact()}
-										onInput={(event) => setContact(event.currentTarget.value)}
-										onKeyDown={(event) => {
-											if (event.key === "Enter") requestConfirmation();
-										}}
-										aria-invalid={Boolean(errorMessage())}
-										aria-describedby={
-											errorMessage() ? "restock-error" : undefined
-										}
-										placeholder={
-											channel() === "sms" ? "88889999" : "name@example.com"
-										}
-										class="h-12 w-full rounded-xl border border-border bg-background px-4 font-medium text-base shadow-soft-sm transition-[box-shadow,border-color] duration-200 ease-out focus-visible:shadow-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive"
 									/>
 								</div>
 								<Show when={errorMessage()}>
 									<p
+										class="bg-error text-error-foreground rounded-xl px-4 py-3 text-sm"
 										id="restock-error"
-										class="rounded-xl bg-error px-4 py-3 text-error-foreground text-sm"
 										role="alert"
 									>
 										{errorMessage()}
 									</p>
 								</Show>
 								<Button
-									type="button"
 									class="w-full"
-									size="lg"
 									disabled={requestMutation.isPending}
 									onClick={requestConfirmation}
+									size="lg"
+									type="button"
 								>
-									{requestMutation.isPending
-										? "Код илгээж байна..."
-										: "Баталгаажуулах код авах"}
+									{requestMutation.isPending ? "Код илгээж байна..." : "Баталгаажуулах код авах"}
 								</Button>
 							</div>
 						</Match>

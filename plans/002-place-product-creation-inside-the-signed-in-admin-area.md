@@ -40,27 +40,30 @@ No exact open issue was found.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- apps/admin/src/routes/products.add.tsx apps/admin/src/routes/_dash/route.tsx apps/admin/src/routeTree.gen.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                         | Expected on success                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- apps/admin/src/routes/products.add.tsx apps/admin/src/routes/_dash/route.tsx apps/admin/src/routeTree.gen.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                           | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                 | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                          | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - move/rename the route source beneath `_dash` while retaining `/products/add`
 - regenerated route tree
 
 **Files/path families allowed**
+
 - `apps/admin/src/routes/products.add.tsx`
 - `apps/admin/src/routes/_dash/route.tsx`
 - `apps/admin/src/routeTree.gen.ts`
 
 **Out of scope**
+
 - form/save authorization
 - login/session semantics
 - URL or navigation changes

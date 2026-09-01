@@ -25,18 +25,18 @@ Messenger checkout already models explicit Delivery zone confirmation and option
 **Baseline source:** `packages/assistant/src/checkout-tools.ts:194-205`
 
 ```ts
-			// making the customer pick one, then jump straight to the summary for a
-			// single confirm. The chosen zone is shown in the summary, so the
-			// customer can still object before the order is placed.
-			if (candidates.length === 0) {
-				return advance(withCandidates, formatZoneCandidates(candidates));
-			}
-			const zoned = applyZoneSelection(withCandidates, candidates[0]!.zoneId);
-			if (!zoned.ok) {
-				return advance(withCandidates, formatZoneCandidates(candidates));
-			}
-			const confirming = applyNotes(zoned.state, undefined);
-			const saved = await deps.saveCheckout(confirming);
+// making the customer pick one, then jump straight to the summary for a
+// single confirm. The chosen zone is shown in the summary, so the
+// customer can still object before the order is placed.
+if (candidates.length === 0) {
+	return advance(withCandidates, formatZoneCandidates(candidates));
+}
+const zoned = applyZoneSelection(withCandidates, candidates[0]!.zoneId);
+if (!zoned.ok) {
+	return advance(withCandidates, formatZoneCandidates(candidates));
+}
+const confirming = applyNotes(zoned.state, undefined);
+const saved = await deps.saveCheckout(confirming);
 ```
 
 ### Domain and repository rule
@@ -49,29 +49,32 @@ Coordinate with #149 asset QA and #172 delivery copy/loading work; neither dupli
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/assistant/src/checkout.ts packages/assistant/src/checkout-tools.ts apps/agent/scripts/checkout-sim.ts apps/agent/cli/payment-proof.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                           | Expected on success                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/assistant/src/checkout.ts packages/assistant/src/checkout-tools.ts apps/agent/scripts/checkout-sim.ts apps/agent/cli/payment-proof.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                             | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                   | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                            | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - checkout tool descriptions/control flow
 - existing state transitions only if necessary
 - existing CLI simulations as proof harnesses
 
 **Files/path families allowed**
+
 - `packages/assistant/src/checkout.ts`
 - `packages/assistant/src/checkout-tools.ts`
 - `apps/agent/scripts/checkout-sim.ts`
 - `apps/agent/cli/payment-proof.ts`
 
 **Out of scope**
+
 - resolver accuracy/automatic selection
 - address normalization
 - storefront checkout

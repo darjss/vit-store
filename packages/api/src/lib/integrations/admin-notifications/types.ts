@@ -1,29 +1,29 @@
 export type DetailedOrderNotificationInput = {
+	address: string;
+	customerPhone: number;
+	notes: string | null;
 	orderNumber: string;
 	paymentNumber: string;
-	provider: "qpay" | "transfer" | "cash";
-	customerPhone: number;
-	address: string;
-	notes: string | null;
-	total: number;
 	products: Array<{
-		name: string;
-		quantity: number;
-		price: number;
 		imageUrl?: string;
+		name: string;
+		price: number;
+		quantity: number;
 	}>;
+	provider: "qpay" | "transfer" | "cash";
+	total: number;
 };
 
 export type TransferClaimedNotificationInput = {
-	paymentNumber: string;
-	customerPhone: number;
 	address: string;
+	customerPhone: number;
 	notes: string | null;
-	total: number;
+	paymentNumber: string;
 	products: Array<{
-		name: string;
-		quantity: number;
-		price: number;
 		imageUrl?: string;
+		name: string;
+		price: number;
+		quantity: number;
 	}>;
+	total: number;
 };

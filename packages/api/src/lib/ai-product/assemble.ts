@@ -7,30 +7,30 @@ import type {
 import { generateCleanSlug } from "~/lib/ai-product/brand-resolve";
 
 export function assembleExtractedProductData(params: {
+	calculatedPriceMnt: number | null;
+	errors: Array<string>;
 	extractedData: FirecrawlExtractedProduct;
-	visionData: VisionAnalysisResult;
-	structuredData: TranslationResult | null;
-	productUrl: string;
-	uploadedImages: { url: string }[];
-	filteredImages: string[];
+	extractionStatus: "success" | "partial" | "failed";
+	filteredImages: Array<string>;
 	finalBrandId: number | null;
 	matchedCategoryId: number | null;
-	calculatedPriceMnt: number | null;
-	extractionStatus: "success" | "partial" | "failed";
-	errors: string[];
+	productUrl: string;
+	structuredData: TranslationResult | null;
+	uploadedImages: Array<{ url: string }>;
+	visionData: VisionAnalysisResult;
 }): ExtractedProductData {
 	const {
+		calculatedPriceMnt,
+		errors,
 		extractedData,
-		visionData,
-		structuredData,
-		productUrl,
-		uploadedImages,
+		extractionStatus,
 		filteredImages,
 		finalBrandId,
 		matchedCategoryId,
-		calculatedPriceMnt,
-		extractionStatus,
-		errors,
+		productUrl,
+		structuredData,
+		uploadedImages,
+		visionData,
 	} = params;
 
 	const allOriginalIngredients = [
@@ -42,42 +42,38 @@ export function assembleExtractedProductData(params: {
 	const potency = structuredData?.potency || "Unknown";
 
 	return {
-		originalTitle: extractedData.title,
+		amazonPriceUsd: extractedData.priceUsd,
+		amount,
+		brand: extractedData.brand,
+		brandId: finalBrandId,
+		calculatedPriceMnt,
+		categoryId: matchedCategoryId,
+		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
+		description: structuredData?.description || extractedData.description || "Тайлбар байхгүй",
+		errors,
+		extractionStatus,
+		images: uploadedImages,
+		ingredients: structuredData?.ingredients || allOriginalIngredients,
+		name,
+		name_mn: structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
 		originalDescription: extractedData.description,
 		originalFeatures: extractedData.features,
 		originalIngredients: allOriginalIngredients,
-		name,
-		name_mn: structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
-		description:
-			structuredData?.description ||
-			extractedData.description ||
-			"Тайлбар байхгүй",
-		brand: extractedData.brand,
-		brandId: finalBrandId,
-		categoryId: matchedCategoryId,
-		amount,
+		originalTitle: extractedData.title,
 		potency,
-		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
-		weightGrams: structuredData?.weightGrams || 200,
-		seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
 		seoDescription:
-			structuredData?.seoDescription ||
-			(extractedData.description || "").slice(0, 155),
-		ingredients: structuredData?.ingredients || allOriginalIngredients,
-		images: uploadedImages,
-		sourceUrl: productUrl,
-		amazonPriceUsd: extractedData.priceUsd,
-		calculatedPriceMnt,
-		extractionStatus,
-		errors,
+			structuredData?.seoDescription || (extractedData.description || "").slice(0, 155),
+		seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
 		slug: generateCleanSlug(name, extractedData.brand, amount, potency),
+		sourceUrl: productUrl,
+		weightGrams: structuredData?.weightGrams || 200,
 	};
 }
 
 export function noteImageUploadIssues(
-	filteredImages: string[],
-	uploadedImages: { url: string }[],
-	errors: string[],
+	filteredImages: Array<string>,
+	uploadedImages: Array<{ url: string }>,
+	errors: Array<string>,
 ): "success" | "partial" {
 	let status: "success" | "partial" = "success";
 

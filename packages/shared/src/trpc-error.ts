@@ -1,31 +1,31 @@
 export type TrpcErrorShape = {
-	message: string;
 	code: number;
 	data: {
 		code: string;
 		httpStatus: number;
 	};
+	message: string;
 };
 
 function fallbackError(httpStatus: number): TrpcErrorShape {
 	if (httpStatus === 400) {
 		return {
-			message: "Bad request",
-			code: -32600,
+			code: -32_600,
 			data: { code: "BAD_REQUEST", httpStatus },
+			message: "Bad request",
 		};
 	}
 	if (httpStatus === 404) {
 		return {
-			message: "Not found",
-			code: -32004,
+			code: -32_004,
 			data: { code: "NOT_FOUND", httpStatus },
+			message: "Not found",
 		};
 	}
 	return {
-		message: "Internal server error",
-		code: -32603,
+		code: -32_603,
 		data: { code: "INTERNAL_SERVER_ERROR", httpStatus },
+		message: "Internal server error",
 	};
 }
 
@@ -36,8 +36,8 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 export type SanitizedTrpcResponse = {
-	payload: unknown;
 	hasError: boolean;
+	payload: unknown;
 };
 
 /** Keep only the stable, client-facing fields from a tRPC error shape. */
@@ -48,51 +48,43 @@ export function sanitizePublicTrpcErrorShape(
 	const fallback = fallbackError(fallbackHttpStatus);
 	const shape = asRecord(value);
 	const data = asRecord(shape?.data);
-	const dataCode =
-		typeof data?.code === "string" ? data.code : fallback.data.code;
-	const httpStatus =
-		typeof data?.httpStatus === "number" ? data.httpStatus : fallbackHttpStatus;
+	const dataCode = typeof data?.code === "string" ? data.code : fallback.data.code;
+	const httpStatus = typeof data?.httpStatus === "number" ? data.httpStatus : fallbackHttpStatus;
 	const isInternalError = dataCode === "INTERNAL_SERVER_ERROR";
 
 	return {
+		code: typeof shape?.code === "number" ? shape.code : fallback.code,
+		data: {
+			code: dataCode,
+			httpStatus,
+		},
 		message:
 			!isInternalError && typeof shape?.message === "string"
 				? shape.message
 				: isInternalError
 					? "Internal server error"
 					: fallback.message,
-		code: typeof shape?.code === "number" ? shape.code : fallback.code,
-		data: {
-			code: dataCode,
-			httpStatus,
-		},
 	};
 }
 
-function sanitizeResponseItem(
-	value: unknown,
-	fallbackHttpStatus: number,
-): SanitizedTrpcResponse {
+function sanitizeResponseItem(value: unknown, fallbackHttpStatus: number): SanitizedTrpcResponse {
 	const item = asRecord(value);
 	if (!item || !("error" in item)) {
-		return { payload: value, hasError: false };
+		return { hasError: false, payload: value };
 	}
 
 	const error = asRecord(item.error);
 	const serializedShape = asRecord(error?.json);
 	return {
+		hasError: true,
 		payload: {
 			...item,
 			error: serializedShape
 				? {
-						json: sanitizePublicTrpcErrorShape(
-							serializedShape,
-							fallbackHttpStatus,
-						),
+						json: sanitizePublicTrpcErrorShape(serializedShape, fallbackHttpStatus),
 					}
 				: sanitizePublicTrpcErrorShape(error, fallbackHttpStatus),
 		},
-		hasError: true,
 	};
 }
 
@@ -111,5 +103,5 @@ export function sanitizePublicTrpcResponse(
 		hasError ||= sanitized.hasError;
 		return sanitized.payload;
 	});
-	return { payload, hasError };
+	return { hasError, payload };
 }

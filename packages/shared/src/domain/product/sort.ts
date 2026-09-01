@@ -5,8 +5,8 @@ export type ProductSortField = (typeof PRODUCT_SORT_FIELDS)[number];
 export type ProductSortDirection = (typeof PRODUCT_SORT_DIRECTIONS)[number];
 
 export interface SortSelection {
-	field: ProductSortField;
 	direction: ProductSortDirection;
+	field: ProductSortField;
 }
 
 const SORT_FIELDS = new Set<string>(PRODUCT_SORT_FIELDS);
@@ -31,8 +31,8 @@ export const parseSort = (
 		SORT_DIRECTIONS.has(direction)
 	) {
 		return {
-			field: field as ProductSortField,
 			direction: direction as ProductSortDirection,
+			field: field as ProductSortField,
 		};
 	}
 	return null;

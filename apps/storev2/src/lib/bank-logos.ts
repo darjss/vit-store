@@ -27,8 +27,8 @@ const BANK_LOGOS: Record<string, string> = {
 	"төрийн банк": "/banks/state.png",
 	// "Trade and Development bank" / "TDB online"
 	tdb: "/banks/tdb.png",
-	"trade and development bank": "/banks/tdb.png",
 	"tdb online": "/banks/tdb.png",
+	"trade and development bank": "/banks/tdb.png",
 	// "Social Pay" / "Голомт банк"
 	socialpay: "/banks/socialpay.png",
 	"social pay": "/banks/socialpay.png",
@@ -38,8 +38,8 @@ const BANK_LOGOS: Record<string, string> = {
 	most: "/banks/most.png",
 	"most money": "/banks/most.png",
 	// "National investment bank" / "Үндэсний хөрөнгө оруулалтын банк"
-	nib: "/banks/nib.jpeg",
 	"national investment bank": "/banks/nib.jpeg",
+	nib: "/banks/nib.jpeg",
 	"үндэсний хөрөнгө оруулалтын банк": "/banks/nib.jpeg",
 	// "Chinggis khaan bank" / "Чингис Хаан банк"
 	chinggis: "/banks/chinggis.png",
@@ -91,11 +91,6 @@ const BANK_LOGOS: Record<string, string> = {
 
 const normalize = (value?: string) => value?.trim().toLowerCase() ?? "";
 
-export function resolveBankLogo(
-	name?: string,
-	description?: string,
-): string | null {
-	return (
-		BANK_LOGOS[normalize(name)] ?? BANK_LOGOS[normalize(description)] ?? null
-	);
+export function resolveBankLogo(name?: string, description?: string): string | null {
+	return BANK_LOGOS[normalize(name)] ?? BANK_LOGOS[normalize(description)] ?? null;
 }

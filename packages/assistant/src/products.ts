@@ -1,15 +1,9 @@
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
 
-export const assistantStockStatusSchema = v.picklist([
-	"in_stock",
-	"low_stock",
-	"out_of_stock",
-]);
+export const assistantStockStatusSchema = v.picklist(["in_stock", "low_stock", "out_of_stock"]);
 
-export type AssistantStockStatus = v.InferOutput<
-	typeof assistantStockStatusSchema
->;
+export type AssistantStockStatus = v.InferOutput<typeof assistantStockStatusSchema>;
 
 // Runtime contract for the catalog result shape the assistant operates on.
 // Mirrors the api `AssistantProductResult` projection returned by the
@@ -20,12 +14,12 @@ export type AssistantStockStatus = v.InferOutput<
 // of an `undefined` id silently producing a dead `order_product:undefined`
 // button. The exported type is derived from the schema so they cannot diverge.
 export const assistantProductSchema = v.object({
+	brand: v.string(),
 	id: v.number(),
-	slug: v.string(),
+	image: v.string(),
 	name: v.string(),
 	price: v.number(),
-	image: v.string(),
-	brand: v.string(),
+	slug: v.string(),
 	stockStatus: assistantStockStatusSchema,
 });
 
@@ -40,11 +34,11 @@ export interface ProductCardButton {
 // generic-template element; a future storefront web widget can render the
 // same shape its own way (ADR 0002).
 export interface ProductCard {
-	productId: number;
-	title: string;
-	subtitle: string;
-	imageUrl?: string;
 	button: ProductCardButton;
+	imageUrl?: string;
+	productId: number;
+	subtitle: string;
+	title: string;
 }
 
 export const ORDER_BUTTON_LABEL = "Захиалах";
@@ -57,7 +51,9 @@ export const buildOrderPayload = (productId: number): string =>
 
 export const parseOrderPayload = (payload: string): number | undefined => {
 	const match = ORDER_PAYLOAD_RE.exec(payload);
-	if (!match) return undefined;
+	if (!match) {
+		return undefined;
+	}
 	const id = Number(match[1]);
 	return Number.isSafeInteger(id) ? id : undefined;
 };
@@ -68,8 +64,7 @@ const STOCK_LABELS: Record<AssistantStockStatus, string> = {
 	out_of_stock: "Дууссан",
 };
 
-const formatPrice = (price: number): string =>
-	`${Math.round(price).toLocaleString("en-US")}₮`;
+const formatPrice = (price: number): string => `${Math.round(price).toLocaleString("en-US")}₮`;
 
 // Messenger generic-template elements cap title/subtitle at 80 chars each, and
 // the whole element array fails if one field is over. Truncate defensively so a
@@ -83,23 +78,22 @@ const truncate = (text: string, max: number): string =>
 export const formatProductCard = (product: AssistantProduct): ProductCard => {
 	const brandPart = product.brand ? `${product.brand} · ` : "";
 	return {
-		productId: product.id,
-		title: truncate(product.name, MESSENGER_TITLE_MAX),
-		subtitle: truncate(
-			`${brandPart}${formatPrice(product.price)} · ${STOCK_LABELS[product.stockStatus]}`,
-			MESSENGER_SUBTITLE_MAX,
-		),
-		imageUrl: product.image || undefined,
 		button: {
 			label: ORDER_BUTTON_LABEL,
 			payload: buildOrderPayload(product.id),
 		},
+		imageUrl: product.image || undefined,
+		productId: product.id,
+		subtitle: truncate(
+			`${brandPart}${formatPrice(product.price)} · ${STOCK_LABELS[product.stockStatus]}`,
+			MESSENGER_SUBTITLE_MAX,
+		),
+		title: truncate(product.name, MESSENGER_TITLE_MAX),
 	};
 };
 
-export const formatProductCards = (
-	products: readonly AssistantProduct[],
-): ProductCard[] => products.map(formatProductCard);
+export const formatProductCards = (products: ReadonlyArray<AssistantProduct>): Array<ProductCard> =>
+	products.map(formatProductCard);
 
 export const NO_MATCH_MESSAGE =
 	"Уучлаарай, таны хайсан бараа олдсонгүй. Барааны нэр, брэнд эсвэл найрлагыг өөрөөр бичээд дахин оролдоно уу.";
@@ -113,6 +107,7 @@ export const SEARCH_ERROR_MESSAGE =
 export const PRODUCT_SEARCH_TOOL_NAME = "search_products";
 
 export interface ProductSearchToolDeps {
+	limit?: number;
 	// Calls the existing storefront catalog search (do not duplicate catalog
 	// logic). Returns the assistant projection, ordered by relevance. The
 	// optional signal carries the tool turn's cancellation/timeout deadline
@@ -121,12 +116,11 @@ export interface ProductSearchToolDeps {
 		query: string,
 		limit: number,
 		signal?: AbortSignal,
-	) => Promise<AssistantProduct[]>;
+	) => Promise<Array<AssistantProduct>>;
 	// Sends the formatted cards out on the bound channel.
-	sendProductCards: (cards: ProductCard[]) => Promise<unknown>;
+	sendProductCards: (cards: Array<ProductCard>) => Promise<unknown>;
 	// Sends a plain text reply (used for the no-match path).
 	sendText: (text: string) => Promise<unknown>;
-	limit?: number;
 }
 
 // Builds the conversation-bound product-search tool. The transport (catalog
@@ -135,7 +129,6 @@ export interface ProductSearchToolDeps {
 export const buildProductSearchTool = (deps: ProductSearchToolDeps) => {
 	const limit = deps.limit ?? 8;
 	return defineTool({
-		name: PRODUCT_SEARCH_TOOL_NAME,
 		description:
 			"Search the Vit Store catalog for products the customer asks about by name, brand, dose, or romanized-Mongolian fragment, then show the matches as Messenger product cards with a Захиалах (order) button. Call this whenever the customer names a product, brand, supplement, or dose they want to find or buy. On a match it sends the cards directly; on no match it sends a clear no-match reply.",
 		input: v.object({
@@ -147,31 +140,32 @@ export const buildProductSearchTool = (deps: ProductSearchToolDeps) => {
 				),
 			),
 		}),
+		name: PRODUCT_SEARCH_TOOL_NAME,
 		async run({ input, signal }) {
-			let products: AssistantProduct[];
+			let products: Array<AssistantProduct>;
 			try {
 				products = await deps.searchProducts(input.query, limit, signal);
 			} catch {
 				await deps.sendText(SEARCH_ERROR_MESSAGE);
 				return {
-					query: input.query,
-					matchCount: 0,
 					inStockCount: 0,
+					matchCount: 0,
 					outOfStockCount: 0,
-					sent: "search_error_text",
 					products: [],
+					query: input.query,
+					sent: "search_error_text",
 				};
 			}
 
 			if (products.length === 0) {
 				await deps.sendText(NO_MATCH_MESSAGE);
 				return {
-					query: input.query,
-					matchCount: 0,
 					inStockCount: 0,
+					matchCount: 0,
 					outOfStockCount: 0,
-					sent: "no_match_text",
 					products: [],
+					query: input.query,
+					sent: "no_match_text",
 				};
 			}
 
@@ -183,18 +177,18 @@ export const buildProductSearchTool = (deps: ProductSearchToolDeps) => {
 			).length;
 
 			return {
-				query: input.query,
-				matchCount: products.length,
 				inStockCount,
+				matchCount: products.length,
 				outOfStockCount: products.length - inStockCount,
-				sent: "product_cards",
 				products: products.map((product) => ({
+					brand: product.brand,
 					id: product.id,
 					name: product.name,
-					brand: product.brand,
 					price: product.price,
 					stockStatus: product.stockStatus,
 				})),
+				query: input.query,
+				sent: "product_cards",
 			};
 		},
 	});

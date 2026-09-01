@@ -4,11 +4,7 @@ import superjson from "superjson";
 import * as v from "valibot";
 import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
-import {
-	summarizeTrpcInputForLog,
-	summarizeTrpcOutputForLog,
-	toError,
-} from "~/lib/logging";
+import { summarizeTrpcInputForLog, summarizeTrpcOutputForLog, toError } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
@@ -17,29 +13,25 @@ import { getTtlForTimeRange } from "~/lib/utils";
 const isLocalDevelopment = process.env.NODE_ENV === "development";
 
 const t = initTRPC.context<Context>().create({
-	transformer: superjson,
-	isDev: isLocalDevelopment,
-	errorFormatter({ shape, error }) {
+	errorFormatter({ error, shape }) {
 		if (isLocalDevelopment) {
 			return {
 				...shape,
 				data: {
 					...shape.data,
-					valibotError:
-						error.cause instanceof v.ValiError ? error.cause.issues : null,
+					valibotError: error.cause instanceof v.ValiError ? error.cause.issues : null,
 				},
 			};
 		}
 
-		const publicShape = sanitizePublicTrpcErrorShape(
-			shape,
-			shape.data.httpStatus,
-		);
+		const publicShape = sanitizePublicTrpcErrorShape(shape, shape.data.httpStatus);
 		return {
 			...publicShape,
 			data: { ...publicShape.data, valibotError: null },
 		};
 	},
+	isDev: isLocalDevelopment,
+	transformer: superjson,
 });
 
 export const router = t.router;
@@ -93,7 +85,7 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, email: session.user.username },
+		user: { email: session.user.username, id: session.user.id },
 		user_type: "admin",
 	});
 	return next({ ctx: { ...ctx, session } });
@@ -111,9 +103,9 @@ function ensureTRPCError(
 	// Regular Error - wrap it
 	if (error instanceof Error) {
 		return new TRPCError({
+			cause: error,
 			code: "INTERNAL_SERVER_ERROR",
 			message: error.message || fallbackMessage,
-			cause: error,
 		});
 	}
 
@@ -127,9 +119,9 @@ function ensureTRPCError(
 
 	// Unknown error type - use fallback
 	return new TRPCError({
+		cause: error,
 		code: "INTERNAL_SERVER_ERROR",
 		message: fallbackMessage,
-		cause: error,
 	});
 }
 
@@ -141,62 +133,59 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	}
 });
 
-const loggingMiddleware = t.middleware(
-	async ({ ctx, next, path, type, input }) => {
-		const startTime = Date.now();
-		const procedureType =
-			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput = summarizeTrpcInputForLog(path, input);
+const loggingMiddleware = t.middleware(async ({ ctx, input, next, path, type }) => {
+	const startTime = Date.now();
+	const procedureType = (type as string | undefined)?.toUpperCase() || "PROCEDURE";
+	const safeInput = summarizeTrpcInputForLog(path, input);
+
+	ctx.log.set({
+		trpc: {
+			input: safeInput,
+			procedure: path,
+			type: procedureType,
+		},
+	});
+
+	try {
+		const result = await next();
+		const durationMs = Date.now() - startTime;
+		const resultData =
+			result && typeof result === "object" && "data" in result
+				? (result as { data?: unknown }).data
+				: result;
+		const safeOutput = summarizeTrpcOutputForLog(path, resultData);
 
 		ctx.log.set({
 			trpc: {
+				duration_ms: durationMs,
+				outcome: "success",
+				output: safeOutput,
 				procedure: path,
 				type: procedureType,
-				input: safeInput,
 			},
 		});
 
-		try {
-			const result = await next();
-			const durationMs = Date.now() - startTime;
-			const resultData =
-				result && typeof result === "object" && "data" in result
-					? (result as { data?: unknown }).data
-					: result;
-			const safeOutput = summarizeTrpcOutputForLog(path, resultData);
+		return result;
+	} catch (error) {
+		const durationMs = Date.now() - startTime;
 
-			ctx.log.set({
-				trpc: {
-					procedure: path,
-					type: procedureType,
-					duration_ms: durationMs,
-					outcome: "success",
-					output: safeOutput,
-				},
-			});
+		ctx.log.error(toError(error), {
+			event: "trpc.procedure_error",
+			trpc: {
+				duration_ms: durationMs,
+				error_code: error instanceof TRPCError ? error.code : undefined,
+				input: safeInput,
+				outcome: "error",
+				procedure: path,
+				type: procedureType,
+			},
+		});
 
-			return result;
-		} catch (error) {
-			const durationMs = Date.now() - startTime;
+		throw error;
+	}
+});
 
-			ctx.log.error(toError(error), {
-				event: "trpc.procedure_error",
-				trpc: {
-					procedure: path,
-					type: procedureType,
-					duration_ms: durationMs,
-					outcome: "error",
-					input: safeInput,
-					error_code: error instanceof TRPCError ? error.code : undefined,
-				},
-			});
-
-			throw error;
-		}
-	},
-);
-
-const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
+const cacheMiddleware = t.middleware(async ({ ctx, input, next, path }) => {
 	const cacheKey = await createKvCacheKey(path, input);
 
 	const cached = await ctx.kv.get(cacheKey);
@@ -205,11 +194,11 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 		// Return in the same format as next() returns
 		// Using type assertion because the middleware marker type is branded and can't be created directly
 		return {
-			ok: true as const,
 			data: JSON.parse(cached),
 			marker: "middlewareMarker" as "middlewareMarker" & {
 				__brand: "middlewareMarker";
 			},
+			ok: true as const,
 		};
 	}
 
@@ -220,9 +209,7 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 		let ttl: number;
 
 		if (input && typeof input === "object" && "timeRange" in input) {
-			ttl = getTtlForTimeRange(
-				(input as Record<string, unknown>).timeRange as timeRangeType,
-			);
+			ttl = getTtlForTimeRange((input as Record<string, unknown>).timeRange as timeRangeType);
 		} else if (
 			input &&
 			typeof input === "object" &&
@@ -238,7 +225,7 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 			expirationTtl: ttl,
 		});
 
-		ctx.log.info("cache.set", { cache_key: cacheKey, path, cache_ttl: ttl });
+		ctx.log.info("cache.set", { cache_key: cacheKey, cache_ttl: ttl, path });
 	}
 
 	return result;
@@ -247,15 +234,11 @@ const cacheMiddleware = t.middleware(async ({ ctx, next, path, input }) => {
 // Shared base: error handling + request logging. Every authenticated
 // procedure composes from this so the cross-cutting middlewares are applied
 // once and in a consistent order.
-export const baseProcedure = t.procedure
-	.use(errorHandlingMiddleware)
-	.use(loggingMiddleware);
+export const baseProcedure = t.procedure.use(errorHandlingMiddleware).use(loggingMiddleware);
 
 export const publicProcedure = baseProcedure;
 export const customerProcedure = baseProcedure.use(customerAuthMiddleware);
-export const verifiedCustomerProcedure = baseProcedure.use(
-	verifiedCustomerAuthMiddleware,
-);
+export const verifiedCustomerProcedure = baseProcedure.use(verifiedCustomerAuthMiddleware);
 export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
 
 // Bot auth: a shared-secret header (`X-Admin-Bot-Token`) gates machine-to-
@@ -264,10 +247,7 @@ export const adminProcedure = baseProcedure.use(adminAuthMiddleware);
 // agent can read admin data (e.g. pending orders) without a browser session.
 // Token comparison is constant-time (SHA-256 both sides, compare digests) to
 // prevent timing side-channel attacks on the shared secret.
-export const timingSafeEqual = async (
-	a: string,
-	b: string,
-): Promise<boolean> => {
+export const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
 	const encoder = new TextEncoder();
 	const [hashA, hashB] = await Promise.all([
 		crypto.subtle.digest("SHA-256", encoder.encode(a)),

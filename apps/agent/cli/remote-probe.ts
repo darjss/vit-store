@@ -24,19 +24,24 @@
  */
 import { createHmac } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const AGENT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const AGENT_ROOT = join(import.meta.dirname, "..");
 
 function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) return {};
+	if (!existsSync(file)) {
+		return {};
+	}
 	const out: Record<string, string> = {};
 	for (const line of readFileSync(file, "utf8").split("\n")) {
 		const t = line.trim();
-		if (!t || t.startsWith("#")) continue;
+		if (!t || t.startsWith("#")) {
+			continue;
+		}
 		const eq = t.indexOf("=");
-		if (eq > 0) out[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+		if (eq > 0) {
+			out[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+		}
 	}
 	return out;
 }
@@ -79,13 +84,19 @@ let postback: string | undefined;
 // tail`) instead. Keeps dogfooding out of any real Messenger inbox.
 let sendOnly = false;
 let useAdmin = false;
-const words: string[] = [];
+const words: Array<string> = [];
 for (let i = 0; i < argv.length; i++) {
-	if (argv[i] === "--psid") psid = argv[++i] ?? psid;
-	else if (argv[i] === "--postback") postback = argv[++i];
-	else if (argv[i] === "--send-only") sendOnly = true;
-	else if (argv[i] === "--admin") useAdmin = true;
-	else words.push(argv[i]!);
+	if (argv[i] === "--psid") {
+		psid = argv[++i] ?? psid;
+	} else if (argv[i] === "--postback") {
+		postback = argv[++i];
+	} else if (argv[i] === "--send-only") {
+		sendOnly = true;
+	} else if (argv[i] === "--admin") {
+		useAdmin = true;
+	} else {
+		words.push(argv[i]!);
+	}
 }
 if (useAdmin) {
 	if (ADMIN_PSIDS.length === 0) {
@@ -107,37 +118,56 @@ if (!text && !postback) {
 // ─── send a real signed Meta webhook to the deployed worker ──────────────────
 const mid = `probe-${Date.now().toString(36)}`;
 const messaging = postback
-	? { sender: { id: psid }, recipient: { id: PAGE_ID }, timestamp: Date.now(), postback: { mid, title: "(probe)", payload: postback } }
-	: { sender: { id: psid }, recipient: { id: PAGE_ID }, timestamp: Date.now(), message: { mid, text } };
-const body = JSON.stringify({ object: "page", entry: [{ id: PAGE_ID, time: Date.now(), messaging: [messaging] }] });
+	? {
+			postback: { mid, payload: postback, title: "(probe)" },
+			recipient: { id: PAGE_ID },
+			sender: { id: psid },
+			timestamp: Date.now(),
+		}
+	: {
+			message: { mid, text },
+			recipient: { id: PAGE_ID },
+			sender: { id: psid },
+			timestamp: Date.now(),
+		};
+const body = JSON.stringify({
+	entry: [{ id: PAGE_ID, messaging: [messaging], time: Date.now() }],
+	object: "page",
+});
 const sig = `sha256=${createHmac("sha256", APP_SECRET).update(body).digest("hex")}`;
 
 const sentAt = Math.floor(Date.now() / 1000);
 console.log(`\nyou › ${postback ? `[postback ${postback}]` : text}   (psid=${psid})`);
 const res = await fetch(WEBHOOK, {
-	method: "POST",
-	headers: { "content-type": "application/json", "x-hub-signature-256": sig },
 	body,
+	headers: { "content-type": "application/json", "x-hub-signature-256": sig },
+	method: "POST",
 });
 console.log(`  · webhook ${res.status} ${(await res.text()).trim()}`);
-if (!res.ok) process.exit(1);
+if (!res.ok) {
+	process.exit(1);
+}
 if (sendOnly) {
 	console.log("  (send-only — read the reply from `wrangler tail` [bot.say])\n");
 	process.exit(0);
 }
 
 // ─── read the bot's reply back from the Graph conversations API ──────────────
-async function readReplies(sinceUnix: number): Promise<{ time: string; text: string }[]> {
+async function readReplies(sinceUnix: number): Promise<Array<{ text: string; time: string }>> {
 	const url = `${GRAPH}/${PAGE_ID}/conversations?platform=messenger&fields=messages.limit(8)%7Bmessage,from,created_time%7D&limit=5&access_token=${PAGE_TOKEN}`;
-	const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+	const r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 	const d: any = await r.json();
-	if (d.error) throw new Error(d.error.message);
-	const out: { time: string; text: string }[] = [];
+	if (d.error) {
+		throw new Error(d.error.message);
+	}
+	const out: Array<{ text: string; time: string }> = [];
 	for (const conv of d.data ?? []) {
 		for (const m of conv.messages?.data ?? []) {
 			const t = Math.floor(new Date(m.created_time).getTime() / 1000);
 			const fromPage = m.from?.id === PAGE_ID;
-			if (fromPage && t >= sinceUnix && m.message) out.push({ time: m.created_time, text: m.message });
+			if (fromPage && t >= sinceUnix && m.message) {
+				out.push({ text: m.message, time: m.created_time });
+			}
 		}
 	}
 	return out.sort((a, b) => a.time.localeCompare(b.time));
@@ -150,23 +180,29 @@ let got = 0;
 let lastReplyAt = 0;
 while (Date.now() < deadline) {
 	await Bun.sleep(3000);
-	let replies: { time: string; text: string }[] = [];
+	let replies: Array<{ text: string; time: string }> = [];
 	try {
 		replies = await readReplies(sentAt);
-	} catch (e) {
-		console.error("  read error:", e instanceof Error ? e.message : String(e));
+	} catch (error) {
+		console.error("  read error:", error instanceof Error ? error.message : String(error));
 		break;
 	}
 	for (const r of replies) {
 		const k = `${r.time}:${r.text.slice(0, 24)}`;
-		if (seen.has(k)) continue;
+		if (seen.has(k)) {
+			continue;
+		}
 		seen.add(k);
 		got++;
 		lastReplyAt = Date.now();
 		console.log(`bot › ${r.text}`);
 	}
 	// Once a reply lands, wait ~10s more for follow-up messages, then stop.
-	if (got > 0 && Date.now() - lastReplyAt > 10_000) break;
+	if (got > 0 && Date.now() - lastReplyAt > 10_000) {
+		break;
+	}
 }
-if (got === 0) console.log("  (no text reply seen in time — may be product cards only; check `wrangler tail`)");
+if (got === 0) {
+	console.log("  (no text reply seen in time — may be product cards only; check `wrangler tail`)");
+}
 console.log("");

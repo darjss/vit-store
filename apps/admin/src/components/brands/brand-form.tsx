@@ -10,49 +10,36 @@ import { ImagePlaceholderIcon } from "../icons";
 import SubmitButton from "../submit-button";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { UploadButton } from "../upload-button";
 
-const BrandForm = ({
-	brand,
-	onSuccess,
-}: {
-	brand?: addBrandType;
-	onSuccess: () => void;
-}) => {
+const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () => void }) => {
 	const form = useForm({
-		resolver: valibotResolver(addBrandSchema),
 		defaultValues: {
-			name: brand?.name || "",
-			slug: brand?.slug || "",
-			logoUrl: brand?.logoUrl || "",
-			description: brand?.description || "",
 			bannerImage: brand?.bannerImage || "",
-			seoTitle: brand?.seoTitle || "",
+			description: brand?.description || "",
+			logoUrl: brand?.logoUrl || "",
+			name: brand?.name || "",
 			seoDescription: brand?.seoDescription || "",
+			seoTitle: brand?.seoTitle || "",
+			slug: brand?.slug || "",
 		},
+		resolver: valibotResolver(addBrandSchema),
 	});
 
 	const queryClient = useQueryClient();
 	const mutation = useMutation({
 		...trpc.brands.addBrand.mutationOptions(),
+		onError: (_error) => {
+			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
+		},
 		onSuccess: async () => {
 			form.reset();
 			queryClient.invalidateQueries(trpc.brands.getAllBrands.queryOptions());
 			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Брэнд шинэчлэхэд алдаа гарлаа");
 		},
 	});
 	const onSubmit = async (values: addBrandType) => {
@@ -64,12 +51,12 @@ const BrandForm = ({
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+			<form className="relative" onSubmit={form.handleSubmit(onSubmit)}>
 				<FormLoadingOverlay isLoading={form.formState.isSubmitting} />
 				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">Брэндийн мэдээлэл</h3>
+							<h3 className="text-xl font-semibold">Брэндийн мэдээлэл</h3>
 							<FormField
 								control={form.control}
 								name="name"
@@ -109,35 +96,28 @@ const BrandForm = ({
 												{currentImageUrl ? (
 													<div className="group relative">
 														<Button
-															type="button"
+															className="absolute -top-2 -right-2 z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+															onClick={() => form.setValue("logoUrl", "")}
 															size="icon"
+															type="button"
 															variant="destructive"
-															onClick={() =>
-																form.setValue(
-																	"logoUrl",
-																	"",
-																)
-															}
-															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-															>
-																<X className="h-3 w-3" />
-															</Button>
+														>
+															<X className="h-3 w-3" />
+														</Button>
 														<Image
-																src={currentImageUrl}
-																alt={form.watch("name") || "Брэндийн лого"}
-																width={120}
-																height={120}
-																layout="constrained"
-																className="h-28 w-28 rounded-lg border-2 border-border bg-background object-contain p-3 shadow-sm"
-															/>
+															alt={form.watch("name") || "Брэндийн лого"}
+															className="border-border bg-background h-28 w-28 rounded-lg border-2 object-contain p-3 shadow-sm"
+															height={120}
+															layout="constrained"
+															src={currentImageUrl}
+															width={120}
+														/>
 													</div>
 												) : (
-													<div className="flex h-28 w-28 items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
+													<div className="border-border bg-muted/30 flex h-28 w-28 items-center justify-center rounded-lg border-2 border-dashed">
 														<div className="text-center">
-															<ImagePlaceholderIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-															<p className="mt-2 text-muted-foreground text-xs">
-																Лого байршуулах
-															</p>
+															<ImagePlaceholderIcon className="text-muted-foreground mx-auto h-10 w-10" />
+															<p className="text-muted-foreground mt-2 text-xs">Лого байршуулах</p>
 														</div>
 													</div>
 												)}
@@ -156,7 +136,7 @@ const BrandForm = ({
 
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">SEO ба баннер</h3>
+							<h3 className="text-xl font-semibold">SEO ба баннер</h3>
 
 							<FormField
 								control={form.control}
@@ -187,28 +167,28 @@ const BrandForm = ({
 												{bannerImageUrl ? (
 													<div className="group relative">
 														<Button
-															type="button"
-															size="icon"
-															variant="destructive"
+															className="absolute -top-2 -right-2 z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
 															onClick={() => form.setValue("bannerImage", "")}
-															className="-top-2 -right-2 absolute z-10 h-6 w-6 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-															>
-																<X className="h-3 w-3" />
-															</Button>
+															size="icon"
+															type="button"
+															variant="destructive"
+														>
+															<X className="h-3 w-3" />
+														</Button>
 														<Image
-																src={bannerImageUrl}
-																alt="Баннер"
-																width={400}
-																height={120}
-																layout="constrained"
-																className="h-24 w-full rounded-lg border-2 border-border bg-background object-cover shadow-sm"
-															/>
+															alt="Баннер"
+															className="border-border bg-background h-24 w-full rounded-lg border-2 object-cover shadow-sm"
+															height={120}
+															layout="constrained"
+															src={bannerImageUrl}
+															width={400}
+														/>
 													</div>
 												) : (
-													<div className="flex h-24 w-full items-center justify-center rounded-lg border-2 border-border border-dashed bg-muted/30">
+													<div className="border-border bg-muted/30 flex h-24 w-full items-center justify-center rounded-lg border-2 border-dashed">
 														<div className="text-center">
-															<ImagePlaceholderIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-															<p className="mt-2 text-muted-foreground text-xs">
+															<ImagePlaceholderIcon className="text-muted-foreground mx-auto h-10 w-10" />
+															<p className="text-muted-foreground mt-2 text-xs">
 																Баннер байршуулах
 															</p>
 														</div>
@@ -232,11 +212,7 @@ const BrandForm = ({
 									<FormItem>
 										<FormLabel>SEO гарчиг</FormLabel>
 										<FormControl>
-											<Input
-												placeholder="SEO гарчиг..."
-												{...field}
-												value={field.value ?? ""}
-											/>
+											<Input placeholder="SEO гарчиг..." {...field} value={field.value ?? ""} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -250,11 +226,7 @@ const BrandForm = ({
 									<FormItem>
 										<FormLabel>SEO тайлбар</FormLabel>
 										<FormControl>
-											<Textarea
-												placeholder="SEO тайлбар..."
-												{...field}
-												value={field.value ?? ""}
-											/>
+											<Textarea placeholder="SEO тайлбар..." {...field} value={field.value ?? ""} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -265,8 +237,8 @@ const BrandForm = ({
 
 					<div className="flex justify-end">
 						<SubmitButton
+							className="hover:bg-primary/90 w-full px-8 py-3 text-lg font-semibold transition-colors duration-300 sm:w-auto"
 							isPending={form.formState.isSubmitting}
-							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{brand ? "Брэнд шинэчлэх" : "Брэнд нэмэх"}
 						</SubmitButton>

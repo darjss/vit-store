@@ -14,21 +14,21 @@ config({
 const env = createAdminAlchemyEnv(process.env);
 
 export const admin = await Vite("dashboard", {
+	adopt: true,
+	assets: "dist",
+	bindings: {
+		VITE_SERVER_URL: env.VITE_SERVER_URL,
+	},
+	cwd: import.meta.dirname,
+	dev: {
+		command: "bun run dev:vite",
+	},
 	domains:
 		stage === "prod"
 			? ["admin.amerikvitamin.mn"]
 			: stage === "staging"
 				? ["admin-staging.amerikvitamin.mn"]
 				: undefined,
-	cwd: import.meta.dirname,
-	adopt: true,
-	assets: "dist",
-	bindings: {
-		VITE_SERVER_URL: env.VITE_SERVER_URL,
-	},
-	dev: {
-		command: "bun run dev:vite",
-	},
 });
 
 await app.finalize();

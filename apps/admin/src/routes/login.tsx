@@ -6,7 +6,6 @@ import { GoogleIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/login")({
-	component: RouteComponent,
 	beforeLoad: async ({ context: ctx }) => {
 		// Logged-out visitors get a 401 from auth.me; ensureQueryData rejects on
 		// it and would otherwise blow up the route instead of rendering the form.
@@ -14,9 +13,9 @@ export const Route = createFileRoute("/login")({
 		try {
 			session = await ctx.queryClient.ensureQueryData({
 				...ctx.trpc.auth.me.queryOptions(),
-				staleTime: 1000 * 60 * 15,
 				gcTime: 1000 * 60 * 30,
 				retry: false,
+				staleTime: 1000 * 60 * 15,
 			});
 		} catch (error) {
 			if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
@@ -30,6 +29,7 @@ export const Route = createFileRoute("/login")({
 		}
 		return { session };
 	},
+	component: RouteComponent,
 	validateSearch: v.object({
 		message: v.optional(v.string()),
 	}),
@@ -39,7 +39,7 @@ function RouteComponent() {
 	const { message } = useSearch({ from: "/login" });
 
 	return (
-		<div className="min-h-screen w-full bg-background">
+		<div className="bg-background min-h-screen w-full">
 			<div
 				className="absolute inset-0 z-0"
 				style={{
@@ -56,22 +56,18 @@ function RouteComponent() {
 			<div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4">
 				<div className="w-full max-w-sm">
 					<div className="mb-12 text-center">
-						<h1 className="mb-2 font-bold font-head text-4xl text-foreground">
-							Нэвтрэх
-						</h1>
-						<p className="text-muted-foreground">
-							Админ хэсэгт нэвтрэхийн тулд нэвтэрнэ үү
-						</p>
+						<h1 className="font-head text-foreground mb-2 text-4xl font-bold">Нэвтрэх</h1>
+						<p className="text-muted-foreground">Админ хэсэгт нэвтрэхийн тулд нэвтэрнэ үү</p>
 					</div>
 
 					{message && (
-						<div className="mb-6 flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+						<div className="bg-destructive/10 text-destructive mb-6 flex items-center gap-2 rounded-md p-3 text-sm">
 							<AlertCircle className="h-4 w-4 shrink-0" />
 							<p>{message}</p>
 						</div>
 					)}
 
-					<Button asChild variant="default" size="lg" className="w-full gap-3">
+					<Button asChild className="w-full gap-3" size="lg" variant="default">
 						<a href={`${import.meta.env.VITE_SERVER_URL}/admin/login/google`}>
 							<GoogleIcon />
 							Google-ээр нэвтрэх

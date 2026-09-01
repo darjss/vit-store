@@ -9,16 +9,16 @@ export const buildKimiVision =
 	async (image: InboundImage, prompt: string): Promise<string> => {
 		const dataUrl = `data:${image.contentType};base64,${toBase64(image.bytes)}`;
 		const response = await ai.run(KIMI_VISION_MODEL, {
+			max_tokens: maxTokens,
 			messages: [
 				{
-					role: "user",
 					content: [
-						{ type: "text", text: prompt },
-						{ type: "image_url", image_url: { url: dataUrl } },
+						{ text: prompt, type: "text" },
+						{ image_url: { url: dataUrl }, type: "image_url" },
 					],
+					role: "user",
 				},
 			],
-			max_tokens: maxTokens,
 		});
 		return extractText(response);
 	};
@@ -28,17 +28,23 @@ export const buildKimiVision =
 // falling back to a JSON dump so a shape change surfaces as a parse miss
 // downstream rather than a silent empty string.
 const extractText = (response: unknown): string => {
-	if (typeof response === "string") return response;
+	if (typeof response === "string") {
+		return response;
+	}
 	if (response && typeof response === "object") {
 		const obj = response as Record<string, unknown>;
-		if (typeof obj.response === "string") return obj.response;
+		if (typeof obj.response === "string") {
+			return obj.response;
+		}
 		const choices = obj.choices;
 		if (Array.isArray(choices) && choices.length > 0) {
 			const message = (choices[0] as Record<string, unknown>)?.message as
 				| Record<string, unknown>
 				| undefined;
 			const content = message?.content;
-			if (typeof content === "string") return content;
+			if (typeof content === "string") {
+				return content;
+			}
 			if (Array.isArray(content)) {
 				return content
 					.map((part) =>
@@ -50,7 +56,9 @@ const extractText = (response: unknown): string => {
 			}
 		}
 		const result = obj.result as Record<string, unknown> | undefined;
-		if (result && typeof result.response === "string") return result.response;
+		if (result && typeof result.response === "string") {
+			return result.response;
+		}
 	}
 	return JSON.stringify(response);
 };
@@ -60,7 +68,7 @@ const extractText = (response: unknown): string => {
 // photo doesn't overflow the argument stack.
 const toBase64 = (bytes: Uint8Array): string => {
 	let binary = "";
-	const CHUNK = 0x8000;
+	const CHUNK = 0x80_00;
 	for (let i = 0; i < bytes.length; i += CHUNK) {
 		binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
 	}

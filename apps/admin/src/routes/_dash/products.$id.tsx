@@ -5,7 +5,6 @@ import { ProductDetailPage } from "@/features/products/detail/product-detail-pag
 
 export const Route = createFileRoute("/_dash/products/$id")({
 	component: RouteComponent,
-	pendingComponent: ProductDetailSkeleton,
 	loader: ({ context: ctx, params }) => {
 		const productId = Number(params.id);
 		void ctx.queryClient.prefetchQuery(
@@ -26,6 +25,7 @@ export const Route = createFileRoute("/_dash/products/$id")({
 			}),
 		);
 	},
+	pendingComponent: ProductDetailSkeleton,
 });
 
 function RouteComponent() {

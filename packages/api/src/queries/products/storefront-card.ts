@@ -4,60 +4,57 @@ import { ProductImagesTable } from "~/db/schema";
 /** Complete product-card selection. Every storefront listing/search opts into
  * this contract so localized comparison fields cannot drift by query path. */
 export const storefrontCardColumns = {
+	amount: true,
+	categoryId: true,
+	discount: true,
 	id: true,
-	slug: true,
 	name: true,
 	name_mn: true,
 	potency: true,
-	amount: true,
 	price: true,
-	discount: true,
-	stock: true,
+	slug: true,
 	status: true,
-	categoryId: true,
+	stock: true,
 } as const;
 
 export const storefrontCardRelations = {
-	images: {
-		columns: { url: true },
-		where: and(
-			eq(ProductImagesTable.isPrimary, true),
-			isNull(ProductImagesTable.deletedAt),
-		),
-	},
 	brand: {
 		columns: { name: true },
+	},
+	images: {
+		columns: { url: true },
+		where: and(eq(ProductImagesTable.isPrimary, true), isNull(ProductImagesTable.deletedAt)),
 	},
 } as const;
 
 export interface StorefrontCardRow {
+	amount: string | null;
+	brand: { name: string };
+	categoryId: number;
+	discount: number | null;
 	id: number;
-	slug: string;
+	images: Array<{ url: string }>;
 	name: string;
 	name_mn: string | null;
 	potency: string | null;
-	amount: string | null;
 	price: number;
-	discount: number | null;
-	stock: number;
+	slug: string;
 	status: string;
-	categoryId: number;
-	images: { url: string }[];
-	brand: { name: string };
+	stock: number;
 }
 
 export const projectStorefrontCard = (product: StorefrontCardRow) => ({
+	amount: product.amount,
+	brand: product.brand.name,
+	categoryId: product.categoryId,
+	discount: product.discount ?? 0,
 	id: product.id,
-	slug: product.slug,
+	image: product.images[0]?.url ?? "",
 	name: product.name,
 	nameMn: product.name_mn,
 	potency: product.potency,
-	amount: product.amount,
 	price: product.price,
-	image: product.images[0]?.url ?? "",
-	brand: product.brand.name,
-	discount: product.discount ?? 0,
-	stock: product.stock,
+	slug: product.slug,
 	status: product.status,
-	categoryId: product.categoryId,
+	stock: product.stock,
 });

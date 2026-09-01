@@ -18,19 +18,19 @@ if (!orderNumber) {
     return Astro.redirect("/404");
 }
 const result = await loadOrderOrRedirect(serverApi, orderNumber, checkoutToken, Astro.redirect);
-if ("redirect" in result) return result.redirect;
+if ("redirect" in result) {return result.redirect;}
 const order = result.order;
 
-const timelineSteps: OrderStatusType[] = ["pending", "shipped", "delivered"];
+const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 const currentStepIndex = timelineSteps.indexOf((order.status ?? "pending") as OrderStatusType);
 
 const statusBadgeClasses: Record<string, string> = {
-    created: "bg-card border border-border text-foreground",
-    pending: "bg-warning text-warning-foreground",
-    shipped: "bg-info text-info-foreground",
-    delivered: "bg-success text-success-foreground",
     cancelled: "bg-error text-error-foreground",
+    created: "bg-card border border-border text-foreground",
+    delivered: "bg-success text-success-foreground",
+    pending: "bg-warning text-warning-foreground",
     refunded: "bg-secondary text-secondary-foreground",
+    shipped: "bg-info text-info-foreground",
 };
 ---
 

@@ -12,11 +12,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -26,55 +22,53 @@ import {
 } from "@/components/ui/select";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 
-const primaryStatuses = [
-	"active",
-	"pending",
-	"shipped",
-	"delivered",
-	"all",
-] as const;
+const primaryStatuses = ["active", "pending", "shipped", "delivered", "all"] as const;
 const issueStatuses = ["created", "cancelled", "refunded"] as const;
 
 const datePresets = [
-	{ value: "all", label: "Бүгд" },
-	{ value: "today", label: "Өнөөдөр" },
-	{ value: "yesterday", label: "Өчигдөр" },
-	{ value: "last7days", label: "7 хоног" },
-	{ value: "last30days", label: "30 хоног" },
+	{ label: "Бүгд", value: "all" },
+	{ label: "Өнөөдөр", value: "today" },
+	{ label: "Өчигдөр", value: "yesterday" },
+	{ label: "7 хоног", value: "last7days" },
+	{ label: "30 хоног", value: "last30days" },
 ] as const;
 
 function formatStatusLabel(status?: string) {
-	if (!status || status === "all") return "Бүгд";
-	if (status === "active") return "Явагдаж буй";
+	if (!status || status === "all") {
+		return "Бүгд";
+	}
+	if (status === "active") {
+		return "Явагдаж буй";
+	}
 	return orderStatusLabels[status as OrderStatusType] ?? status;
 }
 
 interface OrdersFiltersProps {
 	date?: string;
-	orderStatus?: string;
-	paymentStatus?: string;
-	pageSize: number;
-	searchTerm?: string;
-	sortDirection?: "asc" | "desc";
-	sortField?: string;
 	filtersActive: boolean;
 	onFilterChange: (field: string, value: string) => void;
 	onResetFilters: () => void;
 	onSort: (field: string) => void;
+	orderStatus?: string;
+	pageSize: number;
+	paymentStatus?: string;
+	searchTerm?: string;
+	sortDirection?: "asc" | "desc";
+	sortField?: string;
 }
 
 export default function OrdersFilters({
 	date,
-	orderStatus,
-	paymentStatus,
-	pageSize,
-	searchTerm,
-	sortDirection,
-	sortField,
 	filtersActive,
 	onFilterChange,
 	onResetFilters,
 	onSort,
+	orderStatus,
+	pageSize,
+	paymentStatus,
+	searchTerm,
+	sortDirection,
+	sortField,
 }: OrdersFiltersProps) {
 	const navigate = useNavigate({ from: "/orders" });
 	const [isDateOpen, setIsDateOpen] = useState(false);
@@ -85,18 +79,13 @@ export default function OrdersFilters({
 		date !== "yesterday" &&
 		date !== "last7days" &&
 		date !== "last30days";
-	const selectedDate = isCustomDate
-		? new Date(`${date}T00:00:00+08:00`)
-		: undefined;
+	const selectedDate = isCustomDate ? new Date(`${date}T00:00:00+08:00`) : undefined;
 
 	const isIssueActive =
-		orderStatus === "created" ||
-		orderStatus === "cancelled" ||
-		orderStatus === "refunded";
+		orderStatus === "created" || orderStatus === "cancelled" || orderStatus === "refunded";
 
 	const handleDatePreset = (preset: string) => {
 		navigate({
-			to: "/orders",
 			search: {
 				date: preset,
 				orderStatus,
@@ -107,6 +96,7 @@ export default function OrdersFilters({
 				sortDirection,
 				sortField,
 			},
+			to: "/orders",
 		});
 	};
 
@@ -114,7 +104,6 @@ export default function OrdersFilters({
 		if (selectedDate) {
 			const dateStr = selectedDate.toISOString().split("T")[0];
 			navigate({
-				to: "/orders",
 				search: {
 					date: dateStr,
 					orderStatus,
@@ -125,6 +114,7 @@ export default function OrdersFilters({
 					sortDirection,
 					sortField,
 				},
+				to: "/orders",
 			});
 		}
 		setIsDateOpen(false);
@@ -133,19 +123,19 @@ export default function OrdersFilters({
 	return (
 		<div className="space-y-4">
 			{/* Status tabs — primary + issues dropdown */}
-			<div className="scrollbar-thin flex gap-1 overflow-x-auto pb-1">
+			<div className="flex scrollbar-thin gap-1 overflow-x-auto pb-1">
 				{primaryStatuses.map((status) => {
 					const value = status;
 					const isActive = orderStatus === value;
 					return (
 						<Button
-							key={value}
-							variant={isActive ? "default" : "outline"}
-							size="sm"
-							onClick={() => onFilterChange("orderStatus", value)}
-							className={`h-10 shrink-0 px-4 font-bold text-xs sm:text-sm ${
+							className={`h-10 shrink-0 px-4 text-xs font-bold sm:text-sm ${
 								isActive ? "shadow-hard" : "shadow-hard-sm"
 							}`}
+							key={value}
+							onClick={() => onFilterChange("orderStatus", value)}
+							size="sm"
+							variant={isActive ? "default" : "outline"}
 						>
 							{formatStatusLabel(status)}
 						</Button>
@@ -155,29 +145,24 @@ export default function OrdersFilters({
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
-							variant={isIssueActive ? "default" : "outline"}
-							size="sm"
-							className={`h-10 shrink-0 gap-1 px-3 font-bold text-xs sm:text-sm ${
+							className={`h-10 shrink-0 gap-1 px-3 text-xs font-bold sm:text-sm ${
 								isIssueActive ? "shadow-hard" : "shadow-hard-sm"
 							}`}
+							size="sm"
+							variant={isIssueActive ? "default" : "outline"}
 						>
 							Асуудалтай
 							<ChevronDown className="h-3.5 w-3.5" />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						align="start"
-						className="border-2 border-border bg-card shadow-hard"
-					>
+					<DropdownMenuContent align="start" className="border-border bg-card shadow-hard border-2">
 						{issueStatuses.map((status) => (
 							<DropdownMenuItem
+								className={`py-2.5 font-bold ${
+									orderStatus === status ? "bg-primary text-primary-foreground" : ""
+								}`}
 								key={status}
 								onClick={() => onFilterChange("orderStatus", status)}
-								className={`py-2.5 font-bold ${
-									orderStatus === status
-										? "bg-primary text-primary-foreground"
-										: ""
-								}`}
 							>
 								{formatStatusLabel(status)}
 							</DropdownMenuItem>
@@ -190,41 +175,36 @@ export default function OrdersFilters({
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<div className="flex flex-wrap items-center gap-1.5">
 					{datePresets.map((preset) => {
-						const isActive =
-							date === preset.value || (!date && preset.value === "all");
+						const isActive = date === preset.value || (!date && preset.value === "all");
 						return (
 							<Button
+								className={`h-9 px-2.5 text-xs ${isActive ? "shadow-hard" : "shadow-hard-sm"}`}
 								key={preset.value}
-								variant={isActive ? "default" : "outline"}
-								size="sm"
 								onClick={() => handleDatePreset(preset.value)}
-								className={`h-9 px-2.5 text-xs ${
-									isActive ? "shadow-hard" : "shadow-hard-sm"
-								}`}
+								size="sm"
+								variant={isActive ? "default" : "outline"}
 							>
 								{preset.label}
 							</Button>
 						);
 					})}
-					<Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
+					<Popover onOpenChange={setIsDateOpen} open={isDateOpen}>
 						<PopoverTrigger asChild>
 							<Button
-								variant={isCustomDate ? "default" : "outline"}
-								size="sm"
-								className={`h-9 w-9 p-0 ${
-									isCustomDate ? "shadow-hard" : "shadow-hard-sm"
-								}`}
 								aria-label="Огноо сонгох"
+								className={`h-9 w-9 p-0 ${isCustomDate ? "shadow-hard" : "shadow-hard-sm"}`}
+								size="sm"
+								variant={isCustomDate ? "default" : "outline"}
 							>
 								<CalendarIcon className="h-3.5 w-3.5" />
 							</Button>
 						</PopoverTrigger>
-						<PopoverContent className="w-auto p-0" align="start">
+						<PopoverContent align="start" className="w-auto p-0">
 							<Calendar
-								mode="single"
-								selected={selectedDate}
-								onSelect={handleCustomDateSelect}
 								components={{ DayButton: CalendarDayButton }}
+								mode="single"
+								onSelect={handleCustomDateSelect}
+								selected={selectedDate}
 							/>
 						</PopoverContent>
 					</Popover>
@@ -232,10 +212,10 @@ export default function OrdersFilters({
 
 				<div className="flex items-center gap-2 sm:ml-auto">
 					<Select
-						value={paymentStatus ?? "all"}
 						onValueChange={(value) => onFilterChange("paymentStatus", value)}
+						value={paymentStatus ?? "all"}
 					>
-						<SelectTrigger className="h-9 w-[150px] text-xs shadow-hard-sm">
+						<SelectTrigger className="shadow-hard-sm h-9 w-[150px] text-xs">
 							<SelectValue placeholder="Төлбөр" />
 						</SelectTrigger>
 						<SelectContent>
@@ -248,15 +228,15 @@ export default function OrdersFilters({
 						</SelectContent>
 					</Select>
 
-					<div className="h-6 w-px bg-border" />
+					<div className="bg-border h-6 w-px" />
 
 					<Button
-						variant={sortField === "total" ? "default" : "outline"}
-						size="sm"
-						onClick={() => onSort("total")}
 						className={`h-9 gap-1 px-3 text-xs ${
 							sortField === "total" ? "shadow-hard" : "shadow-hard-sm"
 						}`}
+						onClick={() => onSort("total")}
+						size="sm"
+						variant={sortField === "total" ? "default" : "outline"}
 					>
 						Нийт
 						{sortField === "total" &&
@@ -267,12 +247,12 @@ export default function OrdersFilters({
 							))}
 					</Button>
 					<Button
-						variant={sortField === "createdAt" ? "default" : "outline"}
-						size="sm"
-						onClick={() => onSort("createdAt")}
 						className={`h-9 gap-1 px-3 text-xs ${
 							sortField === "createdAt" ? "shadow-hard" : "shadow-hard-sm"
 						}`}
+						onClick={() => onSort("createdAt")}
+						size="sm"
+						variant={sortField === "createdAt" ? "default" : "outline"}
 					>
 						Огноо
 						{sortField === "createdAt" &&
@@ -285,10 +265,10 @@ export default function OrdersFilters({
 
 					{filtersActive && (
 						<Button
-							variant="ghost"
-							size="sm"
-							onClick={onResetFilters}
 							className="hidden h-9 gap-1.5 sm:flex"
+							onClick={onResetFilters}
+							size="sm"
+							variant="ghost"
 						>
 							<RotateCcw className="h-3.5 w-3.5" />
 							Цэвэрлэх

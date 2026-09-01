@@ -11,11 +11,11 @@ const PRODUCT_IMAGE_WIDTH = 380;
 const PRODUCT_IMAGE_HEIGHT = 460;
 
 type ProductForOg = {
-	name: string;
 	brand?: { name?: string | null } | null;
 	category?: { name?: string | null } | null;
+	images: Array<{ isPrimary: boolean; url: string }>;
+	name: string;
 	price: number;
-	images: Array<{ url: string; isPrimary: boolean }>;
 };
 
 function escapeXml(value: string): string {
@@ -28,27 +28,29 @@ function escapeXml(value: string): string {
 }
 
 function stripHtml(value: string | null | undefined): string {
-	if (!value) return "";
+	if (!value) {
+		return "";
+	}
 	return value
-		.replace(/<[^>]+>/g, " ")
-		.replace(/\s+/g, " ")
+		.replaceAll(/<[^>]+>/g, " ")
+		.replaceAll(/\s+/g, " ")
 		.trim();
 }
 
 function truncate(value: string, maxLength: number): string {
-	if (value.length <= maxLength) return value;
+	if (value.length <= maxLength) {
+		return value;
+	}
 	return `${value.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-function splitTitle(
-	title: string,
-	maxLineLength: number,
-	maxLines: number,
-): string[] {
+function splitTitle(title: string, maxLineLength: number, maxLines: number): Array<string> {
 	const words = title.trim().split(/\s+/).filter(Boolean);
-	if (words.length === 0) return ["Америк Витамин"];
+	if (words.length === 0) {
+		return ["Америк Витамин"];
+	}
 
-	const lines: string[] = [];
+	const lines: Array<string> = [];
 	let currentLine = "";
 
 	for (const word of words) {
@@ -80,9 +82,7 @@ function splitTitle(
 	if (lines.length > maxLines) {
 		return lines
 			.slice(0, maxLines)
-			.map((line, index) =>
-				index === maxLines - 1 ? truncate(`${line}…`, maxLineLength) : line,
-			);
+			.map((line, index) => (index === maxLines - 1 ? truncate(`${line}…`, maxLineLength) : line));
 	}
 
 	if (lines.length === maxLines) {
@@ -96,17 +96,13 @@ function formatPrice(price: number): string {
 	return price > 0 ? `${new Intl.NumberFormat("en-US").format(price)} MNT` : "";
 }
 
-function getPrimaryImageUrl(
-	images: Array<{ url: string; isPrimary: boolean }>,
-): string | null {
-	const primaryImage =
-		images.find((image) => image.isPrimary)?.url ?? images[0]?.url;
-	if (!primaryImage) return null;
+function getPrimaryImageUrl(images: Array<{ isPrimary: boolean; url: string }>): string | null {
+	const primaryImage = images.find((image) => image.isPrimary)?.url ?? images[0]?.url;
+	if (!primaryImage) {
+		return null;
+	}
 
-	if (
-		primaryImage.startsWith("http://") ||
-		primaryImage.startsWith("https://")
-	) {
+	if (primaryImage.startsWith("http://") || primaryImage.startsWith("https://")) {
 		return toProductImageUrl(primaryImage, "md");
 	}
 
@@ -118,12 +114,8 @@ function getPrimaryImageUrl(
 
 function buildOgSvg(product: ProductForOg) {
 	const productName = stripHtml(product.name);
-	const brand = escapeXml(
-		truncate(stripHtml(product.brand?.name) || "Америк Витамин", 22),
-	);
-	const category = escapeXml(
-		truncate(stripHtml(product.category?.name) || "Бүтээгдэхүүн", 24),
-	);
+	const brand = escapeXml(truncate(stripHtml(product.brand?.name) || "Америк Витамин", 22));
+	const category = escapeXml(truncate(stripHtml(product.category?.name) || "Бүтээгдэхүүн", 24));
 	const titleLines = splitTitle(productName, 18, 3);
 	const longestLine = Math.max(...titleLines.map((line) => line.length));
 	const titleFontSize =
@@ -213,14 +205,10 @@ function buildOgSvg(product: ProductForOg) {
 `.trim();
 }
 
-export async function GET({
-	params,
-}: {
-	params: { slug?: string };
-}) {
+export async function GET({ params }: { params: { slug?: string } }) {
 	const slug = params.slug ?? "";
 	const slugParts = slug.split("-");
-	const productId = Number(slugParts[slugParts.length - 1]);
+	const productId = Number(slugParts.at(-1));
 
 	if (Number.isNaN(productId)) {
 		return new Response("Invalid product ID", { status: 400 });
@@ -234,8 +222,8 @@ export async function GET({
 
 	return new Response(buildOgSvg(product), {
 		headers: {
-			"Content-Type": "image/svg+xml; charset=utf-8",
 			"Cache-Control": "no-store",
+			"Content-Type": "image/svg+xml; charset=utf-8",
 		},
 	});
 }

@@ -5,70 +5,71 @@ import { captureException } from "./analytics";
 const getErrorDetails = (error: unknown) => {
 	if (error instanceof Error) {
 		return {
-			name: error.name,
 			message: error.message,
+			name: error.name,
 			stack: error.stack,
 		};
 	}
 
 	return {
-		name: typeof error,
 		message: String(error),
+		name: typeof error,
 	};
 };
 
 const getBrowserContext = () => {
-	if (typeof window === "undefined") return {};
+	if (typeof window === "undefined") {
+		return {};
+	}
 
 	return {
+		devicePixelRatio: window.devicePixelRatio,
+		isOnline: window.navigator.onLine,
 		pageUrl: window.location.href,
 		userAgent: window.navigator.userAgent,
-		isOnline: window.navigator.onLine,
-		devicePixelRatio: window.devicePixelRatio,
-		viewportWidth: window.innerWidth,
 		viewportHeight: window.innerHeight,
+		viewportWidth: window.innerWidth,
 	};
 };
 
 export const queryClient = new QueryClient({
-	queryCache: new QueryCache({
-		onError: (error, query) => {
-			captureException(error, {
-				...getErrorDetails(error),
-				...getBrowserContext(),
-				source: "tanstack-query",
-				queryHash: query.queryHash,
-				queryKey: query.queryKey,
-				queryMeta: query.meta,
-			});
+	defaultOptions: {
+		mutations: {
+			onError: (error) => {
+				showToast({
+					description: error.message || "Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.",
+					duration: 5000,
+					title: "Алдаа гарлаа",
+					variant: "error",
+				});
+			},
 		},
-	}),
+		queries: {
+			gcTime: 1000 * 60 * 60,
+			staleTime: 1000 * 60 * 5,
+		},
+	},
 	mutationCache: new MutationCache({
 		onError: (error, _variables, _context, mutation) => {
 			captureException(error, {
 				...getErrorDetails(error),
 				...getBrowserContext(),
-				source: "tanstack-mutation",
 				mutationKey: mutation.options.mutationKey,
 				mutationMeta: mutation.options.meta,
+				source: "tanstack-mutation",
 			});
 		},
 	}),
-	defaultOptions: {
-		queries: {
-			staleTime: 1000 * 60 * 5,
-			gcTime: 1000 * 60 * 60,
+	queryCache: new QueryCache({
+		onError: (error, query) => {
+			captureException(error, {
+				...getErrorDetails(error),
+				...getBrowserContext(),
+				queryHash: query.queryHash,
+				queryKey: query.queryKey,
+				queryMeta: query.meta,
+				source: "tanstack-query",
+			});
 		},
-		mutations: {
-			onError: (error) => {
-				showToast({
-					title: "Алдаа гарлаа",
-					description:
-						error.message || "Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.",
-					duration: 5000,
-					variant: "error",
-				});
-			},
-		},
-	},
+	}),
 });

@@ -6,17 +6,17 @@ const MAX_STACK_FRAME_LENGTH = 500;
 const SAFE_TOKEN = /^[A-Za-z0-9_.:-]{1,80}$/;
 
 type SafeDiagnostic = {
+	cause?: SafeDiagnostic;
+	code?: string | number;
 	name: string;
 	stack: string;
-	code?: string | number;
-	cause?: SafeDiagnostic;
 };
 
 function safeToken(value: unknown): string | number | undefined {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	return typeof value === "string" && SAFE_TOKEN.test(value)
-		? value
-		: undefined;
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return value;
+	}
+	return typeof value === "string" && SAFE_TOKEN.test(value) ? value : undefined;
 }
 
 function safeErrorName(value: string): string {
@@ -49,7 +49,9 @@ export function operatorTrpcError(error: Error): Error {
 			stack: safeStack(name, current.stack),
 		};
 		const code = safeToken((current as Error & { code?: unknown }).code);
-		if (code !== undefined) diagnostic.code = code;
+		if (code !== undefined) {
+			diagnostic.code = code;
+		}
 
 		seen.add(current);
 		const cause = (current as Error & { cause?: unknown }).cause;
@@ -65,14 +67,14 @@ export function operatorTrpcError(error: Error): Error {
 	projected.stack = diagnostic.stack;
 	if (diagnostic.code !== undefined) {
 		Object.defineProperty(projected, "code", {
-			value: diagnostic.code,
 			enumerable: true,
+			value: diagnostic.code,
 		});
 	}
 	if (diagnostic.cause) {
 		Object.defineProperty(projected, "cause", {
-			value: diagnostic.cause,
 			enumerable: true,
+			value: diagnostic.cause,
 		});
 	}
 	return projected;
@@ -87,7 +89,7 @@ export function logTrpcError(
 	const context = log.getContext();
 	const fields = {
 		event,
-		trpc: { path, code: error.code },
+		trpc: { code: error.code, path },
 	};
 
 	// Procedure handlers may have already recorded the original database error.

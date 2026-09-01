@@ -12,13 +12,13 @@ import { assistantStockStatusSchema } from "./products";
 // A single cart line. `price` is the unit price snapshot in MNT (integer
 // tugriks) captured from the catalog projection when the item was first added.
 export const cartItemSchema = v.object({
-	productId: v.number(),
+	brand: v.optional(v.string()),
+	image: v.optional(v.string()),
 	name: v.string(),
 	price: v.number(),
-	image: v.optional(v.string()),
-	brand: v.optional(v.string()),
-	stockStatus: v.optional(assistantStockStatusSchema),
+	productId: v.number(),
 	quantity: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	stockStatus: v.optional(assistantStockStatusSchema),
 });
 
 export type CartItem = v.InferOutput<typeof cartItemSchema>;
@@ -32,7 +32,7 @@ export const cartSchema = v.object({
 
 export type Cart = v.InferOutput<typeof cartSchema>;
 
-export const EMPTY_CART: Cart = { items: [], confirmed: false };
+export const EMPTY_CART: Cart = { confirmed: false, items: [] };
 
 // Default order quantity when a customer taps Захиалах (PRD).
 export const DEFAULT_QUANTITY = 1;
@@ -44,11 +44,11 @@ const MAX_QUANTITY = 99;
 // the shared `AssistantProduct` projection (#19), so the catalog result can be
 // passed straight through without a separate mapping.
 export interface CartProductInput {
+	brand?: string;
 	id: number;
+	image?: string;
 	name: string;
 	price: number;
-	image?: string;
-	brand?: string;
 	stockStatus?: v.InferOutput<typeof assistantStockStatusSchema>;
 }
 
@@ -58,7 +58,7 @@ const clampQuantity = (quantity: number): number =>
 // Any mutation re-opens the confirm gate: a cart the customer just changed must
 // be re-confirmed before checkout, so a stale confirmation can never leak into
 // a later, different cart.
-const reopen = (items: CartItem[]): Cart => ({ items, confirmed: false });
+const reopen = (items: Array<CartItem>): Cart => ({ confirmed: false, items });
 
 // Adds `quantity` of a product, merging into the existing line when present.
 // Adding to a confirmed cart re-opens it (see `reopen`).
@@ -79,9 +79,9 @@ export const addToCart = (
 		);
 	}
 	const line: CartItem = {
-		productId: product.id,
 		name: product.name,
 		price: product.price,
+		productId: product.id,
 		quantity: add,
 		...(product.image ? { image: product.image } : {}),
 		...(product.brand ? { brand: product.brand } : {}),
@@ -91,30 +91,24 @@ export const addToCart = (
 };
 
 // Sets an absolute quantity for a line. A quantity of 0 (or less) removes it.
-export const setQuantity = (
-	cart: Cart,
-	productId: number,
-	quantity: number,
-): Cart => {
-	if (quantity <= 0) return removeFromCart(cart, productId);
+export const setQuantity = (cart: Cart, productId: number, quantity: number): Cart => {
+	if (quantity <= 0) {
+		return removeFromCart(cart, productId);
+	}
 	return reopen(
 		cart.items.map((item) =>
-			item.productId === productId
-				? { ...item, quantity: clampQuantity(quantity) }
-				: item,
+			item.productId === productId ? { ...item, quantity: clampQuantity(quantity) } : item,
 		),
 	);
 };
 
 // Adjusts a line's quantity by a relative delta (e.g. +1 / -1 buttons).
 // Dropping to 0 removes the line.
-export const adjustQuantity = (
-	cart: Cart,
-	productId: number,
-	delta: number,
-): Cart => {
+export const adjustQuantity = (cart: Cart, productId: number, delta: number): Cart => {
 	const existing = cart.items.find((item) => item.productId === productId);
-	if (!existing) return cart;
+	if (!existing) {
+		return cart;
+	}
 	return setQuantity(cart, productId, existing.quantity + delta);
 };
 
@@ -136,8 +130,7 @@ export const cartSubtotal = (cart: Cart): number =>
 
 export const isCartEmpty = (cart: Cart): boolean => cart.items.length === 0;
 
-const formatPrice = (price: number): string =>
-	`${Math.round(price).toLocaleString("en-US")}₮`;
+const formatPrice = (price: number): string => `${Math.round(price).toLocaleString("en-US")}₮`;
 
 export const CART_EMPTY_MESSAGE =
 	"Таны сагс хоосон байна. Бараа хайгаад Захиалах товчийг дарж сагсандаа нэмнэ үү.";
@@ -149,7 +142,9 @@ export const CART_CONFIRMED_MESSAGE =
 // price, quantity and line total, then the subtotal. Channel-neutral text the
 // Messenger channel sends verbatim and a future web widget could render too.
 export const formatCartSummary = (cart: Cart): string => {
-	if (isCartEmpty(cart)) return CART_EMPTY_MESSAGE;
+	if (isCartEmpty(cart)) {
+		return CART_EMPTY_MESSAGE;
+	}
 	const lines = cart.items.map((item, index) => {
 		const lineTotal = item.price * item.quantity;
 		return `${index + 1}. ${item.name} — ${formatPrice(item.price)} × ${item.quantity} = ${formatPrice(lineTotal)}`;
@@ -178,12 +173,9 @@ const CART_DEC_PREFIX = "cart_dec";
 const CART_REMOVE_PREFIX = "cart_remove";
 const ID_RE = /^(\d+)$/;
 
-export const buildCartIncPayload = (id: number): string =>
-	`${CART_INC_PREFIX}:${id}`;
-export const buildCartDecPayload = (id: number): string =>
-	`${CART_DEC_PREFIX}:${id}`;
-export const buildCartRemovePayload = (id: number): string =>
-	`${CART_REMOVE_PREFIX}:${id}`;
+export const buildCartIncPayload = (id: number): string => `${CART_INC_PREFIX}:${id}`;
+export const buildCartDecPayload = (id: number): string => `${CART_DEC_PREFIX}:${id}`;
+export const buildCartRemovePayload = (id: number): string => `${CART_REMOVE_PREFIX}:${id}`;
 
 const productIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
 
@@ -208,9 +200,13 @@ export const cartCommandSchema = v.variant("kind", [
 export type CartCommand = v.InferOutput<typeof cartCommandSchema>;
 
 const parseIdSuffix = (payload: string, prefix: string): number | undefined => {
-	if (!payload.startsWith(`${prefix}:`)) return undefined;
+	if (!payload.startsWith(`${prefix}:`)) {
+		return undefined;
+	}
 	const match = ID_RE.exec(payload.slice(prefix.length + 1));
-	if (!match) return undefined;
+	if (!match) {
+		return undefined;
+	}
 	const id = Number(match[1]);
 	return Number.isSafeInteger(id) ? id : undefined;
 };
@@ -219,15 +215,27 @@ const parseIdSuffix = (payload: string, prefix: string): number | undefined => {
 // is not a cart-control payload (so the caller can fall through to other event
 // handling — e.g. `order_product:<id>` or a normal text turn).
 export const parseCartPayload = (payload: string): CartCommand | undefined => {
-	if (payload === CART_VIEW_PAYLOAD) return { kind: "view" };
-	if (payload === CART_CONFIRM_PAYLOAD) return { kind: "confirm" };
-	if (payload === CART_CLEAR_PAYLOAD) return { kind: "clear" };
+	if (payload === CART_VIEW_PAYLOAD) {
+		return { kind: "view" };
+	}
+	if (payload === CART_CONFIRM_PAYLOAD) {
+		return { kind: "confirm" };
+	}
+	if (payload === CART_CLEAR_PAYLOAD) {
+		return { kind: "clear" };
+	}
 	const inc = parseIdSuffix(payload, CART_INC_PREFIX);
-	if (inc !== undefined) return { kind: "inc", productId: inc };
+	if (inc !== undefined) {
+		return { kind: "inc", productId: inc };
+	}
 	const dec = parseIdSuffix(payload, CART_DEC_PREFIX);
-	if (dec !== undefined) return { kind: "dec", productId: dec };
+	if (dec !== undefined) {
+		return { kind: "dec", productId: dec };
+	}
 	const remove = parseIdSuffix(payload, CART_REMOVE_PREFIX);
-	if (remove !== undefined) return { kind: "remove", productId: remove };
+	if (remove !== undefined) {
+		return { kind: "remove", productId: remove };
+	}
 	return undefined;
 };
 
@@ -256,8 +264,8 @@ export const applyCartCommand = (cart: Cart, command: CartCommand): Cart => {
 // a `quick_replies` entry (content_type 'text'); a web widget could render the
 // same list as buttons.
 export interface CartQuickReply {
-	title: string;
 	payload: string;
+	title: string;
 }
 
 // Messenger allows at most 13 quick replies and caps each title at 20 chars.
@@ -268,27 +276,31 @@ const MAX_CART_QUICK_REPLIES = 13;
 // the prefix is the whole point: truncating a bare label and *then* prepending
 // "➕ " would push the result past 20 and risk Meta rejecting the send.
 const qr = (title: string, payload: string): CartQuickReply => ({
+	payload,
 	title:
 		title.length <= QUICK_REPLY_TITLE_MAX
 			? title
 			: `${title.slice(0, QUICK_REPLY_TITLE_MAX - 1).trimEnd()}…`,
-	payload,
 });
 
 // Builds the cart-control quick replies for the current cart: per-item +/−/✖
 // adjusters plus the global confirm/clear actions, bounded to Messenger's 13
 // quick-reply cap (per-item controls are dropped first if the cart is large;
 // the always-visible confirm/clear keep the customer able to act).
-export const cartQuickReplies = (cart: Cart): CartQuickReply[] => {
-	if (isCartEmpty(cart)) return [];
+export const cartQuickReplies = (cart: Cart): Array<CartQuickReply> => {
+	if (isCartEmpty(cart)) {
+		return [];
+	}
 	const global = [
 		qr("✅ Баталгаажуулах", CART_CONFIRM_PAYLOAD),
 		qr("🗑 Сагс хоослох", CART_CLEAR_PAYLOAD),
 	];
 	const perItemBudget = MAX_CART_QUICK_REPLIES - global.length;
-	const perItem: CartQuickReply[] = [];
+	const perItem: Array<CartQuickReply> = [];
 	for (const item of cart.items) {
-		if (perItem.length + 3 > perItemBudget) break;
+		if (perItem.length + 3 > perItemBudget) {
+			break;
+		}
 		perItem.push(
 			qr(`➕ ${item.name}`, buildCartIncPayload(item.productId)),
 			qr(`➖ ${item.name}`, buildCartDecPayload(item.productId)),

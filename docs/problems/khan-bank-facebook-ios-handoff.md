@@ -24,11 +24,11 @@ This problem is one part of the wider recovery journey documented in:
 
 PostHog bank-handoff events from 2026-08-25 through 2026-08-30 show:
 
-| Context | Clicks | Payments | App opened | No handoff | No recorded outcome |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Facebook in-app browser | 19 | 12 | 6 | 10 | 3 |
-| Browser outside Facebook | 2 | 2 | 2 | 0 | 0 |
-| Total | 21 | 14 | 8 | 10 | 3 |
+| Context                  | Clicks | Payments | App opened | No handoff | No recorded outcome |
+| ------------------------ | -----: | -------: | ---------: | ---------: | ------------------: |
+| Facebook in-app browser  |     19 |       12 |          6 |         10 |                   3 |
+| Browser outside Facebook |      2 |        2 |          2 |          0 |                   0 |
+| Total                    |     21 |       14 |          8 |         10 |                   3 |
 
 Only 6 of 19 Facebook taps produced an observed Khan Bank app handoff. Both
 non-Facebook taps produced a handoff.
@@ -54,11 +54,11 @@ occurred after that merge.
 
 After the eight-second timeout change and before PR #299:
 
-| Khan Bank result | Taps |
-| --- | ---: |
-| App opened | 8 |
-| No handoff | 5 |
-| No recorded outcome | 3 |
+| Khan Bank result    | Taps |
+| ------------------- | ---: |
+| App opened          |    8 |
+| No handoff          |    5 |
+| No recorded outcome |    3 |
 
 The longer timeout removed the first known short-timeout case from the later
 sample, but it did not remove Facebook handoff failures.
@@ -124,11 +124,11 @@ If the UA is Facebook, the sheet says bank apps often fail to open there.
 
 The same production period shows different failure shapes for other apps:
 
-| App | Payments | Clicks | App opened | No handoff | Eventually paid |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Khan Bank | 14 | 21 | 8 | 10 | 9 |
-| Sono | 8 | 12 | 11 | 1 | 0 |
-| Trade and Development Bank | 3 | 4 | 4 | 0 | 3 |
+| App                        | Payments | Clicks | App opened | No handoff | Eventually paid |
+| -------------------------- | -------: | -----: | ---------: | ---------: | --------------: |
+| Khan Bank                  |       14 |     21 |          8 |         10 |               9 |
+| Sono                       |        8 |     12 |         11 |          1 |               0 |
+| Trade and Development Bank |        3 |      4 |          4 |          0 |               3 |
 
 Sono generally opens but none of its selected Payments completed. Its failure
 occurs after browser handoff and is separate from the Khan Bank/Facebook issue.

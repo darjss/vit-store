@@ -1,10 +1,5 @@
 import { Edit2, MoreVertical, Trash2 } from "lucide-react";
-import {
-	type Dispatch,
-	type ReactNode,
-	type SetStateAction,
-	useState,
-} from "react";
+import { type Dispatch, type ReactNode, type SetStateAction, useState } from "react";
 import SubmitButton from "@/components/submit-button";
 import {
 	AlertDialog,
@@ -26,37 +21,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface RowActionProps {
-	id: number;
-	setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>;
 	deleteMutation: (id: number) => void;
-	isDeletePending: boolean;
 	extraActions?: ReactNode;
+	id: number;
+	isDeletePending: boolean;
+	setIsEditDialogOpen: Dispatch<SetStateAction<boolean>>;
 }
 
 const RowAction = ({
-	id,
-	setIsEditDialogOpen,
 	deleteMutation,
-	isDeletePending,
 	extraActions,
+	id,
+	isDeletePending,
+	setIsEditDialogOpen,
 }: RowActionProps) => {
 	const [isDeleteAlertOpen, setIsDelteAlertOpen] = useState(false);
 
 	return (
-		<DropdownMenu modal={false} data-no-nav>
+		<DropdownMenu data-no-nav modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
-					variant="default"
+					onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) => e.stopPropagation()}
 					size="icon"
-					onClick={(e: React.MouseEvent<HTMLButtonElement>) =>
-						e.stopPropagation()
-					}
-					onMouseDown={(e: React.MouseEvent<HTMLButtonElement>) =>
-						e.stopPropagation()
-					}
-					onPointerDown={(e: React.PointerEvent<HTMLButtonElement>) =>
-						e.stopPropagation()
-					}
+					variant="default"
 				>
 					<MoreVertical className="h-4 w-4" />
 					<span className="sr-only">Цэс нээх</span>
@@ -64,20 +53,20 @@ const RowAction = ({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="w-32 border-2 border-border bg-background shadow-shadow"
+				className="border-border bg-background shadow-shadow w-32 border-2"
 				data-no-nav
 				onClick={(e) => e.stopPropagation()}
 				onMouseDown={(e) => e.stopPropagation()}
 				onPointerDown={(e) => e.stopPropagation()}
 			>
 				<DropdownMenuItem
-					className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-					onSelect={(e) => {
+					className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
+					onClick={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
 						setIsEditDialogOpen(true);
 					}}
-					onClick={(e) => {
+					onSelect={(e) => {
 						e.stopPropagation();
 						e.preventDefault();
 						setIsEditDialogOpen(true);
@@ -92,14 +81,10 @@ const RowAction = ({
 
 				<DropdownMenuSeparator className="bg-border" />
 
-				<AlertDialog
-					open={isDeleteAlertOpen}
-					onOpenChange={setIsDelteAlertOpen}
-					data-no-nav
-				>
+				<AlertDialog data-no-nav onOpenChange={setIsDelteAlertOpen} open={isDeleteAlertOpen}>
 					<AlertDialogTrigger asChild>
 						<DropdownMenuItem
-							className="cursor-pointer gap-2 py-2 text-destructive hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
+							className="text-destructive hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer gap-2 py-2"
 							onSelect={(e) => {
 								e.stopPropagation();
 								e.preventDefault();
@@ -110,28 +95,27 @@ const RowAction = ({
 							<span>Устгах</span>
 						</DropdownMenuItem>
 					</AlertDialogTrigger>
-					<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
+					<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
 						<AlertDialogHeader>
 							<AlertDialogTitle className="font-heading text-lg">
 								Устгахыг баталгаажуулах
 							</AlertDialogTitle>
-							<p className="mt-2 text-foreground/70 text-sm">
-								Та энэ зүйлийг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах
-								боломжгүй.
+							<p className="text-foreground/70 mt-2 text-sm">
+								Та энэ зүйлийг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.
 							</p>
 						</AlertDialogHeader>
 						<AlertDialogFooter className="mt-6 flex gap-3">
 							<AlertDialogCancel asChild>
-								<Button variant="destructive" className="flex-1">
+								<Button className="flex-1" variant="destructive">
 									Болих
 								</Button>
 							</AlertDialogCancel>
 							<AlertDialogAction asChild>
 								<SubmitButton
-									variant="destructive"
 									className="flex-1"
-									onClick={() => deleteMutation(id)}
 									isPending={isDeletePending}
+									onClick={() => deleteMutation(id)}
+									variant="destructive"
 								>
 									Устгах
 								</SubmitButton>

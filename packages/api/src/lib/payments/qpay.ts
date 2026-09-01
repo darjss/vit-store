@@ -9,29 +9,29 @@ const truncate = (value: string, maxLength = 500) =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
 interface TokenResponse {
-	token_type: string;
-	refresh_expires_in: number;
-	refresh_token: string;
 	access_token: string;
 	expires_in: number;
-	scope: string;
 	"not-before-policy": string;
+	refresh_expires_in: number;
+	refresh_token: string;
+	scope: string;
 	session_state: string;
+	token_type: string;
 }
 
 interface PaymentUrl {
-	name: string;
 	description: string;
-	logo: string;
 	link: string;
+	logo: string;
+	name: string;
 }
 
 export interface InvoiceResponse {
 	invoice_id: string;
-	qr_text: string;
-	qr_image: string;
 	qPay_shortUrl: string;
-	urls: PaymentUrl[];
+	qr_image: string;
+	qr_text: string;
+	urls: Array<PaymentUrl>;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -64,35 +64,35 @@ export const parseQpayInvoiceResponse = (value: string) => {
 };
 
 interface P2PTransaction {
-	id: string;
-	transaction_bank_code: string;
 	account_bank_code: string;
 	account_bank_name: string;
 	account_number: string;
-	status: string;
 	amount: string;
 	currency: string;
+	id: string;
 	settlement_status: string;
+	status: string;
+	transaction_bank_code: string;
 }
 
 interface PaymentRow {
-	payment_id: string;
-	payment_status: string;
-	payment_amount: string;
-	trx_fee: string;
-	payment_currency: string;
-	payment_wallet: string;
-	payment_type: string;
+	card_transactions: Array<unknown>;
 	next_payment_date: string | null;
 	next_payment_datetime: string | null;
-	card_transactions: unknown[];
-	p2p_transactions: P2PTransaction[];
+	p2p_transactions: Array<P2PTransaction>;
+	payment_amount: string;
+	payment_currency: string;
+	payment_id: string;
+	payment_status: string;
+	payment_type: string;
+	payment_wallet: string;
+	trx_fee: string;
 }
 
 interface PaymentResponse {
 	count: number;
 	paid_amount: number;
-	rows: PaymentRow[];
+	rows: Array<PaymentRow>;
 }
 
 const QPAY_ACCESS_TOKEN_KEY = "qpay_access_token";
@@ -136,19 +136,20 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 		if (error instanceof HTTPError) {
 			const body = await error.response.text();
 			logger.error("qpay auth failed", {
+				baseUrl: apiUrl,
+				body: truncate(body),
+				passwordLength: password.length,
 				status: error.response.status,
 				statusText: error.response.statusText,
-				body: truncate(body),
-				baseUrl: apiUrl,
 				usernameLength: username.length,
-				passwordLength: password.length,
 			});
 			throw new Error(
 				`QPay auth failed (${error.response.status}): ${body.slice(0, 300)} [base=${apiUrl} userLen=${username.length} passLen=${password.length}]`,
+				{ cause: error },
 			);
 		}
 		if (error instanceof SyntaxError) {
-			throw new Error(`QPay auth returned invalid JSON: ${error.message}`);
+			throw new Error(`QPay auth returned invalid JSON: ${error.message}`, { cause: error });
 		}
 		throw error;
 	}
@@ -163,27 +164,14 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 };
 
 const qpayClient = ky.create({
-	prefixUrl: apiUrl,
 	hooks: {
-		beforeRequest: [
-			async (request) => {
-				requestStartedAt.set(request, Date.now());
-				logger.info("qpay request", {
-					method: request.method,
-					url: request.url,
-				});
-				const token = await getAccessToken();
-				request.headers.set("Authorization", `Bearer ${token}`);
-			},
-		],
 		afterResponse: [
 			async (request, options, response) => {
 				logger.info("qpay response", {
+					durationMs: Date.now() - (requestStartedAt.get(request) ?? Date.now()),
 					method: request.method,
-					url: request.url,
 					status: response.status,
-					durationMs:
-						Date.now() - (requestStartedAt.get(request) ?? Date.now()),
+					url: request.url,
 				});
 				if (response.status !== 401) {
 					return response;
@@ -195,10 +183,10 @@ const qpayClient = ky.create({
 
 				const body = await response.clone().text();
 				logger.warn("qpay token rejected, refreshing and retrying request", {
-					method: request.method,
-					url: request.url,
-					status: response.status,
 					body: truncate(body),
+					method: request.method,
+					status: response.status,
+					url: request.url,
 				});
 				await env.vitStoreKV.delete(QPAY_ACCESS_TOKEN_KEY);
 				const refreshedToken = await getAccessToken({ forceRefresh: true });
@@ -214,53 +202,61 @@ const qpayClient = ky.create({
 			async (error) => {
 				const body = await error.response.clone().text();
 				logger.error("qpay error", {
+					body: truncate(body),
 					method: error.request.method,
-					url: error.request.url,
 					status: error.response.status,
 					statusText: error.response.statusText,
-					body: truncate(body),
+					url: error.request.url,
 				});
 				return error;
 			},
 		],
+		beforeRequest: [
+			async (request) => {
+				requestStartedAt.set(request, Date.now());
+				logger.info("qpay request", {
+					method: request.method,
+					url: request.url,
+				});
+				const token = await getAccessToken();
+				request.headers.set("Authorization", `Bearer ${token}`);
+			},
+		],
 	},
+	prefixUrl: apiUrl,
 });
 
-export const createQpayInvoice = async (
-	amount: number,
-	paymentNumber: string,
-) => {
+export const createQpayInvoice = async (amount: number, paymentNumber: string) => {
 	const callbackUrl = new URL(
-		env.QPAY_CALLBACK_URL ??
-			`${new URL(env.GOOGLE_CALLBACK_URL).origin}/webhooks/qpay`,
+		env.QPAY_CALLBACK_URL ?? `${new URL(env.GOOGLE_CALLBACK_URL).origin}/webhooks/qpay`,
 	);
 	callbackUrl.searchParams.set("id", paymentNumber);
 
 	logger.info("creating qpay invoice", {
-		paymentNumber,
 		amount,
 		callbackUrl: callbackUrl.toString(),
+		paymentNumber,
 	});
 
 	try {
 		const response = await qpayClient
 			.post("invoice", {
 				json: {
-					invoice_code: "AMERIK_VITAMIN_INVOICE",
-					sender_invoice_no: paymentNumber,
-					invoice_receiver_code: "terminal",
-					invoice_description: `${paymentNumber}`,
-					sender_branch_code: "SALBAR1",
-					amount: amount,
+					amount,
 					callback_url: callbackUrl.toString(),
+					invoice_code: "AMERIK_VITAMIN_INVOICE",
+					invoice_description: `${paymentNumber}`,
+					invoice_receiver_code: "terminal",
+					sender_branch_code: "SALBAR1",
+					sender_invoice_no: paymentNumber,
 				},
 			})
 			.json<InvoiceResponse>();
 
 		logger.info("qpay invoice created", {
-			paymentNumber,
-			invoiceId: response.invoice_id,
 			amount,
+			invoiceId: response.invoice_id,
+			paymentNumber,
 		});
 		return response;
 	} catch (error) {
@@ -268,10 +264,11 @@ export const createQpayInvoice = async (
 			const body = await error.response.text();
 			throw new Error(
 				`QPay invoice create failed (${error.response.status}): ${body.slice(0, 300)}`,
+				{ cause: error },
 			);
 		}
 		if (error instanceof SyntaxError) {
-			throw new Error(`QPay invoice returned invalid JSON: ${error.message}`);
+			throw new Error(`QPay invoice returned invalid JSON: ${error.message}`, { cause: error });
 		}
 		throw error;
 	}
@@ -281,11 +278,11 @@ export const checkQpayInvoice = async (invoiceId: string) => {
 	const response = await qpayClient
 		.post("payment/check", {
 			json: {
-				object_type: "INVOICE",
 				object_id: invoiceId,
+				object_type: "INVOICE",
 				offset: {
-					page_number: 1,
 					page_limit: 100,
+					page_number: 1,
 				},
 			},
 		})
@@ -294,8 +291,8 @@ export const checkQpayInvoice = async (invoiceId: string) => {
 	if (!latestPayment) {
 		logger.info("qpay invoice has no payments", {
 			invoiceId,
-			paymentCount: response.count,
 			paidAmount: response.paid_amount,
+			paymentCount: response.count,
 		});
 		return false;
 	}
@@ -303,10 +300,10 @@ export const checkQpayInvoice = async (invoiceId: string) => {
 	const isPaid = latestPayment.payment_status === "PAID";
 	logger.info("qpay invoice checked", {
 		invoiceId,
-		paymentCount: response.count,
-		paidAmount: response.paid_amount,
-		latestPaymentStatus: latestPayment.payment_status,
 		isPaid,
+		latestPaymentStatus: latestPayment.payment_status,
+		paidAmount: response.paid_amount,
+		paymentCount: response.count,
 	});
 	return isPaid;
 };

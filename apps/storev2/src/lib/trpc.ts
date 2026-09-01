@@ -14,22 +14,17 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 
 		if (Array.isArray(data)) {
 			return data.some((item: unknown) => {
-				const error = (
-					item as { error?: { data?: { code?: string }; code?: string } }
-				)?.error;
-				return (
-					error?.data?.code === "UNAUTHORIZED" || error?.code === "UNAUTHORIZED"
-				);
+				const error = (item as { error?: { code?: string; data?: { code?: string } } })?.error;
+				return error?.data?.code === "UNAUTHORIZED" || error?.code === "UNAUTHORIZED";
 			});
 		}
 
 		const singleData = data as {
-			error?: { data?: { code?: string }; code?: string };
+			error?: { code?: string; data?: { code?: string } };
 		};
 		if (singleData?.error) {
 			return (
-				singleData.error.data?.code === "UNAUTHORIZED" ||
-				singleData.error.code === "UNAUTHORIZED"
+				singleData.error.data?.code === "UNAUTHORIZED" || singleData.error.code === "UNAUTHORIZED"
 			);
 		}
 	} catch {
@@ -42,9 +37,7 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 const getBackendUrl = () => {
 	const apiUrlFromEnv = import.meta.env.PUBLIC_API_URL;
 
-	return apiUrlFromEnv
-		? `${apiUrlFromEnv}/trpc/store`
-		: "http://localhost:3000/trpc/store";
+	return apiUrlFromEnv ? `${apiUrlFromEnv}/trpc/store` : "http://localhost:3000/trpc/store";
 };
 
 const getClientBackendUrl = () => {
@@ -79,10 +72,7 @@ const fetchWithServerRetry = async (
 				break;
 			}
 
-			console.warn(
-				`tRPC fetch failed; retrying (${attempt}/${attempts - 1})`,
-				error,
-			);
+			console.warn(`tRPC fetch failed; retrying (${attempt}/${attempts - 1})`, error);
 			await wait(500 * attempt);
 		}
 	}
@@ -100,12 +90,8 @@ export const createServerClient = (
 	return createTRPCClient<StoreRouter>({
 		links: [
 			httpLink({
-				url,
-				transformer: SuperJSON,
 				fetch: async (url, options) => {
-					const fetchFn = serverBinding?.fetch
-						? serverBinding.fetch.bind(serverBinding)
-						: fetch;
+					const fetchFn = serverBinding?.fetch ? serverBinding.fetch.bind(serverBinding) : fetch;
 
 					const response = await fetchWithServerRetry(fetchFn, url, {
 						...options,
@@ -122,6 +108,8 @@ export const createServerClient = (
 
 					return response;
 				},
+				transformer: SuperJSON,
+				url,
 			}),
 		],
 	});
@@ -130,8 +118,6 @@ export const createServerClient = (
 export const api = createTRPCClient<StoreRouter>({
 	links: [
 		httpLink({
-			url: getClientBackendUrl(),
-			transformer: SuperJSON,
 			fetch: async (url, options) => {
 				const response = await fetchWithServerRetry(fetch, url, {
 					...options,
@@ -140,10 +126,7 @@ export const api = createTRPCClient<StoreRouter>({
 				});
 
 				if (await checkUnauthorized(response)) {
-					if (
-						typeof window !== "undefined" &&
-						window.location.pathname !== "/login"
-					) {
+					if (typeof window !== "undefined" && window.location.pathname !== "/login") {
 						// Batched tRPC requests can resolve 401s concurrently; each
 						// would otherwise kick off its own view transition and the
 						// second throws InvalidStateError. safeNavigate coalesces
@@ -155,6 +138,8 @@ export const api = createTRPCClient<StoreRouter>({
 
 				return response;
 			},
+			transformer: SuperJSON,
+			url: getClientBackendUrl(),
 		}),
 	],
 });

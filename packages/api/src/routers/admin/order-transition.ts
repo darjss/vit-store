@@ -16,20 +16,19 @@ export function planPaymentTransition(
 	prevPaymentStatus: string | undefined,
 	newPaymentStatus: string,
 ): {
+	shouldAdjustStockDiff: boolean;
+	shouldDeductFullStock: boolean;
+	shouldRecordSale: boolean;
 	transitionedToSuccess: boolean;
 	wasSuccess: boolean;
-	shouldRecordSale: boolean;
-	shouldDeductFullStock: boolean;
-	shouldAdjustStockDiff: boolean;
 } {
 	const wasSuccess = prevPaymentStatus === "success";
-	const transitionedToSuccess =
-		!wasSuccess && newPaymentStatus === "success";
+	const transitionedToSuccess = !wasSuccess && newPaymentStatus === "success";
 	return {
+		shouldAdjustStockDiff: wasSuccess && !transitionedToSuccess,
+		shouldDeductFullStock: transitionedToSuccess,
+		shouldRecordSale: transitionedToSuccess,
 		transitionedToSuccess,
 		wasSuccess,
-		shouldRecordSale: transitionedToSuccess,
-		shouldDeductFullStock: transitionedToSuccess,
-		shouldAdjustStockDiff: wasSuccess && !transitionedToSuccess,
 	};
 }

@@ -1,11 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DB } from "~/db";
-import {
-	BrandsTable,
-	CategoriesTable,
-	ProductImagesTable,
-	ProductsTable,
-} from "~/db/schema";
+import { BrandsTable, CategoriesTable, ProductImagesTable, ProductsTable } from "~/db/schema";
 import {
 	buildProductSearchDocument,
 	buildProductSearchRankings,
@@ -18,35 +13,35 @@ import type {
 
 export const loadProductSearchDocumentsFromDb = async (
 	db: DB,
-	signals: ProductSearchAnalyticsSignal[] = [],
-): Promise<ProductSearchDocument[]> => {
+	signals: Array<ProductSearchAnalyticsSignal> = [],
+): Promise<Array<ProductSearchDocument>> => {
 	const products = await db
 		.select({
-			id: ProductsTable.id,
-			name: ProductsTable.name,
-			nameMn: ProductsTable.name_mn,
-			description: ProductsTable.description,
-			slug: ProductsTable.slug,
-			price: ProductsTable.price,
-			createdAt: ProductsTable.createdAt,
-			discount: ProductsTable.discount,
-			status: ProductsTable.status,
-			stock: ProductsTable.stock,
 			amount: ProductsTable.amount,
-			potency: ProductsTable.potency,
-			dailyIntake: ProductsTable.dailyIntake,
 			brandId: ProductsTable.brandId,
 			categoryId: ProductsTable.categoryId,
-			isFeatured: ProductsTable.isFeatured,
+			createdAt: ProductsTable.createdAt,
+			dailyIntake: ProductsTable.dailyIntake,
+			description: ProductsTable.description,
+			discount: ProductsTable.discount,
+			id: ProductsTable.id,
 			ingredients: ProductsTable.ingredients,
+			isFeatured: ProductsTable.isFeatured,
+			name: ProductsTable.name,
+			nameMn: ProductsTable.name_mn,
+			potency: ProductsTable.potency,
+			price: ProductsTable.price,
+			slug: ProductsTable.slug,
+			status: ProductsTable.status,
+			stock: ProductsTable.stock,
 			tags: ProductsTable.tags,
 		})
 		.from(ProductsTable)
-		.where(
-			and(isNull(ProductsTable.deletedAt), eq(ProductsTable.status, "active")),
-		);
+		.where(and(isNull(ProductsTable.deletedAt), eq(ProductsTable.status, "active")));
 
-	if (products.length === 0) return [];
+	if (products.length === 0) {
+		return [];
+	}
 
 	const brandIds = [...new Set(products.map((p) => p.brandId))];
 	const categoryIds = [...new Set(products.map((p) => p.categoryId))];
@@ -79,28 +74,28 @@ export const loadProductSearchDocumentsFromDb = async (
 		}
 	}
 
-	const sources: ProductSearchSourceDocument[] = products.map((product) => ({
+	const sources: Array<ProductSearchSourceDocument> = products.map((product) => ({
+		amount: product.amount,
+		brand: brandMap.get(product.brandId) ?? "",
+		brandId: product.brandId,
+		category: categoryMap.get(product.categoryId) ?? "",
+		categoryId: product.categoryId,
+		createdAt: product.createdAt,
+		dailyIntake: product.dailyIntake,
+		description: product.description,
+		discount: product.discount,
 		id: product.id,
+		image: primaryImageByProduct.get(product.id) ?? "",
+		ingredients: product.ingredients,
+		isFeatured: product.isFeatured,
 		name: product.name,
 		nameMn: product.nameMn,
-		description: product.description,
-		slug: product.slug,
+		potency: product.potency,
 		price: product.price,
-		createdAt: product.createdAt,
-		discount: product.discount,
-		brand: brandMap.get(product.brandId) ?? "",
-		category: categoryMap.get(product.categoryId) ?? "",
+		slug: product.slug,
 		status: product.status,
 		stock: product.stock,
-		amount: product.amount,
-		potency: product.potency,
-		dailyIntake: product.dailyIntake,
-		brandId: product.brandId,
-		categoryId: product.categoryId,
-		isFeatured: product.isFeatured,
-		ingredients: product.ingredients,
 		tags: product.tags,
-		image: primaryImageByProduct.get(product.id) ?? "",
 	}));
 	const rankingByProduct = buildProductSearchRankings(sources, signals);
 

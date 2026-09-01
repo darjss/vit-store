@@ -2,10 +2,7 @@
 // delivered twice applies the add only once (admission claim, mid-keyed).
 // Real worker + real CartStore DO; stub store API + capture as in cart-demo.
 import { createHmac } from "node:crypto";
-import type {
-	MessengerMessagingEvent,
-	MessengerWebhookPayload,
-} from "@flue/messenger";
+import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
 import { SuperJSON } from "superjson";
 
 const APP_SECRET = "dev-app-secret";
@@ -15,35 +12,34 @@ const WEBHOOK = "http://127.0.0.1:3583/channels/messenger/webhook";
 const FIXED_MID = `dedupe-mid-${Date.now().toString(36)}`;
 
 const storeApi = Bun.serve({
-	port: 3000,
-	hostname: "127.0.0.1",
 	fetch(req) {
 		const raw = new URL(req.url).searchParams.get("input");
 		const ids = raw
 			? ((
 					SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw))) as {
-						ids?: number[];
+						ids?: Array<number>;
 					}
 				).ids ?? [])
 			: [];
 		const data = ids.includes(101)
 			? [
 					{
-						id: 101,
-						slug: "magnesium-glycinate-400",
-						name: "Magnesium Glycinate 400mg",
-						price: 54900,
-						image: "",
 						brand: "NOW Foods",
+						id: 101,
+						image: "",
+						name: "Magnesium Glycinate 400mg",
+						price: 54_900,
+						slug: "magnesium-glycinate-400",
 						stockStatus: "in_stock",
 					},
 				]
 			: [];
-		return new Response(
-			JSON.stringify({ result: { data: SuperJSON.serialize(data) } }),
-			{ headers: { "content-type": "application/json" } },
-		);
+		return new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
+			headers: { "content-type": "application/json" },
+		});
 	},
+	hostname: "127.0.0.1",
+	port: 3000,
 });
 
 let lastText: string | undefined;
@@ -51,69 +47,70 @@ let lastText: string | undefined;
 // 400 — simulating Meta's Send API failing AFTER the DO mutation has committed.
 let failNextSend = false;
 const capture = Bun.serve({
-	port: 8788,
-	hostname: "127.0.0.1",
 	async fetch(req) {
-		if (req.method !== "POST") return Response.json({ id: PSID });
+		if (req.method !== "POST") {
+			return Response.json({ id: PSID });
+		}
 		const body = (await req.json()) as Record<string, unknown>;
 		if (body.sender_action) {
-			return Response.json({ recipient_id: PSID, message_id: "cap" });
+			return Response.json({ message_id: "cap", recipient_id: PSID });
 		}
 		if (failNextSend) {
 			failNextSend = false;
 			// 4xx → messenger-sdk throws immediately (no retry) → sendCartSummary
 			// throws inside handleCartEvent.
 			return Response.json(
-				{ error: { message: "simulated send failure", code: 400 } },
+				{ error: { code: 400, message: "simulated send failure" } },
 				{ status: 400 },
 			);
 		}
 		lastText = (body.message as Record<string, unknown>)?.text as string;
-		return Response.json({ recipient_id: PSID, message_id: "cap" });
+		return Response.json({ message_id: "cap", recipient_id: PSID });
 	},
+	hostname: "127.0.0.1",
+	port: 8788,
 });
 
 // Returns the webhook HTTP status (does not throw) so we can assert the worker
 // stays 200 even when the post-commit send fails.
 async function fire(event: MessengerMessagingEvent): Promise<number> {
 	const payload: MessengerWebhookPayload = {
+		entry: [{ id: PAGE_ID, messaging: [event], time: Date.now() }],
 		object: "page",
-		entry: [{ id: PAGE_ID, time: Date.now(), messaging: [event] }],
 	};
 	const bodyText = JSON.stringify(payload);
 	const sig = createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
 	lastText = undefined;
 	const res = await fetch(WEBHOOK, {
-		method: "POST",
+		body: bodyText,
 		headers: {
 			"content-type": "application/json",
 			"x-hub-signature-256": `sha256=${sig}`,
 		},
-		body: bodyText,
+		method: "POST",
 	});
 	return res.status;
 }
 
 const addPostback = () => ({
-	sender: { id: PSID },
+	postback: { mid: FIXED_MID, payload: "order_product:101", title: "Захиалах" },
 	recipient: { id: PAGE_ID },
+	sender: { id: PSID },
 	timestamp: Date.now(),
-	postback: { mid: FIXED_MID, title: "Захиалах", payload: "order_product:101" },
 });
 
 const viewQuickReply = () => ({
-	sender: { id: PSID },
-	recipient: { id: PAGE_ID },
-	timestamp: Date.now(),
 	message: {
 		mid: `view-${Date.now().toString(36)}`,
-		text: "view",
 		quick_reply: { payload: "cart_view" },
+		text: "view",
 	},
+	recipient: { id: PAGE_ID },
+	sender: { id: PSID },
+	timestamp: Date.now(),
 });
 
-const qtyOf = (summary: string | undefined): string =>
-	summary?.match(/×\s*(\d+)/)?.[1] ?? "?";
+const qtyOf = (summary: string | undefined): string => summary?.match(/×\s*(\d+)/)?.[1] ?? "?";
 
 // HIGH-1 scenario: the add commits, then the summary send FAILS, then Meta
 // re-delivers the SAME mid. The add must be applied exactly once.

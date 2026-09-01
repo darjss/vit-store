@@ -13,36 +13,33 @@ import { cn } from "@/lib/utils";
 
 const AppSidebar = () => {
 	return (
-		<Sidebar collapsible="offcanvas" className="border-border border-r-2">
+		<Sidebar className="border-border border-r-2" collapsible="offcanvas">
 			<SidebarContent>
 				<SidebarGroup className="p-3">
 					<SidebarGroupContent>
 						<SidebarMenu className="gap-2 pt-2">
 							{sideNavItems.map((item) => (
-								<SidebarMenuItem key={item.title} className="relative">
+								<SidebarMenuItem className="relative" key={item.title}>
 									<Link
-										to={item.url}
 										activeProps={{
 											className: "is-active",
 										}}
 										className={cn(
-											"block rounded-base transition-colors",
-											"focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+											"rounded-base block transition-colors",
+											"focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-hidden",
 										)}
+										to={item.url}
 									>
 										{({ isActive }) => (
 											<div className="relative">
 												<span
 													aria-hidden
 													className={cn(
-														"-translate-y-1/2 absolute top-1/2 left-0 h-6 w-1 rounded-full transition-all",
-														isActive
-															? "bg-primary opacity-100"
-															: "bg-transparent opacity-0",
+														"absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-full transition-all",
+														isActive ? "bg-primary opacity-100" : "bg-transparent opacity-0",
 													)}
 												/>
 												<SidebarMenuButton
-													isActive={isActive}
 													className={cn(
 														"rounded-base px-3 py-2",
 														"transition-colors duration-150",
@@ -57,21 +54,18 @@ const AppSidebar = () => {
 																].join(" ")
 															: "text-foreground",
 													)}
+													isActive={isActive}
 												>
 													<item.icon
 														className={cn(
 															"size-5 transition-colors",
-															isActive
-																? "text-primary-foreground"
-																: "text-foreground",
+															isActive ? "text-primary-foreground" : "text-foreground",
 														)}
 													/>
 													<span
 														className={cn(
 															"truncate text-sm md:text-base",
-															isActive
-																? "text-primary-foreground"
-																: "text-foreground",
+															isActive ? "text-primary-foreground" : "text-foreground",
 														)}
 													>
 														{item.title}

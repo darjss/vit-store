@@ -17,13 +17,13 @@ import { storeClient, withTimeout } from "./store-client";
 // transfer amount) and the customer phone (the transfer reference). Validated at
 // the boundary so api-side drift fails loudly here.
 const paymentSummarySchema = v.object({
+	order: v.object({
+		customerPhone: v.string(),
+		orderNumber: v.string(),
+	}),
 	paymentNumber: v.string(),
 	status: v.string(),
 	total: v.number(),
-	order: v.object({
-		orderNumber: v.string(),
-		customerPhone: v.string(),
-	}),
 });
 
 export type PaymentSummary = v.InferOutput<typeof paymentSummarySchema>;
@@ -48,12 +48,7 @@ export const fetchPaymentSummary = async (
 
 const claimResultSchema = v.object({
 	orderNumber: v.nullable(v.optional(v.string())),
-	outcome: v.picklist([
-		"changed",
-		"already_claimed",
-		"already_confirmed",
-		"refused",
-	]),
+	outcome: v.picklist(["changed", "already_claimed", "already_confirmed", "refused"]),
 });
 
 export type TransferClaimResult = v.InferOutput<typeof claimResultSchema>;

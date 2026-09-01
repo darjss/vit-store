@@ -9,9 +9,7 @@ import type {
 import { createDb } from "@vit/api/db";
 import type { AppRequestLogger } from "./logging";
 
-function resolveWorkersCache(
-	context: CreateContextOptions["context"],
-): WorkersCache | undefined {
+function resolveWorkersCache(context: CreateContextOptions["context"]): WorkersCache | undefined {
 	try {
 		return (context.executionCtx as unknown as { cache?: WorkersCache })?.cache;
 	} catch {
@@ -19,9 +17,7 @@ function resolveWorkersCache(
 	}
 }
 
-export async function createContext({
-	context,
-}: CreateContextOptions): Promise<ApiContext> {
+export async function createContext({ context }: CreateContextOptions): Promise<ApiContext> {
 	const kv = context.env.vitStoreKV;
 	const r2 = context.env.r2Bucket;
 	const cache = resolveWorkersCache(context);
@@ -30,20 +26,18 @@ export async function createContext({
 	// Use DIRECT_DB_URL in dev mode, Hyperdrive in prod
 	const directDbUrl = (context.env as EnvWithDirectDbUrl).DIRECT_DB_URL;
 	const db =
-		directDbUrl && directDbUrl.length > 0
-			? createDb(directDbUrl)
-			: createDb(context.env.DB);
+		directDbUrl && directDbUrl.length > 0 ? createDb(directDbUrl) : createDb(context.env.DB);
 
 	const log = context.get("log") as AppRequestLogger;
 	log.set({ user_type: "anonymous" });
 
 	return {
 		c: context,
-		session: null as Session<CustomerSelectType | UserSelectType> | null,
-		db: db,
-		kv,
-		r2,
 		cache,
+		db,
+		kv,
 		log,
+		r2,
+		session: null as Session<CustomerSelectType | UserSelectType> | null,
 	};
 }

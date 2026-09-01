@@ -4,143 +4,140 @@ export * from "./types/payment";
 export * from "./types/product";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type {
-	CustomerSelectType,
-	UserSelectType,
-} from "../../api/src/db/schema";
+import type { CustomerSelectType, UserSelectType } from "../../api/src/db/schema";
 
 export interface AIExtractedData {
-	name: string;
-	name_mn?: string;
-	description: string;
+	amount: string;
 	brand?: string | null;
 	brandId?: number | null;
 	categoryId?: number | null;
-	amount: string;
-	potency: string;
 	dailyIntake: number;
+	description: string;
+	images: Array<{ url: string }>;
+	ingredients?: Array<string>;
+	name: string;
+	name_mn?: string;
+	potency: string;
 	price?: number;
-	weightGrams?: number;
-	seoTitle?: string;
 	seoDescription?: string;
-	tags?: string[];
-	ingredients?: string[];
-	images: { url: string }[];
+	seoTitle?: string;
+	tags?: Array<string>;
+	weightGrams?: number;
 }
 
 export interface AIPurchaseProductDraft {
-	name: string;
-	name_mn?: string | null;
-	description?: string | null;
+	amount: string;
 	brand?: string | null;
 	brandId?: number | null;
 	categoryId?: number | null;
-	amount: string;
+	description?: string | null;
+	images?: Array<{ url: string }>;
+	name: string;
+	name_mn?: string | null;
 	potency: string;
-	images?: { url: string }[];
-	sourceCode?: string | null;
 	rawText?: string | null;
+	sourceCode?: string | null;
 }
 
 export interface AIPurchaseMatchedProduct {
 	id: number;
+	imageUrl?: string | null;
 	name: string;
 	price: number;
-	imageUrl?: string | null;
 }
 
 export interface AIPurchaseExtractedItem {
-	sourceCode?: string | null;
+	candidateMatches?: Array<AIPurchaseMatchedProduct>;
 	description: string;
-	quantity: number;
-	unitPrice: number;
-	lineTotal?: number | null;
 	expirationDate?: string | null;
-	matchStatus: "matched" | "ambiguous" | "unmatched";
-	productId?: number | null;
+	lineTotal?: number | null;
 	matchedProduct?: AIPurchaseMatchedProduct | null;
-	candidateMatches?: AIPurchaseMatchedProduct[];
+	matchStatus: "matched" | "ambiguous" | "unmatched";
 	newProductDraft?: AIPurchaseProductDraft | null;
-	warnings: string[];
+	productId?: number | null;
+	quantity: number;
+	sourceCode?: string | null;
+	unitPrice: number;
+	warnings: Array<string>;
 }
 
 export interface AIPurchaseExtractedData {
+	errors: Array<string>;
+	extractionStatus: "success" | "partial" | "failed";
 	header: {
-		provider: "amazon" | "iherb" | "naturebell" | "unknown";
 		externalOrderNumber?: string | null;
-		orderedAt?: Date | null;
-		trackingNumber?: string | null;
-		shippingCost?: number | null;
 		notes?: string | null;
+		orderedAt?: Date | null;
+		provider: "amazon" | "iherb" | "naturebell" | "unknown";
+		shippingCost?: number | null;
 		subtotal?: number | null;
 		total?: number | null;
+		trackingNumber?: string | null;
 	};
-	items: AIPurchaseExtractedItem[];
-	extractionStatus: "success" | "partial" | "failed";
-	errors: string[];
+	items: Array<AIPurchaseExtractedItem>;
 	rawText?: string | null;
 }
 
 export interface ProductFormValues {
-	name: string;
-	description: string;
-	dailyIntake: number;
+	amount: string;
 	brandId: string;
 	categoryId: string;
-	amount: string;
+	dailyIntake: number;
+	description: string;
+	expirationDate?: string;
+	images: Array<{ id?: number; url: string }>;
+	ingredients?: Array<string>;
+	name: string;
+	name_mn?: string;
 	potency: string;
+	price: number;
+	seoDescription?: string;
+	seoTitle?: string;
 	status: "active" | "draft" | "out_of_stock";
 	stock: number;
-	price: number;
-	images: { url: string; id?: number }[];
-	name_mn?: string;
-	ingredients?: string[];
-	tags?: string[];
-	seoTitle?: string;
-	seoDescription?: string;
+	tags?: Array<string>;
 	weightGrams?: number;
-	expirationDate?: string;
 }
 
 export interface ProductCardData {
-	id: number;
-	name: string;
-	nameMn?: string | null;
-	name_mn?: string | null;
-	potency?: string | null;
 	amount?: string | null;
+	brand?: { name: string } | null;
+	/** Category id used for the stable sorbet wash mapping on the card. */
+	categoryId?: number;
+	/** Discount percent (0-100). 0 or absent means no sale price. */
+	discount?: number;
+	id: number;
+	images: Array<{ url: string | null }>;
+	name: string;
+	name_mn?: string | null;
+	nameMn?: string | null;
+	potency?: string | null;
 	price: number;
 	slug: string;
-	images: { url: string | null }[];
-	brand?: { name: string } | null;
 	/**
 	 * Units on hand. Optional because some feeders (e.g. legacy home
 	 * projections) do not select it; when absent the card renders without
 	 * stock messaging and never disables add-to-cart.
 	 */
 	stock?: number;
-	/** Discount percent (0-100). 0 or absent means no sale price. */
-	discount?: number;
-	/** Category id used for the stable sorbet wash mapping on the card. */
-	categoryId?: number;
 }
 
 export interface SessionConfig {
-	kvSessionPrefix: string;
-	kvUserSessionPrefix: string;
 	cookieName: string;
 	domainEnvVar: string;
-	sessionDurationMs: number;
+	kvSessionPrefix: string;
+	kvUserSessionPrefix: string;
 	renewalThresholdMs: number;
+	sessionDurationMs: number;
 }
 
 export interface AddSalesType {
-	productCost: number;
-	quantitySold: number;
-	orderId: number;
-	sellingPrice: number;
-	productId: number;
 	createdAt?: Date;
+	orderId: number;
+	productCost: number;
+	productId: number;
+	quantitySold: number;
+	sellingPrice: number;
 }
 
 export type TransactionType = Parameters<
@@ -148,52 +145,52 @@ export type TransactionType = Parameters<
 >[0];
 
 export interface Session<TUser = CustomerSelectType | UserSelectType> {
+	expiresAt: Date;
 	id: string;
 	user: TUser;
-	expiresAt: Date;
 }
 export type { CustomerSelectType, UserSelectType };
 export interface PaymentWebhookResponse {
-	type: string;
-	status: string;
-	message: string;
 	body: {
+		[key: string]: unknown;
 		amount: number;
-		currency: string;
 		completedAt: string;
-		terminalId: string;
-		invoiceId: string;
-		paymentVendor: string;
+		currency: string;
 		initType: string;
-		status: string;
-		respCode: string;
-		transactionId: string | null;
+		invoiceId: string;
 		linkId: number;
 		linkRef: string;
-		[key: string]: unknown;
+		paymentVendor: string;
+		respCode: string;
+		status: string;
+		terminalId: string;
+		transactionId: string | null;
 	};
+	message: string;
+	status: string;
+	type: string;
 }
 
 export interface RestockSubscription {
-	productId: number;
 	channel: "sms" | "email";
 	contact: string;
 	createdAt: string;
+	productId: number;
 }
 
 export interface OAuthCookieData {
-	state?: string;
 	codeVerifier?: string;
+	state?: string;
 }
 
 export interface GoogleIdTokenClaims {
-	sub: string;
-	name?: string;
+	aud?: string | Array<string>;
 	email?: string;
 	email_verified?: boolean;
-	iss?: string;
-	aud?: string | string[];
 	exp?: number;
+	iss?: string;
+	name?: string;
+	sub: string;
 }
 
-export type ImageUrlArray = { url: string }[];
+export type ImageUrlArray = Array<{ url: string }>;

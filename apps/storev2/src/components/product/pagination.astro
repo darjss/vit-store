@@ -1,12 +1,12 @@
 ---
 interface Props {
-	page: number;
-	totalPages: number;
 	baseUrl: string;
+	page: number;
 	search?: string;
+	totalPages: number;
 }
 
-const { page, totalPages, baseUrl, search = "" } = Astro.props;
+const { baseUrl, page, search = "", totalPages } = Astro.props;
 
 const getPageUrl = (p: number) => {
 	return `${baseUrl}/${p}${search}`;
@@ -14,11 +14,11 @@ const getPageUrl = (p: number) => {
 
 // Generate page numbers to show
 const getVisiblePages = () => {
-	const pages: (number | string)[] = [];
+	const pages: Array<number | string> = [];
 	const maxVisible = 5;
 
 	if (totalPages <= maxVisible) {
-		for (let i = 1; i <= totalPages; i++) pages.push(i);
+		for (let i = 1; i <= totalPages; i++) {pages.push(i);}
 		return pages;
 	}
 
@@ -36,9 +36,9 @@ const getVisiblePages = () => {
 		end = totalPages - 1;
 	}
 
-	if (start > 2) pages.push("...");
-	for (let i = start; i <= end; i++) pages.push(i);
-	if (end < totalPages - 1) pages.push("...");
+	if (start > 2) {pages.push("...");}
+	for (let i = start; i <= end; i++) {pages.push(i);}
+	if (end < totalPages - 1) {pages.push("...");}
 
 	pages.push(totalPages);
 	return pages;

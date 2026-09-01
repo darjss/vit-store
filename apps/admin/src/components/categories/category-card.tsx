@@ -14,43 +14,36 @@ const CategoryCard = (category: CategorySelectType) => {
 	const deleteMutation = useMutation({
 		...trpc.category.deleteCategory.mutationOptions(),
 		onSuccess: () => {
-			context.queryClient.invalidateQueries(
-				trpc.category.getAllCategories.queryOptions(),
-			);
+			context.queryClient.invalidateQueries(trpc.category.getAllCategories.queryOptions());
 		},
 	});
 
 	return (
 		<>
-			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+			<Dialog onOpenChange={setIsEditDialogOpen} open={isEditDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Ангилал засах</DialogTitle>
 					</DialogHeader>
-					<CategoryForm
-						category={category}
-						onSuccess={() => setIsEditDialogOpen(false)}
-					/>
+					<CategoryForm category={category} onSuccess={() => setIsEditDialogOpen(false)} />
 				</DialogContent>
 			</Dialog>
 
-			<Card className="group relative overflow-hidden border-2 border-border bg-background shadow-shadow transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
+			<Card className="group border-border bg-background shadow-shadow relative overflow-hidden border-2 transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
 				<CardContent className="p-3">
 					<div className="flex items-center gap-3">
-						<div className="flex h-8 w-8 items-center justify-center rounded-base border-2 border-border bg-secondary font-heading text-foreground/60 text-xs uppercase">
+						<div className="rounded-base border-border bg-secondary font-heading text-foreground/60 flex h-8 w-8 items-center justify-center border-2 text-xs uppercase">
 							{category.name[0]}
 						</div>
 						<div className="min-w-0">
-							<h3 className="truncate font-heading text-sm leading-none">
-								{category.name}
-							</h3>
+							<h3 className="font-heading truncate text-sm leading-none">{category.name}</h3>
 						</div>
 						<div className="ml-auto">
 							<RowAction
-								id={category.id}
-								setIsEditDialogOpen={setIsEditDialogOpen}
 								deleteMutation={(id) => deleteMutation.mutate({ id })}
+								id={category.id}
 								isDeletePending={deleteMutation.isPending}
+								setIsEditDialogOpen={setIsEditDialogOpen}
 							/>
 						</div>
 					</div>

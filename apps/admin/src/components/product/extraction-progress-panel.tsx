@@ -1,15 +1,7 @@
-import {
-	AlertCircle,
-	CheckCircle2,
-	Loader2,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ExtractionStepStatus =
-	| "pending"
-	| "active"
-	| "complete"
-	| "error";
+export type ExtractionStepStatus = "pending" | "active" | "complete" | "error";
 
 export type ExtractionStep = {
 	id: string;
@@ -19,43 +11,37 @@ export type ExtractionStep = {
 };
 
 interface ExtractionProgressPanelProps {
-	steps: ExtractionStep[];
+	steps: Array<ExtractionStep>;
 }
 
 export function ExtractionProgressPanel({ steps }: ExtractionProgressPanelProps) {
 	return (
-		<div className="space-y-3 rounded-none border-2 border-border bg-muted/30 p-4">
+		<div className="border-border bg-muted/30 space-y-3 rounded-none border-2 p-4">
 			<div className="flex items-center gap-2 text-sm">
-				<Loader2 className="h-4 w-4 animate-spin text-primary" />
+				<Loader2 className="text-primary h-4 w-4 animate-spin" />
 				<span className="font-bold">Ажиллаж байна...</span>
 			</div>
 
 			<div className="space-y-2">
 				{steps.map((step, index) => (
 					<div
-						key={step.id}
 						className={cn(
 							"flex items-center gap-3 rounded-none border-2 p-2 transition-all",
 							step.status === "active" && "border-primary bg-primary/10",
-							step.status === "complete" &&
-								"border-green-500 bg-green-500/10",
-							step.status === "error" &&
-								"border-destructive bg-destructive/10",
-							step.status === "pending" &&
-								"border-border bg-background opacity-50",
+							step.status === "complete" && "border-green-500 bg-green-500/10",
+							step.status === "error" && "border-destructive bg-destructive/10",
+							step.status === "pending" && "border-border bg-background opacity-50",
 						)}
+						key={step.id}
 					>
 						<div
 							className={cn(
-								"flex h-6 w-6 shrink-0 items-center justify-center border-2 font-bold font-heading text-xs",
-								step.status === "active" &&
-									"border-primary bg-primary text-primary-foreground",
-								step.status === "complete" &&
-									"border-green-600 bg-green-500 text-white",
+								"font-heading flex h-6 w-6 shrink-0 items-center justify-center border-2 text-xs font-bold",
+								step.status === "active" && "border-primary bg-primary text-primary-foreground",
+								step.status === "complete" && "border-green-600 bg-green-500 text-white",
 								step.status === "error" &&
 									"border-destructive bg-destructive text-destructive-foreground",
-								step.status === "pending" &&
-									"border-border bg-muted text-muted-foreground",
+								step.status === "pending" && "border-border bg-muted text-muted-foreground",
 							)}
 						>
 							{step.status === "complete" ? (
@@ -71,7 +57,7 @@ export function ExtractionProgressPanel({ steps }: ExtractionProgressPanelProps)
 						<div className="min-w-0 flex-1">
 							<p
 								className={cn(
-									"truncate font-medium text-sm",
+									"truncate text-sm font-medium",
 									step.status === "active" && "text-primary",
 									step.status === "complete" && "text-green-600",
 									step.status === "error" && "text-destructive",
@@ -92,7 +78,7 @@ export function ExtractionProgressPanel({ steps }: ExtractionProgressPanelProps)
 	);
 }
 
-export const EXTRACTION_STEPS: ExtractionStep[] = [
+export const EXTRACTION_STEPS: Array<ExtractionStep> = [
 	{
 		id: "searching",
 		label: "Searching Amazon",
@@ -119,44 +105,28 @@ export const EXTRACTION_STEPS: ExtractionStep[] = [
 	},
 ];
 
-export function resetSteps(): ExtractionStep[] {
+export function resetSteps(): Array<ExtractionStep> {
 	return EXTRACTION_STEPS.map((step) => ({ ...step, status: "pending" }));
 }
 
-export function setStepActive(
-	steps: ExtractionStep[],
-	stepId: string,
-): ExtractionStep[] {
+export function setStepActive(steps: Array<ExtractionStep>, stepId: string): Array<ExtractionStep> {
 	return steps.map((step) => ({
 		...step,
-		status:
-			step.id === stepId
-				? "active"
-				: step.status === "active"
-					? "pending"
-					: step.status,
+		status: step.id === stepId ? "active" : step.status === "active" ? "pending" : step.status,
 	}));
 }
 
 export function markStepComplete(
-	steps: ExtractionStep[],
+	steps: Array<ExtractionStep>,
 	stepId: string,
-): ExtractionStep[] {
+): Array<ExtractionStep> {
 	return steps.map((step) => ({
 		...step,
-		status:
-			step.id === stepId
-				? "complete"
-				: step.status === "active"
-					? "complete"
-					: step.status,
+		status: step.id === stepId ? "complete" : step.status === "active" ? "complete" : step.status,
 	}));
 }
 
-export function markStepError(
-	steps: ExtractionStep[],
-	stepId: string,
-): ExtractionStep[] {
+export function markStepError(steps: Array<ExtractionStep>, stepId: string): Array<ExtractionStep> {
 	return steps.map((step) => ({
 		...step,
 		status: step.id === stepId ? "error" : step.status,

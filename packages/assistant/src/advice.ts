@@ -18,10 +18,10 @@ import * as v from "valibot";
 // payload, so it MUST v.parse this at the boundary: api-side shape drift then
 // fails loudly here instead of silently feeding the model `undefined` fields.
 export const assistantAdviceProductSchema = v.object({
-	id: v.number(),
-	name: v.string(),
 	brand: v.string(),
 	category: v.string(),
+	id: v.number(),
+	name: v.string(),
 	// Free-text label/marketing description. May be empty — the model must then
 	// stay general and not fabricate a use.
 	description: v.string(),
@@ -36,9 +36,7 @@ export const assistantAdviceProductSchema = v.object({
 	price: v.number(),
 });
 
-export type AssistantAdviceProduct = v.InferOutput<
-	typeof assistantAdviceProductSchema
->;
+export type AssistantAdviceProduct = v.InferOutput<typeof assistantAdviceProductSchema>;
 
 export const PRODUCT_ADVICE_TOOL_NAME = "get_product_advice";
 
@@ -54,9 +52,9 @@ export interface ProductAdviceToolDeps {
 	// that still resolve, in request order. The optional signal carries the tool
 	// turn's cancellation/timeout deadline through to the underlying fetch.
 	getAdviceProducts: (
-		ids: number[],
+		ids: Array<number>,
 		signal?: AbortSignal,
-	) => Promise<AssistantAdviceProduct[]>;
+	) => Promise<Array<AssistantAdviceProduct>>;
 	// Sends a plain text reply (used only for the transport-error path).
 	sendText: (text: string) => Promise<unknown>;
 }
@@ -71,7 +69,6 @@ export interface ProductAdviceToolDeps {
 // model can stay general instead of inventing a use.
 export const buildProductAdviceTool = (deps: ProductAdviceToolDeps) =>
 	defineTool({
-		name: PRODUCT_ADVICE_TOOL_NAME,
 		description:
 			"Fetch real catalog label data (description, ingredients, pack size, potency, recommended daily intake, brand, category, price) for one or more products so you can answer advice and comparison questions. Call this whenever the customer asks what a product is commonly used for ('энэ юунд сайн бэ'), which of several is better ('али нь сайн бэ'), what is in it ('найрлага'), what form/dose it is, or how to take it. First find the product(s) with search_products to get their ids, then pass those ids here (pass several ids to compare). Answer ONLY from the returned data; if a field is empty, say you don't have that detail rather than inventing it. Never claim a product cures, heals, treats, or diagnoses anything, and never guarantee an outcome.",
 		input: v.object({
@@ -84,44 +81,43 @@ export const buildProductAdviceTool = (deps: ProductAdviceToolDeps) =>
 				),
 			),
 		}),
+		name: PRODUCT_ADVICE_TOOL_NAME,
 		async run({ input, signal }) {
-			let products: AssistantAdviceProduct[];
+			let products: Array<AssistantAdviceProduct>;
 			try {
 				products = await deps.getAdviceProducts(input.productIds, signal);
 			} catch {
 				await deps.sendText(ADVICE_ERROR_MESSAGE);
 				return {
-					requestedIds: input.productIds,
 					matchCount: 0,
 					missingIds: input.productIds,
-					sent: "advice_error_text",
 					products: [],
+					requestedIds: input.productIds,
+					sent: "advice_error_text",
 				};
 			}
 
 			return {
-				requestedIds: input.productIds,
 				matchCount: products.length,
+				requestedIds: input.productIds,
 				// Ids requested that no longer resolve (out of stock / removed); the
 				// model should not claim to know about these.
-				missingIds: input.productIds.filter(
-					(id) => !products.some((product) => product.id === id),
-				),
-				sent: "advice_facts",
+				missingIds: input.productIds.filter((id) => !products.some((product) => product.id === id)),
 				products: products.map((product) => ({
-					id: product.id,
-					name: product.name,
+					amount: product.amount,
 					brand: product.brand,
 					category: product.category,
-					description: product.description,
-					ingredients: product.ingredients,
-					amount: product.amount,
-					potency: product.potency,
 					dailyIntake: product.dailyIntake,
-					price: product.price,
+					description: product.description,
 					hasDescription: product.description.trim().length > 0,
 					hasIngredients: product.ingredients.length > 0,
+					id: product.id,
+					ingredients: product.ingredients,
+					name: product.name,
+					potency: product.potency,
+					price: product.price,
 				})),
+				sent: "advice_facts",
 			};
 		},
 	});

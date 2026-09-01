@@ -1,15 +1,5 @@
 import type { timeRangeType } from "@vit/shared/schema";
-import {
-	and,
-	desc,
-	eq,
-	gte,
-	isNull,
-	lt,
-	notInArray,
-	or,
-	sql,
-} from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -29,243 +19,6 @@ export const EXCLUDED_ORDER_STATUSES = ["cancelled", "refunded"] as const;
 
 export const analyticsQueries = {
 	admin: {
-		async getAverageOrderValue(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			const orders = await db()
-				.select({
-					avg: sql<number>`AVG(${OrdersTable.total})`,
-				})
-				.from(OrdersTable)
-				.where(
-					and(
-						gte(OrdersTable.createdAt, startDate),
-						notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
-					),
-				);
-			return orders[0]?.avg || 0;
-		},
-
-		async getTotalProfit(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			const sales = await db()
-				.select({
-					totalRevenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
-					totalCost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
-					totalDiscount: sql<number>`SUM(${SalesTable.discountApplied})`,
-				})
-				.from(SalesTable)
-				.where(
-					and(
-						gte(SalesTable.createdAt, startDate),
-						isNull(SalesTable.deletedAt),
-					),
-				);
-			const revenue = sales[0]?.totalRevenue || 0;
-			const cost = sales[0]?.totalCost || 0;
-			const discount = sales[0]?.totalDiscount || 0;
-			return revenue - cost - discount;
-		},
-
-		async getSalesByCategory(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			return await db()
-				.select({
-					categoryName: CategoriesTable.name,
-					brandName: BrandsTable.name,
-					total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
-					quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
-				})
-				.from(SalesTable)
-				.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
-				.innerJoin(
-					CategoriesTable,
-					eq(ProductsTable.categoryId, CategoriesTable.id),
-				)
-				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-				.where(
-					and(
-						gte(SalesTable.createdAt, startDate),
-						isNull(SalesTable.deletedAt),
-					),
-				)
-				.groupBy(CategoriesTable.name, BrandsTable.name);
-		},
-
-		async getCustomerLifetimeValue() {
-			const result = await db()
-				.select({
-					averageLifetimeValue: sql<number>`ROUND(AVG(total_spent), 2)`.as(
-						"average_lifetime_value",
-					),
-					totalCustomers:
-						sql<number>`COUNT(DISTINCT ${OrdersTable.customerPhone})`.as(
-							"total_customers",
-						),
-					maxLifetimeValue: sql<number>`MAX(total_spent)`.as(
-						"max_lifetime_value",
-					),
-					minLifetimeValue: sql<number>`MIN(total_spent)`.as(
-						"min_lifetime_value",
-					),
-				})
-				.from(
-					db()
-						.select({
-							customerPhone: OrdersTable.customerPhone,
-							total_spent: sql<number>`SUM(${OrdersTable.total})`.as(
-								"total_spent",
-							),
-						})
-						.from(OrdersTable)
-						.where(notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]))
-						.groupBy(OrdersTable.customerPhone)
-						.as("customer_totals"),
-				);
-			if (result[0] === undefined) {
-				return {
-					averageLifetimeValue: 0,
-					totalCustomers: 0,
-					maxLifetimeValue: 0,
-					minLifetimeValue: 0,
-				};
-			}
-			return {
-				averageLifetimeValue: result[0].averageLifetimeValue,
-				totalCustomers: result[0].totalCustomers,
-				maxLifetimeValue: result[0].maxLifetimeValue,
-				minLifetimeValue: result[0].minLifetimeValue,
-			};
-		},
-
-		async getRepeatCustomersCount(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			const repeatCustomers = await db()
-				.select({
-					count: sql<number>`COUNT(DISTINCT customer_phone)`,
-				})
-				.from(
-					db()
-						.select({
-							customerPhone: OrdersTable.customerPhone,
-							orderCount: sql<number>`COUNT(*)`.as("order_count"),
-						})
-						.from(OrdersTable)
-						.where(
-							and(
-								gte(OrdersTable.createdAt, startDate),
-								notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
-							),
-						)
-						.groupBy(OrdersTable.customerPhone)
-						.having(sql`COUNT(*) > 1`)
-						.as("customer_orders"),
-				);
-			return repeatCustomers[0]?.count || 0;
-		},
-
-		async getInventoryStatus() {
-			return await db()
-				.select({
-					productId: ProductsTable.id,
-					name: ProductsTable.name,
-					stock: ProductsTable.stock,
-					status: sql<string>`CASE
-				WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
-				WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
-				ELSE 'In Stock'
-			END`,
-				})
-				.from(ProductsTable);
-		},
-
-		async getFailedPayments(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			const result = await db()
-				.select({
-					count: sql<number>`COUNT(*)`,
-					total: sql<number>`SUM(${OrdersTable.total})`,
-				})
-				.from(PaymentsTable)
-				.innerJoin(OrdersTable, eq(PaymentsTable.orderId, OrdersTable.id))
-				.where(
-					and(
-						gte(PaymentsTable.createdAt, startDate),
-						eq(PaymentsTable.status, "failed"),
-					),
-				);
-			return {
-				count: result[0]?.count || 0,
-				total: result[0]?.total || 0,
-			};
-		},
-
-		async getLowInventoryProducts() {
-			try {
-				const result = await db()
-					.select({
-						productId: ProductsTable.id,
-						name: ProductsTable.name,
-						stock: ProductsTable.stock,
-						price: ProductsTable.price,
-						imageUrl: ProductImagesTable.url,
-						status: sql<string>`CASE
-				WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
-				WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
-				ELSE 'In Stock'
-			END`,
-					})
-					.from(ProductsTable)
-					.leftJoin(
-						ProductImagesTable,
-						and(
-							eq(ProductsTable.id, ProductImagesTable.productId),
-							eq(ProductImagesTable.isPrimary, true),
-						),
-					)
-					.where(or(eq(ProductsTable.stock, 0), lt(ProductsTable.stock, 10)))
-					.orderBy(ProductsTable.stock);
-				return result;
-			} catch (error) {
-				logger.error("getLowInventoryProducts", error);
-				throw error;
-			}
-		},
-
-		async getTopBrandsBySales(timeRange: timeRangeType) {
-			const startDate = getDaysFromTimeRange(timeRange);
-			return await db()
-				.select({
-					brandName: BrandsTable.name,
-					total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
-					quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
-				})
-				.from(SalesTable)
-				.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
-				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-				.where(
-					and(
-						gte(SalesTable.createdAt, startDate),
-						isNull(SalesTable.deletedAt),
-					),
-				)
-				.groupBy(BrandsTable.name)
-				.orderBy(
-					desc(
-						sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
-					),
-				)
-				.limit(5);
-		},
-
-		async getCurrentProductsValue() {
-			const result = await db()
-				.select({
-					total: sql<number>`SUM(${ProductsTable.price} * ${ProductsTable.stock})`,
-				})
-				.from(ProductsTable);
-			return result[0]?.total || 0;
-		},
-
 		async getAnalyticsData(timeRange: timeRangeType) {
 			const startDate = getDaysFromTimeRange(timeRange);
 			const [
@@ -298,17 +51,12 @@ export const analyticsQueries = {
 				// Total Profit
 				db()
 					.select({
-						totalRevenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						totalCost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
 						totalDiscount: sql<number>`SUM(${SalesTable.discountApplied})`,
+						totalRevenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
-					.where(
-						and(
-							gte(SalesTable.createdAt, startDate),
-							isNull(SalesTable.deletedAt),
-						),
-					)
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.then((sales) => {
 						const revenue = sales[0]?.totalRevenue || 0;
 						const cost = sales[0]?.totalCost || 0;
@@ -320,24 +68,16 @@ export const analyticsQueries = {
 				// Sales by Category
 				db()
 					.select({
-						categoryName: CategoriesTable.name,
 						brandName: BrandsTable.name,
-						total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
+						categoryName: CategoriesTable.name,
 						quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
+						total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
 					.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
-					.innerJoin(
-						CategoriesTable,
-						eq(ProductsTable.categoryId, CategoriesTable.id),
-					)
+					.innerJoin(CategoriesTable, eq(ProductsTable.categoryId, CategoriesTable.id))
 					.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-					.where(
-						and(
-							gte(SalesTable.createdAt, startDate),
-							isNull(SalesTable.deletedAt),
-						),
-					)
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.groupBy(CategoriesTable.name, BrandsTable.name)
 					.catch(() => []),
 
@@ -347,29 +87,20 @@ export const analyticsQueries = {
 						averageLifetimeValue: sql<number>`ROUND(AVG(total_spent), 2)`.as(
 							"average_lifetime_value",
 						),
-						totalCustomers:
-							sql<number>`COUNT(DISTINCT ${OrdersTable.customerPhone})`.as(
-								"total_customers",
-							),
-						maxLifetimeValue: sql<number>`MAX(total_spent)`.as(
-							"max_lifetime_value",
-						),
-						minLifetimeValue: sql<number>`MIN(total_spent)`.as(
-							"min_lifetime_value",
+						maxLifetimeValue: sql<number>`MAX(total_spent)`.as("max_lifetime_value"),
+						minLifetimeValue: sql<number>`MIN(total_spent)`.as("min_lifetime_value"),
+						totalCustomers: sql<number>`COUNT(DISTINCT ${OrdersTable.customerPhone})`.as(
+							"total_customers",
 						),
 					})
 					.from(
 						db()
 							.select({
 								customerPhone: OrdersTable.customerPhone,
-								total_spent: sql<number>`SUM(${OrdersTable.total})`.as(
-									"total_spent",
-								),
+								total_spent: sql<number>`SUM(${OrdersTable.total})`.as("total_spent"),
 							})
 							.from(OrdersTable)
-							.where(
-								notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
-							)
+							.where(notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]))
 							.groupBy(OrdersTable.customerPhone)
 							.as("customer_totals"),
 					)
@@ -377,23 +108,23 @@ export const analyticsQueries = {
 						if (result[0] === undefined) {
 							return {
 								averageLifetimeValue: 0,
-								totalCustomers: 0,
 								maxLifetimeValue: 0,
 								minLifetimeValue: 0,
+								totalCustomers: 0,
 							};
 						}
 						return {
 							averageLifetimeValue: result[0].averageLifetimeValue,
-							totalCustomers: result[0].totalCustomers,
 							maxLifetimeValue: result[0].maxLifetimeValue,
 							minLifetimeValue: result[0].minLifetimeValue,
+							totalCustomers: result[0].totalCustomers,
 						};
 					})
 					.catch(() => ({
 						averageLifetimeValue: 0,
-						totalCustomers: 0,
 						maxLifetimeValue: 0,
 						minLifetimeValue: 0,
+						totalCustomers: 0,
 					})),
 
 				// Repeat Customers Count
@@ -424,14 +155,14 @@ export const analyticsQueries = {
 				// Inventory Status
 				db()
 					.select({
-						productId: ProductsTable.id,
 						name: ProductsTable.name,
-						stock: ProductsTable.stock,
+						productId: ProductsTable.id,
 						status: sql<string>`CASE
 					WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 					WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 					ELSE 'In Stock'
 				END`,
+						stock: ProductsTable.stock,
 					})
 					.from(ProductsTable)
 					.catch(() => []),
@@ -444,12 +175,7 @@ export const analyticsQueries = {
 					})
 					.from(PaymentsTable)
 					.innerJoin(OrdersTable, eq(PaymentsTable.orderId, OrdersTable.id))
-					.where(
-						and(
-							gte(PaymentsTable.createdAt, startDate),
-							eq(PaymentsTable.status, "failed"),
-						),
-					)
+					.where(and(gte(PaymentsTable.createdAt, startDate), eq(PaymentsTable.status, "failed")))
 					.then((result) => ({
 						count: result[0]?.count || 0,
 						total: result[0]?.total || 0,
@@ -459,16 +185,16 @@ export const analyticsQueries = {
 				// Low Inventory Products
 				db()
 					.select({
-						productId: ProductsTable.id,
-						name: ProductsTable.name,
-						stock: ProductsTable.stock,
-						price: ProductsTable.price,
 						imageUrl: ProductImagesTable.url,
+						name: ProductsTable.name,
+						price: ProductsTable.price,
+						productId: ProductsTable.id,
 						status: sql<string>`CASE
 					WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
 					WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
 					ELSE 'In Stock'
 				END`,
+						stock: ProductsTable.stock,
 					})
 					.from(ProductsTable)
 					.leftJoin(
@@ -486,32 +212,23 @@ export const analyticsQueries = {
 				db()
 					.select({
 						brandName: BrandsTable.name,
-						total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
+						total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
 					.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
 					.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
-					.where(
-						and(
-							gte(SalesTable.createdAt, startDate),
-							isNull(SalesTable.deletedAt),
-						),
-					)
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
 					.groupBy(BrandsTable.name)
-					.orderBy(
-						desc(
-							sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
-						),
-					)
+					.orderBy(desc(sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`))
 					.limit(5)
 					.then((result) => result)
 					.catch(
 						() =>
 							[] as Array<{
 								brandName: string;
-								total: number;
 								quantity: number;
+								total: number;
 							}>,
 					),
 
@@ -551,15 +268,215 @@ export const analyticsQueries = {
 
 				// Add any computed metrics
 				metrics: {
-					totalProducts: inventoryStatus.length,
-					lowStockCount: lowInventoryProducts.length,
-					topBrandRevenue: topBrands.reduce(
-						(acc, brand) => acc + brand.total,
-						0,
-					),
 					currentProductsValue,
+					lowStockCount: lowInventoryProducts.length,
+					topBrandRevenue: topBrands.reduce((acc, brand) => acc + brand.total, 0),
+					totalProducts: inventoryStatus.length,
 				},
 			};
+		},
+
+		async getAverageOrderValue(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			const orders = await db()
+				.select({
+					avg: sql<number>`AVG(${OrdersTable.total})`,
+				})
+				.from(OrdersTable)
+				.where(
+					and(
+						gte(OrdersTable.createdAt, startDate),
+						notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
+					),
+				);
+			return orders[0]?.avg || 0;
+		},
+
+		async getCurrentProductsValue() {
+			const result = await db()
+				.select({
+					total: sql<number>`SUM(${ProductsTable.price} * ${ProductsTable.stock})`,
+				})
+				.from(ProductsTable);
+			return result[0]?.total || 0;
+		},
+
+		async getCustomerLifetimeValue() {
+			const result = await db()
+				.select({
+					averageLifetimeValue: sql<number>`ROUND(AVG(total_spent), 2)`.as(
+						"average_lifetime_value",
+					),
+					maxLifetimeValue: sql<number>`MAX(total_spent)`.as("max_lifetime_value"),
+					minLifetimeValue: sql<number>`MIN(total_spent)`.as("min_lifetime_value"),
+					totalCustomers: sql<number>`COUNT(DISTINCT ${OrdersTable.customerPhone})`.as(
+						"total_customers",
+					),
+				})
+				.from(
+					db()
+						.select({
+							customerPhone: OrdersTable.customerPhone,
+							total_spent: sql<number>`SUM(${OrdersTable.total})`.as("total_spent"),
+						})
+						.from(OrdersTable)
+						.where(notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]))
+						.groupBy(OrdersTable.customerPhone)
+						.as("customer_totals"),
+				);
+			if (result[0] === undefined) {
+				return {
+					averageLifetimeValue: 0,
+					maxLifetimeValue: 0,
+					minLifetimeValue: 0,
+					totalCustomers: 0,
+				};
+			}
+			return {
+				averageLifetimeValue: result[0].averageLifetimeValue,
+				maxLifetimeValue: result[0].maxLifetimeValue,
+				minLifetimeValue: result[0].minLifetimeValue,
+				totalCustomers: result[0].totalCustomers,
+			};
+		},
+
+		async getFailedPayments(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			const result = await db()
+				.select({
+					count: sql<number>`COUNT(*)`,
+					total: sql<number>`SUM(${OrdersTable.total})`,
+				})
+				.from(PaymentsTable)
+				.innerJoin(OrdersTable, eq(PaymentsTable.orderId, OrdersTable.id))
+				.where(and(gte(PaymentsTable.createdAt, startDate), eq(PaymentsTable.status, "failed")));
+			return {
+				count: result[0]?.count || 0,
+				total: result[0]?.total || 0,
+			};
+		},
+
+		async getInventoryStatus() {
+			return await db()
+				.select({
+					name: ProductsTable.name,
+					productId: ProductsTable.id,
+					status: sql<string>`CASE
+				WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
+				WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
+				ELSE 'In Stock'
+			END`,
+					stock: ProductsTable.stock,
+				})
+				.from(ProductsTable);
+		},
+
+		async getLowInventoryProducts() {
+			try {
+				const result = await db()
+					.select({
+						imageUrl: ProductImagesTable.url,
+						name: ProductsTable.name,
+						price: ProductsTable.price,
+						productId: ProductsTable.id,
+						status: sql<string>`CASE
+				WHEN ${ProductsTable.stock} = 0 THEN 'Out of Stock'
+				WHEN ${ProductsTable.stock} < 10 THEN 'Low Stock'
+				ELSE 'In Stock'
+			END`,
+						stock: ProductsTable.stock,
+					})
+					.from(ProductsTable)
+					.leftJoin(
+						ProductImagesTable,
+						and(
+							eq(ProductsTable.id, ProductImagesTable.productId),
+							eq(ProductImagesTable.isPrimary, true),
+						),
+					)
+					.where(or(eq(ProductsTable.stock, 0), lt(ProductsTable.stock, 10)))
+					.orderBy(ProductsTable.stock);
+				return result;
+			} catch (error) {
+				logger.error("getLowInventoryProducts", error);
+				throw error;
+			}
+		},
+
+		async getRepeatCustomersCount(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			const repeatCustomers = await db()
+				.select({
+					count: sql<number>`COUNT(DISTINCT customer_phone)`,
+				})
+				.from(
+					db()
+						.select({
+							customerPhone: OrdersTable.customerPhone,
+							orderCount: sql<number>`COUNT(*)`.as("order_count"),
+						})
+						.from(OrdersTable)
+						.where(
+							and(
+								gte(OrdersTable.createdAt, startDate),
+								notInArray(OrdersTable.status, [...EXCLUDED_ORDER_STATUSES]),
+							),
+						)
+						.groupBy(OrdersTable.customerPhone)
+						.having(sql`COUNT(*) > 1`)
+						.as("customer_orders"),
+				);
+			return repeatCustomers[0]?.count || 0;
+		},
+
+		async getSalesByCategory(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			return await db()
+				.select({
+					brandName: BrandsTable.name,
+					categoryName: CategoriesTable.name,
+					quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
+					total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
+				})
+				.from(SalesTable)
+				.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
+				.innerJoin(CategoriesTable, eq(ProductsTable.categoryId, CategoriesTable.id))
+				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
+				.groupBy(CategoriesTable.name, BrandsTable.name);
+		},
+
+		async getTopBrandsBySales(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			return await db()
+				.select({
+					brandName: BrandsTable.name,
+					quantity: sql<number>`SUM(${SalesTable.quantitySold})`,
+					total: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
+				})
+				.from(SalesTable)
+				.innerJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
+				.innerJoin(BrandsTable, eq(ProductsTable.brandId, BrandsTable.id))
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)))
+				.groupBy(BrandsTable.name)
+				.orderBy(desc(sql`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`))
+				.limit(5);
+		},
+
+		async getTotalProfit(timeRange: timeRangeType) {
+			const startDate = getDaysFromTimeRange(timeRange);
+			const sales = await db()
+				.select({
+					totalCost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
+					totalDiscount: sql<number>`SUM(${SalesTable.discountApplied})`,
+					totalRevenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
+				})
+				.from(SalesTable)
+				.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)));
+			const revenue = sales[0]?.totalRevenue || 0;
+			const cost = sales[0]?.totalCost || 0;
+			const discount = sales[0]?.totalDiscount || 0;
+			return revenue - cost - discount;
 		},
 	},
 };

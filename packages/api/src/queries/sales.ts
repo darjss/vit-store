@@ -18,14 +18,12 @@ export const salesQueries = {
 			return result;
 		},
 
-		async getAnalyticsForHome(
-			timeRange: "daily" | "weekly" | "monthly" = "daily",
-		) {
+		async getAnalyticsForHome(timeRange: "daily" | "weekly" | "monthly" = "daily") {
 			try {
 				const result = await db()
 					.select({
-						revenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						cost: sql<number>`SUM(${SalesTable.productCost} * ${SalesTable.quantitySold})`,
+						revenue: sql<number>`SUM(${SalesTable.sellingPrice} * ${SalesTable.quantitySold})`,
 						salesCount: sql<number>`COUNT(*)`,
 					})
 					.from(SalesTable)
@@ -42,10 +40,10 @@ export const salesQueries = {
 				const profit = revenue - cost;
 				const salesCount = result[0]?.salesCount ?? 0;
 
-				return { revenue, salesCount, profit };
-			} catch (e) {
-				logger.error("getAnalyticsForHome", e);
-				return { revenue: 0, salesCount: 0, profit: 0 };
+				return { profit, revenue, salesCount };
+			} catch (error) {
+				logger.error("getAnalyticsForHome", error);
+				return { profit: 0, revenue: 0, salesCount: 0 };
 			}
 		},
 
@@ -53,11 +51,11 @@ export const salesQueries = {
 			try {
 				const result = await db()
 					.select({
-						productId: SalesTable.productId,
-						totalSold: sql<number>`SUM(${SalesTable.quantitySold})`,
-						revenue: sql<number>`SUM(${SalesTable.quantitySold} * ${SalesTable.sellingPrice})`,
-						name: ProductsTable.name,
 						imageUrl: ProductImagesTable.url,
+						name: ProductsTable.name,
+						productId: SalesTable.productId,
+						revenue: sql<number>`SUM(${SalesTable.quantitySold} * ${SalesTable.sellingPrice})`,
+						totalSold: sql<number>`SUM(${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
 					.leftJoin(ProductsTable, eq(SalesTable.productId, ProductsTable.id))
@@ -75,17 +73,13 @@ export const salesQueries = {
 							isNull(SalesTable.deletedAt),
 						),
 					)
-					.groupBy(
-						SalesTable.productId,
-						ProductsTable.name,
-						ProductImagesTable.url,
-					)
+					.groupBy(SalesTable.productId, ProductsTable.name, ProductImagesTable.url)
 					.orderBy(sql`SUM(${SalesTable.quantitySold}) DESC`)
 					.limit(productCount);
 				return result;
-			} catch (e) {
-				logger.error("getMostSoldProducts", e);
-				throw e;
+			} catch (error) {
+				logger.error("getMostSoldProducts", error);
+				throw error;
 			}
 		},
 
@@ -97,15 +91,10 @@ export const salesQueries = {
 						revenue: sql<number>`SUM(${SalesTable.sellingPrice}*${SalesTable.quantitySold})`,
 					})
 					.from(SalesTable)
-					.where(
-						and(
-							gte(SalesTable.createdAt, startDate),
-							isNull(SalesTable.deletedAt),
-						),
-					);
+					.where(and(gte(SalesTable.createdAt, startDate), isNull(SalesTable.deletedAt)));
 				return result[0]?.revenue ?? 0;
-			} catch (e) {
-				logger.error("getRevenue", e);
+			} catch (error) {
+				logger.error("getRevenue", error);
 				return 0;
 			}
 		},

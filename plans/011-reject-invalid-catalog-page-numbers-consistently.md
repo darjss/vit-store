@@ -27,7 +27,6 @@ Category and brand routes parse page text loosely and disagree on empty/out-of-r
 ```ts
 const { slug, page: pageParam } = Astro.params;
 const page = Number.parseInt(pageParam!, 10);
-
 ```
 
 ### Domain and repository rule
@@ -40,28 +39,31 @@ Coordinate with broader catalog URL issues #165 and #167; no duplicate claim.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- apps/storev2/src/pages/products/category/[slug]/[page].astro apps/storev2/src/pages/products/brand/[slug]/[page].astro packages/api/src/routers/store/product.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                             | Expected on success                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- apps/storev2/src/pages/products/category/[slug]/[page].astro apps/storev2/src/pages/products/brand/[slug]/[page].astro packages/api/src/routers/store/product.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                               | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                                     | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                              | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - one approved parser/policy for category and brand pages
 - pre-query invalid redirect
 - post-query past-end handling
 
 **Files/path families allowed**
+
 - `apps/storev2/src/pages/products/category/[slug]/[page].astro`
 - `apps/storev2/src/pages/products/brand/[slug]/[page].astro`
 - `packages/api/src/routers/store/product.ts`
 
 **Out of scope**
+
 - catalog query semantics
 - trailing-slash conventions
 - category/brand lookup redesign

@@ -48,16 +48,16 @@ import {
 
 // Worker bindings the Messenger webhook reaches through the Hono context.
 type WebhookEnv = {
-	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
-	CART_STORE?: DurableObjectNamespace;
-	CHECKOUT_STORE?: DurableObjectNamespace;
-	MESSENGER_INBOUND_BUCKET?: R2Bucket;
+	ADMIN_BOT_TOKEN?: string;
 	// Admin agent gate: comma-separated admin PSIDs + the bot token for the
 	// tRPC bot client. LOADER is the Codemode sandbox binding (used inside the
 	// admin agent, not the webhook, but typed here for completeness).
 	ADMIN_PSIDS?: string;
-	ADMIN_BOT_TOKEN?: string;
+	CART_STORE?: DurableObjectNamespace;
+	CHECKOUT_STORE?: DurableObjectNamespace;
 	LOADER?: WorkerLoader;
+	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
+	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
 // Mongolian apology when an inbound photo can't be fetched from Meta (expired
@@ -95,7 +95,7 @@ const _sendMessage = messenger.send.message.bind(messenger.send);
 (messenger.send as any).message = async (body: any, opts: any) => {
 	const text = body?.message?.text;
 	if (typeof text === "string" && text.length > 0) {
-		console.log(`[bot.say] ${text.replace(/\n/g, " ⏎ ").slice(0, 700)}`);
+		console.log(`[bot.say] ${text.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
 	}
 	return _sendMessage(body, opts);
 };
@@ -113,8 +113,8 @@ const ADMIN_SESSION_SUFFIX = ":v2";
 
 export const channel: MessengerChannel = createMessengerChannel({
 	appSecret: requiredEnv("MESSENGER_APP_SECRET"),
-	verifyToken: requiredEnv("MESSENGER_VERIFY_TOKEN"),
 	pageId: requiredEnv("MESSENGER_PAGE_ID"),
+	verifyToken: requiredEnv("MESSENGER_VERIFY_TOKEN"),
 
 	// Mounted at GET/POST /channels/messenger/webhook.
 	async webhook({ c, payload }) {
@@ -127,11 +127,10 @@ export const channel: MessengerChannel = createMessengerChannel({
 				// unchanged. Reuses the same image/text dispatch helpers with
 				// `adminAssistant` as the target — no duplicated logic.
 				const adminConversation = channel.conversationRef(event);
-				if (
-					adminConversation &&
-					isAdminPsid(adminConversation.participant.id, env)
-				) {
-					if (await dispatchInboundImage(event, env, adminAssistant, ADMIN_SESSION_SUFFIX)) continue;
+				if (adminConversation && isAdminPsid(adminConversation.participant.id, env)) {
+					if (await dispatchInboundImage(event, env, adminAssistant, ADMIN_SESSION_SUFFIX)) {
+						continue;
+					}
 					await dispatchInboundText(event, env, adminAssistant, ADMIN_SESSION_SUFFIX);
 					continue;
 				}
@@ -139,16 +138,22 @@ export const channel: MessengerChannel = createMessengerChannel({
 				// deterministically ahead of the text path, so they never reach the
 				// model: add/view/adjust/remove/confirm run with no LLM turn (and thus
 				// run under local miniflare where `env.AI` is unavailable).
-				if (await tryHandleCartEvent(event, env)) continue;
+				if (await tryHandleCartEvent(event, env)) {
+					continue;
+				}
 				// Post-order payment surface (#25): the QPay/transfer button taps, a
 				// "Шилжүүлсэн" claim, and (within the transfer context) a "хийсэн"
 				// text or a screenshot are handled deterministically here, ahead of
 				// the photo/text paths, so a transfer claim never reaches the model
 				// and never touches a payment-confirmation API.
-				if (await tryHandlePaymentEvent(event, env)) continue;
+				if (await tryHandlePaymentEvent(event, env)) {
+					continue;
+				}
 				// Photo turns: trusted channel code fetches the Meta image, stages it
 				// under messenger-inbound/ in R2, and dispatches ONLY the key (#20).
-				if (await dispatchInboundImage(event, env)) continue;
+				if (await dispatchInboundImage(event, env)) {
+					continue;
+				}
 				await dispatchInboundText(event, env);
 			}
 		}
@@ -161,7 +166,9 @@ export const channel: MessengerChannel = createMessengerChannel({
 // agent), false otherwise (falls through to the customer agent).
 function isAdminPsid(psid: string, env: WebhookEnv): boolean {
 	const raw = env.ADMIN_PSIDS;
-	if (!raw) return false;
+	if (!raw) {
+		return false;
+	}
 	return raw
 		.split(",")
 		.map((s) => s.trim())
@@ -182,8 +189,10 @@ async function dispatchInboundText(
 	target: AgentDefinition = assistant,
 	sessionIdSuffix = "",
 ): Promise<void> {
-	const admission = await admitMessengerTextMessage({ channel, event, env });
-	if (admission === undefined) return;
+	const admission = await admitMessengerTextMessage({ channel, env, event });
+	if (admission === undefined) {
+		return;
+	}
 
 	// dispatch() is the durable commit point. If it throws before the turn is
 	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
@@ -192,10 +201,10 @@ async function dispatchInboundText(
 		await dispatch(target, {
 			id: admission.sessionId + sessionIdSuffix,
 			input: {
-				type: "messenger.message",
+				attachmentTypes: admission.attachmentTypes,
 				messageId: admission.messageId,
 				text: admission.text,
-				attachmentTypes: admission.attachmentTypes,
+				type: "messenger.message",
 				// dispatch() input must be JSON-clean: omit the key entirely when
 				// there is no quick reply rather than passing undefined.
 				...(admission.quickReplyPayload !== undefined
@@ -225,39 +234,43 @@ async function dispatchInboundImage(
 	// Extract once and pass the array through to admission so the webhook loop
 	// doesn't scan attachments twice per event.
 	const images = extractInboundImages(event);
-	if (images.length === 0) return false;
+	if (images.length === 0) {
+		return false;
+	}
 
 	// Resolve the bucket BEFORE claiming the mid: a missing binding is a
 	// production misconfig that must fail loud (like the cart/admission stores),
 	// leaving the mid unclaimed so Meta's retry is honored.
 	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	if (bucket === undefined) {
-		throw new Error(
-			"MESSENGER_INBOUND_BUCKET binding is required for inbound Messenger photos.",
-		);
+		throw new Error("MESSENGER_INBOUND_BUCKET binding is required for inbound Messenger photos.");
 	}
 
 	const admission = await admitMessengerImageMessage({
 		channel,
-		event,
 		env,
+		event,
 		images,
 	});
-	if (admission === undefined) return true;
+	if (admission === undefined) {
+		return true;
+	}
 
 	try {
-		const imageKeys: string[] = [];
+		const imageKeys: Array<string> = [];
 		for (const image of admission.images) {
 			const staged = await stageInboundImage(
 				bucket,
 				{
-					sessionId: admission.sessionId,
-					messageId: admission.messageId,
 					index: image.index,
+					messageId: admission.messageId,
+					sessionId: admission.sessionId,
 				},
 				image.url,
 			);
-			if (staged !== undefined) imageKeys.push(staged.key);
+			if (staged !== undefined) {
+				imageKeys.push(staged.key);
+			}
 		}
 
 		// Nothing staged (expired/oversized url). Keep the claim so a Meta retry
@@ -270,9 +283,9 @@ async function dispatchInboundImage(
 		await dispatch(target, {
 			id: admission.sessionId + sessionIdSuffix,
 			input: {
-				type: "messenger.message",
 				messageId: admission.messageId,
 				text: admission.caption,
+				type: "messenger.message",
 				// Derive from the STAGED keys, not every attempted attachment, so the
 				// reported type count can't diverge from imageKeys.
 				attachmentTypes: imageKeys.map(() => "image"),
@@ -297,10 +310,14 @@ async function tryHandleCartEvent(
 	env: WebhookEnv,
 ): Promise<boolean> {
 	const cartEvent = detectCartEvent(event);
-	if (cartEvent === undefined) return false;
+	if (cartEvent === undefined) {
+		return false;
+	}
 
 	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) return true;
+	if (conversation === undefined) {
+		return true;
+	}
 	const sessionId = channel.conversationKey(conversation);
 
 	// Resolve the cart store BEFORE claiming the mid: a missing binding is a
@@ -309,9 +326,7 @@ async function tryHandleCartEvent(
 	// ahead of the claim — leaves the mid unclaimed so Meta's retry is honored.
 	const cart = cartSessionFor(env.CART_STORE, sessionId);
 	if (cart === undefined) {
-		throw new Error(
-			"CART_STORE binding is required for Messenger cart events.",
-		);
+		throw new Error("CART_STORE binding is required for Messenger cart events.");
 	}
 
 	const claimKey = `messenger:cart:v1:${sessionId}:mid:${cartEvent.mid}`;
@@ -328,7 +343,9 @@ async function tryHandleCartEvent(
 		});
 	} catch (error) {
 		// Release the claim so Meta's retry can re-apply the dropped event.
-		if (cartEvent.mid.length > 0) await releaseInboundClaim(claimKey, env);
+		if (cartEvent.mid.length > 0) {
+			await releaseInboundClaim(claimKey, env);
+		}
 		throw error;
 	}
 	return true;
@@ -339,25 +356,20 @@ async function tryHandleCartEvent(
 // this defaults to the store API base; `STORE_PUBLIC_URL` overrides it when they
 // diverge.
 const storePublicUrl = (): string => {
-	const base =
-		process.env.STORE_PUBLIC_URL ??
-		process.env.STORE_API_URL ??
-		"http://localhost:3000";
+	const base = process.env.STORE_PUBLIC_URL ?? process.env.STORE_API_URL ?? "http://localhost:3000";
 	return base.replace(/\/+$/, "");
 };
 
 // Maps the channel-neutral payment-choice buttons to the Messenger SDK button
 // shape (web_url needs `url`, postback needs `payload`).
-const toMessengerButtons = (
-	buttons: ReturnType<typeof buildPaymentChoice>["buttons"],
-) =>
+const toMessengerButtons = (buttons: ReturnType<typeof buildPaymentChoice>["buttons"]) =>
 	buttons.map((b) =>
 		b.type === "web_url"
-			? { type: "web_url" as const, title: b.title, url: b.url as string }
+			? { title: b.title, type: "web_url" as const, url: b.url as string }
 			: {
-					type: "postback" as const,
-					title: b.title,
 					payload: b.payload as string,
+					title: b.title,
+					type: "postback" as const,
 				},
 	);
 
@@ -367,18 +379,20 @@ const toMessengerButtons = (
 // sent right after the order confirmation.
 export function sendPaymentChoices(ref: MessengerConversationRef) {
 	return async (order: CreatedOrder) => {
-		if (!order.paymentNumber) return undefined;
+		if (!order.paymentNumber) {
+			return undefined;
+		}
 		const choice = buildPaymentChoice(storePublicUrl(), {
-			paymentNumber: order.paymentNumber,
 			checkoutToken: order.checkoutToken,
+			paymentNumber: order.paymentNumber,
 		});
 		const result = await messenger.templates.button({
-			recipient: toRecipient(ref.participant),
-			text: choice.text,
 			buttons: toMessengerButtons(choice.buttons),
 			messaging_type: "RESPONSE",
+			recipient: toRecipient(ref.participant),
+			text: choice.text,
 		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return { messageId: result?.message_id ?? null, ok: true };
 	};
 }
 
@@ -387,18 +401,18 @@ export function sendPaymentChoices(ref: MessengerConversationRef) {
 export function sendBankTransferDetails(ref: MessengerConversationRef) {
 	return async (text: string, paymentRef: PaymentRef) => {
 		const result = await messenger.templates.button({
-			recipient: toRecipient(ref.participant),
-			text,
 			buttons: [
 				{
-					type: "postback" as const,
-					title: TRANSFER_DONE_BUTTON_TITLE,
 					payload: claimTransferPayload(paymentRef),
+					title: TRANSFER_DONE_BUTTON_TITLE,
+					type: "postback" as const,
 				},
 			],
 			messaging_type: "RESPONSE",
+			recipient: toRecipient(ref.participant),
+			text,
 		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return { messageId: result?.message_id ?? null, ok: true };
 	};
 }
 
@@ -411,10 +425,7 @@ function paymentDepsFor(
 ): PaymentHandlerDeps {
 	return {
 		fetchPaymentSummary: async (ref) => {
-			const summary = await fetchPaymentSummary(
-				ref.paymentNumber,
-				ref.checkoutToken,
-			);
+			const summary = await fetchPaymentSummary(ref.paymentNumber, ref.checkoutToken);
 			return { amount: summary.total, reference: summary.order.customerPhone };
 		},
 		// The ONLY payment write a claim performs — records the claim, never
@@ -443,16 +454,19 @@ async function tryHandlePaymentEvent(
 	event: Parameters<typeof detectCartEvent>[0],
 	env: WebhookEnv,
 ): Promise<boolean> {
-	if (event.message?.is_echo) return false;
+	if (event.message?.is_echo) {
+		return false;
+	}
 	const conversation = channel.conversationRef(event);
-	if (conversation === undefined) return false;
+	if (conversation === undefined) {
+		return false;
+	}
 	const sessionId = channel.conversationKey(conversation);
 	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
 	// Postbacks carry no message id; synthesize a stable dedup id from the
 	// payload + timestamp so Meta's webhook retries don't re-run the transition.
 	const rawMid = event.postback?.mid ?? event.message?.mid;
-	const payPayload =
-		event.postback?.payload ?? event.message?.quick_reply?.payload;
+	const payPayload = event.postback?.payload ?? event.message?.quick_reply?.payload;
 	const mid =
 		rawMid && rawMid.length > 0
 			? rawMid
@@ -474,9 +488,13 @@ async function tryHandlePaymentEvent(
 	// 2. Free-text "хийсэн"/"hiisen" or a screenshot — a claim ONLY inside the
 	// transfer context recorded on the checkout session. Without a payment
 	// context (or store binding) fall through to the normal paths.
-	if (checkout === undefined) return false;
+	if (checkout === undefined) {
+		return false;
+	}
 	const claim = await resolveContextualClaim(event, checkout);
-	if (claim === undefined) return false;
+	if (claim === undefined) {
+		return false;
+	}
 	const d = deps();
 	// Already claimed: just re-acknowledge, do not re-record (avoid re-notifying
 	// admin on a repeated "хийсэн").
@@ -491,13 +509,18 @@ async function tryHandlePaymentEvent(
 function detectPaymentPostback(
 	event: Parameters<typeof detectCartEvent>[0],
 ): { kind: "choose" | "claim"; ref: PaymentRef } | undefined {
-	const payload =
-		event.postback?.payload ?? event.message?.quick_reply?.payload;
-	if (!payload) return undefined;
+	const payload = event.postback?.payload ?? event.message?.quick_reply?.payload;
+	if (!payload) {
+		return undefined;
+	}
 	const choose = parseChooseTransferPayload(payload);
-	if (choose) return { kind: "choose", ref: choose };
+	if (choose) {
+		return { kind: "choose", ref: choose };
+	}
 	const claim = parseClaimTransferPayload(payload);
-	if (claim) return { kind: "claim", ref: claim };
+	if (claim) {
+		return { kind: "claim", ref: claim };
+	}
 	return undefined;
 }
 
@@ -508,25 +531,30 @@ function detectPaymentPostback(
 async function resolveContextualClaim(
 	event: Parameters<typeof detectCartEvent>[0],
 	checkout: NonNullable<ReturnType<typeof checkoutSessionFor>>,
-): Promise<{ ref: PaymentRef; alreadyClaimed: boolean } | undefined> {
+): Promise<{ alreadyClaimed: boolean; ref: PaymentRef } | undefined> {
 	const isClaimText = isTransferDoneText(event.message?.text);
 	const hasImage = extractInboundImages(event).length > 0;
-	if (!isClaimText && !hasImage) return undefined;
+	if (!isClaimText && !hasImage) {
+		return undefined;
+	}
 
 	const payment = (await checkout.getCheckout())?.payment;
-	if (!payment) return undefined;
-	const inImageContext =
-		hasImage && payment.transferStatus === "transfer_pending";
+	if (!payment) {
+		return undefined;
+	}
+	const inImageContext = hasImage && payment.transferStatus === "transfer_pending";
 	// A "хийсэн" text is a claim at any post-order transfer status (offered /
 	// pending / already-claimed).
-	if (!inImageContext && !isClaimText) return undefined;
+	if (!inImageContext && !isClaimText) {
+		return undefined;
+	}
 
 	return {
-		ref: {
-			paymentNumber: payment.paymentNumber,
-			checkoutToken: payment.checkoutToken ?? null,
-		},
 		alreadyClaimed: payment.transferStatus === "transfer_claimed",
+		ref: {
+			checkoutToken: payment.checkoutToken ?? null,
+			paymentNumber: payment.paymentNumber,
+		},
 	};
 }
 
@@ -540,11 +568,15 @@ async function runPaymentTransition(
 	run: () => Promise<unknown>,
 ): Promise<boolean> {
 	const claimKey = `messenger:payment:v1:${sessionId}:mid:${mid}`;
-	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) return true;
+	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
+		return true;
+	}
 	try {
 		await run();
 	} catch (error) {
-		if (mid.length > 0) await releaseInboundClaim(claimKey, env);
+		if (mid.length > 0) {
+			await releaseInboundClaim(claimKey, env);
+		}
 		throw error;
 	}
 	return true;
@@ -553,10 +585,9 @@ async function runPaymentTransition(
 export function postMessage(ref: MessengerConversationRef) {
 	const recipientId = ref.participant.id;
 	return defineTool({
-		name: "post_messenger_message",
-		description:
-			"Post a simple text reply to the bound Messenger customer conversation.",
+		description: "Post a simple text reply to the bound Messenger customer conversation.",
 		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
+		name: "post_messenger_message",
 		async run({ input }) {
 			// Own the typing lifecycle here so typing_on and typing_off are always
 			// paired: teardown is guaranteed in finally, and typing is never sent
@@ -564,11 +595,11 @@ export function postMessage(ref: MessengerConversationRef) {
 			await bestEffortTyping("on");
 			try {
 				const result = await messenger.send.message({
-					recipient: toRecipient(ref.participant),
-					messaging_type: "RESPONSE",
 					message: { text: input.text },
+					messaging_type: "RESPONSE",
+					recipient: toRecipient(ref.participant),
 				});
-				return { ok: true, messageId: result?.message_id ?? null };
+				return { messageId: result?.message_id ?? null, ok: true };
 			} finally {
 				await bestEffortTyping("off");
 			}
@@ -577,8 +608,11 @@ export function postMessage(ref: MessengerConversationRef) {
 
 	async function bestEffortTyping(action: "on" | "off"): Promise<void> {
 		try {
-			if (action === "on") await messenger.send.typingOn(recipientId);
-			else await messenger.send.typingOff(recipientId);
+			if (action === "on") {
+				await messenger.send.typingOn(recipientId);
+			} else {
+				await messenger.send.typingOff(recipientId);
+			}
 		} catch {
 			// Typing indicators are cosmetic; never fail a reply over one.
 		}
@@ -590,11 +624,11 @@ export function postMessage(ref: MessengerConversationRef) {
 export function sendTextReply(ref: MessengerConversationRef) {
 	return async (text: string) => {
 		const result = await messenger.send.message({
-			recipient: toRecipient(ref.participant),
-			messaging_type: "RESPONSE",
 			message: { text },
+			messaging_type: "RESPONSE",
+			recipient: toRecipient(ref.participant),
 		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return { messageId: result?.message_id ?? null, ok: true };
 	};
 }
 
@@ -606,26 +640,24 @@ export function sendCartSummary(ref: MessengerConversationRef) {
 	return async (cart: Cart) => {
 		const quickReplies = cartQuickReplies(cart).map((qr) => ({
 			content_type: "text" as const,
-			title: qr.title,
 			payload: qr.payload,
+			title: qr.title,
 		}));
 		const result = await messenger.send.message({
-			recipient: toRecipient(ref.participant),
-			messaging_type: "RESPONSE",
 			message: {
 				text: formatCartSummary(cart),
 				...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
 			},
+			messaging_type: "RESPONSE",
+			recipient: toRecipient(ref.participant),
 		});
-		return { ok: true, messageId: result?.message_id ?? null };
+		return { messageId: result?.message_id ?? null, ok: true };
 	};
 }
 
 // Resolves a single product id to the shared assistant projection for cart
 // lines. Reuses the by-id catalog boundary (no duplicated catalog logic).
-export async function resolveProductById(
-	id: number,
-): Promise<AssistantProduct | undefined> {
+export async function resolveProductById(id: number): Promise<AssistantProduct | undefined> {
 	const [product] = await getAssistantProductsByIds([id]);
 	return product;
 }
@@ -634,33 +666,36 @@ export async function resolveProductById(
 // element carries the product's Захиалах postback button whose payload holds
 // the product id. Generic templates allow at most 10 elements.
 export function sendProductCards(ref: MessengerConversationRef) {
-	return async (cards: ProductCard[]) => {
+	return async (cards: Array<ProductCard>) => {
 		const elements = cards.slice(0, 10).map((card) => ({
-			title: card.title,
 			subtitle: card.subtitle,
+			title: card.title,
 			...(card.imageUrl ? { image_url: card.imageUrl } : {}),
 			buttons: [
 				{
-					type: "postback" as const,
-					title: card.button.label,
 					payload: card.button.payload,
+					title: card.button.label,
+					type: "postback" as const,
 				},
 			],
 		}));
 
 		console.log(
-			`[bot.cards] ${elements.map((e) => e.title).join(" | ").slice(0, 700)}`,
+			`[bot.cards] ${elements
+				.map((e) => e.title)
+				.join(" | ")
+				.slice(0, 700)}`,
 		);
 		try {
 			const result = await messenger.templates.generic({
-				recipient: toRecipient(ref.participant),
 				elements,
 				messaging_type: "RESPONSE",
+				recipient: toRecipient(ref.participant),
 			});
 			return {
-				ok: true,
-				messageId: result?.message_id ?? null,
 				cardCount: elements.length,
+				messageId: result?.message_id ?? null,
+				ok: true,
 			};
 		} catch (error) {
 			// Cards are best-effort: the catalog search already succeeded, so a
@@ -670,13 +705,15 @@ export function sendProductCards(ref: MessengerConversationRef) {
 			console.warn(
 				`[bot.cards] send failed (best-effort): ${error instanceof Error ? error.message : String(error)}`,
 			);
-			return { ok: true, messageId: null, cardCount: elements.length };
+			return { cardCount: elements.length, messageId: null, ok: true };
 		}
 	};
 }
 
 function requiredEnv(name: string): string {
 	const value = process.env[name];
-	if (!value) throw new Error(`${name} is required.`);
+	if (!value) {
+		throw new Error(`${name} is required.`);
+	}
 	return value;
 }

@@ -1,7 +1,4 @@
-export async function createKvCacheKey(
-	path: string,
-	input: unknown,
-): Promise<string> {
+export async function createKvCacheKey(path: string, input: unknown): Promise<string> {
 	const cacheableInput =
 		input && typeof input === "object"
 			? {
@@ -18,9 +15,7 @@ export async function createKvCacheKey(
 						return result;
 					}, {})
 			: cacheableInput;
-	const data = new TextEncoder().encode(
-		`${path}:${JSON.stringify(normalizedInput)}`,
-	);
+	const data = new TextEncoder().encode(`${path}:${JSON.stringify(normalizedInput)}`);
 	const hash = await crypto.subtle.digest("SHA-256", data);
 	const hashHex = Array.from(new Uint8Array(hash), (byte) =>
 		byte.toString(16).padStart(2, "0"),
@@ -29,7 +24,7 @@ export async function createKvCacheKey(
 	return `cache:${hashHex}`;
 }
 
-export async function analyticsCacheKeys(): Promise<string[]> {
+export async function analyticsCacheKeys(): Promise<Array<string>> {
 	return Promise.all([
 		createKvCacheKey("analytics.getCurrentProductsValue", undefined),
 		...(["daily", "weekly", "monthly"] as const).map((timeRange) =>

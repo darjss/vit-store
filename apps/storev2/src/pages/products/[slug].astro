@@ -42,7 +42,7 @@ if (redirectTo) {
 }
 
 const slugParts = slug?.split("-") ?? [];
-const productId = Number(slugParts[slugParts.length - 1]);
+const productId = Number(slugParts.at(-1));
 
 if (Number.isNaN(productId)) {
 	console.error("Invalid product ID");
@@ -76,16 +76,16 @@ const productWashBg = washBg(washKey);
 
 const breadcrumbItems = [
 	{
-		label: "Бүтээгдэхүүн",
 		href: "/products/",
+		label: "Бүтээгдэхүүн",
 	},
 	{
-		label: product.category?.name || "Category",
 		href: categoryHref,
+		label: product.category?.name || "Category",
 	},
 	{
-		label: product.name,
 		href: "",
+		label: product.name,
 	},
 ];
 
@@ -93,8 +93,8 @@ const primaryImage = product.images.find((img) => img.isPrimary)?.url || product
 const ogImage = `/og/products/${slug}.svg`;
 
 function truncateAtWord(text: string, maxLength: number) {
-	const normalized = text.replace(/\s+/g, " ").trim();
-	if (normalized.length <= maxLength) return normalized;
+	const normalized = text.replaceAll(/\s+/g, " ").trim();
+	if (normalized.length <= maxLength) {return normalized;}
 	const truncated = normalized.slice(0, maxLength + 1);
 	const lastSpace = truncated.lastIndexOf(" ");
 	return `${truncated.slice(0, lastSpace > 80 ? lastSpace : maxLength).trim()}…`;
@@ -110,26 +110,26 @@ const seoDescription = product.description
 const productSchema = {
 	"@context": "https://schema.org",
 	"@type": "Product",
-	name: product.name,
-	description: product.description || seoDescription,
-	image: product.images.map(img => img.url.startsWith("http") ? img.url : `${SITE_URL}${img.url}`),
 	brand: {
 		"@type": "Brand",
 		name: product.brand?.name || "Америк Витамин"
 	},
-	sku: String(product.id),
+	description: product.description || seoDescription,
+	image: product.images.map(img => img.url.startsWith("http") ? img.url : `${SITE_URL}${img.url}`),
+	name: product.name,
 	offers: {
 		"@type": "Offer",
-		url: `${SITE_URL}/products/${slug}/`,
-		priceCurrency: "MNT",
-		price: product.price,
-		priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
 		availability: isInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+		price: product.price,
+		priceCurrency: "MNT",
+		priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
 		seller: {
 			"@type": "Organization",
 			name: "Америк Витамин"
-		}
+		},
+		url: `${SITE_URL}/products/${slug}/`
 	},
+	sku: String(product.id),
 	...(product.category && {
 		category: product.category.name
 	})
@@ -142,29 +142,29 @@ const breadcrumbSchema = {
 	itemListElement: [
 		{
 			"@type": "ListItem",
-			position: 1,
+			item: SITE_URL,
 			name: "Нүүр",
-			item: SITE_URL
+			position: 1
 		},
 		{
 			"@type": "ListItem",
-			position: 2,
+			item: `${SITE_URL}/products/`,
 			name: "Бүтээгдэхүүн",
-			item: `${SITE_URL}/products/`
+			position: 2
 		},
 		...(product.category ? [{
 			"@type": "ListItem",
-			position: 3,
-			name: product.category.name,
 			item: product.category?.slug
 			? `${SITE_URL}/products/category/${product.category.slug}/1/`
-			: `${SITE_URL}/products/?category=${product.categoryId}`
+			: `${SITE_URL}/products/?category=${product.categoryId}`,
+			name: product.category.name,
+			position: 3
 		}] : []),
 		{
 			"@type": "ListItem",
-			position: product.category ? 4 : 3,
+			item: `${SITE_URL}/products/${slug}/`,
 			name: product.name,
-			item: `${SITE_URL}/products/${slug}/`
+			position: product.category ? 4 : 3
 		}
 	]
 };
@@ -272,7 +272,7 @@ const breadcrumbSchema = {
 	// Track product view on page load (supports view transitions)
 	let _productViewTracked = false;
 	function trackProductView() {
-		if (_productViewTracked) return;
+		if (_productViewTracked) {return;}
 		if (window.posthog && productData) {
 			window.posthog.capture("product_viewed", productData);
 			_productViewTracked = true;

@@ -38,41 +38,41 @@ import {
 // What `order.addOrder` returns through the agent boundary — the identifiers the
 // payment slices (#24/#25) consume.
 export interface CreatedOrder {
+	checkoutToken: string | null;
 	orderNumber: string;
 	paymentNumber: string | null;
-	checkoutToken: string | null;
 }
 
 export interface CheckoutToolDeps {
-	getCart: () => Promise<Cart>;
-	getCheckout: () => Promise<CheckoutState | undefined>;
-	saveCheckout: (state: CheckoutState) => Promise<CheckoutState>;
-	// Best-effort delivery-zone candidates for an address (live zone list +
-	// ranker). The customer confirms one; never auto-picked (ADR 0005).
-	resolveZoneCandidates: (addressText: string) => Promise<ZoneCandidate[]>;
 	// Calls the EXISTING `order.addOrder` procedure. The agent never computes the
 	// total — the API does, and adds the delivery fee.
 	createOrder: (payload: CheckoutOrderPayload) => Promise<CreatedOrder>;
-	// Sends a plain text reply on the bound channel.
-	sendText: (text: string) => Promise<unknown>;
+	getCart: () => Promise<Cart>;
+	getCheckout: () => Promise<CheckoutState | undefined>;
+	// Best-effort delivery-zone candidates for an address (live zone list +
+	// ranker). The customer confirms one; never auto-picked (ADR 0005).
+	resolveZoneCandidates: (addressText: string) => Promise<Array<ZoneCandidate>>;
+	saveCheckout: (state: CheckoutState) => Promise<CheckoutState>;
 	// Optional post-order hook (#25): once the order exists and has a payment
 	// number, offer the QPay/transfer payment choices on the channel. Injected so
 	// the channel-neutral tools never build a Messenger button template. Omitted
 	// in unit/sim contexts that only exercise order creation.
 	sendPaymentChoices?: (order: CreatedOrder) => Promise<unknown>;
+	// Sends a plain text reply on the bound channel.
+	sendText: (text: string) => Promise<unknown>;
 }
 
 const facts = (state: CheckoutState) => ({
-	phase: state.phase,
-	phone: state.phone ?? null,
 	address: state.address ?? null,
-	selectedZoneId: state.selectedZoneId ?? null,
-	selectedZoneName: state.selectedZoneName ?? null,
-	notes: state.notes ?? null,
 	candidates: state.candidates.map((c) => ({
 		zoneId: c.zoneId,
 		zoneName: c.zoneName,
 	})),
+	notes: state.notes ?? null,
+	phase: state.phase,
+	phone: state.phone ?? null,
+	selectedZoneId: state.selectedZoneId ?? null,
+	selectedZoneName: state.selectedZoneName ?? null,
 });
 
 const CHECKOUT_NOT_STARTED_MESSAGE =
@@ -90,22 +90,17 @@ const finalizeCreatedOrder = async (
 ): Promise<CheckoutState> => {
 	const done = created.paymentNumber
 		? attachPayment(markCreated(claimed), {
-				paymentNumber: created.paymentNumber,
 				checkoutToken: created.checkoutToken,
+				paymentNumber: created.paymentNumber,
 			})
 		: markCreated(claimed);
 	await deps.saveCheckout(done);
-	await deps.sendText(
-		formatOrderCreated(created.orderNumber, created.paymentNumber),
-	);
+	await deps.sendText(formatOrderCreated(created.orderNumber, created.paymentNumber));
 	if (created.paymentNumber && deps.sendPaymentChoices) {
 		try {
 			await deps.sendPaymentChoices(created);
 		} catch (error) {
-			console.warn(
-				"[checkout] post-order payment-choice send failed (order is durable):",
-				error,
-			);
+			console.warn("[checkout] post-order payment-choice send failed (order is durable):", error);
 		}
 	}
 	return done;
@@ -132,38 +127,40 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	};
 
 	const notStarted = () => ({
-		ok: false as const,
 		error: "checkout_not_started",
+		ok: false as const,
 	});
 
 	const beginCheckout = defineTool({
-		name: "begin_checkout",
 		description:
 			"Start order checkout for the customer's CONFIRMED cart. Call this only after the cart is confirmed and the customer wants to place the order. It asks the customer for their phone number. Phone is collected only here, at checkout — never earlier.",
 		input: v.object({}),
+		name: "begin_checkout",
 		async run() {
 			const cart = await deps.getCart();
 			const guard = canBeginCheckout(cart);
 			if (!guard.ok) {
 				await deps.sendText(guard.error);
-				return { ok: false, error: guard.error };
+				return { error: guard.error, ok: false };
 			}
 			return advance(initialCheckoutState(), CHECKOUT_PHONE_PROMPT);
 		},
 	});
 
 	const providePhone = defineTool({
-		name: "provide_phone",
 		description:
 			"Record the phone number the customer gave for delivery. Pass exactly what they typed; it is normalized and validated (Mongolian 8-digit, starts 6-9). On an invalid number the customer is asked to re-enter. We ask for phone AND address together, so on success this does NOT re-prompt — immediately call provide_address with the address from the same message. If the customer gave only a phone, ask once for the address yourself.",
 		input: v.object({ phone: v.pipe(v.string(), v.minLength(1)) }),
+		name: "provide_phone",
 		async run({ input }) {
 			const state = await requireCheckout();
-			if (!state) return notStarted();
+			if (!state) {
+				return notStarted();
+			}
 			const result = applyPhone(state, input.phone);
 			if (!result.ok) {
 				await deps.sendText(result.error);
-				return { ok: false, error: result.error, ...facts(state) };
+				return { error: result.error, ok: false, ...facts(state) };
 			}
 			// Phone + address are asked together up front, so don't re-prompt for
 			// the address here; the model calls provide_address next from the same
@@ -174,21 +171,21 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	});
 
 	const provideAddress = defineTool({
-		name: "provide_address",
 		description:
 			"Record the customer's natural-language delivery address (district, khoroo, building/unit, nearby landmark). The delivery zone is resolved and auto-selected, then the short order summary is sent for a single confirm — you do NOT ask the customer to pick a zone, and you do NOT ask for notes. If no zone matches, the customer is asked to give a clearer address.",
 		input: v.object({ address: v.pipe(v.string(), v.minLength(1)) }),
+		name: "provide_address",
 		async run({ input }) {
 			const state = await requireCheckout();
-			if (!state) return notStarted();
+			if (!state) {
+				return notStarted();
+			}
 			const result = applyAddress(state, input.address);
 			if (!result.ok) {
 				await deps.sendText(result.error);
-				return { ok: false, error: result.error, ...facts(state) };
+				return { error: result.error, ok: false, ...facts(state) };
 			}
-			const candidates = await deps.resolveZoneCandidates(
-				result.state.address as string,
-			);
+			const candidates = await deps.resolveZoneCandidates(result.state.address as string);
 			const withCandidates = setZoneCandidates(result.state, candidates);
 			// Short admin-style flow: auto-select the top-ranked zone rather than
 			// making the customer pick one, then jump straight to the summary for a
@@ -210,19 +207,21 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	});
 
 	const confirmDeliveryZone = defineTool({
-		name: "confirm_delivery_zone",
 		description:
 			"Fallback for when a clear zone could not be auto-selected and the customer picked one from the offered list. Pass the zoneId they chose (must be one of the offered candidates). After this the order summary is shown for a single confirm — notes are not asked.",
 		input: v.object({
 			zoneId: v.pipe(v.number(), v.integer(), v.minValue(1)),
 		}),
+		name: "confirm_delivery_zone",
 		async run({ input }) {
 			const state = await requireCheckout();
-			if (!state) return notStarted();
+			if (!state) {
+				return notStarted();
+			}
 			const result = applyZoneSelection(state, input.zoneId);
 			if (!result.ok) {
 				await deps.sendText(result.error);
-				return { ok: false, error: result.error, ...facts(state) };
+				return { error: result.error, ok: false, ...facts(state) };
 			}
 			const confirming = applyNotes(result.state, undefined);
 			const saved = await deps.saveCheckout(confirming);
@@ -233,13 +232,15 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	});
 
 	const provideNotes = defineTool({
-		name: "provide_notes",
 		description:
 			"Record optional order notes, or skip them. Pass the notes text, or leave empty / call with no notes when the customer has none or says to skip. After this the final order summary is shown for the customer to confirm before creation.",
 		input: v.object({ notes: v.optional(v.string()) }),
+		name: "provide_notes",
 		async run({ input }) {
 			const state = await requireCheckout();
-			if (!state) return notStarted();
+			if (!state) {
+				return notStarted();
+			}
 			const next = applyNotes(state, input.notes);
 			const saved = await deps.saveCheckout(next);
 			const cart = await deps.getCart();
@@ -249,20 +250,22 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	});
 
 	const placeOrder = defineTool({
-		name: "place_order",
 		description:
 			"Create the order once the customer has confirmed the final summary (e.g. said yes/тийм). This calls the store order API, which computes the total and adds the delivery fee. Only call after phone, address, and a confirmed zone are collected. Returns the order number, payment number, and checkout token.",
 		input: v.object({}),
+		name: "place_order",
 		async run() {
 			const state = await requireCheckout();
-			if (!state) return notStarted();
+			if (!state) {
+				return notStarted();
+			}
 			// Idempotency: a checkout already past `confirming` has claimed the
 			// irreversible commit (or finished it). Refuse rather than risk a second
 			// order on an in-turn/durable replay — `addOrder` has no idempotency key.
 			if (state.phase === "creating") {
 				return {
-					ok: false as const,
 					error: "checkout_already_creating",
+					ok: false as const,
 					...facts(state),
 				};
 			}
@@ -271,16 +274,15 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 			// `collecting_notes`, so guard on the phase too; otherwise re-show it.
 			if (state.phase !== "confirming") {
 				if (!isReadyToCreate(state)) {
-					const error =
-						"Захиалга үүсгэхэд утас, хаяг, хүргэлтийн бүс бүрэн биш байна.";
+					const error = "Захиалга үүсгэхэд утас, хаяг, хүргэлтийн бүс бүрэн биш байна.";
 					await deps.sendText(error);
-					return { ok: false, error, ...facts(state) };
+					return { error, ok: false, ...facts(state) };
 				}
 				const cart = await deps.getCart();
 				await deps.sendText(formatOrderSummary(state, cart));
 				return {
-					ok: false as const,
 					error: "summary_not_confirmed",
+					ok: false as const,
 					...facts(state),
 				};
 			}
@@ -292,7 +294,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 			const guard = canBeginCheckout(cart);
 			if (!guard.ok) {
 				await deps.sendText(guard.error);
-				return { ok: false as const, error: guard.error, ...facts(state) };
+				return { error: guard.error, ok: false as const, ...facts(state) };
 			}
 			const payload = buildCheckoutOrderPayload(state, cart);
 			// Claim BEFORE the irreversible commit (see `markCreating`).
@@ -301,10 +303,10 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 			const created = await deps.createOrder(payload);
 			const done = await finalizeCreatedOrder(deps, claimed, created);
 			return {
+				checkoutToken: created.checkoutToken,
 				ok: true,
 				orderNumber: created.orderNumber,
 				paymentNumber: created.paymentNumber,
-				checkoutToken: created.checkoutToken,
 				...facts(done),
 			};
 		},

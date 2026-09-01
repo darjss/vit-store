@@ -1,12 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { debounce } from "lodash";
-import {
-	AlertCircle,
-	Loader2,
-	PackageSearch,
-	Search,
-	Trash2,
-} from "lucide-react";
+import { AlertCircle, Loader2, PackageSearch, Search, Trash2 } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo, useState } from "react";
 import type { BrandType, CategoryType, ProductType } from "@/lib/types";
 import { trpc } from "@/utils/trpc";
@@ -15,40 +9,34 @@ import { Card } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import type { PurchaseLineState } from "./purchase-form.helpers";
 
 type PurchaseLineEditorProps = {
-	item: PurchaseLineState;
-	index: number;
-	products: ProductType[];
-	brands: BrandType[];
-	categories: CategoryType[];
-	isAiMode: boolean;
+	brands: Array<BrandType>;
 	canRemove: boolean;
+	categories: Array<CategoryType>;
+	index: number;
+	isAiMode: boolean;
+	item: PurchaseLineState;
+	onRemove: (index: number) => void;
+	onUpdateDraft: (
+		index: number,
+		field: keyof NonNullable<PurchaseLineState["newProductDraft"]>,
+		value: string | number | null | Array<{ url: string }>,
+	) => void;
 	onUpdateItem: (
 		index: number,
 		field: keyof PurchaseLineState,
 		value: number | string | null | undefined,
 	) => void;
-	onUpdateDraft: (
-		index: number,
-		field: keyof NonNullable<PurchaseLineState["newProductDraft"]>,
-		value: string | number | null | { url: string }[],
-	) => void;
-	onRemove: (index: number) => void;
+	products: Array<ProductType>;
 };
 
-function ItemWarnings({ warnings }: { warnings: string[] }) {
+function ItemWarnings({ warnings }: { warnings: Array<string> }) {
 	return (
-		<div className="rounded-base border border-amber-300 bg-amber-50 p-3 text-amber-800 text-sm">
+		<div className="rounded-base border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
 			<div className="mb-2 flex items-center gap-2 font-medium">
 				<AlertCircle className="h-4 w-4" />
 				Анхааруулга шалгах
@@ -63,15 +51,17 @@ function ItemWarnings({ warnings }: { warnings: string[] }) {
 }
 
 function DraftSuggestions({
-	index,
 	candidates,
+	index,
 	onSelect,
 }: {
-	index: number;
 	candidates: NonNullable<PurchaseLineState["candidateMatches"]>;
+	index: number;
 	onSelect: PurchaseLineEditorProps["onUpdateItem"];
 }) {
-	if (candidates.length === 0) return null;
+	if (candidates.length === 0) {
+		return null;
+	}
 
 	return (
 		<div className="space-y-2">
@@ -80,10 +70,10 @@ function DraftSuggestions({
 				{candidates.map((candidate) => (
 					<Button
 						key={candidate.id}
+						onClick={() => onSelect(index, "productId", candidate.id)}
+						size="sm"
 						type="button"
 						variant="outline"
-						size="sm"
-						onClick={() => onSelect(index, "productId", candidate.id)}
 					>
 						{candidate.name}
 					</Button>
@@ -94,16 +84,16 @@ function DraftSuggestions({
 }
 
 function DraftFields({
-	item,
-	index,
 	brands,
 	categories,
+	index,
+	item,
 	onUpdateDraft,
 }: {
-	item: PurchaseLineState;
+	brands: Array<BrandType>;
+	categories: Array<CategoryType>;
 	index: number;
-	brands: BrandType[];
-	categories: CategoryType[];
+	item: PurchaseLineState;
 	onUpdateDraft: PurchaseLineEditorProps["onUpdateDraft"];
 }) {
 	return (
@@ -111,32 +101,26 @@ function DraftFields({
 			<div className="space-y-2">
 				<Label>Барааны нэр</Label>
 				<Input
-					value={item.newProductDraft?.name ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
 						onUpdateDraft(index, "name", event.target.value)
 					}
+					value={item.newProductDraft?.name ?? ""}
 				/>
 			</div>
 			<div className="space-y-2">
 				<Label>Нэр (МН)</Label>
 				<Input
-					value={item.newProductDraft?.name_mn ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
 						onUpdateDraft(index, "name_mn", event.target.value)
 					}
+					value={item.newProductDraft?.name_mn ?? ""}
 				/>
 			</div>
 			<div className="space-y-2">
 				<Label>Брэнд</Label>
 				<Select
-					value={
-						item.newProductDraft?.brandId
-							? String(item.newProductDraft.brandId)
-							: ""
-					}
-					onValueChange={(value) =>
-						onUpdateDraft(index, "brandId", Number(value))
-					}
+					onValueChange={(value) => onUpdateDraft(index, "brandId", Number(value))}
+					value={item.newProductDraft?.brandId ? String(item.newProductDraft.brandId) : ""}
 				>
 					<SelectTrigger>
 						<SelectValue placeholder="Брэнд сонгох" />
@@ -153,14 +137,8 @@ function DraftFields({
 			<div className="space-y-2">
 				<Label>Ангилал</Label>
 				<Select
-					value={
-						item.newProductDraft?.categoryId
-							? String(item.newProductDraft.categoryId)
-							: ""
-					}
-					onValueChange={(value) =>
-						onUpdateDraft(index, "categoryId", Number(value))
-					}
+					onValueChange={(value) => onUpdateDraft(index, "categoryId", Number(value))}
+					value={item.newProductDraft?.categoryId ? String(item.newProductDraft.categoryId) : ""}
 				>
 					<SelectTrigger>
 						<SelectValue placeholder="Ангилал сонгох" />
@@ -177,29 +155,29 @@ function DraftFields({
 			<div className="space-y-2">
 				<Label>Хэмжээ</Label>
 				<Input
-					value={item.newProductDraft?.amount ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
 						onUpdateDraft(index, "amount", event.target.value)
 					}
+					value={item.newProductDraft?.amount ?? ""}
 				/>
 			</div>
 			<div className="space-y-2">
 				<Label>Агууламж</Label>
 				<Input
-					value={item.newProductDraft?.potency ?? ""}
 					onChange={(event: ChangeEvent<HTMLInputElement>) =>
 						onUpdateDraft(index, "potency", event.target.value)
 					}
+					value={item.newProductDraft?.potency ?? ""}
 				/>
 			</div>
 			<div className="space-y-2 md:col-span-2">
 				<Label>Тайлбар</Label>
 				<Textarea
-					value={item.newProductDraft?.description ?? ""}
 					onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
 						onUpdateDraft(index, "description", event.target.value)
 					}
 					rows={3}
+					value={item.newProductDraft?.description ?? ""}
 				/>
 			</div>
 		</div>
@@ -207,15 +185,12 @@ function DraftFields({
 }
 
 function ProductSearchField({
-	item,
 	index,
-	products,
 	isAiMode,
+	item,
 	onUpdateItem,
-}: Pick<
-	PurchaseLineEditorProps,
-	"item" | "index" | "products" | "isAiMode" | "onUpdateItem"
->) {
+	products,
+}: Pick<PurchaseLineEditorProps, "item" | "index" | "products" | "isAiMode" | "onUpdateItem">) {
 	const [productSearch, setProductSearch] = useState("");
 	const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
 
@@ -231,16 +206,15 @@ function ProductSearchField({
 		[],
 	);
 
-	const { data: searchResults = [], isFetching: isSearchingProducts } =
-		useQuery({
-			...trpc.product.searchProductsInstant.queryOptions({
-				query: debouncedProductSearch,
-				limit: 10,
-			}),
-			staleTime: 5 * 60 * 1000,
-			refetchOnWindowFocus: false,
-			enabled: debouncedProductSearch.length > 0,
-		});
+	const { data: searchResults = [], isFetching: isSearchingProducts } = useQuery({
+		...trpc.product.searchProductsInstant.queryOptions({
+			limit: 10,
+			query: debouncedProductSearch,
+		}),
+		enabled: debouncedProductSearch.length > 0,
+		refetchOnWindowFocus: false,
+		staleTime: 5 * 60 * 1000,
+	});
 
 	const handleProductSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const value = event.target.value;
@@ -258,13 +232,13 @@ function ProductSearchField({
 		<div className="space-y-2">
 			<Label>Бараа</Label>
 			{selectedProduct ? (
-				<div className="flex items-center justify-between gap-2 rounded-base border-2 border-border bg-background px-3 py-2">
+				<div className="rounded-base border-border bg-background flex items-center justify-between gap-2 border-2 px-3 py-2">
 					<span className="line-clamp-1 text-sm">{selectedProduct.name}</span>
 					<Button
+						onClick={() => onUpdateItem(index, "productId", 0)}
+						size="sm"
 						type="button"
 						variant="outline"
-						size="sm"
-						onClick={() => onUpdateItem(index, "productId", 0)}
 					>
 						Солих
 					</Button>
@@ -272,30 +246,30 @@ function ProductSearchField({
 			) : null}
 			<div className="relative">
 				<div className="relative">
-					<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+					<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 					<Input
-						placeholder="Барааг нэрээр хайх..."
 						className="pl-10"
-						value={productSearch}
 						onChange={handleProductSearchChange}
+						placeholder="Барааг нэрээр хайх..."
+						value={productSearch}
 					/>
 				</div>
 				{isSearchingProducts ? (
-					<div className="mt-2 flex items-center text-muted-foreground text-xs">
+					<div className="text-muted-foreground mt-2 flex items-center text-xs">
 						<Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
 						Хайж байна...
 					</div>
 				) : null}
 				{searchResults.length > 0 && productSearch ? (
-					<Card className="absolute right-0 left-0 z-50 mt-1 border-2 border-border shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+					<Card className="border-border absolute right-0 left-0 z-50 mt-1 border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
 						<ScrollArea className="max-h-[260px]">
 							<div className="p-1">
 								{searchResults.map((product) => (
 									<button
+										className="hover:bg-muted w-full rounded-md px-3 py-2 text-left text-sm"
 										key={product.id}
-										type="button"
-										className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
 										onClick={() => handleSelectProduct(product.id)}
+										type="button"
 									>
 										{product.name}
 									</button>
@@ -304,18 +278,16 @@ function ProductSearchField({
 						</ScrollArea>
 					</Card>
 				) : null}
-				{debouncedProductSearch &&
-				!isSearchingProducts &&
-				searchResults.length === 0 ? (
-					<p className="mt-2 text-muted-foreground text-xs">Бараа олдсонгүй</p>
+				{debouncedProductSearch && !isSearchingProducts && searchResults.length === 0 ? (
+					<p className="text-muted-foreground mt-2 text-xs">Бараа олдсонгүй</p>
 				) : null}
 			</div>
 			{isAiMode ? (
 				<Button
+					onClick={() => onUpdateItem(index, "productId", 0)}
+					size="sm"
 					type="button"
 					variant={!item.productId ? "default" : "outline"}
-					size="sm"
-					onClick={() => onUpdateItem(index, "productId", 0)}
 				>
 					Шинэ барааны ноорог үүсгэх
 				</Button>
@@ -325,41 +297,37 @@ function ProductSearchField({
 }
 
 export function PurchaseLineEditor({
-	item,
-	index,
-	products,
 	brands,
-	categories,
-	isAiMode,
 	canRemove,
-	onUpdateItem,
-	onUpdateDraft,
+	categories,
+	index,
+	isAiMode,
+	item,
 	onRemove,
+	onUpdateDraft,
+	onUpdateItem,
+	products,
 }: PurchaseLineEditorProps) {
 	return (
-		<div className="space-y-4 rounded-base border-2 border-border bg-card p-4">
+		<div className="rounded-base border-border bg-card space-y-4 border-2 p-4">
 			<div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto]">
 				<div className="space-y-2">
 					<ProductSearchField
-						item={item}
 						index={index}
-						products={products}
 						isAiMode={isAiMode}
+						item={item}
 						onUpdateItem={onUpdateItem}
+						products={products}
 					/>
 
 					{item.description ? (
-						<div className="rounded-base border bg-muted/20 p-2 text-sm">
+						<div className="rounded-base bg-muted/20 border p-2 text-sm">
 							<p className="font-medium">{item.description}</p>
 							{item.sourceCode ? (
-								<p className="text-muted-foreground text-xs">
-									Код: {item.sourceCode}
-								</p>
+								<p className="text-muted-foreground text-xs">Код: {item.sourceCode}</p>
 							) : null}
 							{item.expirationDate ? (
-								<p className="text-muted-foreground text-xs">
-									Хугацаа: {item.expirationDate}
-								</p>
+								<p className="text-muted-foreground text-xs">Хугацаа: {item.expirationDate}</p>
 							) : null}
 						</div>
 					) : null}
@@ -368,36 +336,36 @@ export function PurchaseLineEditor({
 				<div className="space-y-2">
 					<Label>Захиалсан тоо</Label>
 					<Input
-						type="number"
 						min={1}
-						value={item.quantityOrdered}
 						onChange={(event: ChangeEvent<HTMLInputElement>) =>
 							onUpdateItem(index, "quantityOrdered", Number(event.target.value))
 						}
 						required
+						type="number"
+						value={item.quantityOrdered}
 					/>
 				</div>
 
 				<div className="space-y-2">
 					<Label>Нэгжийн өртөг</Label>
 					<Input
-						type="number"
 						min={0}
-						value={item.unitCost}
 						onChange={(event: ChangeEvent<HTMLInputElement>) =>
 							onUpdateItem(index, "unitCost", Number(event.target.value))
 						}
 						required
+						type="number"
+						value={item.unitCost}
 					/>
 				</div>
 
 				<div className="flex items-end">
 					<Button
+						className="w-full gap-2"
+						disabled={!canRemove}
+						onClick={() => onRemove(index)}
 						type="button"
 						variant="outline"
-						className="w-full gap-2"
-						onClick={() => onRemove(index)}
-						disabled={!canRemove}
 					>
 						<Trash2 className="h-4 w-4" />
 						Устгах
@@ -408,23 +376,23 @@ export function PurchaseLineEditor({
 			{item.warnings?.length ? <ItemWarnings warnings={item.warnings} /> : null}
 
 			{isAiMode && !item.productId ? (
-				<div className="space-y-4 rounded-base border border-border border-dashed bg-muted/20 p-4">
+				<div className="rounded-base border-border bg-muted/20 space-y-4 border border-dashed p-4">
 					<div className="flex items-center gap-2">
 						<PackageSearch className="h-4 w-4" />
 						<h4 className="font-medium">Шинэ барааны ноорог</h4>
 					</div>
 
 					<DraftSuggestions
-						index={index}
 						candidates={item.candidateMatches ?? []}
+						index={index}
 						onSelect={onUpdateItem}
 					/>
 
 					<DraftFields
-						item={item}
-						index={index}
 						brands={brands}
 						categories={categories}
+						index={index}
+						item={item}
 						onUpdateDraft={onUpdateDraft}
 					/>
 				</div>

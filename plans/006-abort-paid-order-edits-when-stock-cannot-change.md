@@ -49,27 +49,30 @@ Coordinate with adjacent storefront error issue #149; this targets admin paid ed
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/admin/order.ts packages/api/src/queries/products/index.ts packages/api/src/queries/payments.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                    | Expected on success                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/admin/order.ts packages/api/src/queries/products/index.ts packages/api/src/queries/payments.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                      | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                            | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                     | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - all required stock transitions in admin paid-Order edit transaction
 - existing helper contract only if clarification is needed
 
 **Files/path families allowed**
+
 - `packages/api/src/routers/admin/order.ts`
 - `packages/api/src/queries/products/index.ts`
 - `packages/api/src/queries/payments.ts`
 
 **Out of scope**
+
 - new negative-stock override UX
 - stock policy redesign
 - pending Order behavior

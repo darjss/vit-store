@@ -1,21 +1,16 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/solid-query";
 import { parseSort } from "@vit/shared/domain/product";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	onCleanup,
-	onMount,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import { hydrateServerState } from "@/lib/hydration";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
-import { TuningIcon as IconEqualizer, MinimalisticMagnifierIcon as IconSearch } from "@solar-icons/solid/linear";
+import {
+	TuningIcon as IconEqualizer,
+	MinimalisticMagnifierIcon as IconSearch,
+} from "@solar-icons/solid/linear";
 import SearchSheet from "../search/search-sheet";
 import AppliedFilters from "./applied-filters";
 import FilterDrawer from "./filter-drawer";
@@ -36,8 +31,8 @@ type FilterOption = {
 
 type ProductsListProps = {
 	dehydratedState?: string;
-	initialCategories?: FilterOption[];
-	initialBrands?: FilterOption[];
+	initialBrands?: Array<FilterOption>;
+	initialCategories?: Array<FilterOption>;
 	totalProductCount?: number;
 };
 
@@ -47,14 +42,13 @@ const ProductsList = (props: ProductsListProps) => {
 	const [filterDrawerOpen, setFilterDrawerOpen] = createSignal(false);
 	const filterSheetFocusRestore = createSheetFocusRestore();
 	const [isLoadMoreInRange, setIsLoadMoreInRange] = createSignal(false);
-	const [lastLoggedProductsError, setLastLoggedProductsError] =
-		createSignal<unknown>();
+	const [lastLoggedProductsError, setLastLoggedProductsError] = createSignal<unknown>();
 
 	const categoriesQuery = useQuery(
 		() => ({
-			queryKey: ["categories"],
-			queryFn: () => api.category.getAllCategoriesWithStock.query(),
 			initialData: props.initialCategories,
+			queryFn: () => api.category.getAllCategoriesWithStock.query(),
+			queryKey: ["categories"],
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
@@ -62,17 +56,17 @@ const ProductsList = (props: ProductsListProps) => {
 
 	const brandsQuery = useQuery(
 		() => ({
-			queryKey: ["brands"],
-			queryFn: () => api.brand.getAllBrandsWithStock.query(),
 			initialData: props.initialBrands,
+			queryFn: () => api.brand.getAllBrandsWithStock.query(),
+			queryKey: ["brands"],
 			staleTime: 1000 * 60 * 10, // 10 minutes
 		}),
 		() => queryClient,
 	);
 
 	const filters = useProductFilters({
-		categories: () => categoriesQuery.data,
 		brands: () => brandsQuery.data,
+		categories: () => categoriesQuery.data,
 	});
 
 	// Remove the SSR fallback grid once the client island mounts. Both grids
@@ -90,18 +84,42 @@ const ProductsList = (props: ProductsListProps) => {
 			!parseSort(filters.sortField(), filters.sortDirection())
 		) {
 			filters.applyFilters({
-				sortField: null,
-				sortDirection: null,
-				categoryId: filters.categoryId(),
 				brandId: filters.brandId(),
-				priceRange: filters.priceRange(),
+				categoryId: filters.categoryId(),
 				includeOutOfStock: filters.includeOutOfStock(),
+				priceRange: filters.priceRange(),
+				sortDirection: null,
+				sortField: null,
 			});
 		}
 	});
 
 	const searchQuery = useInfiniteQuery(
 		() => ({
+			enabled: filters.isSearchMode(),
+			getNextPageParam: (lastPage) =>
+				lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined,
+			initialPageParam: 1,
+			placeholderData: keepPreviousData,
+			queryFn: async ({ pageParam }) => {
+				const term = filters.effectiveSearchTerm();
+				if (!term) {
+					throw new Error("Search query must contain at least two characters");
+				}
+				const sort = filters.selectedSort();
+				return await api.product.searchProductsForPage.query({
+					brandId: filters.brandId() ?? undefined,
+					categoryId: filters.categoryId() ?? undefined,
+					maxPrice: filters.maxPrice(),
+					minPrice: filters.minPrice(),
+					page: pageParam,
+					pageSize: 12,
+					query: term,
+					requireStock: !filters.includeOutOfStock(),
+					sortDirection: sort?.direction,
+					sortField: sort?.field,
+				});
+			},
 			queryKey: [
 				"search-products-page",
 				filters.effectiveSearchTerm(),
@@ -113,39 +131,32 @@ const ProductsList = (props: ProductsListProps) => {
 				filters.maxPrice(),
 				filters.includeOutOfStock(),
 			],
-			queryFn: async ({ pageParam }) => {
-				const term = filters.effectiveSearchTerm();
-				if (!term) {
-					throw new Error("Search query must contain at least two characters");
-				}
-				const sort = filters.selectedSort();
-				return await api.product.searchProductsForPage.query({
-					query: term,
-					page: pageParam,
-					pageSize: 12,
-					categoryId: filters.categoryId() ?? undefined,
-					brandId: filters.brandId() ?? undefined,
-					minPrice: filters.minPrice(),
-					maxPrice: filters.maxPrice(),
-					requireStock: !filters.includeOutOfStock(),
-					sortField: sort?.field,
-					sortDirection: sort?.direction,
-				});
-			},
-			initialPageParam: 1,
-			getNextPageParam: (lastPage) =>
-				lastPage.pagination.hasNextPage
-					? lastPage.pagination.page + 1
-					: undefined,
-			enabled: filters.isSearchMode(),
 			staleTime: 1000 * 60 * 5,
-			placeholderData: keepPreviousData,
 		}),
 		() => queryClient,
 	);
 
 	const productsQuery = useInfiniteQuery(
 		() => ({
+			enabled: !filters.isSearchMode(),
+			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+			initialPageParam: undefined as string | undefined,
+			placeholderData: keepPreviousData,
+			queryFn: async ({ pageParam }) => {
+				const sort = filters.selectedSort();
+				return await api.product.getInfiniteProducts.query({
+					brandId: filters.brandId() ?? undefined,
+					categoryId: filters.categoryId() ?? undefined,
+					cursor: pageParam,
+					limit: 12,
+					listType: filters.listFilter() ?? undefined,
+					maxPrice: filters.maxPrice(),
+					minPrice: filters.minPrice(),
+					requireStock: !filters.includeOutOfStock(),
+					sortDirection: sort?.direction,
+					sortField: sort?.field,
+				});
+			},
 			queryKey: [
 				"products-browse",
 				filters.selectedSort()?.field,
@@ -157,25 +168,6 @@ const ProductsList = (props: ProductsListProps) => {
 				filters.maxPrice(),
 				filters.includeOutOfStock(),
 			],
-			queryFn: async ({ pageParam }) => {
-				const sort = filters.selectedSort();
-				return await api.product.getInfiniteProducts.query({
-					cursor: pageParam,
-					limit: 12,
-					listType: filters.listFilter() ?? undefined,
-					sortField: sort?.field,
-					sortDirection: sort?.direction,
-					categoryId: filters.categoryId() ?? undefined,
-					brandId: filters.brandId() ?? undefined,
-					minPrice: filters.minPrice(),
-					maxPrice: filters.maxPrice(),
-					requireStock: !filters.includeOutOfStock(),
-				});
-			},
-			initialPageParam: undefined as string | undefined,
-			getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-			placeholderData: keepPreviousData,
-			enabled: !filters.isSearchMode(),
 		}),
 		() => queryClient,
 	);
@@ -183,9 +175,7 @@ const ProductsList = (props: ProductsListProps) => {
 	const searchResults = createMemo(() =>
 		(searchQuery.data?.pages ?? []).flatMap((page) => page.items),
 	);
-	const isSearchLoading = createMemo(
-		() => searchQuery.isLoading && !searchQuery.data,
-	);
+	const isSearchLoading = createMemo(() => searchQuery.isLoading && !searchQuery.data);
 	const isSearchRefetching = createMemo(
 		() =>
 			searchQuery.isFetching &&
@@ -195,12 +185,16 @@ const ProductsList = (props: ProductsListProps) => {
 	);
 
 	const isInitialLoading = createMemo(() => {
-		if (filters.isSearchMode()) return isSearchLoading();
+		if (filters.isSearchMode()) {
+			return isSearchLoading();
+		}
 		return productsQuery.isLoading && !productsQuery.data;
 	});
 
 	const isRefetching = createMemo(() => {
-		if (filters.isSearchMode()) return isSearchRefetching();
+		if (filters.isSearchMode()) {
+			return isSearchRefetching();
+		}
 		return (
 			productsQuery.isFetching &&
 			!productsQuery.isLoading &&
@@ -211,19 +205,20 @@ const ProductsList = (props: ProductsListProps) => {
 
 	const allBrowseProducts = createMemo(() => {
 		const data = productsQuery.data;
-		if (!data) return [];
+		if (!data) {
+			return [];
+		}
 		return data.pages.flatMap((page) => page.items);
 	});
 
 	const hasProducts = createMemo(() => {
-		if (filters.isSearchMode()) return searchResults().length > 0;
+		if (filters.isSearchMode()) {
+			return searchResults().length > 0;
+		}
 		return allBrowseProducts().length > 0;
 	});
 	const hasInitialBrowseError = createMemo(
-		() =>
-			!filters.isSearchMode() &&
-			productsQuery.isError &&
-			allBrowseProducts().length === 0,
+		() => !filters.isSearchMode() && productsQuery.isError && allBrowseProducts().length === 0,
 	);
 
 	// Log the infinite-products failure once with wide-event context. The query
@@ -231,11 +226,7 @@ const ProductsList = (props: ProductsListProps) => {
 	// not misleading when the includeOutOfStock toggle switches the call.
 	createEffect(() => {
 		const error = productsQuery.error;
-		if (
-			!productsQuery.isError ||
-			!error ||
-			lastLoggedProductsError() === error
-		) {
+		if (!productsQuery.isError || !error || lastLoggedProductsError() === error) {
 			return;
 		}
 
@@ -244,34 +235,34 @@ const ProductsList = (props: ProductsListProps) => {
 		const details =
 			error instanceof Error
 				? {
-						name: error.name,
 						message: error.message,
+						name: error.name,
 						stack: error.stack,
 					}
-				: { name: typeof error, message: String(error) };
+				: { message: String(error), name: typeof error };
 		const queryName = filters.includeOutOfStock()
 			? "product.getInfiniteProducts"
 			: "product.getInfiniteProducts (requireStock)";
 		const context = {
 			...details,
+			brandId: filters.brandId(),
+			categoryId: filters.categoryId(),
 			component: "ProductsList",
-			query: queryName,
-			pageUrl: window.location.href,
-			userAgent: window.navigator.userAgent,
-			isOnline: window.navigator.onLine,
 			devicePixelRatio: window.devicePixelRatio,
-			viewportWidth: window.innerWidth,
-			viewportHeight: window.innerHeight,
-			loadedProductCount: allBrowseProducts().length,
-			loadedPageCount: productsQuery.data?.pages.length ?? 0,
 			hasNextPage: productsQuery.hasNextPage,
 			isFetching: productsQuery.isFetching,
 			isFetchingNextPage: productsQuery.isFetchingNextPage,
-			sortField: sort?.field ?? null,
-			sortDirection: sort?.direction ?? null,
-			categoryId: filters.categoryId(),
-			brandId: filters.brandId(),
+			isOnline: window.navigator.onLine,
 			listFilter: filters.listFilter(),
+			loadedPageCount: productsQuery.data?.pages.length ?? 0,
+			loadedProductCount: allBrowseProducts().length,
+			pageUrl: window.location.href,
+			query: queryName,
+			sortDirection: sort?.direction ?? null,
+			sortField: sort?.field ?? null,
+			userAgent: window.navigator.userAgent,
+			viewportHeight: window.innerHeight,
+			viewportWidth: window.innerWidth,
 		};
 
 		console.error("[ProductsList] Infinite products query failed", context);
@@ -301,14 +292,12 @@ const ProductsList = (props: ProductsListProps) => {
 		return allBrowseProducts().length;
 	});
 	const productCountLabel = createMemo(() => {
-		if (
-			!filters.isSearchMode() &&
-			filters.isBrowsingAll() &&
-			props.totalProductCount != null
-		) {
+		if (!filters.isSearchMode() && filters.isBrowsingAll() && props.totalProductCount != null) {
 			return `${props.totalProductCount} бүтээгдэхүүн`;
 		}
-		if (shouldShowEmptyState()) return "0 бүтээгдэхүүн";
+		if (shouldShowEmptyState()) {
+			return "0 бүтээгдэхүүн";
+		}
 		if (filters.isSearchMode() && hasProducts()) {
 			return `${productCount()} бүтээгдэхүүн`;
 		}
@@ -319,15 +308,13 @@ const ProductsList = (props: ProductsListProps) => {
 	});
 
 	const hasNextPage = () =>
-		filters.isSearchMode()
-			? searchQuery.hasNextPage
-			: productsQuery.hasNextPage;
+		filters.isSearchMode() ? searchQuery.hasNextPage : productsQuery.hasNextPage;
 	const isFetchingNextPage = () =>
-		filters.isSearchMode()
-			? searchQuery.isFetchingNextPage
-			: productsQuery.isFetchingNextPage;
+		filters.isSearchMode() ? searchQuery.isFetchingNextPage : productsQuery.isFetchingNextPage;
 	const loadNextPage = () => {
-		if (!hasNextPage() || isFetchingNextPage()) return;
+		if (!hasNextPage() || isFetchingNextPage()) {
+			return;
+		}
 		if (filters.isSearchMode()) {
 			void searchQuery.fetchNextPage({ cancelRefetch: false });
 		} else {
@@ -336,7 +323,9 @@ const ProductsList = (props: ProductsListProps) => {
 	};
 
 	createEffect(() => {
-		if (!isLoadMoreInRange() || !hasNextPage()) return;
+		if (!isLoadMoreInRange() || !hasNextPage()) {
+			return;
+		}
 		loadNextPage();
 	});
 
@@ -376,92 +365,86 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* Compact Header on wash tint */}
 				<div
 					class={cn(
-						"mb-3 flex flex-col gap-1 rounded-2xl border border-border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
+						"border-border mb-3 flex flex-col gap-1 rounded-2xl border px-4 py-4 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4 sm:px-6 sm:py-5",
 						washBg("all-products"),
 					)}
 				>
-					<h1 class="font-bold font-display text-lg leading-tight tracking-tight sm:text-xl lg:text-2xl">
+					<h1 class="font-display text-lg leading-tight font-bold tracking-tight sm:text-xl lg:text-2xl">
 						{filters.pageTitle()}
 					</h1>
 					<Show
-						when={!isInitialLoading()}
 						fallback={
-							<div class="h-3.5 w-20 animate-pulse rounded bg-muted sm:h-4 sm:w-24 lg:h-5 lg:w-28" />
+							<div class="bg-muted h-3.5 w-20 animate-pulse rounded sm:h-4 sm:w-24 lg:h-5 lg:w-28" />
 						}
+						when={!isInitialLoading()}
 					>
-						<span class="font-medium text-foreground/70 text-xs sm:text-sm lg:text-base">
+						<span class="text-foreground/70 text-xs font-medium sm:text-sm lg:text-base">
 							{productCountLabel()}
 						</span>
 					</Show>
 				</div>
 
 				{/* Search + filter trigger topbar */}
-				<div class="-mx-3 sm:-mx-6 lg:-mx-8 sticky top-0 z-30 mb-3 flex items-center gap-2 border-border border-b bg-background/95 px-3 py-2.5 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-md sm:px-6 lg:px-8">
+				<div class="border-border bg-background/95 supports-[backdrop-filter]:bg-background/85 sticky top-0 z-30 -mx-3 mb-3 flex items-center gap-2 border-b px-3 py-2.5 supports-[backdrop-filter]:backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
 					<SearchSheet
-						position="bottom"
-						triggerAriaLabel="Хайх"
-						triggerClass="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out active:scale-[0.99]"
 						contentClass="h-[85vh] w-full max-w-none border-border border-t p-0"
 						headerClass="bg-primary/10"
 						inputPlaceholder="Омега-3, магни, нойргүйдэл…"
+						position="bottom"
+						triggerAriaLabel="Хайх"
+						triggerClass="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-border bg-card px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out active:scale-[0.99]"
 						triggerContent={
 							<>
-								<IconSearch class="h-5 w-5 shrink-0" aria-hidden="true" />
-								<span class="truncate font-medium text-sm">Хайх...</span>
+								<IconSearch aria-hidden="true" class="h-5 w-5 shrink-0" />
+								<span class="truncate text-sm font-medium">Хайх...</span>
 							</>
 						}
 					/>
 					<button
-						type="button"
+						aria-label="Шүүлтүүр нээх"
+						class="border-border bg-card shadow-soft-sm relative flex h-11 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-bold transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
 						onClick={(event) => {
 							filterSheetFocusRestore.register(event.currentTarget);
 							setFilterDrawerOpen(true);
 						}}
-						aria-label="Шүүлтүүр нээх"
-						class="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-4 font-bold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out active:scale-[0.97]"
+						type="button"
 					>
 						<IconEqualizer class="h-4 w-4" />
 						<span>Шүүлтүүр</span>
 						<Show when={filters.activeFilterCount() > 0}>
-							<span class="flex size-5 items-center justify-center rounded-full border border-cocoa bg-primary font-bold text-[11px]">
+							<span class="border-cocoa bg-primary flex size-5 items-center justify-center rounded-full border text-[11px] font-bold">
 								{filters.activeFilterCount()}
 							</span>
 						</Show>
 					</button>
 				</div>
 
-				<AppliedFilters
-					chips={filters.appliedChips()}
-					onClearAll={filters.handleClearFilters}
-				/>
+				<AppliedFilters chips={filters.appliedChips()} onClearAll={filters.handleClearFilters} />
 
 				<FilterDrawer
-					open={filterDrawerOpen()}
-					onOpenChange={setFilterDrawerOpen}
-					focusRestore={filterSheetFocusRestore}
-					categories={categoriesQuery.data ?? []}
-					brands={brandsQuery.data ?? []}
-					sortField={filters.sortField()}
-					sortDirection={filters.sortDirection()}
-					categoryId={filters.categoryId()}
 					brandId={filters.brandId()}
-					priceRange={filters.priceRange()}
-					listFilter={filters.listFilter()}
+					brands={brandsQuery.data ?? []}
+					categories={categoriesQuery.data ?? []}
+					categoryId={filters.categoryId()}
 					effectiveSearchTerm={filters.effectiveSearchTerm()}
+					focusRestore={filterSheetFocusRestore}
 					includeOutOfStock={filters.includeOutOfStock()}
+					listFilter={filters.listFilter()}
 					onApply={filters.applyFilters}
+					onOpenChange={setFilterDrawerOpen}
 					onReset={filters.resetDrawerFilters}
+					open={filterDrawerOpen()}
+					priceRange={filters.priceRange()}
+					sortDirection={filters.sortDirection()}
+					sortField={filters.sortField()}
 				/>
 
 				{/* Products Grid */}
 				<Show
-					when={hasProducts() || isRefetching()}
 					fallback={
 						<Show
-							when={isInitialLoading()}
 							fallback={
 								<Show
-									when={hasInitialBrowseError()}
 									fallback={
 										<Show when={shouldShowEmptyState()}>
 											<ProductEmptyState
@@ -470,26 +453,27 @@ const ProductsList = (props: ProductsListProps) => {
 											/>
 										</Show>
 									}
+									when={hasInitialBrowseError()}
 								>
 									<ProductErrorState onRetry={retryProducts} />
 								</Show>
 							}
+							when={isInitialLoading()}
 						>
 							{/* Initial Loading Skeleton */}
 							<ProductSkeletonGrid count={8} />
 						</Show>
 					}
+					when={hasProducts() || isRefetching()}
 				>
 					{/* Products Grid with refetching overlay */}
 					<div class="relative">
 						{/* Loading indicator for initial load */}
 						<Show when={isInitialLoading()}>
-							<div class="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-								<div class="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-5 py-4 shadow-soft sm:gap-3.5 sm:px-6 sm:py-5 sm:shadow-soft-lg lg:px-8 lg:py-6">
-									<div class="h-6 w-6 animate-spin rounded-full border border-border border-t-transparent sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
-									<p class="font-bold text-xs sm:text-sm lg:text-base">
-										Ачааллаж байна...
-									</p>
+							<div class="bg-background/90 absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm">
+								<div class="border-border bg-card shadow-soft sm:shadow-soft-lg flex flex-col items-center gap-3 rounded-lg border px-5 py-4 sm:gap-3.5 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+									<div class="border-border h-6 w-6 animate-spin rounded-full border border-t-transparent sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
+									<p class="text-xs font-bold sm:text-sm lg:text-base">Ачааллаж байна...</p>
 								</div>
 							</div>
 						</Show>
@@ -502,9 +486,7 @@ const ProductsList = (props: ProductsListProps) => {
 							{/* Search mode: render search results */}
 							<Show when={filters.isSearchMode()}>
 								<div class="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
-									<For each={searchResults()}>
-										{(product) => <ProductCard product={product} />}
-									</For>
+									<For each={searchResults()}>{(product) => <ProductCard product={product} />}</For>
 								</div>
 							</Show>
 							{/* Browse mode: plain CSS grid. Pages are 12 items, so even
@@ -534,8 +516,8 @@ const ProductsList = (props: ProductsListProps) => {
 				{/* Loading More Skeleton */}
 				<Show when={isFetchingNextPage()}>
 					<ProductSkeletonGrid
-						count={4}
 						class="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 lg:mt-6 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
+						count={4}
 					/>
 				</Show>
 
@@ -544,8 +526,7 @@ const ProductsList = (props: ProductsListProps) => {
 					when={
 						(filters.isSearchMode()
 							? searchQuery.data && !searchQuery.hasNextPage
-							: productsQuery.data && !productsQuery.hasNextPage) &&
-							hasProducts()
+							: productsQuery.data && !productsQuery.hasNextPage) && hasProducts()
 					}
 				>
 					<ProductListEnd count={productCount()} />
@@ -553,18 +534,15 @@ const ProductsList = (props: ProductsListProps) => {
 
 				{/* Automatic continuation with an accessible manual fallback. */}
 				<Show
-					when={
-						hasNextPage() &&
-						(filters.isSearchMode() ? searchQuery.data : productsQuery.data)
-					}
+					when={hasNextPage() && (filters.isSearchMode() ? searchQuery.data : productsQuery.data)}
 				>
 					<div class="mt-4 flex justify-center sm:mt-6">
 						<button
-							ref={setupObserver}
-							type="button"
+							class="border-border bg-card shadow-soft-sm hover:shadow-soft inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border px-5 text-sm font-semibold transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
 							disabled={isFetchingNextPage()}
 							onClick={loadNextPage}
-							class="hover:-translate-y-0.5 inline-flex h-11 min-w-[132px] items-center justify-center rounded-full border border-border bg-card px-5 font-semibold text-sm shadow-soft-sm transition-[box-shadow,transform] duration-200 ease-out hover:shadow-soft active:scale-[0.97] disabled:pointer-events-none disabled:opacity-60"
+							ref={setupObserver}
+							type="button"
 						>
 							{isFetchingNextPage() ? "Ачааллаж байна..." : "Цааш үзэх"}
 						</button>

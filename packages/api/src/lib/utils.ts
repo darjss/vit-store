@@ -15,26 +15,24 @@ import { customAlphabet } from "nanoid";
 
 export { deliveryProvider, orderStatus, paymentProvider, paymentStatus };
 
-export const percentile = (sortedValues: number[], p: number): number => {
+export const percentile = (sortedValues: Array<number>, p: number): number => {
 	if (sortedValues.length === 0) {
 		return 0;
 	}
 
 	const index = Math.ceil((p / 100) * sortedValues.length) - 1;
-	return (
-		sortedValues[Math.max(0, Math.min(index, sortedValues.length - 1))] ?? 0
-	);
+	return sortedValues[Math.max(0, Math.min(index, sortedValues.length - 1))] ?? 0;
 };
 
-export const summarizeTimings = (values: number[]) => {
+export const summarizeTimings = (values: Array<number>) => {
 	if (values.length === 0) {
 		return {
 			count: 0,
+			max: 0,
 			mean: 0,
 			min: 0,
 			p50: 0,
 			p95: 0,
-			max: 0,
 		};
 	}
 
@@ -43,17 +41,15 @@ export const summarizeTimings = (values: number[]) => {
 
 	return {
 		count: values.length,
+		max: sorted.at(-1) ?? 0,
 		mean: sum / values.length,
 		min: sorted[0] ?? 0,
 		p50: percentile(sorted, 50),
 		p95: percentile(sorted, 95),
-		max: sorted[sorted.length - 1] ?? 0,
 	};
 };
 
-export const measureMs = async (
-	fn: () => Promise<unknown>,
-): Promise<number> => {
+export const measureMs = async (fn: () => Promise<unknown>): Promise<number> => {
 	const startedAt = performance.now();
 	await fn();
 	return performance.now() - startedAt;
@@ -80,8 +76,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // current day in Asia/Ulaanbaatar.
 export const getStartOfDay = () => {
 	const nowMs = Date.now();
-	const ubDayStartMs =
-		Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
+	const ubDayStartMs = Math.floor((nowMs + UB_OFFSET_MS) / DAY_MS) * DAY_MS - UB_OFFSET_MS;
 	return new Date(ubDayStartMs);
 };
 
@@ -94,7 +89,7 @@ export const getDaysAgo = (days: number) => {
 export const getStartAndEndofDayAgo = (days: number) => {
 	const startDate = getDaysAgo(days);
 	const endDate = new Date(startDate.getTime() + DAY_MS - 1);
-	return { startDate, endDate };
+	return { endDate, startDate };
 };
 export const calculateExpiration = (timerange: timeRangeType) => {
 	switch (timerange) {
@@ -112,8 +107,8 @@ export const calculateExpiration = (timerange: timeRangeType) => {
 export const slugify = (text: string): string => {
 	return text
 		.toLowerCase()
-		.replace(/[^a-z0-9\u0400-\u04FF]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replaceAll(/[^a-z0-9\u0400-\u04FF]+/g, "-")
+		.replaceAll(/^-+|-+$/g, "");
 };
 
 export const getTtlForTimeRange = (timeRange?: timeRangeType) => {
@@ -148,116 +143,114 @@ export const getDaysFromTimeRange = (timerange: timeRangeType) => {
 };
 
 interface OrderResult {
-	id: number;
-	orderNumber: string;
-	customerPhone: number;
-	status: OrderStatusType;
-	total: number;
-	notes: string | null;
 	address: string;
 	addressZoneId: number | null;
-	deliveryProvider: OrderDeliveryProviderType;
 	createdAt: Date;
-	updatedAt: Date | null;
+	customerPhone: number;
+	deliveryProvider: OrderDeliveryProviderType;
+	id: number;
+	notes: string | null;
 	orderDetails: Array<{
-		quantity: number;
 		price: number | null;
 		product: {
-			name: string;
-			price: number;
 			id: number;
 			images: Array<{
 				url: string;
 			}>;
+			name: string;
+			price: number;
 		};
+		quantity: number;
 	}>;
+	orderNumber: string;
 	payments: Array<{
-		status: PaymentStatusType;
-		provider: PaymentProviderType;
-		paymentNumber: string;
 		createdAt: Date;
+		paymentNumber: string;
+		provider: PaymentProviderType;
+		status: PaymentStatusType;
 	}>;
+	status: OrderStatusType;
+	total: number;
+	updatedAt: Date | null;
 }
 
 interface ShapedOrder {
-	id: number;
-	orderNumber: string;
-	customerPhone: number;
-	status: OrderStatusType;
-	total: number;
-	notes: string | null;
-	createdAt: Date;
 	address: string;
 	addressZoneId: number | undefined;
-	updatedAt: Date | null;
+	createdAt: Date;
+	customerPhone: number;
 	deliveryProvider: OrderDeliveryProviderType;
+	id: number;
+	notes: string | null;
+	orderNumber: string;
+	paymentNumber: string | undefined;
+	paymentProvider: PaymentProviderType;
+	paymentStatus: PaymentStatusType;
 	products: Array<{
-		quantity: number;
+		imageUrl: string | undefined;
 		name: string;
 		price: number;
 		productId: number;
-		imageUrl: string | undefined;
+		quantity: number;
 	}>;
-	paymentStatus: PaymentStatusType;
-	paymentProvider: PaymentProviderType;
-	paymentNumber: string | undefined;
+	status: OrderStatusType;
+	total: number;
+	updatedAt: Date | null;
 }
 
 export const shapeOrderResult = (result: OrderResult) => {
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 	const latestPayment = result.payments[0];
 	return {
-		id: result.id,
-		orderNumber: result.orderNumber,
-		customerPhone: `${result.customerPhone}`,
-		status: result.status,
-		total: result.total,
-		notes: result.notes,
-		createdAt: result.createdAt,
 		address: result.address,
 		addressZoneId: result.addressZoneId ?? undefined,
-		updatedAt: result.updatedAt,
+		createdAt: result.createdAt,
+		customerPhone: `${result.customerPhone}`,
+		deliveryProvider: result.deliveryProvider,
+		id: result.id,
+		notes: result.notes,
+		orderNumber: result.orderNumber,
+		paymentNumber: latestPayment?.paymentNumber,
+		paymentProvider: latestPayment?.provider ?? "transfer",
+		paymentStatus: latestPayment?.status ?? "pending",
 		products: result.orderDetails.map((orderDetail) => ({
-			quantity: orderDetail.quantity,
+			imageUrl: orderDetail.product.images[0]?.url,
 			name: orderDetail.product.name,
 			price: orderDetail.price ?? orderDetail.product.price,
 			productId: orderDetail.product.id,
-			imageUrl: orderDetail.product.images[0]?.url,
+			quantity: orderDetail.quantity,
 		})),
-		deliveryProvider: result.deliveryProvider,
-		paymentStatus: latestPayment?.status ?? "pending",
-		paymentProvider: latestPayment?.provider ?? "transfer",
-		paymentNumber: latestPayment?.paymentNumber,
+		status: result.status,
+		total: result.total,
+		updatedAt: result.updatedAt,
 	};
 };
-export const shapeOrderResults = (results: OrderResult[]) => {
+export const shapeOrderResults = (results: Array<OrderResult>) => {
 	return results?.map((result) => {
-		result.payments.sort(
-			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-		);
+		result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 		const latestPayment = result.payments[0];
 		return {
-			id: result.id,
-			orderNumber: result.orderNumber,
-			customerPhone: `${result.customerPhone}`,
-			status: result.status,
-			total: result.total,
-			notes: result.notes,
 			address: result.address,
 			addressZoneId: result.addressZoneId ?? undefined,
 			createdAt: result.createdAt,
-			updatedAt: result.updatedAt,
+			customerPhone: `${result.customerPhone}`,
 			deliveryProvider: result.deliveryProvider,
-			products: result.orderDetails.map((orderDetail) => ({
-				quantity: orderDetail.quantity,
-				name: orderDetail.product.name,
-				productId: orderDetail.product.id,
-				price: orderDetail.price ?? orderDetail.product.price,
-				imageUrl: orderDetail.product.images[0]?.url,
-			})),
-			paymentStatus: latestPayment?.status ?? "pending",
-			paymentProvider: latestPayment?.provider ?? "transfer",
+			id: result.id,
+			notes: result.notes,
+			orderNumber: result.orderNumber,
 			paymentNumber: latestPayment?.paymentNumber,
+			paymentProvider: latestPayment?.provider ?? "transfer",
+			paymentStatus: latestPayment?.status ?? "pending",
+			products: result.orderDetails.map((orderDetail) => ({
+				imageUrl: orderDetail.product.images[0]?.url,
+				name: orderDetail.product.name,
+				price: orderDetail.price ?? orderDetail.product.price,
+				productId: orderDetail.product.id,
+				quantity: orderDetail.quantity,
+			})),
+			status: result.status,
+			total: result.total,
+			updatedAt: result.updatedAt,
 		};
 	});
 };

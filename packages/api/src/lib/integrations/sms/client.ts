@@ -30,7 +30,7 @@ export { WebHookEventType };
 // Define JWT types locally (matching android-sms-gateway v3.0 API)
 export interface TokenRequest {
 	/** The scopes to include in the token */
-	scopes: string[];
+	scopes: Array<string>;
 	/** The time-to-live (TTL) of the token in seconds */
 	ttl?: number;
 }
@@ -38,35 +38,23 @@ export interface TokenRequest {
 export interface TokenResponse {
 	/** The JWT access token */
 	access_token: string;
-	/** The type of the token */
-	token_type: string;
-	/** The unique identifier of the token */
-	id: string;
 	/** The expiration time of the token */
 	expires_at: string;
+	/** The unique identifier of the token */
+	id: string;
+	/** The type of the token */
+	token_type: string;
 }
 
 /**
  * HTTP client interface for making requests
  */
 interface HttpClient {
-	get<T>(url: string, headers?: Record<string, string>): Promise<T>;
-	post<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
-	put<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
-	patch<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
 	delete<T>(url: string, headers?: Record<string, string>): Promise<T>;
+	get<T>(url: string, headers?: Record<string, string>): Promise<T>;
+	patch<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T>;
+	post<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T>;
+	put<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T>;
 }
 
 /**
@@ -92,36 +80,24 @@ function createHttpClient(): HttpClient {
 	};
 
 	return {
+		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
+			const response = await client.delete(url, { headers });
+			return handleResponse<T>(response);
+		},
 		async get<T>(url: string, headers?: Record<string, string>): Promise<T> {
 			const response = await client.get(url, { headers });
 			return handleResponse<T>(response);
 		},
-		async post<T>(
-			url: string,
-			body: unknown,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.post(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async put<T>(
-			url: string,
-			body: unknown,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.put(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async patch<T>(
-			url: string,
-			body: unknown,
-			headers?: Record<string, string>,
-		): Promise<T> {
+		async patch<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
 			const response = await client.patch(url, { headers, json: body });
 			return handleResponse<T>(response);
 		},
-		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await client.delete(url, { headers });
+		async post<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+			const response = await client.post(url, { headers, json: body });
+			return handleResponse<T>(response);
+		},
+		async put<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
+			const response = await client.put(url, { headers, json: body });
 			return handleResponse<T>(response);
 		},
 	};
@@ -131,12 +107,12 @@ function createHttpClient(): HttpClient {
  * SMS Gateway client configuration options
  */
 export interface SmsGatewayConfig {
+	/** Optional custom base URL */
+	baseUrl?: string;
 	/** Username for Basic Auth (empty string for JWT auth) */
 	login: string;
 	/** Password for Basic Auth or JWT token */
 	password: string;
-	/** Optional custom base URL */
-	baseUrl?: string;
 }
 
 /**
@@ -159,7 +135,7 @@ export interface SmsGatewayConfig {
  * ```
  */
 export function createSmsClient(config: SmsGatewayConfig): Client {
-	const { login, password, baseUrl } = config;
+	const { baseUrl, login, password } = config;
 	const httpClient = createHttpClient();
 	return new Client(login, password, httpClient, baseUrl);
 }
@@ -175,9 +151,9 @@ export function createSmsClient(config: SmsGatewayConfig): Client {
  * - SMS_GATEWAY_BASE_URL: Custom API base URL
  */
 export const smsClient = createSmsClient({
+	baseUrl: process.env.SMS_GATEWAY_BASE_URL,
 	login: process.env.SMS_GATEWAY_LOGIN ?? "",
 	password: process.env.SMS_GATEWAY_PASSWORD ?? "",
-	baseUrl: process.env.SMS_GATEWAY_BASE_URL,
 });
 
 // Extended client type to include JWT methods
@@ -232,16 +208,12 @@ export const smsGateway = {
 	async sendSmsAndWait(
 		message: Message,
 		options?: {
-			skipPhoneValidation?: boolean;
-			maxAttempts?: number;
 			intervalMs?: number;
+			maxAttempts?: number;
+			skipPhoneValidation?: boolean;
 		},
 	): Promise<MessageState> {
-		const {
-			skipPhoneValidation,
-			maxAttempts = 10,
-			intervalMs = 1000,
-		} = options ?? {};
+		const { intervalMs = 1000, maxAttempts = 10, skipPhoneValidation } = options ?? {};
 
 		const result = await smsClient.send(message, { skipPhoneValidation });
 
@@ -270,7 +242,7 @@ export const smsGateway = {
 	/**
 	 * List all registered devices
 	 */
-	async getDevices(): Promise<Device[]> {
+	async getDevices(): Promise<Array<Device>> {
 		return smsClient.getDevices();
 	},
 
@@ -284,7 +256,7 @@ export const smsGateway = {
 	/**
 	 * List all registered webhooks
 	 */
-	async getWebhooks(): Promise<WebHook[]> {
+	async getWebhooks(): Promise<Array<WebHook>> {
 		return smsClient.getWebhooks();
 	},
 
@@ -327,7 +299,7 @@ export const smsGateway = {
 	/**
 	 * Get logs within a time range
 	 */
-	async getLogs(from?: Date, to?: Date): Promise<LogEntry[]> {
+	async getLogs(from?: Date, to?: Date): Promise<Array<LogEntry>> {
 		return smsClient.getLogs(from, to);
 	},
 

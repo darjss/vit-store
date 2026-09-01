@@ -4,13 +4,13 @@ import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 
 interface Props {
 	product: {
-		description?: string | null;
-		ingredients?: string[] | null;
-		dailyIntake?: number | null;
-		weightGrams?: number | null;
 		amount?: string | null;
-		potency?: string | null;
+		dailyIntake?: number | null;
+		description?: string | null;
 		expirationDate?: string | null;
+		ingredients?: Array<string> | null;
+		potency?: string | null;
+		weightGrams?: number | null;
 	};
 }
 

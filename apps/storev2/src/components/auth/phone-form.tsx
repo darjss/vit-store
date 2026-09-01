@@ -7,22 +7,22 @@ import { useAppForm } from "../form/form";
 import { showToast } from "../ui/toast";
 
 const PhoneForm = (props: {
-	setStep: (step: "phone" | "otp") => void;
 	setPhone: (phone: string) => void;
+	setStep: (step: "phone" | "otp") => void;
 }) => {
 	const mutation = useMutation(
 		() => ({
 			mutationFn: async (phone: string) => {
-				return await api.auth.sendOtp.mutate({ phone: phone });
+				return await api.auth.sendOtp.mutate({ phone });
 			},
 
 			onSuccess: async () => {
 				props.setStep("otp");
 				showToast({
-					title: "Амжилттай",
 					description: "Таны утсанд баталгаажуулах код илгээгдлээ",
-					variant: "success",
 					duration: 5000,
+					title: "Амжилттай",
+					variant: "success",
 				});
 			},
 		}),
@@ -32,6 +32,10 @@ const PhoneForm = (props: {
 	const form = useAppForm(() => ({
 		defaultValues: {
 			phone: "",
+		},
+		onSubmit: async (values) => {
+			props.setPhone(values.value.phone);
+			mutation.mutate(values.value.phone);
 		},
 		validators: {
 			onChange: v.object({
@@ -43,26 +47,23 @@ const PhoneForm = (props: {
 				),
 			}),
 		},
-		onSubmit: async (values) => {
-			props.setPhone(values.value.phone);
-			mutation.mutate(values.value.phone);
-		},
 	}));
 
 	return (
 		<div class="space-y-6">
-			<div class="rounded-xl bg-info/60 p-4">
+			<div class="bg-info/60 rounded-xl p-4">
 				<div class="flex items-start gap-3">
-					<div class="mt-0.5 flex-shrink-0 text-info-foreground">
+					<div class="text-info-foreground mt-0.5 flex-shrink-0">
 						<IconInformation class="h-5 w-5" />
 					</div>
-					<p class="flex-1 font-medium text-info-foreground text-xs leading-relaxed md:text-sm">
+					<p class="text-info-foreground flex-1 text-xs leading-relaxed font-medium md:text-sm">
 						Таны утасны дугаарт баталгаажуулах код илгээгдэх болно
 					</p>
 				</div>
 			</div>
 
 			<form
+				class="space-y-6"
 				onSubmit={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -72,17 +73,12 @@ const PhoneForm = (props: {
 					}
 					form.handleSubmit();
 				}}
-				class="space-y-6"
 			>
 				<form.AppField
-					name="phone"
 					children={(field) => (
-						<field.FormTextField
-							label="Утасны дугаар"
-							placeholder="88889999"
-							type="tel"
-						/>
+						<field.FormTextField label="Утасны дугаар" placeholder="88889999" type="tel" />
 					)}
+					name="phone"
 				/>
 
 				<form.AppForm>

@@ -15,16 +15,16 @@ export const prerender = true;
 type CategoryTile = {
   id: number;
   name: string;
-  slug: string;
   productCount: number;
+  slug: string;
 };
 
 type BrandRow = {
   id: number;
-  name: string;
-  slug: string;
   logoUrl: string | null;
+  name: string;
   productCount: number;
+  slug: string;
 };
 
 const products = await api.product.getProductsForHome.query();
@@ -53,10 +53,10 @@ const orderedCategories = [
 ];
 
 const categoryTiles = orderedCategories.slice(0, 8);
-const heroProducts: ProductForHome[] = featuredProducts.slice(0, 4);
-const shelfProducts: ProductForHome[] = featuredProducts.slice(0, 8);
-const gridProducts: ProductForHome[] = newProducts.slice(0, 4);
-const brandRow: BrandRow[] = brands.slice(0, 10);
+const heroProducts: Array<ProductForHome> = featuredProducts.slice(0, 4);
+const shelfProducts: Array<ProductForHome> = featuredProducts.slice(0, 8);
+const gridProducts: Array<ProductForHome> = newProducts.slice(0, 4);
+const brandRow: Array<BrandRow> = brands.slice(0, 10);
 ---
 
 <Layout
@@ -382,7 +382,7 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     for (const el of document.querySelectorAll<HTMLElement>(
       "[data-reveal], [data-reveal-group]",
     )) {
-      if (el.dataset.revealed) continue;
+      if (el.dataset.revealed) {continue;}
       el.dataset.revealed = "true";
       // Set stagger index on group children so CSS can compute
       // transition-delay per item.
@@ -399,12 +399,12 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
 
   function initHeroRotator() {
     const rotator = document.querySelector<HTMLElement>("[data-hero-rotator]");
-    if (!rotator || rotator.dataset.init) return;
+    if (!rotator || rotator.dataset.init) {return;}
 
     const slides = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-slide"));
     const dots = Array.from(rotator.querySelectorAll<HTMLElement>(".hero-dot"));
     const count = slides.length;
-    if (count <= 1) return;
+    if (count <= 1) {return;}
     rotator.dataset.init = "true";
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -419,8 +419,8 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
         const on = i === idx;
         s.classList.toggle("is-active", on);
         s.setAttribute("aria-hidden", on ? "false" : "true");
-        if (on) s.removeAttribute("tabindex");
-        else s.setAttribute("tabindex", "-1");
+        if (on) {s.removeAttribute("tabindex");}
+        else {s.setAttribute("tabindex", "-1");}
       });
       dots.forEach((d, i) => {
         const on = i === idx;
@@ -430,9 +430,9 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
     }
 
     function start() {
-      if (stopped || timer !== null) return;
+      if (stopped || timer !== null) {return;}
       timer = window.setInterval(() => {
-        if (!paused) show(idx + 1);
+        if (!paused) {show(idx + 1);}
       }, 5000);
     }
 
@@ -493,7 +493,7 @@ const brandRow: BrandRow[] = brands.slice(0, 10);
       true,
     );
 
-    if (!reduce) start();
+    if (!reduce) {start();}
   }
 
   document.addEventListener("astro:page-load", initHeroRotator);

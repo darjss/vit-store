@@ -12,30 +12,30 @@
 
 export interface PostHogConfig {
 	apiKey: string;
-	projectId: string;
 	host: string;
+	projectId: string;
 }
 
 interface HogQLQueryResult {
-	results: unknown[][];
-	columns: string[];
-	types: string[];
+	columns: Array<string>;
 	hasMore?: boolean;
+	results: Array<Array<unknown>>;
+	types: Array<string>;
 }
 
 interface PostHogQueryResponse {
-	results: unknown[][];
-	columns: string[];
-	types: string[];
-	hasMore?: boolean;
+	columns: Array<string>;
 	error?: string;
+	hasMore?: boolean;
+	results: Array<Array<unknown>>;
+	types: Array<string>;
 }
 
 export interface ProductSearchRankingSignal {
-	productId: number;
-	uniqueViewers: number;
 	addToCarts: number;
+	productId: number;
 	searchClickSessions: number;
+	uniqueViewers: number;
 }
 
 export class PostHogClient {
@@ -52,24 +52,22 @@ export class PostHogClient {
 		const url = `${this.config.host}/api/projects/${this.config.projectId}/query/`;
 
 		const response = await fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${this.config.apiKey}`,
-			},
 			body: JSON.stringify({
 				query: {
 					kind: "HogQLQuery",
 					query: hogql,
 				},
 			}),
+			headers: {
+				Authorization: `Bearer ${this.config.apiKey}`,
+				"Content-Type": "application/json",
+			},
+			method: "POST",
 		});
 
 		if (!response.ok) {
 			const text = await response.text();
-			throw new Error(
-				`PostHog query failed (${response.status}): ${text.slice(0, 500)}`,
-			);
+			throw new Error(`PostHog query failed (${response.status}): ${text.slice(0, 500)}`);
 		}
 
 		const data = (await response.json()) as PostHogQueryResponse;
@@ -79,10 +77,10 @@ export class PostHogClient {
 		}
 
 		return {
-			results: data.results,
 			columns: data.columns,
-			types: data.types,
 			hasMore: data.hasMore,
+			results: data.results,
+			types: data.types,
 		};
 	}
 
@@ -94,14 +92,14 @@ export class PostHogClient {
 	 * @param daysBack - number of days to look back (1=today, 7=week, 30=month)
 	 */
 	async getWebAnalytics(daysBack: number): Promise<{
-		uniqueVisitors: number;
-		pageviews: number;
-		productViews: number;
 		addToCarts: number;
 		checkouts: number;
 		orders: number;
+		pageviews: number;
 		payments: number;
+		productViews: number;
 		searches: number;
+		uniqueVisitors: number;
 	}> {
 		const hogql = `
 			SELECT
@@ -122,14 +120,14 @@ export class PostHogClient {
 		const row = result.results[0] || [];
 
 		return {
-			uniqueVisitors: Number(row[0]) || 0,
-			pageviews: Number(row[1]) || 0,
-			productViews: Number(row[2]) || 0,
 			addToCarts: Number(row[3]) || 0,
 			checkouts: Number(row[4]) || 0,
 			orders: Number(row[5]) || 0,
+			pageviews: Number(row[1]) || 0,
 			payments: Number(row[6]) || 0,
+			productViews: Number(row[2]) || 0,
 			searches: Number(row[7]) || 0,
+			uniqueVisitors: Number(row[0]) || 0,
 		};
 	}
 
@@ -137,9 +135,9 @@ export class PostHogClient {
 	 * Get web analytics for a previous period (for percentage change calculations).
 	 */
 	async getWebAnalyticsPrevious(daysBack: number): Promise<{
-		uniqueVisitors: number;
-		pageviews: number;
 		orders: number;
+		pageviews: number;
+		uniqueVisitors: number;
 	}> {
 		const hogql = `
 			SELECT
@@ -155,9 +153,9 @@ export class PostHogClient {
 		const row = result.results[0] || [];
 
 		return {
-			uniqueVisitors: Number(row[0]) || 0,
-			pageviews: Number(row[1]) || 0,
 			orders: Number(row[2]) || 0,
+			pageviews: Number(row[1]) || 0,
+			uniqueVisitors: Number(row[0]) || 0,
 		};
 	}
 
@@ -165,12 +163,12 @@ export class PostHogClient {
 	 * Get conversion funnel data: how many unique users reached each step.
 	 */
 	async getConversionFunnel(daysBack: number): Promise<{
-		visitors: number;
-		productViewers: number;
 		cartAdders: number;
 		checkoutStarters: number;
 		orderPlacers: number;
 		paymentConfirmers: number;
+		productViewers: number;
+		visitors: number;
 	}> {
 		const hogql = `
 			SELECT
@@ -189,12 +187,12 @@ export class PostHogClient {
 		const row = result.results[0] || [];
 
 		return {
-			visitors: Number(row[0]) || 0,
-			productViewers: Number(row[1]) || 0,
 			cartAdders: Number(row[2]) || 0,
 			checkoutStarters: Number(row[3]) || 0,
 			orderPlacers: Number(row[4]) || 0,
 			paymentConfirmers: Number(row[5]) || 0,
+			productViewers: Number(row[1]) || 0,
+			visitors: Number(row[0]) || 0,
 		};
 	}
 
@@ -206,10 +204,10 @@ export class PostHogClient {
 		limit = 20,
 	): Promise<
 		Array<{
-			query: string;
-			count: number;
 			avgResults: number;
+			count: number;
 			noResultCount: number;
+			query: string;
 		}>
 	> {
 		const hogql = `
@@ -230,10 +228,10 @@ export class PostHogClient {
 		const result = await this.query(hogql);
 
 		return result.results.map((row) => ({
-			query: String(row[0] || ""),
-			count: Number(row[1]) || 0,
 			avgResults: Number(row[2]) || 0,
+			count: Number(row[1]) || 0,
 			noResultCount: Number(row[3]) || 0,
+			query: String(row[0] || ""),
 		}));
 	}
 
@@ -241,9 +239,7 @@ export class PostHogClient {
 	 * Get product demand for product-search ranking.
 	 * Click counts use unique sessions so repeated taps do not inflate demand.
 	 */
-	async getProductSearchRankingSignals(
-		daysBack = 90,
-	): Promise<ProductSearchRankingSignal[]> {
+	async getProductSearchRankingSignals(daysBack = 90): Promise<Array<ProductSearchRankingSignal>> {
 		const totals = await this.query(`
 			SELECT
 				properties.product_id AS product_id,
@@ -264,10 +260,10 @@ export class PostHogClient {
 			return Number.isFinite(productId)
 				? [
 						{
-							productId,
-							uniqueViewers: Number(row[1]) || 0,
 							addToCarts: Number(row[2]) || 0,
+							productId,
 							searchClickSessions: Number(row[3]) || 0,
+							uniqueViewers: Number(row[1]) || 0,
 						},
 					]
 				: [];
@@ -282,12 +278,12 @@ export class PostHogClient {
 		limit = 20,
 	): Promise<
 		Array<{
+			addToCartCount: number;
 			productId: number;
 			productName: string;
 			productSlug: string;
-			views: number;
 			uniqueViewers: number;
-			addToCartCount: number;
+			views: number;
 		}>
 	> {
 		const hogql = `
@@ -336,12 +332,12 @@ export class PostHogClient {
 		}
 
 		return result.results.map((row) => ({
+			addToCartCount: atcMap[Number(row[0])] || 0,
 			productId: Number(row[0]) || 0,
 			productName: String(row[1] || ""),
 			productSlug: String(row[2] || ""),
-			views: Number(row[3]) || 0,
 			uniqueViewers: Number(row[4]) || 0,
-			addToCartCount: atcMap[Number(row[0])] || 0,
+			views: Number(row[3]) || 0,
 		}));
 	}
 
@@ -354,11 +350,11 @@ export class PostHogClient {
 		productId: number,
 		daysBack: number,
 	): Promise<{
-		views: number;
-		uniqueViewers: number;
 		addToCartCount: number;
+		dailyTrend: Array<{ addToCarts: number; date: string; views: number }>;
 		searchClicks: number;
-		dailyTrend: Array<{ date: string; views: number; addToCarts: number }>;
+		uniqueViewers: number;
+		views: number;
 	}> {
 		// Fetch aggregate stats first
 		const statsHogql = `
@@ -393,15 +389,15 @@ export class PostHogClient {
 		const trendResult = await this.query(trendHogql);
 
 		return {
-			views: Number(statsRow[0]) || 0,
-			uniqueViewers: Number(statsRow[1]) || 0,
 			addToCartCount: Number(statsRow[2]) || 0,
-			searchClicks: Number(statsRow[3]) || 0,
 			dailyTrend: trendResult.results.map((row) => ({
+				addToCarts: Number(row[2]) || 0,
 				date: String(row[0] || ""),
 				views: Number(row[1]) || 0,
-				addToCarts: Number(row[2]) || 0,
 			})),
+			searchClicks: Number(statsRow[3]) || 0,
+			uniqueViewers: Number(statsRow[1]) || 0,
+			views: Number(statsRow[0]) || 0,
 		};
 	}
 
@@ -410,9 +406,7 @@ export class PostHogClient {
 	 */
 	async getDailyVisitorTrend(
 		daysBack: number,
-	): Promise<
-		Array<{ date: string; visitors: number; pageviews: number; orders: number }>
-	> {
+	): Promise<Array<{ date: string; orders: number; pageviews: number; visitors: number }>> {
 		const hogql = `
 			SELECT
 				toDate(timestamp) AS day,
@@ -430,9 +424,9 @@ export class PostHogClient {
 
 		return result.results.map((row) => ({
 			date: String(row[0] || ""),
-			visitors: Number(row[1]) || 0,
-			pageviews: Number(row[2]) || 0,
 			orders: Number(row[3]) || 0,
+			pageviews: Number(row[2]) || 0,
+			visitors: Number(row[1]) || 0,
 		}));
 	}
 }
@@ -441,13 +435,13 @@ export class PostHogClient {
  * Create a PostHog client from Cloudflare Worker env vars.
  */
 export function createPostHogClient(env: {
+	POSTHOG_HOST: string;
 	POSTHOG_PERSONAL_API_KEY: string;
 	POSTHOG_PROJECT_ID: string;
-	POSTHOG_HOST: string;
 }): PostHogClient {
 	return new PostHogClient({
 		apiKey: env.POSTHOG_PERSONAL_API_KEY,
-		projectId: env.POSTHOG_PROJECT_ID,
 		host: env.POSTHOG_HOST,
+		projectId: env.POSTHOG_PROJECT_ID,
 	});
 }

@@ -14,8 +14,8 @@ export const userQueries = {
 				.insert(UsersTable)
 				.values({
 					googleId,
-					username,
 					isApproved,
+					username,
 				})
 				.returning();
 			const [user] = result;
@@ -25,15 +25,11 @@ export const userQueries = {
 			return user;
 		},
 
-		async getUserFromGoogleId(
-			googleId: string,
-		): Promise<UserSelectType | null> {
+		async getUserFromGoogleId(googleId: string): Promise<UserSelectType | null> {
 			const result = await db()
 				.select()
 				.from(UsersTable)
-				.where(
-					and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)),
-				);
+				.where(and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)));
 			if (result.length < 1 || result[0] === undefined) {
 				return null;
 			}
@@ -43,14 +39,14 @@ export const userQueries = {
 		async updateUserByGoogleId(
 			googleId: string,
 			updates: {
-				username?: string;
 				isApproved?: boolean;
+				username?: string;
 			},
 		): Promise<UserSelectType | null> {
 			const valuesToSet: {
-				username?: string;
 				isApproved?: boolean;
 				updatedAt: Date;
+				username?: string;
 			} = {
 				updatedAt: new Date(),
 			};
@@ -66,9 +62,7 @@ export const userQueries = {
 			const result = await db()
 				.update(UsersTable)
 				.set(valuesToSet)
-				.where(
-					and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)),
-				)
+				.where(and(eq(UsersTable.googleId, googleId), isNull(UsersTable.deletedAt)))
 				.returning();
 
 			if (result.length < 1 || result[0] === undefined) {

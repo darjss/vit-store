@@ -15,30 +15,28 @@ const FormSelectField = lazy(() =>
 );
 function SubmitButton(props: {
 	children?: JSX.Element;
-	loadingContent?: JSX.Element;
-	disabled?: boolean;
-	type?: ComponentProps<typeof Button>["type"];
-	size?: ComponentProps<typeof Button>["size"];
 	class?: string;
+	disabled?: boolean;
+	loadingContent?: JSX.Element;
+	size?: ComponentProps<typeof Button>["size"];
+	type?: ComponentProps<typeof Button>["type"];
 }) {
 	const form = useFormContext();
 	return (
 		<form.Subscribe
 			selector={(state) => ({
-				isSubmitting: state.isSubmitting,
 				canSubmit: state.canSubmit,
+				isSubmitting: state.isSubmitting,
 			})}
 		>
 			{(state) => (
 				<Button
-					type={props.type || "submit"}
+					class={props.class}
 					disabled={props.disabled || !state().canSubmit}
 					size={props.size}
-					class={props.class}
+					type={props.type || "submit"}
 				>
-					{state().isSubmitting
-						? (props.loadingContent ?? "...")
-						: (props.children ?? "Submit")}
+					{state().isSubmitting ? (props.loadingContent ?? "...") : (props.children ?? "Submit")}
 				</Button>
 			)}
 		</form.Subscribe>
@@ -47,14 +45,14 @@ function SubmitButton(props: {
 
 const { useAppForm } = createFormHook({
 	fieldComponents: {
-		FormTextField,
-		FormTextArea,
 		FormSelectField,
+		FormTextArea,
+		FormTextField,
 	},
+	fieldContext,
 	formComponents: {
 		SubmitButton,
 	},
-	fieldContext,
 	formContext,
 });
 

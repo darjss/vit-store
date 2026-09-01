@@ -1,47 +1,46 @@
-import type {
-	AIPurchaseMatchedProduct,
-	AIPurchaseProductDraft,
-} from "@vit/shared";
+import type { AIPurchaseMatchedProduct, AIPurchaseProductDraft } from "@vit/shared";
 import type { PurchaseDetailType, RouterInputs, RouterOutputs } from "@/lib/types";
 
 export type PurchaseFormProps = {
-	purchase?: PurchaseDetailType;
 	aiData?: RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
-	onSuccess?: (purchaseId: number) => void;
 	onResetAI?: () => void;
+	onSuccess?: (purchaseId: number) => void;
+	purchase?: PurchaseDetailType;
 };
 
 export type PurchaseLineState = {
+	candidateMatches?: Array<AIPurchaseMatchedProduct>;
+	description?: string;
+	expirationDate?: string | null;
 	id?: number;
+	lineTotal?: number | null;
+	newProductDraft?: AIPurchaseProductDraft | null;
 	productId: number;
 	quantityOrdered: number;
-	unitCost: number;
 	quantityReceived?: number;
 	sourceCode?: string | null;
-	description?: string;
-	lineTotal?: number | null;
-	expirationDate?: string | null;
-	warnings?: string[];
-	candidateMatches?: AIPurchaseMatchedProduct[];
-	newProductDraft?: AIPurchaseProductDraft | null;
+	unitCost: number;
+	warnings?: Array<string>;
 };
 
 export const EMPTY_LINE: PurchaseLineState = {
+	description: "",
+	expirationDate: null,
+	lineTotal: null,
+	newProductDraft: null,
 	productId: 0,
 	quantityOrdered: 1,
-	unitCost: 0,
 	sourceCode: null,
-	description: "",
-	lineTotal: null,
-	expirationDate: null,
+	unitCost: 0,
 	warnings: [],
-	newProductDraft: null,
 };
 
 export function toDateInputValue(date: Date | null | undefined) {
-	if (!date) return "";
+	if (!date) {
+		return "";
+	}
 	const value = new Date(date);
-	const timezoneOffset = value.getTimezoneOffset() * 60000;
+	const timezoneOffset = value.getTimezoneOffset() * 60_000;
 	return new Date(value.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
@@ -49,34 +48,32 @@ function createLineFromAIItem(
 	item: NonNullable<PurchaseFormProps["aiData"]>["items"][number],
 ): PurchaseLineState {
 	return {
+		candidateMatches: item.candidateMatches ?? [],
+		description: item.description,
+		expirationDate: item.expirationDate ?? null,
+		lineTotal: item.lineTotal ?? null,
+		newProductDraft: item.newProductDraft ?? null,
 		productId: item.productId ?? 0,
 		quantityOrdered: item.quantity,
-		unitCost: item.unitPrice,
 		sourceCode: item.sourceCode ?? null,
-		description: item.description,
-		lineTotal: item.lineTotal ?? null,
-		expirationDate: item.expirationDate ?? null,
+		unitCost: item.unitPrice,
 		warnings: item.warnings ?? [],
-		candidateMatches: item.candidateMatches ?? [],
-		newProductDraft: item.newProductDraft ?? null,
 	};
 }
 
-function createLineFromPurchaseItem(
-	item: PurchaseDetailType["items"][number],
-): PurchaseLineState {
+function createLineFromPurchaseItem(item: PurchaseDetailType["items"][number]): PurchaseLineState {
 	return {
+		description: item.product.name,
+		expirationDate: null,
 		id: item.id,
+		lineTotal: item.lineTotal,
+		newProductDraft: null,
 		productId: item.productId,
 		quantityOrdered: item.quantityOrdered,
-		unitCost: item.unitCost,
 		quantityReceived: item.quantityReceived,
 		sourceCode: null,
-		description: item.product.name,
-		lineTotal: item.lineTotal,
-		expirationDate: null,
+		unitCost: item.unitCost,
 		warnings: [],
-		newProductDraft: null,
 	};
 }
 
@@ -95,23 +92,21 @@ export function getInitialPurchaseItems({
 	return [{ ...EMPTY_LINE }];
 }
 
-export function hasUnresolvedAiItems(items: PurchaseLineState[]) {
+export function hasUnresolvedAiItems(items: Array<PurchaseLineState>) {
 	return items.some((item) => {
-		if (item.productId > 0) return false;
+		if (item.productId > 0) {
+			return false;
+		}
 		const draft = item.newProductDraft;
-		return (
-			!draft?.name ||
-			!draft.amount ||
-			!draft.potency ||
-			!draft.brandId ||
-			!draft.categoryId
-		);
+		return !draft?.name || !draft.amount || !draft.potency || !draft.brandId || !draft.categoryId;
 	});
 }
 
 function buildAiDraft(
 	item: PurchaseLineState,
-): NonNullable<RouterInputs["aiPurchase"]["saveExtractedPurchase"]["items"][number]["newProductDraft"]> {
+): NonNullable<
+	RouterInputs["aiPurchase"]["saveExtractedPurchase"]["items"][number]["newProductDraft"]
+> {
 	const draft = item.newProductDraft;
 
 	if (!draft) {
@@ -126,79 +121,74 @@ function buildAiDraft(
 
 export function buildImportedPurchasePayload(
 	values: {
-		provider: PurchaseDetailType["provider"];
 		externalOrderNumber: string;
-		trackingNumber: string;
-		shippingCost: number;
+		forwarderReceivedAt: string;
 		notes: string;
 		orderedAt: string;
+		provider: PurchaseDetailType["provider"];
 		shippedAt: string;
-		forwarderReceivedAt: string;
+		shippingCost: number;
+		trackingNumber: string;
 	},
-	items: PurchaseLineState[],
+	items: Array<PurchaseLineState>,
 ): RouterInputs["aiPurchase"]["saveExtractedPurchase"] {
 	return {
-		provider: values.provider,
 		externalOrderNumber: values.externalOrderNumber,
-		trackingNumber: values.trackingNumber || null,
-		shippingCost: Number(values.shippingCost) || 0,
-		notes: values.notes || null,
-		orderedAt: values.orderedAt ? new Date(values.orderedAt) : null,
-		shippedAt: values.shippedAt ? new Date(values.shippedAt) : null,
-		forwarderReceivedAt: values.forwarderReceivedAt
-			? new Date(values.forwarderReceivedAt)
-			: null,
+		forwarderReceivedAt: values.forwarderReceivedAt ? new Date(values.forwarderReceivedAt) : null,
 		items: items.map((item) => ({
-			sourceCode: item.sourceCode ?? null,
-			description: item.description || "",
-			quantity: Number(item.quantityOrdered),
-			unitPrice: Number(item.unitCost),
-			lineTotal:
-				item.lineTotal ?? Number(item.quantityOrdered) * Number(item.unitCost),
-			expirationDate: item.expirationDate ?? null,
-			matchStatus: item.productId > 0 ? "matched" : "unmatched",
-			productId: item.productId > 0 ? item.productId : null,
-			matchedProduct: item.productId > 0 ? undefined : null,
 			candidateMatches: item.candidateMatches ?? [],
+			description: item.description || "",
+			expirationDate: item.expirationDate ?? null,
+			lineTotal: item.lineTotal ?? Number(item.quantityOrdered) * Number(item.unitCost),
+			matchedProduct: item.productId > 0 ? undefined : null,
+			matchStatus: item.productId > 0 ? "matched" : "unmatched",
 			newProductDraft: item.productId > 0 ? null : buildAiDraft(item),
+			productId: item.productId > 0 ? item.productId : null,
+			quantity: Number(item.quantityOrdered),
+			sourceCode: item.sourceCode ?? null,
+			unitPrice: Number(item.unitCost),
 			warnings: item.warnings ?? [],
 		})),
+		notes: values.notes || null,
+		orderedAt: values.orderedAt ? new Date(values.orderedAt) : null,
+		provider: values.provider,
+		shippedAt: values.shippedAt ? new Date(values.shippedAt) : null,
+		shippingCost: Number(values.shippingCost) || 0,
+		trackingNumber: values.trackingNumber || null,
 	};
 }
 
 export function buildPurchasePayload(
 	values: {
-		provider: PurchaseDetailType["provider"];
+		cancelledAt?: Date | null;
 		externalOrderNumber: string;
-		trackingNumber: string;
-		shippingCost: number;
+		forwarderReceivedAt: string;
 		notes: string;
 		orderedAt: string;
-		shippedAt: string;
-		forwarderReceivedAt: string;
+		provider: PurchaseDetailType["provider"];
 		receivedAt?: Date | null;
-		cancelledAt?: Date | null;
+		shippedAt: string;
+		shippingCost: number;
+		trackingNumber: string;
 	},
-	items: PurchaseLineState[],
-){
+	items: Array<PurchaseLineState>,
+) {
 	return {
-		provider: values.provider,
-		externalOrderNumber: values.externalOrderNumber,
-		trackingNumber: values.trackingNumber || null,
-		shippingCost: Number(values.shippingCost) || 0,
-		notes: values.notes || null,
-		orderedAt: values.orderedAt ? new Date(values.orderedAt) : null,
-		shippedAt: values.shippedAt ? new Date(values.shippedAt) : null,
-		forwarderReceivedAt: values.forwarderReceivedAt
-			? new Date(values.forwarderReceivedAt)
-			: null,
-		receivedAt: values.receivedAt ?? null,
 		cancelledAt: values.cancelledAt ?? null,
+		externalOrderNumber: values.externalOrderNumber,
+		forwarderReceivedAt: values.forwarderReceivedAt ? new Date(values.forwarderReceivedAt) : null,
 		items: items.map((item) => ({
 			id: item.id,
 			productId: Number(item.productId),
 			quantityOrdered: Number(item.quantityOrdered),
 			unitCost: Number(item.unitCost),
 		})),
+		notes: values.notes || null,
+		orderedAt: values.orderedAt ? new Date(values.orderedAt) : null,
+		provider: values.provider,
+		receivedAt: values.receivedAt ?? null,
+		shippedAt: values.shippedAt ? new Date(values.shippedAt) : null,
+		shippingCost: Number(values.shippingCost) || 0,
+		trackingNumber: values.trackingNumber || null,
 	};
 }

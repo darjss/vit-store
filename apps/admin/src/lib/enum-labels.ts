@@ -1,31 +1,23 @@
 import { orderStatusLabels } from "@vit/shared";
-import type {
-	purchaseStatus,
-	status as productStatus,
-} from "@vit/shared/constants";
-import type {
-	OrderStatusType,
-	PaymentProviderType,
-	PaymentStatusType,
-} from "@vit/shared/types";
+import type { purchaseStatus, status as productStatus } from "@vit/shared/constants";
+import type { OrderStatusType, PaymentProviderType, PaymentStatusType } from "@vit/shared/types";
 
 type ProductStatusType = (typeof productStatus)[number];
 type PurchaseStatusType = (typeof purchaseStatus)[number];
 
-export const orderStatusLabel: Record<OrderStatusType, string> =
-	orderStatusLabels;
+export const orderStatusLabel: Record<OrderStatusType, string> = orderStatusLabels;
 
 export const paymentStatusLabel: Record<PaymentStatusType, string> = {
-	pending: "Төлбөр хүлээж буй",
 	customer_claimed_paid: "Шалгах шаардлагатай",
-	success: "Төлбөр баталгаажсан",
 	failed: "Төлбөр амжилтгүй",
+	pending: "Төлбөр хүлээж буй",
+	success: "Төлбөр баталгаажсан",
 };
 
 export const paymentProviderLabel: Record<PaymentProviderType, string> = {
+	cash: "Бэлэн мөнгө",
 	qpay: "QPay",
 	transfer: "Данс",
-	cash: "Бэлэн мөнгө",
 };
 
 export const productStatusLabel: Record<ProductStatusType, string> = {
@@ -35,11 +27,11 @@ export const productStatusLabel: Record<ProductStatusType, string> = {
 };
 
 export const purchaseStatusLabel: Record<PurchaseStatusType, string> = {
+	cancelled: "Цуцлагдсан",
 	draft: "Ноорог",
-	ordered: "Захиалсан",
-	shipped: "Илгээгдсэн",
 	forwarder_received: "Зуучлагч хүлээн авсан",
+	ordered: "Захиалсан",
 	partially_received: "Хэсэгчлэн хүлээн авсан",
 	received: "Хүлээн авсан",
-	cancelled: "Цуцлагдсан",
+	shipped: "Илгээгдсэн",
 };

@@ -29,7 +29,7 @@ export interface PhotoIdentifyResult {
 	facts: string;
 	// Catalog search strings, most specific first, to feed straight into the
 	// #19 `search_products` tool. May be empty when the photo is unreadable.
-	queries: string[];
+	queries: Array<string>;
 }
 
 // What the model is asked to return. We instruct strict JSON so parsing is
@@ -73,23 +73,33 @@ export const parsePhotoVision = (text: string): PhotoIdentifyResult => {
 
 export const extractJsonObject = (text: string): string | undefined => {
 	const start = text.indexOf("{");
-	if (start === -1) return undefined;
+	if (start === -1) {
+		return undefined;
+	}
 	let depth = 0;
 	let inString = false;
 	let escaped = false;
 	for (let i = start; i < text.length; i += 1) {
 		const ch = text[i];
 		if (inString) {
-			if (escaped) escaped = false;
-			else if (ch === "\\") escaped = true;
-			else if (ch === '"') inString = false;
+			if (escaped) {
+				escaped = false;
+			} else if (ch === "\\") {
+				escaped = true;
+			} else if (ch === '"') {
+				inString = false;
+			}
 			continue;
 		}
-		if (ch === '"') inString = true;
-		else if (ch === "{") depth += 1;
-		else if (ch === "}") {
+		if (ch === '"') {
+			inString = true;
+		} else if (ch === "{") {
+			depth += 1;
+		} else if (ch === "}") {
 			depth -= 1;
-			if (depth === 0) return text.slice(start, i + 1);
+			if (depth === 0) {
+				return text.slice(start, i + 1);
+			}
 		}
 	}
 	return undefined;
@@ -111,7 +121,6 @@ export interface PhotoIdentifyToolDeps {
 // the exact same card path as #19 text search.
 export const buildPhotoIdentifyTool = (deps: PhotoIdentifyToolDeps) =>
 	defineTool({
-		name: PHOTO_IDENTIFY_TOOL_NAME,
 		description:
 			"Identify the product in a customer-sent photo. Call this whenever the dispatch input includes an imageKey (the customer sent a picture instead of text). Pass that imageKey; it returns text facts about the product plus suggested catalog search queries. After calling it, call search_products with the most specific suggested query to show the matching product cards.",
 		input: v.object({
@@ -123,22 +132,23 @@ export const buildPhotoIdentifyTool = (deps: PhotoIdentifyToolDeps) =>
 				),
 			),
 		}),
+		name: PHOTO_IDENTIFY_TOOL_NAME,
 		async run({ input }) {
 			const image = await deps.loadImage(input.imageKey);
 			if (image === undefined) {
 				return {
-					imageKey: input.imageKey,
 					available: false,
 					facts: "The photo is no longer available.",
+					imageKey: input.imageKey,
 					queries: [],
 				};
 			}
 			const text = await deps.runVision(image, PHOTO_IDENTIFY_PROMPT);
 			const result = parsePhotoVision(text);
 			return {
-				imageKey: input.imageKey,
 				available: true,
 				facts: result.facts,
+				imageKey: input.imageKey,
 				queries: result.queries,
 			};
 		},

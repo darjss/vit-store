@@ -16,8 +16,7 @@ import { observe } from "@flue/runtime";
 // (each user message = N sequential turns), and the cache fields show how much of
 // the input is the discounted cached prefix vs full-price fresh tokens.
 
-const size = (value: unknown): number =>
-	value === undefined ? 0 : JSON.stringify(value).length;
+const size = (value: unknown): number => (value === undefined ? 0 : JSON.stringify(value).length);
 
 // Cache-hit % over an input split into fresh vs cached-prefix tokens.
 const cacheLine = (u: Record<string, any> | undefined): string => {
@@ -52,10 +51,11 @@ observe((event) => {
 			console.log(
 				`[flue.tool] ✓ ${e.toolName} ${e.durationMs ?? "?"}ms result≈${size(e.result)}ch${e.isError ? " ERROR" : ""}${tag(e)}`,
 			);
-			if (e.isError)
+			if (e.isError) {
 				console.error(
 					`[flue.err] tool ${e.toolName}: ${JSON.stringify(e.result ?? e.error).slice(0, 400)}${tag(e)}`,
 				);
+			}
 			break;
 		// The whole user-message → reply operation: wall-clock + aggregate usage.
 		case "operation":
@@ -76,10 +76,11 @@ observe((event) => {
 			);
 			break;
 		case "submission_settled":
-			if (e.outcome === "failed")
+			if (e.outcome === "failed") {
 				console.error(
 					`[flue.err] submission failed: ${e.error?.message ?? e.error?.type ?? "?"}${tag(e)}`,
 				);
+			}
 			break;
 		// Tool/schema problems that silently degrade behavior.
 		case "tool_input_validation":
@@ -90,8 +91,9 @@ observe((event) => {
 			console.warn(`[flue.warn] ${e.type} ${e.toolName ?? ""}${tag(e)}`);
 			break;
 		case "log":
-			if (e.level === "warn" || e.level === "error")
+			if (e.level === "warn" || e.level === "error") {
 				console.log(`[flue.log] ${e.level} ${e.message}${tag(e)}`);
+			}
 			break;
 	}
 });

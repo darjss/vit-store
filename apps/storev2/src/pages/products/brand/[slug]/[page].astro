@@ -12,7 +12,7 @@ import { WASH_BG, washFor } from "@/lib/wash";
 const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
 
-const { slug, page: pageParam } = Astro.params;
+const { page: pageParam, slug } = Astro.params;
 if (!slug || !pageParam || !/^\d+$/.test(pageParam)) {
 	return Astro.redirect("/404");
 }
@@ -50,11 +50,11 @@ const brandLogoOnError =
 	"this.outerHTML='<div class=&quot;h-12 w-12 sm:h-16 sm:w-16 shrink-0 border border-border bg-card rounded-xl flex items-center justify-center font-bold font-display text-sm sm:text-lg&quot;>'+this.alt.substring(0,2).toUpperCase()+'</div>';this.onerror=null";
 
 const { items: products, pagination } = await api.product.getPaginatedProducts.query({
+	brandId: brand.id,
 	page,
 	pageSize: PAGE_SIZE,
-	brandId: brand.id,
-	sortField,
 	sortDirection,
+	sortField,
 });
 if (page > pagination.totalPages) {
 	return Astro.redirect("/404");
@@ -75,29 +75,29 @@ const breadcrumbSchema = {
 	"@context": "https://schema.org",
 	"@type": "BreadcrumbList",
 	itemListElement: [
-		{ "@type": "ListItem", position: 1, name: "Нүүр", item: SITE_URL },
-		{ "@type": "ListItem", position: 2, name: "Бүтээгдэхүүн", item: `${SITE_URL}/products` },
-		{ "@type": "ListItem", position: 3, name: brand.name, item: `${SITE_URL}${baseUrl}/1` },
-		...(page > 1 ? [{ "@type": "ListItem", position: 4, name: `Хуудас ${page}`, item: `${SITE_URL}${baseUrl}/${page}` }] : []),
+		{ "@type": "ListItem", item: SITE_URL, name: "Нүүр", position: 1 },
+		{ "@type": "ListItem", item: `${SITE_URL}/products`, name: "Бүтээгдэхүүн", position: 2 },
+		{ "@type": "ListItem", item: `${SITE_URL}${baseUrl}/1`, name: brand.name, position: 3 },
+		...(page > 1 ? [{ "@type": "ListItem", item: `${SITE_URL}${baseUrl}/${page}`, name: `Хуудас ${page}`, position: 4 }] : []),
 	],
 };
 
 const itemListSchema = {
 	"@context": "https://schema.org",
 	"@type": "ItemList",
-	name: brand.name,
-	numberOfItems: pagination.totalCount,
 	itemListElement: products.map((p, i) => ({
 		"@type": "ListItem",
+		name: p.name,
 		position: (page - 1) * PAGE_SIZE + i + 1,
 		url: `${SITE_URL}/products/${p.slug}-${p.id}`,
-		name: p.name,
 	})),
+	name: brand.name,
+	numberOfItems: pagination.totalCount,
 };
 
 Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
+	maxAge: 86_400,
+	swr: 604_800,
 	tags: ["site-shell", "catalog", `brand-${brand.id}`],
 });
 ---

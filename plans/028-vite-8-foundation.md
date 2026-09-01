@@ -15,7 +15,7 @@ catalog:
   vite: npm:@voidzero-dev/vite-plus-core@^0.2.5
   vite-plus: ^0.2.5
 overrides:
-  vite: 'catalog:'
+  vite: "catalog:"
 ```
 
 vit-store uses **Bun workspaces** — same idea in root `package.json` `catalog` + `overrides`.
@@ -67,37 +67,38 @@ These must move together or builds/typecheck break.
 
 **Vite stack**
 
-| Package | Current | Target | Where |
-| --- | --- | --- | --- |
-| `vite` | ^6.2.2 | `@voidzero-dev/vite-plus-core@^0.2.5` via catalog | admin, storev2, root overrides |
-| `@vitejs/plugin-react` | ^4.3.4 | ^6.1.1 | admin |
-| `vite-tsconfig-paths` | ^5.1.4 | ^6.1.1 | admin |
-| `@tailwindcss/vite` | ^4.0.15 / ^4 | ^4.3.3 | admin, storev2 (store-kit pin) |
-| `tailwindcss` | ^4.0.15 / ^4 | ^4.3.3 | admin, storev2 |
-| `@tanstack/router-plugin` | ^1.114.27 | ^1.168.x | admin — peer `>=20.19` |
-| `@tanstack/react-router` | ^1.114.25 | ^1.170.x | admin (match plugin) |
-| `astro` | ^7.0.6 | ^7.2.10 | storev2 |
-| `@astrojs/cloudflare` | ^14.1.1 | ^14.2.6 | storev2 |
-| `@astrojs/solid-js` | ^7.0.1 | ^7.0.2 | storev2 |
-| `vite-plugin-pwa` | ^1.0.1 | ^1.3.0 | admin — peer `>=16` |
+| Package                   | Current      | Target                                            | Where                          |
+| ------------------------- | ------------ | ------------------------------------------------- | ------------------------------ |
+| `vite`                    | ^6.2.2       | `@voidzero-dev/vite-plus-core@^0.2.5` via catalog | admin, storev2, root overrides |
+| `@vitejs/plugin-react`    | ^4.3.4       | ^6.1.1                                            | admin                          |
+| `vite-tsconfig-paths`     | ^5.1.4       | ^6.1.1                                            | admin                          |
+| `@tailwindcss/vite`       | ^4.0.15 / ^4 | ^4.3.3                                            | admin, storev2 (store-kit pin) |
+| `tailwindcss`             | ^4.0.15 / ^4 | ^4.3.3                                            | admin, storev2                 |
+| `@tanstack/router-plugin` | ^1.114.27    | ^1.168.x                                          | admin — peer `>=20.19`         |
+| `@tanstack/react-router`  | ^1.114.25    | ^1.170.x                                          | admin (match plugin)           |
+| `astro`                   | ^7.0.6       | ^7.2.10                                           | storev2                        |
+| `@astrojs/cloudflare`     | ^14.1.1      | ^14.2.6                                           | storev2                        |
+| `@astrojs/solid-js`       | ^7.0.1       | ^7.0.2                                            | storev2                        |
+| `vite-plugin-pwa`         | ^1.0.1       | ^1.3.0                                            | admin — peer `>=16`            |
 
 **TypeScript 7 stack**
 
-| Package | Current | Target | Where |
-| --- | --- | --- | --- |
-| `typescript` | ^5.8–5.9 | ^7.0.2 | **catalog** — single source of truth |
-| `typescript` (direct pins) | ^5.8.3, ^5.9.3, `^5` | `catalog:` | root devDep, admin, storev2, api, shared, assistant |
-| `@types/node` | ^22.x | ^26.4.0 | root, admin, server — align with TS 7 / Node 22+ peers |
+| Package                    | Current              | Target     | Where                                                  |
+| -------------------------- | -------------------- | ---------- | ------------------------------------------------------ |
+| `typescript`               | ^5.8–5.9             | ^7.0.2     | **catalog** — single source of truth                   |
+| `typescript` (direct pins) | ^5.8.3, ^5.9.3, `^5` | `catalog:` | root devDep, admin, storev2, api, shared, assistant    |
+| `@types/node`              | ^22.x                | ^26.4.0    | root, admin, server — align with TS 7 / Node 22+ peers |
 
 **Drop `@typescript/native-preview`.** TS 7.0 GA ships the Go native compiler as the normal `typescript` package — same install, `tsc` binary (not a separate `tsgo`). The preview package was for beta/nightly only.
 
-| Before | After |
-| --- | --- |
-| `"check-types": "tsgo --noEmit"` | `"check-types": "tsc --noEmit"` |
-| root devDep `@typescript/native-preview` | remove |
+| Before                                      | After                                 |
+| ------------------------------------------- | ------------------------------------- |
+| `"check-types": "tsgo --noEmit"`            | `"check-types": "tsc --noEmit"`       |
+| root devDep `@typescript/native-preview`    | remove                                |
 | `.vscode` `typescript.experimental.useTsgo` | remove — use workspace `typescript@7` |
 
 **Astro caveat:** `astro check` on storev2 may still rely on TS 6 programmatic APIs until Astro/Volar fully adopts TS 7.1's stable compiler API. Spike during 028:
+
 - If `astro check` passes on catalog TS 7 → done.
 - If not → add `@typescript/typescript6` for storev2 only, or split `check-types` (packages `tsc`, storev2 `astro check` on 6 until 7.1).
 
@@ -105,13 +106,13 @@ Do **not** keep native-preview alongside TS 7 — redundant and confusing.
 
 **Catalog + tooling minors** (same PR):
 
-| Catalog / package | Current | Target |
-| --- | --- | --- |
-| `@trpc/server`, `@trpc/client` | ^11.4.3 | ^11.18.0 |
-| `hono` | ^4.8.12 | ^4.13.5 |
-| `valibot` | ^1.1.0 | ^1.4.2 |
-| `dotenv` | ^17.2.1 | ^17.4.2 |
-| `wrangler` (all workspaces) | ^4.101.0 | ^4.127.1 |
+| Catalog / package              | Current  | Target   |
+| ------------------------------ | -------- | -------- |
+| `@trpc/server`, `@trpc/client` | ^11.4.3  | ^11.18.0 |
+| `hono`                         | ^4.8.12  | ^4.13.5  |
+| `valibot`                      | ^1.1.0   | ^1.4.2   |
+| `dotenv`                       | ^17.2.1  | ^17.4.2  |
+| `wrangler` (all workspaces)    | ^4.101.0 | ^4.127.1 |
 
 **Root `overrides`** — dedupe compiler + vite tree:
 
@@ -125,43 +126,43 @@ Do **not** keep native-preview alongside TS 7 — redundant and confusing.
 
 #### Tier B — upgrade in 028 if time (safe minors, no major)
 
-| Package | Target | Notes |
-| --- | --- | --- |
-| `react`, `react-dom` | ^19.2.8 | admin |
-| `@tanstack/react-query` + devtools | ^5.102.8 | admin |
-| `miniflare` | ^4.20260730.0 | root, storev2 — skip v5 alpha |
-| `drizzle-orm` / `drizzle-kit` | ^0.45.2 / ^0.31.10 | catalog |
-| `turbo` | ^2.10.12 | root |
-| `superjson` | ^2.2.6 | several packages |
+| Package                            | Target             | Notes                         |
+| ---------------------------------- | ------------------ | ----------------------------- |
+| `react`, `react-dom`               | ^19.2.8            | admin                         |
+| `@tanstack/react-query` + devtools | ^5.102.8           | admin                         |
+| `miniflare`                        | ^4.20260730.0      | root, storev2 — skip v5 alpha |
+| `drizzle-orm` / `drizzle-kit`      | ^0.45.2 / ^0.31.10 | catalog                       |
+| `turbo`                            | ^2.10.12           | root                          |
+| `superjson`                        | ^2.2.6             | several packages              |
 
 #### Tier C — defer (separate PRs, not 028)
 
-| Package | Why defer |
-| --- | --- |
-| `@cloudflare/workers-types` ^5 | Major across all apps — test wrangler compat first; can follow TS 7 PR if types break |
-| `lucide-react` ^1 | Icon API break — admin only |
-| `nanoid` ^6 | Major in admin, server, api |
-| `react-day-picker` ^10 | Admin UI break |
-| `@ai-sdk/google` ^4, `ai` ^7 | API package — agent/AI path |
-| `ky` ^2 | **Breaking** — see [ky v2 note](#ky-v2-defer) below |
-| `@flue/*` ^2 | Agent + assistant — Flue beta migration |
-| `agents` ^0.22 | Agent Cloudflare SDK |
-| `astro-seo` ^1, `motion` ^13 | Storefront — unrelated to Vite 8 |
-| `tsdown` ^0.22 | Plan 027 `vp pack` replaces this |
-| `@biomejs/biome` | Removed in Plan 027 |
-| `oxlint` ^1.80 | Plan 027 with `@nkzw/oxlint-config` — pin with vite-plus oxlint version then |
-| GitHub Actions checkout/cache v7/v6 | CI hygiene PR |
+| Package                             | Why defer                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `@cloudflare/workers-types` ^5      | Major across all apps — test wrangler compat first; can follow TS 7 PR if types break |
+| `lucide-react` ^1                   | Icon API break — admin only                                                           |
+| `nanoid` ^6                         | Major in admin, server, api                                                           |
+| `react-day-picker` ^10              | Admin UI break                                                                        |
+| `@ai-sdk/google` ^4, `ai` ^7        | API package — agent/AI path                                                           |
+| `ky` ^2                             | **Breaking** — see [ky v2 note](#ky-v2-defer) below                                   |
+| `@flue/*` ^2                        | Agent + assistant — Flue beta migration                                               |
+| `agents` ^0.22                      | Agent Cloudflare SDK                                                                  |
+| `astro-seo` ^1, `motion` ^13        | Storefront — unrelated to Vite 8                                                      |
+| `tsdown` ^0.22                      | Plan 027 `vp pack` replaces this                                                      |
+| `@biomejs/biome`                    | Removed in Plan 027                                                                   |
+| `oxlint` ^1.80                      | Plan 027 with `@nkzw/oxlint-config` — pin with vite-plus oxlint version then          |
+| GitHub Actions checkout/cache v7/v6 | CI hygiene PR                                                                         |
 
 #### Tier D — do not upgrade (hold)
 
-| Package | Reason |
-| --- | --- |
-| `alchemy@0.93.12` | Patched (`patches/alchemy@0.93.12.patch`) |
-| `@solid-primitives/storage@4.3.3` | Patched |
-| `@solar-icons/solid@2.0.0-beta.3` | Patched |
-| `@solid-primitives/event-listener` | Root override pinned 2.4.6 |
-| `zod@4` | Intentional v4 pin at root |
-| `khaan-client` | GitHub SHA pin |
+| Package                            | Reason                                    |
+| ---------------------------------- | ----------------------------------------- |
+| `alchemy@0.93.12`                  | Patched (`patches/alchemy@0.93.12.patch`) |
+| `@solid-primitives/storage@4.3.3`  | Patched                                   |
+| `@solar-icons/solid@2.0.0-beta.3`  | Patched                                   |
+| `@solid-primitives/event-listener` | Root override pinned 2.4.6                |
+| `zod@4`                            | Intentional v4 pin at root                |
+| `khaan-client`                     | GitHub SHA pin                            |
 
 ### 028 upgrade workflow
 
@@ -178,14 +179,14 @@ Do **not** keep native-preview alongside TS 7 — redundant and confusing.
 
 Yes, **ky 2 is a breaking major** ([release notes](https://github.com/sindresorhus/ky/releases/tag/v2.0.0)). Not in 028 scope — separate small PR after Vite/TS land.
 
-| Breaking change | vit-store impact |
-| --- | --- |
-| `prefixUrl` → `prefix` (or `baseUrl`) | `qpay.ts`, `delivery/index.ts` |
+| Breaking change                                       | vit-store impact                                               |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| `prefixUrl` → `prefix` (or `baseUrl`)                 | `qpay.ts`, `delivery/index.ts`                                 |
 | Hooks get `{request, options, ...}` not separate args | both clients — `beforeRequest`, `afterResponse`, `beforeError` |
-| `HTTPError`: body pre-consumed → use `error.data` | `qpay.ts` reads `error.response.text()` in 3 places |
-| `beforeError` receives all error types | narrow with `isHTTPError` from ky |
-| Node `>=22` | fine (Bun 1.4, Workers) |
-| `.json()` throws on empty / 204 | audit call sites |
+| `HTTPError`: body pre-consumed → use `error.data`     | `qpay.ts` reads `error.response.text()` in 3 places            |
+| `beforeError` receives all error types                | narrow with `isHTTPError` from ky                              |
+| Node `>=22`                                           | fine (Bun 1.4, Workers)                                        |
+| `.json()` throws on empty / 204                       | audit call sites                                               |
 
 **Files:** `packages/api/src/lib/payments/qpay.ts`, `packages/api/src/lib/integrations/delivery/index.ts` (heavy); `sms/client.ts` (minimal `ky.create` — easy).
 
@@ -195,12 +196,12 @@ Yes, **ky 2 is a breaking major** ([release notes](https://github.com/sindresorh
 
 ## Current Vite touchpoints
 
-| Location | Vite role | Version today |
-| --- | --- | --- |
-| `apps/admin/vite.config.ts` | React SPA build; Alchemy `dev:vite` | `^6.2.2` direct dep |
-| `apps/admin/alchemy.run.ts` | `Vite()` resource → `bun run dev:vite` | indirect |
-| `apps/storev2/astro.config.mjs` | `vite: { plugins: [tailwindcss()] }` | Astro-bundled (no explicit vite dep) |
-| Plugins | `@tailwindcss/vite`, `@vitejs/plugin-react`, `@tanstack/router-plugin`, `vite-plugin-pwa`, `vite-tsconfig-paths` | must resolve against Vite 8 |
+| Location                        | Vite role                                                                                                        | Version today                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `apps/admin/vite.config.ts`     | React SPA build; Alchemy `dev:vite`                                                                              | `^6.2.2` direct dep                  |
+| `apps/admin/alchemy.run.ts`     | `Vite()` resource → `bun run dev:vite`                                                                           | indirect                             |
+| `apps/storev2/astro.config.mjs` | `vite: { plugins: [tailwindcss()] }`                                                                             | Astro-bundled (no explicit vite dep) |
+| Plugins                         | `@tailwindcss/vite`, `@vitejs/plugin-react`, `@tanstack/router-plugin`, `vite-plugin-pwa`, `vite-tsconfig-paths` | must resolve against Vite 8          |
 
 **Not on Vite:** server (tsdown), agent (flue), packages (tsdown).
 
@@ -227,13 +228,13 @@ Only one `from "vite"` import in the repo: `apps/admin/vite.config.ts`.
 
 Every workspace **`typescript` devDependency → `"catalog:"`** (no stray `^5` pins):
 
-| Package | Today | Target |
-| --- | --- | --- |
-| root | ^5.8.3 | catalog: |
-| admin | ^5.8.3 | catalog: |
-| storev2 | ^5.9.3 | catalog: |
-| server, agent | catalog: | catalog: (bump catalog to 7) |
-| @vit/api, @vit/shared, @vit/assistant | ^5 / catalog | catalog: |
+| Package                               | Today        | Target                       |
+| ------------------------------------- | ------------ | ---------------------------- |
+| root                                  | ^5.8.3       | catalog:                     |
+| admin                                 | ^5.8.3       | catalog:                     |
+| storev2                               | ^5.9.3       | catalog:                     |
+| server, agent                         | catalog:     | catalog: (bump catalog to 7) |
+| @vit/api, @vit/shared, @vit/assistant | ^5 / catalog | catalog:                     |
 
 ```json
 // apps/admin/package.json devDependencies
@@ -295,6 +296,7 @@ Apply **Tier A** plugin bumps from taze (`@vitejs/plugin-react`, `vite-tsconfig-
 3. `cd apps/admin && bun run build` — fix breakages.
 
 Known Vite 8 deltas (covered by Tier A taze targets):
+
 - `@vitejs/plugin-react` ^6.x required for Vite 8
 - `@tanstack/router-plugin` — large minor jump; peer `>=20.19`
 - `vite-plugin-pwa` ^1.3 — check PWA dev still works
@@ -321,14 +323,14 @@ Do **not** change Alchemy scripts in this phase.
 
 Run taze Tier A first; mark OK after smoke build.
 
-| Package | taze target | Vite 8 OK? | Action if not |
-| --- | --- | --- | --- |
-| `@tailwindcss/vite` | ^4.3.3 | TBD | — |
-| `@vitejs/plugin-react` | ^6.1.1 | TBD | — |
-| `@tanstack/router-plugin` | ^1.168.x | TBD | check routeTree.gen |
-| `vite-plugin-pwa` | ^1.3.0 | TBD | defer PWA dev if broken |
-| `vite-tsconfig-paths` | ^6.1.1 | TBD | — |
-| `@astrojs/cloudflare` + Astro 7.2 | ^14.2.6 / ^7.2.10 | TBD | — |
+| Package                           | taze target       | Vite 8 OK? | Action if not           |
+| --------------------------------- | ----------------- | ---------- | ----------------------- |
+| `@tailwindcss/vite`               | ^4.3.3            | TBD        | —                       |
+| `@vitejs/plugin-react`            | ^6.1.1            | TBD        | —                       |
+| `@tanstack/router-plugin`         | ^1.168.x          | TBD        | check routeTree.gen     |
+| `vite-plugin-pwa`                 | ^1.3.0            | TBD        | defer PWA dev if broken |
+| `vite-tsconfig-paths`             | ^6.1.1            | TBD        | —                       |
+| `@astrojs/cloudflare` + Astro 7.2 | ^14.2.6 / ^7.2.10 | TBD        | —                       |
 
 Document results in PR description. Re-run `bunx taze -r major --group` post-merge to refresh deferred Tier C list.
 
@@ -364,6 +366,7 @@ Keeps 028 honest without requiring full vp yet.
 ## Rollback
 
 If admin or storev2 breaks on Vite 8:
+
 1. Revert catalog + overrides + package.json changes.
 2. File blockers (plugin name, error) before retrying.
 3. Do **not** proceed to Plan 027 until green.

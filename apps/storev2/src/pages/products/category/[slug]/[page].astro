@@ -13,7 +13,7 @@ const PAGE_SIZE = 24;
 const SITE_URL = "https://amerikvitamin.mn";
 
 
-const { slug, page: pageParam } = Astro.params;
+const { page: pageParam, slug } = Astro.params;
 if (!slug || !pageParam || !/^\d+$/.test(pageParam)) {
 	return Astro.redirect("/404");
 }
@@ -44,11 +44,11 @@ if (!category) {
 }
 
 const { items: products, pagination } = await api.product.getPaginatedProducts.query({
+	categoryId: category.id,
 	page,
 	pageSize: PAGE_SIZE,
-	categoryId: category.id,
-	sortField,
 	sortDirection,
+	sortField,
 });
 if (page > pagination.totalPages) {
 	return Astro.redirect("/404");
@@ -58,14 +58,14 @@ const baseUrl = `/products/category/${slug}`;
 const washClass = WASH_BG[washFor(category.id)];
 const pageUrl = `${SITE_URL}${baseUrl}/${page}/`;
 
-const { seoTitle, seoDescription, intro, faqs } = resolveCategorySeo({
-	slug,
-	name: category.name,
-	seoTitle: category.seoTitle,
-	seoDescription: category.seoDescription,
+const { faqs, intro, seoDescription, seoTitle } = resolveCategorySeo({
 	description: category.description,
-	totalCount: pagination.totalCount,
+	name: category.name,
 	page,
+	seoDescription: category.seoDescription,
+	seoTitle: category.seoTitle,
+	slug,
+	totalCount: pagination.totalCount,
 	totalPages: pagination.totalPages,
 });
 
@@ -73,35 +73,35 @@ const breadcrumbSchema = {
 	"@context": "https://schema.org",
 	"@type": "BreadcrumbList",
 	itemListElement: [
-		{ "@type": "ListItem", position: 1, name: "Нүүр", item: SITE_URL },
-		{ "@type": "ListItem", position: 2, name: "Бүтээгдэхүүн", item: `${SITE_URL}/products` },
-		{ "@type": "ListItem", position: 3, name: category.name, item: `${SITE_URL}${baseUrl}/1/` },
-		...(page > 1 ? [{ "@type": "ListItem", position: 4, name: `Хуудас ${page}`, item: pageUrl }] : []),
+		{ "@type": "ListItem", item: SITE_URL, name: "Нүүр", position: 1 },
+		{ "@type": "ListItem", item: `${SITE_URL}/products`, name: "Бүтээгдэхүүн", position: 2 },
+		{ "@type": "ListItem", item: `${SITE_URL}${baseUrl}/1/`, name: category.name, position: 3 },
+		...(page > 1 ? [{ "@type": "ListItem", item: pageUrl, name: `Хуудас ${page}`, position: 4 }] : []),
 	],
 };
 
 const collectionSchema = {
 	"@context": "https://schema.org",
 	"@type": "CollectionPage",
-	name: seoTitle,
-	description: seoDescription,
-	url: pageUrl,
-	isPartOf: { "@type": "WebSite", name: "Америк Витамин", url: SITE_URL },
 	about: category.name,
+	description: seoDescription,
 	inLanguage: "mn-MN",
+	isPartOf: { "@type": "WebSite", name: "Америк Витамин", url: SITE_URL },
+	name: seoTitle,
+	url: pageUrl,
 };
 
 const itemListSchema = {
 	"@context": "https://schema.org",
 	"@type": "ItemList",
-	name: category.name,
-	numberOfItems: pagination.totalCount,
 	itemListElement: products.map((p, i) => ({
 		"@type": "ListItem",
+		name: p.name,
 		position: (page - 1) * PAGE_SIZE + i + 1,
 		url: `${SITE_URL}/products/${p.slug}-${p.id}`,
-		name: p.name,
 	})),
+	name: category.name,
+	numberOfItems: pagination.totalCount,
 };
 
 const faqSchema =
@@ -111,17 +111,17 @@ const faqSchema =
 				"@type": "FAQPage",
 				mainEntity: faqs.map((faq) => ({
 					"@type": "Question",
-					name: faq.question,
 					acceptedAnswer: {
 						"@type": "Answer",
 						text: faq.answer,
 					},
+					name: faq.question,
 				})),
 			}
 		: null;
 Astro.cache.set({
-	maxAge: 86400,
-	swr: 604800,
+	maxAge: 86_400,
+	swr: 604_800,
 	tags: ["site-shell", "catalog", `category-${category.id}`],
 });
 ---

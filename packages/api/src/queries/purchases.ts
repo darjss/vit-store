@@ -1,8 +1,4 @@
-import type {
-	addPurchaseType,
-	editPurchaseType,
-	receivePurchaseType,
-} from "@vit/shared/schema";
+import type { addPurchaseType, editPurchaseType, receivePurchaseType } from "@vit/shared/schema";
 import type { SQL } from "drizzle-orm";
 import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/db/client";
@@ -13,10 +9,7 @@ import {
 	PurchaseReceiptsTable,
 	PurchasesTable,
 } from "~/db/schema";
-import {
-	applyStockTransition,
-	type StockTransition,
-} from "~/lib/stock/transition";
+import { applyStockTransition, type StockTransition } from "~/lib/stock/transition";
 import type { TransactionType } from "~/lib/types";
 
 type Transaction = TransactionType;
@@ -32,10 +25,12 @@ type PurchaseStatus =
 	| "cancelled";
 
 function getReceivedQuantity(
-	receiptItems: Array<{ quantityReceived: number; deletedAt: Date | null }>,
+	receiptItems: Array<{ deletedAt: Date | null; quantityReceived: number }>,
 ) {
 	return receiptItems.reduce((sum, item) => {
-		if (item.deletedAt) return sum;
+		if (item.deletedAt) {
+			return sum;
+		}
 		return sum + item.quantityReceived;
 	}, 0);
 }
@@ -51,17 +46,27 @@ function derivePurchaseStatus(purchase: PurchaseRecord): PurchaseStatus {
 
 	const allReceived =
 		itemTotals.length > 0 &&
-		itemTotals.every(
-			(item) => item.ordered > 0 && item.received >= item.ordered,
-		);
+		itemTotals.every((item) => item.ordered > 0 && item.received >= item.ordered);
 	const anyReceived = itemTotals.some((item) => item.received > 0);
 
-	if (purchase.cancelledAt) return "cancelled";
-	if (allReceived && purchase.receivedAt) return "received";
-	if (anyReceived) return "partially_received";
-	if (purchase.forwarderReceivedAt) return "forwarder_received";
-	if (purchase.shippedAt) return "shipped";
-	if (purchase.orderedAt) return "ordered";
+	if (purchase.cancelledAt) {
+		return "cancelled";
+	}
+	if (allReceived && purchase.receivedAt) {
+		return "received";
+	}
+	if (anyReceived) {
+		return "partially_received";
+	}
+	if (purchase.forwarderReceivedAt) {
+		return "forwarder_received";
+	}
+	if (purchase.shippedAt) {
+		return "shipped";
+	}
+	if (purchase.orderedAt) {
+		return "ordered";
+	}
 	return "draft";
 }
 
@@ -71,15 +76,15 @@ function shapePurchase(purchase: PurchaseRecord) {
 		.map((item) => {
 			const quantityReceived = getReceivedQuantity(item.receiptItems);
 			return {
+				createdAt: item.createdAt,
 				id: item.id,
-				productId: item.productId,
+				lineTotal: item.unitCost * item.quantityOrdered,
 				product: item.product,
+				productId: item.productId,
 				quantityOrdered: item.quantityOrdered,
 				quantityReceived,
 				quantityRemaining: Math.max(item.quantityOrdered - quantityReceived, 0),
 				unitCost: item.unitCost,
-				lineTotal: item.unitCost * item.quantityOrdered,
-				createdAt: item.createdAt,
 				updatedAt: item.updatedAt,
 			};
 		});
@@ -87,43 +92,43 @@ function shapePurchase(purchase: PurchaseRecord) {
 	const receipts = purchase.receipts
 		.filter((receipt) => !receipt.deletedAt)
 		.map((receipt) => ({
-			id: receipt.id,
-			receivedAt: receipt.receivedAt,
-			notes: receipt.notes,
 			createdAt: receipt.createdAt,
+			id: receipt.id,
 			items: receipt.items
 				.filter((item) => !item.deletedAt)
 				.map((item) => ({
 					id: item.id,
-					purchaseItemId: item.purchaseItemId,
-					quantityReceived: item.quantityReceived,
 					productId: item.purchaseItem.productId,
 					productName: item.purchaseItem.product.name,
+					purchaseItemId: item.purchaseItemId,
+					quantityReceived: item.quantityReceived,
 				})),
+			notes: receipt.notes,
+			receivedAt: receipt.receivedAt,
 		}));
 
 	const merchandiseTotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
 
 	return {
-		id: purchase.id,
-		provider: purchase.provider,
-		externalOrderNumber: purchase.externalOrderNumber,
-		trackingNumber: purchase.trackingNumber,
-		shippingCost: purchase.shippingCost,
-		notes: purchase.notes,
-		orderedAt: purchase.orderedAt,
-		shippedAt: purchase.shippedAt,
-		forwarderReceivedAt: purchase.forwarderReceivedAt,
-		receivedAt: purchase.receivedAt,
 		cancelledAt: purchase.cancelledAt,
 		createdAt: purchase.createdAt,
-		updatedAt: purchase.updatedAt,
-		items,
-		receipts,
+		externalOrderNumber: purchase.externalOrderNumber,
+		forwarderReceivedAt: purchase.forwarderReceivedAt,
+		id: purchase.id,
 		itemCount: items.length,
+		items,
 		merchandiseTotal,
-		totalCost: merchandiseTotal + purchase.shippingCost,
+		notes: purchase.notes,
+		orderedAt: purchase.orderedAt,
+		provider: purchase.provider,
+		receipts,
+		receivedAt: purchase.receivedAt,
+		shippedAt: purchase.shippedAt,
+		shippingCost: purchase.shippingCost,
 		status: derivePurchaseStatus(purchase),
+		totalCost: merchandiseTotal + purchase.shippingCost,
+		trackingNumber: purchase.trackingNumber,
+		updatedAt: purchase.updatedAt,
 	};
 }
 
@@ -153,12 +158,12 @@ async function fetchPurchases(where?: SQL<unknown>) {
 						},
 					},
 					receiptItems: {
-						where: isNull(PurchaseReceiptItemsTable.deletedAt),
 						columns: {
+							deletedAt: true,
 							id: true,
 							quantityReceived: true,
-							deletedAt: true,
 						},
+						where: isNull(PurchaseReceiptItemsTable.deletedAt),
 					},
 				},
 			},
@@ -195,29 +200,26 @@ async function syncPurchaseItems(
 	items: addPurchaseType["items"] | editPurchaseType["items"],
 ) {
 	const existingItems = await tx.query.PurchaseItemsTable.findMany({
-		where: and(
-			eq(PurchaseItemsTable.purchaseId, purchaseId),
-			isNull(PurchaseItemsTable.deletedAt),
-		),
+		where: and(eq(PurchaseItemsTable.purchaseId, purchaseId), isNull(PurchaseItemsTable.deletedAt)),
 		with: {
 			receiptItems: {
-				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 				columns: {
 					quantityReceived: true,
 				},
+				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 			},
 		},
 	});
 
 	const existingById = new Map(existingItems.map((item) => [item.id, item]));
 	const incomingIds = new Set(
-		items
-			.map((item) => item.id)
-			.filter((itemId): itemId is number => typeof itemId === "number"),
+		items.map((item) => item.id).filter((itemId): itemId is number => typeof itemId === "number"),
 	);
 
 	for (const existingItem of existingItems) {
-		if (incomingIds.has(existingItem.id)) continue;
+		if (incomingIds.has(existingItem.id)) {
+			continue;
+		}
 		const receivedQuantity = existingItem.receiptItems.reduce(
 			(sum, receiptItem) => sum + receiptItem.quantityReceived,
 			0,
@@ -242,25 +244,23 @@ async function syncPurchaseItems(
 				0,
 			);
 			if (item.quantityOrdered < receivedQuantity) {
-				throw new Error(
-					"Cannot reduce ordered quantity below received quantity",
-				);
+				throw new Error("Cannot reduce ordered quantity below received quantity");
 			}
 			await tx
 				.update(PurchaseItemsTable)
 				.set({
+					deletedAt: null,
 					productId: item.productId,
 					quantityOrdered: item.quantityOrdered,
 					unitCost: item.unitCost,
-					deletedAt: null,
 				})
 				.where(eq(PurchaseItemsTable.id, item.id));
 			continue;
 		}
 
 		await tx.insert(PurchaseItemsTable).values({
-			purchaseId,
 			productId: item.productId,
+			purchaseId,
 			quantityOrdered: item.quantityOrdered,
 			unitCost: item.unitCost,
 		});
@@ -269,16 +269,13 @@ async function syncPurchaseItems(
 
 async function updatePurchaseReceivedAt(tx: Transaction, purchaseId: number) {
 	const items = await tx.query.PurchaseItemsTable.findMany({
-		where: and(
-			eq(PurchaseItemsTable.purchaseId, purchaseId),
-			isNull(PurchaseItemsTable.deletedAt),
-		),
+		where: and(eq(PurchaseItemsTable.purchaseId, purchaseId), isNull(PurchaseItemsTable.deletedAt)),
 		with: {
 			receiptItems: {
-				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 				columns: {
 					quantityReceived: true,
 				},
+				where: isNull(PurchaseReceiptItemsTable.deletedAt),
 			},
 		},
 	});
@@ -296,47 +293,118 @@ async function updatePurchaseReceivedAt(tx: Transaction, purchaseId: number) {
 	await tx
 		.update(PurchasesTable)
 		.set({
-			receivedAt: allReceived
-				? sql`COALESCE(${PurchasesTable.receivedAt}, NOW())`
-				: null,
+			receivedAt: allReceived ? sql`COALESCE(${PurchasesTable.receivedAt}, NOW())` : null,
 		})
 		.where(eq(PurchasesTable.id, purchaseId));
 }
 
 export const purchaseQueries = {
 	admin: {
+		async cancelPurchase(tx: Transaction, purchaseId: number) {
+			const purchase = await tx.query.PurchasesTable.findFirst({
+				where: and(eq(PurchasesTable.id, purchaseId), isNull(PurchasesTable.deletedAt)),
+			});
+			if (!purchase) {
+				throw new Error("Purchase not found");
+			}
+
+			await tx
+				.update(PurchasesTable)
+				.set({ cancelledAt: new Date() })
+				.where(eq(PurchasesTable.id, purchaseId));
+		},
+
+		async createPurchase(tx: Transaction, input: addPurchaseType) {
+			const result = await tx
+				.insert(PurchasesTable)
+				.values({
+					cancelledAt: input.cancelledAt ?? null,
+					externalOrderNumber: input.externalOrderNumber,
+					forwarderReceivedAt: input.forwarderReceivedAt ?? null,
+					notes: input.notes ?? null,
+					orderedAt: input.orderedAt ?? null,
+					provider: input.provider,
+					receivedAt: input.receivedAt ?? null,
+					shippedAt: input.shippedAt ?? null,
+					shippingCost: input.shippingCost,
+					trackingNumber: input.trackingNumber ?? null,
+				})
+				.returning({ id: PurchasesTable.id });
+
+			const purchaseId = result[0]?.id;
+			if (!purchaseId) {
+				throw new Error("Purchase creation failed");
+			}
+
+			await tx.insert(PurchaseItemsTable).values(
+				input.items.map((item) => ({
+					productId: item.productId,
+					purchaseId,
+					quantityOrdered: item.quantityOrdered,
+					unitCost: item.unitCost,
+				})),
+			);
+
+			return { id: purchaseId };
+		},
+
+		async deletePurchase(tx: Transaction, purchaseId: number) {
+			const purchase = await tx.query.PurchasesTable.findFirst({
+				where: and(eq(PurchasesTable.id, purchaseId), isNull(PurchasesTable.deletedAt)),
+				with: {
+					items: {
+						columns: {
+							id: true,
+						},
+						where: isNull(PurchaseItemsTable.deletedAt),
+					},
+					receipts: {
+						columns: {
+							id: true,
+						},
+						where: isNull(PurchaseReceiptsTable.deletedAt),
+					},
+				},
+			});
+
+			if (!purchase) {
+				throw new Error("Purchase not found");
+			}
+
+			if (purchase.receipts.length > 0) {
+				throw new Error("Cannot delete purchase with receipts");
+			}
+
+			await tx
+				.update(PurchasesTable)
+				.set({ deletedAt: new Date() })
+				.where(eq(PurchasesTable.id, purchaseId));
+
+			await tx
+				.update(PurchaseItemsTable)
+				.set({ deletedAt: new Date() })
+				.where(eq(PurchaseItemsTable.purchaseId, purchaseId));
+		},
+
 		async getAllPurchases() {
 			const purchases = await fetchPurchases(
-				and(
-					isNull(PurchasesTable.deletedAt),
-					isNull(PurchasesTable.cancelledAt),
-				),
+				and(isNull(PurchasesTable.deletedAt), isNull(PurchasesTable.cancelledAt)),
 			);
 			return purchases
 				.map(shapePurchase)
 				.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 		},
 
-		async getPurchaseById(id: number) {
-			const result = await fetchPurchases(
-				and(eq(PurchasesTable.id, id), isNull(PurchasesTable.deletedAt)),
-			);
-			const purchase = result[0];
-			return purchase ? shapePurchase(purchase) : null;
-		},
-
 		async getPaginatedPurchases(params: {
 			page: number;
 			pageSize: number;
-			searchTerm?: string;
 			provider?: addPurchaseType["provider"];
-			status?: PurchaseStatus;
-			sortField?: string;
+			searchTerm?: string;
 			sortDirection: "asc" | "desc";
+			sortField?: string;
+			status?: PurchaseStatus;
 		}) {
-			const conditions: (SQL<unknown> | undefined)[] = [
-				isNull(PurchasesTable.deletedAt),
-			];
+			const conditions: Array<SQL<unknown> | undefined> = [isNull(PurchasesTable.deletedAt)];
 
 			if (params.provider) {
 				conditions.push(eq(PurchasesTable.provider, params.provider));
@@ -345,31 +413,19 @@ export const purchaseQueries = {
 			if (params.searchTerm) {
 				conditions.push(
 					or(
-						ilike(
-							PurchasesTable.externalOrderNumber,
-							`%${params.searchTerm.trim()}%`,
-						),
-						ilike(
-							PurchasesTable.trackingNumber,
-							`%${params.searchTerm.trim()}%`,
-						),
+						ilike(PurchasesTable.externalOrderNumber, `%${params.searchTerm.trim()}%`),
+						ilike(PurchasesTable.trackingNumber, `%${params.searchTerm.trim()}%`),
 					),
 				);
 			}
 
-			const records = await fetchPurchases(
-				conditions.length > 0 ? and(...conditions) : undefined,
-			);
+			const records = await fetchPurchases(conditions.length > 0 ? and(...conditions) : undefined);
 			let purchases = records.map(shapePurchase);
 
 			if (params.status) {
-				purchases = purchases.filter(
-					(purchase) => purchase.status === params.status,
-				);
+				purchases = purchases.filter((purchase) => purchase.status === params.status);
 			} else {
-				purchases = purchases.filter(
-					(purchase) => purchase.status !== "cancelled",
-				);
+				purchases = purchases.filter((purchase) => purchase.status !== "cancelled");
 			}
 
 			const sortMultiplier = params.sortDirection === "asc" ? 1 : -1;
@@ -396,106 +452,43 @@ export const purchaseQueries = {
 			const offset = (params.page - 1) * params.pageSize;
 
 			return {
-				purchases: purchases.slice(offset, offset + params.pageSize),
 				pagination: {
 					currentPage: params.page,
-					totalPages,
-					totalCount,
 					hasNextPage: params.page < totalPages,
 					hasPreviousPage: params.page > 1,
+					totalCount,
+					totalPages,
 				},
+				purchases: purchases.slice(offset, offset + params.pageSize),
 			};
 		},
 
-		async searchPurchases(query: string) {
-			const trimmed = query.trim();
-			if (!trimmed) return [];
-			const records = await fetchPurchases(
-				and(
-					isNull(PurchasesTable.deletedAt),
-					or(
-						ilike(PurchasesTable.externalOrderNumber, `%${trimmed}%`),
-						ilike(PurchasesTable.trackingNumber, `%${trimmed}%`),
-					),
-				),
+		async getPurchaseById(id: number) {
+			const result = await fetchPurchases(
+				and(eq(PurchasesTable.id, id), isNull(PurchasesTable.deletedAt)),
 			);
-			return records.map(shapePurchase).slice(0, 50);
+			const purchase = result[0];
+			return purchase ? shapePurchase(purchase) : null;
 		},
 
-		async createPurchase(tx: Transaction, input: addPurchaseType) {
-			const result = await tx
-				.insert(PurchasesTable)
-				.values({
-					provider: input.provider,
-					externalOrderNumber: input.externalOrderNumber,
-					trackingNumber: input.trackingNumber ?? null,
-					shippingCost: input.shippingCost,
-					notes: input.notes ?? null,
-					orderedAt: input.orderedAt ?? null,
-					shippedAt: input.shippedAt ?? null,
-					forwarderReceivedAt: input.forwarderReceivedAt ?? null,
-					receivedAt: input.receivedAt ?? null,
-					cancelledAt: input.cancelledAt ?? null,
-				})
-				.returning({ id: PurchasesTable.id });
-
-			const purchaseId = result[0]?.id;
-			if (!purchaseId) throw new Error("Purchase creation failed");
-
-			await tx.insert(PurchaseItemsTable).values(
-				input.items.map((item) => ({
-					purchaseId,
-					productId: item.productId,
-					quantityOrdered: item.quantityOrdered,
-					unitCost: item.unitCost,
-				})),
-			);
-
-			return { id: purchaseId };
-		},
-
-		async updatePurchase(
+		async markPurchaseForwarderReceived(
 			tx: Transaction,
 			purchaseId: number,
-			input: editPurchaseType,
+			forwarderReceivedAt: Date,
 		) {
-			const purchase = await tx.query.PurchasesTable.findFirst({
-				where: and(
-					eq(PurchasesTable.id, purchaseId),
-					isNull(PurchasesTable.deletedAt),
-				),
-			});
-
-			if (!purchase) {
-				throw new Error("Purchase not found");
-			}
-
 			await tx
 				.update(PurchasesTable)
-				.set({
-					provider: input.provider,
-					externalOrderNumber: input.externalOrderNumber,
-					trackingNumber: input.trackingNumber ?? null,
-					shippingCost: input.shippingCost,
-					notes: input.notes ?? null,
-					orderedAt: input.orderedAt ?? null,
-					shippedAt: input.shippedAt ?? null,
-					forwarderReceivedAt: input.forwarderReceivedAt ?? null,
-					receivedAt: input.receivedAt ?? null,
-					cancelledAt: input.cancelledAt ?? null,
-				})
+				.set({ forwarderReceivedAt })
 				.where(eq(PurchasesTable.id, purchaseId));
+		},
 
-			await syncPurchaseItems(tx, purchaseId, input.items);
-			await updatePurchaseReceivedAt(tx, purchaseId);
+		async markPurchaseShipped(tx: Transaction, purchaseId: number, shippedAt: Date) {
+			await tx.update(PurchasesTable).set({ shippedAt }).where(eq(PurchasesTable.id, purchaseId));
 		},
 
 		async receivePurchase(tx: Transaction, input: receivePurchaseType) {
 			const purchase = await tx.query.PurchasesTable.findFirst({
-				where: and(
-					eq(PurchasesTable.id, input.purchaseId),
-					isNull(PurchasesTable.deletedAt),
-				),
+				where: and(eq(PurchasesTable.id, input.purchaseId), isNull(PurchasesTable.deletedAt)),
 			});
 
 			if (!purchase) {
@@ -509,9 +502,9 @@ export const purchaseQueries = {
 			const receiptResult = await tx
 				.insert(PurchaseReceiptsTable)
 				.values({
+					notes: input.notes ?? null,
 					purchaseId: input.purchaseId,
 					receivedAt: input.receivedAt,
-					notes: input.notes ?? null,
 				})
 				.returning({ id: PurchaseReceiptsTable.id });
 
@@ -529,10 +522,10 @@ export const purchaseQueries = {
 				),
 				with: {
 					receiptItems: {
-						where: isNull(PurchaseReceiptItemsTable.deletedAt),
 						columns: {
 							quantityReceived: true,
 						},
+						where: isNull(PurchaseReceiptItemsTable.deletedAt),
 					},
 				},
 			});
@@ -560,28 +553,31 @@ export const purchaseQueries = {
 
 			await tx.insert(PurchaseReceiptItemsTable).values(
 				input.items.map((item) => ({
-					receiptId,
 					purchaseItemId: item.purchaseItemId,
 					quantityReceived: item.quantityReceived,
+					receiptId,
 				})),
 			);
 
 			const stockDeltas = new Map<number, number>();
 			for (const receiptItem of input.items) {
 				const purchaseItem = itemsById.get(receiptItem.purchaseItemId);
-				if (!purchaseItem) continue;
+				if (!purchaseItem) {
+					continue;
+				}
 				stockDeltas.set(
 					purchaseItem.productId,
-					(stockDeltas.get(purchaseItem.productId) ?? 0) +
-						receiptItem.quantityReceived,
+					(stockDeltas.get(purchaseItem.productId) ?? 0) + receiptItem.quantityReceived,
 				);
 			}
 
 			const affectedProductIds = [...stockDeltas.keys()];
-			const restockCandidates: StockTransition[] = [];
+			const restockCandidates: Array<StockTransition> = [];
 			for (const [productId, delta] of stockDeltas) {
-				const transition = await applyStockTransition(tx, { productId, delta });
-				if (transition) restockCandidates.push(transition);
+				const transition = await applyStockTransition(tx, { delta, productId });
+				if (transition) {
+					restockCandidates.push(transition);
+				}
 			}
 
 			await updatePurchaseReceivedAt(tx, input.purchaseId);
@@ -592,82 +588,50 @@ export const purchaseQueries = {
 			};
 		},
 
-		async deletePurchase(tx: Transaction, purchaseId: number) {
-			const purchase = await tx.query.PurchasesTable.findFirst({
-				where: and(
-					eq(PurchasesTable.id, purchaseId),
+		async searchPurchases(query: string) {
+			const trimmed = query.trim();
+			if (!trimmed) {
+				return [];
+			}
+			const records = await fetchPurchases(
+				and(
 					isNull(PurchasesTable.deletedAt),
+					or(
+						ilike(PurchasesTable.externalOrderNumber, `%${trimmed}%`),
+						ilike(PurchasesTable.trackingNumber, `%${trimmed}%`),
+					),
 				),
-				with: {
-					receipts: {
-						where: isNull(PurchaseReceiptsTable.deletedAt),
-						columns: {
-							id: true,
-						},
-					},
-					items: {
-						where: isNull(PurchaseItemsTable.deletedAt),
-						columns: {
-							id: true,
-						},
-					},
-				},
+			);
+			return records.map(shapePurchase).slice(0, 50);
+		},
+
+		async updatePurchase(tx: Transaction, purchaseId: number, input: editPurchaseType) {
+			const purchase = await tx.query.PurchasesTable.findFirst({
+				where: and(eq(PurchasesTable.id, purchaseId), isNull(PurchasesTable.deletedAt)),
 			});
 
 			if (!purchase) {
 				throw new Error("Purchase not found");
 			}
 
-			if (purchase.receipts.length > 0) {
-				throw new Error("Cannot delete purchase with receipts");
-			}
-
 			await tx
 				.update(PurchasesTable)
-				.set({ deletedAt: new Date() })
+				.set({
+					cancelledAt: input.cancelledAt ?? null,
+					externalOrderNumber: input.externalOrderNumber,
+					forwarderReceivedAt: input.forwarderReceivedAt ?? null,
+					notes: input.notes ?? null,
+					orderedAt: input.orderedAt ?? null,
+					provider: input.provider,
+					receivedAt: input.receivedAt ?? null,
+					shippedAt: input.shippedAt ?? null,
+					shippingCost: input.shippingCost,
+					trackingNumber: input.trackingNumber ?? null,
+				})
 				.where(eq(PurchasesTable.id, purchaseId));
 
-			await tx
-				.update(PurchaseItemsTable)
-				.set({ deletedAt: new Date() })
-				.where(eq(PurchaseItemsTable.purchaseId, purchaseId));
-		},
-
-		async cancelPurchase(tx: Transaction, purchaseId: number) {
-			const purchase = await tx.query.PurchasesTable.findFirst({
-				where: and(
-					eq(PurchasesTable.id, purchaseId),
-					isNull(PurchasesTable.deletedAt),
-				),
-			});
-			if (!purchase) throw new Error("Purchase not found");
-
-			await tx
-				.update(PurchasesTable)
-				.set({ cancelledAt: new Date() })
-				.where(eq(PurchasesTable.id, purchaseId));
-		},
-
-		async markPurchaseShipped(
-			tx: Transaction,
-			purchaseId: number,
-			shippedAt: Date,
-		) {
-			await tx
-				.update(PurchasesTable)
-				.set({ shippedAt })
-				.where(eq(PurchasesTable.id, purchaseId));
-		},
-
-		async markPurchaseForwarderReceived(
-			tx: Transaction,
-			purchaseId: number,
-			forwarderReceivedAt: Date,
-		) {
-			await tx
-				.update(PurchasesTable)
-				.set({ forwarderReceivedAt })
-				.where(eq(PurchasesTable.id, purchaseId));
+			await syncPurchaseItems(tx, purchaseId, input.items);
+			await updatePurchaseReceivedAt(tx, purchaseId);
 		},
 	},
 };

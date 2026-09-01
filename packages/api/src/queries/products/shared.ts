@@ -1,13 +1,9 @@
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
-import { db } from "~/db/client";
-import { ProductImagesTable, ProductsTable } from "~/db/schema";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { ProductsTable } from "~/db/schema";
 import { searchProducts } from "~/lib/product-search/client";
 
 export function buildActiveProductConditions(requireStock = false) {
-	const conditions = [
-		isNull(ProductsTable.deletedAt),
-		eq(ProductsTable.status, "active"),
-	];
+	const conditions = [isNull(ProductsTable.deletedAt), eq(ProductsTable.status, "active")];
 	if (requireStock) {
 		conditions.push(gt(ProductsTable.stock, 0));
 	}
@@ -16,16 +12,20 @@ export function buildActiveProductConditions(requireStock = false) {
 
 /** Dedupe, drop OOS / excluded ids, rank by stock desc, cap. */
 export function rankInStockProducts<T extends { id: number; stock: number }>(
-	products: T[],
+	products: Array<T>,
 	options: { excludeIds?: Iterable<number>; limit: number },
-): T[] {
+): Array<T> {
 	const exclude = new Set(options.excludeIds ?? []);
 	const seen = new Set<number>();
-	const eligible: T[] = [];
+	const eligible: Array<T> = [];
 
 	for (const product of products) {
-		if (product.stock <= 0) continue;
-		if (exclude.has(product.id) || seen.has(product.id)) continue;
+		if (product.stock <= 0) {
+			continue;
+		}
+		if (exclude.has(product.id) || seen.has(product.id)) {
+			continue;
+		}
 		seen.add(product.id);
 		eligible.push(product);
 	}
@@ -35,23 +35,25 @@ export function rankInStockProducts<T extends { id: number; stock: number }>(
 }
 
 export async function hydrateProductsBySearchIds<T extends Record<string, unknown>>(
-	ids: number[],
-	queryFn: (ids: number[]) => Promise<T[]>,
+	ids: Array<number>,
+	queryFn: (ids: Array<number>) => Promise<Array<T>>,
 	limit?: number,
-): Promise<T[]> {
-	if (ids.length === 0) return [];
+): Promise<Array<T>> {
+	if (ids.length === 0) {
+		return [];
+	}
 	const products = await queryFn(ids);
 	const byId = new Map(
 		products.map((product) => [(product as unknown as { id: number }).id, product]),
 	);
-	const ordered = ids
-		.map((id) => byId.get(id))
-		.filter((product): product is T => !!product);
+	const ordered = ids.map((id) => byId.get(id)).filter((product): product is T => !!product);
 	return limit ? ordered.slice(0, limit) : ordered;
 }
 
 export async function searchProductIds(term: string, limit: number) {
 	const trimmed = term.trim();
-	if (!trimmed) return [] as number[];
+	if (!trimmed) {
+		return [] as Array<number>;
+	}
 	return (await searchProducts(trimmed, limit)).map((result) => result.id);
 }

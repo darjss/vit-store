@@ -21,8 +21,8 @@ const CHOOSE_TRANSFER_PREFIX = "pay_transfer";
 const CLAIM_TRANSFER_PREFIX = "transfer_done";
 
 export interface PaymentRef {
-	paymentNumber: string;
 	checkoutToken: string | null;
+	paymentNumber: string;
 }
 
 const encodeRef = (prefix: string, ref: PaymentRef): string =>
@@ -30,16 +30,22 @@ const encodeRef = (prefix: string, ref: PaymentRef): string =>
 
 const decodeRef = (prefix: string, payload: string): PaymentRef | undefined => {
 	const head = `${prefix}:`;
-	if (!payload.startsWith(head)) return undefined;
+	if (!payload.startsWith(head)) {
+		return undefined;
+	}
 	const rest = payload.slice(head.length);
 	const sep = rest.indexOf(":");
-	if (sep < 0) return undefined;
+	if (sep < 0) {
+		return undefined;
+	}
 	const paymentNumber = rest.slice(0, sep);
 	const checkoutToken = rest.slice(sep + 1);
-	if (paymentNumber.length === 0) return undefined;
+	if (paymentNumber.length === 0) {
+		return undefined;
+	}
 	return {
-		paymentNumber,
 		checkoutToken: checkoutToken.length > 0 ? checkoutToken : null,
+		paymentNumber,
 	};
 };
 
@@ -49,28 +55,21 @@ export const chooseTransferPayload = (ref: PaymentRef): string =>
 export const claimTransferPayload = (ref: PaymentRef): string =>
 	encodeRef(CLAIM_TRANSFER_PREFIX, ref);
 
-export const parseChooseTransferPayload = (
-	payload: string,
-): PaymentRef | undefined => decodeRef(CHOOSE_TRANSFER_PREFIX, payload);
+export const parseChooseTransferPayload = (payload: string): PaymentRef | undefined =>
+	decodeRef(CHOOSE_TRANSFER_PREFIX, payload);
 
-export const parseClaimTransferPayload = (
-	payload: string,
-): PaymentRef | undefined => decodeRef(CLAIM_TRANSFER_PREFIX, payload);
+export const parseClaimTransferPayload = (payload: string): PaymentRef | undefined =>
+	decodeRef(CLAIM_TRANSFER_PREFIX, payload);
 
 // ── QPay-only page url (#24) ─────────────────────────────────────────────────
 //
 // The QPay page authorises with the payment number (path) + checkout token
 // (`ct` query), exactly as the storefront link does. The token is omitted when
 // absent rather than sent empty.
-export const buildQpayPageUrl = (
-	storeBaseUrl: string,
-	ref: PaymentRef,
-): string => {
+export const buildQpayPageUrl = (storeBaseUrl: string, ref: PaymentRef): string => {
 	const base = storeBaseUrl.replace(/\/+$/, "");
 	const url = `${base}/payment/qpay/${encodeURIComponent(ref.paymentNumber)}`;
-	return ref.checkoutToken
-		? `${url}?ct=${encodeURIComponent(ref.checkoutToken)}`
-		: url;
+	return ref.checkoutToken ? `${url}?ct=${encodeURIComponent(ref.checkoutToken)}` : url;
 };
 
 // ── Payment-choice buttons (sent right after order creation) ─────────────────
@@ -83,10 +82,10 @@ export const PAYMENT_CHOICE_PROMPT =
 	"Төлбөрөө хэрхэн төлөх вэ? QPay-р эсвэл дансаар шилжүүлж болно.";
 
 export interface PaymentChoiceButton {
-	type: "web_url" | "postback";
-	title: string;
-	url?: string;
 	payload?: string;
+	title: string;
+	type: "web_url" | "postback";
+	url?: string;
 }
 
 // The two equal payment choices as a channel-neutral button template body. QPay
@@ -95,35 +94,31 @@ export interface PaymentChoiceButton {
 export const buildPaymentChoice = (
 	storeBaseUrl: string,
 	ref: PaymentRef,
-): { text: string; buttons: PaymentChoiceButton[] } => ({
-	text: PAYMENT_CHOICE_PROMPT,
+): { buttons: Array<PaymentChoiceButton>; text: string } => ({
 	buttons: [
 		{
-			type: "web_url",
 			title: QPAY_BUTTON_TITLE,
+			type: "web_url",
 			url: buildQpayPageUrl(storeBaseUrl, ref),
 		},
 		{
-			type: "postback",
-			title: TRANSFER_BUTTON_TITLE,
 			payload: chooseTransferPayload(ref),
+			title: TRANSFER_BUTTON_TITLE,
+			type: "postback",
 		},
 	],
+	text: PAYMENT_CHOICE_PROMPT,
 });
 
 // ── Bank-transfer details (sent when the customer picks transfer) ────────────
 
-const formatMnt = (amount: number): string =>
-	`${amount.toLocaleString("en-US")}₮`;
+const formatMnt = (amount: number): string => `${amount.toLocaleString("en-US")}₮`;
 
 // The in-chat transfer instructions: bank/account/name from the shared single
 // source, the order amount, and the transfer reference (the customer's phone —
 // what admin/bank reconciliation matches on). Mirrors the storefront transfer
 // tab so chat and site never disagree.
-export const formatBankTransferDetails = (input: {
-	amount: number;
-	reference: string;
-}): string =>
+export const formatBankTransferDetails = (input: { amount: number; reference: string }): string =>
 	[
 		"Дансаар шилжүүлэх мэдээлэл:",
 		`Банк: ${bankTransfer.bankName}`,
@@ -148,9 +143,13 @@ export const TRANSFER_CLAIM_ACK_MESSAGE =
 // Only meaningful inside the post-order transfer context; the caller gates on
 // session state before treating a match as a claim.
 export const isTransferDoneText = (text: string | undefined): boolean => {
-	if (!text) return false;
+	if (!text) {
+		return false;
+	}
 	const normalized = text.trim().toLowerCase();
-	if (normalized.length === 0) return false;
+	if (normalized.length === 0) {
+		return false;
+	}
 	return (
 		normalized.includes("хийсэн") ||
 		normalized.includes("hiisen") ||

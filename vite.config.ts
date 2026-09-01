@@ -1,42 +1,25 @@
-import oxlintConfig from "./.oxlintrc.json" with { type: "json" };
 import { defineConfig } from "vite-plus";
 
-const sharedIgnorePatterns = [
-	"**/node_modules/**",
-	"**/.next/**",
-	"**/dist/**",
-	"**/generated/**",
-	"**/.turbo/**",
-	"**/tmp/**",
-	"**/.bun/**",
-	"**/dev-dist/**",
-	"**/.zed/**",
-	"**/.vscode/**",
-	"**/routeTree.gen.ts",
-	"**/.nuxt/**",
-	"**/.wrangler/**",
-	"**/.alchemy/**",
-	"**/dev.log",
-	"**/public/**",
-	"**/components/ui/**",
-	"**/.astro/**",
-	"**/vit/**",
-	"**/*.sql",
-	"**/migrations/meta/**",
-	"apps/storev2/src/components/starwind/**",
-	"**/.agents/**",
-	"**/.cursor/**",
-	"plans/**",
-];
+import formatConfig from "./oxfmt.config";
+import lintConfig from "./oxlint.config";
 
 export default defineConfig({
 	fmt: {
-		useTabs: true,
-		singleQuote: false,
-		ignorePatterns: sharedIgnorePatterns,
+		...formatConfig,
 	},
 	lint: {
-		...oxlintConfig,
-		ignorePatterns: [...(oxlintConfig.ignorePatterns ?? []), ...sharedIgnorePatterns],
+		...lintConfig,
+		jsPlugins: [
+			...(lintConfig.jsPlugins ?? []),
+			{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
+		],
+		options: { typeAware: false, typeCheck: false },
+		rules: {
+			...lintConfig.rules,
+			"vite-plus/prefer-vite-plus-imports": "error",
+		},
+	},
+	staged: {
+		"*": "vp check --fix",
 	},
 });

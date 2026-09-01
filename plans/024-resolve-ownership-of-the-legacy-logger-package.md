@@ -43,23 +43,25 @@ No exact open issue was found.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/logger packages/api/scripts/import-extracted-only-products.ts packages/api/package.json README.md packages/api/src/lib/logger` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                   | Expected on success                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/logger packages/api/scripts/import-extracted-only-products.ts packages/api/package.json README.md packages/api/src/lib/logger` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                     | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                           | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                    | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - operator/external-consumer decision
 - if retained, migrate the script to owned logger with compatible safe fields
 - remove package/docs only after no caller remains
 
 **Files/path families allowed**
+
 - `packages/logger`
 - `packages/api/scripts/import-extracted-only-products.ts`
 - `packages/api/package.json`
@@ -67,6 +69,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `packages/api/src/lib/logger`
 
 **Out of scope**
+
 - deleting ingestion script without approval
 - changing log retention/content policy
 - second logger abstraction

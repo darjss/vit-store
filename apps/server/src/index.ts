@@ -1,10 +1,5 @@
 import { trpcServer } from "@hono/trpc-server";
-import {
-	adminRouter,
-	botRouter,
-	finalizeCatalogCacheHeaders,
-	storeRouter,
-} from "@vit/api";
+import { adminRouter, botRouter, finalizeCatalogCacheHeaders, storeRouter } from "@vit/api";
 import { createLogger } from "evlog";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -24,32 +19,28 @@ import webhookRoutes from "./routes/webhooks";
 
 export { TransferReconciliationObject } from "./durable-objects/transfer-reconciliation-object";
 
-const DEFAULT_CORS_ORIGINS = [
-	"http://localhost:5173",
-	"https://admin.vitstore.dev",
-];
+const DEFAULT_CORS_ORIGINS = ["http://localhost:5173", "https://admin.vitstore.dev"];
 
-function scheduledJobFailure(
-	job: string,
-	result: PromiseSettledResult<unknown>,
-) {
-	if (result.status === "fulfilled") return;
+function scheduledJobFailure(job: string, result: PromiseSettledResult<unknown>) {
+	if (result.status === "fulfilled") {
+		return;
+	}
 	const error =
 		result.reason instanceof Error
 			? result.reason
 			: Object.assign(new Error(), { name: "NonErrorRejection" });
 	const projected = operatorTrpcError(error) as Error & {
-		code?: string | number;
 		cause?: unknown;
+		code?: string | number;
 	};
 	return {
-		job,
 		error: {
-			name: projected.name,
-			code: projected.code,
-			stack: projected.stack,
 			cause: projected.cause,
+			code: projected.code,
+			name: projected.name,
+			stack: projected.stack,
 		},
+		job,
 	};
 }
 
@@ -59,19 +50,17 @@ app.use(evlogMiddleware());
 
 app.use("/*", (c, next) => {
 	const rateLimitMiddleware = rateLimit({
-		rateLimiter: () => c.env.RATE_LIMITER,
 		getRateLimitKey: (c) => c.req.header("cf-connecting-ip") ?? "unknown",
+		rateLimiter: () => c.env.RATE_LIMITER,
 	});
 	return rateLimitMiddleware(c, next);
 });
 
 app.use("/*", (c, next) => {
 	const corsMiddleware = cors({
-		origin: c.env.CORS_ORIGIN
-			? c.env.CORS_ORIGIN.split(",")
-			: DEFAULT_CORS_ORIGINS,
 		allowMethods: ["GET", "POST", "OPTIONS"],
 		credentials: true,
+		origin: c.env.CORS_ORIGIN ? c.env.CORS_ORIGIN.split(",") : DEFAULT_CORS_ORIGINS,
 	});
 	return corsMiddleware(c, next);
 });
@@ -79,14 +68,16 @@ app.use("/*", (c, next) => {
 app.use(
 	"/trpc/admin/*",
 	trpcServer({
-		endpoint: "/trpc/admin",
-		router: adminRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
-		onError({ path, error, ctx }) {
-			if (ctx) logTrpcError(ctx.log, "trpc.admin_error", path, error);
+		endpoint: "/trpc/admin",
+		onError({ ctx, error, path }) {
+			if (ctx) {
+				logTrpcError(ctx.log, "trpc.admin_error", path, error);
+			}
 		},
+		router: adminRouter,
 	}),
 );
 
@@ -104,14 +95,16 @@ app.use("/trpc/store/*", async (c, next) => {
 app.use(
 	"/trpc/store/*",
 	trpcServer({
-		endpoint: "/trpc/store",
-		router: storeRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
-		onError({ path, error, ctx }) {
-			if (ctx) logTrpcError(ctx.log, "trpc.store_error", path, error);
+		endpoint: "/trpc/store",
+		onError({ ctx, error, path }) {
+			if (ctx) {
+				logTrpcError(ctx.log, "trpc.store_error", path, error);
+			}
 		},
+		router: storeRouter,
 	}),
 );
 
@@ -120,14 +113,16 @@ app.use(
 app.use(
 	"/trpc/bot/*",
 	trpcServer({
-		endpoint: "/trpc/bot",
-		router: botRouter,
 		createContext: (_opts, context) => {
 			return createContext({ context });
 		},
-		onError({ path, error, ctx }) {
-			if (ctx) logTrpcError(ctx.log, "trpc.bot_error", path, error);
+		endpoint: "/trpc/bot",
+		onError({ ctx, error, path }) {
+			if (ctx) {
+				logTrpcError(ctx.log, "trpc.bot_error", path, error);
+			}
 		},
+		router: botRouter,
 	}),
 );
 
@@ -164,31 +159,27 @@ export default {
 
 		const restock = runRestockNotifier(env);
 		const paymentNotifications = runPaymentNotificationOutbox();
-		const [restockResult, paymentNotificationResult] = await Promise.allSettled(
-			[restock, paymentNotifications],
-		);
+		const [restockResult, paymentNotificationResult] = await Promise.allSettled([
+			restock,
+			paymentNotifications,
+		]);
 		const jobs = {
-			restock_notifier: restockResult.status,
 			payment_notification_outbox: paymentNotificationResult.status,
+			restock_notifier: restockResult.status,
 		};
 		const failures = [
 			scheduledJobFailure("restock_notifier", restockResult),
-			scheduledJobFailure(
-				"payment_notification_outbox",
-				paymentNotificationResult,
-			),
+			scheduledJobFailure("payment_notification_outbox", paymentNotificationResult),
 		].filter((failure) => failure !== undefined);
 
 		if (failures.length > 0) {
 			log.error(new Error("Scheduled jobs failed"), {
 				event: "scheduled.jobs_complete",
-				jobs,
 				failures,
+				jobs,
 			});
 			log.emit();
-			throw new Error(
-				`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`,
-			);
+			throw new Error(`Scheduled jobs failed: ${failures.map(({ job }) => job).join(", ")}`);
 		}
 
 		log.info("scheduled.jobs_complete", { jobs });

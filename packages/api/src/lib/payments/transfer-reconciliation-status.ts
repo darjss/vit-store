@@ -20,19 +20,19 @@ export type TransferReconciliationStatus =
 	| "failed";
 
 export type TransferReconciliationState = {
-	paymentNumber: string;
-	status: TransferReconciliationStatus;
 	attempts: number;
-	startedAt: string;
 	expiresAt: string;
-	nextPollAt: string | null;
 	lastError: string | null;
 	matchedTransaction?: {
-		tranDate?: string;
-		time?: string;
 		amount: number;
+		balance?: number;
 		description: string;
 		relatedAccount?: string;
-		balance?: number;
+		time?: string;
+		tranDate?: string;
 	};
+	nextPollAt: string | null;
+	paymentNumber: string;
+	startedAt: string;
+	status: TransferReconciliationStatus;
 };

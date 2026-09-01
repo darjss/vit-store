@@ -6,7 +6,7 @@ import SidebarUserSection from "@/components/auth/SidebarUserSection.astro";
 import { getBrandLogoUrl } from "@/lib/image";
 import { getStaticNavigationData } from "@/lib/static-navigation";
 
-const { categories, brands } = await getStaticNavigationData();
+const { brands, categories } = await getStaticNavigationData();
 // Defensive filter: the brand query already enforces `having count > 0`, but a
 // stale KV cache can still serve 0-product brands. Drop them at the nav level so
 // the mobile menu never lists dead-end brand pages.

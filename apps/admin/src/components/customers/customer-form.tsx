@@ -6,90 +6,78 @@ import * as v from "valibot";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "../ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 
 const addCustomerSchema = v.object({
+	address: v.optional(
+		v.pipe(v.string("Хаяг заавал оруулах"), v.minLength(5, "Хаяг хэт богино байна")),
+	),
 	phone: v.pipe(
 		v.string("Дугаар заавал оруулах"),
 		v.minLength(8, "Дугаар 8 оронтой байх ёстой"),
 		v.maxLength(8, "Дугаар 8 оронтой байх ёстой"),
 		v.regex(/^[6-9]\d{7}$/, "Зөв дугаар оруулна уу"),
 	),
-	address: v.optional(
-		v.pipe(
-			v.string("Хаяг заавал оруулах"),
-			v.minLength(5, "Хаяг хэт богино байна"),
-		),
-	),
 });
 
 type AddCustomerFormValues = v.InferOutput<typeof addCustomerSchema>;
 
 type CustomerFormProps = {
+	customer?: { address?: string | null; phone: number };
 	onSuccess: () => void;
-	customer?: { phone: number; address?: string | null };
 };
 
-const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
+const CustomerForm = ({ customer, onSuccess }: CustomerFormProps) => {
 	const form = useForm<AddCustomerFormValues>({
-		resolver: valibotResolver(addCustomerSchema),
 		defaultValues: {
-			phone: customer ? String(customer.phone) : "",
 			address: customer?.address ?? "",
+			phone: customer ? String(customer.phone) : "",
 		},
+		resolver: valibotResolver(addCustomerSchema),
 	});
 
 	const queryClient = useQueryClient();
 
 	const addMutation = useMutation({
 		...trpc.customer.addUser.mutationOptions(),
-		onSuccess: async () => {
-			form.reset();
-			queryClient.invalidateQueries(
-				trpc.customer.getAllCustomers.queryOptions(),
-			);
-			onSuccess();
-		},
 		onError: (_error) => {
 			toast.error("Хэрэглэгч нэмэхэд алдаа гарлаа");
+		},
+		onSuccess: async () => {
+			form.reset();
+			queryClient.invalidateQueries(trpc.customer.getAllCustomers.queryOptions());
+			onSuccess();
 		},
 	});
 
 	const updateMutation = useMutation({
 		...trpc.customer.updateCustomer.mutationOptions(),
-		onSuccess: async () => {
-			queryClient.invalidateQueries(
-				trpc.customer.getAllCustomers.queryOptions(),
-			);
-			onSuccess();
-		},
 		onError: (_error) => {
 			toast.error("Хэрэглэгч засахад алдаа гарлаа");
+		},
+		onSuccess: async () => {
+			queryClient.invalidateQueries(trpc.customer.getAllCustomers.queryOptions());
+			onSuccess();
 		},
 	});
 
 	const onSubmit = (values: AddCustomerFormValues) => {
-		if (addMutation.isPending || updateMutation.isPending) return;
+		if (addMutation.isPending || updateMutation.isPending) {
+			return;
+		}
 		if (customer) {
 			updateMutation.mutate({
-				phone: Number(customer.phone),
 				address: values.address || undefined,
+				phone: Number(customer.phone),
 			});
 			return;
 		}
 		addMutation.mutate({
-			phone: Number(values.phone),
 			address: values.address || undefined,
+			phone: Number(values.phone),
 		});
 	};
 
@@ -98,12 +86,12 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+			<form className="relative" onSubmit={form.handleSubmit(onSubmit)}>
 				<FormLoadingOverlay isLoading={isPending} />
 				<div className="grid grid-cols-1 gap-6">
 					<Card className="shadow-md transition-shadow duration-300 hover:shadow-lg">
 						<CardContent className="space-y-6 p-6">
-							<h3 className="font-semibold text-xl">
+							<h3 className="text-xl font-semibold">
 								{isEditing ? "Хэрэглэгч засах" : "Хэрэглэгчийн мэдээлэл"}
 							</h3>
 							<FormField
@@ -114,10 +102,10 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 										<FormLabel>Утасны дугаар</FormLabel>
 										<FormControl>
 											<Input
-												inputMode="numeric"
-												placeholder="8 оронтой дугаар"
-												maxLength={8}
 												disabled={isEditing}
+												inputMode="numeric"
+												maxLength={8}
+												placeholder="8 оронтой дугаар"
 												{...field}
 											/>
 										</FormControl>
@@ -144,8 +132,8 @@ const CustomerForm = ({ onSuccess, customer }: CustomerFormProps) => {
 
 					<div className="flex justify-end">
 						<SubmitButton
+							className="hover:bg-primary/90 w-full px-8 py-3 text-lg font-semibold transition-colors duration-300 sm:w-auto"
 							isPending={isPending}
-							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{isEditing ? "Хадгалах" : "Хэрэглэгч нэмэх"}
 						</SubmitButton>

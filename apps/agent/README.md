@@ -94,7 +94,7 @@ therefore re-applies and then verifies the rule on every deploy:
 ```
 
 - `r2:lifecycle:inbound` (re)applies the rule via `wrangler r2 bucket lifecycle
-  set --file`. `set` replaces the rule set, so it is **idempotent** — running it
+set --file`. `set` replaces the rule set, so it is **idempotent** — running it
   on every deploy is safe.
 - `r2:lifecycle:assert` lists the live rules on the bucket and **fails the deploy
   loud** (non-zero exit) if the `messenger-inbound-cleanup` rule is absent, so a
@@ -220,7 +220,7 @@ comes back through the Send API.
 - `/reset` — reset the current session (new PSID → fresh bot memory)
 - `/psid` — show the current session id + persistent PSID
 - `/buttons` — list the buttons from the last bot message
-- `/fire <n>` — fire button *n*'s payload (postback event, or quick-reply message)
+- `/fire <n>` — fire button _n_'s payload (postback event, or quick-reply message)
 - `/payloads` — list saved outgoing Send API JSON files
 - `/seed [list|<file>]` — replay a private `messenger-chat-history/` example
 - `/image` — placeholder until #20 (photo identification) lands

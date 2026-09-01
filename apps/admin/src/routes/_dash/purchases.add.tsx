@@ -1,24 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { Suspense, useState } from "react";
-import {
-	AIPurchaseInput,
-	AIPurchasePreview,
-} from "@/components/purchase/ai-purchase-input";
+import { AIPurchaseInput, AIPurchasePreview } from "@/components/purchase/ai-purchase-input";
 import PurchaseForm from "@/components/purchase/purchase-form";
 import { FormPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import type { RouterOutputs } from "@/lib/types";
 
-type ExtractedPurchaseData =
-	RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
+type ExtractedPurchaseData = RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
 
 export const Route = createFileRoute("/_dash/purchases/add")({
 	component: RouteComponent,
-	pendingComponent: FormPageSkeleton,
 	loader: ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.product.getAllProducts.queryOptions(),
-		);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getAllProducts.queryOptions());
 		void ctx.queryClient.prefetchQuery({
 			...ctx.trpc.category.getAllCategories.queryOptions(),
 			staleTime: 15 * 60 * 1000,
@@ -28,12 +21,13 @@ export const Route = createFileRoute("/_dash/purchases/add")({
 			staleTime: 15 * 60 * 1000,
 		});
 	},
+	pendingComponent: FormPageSkeleton,
 });
 
 type AIState =
 	| { mode: "input" }
-	| { mode: "preview"; data: ExtractedPurchaseData }
-	| { mode: "form"; data: ExtractedPurchaseData };
+	| { data: ExtractedPurchaseData; mode: "preview" }
+	| { data: ExtractedPurchaseData; mode: "form" };
 
 function RouteComponent() {
 	return (
@@ -52,10 +46,10 @@ function AddPurchasePage() {
 		<div className="min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
 			<div className="mx-auto w-full max-w-6xl">
 				<div className="mb-6 sm:mb-8">
-					<div className="mb-4 flex items-center gap-2 text-muted-foreground text-sm">
+					<div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm">
 						<Link
+							className="hover:text-foreground flex items-center gap-1.5 transition-colors"
 							to="/purchases"
-							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
 						>
 							<ArrowLeft className="h-3.5 w-3.5" />
 							Худалдан авалт
@@ -63,31 +57,28 @@ function AddPurchasePage() {
 						<span>/</span>
 						<span className="text-foreground">Нэмэх</span>
 					</div>
-					<h1 className="font-heading text-2xl sm:text-3xl">
-						Худалдан авалт нэмэх
-					</h1>
-					<p className="mt-1 text-muted-foreground text-sm">
-						Нийлүүлэгчийн худалдан авалтыг гараар үүсгэх эсвэл падааны зургаас
-						оруулах.
+					<h1 className="font-heading text-2xl sm:text-3xl">Худалдан авалт нэмэх</h1>
+					<p className="text-muted-foreground mt-1 text-sm">
+						Нийлүүлэгчийн худалдан авалтыг гараар үүсгэх эсвэл падааны зургаас оруулах.
 					</p>
 				</div>
 
 				<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<button
-						type="button"
+						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
+							activeTab === "manual"
+								? "bg-primary shadow-hard"
+								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
+						}`}
 						onClick={() => {
 							setActiveTab("manual");
 							setAiState({ mode: "input" });
 						}}
-						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
-							activeTab === "manual"
-								? "bg-primary shadow-hard"
-								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
-						}`}
+						type="button"
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
 									activeTab === "manual"
 										? "bg-primary-foreground text-primary"
 										: "bg-muted text-muted-foreground"
@@ -97,19 +88,15 @@ function AddPurchasePage() {
 							</div>
 							<div className="min-w-0 flex-1">
 								<p
-									className={`font-bold font-heading ${
-										activeTab === "manual"
-											? "text-primary-foreground"
-											: "text-foreground"
+									className={`font-heading font-bold ${
+										activeTab === "manual" ? "text-primary-foreground" : "text-foreground"
 									}`}
 								>
 									Гараар
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
-										activeTab === "manual"
-											? "text-primary-foreground/70"
-											: "text-muted-foreground"
+										activeTab === "manual" ? "text-primary-foreground/70" : "text-muted-foreground"
 									}`}
 								>
 									Худалдан авалт болон барааны мөрийг өөрөө оруулах
@@ -117,22 +104,22 @@ function AddPurchasePage() {
 							</div>
 						</div>
 						{activeTab === "manual" && (
-							<div className="absolute top-2 right-2 h-2 w-2 bg-primary-foreground" />
+							<div className="bg-primary-foreground absolute top-2 right-2 h-2 w-2" />
 						)}
 					</button>
 
 					<button
-						type="button"
-						onClick={() => setActiveTab("ai")}
-						className={`group relative border-2 border-border p-4 text-left transition-all sm:p-5 ${
+						className={`group border-border relative border-2 p-4 text-left transition-all sm:p-5 ${
 							activeTab === "ai"
 								? "bg-secondary text-secondary-foreground shadow-hard"
-								: "bg-card hover:translate-y-0.5 hover:bg-muted/30"
+								: "bg-card hover:bg-muted/30 hover:translate-y-0.5"
 						}`}
+						onClick={() => setActiveTab("ai")}
+						type="button"
 					>
 						<div className="flex items-start gap-3">
 							<div
-								className={`flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border ${
+								className={`border-border flex h-10 w-10 shrink-0 items-center justify-center border-2 ${
 									activeTab === "ai"
 										? "bg-secondary-foreground text-secondary"
 										: "bg-muted text-muted-foreground"
@@ -142,19 +129,15 @@ function AddPurchasePage() {
 							</div>
 							<div className="min-w-0 flex-1">
 								<p
-									className={`font-bold font-heading ${
-										activeTab === "ai"
-											? "text-secondary-foreground"
-											: "text-foreground"
+									className={`font-heading font-bold ${
+										activeTab === "ai" ? "text-secondary-foreground" : "text-foreground"
 									}`}
 								>
 									AI оруулалт
 								</p>
 								<p
 									className={`mt-0.5 text-sm ${
-										activeTab === "ai"
-											? "text-secondary-foreground/70"
-											: "text-muted-foreground"
+										activeTab === "ai" ? "text-secondary-foreground/70" : "text-muted-foreground"
 									}`}
 								>
 									Падааны зураг оруулж, ялгаж авсан мэдээллийг шалгах
@@ -162,18 +145,18 @@ function AddPurchasePage() {
 							</div>
 						</div>
 						{activeTab === "ai" && (
-							<div className="absolute top-2 right-2 h-2 w-2 bg-secondary-foreground" />
+							<div className="bg-secondary-foreground absolute top-2 right-2 h-2 w-2" />
 						)}
 					</button>
 				</div>
 
-				<div className="rounded-base border-2 border-border bg-card p-4 shadow-shadow sm:p-6">
+				<div className="rounded-base border-border bg-card shadow-shadow border-2 p-4 sm:p-6">
 					{activeTab === "manual" ? (
 						<PurchaseForm
 							onSuccess={(purchaseId) =>
 								navigate({
-									to: "/purchases/$id",
 									params: { id: String(purchaseId) },
+									to: "/purchases/$id",
 								})
 							}
 						/>
@@ -181,17 +164,17 @@ function AddPurchasePage() {
 
 					{activeTab === "ai" && aiState.mode === "input" ? (
 						<AIPurchaseInput
-							onExtracted={(data) => setAiState({ mode: "preview", data })}
 							onCancel={() => setActiveTab("manual")}
+							onExtracted={(data) => setAiState({ data, mode: "preview" })}
 						/>
 					) : null}
 
 					{activeTab === "ai" && aiState.mode === "preview" ? (
 						<AIPurchasePreview
 							data={aiState.data}
-							onConfirm={() => setAiState({ mode: "form", data: aiState.data })}
-							onEdit={() => setAiState({ mode: "form", data: aiState.data })}
 							onCancel={() => setAiState({ mode: "input" })}
+							onConfirm={() => setAiState({ data: aiState.data, mode: "form" })}
+							onEdit={() => setAiState({ data: aiState.data, mode: "form" })}
 						/>
 					) : null}
 
@@ -201,8 +184,8 @@ function AddPurchasePage() {
 							onResetAI={() => setAiState({ mode: "input" })}
 							onSuccess={(purchaseId) =>
 								navigate({
-									to: "/purchases/$id",
 									params: { id: String(purchaseId) },
+									to: "/purchases/$id",
 								})
 							}
 						/>

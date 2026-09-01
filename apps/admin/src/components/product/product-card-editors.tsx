@@ -4,33 +4,33 @@ import { Input } from "@/components/ui/input";
 
 export function ProductStockEditor({
 	isEditing,
+	isPending,
+	onCancel,
+	onEdit,
+	onSave,
+	onValueChange,
 	stock,
 	value,
-	isPending,
-	onValueChange,
-	onEdit,
-	onCancel,
-	onSave,
 }: {
 	isEditing: boolean;
+	isPending: boolean;
+	onCancel: () => void;
+	onEdit: () => void;
+	onSave: () => void;
+	onValueChange: (value: number) => void;
 	stock: number;
 	value: number;
-	isPending: boolean;
-	onValueChange: (value: number) => void;
-	onEdit: () => void;
-	onCancel: () => void;
-	onSave: () => void;
 }) {
 	if (!isEditing) {
 		return (
 			<Button
-				variant="secondary"
-				size="sm"
+				className="border-border h-8 border-2 px-3 text-sm"
 				onClick={(e) => {
 					e.stopPropagation();
 					onEdit();
 				}}
-				className="h-8 border-2 border-border px-3 text-sm"
+				size="sm"
+				variant="secondary"
 			>
 				<Edit className="mr-1 h-4 w-4" />
 				үлдэгдэл засах
@@ -41,47 +41,48 @@ export function ProductStockEditor({
 	return (
 		<div className="flex items-center gap-1">
 			<Input
-				type="number"
+				className="border-border h-8 w-20 border-2 text-center text-sm"
+				disabled={isPending}
 				min="0"
-				value={value}
-				onClick={(e) => e.stopPropagation()}
 				onChange={(e) => {
-					const next =
-						e.target.value === "" ? 0 : Number.parseInt(e.target.value, 10);
+					const next = e.target.value === "" ? 0 : Number.parseInt(e.target.value, 10);
 					onValueChange(Math.max(0, next));
 				}}
+				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => {
 					e.stopPropagation();
-					if (e.key === "Enter") onSave();
+					if (e.key === "Enter") {
+						onSave();
+					}
 					if (e.key === "Escape") {
 						onValueChange(stock);
 						onCancel();
 					}
 				}}
-				className="h-8 w-20 border-2 border-border text-center text-sm"
-				disabled={isPending}
+				type="number"
+				value={value}
 			/>
 			<Button
-				size="sm"
 				className="h-8 px-2 text-xs"
+				disabled={isPending}
 				onClick={(e) => {
 					e.stopPropagation();
 					onSave();
 				}}
-				disabled={isPending}
+				size="sm"
 			>
 				Хадг
 			</Button>
 			<Button
-				variant="outline"
-				size="sm"
 				className="h-8 px-2 text-xs"
+				disabled={isPending}
 				onClick={(e) => {
 					e.stopPropagation();
 					onValueChange(stock);
 					onCancel();
 				}}
-				disabled={isPending}
+				size="sm"
+				variant="outline"
 			>
 				Цуц
 			</Button>
@@ -91,33 +92,33 @@ export function ProductStockEditor({
 
 export function ProductPriceEditor({
 	isEditing,
+	isPending,
+	onCancel,
+	onEdit,
+	onSave,
+	onValueChange,
 	price,
 	value,
-	isPending,
-	onValueChange,
-	onEdit,
-	onCancel,
-	onSave,
 }: {
 	isEditing: boolean;
+	isPending: boolean;
+	onCancel: () => void;
+	onEdit: () => void;
+	onSave: () => void;
+	onValueChange: (value: number) => void;
 	price: number;
 	value: number;
-	isPending: boolean;
-	onValueChange: (value: number) => void;
-	onEdit: () => void;
-	onCancel: () => void;
-	onSave: () => void;
 }) {
 	if (!isEditing) {
 		return (
 			<Button
-				variant="secondary"
-				size="sm"
+				className="border-border h-8 border-2 px-3 text-sm"
 				onClick={(e) => {
 					e.stopPropagation();
 					onEdit();
 				}}
-				className="h-8 border-2 border-border px-3 text-sm"
+				size="sm"
+				variant="secondary"
 			>
 				<Edit className="mr-1 h-4 w-4" />₮{price.toLocaleString()}
 			</Button>
@@ -127,47 +128,48 @@ export function ProductPriceEditor({
 	return (
 		<div className="flex items-center gap-1">
 			<Input
-				type="number"
+				className="border-border h-8 w-24 border-2 text-center text-sm"
+				disabled={isPending}
 				min="0"
-				value={value}
-				onClick={(e) => e.stopPropagation()}
 				onChange={(e) => {
-					const next =
-						e.target.value === "" ? 0 : Number.parseInt(e.target.value, 10);
+					const next = e.target.value === "" ? 0 : Number.parseInt(e.target.value, 10);
 					onValueChange(Math.max(0, next));
 				}}
+				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => {
 					e.stopPropagation();
-					if (e.key === "Enter") onSave();
+					if (e.key === "Enter") {
+						onSave();
+					}
 					if (e.key === "Escape") {
 						onValueChange(price);
 						onCancel();
 					}
 				}}
-				className="h-8 w-24 border-2 border-border text-center text-sm"
-				disabled={isPending}
+				type="number"
+				value={value}
 			/>
 			<Button
-				size="sm"
 				className="h-8 px-2 text-xs"
+				disabled={isPending}
 				onClick={(e) => {
 					e.stopPropagation();
 					onSave();
 				}}
-				disabled={isPending}
+				size="sm"
 			>
 				Хадг
 			</Button>
 			<Button
-				variant="outline"
-				size="sm"
 				className="h-8 px-2 text-xs"
+				disabled={isPending}
 				onClick={(e) => {
 					e.stopPropagation();
 					onValueChange(price);
 					onCancel();
 				}}
-				disabled={isPending}
+				size="sm"
+				variant="outline"
 			>
 				Цуц
 			</Button>

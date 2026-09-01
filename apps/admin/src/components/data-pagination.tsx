@@ -9,27 +9,27 @@ import {
 } from "@/components/ui/pagination";
 
 interface DataPaginationProps {
-	currentPage: number;
-	totalItems: number;
-	itemsPerPage: number;
-	onPageChange: (page: number) => void | Promise<void>;
-	maxPageButtons?: number;
-	showTotalCount?: boolean;
 	className?: string;
-	totalCountText?: string;
+	currentPage: number;
 	isLoading?: boolean;
+	itemsPerPage: number;
+	maxPageButtons?: number;
+	onPageChange: (page: number) => void | Promise<void>;
+	showTotalCount?: boolean;
+	totalCountText?: string;
+	totalItems: number;
 }
 
 export function DataPagination({
-	currentPage,
-	totalItems,
-	itemsPerPage,
-	onPageChange,
-	maxPageButtons = 2,
-	showTotalCount = true,
 	className = "",
-	totalCountText,
+	currentPage,
 	isLoading = false,
+	itemsPerPage,
+	maxPageButtons = 2,
+	onPageChange,
+	showTotalCount = true,
+	totalCountText,
+	totalItems,
 }: DataPaginationProps) {
 	const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
@@ -41,7 +41,7 @@ export function DataPagination({
 	};
 
 	const getPageNumbers = () => {
-		const pageNumbers: number[] = [];
+		const pageNumbers: Array<number> = [];
 		let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
 		let endPage = startPage + maxPageButtons - 1;
 
@@ -63,15 +63,14 @@ export function DataPagination({
 	}
 
 	const showStartEllipsis = totalPages > 1 && pageNumbers[0] > 1;
-	const showEndEllipsis =
-		totalPages > 1 && (pageNumbers[pageNumbers.length - 1] ?? 0) < totalPages;
+	const showEndEllipsis = totalPages > 1 && (pageNumbers.at(-1) ?? 0) < totalPages;
 	if (totalPages === 1) {
 		return null;
 	}
 	return (
 		<div className={`space-y-4 ${className}`}>
 			{showTotalCount && (
-				<p className="text-center text-muted-foreground text-xs">
+				<p className="text-muted-foreground text-center text-xs">
 					{totalCountText || `${totalPages} хуудаснаас ${currentPage}-р хуудас`}
 				</p>
 			)}
@@ -80,13 +79,9 @@ export function DataPagination({
 				<PaginationContent>
 					<PaginationItem>
 						<PaginationPrevious
-							onClick={() => handlePageChange(currentPage - 1)}
-							className={
-								currentPage <= 1 || isLoading
-									? "pointer-events-none opacity-50"
-									: ""
-							}
 							aria-disabled={currentPage <= 1 || isLoading}
+							className={currentPage <= 1 || isLoading ? "pointer-events-none opacity-50" : ""}
+							onClick={() => handlePageChange(currentPage - 1)}
 						/>
 					</PaginationItem>
 
@@ -94,10 +89,10 @@ export function DataPagination({
 						<>
 							<PaginationItem>
 								<PaginationLink
-									onClick={() => handlePageChange(1)}
-									isActive={currentPage === 1}
 									aria-disabled={isLoading}
 									className={isLoading ? "pointer-events-none" : ""}
+									isActive={currentPage === 1}
+									onClick={() => handlePageChange(1)}
 								>
 									1
 								</PaginationLink>
@@ -112,10 +107,10 @@ export function DataPagination({
 					{pageNumbers.map((pageNumber) => (
 						<PaginationItem key={pageNumber}>
 							<PaginationLink
-								onClick={() => handlePageChange(pageNumber)}
-								isActive={pageNumber === currentPage}
 								aria-disabled={isLoading}
 								className={isLoading ? "pointer-events-none" : ""}
+								isActive={pageNumber === currentPage}
+								onClick={() => handlePageChange(pageNumber)}
 							>
 								{pageNumber}
 							</PaginationLink>
@@ -130,10 +125,10 @@ export function DataPagination({
 
 							<PaginationItem>
 								<PaginationLink
-									onClick={() => handlePageChange(totalPages)}
-									isActive={currentPage === totalPages}
 									aria-disabled={isLoading}
 									className={isLoading ? "pointer-events-none" : ""}
+									isActive={currentPage === totalPages}
+									onClick={() => handlePageChange(totalPages)}
 								>
 									{totalPages}
 								</PaginationLink>
@@ -143,13 +138,11 @@ export function DataPagination({
 
 					<PaginationItem>
 						<PaginationNext
-							onClick={() => handlePageChange(currentPage + 1)}
-							className={
-								currentPage >= totalPages || isLoading
-									? "pointer-events-none opacity-50"
-									: ""
-							}
 							aria-disabled={currentPage >= totalPages || isLoading}
+							className={
+								currentPage >= totalPages || isLoading ? "pointer-events-none opacity-50" : ""
+							}
+							onClick={() => handlePageChange(currentPage + 1)}
 						/>
 					</PaginationItem>
 				</PaginationContent>

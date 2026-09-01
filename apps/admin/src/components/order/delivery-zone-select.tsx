@@ -12,33 +12,33 @@ export interface DeliveryZone {
 }
 
 interface DeliveryZoneSelectProps {
+	disabled?: boolean;
 	id: string;
 	label: string;
-	zones: DeliveryZone[];
-	value?: number;
 	onValueChange: (value: number) => void;
-	disabled?: boolean;
+	value?: number;
+	zones: Array<DeliveryZone>;
 }
 
 export function DeliveryZoneSelect({
+	disabled,
 	id,
 	label,
-	zones,
-	value,
 	onValueChange,
-	disabled,
+	value,
+	zones,
 }: DeliveryZoneSelectProps) {
 	return (
 		<div className="space-y-2">
-			<label htmlFor={id} className="font-bold text-sm">
+			<label className="text-sm font-bold" htmlFor={id}>
 				{label}
 			</label>
 			<Select
-				value={value?.toString()}
-				onValueChange={(next) => onValueChange(Number(next))}
 				disabled={disabled}
+				onValueChange={(next) => onValueChange(Number(next))}
+				value={value?.toString()}
 			>
-				<SelectTrigger id={id} aria-required="true">
+				<SelectTrigger aria-required="true" id={id}>
 					<SelectValue placeholder="Хүргэлтийн бүс сонгох" />
 				</SelectTrigger>
 				<SelectContent>

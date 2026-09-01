@@ -8,10 +8,7 @@ import {
 	RestockSubscriptionsTable,
 } from "~/db/schema";
 import { MAX_OPEN_PRODUCTS_PER_CONTACT } from "~/lib/restock/dispatch";
-import {
-	isValidRestockContact,
-	normalizeRestockContact,
-} from "~/lib/restock/normalize";
+import { isValidRestockContact, normalizeRestockContact } from "~/lib/restock/normalize";
 import { enforceRestockRateLimit } from "~/lib/restock/rate-limit";
 
 type RestockContact = {
@@ -20,8 +17,8 @@ type RestockContact = {
 };
 
 type SubscribeResult = {
-	channel: "sms" | "email";
 	alreadySubscribed: boolean;
+	channel: "sms" | "email";
 };
 
 const CONTACT_RATE_LIMIT = 20;
@@ -39,10 +36,7 @@ function normalizeAndValidateContact(input: RestockContact): RestockContact {
 	if (!isValidRestockContact(input.channel, contact)) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message:
-				input.channel === "sms"
-					? "Invalid phone number"
-					: "Invalid email address",
+			message: input.channel === "sms" ? "Invalid phone number" : "Invalid email address",
 		});
 	}
 	return { channel: input.channel, contact };
@@ -61,11 +55,9 @@ type Tx = Parameters<Parameters<ReturnType<typeof db>["transaction"]>[0]>[0];
 
 async function assertProductOutOfStock(tx: Tx, productId: number) {
 	const [product] = await tx
-		.select({ stock: ProductsTable.stock, status: ProductsTable.status })
+		.select({ status: ProductsTable.status, stock: ProductsTable.stock })
 		.from(ProductsTable)
-		.where(
-			and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)),
-		)
+		.where(and(eq(ProductsTable.id, productId), isNull(ProductsTable.deletedAt)))
 		.for("update");
 	if (!product || product.status === "draft") {
 		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
@@ -95,8 +87,8 @@ async function insertOneContact(
 
 	if (existing) {
 		return {
-			channel: item.channel,
 			alreadySubscribed: true,
+			channel: item.channel,
 		};
 	}
 
@@ -120,21 +112,21 @@ async function insertOneContact(
 
 	try {
 		await tx.insert(RestockSubscriptionsTable).values({
-			productId,
 			channel: item.channel,
+			consentState: "verified",
 			contact: item.contact,
 			deliveryKey: `restock-${crypto.randomUUID()}`,
-			consentState: "verified",
+			productId,
 		});
 		return {
-			channel: item.channel,
 			alreadySubscribed: false,
+			channel: item.channel,
 		};
 	} catch (error) {
 		if (isUniqueConflict(error)) {
 			return {
-				channel: item.channel,
 				alreadySubscribed: true,
+				channel: item.channel,
 			};
 		}
 		throw error;
@@ -142,22 +134,22 @@ async function insertOneContact(
 }
 
 export async function createVerifiedRestockSubscription(input: {
-	productId: number;
 	channel: "sms" | "email";
 	contact: string;
+	productId: number;
 }) {
 	const contact = normalizeAndValidateContact(input);
 	let result: SubscribeResult;
 	try {
 		result = await db().transaction(async (tx) => {
 			await assertProductOutOfStock(tx, input.productId);
-			await tx.execute(
-				sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`,
-			);
+			await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${contact.contact}, 0))`);
 			return insertOneContact(tx, input.productId, contact);
 		});
 	} catch (error) {
-		if (error instanceof TRPCError) throw error;
+		if (error instanceof TRPCError) {
+			throw error;
+		}
 		throw new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
 			message: "Failed to create restock subscription",
@@ -165,19 +157,17 @@ export async function createVerifiedRestockSubscription(input: {
 	}
 
 	return {
-		success: true as const,
-		message: result.alreadySubscribed
-			? "Already subscribed"
-			: "Subscription created",
 		alreadySubscribed: result.alreadySubscribed,
+		message: result.alreadySubscribed ? "Already subscribed" : "Subscription created",
 		results: [result],
+		success: true as const,
 	};
 }
 
 export async function subscribeVerifiedPhoneToRestock(input: {
 	productId: number;
-	verifiedPhone: string;
 	requestIp: string;
+	verifiedPhone: string;
 }) {
 	const contact = normalizeAndValidateContact({
 		channel: "sms",
@@ -186,16 +176,16 @@ export async function subscribeVerifiedPhoneToRestock(input: {
 	await Promise.all([
 		enforceRestockRateLimit({
 			action: "subscribe",
+			limit: CONTACT_RATE_LIMIT,
 			scope: "contact",
 			value: contact.contact,
-			limit: CONTACT_RATE_LIMIT,
 			windowSeconds: CONTACT_RATE_WINDOW_SECONDS,
 		}),
 		enforceRestockRateLimit({
 			action: "subscribe",
+			limit: IP_RATE_LIMIT,
 			scope: "ip",
 			value: input.requestIp,
-			limit: IP_RATE_LIMIT,
 			windowSeconds: CONTACT_RATE_WINDOW_SECONDS,
 		}),
 	]);
@@ -209,9 +199,7 @@ export async function getRestockWaitCount(productId: number): Promise<number> {
 	const [row] = await db()
 		.select({ c: countDistinct(RestockSubscriptionsTable.contact) })
 		.from(RestockSubscriptionsTable)
-		.where(
-			and(eq(RestockSubscriptionsTable.productId, productId), openSubscription),
-		);
+		.where(and(eq(RestockSubscriptionsTable.productId, productId), openSubscription));
 
 	return Number(row?.c ?? 0);
 }
@@ -237,19 +225,16 @@ export async function listRestockWaitCounts(limit = 50) {
 export async function listRestockWaitlist(limit = 50) {
 	const ranked = await db()
 		.select({
-			productId: RestockSubscriptionsTable.productId,
-			waitCount: countDistinct(RestockSubscriptionsTable.contact),
-			name: ProductsTable.name,
-			slug: ProductsTable.slug,
-			stock: ProductsTable.stock,
-			status: ProductsTable.status,
 			brandName: BrandsTable.name,
+			name: ProductsTable.name,
+			productId: RestockSubscriptionsTable.productId,
+			slug: ProductsTable.slug,
+			status: ProductsTable.status,
+			stock: ProductsTable.stock,
+			waitCount: countDistinct(RestockSubscriptionsTable.contact),
 		})
 		.from(RestockSubscriptionsTable)
-		.innerJoin(
-			ProductsTable,
-			eq(ProductsTable.id, RestockSubscriptionsTable.productId),
-		)
+		.innerJoin(ProductsTable, eq(ProductsTable.id, RestockSubscriptionsTable.productId))
 		.leftJoin(BrandsTable, eq(BrandsTable.id, ProductsTable.brandId))
 		.where(and(openSubscription, isNull(ProductsTable.deletedAt)))
 		.groupBy(
@@ -270,16 +255,13 @@ export async function listRestockWaitlist(limit = 50) {
 	const productIds = ranked.map((row) => row.productId);
 	const images = await db()
 		.select({
+			isPrimary: ProductImagesTable.isPrimary,
 			productId: ProductImagesTable.productId,
 			url: ProductImagesTable.url,
-			isPrimary: ProductImagesTable.isPrimary,
 		})
 		.from(ProductImagesTable)
 		.where(
-			and(
-				inArray(ProductImagesTable.productId, productIds),
-				isNull(ProductImagesTable.deletedAt),
-			),
+			and(inArray(ProductImagesTable.productId, productIds), isNull(ProductImagesTable.deletedAt)),
 		);
 
 	const imageByProduct = new Map<number, string>();
@@ -291,13 +273,13 @@ export async function listRestockWaitlist(limit = 50) {
 	}
 
 	return ranked.map((row) => ({
-		productId: row.productId,
-		waitCount: Number(row.waitCount),
-		name: row.name,
-		slug: row.slug,
-		stock: row.stock,
-		status: row.status,
 		brandName: row.brandName ?? null,
 		image: imageByProduct.get(row.productId) ?? null,
+		name: row.name,
+		productId: row.productId,
+		slug: row.slug,
+		status: row.status,
+		stock: row.stock,
+		waitCount: Number(row.waitCount),
 	}));
 }

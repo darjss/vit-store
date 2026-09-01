@@ -1,0 +1,36 @@
+import { defineConfig } from "oxfmt";
+
+export default defineConfig({
+	ignorePatterns: [
+		"**/node_modules/**",
+		"**/.next/**",
+		"**/dist/**",
+		"**/generated/**",
+		"**/.turbo/**",
+		"**/tmp/**",
+		"**/.bun/**",
+		"**/dev-dist/**",
+		"**/.zed/**",
+		"**/.vscode/**",
+		"**/routeTree.gen.ts",
+		"**/.nuxt/**",
+		"**/.wrangler/**",
+		"**/.alchemy/**",
+		"**/dev.log",
+		"**/public/**",
+		"**/components/ui/**",
+		"**/.astro/**",
+		"**/vit/**",
+		"**/*.sql",
+		"**/migrations/meta/**",
+		"apps/storev2/src/components/starwind/**",
+		"tools/oxlint/anti-slop/**",
+		"**/.agents/**",
+		"**/.cursor/**",
+	],
+	singleQuote: false,
+	sortTailwindcss: {
+		functions: ["clsx", "cva", "cn"],
+	},
+	useTabs: true,
+});

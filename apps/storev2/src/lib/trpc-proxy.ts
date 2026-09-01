@@ -1,7 +1,4 @@
-import {
-	sanitizePublicTrpcErrorShape,
-	sanitizePublicTrpcResponse,
-} from "@vit/shared";
+import { sanitizePublicTrpcErrorShape, sanitizePublicTrpcResponse } from "@vit/shared";
 
 export const isUnsupportedTrpcTransport = (request: Request): boolean =>
 	request.headers.get("trpc-accept") === "application/jsonl";
@@ -17,7 +14,7 @@ export const noStoreJson = (
 	headers.set("cloudflare-cdn-cache-control", "no-store");
 	headers.delete("cache-tag");
 	headers.delete("content-length");
-	return Response.json(body, { status, headers });
+	return Response.json(body, { headers, status });
 };
 
 export const trpcErrorResponse = (
@@ -37,26 +34,22 @@ export const trpcErrorResponse = (
 	);
 };
 
-export const sanitizeUpstreamTrpcResponse = async (
-	response: Response,
-): Promise<Response> => {
+export const sanitizeUpstreamTrpcResponse = async (response: Response): Promise<Response> => {
 	let payload: unknown;
 	try {
 		payload = await response.clone().json();
 	} catch (error) {
 		console.warn({
+			errorType: error instanceof Error ? error.name : typeof error,
 			event: "store_trpc_invalid_error_response",
 			upstreamStatus: response.status,
-			errorType: error instanceof Error ? error.name : typeof error,
 		});
 		return trpcErrorResponse(502);
 	}
 
 	const sanitized = sanitizePublicTrpcResponse(payload, response.status);
 	if (!sanitized.hasError) {
-		return response.status >= 400
-			? trpcErrorResponse(response.status)
-			: response;
+		return response.status >= 400 ? trpcErrorResponse(response.status) : response;
 	}
 	return noStoreJson(sanitized.payload, response.status, response.headers);
 };

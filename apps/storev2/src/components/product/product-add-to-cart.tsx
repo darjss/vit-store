@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { createSheetFocusRestore } from "@/components/ui/sheet";
 import AddToCartButton from "../cart/add-to-cart-button";
 import { showToast } from "../ui/toast";
-import {
-	useInventorySnapshot,
-	useInventoryVerification,
-} from "./inventory-reconciler";
+import { useInventorySnapshot, useInventoryVerification } from "./inventory-reconciler";
 import RestockNotifySheet from "./restock-notify-sheet";
 
 interface ProductQuantitySelectorProps {
@@ -20,9 +17,7 @@ interface ProductQuantitySelectorProps {
 	stock: number;
 }
 
-export default function ProductQuantitySelector(
-	props: ProductQuantitySelectorProps,
-) {
+export default function ProductQuantitySelector(props: ProductQuantitySelectorProps) {
 	const maxStock = props.stock;
 	const [quantity, setQuantity] = createSignal(1);
 	const [notifyOpen, setNotifyOpen] = createSignal(false);
@@ -39,17 +34,19 @@ export default function ProductQuantitySelector(
 
 	createEffect(() => {
 		const max = Math.min(10, stock());
-		if (max > 0) setQuantity((current) => Math.min(current, max));
+		if (max > 0) {
+			setQuantity((current) => Math.min(current, max));
+		}
 	});
 
 	const increment = () => {
 		const max = Math.min(10, stock());
 		if (quantity() >= max) {
 			showToast({
-				title: "Нэмэх боломжгүй",
 				description: "Энэ бүтээгдэхүүнээс илүү тоо хэмжээгээр авах боломжгүй.",
-				variant: "destructive",
 				duration: 3000,
+				title: "Нэмэх боломжгүй",
+				variant: "destructive",
 			});
 			return;
 		}
@@ -61,21 +58,18 @@ export default function ProductQuantitySelector(
 		<Switch>
 			<Match when={verification().status !== "verified"}>
 				<div
-					class="rounded-2xl border border-border bg-warning p-4 text-warning-foreground"
+					class="border-border bg-warning text-warning-foreground rounded-2xl border p-4"
 					data-inventory-verification={verification().status}
 				>
 					<div class="flex items-start gap-2.5">
-						<IconAlertTriangle
-							class="mt-0.5 h-5 w-5 shrink-0"
-							aria-hidden="true"
-						/>
+						<IconAlertTriangle aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0" />
 						<div>
-							<p class="font-semibold text-sm">
+							<p class="text-sm font-semibold">
 								{verification().status === "degraded"
 									? "Нөөц баталгаажаагүй"
 									: "Нөөцийг шалгаж байна"}
 							</p>
-							<p class="mt-1 text-muted-foreground text-xs leading-relaxed sm:text-sm">
+							<p class="text-muted-foreground mt-1 text-xs leading-relaxed sm:text-sm">
 								{verification().status === "degraded"
 									? "Шинэ мэдээлэл авах хүртэл сагслах боломжгүй. Дээрх “Дахин шалгах” товчийг ашиглана уу."
 									: "Одоогийн нөөц баталгаажмагц сагслах боломжтой болно."}
@@ -87,32 +81,30 @@ export default function ProductQuantitySelector(
 			<Match when={isInStock()}>
 				<div class="flex items-center gap-3">
 					<fieldset
-						class="inline-flex h-12 shrink-0 items-center rounded-full border border-border bg-background shadow-soft-sm"
 						aria-label="Тоо хэмжээ"
+						class="border-border bg-background shadow-soft-sm inline-flex h-12 shrink-0 items-center rounded-full border"
 					>
 						<button
-							type="button"
-							onClick={decrement}
-							class="flex h-12 w-11 items-center justify-center rounded-l-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
-							disabled={quantity() <= 1}
 							aria-label="Хасах"
+							class="text-foreground hover:bg-muted flex h-12 w-11 items-center justify-center rounded-l-full text-xl font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							disabled={quantity() <= 1}
+							onClick={decrement}
+							type="button"
 						>
 							−
 						</button>
-						<span class="w-8 text-center font-display text-base tabular-nums">
-							{quantity()}
-						</span>
+						<span class="font-display w-8 text-center text-base tabular-nums">{quantity()}</span>
 						<button
-							type="button"
-							onClick={increment}
-							class="flex h-12 w-11 items-center justify-center rounded-r-full font-semibold text-foreground text-xl transition-[background-color,transform] duration-150 ease-out hover:bg-muted active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
 							aria-label="Нэмэх"
+							class="text-foreground hover:bg-muted flex h-12 w-11 items-center justify-center rounded-r-full text-xl font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.94] disabled:pointer-events-none disabled:opacity-40"
+							onClick={increment}
+							type="button"
 						>
 							+
 						</button>
 					</fieldset>
 
-					<div data-product-main-purchase-action class="min-w-0 flex-1">
+					<div class="min-w-0 flex-1" data-product-main-purchase-action>
 						<AddToCartButton
 							cartItem={{
 								...props.cartItem,
@@ -125,27 +117,25 @@ export default function ProductQuantitySelector(
 			</Match>
 			<Match when={!isInStock()}>
 				<div class="space-y-4">
-					<div class="rounded-2xl bg-sand/40 p-4 sm:p-5">
+					<div class="bg-sand/40 rounded-2xl p-4 sm:p-5">
 						<div class="mb-2 flex items-center gap-2.5">
-							<IconAlertTriangle class="h-5 w-5 text-cocoa/80" />
-							<h3 class="font-semibold text-base text-foreground sm:text-lg">
-								Дууссан байна
-							</h3>
+							<IconAlertTriangle class="text-cocoa/80 h-5 w-5" />
+							<h3 class="text-foreground text-base font-semibold sm:text-lg">Дууссан байна</h3>
 						</div>
 						<p class="text-muted-foreground text-sm leading-relaxed sm:text-base">
-							Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх
-							товчийг дарж бараа орох үед мэдэгдэл авах боломжтой.
+							Уучлаарай, энэ бүтээгдэхүүн одоогоор дууссан байна. Та доорх товчийг дарж бараа орох
+							үед мэдэгдэл авах боломжтой.
 						</p>
 					</div>
 
 					<Button
-						data-product-main-purchase-action
 						class="w-full"
-						size="lg"
+						data-product-main-purchase-action
 						onClick={(event) => {
 							restockSheetFocusRestore.register(event.currentTarget);
 							setNotifyOpen(true);
 						}}
+						size="lg"
 					>
 						<IconNotification class="mr-1" />
 						Мэдэгдэл авах
@@ -153,11 +143,11 @@ export default function ProductQuantitySelector(
 
 					<Show when={notifyOpen()}>
 						<RestockNotifySheet
-							open
+							focusRestore={restockSheetFocusRestore}
 							onOpenChange={setNotifyOpen}
+							open
 							productId={props.cartItem.productId}
 							productName={props.cartItem.name}
-							focusRestore={restockSheetFocusRestore}
 						/>
 					</Show>
 				</div>

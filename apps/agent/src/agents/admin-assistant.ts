@@ -20,66 +20,58 @@ import {
 } from "../channels/telegram";
 
 type AgentEnv = {
-	LOADER?: WorkerLoader;
 	ADMIN_BOT_TOKEN?: string;
 	AI?: Ai;
+	LOADER?: WorkerLoader;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
-export default defineAgent<AgentEnv>(({ id, env }) => {
-	const storeApiUrl =
-		process.env.STORE_API_URL ?? "http://localhost:3000";
+export default defineAgent<AgentEnv>(({ env, id }) => {
+	const storeApiUrl = process.env.STORE_API_URL ?? "http://localhost:3000";
 	const queryTool =
 		env.LOADER && env.ADMIN_BOT_TOKEN
 			? buildAdminQueryTool({
-					loader: env.LOADER,
 					botToken: env.ADMIN_BOT_TOKEN,
+					loader: env.LOADER,
 					storeApiUrl,
 				})
 			: undefined;
 
 	const purchaseExtractTool =
-		env.AI &&
-		env.MESSENGER_INBOUND_BUCKET &&
-		env.ADMIN_BOT_TOKEN
+		env.AI && env.MESSENGER_INBOUND_BUCKET && env.ADMIN_BOT_TOKEN
 			? buildPurchaseImageExtractTool({
-					loadImage: (key) =>
-						loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
-					runVision: buildKimiVision(env.AI, 4096),
+					loadImage: (key) => loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
 					matchExtracted: (input) =>
 						createAdminBotClient(
 							storeApiUrl,
 							env.ADMIN_BOT_TOKEN as string,
 						).aiPurchase.matchExtractedInvoice.mutate(input),
+					runVision: buildKimiVision(env.AI, 4096),
 				})
 			: undefined;
 
 	const isTelegram = id.startsWith("telegram:");
-	const telegramRef = isTelegram
-		? telegramChannel.parseConversationKey(id)
-		: undefined;
+	const telegramRef = isTelegram ? telegramChannel.parseConversationKey(id) : undefined;
 	const replyTool = isTelegram
 		? postTelegramMessage(telegramRef!)
-		: postMessengerMessage(
-				messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")),
-			);
+		: postMessengerMessage(messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")));
 	const productPhotoTool =
 		isTelegram && telegramRef && env.ADMIN_BOT_TOKEN
 			? postTelegramProductPhoto({
+					botToken: env.ADMIN_BOT_TOKEN,
 					ref: telegramRef,
 					storeApiUrl,
-					botToken: env.ADMIN_BOT_TOKEN,
 				})
 			: undefined;
 
 	return {
+		compaction: {
+			keepRecentTokens: 8000,
+			reserveTokens: 20_000,
+		},
+		instructions: adminAssistantInstructions,
 		model: ADMIN_ASSISTANT_MODEL,
 		thinkingLevel: "medium" as const,
-		instructions: adminAssistantInstructions,
-		compaction: {
-			reserveTokens: 20_000,
-			keepRecentTokens: 8_000,
-		},
 		tools: [
 			...(queryTool ? [queryTool] : []),
 			...(purchaseExtractTool ? [purchaseExtractTool] : []),

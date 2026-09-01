@@ -3,6 +3,7 @@
 ## 🔐 Authentication & User Management
 
 ### Login/Signup Flow
+
 - [x] Create `/pages/login.astro` page
 - [x] Build OTP input component with phone number field
 - [x] Add OTP verification component (4-digit code input)
@@ -11,6 +12,7 @@
 - [x] Display error messages for invalid OTP or phone number
 
 ### User Profile & Account
+
 - [x] Create `/pages/profile.astro` - user profile page
 - [x] Build user info display component (name, phone, address)
 - [ ] Add editable profile form (name, email, address fields)
@@ -18,6 +20,7 @@
 - [ ] Add password/phone change feature
 
 ### Order History
+
 - [x] Create order history page (integrated in `/pages/profile.astro`)
 - [x] Build order list component with status badges
 - [ ] Add order filtering (all, pending, shipped, delivered, cancelled)
@@ -32,6 +35,7 @@
 - [ ] Create order search functionality
 
 ### Session Management
+
 - [x] Add session check on protected pages
 - [ ] Implement auto-logout on session expiry
 - [ ] Add "remember me" functionality
@@ -43,6 +47,7 @@
 ## 🛍️ Shopping Experience
 
 ### Product Listing Page (`/products/index.astro`)
+
 - [x] Replace placeholder content with actual product grid
 - [x] Implement product filtering system (component exists: `product-filters.tsx`)
   - [x] Filter by category
@@ -62,6 +67,7 @@
 - [x] Create "clear all filters" button
 
 ### Search Functionality
+
 - [ ] Create search page `/pages/search.astro`
 - [ ] Build search input component with autocomplete
 - [ ] Implement real-time search suggestions
@@ -72,6 +78,7 @@
 - [ ] Add keyboard navigation for search suggestions
 
 ### Product Details Enhancements
+
 - [x] Product details page with tabs (description, usage, ingredients, specs)
 - [ ] Add product reviews section
   - [ ] Display existing reviews with ratings
@@ -92,6 +99,7 @@
 ## 🛒 Cart & Checkout
 
 ### Cart Enhancements
+
 - [ ] Add "save for later" functionality
 - [ ] Implement promo code input field
 - [ ] Create discount code validation
@@ -102,6 +110,7 @@
 - [ ] Add cart item notes/special instructions
 
 ### Checkout Page (`/checkout.astro`)
+
 - [x] Build complete checkout page layout
 - [ ] Create multi-step checkout flow
   - [x] Step 1: Shipping information
@@ -136,6 +145,7 @@
 ## 📄 Static Pages
 
 ### About Page
+
 - [ ] Create `/pages/about.astro`
 - [ ] Add company story section
 - [ ] Create team section with photos
@@ -143,6 +153,7 @@
 - [ ] Include trust badges and certifications
 
 ### Contact Page
+
 - [ ] Create `/pages/contact.astro`
 - [ ] Build contact form (name, email, phone, message)
 - [ ] Add contact information (phone, email, address)
@@ -152,6 +163,7 @@
 - [ ] Add social media links
 
 ### Help/FAQ Page
+
 - [ ] Create `/pages/help.astro`
 - [ ] Add frequently asked questions accordion
 - [ ] Create category-based FAQ organization
@@ -162,6 +174,7 @@
 - [ ] Add terms of service
 
 ### 404 Page
+
 - [x] Create custom `/pages/404.astro`
 - [x] Add helpful error message
 - [ ] Include search functionality
@@ -173,6 +186,7 @@
 ## 🎨 UI Components & Features
 
 ### Header Enhancements
+
 - [x] Implement mobile menu functionality (hamburger icon exists, needs functionality)
 - [ ] Add search functionality to header search button
 - [x] Create user dropdown menu
@@ -184,6 +198,7 @@
 - [ ] Create mega menu for categories (desktop)
 
 ### Footer Enhancements
+
 - [ ] Add newsletter signup form
 - [ ] Include social media icons and links
 - [ ] Add payment method icons
@@ -192,6 +207,7 @@
 - [ ] Include trust badges
 
 ### Category Navigation
+
 - [ ] Create category page `/pages/categories/[slug].astro`
 - [x] Build category carousel/slider on homepage (CategoryGrid component)
 - [ ] Add category images to CategoryGrid component
@@ -199,6 +215,7 @@
 - [x] Create breadcrumb navigation for categories (exists on product detail page)
 
 ### Wishlist/Favorites
+
 - [ ] Create wishlist store (similar to cart)
 - [ ] Add "add to wishlist" button on product cards
 - [ ] Create `/pages/wishlist.astro` page
@@ -208,6 +225,7 @@
 - [ ] Show wishlist count in header
 
 ### Product Comparison
+
 - [ ] Create comparison store
 - [ ] Add "compare" checkbox on product cards
 - [ ] Create `/pages/compare.astro` page
@@ -220,6 +238,7 @@
 ## 📱 Responsive & Mobile
 
 ### Mobile Optimization
+
 - [x] Test and fix mobile menu navigation (MobileNavbar component exists)
 - [x] Optimize product cards for mobile (responsive design exists)
 - [x] Improve checkout flow for mobile (responsive layout exists)
@@ -229,6 +248,7 @@
 - [ ] Implement mobile-specific filters layout
 
 ### PWA Features
+
 - [ ] Add "Add to Home Screen" prompt
 - [ ] Implement offline support
 - [ ] Add service worker for caching
@@ -241,6 +261,7 @@
 ## 🔔 Notifications & Feedback
 
 ### Toast Notifications
+
 - [x] Install and configure toast library
 - [ ] Add toast for "added to cart" success
 - [ ] Show toast for "added to wishlist"
@@ -250,6 +271,7 @@
 - [x] Display toast for order placement success
 
 ### Loading States
+
 - [x] Add skeleton loaders for product cards (fallback slots exist)
 - [ ] Create loading spinner for cart operations
 - [x] Add loading state for checkout steps
@@ -257,6 +279,7 @@
 - [ ] Add loading overlay for long operations
 
 ### Error Handling
+
 - [ ] Create error boundary component
 - [ ] Add error states for failed API calls
 - [ ] Implement retry functionality for failed requests
@@ -268,6 +291,7 @@
 ## 🔍 SEO & Performance
 
 ### SEO Optimization
+
 - [ ] Add meta tags to all pages
 - [ ] Implement Open Graph tags for social sharing
 - [ ] Create XML sitemap
@@ -278,6 +302,7 @@
 - [ ] Add product schema markup
 
 ### Performance Optimization
+
 - [ ] Implement lazy loading for images
 - [ ] Optimize image formats (WebP, AVIF)
 - [ ] Add image compression pipeline
@@ -296,6 +321,7 @@
 - [ ] Test responsive breakpoints via browser verification
 
 ### Code Quality
+
 - [ ] Add ESLint configuration
 - [ ] Set up Prettier for code formatting
 - [ ] Add pre-commit hooks (Husky)
@@ -308,6 +334,7 @@
 ## 🌐 Internationalization (i18n)
 
 ### Mongolian Language Support
+
 - [ ] Audit all hardcoded text for proper Mongolian
 - [ ] Create translation JSON files
 - [ ] Implement language switching functionality
@@ -321,6 +348,7 @@
 ## 📊 Analytics & Tracking
 
 ### Analytics Integration
+
 - [ ] Set up Google Analytics 4
 - [ ] Track product views
 - [ ] Track add to cart events
@@ -331,6 +359,7 @@
 - [ ] Implement event tracking for key actions
 
 ### User Behavior
+
 - [ ] Track most viewed products
 - [ ] Monitor cart abandonment
 - [ ] Track user navigation patterns
@@ -342,6 +371,7 @@
 ## 🔒 Security & Privacy
 
 ### Security Enhancements
+
 - [ ] Implement CSRF protection
 - [ ] Add rate limiting for API calls
 - [ ] Sanitize user inputs
@@ -351,6 +381,7 @@
 - [ ] Implement secure headers
 
 ### Privacy Features
+
 - [ ] Add cookie consent banner
 - [ ] Create privacy policy page
 - [ ] Implement GDPR compliance features
@@ -362,6 +393,7 @@
 ## 🎁 Marketing Features
 
 ### Promotions
+
 - [ ] Create banner component for promotions
 - [ ] Add countdown timer for limited offers
 - [ ] Implement flash sale functionality
@@ -369,12 +401,14 @@
 - [ ] Create promotional email templates
 
 ### Loyalty Program
+
 - [ ] Design loyalty points system
 - [ ] Add points display in user account
 - [ ] Create rewards redemption flow
 - [ ] Show points earned on orders
 
 ### Referral Program
+
 - [ ] Create referral code generation
 - [ ] Add referral link sharing
 - [ ] Implement referral tracking
@@ -385,6 +419,7 @@
 ## 🐛 Bug Fixes & Improvements
 
 ### Known Issues
+
 - [ ] Fix cart persistence issues (if any)
 - [ ] Resolve image carousel navigation on mobile
 - [ ] Fix product filter reset behavior
@@ -392,6 +427,7 @@
 - [ ] Fix mobile menu z-index issues
 
 ### UI/UX Improvements
+
 - [ ] Improve button hover states
 - [ ] Enhance form validation messages
 - [ ] Add micro-interactions
@@ -406,6 +442,7 @@
 ## 🚀 Deployment & DevOps
 
 ### Deployment Preparation
+
 - [ ] Set up environment variables for production
 - [ ] Configure Cloudflare Pages deployment
 - [ ] Set up staging environment
@@ -415,6 +452,7 @@
 - [ ] Add performance monitoring
 
 ### CI/CD Pipeline
+
 - [ ] Set up GitHub Actions workflow
 - [ ] Add automated testing in CI
 - [ ] Implement automatic deployment to staging
@@ -426,6 +464,7 @@
 ## 📈 Future Enhancements
 
 ### Advanced Features
+
 - [ ] Implement product recommendations AI
 - [ ] Add voice search functionality
 - [ ] Create AR product preview (if applicable)
@@ -436,6 +475,7 @@
 - [ ] Add live chat support
 
 ### Admin Features
+
 - [ ] Create inventory alerts
 - [ ] Add low stock notifications
 - [ ] Implement bulk order processing
@@ -447,24 +487,28 @@
 ## Priority Levels
 
 🔴 **Critical** (Complete these first)
+
 - [x] Checkout page implementation
 - [x] Product listing page (placeholder exists, needs actual product grid)
 - [x] User authentication pages
 - [ ] Search functionality
 
 🟡 **High Priority** (Complete next)
+
 - [x] User profile and order history
 - [ ] Wishlist functionality
 - [x] Mobile responsiveness (basic responsive design implemented)
 - [ ] SEO optimization
 
 🟢 **Medium Priority** (Nice to have)
+
 - [ ] Product reviews
 - [ ] Comparison feature
 - [ ] PWA features
 - [ ] Advanced analytics
 
 🔵 **Low Priority** (Future enhancements)
+
 - [ ] Referral program
 - [ ] Loyalty system
 - [ ] Advanced AI features

@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
  */
 
 export interface ProductImageFallbackProps {
-	name: string;
 	brand?: string | null;
 	category?: string | null;
 	class?: string;
+	name: string;
 }
 
 /**
@@ -46,13 +46,15 @@ export function getProductMonogram(name: string): string {
 	]);
 
 	const words = name
-		.replace(/[^\p{L}\p{N}\s]/gu, " ")
+		.replaceAll(/[^\p{L}\p{N}\s]/gu, " ")
 		.split(/\s+/)
 		.map((w) => w.trim())
 		.filter((w) => w.length > 0 && !FILLER.has(w.toLowerCase()));
 
 	const letters = words.slice(0, 2).map((w) => w[0]!.toUpperCase());
-	if (letters.length > 0) return letters.join("");
+	if (letters.length > 0) {
+		return letters.join("");
+	}
 
 	const firstAlpha = name.match(/\p{L}|\p{N}/u);
 	return firstAlpha ? firstAlpha[0]!.toUpperCase() : "?";
@@ -64,17 +66,17 @@ export default function ProductImageFallback(props: ProductImageFallbackProps) {
 
 	return (
 		<div
+			aria-hidden="true"
 			class={cn(
 				"absolute inset-0 flex flex-col items-center justify-center gap-1 p-3 text-center",
 				props.class,
 			)}
-			aria-hidden="true"
 		>
-			<span class="select-none font-extrabold uppercase leading-none tracking-tight text-foreground/70 text-4xl sm:text-5xl md:text-6xl">
+			<span class="text-foreground/70 text-4xl leading-none font-extrabold tracking-tight uppercase select-none sm:text-5xl md:text-6xl">
 				{monogram()}
 			</span>
 			<Show when={label()}>
-				<span class="line-clamp-1 max-w-full text-[11px] font-bold uppercase tracking-widest text-foreground/80 sm:text-[11px]">
+				<span class="text-foreground/80 line-clamp-1 max-w-full text-[11px] font-bold tracking-widest uppercase sm:text-[11px]">
 					{label()}
 				</span>
 			</Show>

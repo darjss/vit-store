@@ -1,11 +1,9 @@
 import type { TransferReconciliationState } from "~/lib/payments/transfer-reconciliation-status";
 
 export type TransferReconciliationStub = {
-	start(input: { paymentNumber: string }): Promise<unknown>;
+	collectMatchingKhaanFingerprints(paymentNumber: string): Promise<Array<string> | null>;
 	getStatus(): Promise<TransferReconciliationState | null>;
-	collectMatchingKhaanFingerprints(
-		paymentNumber: string,
-	): Promise<string[] | null>;
+	start(input: { paymentNumber: string }): Promise<unknown>;
 };
 
 /**
@@ -27,6 +25,4 @@ export const getTransferReconciliationStub = (
 	env: Env,
 	paymentNumber: string,
 ): TransferReconciliationStub =>
-	(env.KHAAN_TRANSFER_RECONCILER as unknown as ReconciliationNamespace).getByName(
-		paymentNumber,
-	);
+	(env.KHAAN_TRANSFER_RECONCILER as unknown as ReconciliationNamespace).getByName(paymentNumber);

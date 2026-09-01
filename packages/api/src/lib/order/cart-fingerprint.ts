@@ -1,6 +1,4 @@
-export function cartFingerprint(
-	items: { productId: number; quantity: number }[],
-) {
+export function cartFingerprint(items: Array<{ productId: number; quantity: number }>) {
 	return items
 		.map((item) => ({
 			productId: Math.trunc(item.productId),

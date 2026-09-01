@@ -1,47 +1,45 @@
 import { cart } from "@/store/cart";
-import { AddCircleIcon as IconPlus, CloseCircleIcon as IconClose, MinusCircleIcon as IconMinus } from "@solar-icons/solid/linear";
+import {
+	AddCircleIcon as IconPlus,
+	CloseCircleIcon as IconClose,
+	MinusCircleIcon as IconMinus,
+} from "@solar-icons/solid/linear";
 
-const CartActions = ({
-	quantity,
-	productId,
-}: {
-	quantity: () => number;
-	productId: number;
-}) => {
+const CartActions = ({ productId, quantity }: { productId: number; quantity: () => number }) => {
 	return (
 		<div class="flex items-center gap-2">
-			<div class="inline-flex items-center rounded-full border border-border bg-background shadow-soft-sm">
+			<div class="border-border bg-background shadow-soft-sm inline-flex items-center rounded-full border">
 				<button
-					type="button"
-					class="flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted active:scale-95"
-					data-product-id={productId}
-					data-action="decrease"
-					onClick={() => cart.updateQuantity(productId, -1)}
 					aria-label="Хасах"
+					class="hover:bg-muted flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-[140ms] ease-out active:scale-95"
+					data-action="decrease"
+					data-product-id={productId}
+					onClick={() => cart.updateQuantity(productId, -1)}
+					type="button"
 				>
-					<IconMinus class="h-4 w-4" aria-hidden="true" />
+					<IconMinus aria-hidden="true" class="h-4 w-4" />
 				</button>
-				<div class="flex min-w-7 items-center justify-center font-semibold text-foreground text-sm tabular-nums">
+				<div class="text-foreground flex min-w-7 items-center justify-center text-sm font-semibold tabular-nums">
 					{quantity()}
 				</div>
 				<button
-					type="button"
-					class="flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-[140ms] ease-out hover:bg-muted active:scale-95"
-					data-product-id={productId}
-					data-action="increase"
-					onClick={() => cart.updateQuantity(productId, 1)}
 					aria-label="Нэмэх"
+					class="hover:bg-muted flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-[140ms] ease-out active:scale-95"
+					data-action="increase"
+					data-product-id={productId}
+					onClick={() => cart.updateQuantity(productId, 1)}
+					type="button"
 				>
-					<IconPlus class="h-4 w-4" aria-hidden="true" />
+					<IconPlus aria-hidden="true" class="h-4 w-4" />
 				</button>
 			</div>
 			<button
-				type="button"
-				class="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-[140ms] ease-out hover:bg-error hover:text-error-foreground active:scale-95"
-				onClick={() => cart.remove(productId)}
 				aria-label="Устгах"
+				class="text-muted-foreground hover:bg-error hover:text-error-foreground flex size-11 items-center justify-center rounded-full transition-[background-color,color,transform] duration-[140ms] ease-out active:scale-95"
+				onClick={() => cart.remove(productId)}
+				type="button"
 			>
-				<IconClose class="h-4 w-4" aria-hidden="true" />
+				<IconClose aria-hidden="true" class="h-4 w-4" />
 			</button>
 		</div>
 	);

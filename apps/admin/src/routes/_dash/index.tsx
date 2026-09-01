@@ -23,33 +23,29 @@ import { DashboardPageSkeleton } from "@/components/skeletons/admin-page-skeleto
 
 export const Route = createFileRoute("/_dash/")({
 	component: HomeComponent,
-	pendingComponent: DashboardPageSkeleton,
 	loader: ({ context: ctx }) => {
 		void ctx.queryClient.prefetchQuery(ctx.trpc.sales.analytics.queryOptions());
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.sales.topProducts.queryOptions({
-				timeRange: "daily",
 				productCount: 5,
+				timeRange: "daily",
 			}),
 		);
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getPendingOrders.queryOptions(),
-		);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.order.getPendingOrders.queryOptions());
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.analytics.getWebAnalytics.queryOptions({ timeRange: "daily" }),
 		);
 	},
+	pendingComponent: DashboardPageSkeleton,
 });
 
 function HomeComponent() {
 	const { data: stats } = useSuspenseQuery(trpc.sales.analytics.queryOptions());
-	const { data: orders } = useSuspenseQuery(
-		trpc.order.getPendingOrders.queryOptions(),
-	);
+	const { data: orders } = useSuspenseQuery(trpc.order.getPendingOrders.queryOptions());
 	const { data: topProducts } = useSuspenseQuery(
 		trpc.sales.topProducts.queryOptions({
-			timeRange: "daily",
 			productCount: 5,
+			timeRange: "daily",
 		}),
 	);
 	const { data: webAnalytics } = useSuspenseQuery(
@@ -67,32 +63,30 @@ function HomeComponent() {
 		<div className="space-y-3 pb-6">
 			{/* Compact Hero - Pending Orders */}
 			<Link
-				to="/orders"
+				className="block"
 				search={{
 					orderStatus: "pending",
-					sortField: "createdAt",
-					sortDirection: "desc",
-					searchTerm: "",
 					page: 1,
 					pageSize: 10,
+					searchTerm: "",
+					sortDirection: "desc",
+					sortField: "createdAt",
 				}}
-				className="block"
+				to="/orders"
 			>
-				<div className="flex items-center justify-between border-2 border-border bg-primary p-3 shadow-hard-sm active:translate-y-0.5 active:shadow-none">
+				<div className="border-border bg-primary shadow-hard-sm flex items-center justify-between border-2 p-3 active:translate-y-0.5 active:shadow-none">
 					<div className="flex items-center gap-3">
-						<div className="flex h-10 w-10 items-center justify-center border-2 border-primary-foreground/30 bg-primary-foreground/10">
-							<ShoppingBag className="h-5 w-5 text-primary-foreground" />
+						<div className="border-primary-foreground/30 bg-primary-foreground/10 flex h-10 w-10 items-center justify-center border-2">
+							<ShoppingBag className="text-primary-foreground h-5 w-5" />
 						</div>
 						<div>
-							<p className="font-black font-heading text-2xl text-primary-foreground leading-none">
+							<p className="font-heading text-primary-foreground text-2xl leading-none font-black">
 								{orders.length}
 							</p>
-							<p className="font-medium text-primary-foreground/80 text-xs">
-								хүлээгдэж буй
-							</p>
+							<p className="text-primary-foreground/80 text-xs font-medium">хүлээгдэж буй</p>
 						</div>
 					</div>
-					<div className="flex items-center gap-1 font-bold text-primary-foreground text-sm">
+					<div className="text-primary-foreground flex items-center gap-1 text-sm font-bold">
 						Харах
 						<ArrowRight className="h-4 w-4" />
 					</div>
@@ -101,14 +95,12 @@ function HomeComponent() {
 
 			{/* Today's Stats - 2x2 Grid */}
 			<div className="grid grid-cols-2 gap-2">
-				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
-					<div className="flex items-center gap-1.5 text-muted-foreground">
+				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+					<div className="text-muted-foreground flex items-center gap-1.5">
 						<DollarSign className="h-3.5 w-3.5" />
-						<span className="font-bold text-[10px] uppercase tracking-wide">
-							Орлого
-						</span>
+						<span className="text-[10px] font-bold tracking-wide uppercase">Орлого</span>
 					</div>
-					<p className="mt-1 font-black font-heading text-lg leading-tight">
+					<p className="font-heading mt-1 text-lg leading-tight font-black">
 						{formatCurrency(stats.daily.revenue)}
 					</p>
 					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
@@ -120,14 +112,12 @@ function HomeComponent() {
 					</div>
 				</div>
 
-				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
-					<div className="flex items-center gap-1.5 text-muted-foreground">
+				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+					<div className="text-muted-foreground flex items-center gap-1.5">
 						<Package className="h-3.5 w-3.5" />
-						<span className="font-bold text-[10px] uppercase tracking-wide">
-							Захиалга
-						</span>
+						<span className="text-[10px] font-bold tracking-wide uppercase">Захиалга</span>
 					</div>
-					<p className="mt-1 font-black font-heading text-lg leading-tight">
+					<p className="font-heading mt-1 text-lg leading-tight font-black">
 						{stats.daily.salesCount}
 					</p>
 					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
@@ -139,14 +129,12 @@ function HomeComponent() {
 					</div>
 				</div>
 
-				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
-					<div className="flex items-center gap-1.5 text-muted-foreground">
+				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+					<div className="text-muted-foreground flex items-center gap-1.5">
 						<Eye className="h-3.5 w-3.5" />
-						<span className="font-bold text-[10px] uppercase tracking-wide">
-							Зочин
-						</span>
+						<span className="text-[10px] font-bold tracking-wide uppercase">Зочин</span>
 					</div>
-					<p className="mt-1 font-black font-heading text-lg leading-tight">
+					<p className="font-heading mt-1 text-lg leading-tight font-black">
 						{webAnalytics.current.uniqueVisitors.toLocaleString()}
 					</p>
 					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
@@ -160,14 +148,12 @@ function HomeComponent() {
 					</div>
 				</div>
 
-				<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
-					<div className="flex items-center gap-1.5 text-muted-foreground">
+				<div className="border-border bg-card shadow-hard-sm border-2 p-3">
+					<div className="text-muted-foreground flex items-center gap-1.5">
 						<TrendingUp className="h-3.5 w-3.5" />
-						<span className="font-bold text-[10px] uppercase tracking-wide">
-							Ашиг
-						</span>
+						<span className="text-[10px] font-bold tracking-wide uppercase">Ашиг</span>
 					</div>
-					<p className="mt-1 font-black font-heading text-lg leading-tight">
+					<p className="font-heading mt-1 text-lg leading-tight font-black">
 						{formatCurrency(stats.daily.profit)}
 					</p>
 					<div className="mt-1.5 flex items-center gap-0.5 text-[10px]">
@@ -181,48 +167,44 @@ function HomeComponent() {
 			</div>
 
 			{/* Mini Chart */}
-			<div className="border-2 border-border bg-card p-3 shadow-hard-sm">
+			<div className="border-border bg-card shadow-hard-sm border-2 p-3">
 				<div className="mb-2 flex items-center justify-between">
-					<span className="font-bold text-muted-foreground text-xs uppercase tracking-wide">
+					<span className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
 						Сүүлийн 7 өдөр
 					</span>
 				</div>
 				<div className="h-[80px] w-full">
-					<ResponsiveContainer width="100%" height="100%">
-						<BarChart
-							data={revenueData}
-							margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-						>
+					<ResponsiveContainer height="100%" width="100%">
+						<BarChart data={revenueData} margin={{ bottom: 0, left: 0, right: 0, top: 0 }}>
 							<XAxis
+								axisLine={false}
 								dataKey="date"
+								dy={5}
 								tick={{ fontSize: 9, fontWeight: 600 }}
 								tickLine={false}
-								axisLine={false}
-								dy={5}
 							/>
 							<Tooltip
-								cursor={{ fill: "var(--color-muted)", opacity: 0.3 }}
-								content={({ active, payload, label }) => {
-									if (!active || !payload?.length) return null;
+								content={({ active, label, payload }) => {
+									if (!active || !payload?.length) {
+										return null;
+									}
 									return (
-										<div className="border-2 border-border bg-card p-1.5 text-[10px] shadow-hard-sm">
+										<div className="border-border bg-card shadow-hard-sm border-2 p-1.5 text-[10px]">
 											<p className="font-bold">{label}</p>
 											<p className="font-mono">
-												₮
-												{new Intl.NumberFormat("mn-MN").format(
-													payload[0].value as number,
-												)}
+												₮{new Intl.NumberFormat("mn-MN").format(payload[0].value as number)}
 											</p>
 										</div>
 									);
 								}}
+								cursor={{ fill: "var(--color-muted)", opacity: 0.3 }}
 							/>
 							<Bar
 								dataKey="revenue"
 								fill="var(--color-primary)"
+								radius={0}
 								stroke="var(--color-border)"
 								strokeWidth={1.5}
-								radius={0}
 							/>
 						</BarChart>
 					</ResponsiveContainer>
@@ -230,59 +212,54 @@ function HomeComponent() {
 			</div>
 
 			{/* Pending Orders - Inline Expandable */}
-			<div className="border-2 border-border bg-card shadow-hard-sm">
-				<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+			<div className="border-border bg-card shadow-hard-sm border-2">
+				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
 					<div className="flex items-center gap-2">
-						<Clock className="h-4 w-4 text-muted-foreground" />
-						<span className="font-bold text-sm">Хүлээгдэж буй</span>
+						<Clock className="text-muted-foreground h-4 w-4" />
+						<span className="text-sm font-bold">Хүлээгдэж буй</span>
 					</div>
-					<Badge variant="secondary" className="font-mono text-xs">
+					<Badge className="font-mono text-xs" variant="secondary">
 						{orders.length}
 					</Badge>
 				</div>
 
 				{orders.length === 0 ? (
-					<div className="p-6 text-center text-muted-foreground text-sm">
-						Шинэ захиалга байхгүй
-					</div>
+					<div className="text-muted-foreground p-6 text-center text-sm">Шинэ захиалга байхгүй</div>
 				) : (
 					<>
-						<div className="divide-y divide-border">
+						<div className="divide-border divide-y">
 							{displayedOrders.map((order) => (
 								<Link
+									className="active:bg-muted/20 flex items-center justify-between p-3"
 									key={order.id}
-									to="/orders/$id"
 									params={{ id: String(order.id) }}
-									className="flex items-center justify-between p-3 active:bg-muted/20"
+									to="/orders/$id"
 								>
 									<div className="min-w-0 flex-1">
 										<div className="flex items-center gap-2">
-											<Badge
-												variant="surface"
-												className="shrink-0 font-mono text-[10px]"
-											>
+											<Badge className="shrink-0 font-mono text-[10px]" variant="surface">
 												#{String(order.id).slice(-4)}
 											</Badge>
-											<span className="truncate text-muted-foreground text-xs">
+											<span className="text-muted-foreground truncate text-xs">
 												{formatDateToText(order.createdAt)}
 											</span>
 										</div>
 										<div className="mt-1 flex items-center gap-3 text-xs">
 											<span className="flex items-center gap-1">
-												<Phone className="h-3 w-3 text-muted-foreground" />
+												<Phone className="text-muted-foreground h-3 w-3" />
 												{order.customerPhone}
 											</span>
 										</div>
-										<div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+										<div className="text-muted-foreground mt-1 flex items-center gap-1 text-[10px]">
 											<MapPin className="h-2.5 w-2.5 shrink-0" />
 											<span className="truncate">{order.address}</span>
 										</div>
 									</div>
 									<div className="ml-2 text-right">
-										<p className="font-black font-heading text-sm">
+										<p className="font-heading text-sm font-black">
 											₮{order.total.toLocaleString()}
 										</p>
-										<p className="text-[10px] text-muted-foreground">
+										<p className="text-muted-foreground text-[10px]">
 											{order.products?.length || 0} бараа
 										</p>
 									</div>
@@ -292,9 +269,9 @@ function HomeComponent() {
 
 						{orders.length > 3 && (
 							<button
-								type="button"
+								className="border-border bg-muted/20 active:bg-muted/40 flex w-full items-center justify-center gap-1 border-t-2 py-2.5 text-xs font-bold"
 								onClick={() => setOrdersExpanded(!ordersExpanded)}
-								className="flex w-full items-center justify-center gap-1 border-border border-t-2 bg-muted/20 py-2.5 font-bold text-xs active:bg-muted/40"
+								type="button"
 							>
 								{ordersExpanded ? (
 									<>
@@ -314,35 +291,29 @@ function HomeComponent() {
 			</div>
 
 			{/* Top Products - Compact */}
-			<div className="border-2 border-border bg-card shadow-hard-sm">
-				<div className="flex items-center justify-between border-border border-b-2 bg-muted/30 px-3 py-2">
+			<div className="border-border bg-card shadow-hard-sm border-2">
+				<div className="border-border bg-muted/30 flex items-center justify-between border-b-2 px-3 py-2">
 					<div className="flex items-center gap-2">
-						<TrendingUp className="h-4 w-4 text-muted-foreground" />
-						<span className="font-bold text-sm">Топ бараа</span>
+						<TrendingUp className="text-muted-foreground h-4 w-4" />
+						<span className="text-sm font-bold">Топ бараа</span>
 					</div>
 					<span className="text-muted-foreground text-xs">Өнөөдөр</span>
 				</div>
 
 				{topProducts.length === 0 ? (
-					<div className="p-6 text-center text-muted-foreground text-sm">
-						Борлуулалт алга
-					</div>
+					<div className="text-muted-foreground p-6 text-center text-sm">Борлуулалт алга</div>
 				) : (
-					<div className="divide-y divide-border">
+					<div className="divide-border divide-y">
 						{topProducts.map((product, index) => (
-							<div key={product.name} className="flex items-center gap-3 p-2.5">
-								<div className="flex h-7 w-7 shrink-0 items-center justify-center border-2 border-border bg-muted/50 font-bold font-heading text-sm">
+							<div className="flex items-center gap-3 p-2.5" key={product.name}>
+								<div className="border-border bg-muted/50 font-heading flex h-7 w-7 shrink-0 items-center justify-center border-2 text-sm font-bold">
 									{index + 1}
 								</div>
 								<div className="min-w-0 flex-1">
-									<p className="truncate font-bold text-sm leading-tight">
-										{product.name}
-									</p>
-									<p className="text-[10px] text-muted-foreground">
-										{product.totalSold} ширхэг
-									</p>
+									<p className="truncate text-sm leading-tight font-bold">{product.name}</p>
+									<p className="text-muted-foreground text-[10px]">{product.totalSold} ширхэг</p>
 								</div>
-								<span className="shrink-0 font-bold font-mono text-xs">
+								<span className="shrink-0 font-mono text-xs font-bold">
 									₮{(product.revenue / 1000).toFixed(0)}k
 								</span>
 							</div>

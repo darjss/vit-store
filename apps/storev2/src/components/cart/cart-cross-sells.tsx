@@ -1,14 +1,7 @@
 import { Image } from "@unpic/solid";
 import { formatCurrency } from "@vit/shared";
 import type { ProductForHome } from "@vit/shared/types";
-import {
-	createMemo,
-	createResource,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-} from "solid-js";
+import { createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import CardAddButton from "@/components/product/card-add-button";
 import ProductImageFallback from "@/components/product/product-image-fallback";
 import { getProductImageProps } from "@/lib/image";
@@ -19,22 +12,21 @@ import { cart } from "@/store/cart";
 const CROSS_SELL_TIMEOUT_MS = 5000;
 
 async function fetchCartCrossSells(
-	productIds: number[],
+	productIds: Array<number>,
 	signal: AbortSignal,
-): Promise<ProductForHome[]> {
-	if (productIds.length === 0) return [];
+): Promise<Array<ProductForHome>> {
+	if (productIds.length === 0) {
+		return [];
+	}
 	try {
-		const products = await api.product.getCartCrossSells.query(
-			{ productIds },
-			{ signal },
-		);
+		const products = await api.product.getCartCrossSells.query({ productIds }, { signal });
 		return products.map((p) => ({
+			brand: p.brand,
 			id: p.id,
-			slug: p.slug,
+			image: p.image,
 			name: p.name,
 			price: p.price,
-			image: p.image,
-			brand: p.brand,
+			slug: p.slug,
 			stock: p.stock,
 		}));
 	} catch {
@@ -46,13 +38,13 @@ export default function CartCrossSells() {
 	let activeRequest: AbortController | undefined;
 
 	const productIdsKey = createMemo(() =>
-		[...new Set(cart.items().map((item) => item.productId))]
-			.sort((a, b) => a - b)
-			.join(","),
+		[...new Set(cart.items().map((item) => item.productId))].sort((a, b) => a - b).join(","),
 	);
 
 	const [crossSells] = createResource(productIdsKey, async (key) => {
-		if (!key) return Promise.resolve([] as ProductForHome[]);
+		if (!key) {
+			return [] as Array<ProductForHome>;
+		}
 		activeRequest?.abort();
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), CROSS_SELL_TIMEOUT_MS);
@@ -61,80 +53,72 @@ export default function CartCrossSells() {
 			return await fetchCartCrossSells(key.split(",").map(Number), controller.signal);
 		} finally {
 			clearTimeout(timeout);
-			if (activeRequest === controller) activeRequest = undefined;
+			if (activeRequest === controller) {
+				activeRequest = undefined;
+			}
 		}
 	});
 
 	onCleanup(() => activeRequest?.abort());
 
 	return (
-		<Show when={!crossSells.loading && crossSells()} keyed>
+		<Show keyed when={!crossSells.loading && crossSells()}>
 			{(list) => (
 				<Show when={list.length > 0}>
 					<div class="border-border border-t px-4 py-4">
-						<p class="mb-3 font-semibold text-foreground text-sm">
-							Сагсанд нэмэх үү?
-						</p>
+						<p class="text-foreground mb-3 text-sm font-semibold">Сагсанд нэмэх үү?</p>
 						<div class="space-y-2">
 							<For each={list}>
 								{(product) => {
-									const imageProps = getProductImageProps(
-										product.image,
-										"card",
-									);
+									const imageProps = getProductImageProps(product.image, "card");
 									const [imageFailed, setImageFailed] = createSignal(false);
 									const productUrl = `/products/${product.slug}-${product.id}/`;
 
 									return (
-										<div class="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5 shadow-soft-sm">
+										<div class="border-border bg-card shadow-soft-sm flex items-center gap-3 rounded-2xl border p-2.5">
 											<a
+												class={`block size-14 shrink-0 overflow-hidden rounded-xl ${washBg(product.id)}`}
 												href={productUrl}
 												onClick={() => cart.closeDrawer()}
-												class={`block size-14 shrink-0 overflow-hidden rounded-xl ${washBg(product.id)}`}
 											>
 												<Show
-													when={product.image && !imageFailed()}
 													fallback={
-														<ProductImageFallback
-															name={product.name}
-															brand={product.brand}
-														/>
+														<ProductImageFallback brand={product.brand} name={product.name} />
 													}
+													when={product.image && !imageFailed()}
 												>
 													<Image
-														src={imageProps.src || product.image}
 														alt={product.name}
-														width={56}
+														class="h-full w-full object-contain p-1"
+														decoding="async"
 														height={56}
 														layout="fixed"
-														class="h-full w-full object-contain p-1"
 														loading="lazy"
-														decoding="async"
 														onError={() => setImageFailed(true)}
+														src={imageProps.src || product.image}
+														width={56}
 													/>
 												</Show>
 											</a>
 
 											<div class="min-w-0 flex-1">
 												<a
+													class="text-foreground line-clamp-2 text-sm leading-snug font-medium hover:underline"
 													href={productUrl}
 													onClick={() => cart.closeDrawer()}
-													class="line-clamp-2 font-medium text-foreground text-sm leading-snug hover:underline"
 												>
 													{product.name}
 												</a>
-												<p class="mt-0.5 font-display text-sm">
-													{formatCurrency(product.price)}
-												</p>
+												<p class="font-display mt-0.5 text-sm">{formatCurrency(product.price)}</p>
 											</div>
 
 											<CardAddButton
 												cartItem={{
-													productId: product.id,
-													quantity: 1,
+													image: product.image,
 													name: product.name,
 													price: product.price,
-													image: product.image,
+													productId: product.id,
+													quantity: 1,
 													slug: product.slug,
 												}}
 											/>

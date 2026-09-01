@@ -18,14 +18,14 @@ Single-context layout: root `CONTEXT.md` plus root `docs/adr/`. See `docs/agents
 
 Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes live in the sibling repo [`darjss/vit-playground`](https://github.com/darjss/vit-playground) at `../vit-playground` (or `~/dev/vit-playground`). Keep `vit-store` for app source, ADRs, `docs/problems/`, and `plans/`.
 
-| Path in vit-playground | Use |
-| --- | --- |
-| `scripts/` | Catalog ops, cache maintenance, slugs, revenue reports, messenger explore |
-| `api-scripts/` | DB/product maintenance; imports `@vit/api` from the sibling vit-store checkout |
-| `data/` | Product JSON, `seed.sql`, sample images |
-| `reports/` | Dogfood output, production QA snapshots |
-| `scratch/` | Temp notes and one-off drafts |
-| `vit-stock-review/` | Catalogue audits, stock sheets, generated creatives |
+| Path in vit-playground | Use                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `scripts/`             | Catalog ops, cache maintenance, slugs, revenue reports, messenger explore      |
+| `api-scripts/`         | DB/product maintenance; imports `@vit/api` from the sibling vit-store checkout |
+| `data/`                | Product JSON, `seed.sql`, sample images                                        |
+| `reports/`             | Dogfood output, production QA snapshots                                        |
+| `scratch/`             | Temp notes and one-off drafts                                                  |
+| `vit-stock-review/`    | Catalogue audits, stock sheets, generated creatives                            |
 
 `apps/agent/scripts/` stays in vit-store (wired into agent dev/deploy). Do not move those back into vit-store root `scripts/`. Run playground scripts from `vit-playground` or via `bun ../vit-playground/scripts/...` from vit-store; see vit-playground `README.md`.
 
