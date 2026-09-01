@@ -494,6 +494,7 @@ export const orderQueries = {
 			sortDirection?: "asc" | "desc";
 			searchTerm?: string;
 			date?: string;
+			createdAfter?: Date;
 		}) {
 			const database = db();
 			const conditions: (SQL<unknown> | undefined)[] = [];
@@ -512,13 +513,16 @@ export const orderQueries = {
 			}
 
 			if (params.paymentStatus !== undefined) {
-				// Move the payment-status filter into the SQL WHERE so both the page
-				// query and the count query honor it. Previously the count ignored
-				// paymentStatus, producing wrong totalPages (mostly empty pages
-				// after page 1).
-				conditions.push(
-					sql`${OrdersTable.id} IN (SELECT ${PaymentsTable.orderId} FROM ${PaymentsTable} WHERE ${PaymentsTable.status} = ${params.paymentStatus} AND ${PaymentsTable.deletedAt} IS NULL)`,
-				);
+				const paidOrderIds = database
+					.select({ orderId: PaymentsTable.orderId })
+					.from(PaymentsTable)
+					.where(
+						and(
+							eq(PaymentsTable.status, params.paymentStatus),
+							isNull(PaymentsTable.deletedAt),
+						),
+					);
+				conditions.push(inArray(OrdersTable.id, paidOrderIds));
 			}
 
 			if (params.searchTerm !== undefined) {
@@ -539,6 +543,10 @@ export const orderQueries = {
 				conditions.push(
 					between(OrdersTable.createdAt, dateRange.start, dateRange.end),
 				);
+			}
+
+			if (params.createdAfter !== undefined) {
+				conditions.push(gte(OrdersTable.createdAt, params.createdAfter));
 			}
 
 			const orderByClauses: SQL<unknown>[] = [];

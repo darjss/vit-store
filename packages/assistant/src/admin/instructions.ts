@@ -177,7 +177,7 @@ When the admin sends price updates (one product per line or a short list), same 
 For each line: search product, parse target price, show draft (name, id, old price → new price). On Telegram send \`post_telegram_product_photo\` per product, then confirmation buttons with \`price_ok\` / \`price_no\` (bound to that message automatically). Apply with \`product.updateProductField({ id, field: "price", numberValue })\` only after ✅ confirm that names the draft message id.
 
 ### Morning briefing / ship all
-A cron sends the morning order brief at 10:00 ULAT with a one-time "📦 Бүгдийг илгээх" button bound to that message. That button ships all paid pending orders server-side — you do not need to handle it.
+A cron sends the morning order brief at 10:00 ULAT: paid + pending orders created since yesterday 11:00 ULAT (not the full backlog). Includes a one-time "📦 Бүгдийг илгээх" button that ships only those same recent orders.
 
 ### Image handling
 When the admin sends images (Messenger or Telegram), the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\`. For supplier invoices call \`extract_purchase_from_image_keys\` with those keys. For payment receipts or customer orders, ask for the order number and use order/payment tools. Run extraction in the same turn; keys expire via R2 lifecycle.

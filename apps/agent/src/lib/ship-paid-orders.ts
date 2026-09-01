@@ -1,3 +1,4 @@
+import { morningBriefOrderSince } from "@vit/api/lib/integrations/admin-notifications/morning-brief-window";
 import { createAdminBotClient } from "./admin-bot-client";
 
 type ShipPaidOrdersResult = {
@@ -14,6 +15,7 @@ export const shipAllPaidPendingOrders = async (input: {
 	const client = createAdminBotClient(input.storeApiUrl, input.botToken);
 	const shipped: string[] = [];
 	const skipped: ShipPaidOrdersResult["skipped"] = [];
+	const createdAfter = morningBriefOrderSince();
 
 	for (let page = 1; ; page += 1) {
 		const result = await client.order.getPaginatedOrders.query({
@@ -21,6 +23,7 @@ export const shipAllPaidPendingOrders = async (input: {
 			pageSize: PAGE_SIZE,
 			orderStatus: "pending",
 			paymentStatus: "success",
+			createdAfter,
 		});
 
 		for (const order of result.orders) {
