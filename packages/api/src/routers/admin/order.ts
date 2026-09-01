@@ -175,9 +175,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					orderId: input.id,
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete order",
-					cause: error,
 				});
 			}
 		}),
@@ -190,9 +190,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					event: "admin.orders_fetch_failed",
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch orders",
-					cause: error,
 				});
 			}
 		}),
@@ -204,9 +204,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					event: "order.fetch_zones_failed",
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch delivery zones",
-					cause: error,
 				});
 			}
 		}),
@@ -221,15 +221,15 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				}
 				return result;
 			} catch (error) {
-				if (error instanceof TRPCError) throw error;
+				if (error instanceof TRPCError) {throw error;}
 				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_fetch_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch order",
-					cause: error,
 				});
 			}
 		}),
@@ -248,9 +248,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						orderNumber: input.orderNumber,
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to resolve order number",
-						cause: error,
 					});
 				}
 			}),
@@ -296,9 +296,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						event: "admin.orders_paginated_fetch_failed",
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to fetch paginated orders",
-						cause: error,
 					});
 				}
 			}),
@@ -317,9 +317,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						productId: input.productId,
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to fetch recent orders",
-						cause: error,
 					});
 				}
 			}),
@@ -349,9 +349,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					orderId: input.id,
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to patch order header",
-					cause: error,
 				});
 			}
 		}),
@@ -395,9 +395,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					orderId: input.id,
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to restore order",
-					cause: error,
 				});
 			}
 		}),
@@ -413,9 +413,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						searchTerm: input.searchTerm,
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to search order",
-						cause: error,
 					});
 				}
 			}),
@@ -435,9 +435,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						query: input.query,
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to search order quick",
-						cause: error,
 					});
 				}
 			}),
@@ -486,16 +486,16 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						orderNumber: order.orderNumber,
 					};
 				} catch (error) {
-					if (error instanceof TRPCError) throw error;
+					if (error instanceof TRPCError) {throw error;}
 					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.ship_order_failed",
 						orderId: input.orderId,
 					});
 					const message = error instanceof Error ? error.message : "Захиалга илгээхэд алдаа гарлаа";
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message,
-						cause: error,
 					});
 				}
 			}),
@@ -581,11 +581,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						if (transitionedToSuccess) {
 							const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
 							await tx.insert(SalesTable).values({
-								productCost,
-								quantitySold: product.quantity,
 								orderId: input.id,
-								sellingPrice: product.price,
+								productCost,
 								productId: product.productId,
+								quantitySold: product.quantity,
+								sellingPrice: product.price,
 							});
 							await applyRequiredStockTransition(product.productId, -product.quantity);
 						} else if (wasSuccess) {
@@ -622,11 +622,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						for (const product of input.products) {
 							const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
 							await tx.insert(SalesTable).values({
-								productCost,
-								quantitySold: product.quantity,
 								orderId: input.id,
-								sellingPrice: product.price,
+								productCost,
 								productId: product.productId,
+								quantitySold: product.quantity,
+								sellingPrice: product.price,
 							});
 						}
 					}
@@ -649,9 +649,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					orderId: input.id,
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update order",
-					cause: error,
 				});
 			}
 		}),
@@ -683,16 +683,16 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						message: `Order status updated successfully to ${input.status}`,
 					};
 				} catch (error) {
-					if (error instanceof TRPCError) throw error;
+					if (error instanceof TRPCError) {throw error;}
 					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_status_update_failed",
-						orderId: input.id,
 						order_status: input.status,
+						orderId: input.id,
 					});
 					throw new TRPCError({
+						cause: error,
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to update order status",
-						cause: error,
 					});
 				}
 			}),

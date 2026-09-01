@@ -181,10 +181,10 @@ export const orderQueries = {
 				notes: order.notes,
 				orderNumber: order.orderNumber,
 				products: order.orderDetails.map((orderDetail) => ({
-					quantity: orderDetail.quantity,
-					name: orderDetail.product.name,
 					id: orderDetail.product.id,
 					imageUrl: orderDetail.product.images[0]?.url,
+					name: orderDetail.product.name,
+					quantity: orderDetail.quantity,
 				})),
 				status: order.status,
 				total: order.total,
@@ -364,7 +364,7 @@ export const orderQueries = {
 			date?: string;
 			includeAllStatuses?: boolean;
 			orderStatus?: OrderStatus;
-			orderStatuses?: OrderStatus[];
+			orderStatuses?: Array<OrderStatus>;
 			page: number;
 			pageSize: number;
 			paymentStatus?: PaymentStatusType;
@@ -560,12 +560,12 @@ export const orderQueries = {
 				with: {
 					order: {
 						columns: {
-							customerPhone: true,
-							status: true,
-							orderNumber: true,
-							total: true,
 							createdAt: true,
+							customerPhone: true,
 							id: true,
+							orderNumber: true,
+							status: true,
+							total: true,
 						},
 					},
 				},
@@ -661,12 +661,12 @@ export const orderQueries = {
 
 			return db().query.OrdersTable.findMany({
 				columns: {
+					createdAt: true,
+					customerPhone: true,
 					id: true,
 					orderNumber: true,
-					customerPhone: true,
 					status: true,
 					total: true,
-					createdAt: true,
 				},
 				limit,
 				orderBy: desc(OrdersTable.createdAt),
@@ -802,10 +802,10 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
 							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
 						},
 					},
 				},
@@ -817,11 +817,11 @@ export const orderQueries = {
 			const orders = await db().query.OrdersTable.findMany({
 				columns: {
 					address: true,
+					createdAt: true,
+					notes: true,
 					orderNumber: true,
 					status: true,
 					total: true,
-					notes: true,
-					createdAt: true,
 				},
 				where: and(eq(OrdersTable.customerPhone, phone), isNull(OrdersTable.deletedAt)),
 				with: {
@@ -853,18 +853,18 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
 							createdAt: true,
+							paymentNumber: true,
+							provider: true,
+							status: true,
 						},
-						where: isNull(PaymentsTable.deletedAt),
 						orderBy: [desc(PaymentsTable.createdAt)],
+						where: isNull(PaymentsTable.deletedAt),
 					},
 					sales: {
 						columns: {
-							sellingPrice: true,
 							productId: true,
+							sellingPrice: true,
 						},
 					},
 				},
