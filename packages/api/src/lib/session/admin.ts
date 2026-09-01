@@ -1,9 +1,11 @@
 import { createUserSessionManager } from "~/lib/session/index";
+import { sessionUserWireSchema } from "~/lib/session/wire-schemas";
 
 const adminSessionManager = createUserSessionManager({
 	cookieName: "admin_session",
 	kvSessionPrefix: "admin_session",
 	kvUserSessionPrefix: "admin_user_sessions",
+	userSchema: sessionUserWireSchema,
 	// 30-day rolling session: any activity in the second half of the window
 	// (last 15d) extends the session by another 30d, so an active admin stays
 	// logged in for up to 30d since their last request. Previously this was 24h
