@@ -181,29 +181,35 @@ export async function rerankAmbiguousMatches<
 		}),
 	);
 
-	const { output: rawOutput } = await generateText({
-		model: opencode("kimi-k2.5"),
-		output: Output.object({ schema: invoiceMatchRerankSchema }),
-		prompt: `You are resolving invoice line items to existing catalog products.
+	try {
+		const { output: rawOutput } = await generateText({
+			model: opencode("kimi-k2.5"),
+			output: Output.object({ schema: invoiceMatchRerankSchema }),
+			prompt: `You are resolving invoice line items to existing catalog products.
 
 Choose the best candidate only when the evidence is strong enough. Prefer exact or near-exact product identity. If none of the candidates clearly match, return null.
 
 Input:
 ${JSON.stringify(payload, null, 2)}`,
-	});
+		});
 
-	const output = parseLlmOutput(invoiceMatchRerankSchema, rawOutput);
+		const output = parseLlmOutput(invoiceMatchRerankSchema, rawOutput);
 
-	return new Map(
-		(output.matches ?? []).map((match) => [
-			match.lineIndex,
-			{
-				bestCandidateId: match.bestCandidateId,
-				confidence: match.confidence,
-				reason: match.reason,
-			},
-		]),
-	);
+		return new Map(
+			(output.matches ?? []).map((match) => [
+				match.lineIndex,
+				{
+					bestCandidateId: match.bestCandidateId,
+					confidence: match.confidence,
+					reason: match.reason,
+				},
+			]),
+		);
+	} catch {
+		// Opencode unavailable — auto-match scores still apply; ambiguous lines
+		// stay ambiguous for admin review.
+		return new Map();
+	}
 }
 
 export async function rankInvoiceLineCandidates<T extends InvoiceLineForMatch>(

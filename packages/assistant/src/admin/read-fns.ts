@@ -229,13 +229,8 @@ export function buildReadFns({
 		safeProvider({
 			name: "aiPurchase",
 			fns: {
-				// Dashboard path: takes fetchable image urls. Prefer
-				// `extractPurchaseFromImageKeys` from chat — the webhook stages
-				// inbound screenshots to R2 and dispatches only the keys.
 				extractPurchaseFromImages: async (input: unknown) => botClient.aiPurchase.extractPurchaseFromImages.mutate(input as never),
-				// Chat path: takes R2 keys (messenger-inbound/...) the webhook
-				// staged. The server resolves them to image bytes server-side.
-				extractPurchaseFromImageKeys: async (input: unknown) => botClient.aiPurchase.extractPurchaseFromImageKeys.mutate(input as never),
+				matchExtractedInvoice: async (input: unknown) => botClient.aiPurchase.matchExtractedInvoice.mutate(input as never),
 				saveExtractedPurchase: async (input: unknown) => botClient.aiPurchase.saveExtractedPurchase.mutate(input as never),
 			},
 		}),

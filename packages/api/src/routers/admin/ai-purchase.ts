@@ -109,6 +109,16 @@ async function inferInvoiceData(
 		],
 	});
 	const output = parseLlmOutput(invoiceExtractionSchema, rawOutput);
+	return matchExtractedInvoiceData(input.provider, output, brands, categories);
+}
+
+export async function matchExtractedInvoiceData(
+	provider: extractPurchaseFromImagesType["provider"],
+	rawOutput: InvoiceExtractionOutput,
+	brands: { id: number; name: string }[],
+	categories: { id: number; name: string }[],
+) {
+	const output = rawOutput;
 	const dedupedItems = dedupeItems(output.items ?? []);
 	const rankedCandidatesByIndex = new Map<
 		number,
@@ -140,7 +150,7 @@ async function inferInvoiceData(
 
 	return {
 		header: {
-			provider: input.provider,
+			provider,
 			externalOrderNumber: output.header?.externalOrderNumber ?? null,
 			orderedAt: parseOrderedAt(output.header?.orderedAt ?? null),
 			trackingNumber: output.header?.trackingNumber ?? null,
@@ -442,35 +452,26 @@ export function buildAiPurchaseRouter<P extends typeof baseProcedure>(proc: P) {
 
 export const aiPurchase = buildAiPurchaseRouter(adminProcedure);
 
-// Bot variant: the two common procedures plus a chat-only
-// `extractPurchaseFromImageKeys` that resolves R2-staged inbound image keys
-// server-side. The dashboard path keeps using `extractPurchaseFromImages`
-// with real urls; the chat path receives R2 keys from the webhook staging.
+// Bot variant: catalog matching after agent-side Workers AI vision extraction.
 export const aiPurchaseBot = router({
 	...commonPurchaseProcedures(botProcedure),
-	extractPurchaseFromImageKeys: botProcedure
+	matchExtractedInvoice: botProcedure
 		.input(
 			v.object({
 				provider: v.picklist(purchaseProvider),
-				imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
+				extraction: v.record(v.string(), v.unknown()),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const images = await resolveR2ImageKeysToUrls(ctx, input.imageKeys);
-				if (images.length === 0) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message:
-							"No staged images could be resolved from the provided keys. They may have expired.",
-					});
-				}
+				const parsed = parseLlmOutput(invoiceExtractionSchema, input.extraction);
 				const [brands, categories] = await Promise.all([
 					brandQueries.admin.getAllBrands(),
 					categoryQueries.admin.getAllCategories(),
 				]);
-				return await inferInvoiceData(
-					{ provider: input.provider, images },
+				return await matchExtractedInvoiceData(
+					input.provider,
+					parsed,
 					brands,
 					categories,
 				);
@@ -478,11 +479,11 @@ export const aiPurchaseBot = router({
 				if (error instanceof TRPCError) throw error;
 				ctx.log.error(
 					error instanceof Error ? error : new Error(String(error)),
-					{ event: "aiPurchase.extractPurchaseFromImageKeys" },
+					{ event: "aiPurchase.matchExtractedInvoice" },
 				);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to extract purchase invoice from images",
+					message: "Failed to match extracted purchase invoice",
 					cause: error,
 				});
 			}

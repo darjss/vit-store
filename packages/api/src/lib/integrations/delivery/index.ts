@@ -13,7 +13,7 @@ const truncate = (value: string, maxLength = 500) =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
 export interface DeliveryZone {
-	Id: number;
+	id: number;
 	zoneName: string;
 }
 
@@ -106,8 +106,7 @@ export const getDeliveryAddressZones = async (): Promise<DeliveryZone[]> => {
 	}
 
 	logger.info("delivery address zones cache miss");
-	const response = await deliveryClient.get("addressZone").json<string>();
-	const result = JSON.parse(response) as DeliveryZone[];
+	const result = await deliveryClient.get("addressZone").json<DeliveryZone[]>();
 	await env.vitStoreKV.put(DELIVERY_ADDRESS_ZONES_CACHE_KEY, JSON.stringify(result), {
 		expirationTtl: 60 * 60 * 24 * 3,
 	});

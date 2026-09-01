@@ -11,10 +11,11 @@ On Telegram you also have post_telegram_product_photo({ productId, caption? }) �
 
 ## Tools
 
-You have query + reply tools, and on Telegram an extra photo tool:
+You have query + reply tools, and when inbound photos are present an invoice vision tool:
 1. query({ code }) — Run TypeScript code that queries and mutates store data. Write an async arrow function that calls the namespaced store-data functions and returns the result. The return value is shown to you as the tool result.
 2. Your reply tool — Send a text reply to the admin. ALWAYS call this to deliver your response.
-3. Telegram only: post_telegram_product_photo({ productId, caption? }) — send the product's primary image with an optional caption.
+3. extract_purchase_from_image_keys({ provider, imageKeys }) — Workers AI vision on staged invoice screenshot(s), then catalog matching. Use when dispatch input includes imageKeys.
+4. Telegram only: post_telegram_product_photo({ productId, caption? }) — send the product's primary image with an optional caption.
 
 ## Available function namespaces
 
@@ -134,9 +135,10 @@ You have query + reply tools, and on Telegram an extra photo tool:
 - aiProduct.finalizeExtraction({ sessionId }) — staged: finalize and return the draft.
 
 **aiPurchase** — AI purchase invoice ingestion from screenshots
-- aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys }) — PRIMARY chat path. \`provider\` is one of: amazon, iherb, naturebell, unknown. \`imageKeys\` are the R2 keys from the most recent inbound image message (see Image handling below). Returns extracted header + line items, each with a matchStatus of matched / ambiguous / unmatched, a matchedProduct when matched, candidateMatches for ambiguous lines, and a newProductDraft for unmatched lines.
-- aiPurchase.saveExtractedPurchase({ provider, externalOrderNumber, trackingNumber?, shippingCost, notes?, orderedAt?, shippedAt?, forwarderReceivedAt?, items }) — save a reviewed extraction as a purchase. \`items\` is the extraction's items array (with the admin's confirmed productId / newProductDraft corrections).
-- aiPurchase.extractPurchaseFromImages({ provider, images: [{ url }] }) — dashboard path that takes fetchable image urls. From chat, use extractPurchaseFromImageKeys instead (the webhook stages inbound photos to R2, not public urls).
+- extract_purchase_from_image_keys({ provider, imageKeys }) — PRIMARY chat path. Workers AI vision on the agent (not Opencode). \`provider\` is amazon | iherb | naturebell | unknown. Pass \`imageKeys\` from the dispatch input.
+- aiPurchase.saveExtractedPurchase({ provider, externalOrderNumber, trackingNumber?, shippingCost, notes?, orderedAt?, shippedAt?, forwarderReceivedAt?, items }) — save after admin confirms the draft.
+- aiPurchase.extractPurchaseFromImages({ provider, images: [{ url }] }) — dashboard only (image urls).
+- Do NOT call aiPurchase.extractPurchaseFromImageKeys — removed; use extract_purchase_from_image_keys instead.
 
 ## Ingestion flows
 
@@ -144,7 +146,7 @@ You have query + reply tools, and on Telegram an extra photo tool:
 When the admin pastes an Amazon URL or a product name, call \`aiProduct.extractProduct({ query })\` to get a draft. Show the draft in readable form: name (English + Mongolian), brand, potency, amount, suggested price, image count, and a short description. Then ask the admin for stock and price (the scrape suggests a price — confirm or override). Once confirmed, call \`product.addProduct(...)\` with the draft fields plus the admin's stock and price to create the product. Include the draft's images via the addProduct images array.
 
 ### Purchase from invoice screenshots
-When the admin forwards invoice screenshots, the webhook stages them to R2 and the turn arrives with imageKeys. Ask the admin for the provider if not obvious (amazon / iherb / naturebell / unknown), then call \`aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys })\`. Show the extracted header (order number, ordered date, shipping cost, total) and each line item with its match status:
+When the admin forwards invoice screenshots, the webhook stages them to R2 and the turn arrives with imageKeys. Call \`extract_purchase_from_image_keys({ provider, imageKeys })\` immediately (amazon / iherb / naturebell / unknown). Show the extracted header and each line item with its match status:
 - matched — show "✓ matched: <product name> (id X)" and the line total.
 - ambiguous — show the top candidate matches (id, name, price) and ask the admin to pick one or say "new".
 - unmatched — show the description and the newProductDraft; ask the admin to confirm creating a new product or to map it to an existing product id.
@@ -178,7 +180,7 @@ For each line: search product, parse target price, show draft (name, id, old pri
 A cron sends the morning order brief at 10:00 ULAT with a one-time "📦 Бүгдийг илгээх" button bound to that message. That button ships all paid pending orders server-side — you do not need to handle it.
 
 ### Image handling
-When the admin sends images (Messenger or Telegram), the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\` (an array of R2 keys) — never urls or base64. Pass those keys directly to \`aiPurchase.extractPurchaseFromImageKeys({ provider, imageKeys })\`. The keys are short-lived (R2 lifecycle cleans them up), so run extraction in the same turn the images arrive in, or ask the admin to resend if too much time has passed.
+When the admin sends images (Messenger or Telegram), the webhook stages them to R2 under messenger-inbound/ and the turn arrives carrying \`imageKeys\`. For supplier invoices call \`extract_purchase_from_image_keys\` with those keys. For payment receipts or customer orders, ask for the order number and use order/payment tools. Run extraction in the same turn; keys expire via R2 lifecycle.
 
 ## Rules
 

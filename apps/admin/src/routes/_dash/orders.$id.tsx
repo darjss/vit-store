@@ -593,7 +593,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									<span className="text-muted-foreground">Хүргэлтийн бүс</span>
 									<p className="mt-1 font-bold">
 										{addressZonesQuery.data?.find(
-											(zone) => zone.Id === order.addressZoneId,
+											(zone) => zone.id === order.addressZoneId,
 										)?.zoneName ?? `Бүс #${order.addressZoneId}`}
 									</p>
 								</div>

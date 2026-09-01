@@ -57,7 +57,7 @@ export default function ShipOrderDialog({
 
 	const zones = zonesQuery.data ?? [];
 	const zonesReady = zonesQuery.isSuccess && zones.length > 0;
-	const selectedZoneExists = zones.some((zone) => zone.Id === selectedZoneId);
+	const selectedZoneExists = zones.some((zone) => zone.id === selectedZoneId);
 	const canSubmit = zonesReady && selectedZoneExists && !shipOrder.isPending;
 
 	return (

@@ -18,9 +18,8 @@ import { salesBot } from "~/routers/admin/sales";
 // different auth gate. Excludes the auth router (admin users/sessions are
 // dashboard-only). AI ingestion flows (aiProduct, aiPurchase) are exposed to
 // the bot so the admin agent can extract products from URLs/names and import
-// purchases from invoice screenshots (#110). aiPurchase also exposes a
-// chat-only `extractPurchaseFromImageKeys` that resolves R2-staged inbound
-// image keys server-side.
+// purchases from invoice screenshots (#110). aiPurchase exposes
+// `matchExtractedInvoice` for catalog matching after agent-side vision.
 export const botRouter = router({
 	aiProduct: aiProductBot,
 	aiPurchase: aiPurchaseBot,

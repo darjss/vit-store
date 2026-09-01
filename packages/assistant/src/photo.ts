@@ -71,7 +71,7 @@ export const parsePhotoVision = (text: string): PhotoIdentifyResult => {
 	return { facts: facts.length > 0 ? facts : "No description returned.", queries: [] };
 };
 
-const extractJsonObject = (text: string): string | undefined => {
+export const extractJsonObject = (text: string): string | undefined => {
 	const start = text.indexOf("{");
 	if (start === -1) return undefined;
 	let depth = 0;

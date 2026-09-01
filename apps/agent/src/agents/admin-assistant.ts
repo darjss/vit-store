@@ -4,7 +4,11 @@ import {
 	ADMIN_ASSISTANT_MODEL,
 	adminAssistantInstructions,
 	buildAdminQueryTool,
+	buildPurchaseImageExtractTool,
 } from "@vit/assistant";
+import { createAdminBotClient } from "../lib/admin-bot-client";
+import { loadInboundImage } from "../lib/messenger-inbound";
+import { buildKimiVision } from "../lib/vision";
 import {
 	channel as messengerChannel,
 	postMessage as postMessengerMessage,
@@ -18,6 +22,8 @@ import {
 type AgentEnv = {
 	LOADER?: WorkerLoader;
 	ADMIN_BOT_TOKEN?: string;
+	AI?: Ai;
+	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
 export default defineAgent<AgentEnv>(({ id, env }) => {
@@ -29,6 +35,22 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 					loader: env.LOADER,
 					botToken: env.ADMIN_BOT_TOKEN,
 					storeApiUrl,
+				})
+			: undefined;
+
+	const purchaseExtractTool =
+		env.AI &&
+		env.MESSENGER_INBOUND_BUCKET &&
+		env.ADMIN_BOT_TOKEN
+			? buildPurchaseImageExtractTool({
+					loadImage: (key) =>
+						loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
+					runVision: buildKimiVision(env.AI, 4096),
+					matchExtracted: (input) =>
+						createAdminBotClient(
+							storeApiUrl,
+							env.ADMIN_BOT_TOKEN as string,
+						).aiPurchase.matchExtractedInvoice.mutate(input),
 				})
 			: undefined;
 
@@ -60,6 +82,7 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 		},
 		tools: [
 			...(queryTool ? [queryTool] : []),
+			...(purchaseExtractTool ? [purchaseExtractTool] : []),
 			replyTool,
 			...(productPhotoTool ? [productPhotoTool] : []),
 		],

@@ -76,7 +76,7 @@ export default function BatchShipOrderDialog({
 		zonesReady &&
 		orders.length > 0 &&
 		orders.every((order) =>
-			zones.some((zone) => zone.Id === draftZoneIds[order.id]),
+			zones.some((zone) => zone.id === draftZoneIds[order.id]),
 		) &&
 		!isSending;
 

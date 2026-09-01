@@ -5,7 +5,7 @@ import { type InboundImage, KIMI_VISION_MODEL } from "@vit/assistant";
 const MAX_VISION_TOKENS = 1536;
 
 export const buildKimiVision =
-	(ai: Ai) =>
+	(ai: Ai, maxTokens = MAX_VISION_TOKENS) =>
 	async (image: InboundImage, prompt: string): Promise<string> => {
 		const dataUrl = `data:${image.contentType};base64,${toBase64(image.bytes)}`;
 		const response = await ai.run(KIMI_VISION_MODEL, {
@@ -18,7 +18,7 @@ export const buildKimiVision =
 					],
 				},
 			],
-			max_tokens: MAX_VISION_TOKENS,
+			max_tokens: maxTokens,
 		});
 		return extractText(response);
 	};

@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 
 export interface DeliveryZone {
-	Id: number;
+	id: number;
 	zoneName: string;
 }
 
@@ -43,7 +43,7 @@ export function DeliveryZoneSelect({
 				</SelectTrigger>
 				<SelectContent>
 					{zones.map((zone) => (
-						<SelectItem key={zone.Id} value={zone.Id.toString()}>
+						<SelectItem key={zone.id} value={zone.id.toString()}>
 							{zone.zoneName}
 						</SelectItem>
 					))}
