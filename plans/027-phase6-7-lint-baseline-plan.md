@@ -1,9 +1,9 @@
-# Plan 027 lint baseline plan (Phases 6–8)
+# Plan 027 lint baseline + coverage hardening (Phases 6–12)
 
 Finish Plan 027 after the tooling stack (#315–#321). Fix lint debt intentionally. No rule disables to fake green CI.
 
-**Current tip:** `feat/027-phase5-fmt-autofix` (#321)  
-**Lint:** ~1,178 errors (~842 anti-slop, ~336 nkzw/other) after fmt + `--fix`
+**Current tip:** `feat/027-phase6-anti-slop-shared-server` (#322, shared+server anti-slop at 0)  
+**Lint:** Phase 6 in progress; repo anti-slop ~773 after #322 (was 842)
 
 ## How to read this
 
@@ -25,6 +25,10 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
 | **#324** | `feat/027-phase6c-anti-slop-apps` | anti-slop: `apps/admin`, `apps/storev2`, `apps/agent`, `packages/assistant` |
 | **#325** | `feat/027-phase7-nkzw-baseline` | nkzw: complexity, admin react, env.d.ts, worker.mjs, unused vars |
 | **#326** | `feat/027-phase8-ci-lint-gate` | CI: `vp fmt --check` + `vp lint` in workflow |
+| **#327** | `feat/027-phase9-solid-lint` | Solid plugin for storev2 (spike + enable) |
+| **#328** | `feat/027-phase10-type-aware-lint` | Type-aware oxlint spike → curated rules |
+| **#329** | `feat/027-phase11-astro-biome` | Astro-only Biome (spike-gated; skip if no net signal) |
+| **#330** | `feat/027-phase12-lint-hardening-ci` | CI gates for Phase 9–11 checks |
 
 ---
 
@@ -170,12 +174,149 @@ Defer `typeAware/typeCheck: true` until astro-check TS7 unblocked.
 
 ---
 
+## Phase 9 — Solid lint for storev2 (#327)
+
+**Goal:** Replace the storev2 React-rule dead zone with Solid-specific lint. Keep React rules off for `apps/storev2/**`.
+
+**Why now:** Phase 6c clears storev2 anti-slop first. Admin keeps React rules; storev2 gets framework rules that match Solid semantics.
+
+### Steps
+
+1. **Spike** `eslint-plugin-solid` through Oxlint's JS plugin compatibility layer on a scratch branch.
+2. Document a **compatibility matrix** in the PR body: which Solid rules run vs fail under oxlint jsPlugins.
+3. Enable recommended TypeScript/Solid rules for `apps/storev2/**` only; keep `storev2ReactOff` for all React rules.
+4. Fix or narrow any false positives. No broad ignores.
+
+### Verify
+
+- [ ] `bunx vp lint apps/storev2` — 0 new errors vs Phase 7 baseline
+- [ ] `bunx vp fmt --check`
+- [ ] `turbo check-types --filter=storev2`
+- [ ] PR lists Solid rules that oxlint cannot execute
+
+**Do not** add Solid lint as a CI gate yet (Phase 12).
+
+---
+
+## Phase 10 — Type-aware lint spike (#328)
+
+**Goal:** Move toward store-kit parity (`typeAware` / `typeCheck` in `vite.config.ts` lint options) without enabling the full typed rule surface on day one.
+
+**Baseline today:** vit-store ~8s lint with `typeCheck: false`; store-kit ~64s with `typeCheck: true`.
+
+### Steps
+
+1. On a spike branch, flip `typeAware` / `typeCheck` in `vite.config.ts` lint options.
+2. **Measure** `vp lint` wall time (cold + warm). Log in PR body.
+3. Enable a **curated allowlist** of high-signal correctness rules only (async/promise misuse, floating promises, etc.). Do not blindly enable every typed rule.
+4. Fix surfaced errors in a follow-up commit on the same PR or defer to Phase 10b if the error budget is large.
+5. If runtime exceeds ~30s on CI runners, document mitigation (scoped lint, nightly, or package-scoped runs).
+
+### Verify
+
+- [ ] Before/after lint runtime in PR body
+- [ ] Error count by rule category
+- [ ] `vp fmt --check` green
+- [ ] `astro check` still run separately (not replaced by type-aware oxlint)
+
+**Gate:** Do not merge until Phase 8 CI gate is green on `#326` tip.
+
+---
+
+## Phase 11 — Astro-only Biome (#329, spike-gated)
+
+**Goal:** Restore template/directive/HTML lint coverage for Astro files that Oxlint does not meaningfully cover. **Skip this phase** if the spike shows Biome findings overlap `astro check` without net new signal.
+
+**Context:** Previous Biome had `html.experimentalFullSupportEnabled: true`. Oxlint lints Astro JS/TS sections only. `astro check` covers compiler/type/template correctness but is not a full linter substitute for markup.
+
+### Spike (required before implementation)
+
+```sh
+# Compare signal vs astro check on storev2 astro files only
+biome lint apps/storev2/**/*.astro
+astro check
+```
+
+If Biome catches meaningful template/directive issues `astro check` misses, proceed. Otherwise close Phase 11 as "not needed" in the plan doc.
+
+### Desired lint architecture (after Phases 9–11)
+
+```text
+Vite+ / Oxlint
+├── JS / TS / TSX
+├── @nkzw/oxlint-config
+├── type-aware rules (Phase 10)
+├── anti-slop JS plugin
+└── eslint-plugin-solid (apps/storev2 only)
+
+Oxfmt
+└── repo formatting
+
+Biome (Phase 11, if spike wins)
+└── apps/storev2/**/*.astro only
+
+astro check
+└── Astro compiler/type diagnostics
+```
+
+### Implementation (if spike wins)
+
+1. Add minimal `biome.json` with `includes: ["apps/storev2/**/*.astro"]` only.
+2. Wire `bun run lint:astro` (or `vp run` task). **Not** part of `vp lint`.
+3. Do **not** restore Biome as general JS/TS formatter or linter. Oxfmt + Oxlint remain primary.
+4. Update `plans/027-migrate-lint-format-to-vite-plus.md` with an ADR-style note explaining the Astro-only Biome exception.
+
+### Verify
+
+```sh
+vp lint
+vp fmt --check
+astro check
+bun run lint:astro   # if Phase 11 lands
+```
+
+- [ ] Build `storev2` and `admin`
+- [ ] Lint error counts by category in PR body
+
+---
+
+## Phase 12 — Hardening CI gates (#330)
+
+**Goal:** Gate the new checks from Phases 9–11 only after each has a clean local baseline.
+
+| Check | CI step | Prerequisite |
+|-------|---------|--------------|
+| Oxlint + Oxfmt | `vp fmt --check` + `vp lint` | Phase 8 (#326) |
+| Solid rules | included in `vp lint` | Phase 9 baseline 0 |
+| Type-aware rules | included in `vp lint` | Phase 10 baseline 0 + acceptable runtime |
+| Astro Biome | `bun run lint:astro` | Phase 11 spike passed |
+
+---
+
+## Cross-phase cleanup (Phases 9–12)
+
+Apply during 9–11 PRs, not as drive-by in Phase 6–7:
+
+- Keep app-specific rule boundaries explicit:
+  - `apps/admin`: React rules
+  - `apps/storev2`: Solid rules, React rules off
+  - server/packages: no framework rules unless relevant
+- Confirm no generated or handwritten Worker entrypoints are accidentally ignored (`worker.mjs`, etc.).
+- Preserve targeted Starwind/generated-code exclusions only where justified.
+- **No rule disables** to fake green on new plugins. Fix underlying design per `scripts/anti-slop-worker-brief.md`.
+
+---
+
 ## Operator checklist
 
 - [ ] Merge #315 → #321 in order (or stack-merge)
 - [ ] Approve Phase 6 swarm execution ("go" on anti-slop PRs)
 - [ ] Phase 7 after Phase 6 merges
 - [ ] Phase 8 after `vp lint` exit 0 locally
+- [ ] Phase 9 after Phase 6c storev2 anti-slop clean
+- [ ] Phase 10 after Phase 8 CI gate green
+- [ ] Phase 11 only if Astro Biome spike shows net new signal
+- [ ] Phase 12 after 9–11 baselines clean
 
 ---
 
@@ -184,3 +325,5 @@ Defer `typeAware/typeCheck: true` until astro-check TS7 unblocked.
 - Adversarial review: `~/dev/scratchpad/vit-store/review-027-adversarial.md`
 - store-kit lint: ~64s with `typeCheck: true`; vit-store ~8s with `typeCheck: false`
 - Plan 027: `plans/027-migrate-lint-format-to-vite-plus.md`
+- Worker brief: `scripts/anti-slop-worker-brief.md`
+- Bucket script: `scripts/lint-anti-slop-bucket.ts`
