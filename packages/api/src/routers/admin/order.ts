@@ -510,6 +510,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
         sortDirection: v.optional(v.picklist(["asc", "desc"])),
         searchTerm: v.optional(v.string()),
         date: v.optional(v.string()),
+        createdAfter: v.optional(v.date()),
     }))
         .query(async ({ input, ctx }) => {
         try {
@@ -524,6 +525,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
                 sortDirection: input.sortDirection,
                 searchTerm: input.searchTerm,
                 date: input.date,
+                createdAfter: input.createdAfter,
             });
         }
         catch (e) {
