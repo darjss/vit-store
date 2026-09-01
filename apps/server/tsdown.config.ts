@@ -1,10 +1,10 @@
-import { defineConfig } from "tsdown";
+import { defineConfig } from "vite-plus/pack";
 
 export default defineConfig({
-	entry: "./src/index.ts",
-	format: "esm",
-	outDir: "./dist",
-	clean: true,
-	noExternal: [/@vit\/.*/],
-	sourcemap: true,
+  entry: "./src/index.ts",
+  format: "esm",
+  outDir: "./dist",
+  clean: true,
+  noExternal: [/@vit\/.*/],
+  sourcemap: true,
 });

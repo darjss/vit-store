@@ -1,30 +1,29 @@
 {
-	"name": "@vit/assistant",
-	"type": "module",
-	"exports": {
-		".": {
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
-		}
-	},
-	"scripts": {
-		"build": "tsdown",
-		"check-types": "tsc --noEmit"
-	},
-	"dependencies": {
-		"@cloudflare/codemode": "^0.4.1",
-		"@flue/runtime": "^1.0.0-beta.3",
-		"@trpc/client": "catalog:",
-		"@vit/api": "workspace:*",
-		"@vit/shared": "workspace:*",
-		"superjson": "^2.2.3",
-		"valibot": "catalog:"
-	},
-	"devDependencies": {
-		"tsdown": "catalog:",
-		"typescript": "catalog:"
-	},
-	"peerDependencies": {
-		"typescript": "^7"
-	}
+  "name": "@vit/assistant",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "vp pack",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/codemode": "^0.4.1",
+    "@flue/runtime": "^1.0.0-beta.3",
+    "@trpc/client": "catalog:",
+    "@vit/api": "workspace:*",
+    "@vit/shared": "workspace:*",
+    "superjson": "^2.2.3",
+    "valibot": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
 }
