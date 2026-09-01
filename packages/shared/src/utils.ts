@@ -1,4 +1,5 @@
-import { orderStatusStyles } from "./order-status";
+import { orderStatusLabels, orderStatusStyles } from "./order-status";
+import type { OrderStatusType } from "./types/order";
 
 export const getStatusColor = (status: string) => {
 	switch (status) {
@@ -53,9 +54,13 @@ export function formatCurrency(amount: number): string {
 	return `${amount.toLocaleString()}₮`;
 }
 
+const isOrderStatusType = (status: string): status is OrderStatusType =>
+	status in orderStatusLabels;
+
 export const getOrderStatusStyles = (status: string) => {
-	const key = status.toLowerCase() === "canceled" ? "cancelled" : status.toLowerCase();
-	const styles = orderStatusStyles[key as keyof typeof orderStatusStyles];
+	const normalized = status.toLowerCase() === "canceled" ? "cancelled" : status.toLowerCase();
+	const key = isOrderStatusType(normalized) ? normalized : null;
+	const styles = key ? orderStatusStyles[key] : undefined;
 	return (
 		styles ?? {
 			badge: "border-black bg-[#5f27cd] text-white",

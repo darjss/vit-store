@@ -39,7 +39,7 @@ export interface OrderResult {
 	updatedAt: Date | null;
 }
 
-export interface ShapedOrder {
+export interface OrderListRow {
 	address: string;
 	createdAt: Date;
 	customerPhone: number;

@@ -36,9 +36,9 @@ const terminalStatuses = new Set<TransferReconciliationStatus>([
 	"failed",
 ]);
 
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const errorMessage = (error: Error) => error.message;
 
-const retryDelayMs = (error: unknown) =>
+const retryDelayMs = (error: Error) =>
 	error instanceof KhaanRateLimitError ? RATE_LIMIT_BACKOFF_MS : POLL_INTERVAL_MS;
 
 const isConfirmablePaymentStatus = (status: string) =>
@@ -233,12 +233,13 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 
 			await this.confirmMatch(state, attempts, matchResult.match, fingerprintByIdentity);
 		} catch (error) {
+			const failure = error instanceof Error ? error : new Error(String(error));
 			if (error instanceof KhaanAuthError) {
 				this.client = null;
 				await this.writeState({
 					...state,
 					attempts,
-					lastError: errorMessage(error),
+					lastError: errorMessage(failure),
 					nextPollAt: null,
 					status: "auth_required",
 				});
@@ -248,9 +249,9 @@ export class TransferReconciliationObject extends DurableObject<Env> {
 				{
 					...state,
 					attempts,
-					lastError: errorMessage(error),
+					lastError: errorMessage(failure),
 				},
-				retryDelayMs(error),
+				retryDelayMs(failure),
 			);
 		}
 	}

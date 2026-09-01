@@ -1,13 +1,33 @@
 import { timingSafeEqual } from "@vit/api";
-import type { ImageUrlArray } from "@vit/shared";
+import { imageUrlArraySchema } from "@vit/shared";
 import { requireAdminSession } from "../lib/admin-session";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
+import * as v from "valibot";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 const CDN_BASE_URL = "https://cdn.darjs.dev";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_URL_IMAGES = 10;
+
+function readImageFile(formData: FormData): File | null {
+	const image = formData.get("image");
+	return image instanceof File ? image : null;
+}
+
+function readOptionalString(entry: FormDataEntryValue | null): string | null {
+	if (entry === null) {
+		return null;
+	}
+	const parsed = v.safeParse(v.string(), entry);
+	return parsed.success ? parsed.output : null;
+}
+
+function readRequiredString(entry: FormDataEntryValue | null): string | null {
+	const parsed = readOptionalString(entry);
+	return parsed && parsed.length > 0 ? parsed : null;
+}
+
 function extensionFromContentType(contentType: string): string {
 	if (contentType.includes("png")) {
 		return "png";
@@ -49,8 +69,8 @@ app.post("/products", async (c) => {
 	const startTime = Date.now();
 	try {
 		const formData = await c.req.formData();
-		const image = formData.get("image") as unknown as File;
-		const productName = formData.get("productName") as string | null;
+		const image = readImageFile(formData);
+		const productName = readOptionalString(formData.get("productName"));
 		const isPrimary = formData.get("isPrimary") === "true";
 		if (!image) {
 			log.warn("upload.validation_failed", { reason: "no_image" });
@@ -128,20 +148,15 @@ app.post("/products", async (c) => {
 			isPrimary,
 			key: carouselKey,
 		});
-		const response: {
-			key: string;
-			message: string;
-			thumbnailUrl?: string;
-			url: string;
-		} = {
+		const base = {
 			key: carouselKey,
 			message: "Uploaded successfully",
 			url: carouselUrl,
-		};
-		if (thumbnailUrl) {
-			response.thumbnailUrl = thumbnailUrl;
+		} satisfies { key: string; message: string; url: string };
+		if (thumbnailUrl !== undefined) {
+			return c.json({ ...base, thumbnailUrl });
 		}
-		return c.json(response);
+		return c.json(base);
 	} catch (error) {
 		log.error(error instanceof Error ? error : new Error(String(error)), {
 			event: "upload.failed",
@@ -154,8 +169,12 @@ app.post("/brands", async (c) => {
 	log.set({ operation: "upload.brands", user_type: "admin" });
 	try {
 		const formData = await c.req.formData();
-		const image = formData.get("image") as unknown as File;
-		const brandName = formData.get("brandName") as string;
+		const image = readImageFile(formData);
+		const brandName = readRequiredString(formData.get("brandName"));
+		if (!image || !brandName) {
+			log.warn("upload.validation_failed", { reason: "missing_brand_fields" });
+			return c.json({ message: "Brand image and name are required" }, 400);
+		}
 		const isSvg = image.type === "image/svg+xml";
 		const sanitizedBrandName = brandName
 			.toLowerCase()
@@ -217,8 +236,20 @@ app.post("/images/urls", async (c) => {
 	const startTime = Date.now();
 	try {
 		const uploadPrefix = sanitizePrefix(c.req.query("prefix"));
-		const body = (await c.req.json()) as ImageUrlArray;
-		if (!Array.isArray(body) || body.length === 0) {
+		let json: unknown;
+		try {
+			json = await c.req.json();
+		} catch {
+			log.warn("upload.urls_validation_failed", { reason: "invalid_json" });
+			return c.json({ message: "Array of image URLs required" }, 400);
+		}
+		const parsed = v.safeParse(imageUrlArraySchema, json);
+		if (!parsed.success) {
+			log.warn("upload.urls_validation_failed", { reason: "invalid_body" });
+			return c.json({ message: "Array of image URLs required" }, 400);
+		}
+		const body = parsed.output;
+		if (body.length === 0) {
 			log.warn("upload.urls_validation_failed", { reason: "empty_array" });
 			return c.json({ message: "Array of image URLs required" }, 400);
 		}

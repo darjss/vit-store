@@ -1,10 +1,22 @@
-import { sanitizePublicTrpcErrorShape, sanitizePublicTrpcResponse } from "@vit/shared";
+import {
+	sanitizePublicTrpcError,
+	sanitizePublicTrpcResponse,
+	type TrpcPublicError,
+	type TrpcResponseWire,
+	trpcResponseWireSchema,
+} from "@vit/shared";
+import * as v from "valibot";
+
+export type TrpcProxyJsonBody =
+	| TrpcResponseWire
+	| { error: { json: TrpcPublicError } }
+	| { error: string };
 
 export const isUnsupportedTrpcTransport = (request: Request): boolean =>
 	request.headers.get("trpc-accept") === "application/jsonl";
 
 export const noStoreJson = (
-	body: unknown,
+	body: TrpcProxyJsonBody,
 	status: number,
 	initialHeaders?: HeadersInit,
 ): Response => {
@@ -22,11 +34,11 @@ export const trpcErrorResponse = (
 	message?: string,
 	initialHeaders?: HeadersInit,
 ): Response => {
-	const shape = sanitizePublicTrpcErrorShape(undefined, status);
+	const error = sanitizePublicTrpcError(undefined, status);
 	return noStoreJson(
 		{
 			error: {
-				json: message ? { ...shape, message } : shape,
+				json: message ? { ...error, message } : error,
 			},
 		},
 		status,
@@ -40,14 +52,19 @@ export const sanitizeUpstreamTrpcResponse = async (response: Response): Promise<
 		payload = await response.clone().json();
 	} catch (error) {
 		console.warn({
-			errorType: error instanceof Error ? error.name : typeof error,
+			errorType: error instanceof Error ? error.name : "unknown",
 			event: "store_trpc_invalid_error_response",
 			upstreamStatus: response.status,
 		});
 		return trpcErrorResponse(502);
 	}
 
-	const sanitized = sanitizePublicTrpcResponse(payload, response.status);
+	const wire = v.safeParse(trpcResponseWireSchema, payload);
+	if (!wire.success) {
+		return trpcErrorResponse(502);
+	}
+
+	const sanitized = sanitizePublicTrpcResponse(wire.output, response.status);
 	if (!sanitized.hasError) {
 		return response.status >= 400 ? trpcErrorResponse(response.status) : response;
 	}

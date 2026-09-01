@@ -1,28 +1,27 @@
 import { createAdminSession, setAdminSessionTokenCookie } from "@vit/api";
 import { userQueries } from "@vit/api/queries";
 import type { ServerHonoEnv } from "../lib/logging";
-import type { GoogleIdTokenClaims, OAuthCookieData } from "@vit/shared";
+import {
+	googleIdTokenClaimsSchema,
+	oauthCookieDataSchema,
+	type GoogleIdTokenClaims,
+} from "@vit/shared";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import * as v from "valibot";
 import { google } from "../lib/oauth";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 const COOKIE_MAX_AGE = 60 * 10;
 const OAUTH_TEMP_COOKIE = "google_oauth_temp";
 const BOOTSTRAP_ADMIN_GOOGLE_ID = "118271302696111351988";
-function getOAuthCookieOptions(isSecure: boolean): {
-	httpOnly: boolean;
-	maxAge: number;
-	path: string;
-	sameSite: "None" | "Lax";
-	secure: boolean;
-} {
+function getOAuthCookieOptions(isSecure: boolean) {
 	return {
 		httpOnly: true,
 		maxAge: COOKIE_MAX_AGE,
 		path: "/",
-		sameSite: isSecure ? "None" : "Lax",
+		sameSite: isSecure ? ("None" as const) : ("Lax" as const),
 		secure: isSecure,
 	};
 }
@@ -30,16 +29,10 @@ function isValidGoogleIdTokenAudience(
 	audience: string | Array<string> | undefined,
 	clientId: string,
 ): boolean {
-	if (!clientId) {
+	if (!clientId || audience === undefined) {
 		return false;
 	}
-	if (typeof audience === "string") {
-		return audience === clientId;
-	}
-	if (Array.isArray(audience)) {
-		return audience.includes(clientId);
-	}
-	return false;
+	return Array.isArray(audience) ? audience.includes(clientId) : audience === clientId;
 }
 function isValidGoogleIdTokenClaims(claims: GoogleIdTokenClaims, clientId: string): boolean {
 	const validIssuer =
@@ -50,16 +43,10 @@ function isValidGoogleIdTokenClaims(claims: GoogleIdTokenClaims, clientId: strin
 	if (!isValidGoogleIdTokenAudience(claims.aud, clientId)) {
 		return false;
 	}
-	if (typeof claims.exp !== "number") {
-		return false;
-	}
 	if (Math.floor(Date.now() / 1000) >= claims.exp) {
 		return false;
 	}
 	if (claims.email !== undefined && claims.email_verified !== true) {
-		return false;
-	}
-	if (typeof claims.sub !== "string" || claims.sub.length === 0) {
 		return false;
 	}
 	return true;
@@ -98,7 +85,7 @@ app.get("/login/google/callback", async (c) => {
 		let storedState: string | undefined;
 		let codeVerifier: string | undefined;
 		try {
-			const parsed = JSON.parse(combined) as OAuthCookieData;
+			const parsed = v.parse(oauthCookieDataSchema, JSON.parse(combined));
 			storedState = parsed.state;
 			codeVerifier = parsed.codeVerifier;
 		} catch (error) {
@@ -136,14 +123,15 @@ app.get("/login/google/callback", async (c) => {
 			sameSite: isSecure ? "None" : "Lax",
 			secure: isSecure,
 		});
-		const claims = decodeIdToken(tokens.idToken()) as GoogleIdTokenClaims;
+		const claimsResult = v.safeParse(googleIdTokenClaimsSchema, decodeIdToken(tokens.idToken()));
 		const googleClientId = c.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
-		if (!isValidGoogleIdTokenClaims(claims, googleClientId)) {
+		if (!claimsResult.success || !isValidGoogleIdTokenClaims(claimsResult.output, googleClientId)) {
 			log.warn("auth.login_failed", {
 				failureReason: "invalid_id_token_claims",
 			});
 			return new Response(null, { status: 400 });
 		}
+		const claims = claimsResult.output;
 		const googleUserId = claims.sub;
 		const username = claims.name ?? claims.email ?? "Google User";
 		const adminEmail = claims.email ?? "unknown";

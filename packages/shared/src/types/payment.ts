@@ -94,13 +94,13 @@ export interface BonumErrorResponse {
 export class BonumApiError extends Error {
 	public statusCode: number;
 	public responseBody: BonumErrorResponse | string;
-	public requestBody?: unknown;
+	public requestBody?: BonumInvoiceRequestBody;
 
 	constructor(
 		message: string,
 		statusCode: number,
 		responseBody: BonumErrorResponse | string,
-		requestBody?: unknown,
+		requestBody?: BonumInvoiceRequestBody,
 	) {
 		super(message);
 		this.name = "BonumApiError";

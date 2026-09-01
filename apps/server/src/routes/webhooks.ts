@@ -1,13 +1,14 @@
+import { messengerWebhookHandler, messengerWebhookPayloadSchema } from "@vit/api/integrations";
 import { env } from "cloudflare:workers";
-import type { GenericWebhookPayload } from "@vit/api/integrations";
-import { messengerWebhookHandler } from "@vit/api/integrations";
 import type { ServerHonoEnv } from "../lib/logging";
 import { Hono } from "hono";
+import * as v from "valibot";
+
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 app.post("/messenger", async (c) => {
 	const log = c.get("log");
 	log.set({ operation: "messenger.webhook", user_type: "system" });
-	const payload = (await c.req.json()) as GenericWebhookPayload;
+	const payload = v.parse(messengerWebhookPayloadSchema, await c.req.json());
 	log.info("webhook.received", {
 		eventType: payload.object,
 		provider: "messenger",
