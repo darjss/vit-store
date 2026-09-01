@@ -91,7 +91,7 @@ export class CartStore implements DurableObject {
 		const current = await this.read();
 		const next =
 			parsed.output.type === "add"
-				? addToCart(current, parsed.output.product as CartProductInput, parsed.output.quantity)
+				? addToCart(current, parsed.output.product, parsed.output.quantity)
 				: applyCartCommand(current, parsed.output.command);
 		await this.write(next);
 		return Response.json({ cart: next });

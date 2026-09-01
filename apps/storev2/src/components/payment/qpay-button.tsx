@@ -23,6 +23,7 @@ import {
 	trackQpayError,
 } from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
+import { isServer } from "@/lib/runtime";
 import {
 	HandoffState,
 	type HandoffState as HandoffStateType,
@@ -31,6 +32,7 @@ import {
 	watchReturnFromBankApp,
 } from "@/lib/deeplink-handoff";
 import { paymentSuccessUrl } from "@/lib/payment-url";
+import { isServer } from "@/lib/runtime";
 import { queryClient } from "@/lib/query";
 import { safeNavigate } from "@/lib/safe-navigate";
 import { api } from "@/lib/trpc";
@@ -188,8 +190,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 		);
 	};
 
-	const isDesktop = () =>
-		typeof window !== "undefined" && window.matchMedia("(min-width: 640px)").matches;
+	const isDesktop = () => !isServer && window.matchMedia("(min-width: 640px)").matches;
 
 	onMount(() => {
 		setShowQr(isDesktop());
@@ -234,7 +235,7 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	);
 
 	const amountLabel = () => {
-		if (typeof props.amount !== "number") {
+		if (!Number.isFinite(props.amount)) {
 			return null;
 		}
 		return `${props.amount.toLocaleString()}₮`;

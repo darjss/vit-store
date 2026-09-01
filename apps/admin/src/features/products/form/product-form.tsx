@@ -54,7 +54,7 @@ const ProductForm = ({
 
 	const queryClient = useQueryClient();
 	const productId = product?.id;
-	const isEditing = typeof productId === "number";
+	const isEditing = productId !== undefined;
 
 	const addMutation = useMutation({
 		...trpc.product.addProduct.mutationOptions(),
@@ -95,7 +95,7 @@ const ProductForm = ({
 	};
 
 	const onSubmit = async (values: ProductFormValues) => {
-		if (typeof productId === "number") {
+		if (productId !== undefined) {
 			updateMutation.mutate({
 				...values,
 				expirationDate: values.expirationDate || "",

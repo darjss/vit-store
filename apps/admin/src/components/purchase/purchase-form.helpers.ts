@@ -172,7 +172,7 @@ export function buildPurchasePayload(
 		trackingNumber: string;
 	},
 	items: Array<PurchaseLineState>,
-) {
+): RouterInputs["purchase"]["addPurchase"] {
 	return {
 		cancelledAt: values.cancelledAt ?? null,
 		externalOrderNumber: values.externalOrderNumber,

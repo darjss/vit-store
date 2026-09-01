@@ -18,6 +18,9 @@ import Layout from "@/layouts/Layout.astro";
 import { env } from "cloudflare:workers";
 import { createServerClient } from "@/lib/trpc";
 import { paymentUrl } from "@/lib/payment-url";
+import { trpcErrorCode } from "@/lib/trpc-error-code";
+import { thrownErrorWireSchema } from "@/lib/error-wire";
+import * as v from "valibot";
 import { orderStatusLabels } from "@vit/shared/order-status";
 import { BagIcon as IconShoppingBag } from "@solar-icons/solid/linear";
 
@@ -35,7 +38,7 @@ let user;
 try {
 	user = await serverApi.auth.check.query();
 } catch (error) {
-	const code = (error as { data?: { code?: string } })?.data?.code ?? (error as { code?: string })?.code;
+	const code = trpcErrorCode(v.parse(thrownErrorWireSchema, error));
 	if (code === "UNAUTHORIZED") {return Astro.redirect("/login");}
 	throw error;
 }
@@ -114,7 +117,7 @@ const formatPhone = (phone?: number) => {
 };
 
 // Status badges — payment state wins when the Order is still awaiting pay.
-const statusColors: Record<string, string> = {
+const statusColors = {
 	cancelled: "bg-error text-error-foreground",
 	completed: "bg-success text-success-foreground",
 	created: "bg-warning text-warning-foreground",
@@ -123,21 +126,21 @@ const statusColors: Record<string, string> = {
 	processing: "bg-info text-info-foreground",
 	refunded: "bg-muted text-muted-foreground",
 	shipped: "bg-info text-info-foreground",
-};
+} satisfies Record<string, string>;
 
-const paymentStatusLabels: Record<string, string> = {
+const paymentStatusLabels = {
 	customer_claimed_paid: "Шалгаж байна",
 	failed: "Төлбөр амжилтгүй",
 	pending: "Төлөөгүй",
 	success: "Төлсөн",
-};
+} satisfies Record<string, string>;
 
-const paymentStatusColors: Record<string, string> = {
+const paymentStatusColors = {
 	customer_claimed_paid: "bg-info text-info-foreground",
 	failed: "bg-error text-error-foreground",
 	pending: "bg-warning text-warning-foreground",
 	success: "bg-success text-success-foreground",
-};
+} satisfies Record<string, string>;
 
 const canContinuePayment = (
 	orderStatus: string,

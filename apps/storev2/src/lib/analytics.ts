@@ -1,3 +1,10 @@
+import * as v from "valibot";
+
+import type { AnalyticsProperties } from "@/lib/analytics-props";
+import { thrownErrorWireSchema, type ThrownErrorWire } from "@/lib/error-wire";
+import { isServer } from "@/lib/runtime";
+import { searchAttributionSchema } from "@/lib/search-attribution";
+
 interface CartItemProperties {
 	price: number;
 	product_id: number;
@@ -5,20 +12,12 @@ interface CartItemProperties {
 	quantity: number;
 }
 
-type SearchAttribution = {
-	clickedAt: number;
-	position: number;
-	productId: number;
-	query: string;
-	searchId: string;
-};
-
 const SEARCH_ATTRIBUTION_KEY = "vit-search-attribution";
 const SEARCH_ATTRIBUTION_MAX_AGE_MS = 30 * 60 * 1000;
 const trackedSearchClicks = new Set<string>();
 
-const rememberSearchAttribution = (attribution: SearchAttribution) => {
-	if (typeof window === "undefined") {
+const rememberSearchAttribution = (attribution: v.InferOutput<typeof searchAttributionSchema>) => {
+	if (isServer) {
 		return;
 	}
 	try {
@@ -27,43 +26,29 @@ const rememberSearchAttribution = (attribution: SearchAttribution) => {
 };
 
 const currentSearchAttribution = (productId: number) => {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return null;
 	}
 	try {
-		const value: unknown = JSON.parse(sessionStorage.getItem(SEARCH_ATTRIBUTION_KEY) ?? "null");
+		const parsed = v.safeParse(
+			searchAttributionSchema,
+			JSON.parse(sessionStorage.getItem(SEARCH_ATTRIBUTION_KEY) ?? "null"),
+		);
 		if (
-			typeof value !== "object" ||
-			value === null ||
-			!("searchId" in value) ||
-			!("query" in value) ||
-			!("productId" in value) ||
-			!("position" in value) ||
-			!("clickedAt" in value) ||
-			typeof value.searchId !== "string" ||
-			typeof value.query !== "string" ||
-			typeof value.productId !== "number" ||
-			value.productId !== productId ||
-			typeof value.position !== "number" ||
-			typeof value.clickedAt !== "number" ||
-			Date.now() - value.clickedAt > SEARCH_ATTRIBUTION_MAX_AGE_MS
+			!parsed.success ||
+			parsed.output.productId !== productId ||
+			Date.now() - parsed.output.clickedAt > SEARCH_ATTRIBUTION_MAX_AGE_MS
 		) {
 			return null;
 		}
-		return {
-			clickedAt: value.clickedAt,
-			position: value.position,
-			productId: value.productId,
-			query: value.query,
-			searchId: value.searchId,
-		};
+		return parsed.output;
 	} catch {
 		return null;
 	}
 };
 
 const currentPageSource = () => {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return "unknown";
 	}
 	if (window.location.pathname === "/") {
@@ -75,21 +60,21 @@ const currentPageSource = () => {
 	return "catalog";
 };
 
-function capture(event: string, properties?: Record<string, unknown>) {
-	if (typeof window !== "undefined" && window.posthog) {
+function capture(event: string, properties?: AnalyticsProperties) {
+	if (!isServer && window.posthog) {
 		window.posthog.capture(event, properties);
 	}
 }
 
-function identify(distinctId: string, properties?: Record<string, unknown>) {
-	if (typeof window !== "undefined" && window.posthog) {
+function identify(distinctId: string, properties?: AnalyticsProperties) {
+	if (!isServer && window.posthog) {
 		window.posthog.identify(distinctId, properties);
 	}
 }
 
-export function captureException(error: unknown, properties?: Record<string, unknown>) {
-	if (typeof window !== "undefined" && window.posthog) {
-		window.posthog.captureException(error, properties);
+export function captureException(error: ThrownErrorWire, properties?: AnalyticsProperties) {
+	if (!isServer && window.posthog) {
+		window.posthog.captureException(v.parse(thrownErrorWireSchema, error), properties);
 	}
 }
 
@@ -110,7 +95,7 @@ async function hashString(str: string): Promise<string> {
 export function trackAddToCart(item: CartItemProperties) {
 	const attribution = currentSearchAttribution(item.product_id);
 	capture("add_to_cart", {
-		page_path: typeof window === "undefined" ? undefined : window.location.pathname,
+		page_path: isServer ? undefined : window.location.pathname,
 		price: item.price,
 		product_id: item.product_id,
 		product_name: item.product_name,
@@ -147,7 +132,7 @@ export function trackCartOpened(cartCount: number, cartTotal: number) {
  * failures can be attributed to a specific host app.
  */
 export function detectInAppBrowser(): string {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return "unknown";
 	}
 	const ua = navigator.userAgent;
@@ -233,7 +218,7 @@ export function trackCheckoutStarted(
  * Track QPay invoice creation errors
  */
 export function trackQpayError(paymentNumber: string, errorMessage: string) {
-	if (typeof window !== "undefined" && window.posthog) {
+	if (!isServer && window.posthog) {
 		window.posthog.capture("qpay_error", {
 			error_message: errorMessage,
 			payment_number: paymentNumber,
@@ -360,12 +345,15 @@ type RestockEvent = {
 	productId: number;
 };
 
-function restockProperties(event: RestockEvent) {
-	return {
-		product_id: event.productId,
-		...(event.channel ? { channel: event.channel } : {}),
+function restockProperties(event: RestockEvent): AnalyticsProperties {
+	const properties: AnalyticsProperties = {
 		customer_type: event.customerType,
+		product_id: event.productId,
 	};
+	if (event.channel) {
+		properties.channel = event.channel;
+	}
+	return properties;
 }
 
 export function trackRestockSheetOpened(event: RestockEvent) {

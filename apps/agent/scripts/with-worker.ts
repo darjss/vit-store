@@ -127,9 +127,13 @@ try {
 		console.error("✗ worker did not become healthy");
 	} else {
 		console.log("• worker ready\n");
+		const childEnv = { ...process.env };
+		if (local) {
+			childEnv.SMOKE_EXPECT_REPLY = "0";
+		}
 		const child = Bun.spawn(command, {
 			cwd: AGENT_ROOT,
-			env: { ...process.env, ...(local ? { SMOKE_EXPECT_REPLY: "0" } : {}) },
+			env: childEnv,
 			stderr: "inherit",
 			stdin: "inherit",
 			stdout: "inherit",

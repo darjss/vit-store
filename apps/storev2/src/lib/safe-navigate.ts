@@ -1,3 +1,5 @@
+import { isServer } from "@/lib/runtime";
+
 // Guard around Astro's view-transition `navigate()` to prevent the
 // `InvalidStateError` ("Transition was aborted because of invalid state")
 // that `document.startViewTransition` throws when:
@@ -15,7 +17,7 @@
 
 let inFlight = false;
 
-if (typeof document !== "undefined") {
+if (!isServer) {
 	const reset = () => {
 		inFlight = false;
 	};
@@ -31,7 +33,7 @@ type NavigateOptions = Parameters<(typeof import("astro:transitions/client"))["n
  * hidden (view transitions cannot run while the document is not visible).
  */
 export async function safeNavigate(href: string, options?: NavigateOptions) {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 	if (inFlight) {

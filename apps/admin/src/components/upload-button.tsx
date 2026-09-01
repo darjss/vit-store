@@ -3,6 +3,7 @@ import type { ImageUrlArray } from "@vit/shared";
 import { nanoid } from "nanoid";
 import { useRef } from "react";
 import { toast } from "sonner";
+import { parseUploadResponse } from "@/lib/upload-response";
 import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
@@ -29,11 +30,7 @@ const uploadImage = async (image: File, category: string) => {
 		credentials: "include",
 		method: "POST",
 	});
-	const data = (await response.json()) as { message: string; url?: string };
-	if (response.ok && data.url) {
-		return data.url;
-	}
-	throw new Error(data.message || `Upload failed (${response.status})`);
+	return parseUploadResponse(response);
 };
 
 export const UploadButton = ({

@@ -37,15 +37,16 @@ export default defineAgent<AgentEnv>(({ env, id }) => {
 				})
 			: undefined;
 
+	const bucket = env.MESSENGER_INBOUND_BUCKET;
+	const adminToken = env.ADMIN_BOT_TOKEN;
 	const purchaseExtractTool =
-		env.AI && env.MESSENGER_INBOUND_BUCKET && env.ADMIN_BOT_TOKEN
+		env.AI && bucket && adminToken
 			? buildPurchaseImageExtractTool({
-					loadImage: (key) => loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
+					loadImage: (key) => loadInboundImage(bucket, key),
 					matchExtracted: (input) =>
-						createAdminBotClient(
-							storeApiUrl,
-							env.ADMIN_BOT_TOKEN as string,
-						).aiPurchase.matchExtractedInvoice.mutate(input),
+						createAdminBotClient(storeApiUrl, adminToken).aiPurchase.matchExtractedInvoice.mutate(
+							input,
+						),
 					runVision: buildKimiVision(env.AI, 4096),
 				})
 			: undefined;

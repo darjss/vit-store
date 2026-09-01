@@ -1,11 +1,13 @@
 import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
+import { errorKind, thrownErrorWireSchema } from "@/lib/error-wire";
 import {
 	isUnsupportedTrpcTransport,
 	noStoreJson,
 	sanitizeUpstreamTrpcResponse,
 	trpcErrorResponse,
 } from "@/lib/trpc-proxy";
+import * as v from "valibot";
 
 export const prerender = false;
 
@@ -55,18 +57,21 @@ export const ALL: APIRoute = async ({ params, request }) => {
 		redirect: "manual",
 	};
 
-	if (request.body && request.method !== "GET" && request.method !== "HEAD") {
-		init.body = request.body;
-		(init as RequestInit & { duplex: "half" }).duplex = "half";
-	}
-
-	const upstreamRequest = new Request(targetUrl, init);
 	let upstreamResponse: Response;
 	try {
-		upstreamResponse = await env.server.fetch(upstreamRequest);
+		if (request.body && request.method !== "GET" && request.method !== "HEAD") {
+			const streamingInit: RequestInit & { duplex: "half" } = {
+				...init,
+				body: request.body,
+				duplex: "half",
+			};
+			upstreamResponse = await env.server.fetch(new Request(targetUrl, streamingInit));
+		} else {
+			upstreamResponse = await env.server.fetch(new Request(targetUrl, init));
+		}
 	} catch (error) {
 		console.error({
-			errorType: error instanceof Error ? error.name : typeof error,
+			errorType: errorKind(v.parse(thrownErrorWireSchema, error)),
 			event: "store_trpc_transport_rejected",
 			method: request.method,
 		});

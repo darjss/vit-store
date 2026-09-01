@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
-import type { purchaseProvider } from "@vit/shared";
+import { purchaseProvider } from "@vit/shared";
 import { Loader2, Plus } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { PurchaseDetailType } from "@/lib/types";
+import { parsePicklistValue } from "@/lib/parse-select";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { Button } from "../ui/button";
@@ -136,10 +137,10 @@ export default function PurchaseForm({
 		);
 	};
 
-	const updateDraft = (
+	const updateDraft = <K extends keyof NonNullable<PurchaseLineState["newProductDraft"]>>(
 		index: number,
-		field: keyof NonNullable<PurchaseLineState["newProductDraft"]>,
-		value: string | number | null | Array<{ url: string }>,
+		field: K,
+		value: NonNullable<PurchaseLineState["newProductDraft"]>[K],
 	) => {
 		setItems((current) =>
 			current.map((item, itemIndex) =>
@@ -152,7 +153,7 @@ export default function PurchaseForm({
 								name: item.newProductDraft?.name ?? item.description ?? "",
 								potency: item.newProductDraft?.potency ?? "Unknown",
 								...item.newProductDraft,
-								[field]: value as never,
+								[field]: value,
 							},
 						}
 					: item,
@@ -185,7 +186,7 @@ export default function PurchaseForm({
 						forwarderReceivedAt,
 						notes,
 						orderedAt,
-						provider: provider as PurchaseDetailType["provider"],
+						provider,
 						shippedAt,
 						shippingCost,
 						trackingNumber,
@@ -203,7 +204,7 @@ export default function PurchaseForm({
 				forwarderReceivedAt,
 				notes,
 				orderedAt,
-				provider: provider as PurchaseDetailType["provider"],
+				provider,
 				receivedAt: purchase?.receivedAt ?? null,
 				shippedAt,
 				shippingCost,
@@ -216,11 +217,11 @@ export default function PurchaseForm({
 			updatePurchaseMutation.mutate({
 				data: payload,
 				id: purchase.id,
-			} as never);
+			});
 			return;
 		}
 
-		createPurchaseMutation.mutate(payload as never);
+		createPurchaseMutation.mutate(payload);
 	};
 
 	return (
@@ -230,7 +231,12 @@ export default function PurchaseForm({
 				<div className="space-y-2">
 					<Label htmlFor="provider">Нийлүүлэгч</Label>
 					<Select
-						onValueChange={(value) => setProvider(value as (typeof purchaseProvider)[number])}
+						onValueChange={(value) => {
+							const parsed = parsePicklistValue(purchaseProvider, value);
+							if (parsed) {
+								setProvider(parsed);
+							}
+						}}
 						value={provider}
 					>
 						<SelectTrigger id="provider">

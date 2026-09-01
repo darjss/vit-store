@@ -50,9 +50,6 @@ export function useSearchParam(
 	});
 
 	const setParam = (next: string | null) => {
-		if (typeof window === "undefined") {
-			return;
-		}
 		const url = new URL(window.location.href);
 		const prev = url.searchParams.get(key);
 		const normalized = next == null || next === "" ? null : next;

@@ -56,7 +56,7 @@ export interface ProductAdviceToolDeps {
 		signal?: AbortSignal,
 	) => Promise<Array<AssistantAdviceProduct>>;
 	// Sends a plain text reply (used only for the transport-error path).
-	sendText: (text: string) => Promise<unknown>;
+	sendText: (text: string) => Promise<void>;
 }
 
 // Builds the conversation-bound product-advice tool. The model first finds the

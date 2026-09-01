@@ -1,3 +1,7 @@
+import * as v from "valibot";
+
+import { isServer } from "@/lib/runtime";
+
 const STORAGE_KEY = "vit-search-history";
 const MAX_SEARCHES = 5;
 
@@ -6,11 +10,18 @@ export interface SearchHistoryItem {
 	timestamp: number;
 }
 
+const searchHistorySchema = v.array(
+	v.object({
+		term: v.string(),
+		timestamp: v.number(),
+	}),
+);
+
 /**
  * Get recent searches from localStorage
  */
 export function getRecentSearches(): Array<SearchHistoryItem> {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return [];
 	}
 
@@ -20,9 +31,11 @@ export function getRecentSearches(): Array<SearchHistoryItem> {
 			return [];
 		}
 
-		const items: Array<SearchHistoryItem> = JSON.parse(stored);
-		// Return sorted by most recent first
-		return items.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_SEARCHES);
+		const parsed = v.safeParse(searchHistorySchema, JSON.parse(stored));
+		if (!parsed.success) {
+			return [];
+		}
+		return parsed.output.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_SEARCHES);
 	} catch {
 		return [];
 	}
@@ -32,7 +45,7 @@ export function getRecentSearches(): Array<SearchHistoryItem> {
  * Add a search term to history
  */
 export function addSearch(term: string): void {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 	if (!term.trim()) {
@@ -61,7 +74,7 @@ export function addSearch(term: string): void {
  * Remove a specific search term from history
  */
 export function removeSearch(term: string): void {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 
@@ -78,7 +91,7 @@ export function removeSearch(term: string): void {
  * Clear all search history
  */
 export function clearHistory(): void {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return;
 	}
 

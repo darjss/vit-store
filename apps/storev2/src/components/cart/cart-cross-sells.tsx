@@ -43,7 +43,7 @@ export default function CartCrossSells() {
 
 	const [crossSells] = createResource(productIdsKey, async (key) => {
 		if (!key) {
-			return [] as Array<ProductForHome>;
+			return [] satisfies Array<ProductForHome>;
 		}
 		activeRequest?.abort();
 		const controller = new AbortController();

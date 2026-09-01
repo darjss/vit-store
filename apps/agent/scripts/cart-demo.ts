@@ -19,7 +19,13 @@
 // Usage: worker must be running on :3583, then `bun scripts/cart-demo.ts`.
 import { createHmac } from "node:crypto";
 import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
+import { assistantProductSchema } from "@vit/assistant";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+import { graphSendBodySchema } from "../cli/graph-send";
+import { trpcResponse } from "../cli/trpc-stub";
+
+const idsInputSchema = v.object({ ids: v.optional(v.array(v.number())) });
 
 const APP_SECRET = "dev-app-secret";
 const PAGE_ID = "DEV_PAGE_ID";
@@ -27,7 +33,7 @@ const PSID = `DEMO_PSID_${Date.now().toString(36)}`;
 const WORKER = "http://127.0.0.1:3583";
 const WEBHOOK = `${WORKER}/channels/messenger/webhook`;
 
-const PRODUCTS: Record<number, unknown> = {
+const PRODUCTS = {
 	101: {
 		brand: "NOW Foods",
 		id: 101,
@@ -46,7 +52,7 @@ const PRODUCTS: Record<number, unknown> = {
 		slug: "omega-3-1000",
 		stockStatus: "low_stock",
 	},
-};
+} as const satisfies Record<number, v.InferOutput<typeof assistantProductSchema>>;
 
 // ── Stub store API (simulated catalog source) on :3000 ───────────────────────
 const storeApi = Bun.serve({
@@ -55,13 +61,18 @@ const storeApi = Bun.serve({
 		const raw = url.searchParams.get("input");
 		let ids: Array<number> = [];
 		if (raw) {
-			const input = SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw))) as {
-				ids?: Array<number>;
-			};
-			ids = input.ids ?? [];
+			ids =
+				v.parse(idsInputSchema, SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw)))).ids ??
+				[];
 		}
-		const data = ids.map((id) => PRODUCTS[id]).filter((p): p is NonNullable<typeof p> => p != null);
-		return new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
+		const data = ids
+			.map((id) => {
+				if (id === 101) return PRODUCTS[101];
+				if (id === 202) return PRODUCTS[202];
+				return undefined;
+			})
+			.filter((product) => product !== undefined);
+		return new Response(trpcResponse(data), {
 			headers: { "content-type": "application/json" },
 		});
 	},
@@ -80,18 +91,16 @@ const capture = Bun.serve({
 		if (req.method !== "POST") {
 			return Response.json({ id: PSID });
 		}
-		const body = (await req.json()) as Record<string, unknown>;
+		const body = v.parse(graphSendBodySchema, await req.json());
 		if (!body.sender_action) {
-			const message = (body.message ?? {}) as Record<string, unknown>;
-			const qr = Array.isArray(message.quick_replies)
-				? (message.quick_replies as Array<Record<string, unknown>>).map((q) => ({
-						payload: String(q.payload ?? ""),
-						title: String(q.title ?? ""),
-					}))
-				: [];
+			const message = body.message;
+			const qr = (message?.quick_replies ?? []).map((q) => ({
+				payload: q.payload ?? "",
+				title: q.title ?? "",
+			}));
 			lastCapture = {
 				quickReplies: qr,
-				text: message.text as string | undefined,
+				text: message?.text,
 			};
 		}
 		return Response.json({

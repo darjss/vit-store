@@ -17,6 +17,7 @@ import {
 import { useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { chartTooltipNumber } from "@/lib/chart-tooltip";
 import { formatCurrency, formatDateToText, getRevenueData } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 import { DashboardPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
@@ -192,7 +193,10 @@ function HomeComponent() {
 										<div className="border-border bg-card shadow-hard-sm border-2 p-1.5 text-[10px]">
 											<p className="font-bold">{label}</p>
 											<p className="font-mono">
-												₮{new Intl.NumberFormat("mn-MN").format(payload[0].value as number)}
+												₮
+												{new Intl.NumberFormat("mn-MN").format(
+													chartTooltipNumber(payload[0]?.value),
+												)}
 											</p>
 										</div>
 									);

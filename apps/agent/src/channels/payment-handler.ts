@@ -4,6 +4,7 @@ import {
 	TRANSFER_CLAIM_ACK_MESSAGE,
 	type TransferStatus,
 } from "@vit/assistant";
+import type { ChannelBankDetailsSend, ChannelTextSend } from "../lib/channel-send";
 
 // Deterministic post-order payment flow, WITHOUT the model (mirrors
 // cart-handler.ts, #21). Two transitions run here:
@@ -26,9 +27,9 @@ export interface PaymentHandlerDeps {
 	// payment. Backed by the store `payment.getPaymentByNumber` boundary.
 	fetchPaymentSummary: (ref: PaymentRef) => Promise<{ amount: number; reference: string }>;
 	// Sends the bank details text PLUS the `Шилжүүлсэн` claim button.
-	sendBankDetails: (text: string, ref: PaymentRef) => Promise<unknown>;
+	sendBankDetails: ChannelBankDetailsSend;
 	// Plain text reply (the claim acknowledgement).
-	sendText: (text: string) => Promise<unknown>;
+	sendText: ChannelTextSend;
 	// Persists the transfer status on the per-session checkout record so a later
 	// free-text/screenshot claim is recognised. Optional (best-effort context).
 	setTransferStatus?: (status: TransferStatus) => Promise<void>;

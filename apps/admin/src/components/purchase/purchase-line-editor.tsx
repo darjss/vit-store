@@ -398,7 +398,7 @@ export function PurchaseLineEditor({
 				</div>
 			) : null}
 
-			{typeof item.quantityReceived === "number" ? (
+			{item.quantityReceived !== undefined ? (
 				<p className="text-muted-foreground text-sm">
 					Хүлээн авсан: {item.quantityReceived} / {item.quantityOrdered}
 				</p>

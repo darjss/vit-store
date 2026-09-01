@@ -34,8 +34,12 @@ export async function getStaticPaths() {
 	});
 }
 
+interface Props {
+	redirectTo: string | null;
+}
+
 const { slug } = Astro.params;
-const { redirectTo } = Astro.props as { redirectTo: string | null };
+const { redirectTo } = Astro.props;
 
 if (redirectTo) {
 	return Astro.redirect(`/products/${redirectTo}/`, 301);

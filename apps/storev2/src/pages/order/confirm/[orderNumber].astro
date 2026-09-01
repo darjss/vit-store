@@ -9,6 +9,7 @@ import { HomeAngleIcon as IconHome, LetterIcon as IconMail, MapPointIcon as Icon
 import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
 import { orderStatusLabels } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
+import { parseOrderStatus } from "@/lib/order-status-parse";
 
 const { orderNumber } = Astro.params;
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
@@ -22,16 +23,16 @@ if ("redirect" in result) {return result.redirect;}
 const order = result.order;
 
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
-const currentStepIndex = timelineSteps.indexOf((order.status ?? "pending") as OrderStatusType);
+const currentStepIndex = timelineSteps.indexOf(parseOrderStatus(order.status ?? "pending"));
 
-const statusBadgeClasses: Record<string, string> = {
+const statusBadgeClasses = {
     cancelled: "bg-error text-error-foreground",
     created: "bg-card border border-border text-foreground",
     delivered: "bg-success text-success-foreground",
     pending: "bg-warning text-warning-foreground",
     refunded: "bg-secondary text-secondary-foreground",
     shipped: "bg-info text-info-foreground",
-};
+} satisfies Record<string, string>;
 ---
 
 <Layout>

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronDown, Home, RotateCcw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
+import { formatAppErrorDisplay } from "@/lib/app-error-display";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,26 +15,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/text";
 
 interface AppErrorProps {
-	error: unknown;
+	error: Error | string;
 }
 
 export default function AppError({ error }: AppErrorProps) {
 	const [open, setOpen] = useState(false);
-	const { message, raw, stack } = useMemo(() => {
-		if (error instanceof Error) {
-			return {
-				message: error.message,
-				raw: String(error),
-				stack: error.stack || "",
-			};
-		}
-		try {
-			const asString = typeof error === "string" ? error : JSON.stringify(error, null, 2);
-			return { message: asString, raw: asString, stack: "" };
-		} catch {
-			return { message: "Тодорхойгүй алдаа.", raw: String(error), stack: "" };
-		}
-	}, [error]);
+	const { message, raw, stack } = useMemo(() => formatAppErrorDisplay(error), [error]);
 
 	return (
 		<div className="relative grid min-h-screen place-items-center p-6">

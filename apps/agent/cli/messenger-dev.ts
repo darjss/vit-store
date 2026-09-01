@@ -22,6 +22,17 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
+import * as v from "valibot";
+import {
+	devStateSchema,
+	extractSeedTexts,
+	IMAGE_CONTENT_TYPE_BY_EXT,
+	parseSeedFile,
+	type DevButton,
+	type DevState,
+} from "./dev-state";
+import { loadDotVars } from "./dot-vars";
+import { captureGraphSend, extractGraphButtons, graphSendBodySchema } from "./graph-send";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const DEV_DIR = join(AGENT_ROOT, ".dev");
@@ -31,25 +42,6 @@ const STATE_FILE = join(DEV_DIR, "state.json");
 const HISTORY_DIR = join(AGENT_ROOT, "..", "..", "messenger-chat-history");
 
 // ─── Config (.dev.vars / env) ────────────────────────────────────────────────
-
-function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) {
-		return {};
-	}
-	const out: Record<string, string> = {};
-	for (const line of readFileSync(file, "utf8").split("\n")) {
-		const trimmed = line.trim();
-		if (trimmed.length === 0 || trimmed.startsWith("#")) {
-			continue;
-		}
-		const eq = trimmed.indexOf("=");
-		if (eq === -1) {
-			continue;
-		}
-		out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-	}
-	return out;
-}
 
 const vars = { ...loadDotVars(join(AGENT_ROOT, ".dev.vars")), ...process.env };
 
@@ -72,14 +64,9 @@ const CAPTURE_PORT = Number(
 
 // ─── Persistent state ────────────────────────────────────────────────────────
 
-type Button = { kind: "postback" | "quick_reply" | "url"; title: string; value: string };
+type Button = DevButton;
 type Session = { psid: string };
-type State = {
-	current: string;
-	inboundSeq: number;
-	lastButtons: Array<Button>;
-	sessions: Record<string, Session>;
-};
+type State = DevState;
 
 function freshPsid(name: string): string {
 	// Stable-ish but unique per reset so each reset spawns a new agent session.
@@ -89,7 +76,7 @@ function freshPsid(name: string): string {
 function loadState(): State {
 	if (existsSync(STATE_FILE)) {
 		try {
-			return JSON.parse(readFileSync(STATE_FILE, "utf8")) as State;
+			return v.parse(devStateSchema, JSON.parse(readFileSync(STATE_FILE, "utf8")));
 		} catch {
 			// fall through to a fresh state on a corrupt file
 		}
@@ -143,59 +130,11 @@ function printAbovePrompt(line: string): void {
 // ─── Capture server (stands in for Graph Send API) ───────────────────────────
 
 let outboundSeq = 0;
-
-function extractButtons(message: Record<string, unknown>): Array<Button> {
-	const buttons: Array<Button> = [];
-	const quickReplies = message.quick_replies;
-	if (Array.isArray(quickReplies)) {
-		for (const qr of quickReplies) {
-			if (qr && typeof qr === "object") {
-				const title = String((qr as Record<string, unknown>).title ?? "");
-				const payload = (qr as Record<string, unknown>).payload;
-				if (typeof payload === "string") {
-					buttons.push({ kind: "quick_reply", title, value: payload });
-				}
-			}
-		}
-	}
-	const attachment = message.attachment as Record<string, unknown> | undefined;
-	const payload = attachment?.payload as Record<string, unknown> | undefined;
-	const collect = (btns: unknown) => {
-		if (!Array.isArray(btns)) {
-			return;
-		}
-		for (const b of btns) {
-			if (!b || typeof b !== "object") {
-				continue;
-			}
-			const btn = b as Record<string, unknown>;
-			const title = String(btn.title ?? "");
-			if (btn.type === "postback" && typeof btn.payload === "string") {
-				buttons.push({ kind: "postback", title, value: btn.payload });
-			} else if (btn.type === "web_url" && typeof btn.url === "string") {
-				buttons.push({ kind: "url", title, value: btn.url });
-			}
-		}
-	};
-	if (payload) {
-		collect(payload.buttons);
-		if (Array.isArray(payload.elements)) {
-			for (const el of payload.elements) {
-				if (el && typeof el === "object") {
-					collect((el as Record<string, unknown>).buttons);
-				}
-			}
-		}
-	}
-	return buttons;
-}
-
-// Smoke-mode signals, populated by the real webhook + capture path below.
 let lastWebhookStatus = 0;
 let lastBotReply: string | null = null;
 
-function renderOutbound(body: Record<string, unknown>, savedPath: string): void {
-	const message = body.message as Record<string, unknown> | undefined;
+function renderOutbound(body: v.InferOutput<typeof graphSendBodySchema>, savedPath: string): void {
+	const message = body.message;
 	if (body.sender_action) {
 		printAbovePrompt(C.dim(`  · bot ${String(body.sender_action)}`));
 		return;
@@ -203,14 +142,14 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 	if (!message) {
 		return;
 	}
-	const buttons = extractButtons(message);
-	if (typeof message.text === "string") {
+	const buttons = extractGraphButtons(message);
+	if (message.text) {
 		lastBotReply = message.text;
 		printAbovePrompt(`${C.green("bot ›")} ${message.text}`);
 	}
-	const attachment = message.attachment as Record<string, unknown> | undefined;
+	const attachment = message.attachment;
 	if (attachment) {
-		const payload = attachment.payload as Record<string, unknown> | undefined;
+		const payload = attachment.payload;
 		printAbovePrompt(
 			C.dim(`  [attachment ${String(attachment.type)} ${String(payload?.template_type ?? "")}]`),
 		);
@@ -230,14 +169,6 @@ function renderOutbound(body: Record<string, unknown>, savedPath: string): void 
 // capture server, standing in for the Meta CDN attachment url (#20).
 let pendingImage: { bytes: Uint8Array; contentType: string } | null = null;
 
-const IMAGE_CONTENT_TYPE_BY_EXT: Record<string, string> = {
-	gif: "image/gif",
-	jpeg: "image/jpeg",
-	jpg: "image/jpeg",
-	png: "image/png",
-	webp: "image/webp",
-};
-
 function startCaptureServer(): void {
 	mkdirSync(SENT_DIR, { recursive: true });
 	Bun.serve({
@@ -254,25 +185,23 @@ function startCaptureServer(): void {
 				// e.g. profile GET — return an empty-ish profile so the SDK is happy.
 				return Response.json({ id: psid() });
 			}
-			let body: Record<string, unknown> = {};
+			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
 			try {
-				body = (await req.json()) as Record<string, unknown>;
+				parsedBody = v.parse(graphSendBodySchema, await req.json());
 			} catch {
-				// ignore non-JSON
+				parsedBody = {};
 			}
-			const recipient = body.recipient as Record<string, unknown> | undefined;
-			const recipientId = (recipient?.id as string | undefined) ?? psid();
-			// Only persist real outbound messages (skip typing/mark_seen noise).
-			if (!body.sender_action) {
+			const recipientId = String(parsedBody.recipient?.id ?? psid());
+			if (!parsedBody.sender_action) {
 				outboundSeq += 1;
 				const file = join(
 					SENT_DIR,
 					`${String(outboundSeq).padStart(4, "0")}-${url.pathname.replaceAll(/\W+/g, "_")}.json`,
 				);
-				writeFileSync(file, JSON.stringify(body, null, 2));
-				renderOutbound(body, file);
+				writeFileSync(file, JSON.stringify(parsedBody, null, 2));
+				renderOutbound(parsedBody, file);
 			} else {
-				renderOutbound(body, "");
+				renderOutbound(parsedBody, "");
 			}
 			return Response.json({
 				message_id: `dev-out-${Date.now().toString(36)}-${outboundSeq}`,
@@ -440,14 +369,13 @@ async function seed(arg: string | undefined): Promise<void> {
 		printAbovePrompt(C.red(`  ✗ no example "${arg}" (see /seed list)`));
 		return;
 	}
-	let parsed: unknown;
+	let parsed: ReturnType<typeof parseSeedFile>;
 	try {
-		parsed = JSON.parse(readFileSync(join(HISTORY_DIR, target), "utf8"));
+		parsed = parseSeedFile(readFileSync(join(HISTORY_DIR, target), "utf8"));
 	} catch (error) {
 		printAbovePrompt(C.red(`  ✗ could not parse ${target}: ${String(error)}`));
 		return;
 	}
-	// Best-effort: pull human/customer text lines out of a few common shapes.
 	const texts = extractSeedTexts(parsed);
 	if (texts.length === 0) {
 		printAbovePrompt(C.yellow(`  no replayable customer texts found in ${target}`));
@@ -458,37 +386,6 @@ async function seed(arg: string | undefined): Promise<void> {
 		await sendText(text);
 		await new Promise((r) => setTimeout(r, 400));
 	}
-}
-
-function extractSeedTexts(data: unknown): Array<string> {
-	const out: Array<string> = [];
-	const visit = (node: unknown) => {
-		if (Array.isArray(node)) {
-			for (const item of node) {
-				visit(item);
-			}
-			return;
-		}
-		if (node && typeof node === "object") {
-			const obj = node as Record<string, unknown>;
-			const text =
-				(typeof obj.content === "string" && obj.content) ||
-				(typeof obj.text === "string" && obj.text) ||
-				(typeof obj.message === "string" && obj.message) ||
-				"";
-			const sender = String(obj.from ?? obj.sender ?? obj.role ?? "").toLowerCase();
-			const isCustomer =
-				sender.includes("customer") || sender.includes("user") || sender.includes("human");
-			if (text && (isCustomer || sender === "")) {
-				out.push(text);
-			}
-			for (const value of Object.values(obj)) {
-				visit(value);
-			}
-		}
-	};
-	visit(data);
-	return out.slice(0, 25);
 }
 
 // ─── REPL ────────────────────────────────────────────────────────────────────

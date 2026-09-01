@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { PaymentStatusType } from "@vit/shared/types";
+import { deliveryProvider, paymentStatus } from "@vit/shared/constants";
+import type { OrderDeliveryProviderType, PaymentStatusType } from "@vit/shared/types";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -32,6 +33,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { orderStatusLabel, paymentProviderLabel, paymentStatusLabel } from "@/lib/enum-labels";
+import { parsePicklistValue } from "@/lib/parse-select";
 import { formatCurrency, getPaymentProviderIcon, getPaymentStatusColor } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -234,6 +236,8 @@ function OrderDetail({ orderId }: { orderId: number }) {
 				: null;
 
 	const itemCount = order.products?.reduce((sum, p) => sum + p.quantity, 0) ?? 0;
+	const paymentStatusValue: PaymentStatusType = order.paymentStatus;
+	const deliveryProviderValue: OrderDeliveryProviderType = order.deliveryProvider ?? "tu-delivery";
 	const isPaid = order.paymentStatus === "success";
 	const isPendingTransferClaim =
 		order.paymentStatus === "customer_claimed_paid" &&
@@ -445,12 +449,12 @@ function OrderDetail({ orderId }: { orderId: number }) {
 								<Receipt className="h-5 w-5" /> Төлбөр ба дүн
 							</h2>
 							<div className="space-y-4">
-								<EditableField
+								<EditableField<PaymentStatusType>
 									isLoading={isUpdateFieldPending}
 									label="Төлөв"
 									onSave={(next) =>
 										savePatch({
-											paymentStatus: next as typeof order.paymentStatus,
+											paymentStatus: next,
 										})
 									}
 									options={[
@@ -462,15 +466,18 @@ function OrderDetail({ orderId }: { orderId: number }) {
 										{ label: "Төлсөн", value: "success" },
 										{ label: "Амжилтгүй", value: "failed" },
 									]}
+									parse={(raw): PaymentStatusType =>
+										parsePicklistValue(paymentStatus, raw) ?? paymentStatusValue
+									}
 									renderDisplay={(value) => (
 										<span
 											className={`inline-flex border-2 px-2 py-1 text-xs ${getPaymentStatusColor(value)}`}
 										>
-											{paymentStatusLabel[value as PaymentStatusType]}
+											{paymentStatusLabel[value]}
 										</span>
 									)}
 									type="select"
-									value={order.paymentStatus}
+									value={paymentStatusValue}
 								/>
 								{isPendingTransferClaim && order.paymentNumber ? (
 									<div className="border-primary/30 bg-primary/5 space-y-2 border-2 p-3">
@@ -512,12 +519,12 @@ function OrderDetail({ orderId }: { orderId: number }) {
 							<h2 className="font-heading mb-4 flex items-center gap-2 text-lg font-black">
 								<Truck className="h-5 w-5" /> Хүргэлт
 							</h2>
-							<EditableField
+							<EditableField<OrderDeliveryProviderType>
 								isLoading={isPatchHeaderPending}
 								label="Арга"
 								onSave={(next) =>
 									savePatch({
-										deliveryProvider: next as typeof order.deliveryProvider,
+										deliveryProvider: next,
 									})
 								}
 								options={[
@@ -526,9 +533,12 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									{ label: "Avidaa", value: "avidaa" },
 									{ label: "Өөрөө авна", value: "pick-up" },
 								]}
+								parse={(raw): OrderDeliveryProviderType =>
+									parsePicklistValue(deliveryProvider, raw) ?? deliveryProviderValue
+								}
 								renderDisplay={(value) => deliveryLabel(value)}
 								type="select"
-								value={order.deliveryProvider || "tu-delivery"}
+								value={deliveryProviderValue}
 							/>
 							{order.addressZoneId !== undefined ? (
 								<div className="border-border mt-4 border-t pt-3 text-sm">

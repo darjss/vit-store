@@ -5,6 +5,8 @@
 //
 // Usage: bun scripts/mock-product-cards.ts
 
+import * as v from "valibot";
+
 process.env.MESSENGER_PAGE_ID ??= "TEST_PAGE_ID";
 process.env.MESSENGER_PAGE_ACCESS_TOKEN ??= "TEST_PAGE_TOKEN";
 process.env.MESSENGER_APP_SECRET ??= "TEST_APP_SECRET";
@@ -18,22 +20,29 @@ const [{ messenger, sendProductCards, sendTextReply }, assistant] = await Promis
 const { buildProductSearchTool, parseOrderPayload } = assistant;
 type AssistantProduct = import("@vit/assistant").AssistantProduct;
 
+const genericTemplateEmitSchema = v.object({
+	elements: v.optional(
+		v.array(
+			v.object({
+				buttons: v.optional(v.array(v.object({ payload: v.optional(v.string()) }))),
+			}),
+		),
+	),
+	kind: v.literal("generic_template"),
+});
+
 // Capture every outbound Graph call instead of hitting the network.
-const emitted: Array<unknown> = [];
+const emitted: Array<v.InferOutput<typeof genericTemplateEmitSchema>> = [];
 let nextMessageId = 200;
 messenger.templates.generic = async (options) => {
 	emitted.push({ kind: "generic_template", ...options });
 	return { message_id: `mock-cards-${nextMessageId++}`, recipient_id: "stub" };
 };
 messenger.send.message = async (request) => {
-	emitted.push({ kind: "text", ...request });
+	emitted.push({ kind: "text", message: request.message, recipient: request.recipient });
 	return { message_id: `mock-text-${nextMessageId++}`, recipient_id: "stub" };
 };
 
-// Fixture catalog standing in for the storefront search API. Each query below
-// exercises a representative shape; matching is a simple normalized substring
-// over the name, brand, and romanized aliases so romanized-Mongolian fragments
-// resolve the way the real transliterating search would.
 const CATALOG: Array<AssistantProduct & { aliases: Array<string> }> = [
 	{
 		aliases: ["magnesium", "magnes", "магни", "magni"],
@@ -86,8 +95,13 @@ const stubSearch = async (query: string, limit: number): Promise<Array<Assistant
 		.map(({ aliases: _aliases, ...product }) => product);
 };
 
+const pageId = process.env.MESSENGER_PAGE_ID;
+if (!pageId) {
+	throw new Error("MESSENGER_PAGE_ID is required");
+}
+
 const conversation = {
-	pageId: process.env.MESSENGER_PAGE_ID as string,
+	pageId,
 	participant: { id: "TEST_CUSTOMER_PSID", type: "page-scoped-id" as const },
 };
 
@@ -110,27 +124,17 @@ for (const { label, query } of QUERIES) {
 	const result = await tool.run({ input: { query } });
 	const outbound = structuredClone(emitted);
 
-	// Prove every emitted Захиалах button payload decodes back to a product id.
 	const buttonPayloads = outbound.flatMap((message) => {
-		if (
-			typeof message === "object" &&
-			message !== null &&
-			(message as { kind?: string }).kind === "generic_template"
-		) {
-			const elements =
-				(
-					message as {
-						elements?: Array<{ buttons?: Array<{ payload?: string }> }>;
-					}
-				).elements ?? [];
-			return elements.flatMap((element) =>
-				(element.buttons ?? []).map((button) => ({
-					decodedProductId: button.payload ? parseOrderPayload(button.payload) : undefined,
-					payload: button.payload,
-				})),
-			);
+		const parsed = v.safeParse(genericTemplateEmitSchema, message);
+		if (!parsed.success) {
+			return [];
 		}
-		return [];
+		return (parsed.output.elements ?? []).flatMap((element) =>
+			(element.buttons ?? []).map((button) => ({
+				decodedProductId: button.payload ? parseOrderPayload(button.payload) : undefined,
+				payload: button.payload,
+			})),
+		);
 	});
 
 	runs.push({ buttonPayloads, label, outbound, query, toolResult: result });

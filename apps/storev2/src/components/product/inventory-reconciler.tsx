@@ -1,6 +1,8 @@
 import { formatCurrency } from "@vit/shared";
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "@/components/ui/button";
+import { parseProductJsonLd } from "@/lib/product-jsonld";
+import { isServer } from "@/lib/runtime";
 import { api } from "@/lib/trpc";
 import { RefreshIcon as IconRefresh } from "@solar-icons/solid/linear";
 import { DangerTriangleIcon as IconAlertTriangle } from "@solar-icons/solid/bold";
@@ -50,10 +52,6 @@ type InventoryCoordinator = {
 	warningListeners: Set<(count: number) => void>;
 };
 
-type InventoryWindow = Window & {
-	__vitInventoryCoordinatorV2?: InventoryCoordinator;
-};
-
 function createInventoryCoordinator(): InventoryCoordinator {
 	return {
 		activeRequests: new Set(),
@@ -69,14 +67,14 @@ function createInventoryCoordinator(): InventoryCoordinator {
 }
 
 const serverCoordinator = createInventoryCoordinator();
+let clientCoordinator: InventoryCoordinator | undefined;
 
 function getInventoryCoordinator(): InventoryCoordinator {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return serverCoordinator;
 	}
-	const inventoryWindow = window as InventoryWindow;
-	inventoryWindow.__vitInventoryCoordinatorV2 ??= createInventoryCoordinator();
-	return inventoryWindow.__vitInventoryCoordinatorV2;
+	clientCoordinator ??= createInventoryCoordinator();
+	return clientCoordinator;
 }
 
 const INVENTORY_SNAPSHOT_TTL_MS = 10_000;
@@ -246,20 +244,14 @@ function updateJsonLd(snapshot: InventorySnapshot, inStock: boolean): void {
 	}
 
 	try {
-		const jsonLd = JSON.parse(script.textContent) as {
-			offers?: {
-				availability?: string;
-				price?: number;
-			};
-		};
-		if (!jsonLd.offers) {
+		const parsed = parseProductJsonLd(script.textContent);
+		if (!parsed.success || !parsed.output.offers) {
 			return;
 		}
-		jsonLd.offers.price = snapshot.price;
-		jsonLd.offers.availability = inStock
-			? "https://schema.org/InStock"
-			: "https://schema.org/OutOfStock";
-		const nextJsonLd = JSON.stringify(jsonLd);
+		const offers = parsed.output.offers;
+		offers.price = snapshot.price;
+		offers.availability = inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+		const nextJsonLd = JSON.stringify(parsed.output);
 		if (script.textContent !== nextJsonLd) {
 			script.textContent = nextJsonLd;
 		}
@@ -315,7 +307,7 @@ function degradedRegistrationCount(): number {
 }
 
 function syncWarningHost(count: number): void {
-	if (typeof document === "undefined") {
+	if (isServer) {
 		return;
 	}
 	const host = document.querySelector<HTMLElement>("[data-inventory-warning]");
@@ -473,7 +465,7 @@ function retryDegradedInventory(): void {
 }
 
 function ensureInventoryBrowserContract(): void {
-	if (typeof document === "undefined" || coordinator.retryListenerInstalled) {
+	if (isServer || coordinator.retryListenerInstalled) {
 		return;
 	}
 	coordinator.retryListenerInstalled = true;

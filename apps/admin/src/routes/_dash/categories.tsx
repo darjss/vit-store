@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { CategorySelectType } from "@vit/api/db/schema";
+import type { CategoryType } from "@/lib/types";
 import { Plus } from "lucide-react";
 import { Suspense, useState } from "react";
 import CategoryCard from "@/components/categories/category-card";
@@ -84,8 +84,8 @@ function CategoriesList() {
 
 	return (
 		<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-			{categories.map((category) => (
-				<CategoryCard key={category.id} {...(category as CategorySelectType)} />
+			{categories.map((category: CategoryType) => (
+				<CategoryCard key={category.id} {...category} />
 			))}
 		</div>
 	);

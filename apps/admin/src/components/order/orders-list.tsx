@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type {
+import {
 	orderStatus as orderStatusConstants,
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
@@ -24,18 +24,13 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { mutationErrorMessage } from "@/lib/mutation-error";
+import { parsePicklistValue } from "@/lib/parse-select";
 import { trpc } from "@/utils/trpc";
 import BatchShipOrderDialog, { type BatchShipResult } from "./batch-ship-order-dialog";
 import OrderCard from "./order-card";
 
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
-
-function trpcErrorMessage(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message;
-	}
-	return "Алдаа гарлаа";
-}
 
 interface OrdersListProps {
 	date?: string;
@@ -75,11 +70,13 @@ export default function OrdersList({
 			orderStatus:
 				orderStatus === "all" || orderStatus === "active"
 					? undefined
-					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
+					: parsePicklistValue(orderStatusConstants, orderStatus ?? ""),
 			orderStatuses: orderStatus === "active" ? [...activeOrderStatuses] : undefined,
 			page,
 			pageSize,
-			paymentStatus: paymentStatus as (typeof paymentStatusConstants)[number] | undefined,
+			paymentStatus: paymentStatus
+				? parsePicklistValue(paymentStatusConstants, paymentStatus)
+				: undefined,
 			searchTerm,
 			sortDirection,
 			sortField,
@@ -177,7 +174,7 @@ export default function OrdersList({
 					await updateStatusMutation.mutateAsync({ id, status: "shipped" });
 				} catch (error) {
 					failed.push({
-						message: trpcErrorMessage(error),
+						message: error instanceof Error ? mutationErrorMessage(error) : "Алдаа гарлаа",
 						orderNumber: order?.orderNumber ?? String(id),
 					});
 				}

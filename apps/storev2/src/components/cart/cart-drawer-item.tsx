@@ -2,6 +2,7 @@ import { Image } from "@unpic/solid";
 import type { CartItems } from "@vit/shared/types";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
+import { isServer } from "@/lib/runtime";
 import { cn } from "@/lib/utils";
 import { washBg } from "@/lib/wash";
 import { cart } from "@/store/cart";
@@ -37,7 +38,7 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 	);
 
 	onCleanup(() => {
-		if (typeof window !== "undefined") {
+		if (!isServer) {
 			window.clearTimeout(quantityPulseTimer);
 		}
 	});
@@ -65,6 +66,8 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 		cart.updateQuantity(props.item.productId, -1);
 	};
 
+	const measured = measuredHeight();
+
 	return (
 		<Presence>
 			<Show when={!removing()}>
@@ -74,17 +77,30 @@ const CartDrawerItem = (props: CartDrawerItemProps) => {
 						"border-border bg-card shadow-soft-sm rounded-2xl border p-3",
 						removing() && "overflow-hidden",
 					)}
-					exit={{
-						opacity: 0,
-						rotate: 4,
-						scale: 0.9,
-						x: 80,
-						...(measuredHeight() !== null ? { height: [`${measuredHeight()}px`, "0px"] } : {}),
-						transition: {
-							duration: EXIT_MS / 1000,
-							easing: [0.16, 1, 0.3, 1],
-						},
-					}}
+					exit={
+						measured !== null
+							? {
+									height: [`${measured}px`, "0px"],
+									opacity: 0,
+									rotate: 4,
+									scale: 0.9,
+									transition: {
+										duration: EXIT_MS / 1000,
+										easing: [0.16, 1, 0.3, 1],
+									},
+									x: 80,
+								}
+							: {
+									opacity: 0,
+									rotate: 4,
+									scale: 0.9,
+									transition: {
+										duration: EXIT_MS / 1000,
+										easing: [0.16, 1, 0.3, 1],
+									},
+									x: 80,
+								}
+					}
 					initial={{ opacity: 0, y: 8 }}
 					ref={(element) => {
 						rootEl = element;

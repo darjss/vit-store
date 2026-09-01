@@ -38,17 +38,28 @@ const expirationDisplay = product.expirationDate
 	})()
 	: null;
 
-const specRows = [
-	product.amount && { icon: IconScale, label: "Тоо ширхэг", value: product.amount },
-	product.potency && { icon: IconStrong, label: "Идэвхтэй бодис", value: product.potency },
-	product.dailyIntake && { icon: IconCalendar, label: "Өдрийн тун", value: `${product.dailyIntake} ширхэг` },
-	product.weightGrams && { icon: IconScale, label: "Жин", value: `${product.weightGrams}г` },
-	expirationDisplay && { icon: IconCalendar, label: "Дуусах хугацаа", value: expirationDisplay },
-].filter(Boolean) as Array<{
+type SpecRow = {
 	icon: typeof IconScale;
 	label: string;
 	value: string;
-}>;
+};
+
+const specRows: Array<SpecRow> = [];
+if (product.amount) {
+	specRows.push({ icon: IconScale, label: "Тоо ширхэг", value: product.amount });
+}
+if (product.potency) {
+	specRows.push({ icon: IconStrong, label: "Идэвхтэй бодис", value: product.potency });
+}
+if (product.dailyIntake) {
+	specRows.push({ icon: IconCalendar, label: "Өдрийн тун", value: `${product.dailyIntake} ширхэг` });
+}
+if (product.weightGrams) {
+	specRows.push({ icon: IconScale, label: "Жин", value: `${product.weightGrams}г` });
+}
+if (expirationDisplay) {
+	specRows.push({ icon: IconCalendar, label: "Дуусах хугацаа", value: expirationDisplay });
+}
 ---
 
 <div class="w-full space-y-6">

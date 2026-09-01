@@ -11,7 +11,7 @@ export const WASH_ORDER: Array<Wash> = [
 	"apricot",
 ];
 
-export const WASH_BG: Record<Wash, string> = {
+export const WASH_BG = {
 	apricot: "bg-wash-apricot",
 	blush: "bg-wash-blush",
 	lemon: "bg-wash-lemon",
@@ -20,9 +20,9 @@ export const WASH_BG: Record<Wash, string> = {
 	peach: "bg-wash-peach",
 	sage: "bg-wash-sage",
 	sky: "bg-wash-sky",
-};
+} satisfies Record<Wash, string>;
 
-export const WASH_VAR: Record<Wash, string> = {
+export const WASH_VAR = {
 	apricot: "var(--color-wash-apricot)",
 	blush: "var(--color-wash-blush)",
 	lemon: "var(--color-wash-lemon)",
@@ -31,7 +31,7 @@ export const WASH_VAR: Record<Wash, string> = {
 	peach: "var(--color-wash-peach)",
 	sage: "var(--color-wash-sage)",
 	sky: "var(--color-wash-sky)",
-};
+} satisfies Record<Wash, string>;
 
 export function washFor(key: string | number): Wash {
 	const s = String(key);

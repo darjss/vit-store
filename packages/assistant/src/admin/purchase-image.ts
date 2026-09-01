@@ -2,14 +2,15 @@ import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
 import type { InboundImage } from "../photo";
 import { extractJsonObject } from "../photo";
+import { type CodemodeJson, toCodemodeJson } from "./codemode-boundary";
+import {
+	type PurchaseInvoiceExtraction,
+	type PurchaseProvider,
+	purchaseInvoiceExtractionSchema,
+	purchaseProviderSchema,
+} from "./purchase-invoice-schema";
 
 export const PURCHASE_IMAGE_EXTRACT_TOOL_NAME = "extract_purchase_from_image_keys";
-
-type Json = null | boolean | number | string | Array<Json> | { [key: string]: Json };
-
-const asJson = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
-
-const purchaseProvider = ["amazon", "iherb", "naturebell", "unknown"] as const;
 
 const purchaseInvoiceVisionPrompt = (provider: string) =>
 	`You are extracting purchase invoice data from screenshot image(s) for provider "${provider}".
@@ -48,9 +49,9 @@ Read every visible line item. If unreadable, set extractionStatus to "partial" o
 export type PurchaseImageExtractDeps = {
 	loadImage: (imageKey: string) => Promise<InboundImage | undefined>;
 	matchExtracted: (input: {
-		extraction: Record<string, unknown>;
-		provider: (typeof purchaseProvider)[number];
-	}) => Promise<unknown>;
+		extraction: PurchaseInvoiceExtraction;
+		provider: PurchaseProvider;
+	}) => Promise<CodemodeJson>;
 	runVision: (image: InboundImage, prompt: string) => Promise<string>;
 };
 
@@ -60,7 +61,7 @@ export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 			"Extract a supplier invoice from admin-sent screenshot(s) using Workers AI vision on the agent, then match line items to the catalog. Call when dispatch input includes imageKeys (Telegram/Messenger photos). Pass provider (amazon/iherb/naturebell/unknown) and the imageKeys array from the dispatch payload.",
 		input: v.object({
 			imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
-			provider: v.picklist(purchaseProvider),
+			provider: purchaseProviderSchema,
 		}),
 		name: PURCHASE_IMAGE_EXTRACT_TOOL_NAME,
 		async run({ input }) {
@@ -68,7 +69,7 @@ export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 			for (const imageKey of input.imageKeys) {
 				const image = await deps.loadImage(imageKey);
 				if (image === undefined) {
-					return asJson({
+					return toCodemodeJson({
 						error: `Image no longer available: ${imageKey}`,
 						ok: false,
 					});
@@ -79,18 +80,18 @@ export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 
 			const rawJson = extractJsonObject(visionParts.join("\n"));
 			if (rawJson === undefined) {
-				return asJson({
+				return toCodemodeJson({
 					error: "Vision model did not return parseable invoice JSON.",
 					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
 				});
 			}
 
-			let extraction: Record<string, unknown>;
+			let extraction: PurchaseInvoiceExtraction;
 			try {
-				extraction = JSON.parse(rawJson) as Record<string, unknown>;
+				extraction = v.parse(purchaseInvoiceExtractionSchema, JSON.parse(rawJson));
 			} catch {
-				return asJson({
+				return toCodemodeJson({
 					error: "Vision JSON parse failed.",
 					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
@@ -101,6 +102,6 @@ export const buildPurchaseImageExtractTool = (deps: PurchaseImageExtractDeps) =>
 				extraction,
 				provider: input.provider,
 			});
-			return asJson({ ok: true, result: matched });
+			return toCodemodeJson({ ok: true, result: matched });
 		},
 	});

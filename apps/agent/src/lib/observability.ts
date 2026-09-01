@@ -1,4 +1,4 @@
-import { observe } from "@flue/runtime";
+import { observe, type FlueEvent, type PromptUsage } from "@flue/runtime";
 
 // Comprehensive Flue event observer. Registers globally per isolate (imported for
 // side effect from the agent module), so it runs inside the agent Durable Object
@@ -16,10 +16,11 @@ import { observe } from "@flue/runtime";
 // (each user message = N sequential turns), and the cache fields show how much of
 // the input is the discounted cached prefix vs full-price fresh tokens.
 
-const size = (value: unknown): number => (value === undefined ? 0 : JSON.stringify(value).length);
+const size = (value: Parameters<typeof JSON.stringify>[0]): number =>
+	value === undefined ? 0 : JSON.stringify(value).length;
 
 // Cache-hit % over an input split into fresh vs cached-prefix tokens.
-const cacheLine = (u: Record<string, any> | undefined): string => {
+const cacheLine = (u: PromptUsage | undefined): string => {
 	const fresh = u?.input ?? 0;
 	const cached = u?.cacheRead ?? 0;
 	const hit = fresh + cached > 0 ? Math.round((cached / (fresh + cached)) * 100) : 0;
@@ -27,15 +28,15 @@ const cacheLine = (u: Record<string, any> | undefined): string => {
 };
 
 // Correlation suffix so lines from concurrent customers/DOs can be told apart.
-const tag = (e: Record<string, any>): string => {
+const tag = (e: FlueEvent): string => {
 	const parts = [e.agentName, e.dispatchId ?? e.instanceId, e.session]
 		.filter(Boolean)
-		.map((p: string) => String(p).slice(0, 12));
+		.map((p) => String(p).slice(0, 12));
 	return parts.length ? ` {${parts.join("/")}}` : "";
 };
 
 observe((event) => {
-	const e = event as Record<string, any>;
+	const e = event;
 	switch (e.type) {
 		// One model inference. `durationMs` is the per-Kimi-call latency; a slow
 		// reply is just N of these in sequence.

@@ -3,6 +3,8 @@ import type {
 	MessengerConversationRef,
 	MessengerMessagingEvent,
 } from "@flue/messenger";
+import * as v from "valibot";
+import { admissionResponseSchema } from "../lib/admission-response";
 
 type AdmissionEnv = {
 	MESSENGER_ADMISSION_STORE?: DurableObjectNamespace;
@@ -82,6 +84,10 @@ export type MessengerImageAdmission = {
 
 // Pull image attachments (with a usable Meta CDN url) out of a message event.
 // Exported so the webhook can branch to the photo path before admission.
+const imageAttachmentUrlSchema = v.object({
+	url: v.pipe(v.string(), v.minLength(1)),
+});
+
 export function extractInboundImages(event: MessengerMessagingEvent): Array<MessengerInboundImage> {
 	const attachments = event.message?.attachments ?? [];
 	const images: Array<MessengerInboundImage> = [];
@@ -89,9 +95,9 @@ export function extractInboundImages(event: MessengerMessagingEvent): Array<Mess
 		if (attachment.type !== "image") {
 			continue;
 		}
-		const url = attachment.payload?.url;
-		if (typeof url === "string" && url.length > 0) {
-			images.push({ index: images.length, url });
+		const parsed = v.safeParse(imageAttachmentUrlSchema, attachment.payload);
+		if (parsed.success) {
+			images.push({ index: images.length, url: parsed.output.url });
 		}
 	}
 	return images;
@@ -178,9 +184,9 @@ async function claimOnce(key: string, env?: AdmissionEnv): Promise<boolean> {
 		.fetch(`https://messenger-admission/${encodeURIComponent(key)}`, {
 			method: "POST",
 		});
-	const result = (await response.json()) as { admitted?: boolean };
+	const admitted = v.parse(admissionResponseSchema, await response.json()).admitted === true;
 	rememberInProcess(key);
-	return result.admitted === true;
+	return admitted;
 }
 
 async function releaseClaim(key: string, env?: AdmissionEnv): Promise<void> {

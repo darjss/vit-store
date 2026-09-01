@@ -45,11 +45,12 @@ export default defineAgent<AgentEnv>(({ env, id }) => {
 	// remote-only) and the inbound R2 bucket. Register it additively only when
 	// both are bound, so text/cart turns under local miniflare (no env.AI) are
 	// unaffected.
+	const bucket = env.MESSENGER_INBOUND_BUCKET;
 	const photoTools =
-		env.AI && env.MESSENGER_INBOUND_BUCKET
+		env.AI && bucket
 			? [
 					buildPhotoIdentifyTool({
-						loadImage: (key) => loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
+						loadImage: (key) => loadInboundImage(bucket, key),
 						runVision: buildKimiVision(env.AI),
 					}),
 				]

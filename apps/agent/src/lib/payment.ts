@@ -34,13 +34,13 @@ export const fetchPaymentSummary = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<PaymentSummary> => {
-	const data = await storeClient().payment.getPaymentByNumber.query(
-		{
-			paymentNumber,
-			...(checkoutToken ? { checkoutToken } : {}),
-		},
-		{ signal: withTimeout(outerSignal) },
-	);
+	const queryInput = { paymentNumber };
+	if (checkoutToken) {
+		queryInput.checkoutToken = checkoutToken;
+	}
+	const data = await storeClient().payment.getPaymentByNumber.query(queryInput, {
+		signal: withTimeout(outerSignal),
+	});
 	// Defense-in-depth: the typed client gives compile-time safety, but the
 	// valibot guard still fails loudly on RUNTIME api-side shape drift.
 	return v.parse(paymentSummarySchema, data);
@@ -61,12 +61,12 @@ export const claimTransfer = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<TransferClaimResult> => {
-	const data = await storeClient().payment.claimTransferPaid.mutate(
-		{
-			paymentNumber,
-			...(checkoutToken ? { checkoutToken } : {}),
-		},
-		{ signal: withTimeout(outerSignal) },
-	);
+	const mutateInput = { paymentNumber };
+	if (checkoutToken) {
+		mutateInput.checkoutToken = checkoutToken;
+	}
+	const data = await storeClient().payment.claimTransferPaid.mutate(mutateInput, {
+		signal: withTimeout(outerSignal),
+	});
 	return v.parse(claimResultSchema, data);
 };

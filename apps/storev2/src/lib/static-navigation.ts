@@ -42,12 +42,12 @@ export function getStaticNavigationData() {
 		getWithBuildFallback(
 			"categories",
 			api.category.getAllCategoriesWithStock.query(),
-			[] as Array<StaticNavigationCategory>,
+			[] satisfies Array<StaticNavigationCategory>,
 		),
 		getWithBuildFallback(
 			"brands",
 			api.brand.getAllBrandsWithStock.query(),
-			[] as Array<StaticNavigationBrand>,
+			[] satisfies Array<StaticNavigationBrand>,
 		),
 	]).then(([categories, brands]) => ({ brands, categories }));
 

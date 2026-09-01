@@ -7,6 +7,7 @@ import {
 	parseOrderPayload,
 } from "@vit/assistant";
 import type { CartSession } from "./cart-session";
+import type { ChannelSendResult, ChannelTextSend } from "../lib/channel-send";
 
 // Bridges Messenger button/quick-reply events to the cart WITHOUT the model.
 // `Захиалах` (postback `order_product:<id>`) and the cart-control payloads
@@ -73,9 +74,9 @@ export interface CartEventDeps {
 	// Resolves the catalog snapshot for an added product id (#19 projection).
 	resolveProduct: (id: number) => Promise<AssistantProduct | undefined>;
 	// Sends the cart summary (+ control quick replies) on the bound channel.
-	sendCartSummary: (cart: Cart) => Promise<unknown>;
+	sendCartSummary: (cart: Cart) => Promise<ChannelSendResult>;
 	// Soft text reply used when an added product can no longer be resolved.
-	sendText: (text: string) => Promise<unknown>;
+	sendText: ChannelTextSend;
 }
 
 const PRODUCT_GONE_MESSAGE = "Уучлаарай, энэ бараа одоо боломжгүй байна. Өөр бараа сонгоно уу.";
@@ -87,7 +88,7 @@ const PRODUCT_GONE_MESSAGE = "Уучлаарай, энэ бараа одоо б�
 // customer-facing send is best-effort past the commit: swallow + log, exactly
 // like the typing indicator in `postMessage`. Only PRE-commit failures
 // (resolveProduct) are allowed to throw, where a retry is safe.
-const bestEffortSend = async (send: () => Promise<unknown>): Promise<void> => {
+const bestEffortSend = async (send: () => Promise<ChannelSendResult | void>): Promise<void> => {
 	try {
 		await send();
 	} catch (error) {

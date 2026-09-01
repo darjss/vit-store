@@ -3,7 +3,11 @@ import {
 	BellIcon as IconNotification,
 } from "@solar-icons/solid/bold";
 import { useMutation, useQuery } from "@tanstack/solid-query";
+import type { StoreRouter } from "@vit/api";
+import type { inferRouterOutputs } from "@trpc/server";
 import { createEffect, createSignal, Match, Show, Switch } from "solid-js";
+import * as v from "valibot";
+
 import { Button } from "@/components/ui/button";
 import {
 	Sheet,
@@ -21,28 +25,20 @@ import {
 	trackRestockSubscriptionCreated,
 	trackRestockSubscriptionFailed,
 } from "@/lib/analytics";
+import { thrownErrorWireSchema } from "@/lib/error-wire";
 import { queryClient } from "@/lib/query";
+import { trpcErrorCode } from "@/lib/trpc-error-code";
 import { api } from "@/lib/trpc";
 
 type RestockChannel = "sms" | "email";
 type SheetStage = "contact" | "confirmation" | "success";
+type RestockIdentity = inferRouterOutputs<StoreRouter>["product"]["restockSubscriptionIdentity"];
 
-function errorCode(error: unknown) {
-	if (
-		typeof error === "object" &&
-		error !== null &&
-		"data" in error &&
-		typeof error.data === "object" &&
-		error.data !== null &&
-		"code" in error.data
-	) {
-		return String(error.data.code);
-	}
-	return "UNKNOWN";
-}
-
-function restockErrorMessage(error: unknown, stage: SheetStage) {
-	switch (errorCode(error)) {
+function restockErrorMessage(
+	error: v.InferOutput<typeof thrownErrorWireSchema>,
+	stage: SheetStage,
+) {
+	switch (trpcErrorCode(error)) {
 		case "TOO_MANY_REQUESTS":
 			return "Хэт олон хүсэлт илгээлээ. Түр хүлээгээд дахин оролдоно уу.";
 		case "NOT_FOUND":
@@ -66,7 +62,7 @@ function restockDescription(productName?: string) {
 		: "Бараа дахин орвол танд мэдэгдэнэ.";
 }
 
-function restockCustomerType(identity: unknown) {
+function restockCustomerType(identity: RestockIdentity | undefined) {
 	return identity ? ("verified_customer" as const) : ("guest" as const);
 }
 
@@ -156,12 +152,13 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 		() => ({
 			mutationFn: () => api.product.subscribeToRestock.mutate({ productId: props.productId }),
 			onError: (error) => {
+				const parsed = v.parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
 					channel: "sms",
-					errorCode: errorCode(error),
+					errorCode: trpcErrorCode(parsed),
 				});
-				setErrorMessage(restockErrorMessage(error, "contact"));
+				setErrorMessage(restockErrorMessage(parsed, "contact"));
 			},
 			onSuccess: (result) => {
 				trackRestockSubscriptionCreated({
@@ -185,11 +182,12 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					productId: props.productId,
 				}),
 			onError: (error) => {
+				const parsed = v.parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
-					errorCode: errorCode(error),
+					errorCode: trpcErrorCode(parsed),
 				});
-				setErrorMessage(restockErrorMessage(error, "contact"));
+				setErrorMessage(restockErrorMessage(parsed, "contact"));
 			},
 			onSuccess: (result) => {
 				setChallengeId(result.challengeId);
@@ -211,11 +209,12 @@ export default function RestockNotifySheet(props: RestockNotifySheetProps) {
 					code: code(),
 				}),
 			onError: (error) => {
+				const parsed = v.parse(thrownErrorWireSchema, error);
 				trackRestockSubscriptionFailed({
 					...analyticsEvent(),
-					errorCode: errorCode(error),
+					errorCode: trpcErrorCode(parsed),
 				});
-				setErrorMessage(restockErrorMessage(error, "confirmation"));
+				setErrorMessage(restockErrorMessage(parsed, "confirmation"));
 				queueMicrotask(() => codeInput?.focus());
 			},
 			onSuccess: (result) => {

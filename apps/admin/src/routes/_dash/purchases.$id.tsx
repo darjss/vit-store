@@ -21,12 +21,12 @@ import { purchaseStatusLabel } from "@/lib/enum-labels";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-const purchaseProviderLabel: Record<string, string> = {
+const purchaseProviderLabel = {
 	amazon: "Amazon",
 	iherb: "iHerb",
 	naturebell: "Naturebell",
 	unknown: "Тодорхойгүй",
-};
+} satisfies Record<string, string>;
 
 export const Route = createFileRoute("/_dash/purchases/$id")({
 	component: RouteComponent,

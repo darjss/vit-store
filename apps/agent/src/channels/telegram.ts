@@ -29,7 +29,7 @@ const telegramButtonSchema = v.object({
 export const channel = createTelegramChannel({
 	secretToken: requiredEnv("TELEGRAM_WEBHOOK_SECRET"),
 	async webhook({ c, update }) {
-		const env = c.env as TelegramWebhookEnv;
+		const env = c.env;
 
 		if (update.callback_query) {
 			return handleTelegramCallback({ channel, env, update });
@@ -107,15 +107,18 @@ export const channel = createTelegramChannel({
 
 		try {
 			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+			const dispatchInput = {
+				text,
+				type: "telegram.message" as const,
+				updateId: update.update_id,
+			};
+			if (imageKeys.length > 0) {
+				dispatchInput.imageKeys = imageKeys;
+			}
 			const dispatchTurn = () =>
 				dispatch(adminAssistant, {
 					id: sessionId,
-					input: {
-						text,
-						type: "telegram.message",
-						updateId: update.update_id,
-						...(imageKeys.length > 0 ? { imageKeys } : {}),
-					},
+					input: dispatchInput,
 				});
 
 			if (token) {
@@ -149,14 +152,13 @@ export function isAdminUser(userId: number, env: TelegramWebhookEnv) {
 export function conversationFromMessage(
 	message: NonNullable<Update["message"]>,
 ): TelegramConversationRef {
-	const topic = {
-		...(message.message_thread_id === undefined
-			? {}
-			: { messageThreadId: message.message_thread_id }),
-		...(message.direct_messages_topic?.topic_id === undefined
-			? {}
-			: { directMessagesTopicId: message.direct_messages_topic.topic_id }),
-	};
+	const topic = {};
+	if (message.message_thread_id !== undefined) {
+		topic.messageThreadId = message.message_thread_id;
+	}
+	if (message.direct_messages_topic?.topic_id !== undefined) {
+		topic.directMessagesTopicId = message.direct_messages_topic.topic_id;
+	}
 	return message.business_connection_id
 		? {
 				businessConnectionId: message.business_connection_id,
@@ -167,11 +169,19 @@ export function conversationFromMessage(
 		: { chatId: message.chat.id, type: "chat", ...topic };
 }
 
-const sendOptions = (ref: TelegramConversationRef) => ({
-	...(ref.type === "business-chat" ? { business_connection_id: ref.businessConnectionId } : {}),
-	...(ref.messageThreadId ? { message_thread_id: ref.messageThreadId } : {}),
-	...(ref.directMessagesTopicId ? { direct_messages_topic_id: ref.directMessagesTopicId } : {}),
-});
+const sendOptions = (ref: TelegramConversationRef) => {
+	const options = {};
+	if (ref.type === "business-chat") {
+		options.business_connection_id = ref.businessConnectionId;
+	}
+	if (ref.messageThreadId) {
+		options.message_thread_id = ref.messageThreadId;
+	}
+	if (ref.directMessagesTopicId) {
+		options.direct_messages_topic_id = ref.directMessagesTopicId;
+	}
+	return options;
+};
 
 export function postTelegramMessage(ref: TelegramConversationRef) {
 	const token = requiredEnv("TELEGRAM_ADMIN_BOT_TOKEN");
@@ -230,12 +240,16 @@ export function postTelegramProductPhoto(input: {
 			if (!response.ok) {
 				throw new Error(`Product image fetch failed: ${response.status} ${imageUrl}`);
 			}
+			const photoOptions = {};
+			if (toolInput.caption) {
+				photoOptions.caption = toolInput.caption;
+			}
 			const sent = await telegramApi(token).sendPhoto(
 				input.ref.chatId,
 				new InputFile(await response.bytes(), "product.jpg"),
 				{
 					...sendOptions(input.ref),
-					...(toolInput.caption ? { caption: toolInput.caption } : {}),
+					...photoOptions,
 				},
 			);
 			return { messageId: sent.message_id, ok: true };

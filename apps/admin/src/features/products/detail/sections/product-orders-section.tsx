@@ -3,7 +3,7 @@ import { Calendar, Phone, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orderStatusLabel } from "@/lib/enum-labels";
+import { labelForOrderStatus } from "@/lib/order-status-display";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
@@ -33,7 +33,7 @@ export function ProductOrdersSection({ productId }: { productId: number }) {
 									<span className="text-sm font-medium">{order.customerPhone}</span>
 								</div>
 								<Badge className="bg-green-100 text-xs text-green-800">
-									{orderStatusLabel[order.status as keyof typeof orderStatusLabel] ?? order.status}
+									{labelForOrderStatus(order.status)}
 								</Badge>
 							</div>
 							<div className="flex items-center justify-between">

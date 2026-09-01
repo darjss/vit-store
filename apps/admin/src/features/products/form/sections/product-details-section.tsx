@@ -2,6 +2,7 @@ import { status, type ProductFormValues } from "@vit/shared/domain/product";
 import type { UseFormReturn } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { productStatusLabel } from "@/lib/enum-labels";
+import { labelForProductStatus } from "@/lib/product-status-display";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -147,10 +148,7 @@ export function ProductDetailsSection({
 								<Select defaultValue={field.value || status[0]} onValueChange={field.onChange}>
 									<FormControl>
 										<SelectTrigger>
-											<SelectValue>
-												{productStatusLabel[field.value as keyof typeof productStatusLabel] ??
-													field.value}
-											</SelectValue>
+											<SelectValue>{labelForProductStatus(field.value) || field.value}</SelectValue>
 										</SelectTrigger>
 									</FormControl>
 									<SelectContent>

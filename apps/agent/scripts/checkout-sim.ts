@@ -44,17 +44,19 @@ import {
 	validatePhone,
 } from "@vit/assistant";
 import { deliveryFee } from "@vit/shared/constants";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+import { trpcResponseBody } from "../cli/trpc-stub";
 import { createOrder, fetchDeliveryZones } from "../src/lib/order";
 
 const STORE_PORT = 3000;
 process.env.STORE_API_URL = `http://127.0.0.1:${STORE_PORT}`;
 
 // ── Simulated store catalog (for the stub's total math only) ─────────────────
-const CATALOG: Record<number, { name: string; price: number }> = {
+const CATALOG = {
 	101: { name: "Magnesium Glycinate 400mg", price: 54_900 },
 	202: { name: "Omega-3 1000mg", price: 39_900 },
-};
+} as const;
 
 // ── Simulated live delivery zones (real ranker consumes these) ───────────────
 const ZONES = [
@@ -77,35 +79,34 @@ const rnd = (len: number): string => {
 	return out;
 };
 
+const addOrderWireSchema = v.object({
+	products: v.array(v.object({ productId: v.number(), quantity: v.number() })),
+});
+
 // ── Stub store API (stands in for the real tRPC store router) ────────────────
 const storeApi = Bun.serve({
 	async fetch(req) {
 		const url = new URL(req.url);
-		const trpcBody = (data: unknown) =>
-			new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
-				headers: { "content-type": "application/json" },
-			});
 
 		if (url.pathname.endsWith("/order.getDeliveryAddressZones")) {
-			return trpcBody(ZONES);
+			return trpcResponseBody(ZONES);
 		}
 
 		if (url.pathname.endsWith("/order.addOrder")) {
-			const raw = (await req.json()) as Parameters<typeof SuperJSON.deserialize>[0];
-			const input = SuperJSON.deserialize(raw) as {
-				products: Array<{ productId: number; quantity: number }>;
-			};
+			const raw = await req.json();
+			const input = v.parse(addOrderWireSchema, SuperJSON.deserialize(raw));
 			// Mirror the real API: it totals itself (products + delivery fee). The
 			// CLI never sends a total; the stub computes it exactly as addOrder does.
-			const productsTotal = input.products.reduce(
-				(acc, p) => acc + (CATALOG[p.productId]?.price ?? 0) * p.quantity,
-				0,
-			);
+			const productsTotal = input.products.reduce((acc, p) => {
+				const product =
+					p.productId === 101 ? CATALOG[101] : p.productId === 202 ? CATALOG[202] : undefined;
+				return acc + (product?.price ?? 0) * p.quantity;
+			}, 0);
 			const total = productsTotal + deliveryFee;
 			console.log(
 				`\n[stub store API] order.addOrder computed total = ${total.toLocaleString("en-US")}₮ (products ${productsTotal.toLocaleString("en-US")}₮ + delivery ${deliveryFee.toLocaleString("en-US")}₮)`,
 			);
-			return trpcBody({
+			return trpcResponseBody({
 				checkoutToken: `ct_${rnd(24)}`,
 				orderNumber: rnd(8),
 				paymentNumber: rnd(10),
@@ -128,6 +129,10 @@ const hr = () => console.log("─".repeat(64));
 // mid-checkout, place_order before the summary, and a durable replay.
 const ZONE_INPUTS = ZONES.map((z) => ({ zoneId: z.Id, zoneName: z.zoneName }));
 
+const placeOrderResultSchema = v.object({
+	ok: v.boolean(),
+});
+
 type Tool = ReturnType<typeof buildCheckoutTools>[number];
 
 interface Harness {
@@ -136,7 +141,11 @@ interface Harness {
 	lastSent: () => string | undefined;
 	orderCalls: () => number;
 	setCheckout: (state: CheckoutState) => void;
-	tool: (name: string) => (input?: Record<string, unknown>) => Promise<unknown>;
+	tool: (
+		name: string,
+	) => (
+		input?: Record<string, number | string>,
+	) => Promise<v.InferOutput<typeof placeOrderResultSchema>>;
 }
 
 const makeHarness = (initialCart: Cart): Harness => {
@@ -176,12 +185,12 @@ const makeHarness = (initialCart: Cart): Harness => {
 		},
 		tool:
 			(name) =>
-			(input = {}) => {
+			async (input = {}) => {
 				const t = byName.get(name);
 				if (!t) {
 					throw new Error(`no such tool: ${name}`);
 				}
-				return (t.run as (ctx: { input: Record<string, unknown> }) => Promise<unknown>)({ input });
+				return v.parse(placeOrderResultSchema, await t.run({ input }));
 			},
 	};
 };
@@ -230,7 +239,7 @@ async function runGuardProofs(): Promise<void> {
 		// Simulate a webhook cart button tap: any mutation re-opens (confirmed=false).
 		h.cart.current = removeFromCart(h.cart.current, 202);
 		check("cart re-opened (confirmed=false)", h.cart.current.confirmed === false);
-		const result = (await h.tool("place_order")()) as { ok: boolean };
+		const result = await h.tool("place_order")();
 		check("place_order REFUSED (ok=false)", result.ok === false);
 		check("NO order created (createOrder calls = 0)", h.orderCalls() === 0);
 		check("re-confirm nudge sent", (h.lastSent() ?? "").includes("баталгаажуул"));
@@ -241,7 +250,7 @@ async function runGuardProofs(): Promise<void> {
 	const happy = makeHarness(confirmedCart());
 	{
 		await driveToConfirming(happy);
-		const result = (await happy.tool("place_order")()) as { ok: boolean };
+		const result = await happy.tool("place_order")();
 		check("place_order succeeded (ok=true)", result.ok === true);
 		check("exactly ONE order created", happy.orderCalls() === 1);
 		check("phase advanced to 'created'", happy.checkout()?.phase === "created");
@@ -250,7 +259,7 @@ async function runGuardProofs(): Promise<void> {
 	// C) Idempotency — a post-success replay must NOT mint a second order.
 	console.log("\nC) replay place_order after success (phase 'created'):");
 	{
-		const result = (await happy.tool("place_order")()) as { ok: boolean };
+		const result = await happy.tool("place_order")();
 		check("replay REFUSED (ok=false)", result.ok === false);
 		check("still exactly ONE order (no double-create)", happy.orderCalls() === 1);
 	}
@@ -261,9 +270,9 @@ async function runGuardProofs(): Promise<void> {
 	{
 		const h = makeHarness(confirmedCart());
 		await driveToConfirming(h);
-		const claimed = markCreating(h.checkout() as CheckoutState);
+		const claimed = markCreating(h.checkout()!);
 		h.setCheckout(claimed); // as if the turn died right after the claim was saved
-		const result = (await h.tool("place_order")()) as { ok: boolean };
+		const result = await h.tool("place_order")();
 		check("place_order REFUSED at 'creating'", result.ok === false);
 		check("NO order created on replay (calls = 0)", h.orderCalls() === 0);
 	}
@@ -284,7 +293,7 @@ async function runGuardProofs(): Promise<void> {
 			"phase is 'collecting_notes' (ready, not confirmed)",
 			h.checkout()?.phase === "collecting_notes",
 		);
-		const result = (await h.tool("place_order")()) as { ok: boolean };
+		const result = await h.tool("place_order")();
 		check("place_order REFUSED (ok=false)", result.ok === false);
 		check("NO order created (calls = 0)", h.orderCalls() === 0);
 		check("summary re-shown", (h.lastSent() ?? "").includes("баталгаажуулалт"));

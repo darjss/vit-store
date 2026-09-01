@@ -23,28 +23,10 @@
  * would create a REAL order. Use for conversation testing.
  */
 import { createHmac } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { loadDotVars } from "./dot-vars";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
-
-function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) {
-		return {};
-	}
-	const out: Record<string, string> = {};
-	for (const line of readFileSync(file, "utf8").split("\n")) {
-		const t = line.trim();
-		if (!t || t.startsWith("#")) {
-			continue;
-		}
-		const eq = t.indexOf("=");
-		if (eq > 0) {
-			out[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
-		}
-	}
-	return out;
-}
 
 const vars = {
 	...loadDotVars(join(AGENT_ROOT, "../../.env")),

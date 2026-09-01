@@ -1,6 +1,8 @@
+import { isServer } from "@/lib/runtime";
+
 export const safeStorage: Storage = {
 	clear: () => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return;
 		}
 		try {
@@ -8,7 +10,7 @@ export const safeStorage: Storage = {
 		} catch {}
 	},
 	getItem: (key: string) => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return null;
 		}
 		try {
@@ -18,7 +20,7 @@ export const safeStorage: Storage = {
 		}
 	},
 	key: (index: number) => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return null;
 		}
 		try {
@@ -28,7 +30,7 @@ export const safeStorage: Storage = {
 		}
 	},
 	get length() {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return 0;
 		}
 		try {
@@ -38,7 +40,7 @@ export const safeStorage: Storage = {
 		}
 	},
 	removeItem: (key: string) => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return;
 		}
 		try {
@@ -46,7 +48,7 @@ export const safeStorage: Storage = {
 		} catch {}
 	},
 	setItem: (key: string, value: string) => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return;
 		}
 		try {

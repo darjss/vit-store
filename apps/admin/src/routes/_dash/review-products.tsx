@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { productStatusLabel } from "@/lib/enum-labels";
+import { labelForProductStatus } from "@/lib/product-status-display";
 import {
 	addedProducts,
 	priceChangedProducts,
@@ -284,7 +285,7 @@ function RowTopline({
 					#{id}
 				</span>
 				<span className="border-border bg-muted border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">
-					{productStatusLabel[status as keyof typeof productStatusLabel] ?? status}
+					{labelForProductStatus(status)}
 				</span>
 				{score !== null && (
 					<span className="border-border bg-background border-2 px-1.5 py-0.5 text-[10px] font-black uppercase">

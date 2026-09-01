@@ -3,6 +3,7 @@ import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { orderStatusLabels } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
 import { queryClient } from "@/lib/query";
+import { parseOrderStatus } from "@/lib/order-status-parse";
 import { api } from "@/lib/trpc";
 import { showToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
@@ -21,26 +22,23 @@ import {
 	DangerCircleIcon as IconAlert,
 } from "@solar-icons/solid/bold";
 
-const statusBadgeVariant: Record<
-	string,
-	"outline" | "warning" | "info" | "success" | "error" | "secondary"
-> = {
+const statusBadgeVariant = {
 	cancelled: "error",
 	created: "outline",
 	delivered: "success",
 	pending: "warning",
 	refunded: "secondary",
 	shipped: "info",
-};
+} satisfies Record<string, "outline" | "warning" | "info" | "success" | "error" | "secondary">;
 
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 
-const paymentStatusLabels: Record<string, string> = {
+const paymentStatusLabels = {
 	customer_claimed_paid: "Төлсөн гэж мэдэгдсэн",
 	failed: "Амжилтгүй",
 	pending: "Хүлээгдэж буй",
 	success: "Амжилттай",
-};
+} satisfies Record<string, string>;
 
 const OrderTrackingForm = () => {
 	const [step, setStep] = createSignal<"input" | "otp" | "result">("input");
@@ -176,8 +174,9 @@ const OrderTrackingForm = () => {
 		});
 	};
 
-	const currentStepIndex = () =>
-		timelineSteps.indexOf((trackMutation.data?.status ?? "pending") as OrderStatusType);
+	const trackedOrderStatus = () => parseOrderStatus(trackMutation.data?.status ?? "pending");
+
+	const currentStepIndex = () => timelineSteps.indexOf(trackedOrderStatus());
 
 	return (
 		<div class="space-y-6">
@@ -359,7 +358,7 @@ const OrderTrackingForm = () => {
 												statusBadgeVariant[trackMutation.data?.status || "pending"] ?? "outline"
 											}
 										>
-											{orderStatusLabels[trackMutation.data?.status as OrderStatusType] ??
+											{orderStatusLabels[trackedOrderStatus()] ??
 												trackMutation.data?.status ??
 												"Хүлээгдэж буй"}
 										</Badge>

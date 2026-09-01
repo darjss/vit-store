@@ -10,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { mutationErrorMessage } from "@/lib/mutation-error";
 import { trpc } from "@/utils/trpc";
 import { DeliveryZoneSelect } from "./delivery-zone-select";
 
@@ -34,13 +35,6 @@ interface BatchShipOrderDialogProps {
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 	orders: Array<BatchShipOrder>;
-}
-
-function trpcErrorMessage(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message;
-	}
-	return "Алдаа гарлаа";
 }
 
 export default function BatchShipOrderDialog({
@@ -84,7 +78,7 @@ export default function BatchShipOrderDialog({
 				await shipOrder.mutateAsync({ addressZoneId, orderId });
 				return { ok: true as const };
 			} catch (error) {
-				lastMessage = trpcErrorMessage(error);
+				lastMessage = error instanceof Error ? mutationErrorMessage(error) : "Алдаа гарлаа";
 				if (attempt < 2) {
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				}

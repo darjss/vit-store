@@ -7,26 +7,26 @@ type PurchaseStatusType = (typeof purchaseStatus)[number];
 
 export const orderStatusLabel: Record<OrderStatusType, string> = orderStatusLabels;
 
-export const paymentStatusLabel: Record<PaymentStatusType, string> = {
+export const paymentStatusLabel = {
 	customer_claimed_paid: "Шалгах шаардлагатай",
 	failed: "Төлбөр амжилтгүй",
 	pending: "Төлбөр хүлээж буй",
 	success: "Төлбөр баталгаажсан",
-};
+} satisfies Record<PaymentStatusType, string>;
 
-export const paymentProviderLabel: Record<PaymentProviderType, string> = {
+export const paymentProviderLabel = {
 	cash: "Бэлэн мөнгө",
 	qpay: "QPay",
 	transfer: "Данс",
-};
+} satisfies Record<PaymentProviderType, string>;
 
-export const productStatusLabel: Record<ProductStatusType, string> = {
+export const productStatusLabel = {
 	active: "Идэвхтэй",
 	draft: "Ноорог",
 	out_of_stock: "Дууссан",
-};
+} satisfies Record<ProductStatusType, string>;
 
-export const purchaseStatusLabel: Record<PurchaseStatusType, string> = {
+export const purchaseStatusLabel = {
 	cancelled: "Цуцлагдсан",
 	draft: "Ноорог",
 	forwarder_received: "Зуучлагч хүлээн авсан",
@@ -34,4 +34,4 @@ export const purchaseStatusLabel: Record<PurchaseStatusType, string> = {
 	partially_received: "Хэсэгчлэн хүлээн авсан",
 	received: "Хүлээн авсан",
 	shipped: "Илгээгдсэн",
-};
+} satisfies Record<PurchaseStatusType, string>;

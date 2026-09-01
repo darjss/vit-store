@@ -1,24 +1,29 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/solid-query";
+import * as v from "valibot";
+
 import { showToast } from "@/components/ui/toast";
 import { captureException } from "./analytics";
+import { thrownErrorWireSchema, type ThrownErrorWire } from "./error-wire";
+import { isServer } from "./runtime";
 
-const getErrorDetails = (error: unknown) => {
-	if (error instanceof Error) {
+const getErrorDetails = (error: ThrownErrorWire) => {
+	const parsed = v.parse(thrownErrorWireSchema, error);
+	if (parsed instanceof Error) {
 		return {
-			message: error.message,
-			name: error.name,
-			stack: error.stack,
+			message: parsed.message,
+			name: parsed.name,
+			stack: parsed.stack,
 		};
 	}
 
 	return {
-		message: String(error),
-		name: typeof error,
+		message: String(parsed),
+		name: parsed === null ? "null" : Array.isArray(parsed) ? "array" : "value",
 	};
 };
 
 const getBrowserContext = () => {
-	if (typeof window === "undefined") {
+	if (isServer) {
 		return {};
 	}
 
@@ -51,8 +56,8 @@ export const queryClient = new QueryClient({
 	},
 	mutationCache: new MutationCache({
 		onError: (error, _variables, _context, mutation) => {
-			captureException(error, {
-				...getErrorDetails(error),
+			captureException(v.parse(thrownErrorWireSchema, error), {
+				...getErrorDetails(v.parse(thrownErrorWireSchema, error)),
 				...getBrowserContext(),
 				mutationKey: mutation.options.mutationKey,
 				mutationMeta: mutation.options.meta,
@@ -62,8 +67,8 @@ export const queryClient = new QueryClient({
 	}),
 	queryCache: new QueryCache({
 		onError: (error, query) => {
-			captureException(error, {
-				...getErrorDetails(error),
+			captureException(v.parse(thrownErrorWireSchema, error), {
+				...getErrorDetails(v.parse(thrownErrorWireSchema, error)),
 				...getBrowserContext(),
 				queryHash: query.queryHash,
 				queryKey: query.queryKey,

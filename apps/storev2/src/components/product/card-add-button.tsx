@@ -68,7 +68,10 @@ const CardAddButton = (props: CardAddButtonProps) => {
 			return;
 		}
 		if (isOutOfStock()) {
-			restockSheetFocusRestore.register(event.currentTarget as HTMLElement);
+			const target = event.currentTarget;
+			if (target instanceof HTMLElement) {
+				restockSheetFocusRestore.register(target);
+			}
 			setNotifyOpen(true);
 			return;
 		}
@@ -78,7 +81,10 @@ const CardAddButton = (props: CardAddButtonProps) => {
 		props.onAdd?.();
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
-		playCartBurst(event.currentTarget as HTMLElement);
+		const target = event.currentTarget;
+		if (target instanceof HTMLElement) {
+			playCartBurst(target);
+		}
 		setTimeout(() => setIsAdded(false), 1500);
 	};
 

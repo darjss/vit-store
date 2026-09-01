@@ -213,11 +213,11 @@ export const applyZoneSelection = (
 // confirmation summary.
 export const applyNotes = (state: CheckoutState, notes: string | undefined): CheckoutState => {
 	const trimmed = notes?.trim();
-	return {
-		...state,
-		...(trimmed ? { notes: trimmed } : {}),
-		phase: "confirming",
-	};
+	const next: CheckoutState = { ...state, phase: "confirming" };
+	if (trimmed) {
+		next.notes = trimmed;
+	}
+	return next;
 };
 
 // Claims the irreversible order-creation step BEFORE `createOrder` runs. The
@@ -240,15 +240,17 @@ export const markCreated = (state: CheckoutState): CheckoutState => ({
 // recognise a bank-transfer claim for this exact payment. Starts at `offered`.
 export const attachPayment = (
 	state: CheckoutState,
-	payment: { checkoutToken: string | null; paymentNumber: string },
-): CheckoutState => ({
-	...state,
-	payment: {
-		paymentNumber: payment.paymentNumber,
-		...(payment.checkoutToken ? { checkoutToken: payment.checkoutToken } : {}),
+	input: { checkoutToken: string | null; paymentNumber: string },
+): CheckoutState => {
+	const payment: PaymentContext = {
+		paymentNumber: input.paymentNumber,
 		transferStatus: "offered",
-	},
-});
+	};
+	if (input.checkoutToken) {
+		payment.checkoutToken = input.checkoutToken;
+	}
+	return { ...state, payment };
+};
 
 // Advances the bank-transfer status WITHOUT ever touching payment confirmation:
 // the checkout layer only records that the customer entered the transfer flow
@@ -280,16 +282,25 @@ export const buildCheckoutOrderPayload = (
 	if (!isReadyToCreate(state)) {
 		throw new Error("checkout is not ready: missing phone, address, or zone");
 	}
-	return {
-		address: state.address as string,
-		addressZoneId: state.selectedZoneId as number,
-		phoneNumber: state.phone as string,
-		...(state.notes ? { notes: state.notes } : {}),
+	const phone = state.phone;
+	const address = state.address;
+	const addressZoneId = state.selectedZoneId;
+	if (!phone || !address || addressZoneId === undefined) {
+		throw new Error("checkout is not ready: missing phone, address, or zone");
+	}
+	const payload: CheckoutOrderPayload = {
+		address,
+		addressZoneId,
+		phoneNumber: phone,
 		products: cart.items.map((item) => ({
 			productId: item.productId,
 			quantity: item.quantity,
 		})),
 	};
+	if (state.notes) {
+		payload.notes = state.notes;
+	}
+	return payload;
 };
 
 // ── Formatting (Mongolian, channel-neutral text) ─────────────────────────────

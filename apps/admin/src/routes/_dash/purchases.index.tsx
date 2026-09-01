@@ -15,28 +15,31 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { purchaseStatusLabel } from "@/lib/enum-labels";
+import { parsePicklistValue } from "@/lib/parse-select";
 import { formatCurrency, formatDateToText } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-const purchaseProviderLabel: Record<(typeof purchaseProvider)[number], string> = {
+const purchaseProviderLabel = {
 	amazon: "Amazon",
 	iherb: "iHerb",
 	naturebell: "Naturebell",
 	unknown: "Тодорхойгүй",
-};
+} satisfies Record<(typeof purchaseProvider)[number], string>;
+
+const purchasesSearchSchema = v.object({
+	page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+	pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+	provider: v.optional(v.picklist(purchaseProvider)),
+	searchTerm: v.optional(v.string()),
+	sortDirection: v.optional(v.picklist(["asc", "desc"])),
+	sortField: v.optional(v.string()),
+	status: v.optional(v.picklist(purchaseStatus)),
+});
 
 export const Route = createFileRoute("/_dash/purchases/")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const search = location.search as {
-			page?: number;
-			pageSize?: number;
-			provider?: (typeof purchaseProvider)[number];
-			searchTerm?: string;
-			sortDirection?: "asc" | "desc";
-			sortField?: string;
-			status?: (typeof purchaseStatus)[number];
-		};
+		const search = v.parse(purchasesSearchSchema, location.search);
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.purchase.getPaginatedPurchases.queryOptions({
 				page: search.page ?? 1,
@@ -50,15 +53,7 @@ export const Route = createFileRoute("/_dash/purchases/")({
 		);
 	},
 	pendingComponent: PurchasesPageSkeleton,
-	validateSearch: v.object({
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
-		provider: v.optional(v.picklist(purchaseProvider)),
-		searchTerm: v.optional(v.string()),
-		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		sortField: v.optional(v.string()),
-		status: v.optional(v.picklist(purchaseStatus)),
-	}),
+	validateSearch: purchasesSearchSchema,
 });
 
 function RouteComponent() {
@@ -145,7 +140,7 @@ function PurchasesPage() {
 					onValueChange={(value) =>
 						updateSearch({
 							page: 1,
-							provider: value === "all" ? undefined : (value as (typeof purchaseProvider)[number]),
+							provider: value === "all" ? undefined : parsePicklistValue(purchaseProvider, value),
 						})
 					}
 					value={provider ?? "all"}
@@ -167,7 +162,7 @@ function PurchasesPage() {
 					onValueChange={(value) =>
 						updateSearch({
 							page: 1,
-							status: value === "all" ? undefined : (value as (typeof purchaseStatus)[number]),
+							status: value === "all" ? undefined : parsePicklistValue(purchaseStatus, value),
 						})
 					}
 					value={status ?? "all"}

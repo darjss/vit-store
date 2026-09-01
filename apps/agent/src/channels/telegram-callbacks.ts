@@ -13,16 +13,16 @@ import { conversationFromMessage, isAdminUser, type TelegramWebhookEnv } from ".
 
 export const TELEGRAM_CALLBACK = TELEGRAM_CALLBACK_ACTIONS;
 
-const confirmMessages: Record<string, (draftMessageId: number) => string> = {
-	[TELEGRAM_CALLBACK.PRICE_NO]: (draftMessageId) =>
+const confirmMessages = {
+	[TELEGRAM_CALLBACK.PRICE_NO]: (draftMessageId: number) =>
 		`❌ Цуцаллаа (draft message ${draftMessageId}): үнийн өөрчлөлт.`,
-	[TELEGRAM_CALLBACK.PRICE_OK]: (draftMessageId) =>
+	[TELEGRAM_CALLBACK.PRICE_OK]: (draftMessageId: number) =>
 		`✅ Баталгаажууллаа (draft message ${draftMessageId}): үнийг шинэчилнэ.`,
-	[TELEGRAM_CALLBACK.STOCK_NO]: (draftMessageId) =>
+	[TELEGRAM_CALLBACK.STOCK_NO]: (draftMessageId: number) =>
 		`❌ Цуцаллаа (draft message ${draftMessageId}): нөөц шинэчлэл.`,
-	[TELEGRAM_CALLBACK.STOCK_OK]: (draftMessageId) =>
+	[TELEGRAM_CALLBACK.STOCK_OK]: (draftMessageId: number) =>
 		`✅ Баталгаажууллаа (draft message ${draftMessageId}): нөөц шинэчлэлийг хэрэгжүүлнэ.`,
-};
+} satisfies Record<string, (draftMessageId: number) => string>;
 
 const formatShipAllResult = (result: Awaited<ReturnType<typeof shipAllPaidPendingOrders>>) => {
 	const lines = ["📦 Илгээлтийн үр дүн", ""];
@@ -138,9 +138,7 @@ export async function handleTelegramCallback(input: {
 				return undefined;
 			}
 
-			const sessionId = input.channel.conversationKey(
-				conversationFromMessage(query.message as NonNullable<Update["message"]>),
-			);
+			const sessionId = input.channel.conversationKey(conversationFromMessage(query.message));
 			await clearInlineButtons(api, chatId, boundMessageId);
 			await withTelegramTyping(api, chatId, () =>
 				dispatch(adminAssistant, {

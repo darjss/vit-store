@@ -1,6 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
+import { purchaseProvider } from "@vit/shared";
 import { AlertCircle, FileImage, Loader2, Sparkles, X } from "lucide-react";
 import { useState } from "react";
+import * as v from "valibot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,22 +14,34 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { UploadButton } from "@/components/upload-button";
+import { parsePicklistValue } from "@/lib/parse-select";
 import type { RouterOutputs } from "@/lib/types";
 import { trpc } from "@/utils/trpc";
 
 type ExtractedPurchaseData = RouterOutputs["aiPurchase"]["extractPurchaseFromImages"];
 
-const matchStatusLabel: Record<string, string> = {
+type PurchaseProvider = (typeof purchaseProvider)[number];
+
+const matchStatusValues = ["ambiguous", "matched", "unmatched"] as const;
+
+const matchStatusLabel = {
 	ambiguous: "Эргэлзээтэй",
 	matched: "Тохирсон",
 	unmatched: "Тохироогүй",
-};
+} satisfies Record<(typeof matchStatusValues)[number], string>;
 
-const extractionStatusLabel: Record<string, string> = {
+const matchStatusSchema = v.picklist(matchStatusValues);
+
+function labelForMatchStatus(status: string): string {
+	const parsed = v.safeParse(matchStatusSchema, status);
+	return parsed.success ? matchStatusLabel[parsed.output] : status;
+}
+
+const extractionStatusLabel = {
 	failed: "Амжилтгүй",
 	partial: "Хэсэгчилсэн",
 	success: "Амжилттай",
-};
+} as const satisfies Record<string, string>;
 
 type AIInvoiceInputProps = {
 	onCancel: () => void;
@@ -35,7 +49,7 @@ type AIInvoiceInputProps = {
 };
 
 export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) {
-	const [provider, setProvider] = useState<"amazon" | "iherb" | "naturebell" | "unknown">("amazon");
+	const [provider, setProvider] = useState<PurchaseProvider>("amazon");
 	const [images, setImages] = useState<Array<{ url: string }>>([]);
 
 	const extractMutation = useMutation({
@@ -71,7 +85,15 @@ export function AIPurchaseInput({ onCancel, onExtracted }: AIInvoiceInputProps) 
 			<CardContent className="space-y-4 p-4">
 				<div className="space-y-2">
 					<Label>Нийлүүлэгч</Label>
-					<Select onValueChange={(value) => setProvider(value as typeof provider)} value={provider}>
+					<Select
+						onValueChange={(value) => {
+							const parsed = parsePicklistValue(purchaseProvider, value);
+							if (parsed) {
+								setProvider(parsed);
+							}
+						}}
+						value={provider}
+					>
 						<SelectTrigger>
 							<SelectValue />
 						</SelectTrigger>
@@ -205,7 +227,7 @@ export function AIPurchasePreview({ data, onCancel, onConfirm, onEdit }: AIPurch
 						<div className="rounded-base border p-4" key={`${item.description}-${index}`}>
 							<div className="flex flex-wrap items-center gap-2">
 								<span className="rounded-full border px-2 py-1 text-xs uppercase">
-									{matchStatusLabel[item.matchStatus] ?? item.matchStatus}
+									{labelForMatchStatus(item.matchStatus)}
 								</span>
 								{item.sourceCode ? (
 									<span className="rounded-full border px-2 py-1 text-xs">{item.sourceCode}</span>

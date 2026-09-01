@@ -39,7 +39,9 @@ import {
 	TRANSFER_CLAIM_ACK_MESSAGE,
 } from "@vit/assistant";
 import { bankTransfer } from "@vit/shared/constants";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+import { trpcResponseBody } from "./trpc-stub";
 import {
 	handleChooseTransfer,
 	handleTransferClaim,
@@ -54,14 +56,19 @@ process.env.STORE_API_URL = STORE_BASE;
 process.env.STORE_PUBLIC_URL = STORE_BASE;
 
 // ── Simulated order/payment record the stub serves ───────────────────────────
+let paymentStatus: "pending" | "customer_claimed_paid" | "success" = "pending";
 const PAYMENT = {
 	checkoutToken: "ct_test_9f3ab21c",
 	customerPhone: "99112233",
 	orderNumber: "ORD-5521",
 	paymentNumber: "PMT-7K2QX",
 	total: 145_800,
-	// Mutated ONLY by claim/confirm calls so we can assert the final state.
-	status: "pending" as "pending" | "customer_claimed_paid" | "success",
+	get status() {
+		return paymentStatus;
+	},
+	set status(value: "pending" | "customer_claimed_paid" | "success") {
+		paymentStatus = value;
+	},
 };
 
 // Records of which store procedures the agent hit, so the proof can assert the
@@ -80,14 +87,10 @@ const storeApi = Bun.serve({
 	async fetch(req) {
 		const url = new URL(req.url);
 		const path = url.pathname;
-		const trpcBody = (data: unknown) =>
-			new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
-				headers: { "content-type": "application/json" },
-			});
 
 		if (path.endsWith("/payment.getPaymentByNumber")) {
 			calls.getPaymentByNumber += 1;
-			return trpcBody({
+			return trpcResponseBody({
 				createdAt: "2026-06-25T00:00:00.000Z",
 				order: {
 					address: "Баянзүрх дүүрэг",
@@ -111,23 +114,23 @@ const storeApi = Bun.serve({
 			if (PAYMENT.status === "pending") {
 				PAYMENT.status = "customer_claimed_paid";
 			}
-			return trpcBody({ orderNumber: PAYMENT.orderNumber });
+			return trpcResponseBody({ orderNumber: PAYMENT.orderNumber });
 		}
 
 		// Confirmation procedures — the agent must NEVER reach these on a claim.
 		if (path.endsWith("/payment.confirmPayment")) {
 			calls.confirmPayment += 1;
 			PAYMENT.status = "success";
-			return trpcBody({ ok: true });
+			return trpcResponseBody({ ok: true });
 		}
 		if (path.endsWith("/payment.confirmPaymentAndApplyStock")) {
 			calls.confirmPaymentAndApplyStock += 1;
 			PAYMENT.status = "success";
-			return trpcBody({ ok: true });
+			return trpcResponseBody({ ok: true });
 		}
 		if (path.endsWith("/payment.checkQpayInvoice")) {
 			calls.checkQpayInvoice += 1;
-			return trpcBody({ paid: false });
+			return trpcResponseBody({ paid: false });
 		}
 
 		return new Response("not found", { status: 404 });
@@ -160,11 +163,11 @@ const makePaymentDeps = (cap: Captured): PaymentHandlerDeps => ({
 	},
 	sendBankDetails: async (text, paymentRef) => {
 		cap.bank.push({ buttonPayload: claimTransferPayload(paymentRef), text });
-		return undefined;
+		return { messageId: null, ok: true };
 	},
 	sendText: async (text) => {
 		cap.texts.push(text);
-		return undefined;
+		return { messageId: null, ok: true };
 	},
 	setTransferStatus: async (status) => {
 		cap.transferStatus = status;
@@ -200,20 +203,21 @@ async function pathQpay(): Promise<PaymentRef> {
 		},
 		sendPaymentChoices: async (order) => {
 			choiceOrder = order;
-			return undefined;
+			return { messageId: null, ok: true };
 		},
 		sendText: async (t) => {
 			sentTexts.push(t);
-			return undefined;
+			return { messageId: null, ok: true };
 		},
 	};
-	const tools = new Map(buildCheckoutTools(deps).map((t) => [t.name, t]));
-	const run = (name: string, input: Record<string, unknown> = {}) => {
+	type CheckoutTool = ReturnType<typeof buildCheckoutTools>[number];
+	const tools = new Map<string, CheckoutTool>(buildCheckoutTools(deps).map((t) => [t.name, t]));
+	const run = async (name: string, input: Record<string, string | number> = {}) => {
 		const tool = tools.get(name);
 		if (!tool) {
 			throw new Error(`no such tool: ${name}`);
 		}
-		return (tool.run as (c: { input: unknown }) => Promise<unknown>)({ input });
+		return tool.run({ input });
 	};
 	await run("begin_checkout");
 	await run("provide_phone", { phone: PAYMENT.customerPhone });
@@ -233,7 +237,7 @@ async function pathQpay(): Promise<PaymentRef> {
 		checkoutToken: PAYMENT.checkoutToken,
 		paymentNumber: PAYMENT.paymentNumber,
 	};
-	const choice = buildPaymentChoice(process.env.STORE_PUBLIC_URL as string, ref);
+	const choice = buildPaymentChoice(STORE_BASE, ref);
 	const qpayBtn = choice.buttons.find((b) => b.type === "web_url");
 	const transferBtn = choice.buttons.find((b) => b.type === "postback");
 	const expectedUrl = `${STORE_BASE}/payment/qpay/${PAYMENT.paymentNumber}?ct=${PAYMENT.checkoutToken}`;
@@ -265,11 +269,14 @@ async function pathTransfer(ref: PaymentRef): Promise<void> {
 	// (a) Customer taps `Дансаар шилжүүлэх`. The webhook decodes the postback and
 	// runs the REAL choose-transfer handler (which calls the REAL store boundary).
 	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref));
-	check("Дансаар шилжүүлэх postback decoded", chosen?.paymentNumber === ref.paymentNumber);
+	if (!chosen) {
+		throw new Error("choose-transfer payload did not parse");
+	}
+	check("Дансаар шилжүүлэх postback decoded", chosen.paymentNumber === ref.paymentNumber);
 
 	const cap: Captured = { bank: [], texts: [], transferStatus: undefined };
 	const deps = makePaymentDeps(cap);
-	await handleChooseTransfer(chosen as PaymentRef, deps);
+	await handleChooseTransfer(chosen, deps);
 
 	const bank = cap.bank[0];
 	console.log("  bot → bank transfer details:");
@@ -330,7 +337,7 @@ async function pathTransfer(ref: PaymentRef): Promise<void> {
 		"payment status is 'customer_claimed_paid' (a claim, NOT success)",
 		PAYMENT.status === "customer_claimed_paid",
 	);
-	check("payment status is NOT 'success'", (PAYMENT.status as string) !== "success");
+	check("payment status is NOT 'success'", PAYMENT.status !== "success");
 }
 
 async function main(): Promise<void> {

@@ -1,6 +1,10 @@
 import { createTRPCClient, httpLink } from "@trpc/client";
 import type { StoreRouter } from "@vit/api";
+import { sanitizePublicTrpcResponse, trpcResponseWireSchema } from "@vit/shared";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+
+import { isServer } from "@/lib/runtime";
 import { safeNavigate } from "@/lib/safe-navigate";
 
 const checkUnauthorized = async (response: Response): Promise<boolean> => {
@@ -10,28 +14,23 @@ const checkUnauthorized = async (response: Response): Promise<boolean> => {
 
 	const clonedResponse = response.clone();
 	try {
-		const data = await clonedResponse.json();
-
-		if (Array.isArray(data)) {
-			return data.some((item: unknown) => {
-				const error = (item as { error?: { code?: string; data?: { code?: string } } })?.error;
-				return error?.data?.code === "UNAUTHORIZED" || error?.code === "UNAUTHORIZED";
-			});
+		const data = v.parse(trpcResponseWireSchema, await clonedResponse.json());
+		const { hasError, payload } = sanitizePublicTrpcResponse(data);
+		if (!hasError) {
+			return false;
 		}
 
-		const singleData = data as {
-			error?: { code?: string; data?: { code?: string } };
-		};
-		if (singleData?.error) {
-			return (
-				singleData.error.data?.code === "UNAUTHORIZED" || singleData.error.code === "UNAUTHORIZED"
-			);
-		}
+		const items = Array.isArray(payload) ? payload : [payload];
+		return items.some((item) => {
+			const error = item.error;
+			if (!error || "json" in error) {
+				return error?.json?.data?.code === "UNAUTHORIZED";
+			}
+			return error.data?.code === "UNAUTHORIZED" || error.code === -32_001;
+		});
 	} catch {
 		return false;
 	}
-
-	return false;
 };
 
 const getBackendUrl = () => {
@@ -45,7 +44,7 @@ const getClientBackendUrl = () => {
 	// more fragile with cross-origin fetches (it only surfaces "Load failed"),
 	// so route client tRPC traffic through the Astro app and let the server proxy
 	// it to the API worker.
-	if (typeof window !== "undefined") {
+	if (!isServer) {
 		return "/trpc/store";
 	}
 
@@ -59,7 +58,7 @@ const fetchWithServerRetry = async (
 	url: Parameters<typeof fetch>[0],
 	options?: Parameters<typeof fetch>[1],
 ) => {
-	const attempts = typeof window === "undefined" ? 3 : 1;
+	const attempts = isServer ? 3 : 1;
 	let lastError: unknown;
 
 	for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -92,14 +91,15 @@ export const createServerClient = (
 			httpLink({
 				fetch: async (url, options) => {
 					const fetchFn = serverBinding?.fetch ? serverBinding.fetch.bind(serverBinding) : fetch;
+					const headers = new Headers(options?.headers);
+					if (cookies) {
+						headers.set("cookie", cookies);
+					}
 
 					const response = await fetchWithServerRetry(fetchFn, url, {
 						...options,
 						credentials: "include",
-						headers: {
-							...(options?.headers as Record<string, string>),
-							...(cookies ? { cookie: cookies } : {}),
-						},
+						headers,
 					});
 
 					if (redirectFn && (await checkUnauthorized(response))) {
@@ -126,7 +126,7 @@ export const api = createTRPCClient<StoreRouter>({
 				});
 
 				if (await checkUnauthorized(response)) {
-					if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+					if (!isServer && window.location.pathname !== "/login") {
 						// Batched tRPC requests can resolve 401s concurrently; each
 						// would otherwise kick off its own view transition and the
 						// second throws InvalidStateError. safeNavigate coalesces

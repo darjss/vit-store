@@ -88,13 +88,15 @@ export interface PaymentChoiceButton {
 	url?: string;
 }
 
+export interface PaymentChoice {
+	buttons: Array<PaymentChoiceButton>;
+	text: string;
+}
+
 // The two equal payment choices as a channel-neutral button template body. QPay
 // is a url button straight to the QPay-only page; transfer is a postback the
 // webhook turns into the in-chat bank details.
-export const buildPaymentChoice = (
-	storeBaseUrl: string,
-	ref: PaymentRef,
-): { buttons: Array<PaymentChoiceButton>; text: string } => ({
+export const buildPaymentChoice = (storeBaseUrl: string, ref: PaymentRef): PaymentChoice => ({
 	buttons: [
 		{
 			title: QPAY_BUTTON_TITLE,

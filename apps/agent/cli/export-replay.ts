@@ -57,7 +57,12 @@ import {
 	TRANSFER_CLAIM_ACK_MESSAGE,
 } from "@vit/assistant";
 import { bankTransfer } from "@vit/shared/constants";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+import { loadDotVars } from "./dot-vars";
+import { captureGraphSend, graphSendBodySchema, type GraphCapture } from "./graph-send";
+import { exportThreadSchema } from "./messenger-export";
+import { trpcResponseBody } from "./trpc-stub";
 import {
 	handleChooseTransfer,
 	handleTransferClaim,
@@ -94,24 +99,6 @@ const C = {
 
 // ─── .dev.vars (signature + ids, same as the dev console) ────────────────────
 
-function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) {
-		return {};
-	}
-	const out: Record<string, string> = {};
-	for (const line of readFileSync(file, "utf8").split("\n")) {
-		const trimmed = line.trim();
-		if (trimmed.length === 0 || trimmed.startsWith("#")) {
-			continue;
-		}
-		const eq = trimmed.indexOf("=");
-		if (eq === -1) {
-			continue;
-		}
-		out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-	}
-	return out;
-}
 const vars = { ...loadDotVars(join(AGENT_ROOT, ".dev.vars")), ...process.env };
 const APP_SECRET = vars.MESSENGER_APP_SECRET ?? "dev_local_secret";
 const PAGE_ID = vars.MESSENGER_PAGE_ID ?? "DEV_PAGE_ID";
@@ -152,21 +139,20 @@ function loadCustomerMessages(limitThreads: number): Array<ExportMsg> {
 		if (!existsSync(file)) {
 			continue;
 		}
-		let data: { messages?: Array<Record<string, unknown>> };
 		try {
-			data = JSON.parse(readFileSync(file, "utf8"));
+			const data = v.parse(exportThreadSchema, JSON.parse(readFileSync(file, "utf8")));
+			for (const m of data.messages ?? []) {
+				if (m.sender_name === STORE_PARTICIPANT) {
+					continue;
+				}
+				const raw = m.content ?? "";
+				out.push({
+					hasPhoto: (m.photos?.length ?? 0) > 0,
+					text: decodeFb(raw).trim(),
+				});
+			}
 		} catch {
 			continue;
-		}
-		for (const m of data.messages ?? []) {
-			if (m.sender_name === STORE_PARTICIPANT) {
-				continue;
-			} // skip the page side
-			const raw = typeof m.content === "string" ? m.content : "";
-			out.push({
-				hasPhoto: Array.isArray(m.photos),
-				text: decodeFb(raw).trim(),
-			});
 		}
 	}
 	return out;
@@ -365,28 +351,34 @@ const ADVICE_FIXTURE: Array<{
 ];
 
 // The simulated order/payment record the payment-slice stub serves.
+let paymentStatus: "pending" | "customer_claimed_paid" | "success" = "pending";
 const PAYMENT = {
 	checkoutToken: "ct_test_9f3ab21c",
 	customerPhone: "99112233",
 	orderNumber: "ORD-5521",
 	paymentNumber: "PMT-7K2QX",
-	status: "pending" as "pending" | "customer_claimed_paid" | "success",
+	get status() {
+		return paymentStatus;
+	},
+	set status(value: "pending" | "customer_claimed_paid" | "success") {
+		paymentStatus = value;
+	},
 	total: 145_800,
 };
 const paymentCalls = { confirmPayment: 0, confirmPaymentAndApplyStock: 0 };
 
-function decodeInput(
-	raw: string | null,
-): { ids?: Array<number>; limit?: number; query?: string } | undefined {
+const trpcInputSchema = v.object({
+	ids: v.optional(v.array(v.number())),
+	limit: v.optional(v.number()),
+	query: v.optional(v.string()),
+});
+
+function decodeInput(raw: string | null) {
 	if (!raw) {
 		return undefined;
 	}
 	try {
-		return SuperJSON.deserialize(JSON.parse(raw)) as {
-			ids?: Array<number>;
-			limit?: number;
-			query?: string;
-		};
+		return v.parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
 	} catch {
 		return undefined;
 	}
@@ -409,10 +401,6 @@ function searchFixture(query: string, limit: number) {
 }
 
 function startFixtureServer() {
-	const trpc = (data: unknown) =>
-		new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
-			headers: { "content-type": "application/json" },
-		});
 	return Bun.serve({
 		fetch(req) {
 			const url = new URL(req.url);
@@ -421,18 +409,22 @@ function startFixtureServer() {
 
 			if (path.includes("getProductsByIdsForAdvice")) {
 				const ids = input?.ids ?? [];
-				return trpc(ids.map((id) => ADVICE_FIXTURE.find((p) => p.id === id)).filter(Boolean));
+				return trpcResponseBody(
+					ids.map((id) => ADVICE_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+				);
 			}
 			if (path.includes("getProductsByIdsForAssistant")) {
 				const ids = input?.ids ?? [];
-				return trpc(ids.map((id) => SEARCH_FIXTURE.find((p) => p.id === id)).filter(Boolean));
+				return trpcResponseBody(
+					ids.map((id) => SEARCH_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+				);
 			}
 			if (path.includes("searchProductsForAssistant")) {
-				return trpc(searchFixture(input?.query ?? "", input?.limit ?? 8));
+				return trpcResponseBody(searchFixture(input?.query ?? "", input?.limit ?? 8));
 			}
 			// Payment-slice procedures (lib/payment.ts hits these from THIS process).
 			if (path.endsWith("/payment.getPaymentByNumber")) {
-				return trpc({
+				return trpcResponseBody({
 					createdAt: "2026-06-25T00:00:00.000Z",
 					order: {
 						address: "Баянзүрх дүүрэг",
@@ -453,16 +445,16 @@ function startFixtureServer() {
 				if (PAYMENT.status === "pending") {
 					PAYMENT.status = "customer_claimed_paid";
 				}
-				return trpc({ orderNumber: PAYMENT.orderNumber });
+				return trpcResponseBody({ orderNumber: PAYMENT.orderNumber });
 			}
 			// Confirmation procedures must NEVER be hit on a claim (ADR-0004).
 			if (path.endsWith("/payment.confirmPayment")) {
 				paymentCalls.confirmPayment += 1;
-				return trpc({ ok: true });
+				return trpcResponseBody({ ok: true });
 			}
 			if (path.endsWith("/payment.confirmPaymentAndApplyStock")) {
 				paymentCalls.confirmPaymentAndApplyStock += 1;
-				return trpc({ ok: true });
+				return trpcResponseBody({ ok: true });
 			}
 			return new Response("not found", { status: 404 });
 		},
@@ -473,12 +465,7 @@ function startFixtureServer() {
 
 // ─── Capture server (stands in for Graph Send API) ───────────────────────────
 
-interface Captured {
-	attachment?: string;
-	buttons: Array<string>;
-	quickReplies: Array<string>;
-	text?: string;
-}
+interface Captured extends GraphCapture {}
 // Append-only capture log tagged with the recipient PSID. The worker dispatches
 // model turns asynchronously (waitUntil), so a slow reply from an earlier turn
 // can land while a later turn is running; tagging by recipient lets each turn
@@ -491,56 +478,22 @@ function startCaptureServer() {
 			if (req.method !== "POST") {
 				return Response.json({ id: PAGE_ID });
 			}
-			let body: Record<string, unknown> = {};
+			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
 			try {
-				body = (await req.json()) as Record<string, unknown>;
-			} catch {}
-			if (!body.sender_action) {
-				const message = (body.message ?? {}) as Record<string, unknown>;
-				const recipient = (body.recipient ?? {}) as Record<string, unknown>;
-				const qr = Array.isArray(message.quick_replies)
-					? (message.quick_replies as Array<Record<string, unknown>>).map((q) =>
-							String(q.payload ?? ""),
-						)
-					: [];
-				const att = message.attachment as Record<string, unknown> | undefined;
-				const payload = att?.payload as Record<string, unknown> | undefined;
-				const btns: Array<string> = [];
-				const collect = (b: unknown) => {
-					if (!Array.isArray(b)) {
-						return;
-					}
-					for (const x of b as Array<Record<string, unknown>>) {
-						if (x.type === "postback" && typeof x.payload === "string") {
-							btns.push(`${x.title} → ${x.payload}`);
-						} else if (x.type === "web_url" && typeof x.url === "string") {
-							btns.push(`${x.title} → ${x.url}`);
-						}
-					}
-				};
-				if (payload) {
-					collect(payload.buttons);
-					if (Array.isArray(payload.elements)) {
-						for (const el of payload.elements as Array<Record<string, unknown>>) {
-							collect(el.buttons);
-						}
-					}
-				}
+				parsedBody = v.parse(graphSendBodySchema, await req.json());
+			} catch {
+				parsedBody = {};
+			}
+			const captured = captureGraphSend(parsedBody);
+			if (captured) {
 				captures.push({
-					cap: {
-						attachment: att
-							? `${String(att.type)} ${String(payload?.template_type ?? "")}`
-							: undefined,
-						buttons: btns,
-						quickReplies: qr,
-						text: message.text as string | undefined,
-					},
-					recipient: String(recipient.id ?? ""),
+					cap: captured,
+					recipient: String(parsedBody.recipient?.id ?? ""),
 				});
 			}
 			return Response.json({
 				message_id: `cap-${captures.length}`,
-				recipient_id: String((body.recipient as Record<string, unknown>)?.id ?? PAGE_ID),
+				recipient_id: String(parsedBody.recipient?.id ?? PAGE_ID),
 			});
 		},
 		hostname: "127.0.0.1",
@@ -554,7 +507,13 @@ let mid = 0;
 function sign(bodyText: string): string {
 	return createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
 }
-async function postWebhook(event: Record<string, unknown>): Promise<number> {
+async function postWebhook(event: {
+	message?: { mid: string; quick_reply?: { payload: string }; text?: string };
+	postback?: { mid: string; payload: string; title: string };
+	recipient: { id: string };
+	sender: { id: string };
+	timestamp: number;
+}): Promise<number> {
 	const bodyText = JSON.stringify({
 		entry: [{ id: PAGE_ID, messaging: [event], time: Date.now() }],
 		object: "page",
@@ -736,27 +695,29 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	};
 
 	// 1) Order-created → the two payment-choice buttons (QPay url + transfer postback).
-	const choice = buildPaymentChoice(process.env.STORE_PUBLIC_URL as string, ref);
+	const storePublic = process.env.STORE_PUBLIC_URL ?? FIXTURE_BASE;
+	const choice = buildPaymentChoice(storePublic, ref);
 	const qpayBtn = choice.buttons.find((b) => b.type === "web_url");
 	const transferBtn = choice.buttons.find((b) => b.type === "postback");
 	console.log(`  ${C.green("bot ›")} ${redact(choice.text)}`);
 	console.log(`    ${C.dim(`[button] ${qpayBtn?.title} → ${qpayBtn?.url}`)}`);
 	console.log(`    ${C.dim(`[button] ${transferBtn?.title} → postback ${transferBtn?.payload}`)}`);
 	console.log(
-		`    ${C.dim(`QPay url matches buildQpayPageUrl: ${qpayBtn?.url === buildQpayPageUrl(process.env.STORE_PUBLIC_URL as string, ref)}`)}`,
+		`    ${C.dim(`QPay url matches buildQpayPageUrl: ${qpayBtn?.url === buildQpayPageUrl(storePublic, ref)}`)}`,
 	);
 
 	// 2) Customer taps "Дансаар шилжүүлэх" → real decode → real choose-transfer handler.
 	console.log(`  ${C.magenta("⊳")} tap "${transferBtn?.title}" (${transferBtn?.payload})`);
-	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref)) as PaymentRef;
-	const cap: {
+	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref));
+	if (!chosen) {
+		throw new Error("choose-transfer payload did not parse");
+	}
+	type PaymentCapture = {
 		bank: Array<{ payload: string; text: string }>;
 		status?: string;
 		texts: Array<string>;
-	} = {
-		bank: [],
-		texts: [],
 	};
+	const cap: PaymentCapture = { bank: [], texts: [] };
 	const deps: PaymentHandlerDeps = {
 		claimTransfer: (r) => claimTransfer(r.paymentNumber, r.checkoutToken),
 		fetchPaymentSummary: async (r) => {
@@ -765,11 +726,11 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 		},
 		sendBankDetails: async (text, paymentRef) => {
 			cap.bank.push({ payload: claimTransferPayload(paymentRef), text });
-			return undefined;
+			return { messageId: null, ok: true };
 		},
 		sendText: async (text) => {
 			cap.texts.push(text);
-			return undefined;
+			return { messageId: null, ok: true };
 		},
 		setTransferStatus: async (status) => {
 			cap.status = status;
@@ -791,11 +752,12 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	// 3) Customer taps "Шилжүүлсэн" (claim) → real claim handler → ack, still pending.
 	console.log(`  ${C.magenta("⊳")} tap "Шилжүүлсэн" claim button (${bank?.payload})`);
 	const claimRef = parseClaimTransferPayload(claimTransferPayload(ref)) ?? ref;
-	const cap2: typeof cap = { bank: [], texts: [] };
+	const cap2: PaymentCapture = { bank: [], texts: [] };
 	await handleTransferClaim(claimRef, {
 		...deps,
 		sendText: async (t) => {
 			cap2.texts.push(t);
+			return { messageId: null, ok: true };
 		},
 		setTransferStatus: async (s) => {
 			cap2.status = s;

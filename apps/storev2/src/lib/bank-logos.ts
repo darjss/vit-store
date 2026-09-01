@@ -7,7 +7,7 @@
  * descriptions below are copied verbatim from QPay's response). Unmapped
  * entries fall back to the remote `logo` URL, then to the generic icon.
  */
-const BANK_LOGOS: Record<string, string> = {
+const BANK_LOGOS = {
 	// "qPay wallet" / "qPay хэтэвч"
 	qpay: "/banks/qpay.png",
 	"qpay wallet": "/banks/qpay.png",
@@ -87,7 +87,7 @@ const BANK_LOGOS: Record<string, string> = {
 	payon: "/banks/payon.png",
 	// "Tino" / "Tino"
 	tino: "/banks/tino.png",
-};
+} satisfies Record<string, string>;
 
 const normalize = (value?: string) => value?.trim().toLowerCase() ?? "";
 

@@ -10,6 +10,7 @@ import {
 	Users,
 } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { chartTooltipNumber } from "@/lib/chart-tooltip";
 
 interface WebAnalyticsData {
 	changes: {
@@ -192,13 +193,13 @@ export function WebAnalytics({
 													<p>
 														<span className="text-muted-foreground">Зочин: </span>
 														<span className="font-mono">
-															{(payload[0]?.value as number)?.toLocaleString()}
+															{chartTooltipNumber(payload[0]?.value).toLocaleString()}
 														</span>
 													</p>
 													<p>
 														<span className="text-muted-foreground">Захиалга: </span>
 														<span className="font-mono">
-															{(payload[1]?.value as number)?.toLocaleString()}
+															{chartTooltipNumber(payload[1]?.value).toLocaleString()}
 														</span>
 													</p>
 												</div>

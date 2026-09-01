@@ -64,7 +64,7 @@ export const sideNavItems = [
 	},
 ];
 
-export const breadcrumbLabels: Record<string, string> = {
+export const breadcrumbLabels = {
 	add: "Нэмэх",
 	analytics: "Аналитик",
 	brands: "Брэндүүд",
@@ -75,4 +75,12 @@ export const breadcrumbLabels: Record<string, string> = {
 	purchases: "Худалдан авалт",
 	"restock-waitlist": "Нөөц хүлээлт",
 	"review-products": "Харьцуулалт",
-};
+} satisfies Record<string, string>;
+
+export function labelForBreadcrumb(name: string): string | undefined {
+	if (!Object.hasOwn(breadcrumbLabels, name)) {
+		return undefined;
+	}
+	// SAFETY: `Object.hasOwn` confirms `name` is one of the known breadcrumb segment keys.
+	return breadcrumbLabels[name as keyof typeof breadcrumbLabels];
+}

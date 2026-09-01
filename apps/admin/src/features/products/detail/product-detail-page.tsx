@@ -436,7 +436,7 @@ export function ProductDetailPage({ productId }: { productId: number }) {
 												label="Дуусах хугацаа:"
 												onSave={async (next) => {
 													await updateProductField({
-														field: "expirationDate" as never,
+														field: "expirationDate",
 														id: productId,
 														stringValue: next || undefined,
 													});

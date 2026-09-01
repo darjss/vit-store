@@ -7,9 +7,8 @@
 //
 // Usage: bun scripts/exercise-catalog-boundary.ts
 
-import { SuperJSON } from "superjson";
-
-const trpcBody = (data: unknown) => JSON.stringify({ result: { data: SuperJSON.serialize(data) } });
+import * as v from "valibot";
+import { trpcResponse } from "../cli/trpc-stub";
 
 let mode: "valid" | "drifted" = "valid";
 
@@ -17,7 +16,7 @@ const server = Bun.serve({
 	fetch() {
 		if (mode === "valid") {
 			return new Response(
-				trpcBody([
+				trpcResponse([
 					{
 						brand: "NOW Foods",
 						id: 101,
@@ -31,10 +30,8 @@ const server = Bun.serve({
 				{ headers: { "content-type": "application/json" } },
 			);
 		}
-		// api-side shape drift: `id` renamed to `productId`. The old unchecked
-		// cast would have happily produced `id: undefined`.
 		return new Response(
-			trpcBody([
+			trpcResponse([
 				{
 					brand: "NOW Foods",
 					image: "https://cdn.vit.mn/p/101.jpg",
@@ -56,6 +53,10 @@ process.env.STORE_API_URL = `http://localhost:${server.port}`;
 const { searchAssistantProducts } = await import("../src/lib/catalog");
 const { buildOrderPayload, parseOrderPayload } = await import("@vit/assistant");
 
+const valibotIssueSchema = v.object({
+	issues: v.optional(v.array(v.object({ message: v.string() }))),
+});
+
 mode = "valid";
 const valid = await searchAssistantProducts("magnesium", 8);
 const payload = buildOrderPayload(valid[0]!.id);
@@ -70,11 +71,10 @@ try {
 	const drifted = await searchAssistantProducts("magnesium", 8);
 	console.log("DRIFTED (UNEXPECTED, no throw) →", drifted);
 } catch (error) {
+	const parsed = v.safeParse(valibotIssueSchema, error);
 	console.log("DRIFTED PAYLOAD → v.parse rejected at boundary:", {
-		firstIssue:
-			(error as { issues?: Array<{ message: string; path?: unknown }> }).issues?.[0]?.message ??
-			String(error),
-		kind: error instanceof Error ? error.name : typeof error,
+		firstIssue: parsed.success ? parsed.output.issues?.[0]?.message : String(error),
+		kind: error instanceof Error ? error.name : "unknown",
 		threw: true,
 	});
 }

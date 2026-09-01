@@ -58,11 +58,11 @@ export const parseOrderPayload = (payload: string): number | undefined => {
 	return Number.isSafeInteger(id) ? id : undefined;
 };
 
-const STOCK_LABELS: Record<AssistantStockStatus, string> = {
+const STOCK_LABELS = {
 	in_stock: "Бэлэн байгаа",
 	low_stock: "Цөөн үлдсэн",
 	out_of_stock: "Дууссан",
-};
+} satisfies Record<AssistantStockStatus, string>;
 
 const formatPrice = (price: number): string => `${Math.round(price).toLocaleString("en-US")}₮`;
 
@@ -118,9 +118,9 @@ export interface ProductSearchToolDeps {
 		signal?: AbortSignal,
 	) => Promise<Array<AssistantProduct>>;
 	// Sends the formatted cards out on the bound channel.
-	sendProductCards: (cards: Array<ProductCard>) => Promise<unknown>;
+	sendProductCards: (cards: Array<ProductCard>) => Promise<void>;
 	// Sends a plain text reply (used for the no-match path).
-	sendText: (text: string) => Promise<unknown>;
+	sendText: (text: string) => Promise<void>;
 }
 
 // Builds the conversation-bound product-search tool. The transport (catalog

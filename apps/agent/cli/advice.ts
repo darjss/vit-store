@@ -37,6 +37,10 @@ import { createHmac } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SuperJSON } from "superjson";
+import * as v from "valibot";
+import { loadDotVars } from "./dot-vars";
+import { graphSendBodySchema } from "./graph-send";
+import { trpcResponseBody } from "./trpc-stub";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const FIXTURE_PORT = 8799; // must match STORE_API_URL in scripts/with-worker.ts
@@ -58,24 +62,6 @@ const C = {
 
 // ─── .dev.vars (signature + ids) ─────────────────────────────────────────────
 
-function loadDotVars(file: string): Record<string, string> {
-	if (!existsSync(file)) {
-		return {};
-	}
-	const out: Record<string, string> = {};
-	for (const line of readFileSync(file, "utf8").split("\n")) {
-		const trimmed = line.trim();
-		if (trimmed.length === 0 || trimmed.startsWith("#")) {
-			continue;
-		}
-		const eq = trimmed.indexOf("=");
-		if (eq === -1) {
-			continue;
-		}
-		out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-	}
-	return out;
-}
 const vars = { ...loadDotVars(join(AGENT_ROOT, ".dev.vars")), ...process.env };
 const APP_SECRET = vars.MESSENGER_APP_SECRET ?? "dev_local_secret";
 const PAGE_ID = vars.MESSENGER_PAGE_ID ?? "DEV_PAGE_ID";
@@ -200,12 +186,18 @@ const ADVICE_FIXTURE: Array<{
 	},
 ];
 
-function decodeInput(raw: string | null): unknown {
+const trpcInputSchema = v.object({
+	ids: v.optional(v.array(v.number())),
+	limit: v.optional(v.number()),
+	query: v.optional(v.string()),
+});
+
+function decodeInput(raw: string | null) {
 	if (!raw) {
 		return undefined;
 	}
 	try {
-		return SuperJSON.deserialize(JSON.parse(raw));
+		return v.parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
 	} catch {
 		return undefined;
 	}
@@ -232,26 +224,23 @@ function startFixtureServer() {
 	return Bun.serve({
 		fetch(req) {
 			const url = new URL(req.url);
-			const input = decodeInput(url.searchParams.get("input")) as
-				| { ids?: Array<number>; limit?: number; query?: string }
-				| undefined;
-			let data: unknown = [];
+			const input = decodeInput(url.searchParams.get("input"));
 			if (url.pathname.includes("getProductsByIdsForAdvice")) {
 				const ids = input?.ids ?? [];
-				data = ids
-					.map((id) => ADVICE_FIXTURE.find((p) => p.id === id))
-					.filter((p): p is NonNullable<typeof p> => !!p);
-			} else if (url.pathname.includes("getProductsByIdsForAssistant")) {
-				const ids = input?.ids ?? [];
-				data = ids
-					.map((id) => SEARCH_FIXTURE.find((p) => p.id === id))
-					.filter((p): p is NonNullable<typeof p> => !!p);
-			} else if (url.pathname.includes("searchProductsForAssistant")) {
-				data = searchFixture(input?.query ?? "", input?.limit ?? 8);
-			} else {
-				return new Response("not found", { status: 404 });
+				return trpcResponseBody(
+					ids.map((id) => ADVICE_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+				);
 			}
-			return Response.json({ result: { data: SuperJSON.serialize(data) } });
+			if (url.pathname.includes("getProductsByIdsForAssistant")) {
+				const ids = input?.ids ?? [];
+				return trpcResponseBody(
+					ids.map((id) => SEARCH_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+				);
+			}
+			if (url.pathname.includes("searchProductsForAssistant")) {
+				return trpcResponseBody(searchFixture(input?.query ?? "", input?.limit ?? 8));
+			}
+			return new Response("not found", { status: 404 });
 		},
 		hostname: "127.0.0.1",
 		port: FIXTURE_PORT,
@@ -269,14 +258,16 @@ function startCaptureServer() {
 			if (req.method !== "POST") {
 				return Response.json({ id: PAGE_ID });
 			}
-			let body: Record<string, unknown> = {};
+			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
 			try {
-				body = (await req.json()) as Record<string, unknown>;
-			} catch {}
-			if (!body.sender_action) {
-				const message = body.message as Record<string, unknown> | undefined;
-				if (message && typeof message.text === "string") {
-					turnTexts.push(message.text);
+				parsedBody = v.parse(graphSendBodySchema, await req.json());
+			} catch {
+				parsedBody = {};
+			}
+			if (!parsedBody.sender_action) {
+				const text = parsedBody.message?.text;
+				if (text) {
+					turnTexts.push(text);
 					lastOutboundAt = Date.now();
 				}
 			}
