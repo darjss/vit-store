@@ -68,13 +68,13 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				const { orderId, stockTransitions } = await db().transaction(async (tx) => {
 					const stockTransitions: Array<StockTransition> = [];
 					const order = await orderQueries.admin.createOrderTx(tx, {
-						orderNumber,
-						customerPhone: Number(input.customerPhone),
-						status: input.status,
-						notes: input.notes ?? null,
-						total: orderTotal,
 						address: input.address,
+						customerPhone: Number(input.customerPhone),
 						deliveryProvider: input.deliveryProvider,
+						notes: input.notes ?? null,
+						orderNumber,
+						status: input.status,
+						total: orderTotal,
 					});
 					const orderId = order?.orderId;
 					await orderQueries.admin.createOrderDetailsTx(tx, orderId, orderDetails);
@@ -82,11 +82,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						for (const product of input.products) {
 							const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
 							await salesQueries.admin.addSaleTx(tx, {
-								productCost,
-								quantitySold: product.quantity,
 								orderId,
-								sellingPrice: product.price,
+								productCost,
 								productId: product.productId,
+								quantitySold: product.quantity,
+								sellingPrice: product.price,
 							});
 							const transition = await productQueries.admin.updateStockTx(
 								tx,
@@ -101,7 +101,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					}
 					await paymentQueries.admin.createPaymentTx(tx, {
 						amount: orderTotal,
-						orderId: orderId,
+						orderId,
 						paymentNumber,
 						provider: "transfer",
 						status: input.paymentStatus,
@@ -129,21 +129,21 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				});
 				return { message: "Order added successfully" };
 			} catch (error) {
-				if (error instanceof TRPCError) throw error;
+				if (error instanceof TRPCError) {throw error;}
 				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_add_failed",
 				});
 				throw new TRPCError({
+					cause: error,
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to add order",
-					cause: error,
 				});
 			}
 		}),
-		deleteOrder: proc.input(v.object({ id: v.number() })).mutation(async ({ input, ctx }) => {
+		deleteOrder: proc.input(v.object({ id: v.number() })).mutation(async ({ ctx, input }) => {
 			try {
 				const restockCandidates = await db().transaction(async (tx) => {
-					const stockTransitions: StockTransition[] = [];
+					const stockTransitions: Array<StockTransition> = [];
 					const orderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
 					const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(
 						tx,
@@ -158,7 +158,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 								detail.quantity,
 								"add",
 							);
-							if (transition) stockTransitions.push(transition);
+							if (transition) {stockTransitions.push(transition);}
 						}
 					}
 					await orderQueries.admin.softDeleteOrderTx(tx, input.id);
@@ -169,15 +169,15 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				scheduleRestockDispatches(ctx, restockCandidates);
 				ctx.log.warn("order.cancelled", { orderId: input.id });
 				return { message: "Order deleted successfully" };
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_delete_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete order",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
@@ -185,32 +185,32 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 			try {
 				const orders = await orderQueries.admin.getAllOrders();
 				return orders;
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.orders_fetch_failed",
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch orders",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
 		getDeliveryAddressZones: proc.query(async ({ ctx }) => {
 			try {
 				return await getDeliveryAddressZones();
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "order.fetch_zones_failed",
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch delivery zones",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
-		getOrderById: proc.input(v.object({ id: v.number() })).query(async ({ input, ctx }) => {
+		getOrderById: proc.input(v.object({ id: v.number() })).query(async ({ ctx, input }) => {
 			try {
 				const result = await orderQueries.admin.getOrderById(input.id);
 				if (!result) {
@@ -220,16 +220,16 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					});
 				}
 				return result;
-			} catch (e) {
-				if (e instanceof TRPCError) throw e;
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_fetch_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch order",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
@@ -238,28 +238,27 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 		}),
 		getOrderIdByOrderNumber: proc
 			.input(v.object({ orderNumber: v.pipe(v.string(), v.minLength(1)) }))
-			.query(async ({ input, ctx }) => {
+			.query(async ({ ctx, input }) => {
 				try {
 					const order = await orderQueries.store.getOrderByOrderNumber(input.orderNumber);
 					return order?.id ?? null;
-				} catch (e) {
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_number_lookup_failed",
 						orderNumber: input.orderNumber,
 					});
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to resolve order number",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
 		getPaginatedOrders: proc
 			.input(
 				v.object({
-					page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-					pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
-					paymentStatus: v.optional(v.picklist(paymentStatus)),
+					createdAfter: v.optional(v.date()),
+					date: v.optional(v.string()),
 					includeAllStatuses: v.optional(v.boolean()),
 					orderStatus: v.optional(
 						v.picklist(["created", "pending", "shipped", "delivered", "cancelled", "refunded"]),
@@ -269,36 +268,37 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 							v.picklist(["created", "pending", "shipped", "delivered", "cancelled", "refunded"]),
 						),
 					),
-					sortField: v.optional(v.string()),
-					sortDirection: v.optional(v.picklist(["asc", "desc"])),
+					page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
+					pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
+					paymentStatus: v.optional(v.picklist(paymentStatus)),
 					searchTerm: v.optional(v.string()),
-					date: v.optional(v.string()),
-					createdAfter: v.optional(v.date()),
+					sortDirection: v.optional(v.picklist(["asc", "desc"])),
+					sortField: v.optional(v.string()),
 				}),
 			)
-			.query(async ({ input, ctx }) => {
+			.query(async ({ ctx, input }) => {
 				try {
 					return await orderQueries.admin.getPaginatedOrders({
-						page: input.page ?? 1,
-						pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
-						paymentStatus: input.paymentStatus,
+						createdAfter: input.createdAfter,
+						date: input.date,
 						includeAllStatuses: input.includeAllStatuses,
 						orderStatus: input.orderStatus,
 						orderStatuses: input.orderStatuses,
-						sortField: input.sortField,
-						sortDirection: input.sortDirection,
+						page: input.page ?? 1,
+						pageSize: input.pageSize ?? PRODUCT_PER_PAGE,
+						paymentStatus: input.paymentStatus,
 						searchTerm: input.searchTerm,
-						date: input.date,
-						createdAfter: input.createdAfter,
+						sortDirection: input.sortDirection,
+						sortField: input.sortField,
 					});
-				} catch (e) {
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.orders_paginated_fetch_failed",
 					});
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to fetch paginated orders",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
@@ -307,58 +307,58 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 		}),
 		getRecentOrdersByProductId: proc
 			.input(v.object({ productId: v.number() }))
-			.query(async ({ input, ctx }) => {
+			.query(async ({ ctx, input }) => {
 				try {
 					const orders = await orderQueries.admin.getRecentOrdersByProductId(input.productId);
 					return orders;
-				} catch (e) {
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.recent_orders_fetch_failed",
 						productId: input.productId,
 					});
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to fetch recent orders",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
-		patchOrderHeader: proc.input(patchOrderHeaderSchema).mutation(async ({ input, ctx }) => {
+		patchOrderHeader: proc.input(patchOrderHeaderSchema).mutation(async ({ ctx, input }) => {
 			try {
-				const { id, customerPhone, ...rest } = input;
+				const { customerPhone, id, ...rest } = input;
 				const patch: {
-					customerPhone?: number;
 					address?: string;
 					addressZoneId?: number | null;
+					customerPhone?: number;
+					deliveryProvider?: typeof rest.deliveryProvider;
 					notes?: string | null;
 					status?: typeof rest.status;
-					deliveryProvider?: typeof rest.deliveryProvider;
 				} = { ...rest };
 				if (customerPhone !== undefined) {
 					patch.customerPhone = Number(customerPhone);
 				}
 				await orderQueries.admin.patchOrderHeader(id, patch);
 				ctx.log.info("order.header_patched", {
-					orderId: id,
 					fields: Object.keys(rest),
+					orderId: id,
 				});
 				return { message: "Order header patched successfully" };
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_header_patch_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to patch order header",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
-		restoreOrder: proc.input(v.object({ id: v.number() })).mutation(async ({ input, ctx }) => {
+		restoreOrder: proc.input(v.object({ id: v.number() })).mutation(async ({ ctx, input }) => {
 			try {
 				const restockCandidates = await db().transaction(async (tx) => {
-					const stockTransitions: StockTransition[] = [];
+					const stockTransitions: Array<StockTransition> = [];
 					const details = await orderQueries.admin.getOrderDetailsByOrderIdTx(tx, input.id);
 					const latestPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(
 						tx,
@@ -375,7 +375,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 								d.quantity,
 								"minus",
 							);
-							if (transition) stockTransitions.push(transition);
+							if (transition) {stockTransitions.push(transition);}
 						}
 					}
 					await orderQueries.admin.restoreOrderTx(tx, input.id);
@@ -385,70 +385,70 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				await purgeCatalogCache(ctx, changedProductIds);
 				ctx.log.info("admin.action", {
 					action: "restore_order",
-					targetType: "order",
 					targetId: input.id,
+					targetType: "order",
 				});
 				return { message: "Order restored successfully" };
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_restore_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to restore order",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
 		searchOrder: proc
 			.input(v.object({ searchTerm: v.string() }))
-			.mutation(async ({ input, ctx }) => {
+			.mutation(async ({ ctx, input }) => {
 				try {
 					const orders = await orderQueries.admin.searchOrder(input.searchTerm);
 					return orders;
-				} catch (e) {
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_search_failed",
 						searchTerm: input.searchTerm,
 					});
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to search order",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
 		searchOrderQuick: proc
 			.input(
 				v.object({
-					query: v.pipe(v.string(), v.minLength(1)),
 					limit: v.optional(v.number(), 5),
+					query: v.pipe(v.string(), v.minLength(1)),
 				}),
 			)
-			.query(async ({ input, ctx }) => {
+			.query(async ({ ctx, input }) => {
 				try {
 					return await orderQueries.admin.searchOrdersQuick(input.query, input.limit);
-				} catch (e) {
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_search_quick_failed",
 						query: input.query,
 					});
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to search order quick",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
 		shipOrder: proc
 			.input(
 				v.object({
-					orderId: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
 					addressZoneId: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
+					orderId: v.pipe(v.number(), v.integer(), v.minValue(1), v.finite()),
 				}),
 			)
-			.mutation(async ({ input, ctx }) => {
+			.mutation(async ({ ctx, input }) => {
 				const order = await orderQueries.admin.getOrderById(input.orderId);
 				if (!order) {
 					throw new TRPCError({
@@ -472,34 +472,34 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						order.notes,
 					);
 					await orderQueries.admin.updateOrderStatus(order.id, "shipped", {
-						deliveryProvider: "tu-delivery",
 						addressZoneId: input.addressZoneId,
+						deliveryProvider: "tu-delivery",
 					});
 					ctx.log.info("order.status_changed", {
-						orderId: order.id,
 						order_status: "shipped",
+						orderId: order.id,
 					});
 					return {
+						deliveryOrderId: deliveryResult.orderId,
+						documentNo: deliveryResult.documentNo,
 						orderId: order.id,
 						orderNumber: order.orderNumber,
-						documentNo: deliveryResult.documentNo,
-						deliveryOrderId: deliveryResult.orderId,
 					};
-				} catch (e) {
-					if (e instanceof TRPCError) throw e;
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.ship_order_failed",
 						orderId: input.orderId,
 					});
-					const message = e instanceof Error ? e.message : "Захиалга илгээхэд алдаа гарлаа";
+					const message = error instanceof Error ? error.message : "Захиалга илгээхэд алдаа гарлаа";
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message,
-						cause: e,
+						cause: error,
 					});
 				}
 			}),
-		updateOrder: proc.input(updateOrderSchema).mutation(async ({ input, ctx }) => {
+		updateOrder: proc.input(updateOrderSchema).mutation(async ({ ctx, input }) => {
 			try {
 				const orderTotal = input.products.reduce(
 					(acc, currentProduct) => acc + currentProduct.price * currentProduct.quantity,
@@ -511,8 +511,8 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					);
 					if (!existingCustomer) {
 						await customerQueries.admin.createCustomer({
-							phone: Number(input.customerPhone),
 							address: input.address,
+							phone: Number(input.customerPhone),
 						});
 					} else {
 						await customerQueries.admin.updateCustomer(Number(input.customerPhone), {
@@ -532,26 +532,26 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				// confirmPaymentAndApplyStock (deducts on transition to success).
 				// Pending orders never touch stock.
 				const restockCandidates = await db().transaction(async (tx) => {
-					const stockTransitions: StockTransition[] = [];
+					const stockTransitions: Array<StockTransition> = [];
 					const applyRequiredStockTransition = async (productId: number, delta: number) => {
 						const transition = await applyStockTransition(tx, {
-							productId,
 							delta,
+							productId,
 							requireActive: true,
 							requireNonNegative: true,
 						});
 						if (!transition)
-							throw new Error(`Unable to apply stock transition for product ${productId}`);
+							{throw new Error(`Unable to apply stock transition for product ${productId}`);}
 						stockTransitions.push(transition);
 					};
 					await orderQueries.admin.updateOrderTx(tx, input.id, {
-						customerPhone: Number(input.customerPhone),
-						status: input.status,
-						notes: input.notes,
-						total: orderTotal,
 						address: input.address,
 						addressZoneId: input.addressZoneId ?? null,
+						customerPhone: Number(input.customerPhone),
 						deliveryProvider: input.deliveryProvider,
+						notes: input.notes,
+						status: input.status,
+						total: orderTotal,
 					});
 					const currentOrderDetails = await orderQueries.admin.getOrderDetailsByOrderIdTx(
 						tx,
@@ -562,9 +562,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						tx,
 						input.id,
 						input.products.map((product) => ({
+							price: product.price,
 							productId: product.productId,
 							quantity: product.quantity,
-							price: product.price,
 						})),
 					);
 					const prevPayment = await paymentQueries.admin.getLatestPaymentByOrderIdTx(tx, input.id);
@@ -581,7 +581,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						if (transitionedToSuccess) {
 							const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
 							await tx.insert(SalesTable).values({
-								productCost: productCost,
+								productCost,
 								quantitySold: product.quantity,
 								orderId: input.id,
 								sellingPrice: product.price,
@@ -622,7 +622,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						for (const product of input.products) {
 							const productCost = await getAverageCostOfProduct(tx, product.productId, new Date());
 							await tx.insert(SalesTable).values({
-								productCost: productCost,
+								productCost,
 								quantitySold: product.quantity,
 								orderId: input.id,
 								sellingPrice: product.price,
@@ -632,10 +632,10 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					}
 					await paymentQueries.admin.updatePaymentStatusTx(tx, input.id, input.paymentStatus);
 					ctx.log.info("order.updated", {
-						orderId: input.id,
-						total: orderTotal,
 						order_status: input.status,
+						orderId: input.id,
 						payment_transitioned: transitionedToSuccess,
+						total: orderTotal,
 					});
 					return stockTransitions;
 				});
@@ -643,15 +643,15 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				await purgeCatalogCache(ctx, changedProductIds);
 				scheduleRestockDispatches(ctx, restockCandidates);
 				return { message: "Order updated successfully" };
-			} catch (e) {
-				ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+			} catch (error) {
+				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_update_failed",
 					orderId: input.id,
 				});
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update order",
-					cause: e,
+					cause: error,
 				});
 			}
 		}),
@@ -662,7 +662,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					status: v.picklist(["pending", "shipped", "delivered", "cancelled", "refunded"]),
 				}),
 			)
-			.mutation(async ({ input, ctx }) => {
+			.mutation(async ({ ctx, input }) => {
 				try {
 					const updated = await orderQueries.admin.updateOrderStatus(
 						input.id,
@@ -676,15 +676,15 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						});
 					}
 					ctx.log.info("order.status_changed", {
-						orderId: input.id,
 						order_status: input.status,
+						orderId: input.id,
 					});
 					return {
 						message: `Order status updated successfully to ${input.status}`,
 					};
-				} catch (e) {
-					if (e instanceof TRPCError) throw e;
-					ctx.log.error(e instanceof Error ? e : new Error(String(e)), {
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_status_update_failed",
 						orderId: input.id,
 						order_status: input.status,
@@ -692,7 +692,7 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 					throw new TRPCError({
 						code: "INTERNAL_SERVER_ERROR",
 						message: "Failed to update order status",
-						cause: e,
+						cause: error,
 					});
 				}
 			}),

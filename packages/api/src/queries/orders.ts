@@ -79,13 +79,13 @@ function resolveDateRange(date?: string): { end: Date; start: Date } | null {
 export const orderQueries = {
 	admin: {
 		async createOrder(data: {
-			orderNumber: string;
-			customerPhone: number;
-			status: OrderStatus;
-			notes: string | null;
-			total: number;
 			address: string;
+			customerPhone: number;
 			deliveryProvider: DeliveryProvider;
+			notes: string | null;
+			orderNumber: string;
+			status: OrderStatus;
+			total: number;
 		}) {
 			const result = await db()
 				.insert(OrdersTable)
@@ -96,13 +96,13 @@ export const orderQueries = {
 
 		async createOrderDetails(
 			orderId: number,
-			products: Array<{ productId: number; quantity: number; price: number }>,
+			products: Array<{ price: number; productId: number; quantity: number; }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
+				price: p.price,
 				productId: p.productId,
 				quantity: p.quantity,
-				price: p.price,
 			}));
 			await db().insert(OrderDetailsTable).values(values);
 		},
@@ -110,13 +110,13 @@ export const orderQueries = {
 		async createOrderDetailsTx(
 			tx: TransactionType,
 			orderId: number,
-			products: Array<{ productId: number; quantity: number; price: number }>,
+			products: Array<{ price: number; productId: number; quantity: number; }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
+				price: p.price,
 				productId: p.productId,
 				quantity: p.quantity,
-				price: p.price,
 			}));
 			await tx.insert(OrderDetailsTable).values(values);
 		},
@@ -124,13 +124,13 @@ export const orderQueries = {
 		async createOrderTx(
 			tx: TransactionType,
 			data: {
-				orderNumber: string;
-				customerPhone: number;
-				status: OrderStatus;
-				notes: string | null;
-				total: number;
 				address: string;
+				customerPhone: number;
 				deliveryProvider: DeliveryProvider;
+				notes: string | null;
+				orderNumber: string;
+				status: OrderStatus;
+				total: number;
 			},
 		) {
 			const result = await tx
@@ -155,8 +155,8 @@ export const orderQueries = {
 						with: {
 							product: {
 								columns: {
-									name: true,
 									id: true,
+									name: true,
 								},
 								with: {
 									images: {
@@ -175,28 +175,28 @@ export const orderQueries = {
 				},
 			});
 			return result.map((order) => ({
-				id: order.id,
-				orderNumber: order.orderNumber,
-				customerPhone: order.customerPhone,
-				status: order.status,
-				total: order.total,
-				notes: order.notes,
 				createdAt: order.createdAt,
-				updatedAt: order.updatedAt,
+				customerPhone: order.customerPhone,
+				id: order.id,
+				notes: order.notes,
+				orderNumber: order.orderNumber,
 				products: order.orderDetails.map((orderDetail) => ({
 					quantity: orderDetail.quantity,
 					name: orderDetail.product.name,
 					id: orderDetail.product.id,
 					imageUrl: orderDetail.product.images[0]?.url,
 				})),
+				status: order.status,
+				total: order.total,
+				updatedAt: order.updatedAt,
 			}));
 		},
 
 		async getAverageOrderValue(timerange: "daily" | "weekly" | "monthly") {
 			const order = await db().query.OrdersTable.findMany({
 				columns: {
-					total: true,
 					createdAt: true,
+					total: true,
 				},
 				where: and(
 					gte(OrdersTable.createdAt, getDaysFromTimeRange(timerange)),
@@ -217,14 +217,14 @@ export const orderQueries = {
 				with: {
 					orderDetails: {
 						columns: {
-							quantity: true,
 							price: true,
+							quantity: true,
 						},
 						with: {
 							product: {
 								columns: {
-									name: true,
 									id: true,
+									name: true,
 									price: true,
 								},
 								with: {
@@ -243,10 +243,10 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
+							createdAt: true,
+							paymentNumber: true,
 							provider: true,
 							status: true,
-							paymentNumber: true,
-							createdAt: true,
 						},
 						where: isNull(PaymentsTable.deletedAt),
 					},
@@ -335,18 +335,18 @@ export const orderQueries = {
 				// Emit today-first (i=0) through 6-days-ago (i=6), matching the
 				// previous ordering.
 				const result: Array<{
+					date: string;
 					orderCount: number;
 					salesCount: number;
-					date: string;
 				}> = [];
 				for (let i = 0; i < 7; i++) {
 					const { startDate } = getStartAndEndofDayAgo(i);
 					const ubDay = new Date(startDate.getTime() + UB_OFFSET_MS);
 					const label = `${ubDay.getUTCMonth() + 1}/${ubDay.getUTCDate()}`;
 					result.push({
+						date: label,
 						orderCount: ordersByDay.get(label) ?? 0,
 						salesCount: salesByDay.get(label) ?? 0,
-						date: label,
 					});
 				}
 				return result;
@@ -360,20 +360,20 @@ export const orderQueries = {
 		},
 
 		async getPaginatedOrders(params: {
-			page: number;
-			pageSize: number;
-			paymentStatus?: PaymentStatusType;
+			createdAfter?: Date;
+			date?: string;
 			includeAllStatuses?: boolean;
 			orderStatus?: OrderStatus;
 			orderStatuses?: OrderStatus[];
-			sortField?: string;
-			sortDirection?: "asc" | "desc";
+			page: number;
+			pageSize: number;
+			paymentStatus?: PaymentStatusType;
 			searchTerm?: string;
-			date?: string;
-			createdAfter?: Date;
+			sortDirection?: "asc" | "desc";
+			sortField?: string;
 		}) {
 			const database = db();
-			const conditions: (SQL<unknown> | undefined)[] = [];
+			const conditions: Array<SQL<unknown> | undefined> = [];
 			conditions.push(isNull(OrdersTable.deletedAt));
 
 			if (params.orderStatuses && params.orderStatuses.length > 0) {
@@ -417,15 +417,14 @@ export const orderQueries = {
 				conditions.push(gte(OrdersTable.createdAt, params.createdAfter));
 			}
 
-			const orderByClauses: SQL<unknown>[] = [];
+			const orderByClauses: Array<SQL<unknown>> = [];
 			const primarySortColumn =
 				params.sortField === "total" ? OrdersTable.total : OrdersTable.createdAt;
 
 			const primaryOrderBy =
 				params.sortDirection === "asc" ? asc(primarySortColumn) : desc(primarySortColumn);
 
-			orderByClauses.push(primaryOrderBy);
-			orderByClauses.push(asc(OrdersTable.id));
+			orderByClauses.push(primaryOrderBy, asc(OrdersTable.id));
 
 			const finalConditions = conditions.filter((c): c is SQL<unknown> => c !== undefined);
 
@@ -433,15 +432,15 @@ export const orderQueries = {
 
 			const orderResults = await database.query.OrdersTable.findMany({
 				limit: params.pageSize,
-				offset: offset,
+				offset,
 				orderBy: orderByClauses,
 				where: finalConditions.length > 0 ? and(...finalConditions) : undefined,
 				with: {
 					orderDetails: {
-						columns: { quantity: true, price: true },
+						columns: { price: true, quantity: true },
 						with: {
 							product: {
-								columns: { name: true, id: true, price: true },
+								columns: { id: true, name: true, price: true },
 								with: {
 									images: {
 										columns: { url: true },
@@ -456,10 +455,10 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
+							createdAt: true,
+							paymentNumber: true,
 							provider: true,
 							status: true,
-							paymentNumber: true,
-							createdAt: true,
 						},
 						where:
 							params.paymentStatus === undefined
@@ -496,10 +495,10 @@ export const orderQueries = {
 				orders: shapeOrderResults(orderResults),
 				pagination: {
 					currentPage: params.page,
-					totalPages,
-					totalCount,
 					hasNextPage: params.page < totalPages,
 					hasPreviousPage: params.page > 1,
+					totalCount,
+					totalPages,
 				},
 			};
 		},
@@ -507,19 +506,19 @@ export const orderQueries = {
 		async getPendingOrders() {
 			try {
 				const result = await db().query.OrdersTable.findMany({
-					where: and(eq(OrdersTable.status, "pending"), isNull(OrdersTable.deletedAt)),
 					orderBy: desc(OrdersTable.createdAt),
+					where: and(eq(OrdersTable.status, "pending"), isNull(OrdersTable.deletedAt)),
 					with: {
 						orderDetails: {
 							columns: {
-								quantity: true,
 								price: true,
+								quantity: true,
 							},
 							with: {
 								product: {
 									columns: {
-										name: true,
 										id: true,
+										name: true,
 										price: true,
 									},
 									with: {
@@ -538,10 +537,10 @@ export const orderQueries = {
 						},
 						payments: {
 							columns: {
+								createdAt: true,
+								paymentNumber: true,
 								provider: true,
 								status: true,
-								paymentNumber: true,
-								createdAt: true,
 							},
 							where: isNull(PaymentsTable.deletedAt),
 						},
@@ -555,6 +554,8 @@ export const orderQueries = {
 
 		async getRecentOrdersByProductId(productId: number) {
 			const orderDetails = await db().query.OrderDetailsTable.findMany({
+				limit: 5,
+				orderBy: [asc(OrdersTable.createdAt)],
 				where: eq(OrderDetailsTable.productId, productId),
 				with: {
 					order: {
@@ -568,8 +569,6 @@ export const orderQueries = {
 						},
 					},
 				},
-				limit: 5,
-				orderBy: [asc(OrdersTable.createdAt)],
 			});
 
 			return orderDetails.map((detail) => detail.order);
@@ -578,12 +577,12 @@ export const orderQueries = {
 		async patchOrderHeader(
 			id: number,
 			data: {
-				customerPhone?: number;
-				status?: OrderStatusType;
-				notes?: string | null;
 				address?: string;
 				addressZoneId?: number | null;
+				customerPhone?: number;
 				deliveryProvider?: DeliveryProvider;
+				notes?: string | null;
+				status?: OrderStatusType;
 			},
 		) {
 			await db()
@@ -618,14 +617,14 @@ export const orderQueries = {
 				with: {
 					orderDetails: {
 						columns: {
-							quantity: true,
 							price: true,
+							quantity: true,
 						},
 						with: {
 							product: {
 								columns: {
-									name: true,
 									id: true,
+									name: true,
 									price: true,
 								},
 								with: {
@@ -644,10 +643,10 @@ export const orderQueries = {
 					},
 					payments: {
 						columns: {
+							createdAt: true,
+							paymentNumber: true,
 							provider: true,
 							status: true,
-							paymentNumber: true,
-							createdAt: true,
 						},
 						where: isNull(PaymentsTable.deletedAt),
 					},
@@ -658,16 +657,9 @@ export const orderQueries = {
 
 		async searchOrdersQuick(searchTerm: string, limit = 5) {
 			const term = searchTerm.trim();
-			if (!term) return [];
+			if (!term) {return [];}
 
 			return db().query.OrdersTable.findMany({
-				where: and(
-					isNull(OrdersTable.deletedAt),
-					or(
-						ilike(OrdersTable.orderNumber, `%${term}%`),
-						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
-					),
-				),
 				columns: {
 					id: true,
 					orderNumber: true,
@@ -676,8 +668,15 @@ export const orderQueries = {
 					total: true,
 					createdAt: true,
 				},
-				orderBy: desc(OrdersTable.createdAt),
 				limit,
+				orderBy: desc(OrdersTable.createdAt),
+				where: and(
+					isNull(OrdersTable.deletedAt),
+					or(
+						ilike(OrdersTable.orderNumber, `%${term}%`),
+						like(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${term}%`),
+					),
+				),
 			});
 		},
 
@@ -699,15 +698,15 @@ export const orderQueries = {
 			id: number,
 			status: OrderStatus,
 			options?: {
-				deliveryProvider?: DeliveryProvider;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
 				fromStatus?: OrderStatus;
 			},
 		) {
 			const patch: {
-				status: OrderStatus;
-				deliveryProvider?: DeliveryProvider;
 				addressZoneId?: number | null;
+				deliveryProvider?: DeliveryProvider;
+				status: OrderStatus;
 			} = { status };
 			if (options?.deliveryProvider !== undefined) {
 				patch.deliveryProvider = options.deliveryProvider;
@@ -731,13 +730,13 @@ export const orderQueries = {
 			tx: TransactionType,
 			id: number,
 			data: {
-				customerPhone?: number;
-				status?: OrderStatusType;
-				notes?: string | null;
-				total?: number;
 				address?: string;
 				addressZoneId?: number | null;
+				customerPhone?: number;
 				deliveryProvider?: DeliveryProvider;
+				notes?: string | null;
+				status?: OrderStatusType;
+				total?: number;
 			},
 		) {
 			await tx.update(OrdersTable).set(data).where(eq(OrdersTable.id, id));
@@ -746,14 +745,14 @@ export const orderQueries = {
 
 	store: {
 		async createOrder(data: {
-			orderNumber: string;
-			customerPhone: number;
 			address: string;
 			addressZoneId: number;
-			notes: string | null;
-			total: number;
-			status: OrderStatus;
+			customerPhone: number;
 			deliveryProvider: DeliveryProvider;
+			notes: string | null;
+			orderNumber: string;
+			status: OrderStatus;
+			total: number;
 		}) {
 			const result = await db()
 				.insert(OrdersTable)
@@ -778,14 +777,6 @@ export const orderQueries = {
 			const order = await db().query.OrdersTable.findFirst({
 				where: eq(OrdersTable.orderNumber, orderNumber),
 				with: {
-					payments: {
-						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
-							createdAt: true,
-						},
-					},
 					orderDetails: {
 						with: {
 							product: {
@@ -809,6 +800,14 @@ export const orderQueries = {
 							},
 						},
 					},
+					payments: {
+						columns: {
+							paymentNumber: true,
+							status: true,
+							provider: true,
+							createdAt: true,
+						},
+					},
 				},
 			});
 			return order;
@@ -816,7 +815,6 @@ export const orderQueries = {
 
 		async getOrdersByCustomerPhone(phone: number) {
 			const orders = await db().query.OrdersTable.findMany({
-				where: and(eq(OrdersTable.customerPhone, phone), isNull(OrdersTable.deletedAt)),
 				columns: {
 					address: true,
 					orderNumber: true,
@@ -825,23 +823,8 @@ export const orderQueries = {
 					notes: true,
 					createdAt: true,
 				},
+				where: and(eq(OrdersTable.customerPhone, phone), isNull(OrdersTable.deletedAt)),
 				with: {
-					sales: {
-						columns: {
-							sellingPrice: true,
-							productId: true,
-						},
-					},
-					payments: {
-						columns: {
-							paymentNumber: true,
-							status: true,
-							provider: true,
-							createdAt: true,
-						},
-						where: isNull(PaymentsTable.deletedAt),
-						orderBy: [desc(PaymentsTable.createdAt)],
-					},
 					orderDetails: {
 						columns: {
 							productId: true,
@@ -868,19 +851,35 @@ export const orderQueries = {
 							},
 						},
 					},
+					payments: {
+						columns: {
+							paymentNumber: true,
+							status: true,
+							provider: true,
+							createdAt: true,
+						},
+						where: isNull(PaymentsTable.deletedAt),
+						orderBy: [desc(PaymentsTable.createdAt)],
+					},
+					sales: {
+						columns: {
+							sellingPrice: true,
+							productId: true,
+						},
+					},
 				},
 			});
 			return orders;
 		},
 
-		async getProductsByIds(productIds: number[]) {
+		async getProductsByIds(productIds: Array<number>) {
 			const products = await db().query.ProductsTable.findMany({
-				where: inArray(ProductsTable.id, productIds),
 				columns: {
 					id: true,
 					name: true,
 					price: true,
 				},
+				where: inArray(ProductsTable.id, productIds),
 			});
 			return products;
 		},
