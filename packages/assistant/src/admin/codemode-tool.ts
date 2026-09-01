@@ -1,18 +1,26 @@
 import { DynamicWorkerExecutor } from "@cloudflare/codemode";
 import { defineTool } from "@flue/runtime";
 import * as v from "valibot";
+import { type CodemodeJson, toCodemodeJson } from "./codemode-boundary";
 import { buildReadFns } from "./read-fns";
-
-// Flue tools return JsonValue | undefined; the codemode sandbox returns
-// `unknown`. This cast bridges the two without pulling Flue's internal JsonValue
-// type (not re-exported). The value is already JSON-cleaned via
-// JSON.parse(JSON.stringify(...)) before the cast.
-type Json = null | boolean | number | string | Array<Json> | { [key: string]: Json };
 
 // Max chars of tool result to keep in conversation history. Larger results are
 // truncated so the model's context doesn't bloat (e.g. getAllOrders can return
 // 130k+ chars). The model should write targeted queries, not fetch everything.
 const MAX_RESULT_CHARS = 8000;
+
+const truncateResult = (cleanedResult: CodemodeJson): CodemodeJson => {
+	const serialized = JSON.stringify(cleanedResult);
+	if (serialized.length <= MAX_RESULT_CHARS) {
+		return cleanedResult;
+	}
+	return {
+		hint: "Result was too large and was truncated. Write a more targeted query: filter by date/id, select only needed fields, or use a paginated/count endpoint.",
+		preview: serialized.slice(0, MAX_RESULT_CHARS),
+		totalChars: serialized.length,
+		truncated: true,
+	};
+};
 
 // A Flue tool that lets the admin agent write TypeScript which calls the
 // read-fns registry through Codemode's isolated Dynamic Worker sandbox. The
@@ -55,29 +63,16 @@ export function buildAdminQueryTool({
 			const fns = buildReadFns({ botToken, storeApiUrl });
 			console.log(`[bot.code] ${input.code.slice(0, 500)}`);
 			const result = await executor.execute(input.code, fns);
-			// Clean the codemode result to a JSON-safe value (the sandbox returns
-			// `unknown`; Flue tools must return JsonValue | undefined).
-			const clean = (value: unknown): Json =>
-				value === undefined ? null : (JSON.parse(JSON.stringify(value)) as Json);
-			const cleanedResult = clean(result.result);
-			// Truncate large results to prevent context bloat. The model should
-			// write targeted queries (e.g. filter by date, limit fields) instead
-			// of fetching entire tables.
-			const serialized = JSON.stringify(cleanedResult);
-			const truncated: Json =
-				serialized.length > MAX_RESULT_CHARS
-					? {
-							hint: "Result was too large and was truncated. Write a more targeted query: filter by date/id, select only needed fields, or use a paginated/count endpoint.",
-							preview: serialized.slice(0, MAX_RESULT_CHARS),
-							totalChars: serialized.length,
-							truncated: true,
-						}
-					: cleanedResult;
-			return {
+			const cleanedResult = toCodemodeJson(result.result ?? null);
+			const truncated = truncateResult(cleanedResult);
+			const response: CodemodeJson = {
 				logs: result.logs ?? [],
 				result: truncated,
-				...(result.error ? { error: result.error } : {}),
-			} as Json;
+			};
+			if (result.error) {
+				response.error = result.error;
+			}
+			return response;
 		},
 	});
 }

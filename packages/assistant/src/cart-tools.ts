@@ -23,7 +23,7 @@ export interface CartToolDeps {
 	// Sends the rendered summary out on the bound channel (mirrors how the
 	// product-search tool sends cards itself), so the model does not have to
 	// re-type the cart contents into a separate reply.
-	sendCartSummary: (cart: Cart) => Promise<unknown>;
+	sendCartSummary: (cart: Cart) => Promise<void>;
 }
 
 const cartFacts = (cart: Cart) => ({

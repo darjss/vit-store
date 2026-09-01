@@ -57,9 +57,9 @@ export interface CheckoutToolDeps {
 	// number, offer the QPay/transfer payment choices on the channel. Injected so
 	// the channel-neutral tools never build a Messenger button template. Omitted
 	// in unit/sim contexts that only exercise order creation.
-	sendPaymentChoices?: (order: CreatedOrder) => Promise<unknown>;
+	sendPaymentChoices?: (order: CreatedOrder) => Promise<void>;
 	// Sends a plain text reply on the bound channel.
-	sendText: (text: string) => Promise<unknown>;
+	sendText: (text: string) => Promise<void>;
 }
 
 const facts = (state: CheckoutState) => ({
@@ -185,7 +185,11 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				await deps.sendText(result.error);
 				return { error: result.error, ok: false, ...facts(state) };
 			}
-			const candidates = await deps.resolveZoneCandidates(result.state.address as string);
+			const address = result.state.address;
+			if (!address) {
+				return advance(result.state, formatZoneCandidates([]));
+			}
+			const candidates = await deps.resolveZoneCandidates(address);
 			const withCandidates = setZoneCandidates(result.state, candidates);
 			// Short admin-style flow: auto-select the top-ranked zone rather than
 			// making the customer pick one, then jump straight to the summary for a

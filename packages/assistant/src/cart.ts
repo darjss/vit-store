@@ -83,10 +83,16 @@ export const addToCart = (
 		price: product.price,
 		productId: product.id,
 		quantity: add,
-		...(product.image ? { image: product.image } : {}),
-		...(product.brand ? { brand: product.brand } : {}),
-		...(product.stockStatus ? { stockStatus: product.stockStatus } : {}),
 	};
+	if (product.image) {
+		line.image = product.image;
+	}
+	if (product.brand) {
+		line.brand = product.brand;
+	}
+	if (product.stockStatus) {
+		line.stockStatus = product.stockStatus;
+	}
 	return reopen([...cart.items, line]);
 };
 
