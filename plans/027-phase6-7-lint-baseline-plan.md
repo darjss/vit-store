@@ -51,27 +51,27 @@ The override disables React rules for `apps/storev2/**` only. Admin keeps full R
 
 ### Error budget by area (anti-slop only, approximate)
 
-| Area | anti-slop errors | Notes |
-|------|----------------:|-------|
-| `packages/api` | 176 | integrations, parsers, tRPC boundaries |
-| `apps/agent` | 210 | flue tools, ship-paid-orders |
-| `packages/assistant` | 202 | admin bot instructions glue |
-| `apps/storev2` | 124 | Solid TSX + worker.mjs |
-| `apps/admin` | 74 | some overlap with nkzw react later |
-| `packages/shared` | 36 | smallest — ship first |
-| `apps/server` | 20 | routes, auth, DO |
+| Area                 | anti-slop errors | Notes                                  |
+| -------------------- | ---------------: | -------------------------------------- |
+| `packages/api`       |              176 | integrations, parsers, tRPC boundaries |
+| `apps/agent`         |              210 | flue tools, ship-paid-orders           |
+| `packages/assistant` |              202 | admin bot instructions glue            |
+| `apps/storev2`       |              124 | Solid TSX + worker.mjs                 |
+| `apps/admin`         |               74 | some overlap with nkzw react later     |
+| `packages/shared`    |               36 | smallest — ship first                  |
+| `apps/server`        |               20 | routes, auth, DO                       |
 
 ### Top rules to fix (repo-wide)
 
-| Rule | ~count | Fix pattern |
-|------|-------:|-------------|
-| `require-safety-comment-for-type-assertion` | 321 | Parse first; if `as` remains, add `// SAFETY: <invariant>` on prior line |
-| `no-unknown-parameters` | 141 | Rename `input`/`data`/`body` params to domain types; parse at caller |
-| `no-runtime-typeof` | 131 | Replace `typeof x === "string"` with schema/validator at boundary |
-| `no-unsafe-dictionary-type` | 74 | Replace `Record<string, unknown>` with named metadata types |
-| `no-known-value-widening` | 63 | Use `satisfies` or named return types |
-| `no-shape-in-symbol-names` | 53 | Rename `*shape*` symbols to domain names (careful with tRPC "shape") |
-| `no-conditional-empty-object-spread` | 33 | Build object in steps (fix alchemy.run.ts properly, drop override) |
+| Rule                                        | ~count | Fix pattern                                                              |
+| ------------------------------------------- | -----: | ------------------------------------------------------------------------ |
+| `require-safety-comment-for-type-assertion` |    321 | Parse first; if `as` remains, add `// SAFETY: <invariant>` on prior line |
+| `no-unknown-parameters`                     |    141 | Rename `input`/`data`/`body` params to domain types; parse at caller     |
+| `no-runtime-typeof`                         |    131 | Replace `typeof x === "string"` with schema/validator at boundary        |
+| `no-unsafe-dictionary-type`                 |     74 | Replace `Record<string, unknown>` with named metadata types              |
+| `no-known-value-widening`                   |     63 | Use `satisfies` or named return types                                    |
+| `no-shape-in-symbol-names`                  |     53 | Rename `*shape*` symbols to domain names (careful with tRPC "shape")     |
+| `no-conditional-empty-object-spread`        |     33 | Build object in steps (fix alchemy.run.ts properly, drop override)       |
 
 ### Swarm layout (3 PRs, parallel workers per PR)
 
@@ -85,27 +85,27 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 **PR #322 workers (parallel):**
 
-| Worker | Path | Target |
-|--------|------|--------|
-| W1 | `packages/shared/` | 0 anti-slop |
-| W2 | `apps/server/` | 0 anti-slop; fix `worker.mjs:16` typeof |
+| Worker | Path               | Target                                  |
+| ------ | ------------------ | --------------------------------------- |
+| W1     | `packages/shared/` | 0 anti-slop                             |
+| W2     | `apps/server/`     | 0 anti-slop; fix `worker.mjs:16` typeof |
 
 **PR #323 workers:**
 
-| Worker | Path | Target |
-|--------|------|--------|
-| W3 | `packages/api/src/lib/integrations/` | parsers, webhooks, amazon-html |
-| W4 | `packages/api/src/queries/` + `routers/` | boundary types on inputs |
-| W5 | `packages/api/src/` (remainder) | sweep |
+| Worker | Path                                     | Target                         |
+| ------ | ---------------------------------------- | ------------------------------ |
+| W3     | `packages/api/src/lib/integrations/`     | parsers, webhooks, amazon-html |
+| W4     | `packages/api/src/queries/` + `routers/` | boundary types on inputs       |
+| W5     | `packages/api/src/` (remainder)          | sweep                          |
 
 **PR #324 workers:**
 
-| Worker | Path | Target |
-|--------|------|--------|
-| W6 | `apps/admin/` | anti-slop only (react rules deferred to #325) |
-| W7 | `apps/storev2/` | Solid components + worker |
-| W8 | `apps/agent/` | agent lib |
-| W9 | `packages/assistant/` | assistant package |
+| Worker | Path                  | Target                                        |
+| ------ | --------------------- | --------------------------------------------- |
+| W6     | `apps/admin/`         | anti-slop only (react rules deferred to #325) |
+| W7     | `apps/storev2/`       | Solid components + worker                     |
+| W8     | `apps/agent/`         | agent lib                                     |
+| W9     | `packages/assistant/` | assistant package                             |
 
 **Verify per PR:**
 
@@ -124,15 +124,15 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 ### Error budget by area (non-anti-slop)
 
-| Area | ~errors | Top rules |
-|------|--------:|-----------|
-| `packages/api` | 200 | complexity, unused, import |
-| `apps/admin` | 59 | react/set-state-in-effect, complexity, react-hooks |
-| `apps/storev2` | 37 | complexity, no-console (warn) |
-| `apps/agent` | 28 | complexity, unicorn |
-| `packages/shared` | 3 | minor |
-| `apps/server` | 4 | minor |
-| `env.d.ts` files | 4 | `typescript/no-empty-object-type` |
+| Area              | ~errors | Top rules                                          |
+| ----------------- | ------: | -------------------------------------------------- |
+| `packages/api`    |     200 | complexity, unused, import                         |
+| `apps/admin`      |      59 | react/set-state-in-effect, complexity, react-hooks |
+| `apps/storev2`    |      37 | complexity, no-console (warn)                      |
+| `apps/agent`      |      28 | complexity, unicorn                                |
+| `packages/shared` |       3 | minor                                              |
+| `apps/server`     |       4 | minor                                              |
+| `env.d.ts` files  |       4 | `typescript/no-empty-object-type`                  |
 
 ### Fix strategy (single PR #325)
 
@@ -183,16 +183,17 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 ## Anti-slop gauntlet review (#322 + #323)
 
-Coordinator + subagent review against `scripts/anti-slop-worker-brief.md` (Mar 2026).
+Coordinator + subagent review against `scripts/anti-slop-worker-brief.md` (Mar 2026). Subagents: [PR322](ba01caa5-bbe8-42b1-a741-e85c3f51d197), [PR323](c86dbe8b-d9ed-4dbb-a15e-9c0352f25f51).
 
-### #322 (`shared` + `server`) — **PASS with minor follow-ups**
+### #322 (`shared` + `server`) — **PASS**
 
 | Verdict | Notes |
 |---------|--------|
 | No rule disables | Clean |
 | No SAFETY comments | Clean |
 | Boundary parsing | valibot at auth, webhooks, uploads, trpc-proxy |
-| Follow-up | `FormDataEntryValue` needs DOM lib or inline union type; `trpc-error.ts` batch payload tsc error |
+| Gauntlet fixes (`1c5493d`) | `trpc-error-log.ts` property-descriptor + valibot code read; `trpc-proxy.ts` typed JSON body union |
+| tsc follow-ups | `FormDataEntryValue` needs DOM lib or inline union; `trpc-error.ts` batch payload typing |
 
 ### #323 (`packages/api`) — **ISSUES (2)**
 
@@ -332,12 +333,12 @@ bun run lint:astro   # if Phase 11 lands
 
 **Goal:** Gate the new checks from Phases 9–11 only after each has a clean local baseline.
 
-| Check | CI step | Prerequisite |
-|-------|---------|--------------|
-| Oxlint + Oxfmt | `vp fmt --check` + `vp lint` | Phase 8 (#326) |
-| Solid rules | included in `vp lint` | Phase 9 baseline 0 |
-| Type-aware rules | included in `vp lint` | Phase 10 baseline 0 + acceptable runtime |
-| Astro Biome | `bun run lint:astro` | Phase 11 spike passed |
+| Check            | CI step                      | Prerequisite                             |
+| ---------------- | ---------------------------- | ---------------------------------------- |
+| Oxlint + Oxfmt   | `vp fmt --check` + `vp lint` | Phase 8 (#326)                           |
+| Solid rules      | included in `vp lint`        | Phase 9 baseline 0                       |
+| Type-aware rules | included in `vp lint`        | Phase 10 baseline 0 + acceptable runtime |
+| Astro Biome      | `bun run lint:astro`         | Phase 11 spike passed                    |
 
 ---
 

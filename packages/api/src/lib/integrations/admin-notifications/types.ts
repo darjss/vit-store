@@ -1,29 +1,36 @@
-export type DetailedOrderNotificationInput = {
-	address: string;
-	customerPhone: number;
-	notes: string | null;
-	orderNumber: string;
-	paymentNumber: string;
-	products: Array<{
-		imageUrl?: string;
-		name: string;
-		price: number;
-		quantity: number;
-	}>;
-	provider: "qpay" | "transfer" | "cash";
-	total: number;
-};
+import * as v from "valibot";
 
-export type TransferClaimedNotificationInput = {
-	address: string;
-	customerPhone: number;
-	notes: string | null;
-	paymentNumber: string;
-	products: Array<{
-		imageUrl?: string;
-		name: string;
-		price: number;
-		quantity: number;
-	}>;
-	total: number;
-};
+const notificationProductSchema = v.object({
+	imageUrl: v.optional(v.string()),
+	name: v.string(),
+	price: v.number(),
+	quantity: v.number(),
+});
+
+export const detailedOrderNotificationInputSchema = v.object({
+	address: v.string(),
+	customerPhone: v.number(),
+	notes: v.nullable(v.string()),
+	orderNumber: v.string(),
+	paymentNumber: v.string(),
+	products: v.array(notificationProductSchema),
+	provider: v.picklist(["qpay", "transfer", "cash"]),
+	total: v.number(),
+});
+
+export type DetailedOrderNotificationInput = v.InferOutput<
+	typeof detailedOrderNotificationInputSchema
+>;
+
+export const transferClaimedNotificationInputSchema = v.object({
+	address: v.string(),
+	customerPhone: v.number(),
+	notes: v.nullable(v.string()),
+	paymentNumber: v.string(),
+	products: v.array(notificationProductSchema),
+	total: v.number(),
+});
+
+export type TransferClaimedNotificationInput = v.InferOutput<
+	typeof transferClaimedNotificationInputSchema
+>;

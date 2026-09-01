@@ -3,6 +3,13 @@ import { productImageQueries } from "@vit/api/queries";
 import * as v from "valibot";
 import { purgeCatalogCache } from "~/lib/cache/workers-cache";
 import { adminProcedure, baseProcedure, botProcedure, router } from "~/lib/trpc";
+
+const uploadImagesFromUrlResponseSchema = v.object({
+	images: v.array(v.object({ url: v.string() })),
+	status: v.string(),
+	time: v.number(),
+});
+
 export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P) {
 	return router({
 		addImage: proc
@@ -214,13 +221,7 @@ export function buildProductImagesRouter<P extends typeof baseProcedure>(proc: P
 							message: `Image upload failed: ${response.status} ${response.statusText} ${errorText}`,
 						});
 					}
-					const uploadedImages = (await response.json()) as {
-						images: Array<{
-							url: string;
-						}>;
-						status: string;
-						time: number;
-					};
+					const uploadedImages = v.parse(uploadImagesFromUrlResponseSchema, await response.json());
 					const imagesToInsert = uploadedImages.images.map((uploadedImage, index) => ({
 						...input.images[index],
 						url: uploadedImage.url,

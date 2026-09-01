@@ -34,7 +34,7 @@ export function rankInStockProducts<T extends { id: number; stock: number }>(
 	return eligible.slice(0, options.limit);
 }
 
-export async function hydrateProductsBySearchIds<T extends Record<string, unknown>>(
+export async function hydrateProductsBySearchIds<T extends { id: number }>(
 	ids: Array<number>,
 	queryFn: (ids: Array<number>) => Promise<Array<T>>,
 	limit?: number,
@@ -43,17 +43,17 @@ export async function hydrateProductsBySearchIds<T extends Record<string, unknow
 		return [];
 	}
 	const products = await queryFn(ids);
-	const byId = new Map(
-		products.map((product) => [(product as unknown as { id: number }).id, product]),
-	);
-	const ordered = ids.map((id) => byId.get(id)).filter((product): product is T => !!product);
+	const byId = new Map(products.map((product) => [product.id, product]));
+	const ordered = ids
+		.map((id) => byId.get(id))
+		.filter((product): product is T => product !== undefined);
 	return limit ? ordered.slice(0, limit) : ordered;
 }
 
 export async function searchProductIds(term: string, limit: number) {
 	const trimmed = term.trim();
 	if (!trimmed) {
-		return [] as Array<number>;
+		return [];
 	}
 	return (await searchProducts(trimmed, limit)).map((result) => result.id);
 }

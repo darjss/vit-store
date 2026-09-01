@@ -31,6 +31,68 @@ const normalizeExpirationDate = (value?: string | null) => {
 	}
 	return null;
 };
+
+const numericEditableProductFieldSet = new Set<string>([
+	"brandId",
+	"categoryId",
+	"dailyIntake",
+	"discount",
+	"price",
+	"stock",
+]);
+type NumericEditableProductField =
+	| "brandId"
+	| "categoryId"
+	| "dailyIntake"
+	| "discount"
+	| "price"
+	| "stock";
+
+function isNumericEditableProductField(
+	field: (typeof editableProductFields)[number],
+): field is NumericEditableProductField {
+	return numericEditableProductFieldSet.has(field);
+}
+
+function requireNonNegativeNumberField(
+	field: NumericEditableProductField,
+	numberValue: number | undefined,
+): number {
+	if (numberValue === undefined || !Number.isFinite(numberValue) || numberValue < 0) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `${field} must be a non-negative number`,
+		});
+	}
+	if ((field === "brandId" || field === "categoryId") && (!Number.isInteger(numberValue) || numberValue < 1)) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `${field} must be a positive integer`,
+		});
+	}
+	if (field !== "price" && !Number.isInteger(numberValue)) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `${field} must be an integer`,
+		});
+	}
+	return numberValue;
+}
+
+function resolveEditableProductFieldValue(input: {
+	field: (typeof editableProductFields)[number];
+	numberValue?: number;
+	stringValue?: string;
+}): string | number | null {
+	if (input.field === "expirationDate") {
+		return normalizeExpirationDate(input.stringValue);
+	}
+	if (isNumericEditableProductField(input.field)) {
+		return requireNonNegativeNumberField(input.field, input.numberValue);
+	}
+	return input.stringValue ?? null;
+}
+
 export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
 	return router({
 		addProduct: proc.input(addProductSchema).mutation(async ({ ctx, input }) => {
@@ -481,29 +543,14 @@ export function buildProductRouter<P extends typeof baseProcedure>(proc: P) {
 			)
 			.mutation(async ({ ctx, input }) => {
 				try {
-					const value =
-						String(input.field) === "expirationDate"
-							? normalizeExpirationDate(input.stringValue)
-							: (input.stringValue ?? input.numberValue);
-					if (input.field === "price" || input.field === "stock" || input.field === "discount") {
-						if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-							throw new TRPCError({
-								code: "BAD_REQUEST",
-								message: `${input.field} must be a non-negative number`,
-							});
-						}
-						if (input.field !== "price" && !Number.isInteger(value)) {
-							throw new TRPCError({
-								code: "BAD_REQUEST",
-								message: `${input.field} must be an integer`,
-							});
-						}
+					let stockChange = null;
+					if (input.field === "stock") {
+						const stock = requireNonNegativeNumberField("stock", input.numberValue);
+						stockChange = await productQueries.admin.setProductStock(input.id, stock);
+					} else {
+						const value = resolveEditableProductFieldValue(input);
+						await productQueries.admin.updateProductField(input.id, input.field, value);
 					}
-					const stockChange = await productQueries.admin.updateProductField(
-						input.id,
-						input.field,
-						value ?? null,
-					);
 					await purgeCatalogCache(ctx, [input.id]);
 					scheduleProductSearchRebuild(ctx, "product_updated");
 					if (stockChange) {

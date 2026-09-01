@@ -2,6 +2,7 @@ import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from "@oslojs/encoding";
 
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import * as v from "valibot";
 import type { Context, CustomerSelectType, UserSelectType } from "~/lib/context";
 import type { HonoContextType, SessionConfig } from "~/lib/types";
 
@@ -9,6 +10,10 @@ export interface Session<TUser = CustomerSelectType | UserSelectType> {
 	expiresAt: Date;
 	id: string;
 	user: TUser;
+}
+
+function optionalCookieDomain(domain: string | undefined): string | undefined {
+	return domain && domain.length > 0 ? domain : undefined;
 }
 
 export function generateSessionToken(): string {
@@ -27,6 +32,12 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 		renewalThresholdMs,
 		sessionDurationMs,
 	} = config;
+
+	const sessionKvRecordSchema = v.object({
+		expires_at: v.number(),
+		id: v.string(),
+		user: config.userSchema,
+	});
 
 	function getUserIdentifier(user: TUser): string {
 		if ("phone" in user && user.phone) {
@@ -78,11 +89,7 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 			return null;
 		}
 
-		const result = JSON.parse(rawSession) as {
-			expires_at: number;
-			id: string;
-			user: TUser;
-		};
+		const result = v.parse(sessionKvRecordSchema, JSON.parse(rawSession));
 
 		const session: Session<TUser> = {
 			expiresAt: new Date(result.expires_at * 1000),
@@ -159,9 +166,7 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 	}
 
 	function setSessionTokenCookie(c: HonoContextType, token: string, expiresAt: Date): void {
-		const cookieDomain = c.env.DOMAIN;
-		const cookieDomainOption =
-			typeof cookieDomain === "string" && cookieDomain.length > 0 ? cookieDomain : undefined;
+		const cookieDomainOption = optionalCookieDomain(c.env.DOMAIN);
 
 		setCookie(c, cookieName, token, {
 			domain: cookieDomainOption,
@@ -174,9 +179,7 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 	}
 
 	function deleteSessionTokenCookie(ctx: Context): void {
-		const cookieDomain = ctx.c.env.DOMAIN;
-		const cookieDomainOption =
-			typeof cookieDomain === "string" && cookieDomain.length > 0 ? cookieDomain : undefined;
+		const cookieDomainOption = optionalCookieDomain(ctx.c.env.DOMAIN);
 
 		deleteCookie(ctx.c, cookieName, {
 			domain: cookieDomainOption,

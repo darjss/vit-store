@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, countDistinct, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import * as v from "valibot";
 import { db } from "~/db/client";
 import {
 	BrandsTable,
@@ -42,8 +43,12 @@ function normalizeAndValidateContact(input: RestockContact): RestockContact {
 	return { channel: input.channel, contact };
 }
 
-function isUniqueConflict(error: unknown): boolean {
-	const message = error instanceof Error ? error.message : String(error);
+const uniqueConflictMessageSchema = v.object({
+	message: v.string(),
+});
+
+function isUniqueConflict(error: v.InferOutput<typeof uniqueConflictMessageSchema>): boolean {
+	const message = error.message;
 	return (
 		message.includes("restock_sub_open_unique_idx") ||
 		message.includes("unique") ||
@@ -123,7 +128,10 @@ async function insertOneContact(
 			channel: item.channel,
 		};
 	} catch (error) {
-		if (isUniqueConflict(error)) {
+		if (error instanceof TRPCError) {
+			throw error;
+		}
+		if (error instanceof Error && isUniqueConflict({ message: error.message })) {
 			return {
 				alreadySubscribed: true,
 				channel: item.channel,

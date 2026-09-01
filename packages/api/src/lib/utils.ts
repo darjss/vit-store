@@ -49,7 +49,7 @@ export const summarizeTimings = (values: Array<number>) => {
 	};
 };
 
-export const measureMs = async (fn: () => Promise<unknown>): Promise<number> => {
+export const measureMs = async (fn: () => Promise<void>): Promise<number> => {
 	const startedAt = performance.now();
 	await fn();
 	return performance.now() - startedAt;
@@ -174,7 +174,7 @@ interface OrderResult {
 	updatedAt: Date | null;
 }
 
-interface ShapedOrder {
+interface OrderListItem {
 	address: string;
 	addressZoneId: number | undefined;
 	createdAt: Date;
@@ -198,7 +198,7 @@ interface ShapedOrder {
 	updatedAt: Date | null;
 }
 
-export const shapeOrderResult = (result: OrderResult) => {
+export const projectOrderResult = (result: OrderResult) => {
 	result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 	const latestPayment = result.payments[0];
 	return {
@@ -225,7 +225,7 @@ export const shapeOrderResult = (result: OrderResult) => {
 		updatedAt: result.updatedAt,
 	};
 };
-export const shapeOrderResults = (results: Array<OrderResult>) => {
+export const projectOrderResults = (results: Array<OrderResult>) => {
 	return results?.map((result) => {
 		result.payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 		const latestPayment = result.payments[0];

@@ -1,4 +1,5 @@
 import { type InferFilterFromSchema, Redis, s } from "@upstash/redis";
+import * as v from "valibot";
 import {
 	expandBrandAliases,
 	expandSymptomIngredients,
@@ -15,6 +16,7 @@ import type {
 	ProductSearchStatus,
 	SearchProductResult,
 } from "~/lib/product-search/types";
+import { thrownErrorWireSchema } from "~/lib/logging";
 
 const PRODUCT_SEARCH_INDEX = "vit-products-v3";
 const PRODUCT_KEY_PREFIX = "search:vit:v3:product:";
@@ -109,7 +111,8 @@ const emptyStatus = (): ProductSearchStatus => ({
 	productCount: 0,
 });
 
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : "Unknown error");
+const errorMessage = (error: v.InferOutput<typeof thrownErrorWireSchema>) =>
+	error instanceof Error ? error.message : "Unknown error";
 
 const readJson = <T>(redis: Redis, key: string) => redis.get<T>(key);
 
@@ -310,11 +313,11 @@ export const buildProductSearchFilter = (
 	};
 };
 
+const ingredientPreviewSchema = v.array(v.string());
+
 const ingredientPreview = (value: string) => {
-	const parsed: unknown = JSON.parse(value);
-	return Array.isArray(parsed)
-		? parsed.filter((item): item is string => typeof item === "string")
-		: [];
+	const parsed = v.safeParse(ingredientPreviewSchema, JSON.parse(value));
+	return parsed.success ? parsed.output : [];
 };
 
 const toSearchResult = (document: IndexedProductSearchDocument): SearchProductResult => ({
@@ -514,7 +517,7 @@ export const createProductSearchEngine = (
 				} catch (cleanupError) {
 					const degradedStatus = {
 						...status,
-						lastError: `Stale index cleanup pending: ${errorMessage(cleanupError)}`,
+						lastError: `Stale index cleanup pending: ${errorMessage(v.parse(thrownErrorWireSchema, cleanupError))}`,
 					};
 					await redis
 						.set(namespace.statusKey, JSON.stringify(degradedStatus))
@@ -524,7 +527,7 @@ export const createProductSearchEngine = (
 			} catch (error) {
 				const failedStatus: ProductSearchStatus = {
 					...previousStatus,
-					lastError: errorMessage(error),
+					lastError: errorMessage(v.parse(thrownErrorWireSchema, error)),
 					lastRebuildFinishedAt: new Date().toISOString(),
 					lastRebuildReason: reason,
 					lastRebuildStartedAt: startedAt,

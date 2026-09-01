@@ -10,22 +10,26 @@
  * - POSTHOG_HOST: e.g. "https://us.i.posthog.com"
  */
 
+import * as v from "valibot";
+
 export interface PostHogConfig {
 	apiKey: string;
 	host: string;
 	projectId: string;
 }
 
+const postHogQueryResponseSchema = v.object({
+	columns: v.array(v.string()),
+	error: v.optional(v.string()),
+	hasMore: v.optional(v.boolean()),
+	results: v.array(v.array(v.unknown())),
+	types: v.array(v.string()),
+});
+
+type PostHogQueryResponse = v.InferOutput<typeof postHogQueryResponseSchema>;
+
 interface HogQLQueryResult {
 	columns: Array<string>;
-	hasMore?: boolean;
-	results: Array<Array<unknown>>;
-	types: Array<string>;
-}
-
-interface PostHogQueryResponse {
-	columns: Array<string>;
-	error?: string;
 	hasMore?: boolean;
 	results: Array<Array<unknown>>;
 	types: Array<string>;
@@ -70,7 +74,7 @@ export class PostHogClient {
 			throw new Error(`PostHog query failed (${response.status}): ${text.slice(0, 500)}`);
 		}
 
-		const data = (await response.json()) as PostHogQueryResponse;
+		const data = v.parse(postHogQueryResponseSchema, await response.json());
 
 		if (data.error) {
 			throw new Error(`PostHog HogQL error: ${data.error}`);

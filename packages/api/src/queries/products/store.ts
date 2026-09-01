@@ -14,7 +14,6 @@ import {
 	ne,
 	notInArray,
 	or,
-	type SQLWrapper,
 	sql,
 } from "drizzle-orm";
 import { db } from "~/db/client";
@@ -23,23 +22,30 @@ import { searchProducts } from "~/lib/product-search/client";
 import { normalizeSearchText } from "~/lib/product-search/text";
 import { buildActiveProductConditions, rankInStockProducts } from "~/queries/products/shared";
 
-const buildNameFallbackCondition = (searchTerm: string): SQLWrapper => {
+const buildNameFallbackCondition = (searchTerm: string): SQL<unknown> => {
 	const tokens = normalizeSearchText(searchTerm).split(" ").filter(Boolean);
 	if (tokens.length === 0) {
-		return or(
+		const nameMatch = or(
 			ilike(ProductsTable.name, `%${searchTerm}%`),
 			ilike(ProductsTable.name_mn, `%${searchTerm}%`),
-		) as SQLWrapper;
+		);
+		if (nameMatch === undefined) {
+			throw new Error("name fallback requires at least one ilike condition");
+		}
+		return nameMatch;
 	}
 
 	const nameNoComma = sql`replace(${ProductsTable.name}, ',', '')`;
 	const nameMnNoComma = sql`replace(${ProductsTable.name_mn}, ',', '')`;
-
-	return and(
-		...tokens
-			.slice(0, 6)
-			.map((token) => or(ilike(nameNoComma, `%${token}%`), ilike(nameMnNoComma, `%${token}%`))),
-	) as SQLWrapper;
+	const tokenConditions = tokens
+		.slice(0, 6)
+		.map((token) => or(ilike(nameNoComma, `%${token}%`), ilike(nameMnNoComma, `%${token}%`)))
+		.filter((condition): condition is SQL<unknown> => condition !== undefined);
+	const tokenMatch = and(...tokenConditions);
+	if (tokenMatch === undefined) {
+		throw new Error("name fallback requires at least one token condition");
+	}
+	return tokenMatch;
 };
 
 import {

@@ -2,6 +2,7 @@ import { logger } from "~/lib/logger";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import ky from "ky";
+import * as v from "valibot";
 import { db } from "~/db/client";
 import { DeliveryDispatchesTable } from "~/db/schema";
 
@@ -12,10 +13,14 @@ const requestStartedAt = new WeakMap<Request, number>();
 const truncate = (value: string, maxLength = 500) =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
-export interface DeliveryZone {
-	id: number;
-	zoneName: string;
-}
+export const deliveryZoneSchema = v.object({
+	id: v.number(),
+	zoneName: v.string(),
+});
+
+export type DeliveryZone = v.InferOutput<typeof deliveryZoneSchema>;
+
+const deliveryZonesSchema = v.array(deliveryZoneSchema);
 
 interface Order {
 	deliveryDate: string;
@@ -100,11 +105,11 @@ export const getDeliveryAddressZones = async (): Promise<Array<DeliveryZone>> =>
 	const cached = await env.vitStoreKV.get(DELIVERY_ADDRESS_ZONES_CACHE_KEY);
 	if (cached) {
 		logger.debug("delivery address zones cache hit");
-		return JSON.parse(cached) as Array<DeliveryZone>;
+		return v.parse(deliveryZonesSchema, JSON.parse(cached));
 	}
 
 	logger.info("delivery address zones cache miss");
-	const result = await deliveryClient.get("addressZone").json<Array<DeliveryZone>>();
+	const result = v.parse(deliveryZonesSchema, await deliveryClient.get("addressZone").json());
 	await env.vitStoreKV.put(DELIVERY_ADDRESS_ZONES_CACHE_KEY, JSON.stringify(result), {
 		expirationTtl: 60 * 60 * 24 * 3,
 	});

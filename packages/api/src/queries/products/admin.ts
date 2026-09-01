@@ -331,9 +331,6 @@ export const adminQueries = {
 	},
 
 	async updateProductField(id: number, field: string, value: string | number | null) {
-		if (field === "stock" && typeof value === "number") {
-			return this.setProductStock(id, value);
-		}
 		await db()
 			.update(ProductsTable)
 			.set({ [field]: value })
