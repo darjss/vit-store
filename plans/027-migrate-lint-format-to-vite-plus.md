@@ -1,6 +1,6 @@
 # Plan 027: Full Vite+ migration (store-kit parity)
 
-Status: Phase 1 in progress — prerequisite [028](./028-vite-8-foundation.md) merged
+Status: Phase 3 in progress (stacked PRs #315–#317) — prerequisite [028](./028-vite-8-foundation.md) merged
 
 ## Executive summary
 
