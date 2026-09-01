@@ -1,15 +1,22 @@
 import {
 	sanitizePublicTrpcError,
 	sanitizePublicTrpcResponse,
+	type TrpcPublicError,
+	type TrpcResponseWire,
 	trpcResponseWireSchema,
 } from "@vit/shared";
 import * as v from "valibot";
+
+export type TrpcProxyJsonBody =
+	| TrpcResponseWire
+	| { error: { json: TrpcPublicError } }
+	| { error: string };
 
 export const isUnsupportedTrpcTransport = (request: Request): boolean =>
 	request.headers.get("trpc-accept") === "application/jsonl";
 
 export const noStoreJson = (
-	body: unknown,
+	body: TrpcProxyJsonBody,
 	status: number,
 	initialHeaders?: HeadersInit,
 ): Response => {
