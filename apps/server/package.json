@@ -15,7 +15,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check-types": "tsgo --noEmit",
+		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"dev": "alchemy dev --app server --stage dev",
@@ -49,7 +49,7 @@
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"tsdown": "catalog:",
-		"@types/node": "^22.13.11",
+		"@types/node": "^26.4.0",
 		"@cloudflare/workers-types": "^4.20250822.0"
 	}
 }

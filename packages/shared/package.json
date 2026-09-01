@@ -20,10 +20,11 @@
 		"dev": "echo 'Shared package uses source files directly - no dev build needed'"
 	},
 	"devDependencies": {
-		"tsdown": "catalog:"
+		"tsdown": "catalog:",
+		"typescript": "catalog:"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^7"
 	},
 	"dependencies": {
 		"valibot": "^1.1.0",

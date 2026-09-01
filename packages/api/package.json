@@ -49,10 +49,11 @@
 	},
 	"devDependencies": {
 		"tsdown": "catalog:",
-		"drizzle-kit": "catalog:"
+		"drizzle-kit": "catalog:",
+		"typescript": "catalog:"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^7"
 	},
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "2.0.45",

@@ -6,7 +6,7 @@
 		"dev": "bun run build && wrangler dev --config dist/vit_store_agent/wrangler.json",
 		"build": "flue build --target cloudflare",
 		"deploy": "bun run build && wrangler deploy --config dist/vit_store_agent/wrangler.json && bun run r2:lifecycle:apply",
-		"check-types": "tsgo --noEmit",
+		"check-types": "tsc --noEmit",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"checkout:sim": "bun scripts/checkout-sim.ts",
 		"payment:proof": "bun cli/payment-proof.ts",
@@ -44,6 +44,6 @@
 		"@flue/cli": "^1.0.0-beta.3",
 		"@vit/api": "workspace:*",
 		"typescript": "catalog:",
-		"wrangler": "^4.101.0"
+		"wrangler": "^4.127.1"
 	}
 }
