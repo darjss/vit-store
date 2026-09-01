@@ -1,6 +1,6 @@
 # Plan 028: Vite 8 foundation (prerequisite for full Vite+)
 
-Status: in progress (PR) — **do this before Plan 027**
+Status: **done** (merged PR #314) — unblocks Plan 027
 
 Depends on: nothing  
 Blocks: [027-migrate-lint-format-to-vite-plus.md](./027-migrate-lint-format-to-vite-plus.md) full `vp migrate`

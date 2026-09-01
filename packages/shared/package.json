@@ -1,33 +1,32 @@
 {
-	"name": "@vit/shared",
-	"type": "module",
-	"exports": {
-		".": {
-			"types": "./src/index.ts",
-			"default": "./src/index.ts"
-		},
-		"./domain/product": {
-			"types": "./src/domain/product/index.ts",
-			"default": "./src/domain/product/index.ts"
-		},
-		"./*": {
-			"types": "./src/*.ts",
-			"default": "./src/*.ts"
-		}
-	},
-	"scripts": {
-		"build": "tsdown",
-		"dev": "echo 'Shared package uses source files directly - no dev build needed'"
-	},
-	"devDependencies": {
-		"tsdown": "catalog:",
-		"typescript": "catalog:"
-	},
-	"peerDependencies": {
-		"typescript": "^7"
-	},
-	"dependencies": {
-		"valibot": "^1.1.0",
-		"drizzle-orm": "catalog:"
-	}
+  "name": "@vit/shared",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./domain/product": {
+      "types": "./src/domain/product/index.ts",
+      "default": "./src/domain/product/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "echo 'Shared package uses source files directly - no dev build needed'"
+  },
+  "dependencies": {
+    "drizzle-orm": "catalog:",
+    "valibot": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  }
 }

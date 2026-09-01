@@ -1,94 +1,96 @@
 {
-	"name": "vit-store",
-	"private": true,
-	"type": "module",
-	"workspaces": {
-		"packages": [
-			"apps/*",
-			"packages/*"
-		],
-		"catalog": {
-			"hono": "^4.13.5",
-			"@trpc/server": "^11.18.0",
-			"@trpc/client": "^11.18.0",
-			"@t3-oss/env-core": "^0.13.10",
-			"dotenv": "^17.4.2",
-			"valibot": "^1.4.2",
-			"typescript": "^7.0.2",
-			"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
-			"vite-plus": "^0.3.0",
-			"vitest": "4.1.11",
-			"tsdown": "^0.15.12",
-			"drizzle-orm": "^0.45.2",
-			"drizzle-kit": "^0.31.10",
-			"alchemy": "0.93.12"
-		}
-	},
-	"scripts": {
-		"format": "biome format --write .",
-		"check": "oxlint",
-		"lint": "biome lint .",
-		"lint:fix": "biome check --write .",
-		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"deps:check": "bunx taze -r major --group",
-		"deps:check:minor": "bunx taze -r minor --group",
-		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
-		"dev": "turbo dev",
-		"dev:alchemy": "alchemy dev --stage dev",
-		"build": "turbo build",
-		"check-types": "turbo check-types",
-		"deploy": "turbo deploy",
-		"dev:server": "turbo -F server dev",
-		"db:generate": "turbo -F @vit/api db:generate",
-		"db:migrate": "turbo -F server db:migrate",
-		"db:migrate:local": "turbo -F server db:migrate:local",
-		"db:push": "turbo -F @vit/api db:push",
-		"db:studio": "turbo -F server db:studio",
-		"db:studio:local": "turbo -F server db:studio:local",
-		"db:seed": "turbo -F server db:seed",
-		"db:docker:up": "docker-compose up -d",
-		"db:docker:down": "docker-compose down",
-		"dead-code": "npx fallow dead-code",
-		"health": "npx fallow health",
-		"dupes": "npx fallow dupes",
-		"quality": "bun run check-types && npx fallow dead-code && npx fallow health",
-		"quality:json": "mkdir -p .quality && (npx fallow dead-code --format json > .quality/code-issues.json || [ $? -eq 1 ]) && (npx fallow health --format json > .quality/health-issues.json || [ $? -eq 1 ])"
-	},
-	"dependencies": {
-		"@ai-sdk/google": "^3.0.80",
-		"@corvu/drawer": "^0.2.4",
-		"@t3-oss/env-core": "catalog:",
-		"dismatch": "^2.6.0",
-		"dotenv": "^17.2.3",
-		"string-similarity": "^4.0.4",
-		"valibot": "catalog:"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
-		"@cloudflare/workers-types": "^4.20260617.1",
-		"@types/node": "^26.4.0",
-		"alchemy": "0.93.12",
-		"oxlint": "^1.31.0",
-		"tsdown": "catalog:",
-		"turbo": "^2.10.12",
-		"typescript": "catalog:",
-		"vite-plus": "catalog:",
-		"wrangler": "^4.127.1",
-		"zod": "4"
-	},
-	"overrides": {
-		"@solid-primitives/event-listener": "2.4.6",
-		"typescript": "catalog:",
-		"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
-		"vitest": "4.1.11",
-		"alchemy": {
-			"miniflare": "4.20260730.0"
-		}
-	},
-	"packageManager": "bun@1.4.0",
-	"patchedDependencies": {
-		"@solid-primitives/storage@4.3.3": "patches/@solid-primitives%2Fstorage@4.3.3.patch",
-		"alchemy@0.93.12": "patches/alchemy@0.93.12.patch",
-		"@solar-icons/solid@2.0.0-beta.3": "patches/@solar-icons%2Fsolid@2.0.0-beta.3.patch"
-	}
+  "name": "vit-store",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "hono": "^4.13.5",
+      "@trpc/server": "^11.18.0",
+      "@trpc/client": "^11.18.0",
+      "@t3-oss/env-core": "^0.13.10",
+      "dotenv": "^17.4.2",
+      "valibot": "^1.4.2",
+      "typescript": "^7.0.2",
+      "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
+      "vite-plus": "^0.3.0",
+      "vitest": "4.1.11",
+      "tsdown": "^0.15.12",
+      "drizzle-orm": "^0.45.2",
+      "drizzle-kit": "^0.31.10",
+      "alchemy": "0.93.12"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "prepare": "vp config --no-hooks",
+    "format": "biome format --write .",
+    "check": "vp lint",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "lint:fix:unsafe": "biome check --write --unsafe .",
+    "deps:check": "bunx taze -r major --group",
+    "deps:check:minor": "bunx taze -r minor --group",
+    "knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
+    "dev": "turbo dev",
+    "dev:alchemy": "alchemy dev --stage dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "deploy": "turbo deploy",
+    "dev:server": "turbo -F server dev",
+    "db:generate": "turbo -F @vit/api db:generate",
+    "db:migrate": "turbo -F server db:migrate",
+    "db:migrate:local": "turbo -F server db:migrate:local",
+    "db:push": "turbo -F @vit/api db:push",
+    "db:studio": "turbo -F server db:studio",
+    "db:studio:local": "turbo -F server db:studio:local",
+    "db:seed": "turbo -F server db:seed",
+    "db:docker:up": "docker-compose up -d",
+    "db:docker:down": "docker-compose down",
+    "dead-code": "npx fallow dead-code",
+    "health": "npx fallow health",
+    "dupes": "npx fallow dupes",
+    "quality": "bun run check-types && npx fallow dead-code && npx fallow health",
+    "quality:json": "mkdir -p .quality && (npx fallow dead-code --format json > .quality/code-issues.json || [ $? -eq 1 ]) && (npx fallow health --format json > .quality/health-issues.json || [ $? -eq 1 ])"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
+    "@corvu/drawer": "^0.2.4",
+    "@t3-oss/env-core": "catalog:",
+    "dismatch": "^2.6.0",
+    "dotenv": "^17.2.3",
+    "string-similarity": "^4.0.4",
+    "valibot": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@cloudflare/workers-types": "^4.20260617.1",
+    "@types/node": "^26.4.0",
+    "alchemy": "0.93.12",
+    "oxlint": "^1.31.0",
+    "tsdown": "catalog:",
+    "turbo": "^2.10.12",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "^4.127.1",
+    "zod": "4"
+  },
+  "overrides": {
+    "@solid-primitives/event-listener": "2.4.6",
+    "alchemy": {
+      "miniflare": "4.20260730.0"
+    },
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "4.1.11"
+  },
+  "packageManager": "bun@1.4.0",
+  "patchedDependencies": {
+    "@solid-primitives/storage@4.3.3": "patches/@solid-primitives%2Fstorage@4.3.3.patch",
+    "alchemy@0.93.12": "patches/alchemy@0.93.12.patch",
+    "@solar-icons/solid@2.0.0-beta.3": "patches/@solar-icons%2Fsolid@2.0.0-beta.3.patch"
+  }
 }

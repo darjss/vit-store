@@ -1,55 +1,54 @@
 {
-	"name": "server",
-	"main": "src/index.ts",
-	"type": "module",
-	"exports": {
-		".": {
-			"bun": "./src/index.ts",
-			"import": "./lib/src/index.js"
-		},
-		"./alchemy": {
-			"bun": "./alchemy.run.ts",
-			"import": "./lib/alchemy.run.js",
-			"types": "./alchemy.run.ts"
-		}
-	},
-	"scripts": {
-		"build": "tsdown",
-		"check-types": "tsc --noEmit",
-		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
-		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		"dev": "alchemy dev --app server --stage dev",
-		"deploy": "alchemy deploy --app server --stage prod --env-file ../../.env.prod",
-		"destroy": "alchemy destroy --app server",
-		"db:push": "drizzle-kit push",
-		"db:migrate:local": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
-		"db:studio": "drizzle-kit studio",
-		"db:studio:local": "drizzle-kit studio --config=../../packages/api/drizzle.local.config.ts",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
-		"db:migrate:prod": "drizzle-kit migrate --config=../../packages/api/drizzle.config.ts",
-		"db:seed": "bun run src/lib/seed-postgres.ts"
-	},
-	"dependencies": {
-		"@hono/trpc-server": "^0.4.0",
-		"@trpc/server": "catalog:",
-		"@upstash/redis": "^1.38.2",
-		"@vit/api": "workspace:*",
-		"@vit/shared": "workspace:*",
-		"arctic": "^3.7.0",
-		"drizzle-orm": "catalog:",
-		"evlog": "^2.11.0",
-		"hono": "catalog:",
-		"khaan-client": "github:darjss/khaan-client#0e455a3f75c525743a4637db56d1a85915eee904",
-		"nanoid": "^5.1.5",
-		"posthog-node": "^5.38.4"
-	},
-	"devDependencies": {
-		"alchemy": "catalog:",
-		"drizzle-kit": "catalog:",
-		"typescript": "catalog:",
-		"tsdown": "catalog:",
-		"@types/node": "^26.4.0",
-		"@cloudflare/workers-types": "^4.20250822.0"
-	}
+  "name": "server",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./lib/src/index.js"
+    },
+    "./alchemy": {
+      "bun": "./alchemy.run.ts",
+      "import": "./lib/alchemy.run.js",
+      "types": "./alchemy.run.ts"
+    }
+  },
+  "scripts": {
+    "build": "vp pack",
+    "check-types": "tsc --noEmit",
+    "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "dev": "alchemy dev --app server --stage dev",
+    "deploy": "alchemy deploy --app server --stage prod --env-file ../../.env.prod",
+    "destroy": "alchemy destroy --app server",
+    "db:push": "drizzle-kit push",
+    "db:migrate:local": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:studio:local": "drizzle-kit studio --config=../../packages/api/drizzle.local.config.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
+    "db:migrate:prod": "drizzle-kit migrate --config=../../packages/api/drizzle.config.ts",
+    "db:seed": "bun run src/lib/seed-postgres.ts"
+  },
+  "dependencies": {
+    "@hono/trpc-server": "^0.4.0",
+    "@trpc/server": "catalog:",
+    "@upstash/redis": "^1.38.2",
+    "@vit/api": "workspace:*",
+    "@vit/shared": "workspace:*",
+    "arctic": "^3.7.0",
+    "drizzle-orm": "catalog:",
+    "evlog": "^2.11.0",
+    "hono": "catalog:",
+    "khaan-client": "github:darjss/khaan-client#0e455a3f75c525743a4637db56d1a85915eee904",
+    "nanoid": "^5.1.5",
+    "posthog-node": "^5.38.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250822.0",
+    "@types/node": "^26.4.0",
+    "alchemy": "catalog:",
+    "drizzle-kit": "catalog:",
+    "typescript": "catalog:"
+  }
 }
