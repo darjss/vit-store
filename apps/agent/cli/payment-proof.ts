@@ -39,8 +39,6 @@ import {
 	TRANSFER_CLAIM_ACK_MESSAGE,
 } from "@vit/assistant";
 import { bankTransfer } from "@vit/shared/constants";
-import * as v from "valibot";
-import { SuperJSON } from "superjson";
 import { trpcResponseBody } from "./trpc-stub";
 import {
 	handleChooseTransfer,
@@ -62,13 +60,13 @@ const PAYMENT = {
 	customerPhone: "99112233",
 	orderNumber: "ORD-5521",
 	paymentNumber: "PMT-7K2QX",
-	total: 145_800,
 	get status() {
 		return paymentStatus;
 	},
 	set status(value: "pending" | "customer_claimed_paid" | "success") {
 		paymentStatus = value;
 	},
+	total: 145_800,
 };
 
 // Records of which store procedures the agent hit, so the proof can assert the
@@ -175,14 +173,11 @@ const makePaymentDeps = (cap: Captured): PaymentHandlerDeps => ({
 });
 
 // ── PATH 1: order created → QPay choice ──────────────────────────────────────
-async function pathQpay(): Promise<PaymentRef> {
-	hr();
-	console.log("PATH 1 — order created → QPay payment choice\n");
-
-	// Drive the REAL place_order tool so the choice send is triggered by order
-	// creation, exactly as production does.
+async function drivePlaceOrder(): Promise<{
+	checkout: CheckoutState | undefined;
+	choiceOrder: CreatedOrder | undefined;
+}> {
 	let checkout: CheckoutState | undefined;
-	const sentTexts: Array<string> = [];
 	let choiceOrder: CreatedOrder | undefined;
 	const cart: Cart = confirmCart(
 		addToCart({ ...EMPTY_CART }, { id: 101, name: "Magnesium", price: 69_900 }, 2),
@@ -205,10 +200,7 @@ async function pathQpay(): Promise<PaymentRef> {
 			choiceOrder = order;
 			return { messageId: null, ok: true };
 		},
-		sendText: async (t) => {
-			sentTexts.push(t);
-			return { messageId: null, ok: true };
-		},
+		sendText: async () => ({ messageId: null, ok: true }),
 	};
 	type CheckoutTool = ReturnType<typeof buildCheckoutTools>[number];
 	const tools = new Map<string, CheckoutTool>(buildCheckoutTools(deps).map((t) => [t.name, t]));
@@ -225,18 +217,10 @@ async function pathQpay(): Promise<PaymentRef> {
 	await run("confirm_delivery_zone", { zoneId: 11 });
 	await run("provide_notes", { notes: "" });
 	await run("place_order");
+	return { checkout, choiceOrder };
+}
 
-	check("place_order fired sendPaymentChoices", choiceOrder !== undefined);
-	check(
-		"payment context persisted on checkout (status 'offered')",
-		checkout?.payment?.transferStatus === "offered" &&
-			checkout?.payment?.paymentNumber === PAYMENT.paymentNumber,
-	);
-
-	const ref: PaymentRef = {
-		checkoutToken: PAYMENT.checkoutToken,
-		paymentNumber: PAYMENT.paymentNumber,
-	};
+function assertQpayPaymentChoice(ref: PaymentRef, checkout: CheckoutState | undefined) {
 	const choice = buildPaymentChoice(STORE_BASE, ref);
 	const qpayBtn = choice.buttons.find((b) => b.type === "web_url");
 	const transferBtn = choice.buttons.find((b) => b.type === "postback");
@@ -258,6 +242,25 @@ async function pathQpay(): Promise<PaymentRef> {
 		"transfer postback round-trips to the payment ref",
 		parseChooseTransferPayload(transferBtn?.payload ?? "")?.paymentNumber === PAYMENT.paymentNumber,
 	);
+}
+
+async function pathQpay(): Promise<PaymentRef> {
+	hr();
+	console.log("PATH 1 — order created → QPay payment choice\n");
+
+	const { checkout, choiceOrder } = await drivePlaceOrder();
+	check("place_order fired sendPaymentChoices", choiceOrder !== undefined);
+	check(
+		"payment context persisted on checkout (status 'offered')",
+		checkout?.payment?.transferStatus === "offered" &&
+			checkout?.payment?.paymentNumber === PAYMENT.paymentNumber,
+	);
+
+	const ref: PaymentRef = {
+		checkoutToken: PAYMENT.checkoutToken,
+		paymentNumber: PAYMENT.paymentNumber,
+	};
+	assertQpayPaymentChoice(ref, checkout);
 	return ref;
 }
 

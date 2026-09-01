@@ -416,8 +416,10 @@ async function main(): Promise<void> {
 	storeApi.stop();
 }
 
-main().catch((error) => {
+try {
+	await main();
+} catch (error) {
 	storeApi.stop();
 	console.error("\n✗ SIMULATION FAILED:", error instanceof Error ? error.message : error);
 	process.exit(1);
-});
+}

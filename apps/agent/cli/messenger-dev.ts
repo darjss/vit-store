@@ -22,17 +22,16 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
-import * as v from "valibot";
+import { InferOutput, parse } from "valibot";
 import {
 	devStateSchema,
 	extractSeedTexts,
 	IMAGE_CONTENT_TYPE_BY_EXT,
 	parseSeedFile,
-	type DevButton,
 	type DevState,
 } from "./dev-state";
 import { loadDotVars } from "./dot-vars";
-import { captureGraphSend, extractGraphButtons, graphSendBodySchema } from "./graph-send";
+import { extractGraphButtons, graphSendBodySchema } from "./graph-send";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const DEV_DIR = join(AGENT_ROOT, ".dev");
@@ -64,7 +63,6 @@ const CAPTURE_PORT = Number(
 
 // ─── Persistent state ────────────────────────────────────────────────────────
 
-type Button = DevButton;
 type Session = { psid: string };
 type State = DevState;
 
@@ -76,7 +74,7 @@ function freshPsid(name: string): string {
 function loadState(): State {
 	if (existsSync(STATE_FILE)) {
 		try {
-			return v.parse(devStateSchema, JSON.parse(readFileSync(STATE_FILE, "utf8")));
+			return parse(devStateSchema, JSON.parse(readFileSync(STATE_FILE, "utf8")));
 		} catch {
 			// fall through to a fresh state on a corrupt file
 		}
@@ -133,7 +131,7 @@ let outboundSeq = 0;
 let lastWebhookStatus = 0;
 let lastBotReply: string | null = null;
 
-function renderOutbound(body: v.InferOutput<typeof graphSendBodySchema>, savedPath: string): void {
+function renderOutbound(body: InferOutput<typeof graphSendBodySchema>, savedPath: string): void {
 	const message = body.message;
 	if (body.sender_action) {
 		printAbovePrompt(C.dim(`  · bot ${String(body.sender_action)}`));
@@ -185,9 +183,9 @@ function startCaptureServer(): void {
 				// e.g. profile GET — return an empty-ish profile so the SDK is happy.
 				return Response.json({ id: psid() });
 			}
-			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
+			let parsedBody: InferOutput<typeof graphSendBodySchema>;
 			try {
-				parsedBody = v.parse(graphSendBodySchema, await req.json());
+				parsedBody = parse(graphSendBodySchema, await req.json());
 			} catch {
 				parsedBody = {};
 			}
@@ -432,88 +430,78 @@ function listPayloads(): void {
 	files.slice(-10).forEach((f) => printAbovePrompt(C.dim(`   - ${f}`)));
 }
 
+const devCommands = {
+	buttons: () => {
+		if (state.lastButtons.length === 0) {
+			printAbovePrompt(C.dim("  (no buttons from the last bot message yet)"));
+			return;
+		}
+		state.lastButtons.forEach((b, i) =>
+			printAbovePrompt(C.dim(`  [${i + 1}] ${b.title} (${b.kind}: ${b.value})`)),
+		);
+	},
+	exit: () => process.exit(0),
+	fire: async (arg: string) => {
+		const n = Number(arg);
+		if (!Number.isInteger(n) || n < 1) {
+			printAbovePrompt(C.red("  usage: /fire <button number>"));
+			return;
+		}
+		await fireButton(n);
+	},
+	help: () => help(),
+	image: async (arg: string) => {
+		if (!arg) {
+			printAbovePrompt(C.red("  usage: /image <path-to-photo>"));
+			printAbovePrompt(
+				C.dim("  sends a real image webhook → R2 key → Kimi vision → product cards (#20)."),
+			);
+			printAbovePrompt(C.dim("  needs the worker booted with real Workers AI (not --local)."));
+			return;
+		}
+		await sendImage(arg);
+	},
+	payloads: () => listPayloads(),
+	psid: () => {
+		printAbovePrompt(C.dim(`  session=${state.current} psid=${psid()}`));
+		printAbovePrompt(C.dim(`  sessionId=${sessionId()}`));
+	},
+	quit: () => process.exit(0),
+	reset: () => {
+		state.sessions[state.current] = { psid: freshPsid(state.current) };
+		state.lastButtons = [];
+		saveState(state);
+		printAbovePrompt(C.dim(`  reset session "${state.current}" → new psid=${psid()}`));
+	},
+	seed: async (arg: string) => seed(arg || undefined),
+	session: (arg: string) => {
+		if (!arg) {
+			printAbovePrompt(C.dim("  sessions:"));
+			for (const [name, s] of Object.entries(state.sessions)) {
+				printAbovePrompt(C.dim(`   ${name === state.current ? "*" : " "} ${name}  psid=${s.psid}`));
+			}
+			printAbovePrompt(C.dim("  switch/create with: /session <name>"));
+			return;
+		}
+		if (!state.sessions[arg]) {
+			state.sessions[arg] = { psid: freshPsid(arg) };
+		}
+		state.current = arg;
+		state.lastButtons = [];
+		saveState(state);
+		printAbovePrompt(C.dim(`  switched to session "${arg}" psid=${psid()}`));
+	},
+} satisfies Record<string, (arg: string) => void | Promise<void>>;
+
 async function handleCommand(line: string): Promise<void> {
 	const [cmd, ...rest] = line.slice(1).split(/\s+/);
 	const arg = rest.join(" ").trim();
-	switch (cmd) {
-		case "help":
-			help();
-			return;
-		case "quit":
-		case "exit":
-			process.exit(0);
-			break;
-		case "session": {
-			if (!arg) {
-				printAbovePrompt(C.dim("  sessions:"));
-				for (const [name, s] of Object.entries(state.sessions)) {
-					printAbovePrompt(
-						C.dim(`   ${name === state.current ? "*" : " "} ${name}  psid=${s.psid}`),
-					);
-				}
-				printAbovePrompt(C.dim("  switch/create with: /session <name>"));
-				return;
-			}
-			if (!state.sessions[arg]) {
-				state.sessions[arg] = { psid: freshPsid(arg) };
-			}
-			state.current = arg;
-			state.lastButtons = [];
-			saveState(state);
-			printAbovePrompt(C.dim(`  switched to session "${arg}" psid=${psid()}`));
-			return;
-		}
-		case "reset": {
-			state.sessions[state.current] = { psid: freshPsid(state.current) };
-			state.lastButtons = [];
-			saveState(state);
-			printAbovePrompt(C.dim(`  reset session "${state.current}" → new psid=${psid()}`));
-			return;
-		}
-		case "psid":
-			printAbovePrompt(C.dim(`  session=${state.current} psid=${psid()}`));
-			printAbovePrompt(C.dim(`  sessionId=${sessionId()}`));
-			return;
-		case "buttons": {
-			if (state.lastButtons.length === 0) {
-				printAbovePrompt(C.dim("  (no buttons from the last bot message yet)"));
-				return;
-			}
-			state.lastButtons.forEach((b, i) =>
-				printAbovePrompt(C.dim(`  [${i + 1}] ${b.title} (${b.kind}: ${b.value})`)),
-			);
-			return;
-		}
-		case "fire": {
-			const n = Number(arg);
-			if (!Number.isInteger(n) || n < 1) {
-				printAbovePrompt(C.red("  usage: /fire <button number>"));
-				return;
-			}
-			await fireButton(n);
-			return;
-		}
-		case "payloads":
-			listPayloads();
-			return;
-		case "seed":
-			await seed(arg || undefined);
-			return;
-		case "image": {
-			if (!arg) {
-				printAbovePrompt(C.red("  usage: /image <path-to-photo>"));
-				printAbovePrompt(
-					C.dim("  sends a real image webhook → R2 key → Kimi vision → product cards (#20)."),
-				);
-				printAbovePrompt(C.dim("  needs the worker booted with real Workers AI (not --local)."));
-				return;
-			}
-			await sendImage(arg);
-			return;
-		}
-		default:
-			printAbovePrompt(C.red(`  unknown command /${cmd} (try /help)`));
+	const handler = devCommands[cmd ?? ""];
+	if (handler) {
+		await handler(arg);
+		return;
 	}
+	printAbovePrompt(C.red(`  unknown command /${cmd} (try /help)`));
 }
 
 // Non-interactive smoke test: drives the SAME real signed path as the REPL

@@ -115,7 +115,9 @@ async function healthy(timeoutMs: number): Promise<boolean> {
 			) {
 				return true;
 			}
-		} catch {}
+		} catch {
+			// worker not ready yet
+		}
 		await Bun.sleep(1000);
 	}
 	return false;

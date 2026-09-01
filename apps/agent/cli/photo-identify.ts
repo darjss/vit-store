@@ -25,7 +25,6 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { SuperJSON } from "superjson";
 import { IMAGE_CONTENT_TYPE_BY_EXT } from "./dev-state";
 import { photoProbeResultSchema } from "../src/lib/photo-probe";
 import { trpcResponse } from "./trpc-stub";
@@ -194,4 +193,4 @@ async function main(): Promise<void> {
 	process.exit(ok ? 0 : 1);
 }
 
-void main();
+await main();

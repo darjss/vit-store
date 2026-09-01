@@ -20,12 +20,12 @@
 import { createHmac } from "node:crypto";
 import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
 import { assistantProductSchema } from "@vit/assistant";
-import * as v from "valibot";
+import { array, InferOutput, number, object, optional, parse } from "valibot";
 import { SuperJSON } from "superjson";
 import { graphSendBodySchema } from "../cli/graph-send";
 import { trpcResponse } from "../cli/trpc-stub";
 
-const idsInputSchema = v.object({ ids: v.optional(v.array(v.number())) });
+const idsInputSchema = object({ ids: optional(array(number())) });
 
 const APP_SECRET = "dev-app-secret";
 const PAGE_ID = "DEV_PAGE_ID";
@@ -52,7 +52,7 @@ const PRODUCTS = {
 		slug: "omega-3-1000",
 		stockStatus: "low_stock",
 	},
-} as const satisfies Record<number, v.InferOutput<typeof assistantProductSchema>>;
+} as const satisfies Record<number, InferOutput<typeof assistantProductSchema>>;
 
 // ── Stub store API (simulated catalog source) on :3000 ───────────────────────
 const storeApi = Bun.serve({
@@ -62,13 +62,16 @@ const storeApi = Bun.serve({
 		let ids: Array<number> = [];
 		if (raw) {
 			ids =
-				v.parse(idsInputSchema, SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw)))).ids ??
-				[];
+				parse(idsInputSchema, SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw)))).ids ?? [];
 		}
 		const data = ids
 			.map((id) => {
-				if (id === 101) return PRODUCTS[101];
-				if (id === 202) return PRODUCTS[202];
+				if (id === 101) {
+					return PRODUCTS[101];
+				}
+				if (id === 202) {
+					return PRODUCTS[202];
+				}
 				return undefined;
 			})
 			.filter((product) => product !== undefined);
@@ -91,7 +94,7 @@ const capture = Bun.serve({
 		if (req.method !== "POST") {
 			return Response.json({ id: PSID });
 		}
-		const body = v.parse(graphSendBodySchema, await req.json());
+		const body = parse(graphSendBodySchema, await req.json());
 		if (!body.sender_action) {
 			const message = body.message;
 			const qr = (message?.quick_replies ?? []).map((q) => ({

@@ -24,7 +24,7 @@ import {
 	type TransferStatus,
 } from "@vit/assistant";
 import { Messenger, type Recipient } from "@warriorteam/messenger-sdk";
-import * as v from "valibot";
+import { minLength, object, optional, pipe, safeParse, string } from "valibot";
 import assistant from "../agents/customer-assistant";
 import adminAssistant from "../agents/admin-assistant";
 import { getAssistantProductsByIds } from "../lib/catalog";
@@ -70,8 +70,8 @@ const graphVersion = "v25.0";
 
 const messengerOptions = {
 	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
-	version: graphVersion,
 	maxRetries: 0,
+	version: graphVersion,
 };
 const graphBaseUrl = process.env.MESSENGER_GRAPH_BASE_URL;
 if (graphBaseUrl) {
@@ -84,13 +84,13 @@ export const messenger = new Messenger(messengerOptions);
 // This is prod observability of what the bot actually says, and it lets a CLI
 // dogfood read the bot's replies from `wrangler tail` / Workers Logs WITHOUT the
 // message being delivered (drive the webhook with a non-deliverable test PSID).
-const outboundMessageBodySchema = v.object({
-	message: v.optional(v.object({ text: v.optional(v.string()) })),
+const outboundMessageBodySchema = object({
+	message: optional(object({ text: optional(string()) })),
 });
 
 const _sendMessage = messenger.send.message.bind(messenger.send);
 messenger.send.message = async (body, opts) => {
-	const parsed = v.safeParse(outboundMessageBodySchema, body);
+	const parsed = safeParse(outboundMessageBodySchema, body);
 	const text = parsed.success ? parsed.output.message?.text : undefined;
 	if (text && text.length > 0) {
 		console.log(`[bot.say] ${text.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
@@ -448,6 +448,62 @@ function paymentDepsFor(
 // screenshot — but the latter two only inside the transfer context recorded on
 // the checkout session. A claim records `customer_claimed_paid` and NEVER calls
 // a payment-confirmation API.
+async function tryHandlePaymentPostback(
+	event: Parameters<typeof detectCartEvent>[0],
+	env: WebhookEnv,
+	sessionId: string,
+	mid: string,
+): Promise<boolean> {
+	const postback = detectPaymentPostback(event);
+	if (!postback) {
+		return false;
+	}
+	const conversation = channel.conversationRef(event);
+	if (conversation === undefined) {
+		return false;
+	}
+	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
+	const run =
+		postback.kind === "choose"
+			? () => handleChooseTransfer(postback.ref, paymentDepsFor(conversation, checkout))
+			: () => handleTransferClaim(postback.ref, paymentDepsFor(conversation, checkout));
+	return runPaymentTransition(env, mid, sessionId, run);
+}
+
+async function tryHandleContextualPaymentClaim(
+	event: Parameters<typeof detectCartEvent>[0],
+	env: WebhookEnv,
+	sessionId: string,
+	mid: string,
+): Promise<boolean> {
+	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
+	if (checkout === undefined) {
+		return false;
+	}
+	const claim = await resolveContextualClaim(event, checkout);
+	if (claim === undefined) {
+		return false;
+	}
+	const conversation = channel.conversationRef(event);
+	if (conversation === undefined) {
+		return false;
+	}
+	const d = paymentDepsFor(conversation, checkout);
+	const run = claim.alreadyClaimed
+		? () => d.sendText(TRANSFER_CLAIM_ACK_MESSAGE).then(() => undefined)
+		: () => handleTransferClaim(claim.ref, d);
+	return runPaymentTransition(env, mid, sessionId, run);
+}
+
+function paymentEventMid(event: Parameters<typeof detectCartEvent>[0]): string {
+	const rawMid = event.postback?.mid ?? event.message?.mid;
+	const payPayload = event.postback?.payload ?? event.message?.quick_reply?.payload;
+	if (rawMid && rawMid.length > 0) {
+		return rawMid;
+	}
+	return payPayload ? `syn:${event.timestamp ?? 0}:${payPayload}` : "";
+}
+
 async function tryHandlePaymentEvent(
 	event: Parameters<typeof detectCartEvent>[0],
 	env: WebhookEnv,
@@ -460,46 +516,12 @@ async function tryHandlePaymentEvent(
 		return false;
 	}
 	const sessionId = channel.conversationKey(conversation);
-	const checkout = checkoutSessionFor(env.CHECKOUT_STORE, sessionId);
-	// Postbacks carry no message id; synthesize a stable dedup id from the
-	// payload + timestamp so Meta's webhook retries don't re-run the transition.
-	const rawMid = event.postback?.mid ?? event.message?.mid;
-	const payPayload = event.postback?.payload ?? event.message?.quick_reply?.payload;
-	const mid =
-		rawMid && rawMid.length > 0
-			? rawMid
-			: payPayload
-				? `syn:${event.timestamp ?? 0}:${payPayload}`
-				: "";
-	const deps = () => paymentDepsFor(conversation, checkout);
+	const mid = paymentEventMid(event);
 
-	// 1. Button taps carry the payment ref in the payload — fully self-contained.
-	const postback = detectPaymentPostback(event);
-	if (postback) {
-		const run =
-			postback.kind === "choose"
-				? () => handleChooseTransfer(postback.ref, deps())
-				: () => handleTransferClaim(postback.ref, deps());
-		return runPaymentTransition(env, mid, sessionId, run);
+	if (await tryHandlePaymentPostback(event, env, sessionId, mid)) {
+		return true;
 	}
-
-	// 2. Free-text "хийсэн"/"hiisen" or a screenshot — a claim ONLY inside the
-	// transfer context recorded on the checkout session. Without a payment
-	// context (or store binding) fall through to the normal paths.
-	if (checkout === undefined) {
-		return false;
-	}
-	const claim = await resolveContextualClaim(event, checkout);
-	if (claim === undefined) {
-		return false;
-	}
-	const d = deps();
-	// Already claimed: just re-acknowledge, do not re-record (avoid re-notifying
-	// admin on a repeated "хийсэн").
-	const run = claim.alreadyClaimed
-		? () => d.sendText(TRANSFER_CLAIM_ACK_MESSAGE).then(() => undefined)
-		: () => handleTransferClaim(claim.ref, d);
-	return runPaymentTransition(env, mid, sessionId, run);
+	return tryHandleContextualPaymentClaim(event, env, sessionId, mid);
 }
 
 // Decodes a payment button tap from a postback/quick-reply payload into the
@@ -584,7 +606,7 @@ export function postMessage(ref: MessengerConversationRef) {
 	const recipientId = ref.participant.id;
 	return defineTool({
 		description: "Post a simple text reply to the bound Messenger customer conversation.",
-		input: v.object({ text: v.pipe(v.string(), v.minLength(1)) }),
+		input: object({ text: pipe(string(), minLength(1)) }),
 		name: "post_messenger_message",
 		async run({ input }) {
 			// Own the typing lifecycle here so typing_on and typing_off are always
@@ -670,8 +692,6 @@ export function sendProductCards(ref: MessengerConversationRef) {
 	return async (cards: Array<ProductCard>) => {
 		const elements = cards.slice(0, 10).map((card) => {
 			const element = {
-				subtitle: card.subtitle,
-				title: card.title,
 				buttons: [
 					{
 						payload: card.button.payload,
@@ -679,6 +699,8 @@ export function sendProductCards(ref: MessengerConversationRef) {
 						type: "postback" as const,
 					},
 				],
+				subtitle: card.subtitle,
+				title: card.title,
 			};
 			if (card.imageUrl) {
 				element.image_url = card.imageUrl;
