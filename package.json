@@ -8,16 +8,19 @@
 			"packages/*"
 		],
 		"catalog": {
-			"hono": "^4.8.12",
-			"@trpc/server": "^11.4.3",
-			"@trpc/client": "^11.4.3",
+			"hono": "^4.13.5",
+			"@trpc/server": "^11.18.0",
+			"@trpc/client": "^11.18.0",
 			"@t3-oss/env-core": "^0.13.10",
-			"dotenv": "^17.2.1",
-			"valibot": "^1.1.0",
-			"typescript": "^5.9.2",
+			"dotenv": "^17.4.2",
+			"valibot": "^1.4.2",
+			"typescript": "^7.0.2",
+			"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
+			"vite-plus": "^0.3.0",
+			"vitest": "4.1.11",
 			"tsdown": "^0.15.12",
-			"drizzle-orm": "^0.44.4",
-			"drizzle-kit": "^0.31.4",
+			"drizzle-orm": "^0.45.2",
+			"drizzle-kit": "^0.31.10",
 			"alchemy": "0.93.12"
 		}
 	},
@@ -27,6 +30,8 @@
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
+		"deps:check": "bunx taze -r major --group",
+		"deps:check:minor": "bunx taze -r minor --group",
 		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
 		"dev": "turbo dev",
 		"dev:alchemy": "alchemy dev --stage dev",
@@ -61,19 +66,24 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.8",
 		"@cloudflare/workers-types": "^4.20260617.1",
-		"@types/node": "^22.19.1",
+		"@types/node": "^26.4.0",
 		"alchemy": "0.93.12",
-		"miniflare": "^4.20260616.0",
 		"oxlint": "^1.31.0",
 		"tsdown": "catalog:",
-		"turbo": "^2.6.1",
-		"typescript": "^5.8.3",
-		"wrangler": "^4.101.0",
-		"zod": "4",
-		"@typescript/native-preview": "^7.0.0-dev.20251203.1"
+		"turbo": "^2.10.12",
+		"typescript": "catalog:",
+		"vite-plus": "catalog:",
+		"wrangler": "^4.127.1",
+		"zod": "4"
 	},
 	"overrides": {
-		"@solid-primitives/event-listener": "2.4.6"
+		"@solid-primitives/event-listener": "2.4.6",
+		"typescript": "catalog:",
+		"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
+		"vitest": "4.1.11",
+		"alchemy": {
+			"miniflare": "4.20260730.0"
+		}
 	},
 	"packageManager": "bun@1.4.0",
 	"patchedDependencies": {

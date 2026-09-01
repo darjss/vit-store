@@ -9,7 +9,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check-types": "tsgo --noEmit"
+		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@cloudflare/codemode": "^0.4.1",
@@ -25,6 +25,6 @@
 		"typescript": "catalog:"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^7"
 	}
 }

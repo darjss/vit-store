@@ -1,6 +1,46 @@
 diff --git a/node_modules/alchemy/.bun-tag-43512fa00f027099 b/.bun-tag-43512fa00f027099
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-5b785d7aff77d02c b/.bun-tag-5b785d7aff77d02c
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-adbaa5853b5849cb b/.bun-tag-adbaa5853b5849cb
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/alchemy/.bun-tag-e8f06c8a620b03c4 b/.bun-tag-e8f06c8a620b03c4
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/lib/cloudflare/miniflare/build-worker-options.js b/lib/cloudflare/miniflare/build-worker-options.js
+index c45a40dc9e8151a7776bb874ac8662c55b738fee..801b35058397d4b0e25d9adbc1531ac6612e3c12 100644
+--- a/lib/cloudflare/miniflare/build-worker-options.js
++++ b/lib/cloudflare/miniflare/build-worker-options.js
+@@ -229,6 +229,7 @@ export const buildWorkerOptions = async (input) => {
+             case "ratelimit": {
+                 (options.ratelimits ??= {})[key] = {
+                     simple: binding.simple,
++                    namespace_id: String(binding.namespace_id),
+                 };
+                 break;
+             }
+@@ -239,9 +240,15 @@ export const buildWorkerOptions = async (input) => {
+             case "send_email": {
+                 const config = {
+                     name: key,
+-                    destination_address: binding.destinationAddress,
+-                    allowed_destination_addresses: binding.allowedDestinationAddresses,
+-                    allowed_sender_addresses: binding.allowedSenderAddresses,
++                    ...(binding.destinationAddress !== undefined
++                        ? { destination_address: binding.destinationAddress }
++                        : {
++                              allowed_destination_addresses:
++                                  binding.allowedDestinationAddresses ?? ["*"],
++                          }),
++                    ...(binding.allowedSenderAddresses !== undefined
++                        ? { allowed_sender_addresses: binding.allowedSenderAddresses }
++                        : {}),
+                 };
+                 if (isRemoteBinding(binding)) {
+                     remoteBindings.push({
 diff --git a/lib/cloudflare/worker-metadata.d.ts b/lib/cloudflare/worker-metadata.d.ts
 index a382afeb4e752e1d1413761b413d3836c80810f3..777b360e6de32ea8e51bcbe1849878d87ba6a506 100644
 --- a/lib/cloudflare/worker-metadata.d.ts
@@ -50,6 +90,50 @@ index ddf1f8b86660edf7aca51633cee38af22d7efecc..db3b269bbeb9b11db59117ac58192110
      /**
       * Enable Workers Logpush to export trace events (request/response metadata,
       * console logs, and exceptions) to external destinations.
+diff --git a/package.json b/package.json
+index f9f0bf3cea4ab574a02f443fe4d3380283be120f..7722eda43d5938e62d0711b498b0f17a548babb0 100644
+--- a/package.json
++++ b/package.json
+@@ -195,7 +195,7 @@
+     "glob": "^10.0.0",
+     "jszip": "^3.0.0",
+     "libsodium-wrappers": "^0.8.0",
+-    "miniflare": "4.20260424.0",
++    "miniflare": "4.20260730.0",
+     "neverthrow": "^8.2.0",
+     "open": "^10.1.2",
+     "openapi-types": "^12.1.3",
+diff --git a/src/cloudflare/miniflare/build-worker-options.ts b/src/cloudflare/miniflare/build-worker-options.ts
+index e07e1846b7717fc630279029921375edae07227a..3ffdd7e15ce620df71616e74bbe9c02131c7d8aa 100644
+--- a/src/cloudflare/miniflare/build-worker-options.ts
++++ b/src/cloudflare/miniflare/build-worker-options.ts
+@@ -299,6 +299,7 @@ export const buildWorkerOptions = async (
+       case "ratelimit": {
+         (options.ratelimits ??= {})[key] = {
+           simple: binding.simple,
++          namespace_id: String(binding.namespace_id),
+         };
+         break;
+       }
+@@ -309,9 +310,15 @@ export const buildWorkerOptions = async (
+       case "send_email": {
+         const config = {
+           name: key,
+-          destination_address: binding.destinationAddress,
+-          allowed_destination_addresses: binding.allowedDestinationAddresses,
+-          allowed_sender_addresses: binding.allowedSenderAddresses,
++          ...(binding.destinationAddress !== undefined
++            ? { destination_address: binding.destinationAddress }
++            : {
++                allowed_destination_addresses:
++                  binding.allowedDestinationAddresses ?? ["*"],
++              }),
++          ...(binding.allowedSenderAddresses !== undefined
++            ? { allowed_sender_addresses: binding.allowedSenderAddresses }
++            : {}),
+         };
+         if (isRemoteBinding(binding)) {
+           remoteBindings.push({
 diff --git a/src/cloudflare/worker-metadata.ts b/src/cloudflare/worker-metadata.ts
 index 8c29e1ca11f18a766bd7e1d7c0c20254a018c986..0ead9598eee87dc34173efb36d4e7f8ae3e3b837 100644
 --- a/src/cloudflare/worker-metadata.ts
