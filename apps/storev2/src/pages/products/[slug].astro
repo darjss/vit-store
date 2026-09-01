@@ -49,13 +49,11 @@ const slugParts = slug?.split("-") ?? [];
 const productId = Number(slugParts.at(-1));
 
 if (Number.isNaN(productId)) {
-	console.error("Invalid product ID");
 	return Astro.redirect("/404");
 }
 
 const productData = await api.product.getProductById.query({ id: productId });
 if (!productData) {
-	console.error("Product not found");
 	return Astro.redirect("/404");
 }
 
@@ -272,15 +270,28 @@ const breadcrumbSchema = {
 		/>
 </Layout>
 
-<script define:vars={{ productData: { product_id: product.id, product_name: product.name, product_price: product.price, product_slug: slug } }}>
+<script
+	id="product-view-tracker"
+	hidden
+	data-product-id={product.id}
+	data-product-name={product.name}
+	data-product-price={product.price}
+	data-product-slug={slug}
+></script>
+<script>
 	// Track product view on page load (supports view transitions)
 	let _productViewTracked = false;
 	function trackProductView() {
 		if (_productViewTracked) {return;}
-		if (window.posthog && productData) {
-			window.posthog.capture("product_viewed", productData);
-			_productViewTracked = true;
-		}
+		const el = document.getElementById("product-view-tracker");
+		if (!el || !window.posthog) {return;}
+		window.posthog.capture("product_viewed", {
+			product_id: Number(el.dataset.productId),
+			product_name: el.dataset.productName ?? "",
+			product_price: Number(el.dataset.productPrice),
+			product_slug: el.dataset.productSlug ?? "",
+		});
+		_productViewTracked = true;
 	}
 	
 	// Track on initial load and view transitions

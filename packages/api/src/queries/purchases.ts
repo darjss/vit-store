@@ -296,6 +296,10 @@ async function updatePurchaseReceivedAt(tx: Transaction, purchaseId: number) {
 		.where(eq(PurchasesTable.id, purchaseId));
 }
 
+function getPurchaseSortTime(value: Date | null | undefined) {
+	return value instanceof Date ? value.getTime() : 0;
+}
+
 export const purchaseQueries = {
 	admin: {
 		async cancelPurchase(tx: Transaction, purchaseId: number) {
@@ -428,20 +432,18 @@ export const purchaseQueries = {
 
 			const sortMultiplier = params.sortDirection === "asc" ? 1 : -1;
 			purchases.sort((a, b) => {
-				const getTime = (value: Date | null | undefined) =>
-					value instanceof Date ? value.getTime() : 0;
 				const aValue =
 					params.sortField === "orderedAt"
-						? getTime(a.orderedAt)
+						? getPurchaseSortTime(a.orderedAt)
 						: params.sortField === "receivedAt"
-							? getTime(a.receivedAt)
-							: getTime(a.createdAt);
+							? getPurchaseSortTime(a.receivedAt)
+							: getPurchaseSortTime(a.createdAt);
 				const bValue =
 					params.sortField === "orderedAt"
-						? getTime(b.orderedAt)
+						? getPurchaseSortTime(b.orderedAt)
 						: params.sortField === "receivedAt"
-							? getTime(b.receivedAt)
-							: getTime(b.createdAt);
+							? getPurchaseSortTime(b.receivedAt)
+							: getPurchaseSortTime(b.createdAt);
 				return (aValue - bValue) * sortMultiplier;
 			});
 

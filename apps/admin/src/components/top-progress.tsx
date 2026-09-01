@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 
 export function TopProgress({ visible }: { visible: boolean }) {
-	const [shouldShow, setShouldShow] = useState(false);
+	const [showAfterDelay, setShowAfterDelay] = useState(false);
 
 	useEffect(() => {
-		if (visible) {
-			// Show after a brief delay to avoid flicker
-			const timer = setTimeout(() => setShouldShow(true), 100);
-			return () => clearTimeout(timer);
+		if (!visible) {
+			return;
 		}
-		setShouldShow(false);
+		const timer = setTimeout(() => setShowAfterDelay(true), 100);
+		return () => {
+			clearTimeout(timer);
+			setShowAfterDelay(false);
+		};
 	}, [visible]);
 
-	if (!shouldShow) {
+	if (!visible || !showAfterDelay) {
 		return null;
 	}
 

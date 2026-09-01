@@ -22,7 +22,7 @@ const codemodeJsonSchema: v.GenericSchema<CodemodeJson> = v.lazy(() =>
 );
 
 export const serializeCodemodeJson = <T>(value: T): CodemodeJson =>
-	v.parse(codemodeJsonSchema, JSON.parse(JSON.stringify(value)));
+	v.parse(codemodeJsonSchema, structuredClone(value) as CodemodeJson);
 
 export type CodemodeFn = (input?: CodemodeJson) => Promise<CodemodeJson>;
 

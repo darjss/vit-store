@@ -57,7 +57,7 @@ import {
 	TRANSFER_CLAIM_ACK_MESSAGE,
 } from "@vit/assistant";
 import { bankTransfer } from "@vit/shared/constants";
-import * as v from "valibot";
+import { array, InferOutput, number, object, optional, parse, string } from "valibot";
 import { SuperJSON } from "superjson";
 import { loadDotVars } from "./dot-vars";
 import { captureGraphSend, graphSendBodySchema, type GraphCapture } from "./graph-send";
@@ -140,7 +140,7 @@ function loadCustomerMessages(limitThreads: number): Array<ExportMsg> {
 			continue;
 		}
 		try {
-			const data = v.parse(exportThreadSchema, JSON.parse(readFileSync(file, "utf8")));
+			const data = parse(exportThreadSchema, JSON.parse(readFileSync(file, "utf8")));
 			for (const m of data.messages ?? []) {
 				if (m.sender_name === STORE_PARTICIPANT) {
 					continue;
@@ -367,10 +367,10 @@ const PAYMENT = {
 };
 const paymentCalls = { confirmPayment: 0, confirmPaymentAndApplyStock: 0 };
 
-const trpcInputSchema = v.object({
-	ids: v.optional(v.array(v.number())),
-	limit: v.optional(v.number()),
-	query: v.optional(v.string()),
+const trpcInputSchema = object({
+	ids: optional(array(number())),
+	limit: optional(number()),
+	query: optional(string()),
 });
 
 function decodeInput(raw: string | null) {
@@ -378,7 +378,7 @@ function decodeInput(raw: string | null) {
 		return undefined;
 	}
 	try {
-		return v.parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
+		return parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
 	} catch {
 		return undefined;
 	}
@@ -400,64 +400,76 @@ function searchFixture(query: string, limit: number) {
 	return (matches.length > 0 ? matches : SEARCH_FIXTURE).slice(0, limit);
 }
 
+function fixturePaymentGetByNumber() {
+	return trpcResponseBody({
+		createdAt: "2026-06-25T00:00:00.000Z",
+		order: {
+			address: "Баянзүрх дүүрэг",
+			createdAt: "2026-06-25T00:00:00.000Z",
+			customerPhone: PAYMENT.customerPhone,
+			notes: "",
+			orderNumber: PAYMENT.orderNumber,
+			products: [],
+			status: "pending",
+		},
+		paymentNumber: PAYMENT.paymentNumber,
+		provider: "transfer",
+		status: PAYMENT.status,
+		total: PAYMENT.total,
+	});
+}
+
+function fixtureClaimTransfer() {
+	if (PAYMENT.status === "pending") {
+		PAYMENT.status = "customer_claimed_paid";
+	}
+	return trpcResponseBody({ orderNumber: PAYMENT.orderNumber });
+}
+
+function fixturePaymentRoutes(path: string): Response | undefined {
+	if (path.endsWith("/payment.getPaymentByNumber")) {
+		return fixturePaymentGetByNumber();
+	}
+	if (path.endsWith("/payment.claimTransferPaid")) {
+		return fixtureClaimTransfer();
+	}
+	if (path.endsWith("/payment.confirmPayment")) {
+		paymentCalls.confirmPayment += 1;
+		return trpcResponseBody({ ok: true });
+	}
+	if (path.endsWith("/payment.confirmPaymentAndApplyStock")) {
+		paymentCalls.confirmPaymentAndApplyStock += 1;
+		return trpcResponseBody({ ok: true });
+	}
+	return undefined;
+}
+
+function fixtureFetch(req: Request): Response {
+	const url = new URL(req.url);
+	const path = url.pathname;
+	const input = decodeInput(url.searchParams.get("input"));
+
+	if (path.includes("getProductsByIdsForAdvice")) {
+		const ids = input?.ids ?? [];
+		return trpcResponseBody(
+			ids.map((id) => ADVICE_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+		);
+	}
+	if (path.includes("getProductsByIdsForAssistant")) {
+		const ids = input?.ids ?? [];
+		return trpcResponseBody(
+			ids.map((id) => SEARCH_FIXTURE.find((p) => p.id === id)).filter(Boolean),
+		);
+	}
+	if (path.includes("searchProductsForAssistant")) {
+		return trpcResponseBody(searchFixture(input?.query ?? "", input?.limit ?? 8));
+	}
+	return fixturePaymentRoutes(path) ?? new Response("not found", { status: 404 });
+}
+
 function startFixtureServer() {
 	return Bun.serve({
-		fetch(req) {
-			const url = new URL(req.url);
-			const path = url.pathname;
-			const input = decodeInput(url.searchParams.get("input"));
-
-			if (path.includes("getProductsByIdsForAdvice")) {
-				const ids = input?.ids ?? [];
-				return trpcResponseBody(
-					ids.map((id) => ADVICE_FIXTURE.find((p) => p.id === id)).filter(Boolean),
-				);
-			}
-			if (path.includes("getProductsByIdsForAssistant")) {
-				const ids = input?.ids ?? [];
-				return trpcResponseBody(
-					ids.map((id) => SEARCH_FIXTURE.find((p) => p.id === id)).filter(Boolean),
-				);
-			}
-			if (path.includes("searchProductsForAssistant")) {
-				return trpcResponseBody(searchFixture(input?.query ?? "", input?.limit ?? 8));
-			}
-			// Payment-slice procedures (lib/payment.ts hits these from THIS process).
-			if (path.endsWith("/payment.getPaymentByNumber")) {
-				return trpcResponseBody({
-					createdAt: "2026-06-25T00:00:00.000Z",
-					order: {
-						address: "Баянзүрх дүүрэг",
-						createdAt: "2026-06-25T00:00:00.000Z",
-						customerPhone: PAYMENT.customerPhone,
-						notes: "",
-						orderNumber: PAYMENT.orderNumber,
-						products: [],
-						status: "pending",
-					},
-					paymentNumber: PAYMENT.paymentNumber,
-					provider: "transfer",
-					status: PAYMENT.status,
-					total: PAYMENT.total,
-				});
-			}
-			if (path.endsWith("/payment.claimTransferPaid")) {
-				if (PAYMENT.status === "pending") {
-					PAYMENT.status = "customer_claimed_paid";
-				}
-				return trpcResponseBody({ orderNumber: PAYMENT.orderNumber });
-			}
-			// Confirmation procedures must NEVER be hit on a claim (ADR-0004).
-			if (path.endsWith("/payment.confirmPayment")) {
-				paymentCalls.confirmPayment += 1;
-				return trpcResponseBody({ ok: true });
-			}
-			if (path.endsWith("/payment.confirmPaymentAndApplyStock")) {
-				paymentCalls.confirmPaymentAndApplyStock += 1;
-				return trpcResponseBody({ ok: true });
-			}
-			return new Response("not found", { status: 404 });
-		},
+		fetch: fixtureFetch,
 		hostname: "127.0.0.1",
 		port: FIXTURE_PORT,
 	});
@@ -465,7 +477,7 @@ function startFixtureServer() {
 
 // ─── Capture server (stands in for Graph Send API) ───────────────────────────
 
-interface Captured extends GraphCapture {}
+type Captured = GraphCapture;
 // Append-only capture log tagged with the recipient PSID. The worker dispatches
 // model turns asynchronously (waitUntil), so a slow reply from an earlier turn
 // can land while a later turn is running; tagging by recipient lets each turn
@@ -478,9 +490,9 @@ function startCaptureServer() {
 			if (req.method !== "POST") {
 				return Response.json({ id: PAGE_ID });
 			}
-			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
+			let parsedBody: InferOutput<typeof graphSendBodySchema>;
 			try {
-				parsedBody = v.parse(graphSendBodySchema, await req.json());
+				parsedBody = parse(graphSendBodySchema, await req.json());
 			} catch {
 				parsedBody = {};
 			}
@@ -681,44 +693,14 @@ async function runCartSlice(anchor: string | undefined): Promise<void> {
 	console.log("");
 }
 
-// Payment slice: drive the REAL @vit/assistant payment builders + REAL channel
-// handlers (no model, deterministic), exactly as cli/payment-proof.ts does.
-async function runPaymentSlice(anchor: string | undefined): Promise<void> {
-	hr();
-	console.log(C.bold("▶ payment buttons (#25) — real @vit/assistant payment domain"));
-	if (anchor) {
-		console.log(`  ${C.dim("anchored on real export intent:")} ${C.cyan(redact(anchor))}`);
-	}
-	const ref: PaymentRef = {
-		checkoutToken: PAYMENT.checkoutToken,
-		paymentNumber: PAYMENT.paymentNumber,
-	};
+type PaymentCapture = {
+	bank: Array<{ payload: string; text: string }>;
+	status?: string;
+	texts: Array<string>;
+};
 
-	// 1) Order-created → the two payment-choice buttons (QPay url + transfer postback).
-	const storePublic = process.env.STORE_PUBLIC_URL ?? FIXTURE_BASE;
-	const choice = buildPaymentChoice(storePublic, ref);
-	const qpayBtn = choice.buttons.find((b) => b.type === "web_url");
-	const transferBtn = choice.buttons.find((b) => b.type === "postback");
-	console.log(`  ${C.green("bot ›")} ${redact(choice.text)}`);
-	console.log(`    ${C.dim(`[button] ${qpayBtn?.title} → ${qpayBtn?.url}`)}`);
-	console.log(`    ${C.dim(`[button] ${transferBtn?.title} → postback ${transferBtn?.payload}`)}`);
-	console.log(
-		`    ${C.dim(`QPay url matches buildQpayPageUrl: ${qpayBtn?.url === buildQpayPageUrl(storePublic, ref)}`)}`,
-	);
-
-	// 2) Customer taps "Дансаар шилжүүлэх" → real decode → real choose-transfer handler.
-	console.log(`  ${C.magenta("⊳")} tap "${transferBtn?.title}" (${transferBtn?.payload})`);
-	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref));
-	if (!chosen) {
-		throw new Error("choose-transfer payload did not parse");
-	}
-	type PaymentCapture = {
-		bank: Array<{ payload: string; text: string }>;
-		status?: string;
-		texts: Array<string>;
-	};
-	const cap: PaymentCapture = { bank: [], texts: [] };
-	const deps: PaymentHandlerDeps = {
+function makePaymentSliceDeps(cap: PaymentCapture): PaymentHandlerDeps {
+	return {
 		claimTransfer: (r) => claimTransfer(r.paymentNumber, r.checkoutToken),
 		fetchPaymentSummary: async (r) => {
 			const s = await fetchPaymentSummary(r.paymentNumber, r.checkoutToken);
@@ -736,7 +718,33 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 			cap.status = status;
 		},
 	};
-	await handleChooseTransfer(chosen, deps);
+}
+
+function printPaymentChoice(ref: PaymentRef) {
+	const storePublic = process.env.STORE_PUBLIC_URL ?? FIXTURE_BASE;
+	const choice = buildPaymentChoice(storePublic, ref);
+	const qpayBtn = choice.buttons.find((b) => b.type === "web_url");
+	const transferBtn = choice.buttons.find((b) => b.type === "postback");
+	console.log(`  ${C.green("bot ›")} ${redact(choice.text)}`);
+	console.log(`    ${C.dim(`[button] ${qpayBtn?.title} → ${qpayBtn?.url}`)}`);
+	console.log(`    ${C.dim(`[button] ${transferBtn?.title} → postback ${transferBtn?.payload}`)}`);
+	console.log(
+		`    ${C.dim(`QPay url matches buildQpayPageUrl: ${qpayBtn?.url === buildQpayPageUrl(storePublic, ref)}`)}`,
+	);
+	return transferBtn;
+}
+
+async function runChooseTransferStep(
+	ref: PaymentRef,
+	transferBtn: ReturnType<typeof printPaymentChoice>,
+) {
+	console.log(`  ${C.magenta("⊳")} tap "${transferBtn?.title}" (${transferBtn?.payload})`);
+	const chosen = parseChooseTransferPayload(chooseTransferPayload(ref));
+	if (!chosen) {
+		throw new Error("choose-transfer payload did not parse");
+	}
+	const cap: PaymentCapture = { bank: [], texts: [] };
+	await handleChooseTransfer(chosen, makePaymentSliceDeps(cap));
 	const bank = cap.bank[0];
 	if (bank) {
 		console.log(`    ${C.green("bot ›")} bank transfer details:`);
@@ -748,24 +756,27 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 			`    ${C.dim(`shows account ${bankTransfer.accountNumber} · amount ${PAYMENT.total.toLocaleString("en-US")} · ref ${PAYMENT.customerPhone}`)}`,
 		);
 	}
+	return bank;
+}
 
-	// 3) Customer taps "Шилжүүлсэн" (claim) → real claim handler → ack, still pending.
+async function runClaimTransferStep(ref: PaymentRef, bank: { payload: string } | undefined) {
 	console.log(`  ${C.magenta("⊳")} tap "Шилжүүлсэн" claim button (${bank?.payload})`);
 	const claimRef = parseClaimTransferPayload(claimTransferPayload(ref)) ?? ref;
-	const cap2: PaymentCapture = { bank: [], texts: [] };
+	const cap: PaymentCapture = { bank: [], texts: [] };
+	const baseDeps = makePaymentSliceDeps(cap);
 	await handleTransferClaim(claimRef, {
-		...deps,
+		...baseDeps,
 		sendText: async (t) => {
-			cap2.texts.push(t);
+			cap.texts.push(t);
 			return { messageId: null, ok: true };
 		},
 		setTransferStatus: async (s) => {
-			cap2.status = s;
+			cap.status = s;
 		},
 	});
-	console.log(`    ${C.green("bot ›")} ${redact(cap2.texts[0] ?? "")}`);
+	console.log(`    ${C.green("bot ›")} ${redact(cap.texts[0] ?? "")}`);
 	console.log(
-		`    ${C.dim(`ack matches TRANSFER_CLAIM_ACK_MESSAGE: ${cap2.texts[0] === TRANSFER_CLAIM_ACK_MESSAGE}`)}`,
+		`    ${C.dim(`ack matches TRANSFER_CLAIM_ACK_MESSAGE: ${cap.texts[0] === TRANSFER_CLAIM_ACK_MESSAGE}`)}`,
 	);
 	console.log(
 		`    ${C.dim(`"хийсэн" / "hiisen" also claim: ${isTransferDoneText("хийсэн")} / ${isTransferDoneText("hiisen")}`)}`,
@@ -773,6 +784,23 @@ async function runPaymentSlice(anchor: string | undefined): Promise<void> {
 	console.log(
 		`    ${C.dim(`ADR-0004 invariant — status is "${PAYMENT.status}" (a claim, NOT success); confirmation api calls: ${paymentCalls.confirmPayment + paymentCalls.confirmPaymentAndApplyStock}`)}`,
 	);
+}
+
+// Payment slice: drive the REAL @vit/assistant payment builders + REAL channel
+// handlers (no model, deterministic), exactly as cli/payment-proof.ts does.
+async function runPaymentSlice(anchor: string | undefined): Promise<void> {
+	hr();
+	console.log(C.bold("▶ payment buttons (#25) — real @vit/assistant payment domain"));
+	if (anchor) {
+		console.log(`  ${C.dim("anchored on real export intent:")} ${C.cyan(redact(anchor))}`);
+	}
+	const ref: PaymentRef = {
+		checkoutToken: PAYMENT.checkoutToken,
+		paymentNumber: PAYMENT.paymentNumber,
+	};
+	const transferBtn = printPaymentChoice(ref);
+	const bank = await runChooseTransferStep(ref, transferBtn);
+	await runClaimTransferStep(ref, bank);
 	console.log("");
 }
 
@@ -841,4 +869,4 @@ async function main(): Promise<void> {
 	process.exit(0);
 }
 
-void main();
+await main();

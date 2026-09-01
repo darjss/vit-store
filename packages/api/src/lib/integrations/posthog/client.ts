@@ -26,8 +26,6 @@ const postHogQueryResponseSchema = v.object({
 	types: v.array(v.string()),
 });
 
-type PostHogQueryResponse = v.InferOutput<typeof postHogQueryResponseSchema>;
-
 interface HogQLQueryResult {
 	columns: Array<string>;
 	hasMore?: boolean;

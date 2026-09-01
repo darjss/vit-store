@@ -17,6 +17,34 @@ import {
 	parseQpayInvoiceResponse,
 } from "~/lib/payments/qpay";
 import { publicProcedure, router } from "~/lib/trpc";
+import type { Context } from "~/lib/context";
+
+async function createOrReuseQpayInvoice(
+	ctx: Context,
+	paymentNumber: string,
+	payment: Awaited<ReturnType<typeof assertCanAccessPayment>>,
+): Promise<InvoiceResponse> {
+	const responseFromKv = await kv().get(`QPAY:${paymentNumber}`);
+	const cachedInvoice = responseFromKv ? parseQpayInvoiceResponse(responseFromKv) : null;
+	if (cachedInvoice) {
+		await paymentQueries.store.changePaymentToQpay(paymentNumber, cachedInvoice.invoice_id);
+		return cachedInvoice;
+	}
+	const isDev = process.env.NODE_ENV === "development";
+	const qpayResponse = await createQpayInvoice(
+		isDev ? Math.ceil(payment.amount / 10_000) : payment.amount,
+		paymentNumber,
+	);
+	await paymentQueries.store.changePaymentToQpay(paymentNumber, qpayResponse.invoice_id);
+	await ctx.c.env.vitStoreKV.put(`QPAY:${paymentNumber}`, JSON.stringify(qpayResponse), {
+		expirationTtl: 3600,
+	});
+	trackQpayInvoiceCreatedServerSide({
+		paymentNumber,
+		phone: payment.order.customerPhone?.toString() ?? paymentNumber,
+	}).catch(() => {});
+	return qpayResponse;
+}
 
 export const payment = router({
 	checkQpayPayment: publicProcedure
@@ -130,36 +158,7 @@ export const payment = router({
 						message: "ALREADY_PAID",
 					});
 				}
-				const responseFromKv = await kv().get(`QPAY:${input.paymentNumber}`);
-				const cachedInvoice = responseFromKv ? parseQpayInvoiceResponse(responseFromKv) : null;
-				if (cachedInvoice) {
-					await paymentQueries.store.changePaymentToQpay(
-						input.paymentNumber,
-						cachedInvoice.invoice_id,
-					);
-					return cachedInvoice;
-				}
-				const isDev = process.env.NODE_ENV === "development";
-				const qpayResponse = await createQpayInvoice(
-					isDev ? Math.ceil(payment.amount / 10_000) : payment.amount,
-					input.paymentNumber,
-				);
-				await paymentQueries.store.changePaymentToQpay(
-					input.paymentNumber,
-					qpayResponse.invoice_id,
-				);
-				await ctx.c.env.vitStoreKV.put(
-					`QPAY:${input.paymentNumber}`,
-					JSON.stringify(qpayResponse),
-					{
-						expirationTtl: 3600,
-					},
-				);
-				trackQpayInvoiceCreatedServerSide({
-					paymentNumber: input.paymentNumber,
-					phone: payment.order.customerPhone?.toString() ?? input.paymentNumber,
-				}).catch(() => {});
-				return qpayResponse;
+				return createOrReuseQpayInvoice(ctx, input.paymentNumber, payment);
 			} catch (error) {
 				if (error instanceof TRPCError) {
 					throw error;

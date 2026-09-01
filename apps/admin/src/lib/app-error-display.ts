@@ -1,4 +1,4 @@
-import * as v from "valibot";
+import { instance, pipe, safeParse, string, transform } from "valibot";
 
 export type AppErrorDisplay = {
 	message: string;
@@ -6,18 +6,18 @@ export type AppErrorDisplay = {
 	stack: string;
 };
 
-const displayFromError = v.pipe(
-	v.instance(Error),
-	v.transform((error): AppErrorDisplay => ({
+const displayFromError = pipe(
+	instance(Error),
+	transform((error): AppErrorDisplay => ({
 		message: error.message,
 		raw: String(error),
 		stack: error.stack ?? "",
 	})),
 );
 
-const displayFromString = v.pipe(
-	v.string(),
-	v.transform((asString): AppErrorDisplay => ({
+const displayFromString = pipe(
+	string(),
+	transform((asString): AppErrorDisplay => ({
 		message: asString,
 		raw: asString,
 		stack: "",
@@ -31,12 +31,12 @@ const unknownFallback = (raw: string): AppErrorDisplay => ({
 });
 
 export function formatAppErrorDisplay(error: Error | string): AppErrorDisplay {
-	const fromError = v.safeParse(displayFromError, error);
+	const fromError = safeParse(displayFromError, error);
 	if (fromError.success) {
 		return fromError.output;
 	}
 
-	const fromString = v.safeParse(displayFromString, error);
+	const fromString = safeParse(displayFromString, error);
 	if (fromString.success) {
 		return fromString.output;
 	}

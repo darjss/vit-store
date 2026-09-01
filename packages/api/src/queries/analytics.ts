@@ -23,7 +23,7 @@ type TopBrandSalesRow = {
 	total: number;
 };
 
-const EMPTY_TOP_BRAND_SALES: TopBrandSalesRow[] = [];
+const EMPTY_TOP_BRAND_SALES: Array<TopBrandSalesRow> = [];
 
 export const analyticsQueries = {
 	admin: {

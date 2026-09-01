@@ -3,12 +3,11 @@ import {
 	applyCartCommand,
 	assistantStockStatusSchema,
 	type Cart,
-	type CartProductInput,
 	cartCommandSchema,
 	cartSchema,
 	EMPTY_CART,
 } from "@vit/assistant";
-import * as v from "valibot";
+import { literal, number, object, optional, safeParse, string, variant } from "valibot";
 
 // Per-session cart persistence (ADR 0006: pre-order Messenger conversations live
 // only in the Flue agent session, keyed by PSID — no customer row until an
@@ -27,25 +26,25 @@ const STORAGE_KEY = "cart";
 // Wire payloads accepted on POST. `add` carries the resolved product snapshot
 // (the channel resolves the catalog before calling); `command` carries a parsed
 // cart-control command (inc/dec/set/remove/confirm/clear/view).
-const addRequestSchema = v.object({
-	product: v.object({
-		brand: v.optional(v.string()),
-		id: v.number(),
-		image: v.optional(v.string()),
-		name: v.string(),
-		price: v.number(),
-		stockStatus: v.optional(assistantStockStatusSchema),
+const addRequestSchema = object({
+	product: object({
+		brand: optional(string()),
+		id: number(),
+		image: optional(string()),
+		name: string(),
+		price: number(),
+		stockStatus: optional(assistantStockStatusSchema),
 	}),
-	quantity: v.optional(v.number()),
-	type: v.literal("add"),
+	quantity: optional(number()),
+	type: literal("add"),
 });
 
-const commandRequestSchema = v.object({
+const commandRequestSchema = object({
 	command: cartCommandSchema,
-	type: v.literal("command"),
+	type: literal("command"),
 });
 
-const cartRequestSchema = v.variant("type", [addRequestSchema, commandRequestSchema]);
+const cartRequestSchema = variant("type", [addRequestSchema, commandRequestSchema]);
 
 export class CartStore implements DurableObject {
 	constructor(private readonly state: DurableObjectState) {}
@@ -57,7 +56,7 @@ export class CartStore implements DurableObject {
 		}
 		// Tolerate a legacy/garbled record by falling back to an empty cart rather
 		// than throwing the customer's whole turn.
-		const parsed = v.safeParse(cartSchema, stored);
+		const parsed = safeParse(cartSchema, stored);
 		return parsed.success ? parsed.output : { ...EMPTY_CART };
 	}
 
@@ -83,7 +82,7 @@ export class CartStore implements DurableObject {
 		} catch {
 			return new Response("Invalid JSON", { status: 400 });
 		}
-		const parsed = v.safeParse(cartRequestSchema, body);
+		const parsed = safeParse(cartRequestSchema, body);
 		if (!parsed.success) {
 			return new Response("Invalid cart request", { status: 400 });
 		}

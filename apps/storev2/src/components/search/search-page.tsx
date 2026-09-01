@@ -7,6 +7,8 @@ import SearchInput from "./search-input";
 import SearchResults from "./search-results";
 import SearchSuggestions from "./search-suggestions";
 
+const readQueryFromUrl = () => new URL(window.location.href).searchParams.get("q") ?? "";
+
 /**
  * Full-page search experience for `/search/?q=...`.
  * Reads the initial query from the URL, keeps the `q` param in sync on
@@ -15,8 +17,6 @@ import SearchSuggestions from "./search-suggestions";
 const SearchPage: Component = () => {
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [isSearching, setIsSearching] = createSignal(false);
-
-	const readQueryFromUrl = () => new URL(window.location.href).searchParams.get("q") ?? "";
 
 	onMount(() => {
 		const initial = readQueryFromUrl();

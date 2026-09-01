@@ -7,7 +7,7 @@ import {
 	sanitizeUpstreamTrpcResponse,
 	trpcErrorResponse,
 } from "@/lib/trpc-proxy";
-import * as v from "valibot";
+import { parse } from "valibot";
 
 export const prerender = false;
 
@@ -71,7 +71,7 @@ export const ALL: APIRoute = async ({ params, request }) => {
 		}
 	} catch (error) {
 		console.error({
-			errorType: errorKind(v.parse(thrownErrorWireSchema, error)),
+			errorType: errorKind(parse(thrownErrorWireSchema, error)),
 			event: "store_trpc_transport_rejected",
 			method: request.method,
 		});

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "@unpic/react";
 import { addBrandSchema, type addBrandType } from "@vit/shared";
 import { X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import { ImagePlaceholderIcon } from "../icons";
@@ -16,6 +16,8 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { UploadButton } from "../upload-button";
 
+// ponytail: legacy admin brand form — split sections later; complexity ceiling 17
+// oxlint-disable-next-line complexity
 const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () => void }) => {
 	const form = useForm({
 		defaultValues: {
@@ -46,8 +48,10 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 		mutation.mutate(values);
 	};
 
-	const currentImageUrl = brand ? brand.logoUrl : form.watch("logoUrl");
-	const bannerImageUrl = form.watch("bannerImage");
+	const logoUrl = useWatch({ control: form.control, name: "logoUrl" });
+	const bannerImageUrl = useWatch({ control: form.control, name: "bannerImage" });
+	const brandName = useWatch({ control: form.control, name: "name" });
+	const currentImageUrl = brand ? brand.logoUrl : logoUrl;
 
 	return (
 		<Form {...form}>
@@ -105,7 +109,7 @@ const BrandForm = ({ brand, onSuccess }: { brand?: addBrandType; onSuccess: () =
 															<X className="h-3 w-3" />
 														</Button>
 														<Image
-															alt={form.watch("name") || "Брэндийн лого"}
+															alt={brandName || "Брэндийн лого"}
 															className="border-border bg-background h-28 w-28 rounded-lg border-2 object-contain p-3 shadow-sm"
 															height={120}
 															layout="constrained"

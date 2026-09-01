@@ -1,7 +1,7 @@
 import { TRPCClientError } from "@trpc/client";
 import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
-import * as v from "valibot";
+import { object, optional, string } from "valibot";
 import { GoogleIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
@@ -30,8 +30,8 @@ export const Route = createFileRoute("/login")({
 		return { session };
 	},
 	component: RouteComponent,
-	validateSearch: v.object({
-		message: v.optional(v.string()),
+	validateSearch: object({
+		message: optional(string()),
 	}),
 });
 

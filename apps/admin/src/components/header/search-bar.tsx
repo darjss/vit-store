@@ -194,7 +194,7 @@ const SearchBar = ({
 
 							{products.length === 0 && orders.length === 0 ? (
 								<div className="text-muted-foreground px-2 py-3 text-sm">
-									"{debouncedValue}" илэрц олдсонгүй
+									&ldquo;{debouncedValue}&rdquo; илэрц олдсонгүй
 								</div>
 							) : null}
 						</>

@@ -6,7 +6,18 @@ import {
 } from "@vit/shared/constants";
 import { PlusCircle, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { Suspense, useState } from "react";
-import * as v from "valibot";
+import {
+	type InferOutput,
+	integer,
+	minValue,
+	number,
+	object,
+	optional,
+	parse,
+	picklist,
+	pipe,
+	string,
+} from "valibot";
 import SubmitButton from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,18 +29,18 @@ import OrdersList from "@/components/order/orders-list";
 const orderStatusFilterValues = [...orderStatusConstants, "active", "all"] as const;
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
-const ordersSearchSchema = v.object({
-	date: v.optional(v.string(), "all"),
-	orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
-	page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-	pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
-	paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
-	searchTerm: v.optional(v.string()),
-	sortDirection: v.optional(v.picklist(["asc", "desc"])),
-	sortField: v.optional(v.string()),
+const ordersSearchSchema = object({
+	date: optional(string(), "all"),
+	orderStatus: optional(picklist(orderStatusFilterValues), "active"),
+	page: optional(pipe(number(), integer(), minValue(1)), 1),
+	pageSize: optional(pipe(number(), integer(), minValue(1)), PRODUCT_PER_PAGE),
+	paymentStatus: optional(picklist(paymentStatusConstants)),
+	searchTerm: optional(string()),
+	sortDirection: optional(picklist(["asc", "desc"])),
+	sortField: optional(string()),
 });
 
-function paginatedOrdersQueryFilters(search: v.InferOutput<typeof ordersSearchSchema>) {
+function paginatedOrdersQueryFilters(search: InferOutput<typeof ordersSearchSchema>) {
 	const requestedOrderStatus = search.orderStatus ?? "active";
 	return {
 		date: search.date ?? "all",
@@ -51,7 +62,7 @@ function paginatedOrdersQueryFilters(search: v.InferOutput<typeof ordersSearchSc
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const search = v.parse(ordersSearchSchema, location.search);
+		const search = parse(ordersSearchSchema, location.search);
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.order.getPaginatedOrders.queryOptions(paginatedOrdersQueryFilters(search)),
 		);

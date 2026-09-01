@@ -22,7 +22,7 @@ export type SummarizedLogError = {
 
 export type SummarizedLogArray = {
 	length: number;
-	sample: SummarizedLogValue[];
+	sample: Array<SummarizedLogValue>;
 	truncated: boolean;
 	type: "array";
 };
@@ -117,7 +117,7 @@ export function isSummarizedLogObject(value: SummarizedLogValue): value is Summa
 	return tag === "[object Object]";
 }
 
-export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue {
+function summarizeLogScalarValue(value: LogWire): SummarizedLogValue | null {
 	if (value === null) {
 		return value;
 	}
@@ -142,7 +142,6 @@ export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue
 	if (value instanceof Date) {
 		return value.toISOString();
 	}
-
 	if (value instanceof Error) {
 		return {
 			message: value.message,
@@ -150,14 +149,16 @@ export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue
 			stack: value.stack,
 		};
 	}
+	return null;
+}
 
+function summarizeLogCollectionValue(value: LogWire, depth: number): SummarizedLogValue | null {
 	if (depth >= MAX_DEPTH) {
 		if (Array.isArray(value)) {
 			return { length: value.length, truncated: true, type: "array" };
 		}
 		return { truncated: true, type: value.constructor?.name ?? "object" };
 	}
-
 	if (Array.isArray(value)) {
 		const sample = value
 			.slice(0, MAX_ARRAY_ITEMS)
@@ -169,13 +170,24 @@ export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue
 			type: "array",
 		};
 	}
-
 	if (value instanceof Map) {
 		return summarizeLogValue(Object.fromEntries(value), depth + 1);
 	}
-
 	if (value instanceof Set) {
 		return summarizeLogValue(Array.from(value), depth + 1);
+	}
+	return null;
+}
+
+export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue {
+	const scalar = summarizeLogScalarValue(value);
+	if (scalar !== null) {
+		return scalar;
+	}
+
+	const collection = summarizeLogCollectionValue(value, depth);
+	if (collection !== null) {
+		return collection;
 	}
 
 	if (!isPlainLogObject(value)) {

@@ -116,7 +116,9 @@ export function ProductPerformance({
 												{index + 1}
 											</div>
 											<div className="min-w-0">
-												<p className="truncate text-sm leading-tight font-bold">"{search.query}"</p>
+												<p className="truncate text-sm leading-tight font-bold">
+													&ldquo;{search.query}&rdquo;
+												</p>
 												<div className="text-muted-foreground flex items-center gap-2 text-[10px]">
 													<span>{search.count} удаа хайсан</span>
 													{search.noResultCount > 0 && (

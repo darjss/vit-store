@@ -106,6 +106,11 @@ const finalizeCreatedOrder = async (
 	return done;
 };
 
+const checkoutNotStarted = () => ({
+	error: "checkout_not_started",
+	ok: false as const,
+});
+
 export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 	// Sends the customer-facing prompt, then reports the new state to the model.
 	const advance = async (state: CheckoutState, prompt: string) => {
@@ -125,11 +130,6 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		}
 		return state;
 	};
-
-	const notStarted = () => ({
-		error: "checkout_not_started",
-		ok: false as const,
-	});
 
 	const beginCheckout = defineTool({
 		description:
@@ -155,7 +155,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run({ input }) {
 			const state = await requireCheckout();
 			if (!state) {
-				return notStarted();
+				return checkoutNotStarted();
 			}
 			const result = applyPhone(state, input.phone);
 			if (!result.ok) {
@@ -178,7 +178,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run({ input }) {
 			const state = await requireCheckout();
 			if (!state) {
-				return notStarted();
+				return checkoutNotStarted();
 			}
 			const result = applyAddress(state, input.address);
 			if (!result.ok) {
@@ -220,7 +220,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run({ input }) {
 			const state = await requireCheckout();
 			if (!state) {
-				return notStarted();
+				return checkoutNotStarted();
 			}
 			const result = applyZoneSelection(state, input.zoneId);
 			if (!result.ok) {
@@ -243,7 +243,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run({ input }) {
 			const state = await requireCheckout();
 			if (!state) {
-				return notStarted();
+				return checkoutNotStarted();
 			}
 			const next = applyNotes(state, input.notes);
 			const saved = await deps.saveCheckout(next);
@@ -261,7 +261,7 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run() {
 			const state = await requireCheckout();
 			if (!state) {
-				return notStarted();
+				return checkoutNotStarted();
 			}
 			// Idempotency: a checkout already past `confirming` has claimed the
 			// irreversible commit (or finished it). Refuse rather than risk a second

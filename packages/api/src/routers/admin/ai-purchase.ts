@@ -14,7 +14,6 @@ import * as v from "valibot";
 import { z } from "zod";
 import { db } from "~/db/client";
 import { BrandsTable, ProductImagesTable, ProductsTable } from "~/db/schema";
-import type { Context } from "~/lib/context";
 import { parseLlmOutput } from "~/lib/ai/llm-output";
 import {
 	normalizeText,
@@ -88,6 +87,145 @@ function dedupeItems(items: Array<InvoiceLineItem>) {
 	return deduped;
 }
 
+type RankedInvoiceCandidates = Awaited<ReturnType<typeof rankInvoiceLineCandidates>>;
+
+function buildAmbiguousCandidatesMap(
+	rankedCandidatesByIndex: Map<number, RankedInvoiceCandidates>,
+) {
+	const ambiguousCandidates = new Map<
+		number,
+		Array<RankedInvoiceCandidates[number]["candidate"]>
+	>();
+	for (const [index, rankedCandidates] of rankedCandidatesByIndex.entries()) {
+		const [top, second] = rankedCandidates;
+		if (!top) {
+			continue;
+		}
+		const clearlyMatched = top.score >= 0.82 && (!second || top.score - second.score >= 0.15);
+		if (!clearlyMatched) {
+			ambiguousCandidates.set(
+				index,
+				rankedCandidates.map((entry) => entry.candidate),
+			);
+		}
+	}
+	return ambiguousCandidates;
+}
+
+function resolveInvoiceLineMatch(
+	rankedCandidates: RankedInvoiceCandidates,
+	aiRerank: Awaited<ReturnType<typeof rerankAmbiguousMatches>> extends Map<number, infer V>
+		? V
+		: never,
+) {
+	const matched = rankedCandidates[0];
+	const second = rankedCandidates[1];
+	const autoMatched =
+		matched && matched.score >= 0.82 && (!second || matched.score - second.score >= 0.15)
+			? matched.candidate
+			: null;
+	const aiMatched =
+		!autoMatched && aiRerank?.bestCandidateId
+			? (rankedCandidates.find((entry) => entry.candidate.id === aiRerank.bestCandidateId)
+					?.candidate ?? null)
+			: null;
+	const resolvedMatch = autoMatched ?? aiMatched;
+	const matchStatus = resolvedMatch
+		? "matched"
+		: rankedCandidates.length > 0
+			? "ambiguous"
+			: "unmatched";
+	const matchedProduct = resolvedMatch
+		? {
+				id: resolvedMatch.id,
+				imageUrl: resolvedMatch.imageUrl,
+				name: resolvedMatch.name,
+				price: resolvedMatch.price,
+			}
+		: null;
+	return { aiRerank, matchedProduct, matchStatus, resolvedMatch };
+}
+
+function buildInvoiceLineDraft(
+	item: InvoiceLineItem,
+	exactBrand: { id: number; name: string } | undefined,
+	category: { id: number; name: string } | undefined,
+) {
+	return {
+		amount: item.amount ?? "Unknown",
+		brand: item.brand,
+		brandId: exactBrand?.id ?? null,
+		categoryId: category?.id ?? null,
+		description: item.descriptionDraft ?? item.description,
+		images: [],
+		name: item.description,
+		name_mn: item.name_mn,
+		potency: item.potency ?? "Unknown",
+		rawText: item.description,
+		sourceCode: item.sourceCode,
+	};
+}
+
+function mapMatchedInvoiceLine(
+	item: InvoiceLineItem,
+	index: number,
+	rankedCandidatesByIndex: Map<number, RankedInvoiceCandidates>,
+	aiReranks: Awaited<ReturnType<typeof rerankAmbiguousMatches>>,
+	brands: Array<{ id: number; name: string }>,
+	categories: Array<{ id: number; name: string }>,
+) {
+	const rankedCandidates = rankedCandidatesByIndex.get(index) ?? [];
+	const exactBrand = brands.find(
+		(brand) => normalizeText(brand.name) === normalizeText(item.brand),
+	);
+	const category = categories.find(
+		(entry) => normalizeText(entry.name) === normalizeText(item.categoryGuess),
+	);
+	const { aiRerank, matchedProduct, matchStatus, resolvedMatch } = resolveInvoiceLineMatch(
+		rankedCandidates,
+		aiReranks.get(index),
+	);
+
+	return {
+		candidateMatches: rankedCandidates.map(({ candidate }) => ({
+			id: candidate.id,
+			imageUrl: candidate.imageUrl,
+			name: candidate.name,
+			price: candidate.price,
+		})),
+		description: item.description,
+		expirationDate: item.expirationDate,
+		lineTotal: item.lineTotal ?? (item.unitPrice != null ? item.unitPrice * item.quantity : null),
+		matchedProduct,
+		matchStatus,
+		newProductDraft: buildInvoiceLineDraft(item, exactBrand, category),
+		productId: matchedProduct?.id ?? null,
+		quantity: item.quantity,
+		sourceCode: item.sourceCode,
+		unitPrice: item.unitPrice ?? 0,
+		warnings: [
+			...(item.warnings ?? []),
+			...(aiRerank && !resolvedMatch ? [`AI review: ${aiRerank.reason}`] : []),
+		],
+	};
+}
+
+function buildMatchedInvoiceHeader(
+	provider: extractPurchaseFromImagesType["provider"],
+	output: InvoiceExtractionOutput,
+) {
+	return {
+		externalOrderNumber: output.header?.externalOrderNumber ?? null,
+		notes: output.header?.notes ?? null,
+		orderedAt: parseOrderedAt(output.header?.orderedAt ?? null),
+		provider,
+		shippingCost: output.header?.shippingCost ?? 0,
+		subtotal: output.header?.subtotal ?? null,
+		total: output.header?.total ?? null,
+		trackingNumber: output.header?.trackingNumber ?? null,
+	};
+}
+
 async function inferInvoiceData(
 	input: extractPurchaseFromImagesType,
 	brands: Array<{ id: number; name: string }>,
@@ -124,119 +262,22 @@ export async function matchExtractedInvoiceData(
 ) {
 	const output = rawOutput;
 	const dedupedItems = dedupeItems(output.items ?? []);
-	const rankedCandidatesByIndex = new Map<
-		number,
-		Awaited<ReturnType<typeof rankInvoiceLineCandidates>>
-	>();
+	const rankedCandidatesByIndex = new Map<number, RankedInvoiceCandidates>();
 
 	for (const [index, item] of dedupedItems.entries()) {
 		rankedCandidatesByIndex.set(index, await rankInvoiceLineCandidates(item));
 	}
 
-	const ambiguousCandidates = new Map<
-		number,
-		Array<Awaited<ReturnType<typeof rankInvoiceLineCandidates>>[number]["candidate"]>
-	>();
-	for (const [index, rankedCandidates] of rankedCandidatesByIndex.entries()) {
-		const [top, second] = rankedCandidates;
-		if (!top) {
-			continue;
-		}
-		const clearlyMatched = top.score >= 0.82 && (!second || top.score - second.score >= 0.15);
-		if (!clearlyMatched) {
-			ambiguousCandidates.set(
-				index,
-				rankedCandidates.map((entry) => entry.candidate),
-			);
-		}
-	}
-
+	const ambiguousCandidates = buildAmbiguousCandidatesMap(rankedCandidatesByIndex);
 	const aiReranks = await rerankAmbiguousMatches(dedupedItems, ambiguousCandidates);
 
 	return {
 		errors: output.errors ?? [],
 		extractionStatus: output.extractionStatus,
-		header: {
-			externalOrderNumber: output.header?.externalOrderNumber ?? null,
-			notes: output.header?.notes ?? null,
-			orderedAt: parseOrderedAt(output.header?.orderedAt ?? null),
-			provider,
-			shippingCost: output.header?.shippingCost ?? 0,
-			subtotal: output.header?.subtotal ?? null,
-			total: output.header?.total ?? null,
-			trackingNumber: output.header?.trackingNumber ?? null,
-		},
-		items: dedupedItems.map((item, index) => {
-			const rankedCandidates = rankedCandidatesByIndex.get(index) ?? [];
-			const matched = rankedCandidates[0];
-			const second = rankedCandidates[1];
-			const exactBrand = brands.find(
-				(brand) => normalizeText(brand.name) === normalizeText(item.brand),
-			);
-			const category = categories.find(
-				(entry) => normalizeText(entry.name) === normalizeText(item.categoryGuess),
-			);
-			const aiRerank = aiReranks.get(index);
-			const autoMatched =
-				matched && matched.score >= 0.82 && (!second || matched.score - second.score >= 0.15)
-					? matched.candidate
-					: null;
-			const aiMatched =
-				!autoMatched && aiRerank?.bestCandidateId
-					? (rankedCandidates.find((entry) => entry.candidate.id === aiRerank.bestCandidateId)
-							?.candidate ?? null)
-					: null;
-			const resolvedMatch = autoMatched ?? aiMatched;
-			const matchStatus = resolvedMatch
-				? "matched"
-				: rankedCandidates.length > 0
-					? "ambiguous"
-					: "unmatched";
-			const matchedProduct = resolvedMatch
-				? {
-						id: resolvedMatch.id,
-						imageUrl: resolvedMatch.imageUrl,
-						name: resolvedMatch.name,
-						price: resolvedMatch.price,
-					}
-				: null;
-
-			return {
-				candidateMatches: rankedCandidates.map(({ candidate }) => ({
-					id: candidate.id,
-					imageUrl: candidate.imageUrl,
-					name: candidate.name,
-					price: candidate.price,
-				})),
-				description: item.description,
-				expirationDate: item.expirationDate,
-				lineTotal:
-					item.lineTotal ?? (item.unitPrice != null ? item.unitPrice * item.quantity : null),
-				matchedProduct,
-				matchStatus,
-				newProductDraft: {
-					amount: item.amount ?? "Unknown",
-					brand: item.brand,
-					brandId: exactBrand?.id ?? null,
-					categoryId: category?.id ?? null,
-					description: item.descriptionDraft ?? item.description,
-					images: [],
-					name: item.description,
-					name_mn: item.name_mn,
-					potency: item.potency ?? "Unknown",
-					rawText: item.description,
-					sourceCode: item.sourceCode,
-				},
-				productId: matchedProduct?.id ?? null,
-				quantity: item.quantity,
-				sourceCode: item.sourceCode,
-				unitPrice: item.unitPrice ?? 0,
-				warnings: [
-					...(item.warnings ?? []),
-					...(aiRerank && !resolvedMatch ? [`AI review: ${aiRerank.reason}`] : []),
-				],
-			};
-		}),
+		header: buildMatchedInvoiceHeader(provider, output),
+		items: dedupedItems.map((item, index) =>
+			mapMatchedInvoiceLine(item, index, rankedCandidatesByIndex, aiReranks, brands, categories),
+		),
 		rawText: output.rawText ?? null,
 	};
 }
@@ -331,47 +372,6 @@ async function createProductFromDraft(
 	}
 
 	return productId;
-}
-
-// Resolve R2 object keys (staged by the Messenger webhook under
-// messenger-inbound/) into data: URLs the vision model can ingest. The chat
-// path receives R2 keys, not fetchable CDN urls — the dashboard path passes
-// real urls. Server-side resolution keeps the agent sandbox network-isolated.
-async function resolveR2ImageKeysToUrls(
-	ctx: Context,
-	keys: Array<string>,
-): Promise<Array<{ url: string }>> {
-	const out: Array<{ url: string }> = [];
-	for (const key of keys) {
-		try {
-			const object = await ctx.r2.get(key);
-			if (object === null) {
-				continue;
-			}
-			const bytes = new Uint8Array(await object.arrayBuffer());
-			const contentType = object.httpMetadata?.contentType?.startsWith("image/")
-				? object.httpMetadata.contentType
-				: "image/jpeg";
-			out.push({ url: `data:${contentType};base64,${bytesToBase64(bytes)}` });
-		} catch (error) {
-			ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-				event: "aiPurchase.resolveR2ImageKeysToUrls",
-				key,
-			});
-		}
-	}
-	return out;
-}
-
-// Chunked base64 encoder: String.fromCharCode(...bytes) stack-overflows on
-// large screenshots, so encode in 32KB slices.
-function bytesToBase64(bytes: Uint8Array): string {
-	let binary = "";
-	const chunk = 0x80_00;
-	for (let i = 0; i < bytes.length; i += chunk) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-	}
-	return btoa(binary);
 }
 
 function commonPurchaseProcedures<P extends typeof baseProcedure>(proc: P) {

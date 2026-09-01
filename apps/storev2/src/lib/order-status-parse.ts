@@ -1,7 +1,7 @@
 import type { OrderStatusType } from "@vit/shared/types";
-import * as v from "valibot";
+import { picklist, safeParse } from "valibot";
 
-export const orderStatusSchema = v.picklist([
+export const orderStatusSchema = picklist([
 	"created",
 	"pending",
 	"shipped",
@@ -14,6 +14,6 @@ export function parseOrderStatus(
 	wire: string,
 	fallback: OrderStatusType = "pending",
 ): OrderStatusType {
-	const parsed = v.safeParse(orderStatusSchema, wire);
+	const parsed = safeParse(orderStatusSchema, wire);
 	return parsed.success ? parsed.output : fallback;
 }

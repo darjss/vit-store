@@ -1,6 +1,6 @@
-# Anti-slop worker brief (Phase 6–7)
+# Lint worker brief (Phase 6–7+)
 
-Every subagent fixing anti-slop lint debt must follow this. The coordinator rejects diffs that violate it.
+Every subagent fixing lint debt must follow this. The coordinator rejects diffs that violate it. Repo-wide policy: `AGENTS.md` § Lint & check.
 
 ## Hard rejects
 

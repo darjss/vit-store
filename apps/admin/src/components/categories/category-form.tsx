@@ -2,7 +2,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addCategorySchema, type addCategoryType } from "@vit/shared";
 import { X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
@@ -65,7 +65,7 @@ const CategoryForm = ({
 		addMutation.mutate(values);
 	};
 
-	const bannerImageUrl = form.watch("bannerImage");
+	const bannerImageUrl = useWatch({ control: form.control, name: "bannerImage" });
 
 	return (
 		<Form {...form}>

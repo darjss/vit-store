@@ -12,9 +12,10 @@ import CartDrawerItem from "./cart-drawer-item";
 import { cartSheetFocusRestore } from "./cart-sheet-focus";
 import EmptyCart from "./empty-cart";
 
+const isEmpty = () => cart.items().length === 0;
+
 const CartDrawer = () => {
 	const [totalPulse, setTotalPulse] = createSignal(false);
-	const isEmpty = () => cart.items().length === 0;
 	let totalPulseTimer: number | undefined;
 
 	createEffect(

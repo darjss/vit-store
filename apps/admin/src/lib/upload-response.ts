@@ -1,12 +1,12 @@
-import * as v from "valibot";
+import { object, optional, parse, string } from "valibot";
 
-const uploadResponseSchema = v.object({
-	message: v.string(),
-	url: v.optional(v.string()),
+const uploadResponseSchema = object({
+	message: string(),
+	url: optional(string()),
 });
 
 export async function parseUploadResponse(response: Response): Promise<string> {
-	const data = v.parse(uploadResponseSchema, await response.json());
+	const data = parse(uploadResponseSchema, await response.json());
 	if (response.ok && data.url) {
 		return data.url;
 	}

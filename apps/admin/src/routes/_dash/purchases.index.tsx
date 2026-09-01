@@ -3,7 +3,17 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { PRODUCT_PER_PAGE, purchaseProvider, purchaseStatus } from "@vit/shared";
 import { Package, Plus, Search } from "lucide-react";
 import { Suspense, useState } from "react";
-import * as v from "valibot";
+import {
+	integer,
+	minValue,
+	number,
+	object,
+	optional,
+	parse,
+	picklist,
+	pipe,
+	string,
+} from "valibot";
 import { PurchasesPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,20 +36,20 @@ const purchaseProviderLabel = {
 	unknown: "Тодорхойгүй",
 } satisfies Record<(typeof purchaseProvider)[number], string>;
 
-const purchasesSearchSchema = v.object({
-	page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-	pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), PRODUCT_PER_PAGE),
-	provider: v.optional(v.picklist(purchaseProvider)),
-	searchTerm: v.optional(v.string()),
-	sortDirection: v.optional(v.picklist(["asc", "desc"])),
-	sortField: v.optional(v.string()),
-	status: v.optional(v.picklist(purchaseStatus)),
+const purchasesSearchSchema = object({
+	page: optional(pipe(number(), integer(), minValue(1)), 1),
+	pageSize: optional(pipe(number(), integer(), minValue(1)), PRODUCT_PER_PAGE),
+	provider: optional(picklist(purchaseProvider)),
+	searchTerm: optional(string()),
+	sortDirection: optional(picklist(["asc", "desc"])),
+	sortField: optional(string()),
+	status: optional(picklist(purchaseStatus)),
 });
 
 export const Route = createFileRoute("/_dash/purchases/")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const search = v.parse(purchasesSearchSchema, location.search);
+		const search = parse(purchasesSearchSchema, location.search);
 		void ctx.queryClient.prefetchQuery(
 			ctx.trpc.purchase.getPaginatedPurchases.queryOptions({
 				page: search.page ?? 1,

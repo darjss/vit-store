@@ -69,8 +69,9 @@ const CardAddButton = (props: CardAddButtonProps) => {
 		}
 		if (isOutOfStock()) {
 			const target = event.currentTarget;
-			if (target instanceof HTMLElement) {
-				restockSheetFocusRestore.register(target);
+			if (target && "style" in target) {
+				// SAFETY: button currentTarget exposes HTMLElement.style.
+				restockSheetFocusRestore.register(target as HTMLElement);
 			}
 			setNotifyOpen(true);
 			return;
@@ -82,8 +83,9 @@ const CardAddButton = (props: CardAddButtonProps) => {
 		cart.add({ ...props.cartItem, price: price() }, { openDrawer: false });
 		setIsAdded(true);
 		const target = event.currentTarget;
-		if (target instanceof HTMLElement) {
-			playCartBurst(target);
+		if (target && "style" in target) {
+			// SAFETY: button currentTarget exposes HTMLElement.style.
+			playCartBurst(target as HTMLElement);
 		}
 		setTimeout(() => setIsAdded(false), 1500);
 	};

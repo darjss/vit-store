@@ -22,6 +22,16 @@ export function generateSessionToken(): string {
 	return encodeBase32LowerCaseNoPadding(bytes);
 }
 
+function getUserIdentifier<TUser extends CustomerSelectType | UserSelectType>(user: TUser): string {
+	if ("phone" in user && user.phone) {
+		return user.phone.toString();
+	}
+	if ("id" in user && user.id) {
+		return user.id.toString();
+	}
+	throw new Error("Unable to determine user identifier");
+}
+
 export function createSessionManager<TUser extends CustomerSelectType | UserSelectType>(
 	config: SessionConfig,
 ) {
@@ -38,16 +48,6 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 		id: v.string(),
 		user: config.userSchema,
 	});
-
-	function getUserIdentifier(user: TUser): string {
-		if ("phone" in user && user.phone) {
-			return user.phone.toString();
-		}
-		if ("id" in user && user.id) {
-			return user.id.toString();
-		}
-		throw new Error("Unable to determine user identifier");
-	}
 
 	async function createSession(
 		user: TUser,

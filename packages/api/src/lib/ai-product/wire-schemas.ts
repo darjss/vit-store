@@ -18,8 +18,8 @@ export const firecrawlAmazonJsonSchema = v.object({
 
 export type FirecrawlAmazonJson = v.InferOutput<typeof firecrawlAmazonJsonSchema>;
 
-export const firecrawlExtractedProductSchema: v.GenericSchema<FirecrawlExtractedProduct> =
-	v.object({
+export const firecrawlExtractedProductSchema: v.GenericSchema<FirecrawlExtractedProduct> = v.object(
+	{
 		brand: v.nullable(v.string()),
 		description: v.nullable(v.string()),
 		features: v.array(v.string()),
@@ -29,7 +29,8 @@ export const firecrawlExtractedProductSchema: v.GenericSchema<FirecrawlExtracted
 		servingSize: v.nullable(v.string()),
 		servingsPerContainer: v.nullable(v.number()),
 		title: v.string(),
-	});
+	},
+);
 
 export const amazonScrapeCacheSchema = v.object({
 	extracted: firecrawlExtractedProductSchema,

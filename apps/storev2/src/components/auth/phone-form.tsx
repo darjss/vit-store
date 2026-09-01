@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/solid-query";
-import * as v from "valibot";
+import { maxLength, minLength, object, pipe, regex, string } from "valibot";
 import { queryClient } from "@/lib/query";
 import { api } from "@/lib/trpc";
 import { InfoCircleIcon as IconInformation } from "@solar-icons/solid/linear";
@@ -38,12 +38,12 @@ const PhoneForm = (props: {
 			mutation.mutate(values.value.phone);
 		},
 		validators: {
-			onChange: v.object({
-				phone: v.pipe(
-					v.string(),
-					v.minLength(8, "Phone number must be 8 digits"),
-					v.maxLength(8, "Phone number must be 8 digits"),
-					v.regex(/^[6-9]\d{7}$/, "Phone number must start with 6-9"),
+			onChange: object({
+				phone: pipe(
+					string(),
+					minLength(8, "Phone number must be 8 digits"),
+					maxLength(8, "Phone number must be 8 digits"),
+					regex(/^[6-9]\d{7}$/, "Phone number must start with 6-9"),
 				),
 			}),
 		},
@@ -68,8 +68,10 @@ const PhoneForm = (props: {
 					e.preventDefault();
 					e.stopPropagation();
 					// Blur active input to dismiss mobile keyboard
-					if (document.activeElement instanceof HTMLElement) {
-						document.activeElement.blur();
+					const active = document.activeElement;
+					if (active && "blur" in active) {
+						// SAFETY: focused input with blur() is an HTMLElement.
+						(active as HTMLElement).blur();
 					}
 					form.handleSubmit();
 				}}

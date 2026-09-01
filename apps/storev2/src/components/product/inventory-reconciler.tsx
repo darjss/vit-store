@@ -471,8 +471,12 @@ function ensureInventoryBrowserContract(): void {
 	coordinator.retryListenerInstalled = true;
 	document.addEventListener("click", (event) => {
 		const target = event.target;
-		if (target instanceof Element && target.closest("[data-inventory-retry]")) {
-			retryDegradedInventory();
+		if (target && "closest" in target) {
+			// SAFETY: click target with Element.closest is a DOM Element.
+			const element = target as Element;
+			if (element.closest("[data-inventory-retry]")) {
+				retryDegradedInventory();
+			}
 		}
 	});
 }

@@ -76,6 +76,58 @@ function resolveDateRange(date?: string): { end: Date; start: Date } | null {
 	return { end: new Date(ubMidnightUtc + DAY_MS - 1), start: new Date(ubMidnightUtc) };
 }
 
+function buildPaginatedOrderConditions(
+	database: ReturnType<typeof db>,
+	params: {
+		createdAfter?: Date;
+		date?: string;
+		includeAllStatuses?: boolean;
+		orderStatus?: OrderStatus;
+		orderStatuses?: Array<OrderStatus>;
+		paymentStatus?: PaymentStatusType;
+		searchTerm?: string;
+	},
+) {
+	const conditions: Array<SQL<unknown> | undefined> = [isNull(OrdersTable.deletedAt)];
+
+	if (params.orderStatuses && params.orderStatuses.length > 0) {
+		conditions.push(inArray(OrdersTable.status, params.orderStatuses));
+	} else if (params.orderStatus !== undefined) {
+		conditions.push(eq(OrdersTable.status, params.orderStatus));
+	} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
+		conditions.push(ne(OrdersTable.status, "created"));
+	}
+
+	if (params.paymentStatus !== undefined) {
+		const paidOrderIds = database
+			.select({ orderId: PaymentsTable.orderId })
+			.from(PaymentsTable)
+			.where(and(eq(PaymentsTable.status, params.paymentStatus), isNull(PaymentsTable.deletedAt)));
+		conditions.push(inArray(OrdersTable.id, paidOrderIds));
+	}
+
+	if (params.searchTerm !== undefined) {
+		conditions.push(
+			or(
+				ilike(OrdersTable.orderNumber, `%${params.searchTerm}%`),
+				ilike(OrdersTable.address, `%${params.searchTerm}%`),
+				ilike(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${params.searchTerm}%`),
+			),
+		);
+	}
+
+	const dateRange = resolveDateRange(params.date);
+	if (dateRange) {
+		conditions.push(between(OrdersTable.createdAt, dateRange.start, dateRange.end));
+	}
+
+	if (params.createdAfter !== undefined) {
+		conditions.push(gte(OrdersTable.createdAt, params.createdAfter));
+	}
+
+	return conditions.filter((condition): condition is SQL<unknown> => condition !== undefined);
+}
+
 export const orderQueries = {
 	admin: {
 		async createOrder(data: {
@@ -373,49 +425,7 @@ export const orderQueries = {
 			sortField?: string;
 		}) {
 			const database = db();
-			const conditions: Array<SQL<unknown> | undefined> = [];
-			conditions.push(isNull(OrdersTable.deletedAt));
-
-			if (params.orderStatuses && params.orderStatuses.length > 0) {
-				conditions.push(inArray(OrdersTable.status, params.orderStatuses));
-			} else if (params.orderStatus !== undefined) {
-				conditions.push(eq(OrdersTable.status, params.orderStatus));
-			} else if (!params.includeAllStatuses && params.paymentStatus === undefined) {
-				// Default: hide "created" (unpaid) orders from the admin list.
-				// When a paymentStatus filter is set, drop the exclusion so admins
-				// filtering by pending payments can still see "created" orders
-				// (which are exactly the orders with pending payments).
-				conditions.push(ne(OrdersTable.status, "created"));
-			}
-
-			if (params.paymentStatus !== undefined) {
-				const paidOrderIds = database
-					.select({ orderId: PaymentsTable.orderId })
-					.from(PaymentsTable)
-					.where(
-						and(eq(PaymentsTable.status, params.paymentStatus), isNull(PaymentsTable.deletedAt)),
-					);
-				conditions.push(inArray(OrdersTable.id, paidOrderIds));
-			}
-
-			if (params.searchTerm !== undefined) {
-				conditions.push(
-					or(
-						ilike(OrdersTable.orderNumber, `%${params.searchTerm}%`),
-						ilike(OrdersTable.address, `%${params.searchTerm}%`),
-						ilike(sql`CAST(${OrdersTable.customerPhone} AS TEXT)`, `%${params.searchTerm}%`),
-					),
-				);
-			}
-
-			const dateRange = resolveDateRange(params.date);
-			if (dateRange) {
-				conditions.push(between(OrdersTable.createdAt, dateRange.start, dateRange.end));
-			}
-
-			if (params.createdAfter !== undefined) {
-				conditions.push(gte(OrdersTable.createdAt, params.createdAfter));
-			}
+			const finalConditions = buildPaginatedOrderConditions(database, params);
 
 			const orderByClauses: Array<SQL<unknown>> = [];
 			const primarySortColumn =
@@ -425,8 +435,6 @@ export const orderQueries = {
 				params.sortDirection === "asc" ? asc(primarySortColumn) : desc(primarySortColumn);
 
 			orderByClauses.push(primaryOrderBy, asc(OrdersTable.id));
-
-			const finalConditions = conditions.filter((c): c is SQL<unknown> => c !== undefined);
 
 			const offset = (params.page - 1) * params.pageSize;
 

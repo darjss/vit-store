@@ -8,11 +8,13 @@ import {
 } from "@vit/shared";
 import type { OAuth2Tokens } from "arctic";
 import { decodeIdToken, generateCodeVerifier, generateState } from "arctic";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import * as v from "valibot";
 import { google } from "../lib/oauth";
 const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
+type AuthContext = Context<ServerHonoEnv>;
 const COOKIE_MAX_AGE = 60 * 10;
 const OAUTH_TEMP_COOKIE = "google_oauth_temp";
 const BOOTSTRAP_ADMIN_GOOGLE_ID = "118271302696111351988";
@@ -51,6 +53,59 @@ function isValidGoogleIdTokenClaims(claims: GoogleIdTokenClaims, clientId: strin
 	}
 	return true;
 }
+
+function parseOAuthTempCookie(combined: string | undefined) {
+	if (!combined) {
+		return null;
+	}
+	try {
+		return v.parse(oauthCookieDataSchema, JSON.parse(combined));
+	} catch {
+		return null;
+	}
+}
+
+async function loginApprovedGoogleUser(
+	c: AuthContext,
+	log: AuthContext["var"]["log"],
+	claims: GoogleIdTokenClaims,
+) {
+	const googleUserId = claims.sub;
+	const username = claims.name ?? claims.email ?? "Google User";
+	const adminEmail = claims.email ?? "unknown";
+	const q = userQueries.admin;
+	let user = await q.getUserFromGoogleId(googleUserId);
+	if (user && googleUserId === BOOTSTRAP_ADMIN_GOOGLE_ID && !user.isApproved) {
+		user = await q.updateUserByGoogleId(googleUserId, {
+			isApproved: true,
+			username,
+		});
+	}
+	if (user?.isApproved) {
+		const session = await createAdminSession(user, c.env.vitStoreKV);
+		setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
+		log.info("admin.login", { adminEmail, adminId: googleUserId });
+		return c.redirect(`${c.env.DASH_URL}/`);
+	}
+	if (!user && googleUserId === BOOTSTRAP_ADMIN_GOOGLE_ID) {
+		const bootstrapUser = await q.createUser(googleUserId, username, true);
+		const session = await createAdminSession(bootstrapUser, c.env.vitStoreKV);
+		setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
+		log.info("admin.login", { adminEmail, adminId: googleUserId });
+		return c.redirect(`${c.env.DASH_URL}/`);
+	}
+	if (!user) {
+		await q.createUser(googleUserId, username, false);
+	}
+	log.warn("auth.login_failed", { adminId: googleUserId, failureReason: "not_approved" });
+	return c.redirect(
+		`${c.env.DASH_URL}/login?message=` +
+			encodeURIComponent(
+				"Таны бүртгэл баталгаажуулалтаар хүлээгдэж байна. Администратораас батламж авна уу.",
+			),
+	);
+}
+
 app.get("/login/google", (c) => {
 	const log = c.get("log");
 	log.set({ operation: "auth.oauth_start", user_type: "anonymous" });
@@ -75,40 +130,22 @@ app.get("/login/google/callback", async (c) => {
 	try {
 		const code = c.req.query("code");
 		const state = c.req.query("state");
-		const combined = getCookie(c, OAUTH_TEMP_COOKIE);
-		if (!combined) {
-			log.warn("auth.login_failed", {
-				failureReason: "missing_oauth_params",
-			});
+		const oauthCookie = parseOAuthTempCookie(getCookie(c, OAUTH_TEMP_COOKIE));
+		if (!oauthCookie) {
+			log.warn("auth.login_failed", { failureReason: "missing_oauth_params" });
 			return new Response(null, { status: 400 });
 		}
-		let storedState: string | undefined;
-		let codeVerifier: string | undefined;
-		try {
-			const parsed = v.parse(oauthCookieDataSchema, JSON.parse(combined));
-			storedState = parsed.state;
-			codeVerifier = parsed.codeVerifier;
-		} catch (error) {
-			log.error(error instanceof Error ? error : new Error(String(error)), {
-				event: "auth.oauth_cookie_parse_failed",
-			});
+		if (!code || !state) {
+			log.warn("auth.login_failed", { failureReason: "missing_oauth_params" });
 			return new Response(null, { status: 400 });
 		}
-		if (!code || !state || !storedState || !codeVerifier) {
-			log.warn("auth.login_failed", {
-				failureReason: "missing_oauth_params",
-			});
-			return new Response(null, { status: 400 });
-		}
-		if (state !== storedState) {
-			log.warn("auth.login_failed", {
-				failureReason: "state_mismatch",
-			});
+		if (state !== oauthCookie.state) {
+			log.warn("auth.login_failed", { failureReason: "state_mismatch" });
 			return new Response(null, { status: 400 });
 		}
 		let tokens: OAuth2Tokens;
 		try {
-			tokens = await google.validateAuthorizationCode(code, codeVerifier);
+			tokens = await google.validateAuthorizationCode(code, oauthCookie.codeVerifier);
 		} catch (error) {
 			log.error(error instanceof Error ? error : new Error(String(error)), {
 				event: "auth.oauth_token_validation_failed",
@@ -126,55 +163,10 @@ app.get("/login/google/callback", async (c) => {
 		const claimsResult = v.safeParse(googleIdTokenClaimsSchema, decodeIdToken(tokens.idToken()));
 		const googleClientId = c.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
 		if (!claimsResult.success || !isValidGoogleIdTokenClaims(claimsResult.output, googleClientId)) {
-			log.warn("auth.login_failed", {
-				failureReason: "invalid_id_token_claims",
-			});
+			log.warn("auth.login_failed", { failureReason: "invalid_id_token_claims" });
 			return new Response(null, { status: 400 });
 		}
-		const claims = claimsResult.output;
-		const googleUserId = claims.sub;
-		const username = claims.name ?? claims.email ?? "Google User";
-		const adminEmail = claims.email ?? "unknown";
-		const q = userQueries.admin;
-		let user = await q.getUserFromGoogleId(googleUserId);
-		if (user && googleUserId === BOOTSTRAP_ADMIN_GOOGLE_ID && !user.isApproved) {
-			user = await q.updateUserByGoogleId(googleUserId, {
-				isApproved: true,
-				username,
-			});
-		}
-		if (user?.isApproved) {
-			const session = await createAdminSession(user, c.env.vitStoreKV);
-			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
-			log.info("admin.login", {
-				adminEmail,
-				adminId: googleUserId,
-			});
-			return c.redirect(`${c.env.DASH_URL}/`);
-		}
-		if (!user && googleUserId === BOOTSTRAP_ADMIN_GOOGLE_ID) {
-			const bootstrapUser = await q.createUser(googleUserId, username, true);
-			const session = await createAdminSession(bootstrapUser, c.env.vitStoreKV);
-			setAdminSessionTokenCookie(c, session.token, session.session.expiresAt);
-			log.info("admin.login", {
-				adminEmail,
-				adminId: googleUserId,
-			});
-			return c.redirect(`${c.env.DASH_URL}/`);
-		}
-		if (!user) {
-			await q.createUser(googleUserId, username, false);
-		}
-		log.warn("auth.login_failed", {
-			adminId: googleUserId,
-			failureReason: "not_approved",
-		});
-		return c.redirect(
-			`${c.env.DASH_URL}/login?message=` +
-				encodeURIComponent(
-					"Таны бүртгэл баталгаажуулалтаар хүлээгдэж байна. Администратораас батламж авна уу.",
-				),
-		);
+		return loginApprovedGoogleUser(c, log, claimsResult.output);
 	} catch (error) {
 		log.error(error instanceof Error ? error : new Error(String(error)), {
 			event: "auth.oauth_callback_error",

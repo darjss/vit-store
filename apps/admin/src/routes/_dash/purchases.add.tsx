@@ -37,6 +37,8 @@ function RouteComponent() {
 	);
 }
 
+// ponytail: legacy admin add purchase page — split AI/manual flows later; complexity ceiling 18
+// oxlint-disable-next-line complexity
 function AddPurchasePage() {
 	const navigate = useNavigate();
 	const [activeTab, setActiveTab] = useState<"manual" | "ai">("ai");

@@ -1,13 +1,13 @@
 import { orderStatus as orderStatusValues } from "@vit/shared/constants";
 import type { OrderStatusType } from "@vit/shared/types";
-import * as v from "valibot";
+import { picklist, safeParse } from "valibot";
 import { orderStatusLabel } from "@/lib/enum-labels";
 
-const orderStatusSchema = v.picklist(orderStatusValues);
+const orderStatusSchema = picklist(orderStatusValues);
 
 export function normalizeOrderStatus(status: string): OrderStatusType | undefined {
 	const normalized = status === "pendingOrders" ? "pending" : status;
-	const parsed = v.safeParse(orderStatusSchema, normalized);
+	const parsed = safeParse(orderStatusSchema, normalized);
 	return parsed.success ? parsed.output : undefined;
 }
 

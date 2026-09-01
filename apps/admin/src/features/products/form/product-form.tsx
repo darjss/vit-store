@@ -9,7 +9,7 @@ import {
 	type ProductFormValues,
 } from "@vit/shared/domain/product";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { invalidateProductCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
@@ -39,6 +39,11 @@ const ProductForm = ({
 	});
 
 	const [showAdvancedFields, setShowAdvancedFields] = useState(showAIFields);
+	const [seededAiData, setSeededAiData] = useState(aiData);
+	if (aiData && aiData !== seededAiData) {
+		setSeededAiData(aiData);
+		setShowAdvancedFields(true);
+	}
 
 	const form = useForm<ProductFormValues, undefined, ProductFormValues>({
 		defaultValues: getProductFormDefaults(product, aiData, brands ?? []),
@@ -46,11 +51,11 @@ const ProductForm = ({
 	});
 
 	useEffect(() => {
-		if (aiData) {
-			form.reset(getAiProductFormValues(form.getValues(), aiData, brands ?? []));
-			setShowAdvancedFields(true);
+		if (!aiData) {
+			return;
 		}
-	}, [aiData, brands, form.getValues, form.reset]);
+		form.reset(getAiProductFormValues(form.getValues(), aiData, brands ?? []));
+	}, [aiData, brands, form]);
 
 	const queryClient = useQueryClient();
 	const productId = product?.id;
@@ -109,7 +114,7 @@ const ProductForm = ({
 		}
 	};
 
-	const currentImageUrl = form.watch("images");
+	const currentImageUrl = useWatch({ control: form.control, name: "images" });
 
 	return (
 		<Form {...form}>

@@ -11,13 +11,7 @@ const storeSessionManager = createSessionManager<CustomerSessionClaims>({
 	userSchema: sessionCustomerWireSchema,
 });
 
-const {
-	auth,
-	createSession,
-	deleteSessionTokenCookie,
-	invalidateSession,
-	setSessionTokenCookie,
-	validateSessionToken,
-} = storeSessionManager;
+const { auth, createSession, deleteSessionTokenCookie, invalidateSession, setSessionTokenCookie } =
+	storeSessionManager;
 
 export { auth, createSession, deleteSessionTokenCookie, invalidateSession, setSessionTokenCookie };

@@ -1,6 +1,8 @@
 import { createMemo, createResource, Show } from "solid-js";
 import { MonitorIcon as IconComputer } from "@solar-icons/solid/linear";
 import { CheckCircleIcon as IconCheck } from "@solar-icons/solid/bold";
+import { isNativeError, thrownErrorWireSchema } from "@/lib/error-wire";
+import { parse } from "valibot";
 import { api } from "../lib/trpc";
 
 interface BenchmarkComparisonProps {
@@ -23,30 +25,103 @@ interface BenchmarkResult {
 	redisWriteElapsed?: number;
 }
 
-export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
-	const fetchClientData = async (): Promise<BenchmarkResult> => {
-		const startTime = performance.now();
-		const result = await api.product.getProductBenchmark.query();
-		const fetchTime = performance.now() - startTime;
+const fetchClientData = async (): Promise<BenchmarkResult> => {
+	const startTime = performance.now();
+	const result = await api.product.getProductBenchmark.query();
+	const fetchTime = performance.now() - startTime;
 
-		return {
-			dbElapsed: result.dbElapsed,
-			fetchTime,
-			kvReadElapsed: result.kvReadElapsed,
-			kvWriteElapsed: result.kvWriteElapsed,
-			productCount: result.product.length,
-			redisReadElapsed: result.redisReadElapsed,
-			redisWriteElapsed: result.redisWriteElapsed,
-		};
+	return {
+		dbElapsed: result.dbElapsed,
+		fetchTime,
+		kvReadElapsed: result.kvReadElapsed,
+		kvWriteElapsed: result.kvWriteElapsed,
+		productCount: result.product.length,
+		redisReadElapsed: result.redisReadElapsed,
+		redisWriteElapsed: result.redisWriteElapsed,
 	};
+};
 
+const formatTime = (ms: number) => `${ms.toFixed(2)}ms`;
+
+const benchmarkErrorMessage = (wire: import("@/lib/error-wire").ThrownErrorWire) =>
+	isNativeError(wire) ? wire.message : "Failed to fetch data";
+
+function BenchmarkPerformanceAnalysis(props: {
+	data: BenchmarkResult;
+	diff: { isFaster: boolean; percentage: string; value: number };
+	kvReadTime?: number;
+	redisReadTime?: number;
+	serverDbTime: number;
+}) {
+	return (
+		<div class="bg-background shadow-soft rounded-lg p-6">
+			<h3 class="mb-4 text-xl font-bold">Performance Analysis</h3>
+
+			<div class="grid gap-4 md:grid-cols-3">
+				<div class="bg-muted/30 p-4">
+					<p class="text-muted-foreground mb-1 text-sm">Time Difference</p>
+					<p
+						class={`text-2xl font-bold ${
+							props.diff.isFaster ? "text-foreground" : "text-destructive"
+						}`}
+					>
+						{props.diff.isFaster ? "-" : "+"}
+						{formatTime(Math.abs(props.diff.value))}
+					</p>
+				</div>
+
+				<div class="bg-muted/30 p-4">
+					<p class="text-muted-foreground mb-1 text-sm">Percentage Difference</p>
+					<p
+						class={`text-2xl font-bold ${
+							props.diff.isFaster ? "text-foreground" : "text-destructive"
+						}`}
+					>
+						{props.diff.percentage}% {props.diff.isFaster ? "faster" : "slower"}
+					</p>
+				</div>
+
+				<div class="bg-muted/30 p-4">
+					<p class="text-muted-foreground mb-1 text-sm">Network Overhead</p>
+					<p class="text-foreground text-2xl font-bold">
+						{formatTime(props.data.fetchTime - props.data.dbElapsed - props.serverDbTime)}
+					</p>
+				</div>
+			</div>
+
+			<div class="border-border bg-primary/10 mt-6 border p-4">
+				<h4 class="text-foreground mb-2 font-semibold">Key Insights:</h4>
+				<ul class="text-foreground space-y-2 text-sm">
+					<li>• Server-side rendering delivers content immediately with the initial HTML</li>
+					<li>• Client-side fetching includes additional network round-trip time</li>
+					<li>
+						• Database query time is similar for both approaches (~
+						{formatTime(props.serverDbTime)})
+					</li>
+					<li>• The main difference is network latency from browser to server</li>
+					{props.data.kvReadElapsed !== undefined && props.kvReadTime !== undefined && (
+						<li>
+							• KV read time: {formatTime(props.data.kvReadElapsed)} (client) vs{" "}
+							{formatTime(props.kvReadTime)} (server) - typically very fast
+						</li>
+					)}
+					{props.data.redisReadElapsed !== undefined && props.redisReadTime !== undefined && (
+						<li>
+							• Redis read time: {formatTime(props.data.redisReadElapsed)} (client) vs{" "}
+							{formatTime(props.redisReadTime)} (server) - often faster than KV for simple
+							operations
+						</li>
+					)}
+				</ul>
+			</div>
+		</div>
+	);
+}
+
+export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 	const [data, { refetch }] = createResource(fetchClientData, {
 		initialValue: undefined,
 	});
-
-	const formatTime = (ms: number) => {
-		return `${ms.toFixed(2)}ms`;
-	};
 
 	const difference = createMemo(() => {
 		const result = data();
@@ -66,7 +141,6 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 	return (
 		<>
-			{/* Control Panel */}
 			<div class="bg-background shadow-soft rounded-lg p-6">
 				<button
 					class="bg-foreground hover:bg-foreground/80 disabled:bg-muted-foreground w-full px-6 py-3 font-semibold text-white transition-colors"
@@ -79,12 +153,11 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 
 				<Show when={data.error}>
 					<div class="border-border bg-error/10 text-destructive mt-4 border p-4">
-						Error: {data.error instanceof Error ? data.error.message : "Failed to fetch data"}
+						Error: {benchmarkErrorMessage(parse(thrownErrorWireSchema, data.error))}
 					</div>
 				</Show>
 			</div>
 
-			{/* Client-Side Results */}
 			<div class="border-border bg-card shadow-soft rounded-lg border p-6">
 				<div class="mb-4 flex items-center gap-2">
 					<IconComputer class="text-primary h-6 w-6" />
@@ -153,72 +226,15 @@ export default function BenchmarkComparison(props: BenchmarkComparisonProps) {
 				</Show>
 			</div>
 
-			{/* Comparison Summary */}
 			<Show when={data() && difference()}>
 				{(diff) => (
-					<div class="bg-background shadow-soft rounded-lg p-6">
-						<h3 class="mb-4 text-xl font-bold">Performance Analysis</h3>
-
-						<div class="grid gap-4 md:grid-cols-3">
-							<div class="bg-muted/30 p-4">
-								<p class="text-muted-foreground mb-1 text-sm">Time Difference</p>
-								<p
-									class={`text-2xl font-bold ${
-										diff().isFaster ? "text-foreground" : "text-destructive"
-									}`}
-								>
-									{diff().isFaster ? "-" : "+"}
-									{formatTime(Math.abs(diff().value))}
-								</p>
-							</div>
-
-							<div class="bg-muted/30 p-4">
-								<p class="text-muted-foreground mb-1 text-sm">Percentage Difference</p>
-								<p
-									class={`text-2xl font-bold ${
-										diff().isFaster ? "text-foreground" : "text-destructive"
-									}`}
-								>
-									{diff().percentage}% {diff().isFaster ? "faster" : "slower"}
-								</p>
-							</div>
-
-							<div class="bg-muted/30 p-4">
-								<p class="text-muted-foreground mb-1 text-sm">Network Overhead</p>
-								<p class="text-foreground text-2xl font-bold">
-									{formatTime(
-										(data()?.fetchTime ?? 0) - (data()?.dbElapsed ?? 0) - props.serverDbTime,
-									)}
-								</p>
-							</div>
-						</div>
-
-						<div class="border-border bg-primary/10 mt-6 border p-4">
-							<h4 class="text-foreground mb-2 font-semibold">Key Insights:</h4>
-							<ul class="text-foreground space-y-2 text-sm">
-								<li>• Server-side rendering delivers content immediately with the initial HTML</li>
-								<li>• Client-side fetching includes additional network round-trip time</li>
-								<li>
-									• Database query time is similar for both approaches (~
-									{formatTime(props.serverDbTime)})
-								</li>
-								<li>• The main difference is network latency from browser to server</li>
-								{data()?.kvReadElapsed !== undefined && props.kvReadTime !== undefined && (
-									<li>
-										• KV read time: {formatTime(data()?.kvReadElapsed ?? 0)} (client) vs{" "}
-										{formatTime(props.kvReadTime ?? 0)} (server) - typically very fast
-									</li>
-								)}
-								{data()?.redisReadElapsed !== undefined && props.redisReadTime !== undefined && (
-									<li>
-										• Redis read time: {formatTime(data()?.redisReadElapsed ?? 0)} (client) vs{" "}
-										{formatTime(props.redisReadTime ?? 0)} (server) - often faster than KV for
-										simple operations
-									</li>
-								)}
-							</ul>
-						</div>
-					</div>
+					<BenchmarkPerformanceAnalysis
+						data={data()!}
+						diff={diff()}
+						kvReadTime={props.kvReadTime}
+						redisReadTime={props.redisReadTime}
+						serverDbTime={props.serverDbTime}
+					/>
 				)}
 			</Show>
 		</>

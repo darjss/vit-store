@@ -35,8 +35,9 @@ const AddToCartButton = (props: AddToCartButtonProps) => {
 		cart.add(props.cartItem, { openDrawer: false });
 		setIsAdded(true);
 		const target = event.currentTarget;
-		if (target instanceof HTMLElement) {
-			playCartBurst(target);
+		if (target && "style" in target) {
+			// SAFETY: click target with CSSOM style is the button HTMLElement.
+			playCartBurst(target as HTMLElement);
 		}
 
 		if (openDrawer) {

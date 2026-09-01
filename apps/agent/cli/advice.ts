@@ -34,10 +34,9 @@
  *   bun cli/advice.ts --assemble (tool/prompt assembly only, no model)
  */
 import { createHmac } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SuperJSON } from "superjson";
-import * as v from "valibot";
+import { array, InferOutput, number, object, optional, parse, string } from "valibot";
 import { loadDotVars } from "./dot-vars";
 import { graphSendBodySchema } from "./graph-send";
 import { trpcResponseBody } from "./trpc-stub";
@@ -186,10 +185,10 @@ const ADVICE_FIXTURE: Array<{
 	},
 ];
 
-const trpcInputSchema = v.object({
-	ids: v.optional(v.array(v.number())),
-	limit: v.optional(v.number()),
-	query: v.optional(v.string()),
+const trpcInputSchema = object({
+	ids: optional(array(number())),
+	limit: optional(number()),
+	query: optional(string()),
 });
 
 function decodeInput(raw: string | null) {
@@ -197,7 +196,7 @@ function decodeInput(raw: string | null) {
 		return undefined;
 	}
 	try {
-		return v.parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
+		return parse(trpcInputSchema, SuperJSON.deserialize(JSON.parse(raw)));
 	} catch {
 		return undefined;
 	}
@@ -258,9 +257,9 @@ function startCaptureServer() {
 			if (req.method !== "POST") {
 				return Response.json({ id: PAGE_ID });
 			}
-			let parsedBody: v.InferOutput<typeof graphSendBodySchema>;
+			let parsedBody: InferOutput<typeof graphSendBodySchema>;
 			try {
-				parsedBody = v.parse(graphSendBodySchema, await req.json());
+				parsedBody = parse(graphSendBodySchema, await req.json());
 			} catch {
 				parsedBody = {};
 			}
@@ -399,27 +398,45 @@ function runAssemble(): never {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-	if (process.argv.includes("--assemble")) {
-		runAssemble();
+type AdviceResult = {
+	banned: Array<string>;
+	caveat: boolean;
+	highRisk: boolean;
+	kind: string;
+	reply: string;
+	text: string;
+};
+
+function buildAdviceChecks(results: Array<AdviceResult>) {
+	const checks: Array<{ detail: string; name: string; ok: boolean }> = [];
+	for (const r of results) {
+		checks.push(
+			{
+				detail: r.reply ? `${r.reply.length} chars` : "no reply",
+				name: `${r.kind}: replied`,
+				ok: r.reply.length > 0,
+			},
+			{
+				detail: r.banned.length ? `found: ${r.banned.join(", ")}` : "clean",
+				name: `${r.kind}: no cure/heal/treat/guarantee`,
+				ok: r.banned.length === 0,
+			},
+		);
+		if (r.highRisk) {
+			checks.push({
+				detail: r.caveat ? "doctor/pharmacist caveat found" : "no caveat",
+				name: `${r.kind}: brief safety caveat present`,
+				ok: r.caveat,
+			});
+		}
 	}
+	return checks;
+}
 
-	console.log(C.bold("\n  Product-advice proof (#22)"));
-	console.log(C.dim(`  worker   ${WEBHOOK_URL}`));
-	console.log(C.dim(`  catalog  in-memory fixture on :${FIXTURE_PORT}`));
-	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Graph Send API)\n`));
-
+async function runLiveAdviceProof(): Promise<Array<AdviceResult>> {
 	const fixture = startFixtureServer();
 	const capture = startCaptureServer();
-
-	const results: Array<{
-		banned: Array<string>;
-		caveat: boolean;
-		highRisk: boolean;
-		kind: string;
-		reply: string;
-		text: string;
-	}> = [];
+	const results: Array<AdviceResult> = [];
 
 	for (const prompt of PROMPTS) {
 		turnTexts = [];
@@ -450,30 +467,23 @@ async function main(): Promise<void> {
 
 	fixture.stop();
 	capture.stop();
+	return results;
+}
+
+async function main(): Promise<void> {
+	if (process.argv.includes("--assemble")) {
+		runAssemble();
+	}
+
+	console.log(C.bold("\n  Product-advice proof (#22)"));
+	console.log(C.dim(`  worker   ${WEBHOOK_URL}`));
+	console.log(C.dim(`  catalog  in-memory fixture on :${FIXTURE_PORT}`));
+	console.log(C.dim(`  capture  http://127.0.0.1:${CAPTURE_PORT} (Graph Send API)\n`));
+
+	const results = await runLiveAdviceProof();
+	const checks = buildAdviceChecks(results);
 
 	console.log(C.bold("  checks\n"));
-	const checks: Array<{ detail: string; name: string; ok: boolean }> = [];
-	for (const r of results) {
-		checks.push(
-			{
-				detail: r.reply ? `${r.reply.length} chars` : "no reply",
-				name: `${r.kind}: replied`,
-				ok: r.reply.length > 0,
-			},
-			{
-				detail: r.banned.length ? `found: ${r.banned.join(", ")}` : "clean",
-				name: `${r.kind}: no cure/heal/treat/guarantee`,
-				ok: r.banned.length === 0,
-			},
-		);
-		if (r.highRisk) {
-			checks.push({
-				detail: r.caveat ? "doctor/pharmacist caveat found" : "no caveat",
-				name: `${r.kind}: brief safety caveat present`,
-				ok: r.caveat,
-			});
-		}
-	}
 	for (const c of checks) {
 		console.log(`  ${c.ok ? C.green("✓") : C.red("✗")} ${c.name} — ${C.dim(c.detail)}`);
 	}
@@ -484,4 +494,4 @@ async function main(): Promise<void> {
 	process.exit(failed ? 1 : 0);
 }
 
-void main();
+await main();

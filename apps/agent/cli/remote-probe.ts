@@ -24,6 +24,7 @@
  */
 import { createHmac } from "node:crypto";
 import { join } from "node:path";
+import { array, object, optional, parse, string } from "valibot";
 import { loadDotVars } from "./dot-vars";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
@@ -134,20 +135,36 @@ if (sendOnly) {
 	process.exit(0);
 }
 
+const graphMessageSchema = object({
+	created_time: string(),
+	from: optional(object({ id: optional(string()) })),
+	message: optional(string()),
+});
+
+const graphConversationsResponseSchema = object({
+	data: optional(
+		array(
+			object({
+				messages: optional(object({ data: optional(array(graphMessageSchema)) })),
+			}),
+		),
+	),
+	error: optional(object({ message: string() })),
+});
+
 // ─── read the bot's reply back from the Graph conversations API ──────────────
 async function readReplies(sinceUnix: number): Promise<Array<{ text: string; time: string }>> {
 	const url = `${GRAPH}/${PAGE_ID}/conversations?platform=messenger&fields=messages.limit(8)%7Bmessage,from,created_time%7D&limit=5&access_token=${PAGE_TOKEN}`;
 	const r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-	const d: any = await r.json();
-	if (d.error) {
-		throw new Error(d.error.message);
+	const parsed = parse(graphConversationsResponseSchema, await r.json());
+	if (parsed.error) {
+		throw new Error(parsed.error.message);
 	}
 	const out: Array<{ text: string; time: string }> = [];
-	for (const conv of d.data ?? []) {
+	for (const conv of parsed.data ?? []) {
 		for (const m of conv.messages?.data ?? []) {
 			const t = Math.floor(new Date(m.created_time).getTime() / 1000);
-			const fromPage = m.from?.id === PAGE_ID;
-			if (fromPage && t >= sinceUnix && m.message) {
+			if (m.from?.id === PAGE_ID && t >= sinceUnix && m.message) {
 				out.push({ text: m.message, time: m.created_time });
 			}
 		}

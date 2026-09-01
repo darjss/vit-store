@@ -177,8 +177,26 @@ const conciseShortName = (value: string) => {
 	return bounded(firstClause, MAX_SHORT_NAME);
 };
 
-/** Card-only projection. Imported names remain untouched for PDP/source use. */
-export const projectProductCardDisplay = (product: ProductCardDisplayInput): ProductCardDisplay => {
+function resolveCardDose(product: ProductCardDisplayInput, sourceName: string) {
+	const nameWithoutAmount = removeExact(sourceName, product.amount);
+	if (product.potency?.trim()) {
+		return conciseDose(product.potency);
+	}
+	return conciseDose(nameWithoutAmount);
+}
+
+function resolveCardShortName(product: ProductCardDisplayInput, sourceName: string) {
+	const nameWithoutAmount = removeExact(sourceName, product.amount);
+	const strippedName = stripFormVocabulary(nameWithoutAmount)
+		.replace(DOSE_TOKEN_PATTERN, "")
+		.replace(PACKAGE_MEASURE_PATTERN, "");
+	return (
+		conciseShortName(strippedName) ||
+		conciseShortName(removeBrandPrefix(product.name, product.brand))
+	);
+}
+
+function resolveCardDisplayParts(product: ProductCardDisplayInput) {
 	const sourceName = removeBrandPrefix(product.nameMn?.trim() || product.name, product.brand);
 	const itemAmount = product.amount ? findItemAmount(product.amount) : undefined;
 	const titleForm = findStandaloneForm(sourceName) ?? findStandaloneForm(product.amount ?? "");
@@ -189,16 +207,15 @@ export const projectProductCardDisplay = (product: ProductCardDisplayInput): Pro
 	const packageQuantity = product.amount
 		? packageRemainder(product.amount, itemAmount?.matched)
 		: undefined;
-	const nameWithoutAmount = removeExact(sourceName, product.amount);
-	const dose = product.potency?.trim()
-		? conciseDose(product.potency)
-		: conciseDose(nameWithoutAmount);
-	const strippedName = stripFormVocabulary(nameWithoutAmount)
-		.replace(DOSE_TOKEN_PATTERN, "")
-		.replace(PACKAGE_MEASURE_PATTERN, "");
-	const shortName =
-		conciseShortName(strippedName) ||
-		conciseShortName(removeBrandPrefix(product.name, product.brand));
+	const dose = resolveCardDose(product, sourceName);
+	const shortName = resolveCardShortName(product, sourceName);
+
+	return { dose, form, itemAmount, packageQuantity, product, shortName };
+}
+
+/** Card-only projection. Imported names remain untouched for PDP/source use. */
+export const projectProductCardDisplay = (product: ProductCardDisplayInput): ProductCardDisplay => {
+	const { dose, form, itemAmount, packageQuantity, shortName } = resolveCardDisplayParts(product);
 	const details = [dose, form, itemAmount?.count, packageQuantity].filter(Boolean).join(", ");
 
 	return {

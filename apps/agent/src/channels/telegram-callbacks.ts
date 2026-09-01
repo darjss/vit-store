@@ -50,13 +50,92 @@ const clearInlineButtons = async (api: Api, chatId: number, messageId: number) =
 	});
 };
 
-export async function handleTelegramCallback(input: {
+type CallbackInput = {
 	channel: {
 		conversationKey: (ref: ReturnType<typeof conversationFromMessage>) => string;
 	};
 	env: TelegramWebhookEnv;
 	update: Update;
-}) {
+};
+
+async function handleShipAllCallback(
+	input: CallbackInput,
+	api: Api,
+	query: NonNullable<Update["callback_query"]>,
+	boundMessageId: number,
+) {
+	const chatId = query.message!.chat.id;
+	if (boundMessageId !== query.message!.message_id) {
+		await api.sendMessage(chatId, "Энэ товч энэ мессежид хамаарахгүй.");
+		return;
+	}
+
+	const dedupeKey = `telegram:ship_all:v1:${chatId}:${boundMessageId}`;
+	if (!(await claimInboundOnce(dedupeKey, input.env))) {
+		return;
+	}
+
+	const storeApiUrl = (input.env.STORE_API_URL ?? process.env.STORE_API_URL)?.trim();
+	const botToken = (input.env.ADMIN_BOT_TOKEN ?? process.env.ADMIN_BOT_TOKEN)?.trim();
+	if (!storeApiUrl || !botToken) {
+		await api.sendMessage(chatId, "Илгээх тохиргоо дутуу байна (STORE_API_URL, ADMIN_BOT_TOKEN).");
+		return;
+	}
+
+	const result = await withTelegramTyping(api, chatId, () =>
+		shipAllPaidPendingOrders({
+			botToken,
+			storeApiUrl,
+		}),
+	);
+	await clearInlineButtons(api, chatId, boundMessageId);
+	await api.sendMessage(chatId, formatShipAllResult(result), {
+		link_preview_options: { is_disabled: true },
+	});
+}
+
+function isConfirmAction(action: string): action is keyof typeof confirmMessages {
+	return action in confirmMessages;
+}
+
+async function handleConfirmCallback(
+	input: CallbackInput,
+	api: Api,
+	query: NonNullable<Update["callback_query"]>,
+	action: keyof typeof confirmMessages,
+	boundMessageId: number,
+) {
+	const buildConfirmText = confirmMessages[action];
+	if (!buildConfirmText || query.message!.chat.type !== "private") {
+		return;
+	}
+
+	const chatId = query.message!.chat.id;
+	if (boundMessageId !== query.message!.message_id) {
+		await api.sendMessage(chatId, "Энэ баталгаажуулалт хуучирсан байна.");
+		return;
+	}
+
+	const dedupeKey = `telegram:confirm:v1:${chatId}:${boundMessageId}:${action}`;
+	if (!(await claimInboundOnce(dedupeKey, input.env))) {
+		return;
+	}
+
+	const sessionId = input.channel.conversationKey(conversationFromMessage(query.message!));
+	await clearInlineButtons(api, chatId, boundMessageId);
+	await withTelegramTyping(api, chatId, () =>
+		dispatch(adminAssistant, {
+			id: sessionId,
+			input: {
+				text: buildConfirmText(boundMessageId),
+				type: "telegram.message",
+				updateId: input.update.update_id,
+			},
+		}),
+	);
+}
+
+export async function handleTelegramCallback(input: CallbackInput) {
 	const query = input.update.callback_query;
 	if (!query?.message) {
 		return undefined;
@@ -84,75 +163,17 @@ export async function handleTelegramCallback(input: {
 	}
 
 	const { action, messageId: boundMessageId } = parseTelegramCallbackData(data);
-	const chatId = query.message.chat.id;
-	const callbackMessageId = query.message.message_id;
-
-	try {
-		if (action === TELEGRAM_CALLBACK.SHIP_ALL) {
-			if (boundMessageId === undefined) {
-				await api.sendMessage(chatId, "Энэ товч хуучирсан байна.");
-				return undefined;
-			}
-			if (boundMessageId !== callbackMessageId) {
-				await api.sendMessage(chatId, "Энэ товч энэ мессежид хамаарахгүй.");
-				return undefined;
-			}
-
-			const dedupeKey = `telegram:ship_all:v1:${chatId}:${boundMessageId}`;
-			if (!(await claimInboundOnce(dedupeKey, input.env))) {
-				return undefined;
-			}
-
-			const storeApiUrl = (input.env.STORE_API_URL ?? process.env.STORE_API_URL)?.trim();
-			const botToken = (input.env.ADMIN_BOT_TOKEN ?? process.env.ADMIN_BOT_TOKEN)?.trim();
-			if (!storeApiUrl || !botToken) {
-				await api.sendMessage(
-					chatId,
-					"Илгээх тохиргоо дутуу байна (STORE_API_URL, ADMIN_BOT_TOKEN).",
-				);
-				return undefined;
-			}
-
-			const result = await withTelegramTyping(api, chatId, () =>
-				shipAllPaidPendingOrders({
-					botToken,
-					storeApiUrl,
-				}),
-			);
-			await clearInlineButtons(api, chatId, boundMessageId);
-			await api.sendMessage(chatId, formatShipAllResult(result), {
-				link_preview_options: { is_disabled: true },
-			});
+	if (action === TELEGRAM_CALLBACK.SHIP_ALL) {
+		if (boundMessageId === undefined) {
+			await api.sendMessage(query.message.chat.id, "Энэ товч хуучирсан байна.");
 			return undefined;
 		}
+		await handleShipAllCallback(input, api, query, boundMessageId);
+		return undefined;
+	}
 
-		const buildConfirmText = confirmMessages[action];
-		if (buildConfirmText && boundMessageId !== undefined && query.message.chat.type === "private") {
-			if (boundMessageId !== callbackMessageId) {
-				await api.sendMessage(chatId, "Энэ баталгаажуулалт хуучирсан байна.");
-				return undefined;
-			}
-
-			const dedupeKey = `telegram:confirm:v1:${chatId}:${boundMessageId}:${action}`;
-			if (!(await claimInboundOnce(dedupeKey, input.env))) {
-				return undefined;
-			}
-
-			const sessionId = input.channel.conversationKey(conversationFromMessage(query.message));
-			await clearInlineButtons(api, chatId, boundMessageId);
-			await withTelegramTyping(api, chatId, () =>
-				dispatch(adminAssistant, {
-					id: sessionId,
-					input: {
-						text: buildConfirmText(boundMessageId),
-						type: "telegram.message",
-						updateId: input.update.update_id,
-					},
-				}),
-			);
-		}
-	} catch (error) {
-		throw error;
+	if (boundMessageId !== undefined && isConfirmAction(action)) {
+		await handleConfirmCallback(input, api, query, action, boundMessageId);
 	}
 
 	return undefined;

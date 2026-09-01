@@ -82,6 +82,35 @@ const defaultRanking = (stock: number): ProductSearchRanking => ({
 	rankingScore: 1 + availabilityScore(stock) * 55,
 });
 
+function buildProductSearchTextFields(
+	product: ProductSearchSourceDocument,
+	ingredients: Array<string>,
+	tags: Array<string>,
+	aliases: Array<string>,
+	intentTerms: Array<string>,
+) {
+	const nameMn = product.nameMn ?? "";
+	return {
+		aliases: aliases.join(" "),
+		amount: product.amount ?? "",
+		brand: product.brand,
+		category: product.category,
+		description: product.description ?? "",
+		dosage: normalizeSearchText(`${product.amount ?? ""} ${product.potency ?? ""}`),
+		ingredientPreviewJson: JSON.stringify(ingredients.slice(0, 5)),
+		ingredients: ingredients.join(" "),
+		intentTerms: intentTerms.join(" "),
+		name: product.name,
+		nameMn,
+		nameMnWithBrand: nameMn ? withBrand(product.brand, nameMn) : "",
+		nameWithBrand: withBrand(product.brand, product.name),
+		potency: product.potency ?? "",
+		primaryName: primaryName(product.name, product.brand),
+		primaryNameMn: nameMn ? primaryName(nameMn, product.brand) : "",
+		tags: tags.join(" "),
+	};
+}
+
 export const buildProductSearchDocument = (
 	product: ProductSearchSourceDocument,
 	ranking: ProductSearchRanking = defaultRanking(product.stock),
@@ -91,41 +120,24 @@ export const buildProductSearchDocument = (
 	const aliases = buildProductAliases(product);
 	const intentTerms = buildProductIntentTerms(product);
 	const createdAt = new Date(product.createdAt).toISOString();
-	const nameMn = product.nameMn ?? "";
 
 	return {
-		aliases: aliases.join(" "),
-		amount: product.amount ?? "",
-		brand: product.brand,
+		...buildProductSearchTextFields(product, ingredients, tags, aliases, intentTerms),
 		brandId: product.brandId ?? -1,
-		category: product.category,
 		categoryId: product.categoryId ?? -1,
 		createdAt,
 		createdAtEpoch: Date.parse(createdAt),
 		dailyIntake: product.dailyIntake ?? 0,
-		description: product.description ?? "",
 		discount: product.discount ?? 0,
-		dosage: normalizeSearchText(`${product.amount ?? ""} ${product.potency ?? ""}`),
 		hasImage: Boolean(product.image),
 		id: product.id,
 		image: product.image ?? "",
-		ingredientPreviewJson: JSON.stringify(ingredients.slice(0, 5)),
-		ingredients: ingredients.join(" "),
 		inStock: product.stock > 0 && product.status === "active",
-		intentTerms: intentTerms.join(" "),
 		isFeatured: product.isFeatured ?? false,
-		name: product.name,
-		nameMn,
-		nameMnWithBrand: nameMn ? withBrand(product.brand, nameMn) : "",
-		nameWithBrand: withBrand(product.brand, product.name),
-		potency: product.potency ?? "",
 		price: product.price,
-		primaryName: primaryName(product.name, product.brand),
-		primaryNameMn: nameMn ? primaryName(nameMn, product.brand) : "",
 		rankingScore: ranking.rankingScore,
 		slug: product.slug,
 		status: product.status,
 		stock: product.stock,
-		tags: tags.join(" "),
 	};
 };

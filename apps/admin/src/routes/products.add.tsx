@@ -17,6 +17,8 @@ type AIState =
 	| { data: ExtractedProductData; mode: "preview" }
 	| { data: AIExtractedData; mode: "form" };
 
+// ponytail: legacy admin add product page — split AI/manual flows later; complexity ceiling 16
+// oxlint-disable-next-line complexity
 function RouteComponent() {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();

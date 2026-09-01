@@ -23,7 +23,6 @@ import {
 	trackQpayError,
 } from "@/lib/analytics";
 import { resolveBankLogo } from "@/lib/bank-logos";
-import { isServer } from "@/lib/runtime";
 import {
 	HandoffState,
 	type HandoffState as HandoffStateType,
@@ -112,6 +111,8 @@ const BankTile = (props: BankTileProps) => {
 	);
 };
 
+const isDesktop = () => !isServer && window.matchMedia("(min-width: 640px)").matches;
+
 const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 	const [showQr, setShowQr] = createSignal(false);
 	let qrSection: HTMLDivElement | undefined;
@@ -189,8 +190,6 @@ const QpayPaymentPanel = (props: QpayPaymentPanelProps) => {
 			}),
 		);
 	};
-
-	const isDesktop = () => !isServer && window.matchMedia("(min-width: 640px)").matches;
 
 	onMount(() => {
 		setShowQr(isDesktop());

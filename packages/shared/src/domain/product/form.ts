@@ -3,6 +3,15 @@ import type { AIExtractedData, ProductFormValues } from "../../types";
 
 type BrandOption = Parameters<typeof findBrandId>[1];
 
+function pickTruthy<T>(...values: Array<T | undefined | null>): T | undefined {
+	for (const value of values) {
+		if (value) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
 export type ProductFormProduct = {
 	amount?: string;
 	brandId?: string | number | null;
@@ -25,31 +34,97 @@ export type ProductFormProduct = {
 	weightGrams?: number;
 };
 
+function productPrimaryText(product: ProductFormProduct | undefined) {
+	return {
+		amount: product?.amount ?? "",
+		description: product?.description ?? "",
+		name: product?.name || "",
+		name_mn: product?.name_mn || "",
+	};
+}
+
+function productSecondaryText(product: ProductFormProduct | undefined) {
+	return {
+		expirationDate: product?.expirationDate || "",
+		potency: product?.potency || "",
+		seoDescription: product?.seoDescription || "",
+		seoTitle: product?.seoTitle || "",
+	};
+}
+
+function productTextFields(product: ProductFormProduct | undefined) {
+	return {
+		...productPrimaryText(product),
+		...productSecondaryText(product),
+	};
+}
+
+function productCollectionFields(product: ProductFormProduct | undefined) {
+	return {
+		images: product?.images || [],
+		ingredients: product?.ingredients || [],
+		tags: product?.tags || [],
+	};
+}
+
+function productNumericFields(product: ProductFormProduct | undefined) {
+	return {
+		dailyIntake: product?.dailyIntake || 1,
+		price: product?.price || 0,
+		stock: product?.stock || 0,
+		weightGrams: product?.weightGrams || 0,
+	};
+}
+
+function productFormBase(product: ProductFormProduct | undefined): ProductFormValues {
+	return {
+		...productTextFields(product),
+		...productCollectionFields(product),
+		...productNumericFields(product),
+		brandId: String(product?.brandId ?? ""),
+		categoryId: String(product?.categoryId ?? ""),
+		status: product?.status || "draft",
+	};
+}
+
+function applyAiFormDefaults(
+	base: ProductFormValues,
+	aiData: AIExtractedData,
+	brands: BrandOption,
+): ProductFormValues {
+	return {
+		...base,
+		amount: pickTruthy(aiData.amount, base.amount) ?? base.amount,
+		brandId: getBrandId(undefined, aiData, brands),
+		categoryId: aiData.categoryId ? String(aiData.categoryId) : base.categoryId,
+		dailyIntake: pickTruthy(aiData.dailyIntake) ?? base.dailyIntake,
+		description: pickTruthy(aiData.description, base.description) ?? base.description,
+		images: pickTruthy(aiData.images, base.images) ?? base.images,
+		ingredients: pickTruthy(aiData.ingredients, base.ingredients) ?? base.ingredients,
+		name: pickTruthy(aiData.name, base.name) ?? base.name,
+		name_mn: pickTruthy(aiData.name_mn, base.name_mn) ?? base.name_mn,
+		potency: pickTruthy(aiData.potency, base.potency) ?? base.potency,
+		price: pickTruthy(aiData.price) ?? base.price,
+		seoDescription: pickTruthy(aiData.seoDescription, base.seoDescription) ?? base.seoDescription,
+		seoTitle: pickTruthy(aiData.seoTitle, base.seoTitle) ?? base.seoTitle,
+		tags: pickTruthy(aiData.tags, base.tags) ?? base.tags,
+		weightGrams: pickTruthy(aiData.weightGrams) ?? base.weightGrams,
+	};
+}
+
 export function getProductFormDefaults(
 	product: ProductFormProduct | undefined,
 	aiData: AIExtractedData | undefined,
 	brands: BrandOption,
 ): ProductFormValues {
-	return {
-		amount: aiData?.amount || product?.amount || "",
-		brandId: getBrandId(product, aiData, brands),
-		categoryId: aiData?.categoryId ? String(aiData.categoryId) : String(product?.categoryId ?? ""),
-		dailyIntake: aiData?.dailyIntake || product?.dailyIntake || 1,
-		description: aiData?.description || product?.description || "",
-		expirationDate: product?.expirationDate || "",
-		images: aiData?.images || product?.images || [],
-		ingredients: aiData?.ingredients || product?.ingredients || [],
-		name: aiData?.name || product?.name || "",
-		name_mn: aiData?.name_mn || product?.name_mn || "",
-		potency: aiData?.potency || product?.potency || "",
-		price: aiData?.price || product?.price || 0,
-		seoDescription: aiData?.seoDescription || product?.seoDescription || "",
-		seoTitle: aiData?.seoTitle || product?.seoTitle || "",
-		status: product?.status || "draft",
-		stock: product?.stock || 0,
-		tags: aiData?.tags || product?.tags || [],
-		weightGrams: aiData?.weightGrams || product?.weightGrams || 0,
-	};
+	const base = productFormBase(product);
+	if (!aiData) {
+		return {
+			...base,
+			brandId: getBrandId(product, aiData, brands),
+		};
+	}
+	return applyAiFormDefaults(base, aiData, brands);
 }
 
 export function getAiProductFormValues(

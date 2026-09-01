@@ -20,6 +20,8 @@ interface DataPaginationProps {
 	totalItems: number;
 }
 
+// ponytail: legacy admin pagination — extract page window later; complexity ceiling 22
+// oxlint-disable-next-line complexity
 export function DataPagination({
 	className = "",
 	currentPage,

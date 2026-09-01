@@ -1,8 +1,8 @@
 import { createEnv } from "@t3-oss/env-core";
-import * as v from "valibot";
+import { minLength, optional, pipe, string, url } from "valibot";
 
-const requiredString = () => v.pipe(v.string(), v.minLength(1));
-const requiredUrl = () => v.pipe(v.string(), v.url());
+const requiredString = () => pipe(string(), minLength(1));
+const requiredUrl = () => pipe(string(), url());
 
 type RuntimeEnv = NodeJS.ProcessEnv;
 
@@ -55,7 +55,7 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			UPSTASH_SEARCH_URL: runtimeEnv.UPSTASH_SEARCH_URL,
 		},
 		server: {
-			ADMIN_BOT_TOKEN: v.optional(v.string()),
+			ADMIN_BOT_TOKEN: optional(v.string()),
 			CORS_ORIGIN: requiredString(),
 			DASH_URL: requiredUrl(),
 			DELIVERY_API_URL: requiredUrl(),
@@ -68,12 +68,12 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			GOOGLE_CLIENT_ID: requiredString(),
 			GOOGLE_CLIENT_SECRET: requiredString(),
 			IMAGE_UPLOAD_TOKEN: requiredString(),
-			KHAAN_ACCOUNT_NAME: v.optional(requiredString(), "Aviddaram Bazarragchaa"),
+			KHAAN_ACCOUNT_NAME: optional(requiredString(), "Aviddaram Bazarragchaa"),
 			KHAAN_ACCOUNT_NUMBER: requiredString(),
-			KHAAN_BRANCH_CODE: v.optional(requiredString(), "5041"),
+			KHAAN_BRANCH_CODE: optional(requiredString(), "5041"),
 			KHAAN_DEVICE_ID: requiredString(),
 			KHAAN_PASSWORD: requiredString(),
-			KHAAN_USER_AGENT: v.optional(requiredString()),
+			KHAAN_USER_AGENT: optional(requiredString()),
 			KHAAN_USERNAME: requiredString(),
 			MESSENGER_ACCESS_TOKEN: requiredString(),
 			MESSENGER_VERIFY_TOKEN: requiredString(),
@@ -83,18 +83,18 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			PLANETSCALE_PASSWORD: requiredString(),
 			PLANETSCALE_USER: requiredString(),
 			POSTHOG_API_KEY: requiredString(),
-			POSTHOG_HOST: v.optional(requiredUrl(), "https://us.i.posthog.com"),
+			POSTHOG_HOST: optional(requiredUrl(), "https://us.i.posthog.com"),
 			POSTHOG_PROJECT_API_KEY: requiredString(),
 			POSTHOG_PROJECT_ID: requiredString(),
-			QPAY_CALLBACK_URL: v.optional(requiredUrl()),
+			QPAY_CALLBACK_URL: optional(requiredUrl()),
 			QPAY_PASSWORD: requiredString(),
 			QPAY_URL: requiredUrl(),
 			QPAY_USERNAME: requiredString(),
 			RESTOCK_FROM_EMAIL: requiredString(),
 			SMS_GATEWAY_LOGIN: requiredString(),
 			SMS_GATEWAY_PASSWORD: requiredString(),
-			TELEGRAM_ADMIN_BOT_TOKEN: v.optional(requiredString()),
-			TELEGRAM_ADMIN_CHAT_ID: v.optional(requiredString()),
+			TELEGRAM_ADMIN_BOT_TOKEN: optional(requiredString()),
+			TELEGRAM_ADMIN_CHAT_ID: optional(requiredString()),
 			UPSTASH_REDIS_REST_TOKEN: requiredString(),
 			UPSTASH_REDIS_REST_URL: requiredUrl(),
 			UPSTASH_SEARCH_TOKEN: requiredString(),

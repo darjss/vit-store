@@ -12,8 +12,8 @@ type Particle = {
 	color: string;
 	h: number;
 	opacity: number;
-	rotation: number;
 	particleKind: "rect" | "circle";
+	rotation: number;
 	vr: number;
 	vx: number;
 	vy: number;
@@ -80,8 +80,8 @@ function spawnParticles(
 			color: pickColor(),
 			h: size * rand(0.45, 1.15),
 			opacity: 1,
-			rotation: rand(0, Math.PI * 2),
 			particleKind: Math.random() > 0.35 ? "rect" : "circle",
+			rotation: rand(0, Math.PI * 2),
 			vr: rand(-0.18, 0.18),
 			vx: Math.cos(angle) * speed + rand(-1.5, 1.5),
 			vy: Math.sin(angle) * speed,
