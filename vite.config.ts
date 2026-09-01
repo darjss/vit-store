@@ -19,37 +19,37 @@ export default defineConfig({
 			"vite-plus/prefer-vite-plus-imports": "error",
 		},
 	},
-	staged: {
-		"*": "vp check --fix",
-	},
 	run: {
 		tasks: {
 			"admin:dev": {
+				cache: false,
 				command: "alchemy dev --app admin --stage dev",
 				cwd: "apps/admin",
-				cache: false,
-			},
-			"server:dev": {
-				command: "alchemy dev --app server --stage dev",
-				cwd: "apps/server",
-				cache: false,
-			},
-			"storev2:dev": {
-				command: "NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --app storev2 --stage dev",
-				cwd: "apps/storev2",
-				cache: false,
 			},
 			"db:generate": {
+				cache: false,
 				command: "vp exec drizzle-kit generate",
 				cwd: "packages/api",
-				cache: false,
 			},
 			"db:migrate:local": {
+				cache: false,
 				command:
 					"vp exec drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
 				cwd: "apps/server",
+			},
+			"server:dev": {
 				cache: false,
+				command: "alchemy dev --app server --stage dev",
+				cwd: "apps/server",
+			},
+			"storev2:dev": {
+				cache: false,
+				command: "NODE_TLS_REJECT_UNAUTHORIZED=0 alchemy dev --app storev2 --stage dev",
+				cwd: "apps/storev2",
 			},
 		},
+	},
+	staged: {
+		"*": "vp check --fix",
 	},
 });
