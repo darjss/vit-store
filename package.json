@@ -81,7 +81,8 @@
 		"@solid-primitives/event-listener": "2.4.6",
 		"typescript": "catalog:",
 		"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
-		"vitest": "4.1.11"
+		"vitest": "4.1.11",
+		"miniflare": "4.20260730.0"
 	},
 	"packageManager": "bun@1.4.0",
 	"patchedDependencies": {
