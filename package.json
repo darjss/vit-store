@@ -30,8 +30,8 @@
 		"lint": "biome lint .",
 		"lint:fix": "biome check --write .",
 		"lint:fix:unsafe": "biome check --write --unsafe .",
-		"deps:check": "taze -r major --group",
-		"deps:check:minor": "taze -r minor --group",
+		"deps:check": "bunx taze -r major --group",
+		"deps:check:minor": "bunx taze -r minor --group",
 		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
 		"dev": "turbo dev",
 		"dev:alchemy": "alchemy dev --stage dev",
@@ -68,7 +68,6 @@
 		"@cloudflare/workers-types": "^4.20260617.1",
 		"@types/node": "^26.4.0",
 		"alchemy": "0.93.12",
-		"miniflare": "^4.20260730.0",
 		"oxlint": "^1.31.0",
 		"tsdown": "catalog:",
 		"turbo": "^2.10.12",
@@ -82,7 +81,9 @@
 		"typescript": "catalog:",
 		"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
 		"vitest": "4.1.11",
-		"miniflare": "4.20260730.0"
+		"alchemy": {
+			"miniflare": "4.20260730.0"
+		}
 	},
 	"packageManager": "bun@1.4.0",
 	"patchedDependencies": {

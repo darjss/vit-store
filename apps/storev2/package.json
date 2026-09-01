@@ -52,7 +52,6 @@
 		"@cloudflare/workers-types": "^4.20260617.1",
 		"@posthog/rollup-plugin": "^1.4.3",
 		"alchemy": "catalog:",
-		"miniflare": "^4.20260730.0",
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"wrangler": "^4.127.1"
