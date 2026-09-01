@@ -2,7 +2,16 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as v from "valibot";
+import {
+	type InferOutput,
+	maxLength,
+	minLength,
+	object,
+	optional,
+	pipe,
+	regex,
+	string,
+} from "valibot";
 import { trpc } from "@/utils/trpc";
 import SubmitButton from "../submit-button";
 import { Card, CardContent } from "../ui/card";
@@ -11,19 +20,19 @@ import { FormLoadingOverlay } from "../ui/form-loading-overlay";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 
-const addCustomerSchema = v.object({
-	address: v.optional(
-		v.pipe(v.string("Хаяг заавал оруулах"), v.minLength(5, "Хаяг хэт богино байна")),
+const addCustomerSchema = object({
+	address: optional(
+		pipe(string("Хаяг заавал оруулах"), minLength(5, "Хаяг хэт богино байна")),
 	),
-	phone: v.pipe(
-		v.string("Дугаар заавал оруулах"),
-		v.minLength(8, "Дугаар 8 оронтой байх ёстой"),
-		v.maxLength(8, "Дугаар 8 оронтой байх ёстой"),
-		v.regex(/^[6-9]\d{7}$/, "Зөв дугаар оруулна уу"),
+	phone: pipe(
+		string("Дугаар заавал оруулах"),
+		minLength(8, "Дугаар 8 оронтой байх ёстой"),
+		maxLength(8, "Дугаар 8 оронтой байх ёстой"),
+		regex(/^[6-9]\d{7}$/, "Зөв дугаар оруулна уу"),
 	),
 });
 
-type AddCustomerFormValues = v.InferOutput<typeof addCustomerSchema>;
+type AddCustomerFormValues = InferOutput<typeof addCustomerSchema>;
 
 type CustomerFormProps = {
 	customer?: { address?: string | null; phone: number };

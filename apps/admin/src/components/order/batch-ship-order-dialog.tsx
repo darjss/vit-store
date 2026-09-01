@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -37,31 +37,24 @@ interface BatchShipOrderDialogProps {
 	orders: Array<BatchShipOrder>;
 }
 
-export default function BatchShipOrderDialog({
+function buildInitialZoneIds(orders: Array<BatchShipOrder>) {
+	return Object.fromEntries(orders.map((order) => [order.id, order.addressZoneId]));
+}
+
+function BatchShipOrderDialogContent({
 	onComplete,
 	onOpenChange,
-	open,
 	orders,
-}: BatchShipOrderDialogProps) {
-	const [draftZoneIds, setDraftZoneIds] = useState<Record<number, number | undefined>>({});
+}: Omit<BatchShipOrderDialogProps, "open">) {
+	const [draftZoneIds, setDraftZoneIds] = useState<Record<number, number | undefined>>(() =>
+		buildInitialZoneIds(orders),
+	);
 	const [isSending, setIsSending] = useState(false);
 	const zonesQuery = useQuery({
 		...trpc.order.getDeliveryAddressZones.queryOptions(),
-		enabled: open,
 		staleTime: 1000 * 60 * 60 * 24,
 	});
 	const shipOrder = useMutation(trpc.order.shipOrder.mutationOptions());
-
-	useEffect(() => {
-		if (!open) {
-			return;
-		}
-		setDraftZoneIds((current) =>
-			Object.fromEntries(
-				orders.map((order) => [order.id, current[order.id] ?? order.addressZoneId]),
-			),
-		);
-	}, [open, orders]);
 
 	const zones = zonesQuery.data ?? [];
 	const zonesReady = zonesQuery.isSuccess && zones.length > 0;
@@ -115,91 +108,104 @@ export default function BatchShipOrderDialog({
 	};
 
 	return (
-		<Dialog
-			onOpenChange={(nextOpen) => {
-				if (!isSending) {
-					onOpenChange(nextOpen);
-				}
-			}}
-			open={open}
-		>
-			<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 sm:max-w-2xl">
-				<DialogHeader className="px-4 sm:px-6">
-					<DialogTitle>TU хүргэлтийн бүс сонгох</DialogTitle>
-					<DialogDescription>Захиалга бүрт хаягт нь тохирох бүс сонгоно уу</DialogDescription>
-				</DialogHeader>
+		<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-y-auto border-2 sm:max-w-2xl">
+			<DialogHeader className="px-4 sm:px-6">
+				<DialogTitle>TU хүргэлтийн бүс сонгох</DialogTitle>
+				<DialogDescription>Захиалга бүрт хаягт нь тохирох бүс сонгоно уу</DialogDescription>
+			</DialogHeader>
 
-				<div className="space-y-4 p-4 sm:p-6">
-					{zonesQuery.isLoading ? (
-						<output className="text-muted-foreground flex items-center text-sm">
-							<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-							Хүргэлтийн бүсүүдийг уншиж байна...
-						</output>
-					) : null}
-					{zonesQuery.isError ? (
-						<div
-							className="text-destructive flex items-center justify-between gap-3 text-sm"
-							role="alert"
-						>
-							<span>Хүргэлтийн бүсүүдийг уншиж чадсангүй.</span>
-							<Button
-								onClick={() => void zonesQuery.refetch()}
-								size="sm"
-								type="button"
-								variant="outline"
-							>
-								Дахин оролдох
-							</Button>
-						</div>
-					) : null}
-					{zonesQuery.isSuccess && zones.length === 0 ? (
-						<p className="text-destructive text-sm" role="alert">
-							Одоогоор хүргэлтийн бүс алга байна.
-						</p>
-					) : null}
-
-					{orders.map((order) => (
-						<div className="border-border bg-background space-y-3 border-2 p-4" key={order.id}>
-							<div>
-								<p className="font-heading font-black">#{order.orderNumber}</p>
-								<p className="text-muted-foreground mt-1 text-sm">
-									{order.address || "Хаяг оруулаагүй"}
-								</p>
-							</div>
-							<DeliveryZoneSelect
-								disabled={!zonesReady || isSending}
-								id={`batch-order-${order.id}-delivery-zone`}
-								label={`#${order.orderNumber} хүргэлтийн бүс`}
-								onValueChange={(addressZoneId) =>
-									setDraftZoneIds((current) => ({
-										...current,
-										[order.id]: addressZoneId,
-									}))
-								}
-								value={draftZoneIds[order.id]}
-								zones={zones}
-							/>
-						</div>
-					))}
-				</div>
-
-				<DialogFooter className="px-4 py-3 sm:px-6" position="static">
-					<Button
-						disabled={isSending}
-						onClick={() => onOpenChange(false)}
-						type="button"
-						variant="outline"
+			<div className="space-y-4 p-4 sm:p-6">
+				{zonesQuery.isLoading ? (
+					<output className="text-muted-foreground flex items-center text-sm">
+						<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+						Хүргэлтийн бүсүүдийг уншиж байна...
+					</output>
+				) : null}
+				{zonesQuery.isError ? (
+					<div
+						className="text-destructive flex items-center justify-between gap-3 text-sm"
+						role="alert"
 					>
-						Болих
-					</Button>
-					<Button disabled={!canSubmit} onClick={() => void handleSubmit()} type="button">
-						{isSending ? (
-							<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
-						) : null}
-						{isSending ? "Илгээж байна..." : "TU руу илгээх"}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
+						<span>Хүргэлтийн бүсүүдийг уншиж чадсангүй.</span>
+						<Button
+							onClick={() => void zonesQuery.refetch()}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Дахин оролдох
+						</Button>
+					</div>
+				) : null}
+				{zonesQuery.isSuccess && zones.length === 0 ? (
+					<p className="text-destructive text-sm" role="alert">
+						Одоогоор хүргэлтийн бүс алга байна.
+					</p>
+				) : null}
+
+				{orders.map((order) => (
+					<div className="border-border bg-background space-y-3 border-2 p-4" key={order.id}>
+						<div>
+							<p className="font-heading font-black">#{order.orderNumber}</p>
+							<p className="text-muted-foreground mt-1 text-sm">
+								{order.address || "Хаяг оруулаагүй"}
+							</p>
+						</div>
+						<DeliveryZoneSelect
+							disabled={!zonesReady || isSending}
+							id={`batch-order-${order.id}-delivery-zone`}
+							label={`#${order.orderNumber} хүргэлтийн бүс`}
+							onValueChange={(addressZoneId) =>
+								setDraftZoneIds((current) => ({
+									...current,
+									[order.id]: addressZoneId,
+								}))
+							}
+							value={draftZoneIds[order.id]}
+							zones={zones}
+						/>
+					</div>
+				))}
+			</div>
+
+			<DialogFooter className="px-4 py-3 sm:px-6" position="static">
+				<Button
+					disabled={isSending}
+					onClick={() => onOpenChange(false)}
+					type="button"
+					variant="outline"
+				>
+					Болих
+				</Button>
+				<Button disabled={!canSubmit} onClick={() => void handleSubmit()} type="button">
+					{isSending ? (
+						<Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
+					) : null}
+					{isSending ? "Илгээж байна..." : "TU руу илгээх"}
+				</Button>
+			</DialogFooter>
+		</DialogContent>
+	);
+}
+
+export default function BatchShipOrderDialog({
+	onComplete,
+	onOpenChange,
+	open,
+	orders,
+}: BatchShipOrderDialogProps) {
+	const dialogKey = orders.map((order) => `${order.id}:${order.addressZoneId ?? ""}`).join(",");
+
+	return (
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			{open ? (
+				<BatchShipOrderDialogContent
+					key={dialogKey}
+					onComplete={onComplete}
+					onOpenChange={onOpenChange}
+					orders={orders}
+				/>
+			) : null}
 		</Dialog>
 	);
 }

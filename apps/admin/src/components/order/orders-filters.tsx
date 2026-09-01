@@ -56,6 +56,8 @@ interface OrdersFiltersProps {
 	sortField?: string;
 }
 
+// ponytail: legacy admin orders filters — split filter groups later; complexity ceiling 23
+// oxlint-disable-next-line complexity
 export default function OrdersFilters({
 	date,
 	filtersActive,

@@ -3,7 +3,16 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { status as productStatuses } from "@vit/shared/constants";
 import { ChevronDown, ChevronUp, Loader2, PlusCircle, RotateCcw, Search, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
-import * as v from "valibot";
+import {
+	integer,
+	minValue,
+	number,
+	object,
+	optional,
+	picklist,
+	pipe,
+	string,
+} from "valibot";
 import ProductCard from "@/components/product/product-card";
 import ProductsPageSkeleton from "@/components/product/products-page-skeleton";
 import { Button } from "@/components/ui/button";
@@ -45,21 +54,23 @@ export const Route = createFileRoute("/_dash/products/")({
 		});
 	},
 	pendingComponent: ProductsPageSkeleton,
-	validateSearch: v.object({
-		brandId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-		categoryId: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(
-			v.pipe(v.number(), v.integer(), v.minValue(1)),
+	validateSearch: object({
+		brandId: optional(pipe(number(), integer(), minValue(1))),
+		categoryId: optional(pipe(number(), integer(), minValue(1))),
+		page: optional(pipe(number(), integer(), minValue(1)), 1),
+		pageSize: optional(
+			pipe(number(), integer(), minValue(1)),
 			DEFAULT_PRODUCTS_PAGE_SIZE,
 		),
-		searchTerm: v.optional(v.string()),
-		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		sortField: v.optional(v.string()),
-		status: v.optional(v.picklist(productStatuses), "active"),
+		searchTerm: optional(string()),
+		sortDirection: optional(picklist(["asc", "desc"])),
+		sortField: optional(string()),
+		status: optional(picklist(productStatuses), "active"),
 	}),
 });
 
+// ponytail: legacy admin products index — split filters/list later; complexity ceiling 31
+// oxlint-disable-next-line complexity
 function RouteComponent() {
 	const {
 		brandId,
@@ -71,6 +82,12 @@ function RouteComponent() {
 	} = useSearch({ from: "/_dash/products/" });
 	const [searchInput, setSearchInput] = useState(searchTerm || "");
 	const [debouncedSearch, setDebouncedSearch] = useState(searchTerm || "");
+	const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+	if (searchTerm !== prevSearchTerm) {
+		setPrevSearchTerm(searchTerm);
+		setSearchInput(searchTerm || "");
+		setDebouncedSearch(searchTerm || "");
+	}
 	const hasActiveFilters =
 		brandId !== undefined ||
 		categoryId !== undefined ||
@@ -105,11 +122,6 @@ function RouteComponent() {
 			to: "/products",
 		});
 	}, [debouncedSearch, navigate, searchTerm]);
-
-	useEffect(() => {
-		setSearchInput(searchTerm || "");
-		setDebouncedSearch(searchTerm || "");
-	}, [searchTerm]);
 
 	const handleSearchChange = (value: string) => {
 		setSearchInput(value);
@@ -289,7 +301,7 @@ function RouteComponent() {
 						</>
 					) : !isSearching && !isTypingSearch ? (
 						<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
-							"{normalizedDebouncedSearch}" хайлтаар үр дүн олдсонгүй
+							&ldquo;{normalizedDebouncedSearch}&rdquo; хайлтаар үр дүн олдсонгүй
 						</div>
 					) : null}
 				</div>

@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { purchaseProvider } from "@vit/shared";
 import { AlertCircle, FileImage, Loader2, Sparkles, X } from "lucide-react";
 import { useState } from "react";
-import * as v from "valibot";
+import { picklist, safeParse } from "valibot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -30,10 +30,10 @@ const matchStatusLabel = {
 	unmatched: "Тохироогүй",
 } satisfies Record<(typeof matchStatusValues)[number], string>;
 
-const matchStatusSchema = v.picklist(matchStatusValues);
+const matchStatusSchema = picklist(matchStatusValues);
 
 function labelForMatchStatus(status: string): string {
-	const parsed = v.safeParse(matchStatusSchema, status);
+	const parsed = safeParse(matchStatusSchema, status);
 	return parsed.success ? matchStatusLabel[parsed.output] : status;
 }
 

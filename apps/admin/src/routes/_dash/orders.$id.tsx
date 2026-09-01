@@ -114,6 +114,13 @@ function ResolveOrderNumber({ orderNumber }: { orderNumber: string }) {
 	return <OrderDetail orderId={resolvedId} />;
 }
 
+async function copyOrderField(text: string, label: string) {
+	await navigator.clipboard.writeText(text);
+	toast.success(`${label} хуулагдлаа`);
+}
+
+// ponytail: legacy admin order detail page — split sections later; complexity ceiling 29
+// oxlint-disable-next-line complexity
 function OrderDetail({ orderId }: { orderId: number }) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -128,19 +135,6 @@ function OrderDetail({ orderId }: { orderId: number }) {
 		enabled: order?.addressZoneId !== undefined,
 		staleTime: 1000 * 60 * 60 * 24,
 	});
-
-	if (!order) {
-		return (
-			<div className="mx-auto max-w-3xl p-4">
-				<div className="border-border bg-card shadow-hard border-2 p-6">
-					<h1 className="font-heading text-xl font-black">Захиалга олдсонгүй</h1>
-					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
-						Буцах
-					</Button>
-				</div>
-			</div>
-		);
-	}
 
 	const invalidateOrder = () =>
 		queryClient.invalidateQueries(trpc.order.getOrderById.queryOptions({ id: orderId }));
@@ -183,6 +177,19 @@ function OrderDetail({ orderId }: { orderId: number }) {
 		},
 	});
 
+	if (!order) {
+		return (
+			<div className="mx-auto max-w-3xl p-4">
+				<div className="border-border bg-card shadow-hard border-2 p-6">
+					<h1 className="font-heading text-xl font-black">Захиалга олдсонгүй</h1>
+					<Button className="mt-4" onClick={() => navigate({ to: "/orders" })}>
+						Буцах
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
 	// Header-only inline edits (notes, address, phone, deliveryProvider, status)
 	// go through the lightweight patchOrderHeader endpoint, which touches only
 	// order header columns and does NOT rewrite order details / sales / stock.
@@ -211,11 +218,6 @@ function OrderDetail({ orderId }: { orderId: number }) {
 			id: orderId,
 			notes: patch.notes,
 		});
-	};
-
-	const copy = async (text: string, label: string) => {
-		await navigator.clipboard.writeText(text);
-		toast.success(`${label} хуулагдлаа`);
 	};
 
 	const nextAction =
@@ -368,7 +370,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 							</div>
 
 							<div className="space-y-4">
-								<InfoRow label="Утас" onCopy={() => copy(order.customerPhone.toString(), "Утас")}>
+								<InfoRow label="Утас" onCopy={() => copyOrderField(order.customerPhone.toString(), "Утас")}>
 									<EditableField
 										isLoading={isPatchHeaderPending}
 										onSave={(next) => savePatch({ customerPhone: next })}
@@ -376,7 +378,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 									/>
 								</InfoRow>
 
-								<InfoRow label="Хаяг" onCopy={() => copy(order.address || "", "Хаяг")}>
+								<InfoRow label="Хаяг" onCopy={() => copyOrderField(order.address || "", "Хаяг")}>
 									<EditableField
 										isLoading={isPatchHeaderPending}
 										onSave={(next) => savePatch({ address: next })}
@@ -551,7 +553,7 @@ function OrderDetail({ orderId }: { orderId: number }) {
 							) : null}
 							<Button
 								className="mt-4 h-11 w-full gap-2"
-								onClick={() => copy(order.address || "", "Хүргэлтийн хаяг")}
+								onClick={() => copyOrderField(order.address || "", "Хүргэлтийн хаяг")}
 								variant="outline"
 							>
 								<MapPin className="h-4 w-4" /> Хаяг хуулах

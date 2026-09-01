@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,26 +33,18 @@ interface ProductCardProps {
 	product: ProductType;
 }
 
+// ponytail: legacy admin product card — split actions later; complexity ceiling 22
+// oxlint-disable-next-line complexity
 const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isStockEditing, setIsStockEditing] = useState(false);
 	const [isPriceEditing, setIsPriceEditing] = useState(false);
 	const [isOutOfStockAlertOpen, setIsOutOfStockAlertOpen] = useState(false);
 	const [isActivateConfirmOpen, setIsActivateConfirmOpen] = useState(false);
-	const [stockValue, setStockValue] = useState(product.stock);
-	const [priceValue, setPriceValue] = useState(product.price);
-
-	// Sync drafts from the cache only while their editor is closed, so an
-	// unrelated refetch (e.g. saving stock) can't wipe a price being typed,
-	// and vice versa.
-	useEffect(() => {
-		if (!isStockEditing) {
-			setStockValue(product.stock);
-		}
-		if (!isPriceEditing) {
-			setPriceValue(product.price);
-		}
-	}, [product.stock, product.price, isStockEditing, isPriceEditing]);
+	const [stockDraft, setStockDraft] = useState<number | null>(null);
+	const [priceDraft, setPriceDraft] = useState<number | null>(null);
+	const stockValue = stockDraft ?? product.stock;
+	const priceValue = priceDraft ?? product.price;
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
@@ -64,12 +56,13 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 		...trpc.product.setProductStock.mutationOptions(),
 		onError: () => {
 			toast.error("Үлдэгдэл шинэчлэхэд алдаа гарлаа");
-			setStockValue(product.stock);
+			setStockDraft(null);
 		},
 		onSettled: () => {
 			invalidateProductCaches(queryClient, product.id);
 		},
 		onSuccess: () => {
+			setStockDraft(null);
 			setIsStockEditing(false);
 		},
 	});
@@ -81,13 +74,14 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 		...trpc.product.updateProductField.mutationOptions(),
 		onError: () => {
 			toast.error("Үнэ шинэчлэхэд алдаа гарлаа");
-			setPriceValue(product.price);
+			setPriceDraft(null);
 		},
 		// Close the editor only once the cache reflects the saved price, so
 		// the collapsed button never shows a stale value next to a fresh one
 		// in the summary.
 		onSettled: async () => {
 			await invalidateProductCaches(queryClient, product.id);
+			setPriceDraft(null);
 			setIsPriceEditing(false);
 		},
 	});
@@ -234,10 +228,16 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 							<ProductStockEditor
 								isEditing={isStockEditing}
 								isPending={isSetStockPending}
-								onCancel={() => setIsStockEditing(false)}
-								onEdit={() => setIsStockEditing(true)}
+								onCancel={() => {
+									setStockDraft(null);
+									setIsStockEditing(false);
+								}}
+								onEdit={() => {
+									setStockDraft(product.stock);
+									setIsStockEditing(true);
+								}}
 								onSave={handleSaveStock}
-								onValueChange={setStockValue}
+								onValueChange={setStockDraft}
 								stock={product.stock}
 								value={stockValue}
 							/>
@@ -245,10 +245,16 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 							<ProductPriceEditor
 								isEditing={isPriceEditing}
 								isPending={isSetPricePending}
-								onCancel={() => setIsPriceEditing(false)}
-								onEdit={() => setIsPriceEditing(true)}
+								onCancel={() => {
+									setPriceDraft(null);
+									setIsPriceEditing(false);
+								}}
+								onEdit={() => {
+									setPriceDraft(product.price);
+									setIsPriceEditing(true);
+								}}
 								onSave={handleSavePrice}
-								onValueChange={setPriceValue}
+								onValueChange={setPriceDraft}
 								price={product.price}
 								value={priceValue}
 							/>

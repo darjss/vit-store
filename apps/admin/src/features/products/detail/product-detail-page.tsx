@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
 	AlertCircle,
@@ -59,7 +59,6 @@ function parseNonNegativeInt(raw: string): number {
 	return Number.isFinite(n) && n > 0 ? n : 0;
 }
 export function ProductDetailPage({ productId }: { productId: number }) {
-	const queryClient = useQueryClient();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
 	const { data: product } = useSuspenseQuery({

@@ -1,5 +1,5 @@
 import { PRODUCT_PER_PAGE, status } from "@vit/shared/constants";
-import * as v from "valibot";
+import { parse, picklist } from "valibot";
 import type { ProductType, RouterOutputs } from "@/lib/types";
 
 export type ProductListStatus = (typeof status)[number];
@@ -17,10 +17,10 @@ export type ProductsSearch = {
 
 type InstantSearchProduct = RouterOutputs["product"]["searchProductsInstant"][number];
 
-const instantSearchStatusSchema = v.picklist(status);
+const instantSearchStatusSchema = picklist(status);
 
 export function instantSearchToProductCard(product: InstantSearchProduct): ProductType {
-	const parsedStatus = v.parse(instantSearchStatusSchema, product.status);
+	const parsedStatus = parse(instantSearchStatusSchema, product.status);
 	return {
 		amount: "",
 		brandId: 0,

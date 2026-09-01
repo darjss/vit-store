@@ -5,7 +5,7 @@ import {
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
 import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ interface OrdersListProps {
 	sortField?: string;
 }
 
+// ponytail: legacy admin orders list — split batch toolbar later; complexity ceiling 17
+// oxlint-disable-next-line complexity
 export default function OrdersList({
 	date,
 	orderStatus,
@@ -55,8 +57,6 @@ export default function OrdersList({
 }: OrdersListProps) {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate({ from: "/orders" });
-	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
-	const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
 	const [batchFailed, setBatchFailed] = useState<Array<{
 		message: string;
 		orderNumber: string;
@@ -87,25 +87,29 @@ export default function OrdersList({
 	const orders = ordersData.orders;
 	const pagination = ordersData.pagination;
 
-	const pendingOnPage = orders.filter((o) => o.status === "pending");
-	const selectedPendingOrders = pendingOnPage.filter((order) => selectedIds.has(order.id));
-	const allPendingSelected =
-		pendingOnPage.length > 0 && pendingOnPage.every((o) => selectedIds.has(o.id));
-
-	useEffect(() => {
+	const listKey = `${page}-${pageSize}-${orderStatus}-${paymentStatus}-${date}-${searchTerm}-${sortField}-${sortDirection}`;
+	const [selectionListKey, setSelectionListKey] = useState(listKey);
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+	const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+	if (listKey !== selectionListKey) {
+		setSelectionListKey(listKey);
 		setSelectedIds(new Set());
 		setIsBatchDialogOpen(false);
-	}, [page, pageSize, orderStatus, paymentStatus, date, searchTerm, sortField, sortDirection]);
+	}
 
-	useEffect(() => {
-		const pendingIds = new Set(
-			orders.filter((order) => order.status === "pending").map((order) => order.id),
-		);
-		setSelectedIds((current) => {
-			const next = new Set([...current].filter((id) => pendingIds.has(id)));
-			return next.size === current.size ? current : next;
-		});
-	}, [orders]);
+	const pendingIds = useMemo(
+		() => new Set(orders.filter((order) => order.status === "pending").map((order) => order.id)),
+		[orders],
+	);
+	const visibleSelectedIds = useMemo(
+		() => new Set([...selectedIds].filter((id) => pendingIds.has(id))),
+		[selectedIds, pendingIds],
+	);
+
+	const pendingOnPage = orders.filter((o) => o.status === "pending");
+	const selectedPendingOrders = pendingOnPage.filter((order) => visibleSelectedIds.has(order.id));
+	const allPendingSelected =
+		pendingOnPage.length > 0 && pendingOnPage.every((o) => visibleSelectedIds.has(o.id));
 
 	const updateStatusMutation = useMutation({
 		...trpc.order.updateOrderStatus.mutationOptions(),
@@ -161,11 +165,11 @@ export default function OrdersList({
 	};
 
 	const handleMarkSelfShipped = async () => {
-		if (selectedIds.size === 0) {
+		if (visibleSelectedIds.size === 0) {
 			return;
 		}
 		setIsBatchUpdating(true);
-		const ids = [...selectedIds];
+		const ids = [...visibleSelectedIds];
 		const failed: Array<{ message: string; orderNumber: string }> = [];
 		await Promise.all(
 			ids.map(async (id) => {
@@ -192,8 +196,8 @@ export default function OrdersList({
 		}
 	};
 
-	const canTuSend = selectedIds.size > 0 && !isBatchUpdating;
-	const toolbarOpen = selectedIds.size > 0;
+	const canTuSend = visibleSelectedIds.size > 0 && !isBatchUpdating;
+	const toolbarOpen = visibleSelectedIds.size > 0;
 
 	return (
 		<>
@@ -228,7 +232,7 @@ export default function OrdersList({
 						selection={
 							order.status === "pending"
 								? {
-										checked: selectedIds.has(order.id),
+										checked: visibleSelectedIds.has(order.id),
 										onCheckedChange: (checked) => {
 											setSelectedIds((prev) => {
 												const next = new Set(prev);
@@ -289,7 +293,7 @@ export default function OrdersList({
 						>
 							<div className="flex items-center justify-between gap-4 px-4 py-3">
 								<div className="min-w-0">
-									<p className="font-heading text-sm font-bold">{selectedIds.size} сонгогдсон</p>
+									<p className="font-heading text-sm font-bold">{visibleSelectedIds.size} сонгогдсон</p>
 									<p className="text-muted-foreground text-xs">Зөвхөн хүлээгдэж буй захиалга</p>
 								</div>
 								<div className="flex shrink-0 items-center gap-2">
@@ -337,7 +341,7 @@ export default function OrdersList({
 												<Button
 													aria-label="Нэмэлт сонголт"
 													className="h-10 rounded-l-none px-3"
-													disabled={selectedIds.size === 0 || isBatchUpdating}
+													disabled={visibleSelectedIds.size === 0 || isBatchUpdating}
 													size="sm"
 												>
 													<ChevronDown className="h-4 w-4" />

@@ -1,9 +1,9 @@
-import * as v from "valibot";
+import { picklist, safeParse } from "valibot";
 
-export function parsePicklistValue<T extends readonly string[]>(
+export function parsePicklistValue<T extends ReadonlyArray<string>>(
 	values: T,
 	raw: string,
 ): T[number] | undefined {
-	const parsed = v.safeParse(v.picklist(values), raw);
+	const parsed = safeParse(picklist(values), raw);
 	return parsed.success ? parsed.output : undefined;
 }

@@ -28,6 +28,8 @@ type EditableFieldProps<T> = EditableFieldBaseProps<T> & {
 	parse?: (raw: string) => T;
 };
 
+// ponytail: legacy admin editable field — split display/edit later; complexity ceiling 19
+// oxlint-disable-next-line complexity
 export function EditableField<T>({
 	className = "",
 	format,

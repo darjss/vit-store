@@ -19,7 +19,7 @@ import {
 	Warehouse,
 } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import * as v from "valibot";
+import { object, optional, parse } from "valibot";
 import { ProductPerformance } from "@/components/analytics/product-performance";
 import { WebAnalytics } from "@/components/analytics/web-analytics";
 import { AnalyticsPageSkeleton } from "@/components/skeletons/admin-page-skeletons";
@@ -28,14 +28,14 @@ import { chartTooltipNumber } from "@/lib/chart-tooltip";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-const analyticsSearchSchema = v.object({
-	timeRange: v.optional(timeRangeSchema, "monthly"),
+const analyticsSearchSchema = object({
+	timeRange: optional(timeRangeSchema, "monthly"),
 });
 
 export const Route = createFileRoute("/_dash/analytics")({
 	component: RouteComponent,
 	loader: ({ context: ctx, location }) => {
-		const search = v.parse(analyticsSearchSchema, location.search);
+		const search = parse(analyticsSearchSchema, location.search);
 		const timeRange = search.timeRange ?? "monthly";
 
 		void ctx.queryClient.prefetchQuery(
@@ -167,6 +167,8 @@ function SectionShell({
 	);
 }
 
+// ponytail: legacy admin analytics page — split dashboard sections later; complexity ceiling 17
+// oxlint-disable-next-line complexity
 function RouteComponent() {
 	const { timeRange = "monthly" } = Route.useSearch();
 	const navigate = useNavigate({ from: "/analytics" });

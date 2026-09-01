@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { Plus, Search, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import * as v from "valibot";
+import { integer, minValue, number, object, optional, pipe, string } from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
 import { DataPagination } from "@/components/data-pagination";
@@ -26,10 +26,10 @@ export const Route = createFileRoute("/_dash/customers")({
 		void ctx.queryClient.prefetchQuery(ctx.trpc.customer.getAllCustomers.queryOptions());
 	},
 	pendingComponent: CustomersPageSkeleton,
-	validateSearch: v.object({
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 10),
-		searchTerm: v.optional(v.string()),
+	validateSearch: object({
+		page: optional(pipe(number(), integer(), minValue(1)), 1),
+		pageSize: optional(pipe(number(), integer(), minValue(1)), 10),
+		searchTerm: optional(string()),
 	}),
 });
 
@@ -39,13 +39,14 @@ function RouteComponent() {
 	});
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
+	const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+	if (searchTerm !== prevSearchTerm) {
+		setPrevSearchTerm(searchTerm);
+		setInputValue(searchTerm || "");
+	}
 	const optimisticSearchTerm = inputValue.trim() || undefined;
 	const currentSearchTerm = searchTerm?.trim() || undefined;
 	const optimisticPage = optimisticSearchTerm !== currentSearchTerm ? 1 : page;
-
-	useEffect(() => {
-		setInputValue(searchTerm || "");
-	}, [searchTerm]);
 
 	useEffect(() => {
 		if (optimisticSearchTerm === currentSearchTerm) {

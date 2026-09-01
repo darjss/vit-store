@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import { AlertCircle, Loader2, PackageSearch, Search, Trash2 } from "lucide-react";
-import { type ChangeEvent, useCallback, useMemo, useState } from "react";
+import { type ChangeEvent, useMemo, useState } from "react";
 import type { BrandType, CategoryType, ProductType } from "@/lib/types";
 import { trpc } from "@/utils/trpc";
 import { Button } from "../ui/button";
@@ -199,10 +199,11 @@ function ProductSearchField({
 		[products, item.productId],
 	);
 
-	const debouncedSearch = useCallback(
-		debounce((value: string) => {
-			setDebouncedProductSearch(value.trim());
-		}, 300),
+	const debouncedSearch = useMemo(
+		() =>
+			debounce((value: string) => {
+				setDebouncedProductSearch(value.trim());
+			}, 300),
 		[],
 	);
 

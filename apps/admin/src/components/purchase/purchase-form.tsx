@@ -1,9 +1,8 @@
 import { useMutation, useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
 import { purchaseProvider } from "@vit/shared";
 import { Loader2, Plus } from "lucide-react";
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { PurchaseDetailType } from "@/lib/types";
 import { parsePicklistValue } from "@/lib/parse-select";
 import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
@@ -26,6 +25,12 @@ import {
 } from "./purchase-form.helpers";
 import { PurchaseLineEditor } from "./purchase-line-editor";
 
+function handlePurchaseMutationError(message: string) {
+	toast.error(message);
+}
+
+// ponytail: legacy admin purchase form — split sections later; complexity ceiling 36
+// oxlint-disable-next-line complexity
 export default function PurchaseForm({
 	aiData,
 	onResetAI,
@@ -64,19 +69,19 @@ export default function PurchaseForm({
 	const [items, setItems] = useState<Array<PurchaseLineState>>(
 		getInitialPurchaseItems({ aiData, purchase }),
 	);
-
-	useEffect(() => {
-		if (!aiData) {
-			return;
+	const [seededAiData, setSeededAiData] = useState(aiData);
+	if (aiData !== seededAiData) {
+		setSeededAiData(aiData);
+		if (aiData) {
+			setProvider(aiData.header.provider);
+			setExternalOrderNumber(aiData.header.externalOrderNumber ?? "");
+			setTrackingNumber(aiData.header.trackingNumber ?? "");
+			setShippingCost(aiData.header.shippingCost ?? 0);
+			setNotes(aiData.header.notes ?? "");
+			setOrderedAt(toDateInputValue(aiData.header.orderedAt));
+			setItems(getInitialPurchaseItems({ aiData }));
 		}
-		setProvider(aiData.header.provider);
-		setExternalOrderNumber(aiData.header.externalOrderNumber ?? "");
-		setTrackingNumber(aiData.header.trackingNumber ?? "");
-		setShippingCost(aiData.header.shippingCost ?? 0);
-		setNotes(aiData.header.notes ?? "");
-		setOrderedAt(toDateInputValue(aiData.header.orderedAt));
-		setItems(getInitialPurchaseItems({ aiData }));
-	}, [aiData]);
+	}
 
 	const subtotal = useMemo(
 		() => items.reduce((sum, item) => sum + item.quantityOrdered * item.unitCost, 0),
@@ -96,19 +101,15 @@ export default function PurchaseForm({
 		onSuccess?.(purchaseId);
 	};
 
-	const handleMutationError = (message: string) => {
-		toast.error(message);
-	};
-
 	const createPurchaseMutation = useMutation({
 		...trpc.purchase.addPurchase.mutationOptions(),
-		onError: (error) => handleMutationError(error.message),
+		onError: (error) => handlePurchaseMutationError(error.message),
 		onSuccess: (result) => handleMutationSuccess(result.id),
 	});
 
 	const updatePurchaseMutation = useMutation({
 		...trpc.purchase.updatePurchase.mutationOptions(),
-		onError: (error) => handleMutationError(error.message),
+		onError: (error) => handlePurchaseMutationError(error.message),
 		onSuccess: () => {
 			if (purchase) {
 				handleMutationSuccess(purchase.id);
@@ -118,7 +119,7 @@ export default function PurchaseForm({
 
 	const importPurchaseMutation = useMutation({
 		...trpc.aiPurchase.saveExtractedPurchase.mutationOptions(),
-		onError: (error) => handleMutationError(error.message),
+		onError: (error) => handlePurchaseMutationError(error.message),
 		onSuccess: (result) => handleMutationSuccess(result.id),
 	});
 

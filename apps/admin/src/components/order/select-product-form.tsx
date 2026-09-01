@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { addOrderType } from "@vit/shared";
 import { debounce } from "lodash";
 import { Loader2, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useMemo, useState } from "react";
 import { type UseFormReturn, useFieldArray } from "react-hook-form";
 import type { ProductSearchForOrderType } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -16,10 +16,11 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 	const [inputValue, setInputValue] = useState("");
 	const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
 
-	const debouncedSearch = useCallback(
-		debounce((value: string) => {
-			setDebouncedSearchValue(value);
-		}, 300),
+	const debouncedSearch = useMemo(
+		() =>
+			debounce((value: string) => {
+				setDebouncedSearchValue(value);
+			}, 300),
 		[],
 	);
 
@@ -140,7 +141,7 @@ const SelectProductForm = ({ form }: { form: UseFormReturn<addOrderType> }) => {
 				{data?.length === 0 && inputValue && !isFetching && (
 					<Card className="border-border absolute right-0 left-0 z-[100] mt-1 border-2">
 						<CardContent className="text-muted-foreground p-3 text-center text-xs">
-							"{inputValue}" олдсонгүй
+							&ldquo;{inputValue}&rdquo; олдсонгүй
 						</CardContent>
 					</Card>
 				)}

@@ -10,9 +10,7 @@ export type CategoryType = RouterOutputs["category"]["getAllCategories"][number]
 export type BrandsType = RouterOutputs["brands"]["getAllBrands"];
 export type CategoriesType = RouterOutputs["category"]["getAllCategories"];
 export type ProductType = RouterOutputs["product"]["getAllProducts"][number];
-type PurchaseType = RouterOutputs["purchase"]["getAllPurchases"][number];
 export type PurchaseDetailType = NonNullable<RouterOutputs["purchase"]["getPurchaseById"]>;
-type UserType = RouterOutputs["auth"]["me"];
 export type ProductSearchForOrderType = RouterOutputs["product"]["searchProductsInstant"][number];
 export interface Session {
 	expiresAt: Date;

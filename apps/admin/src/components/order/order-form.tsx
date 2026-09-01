@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addOrderSchema, type addOrderType, orderStatusLabels } from "@vit/shared";
 import { orderStatus, paymentStatus } from "@vit/shared/constants";
 import { useCallback, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { paymentStatusLabel } from "@/lib/enum-labels";
 import { trpc } from "@/utils/trpc";
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import SelectProductForm from "./select-product-form";
 
+// ponytail: legacy admin order form — split sections later; complexity ceiling 25
+// oxlint-disable-next-line complexity
 const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrderType }) => {
 	const form = useForm<addOrderType>({
 		defaultValues: {
@@ -32,7 +34,7 @@ const OrderForm = ({ onSuccess, order }: { onSuccess: () => void; order?: addOrd
 		resolver: valibotResolver(addOrderSchema),
 	});
 
-	const phone = form.watch("customerPhone");
+	const phone = useWatch({ control: form.control, name: "customerPhone" });
 	const isValidPhone = phone && phone.length === 8 && phone.match(String.raw`^[6-9]\d{7}$`);
 
 	const queryClient = useQueryClient();
