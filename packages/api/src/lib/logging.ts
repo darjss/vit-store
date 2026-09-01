@@ -39,6 +39,7 @@ export type SummarizedLogValue =
 
 const logWireSchema: v.GenericSchema<LogWire> = v.lazy(() =>
 	v.union([
+		v.undefined(),
 		v.null(),
 		v.string(),
 		v.number(),
@@ -46,6 +47,7 @@ const logWireSchema: v.GenericSchema<LogWire> = v.lazy(() =>
 		v.custom<bigint>(
 			(input): input is bigint => Object.prototype.toString.call(input) === OBJECT_TAG.bigint,
 		),
+		v.custom<Date>((input): input is Date => input instanceof Date),
 		v.custom<Error>((input): input is Error => input instanceof Error),
 		v.array(logWireSchema),
 		v.record(v.string(), logWireSchema),
@@ -136,6 +138,9 @@ export function summarizeLogValue(value: LogWire, depth = 0): SummarizedLogValue
 	}
 	if (v.is(v.number(), value) || v.is(v.boolean(), value)) {
 		return value;
+	}
+	if (value instanceof Date) {
+		return value.toISOString();
 	}
 
 	if (value instanceof Error) {
