@@ -25,6 +25,7 @@ Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes l
 | `data/` | Product JSON, `seed.sql`, sample images |
 | `reports/` | Dogfood output, production QA snapshots |
 | `scratch/` | Temp notes and one-off drafts |
+| `vit-stock-review/` | Catalogue audits, stock sheets, generated creatives |
 
 `apps/agent/scripts/` stays in vit-store (wired into agent dev/deploy). Do not move those back into vit-store root `scripts/`. Run playground scripts from `vit-playground` or via `bun ../vit-playground/scripts/...` from vit-store; see vit-playground `README.md`.
 
