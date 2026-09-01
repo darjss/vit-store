@@ -29,7 +29,34 @@ Maintenance scripts, product JSON dumps, QA/dogfood reports, and scratch notes l
 
 `apps/agent/scripts/` stays in vit-store (wired into agent dev/deploy). Do not move those back into vit-store root `scripts/`. Run playground scripts from `vit-playground` or via `bun ../vit-playground/scripts/...` from vit-store; see vit-playground `README.md`.
 
-## Orchestrated agent workflow
+## Lint & check
+
+All lint and typecheck cleanup (anti-slop, nkzw, CI gates) follows the same bar. See `scripts/anti-slop-worker-brief.md` for anti-slop specifics; the rules below apply to **every** lint phase.
+
+**Hard rejects**
+
+- `oxlint-disable` / `eslint-disable` (any form)
+- New rule overrides in `oxlint.config.ts` to make CI green
+- `as any`, chained `as unknown as`, or vacuous `// SAFETY:` comments
+- Schemas or types that accept everything just to satisfy a rule
+
+**Fix order**
+
+1. **Design first** — parse at I/O boundaries (valibot or existing wire schemas), name domain types, fix data flow. Internal code takes parsed types, not `unknown`.
+2. **Contracts** — `satisfies`, named metadata types; no `Record<string, unknown>` without an owner contract.
+3. **Assertions last** — only when a real invariant remains after step 1. The `// SAFETY:` comment must state the **concrete invariant** that proves the assertion (e.g. "parsed by `fooSchema` on the prior line", "Drizzle row from `orders` table").
+4. **Complexity / framework rules** — refactor first. A single-line `complexity` disable with a `ponytail:` comment is allowed only on legacy UI hotspots named in the plan; never blanket-off a rule category.
+
+**Verify before PASS**
+
+```bash
+bun scripts/lint-anti-slop-bucket.ts <path>   # when anti-slop is in scope
+bunx vp lint <path>
+bunx vp fmt --check
+```
+
+Do not merge a lint PR whose only diff is config overrides or comment spam.
+
 
 - Use caveman-style output for worker/reviewer agents: terse chat only, details in summary/report files.
 - Use the `btca-local` skill whenever work depends on third-party/local repo internals, especially Flue. Inspect source/examples before assuming APIs. Cite local paths in summaries when decisions depend on those internals.
