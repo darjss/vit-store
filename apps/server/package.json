@@ -5,11 +5,11 @@
 	"exports": {
 		".": {
 			"bun": "./src/index.ts",
-			"import": "./lib/src/index.js"
+			"import": "./lib/src/index.mjs"
 		},
 		"./alchemy": {
 			"bun": "./alchemy.run.ts",
-			"import": "./lib/alchemy.run.js",
+			"import": "./lib/alchemy.run.mjs",
 			"types": "./alchemy.run.ts"
 		}
 	},
