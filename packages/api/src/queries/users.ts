@@ -43,11 +43,7 @@ export const userQueries = {
 				username?: string;
 			},
 		): Promise<UserSelectType | null> {
-			const valuesToSet: {
-				isApproved?: boolean;
-				updatedAt: Date;
-				username?: string;
-			} = {
+			const valuesToSet = {
 				updatedAt: new Date(),
 			};
 

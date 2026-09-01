@@ -129,7 +129,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				});
 				return { message: "Order added successfully" };
 			} catch (error) {
-				if (error instanceof TRPCError) {throw error;}
+				if (error instanceof TRPCError) {
+					throw error;
+				}
 				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_add_failed",
 				});
@@ -158,7 +160,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 								detail.quantity,
 								"add",
 							);
-							if (transition) {stockTransitions.push(transition);}
+							if (transition) {
+								stockTransitions.push(transition);
+							}
 						}
 					}
 					await orderQueries.admin.softDeleteOrderTx(tx, input.id);
@@ -221,7 +225,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 				}
 				return result;
 			} catch (error) {
-				if (error instanceof TRPCError) {throw error;}
+				if (error instanceof TRPCError) {
+					throw error;
+				}
 				ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 					event: "admin.order_fetch_failed",
 					orderId: input.id,
@@ -326,18 +332,11 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 		patchOrderHeader: proc.input(patchOrderHeaderSchema).mutation(async ({ ctx, input }) => {
 			try {
 				const { customerPhone, id, ...rest } = input;
-				const patch: {
-					address?: string;
-					addressZoneId?: number | null;
-					customerPhone?: number;
-					deliveryProvider?: typeof rest.deliveryProvider;
-					notes?: string | null;
-					status?: typeof rest.status;
-				} = { ...rest };
+				const headerPatch = { ...rest };
 				if (customerPhone !== undefined) {
-					patch.customerPhone = Number(customerPhone);
+					headerPatch.customerPhone = Number(customerPhone);
 				}
-				await orderQueries.admin.patchOrderHeader(id, patch);
+				await orderQueries.admin.patchOrderHeader(id, headerPatch);
 				ctx.log.info("order.header_patched", {
 					fields: Object.keys(rest),
 					orderId: id,
@@ -375,7 +374,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 								d.quantity,
 								"minus",
 							);
-							if (transition) {stockTransitions.push(transition);}
+							if (transition) {
+								stockTransitions.push(transition);
+							}
 						}
 					}
 					await orderQueries.admin.restoreOrderTx(tx, input.id);
@@ -486,7 +487,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						orderNumber: order.orderNumber,
 					};
 				} catch (error) {
-					if (error instanceof TRPCError) {throw error;}
+					if (error instanceof TRPCError) {
+						throw error;
+					}
 					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.ship_order_failed",
 						orderId: input.orderId,
@@ -540,8 +543,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 							requireActive: true,
 							requireNonNegative: true,
 						});
-						if (!transition)
-							{throw new Error(`Unable to apply stock transition for product ${productId}`);}
+						if (!transition) {
+							throw new Error(`Unable to apply stock transition for product ${productId}`);
+						}
 						stockTransitions.push(transition);
 					};
 					await orderQueries.admin.updateOrderTx(tx, input.id, {
@@ -683,7 +687,9 @@ export function buildOrderRouter<P extends typeof baseProcedure>(proc: P) {
 						message: `Order status updated successfully to ${input.status}`,
 					};
 				} catch (error) {
-					if (error instanceof TRPCError) {throw error;}
+					if (error instanceof TRPCError) {
+						throw error;
+					}
 					ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
 						event: "admin.order_status_update_failed",
 						order_status: input.status,

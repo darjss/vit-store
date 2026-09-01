@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import ky, { HTTPError } from "ky";
+import * as v from "valibot";
 import { logger } from "~/lib/logger";
 
 const apiUrl = env.QPAY_URL.endsWith("/") ? env.QPAY_URL : `${env.QPAY_URL}/`;
@@ -8,92 +9,75 @@ const requestStartedAt = new WeakMap<Request, number>();
 const truncate = (value: string, maxLength = 500) =>
 	value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
-interface TokenResponse {
-	access_token: string;
-	expires_in: number;
-	"not-before-policy": string;
-	refresh_expires_in: number;
-	refresh_token: string;
-	scope: string;
-	session_state: string;
-	token_type: string;
-}
+const tokenResponseSchema = v.object({
+	access_token: v.string(),
+	expires_in: v.number(),
+	"not-before-policy": v.string(),
+	refresh_expires_in: v.number(),
+	refresh_token: v.string(),
+	scope: v.string(),
+	session_state: v.string(),
+	token_type: v.string(),
+});
 
-interface PaymentUrl {
-	description: string;
-	link: string;
-	logo: string;
-	name: string;
-}
+type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;
 
-export interface InvoiceResponse {
-	invoice_id: string;
-	qPay_shortUrl: string;
-	qr_image: string;
-	qr_text: string;
-	urls: Array<PaymentUrl>;
-}
+const paymentUrlSchema = v.object({
+	description: v.string(),
+	link: v.string(),
+	logo: v.string(),
+	name: v.string(),
+});
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null;
+export const invoiceResponseSchema = v.object({
+	invoice_id: v.pipe(v.string(), v.minLength(1)),
+	qPay_shortUrl: v.string(),
+	qr_image: v.string(),
+	qr_text: v.string(),
+	urls: v.array(paymentUrlSchema),
+});
 
-const isPaymentUrl = (value: unknown): value is PaymentUrl =>
-	isRecord(value) &&
-	typeof value.name === "string" &&
-	typeof value.description === "string" &&
-	typeof value.logo === "string" &&
-	typeof value.link === "string";
+export type InvoiceResponse = v.InferOutput<typeof invoiceResponseSchema>;
 
-const isInvoiceResponse = (value: unknown): value is InvoiceResponse =>
-	isRecord(value) &&
-	typeof value.invoice_id === "string" &&
-	value.invoice_id.length > 0 &&
-	typeof value.qr_text === "string" &&
-	typeof value.qr_image === "string" &&
-	typeof value.qPay_shortUrl === "string" &&
-	Array.isArray(value.urls) &&
-	value.urls.every(isPaymentUrl);
-
-export const parseQpayInvoiceResponse = (value: string) => {
+export const parseQpayInvoiceResponse = (value: string): InvoiceResponse | null => {
 	try {
-		const parsed: unknown = JSON.parse(value);
-		return isInvoiceResponse(parsed) ? parsed : null;
+		return v.parse(invoiceResponseSchema, JSON.parse(value));
 	} catch {
 		return null;
 	}
 };
 
-interface P2PTransaction {
-	account_bank_code: string;
-	account_bank_name: string;
-	account_number: string;
-	amount: string;
-	currency: string;
-	id: string;
-	settlement_status: string;
-	status: string;
-	transaction_bank_code: string;
-}
+const p2pTransactionSchema = v.object({
+	account_bank_code: v.string(),
+	account_bank_name: v.string(),
+	account_number: v.string(),
+	amount: v.string(),
+	currency: v.string(),
+	id: v.string(),
+	settlement_status: v.string(),
+	status: v.string(),
+	transaction_bank_code: v.string(),
+});
 
-interface PaymentRow {
-	card_transactions: Array<unknown>;
-	next_payment_date: string | null;
-	next_payment_datetime: string | null;
-	p2p_transactions: Array<P2PTransaction>;
-	payment_amount: string;
-	payment_currency: string;
-	payment_id: string;
-	payment_status: string;
-	payment_type: string;
-	payment_wallet: string;
-	trx_fee: string;
-}
+const paymentRowSchema = v.object({
+	card_transactions: v.array(v.unknown()),
+	next_payment_date: v.nullable(v.string()),
+	next_payment_datetime: v.nullable(v.string()),
+	p2p_transactions: v.array(p2pTransactionSchema),
+	payment_amount: v.string(),
+	payment_currency: v.string(),
+	payment_id: v.string(),
+	payment_status: v.string(),
+	payment_type: v.string(),
+	payment_wallet: v.string(),
+	trx_fee: v.string(),
+});
 
-interface PaymentResponse {
-	count: number;
-	paid_amount: number;
-	rows: Array<PaymentRow>;
-}
+const paymentResponseSchema = v.object({
+	count: v.number(),
+	paid_amount: v.number(),
+	rows: v.array(paymentRowSchema),
+});
 
 const QPAY_ACCESS_TOKEN_KEY = "qpay_access_token";
 
@@ -124,14 +108,17 @@ const getAccessToken = async (opts?: { forceRefresh?: boolean }) => {
 	let authResponse: TokenResponse;
 	try {
 		logger.info("requesting qpay access token", { baseUrl: apiUrl });
-		authResponse = await ky
-			.post(`${apiUrl}auth/token`, {
-				headers: {
-					Authorization: `Basic ${credentials}`,
-					"Content-Type": "application/json",
-				},
-			})
-			.json<TokenResponse>();
+		authResponse = v.parse(
+			tokenResponseSchema,
+			await ky
+				.post(`${apiUrl}auth/token`, {
+					headers: {
+						Authorization: `Basic ${credentials}`,
+						"Content-Type": "application/json",
+					},
+				})
+				.json(),
+		);
 	} catch (error) {
 		if (error instanceof HTTPError) {
 			const body = await error.response.text();
@@ -239,19 +226,22 @@ export const createQpayInvoice = async (amount: number, paymentNumber: string) =
 	});
 
 	try {
-		const response = await qpayClient
-			.post("invoice", {
-				json: {
-					amount,
-					callback_url: callbackUrl.toString(),
-					invoice_code: "AMERIK_VITAMIN_INVOICE",
-					invoice_description: `${paymentNumber}`,
-					invoice_receiver_code: "terminal",
-					sender_branch_code: "SALBAR1",
-					sender_invoice_no: paymentNumber,
-				},
-			})
-			.json<InvoiceResponse>();
+		const response = v.parse(
+			invoiceResponseSchema,
+			await qpayClient
+				.post("invoice", {
+					json: {
+						amount,
+						callback_url: callbackUrl.toString(),
+						invoice_code: "AMERIK_VITAMIN_INVOICE",
+						invoice_description: `${paymentNumber}`,
+						invoice_receiver_code: "terminal",
+						sender_branch_code: "SALBAR1",
+						sender_invoice_no: paymentNumber,
+					},
+				})
+				.json(),
+		);
 
 		logger.info("qpay invoice created", {
 			amount,
@@ -275,18 +265,21 @@ export const createQpayInvoice = async (amount: number, paymentNumber: string) =
 };
 export const checkQpayInvoice = async (invoiceId: string) => {
 	logger.info("checking qpay invoice", { invoiceId });
-	const response = await qpayClient
-		.post("payment/check", {
-			json: {
-				object_id: invoiceId,
-				object_type: "INVOICE",
-				offset: {
-					page_limit: 100,
-					page_number: 1,
+	const response = v.parse(
+		paymentResponseSchema,
+		await qpayClient
+			.post("payment/check", {
+				json: {
+					object_id: invoiceId,
+					object_type: "INVOICE",
+					offset: {
+						page_limit: 100,
+						page_number: 1,
+					},
 				},
-			},
-		})
-		.json<PaymentResponse>();
+			})
+			.json(),
+	);
 	const latestPayment = response.rows[0];
 	if (!latestPayment) {
 		logger.info("qpay invoice has no payments", {

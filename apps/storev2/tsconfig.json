@@ -13,7 +13,6 @@
 		"types": ["@cloudflare/workers-types"],
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
-		"baseUrl": ".",
 		"paths": {
 			"~/*": ["../../packages/api/src/*"],
 			"@/*": ["./src/*"],

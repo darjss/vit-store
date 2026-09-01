@@ -117,20 +117,28 @@ export const sendTelegramTextWithButtons = async (
 export const sendTelegramPhoto = async (photoUrl: string, caption?: string) => {
 	const { api, chatId } = await getApi();
 	const photo = await fetchImageBlob(photoUrl);
-	await api.sendPhoto({
+	const payload = {
 		chat_id: chatId,
 		photo,
-		...(caption ? { caption } : {}),
-	});
+	};
+	if (caption) {
+		await api.sendPhoto({ ...payload, caption });
+		return;
+	}
+	await api.sendPhoto(payload);
 };
 
 const sendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
 	const { api, chatId } = await getApi();
-	await api.sendPhoto({
+	const payload = {
 		chat_id: chatId,
 		photo: blob,
-		...(caption ? { caption } : {}),
-	});
+	};
+	if (caption) {
+		await api.sendPhoto({ ...payload, caption });
+		return;
+	}
+	await api.sendPhoto(payload);
 };
 
 const sendPhotoAlbum = async (blobs: Array<Blob>) => {

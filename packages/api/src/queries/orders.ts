@@ -32,8 +32,8 @@ import {
 	getDaysFromTimeRange,
 	getStartAndEndofDayAgo,
 	type orderStatus,
-	shapeOrderResult,
-	shapeOrderResults,
+	projectOrderResult,
+	projectOrderResults,
 	UB_OFFSET_MS,
 } from "~/lib/utils";
 
@@ -96,7 +96,7 @@ export const orderQueries = {
 
 		async createOrderDetails(
 			orderId: number,
-			products: Array<{ price: number; productId: number; quantity: number; }>,
+			products: Array<{ price: number; productId: number; quantity: number }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
@@ -110,7 +110,7 @@ export const orderQueries = {
 		async createOrderDetailsTx(
 			tx: TransactionType,
 			orderId: number,
-			products: Array<{ price: number; productId: number; quantity: number; }>,
+			products: Array<{ price: number; productId: number; quantity: number }>,
 		) {
 			const values = products.map((p) => ({
 				orderId,
@@ -252,7 +252,7 @@ export const orderQueries = {
 					},
 				},
 			});
-			return result ? shapeOrderResult(result) : null;
+			return result ? projectOrderResult(result) : null;
 		},
 
 		async getOrderCount(timeRange: timeRangeType) {
@@ -492,7 +492,7 @@ export const orderQueries = {
 			const totalPages = Math.ceil(totalCount / params.pageSize);
 
 			return {
-				orders: shapeOrderResults(orderResults),
+				orders: projectOrderResults(orderResults),
 				pagination: {
 					currentPage: params.page,
 					hasNextPage: params.page < totalPages,
@@ -546,7 +546,7 @@ export const orderQueries = {
 						},
 					},
 				});
-				return shapeOrderResults(result);
+				return projectOrderResults(result);
 			} catch {
 				return [];
 			}
@@ -652,12 +652,14 @@ export const orderQueries = {
 					},
 				},
 			});
-			return shapeOrderResults(orders);
+			return projectOrderResults(orders);
 		},
 
 		async searchOrdersQuick(searchTerm: string, limit = 5) {
 			const term = searchTerm.trim();
-			if (!term) {return [];}
+			if (!term) {
+				return [];
+			}
 
 			return db().query.OrdersTable.findMany({
 				columns: {
@@ -703,11 +705,7 @@ export const orderQueries = {
 				fromStatus?: OrderStatus;
 			},
 		) {
-			const patch: {
-				addressZoneId?: number | null;
-				deliveryProvider?: DeliveryProvider;
-				status: OrderStatus;
-			} = { status };
+			const patch = { status };
 			if (options?.deliveryProvider !== undefined) {
 				patch.deliveryProvider = options.deliveryProvider;
 			}

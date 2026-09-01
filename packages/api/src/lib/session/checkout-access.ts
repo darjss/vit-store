@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeHexLowerCase } from "@oslojs/encoding";
 import { TRPCError } from "@trpc/server";
@@ -23,6 +24,14 @@ export type CheckoutAccessTokenRecord = CheckoutScope & {
 	phone: number;
 	tokenHash: string;
 };
+
+const checkoutAccessTokenRecordSchema = v.object({
+	orderId: v.number(),
+	orderNumber: v.string(),
+	paymentNumber: v.string(),
+	phone: v.number(),
+	tokenHash: v.string(),
+});
 
 const CHECKOUT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 
@@ -62,7 +71,7 @@ async function validateCheckoutToken(
 	if (!raw) {
 		return null;
 	}
-	const record = JSON.parse(raw) as CheckoutAccessTokenRecord;
+	const record = v.parse(checkoutAccessTokenRecordSchema, JSON.parse(raw));
 	return record.tokenHash === hashToken(checkoutToken) ? record : null;
 }
 

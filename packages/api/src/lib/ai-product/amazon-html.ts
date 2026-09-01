@@ -1,4 +1,12 @@
+import * as v from "valibot";
+
 const AMAZON_IMAGE_ID = /\/images\/I\/([A-Za-z0-9\-_+%]+)\./;
+
+const amazonGalleryImageSchema = v.object({
+	hiRes: v.optional(v.string()),
+	large: v.optional(v.string()),
+	main: v.optional(v.record(v.string(), v.tuple([v.number(), v.number()]))),
+});
 
 function imageIdFromUrl(url: string): string | null {
 	return url.match(AMAZON_IMAGE_ID)?.[1] ?? null;
@@ -54,11 +62,7 @@ function extractGalleryImageIds(html: string): Array<string> {
 	}
 
 	try {
-		const images = JSON.parse(raw) as Array<{
-			hiRes?: string;
-			large?: string;
-			main?: Record<string, [number, number]>;
-		}>;
+		const images = v.parse(v.array(amazonGalleryImageSchema), JSON.parse(raw));
 		return images.flatMap((image) => {
 			const url = image.hiRes ?? image.large ?? Object.keys(image.main ?? {})[0];
 			const id = url ? imageIdFromUrl(url) : null;
