@@ -32,8 +32,21 @@ const normalizeExpirationDate = (value?: string | null) => {
 	return null;
 };
 
-const numericEditableProductFieldSet = new Set<string>(["price", "stock", "discount"]);
-type NumericEditableProductField = "price" | "stock" | "discount";
+const numericEditableProductFieldSet = new Set<string>([
+	"brandId",
+	"categoryId",
+	"dailyIntake",
+	"discount",
+	"price",
+	"stock",
+]);
+type NumericEditableProductField =
+	| "brandId"
+	| "categoryId"
+	| "dailyIntake"
+	| "discount"
+	| "price"
+	| "stock";
 
 function isNumericEditableProductField(
 	field: (typeof editableProductFields)[number],
@@ -49,6 +62,12 @@ function requireNonNegativeNumberField(
 		throw new TRPCError({
 			code: "BAD_REQUEST",
 			message: `${field} must be a non-negative number`,
+		});
+	}
+	if ((field === "brandId" || field === "categoryId") && (!Number.isInteger(numberValue) || numberValue < 1)) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `${field} must be a positive integer`,
 		});
 	}
 	if (field !== "price" && !Number.isInteger(numberValue)) {

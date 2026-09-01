@@ -15,6 +15,7 @@ import {
 	amazonScrapeCacheSchema,
 	amazonSearchCacheSchema,
 	firecrawlAmazonJsonSchema,
+	normalizeFirecrawlPriceUsd,
 	toFirecrawlExtractedProduct,
 } from "~/lib/ai-product/wire-schemas";
 import { kv } from "~/lib/kv";
@@ -117,7 +118,7 @@ export async function scrapeAmazonProduct(
 
 		const jsonData = v.parse(firecrawlAmazonJsonSchema, scrapeResponse.json ?? {});
 		const html = scrapeResponse.rawHtml || "";
-		const priceUsd = jsonData.priceUsd ?? extractAmazonPriceUsd(html);
+		const priceUsd = normalizeFirecrawlPriceUsd(jsonData.priceUsd) ?? extractAmazonPriceUsd(html);
 		const imageIds = extractProductImageIds(html);
 		const images = imageIds.map(toHighResUrl);
 
