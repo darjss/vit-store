@@ -68,33 +68,31 @@ const PHOTO_FETCH_FAILED_MESSAGE =
 
 const graphVersion = "v25.0";
 
-export const messenger = new Messenger({
+const messengerOptions = {
 	accessToken: requiredEnv("MESSENGER_PAGE_ACCESS_TOKEN"),
 	version: graphVersion,
-	// Graph's Send API has NO idempotency key, and the SDK defaults to maxRetries:3
-	// on timeout/network/5xx. A slow send (client aborts at 30s) is often ALREADY
-	// delivered by Meta, so a blind retry posts a DUPLICATE message to the customer
-	// — the root of the "same reply 3×" reports. Every outbound send here (text,
-	// cards, typing) is non-idempotent and best-effort, so never auto-retry: one
-	// attempt, and the caller's bestEffort wrappers tolerate a rare dropped send.
 	maxRetries: 0,
-	// Local dev seam: when set, outbound Graph Send API calls are redirected to
-	// a capture endpoint (see apps/agent/cli/messenger-dev.ts) so the real send
-	// path runs without touching Meta. Unset in production -> real Graph host.
-	...(process.env.MESSENGER_GRAPH_BASE_URL
-		? { baseUrl: process.env.MESSENGER_GRAPH_BASE_URL }
-		: {}),
-});
+};
+const graphBaseUrl = process.env.MESSENGER_GRAPH_BASE_URL;
+if (graphBaseUrl) {
+	messengerOptions.baseUrl = graphBaseUrl;
+}
+
+export const messenger = new Messenger(messengerOptions);
 
 // Outbound capture at the single SDK choke point: log every text the bot sends.
 // This is prod observability of what the bot actually says, and it lets a CLI
 // dogfood read the bot's replies from `wrangler tail` / Workers Logs WITHOUT the
 // message being delivered (drive the webhook with a non-deliverable test PSID).
+const outboundMessageBodySchema = v.object({
+	message: v.optional(v.object({ text: v.optional(v.string()) })),
+});
+
 const _sendMessage = messenger.send.message.bind(messenger.send);
-// biome-ignore lint/suspicious/noExplicitAny: intentional thin send wrapper.
-(messenger.send as any).message = async (body: any, opts: any) => {
-	const text = body?.message?.text;
-	if (typeof text === "string" && text.length > 0) {
+messenger.send.message = async (body, opts) => {
+	const parsed = v.safeParse(outboundMessageBodySchema, body);
+	const text = parsed.success ? parsed.output.message?.text : undefined;
+	if (text && text.length > 0) {
 		console.log(`[bot.say] ${text.replaceAll("\n", " ⏎ ").slice(0, 700)}`);
 	}
 	return _sendMessage(body, opts);
@@ -118,7 +116,7 @@ export const channel: MessengerChannel = createMessengerChannel({
 
 	// Mounted at GET/POST /channels/messenger/webhook.
 	async webhook({ c, payload }) {
-		const env = c.env as WebhookEnv;
+		const env = c.env;
 		for (const entry of payload.entry) {
 			for (const event of entry.messaging ?? []) {
 				// Admin PSID gate: an authorized admin's messages route to the
@@ -198,19 +196,18 @@ async function dispatchInboundText(
 	// durably enqueued, release the dedupe claim and rethrow so Meta's retry can
 	// re-deliver instead of being swallowed by dedupe.
 	try {
+		const dispatchInput = {
+			attachmentTypes: admission.attachmentTypes,
+			messageId: admission.messageId,
+			text: admission.text,
+			type: "messenger.message" as const,
+		};
+		if (admission.quickReplyPayload !== undefined) {
+			dispatchInput.quickReplyPayload = admission.quickReplyPayload;
+		}
 		await dispatch(target, {
 			id: admission.sessionId + sessionIdSuffix,
-			input: {
-				attachmentTypes: admission.attachmentTypes,
-				messageId: admission.messageId,
-				text: admission.text,
-				type: "messenger.message",
-				// dispatch() input must be JSON-clean: omit the key entirely when
-				// there is no quick reply rather than passing undefined.
-				...(admission.quickReplyPayload !== undefined
-					? { quickReplyPayload: admission.quickReplyPayload }
-					: {}),
-			},
+			input: dispatchInput,
 		});
 	} catch (error) {
 		await admission.release();
@@ -363,15 +360,16 @@ const storePublicUrl = (): string => {
 // Maps the channel-neutral payment-choice buttons to the Messenger SDK button
 // shape (web_url needs `url`, postback needs `payload`).
 const toMessengerButtons = (buttons: ReturnType<typeof buildPaymentChoice>["buttons"]) =>
-	buttons.map((b) =>
-		b.type === "web_url"
-			? { title: b.title, type: "web_url" as const, url: b.url as string }
-			: {
-					payload: b.payload as string,
-					title: b.title,
-					type: "postback" as const,
-				},
-	);
+	buttons.map((b) => {
+		if (b.type === "web_url") {
+			return { title: b.title, type: "web_url" as const, url: b.url };
+		}
+		return {
+			payload: b.payload,
+			title: b.title,
+			type: "postback" as const,
+		};
+	});
 
 // Post-order payment choices (#25): a button template offering QPay (url button
 // to the QPay-only page) and bank transfer (postback). Bound to one
@@ -565,7 +563,7 @@ async function runPaymentTransition(
 	env: WebhookEnv,
 	mid: string,
 	sessionId: string,
-	run: () => Promise<unknown>,
+	run: () => Promise<void>,
 ): Promise<boolean> {
 	const claimKey = `messenger:payment:v1:${sessionId}:mid:${mid}`;
 	if (mid.length > 0 && !(await claimInboundOnce(claimKey, env))) {
@@ -643,11 +641,14 @@ export function sendCartSummary(ref: MessengerConversationRef) {
 			payload: qr.payload,
 			title: qr.title,
 		}));
+		const message = {
+			text: formatCartSummary(cart),
+		};
+		if (quickReplies.length > 0) {
+			message.quick_replies = quickReplies;
+		}
 		const result = await messenger.send.message({
-			message: {
-				text: formatCartSummary(cart),
-				...(quickReplies.length > 0 ? { quick_replies: quickReplies } : {}),
-			},
+			message,
 			messaging_type: "RESPONSE",
 			recipient: toRecipient(ref.participant),
 		});
@@ -667,18 +668,23 @@ export async function resolveProductById(id: number): Promise<AssistantProduct |
 // the product id. Generic templates allow at most 10 elements.
 export function sendProductCards(ref: MessengerConversationRef) {
 	return async (cards: Array<ProductCard>) => {
-		const elements = cards.slice(0, 10).map((card) => ({
-			subtitle: card.subtitle,
-			title: card.title,
-			...(card.imageUrl ? { image_url: card.imageUrl } : {}),
-			buttons: [
-				{
-					payload: card.button.payload,
-					title: card.button.label,
-					type: "postback" as const,
-				},
-			],
-		}));
+		const elements = cards.slice(0, 10).map((card) => {
+			const element = {
+				subtitle: card.subtitle,
+				title: card.title,
+				buttons: [
+					{
+						payload: card.button.payload,
+						title: card.button.label,
+						type: "postback" as const,
+					},
+				],
+			};
+			if (card.imageUrl) {
+				element.image_url = card.imageUrl;
+			}
+			return element;
+		});
 
 		console.log(
 			`[bot.cards] ${elements

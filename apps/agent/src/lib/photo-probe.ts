@@ -1,4 +1,5 @@
 import { buildPhotoIdentifyTool, formatProductCards, type ProductCard } from "@vit/assistant";
+import * as v from "valibot";
 import { searchAssistantProducts } from "./catalog";
 import { loadInboundImage, stageInboundImage } from "./messenger-inbound";
 import { buildKimiVision } from "./vision";
@@ -26,24 +27,19 @@ export interface PhotoProbeInput {
 	sessionId?: string;
 }
 
-export interface PhotoProbeResult {
-	cards: Array<ProductCard>;
-	contentType: string;
-	facts: string;
-	key: string;
-	matchCount: number;
-	queries: Array<string>;
-	searchError?: string;
-	size: number;
-	usedQuery?: string;
-}
+export const photoProbeResultSchema = v.object({
+	cards: v.array(v.looseObject({})),
+	contentType: v.string(),
+	facts: v.string(),
+	key: v.string(),
+	matchCount: v.number(),
+	queries: v.array(v.string()),
+	searchError: v.optional(v.string()),
+	size: v.number(),
+	usedQuery: v.optional(v.string()),
+});
 
-type IdentifyOutput = {
-	available: boolean;
-	facts: string;
-	imageKey: string;
-	queries: Array<string>;
-};
+export type PhotoProbeResult = v.InferOutput<typeof photoProbeResultSchema>;
 
 export async function runPhotoProbe(
 	env: PhotoProbeEnv,
@@ -72,9 +68,9 @@ export async function runPhotoProbe(
 		loadImage: (key) => loadInboundImage(bucket, key),
 		runVision: buildKimiVision(env.AI),
 	});
-	const identified = (await tool.run({
+	const identified = await tool.run({
 		input: { imageKey: staged.key },
-	})) as IdentifyOutput;
+	});
 
 	// Feed the top suggested query into the SAME #19 search + card formatter.
 	const usedQuery = identified.queries[0];

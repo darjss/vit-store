@@ -26,6 +26,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { SuperJSON } from "superjson";
+import { IMAGE_CONTENT_TYPE_BY_EXT } from "./dev-state";
+import { photoProbeResultSchema } from "../src/lib/photo-probe";
+import { trpcResponse } from "./trpc-stub";
 
 const AGENT_ROOT = join(import.meta.dirname, "..");
 const REPO_ROOT = join(AGENT_ROOT, "..", "..");
@@ -41,14 +44,6 @@ const C = {
 	dim: (s: string) => `\u001b[2m${s}\u001b[0m`,
 	green: (s: string) => `\u001b[32m${s}\u001b[0m`,
 	red: (s: string) => `\u001b[31m${s}\u001b[0m`,
-};
-
-const CONTENT_TYPE_BY_EXT: Record<string, string> = {
-	gif: "image/gif",
-	jpeg: "image/jpeg",
-	jpg: "image/jpeg",
-	png: "image/png",
-	webp: "image/webp",
 };
 
 // A tiny in-memory catalog so the search→cards step has something to format.
@@ -85,7 +80,8 @@ const CATALOG_FIXTURE = [
 
 function contentTypeFor(path: string): string {
 	const ext = path.split(".").pop()?.toLowerCase() ?? "";
-	return CONTENT_TYPE_BY_EXT[ext] ?? "image/jpeg";
+	const match = Object.entries(IMAGE_CONTENT_TYPE_BY_EXT).find(([key]) => key === ext);
+	return match?.[1] ?? "image/jpeg";
 }
 
 function resolveImagePath(): string {
@@ -123,8 +119,8 @@ function startFixtureServer(imageBytes: Uint8Array, imageType: string) {
 			}
 			// tRPC GET for the assistant product search / by-ids procedures.
 			if (url.pathname.includes("product.")) {
-				return Response.json({
-					result: { data: SuperJSON.serialize(CATALOG_FIXTURE) },
+				return new Response(trpcResponse(CATALOG_FIXTURE), {
+					headers: { "content-type": "application/json" },
 				});
 			}
 			return new Response("not found", { status: 404 });
@@ -165,22 +161,22 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
-	const body = (await response.json()) as Record<string, unknown>;
-	server.stop();
-
 	if (!response.ok) {
-		console.error(C.red(`  ✗ photo-probe ${response.status}: ${body.error}`));
+		console.error(C.red(`  ✗ photo-probe ${response.status}: ${await response.text()}`));
+		server.stop();
 		process.exit(1);
 	}
 
-	const queries = (body.queries as Array<string>) ?? [];
-	const cards = (body.cards as Array<unknown>) ?? [];
+	const body = v.parse(photoProbeResultSchema, await response.json());
+	server.stop();
 
 	console.log(`  ${C.cyan("R2 key")}        ${body.key}`);
 	console.log(
 		C.dim(`                (${body.contentType}, ${body.size} bytes — not a CDN url, not base64)`),
 	);
 	console.log(`  ${C.cyan("vision facts")}  ${body.facts}`);
+	const queries = body.queries;
+	const cards = body.cards;
 	console.log(`  ${C.cyan("queries")}       ${JSON.stringify(queries)}`);
 	console.log(
 		`  ${C.cyan("used query")}    ${body.usedQuery ?? "(none)"} → ${body.matchCount} match(es)`,
@@ -191,7 +187,7 @@ async function main(): Promise<void> {
 	console.log(`\n  ${C.cyan("card payloads")} (same shape as #19 text search):`);
 	console.log(JSON.stringify(cards, null, 2));
 
-	const ok = typeof body.facts === "string" && body.facts.length > 0 && !body.searchError;
+	const ok = body.facts.length > 0 && !body.searchError;
 	console.log(
 		`\n  ${ok ? C.green("✓ PHOTO IDENTIFICATION PROOF PASSED") : C.red("✗ PROOF INCOMPLETE")}\n`,
 	);

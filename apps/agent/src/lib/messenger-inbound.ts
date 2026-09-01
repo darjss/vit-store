@@ -38,12 +38,19 @@ const isAllowedImageHost = (rawUrl: string): boolean => {
 	);
 };
 
-const EXTENSION_BY_TYPE: Record<string, string> = {
+const EXTENSION_BY_TYPE = {
 	"image/gif": "gif",
 	"image/jpeg": "jpg",
 	"image/png": "png",
 	"image/webp": "webp",
-};
+} as const satisfies Record<string, string>;
+
+function extensionFor(contentType: string | undefined): string {
+	if (!contentType) {
+		return "img";
+	}
+	return EXTENSION_BY_TYPE[contentType] ?? "img";
+}
 
 // Build a stable, collision-free R2 key for one attachment of one message.
 // Keyed by session + message id + index so a Meta webhook retry of the same mid
@@ -54,7 +61,7 @@ export const inboundImageKey = (
 	index: number,
 	contentType?: string,
 ): string => {
-	const ext = (contentType && EXTENSION_BY_TYPE[contentType]) ?? "img";
+	const ext = extensionFor(contentType);
 	return `${INBOUND_PREFIX}${encodeURIComponent(sessionId)}/${encodeURIComponent(messageId)}-${index}.${ext}`;
 };
 

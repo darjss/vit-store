@@ -1,4 +1,5 @@
-import type { CheckoutState } from "@vit/assistant";
+import { checkoutStateSchema, type CheckoutState } from "@vit/assistant";
+import * as v from "valibot";
 
 // Thin client over the per-session CheckoutStore Durable Object, keyed by the
 // assistant session id — the same keying the CartStore uses — so the in-progress
@@ -16,8 +17,12 @@ type CheckoutStoreNamespace = {
 
 const DO_URL = "https://checkout-store/checkout";
 
+const checkoutResponseSchema = v.object({
+	checkout: v.optional(v.nullable(checkoutStateSchema)),
+});
+
 const readCheckout = async (response: Response): Promise<CheckoutState | undefined> => {
-	const body = (await response.json()) as { checkout?: CheckoutState | null };
+	const body = v.parse(checkoutResponseSchema, await response.json());
 	return body.checkout ?? undefined;
 };
 

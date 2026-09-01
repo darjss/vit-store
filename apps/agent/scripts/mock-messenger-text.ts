@@ -1,7 +1,13 @@
+import * as v from "valibot";
+
 process.env.MESSENGER_PAGE_ID ??= "TEST_PAGE_ID";
 process.env.MESSENGER_PAGE_ACCESS_TOKEN ??= "TEST_PAGE_TOKEN";
 process.env.MESSENGER_APP_SECRET ??= "TEST_APP_SECRET";
 process.env.MESSENGER_VERIFY_TOKEN ??= "TEST_VERIFY_TOKEN";
+
+const outboundTextSchema = v.object({
+	message: v.object({ text: v.string() }),
+});
 
 const [{ channel, messenger, postMessage }, { admitMessengerTextMessage }] = await Promise.all([
 	import("../src/channels/messenger"),
@@ -77,13 +83,9 @@ if (afterFailure === undefined) {
 const replyText = "Mock assistant reply: received your Messenger text.\n";
 const tool = postMessage(firstAdmission.conversation);
 const replyResult = await tool.run({ input: { text: replyText } });
-const sentText = emitted.find(
-	(p): p is { message: { text: string } } =>
-		typeof p === "object" &&
-		p !== null &&
-		"message" in p &&
-		typeof (p as { message?: { text?: unknown } }).message?.text === "string",
-)?.message.text;
+const sentText = emitted
+	.map((payload) => v.safeParse(outboundTextSchema, payload))
+	.find((parsed) => parsed.success)?.output.message.text;
 if (sentText !== replyText) {
 	throw new Error("trailing-newline reply text was altered or dropped");
 }

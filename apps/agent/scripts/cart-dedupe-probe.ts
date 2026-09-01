@@ -3,7 +3,12 @@
 // Real worker + real CartStore DO; stub store API + capture as in cart-demo.
 import { createHmac } from "node:crypto";
 import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
+import * as v from "valibot";
 import { SuperJSON } from "superjson";
+import { graphSendBodySchema } from "../cli/graph-send";
+import { trpcResponse } from "../cli/trpc-stub";
+
+const idsInputSchema = v.object({ ids: v.optional(v.array(v.number())) });
 
 const APP_SECRET = "dev-app-secret";
 const PAGE_ID = "DEV_PAGE_ID";
@@ -15,11 +20,8 @@ const storeApi = Bun.serve({
 	fetch(req) {
 		const raw = new URL(req.url).searchParams.get("input");
 		const ids = raw
-			? ((
-					SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw))) as {
-						ids?: Array<number>;
-					}
-				).ids ?? [])
+			? (v.parse(idsInputSchema, SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw)))).ids ??
+				[])
 			: [];
 		const data = ids.includes(101)
 			? [
@@ -34,7 +36,7 @@ const storeApi = Bun.serve({
 					},
 				]
 			: [];
-		return new Response(JSON.stringify({ result: { data: SuperJSON.serialize(data) } }), {
+		return new Response(trpcResponse(data), {
 			headers: { "content-type": "application/json" },
 		});
 	},
@@ -51,20 +53,18 @@ const capture = Bun.serve({
 		if (req.method !== "POST") {
 			return Response.json({ id: PSID });
 		}
-		const body = (await req.json()) as Record<string, unknown>;
+		const body = v.parse(graphSendBodySchema, await req.json());
 		if (body.sender_action) {
 			return Response.json({ message_id: "cap", recipient_id: PSID });
 		}
 		if (failNextSend) {
 			failNextSend = false;
-			// 4xx → messenger-sdk throws immediately (no retry) → sendCartSummary
-			// throws inside handleCartEvent.
 			return Response.json(
 				{ error: { code: 400, message: "simulated send failure" } },
 				{ status: 400 },
 			);
 		}
-		lastText = (body.message as Record<string, unknown>)?.text as string;
+		lastText = body.message?.text;
 		return Response.json({ message_id: "cap", recipient_id: PSID });
 	},
 	hostname: "127.0.0.1",

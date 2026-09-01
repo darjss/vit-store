@@ -1,4 +1,6 @@
+import * as v from "valibot";
 import { type InboundImage, KIMI_VISION_MODEL } from "@vit/assistant";
+import { aiResponseSchema, formatAiResponseText } from "./ai-response-text";
 
 // Workers AI binding adapter for the photo-identification tool. Reads staged
 // image bytes from R2 and runs glm-5.3-flash vision via the AI binding.
@@ -20,48 +22,9 @@ export const buildKimiVision =
 				},
 			],
 		});
-		return extractText(response);
+		const parsed = v.safeParse(aiResponseSchema, response);
+		return parsed.success ? formatAiResponseText(parsed.output) : JSON.stringify(response);
 	};
-
-// The AI binding's non-streamed return shape varies by model family. Pull the
-// assistant text out of the shapes Workers AI / OpenAI-compat models use,
-// falling back to a JSON dump so a shape change surfaces as a parse miss
-// downstream rather than a silent empty string.
-const extractText = (response: unknown): string => {
-	if (typeof response === "string") {
-		return response;
-	}
-	if (response && typeof response === "object") {
-		const obj = response as Record<string, unknown>;
-		if (typeof obj.response === "string") {
-			return obj.response;
-		}
-		const choices = obj.choices;
-		if (Array.isArray(choices) && choices.length > 0) {
-			const message = (choices[0] as Record<string, unknown>)?.message as
-				| Record<string, unknown>
-				| undefined;
-			const content = message?.content;
-			if (typeof content === "string") {
-				return content;
-			}
-			if (Array.isArray(content)) {
-				return content
-					.map((part) =>
-						part && typeof part === "object"
-							? String((part as Record<string, unknown>).text ?? "")
-							: "",
-					)
-					.join("");
-			}
-		}
-		const result = obj.result as Record<string, unknown> | undefined;
-		if (result && typeof result.response === "string") {
-			return result.response;
-		}
-	}
-	return JSON.stringify(response);
-};
 
 // Base64-encode bytes using btoa over a binary string (workers-types provides
 // btoa; Buffer is not in the agent's type set). Chunked so a multi-hundred-KB

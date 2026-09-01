@@ -1,5 +1,11 @@
 import type { Cart, CartCommand, CartProductInput } from "@vit/assistant";
-import { EMPTY_CART } from "@vit/assistant";
+import {
+	assistantStockStatusSchema,
+	cartCommandSchema,
+	cartSchema,
+	EMPTY_CART,
+} from "@vit/assistant";
+import * as v from "valibot";
 
 // Thin client over the per-session CartStore Durable Object. Both the
 // deterministic button path (channel webhook) and the conversational model
@@ -17,11 +23,37 @@ type CartStoreNamespace = {
 	idFromName(name: string): DurableObjectId;
 };
 
+const cartResponseSchema = v.object({
+	cart: v.optional(cartSchema),
+});
+
+const addRequestSchema = v.object({
+	product: v.object({
+		brand: v.optional(v.string()),
+		id: v.number(),
+		image: v.optional(v.string()),
+		name: v.string(),
+		price: v.number(),
+		stockStatus: v.optional(assistantStockStatusSchema),
+	}),
+	quantity: v.optional(v.number()),
+	type: v.literal("add"),
+});
+
+const commandRequestSchema = v.object({
+	command: cartCommandSchema,
+	type: v.literal("command"),
+});
+
+type CartStorePostBody =
+	| v.InferOutput<typeof addRequestSchema>
+	| v.InferOutput<typeof commandRequestSchema>;
+
 // Internal URL; only the path/method/body matter to the DO.
 const DO_URL = "https://cart-store/cart";
 
 const readCart = async (response: Response): Promise<Cart> => {
-	const body = (await response.json()) as { cart?: Cart };
+	const body = v.parse(cartResponseSchema, await response.json());
 	return body.cart ?? { ...EMPTY_CART };
 };
 
@@ -37,7 +69,7 @@ export const cartSessionFor = (
 	}
 	const stub = namespace.get(namespace.idFromName(sessionId));
 
-	const post = async (payload: unknown): Promise<Cart> => {
+	const post = async (payload: CartStorePostBody): Promise<Cart> => {
 		const response = await stub.fetch(DO_URL, {
 			body: JSON.stringify(payload),
 			headers: { "content-type": "application/json" },
