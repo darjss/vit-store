@@ -98,7 +98,7 @@ function resolveImagePath(): string {
 		}
 		return candidate;
 	}
-	const fallback = join(REPO_ROOT, "(1).jpg");
+	const fallback = join(REPO_ROOT, "../vit-playground/data/(1).jpg");
 	if (!existsSync(fallback)) {
 		console.error(
 			C.red(
