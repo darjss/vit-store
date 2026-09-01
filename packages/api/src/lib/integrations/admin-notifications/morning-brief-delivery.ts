@@ -1,8 +1,5 @@
 import { formatMoney } from "./format";
-import {
-	TELEGRAM_CALLBACK_ACTIONS,
-	bindTelegramCallbackData,
-} from "./telegram-callback-data";
+import { TELEGRAM_CALLBACK_ACTIONS, bindTelegramCallbackData } from "./telegram-callback-data";
 import {
 	sendTelegramText,
 	sendTelegramTextReturningId,
@@ -12,17 +9,15 @@ import {
 const TELEGRAM_TEXT_LIMIT = 4000;
 
 export type MorningBriefOrder = {
-	orderNumber: string;
-	total: number;
 	customerPhone: string;
+	orderNumber: string;
 	products: Array<{ name: string; quantity: number }>;
+	total: number;
 };
 
-const formatOrderLines = (orders: MorningBriefOrder[], dashUrl: string) =>
+const formatOrderLines = (orders: Array<MorningBriefOrder>, dashUrl: string) =>
 	orders.map((order, index) => {
-		const items = order.products
-			.map((p) => `${p.name} x${p.quantity}`)
-			.join(", ");
+		const items = order.products.map((p) => `${p.name} x${p.quantity}`).join(", ");
 		return [
 			`${index + 1}. ${order.orderNumber} · ${formatMoney(order.total)} · ${order.customerPhone}`,
 			items,
@@ -30,11 +25,13 @@ const formatOrderLines = (orders: MorningBriefOrder[], dashUrl: string) =>
 		].join("\n");
 	});
 
-const chunkTextBlocks = (header: string, blocks: string[]) => {
-	const chunks: string[] = [];
+const chunkTextBlocks = (header: string, blocks: Array<string>) => {
+	const chunks: Array<string> = [];
 	let current = header;
 	const flush = () => {
-		if (current.trim()) chunks.push(current);
+		if (current.trim()) {
+			chunks.push(current);
+		}
 		current = "";
 	};
 	for (const block of blocks) {
@@ -43,7 +40,9 @@ const chunkTextBlocks = (header: string, blocks: string[]) => {
 			current = candidate;
 			continue;
 		}
-		if (current) flush();
+		if (current) {
+			flush();
+		}
 		if (block.length <= TELEGRAM_TEXT_LIMIT) {
 			current = block;
 			continue;
@@ -57,15 +56,13 @@ const chunkTextBlocks = (header: string, blocks: string[]) => {
 };
 
 export const deliverMorningOrderBrief = async (
-	orders: MorningBriefOrder[],
+	orders: Array<MorningBriefOrder>,
 	dashUrl: string,
 ) => {
 	const base = dashUrl.replace(/\/$/, "");
 
 	if (orders.length === 0) {
-		await sendTelegramText(
-			"🌅 Өглөөний тайлан\n\nӨчигдрийн 11:00-с хойш төлбөртэй захиалга алга.",
-		);
+		await sendTelegramText("🌅 Өглөөний тайлан\n\nӨчигдрийн 11:00-с хойш төлбөртэй захиалга алга.");
 		return;
 	}
 
@@ -79,11 +76,8 @@ export const deliverMorningOrderBrief = async (
 	);
 	await setTelegramInlineButtons(actionMessageId, [
 		{
+			callback_data: bindTelegramCallbackData(TELEGRAM_CALLBACK_ACTIONS.SHIP_ALL, actionMessageId),
 			text: "📦 Бүгдийг илгээх",
-			callback_data: bindTelegramCallbackData(
-				TELEGRAM_CALLBACK_ACTIONS.SHIP_ALL,
-				actionMessageId,
-			),
 		},
 	]);
 };

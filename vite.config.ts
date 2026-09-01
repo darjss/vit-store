@@ -33,8 +33,7 @@ export default defineConfig({
 			},
 			"db:migrate:local": {
 				cache: false,
-				command:
-					"vp exec drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
+				command: "vp exec drizzle-kit migrate --config=../../packages/api/drizzle.local.config.ts",
 				cwd: "apps/server",
 			},
 			"server:dev": {

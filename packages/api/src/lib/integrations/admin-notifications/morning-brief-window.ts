@@ -6,6 +6,4 @@ const HOURS_FROM_CUTOFF_TO_UB_MIDNIGHT = 13;
 
 /** Paid pending orders created on or after this instant belong in the morning brief. */
 export const morningBriefOrderSince = () =>
-	new Date(
-		getStartOfDay().getTime() - HOURS_FROM_CUTOFF_TO_UB_MIDNIGHT * HOUR_MS,
-	);
+	new Date(getStartOfDay().getTime() - HOURS_FROM_CUTOFF_TO_UB_MIDNIGHT * HOUR_MS);
