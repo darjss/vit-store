@@ -183,16 +183,17 @@ Use `subagent_type: "poteto-agent"`. One worker per package directory. Each work
 
 ## Anti-slop gauntlet review (#322 + #323)
 
-Coordinator + subagent review against `scripts/anti-slop-worker-brief.md` (Mar 2026).
+Coordinator + subagent review against `scripts/anti-slop-worker-brief.md` (Mar 2026). Subagents: [PR322](ba01caa5-bbe8-42b1-a741-e85c3f51d197), [PR323](c86dbe8b-d9ed-4dbb-a15e-9c0352f25f51).
 
-### #322 (`shared` + `server`) — **PASS with minor follow-ups**
+### #322 (`shared` + `server`) — **PASS**
 
 | Verdict | Notes |
 |---------|--------|
 | No rule disables | Clean |
 | No SAFETY comments | Clean |
 | Boundary parsing | valibot at auth, webhooks, uploads, trpc-proxy |
-| Follow-up | `FormDataEntryValue` needs DOM lib or inline union type; `trpc-error.ts` batch payload tsc error |
+| Gauntlet fixes (`1c5493d`) | `trpc-error-log.ts` property-descriptor + valibot code read; `trpc-proxy.ts` typed JSON body union |
+| tsc follow-ups | `FormDataEntryValue` needs DOM lib or inline union; `trpc-error.ts` batch payload typing |
 
 ### #323 (`packages/api`) — **ISSUES (2)**
 
