@@ -49,6 +49,17 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 		user: config.userSchema,
 	});
 
+	type SessionKvRecord = v.InferOutput<typeof sessionKvRecordSchema>;
+
+	function readSessionKvRecord(raw: string): SessionKvRecord | null {
+		try {
+			const parsed = v.safeParse(sessionKvRecordSchema, JSON.parse(raw));
+			return parsed.success ? parsed.output : null;
+		} catch {
+			return null;
+		}
+	}
+
 	async function createSession(
 		user: TUser,
 		kv: KVNamespace,
@@ -89,7 +100,11 @@ export function createSessionManager<TUser extends CustomerSelectType | UserSele
 			return null;
 		}
 
-		const result = v.parse(sessionKvRecordSchema, JSON.parse(rawSession));
+		const result = readSessionKvRecord(rawSession);
+		if (!result) {
+			ctx.log.warn("auth.session_shape_invalid", { sessionId });
+			return null;
+		}
 
 		const session: Session<TUser> = {
 			expiresAt: new Date(result.expires_at * 1000),

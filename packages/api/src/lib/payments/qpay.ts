@@ -12,12 +12,6 @@ const truncate = (value: string, maxLength = 500) =>
 const tokenResponseSchema = v.object({
 	access_token: v.string(),
 	expires_in: v.number(),
-	"not-before-policy": v.string(),
-	refresh_expires_in: v.number(),
-	refresh_token: v.string(),
-	scope: v.string(),
-	session_state: v.string(),
-	token_type: v.string(),
 });
 
 type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;

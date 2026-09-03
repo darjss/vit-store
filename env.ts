@@ -55,7 +55,7 @@ export const createServerAlchemyEnv = (runtimeEnv: RuntimeEnv = process.env) => 
 			UPSTASH_SEARCH_URL: runtimeEnv.UPSTASH_SEARCH_URL,
 		},
 		server: {
-			ADMIN_BOT_TOKEN: optional(v.string()),
+			ADMIN_BOT_TOKEN: optional(string()),
 			CORS_ORIGIN: requiredString(),
 			DASH_URL: requiredUrl(),
 			DELIVERY_API_URL: requiredUrl(),

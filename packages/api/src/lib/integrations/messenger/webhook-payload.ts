@@ -16,7 +16,8 @@ const messengerWebhookEventSchema = v.looseObject({
 
 const messengerWebhookEntrySchema = v.object({
 	id: v.string(),
-	messaging: v.array(messengerWebhookEventSchema),
+	// Meta also sends delivery/read entries without `messaging`.
+	messaging: v.optional(v.array(messengerWebhookEventSchema), []),
 	time: v.number(),
 });
 
