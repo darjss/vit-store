@@ -8,12 +8,14 @@ const app: Hono<ServerHonoEnv> = new Hono<ServerHonoEnv>();
 app.post("/messenger", async (c) => {
 	const log = c.get("log");
 	log.set({ operation: "messenger.webhook", user_type: "system" });
-	const payload = v.parse(messengerWebhookPayloadSchema, await c.req.json());
-	log.info("webhook.received", {
-		eventType: payload.object,
-		provider: "messenger",
-	});
+	// Always ACK 200 so Meta does not retry forever. Invalid payloads and
+	// handler failures are logged and dropped, matching pre-parse behavior.
 	try {
+		const payload = v.parse(messengerWebhookPayloadSchema, await c.req.json());
+		log.info("webhook.received", {
+			eventType: payload.object,
+			provider: "messenger",
+		});
 		await messengerWebhookHandler(payload);
 		log.info("webhook.processed", { provider: "messenger", success: true });
 	} catch (error) {

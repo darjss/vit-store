@@ -33,6 +33,17 @@ const checkoutAccessTokenRecordSchema = v.object({
 	tokenHash: v.string(),
 });
 
+type CheckoutAccessTokenKvRecord = v.InferOutput<typeof checkoutAccessTokenRecordSchema>;
+
+function readCheckoutAccessTokenRecord(raw: string): CheckoutAccessTokenKvRecord | null {
+	try {
+		const parsed = v.safeParse(checkoutAccessTokenRecordSchema, JSON.parse(raw));
+		return parsed.success ? parsed.output : null;
+	} catch {
+		return null;
+	}
+}
+
 const CHECKOUT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const hashToken = (token: string): string =>
@@ -71,7 +82,10 @@ async function validateCheckoutToken(
 	if (!raw) {
 		return null;
 	}
-	const record = v.parse(checkoutAccessTokenRecordSchema, JSON.parse(raw));
+	const record = readCheckoutAccessTokenRecord(raw);
+	if (!record) {
+		return null;
+	}
 	return record.tokenHash === hashToken(checkoutToken) ? record : null;
 }
 
