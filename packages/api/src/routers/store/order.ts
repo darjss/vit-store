@@ -484,7 +484,7 @@ export const order = router({
 				customerPhone: input.phoneNumber,
 				orderNumber: resolvedOrderNumber,
 				paymentNumber,
-				total: resolvedTotal,
+				total: txResult.total,
 			};
 		} catch (error) {
 			if (error instanceof TRPCError) {

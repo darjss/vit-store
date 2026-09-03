@@ -8,7 +8,7 @@ const app = await alchemy("admin");
 const stage = app.stage;
 
 config({
-	path: path.join(import.meta.dirname, `.env.${stage}`),
+	path: path.join(import.meta.dirname, "..", "..", `.env.${stage}`),
 });
 
 const env = createAdminAlchemyEnv(process.env);
@@ -18,6 +18,10 @@ export const admin = await Vite("dashboard", {
 	assets: "dist",
 	bindings: {
 		VITE_SERVER_URL: env.VITE_SERVER_URL,
+	},
+	// Alchemy Vite defaults to `bunx vite build`; this app builds via Vite+ (`vp build`).
+	build: {
+		command: "bun run build",
 	},
 	cwd: import.meta.dirname,
 	dev: {
