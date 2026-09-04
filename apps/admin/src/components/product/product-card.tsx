@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BrandsType, CategoriesType, ProductType } from "@/lib/types";
-import { invalidateProductCaches } from "@/utils/product-cache";
+import { invalidateProductCaches, patchProductInCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
 import RowActions from "../row-actions";
 import {
@@ -57,11 +57,17 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 		onError: () => {
 			toast.error("Үлдэгдэл шинэчлэхэд алдаа гарлаа");
 			setStockDraft(null);
+			void invalidateProductCaches(queryClient, product.id);
 		},
-		onSettled: () => {
-			invalidateProductCaches(queryClient, product.id);
+		onMutate: async ({ id, newStock }) => {
+			await queryClient.cancelQueries({ queryKey: ["admin-products-infinite"] });
+			patchProductInCaches(queryClient, id, { stock: newStock });
+			return undefined;
 		},
-		onSuccess: () => {
+		// Patch first, then await refetch, then close — otherwise the card snaps
+		// back to the stale infinite-list stock (especially visible for 0).
+		onSettled: async () => {
+			await invalidateProductCaches(queryClient, product.id);
 			setStockDraft(null);
 			setIsStockEditing(false);
 		},
@@ -75,10 +81,16 @@ const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 		onError: () => {
 			toast.error("Үнэ шинэчлэхэд алдаа гарлаа");
 			setPriceDraft(null);
+			void invalidateProductCaches(queryClient, product.id);
 		},
-		// Close the editor only once the cache reflects the saved price, so
-		// the collapsed button never shows a stale value next to a fresh one
-		// in the summary.
+		onMutate: async ({ id, numberValue }) => {
+			if (numberValue === undefined) {
+				return undefined;
+			}
+			await queryClient.cancelQueries({ queryKey: ["admin-products-infinite"] });
+			patchProductInCaches(queryClient, id, { price: numberValue });
+			return undefined;
+		},
 		onSettled: async () => {
 			await invalidateProductCaches(queryClient, product.id);
 			setPriceDraft(null);
