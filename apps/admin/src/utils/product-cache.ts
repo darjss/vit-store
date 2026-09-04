@@ -5,20 +5,25 @@ import { trpc } from "./trpc";
  * Single place for "a product changed" invalidations. Every product write
  * (stock, price, fields, form save, delete) touches the same set of caches:
  * the admin infinite list, instant-search dropdowns, the all-products query,
- * and optionally the detail entry for one product. Invalidate all of them or
- * none — patching some is how stale stock/price leaked between views.
+ * and optionally the detail entry for one product.
+ *
+ * Stock/price card edits pass `skipInfiniteList` after an optimistic patch —
+ * refetching the infinite list jumps the dash scroller to the top.
  */
 export async function invalidateProductCaches(
 	queryClient: QueryClient,
 	productId?: number,
+	options?: { skipInfiniteList?: boolean },
 ) {
 	// Returns a promise that settles when every refetch triggered by these
 	// invalidations has completed, so callers can await confirmed cache.
 	await Promise.all([
-		queryClient.invalidateQueries({
-			queryKey: ["admin-products-infinite"],
-			type: "all",
-		}),
+		options?.skipInfiniteList
+			? Promise.resolve()
+			: queryClient.invalidateQueries({
+					queryKey: ["admin-products-infinite"],
+					type: "all",
+				}),
 		queryClient.invalidateQueries(
 			trpc.product.searchProductsInstant.pathFilter(),
 		),

@@ -76,10 +76,12 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			patchProductInCaches(queryClient, id, { stock: newStock });
 			return undefined;
 		},
-		// Patch first, then await refetch, then close — otherwise the card snaps
-		// back to the stale infinite-list stock (especially visible for 0).
+		// Patch owns the infinite list; skip refetching it so the dash scroller
+		// doesn't jump to the top. Still invalidate search/detail on settle.
 		onSettled: async () => {
-			await invalidateProductCaches(queryClient, product.id);
+			await invalidateProductCaches(queryClient, product.id, {
+				skipInfiniteList: true,
+			});
 			setIsStockEditing(false);
 		},
 	});
@@ -105,7 +107,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 			return undefined;
 		},
 		onSettled: async () => {
-			await invalidateProductCaches(queryClient, product.id);
+			await invalidateProductCaches(queryClient, product.id, {
+				skipInfiniteList: true,
+			});
 			setIsPriceEditing(false);
 		},
 	});
