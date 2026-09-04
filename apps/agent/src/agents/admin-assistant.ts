@@ -4,6 +4,7 @@ import {
 	ADMIN_ASSISTANT_MODEL,
 	adminAssistantInstructions,
 	buildAdminQueryTool,
+	buildChatOrderImageExtractTool,
 	buildPurchaseImageExtractTool,
 } from "@vit/assistant";
 import { createAdminBotClient } from "../lib/admin-bot-client";
@@ -18,6 +19,13 @@ import {
 	postTelegramMessage,
 	postTelegramProductPhoto,
 } from "../channels/telegram";
+import addProduct from "../skills/add-product/SKILL.md" with { type: "skill" };
+import stockPaste from "../skills/stock-paste/SKILL.md" with { type: "skill" };
+import lookupOrders from "../skills/lookup-orders/SKILL.md" with { type: "skill" };
+import namedZoneShip from "../skills/named-zone-ship/SKILL.md" with { type: "skill" };
+import invoicePurchase from "../skills/invoice-purchase/SKILL.md" with { type: "skill" };
+import storeAnalytics from "../skills/store-analytics/SKILL.md" with { type: "skill" };
+import messengerOrder from "../skills/messenger-order/SKILL.md" with { type: "skill" };
 
 type AgentEnv = {
 	LOADER?: WorkerLoader;
@@ -38,20 +46,30 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 				})
 			: undefined;
 
+	const loadImage =
+		env.MESSENGER_INBOUND_BUCKET !== undefined
+			? (key: string) =>
+					loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key)
+			: undefined;
+	const runVision =
+		env.AI !== undefined ? buildKimiVision(env.AI, 4096) : undefined;
+
 	const purchaseExtractTool =
-		env.AI &&
-		env.MESSENGER_INBOUND_BUCKET &&
-		env.ADMIN_BOT_TOKEN
+		loadImage && runVision && env.ADMIN_BOT_TOKEN
 			? buildPurchaseImageExtractTool({
-					loadImage: (key) =>
-						loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key),
-					runVision: buildKimiVision(env.AI, 4096),
+					loadImage,
+					runVision,
 					matchExtracted: (input) =>
 						createAdminBotClient(
 							storeApiUrl,
 							env.ADMIN_BOT_TOKEN as string,
 						).aiPurchase.matchExtractedInvoice.mutate(input),
 				})
+			: undefined;
+
+	const chatOrderExtractTool =
+		loadImage && runVision
+			? buildChatOrderImageExtractTool({ loadImage, runVision })
 			: undefined;
 
 	const isTelegram = id.startsWith("telegram:");
@@ -76,6 +94,15 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 		model: ADMIN_ASSISTANT_MODEL,
 		thinkingLevel: "medium" as const,
 		instructions: adminAssistantInstructions,
+		skills: [
+			addProduct,
+			stockPaste,
+			lookupOrders,
+			namedZoneShip,
+			invoicePurchase,
+			storeAnalytics,
+			messengerOrder,
+		],
 		compaction: {
 			reserveTokens: 20_000,
 			keepRecentTokens: 8_000,
@@ -83,6 +110,7 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 		tools: [
 			...(queryTool ? [queryTool] : []),
 			...(purchaseExtractTool ? [purchaseExtractTool] : []),
+			...(chatOrderExtractTool ? [chatOrderExtractTool] : []),
 			replyTool,
 			...(productPhotoTool ? [productPhotoTool] : []),
 		],
