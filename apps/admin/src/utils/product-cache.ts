@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import { trpc } from "./trpc";
 
 /**
@@ -29,4 +29,66 @@ export async function invalidateProductCaches(
 				)
 			: Promise.resolve(),
 	]);
+}
+
+type CachedProductFields = {
+	id: number;
+	price: number;
+	stock: number;
+};
+
+type ProductListPage = {
+	products: Array<CachedProductFields>;
+};
+
+export type ProductCachePatch = {
+	price?: number;
+	stock?: number;
+};
+
+/** Optimistic write into list/detail caches so cards don't snap back to stale stock/price. */
+export function patchProductInCaches(
+	queryClient: QueryClient,
+	productId: number,
+	patch: ProductCachePatch,
+) {
+	queryClient.setQueriesData<InfiniteData<ProductListPage>>(
+		{ queryKey: ["admin-products-infinite"] },
+		(data) => {
+			if (!data) {
+				return data;
+			}
+			return {
+				...data,
+				pages: data.pages.map((page) => ({
+					...page,
+					products: page.products.map((product) =>
+						product.id === productId ? { ...product, ...patch } : product,
+					),
+				})),
+			};
+		},
+	);
+
+	queryClient.setQueriesData<Array<CachedProductFields>>(
+		{ queryKey: trpc.product.getAllProducts.queryKey() },
+		(data) => {
+			if (!data) {
+				return data;
+			}
+			return data.map((product) =>
+				product.id === productId ? { ...product, ...patch } : product,
+			);
+		},
+	);
+
+	queryClient.setQueriesData<CachedProductFields>(
+		{ queryKey: trpc.product.getProductById.queryKey() },
+		(data) => {
+			if (!data || data.id !== productId) {
+				return data;
+			}
+			return { ...data, ...patch };
+		},
+	);
 }
