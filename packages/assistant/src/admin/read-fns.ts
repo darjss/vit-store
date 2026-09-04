@@ -1,6 +1,12 @@
 import { createTRPCClient, httpLink } from "@trpc/client";
 import type { BotRouter } from "@vit/api";
 import { SuperJSON } from "superjson";
+import {
+	addressTokens,
+	rankZoneCandidates,
+	type DeliveryZoneInput,
+	type ZoneKnowledge,
+} from "../delivery-zones";
 
 // A Codemode ResolvedProvider: fns exposed under `name.*` inside the sandbox.
 // The LLM calls `order.getPendingOrders()`, `product.searchProducts()`, etc.
@@ -73,6 +79,37 @@ export function buildReadFns({
 				shipOrder: async (input: unknown) => botClient.order.shipOrder.mutate(input as never),
 				deleteOrder: async (input: unknown) => botClient.order.deleteOrder.mutate(input as never),
 				restoreOrder: async (input: unknown) => botClient.order.restoreOrder.mutate(input as never),
+				getDeliveryAddressZones: async () => {
+					const raw = await botClient.order.getDeliveryAddressZones.query();
+					return normalizeDeliveryZones(raw);
+				},
+				// Rank a few ship zones for an address: live zone-name overlap +
+				// recent shipped orders that share address tokens. Returns zoneId
+				// for shipOrder; never show ids to the admin — use zoneName.
+				suggestZonesForAddress: async (input: unknown) => {
+					const address =
+						typeof input === "object" &&
+						input !== null &&
+						"address" in input &&
+						typeof (input as { address: unknown }).address === "string"
+							? (input as { address: string }).address.trim()
+							: "";
+					if (!address) throw new Error("address is required");
+
+					const zones = normalizeDeliveryZones(
+						await botClient.order.getDeliveryAddressZones.query(),
+					);
+					const knowledge = await buildZoneKnowledgeFromShippedOrders(
+						botClient,
+						address,
+					);
+					return rankZoneCandidates(address, zones, knowledge).map((c) => ({
+						zoneId: c.zoneId,
+						zoneName: c.zoneName,
+						score: c.score,
+						evidence: c.evidence,
+					}));
+				},
 			},
 		}),
 		safeProvider({
@@ -236,3 +273,68 @@ export function buildReadFns({
 		}),
 	];
 }
+
+/** Wire may use `id` (current) or `Id` (older delivery clients). */
+function normalizeDeliveryZones(raw: unknown): DeliveryZoneInput[] {
+	if (!Array.isArray(raw)) return [];
+	const out: DeliveryZoneInput[] = [];
+	for (const row of raw) {
+		if (!row || typeof row !== "object") continue;
+		const r = row as Record<string, unknown>;
+		const id = typeof r.id === "number" ? r.id : typeof r.Id === "number" ? r.Id : null;
+		const zoneName = typeof r.zoneName === "string" ? r.zoneName : null;
+		if (id === null || !zoneName) continue;
+		out.push({ zoneId: id, zoneName });
+	}
+	return out;
+}
+
+async function buildZoneKnowledgeFromShippedOrders(
+	botClient: ReturnType<typeof createTRPCClient<BotRouter>>,
+	address: string,
+): Promise<ZoneKnowledge[]> {
+	const target = new Set(addressTokens(address));
+	if (target.size === 0) return [];
+
+	const page = await botClient.order.getPaginatedOrders.query({
+		page: 1,
+		pageSize: 50,
+		orderStatus: "shipped",
+		sortField: "createdAt",
+		sortDirection: "desc",
+	});
+
+	const byZone = new Map<
+		number,
+		{ orderCount: number; aliasCounts: Map<string, number> }
+	>();
+
+	for (const order of page.orders) {
+		const zoneId = order.addressZoneId;
+		if (zoneId === undefined || zoneId === null) continue;
+		const overlap = addressTokens(order.address ?? "").filter((t) =>
+			target.has(t),
+		);
+		if (overlap.length === 0) continue;
+
+		let entry = byZone.get(zoneId);
+		if (!entry) {
+			entry = { orderCount: 0, aliasCounts: new Map() };
+			byZone.set(zoneId, entry);
+		}
+		entry.orderCount += 1;
+		for (const token of overlap) {
+			entry.aliasCounts.set(token, (entry.aliasCounts.get(token) ?? 0) + 1);
+		}
+	}
+
+	return [...byZone.entries()].map(([zoneId, entry]) => ({
+		zoneId,
+		orderCount: entry.orderCount,
+		aliases: [...entry.aliasCounts.entries()].map(([token, count]) => ({
+			token,
+			count,
+		})),
+	}));
+}
+

@@ -31,9 +31,12 @@ const createdOrderSchema = v.object({
 	checkoutToken: v.nullable(v.string()),
 }) satisfies v.GenericSchema<unknown, CreatedOrder>;
 
-// Live delivery zones (`{ Id, zoneName }`) mapped to the ranker's input shape.
+// Live delivery zones (`{ id, zoneName }` today; older clients used `Id`).
 const deliveryZonesWireSchema = v.array(
-	v.object({ Id: v.number(), zoneName: v.string() }),
+	v.union([
+		v.object({ id: v.number(), zoneName: v.string() }),
+		v.object({ Id: v.number(), zoneName: v.string() }),
+	]),
 );
 
 // Calls `order.addOrder` (a tRPC mutation) through the shared typed client.
@@ -58,5 +61,8 @@ export const fetchDeliveryZones = async (
 		{ signal: withTimeout(outerSignal) },
 	);
 	const zones = v.parse(deliveryZonesWireSchema, data);
-	return zones.map((z) => ({ zoneId: z.Id, zoneName: z.zoneName }));
+	return zones.map((z) => ({
+		zoneId: "id" in z ? z.id : z.Id,
+		zoneName: z.zoneName,
+	}));
 };

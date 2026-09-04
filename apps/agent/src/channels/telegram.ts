@@ -46,8 +46,33 @@ export const channel = createTelegramChannel({
 		if (!message) return undefined;
 
 		const fromId = message.from?.id;
-		if (fromId === undefined || !isAdminUser(fromId, env)) return undefined;
-		if (message.chat.type !== "private") return undefined;
+		if (fromId === undefined || message.chat.type !== "private") {
+			return undefined;
+		}
+
+		// Anyone in a private chat can ask for their Telegram user id so we can
+		// add them to TELEGRAM_ADMIN_CHAT_ID (comma-separated allowlist).
+		const idCommand = (message.text?.trim() ?? "").toLowerCase();
+		if (idCommand === "/id" || idCommand === "/whoami") {
+			const token = env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
+			if (!token) return undefined;
+			await telegramApi(token).sendMessage(
+				message.chat.id,
+				`Your Telegram user id: ${fromId}`,
+			);
+			return undefined;
+		}
+
+		if (!isAdminUser(fromId, env)) {
+			console.info(
+				JSON.stringify({
+					event: "telegram.admin_reject",
+					fromId,
+					username: message.from?.username ?? null,
+				}),
+			);
+			return undefined;
+		}
 
 		const text = message.text?.trim() ?? message.caption?.trim() ?? "";
 		const photos = message.photo;
@@ -132,11 +157,17 @@ export const channel = createTelegramChannel({
 	},
 });
 
+/** Comma/space-separated Telegram user ids allowed to use the admin bot. */
+export function parseAdminUserIds(raw: string | undefined): number[] {
+	if (!raw?.trim()) return [];
+	return raw
+		.split(/[,\s]+/)
+		.map((part) => Number(part.trim()))
+		.filter((id) => Number.isSafeInteger(id) && id !== 0);
+}
+
 export function isAdminUser(userId: number, env: TelegramWebhookEnv) {
-	const raw = env.TELEGRAM_ADMIN_CHAT_ID?.trim();
-	if (!raw) return false;
-	const allowed = Number(raw);
-	return Number.isSafeInteger(allowed) && allowed === userId;
+	return parseAdminUserIds(env.TELEGRAM_ADMIN_CHAT_ID).includes(userId);
 }
 
 export function conversationFromMessage(
