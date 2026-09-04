@@ -16,7 +16,12 @@ let initPromise: Promise<void> | undefined;
 
 export const getTelegramAdminConfig = (): TelegramAdminConfig | null => {
 	const token = process.env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
-	const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim();
+	// Allowlist may be comma-separated for inbound (agent); outbound alerts go
+	// to the first id only (the primary notification chat).
+	const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim()
+		?.split(/[,\s]+/)
+		.map((part) => part.trim())
+		.find((part) => part.length > 0);
 	if (!token || !chatId) return null;
 	return { token, chatId };
 };

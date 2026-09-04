@@ -287,7 +287,7 @@ real values):
   in dev; set to the deployed server origin in prod).
 - `TELEGRAM_ADMIN_BOT_TOKEN` — same `@darjsorderbot` token used for outbound order alerts.
 - `TELEGRAM_WEBHOOK_SECRET` — `secret_token` for `setWebhook` (letters, numbers, `_`, `-` only).
-- `TELEGRAM_ADMIN_CHAT_ID` — allowlisted admin Telegram user/chat id for inbound admin agent.
+- `TELEGRAM_ADMIN_CHAT_ID` — allowlisted admin Telegram user id(s) for inbound admin agent (comma-separated for multiple admins). Outbound order alerts use the first id. Anyone can DM `/id` to learn their Telegram user id.
 
 ### Telegram admin webhook
 
