@@ -8,8 +8,8 @@ import type {
 	orderStatus as orderStatusConstants,
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
-import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronDown, Loader2, Package, Printer, Truck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,14 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+	type BatchProgress,
+	createPrinter,
+	isWebBluetoothAvailable,
+	type M110Printer,
+	printPhones,
+	PrinterError,
+} from "@/lib/phomemo";
 import { trpc } from "@/utils/trpc";
 import BatchShipOrderDialog, {
 	type BatchShipResult,
@@ -75,6 +83,12 @@ export default function OrdersList({
 		{ orderNumber: string; message: string }[] | null
 	>(null);
 	const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+	const [isPrinting, setIsPrinting] = useState(false);
+	const [printProgress, setPrintProgress] = useState<BatchProgress | null>(
+		null,
+	);
+	const printerRef = useRef<M110Printer | null>(null);
+	const printAbortRef = useRef<AbortController | null>(null);
 
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
@@ -231,8 +245,86 @@ export default function OrdersList({
 		}
 	};
 
-	const canTuSend = selectedIds.size > 0 && !isBatchUpdating;
+	const canTuSend = selectedIds.size > 0 && !isBatchUpdating && !isPrinting;
 	const toolbarOpen = selectedIds.size > 0;
+
+	const handlePrintPhones = async () => {
+		if (selectedPendingOrders.length === 0 || isPrinting) return;
+
+		if (!isWebBluetoothAvailable()) {
+			toast.error(
+				"Bluetooth боломжгүй. iPhone/iPad дээр Bluefy хөтөчөөр нээнэ үү.",
+			);
+			return;
+		}
+
+		const printer = printerRef.current ?? createPrinter();
+		printerRef.current = printer;
+		const abort = new AbortController();
+		printAbortRef.current = abort;
+
+		setIsPrinting(true);
+		setPrintProgress({
+			current: 0,
+			total: selectedPendingOrders.length,
+			jobs: selectedPendingOrders.map((order) => ({
+				order: {
+					id: order.id,
+					orderNumber: order.orderNumber,
+					customerPhone: String(order.customerPhone),
+				},
+				status: "pending",
+			})),
+		});
+
+		try {
+			if (!printer.connected) {
+				await printer.connect();
+			}
+
+			const jobs = await printPhones(
+				printer,
+				selectedPendingOrders.map((order) => ({
+					id: order.id,
+					orderNumber: order.orderNumber,
+					customerPhone: String(order.customerPhone),
+				})),
+				{
+					signal: abort.signal,
+					onProgress: setPrintProgress,
+				},
+			);
+
+			const printed = jobs.filter((j) => j.status === "printed").length;
+			const failed = jobs.filter((j) => j.status === "failed");
+			const cancelled = jobs.filter((j) => j.status === "cancelled").length;
+
+			if (failed.length > 0) {
+				toast.error(
+					`${printed} хэвлэсэн, #${failed[0]!.order.orderNumber}: ${failed[0]!.error ?? "алдаа"}`,
+				);
+			} else if (cancelled > 0) {
+				toast.warning(`${printed} хэвлэсэн, ${cancelled} цуцлагдсан`);
+			} else {
+				toast.success(`${printed} утасны шошго хэвлэгдлээ`);
+			}
+		} catch (error) {
+			const message =
+				error instanceof PrinterError
+					? error.message
+					: error instanceof Error
+						? error.message
+						: "Хэвлэхэд алдаа гарлаа";
+			toast.error(message);
+		} finally {
+			setIsPrinting(false);
+			printAbortRef.current = null;
+		}
+	};
+
+	const handleCancelPrint = () => {
+		printAbortRef.current?.abort();
+	};
 
 	return (
 		<>
@@ -339,12 +431,49 @@ export default function OrdersList({
 									<Button
 										variant="ghost"
 										size="sm"
-										disabled={isBatchUpdating}
+										disabled={isBatchUpdating || isPrinting}
 										onClick={clearSelection}
 										className="h-10"
 									>
 										Цэвэрлэх
 									</Button>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="inline-flex">
+												<Button
+													variant="secondary"
+													size="sm"
+													className="h-10 gap-2"
+													disabled={
+														selectedPendingOrders.length === 0 ||
+														isBatchUpdating ||
+														isPrinting
+													}
+													onClick={() => void handlePrintPhones()}
+												>
+													{isPrinting ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Printer className="h-4 w-4" />
+													)}
+													<span className="hidden sm:inline">
+														Утас хэвлэх
+													</span>
+													<span className="sm:hidden">Хэвлэх</span>
+												</Button>
+											</span>
+										</TooltipTrigger>
+										<TooltipContent
+											side="top"
+											className="hidden max-w-xs space-y-1 text-left text-xs sm:block"
+										>
+											<p className="font-bold">M110 утасны шошго</p>
+											<p className="text-muted-foreground">
+												Bluefy хөтөч + Phomemo M110. Сонголт хадгалагдана — дараа
+												нь TU илгээнэ.
+											</p>
+										</TooltipContent>
+									</Tooltip>
 									<div className="flex">
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -383,7 +512,11 @@ export default function OrdersList({
 												<Button
 													size="sm"
 													className="h-10 rounded-l-none px-3"
-													disabled={selectedIds.size === 0 || isBatchUpdating}
+													disabled={
+														selectedIds.size === 0 ||
+														isBatchUpdating ||
+														isPrinting
+													}
 													aria-label="Нэмэлт сонголт"
 												>
 													<ChevronDown className="h-4 w-4" />
@@ -415,6 +548,73 @@ export default function OrdersList({
 				onOpenChange={setIsBatchDialogOpen}
 				onComplete={handleBatchShipComplete}
 			/>
+
+			<Dialog
+				open={isPrinting || printProgress !== null}
+				onOpenChange={(open) => {
+					if (!open && !isPrinting) setPrintProgress(null);
+				}}
+			>
+				<DialogContent className="border-2 border-border bg-card shadow-hard sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="font-heading text-lg">
+							Утасны шошго хэвлэж байна
+						</DialogTitle>
+					</DialogHeader>
+					{printProgress ? (
+						<div className="space-y-3">
+							<p className="font-bold font-heading text-2xl tabular-nums">
+								{printProgress.current} / {printProgress.total}
+							</p>
+							<div className="h-2 w-full border border-border bg-muted">
+								<div
+									className="h-full bg-foreground transition-[width] duration-300"
+									style={{
+										width: `${printProgress.total === 0 ? 0 : (printProgress.jobs.filter((j) => j.status === "printed").length / printProgress.total) * 100}%`,
+									}}
+								/>
+							</div>
+							<ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+								{printProgress.jobs.map((job) => (
+									<li
+										key={job.order.id}
+										className="flex justify-between gap-2 border-border border-b py-1"
+									>
+										<span>
+											#{job.order.orderNumber} · {job.order.customerPhone}
+										</span>
+										<span className="text-muted-foreground shrink-0">
+											{job.status === "printed"
+												? "✓"
+												: job.status === "printing"
+													? "…"
+													: job.status === "failed"
+														? "✗"
+														: job.status === "cancelled"
+															? "цуц"
+															: "—"}
+										</span>
+									</li>
+								))}
+							</ul>
+						</div>
+					) : null}
+					<DialogFooter>
+						{isPrinting ? (
+							<Button variant="secondary" onClick={handleCancelPrint}>
+								Цуцлах
+							</Button>
+						) : (
+							<Button
+								variant="secondary"
+								onClick={() => setPrintProgress(null)}
+							>
+								Хаах
+							</Button>
+						)}
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Batch error dialog */}
 			<Dialog
