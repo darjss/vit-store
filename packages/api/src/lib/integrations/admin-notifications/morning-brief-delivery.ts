@@ -1,13 +1,6 @@
 import { formatMoney } from "./format";
-import {
-	TELEGRAM_CALLBACK_ACTIONS,
-	bindTelegramCallbackData,
-} from "./telegram-callback-data";
-import {
-	sendTelegramText,
-	sendTelegramTextReturningId,
-	setTelegramInlineButtons,
-} from "./telegram";
+import { TELEGRAM_CALLBACK_ACTIONS } from "./telegram-callback-data";
+import { sendTelegramText, sendTelegramTextWithButtons } from "./telegram";
 
 const TELEGRAM_TEXT_LIMIT = 4000;
 
@@ -74,16 +67,13 @@ export const deliverMorningOrderBrief = async (
 		await sendTelegramText(chunk);
 	}
 
-	const actionMessageId = await sendTelegramTextReturningId(
+	await sendTelegramTextWithButtons(
 		`📦 ${orders.length} захиалга — бүгдийг илгээх үү?`,
+		[
+			{
+				text: "📦 Бүгдийг илгээх",
+				callback_data: TELEGRAM_CALLBACK_ACTIONS.SHIP_ALL,
+			},
+		],
 	);
-	await setTelegramInlineButtons(actionMessageId, [
-		{
-			text: "📦 Бүгдийг илгээх",
-			callback_data: bindTelegramCallbackData(
-				TELEGRAM_CALLBACK_ACTIONS.SHIP_ALL,
-				actionMessageId,
-			),
-		},
-	]);
 };
