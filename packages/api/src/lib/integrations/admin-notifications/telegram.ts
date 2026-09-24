@@ -1,8 +1,10 @@
 import { Bot } from "gramio";
+import { logger } from "~/lib/logger";
+import { bindTelegramButtonCallbacks } from "./telegram-callback-data";
 
 type TelegramAdminConfig = {
 	token: string;
-	chatId: string;
+	chatIds: string[];
 };
 
 type ProductImageInput = {
@@ -16,14 +18,14 @@ let initPromise: Promise<void> | undefined;
 
 export const getTelegramAdminConfig = (): TelegramAdminConfig | null => {
 	const token = process.env.TELEGRAM_ADMIN_BOT_TOKEN?.trim();
-	// Allowlist may be comma-separated for inbound (agent); outbound alerts go
-	// to the first id only (the primary notification chat).
-	const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID?.trim()
-		?.split(/[,\s]+/)
+	// Same comma-separated allowlist the agent uses for inbound; outbound
+	// alerts go to every admin in the list.
+	const chatIds = (process.env.TELEGRAM_ADMIN_CHAT_ID ?? "")
+		.split(/[,\s]+/)
 		.map((part) => part.trim())
-		.find((part) => part.length > 0);
-	if (!token || !chatId) return null;
-	return { token, chatId };
+		.filter((part) => part.length > 0);
+	if (!token || chatIds.length === 0) return null;
+	return { token, chatIds };
 };
 
 const getApi = async () => {
@@ -47,13 +49,45 @@ const getApi = async () => {
 	}
 	await initPromise;
 
-	return { api: bot.api, chatId: config.chatId };
+	return { api: bot.api, chatIds: config.chatIds };
+};
+
+// Fan a send out to every admin chat. A single unreachable chat (blocked bot,
+// stale id) must not break or duplicate delivery for the others, so failures
+// are logged per chat and only an all-chat failure throws.
+const forEachChat = async <T>(
+	send: (api: Bot["api"], chatId: string) => Promise<T>,
+): Promise<T[]> => {
+	const { api, chatIds } = await getApi();
+	const results = await Promise.allSettled(
+		chatIds.map(async (chatId) => ({ chatId, value: await send(api, chatId) })),
+	);
+	const delivered: T[] = [];
+	const failed: unknown[] = [];
+	for (const result of results) {
+		if (result.status === "fulfilled") {
+			delivered.push(result.value.value);
+		} else {
+			failed.push(result.reason);
+		}
+	}
+	if (failed.length > 0) {
+		logger.error("telegram admin send failed for some chats", {
+			failedCount: failed.length,
+			chatCount: chatIds.length,
+			error: failed[0],
+		});
+		if (delivered.length === 0) throw failed[0];
+	}
+	return delivered;
 };
 
 const fetchImageBlob = async (photoUrl: string) => {
 	const response = await fetch(photoUrl);
 	if (!response.ok) {
-		throw new Error(`product image fetch failed: ${response.status} ${photoUrl}`);
+		throw new Error(
+			`product image fetch failed: ${response.status} ${photoUrl}`,
+		);
 	}
 	return response.blob();
 };
@@ -64,29 +98,31 @@ export type TelegramInlineButton = {
 };
 
 export const sendTelegramText = async (text: string) => {
-	const { api, chatId } = await getApi();
-	await api.sendMessage({
-		chat_id: chatId,
-		text,
-		link_preview_options: { is_disabled: true },
-	});
+	await forEachChat((api, chatId) =>
+		api.sendMessage({
+			chat_id: chatId,
+			text,
+			link_preview_options: { is_disabled: true },
+		}),
+	);
 };
 
-export const sendTelegramTextReturningId = async (text: string) => {
-	const { api, chatId } = await getApi();
-	const sent = await api.sendMessage({
-		chat_id: chatId,
-		text,
-		link_preview_options: { is_disabled: true },
+export const sendTelegramTextReturningId = async (text: string) =>
+	forEachChat(async (api, chatId) => {
+		const sent = await api.sendMessage({
+			chat_id: chatId,
+			text,
+			link_preview_options: { is_disabled: true },
+		});
+		return { chatId, messageId: sent.message_id };
 	});
-	return sent.message_id;
-};
 
 export const setTelegramInlineButtons = async (
+	chatId: string,
 	messageId: number,
 	buttons: TelegramInlineButton[],
 ) => {
-	const { api, chatId } = await getApi();
+	const { api } = await getApi();
 	await api.editMessageReplyMarkup({
 		chat_id: chatId,
 		message_id: messageId,
@@ -101,8 +137,11 @@ export const setTelegramInlineButtons = async (
 	});
 };
 
-export const clearTelegramInlineButtons = async (messageId: number) => {
-	const { api, chatId } = await getApi();
+export const clearTelegramInlineButtons = async (
+	chatId: string,
+	messageId: number,
+) => {
+	const { api } = await getApi();
 	await api.editMessageReplyMarkup({
 		chat_id: chatId,
 		message_id: messageId,
@@ -114,45 +153,53 @@ export const sendTelegramTextWithButtons = async (
 	text: string,
 	buttons: TelegramInlineButton[],
 ) => {
-	const messageId = await sendTelegramTextReturningId(text);
-	await setTelegramInlineButtons(messageId, buttons);
-	return messageId;
+	const sent = await sendTelegramTextReturningId(text);
+	await Promise.all(
+		sent.map(({ chatId, messageId }) =>
+			setTelegramInlineButtons(
+				chatId,
+				messageId,
+				bindTelegramButtonCallbacks(buttons, messageId),
+			),
+		),
+	);
+	return sent;
 };
 
 export const sendTelegramPhoto = async (photoUrl: string, caption?: string) => {
-	const { api, chatId } = await getApi();
 	const photo = await fetchImageBlob(photoUrl);
-	await api.sendPhoto({
-		chat_id: chatId,
-		photo,
-		...(caption ? { caption } : {}),
-	});
+	await forEachChat((api, chatId) =>
+		api.sendPhoto({
+			chat_id: chatId,
+			photo,
+			...(caption ? { caption } : {}),
+		}),
+	);
 };
 
 const sendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
-	const { api, chatId } = await getApi();
-	await api.sendPhoto({
-		chat_id: chatId,
-		photo: blob,
-		...(caption ? { caption } : {}),
-	});
+	await forEachChat((api, chatId) =>
+		api.sendPhoto({
+			chat_id: chatId,
+			photo: blob,
+			...(caption ? { caption } : {}),
+		}),
+	);
 };
 
 const sendPhotoAlbum = async (blobs: Blob[]) => {
-	const { api, chatId } = await getApi();
-	await api.sendMediaGroup({
-		chat_id: chatId,
-		media: blobs.map((blob) => ({
-			type: "photo" as const,
-			media: blob,
-		})),
-	});
+	await forEachChat((api, chatId) =>
+		api.sendMediaGroup({
+			chat_id: chatId,
+			media: blobs.map((blob) => ({
+				type: "photo" as const,
+				media: blob,
+			})),
+		}),
+	);
 };
 
-const safeSendSinglePhoto = async (
-	blob: Blob,
-	caption: string | undefined,
-) => {
+const safeSendSinglePhoto = async (blob: Blob, caption: string | undefined) => {
 	try {
 		await sendSinglePhoto(blob, caption);
 	} catch {
