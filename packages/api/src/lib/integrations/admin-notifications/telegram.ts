@@ -63,22 +63,23 @@ const forEachChat = async <T>(
 		chatIds.map(async (chatId) => ({ chatId, value: await send(api, chatId) })),
 	);
 	const delivered: T[] = [];
-	const failed: unknown[] = [];
-	for (const result of results) {
+	const failed: Array<{ chatId: string; reason: unknown }> = [];
+	for (const [index, result] of results.entries()) {
 		if (result.status === "fulfilled") {
 			delivered.push(result.value.value);
 		} else {
-			failed.push(result.reason);
+			failed.push({
+				chatId: chatIds[index] ?? "unknown",
+				reason: result.reason,
+			});
 		}
 	}
-	if (failed.length > 0) {
-		logger.error("telegram admin send failed for some chats", {
-			failedCount: failed.length,
-			chatCount: chatIds.length,
-			error: failed[0],
+	for (const failure of failed) {
+		logger.error("telegram.admin_send_failed", failure.reason, {
+			chatId: failure.chatId,
 		});
-		if (delivered.length === 0) throw failed[0];
 	}
+	if (delivered.length === 0 && failed.length > 0) throw failed[0].reason;
 	return delivered;
 };
 
