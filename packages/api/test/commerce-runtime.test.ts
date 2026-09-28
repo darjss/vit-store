@@ -145,15 +145,21 @@ describe("checkout idempotency", () => {
 		expect(fake.commits()).toBe(1);
 	});
 
-	test("a post-commit session failure replays the committed checkout", async () => {
+	test("a committed response-loss replay returns the same order and payment", async () => {
 		const fake = fakeCheckout({ failAccessOnce: true });
 		const first = await executeCheckout(checkoutInput(), fake.dependencies);
 		const replay = await executeCheckout(checkoutInput(), fake.dependencies);
 
 		expect(first.isErr()).toBe(true);
-		if (first.isErr())
+		if (first.isErr()) {
 			expect(first.error._tag).toBe("CheckoutRecoveryRequired");
+			expect(first.error).toMatchObject({ orderNumber: "OR1" });
+		}
 		expect(replay.isOk()).toBe(true);
+		if (replay.isOk()) {
+			expect(replay.value.orderNumber).toBe("OR1");
+			expect(replay.value.paymentNumber).toBe("PAY1");
+		}
 		expect(fake.commits()).toBe(1);
 	});
 

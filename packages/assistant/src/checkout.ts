@@ -1,3 +1,4 @@
+import { checkoutIdempotencyKeySchema } from "@vit/shared";
 import { deliveryFee } from "@vit/shared/constants";
 import { Result } from "better-result";
 import * as v from "valibot";
@@ -71,6 +72,13 @@ export const paymentContextSchema = v.object({
 
 export type PaymentContext = v.InferOutput<typeof paymentContextSchema>;
 
+export const checkoutAttemptSchema = v.strictObject({
+	idempotencyKey: checkoutIdempotencyKeySchema,
+	payloadFingerprint: v.string(),
+});
+
+export type CheckoutAttempt = v.InferOutput<typeof checkoutAttemptSchema>;
+
 // The whole checkout's collected state. Persisted verbatim by the per-session
 // CheckoutStore DO, so it is a plain valibot-validatable record.
 export const checkoutStateSchema = v.object({
@@ -82,6 +90,7 @@ export const checkoutStateSchema = v.object({
 	selectedZoneName: v.optional(v.string()),
 	notes: v.optional(v.string()),
 	payment: v.optional(paymentContextSchema),
+	attempt: v.optional(checkoutAttemptSchema),
 });
 
 export type CheckoutState = v.InferOutput<typeof checkoutStateSchema>;
@@ -100,6 +109,7 @@ export interface CheckoutOrderPayload {
 	addressZoneId: number;
 	notes?: string;
 	products: { productId: number; quantity: number }[];
+	idempotencyKey: string;
 }
 
 // ── Phone validation ─────────────────────────────────────────────────────────
@@ -212,20 +222,19 @@ export const applyNotes = (
 	};
 };
 
-// Claims the irreversible order-creation step BEFORE `createOrder` runs. The
-// claim is persisted first so any in-turn/durable replay after `createOrder`
-// but before `created` is committed observes `creating` and refuses to mint a
-// second order (order creation has no idempotency key). Non-retryable: a stuck
-// `creating` is the safe failure mode versus a duplicate order.
+// Claims the order-creation step before `createOrder` runs. The persisted
+// attempt key makes a replay safe if the operation commits but its response is
+// lost.
 export const markCreating = (state: CheckoutState): CheckoutState => ({
 	...state,
 	phase: "creating",
 });
 
-export const markCreated = (state: CheckoutState): CheckoutState => ({
-	...state,
-	phase: "created",
-});
+export const markCreated = (state: CheckoutState): CheckoutState => {
+	const completed = { ...state };
+	delete completed.attempt;
+	return { ...completed, phase: "created" };
+};
 
 // Records the order's payment identifiers on the created checkout so the
 // post-order Messenger payment surface (#25) can build the QPay link and, later,
@@ -263,30 +272,85 @@ export const isReadyToCreate = (state: CheckoutState): boolean =>
 	state.address.length > 0 &&
 	state.selectedZoneId !== undefined;
 
-// Builds the exact `order.addOrder` input from the checkout state and the
-// CONFIRMED cart snapshot. Missing customer input is an expected typed failure;
-// persisted impossible shapes and other defects still throw at their boundary.
-export const buildCheckoutOrderPayload = (state: CheckoutState, cart: Cart) => {
+type CheckoutPayloadFields = Omit<CheckoutOrderPayload, "idempotencyKey">;
+
+const buildCheckoutPayloadFields = (state: CheckoutState, cart: Cart) => {
 	if (state.phone === undefined) {
 		return Result.err(checkoutFailure({ _tag: "InvalidPhone" }));
 	}
-	if (state.address === undefined || state.address.length === 0) {
+	if (state.address === undefined || state.address.trim().length === 0) {
 		return Result.err(checkoutFailure({ _tag: "AddressRequired" }));
 	}
 	if (state.selectedZoneId === undefined) {
 		return Result.err(checkoutFailure({ _tag: "DeliveryZoneNotSelected" }));
 	}
-	const payload: CheckoutOrderPayload = {
-		phoneNumber: state.phone,
-		address: state.address,
+	const quantities = new Map<number, number>();
+	for (const item of cart.items) {
+		quantities.set(
+			item.productId,
+			(quantities.get(item.productId) ?? 0) + item.quantity,
+		);
+	}
+	const notes = state.notes?.trim();
+	const payload: CheckoutPayloadFields = {
+		phoneNumber: state.phone.trim(),
+		address: state.address.trim(),
 		addressZoneId: state.selectedZoneId,
-		...(state.notes ? { notes: state.notes } : {}),
-		products: cart.items.map((item) => ({
-			productId: item.productId,
-			quantity: item.quantity,
-		})),
+		...(notes ? { notes } : {}),
+		products: [...quantities]
+			.map(([productId, quantity]) => ({ productId, quantity }))
+			.sort((left, right) => left.productId - right.productId),
 	};
 	return Result.ok(payload);
+};
+
+const checkoutPayloadFingerprint = (payload: CheckoutPayloadFields) =>
+	JSON.stringify({
+		phoneNumber: payload.phoneNumber,
+		address: payload.address,
+		addressZoneId: payload.addressZoneId,
+		notes: payload.notes ?? null,
+		products: payload.products,
+	});
+
+export const prepareCheckoutAttempt = (
+	state: CheckoutState,
+	cart: Cart,
+	generateIdempotencyKey: () => string,
+) => {
+	const fields = buildCheckoutPayloadFields(state, cart);
+	if (fields.status === "error") return fields;
+
+	const payloadFingerprint = checkoutPayloadFingerprint(fields.value);
+	return Result.ok(
+		state.attempt?.payloadFingerprint === payloadFingerprint
+			? state
+			: {
+					...state,
+					attempt: {
+						idempotencyKey: generateIdempotencyKey(),
+						payloadFingerprint,
+					},
+				},
+	);
+};
+
+// Builds the canonical v2 order input from a prepared checkout attempt.
+export const buildCheckoutOrderPayload = (state: CheckoutState, cart: Cart) => {
+	const fields = buildCheckoutPayloadFields(state, cart);
+	if (fields.status === "error") return fields;
+
+	const payloadFingerprint = checkoutPayloadFingerprint(fields.value);
+	if (
+		state.attempt === undefined ||
+		state.attempt.payloadFingerprint !== payloadFingerprint
+	) {
+		throw new Error("Checkout attempt was not prepared for this payload.");
+	}
+	return Result.ok({
+		...fields.value,
+		idempotencyKey: state.attempt.idempotencyKey,
+	});
 };
 
 // ── Formatting (Mongolian, channel-neutral text) ─────────────────────────────

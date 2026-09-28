@@ -24,6 +24,7 @@ import {
 	initialCheckoutState,
 	markCreated,
 	markCreating,
+	prepareCheckoutAttempt,
 	setZoneCandidates,
 	type ZoneCandidate,
 } from "./checkout";
@@ -60,6 +61,7 @@ export interface CheckoutToolDeps {
 	createOrder: (
 		payload: CheckoutOrderPayload,
 	) => Promise<BetterResult<CreatedOrder, OrderCreationFailure>>;
+	generateIdempotencyKey?: () => string;
 	sendText: (text: string) => Promise<BetterResult<unknown, DeliveryFailure>>;
 	sendPaymentChoices?: (
 		order: CreatedOrder,
@@ -133,7 +135,6 @@ const phaseStates = {
 
 type PlaceOrderDecision =
 	| { _tag: "Create" }
-	| { _tag: "AlreadyCreating" }
 	| { _tag: "ValidateReadiness" }
 	| { _tag: "NotStarted" };
 
@@ -147,7 +148,7 @@ const decidePlaceOrder = (phase: CheckoutPhase): PlaceOrderDecision =>
 		confirming_zone: () => ({ _tag: "ValidateReadiness" }),
 		collecting_notes: () => ({ _tag: "ValidateReadiness" }),
 		confirming: () => ({ _tag: "Create" }),
-		creating: () => ({ _tag: "AlreadyCreating" }),
+		creating: () => ({ _tag: "Create" }),
 		created: () => ({ _tag: "NotStarted" }),
 	});
 
@@ -179,6 +180,17 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		const saved = await deps.saveCheckout(state);
 		await deliverBestEffort(deps.sendText(prompt));
 		return { ok: true as const, ...facts(saved) };
+	};
+
+	const prepareAttempt = async (state: CheckoutState, cart: Cart) => {
+		const prepared = prepareCheckoutAttempt(
+			state,
+			cart,
+			deps.generateIdempotencyKey ??
+				(() => `checkout_${crypto.randomUUID()}`),
+		);
+		if (prepared.status === "error") return prepared;
+		return Result.ok(await deps.saveCheckout(prepared.value));
 	};
 
 	const requireCheckout = async () => {
@@ -257,11 +269,15 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				return reportFailure(selected.error, withCandidates);
 			}
 			const confirming = applyNotes(selected.value, undefined);
-			const saved = await deps.saveCheckout(confirming);
+			const cart = await deps.getCart();
+			const prepared = await prepareAttempt(confirming, cart);
+			if (prepared.status === "error") {
+				return reportFailure(prepared.error, confirming);
+			}
 			await deliverBestEffort(
-				deps.sendText(formatOrderSummary(saved, await deps.getCart())),
+				deps.sendText(formatOrderSummary(prepared.value, cart)),
 			);
-			return { ok: true as const, ...facts(saved) };
+			return { ok: true as const, ...facts(prepared.value) };
 		},
 	});
 
@@ -281,11 +297,15 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				return reportFailure(selected.error, required.value);
 			}
 			const confirming = applyNotes(selected.value, undefined);
-			const saved = await deps.saveCheckout(confirming);
+			const cart = await deps.getCart();
+			const prepared = await prepareAttempt(confirming, cart);
+			if (prepared.status === "error") {
+				return reportFailure(prepared.error, confirming);
+			}
 			await deliverBestEffort(
-				deps.sendText(formatOrderSummary(saved, await deps.getCart())),
+				deps.sendText(formatOrderSummary(prepared.value, cart)),
 			);
-			return { ok: true as const, ...facts(saved) };
+			return { ok: true as const, ...facts(prepared.value) };
 		},
 	});
 
@@ -298,13 +318,16 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		async run({ input }) {
 			const required = await requireCheckout();
 			if (required.status === "error") return reportFailure(required.error);
-			const saved = await deps.saveCheckout(
-				applyNotes(required.value, input.notes),
-			);
+			const confirming = applyNotes(required.value, input.notes);
+			const cart = await deps.getCart();
+			const prepared = await prepareAttempt(confirming, cart);
+			if (prepared.status === "error") {
+				return reportFailure(prepared.error, confirming);
+			}
 			await deliverBestEffort(
-				deps.sendText(formatOrderSummary(saved, await deps.getCart())),
+				deps.sendText(formatOrderSummary(prepared.value, cart)),
 			);
-			return { ok: true as const, ...facts(saved) };
+			return { ok: true as const, ...facts(prepared.value) };
 		},
 	});
 
@@ -314,12 +337,16 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 		if (guard.status === "error") {
 			return reportFailure(guard.error, state);
 		}
-		const payload = buildCheckoutOrderPayload(state, cart);
+		const prepared = await prepareAttempt(state, cart);
+		if (prepared.status === "error") {
+			return reportFailure(prepared.error, state);
+		}
+		const payload = buildCheckoutOrderPayload(prepared.value, cart);
 		if (payload.status === "error") {
-			return reportFailure(payload.error, state);
+			return reportFailure(payload.error, prepared.value);
 		}
 
-		const claimed = markCreating(state);
+		const claimed = markCreating(prepared.value);
 		await deps.saveCheckout(claimed);
 		const created = await deps.createOrder(payload.value);
 		if (created.status === "error") {
@@ -368,21 +395,20 @@ export const buildCheckoutTools = (deps: CheckoutToolDeps) => {
 				decidePlaceOrder(state.phase),
 				"_tag",
 			)({
-				AlreadyCreating: () =>
-					reportFailure({ _tag: "CheckoutAlreadyCreating" }, state),
 				NotStarted: () => reportFailure({ _tag: "CheckoutNotStarted" }, state),
 				ValidateReadiness: async () => {
-					const payload = buildCheckoutOrderPayload(
-						state,
-						await deps.getCart(),
-					);
-					if (payload.status === "error") {
-						return reportFailure(payload.error, state);
+					const cart = await deps.getCart();
+					const prepared = await prepareAttempt(state, cart);
+					if (prepared.status === "error") {
+						return reportFailure(prepared.error, state);
 					}
 					await deliverBestEffort(
-						deps.sendText(formatOrderSummary(state, await deps.getCart())),
+						deps.sendText(formatOrderSummary(prepared.value, cart)),
 					);
-					return failure({ _tag: "SummaryNotConfirmed" }, state);
+					return failure(
+						{ _tag: "SummaryNotConfirmed" },
+						prepared.value,
+					);
 				},
 				Create: () => createConfirmedOrder(state),
 			});

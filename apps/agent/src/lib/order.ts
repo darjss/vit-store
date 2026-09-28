@@ -6,18 +6,18 @@ import type {
 	CreatedOrder,
 	DeliveryZoneInput,
 } from "@vit/assistant";
-import { Result } from "better-result";
+import {
+	checkoutCreatedSchema,
+	checkoutErrorSchema,
+	deserializeResultOrThrow,
+	type CheckoutError,
+} from "@vit/shared";
+import { Result, ResultDeserializationError } from "better-result";
 import { match } from "dismatch";
 import * as v from "valibot";
 import { storeClient, withTimeout } from "./store-client";
 
 const ORDER_FETCH_TIMEOUT_MS = 20_000;
-
-const createdOrderSchema = v.strictObject({
-	orderNumber: v.string(),
-	paymentNumber: v.nullable(v.string()),
-	checkoutToken: v.nullable(v.string()),
-}) satisfies v.GenericSchema<unknown, CreatedOrder>;
 
 const deliveryZonesWireSchema = v.array(
 	v.strictObject({ Id: v.number(), zoneName: v.string() }),
@@ -53,6 +53,7 @@ const classifyOrderFailure = (
 	}
 	if (
 		error instanceof TypeError ||
+		ResultDeserializationError.is(error) ||
 		(error instanceof DOMException && error.name === "TimeoutError")
 	) {
 		return { _tag: "AmbiguousOrderFailure" };
@@ -74,8 +75,8 @@ const publicOrderFailure = (
 		}),
 		AmbiguousOrderFailure: () => ({
 			_tag: "OrderCreationFailed",
-			retryable: false,
-			recovery: { _tag: "CheckOrderHistory" },
+			retryable: true,
+			recovery: { _tag: "Retry" },
 		}),
 		PermanentOrderFailure: () => ({
 			_tag: "OrderCreationFailed",
@@ -84,14 +85,56 @@ const publicOrderFailure = (
 		}),
 	});
 
-export const createOrder = async (
+const checkoutFailure = (error: CheckoutError): OrderCreationFailure =>
+	match(
+		error,
+		"_tag",
+	)<OrderCreationFailure>({
+		CartEmpty: () => publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		CartChanged: () => publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		InvalidCheckoutDetails: () =>
+			publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		ProductUnavailable: () =>
+			publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		InsufficientStock: () =>
+			publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		DeliveryUnavailable: () =>
+			publicOrderFailure({ _tag: "RetryableOrderFailure" }),
+		CheckoutKeyConflict: () =>
+			publicOrderFailure({ _tag: "PermanentOrderFailure" }),
+		CheckoutRecoveryRequired: () =>
+			publicOrderFailure({ _tag: "RetryableOrderFailure" }),
+	});
+
+type AddOrderMutation = (
 	payload: CheckoutOrderPayload,
+	signal: AbortSignal,
+) => Promise<unknown>;
+
+export const createOrderWithMutation = async (
+	payload: CheckoutOrderPayload,
+	mutate: AddOrderMutation,
 	outerSignal?: AbortSignal,
 ) => {
 	let data: unknown;
 	try {
-		data = await storeClient().order.addOrder.mutate(payload, {
-			signal: withTimeout(outerSignal, ORDER_FETCH_TIMEOUT_MS),
+		data = await mutate(
+			payload,
+			withTimeout(outerSignal, ORDER_FETCH_TIMEOUT_MS),
+		);
+		const result = deserializeResultOrThrow(data, {
+			value: checkoutCreatedSchema,
+			error: checkoutErrorSchema,
+		});
+		if (result.status === "error") {
+			return Result.err<CreatedOrder, OrderCreationFailure>(
+				checkoutFailure(result.error),
+			);
+		}
+		return Result.ok<CreatedOrder, OrderCreationFailure>({
+			orderNumber: result.value.orderNumber,
+			paymentNumber: result.value.paymentNumber,
+			checkoutToken: result.value.checkoutToken,
 		});
 	} catch (error) {
 		const failure = classifyOrderFailure(error);
@@ -100,15 +143,18 @@ export const createOrder = async (
 			publicOrderFailure(failure),
 		);
 	}
-
-	const parsed = v.safeParse(createdOrderSchema, data);
-	if (!parsed.success) {
-		return Result.err<CreatedOrder, OrderCreationFailure>(
-			publicOrderFailure({ _tag: "AmbiguousOrderFailure" }),
-		);
-	}
-	return Result.ok<CreatedOrder, OrderCreationFailure>(parsed.output);
 };
+
+export const createOrder = (
+	payload: CheckoutOrderPayload,
+	outerSignal?: AbortSignal,
+) =>
+	createOrderWithMutation(
+		payload,
+		(input, signal) =>
+			storeClient().v2.order.addOrder.mutate(input, { signal }),
+		outerSignal,
+	);
 
 type DeliveryZoneFailure = Extract<
 	AiOperationError,
