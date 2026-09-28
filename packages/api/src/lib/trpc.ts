@@ -4,7 +4,6 @@ import superjson from "superjson";
 import * as v from "valibot";
 import { createKvCacheKey } from "~/lib/cache/kv-cache-key";
 import type { Context } from "~/lib/context";
-import { summarizeTrpcPayload, toError } from "~/lib/logging";
 import { adminAuth } from "~/lib/session/admin";
 import { isPhoneVerifiedCustomer } from "~/lib/session/checkout-access";
 import { auth } from "~/lib/session/store";
@@ -49,7 +48,7 @@ const customerAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, phone: session.user.phone },
+		user: { id: session.user.id },
 		user_type: "customer",
 	});
 	return next({ ctx: { ...ctx, session } });
@@ -90,7 +89,7 @@ const adminAuthMiddleware = t.middleware(async ({ ctx, next }) => {
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, email: session.user.username },
+		user: { id: session.user.id },
 		user_type: "admin",
 	});
 	return next({ ctx: { ...ctx, session } });
@@ -138,76 +137,56 @@ const errorHandlingMiddleware = t.middleware(async ({ next }) => {
 	}
 });
 
+const safePayloadCounts = (value: unknown) => {
+	if (Array.isArray(value)) return { items: value.length };
+	if (value === null || typeof value !== "object") return {};
+
+	const values = Object.values(value);
+	const listItems = values.reduce(
+		(total, item) => total + (Array.isArray(item) ? item.length : 0),
+		0,
+	);
+	return {
+		fields: values.length,
+		...(listItems > 0 ? { list_items: listItems } : {}),
+	};
+};
+
 const loggingMiddleware = t.middleware(
-	async ({ ctx, next, path, type, input }) => {
+	async ({ ctx, next, path, type, getRawInput }) => {
 		const startTime = Date.now();
+		const input = await getRawInput();
 		const procedureType =
 			(type as string | undefined)?.toUpperCase() || "PROCEDURE";
-		const safeInput =
-			path === "product.subscribeToRestock" &&
-			input &&
-			typeof input === "object" &&
-			"productId" in input &&
-			"contacts" in input &&
-			Array.isArray(input.contacts)
-				? {
-						product_id: input.productId,
-						contact_count: input.contacts.length,
-						channels: input.contacts.map((contact) =>
-							contact && typeof contact === "object" && "channel" in contact
-								? contact.channel
-								: "unknown",
-						),
-					}
-				: summarizeTrpcPayload(input);
 
-		ctx.log.set({
-			trpc: {
-				procedure: path,
-				type: procedureType,
-				input: safeInput,
-			},
-		});
+		const setTrpcContext = (outcome: "success" | "error", output?: unknown) => {
+			ctx.log.set({
+				correlation_id: ctx.correlationId,
+				trpc: {
+					path,
+					type: procedureType,
+					duration_ms: Date.now() - startTime,
+					outcome,
+					counts: {
+						input: safePayloadCounts(input),
+						...(outcome === "success"
+							? { output: safePayloadCounts(output) }
+							: {}),
+					},
+				},
+			});
+		};
 
 		try {
 			const result = await next();
-			const durationMs = Date.now() - startTime;
-			const resultData =
-				result && typeof result === "object" && "data" in result
-					? (result as { data?: unknown }).data
-					: result;
-
-			ctx.log.set({
-				trpc: {
-					procedure: path,
-					type: procedureType,
-					duration_ms: durationMs,
-					outcome: "success",
-					output: summarizeTrpcPayload(resultData),
-				},
-			});
-
+			if (!result.ok) {
+				setTrpcContext("error");
+				return result;
+			}
+			setTrpcContext("success", result.data);
 			return result;
 		} catch (error) {
-			const durationMs = Date.now() - startTime;
-			const fields = {
-				event: "trpc.procedure_error",
-				trpc: {
-					procedure: path,
-					type: procedureType,
-					duration_ms: durationMs,
-					outcome: "error",
-					input: safeInput,
-					error_code: error instanceof TRPCError ? error.code : undefined,
-				},
-			};
-
-			if (ctx.log.getContext().error === undefined) {
-				ctx.log.error(toError(error), fields);
-			} else {
-				ctx.log.set(fields);
-			}
-
+			setTrpcContext("error");
 			throw error;
 		}
 	},

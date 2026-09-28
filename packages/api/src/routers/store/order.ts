@@ -1,20 +1,21 @@
 import {
+	type CheckoutError,
 	checkoutCreatedSchema,
 	checkoutErrorSchema,
 	newOrderSchema,
 	orderAccessErrorSchema,
 	orderTrackingSchema,
-	type CheckoutError,
+	serializeResult,
 } from "@vit/shared";
 import { match } from "dismatch";
 import * as v from "valibot";
-import { createCheckoutOrder } from "~/operations/checkout";
-import { getOrder } from "~/operations/order";
-import { type LegacyTrpcError, toLegacyTrpc } from "~/result/legacy-trpc";
-import { serializeResult } from "@vit/shared";
 import { getDeliveryAddressZones } from "~/lib/integrations/delivery";
 import { publicProcedure, router, verifiedCustomerProcedure } from "~/lib/trpc";
+import { createCheckoutOrder } from "~/operations/checkout";
+import { getOrder } from "~/operations/order";
+import { serializeOperationResult } from "~/operations/serialize-operation-result";
 import { orderQueries } from "~/queries/orders";
+import { type LegacyTrpcError, toLegacyTrpc } from "~/result/legacy-trpc";
 
 const checkoutLegacyError = (error: CheckoutError) =>
 	match(
@@ -111,10 +112,12 @@ export const orderV2 = router({
 	addOrder: publicProcedure
 		.input(newOrderSchema)
 		.mutation(async ({ input, ctx }) =>
-			serializeResult(await createCheckoutOrder(ctx, input), {
-				value: checkoutCreatedSchema,
-				error: checkoutErrorSchema,
-			}),
+			serializeOperationResult(
+				ctx,
+				await createCheckoutOrder(ctx, input),
+				{ value: checkoutCreatedSchema, error: checkoutErrorSchema },
+				{ operation: "store.checkout.create", error_layer: "domain" },
+			),
 		),
 	getOrderByOrderNumber: publicProcedure
 		.input(orderInputSchema)

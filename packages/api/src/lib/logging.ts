@@ -67,7 +67,3 @@ export function summarizeLogValue(value: unknown, depth = 0): unknown {
 	}
 	return result;
 }
-
-export function summarizeTrpcPayload(value: unknown): unknown {
-	return summarizeLogValue(value);
-}
