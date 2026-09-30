@@ -1,49 +1,35 @@
 import type { ExtractedProductData } from "@vit/shared";
 import { Image } from "@unpic/react";
-import {
-	AlertCircle,
-	CheckCircle2,
-	ExternalLink,
-	X,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface AIProductPreviewProps {
 	data: ExtractedProductData;
+	onCancel: () => void;
 	onConfirm: () => void;
 	onEdit: () => void;
-	onCancel: () => void;
 }
 
-export function AIProductPreview({
-	data,
-	onConfirm,
-	onEdit,
-	onCancel,
-}: AIProductPreviewProps) {
+export function AIProductPreview({ data, onCancel, onConfirm, onEdit }: AIProductPreviewProps) {
 	return (
-		<Card className="overflow-hidden border-2 border-border bg-card shadow-hard">
-			<div className="flex items-center justify-between border-border border-b-2 bg-green-500 px-4 py-3">
+		<Card className="border-border bg-card shadow-hard overflow-hidden border-2">
+			<div className="border-border flex items-center justify-between border-b-2 bg-green-500 px-4 py-3">
 				<div className="flex items-center gap-2">
 					<div className="flex h-8 w-8 items-center justify-center border-2 border-white/30 bg-white/10">
 						<CheckCircle2 className="h-4 w-4 text-white" />
 					</div>
 					<div>
-						<h3 className="font-bold font-heading text-white">
-							Амжилттай татлаа!
-						</h3>
-						<p className="text-white/70 text-xs">
-							Мэдээллийг шалгаад батлана уу
-						</p>
+						<h3 className="font-heading font-bold text-white">Амжилттай татлаа!</h3>
+						<p className="text-xs text-white/70">Мэдээллийг шалгаад батлана уу</p>
 					</div>
 				</div>
 				<Button
+					className="h-8 w-8 text-white hover:bg-white/10"
+					onClick={onCancel}
+					size="icon"
 					type="button"
 					variant="ghost"
-					size="icon"
-					onClick={onCancel}
-					className="h-8 w-8 text-white hover:bg-white/10"
 				>
 					<X className="h-4 w-4" />
 				</Button>
@@ -54,9 +40,7 @@ export function AIProductPreview({
 					<div className="space-y-2 rounded-none border-2 border-yellow-500 bg-yellow-500/10 p-3">
 						<div className="flex items-center gap-2">
 							<AlertCircle className="h-4 w-4 text-yellow-600" />
-							<span className="font-bold text-sm text-yellow-700">
-								Зарим мэдээлэл дутуу байна
-							</span>
+							<span className="text-sm font-bold text-yellow-700">Зарим мэдээлэл дутуу байна</span>
 						</div>
 						<ul className="space-y-1 text-xs text-yellow-700">
 							{data.errors.map((error, i) => (
@@ -71,21 +55,21 @@ export function AIProductPreview({
 						<div className="flex gap-2 overflow-x-auto pb-2">
 							{data.images.slice(0, 5).map((img, i) => (
 								<div
+									className="border-border bg-muted relative h-20 w-20 shrink-0 overflow-hidden border-2"
 									key={i}
-									className="relative h-20 w-20 shrink-0 overflow-hidden border-2 border-border bg-muted"
 								>
 									<Image
-										src={img.url}
 										alt={`Бүтээгдэхүүн ${i + 1}`}
-										width={80}
-										height={80}
 										className="h-full w-full object-cover"
+										height={80}
+										src={img.url}
+										width={80}
 									/>
 								</div>
 							))}
 							{data.images.length > 5 && (
-								<div className="flex h-20 w-20 shrink-0 items-center justify-center border-2 border-border border-dashed bg-muted/50">
-									<span className="font-bold text-muted-foreground text-sm">
+								<div className="border-border bg-muted/50 flex h-20 w-20 shrink-0 items-center justify-center border-2 border-dashed">
+									<span className="text-muted-foreground text-sm font-bold">
 										+{data.images.length - 5}
 									</span>
 								</div>
@@ -94,37 +78,35 @@ export function AIProductPreview({
 					)}
 
 					<div className="grid gap-2 sm:grid-cols-2">
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Нэр (EN)
 							</p>
-							<p className="font-medium text-sm">{data.name}</p>
+							<p className="text-sm font-medium">{data.name}</p>
 						</div>
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Нэр (MN)
 							</p>
-							<p className="font-medium text-sm">{data.name_mn}</p>
+							<p className="text-sm font-medium">{data.name_mn}</p>
 						</div>
 					</div>
 
 					<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Брэнд
 							</p>
-							<p className="truncate font-medium text-sm">
+							<p className="truncate text-sm font-medium">
 								{data.brand || "-"}
-								{data.brandId && (
-									<span className="ml-1 text-green-600 text-xs">✓</span>
-								)}
+								{data.brandId && <span className="ml-1 text-xs text-green-600">✓</span>}
 							</p>
 						</div>
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Ангилал
 							</p>
-							<p className="truncate font-medium text-sm">
+							<p className="truncate text-sm font-medium">
 								{data.categoryId ? (
 									<span className="text-green-600">авто ✓</span>
 								) : (
@@ -132,37 +114,35 @@ export function AIProductPreview({
 								)}
 							</p>
 						</div>
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Хэмжээ
 							</p>
-							<p className="truncate font-medium text-sm">{data.amount}</p>
+							<p className="truncate text-sm font-medium">{data.amount}</p>
 						</div>
-						<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-							<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+						<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+							<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 								Хүч
 							</p>
-							<p className="truncate font-medium text-sm">{data.potency}</p>
+							<p className="truncate text-sm font-medium">{data.potency}</p>
 						</div>
 					</div>
 
 					{(data.amazonPriceUsd != null || data.calculatedPriceMnt != null) && (
 						<div className="grid grid-cols-2 gap-2">
-							<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-								<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+							<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+								<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 									Amazon үнэ (USD)
 								</p>
-								<p className="truncate font-medium text-sm">
-									{data.amazonPriceUsd != null
-										? `$${data.amazonPriceUsd.toFixed(2)}`
-										: "—"}
+								<p className="truncate text-sm font-medium">
+									{data.amazonPriceUsd != null ? `$${data.amazonPriceUsd.toFixed(2)}` : "—"}
 								</p>
 							</div>
-							<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-								<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+							<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+								<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 									Тооцсон үнэ (MNT)
 								</p>
-								<p className="truncate font-medium text-sm">
+								<p className="truncate text-sm font-medium">
 									{data.calculatedPriceMnt != null
 										? `${data.calculatedPriceMnt.toLocaleString("en-US")}`
 										: "—"}
@@ -171,8 +151,8 @@ export function AIProductPreview({
 						</div>
 					)}
 
-					<div className="space-y-1 rounded-none border-2 border-border bg-muted/30 p-2">
-						<p className="font-bold text-[10px] text-muted-foreground uppercase tracking-wide">
+					<div className="border-border bg-muted/30 space-y-1 rounded-none border-2 p-2">
+						<p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">
 							Тайлбар
 						</p>
 						<p className="line-clamp-3 text-sm">{data.description}</p>
@@ -180,10 +160,10 @@ export function AIProductPreview({
 
 					{data.sourceUrl && (
 						<a
+							className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
 							href={data.sourceUrl}
-							target="_blank"
 							rel="noopener noreferrer"
-							className="flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground"
+							target="_blank"
 						>
 							<ExternalLink className="h-3 w-3" />
 							<span className="truncate">{data.sourceUrl}</span>
@@ -192,23 +172,13 @@ export function AIProductPreview({
 				</div>
 
 				<div className="flex gap-2">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={onCancel}
-						className="flex-1"
-					>
+					<Button className="flex-1" onClick={onCancel} type="button" variant="outline">
 						Болих
 					</Button>
-					<Button
-						type="button"
-						variant="secondary"
-						onClick={onEdit}
-						className="flex-1"
-					>
+					<Button className="flex-1" onClick={onEdit} type="button" variant="secondary">
 						Засах
 					</Button>
-					<Button type="button" onClick={onConfirm} className="flex-1">
+					<Button className="flex-1" onClick={onConfirm} type="button">
 						Баталж форм руу
 					</Button>
 				</div>

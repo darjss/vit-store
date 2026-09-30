@@ -16,18 +16,17 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown",
+		"build": "vp pack",
 		"dev": "echo 'Shared package uses source files directly - no dev build needed'"
 	},
+	"dependencies": {
+		"drizzle-orm": "catalog:",
+		"valibot": "^1.1.0"
+	},
 	"devDependencies": {
-		"tsdown": "catalog:",
 		"typescript": "catalog:"
 	},
 	"peerDependencies": {
 		"typescript": "^7"
-	},
-	"dependencies": {
-		"valibot": "^1.1.0",
-		"drizzle-orm": "catalog:"
 	}
 }

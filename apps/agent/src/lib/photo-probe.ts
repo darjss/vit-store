@@ -1,8 +1,5 @@
-import {
-	buildPhotoIdentifyTool,
-	formatProductCards,
-	type ProductCard,
-} from "@vit/assistant";
+import { buildPhotoIdentifyTool, formatProductCards, type ProductCard } from "@vit/assistant";
+import * as v from "valibot";
 import { searchAssistantProducts } from "./catalog";
 import { loadInboundImage, stageInboundImage } from "./messenger-inbound";
 import { buildKimiVision } from "./vision";
@@ -25,29 +22,24 @@ export interface PhotoProbeEnv {
 
 export interface PhotoProbeInput {
 	imageUrl: string;
-	sessionId?: string;
-	messageId?: string;
 	limit?: number;
+	messageId?: string;
+	sessionId?: string;
 }
 
-export interface PhotoProbeResult {
-	key: string;
-	contentType: string;
-	size: number;
-	facts: string;
-	queries: string[];
-	usedQuery?: string;
-	matchCount: number;
-	cards: ProductCard[];
-	searchError?: string;
-}
+export const photoProbeResultSchema = v.object({
+	cards: v.array(v.looseObject({})),
+	contentType: v.string(),
+	facts: v.string(),
+	key: v.string(),
+	matchCount: v.number(),
+	queries: v.array(v.string()),
+	searchError: v.optional(v.string()),
+	size: v.number(),
+	usedQuery: v.optional(v.string()),
+});
 
-type IdentifyOutput = {
-	imageKey: string;
-	available: boolean;
-	facts: string;
-	queries: string[];
-};
+export type PhotoProbeResult = v.InferOutput<typeof photoProbeResultSchema>;
 
 export async function runPhotoProbe(
 	env: PhotoProbeEnv,
@@ -64,7 +56,7 @@ export async function runPhotoProbe(
 	const messageId = input.messageId ?? "probe-message";
 	const staged = await stageInboundImage(
 		bucket,
-		{ sessionId, messageId, index: 0 },
+		{ index: 0, messageId, sessionId },
 		input.imageUrl,
 	);
 	if (staged === undefined) {
@@ -76,21 +68,18 @@ export async function runPhotoProbe(
 		loadImage: (key) => loadInboundImage(bucket, key),
 		runVision: buildKimiVision(env.AI),
 	});
-	const identified = (await tool.run({
+	const identified = await tool.run({
 		input: { imageKey: staged.key },
-	})) as IdentifyOutput;
+	});
 
 	// Feed the top suggested query into the SAME #19 search + card formatter.
 	const usedQuery = identified.queries[0];
-	let cards: ProductCard[] = [];
+	let cards: Array<ProductCard> = [];
 	let matchCount = 0;
 	let searchError: string | undefined;
 	if (usedQuery) {
 		try {
-			const products = await searchAssistantProducts(
-				usedQuery,
-				input.limit ?? 8,
-			);
+			const products = await searchAssistantProducts(usedQuery, input.limit ?? 8);
 			matchCount = products.length;
 			cards = formatProductCards(products);
 		} catch (error) {
@@ -99,14 +88,14 @@ export async function runPhotoProbe(
 	}
 
 	return {
-		key: staged.key,
-		contentType: staged.contentType,
-		size: staged.size,
-		facts: identified.facts,
-		queries: identified.queries,
-		usedQuery,
-		matchCount,
 		cards,
+		contentType: staged.contentType,
+		facts: identified.facts,
+		key: staged.key,
+		matchCount,
+		queries: identified.queries,
 		searchError,
+		size: staged.size,
+		usedQuery,
 	};
 }

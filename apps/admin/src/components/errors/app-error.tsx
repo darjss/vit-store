@@ -1,12 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	ChevronDown,
-	Home,
-	RotateCcw,
-	TriangleAlert,
-} from "lucide-react";
+import { ArrowLeft, ChevronDown, Home, RotateCcw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
+import { formatAppErrorDisplay } from "@/lib/app-error-display";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,27 +15,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/text";
 
 interface AppErrorProps {
-	error: unknown;
+	error: Error | string;
 }
 
 export default function AppError({ error }: AppErrorProps) {
 	const [open, setOpen] = useState(false);
-	const { message, stack, raw } = useMemo(() => {
-		if (error instanceof Error) {
-			return {
-				message: error.message,
-				stack: error.stack || "",
-				raw: String(error),
-			};
-		}
-		try {
-			const asString =
-				typeof error === "string" ? error : JSON.stringify(error, null, 2);
-			return { message: asString, stack: "", raw: asString };
-		} catch {
-			return { message: "Тодорхойгүй алдаа.", stack: "", raw: String(error) };
-		}
-	}, [error]);
+	const { message, raw, stack } = useMemo(() => formatAppErrorDisplay(error), [error]);
 
 	return (
 		<div className="relative grid min-h-screen place-items-center p-6">
@@ -54,34 +34,30 @@ export default function AppError({ error }: AppErrorProps) {
 						radial-gradient(circle at center, #FFF991 0%, transparent 70%)
 					`,
 					backgroundSize: "40px 40px, 40px 40px, 100% 100%",
-					opacity: 0.6,
 					mixBlendMode: "multiply",
+					opacity: 0.6,
 				}}
 			/>
-			<div className="relative z-10 w-full max-w-2xl space-y-4 rounded-base border-2 border-border bg-card p-6 shadow-shadow">
+			<div className="rounded-base border-border bg-card shadow-shadow relative z-10 w-full max-w-2xl space-y-4 border-2 p-6">
 				<div className="flex items-start gap-3">
-					<div className="rounded-base border-2 border-border bg-red-300 p-2 text-red-900">
+					<div className="rounded-base border-border border-2 bg-red-300 p-2 text-red-900">
 						<TriangleAlert className="h-6 w-6" />
 					</div>
 					<div className="space-y-1">
 						<Text as="h2">Алдаа гарлаа</Text>
-						<Text className="text-muted-foreground">
-							Та хөгжүүлэгчидтэй холбогдоно уу.
-						</Text>
+						<Text className="text-muted-foreground">Та хөгжүүлэгчидтэй холбогдоно уу.</Text>
 					</div>
 				</div>
 
-				<Alert status="error" className="rounded-base">
+				<Alert className="rounded-base" status="error">
 					<Alert.Title>Алдааны мэдээлэл</Alert.Title>
 					<Alert.Description>
-						<Text className="break-words">
-							{message || "Тодорхойгүй алдаа."}
-						</Text>
+						<Text className="break-words">{message || "Тодорхойгүй алдаа."}</Text>
 					</Alert.Description>
 				</Alert>
 
 				<div className="flex flex-wrap items-center gap-2">
-					<Button variant="outline" onClick={() => window.history.back()}>
+					<Button onClick={() => window.history.back()} variant="outline">
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Өмнөх хуудас
 					</Button>
@@ -91,12 +67,12 @@ export default function AppError({ error }: AppErrorProps) {
 							Нүүр хуудас
 						</Button>
 					</Link>
-					<Button variant="secondary" onClick={() => window.location.reload()}>
+					<Button onClick={() => window.location.reload()} variant="secondary">
 						<RotateCcw className="mr-2 h-4 w-4" />
 						Дахин ачаалах
 					</Button>
 
-					<DropdownMenu open={open} onOpenChange={setOpen}>
+					<DropdownMenu onOpenChange={setOpen} open={open}>
 						<DropdownMenuTrigger asChild>
 							<Button variant="outline">
 								<ChevronDown className="mr-2 h-4 w-4" />
@@ -108,16 +84,14 @@ export default function AppError({ error }: AppErrorProps) {
 							<DropdownMenuSeparator />
 							<div className="space-y-2">
 								{raw && (
-									<div className="rounded-base border-2 border-border bg-background p-2">
+									<div className="rounded-base border-border bg-background border-2 p-2">
 										<Text className="font-mono text-sm">{raw}</Text>
 									</div>
 								)}
 								{stack && (
-									<div className="rounded-base border-2 border-border">
+									<div className="rounded-base border-border border-2">
 										<ScrollArea className="h-60 w-full">
-											<pre className="whitespace-pre-wrap p-3 font-mono text-xs">
-												{stack}
-											</pre>
+											<pre className="p-3 font-mono text-xs whitespace-pre-wrap">{stack}</pre>
 										</ScrollArea>
 									</div>
 								)}

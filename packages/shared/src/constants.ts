@@ -20,30 +20,15 @@ export const BANK_TRANSFER_ENABLED = true;
 
 /** Customer support phone: tel: href and its display form. */
 export const supportPhone = {
-	href: "tel:+97699993950",
 	display: "9999-3950",
+	href: "tel:+97699993950",
 } as const;
 
-export const deliveryProvider = [
-	"tu-delivery",
-	"self",
-	"avidaa",
-	"pick-up",
-] as const;
+export const deliveryProvider = ["tu-delivery", "self", "avidaa", "pick-up"] as const;
 
-export const paymentStatus = [
-	"pending",
-	"customer_claimed_paid",
-	"success",
-	"failed",
-] as const;
+export const paymentStatus = ["pending", "customer_claimed_paid", "success", "failed"] as const;
 
-export const purchaseProvider = [
-	"amazon",
-	"iherb",
-	"naturebell",
-	"unknown",
-] as const;
+export const purchaseProvider = ["amazon", "iherb", "naturebell", "unknown"] as const;
 
 export const purchaseStatus = [
 	"draft",
@@ -133,15 +118,15 @@ export const productColors = [
 ];
 
 export const badgeClasses = {
+	discount: "bg-destructive text-destructive-foreground",
 	featured: "bg-secondary text-secondary-foreground",
 	new: "bg-accent text-accent-foreground",
-	discount: "bg-destructive text-destructive-foreground",
 };
 
 export const badgeIconNames = {
+	discount: "fire-fill",
 	featured: "star-fill",
 	new: "sparkles-line",
-	discount: "fire-fill",
 };
 
 // Flat delivery fee added to every order (storefront cart, the order API total,
@@ -154,9 +139,9 @@ export const deliveryFee = 6000;
 // reference is the customer's own phone number, supplied per order — never part
 // of this static account record.
 export const bankTransfer = {
-	bankName: "Хаан банк",
-	accountNumber: "5011147435",
 	accountName: "Aviddaram Bazarragchaa",
+	accountNumber: "5011147435",
+	bankName: "Хаан банк",
 } as const;
 
 export const productTagSuggestions = [

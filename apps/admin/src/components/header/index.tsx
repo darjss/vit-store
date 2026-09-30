@@ -1,10 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Search, UserRound } from "lucide-react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "../ui/button";
 import { SidebarTrigger } from "../ui/sidebar";
 import BreadCrumbs from "./breadcrumb";
@@ -16,25 +12,25 @@ const Header = () => {
 
 	const handleSelectProduct = (productId: number) => {
 		navigate({
-			to: "/products/$id",
 			params: { id: String(productId) },
+			to: "/products/$id",
 		});
 	};
 
 	const handleSelectOrder = (orderId: number) => {
 		navigate({
-			to: "/orders/$id",
 			params: { id: String(orderId) },
+			to: "/orders/$id",
 		});
 	};
 
 	return (
-		<header className="sticky top-0 z-40 w-full border-border border-b-4 bg-transparent shadow-shadow">
+		<header className="border-border shadow-shadow sticky top-0 z-40 w-full border-b-4 bg-transparent">
 			<div className="flex h-16 items-center justify-between px-3 sm:px-4">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<SidebarTrigger
 						aria-label="Хажуугийн цэс нээх"
-						className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground/70 shadow-shadow ring-offset-background transition-transform hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
+						className="rounded-base border-border bg-background text-foreground/70 shadow-shadow ring-offset-background hover:text-foreground focus-visible:ring-ring border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 					/>
 
 					<div className="select-none">
@@ -45,9 +41,9 @@ const Header = () => {
 				<div className="hidden min-w-0 flex-1 px-4 md:block">
 					<div className="mx-auto w-full max-w-xl">
 						<SearchBar
-							placeholder="Бүтээгдэхүүн, захиалга хайх..."
-							onSelectProduct={handleSelectProduct}
 							onSelectOrder={handleSelectOrder}
+							onSelectProduct={handleSelectProduct}
+							placeholder="Бүтээгдэхүүн, захиалга хайх..."
 						/>
 					</div>
 				</div>
@@ -57,24 +53,24 @@ const Header = () => {
 						<PopoverTrigger asChild className="md:hidden">
 							<Button
 								aria-label="Хайх"
-								variant="secondary"
+								className="rounded-base border-border bg-background text-foreground shadow-shadow ring-offset-background focus-visible:ring-ring border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 								size="icon"
-								className="hover:-translate-x-0.5 hover:-translate-y-0.5 rounded-base border-2 border-border bg-background text-foreground shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
+								variant="secondary"
 							>
 								<Search className="h-6 w-6" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent
 							align="end"
-							className="w-screen max-w-sm rounded-base border-2 border-border bg-background p-3 text-foreground shadow-shadow sm:p-4"
+							className="rounded-base border-border bg-background text-foreground shadow-shadow w-screen max-w-sm border-2 p-3 sm:p-4"
 							sideOffset={8}
 						>
-							<h4 className="mb-3 font-medium text-base">Хайх</h4>
+							<h4 className="mb-3 text-base font-medium">Хайх</h4>
 							<SearchBar
 								autoFocus
-								placeholder="Бүтээгдэхүүн, захиалга хайх..."
-								onSelectProduct={handleSelectProduct}
 								onSelectOrder={handleSelectOrder}
+								onSelectProduct={handleSelectProduct}
+								placeholder="Бүтээгдэхүүн, захиалга хайх..."
 							/>
 						</PopoverContent>
 					</Popover>
@@ -83,14 +79,14 @@ const Header = () => {
 						<PopoverTrigger asChild>
 							<Button
 								aria-label="Хэрэглэгчийн цэс нээх"
-								className="hover:-translate-x-0.5 hover:-translate-y-0.5 flex h-12 w-12 items-center justify-center rounded-base border-2 border-border bg-background shadow-shadow ring-offset-background transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
+								className="rounded-base border-border bg-background shadow-shadow ring-offset-background focus-visible:ring-ring flex h-12 w-12 items-center justify-center border-2 transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-x-0 active:translate-y-0"
 							>
-								<UserRound className="h-7 w-7 text-foreground" />
+								<UserRound className="text-foreground h-7 w-7" />
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent
 							align="end"
-							className="w-64 rounded-base border-2 border-border bg-background p-2 text-foreground shadow-shadow"
+							className="rounded-base border-border bg-background text-foreground shadow-shadow w-64 border-2 p-2"
 							sideOffset={8}
 						>
 							<UserData />

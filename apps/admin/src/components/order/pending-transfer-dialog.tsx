@@ -14,8 +14,8 @@ import { formatCurrency } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
 interface PendingTransferDialogProps {
-	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	open: boolean;
 }
 
 function invalidateTransferQueries(queryClient: ReturnType<typeof useQueryClient>) {
@@ -34,38 +34,38 @@ function invalidateTransferQueries(queryClient: ReturnType<typeof useQueryClient
 }
 
 export function TransferPaymentActions({
+	onSuccess,
 	paymentNumber,
 	size = "sm",
-	onSuccess,
 }: {
+	onSuccess?: () => void;
 	paymentNumber: string;
 	size?: "sm" | "default";
-	onSuccess?: () => void;
 }) {
 	const queryClient = useQueryClient();
 
 	const confirmTransfer = useMutation(
 		trpc.payment.confirmTransferPayment.mutationOptions({
+			onError: (error) => {
+				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
+			},
 			onSuccess: () => {
 				invalidateTransferQueries(queryClient);
 				toast.success("Төлбөр баталгаажлаа");
 				onSuccess?.();
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
 			},
 		}),
 	);
 
 	const rejectTransfer = useMutation(
 		trpc.payment.rejectTransferPayment.mutationOptions({
+			onError: (error) => {
+				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
+			},
 			onSuccess: () => {
 				invalidateTransferQueries(queryClient);
 				toast.success("Төлбөр татгалзлаа");
 				onSuccess?.();
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
 			},
 		}),
 	);
@@ -75,10 +75,10 @@ export function TransferPaymentActions({
 	return (
 		<div className="flex flex-wrap gap-2">
 			<Button
-				size={size}
 				className="gap-1.5"
 				disabled={isPending}
 				onClick={() => confirmTransfer.mutate({ paymentNumber })}
+				size={size}
 			>
 				{confirmTransfer.isPending ? (
 					<Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -88,11 +88,11 @@ export function TransferPaymentActions({
 				Батлах
 			</Button>
 			<Button
-				size={size}
-				variant="outline"
 				className="gap-1.5"
 				disabled={isPending}
 				onClick={() => rejectTransfer.mutate({ paymentNumber })}
+				size={size}
+				variant="outline"
 			>
 				{rejectTransfer.isPending ? (
 					<Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -105,10 +105,7 @@ export function TransferPaymentActions({
 	);
 }
 
-export default function PendingTransferDialog({
-	open,
-	onOpenChange,
-}: PendingTransferDialogProps) {
+export default function PendingTransferDialog({ onOpenChange, open }: PendingTransferDialogProps) {
 	const queryClient = useQueryClient();
 	const claimedTransfers = useQuery({
 		...trpc.payment.getClaimedTransferPayments.queryOptions(),
@@ -117,45 +114,42 @@ export default function PendingTransferDialog({
 
 	const confirmTransfer = useMutation(
 		trpc.payment.confirmTransferPayment.mutationOptions({
+			onError: (error) => {
+				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
+			},
 			onSuccess: () => {
 				invalidateTransferQueries(queryClient);
 				toast.success("Төлбөр баталгаажлаа");
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр баталгаажуулахад алдаа гарлаа");
 			},
 		}),
 	);
 
 	const rejectTransfer = useMutation(
 		trpc.payment.rejectTransferPayment.mutationOptions({
+			onError: (error) => {
+				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
+			},
 			onSuccess: () => {
 				invalidateTransferQueries(queryClient);
 				toast.success("Төлбөр татгалзлаа");
-			},
-			onError: (error) => {
-				toast.error(error.message || "Төлбөр татгалзахад алдаа гарлаа");
 			},
 		}),
 	);
 
 	const pendingPaymentNumber =
-		confirmTransfer.variables?.paymentNumber ??
-		rejectTransfer.variables?.paymentNumber;
+		confirmTransfer.variables?.paymentNumber ?? rejectTransfer.variables?.paymentNumber;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[85vh] max-w-[95vw] overflow-hidden border-2 border-border bg-card p-0 shadow-hard sm:max-w-2xl">
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] max-w-[95vw] overflow-hidden border-2 p-0 sm:max-w-2xl">
 				<DialogHeader className="border-border border-b px-4 py-4 sm:px-6">
 					<DialogTitle>Шилжүүлэг баталгаажуулах</DialogTitle>
-					<DialogDescription>
-						Хэрэглэгч төлсөн гэж мэдэгдсэн дансны шилжүүлгүүд
-					</DialogDescription>
+					<DialogDescription>Хэрэглэгч төлсөн гэж мэдэгдсэн дансны шилжүүлгүүд</DialogDescription>
 				</DialogHeader>
 
 				<div className="max-h-[60vh] overflow-y-auto px-4 py-4 sm:px-6">
 					{claimedTransfers.isLoading ? (
-						<div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+						<div className="text-muted-foreground flex items-center justify-center py-10 text-sm">
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							Уншиж байна...
 						</div>
@@ -168,26 +162,20 @@ export default function PendingTransferDialog({
 
 								return (
 									<div
+										className="border-border bg-background shadow-hard-sm border-2 p-4"
 										key={claim.paymentNumber}
-										className="border-2 border-border bg-background p-4 shadow-hard-sm"
 									>
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 											<div className="min-w-0 space-y-2">
 												<div className="flex flex-wrap items-center gap-2">
-													<span className="font-heading font-black">
-														#{claim.orderNumber}
-													</span>
+													<span className="font-heading font-black">#{claim.orderNumber}</span>
 													<span className="text-muted-foreground text-xs">
-														{new Date(
-															claim.updatedAt ?? claim.createdAt,
-														).toLocaleString("mn-MN")}
+														{new Date(claim.updatedAt ?? claim.createdAt).toLocaleString("mn-MN")}
 													</span>
 												</div>
 												<div className="flex items-center gap-1.5 text-sm">
-													<Phone className="h-3.5 w-3.5 text-muted-foreground" />
-													<span className="font-bold tabular-nums">
-														{claim.customerPhone}
-													</span>
+													<Phone className="text-muted-foreground h-3.5 w-3.5" />
+													<span className="font-bold tabular-nums">{claim.customerPhone}</span>
 												</div>
 												<p className="font-heading text-lg font-black tabular-nums">
 													{formatCurrency(claim.amount)}
@@ -201,10 +189,10 @@ export default function PendingTransferDialog({
 													{claim.products.length > 2 ? "..." : ""}
 												</p>
 												<Link
-													to="/orders/$id"
-													params={{ id: claim.orderId.toString() }}
-													className="inline-flex text-primary text-xs underline-offset-2 hover:underline"
+													className="text-primary inline-flex text-xs underline-offset-2 hover:underline"
 													onClick={() => onOpenChange(false)}
+													params={{ id: claim.orderId.toString() }}
+													to="/orders/$id"
 												>
 													Захиалга харах
 												</Link>
@@ -212,7 +200,6 @@ export default function PendingTransferDialog({
 
 											<div className="flex shrink-0 gap-2">
 												<Button
-													size="sm"
 													className="gap-1.5"
 													disabled={isRowPending}
 													onClick={() =>
@@ -220,6 +207,7 @@ export default function PendingTransferDialog({
 															paymentNumber: claim.paymentNumber,
 														})
 													}
+													size="sm"
 												>
 													{confirmTransfer.isPending &&
 													pendingPaymentNumber === claim.paymentNumber ? (
@@ -230,8 +218,6 @@ export default function PendingTransferDialog({
 													Батлах
 												</Button>
 												<Button
-													size="sm"
-													variant="outline"
 													className="gap-1.5"
 													disabled={isRowPending}
 													onClick={() =>
@@ -239,6 +225,8 @@ export default function PendingTransferDialog({
 															paymentNumber: claim.paymentNumber,
 														})
 													}
+													size="sm"
+													variant="outline"
 												>
 													{rejectTransfer.isPending &&
 													pendingPaymentNumber === claim.paymentNumber ? (
@@ -255,7 +243,7 @@ export default function PendingTransferDialog({
 							})}
 						</div>
 					) : (
-						<p className="py-10 text-center text-muted-foreground text-sm">
+						<p className="text-muted-foreground py-10 text-center text-sm">
 							Одоогоор баталгаажуулах шилжүүлэг байхгүй байна.
 						</p>
 					)}

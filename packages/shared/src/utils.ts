@@ -1,4 +1,5 @@
-import { orderStatusStyles } from "./order-status";
+import { orderStatusLabels, orderStatusStyles } from "./order-status";
+import type { OrderStatusType } from "./types/order";
 
 export const getStatusColor = (status: string) => {
 	switch (status) {
@@ -14,8 +15,12 @@ export const getStatusColor = (status: string) => {
 };
 
 export const getStockColor = (stock: number) => {
-	if (stock > 10) return "text-[#00ff88]";
-	if (stock > 0) return "text-[#ffa502]";
+	if (stock > 10) {
+		return "text-[#00ff88]";
+	}
+	if (stock > 0) {
+		return "text-[#ffa502]";
+	}
 	return "text-[#ff4757]";
 };
 export const getPaymentStatusColor = (status: string) => {
@@ -49,9 +54,13 @@ export function formatCurrency(amount: number): string {
 	return `${amount.toLocaleString()}₮`;
 }
 
+const isOrderStatusType = (status: string): status is OrderStatusType =>
+	status in orderStatusLabels;
+
 export const getOrderStatusStyles = (status: string) => {
-	const key = status.toLowerCase() === "canceled" ? "cancelled" : status.toLowerCase();
-	const styles = orderStatusStyles[key as keyof typeof orderStatusStyles];
+	const normalized = status.toLowerCase() === "canceled" ? "cancelled" : status.toLowerCase();
+	const key = isOrderStatusType(normalized) ? normalized : null;
+	const styles = key ? orderStatusStyles[key] : undefined;
 	return (
 		styles ?? {
 			badge: "border-black bg-[#5f27cd] text-white",
@@ -62,12 +71,12 @@ export const getOrderStatusStyles = (status: string) => {
 
 export function findBrandId(
 	brandName: string | null | undefined,
-	brands: { id: number; name: string }[],
+	brands: Array<{ id: number; name: string }>,
 ): number {
-	if (!brandName) return 0;
-	const brand = brands.find(
-		(b) => b.name.toLowerCase() === brandName.toLowerCase(),
-	);
+	if (!brandName) {
+		return 0;
+	}
+	const brand = brands.find((b) => b.name.toLowerCase() === brandName.toLowerCase());
 	return brand?.id || 0;
 }
 
@@ -75,14 +84,14 @@ function pad(n: number) {
 	return n.toString().padStart(2, "0");
 }
 
+function startOfDay(dt: Date) {
+	return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
 export function formatDateToText(d: Date, now = new Date()): string {
-	const startOfDay = (dt: Date) =>
-		new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 	const msPerDay = 24 * 60 * 60 * 1000;
 
-	const dayDiff = Math.floor(
-		(startOfDay(now).getTime() - startOfDay(d).getTime()) / msPerDay,
-	);
+	const dayDiff = Math.floor((startOfDay(now).getTime() - startOfDay(d).getTime()) / msPerDay);
 
 	const hh = pad(d.getHours());
 	const mm = pad(d.getMinutes());

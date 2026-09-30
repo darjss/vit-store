@@ -3,13 +3,11 @@ import * as v from "valibot";
 import type { InboundImage } from "../photo";
 import { extractJsonObject } from "../photo";
 
-export const CHAT_ORDER_IMAGE_EXTRACT_TOOL_NAME =
-	"extract_order_from_chat_image_keys";
+export const CHAT_ORDER_IMAGE_EXTRACT_TOOL_NAME = "extract_order_from_chat_image_keys";
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+type Json = null | boolean | number | string | Array<Json> | { [key: string]: Json };
 
-const asJson = (value: unknown): Json =>
-	JSON.parse(JSON.stringify(value)) as Json;
+const asJson = (value: unknown): Json => JSON.parse(JSON.stringify(value)) as Json;
 
 const chatOrderVisionPrompt = `You are reading a Facebook Messenger (or similar chat) screenshot of a customer placing an order with a vitamin shop admin.
 Reply with ONLY a JSON object (no markdown):
@@ -36,27 +34,22 @@ export type ChatOrderImageExtractDeps = {
 	runVision: (image: InboundImage, prompt: string) => Promise<string>;
 };
 
-export const buildChatOrderImageExtractTool = (
-	deps: ChatOrderImageExtractDeps,
-) =>
+export const buildChatOrderImageExtractTool = (deps: ChatOrderImageExtractDeps) =>
 	defineTool({
-		name: CHAT_ORDER_IMAGE_EXTRACT_TOOL_NAME,
 		description:
 			"Extract phone, address, notes, and product lines from a Facebook Messenger customer-chat screenshot. Call when imageKeys show a chat thread for creating a store order (not a supplier invoice). Pass the imageKeys from the dispatch payload.",
 		input: v.object({
-			imageKeys: v.pipe(
-				v.array(v.pipe(v.string(), v.minLength(1))),
-				v.minLength(1),
-			),
+			imageKeys: v.pipe(v.array(v.pipe(v.string(), v.minLength(1))), v.minLength(1)),
 		}),
+		name: CHAT_ORDER_IMAGE_EXTRACT_TOOL_NAME,
 		async run({ input }) {
-			const visionParts: string[] = [];
+			const visionParts: Array<string> = [];
 			for (const imageKey of input.imageKeys) {
 				const image = await deps.loadImage(imageKey);
 				if (image === undefined) {
 					return asJson({
-						ok: false,
 						error: `Image no longer available: ${imageKey}`,
+						ok: false,
 					});
 				}
 				const text = await deps.runVision(image, chatOrderVisionPrompt);
@@ -66,19 +59,19 @@ export const buildChatOrderImageExtractTool = (
 			const rawJson = extractJsonObject(visionParts.join("\n"));
 			if (rawJson === undefined) {
 				return asJson({
-					ok: false,
 					error: "Vision model did not return parseable chat-order JSON.",
+					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
 				});
 			}
 
 			try {
 				const extraction = JSON.parse(rawJson) as Record<string, unknown>;
-				return asJson({ ok: true, extraction });
+				return asJson({ extraction, ok: true });
 			} catch {
 				return asJson({
-					ok: false,
 					error: "Vision JSON parse failed.",
+					ok: false,
 					rawVision: visionParts.join("\n").slice(0, 2000),
 				});
 			}

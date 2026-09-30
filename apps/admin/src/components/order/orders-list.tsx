@@ -1,15 +1,11 @@
-import {
-	useMutation,
-	useQueryClient,
-	useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type {
+import {
 	orderStatus as orderStatusConstants,
 	paymentStatus as paymentStatusConstants,
 } from "@vit/shared/constants";
 import { ChevronDown, Loader2, Package, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataPagination } from "@/components/data-pagination";
 import { Button } from "@/components/ui/button";
@@ -27,73 +23,63 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { mutationErrorMessage } from "@/lib/mutation-error";
+import { parsePicklistValue } from "@/lib/parse-select";
 import { trpc } from "@/utils/trpc";
-import BatchShipOrderDialog, {
-	type BatchShipResult,
-} from "./batch-ship-order-dialog";
+import BatchShipOrderDialog, { type BatchShipResult } from "./batch-ship-order-dialog";
 import OrderCard from "./order-card";
 
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
 
-function trpcErrorMessage(error: unknown): string {
-	if (error instanceof Error) return error.message;
-	return "Алдаа гарлаа";
-}
-
 interface OrdersListProps {
+	date?: string;
+	orderStatus?: string;
 	page: number;
 	pageSize: number;
-	searchTerm?: string;
-	sortField?: string;
-	sortDirection?: "asc" | "desc";
-	orderStatus?: string;
 	paymentStatus?: string;
-	date?: string;
+	searchTerm?: string;
+	sortDirection?: "asc" | "desc";
+	sortField?: string;
 }
 
+// ponytail: legacy admin orders list — split batch toolbar later; complexity ceiling 17
+// oxlint-disable-next-line complexity
 export default function OrdersList({
+	date,
+	orderStatus,
 	page,
 	pageSize,
-	searchTerm,
-	sortField,
-	sortDirection,
-	orderStatus,
 	paymentStatus,
-	date,
+	searchTerm,
+	sortDirection,
+	sortField,
 }: OrdersListProps) {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate({ from: "/orders" });
-	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
-	const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
-	const [batchFailed, setBatchFailed] = useState<
-		{ orderNumber: string; message: string }[] | null
-	>(null);
+	const [batchFailed, setBatchFailed] = useState<Array<{
+		message: string;
+		orderNumber: string;
+	}> | null>(null);
 	const [isBatchUpdating, setIsBatchUpdating] = useState(false);
 
 	const { data: ordersData } = useSuspenseQuery({
 		...trpc.order.getPaginatedOrders.queryOptions({
-			page,
+			date,
 			includeAllStatuses: orderStatus === "all",
-			paymentStatus: paymentStatus as
-				| (typeof paymentStatusConstants)[number]
-				| undefined,
-			pageSize,
-			sortField,
-			sortDirection,
 			orderStatus:
 				orderStatus === "all" || orderStatus === "active"
 					? undefined
-					: (orderStatus as (typeof orderStatusConstants)[number] | undefined),
-			orderStatuses:
-				orderStatus === "active" ? [...activeOrderStatuses] : undefined,
+					: parsePicklistValue(orderStatusConstants, orderStatus ?? ""),
+			orderStatuses: orderStatus === "active" ? [...activeOrderStatuses] : undefined,
+			page,
+			pageSize,
+			paymentStatus: paymentStatus
+				? parsePicklistValue(paymentStatusConstants, paymentStatus)
+				: undefined,
 			searchTerm,
-			date,
+			sortDirection,
+			sortField,
 		}),
 		refetchInterval: 60_000,
 		refetchOnWindowFocus: true,
@@ -101,52 +87,39 @@ export default function OrdersList({
 	const orders = ordersData.orders;
 	const pagination = ordersData.pagination;
 
-	const pendingOnPage = orders.filter((o) => o.status === "pending");
-	const selectedPendingOrders = pendingOnPage.filter((order) =>
-		selectedIds.has(order.id),
-	);
-	const allPendingSelected =
-		pendingOnPage.length > 0 &&
-		pendingOnPage.every((o) => selectedIds.has(o.id));
-
-	useEffect(() => {
+	const listKey = `${page}-${pageSize}-${orderStatus}-${paymentStatus}-${date}-${searchTerm}-${sortField}-${sortDirection}`;
+	const [selectionListKey, setSelectionListKey] = useState(listKey);
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+	const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+	if (listKey !== selectionListKey) {
+		setSelectionListKey(listKey);
 		setSelectedIds(new Set());
 		setIsBatchDialogOpen(false);
-	}, [
-		page,
-		pageSize,
-		orderStatus,
-		paymentStatus,
-		date,
-		searchTerm,
-		sortField,
-		sortDirection,
-	]);
+	}
 
-	useEffect(() => {
-		const pendingIds = new Set(
-			orders
-				.filter((order) => order.status === "pending")
-				.map((order) => order.id),
-		);
-		setSelectedIds((current) => {
-			const next = new Set([...current].filter((id) => pendingIds.has(id)));
-			return next.size === current.size ? current : next;
-		});
-	}, [orders]);
-
-	const updateStatusMutation = useMutation(
-		{
-			...trpc.order.updateOrderStatus.mutationOptions(),
-			// Failures are summarized in the batch dialog; a no-op onError keeps
-			// the global MutationCache from toasting once per failed order too.
-			onError: () => {},
-		},
+	const pendingIds = useMemo(
+		() => new Set(orders.filter((order) => order.status === "pending").map((order) => order.id)),
+		[orders],
 	);
+	const visibleSelectedIds = useMemo(
+		() => new Set([...selectedIds].filter((id) => pendingIds.has(id))),
+		[selectedIds, pendingIds],
+	);
+
+	const pendingOnPage = orders.filter((o) => o.status === "pending");
+	const selectedPendingOrders = pendingOnPage.filter((order) => visibleSelectedIds.has(order.id));
+	const allPendingSelected =
+		pendingOnPage.length > 0 && pendingOnPage.every((o) => visibleSelectedIds.has(o.id));
+
+	const updateStatusMutation = useMutation({
+		...trpc.order.updateOrderStatus.mutationOptions(),
+		// Failures are summarized in the batch dialog; a no-op onError keeps
+		// the global MutationCache from toasting once per failed order too.
+		onError: () => {},
+	});
 
 	const handlePageChange = (nextPage: number) => {
 		navigate({
-			to: "/orders",
 			search: {
 				date,
 				orderStatus,
@@ -157,6 +130,7 @@ export default function OrdersList({
 				sortDirection,
 				sortField,
 			},
+			to: "/orders",
 		});
 	};
 
@@ -167,19 +141,12 @@ export default function OrdersList({
 
 	const toggleSelectAllPending = () => {
 		setSelectedIds(
-			allPendingSelected
-				? new Set()
-				: new Set(pendingOnPage.map((order) => order.id)),
+			allPendingSelected ? new Set() : new Set(pendingOnPage.map((order) => order.id)),
 		);
 	};
 
-	const handleBatchShipComplete = async ({
-		total,
-		failed,
-	}: BatchShipResult) => {
-		await queryClient.invalidateQueries(
-			trpc.order.getPaginatedOrders.pathFilter(),
-		);
+	const handleBatchShipComplete = async ({ failed, total }: BatchShipResult) => {
+		await queryClient.invalidateQueries(trpc.order.getPaginatedOrders.pathFilter());
 
 		const okCount = total - failed.length;
 		if (failed.length === 0) {
@@ -189,9 +156,7 @@ export default function OrdersList({
 		}
 
 		setSelectedIds(new Set(failed.map((row) => row.orderId)));
-		setBatchFailed(
-			failed.map(({ orderNumber, message }) => ({ orderNumber, message })),
-		);
+		setBatchFailed(failed.map(({ message, orderNumber }) => ({ message, orderNumber })));
 		if (okCount === 0) {
 			toast.error("Илгээлт амжилтгүй");
 		} else {
@@ -200,26 +165,26 @@ export default function OrdersList({
 	};
 
 	const handleMarkSelfShipped = async () => {
-		if (selectedIds.size === 0) return;
+		if (visibleSelectedIds.size === 0) {
+			return;
+		}
 		setIsBatchUpdating(true);
-		const ids = [...selectedIds];
-		const failed: { orderNumber: string; message: string }[] = [];
+		const ids = [...visibleSelectedIds];
+		const failed: Array<{ message: string; orderNumber: string }> = [];
 		await Promise.all(
 			ids.map(async (id) => {
 				const order = orders.find((o) => o.id === id);
 				try {
 					await updateStatusMutation.mutateAsync({ id, status: "shipped" });
-				} catch (e) {
+				} catch (error) {
 					failed.push({
+						message: error instanceof Error ? mutationErrorMessage(error) : "Алдаа гарлаа",
 						orderNumber: order?.orderNumber ?? String(id),
-						message: trpcErrorMessage(e),
 					});
 				}
 			}),
 		);
-		await queryClient.invalidateQueries(
-			trpc.order.getPaginatedOrders.pathFilter(),
-		);
+		await queryClient.invalidateQueries(trpc.order.getPaginatedOrders.pathFilter());
 		clearSelection();
 		setIsBatchUpdating(false);
 
@@ -231,31 +196,28 @@ export default function OrdersList({
 		}
 	};
 
-	const canTuSend = selectedIds.size > 0 && !isBatchUpdating;
-	const toolbarOpen = selectedIds.size > 0;
+	const canTuSend = visibleSelectedIds.size > 0 && !isBatchUpdating;
+	const toolbarOpen = visibleSelectedIds.size > 0;
 
 	return (
 		<>
 			{/* Batch select header */}
 			{pendingOnPage.length > 0 && (
-				<div className="flex items-center gap-3 border-2 border-border bg-card px-4 py-3 shadow-hard-sm">
+				<div className="border-border bg-card shadow-hard-sm flex items-center gap-3 border-2 px-4 py-3">
 					<label
+						className="flex cursor-pointer items-center gap-3 text-sm select-none"
 						htmlFor="select-all-pending-orders"
-						className="flex cursor-pointer select-none items-center gap-3 text-sm"
 					>
 						<Checkbox
-							id="select-all-pending-orders"
-							checked={allPendingSelected}
-							onCheckedChange={() => toggleSelectAllPending()}
 							aria-label="Энэ хуудсан дээрх бүх хүлээгдэж буй захиалгыг сонгох"
+							checked={allPendingSelected}
 							className="h-5 w-5"
+							id="select-all-pending-orders"
+							onCheckedChange={() => toggleSelectAllPending()}
 						/>
 						<span className="text-muted-foreground">
 							Хүлээгдэж буй{" "}
-							<span className="font-bold text-foreground">
-								{pendingOnPage.length}
-							</span>{" "}
-							сонгох
+							<span className="text-foreground font-bold">{pendingOnPage.length}</span> сонгох
 						</span>
 					</label>
 				</div>
@@ -270,12 +232,15 @@ export default function OrdersList({
 						selection={
 							order.status === "pending"
 								? {
-										checked: selectedIds.has(order.id),
+										checked: visibleSelectedIds.has(order.id),
 										onCheckedChange: (checked) => {
 											setSelectedIds((prev) => {
 												const next = new Set(prev);
-												if (checked) next.add(order.id);
-												else next.delete(order.id);
+												if (checked) {
+													next.add(order.id);
+												} else {
+													next.delete(order.id);
+												}
 												return next;
 											});
 										},
@@ -288,10 +253,10 @@ export default function OrdersList({
 
 			{/* Empty state */}
 			{orders.length === 0 && (
-				<div className="flex flex-col items-center justify-center border-2 border-border border-dashed py-16">
-					<Package className="mb-3 h-12 w-12 text-muted-foreground" />
-					<p className="font-bold font-heading text-lg">Захиалга олдсонгүй</p>
-					<p className="mt-1 text-muted-foreground text-sm">
+				<div className="border-border flex flex-col items-center justify-center border-2 border-dashed py-16">
+					<Package className="text-muted-foreground mb-3 h-12 w-12" />
+					<p className="font-heading text-lg font-bold">Захиалга олдсонгүй</p>
+					<p className="text-muted-foreground mt-1 text-sm">
 						Шүүлтүүр эсвэл хайлтаа өөрчлөөд дахин оролдоно уу
 					</p>
 				</div>
@@ -302,9 +267,9 @@ export default function OrdersList({
 				<div className="pt-4">
 					<DataPagination
 						currentPage={pagination.currentPage}
-						totalItems={pagination.totalCount}
 						itemsPerPage={pageSize}
 						onPageChange={handlePageChange}
+						totalItems={pagination.totalCount}
 					/>
 				</div>
 			)}
@@ -313,8 +278,8 @@ export default function OrdersList({
 			{toolbarOpen && (
 				<>
 					<div
-						className="h-[calc(5.25rem+env(safe-area-inset-bottom,0px))] shrink-0 sm:hidden"
 						aria-hidden
+						className="h-[calc(5.25rem+env(safe-area-inset-bottom,0px))] shrink-0 sm:hidden"
 					/>
 					<TooltipProvider delayDuration={400}>
 						<div
@@ -328,20 +293,18 @@ export default function OrdersList({
 						>
 							<div className="flex items-center justify-between gap-4 px-4 py-3">
 								<div className="min-w-0">
-									<p className="font-bold font-heading text-sm">
-										{selectedIds.size} сонгогдсон
+									<p className="font-heading text-sm font-bold">
+										{visibleSelectedIds.size} сонгогдсон
 									</p>
-									<p className="text-muted-foreground text-xs">
-										Зөвхөн хүлээгдэж буй захиалга
-									</p>
+									<p className="text-muted-foreground text-xs">Зөвхөн хүлээгдэж буй захиалга</p>
 								</div>
 								<div className="flex shrink-0 items-center gap-2">
 									<Button
-										variant="ghost"
-										size="sm"
+										className="h-10"
 										disabled={isBatchUpdating}
 										onClick={clearSelection}
-										className="h-10"
+										size="sm"
+										variant="ghost"
 									>
 										Цэвэрлэх
 									</Button>
@@ -350,52 +313,49 @@ export default function OrdersList({
 											<TooltipTrigger asChild>
 												<span className="inline-flex">
 													<Button
-														size="sm"
-														className="h-10 gap-2 rounded-r-none border-border border-r-2"
+														className="border-border h-10 gap-2 rounded-r-none border-r-2"
 														disabled={!canTuSend}
 														onClick={() => setIsBatchDialogOpen(true)}
+														size="sm"
 													>
 														{isBatchUpdating ? (
 															<Loader2 className="h-4 w-4 animate-spin" />
 														) : (
 															<Truck className="h-4 w-4" />
 														)}
-														<span className="hidden sm:inline">
-															TU руу илгээх
-														</span>
+														<span className="hidden sm:inline">TU руу илгээх</span>
 														<span className="sm:hidden">Илгээх</span>
 													</Button>
 												</span>
 											</TooltipTrigger>
 											<TooltipContent
-												side="top"
 												className="hidden max-w-xs space-y-1 text-left text-xs sm:block"
+												side="top"
 											>
 												<p className="font-bold">Үндсэн: TU API</p>
 												<p className="text-muted-foreground">
-													Ойрын хаягийг өөрөө авах бол «Өөрөөр хүргэсэн»
-													сонгоно.
+													Ойрын хаягийг өөрөө авах бол «Өөрөөр хүргэсэн» сонгоно.
 												</p>
 											</TooltipContent>
 										</Tooltip>
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
-													size="sm"
-													className="h-10 rounded-l-none px-3"
-													disabled={selectedIds.size === 0 || isBatchUpdating}
 													aria-label="Нэмэлт сонголт"
+													className="h-10 rounded-l-none px-3"
+													disabled={visibleSelectedIds.size === 0 || isBatchUpdating}
+													size="sm"
 												>
 													<ChevronDown className="h-4 w-4" />
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent
 												align="end"
-												className="w-64 border-2 border-border bg-card shadow-hard"
+												className="border-border bg-card shadow-hard w-64 border-2"
 											>
 												<DropdownMenuItem
-													onClick={() => void handleMarkSelfShipped()}
 													className="py-2.5"
+													onClick={() => void handleMarkSelfShipped()}
 												>
 													Өөрөөр хүргэсэн (илгээсэн болгох)
 												</DropdownMenuItem>
@@ -410,40 +370,35 @@ export default function OrdersList({
 			)}
 
 			<BatchShipOrderDialog
+				onComplete={handleBatchShipComplete}
+				onOpenChange={setIsBatchDialogOpen}
 				open={isBatchDialogOpen}
 				orders={selectedPendingOrders}
-				onOpenChange={setIsBatchDialogOpen}
-				onComplete={handleBatchShipComplete}
 			/>
 
 			{/* Batch error dialog */}
 			<Dialog
-				open={batchFailed !== null && batchFailed.length > 0}
 				onOpenChange={(open) => {
-					if (!open) setBatchFailed(null);
+					if (!open) {
+						setBatchFailed(null);
+					}
 				}}
+				open={batchFailed !== null && batchFailed.length > 0}
 			>
-				<DialogContent className="max-h-[85vh] overflow-y-auto border-2 border-border bg-card shadow-hard sm:max-w-md">
+				<DialogContent className="border-border bg-card shadow-hard max-h-[85vh] overflow-y-auto border-2 sm:max-w-md">
 					<DialogHeader>
-						<DialogTitle className="font-heading text-lg">
-							Илгээж чадсангүй
-						</DialogTitle>
+						<DialogTitle className="font-heading text-lg">Илгээж чадсангүй</DialogTitle>
 					</DialogHeader>
 					<ul className="space-y-2 text-sm">
 						{batchFailed?.map((row) => (
-							<li
-								key={row.orderNumber}
-								className="border-2 border-border bg-muted px-3 py-2"
-							>
+							<li className="border-border bg-muted border-2 px-3 py-2" key={row.orderNumber}>
 								<span className="font-bold">#{row.orderNumber}</span>
-								<p className="mt-0.5 text-muted-foreground text-xs">
-									{row.message}
-								</p>
+								<p className="text-muted-foreground mt-0.5 text-xs">{row.message}</p>
 							</li>
 						))}
 					</ul>
 					<DialogFooter>
-						<Button variant="secondary" onClick={() => setBatchFailed(null)}>
+						<Button onClick={() => setBatchFailed(null)} variant="secondary">
 							Хаах
 						</Button>
 					</DialogFooter>

@@ -1,115 +1,157 @@
-export type TrpcErrorShape = {
-	message: string;
-	code: number;
-	data: {
-		code: string;
-		httpStatus: number;
-	};
-};
+import * as v from "valibot";
 
-function fallbackError(httpStatus: number): TrpcErrorShape {
+export const trpcPublicErrorSchema = v.object({
+	code: v.number(),
+	data: v.object({
+		code: v.string(),
+		httpStatus: v.number(),
+	}),
+	message: v.string(),
+});
+
+export type TrpcPublicError = v.InferOutput<typeof trpcPublicErrorSchema>;
+
+export const trpcPublicErrorWireSchema = v.object({
+	code: v.optional(v.number()),
+	data: v.optional(
+		v.object({
+			code: v.optional(v.string()),
+			httpStatus: v.optional(v.number()),
+		}),
+	),
+	message: v.optional(v.string()),
+});
+
+export type TrpcPublicErrorWire = v.InferOutput<typeof trpcPublicErrorWireSchema>;
+
+const trpcSerializedErrorWireSchema = v.object({
+	json: v.optional(v.unknown()),
+});
+
+const trpcResponseItemWireSchema = v.looseObject({
+	error: v.optional(
+		v.union([trpcSerializedErrorWireSchema, trpcPublicErrorWireSchema, v.unknown()]),
+	),
+});
+
+export const trpcResponseWireSchema = v.union([
+	trpcResponseItemWireSchema,
+	v.array(trpcResponseItemWireSchema),
+]);
+
+export type TrpcResponseWire = v.InferOutput<typeof trpcResponseWireSchema>;
+
+function fallbackError(httpStatus: number): TrpcPublicError {
 	if (httpStatus === 400) {
 		return {
-			message: "Bad request",
-			code: -32600,
+			code: -32_600,
 			data: { code: "BAD_REQUEST", httpStatus },
+			message: "Bad request",
 		};
 	}
 	if (httpStatus === 404) {
 		return {
-			message: "Not found",
-			code: -32004,
+			code: -32_004,
 			data: { code: "NOT_FOUND", httpStatus },
+			message: "Not found",
 		};
 	}
 	return {
-		message: "Internal server error",
-		code: -32603,
+		code: -32_603,
 		data: { code: "INTERNAL_SERVER_ERROR", httpStatus },
+		message: "Internal server error",
 	};
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-	return value !== null && typeof value === "object"
-		? (value as Record<string, unknown>)
-		: undefined;
-}
-
-export type SanitizedTrpcResponse = {
-	payload: unknown;
-	hasError: boolean;
-};
-
-/** Keep only the stable, client-facing fields from a tRPC error shape. */
-export function sanitizePublicTrpcErrorShape(
-	value: unknown,
+/** Keep only stable, client-facing fields from a parsed tRPC error wire object. */
+export function sanitizePublicTrpcError(
+	wire: TrpcPublicErrorWire | undefined,
 	fallbackHttpStatus = 500,
-): TrpcErrorShape {
+): TrpcPublicError {
 	const fallback = fallbackError(fallbackHttpStatus);
-	const shape = asRecord(value);
-	const data = asRecord(shape?.data);
-	const dataCode =
-		typeof data?.code === "string" ? data.code : fallback.data.code;
-	const httpStatus =
-		typeof data?.httpStatus === "number" ? data.httpStatus : fallbackHttpStatus;
+	const parsed = v.safeParse(trpcPublicErrorWireSchema, wire);
+	if (!parsed.success) {
+		return fallback;
+	}
+
+	const error = parsed.output;
+	const dataCode = error.data?.code ?? fallback.data.code;
+	const httpStatus = error.data?.httpStatus ?? fallbackHttpStatus;
 	const isInternalError = dataCode === "INTERNAL_SERVER_ERROR";
 
 	return {
-		message:
-			!isInternalError && typeof shape?.message === "string"
-				? shape.message
-				: isInternalError
-					? "Internal server error"
-					: fallback.message,
-		code: typeof shape?.code === "number" ? shape.code : fallback.code,
+		code: error.code ?? fallback.code,
 		data: {
 			code: dataCode,
 			httpStatus,
 		},
+		message:
+			!isInternalError && error.message
+				? error.message
+				: isInternalError
+					? "Internal server error"
+					: fallback.message,
 	};
+}
+
+export type SanitizedTrpcResponse = {
+	hasError: boolean;
+	payload: TrpcResponseWire;
+};
+
+function sanitizeNestedTrpcError(
+	error: v.InferOutput<typeof trpcResponseItemWireSchema>["error"],
+	fallbackHttpStatus: number,
+): TrpcPublicError | { json: TrpcPublicError } {
+	const serialized = v.safeParse(trpcSerializedErrorWireSchema, error);
+	if (serialized.success && "json" in serialized.output) {
+		const jsonWire = v.safeParse(trpcPublicErrorWireSchema, serialized.output.json);
+		return {
+			json: sanitizePublicTrpcError(
+				jsonWire.success ? jsonWire.output : undefined,
+				fallbackHttpStatus,
+			),
+		};
+	}
+
+	const errorWire = v.safeParse(trpcPublicErrorWireSchema, error);
+	return sanitizePublicTrpcError(
+		errorWire.success ? errorWire.output : undefined,
+		fallbackHttpStatus,
+	);
 }
 
 function sanitizeResponseItem(
-	value: unknown,
+	item: v.InferOutput<typeof trpcResponseItemWireSchema>,
 	fallbackHttpStatus: number,
 ): SanitizedTrpcResponse {
-	const item = asRecord(value);
-	if (!item || !("error" in item)) {
-		return { payload: value, hasError: false };
+	if (item.error === undefined) {
+		return { hasError: false, payload: item };
 	}
 
-	const error = asRecord(item.error);
-	const serializedShape = asRecord(error?.json);
 	return {
+		hasError: true,
 		payload: {
 			...item,
-			error: serializedShape
-				? {
-						json: sanitizePublicTrpcErrorShape(
-							serializedShape,
-							fallbackHttpStatus,
-						),
-					}
-				: sanitizePublicTrpcErrorShape(error, fallbackHttpStatus),
+			error: sanitizeNestedTrpcError(item.error, fallbackHttpStatus),
 		},
-		hasError: true,
 	};
 }
 
-/** Sanitize singular and batch tRPC JSON responses without changing wire shape. */
+/** Sanitize singular and batch tRPC JSON responses without changing wire layout. */
 export function sanitizePublicTrpcResponse(
-	value: unknown,
+	wire: TrpcResponseWire,
 	fallbackHttpStatus = 500,
 ): SanitizedTrpcResponse {
-	if (!Array.isArray(value)) {
-		return sanitizeResponseItem(value, fallbackHttpStatus);
+	if (!Array.isArray(wire)) {
+		return sanitizeResponseItem(wire, fallbackHttpStatus);
 	}
 
 	let hasError = false;
-	const payload = value.map((item) => {
+	const payload = wire.map((item) => {
 		const sanitized = sanitizeResponseItem(item, fallbackHttpStatus);
 		hasError ||= sanitized.hasError;
 		return sanitized.payload;
 	});
-	return { payload, hasError };
+	return { hasError, payload };
 }

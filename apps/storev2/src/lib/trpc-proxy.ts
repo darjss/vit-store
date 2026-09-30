@@ -1,13 +1,24 @@
 import {
-	sanitizePublicTrpcErrorShape,
+	sanitizePublicTrpcError,
 	sanitizePublicTrpcResponse,
+	type TrpcPublicError,
+	type TrpcResponseWire,
+	trpcResponseWireSchema,
 } from "@vit/shared";
+import { safeParse, parse } from "valibot";
+
+import { errorKind, isNativeError, thrownErrorWireSchema } from "@/lib/error-wire";
+
+export type TrpcProxyJsonBody =
+	| TrpcResponseWire
+	| { error: { json: TrpcPublicError } }
+	| { error: string };
 
 export const isUnsupportedTrpcTransport = (request: Request): boolean =>
 	request.headers.get("trpc-accept") === "application/jsonl";
 
 export const noStoreJson = (
-	body: unknown,
+	body: TrpcProxyJsonBody,
 	status: number,
 	initialHeaders?: HeadersInit,
 ): Response => {
@@ -17,7 +28,7 @@ export const noStoreJson = (
 	headers.set("cloudflare-cdn-cache-control", "no-store");
 	headers.delete("cache-tag");
 	headers.delete("content-length");
-	return Response.json(body, { status, headers });
+	return Response.json(body, { headers, status });
 };
 
 export const trpcErrorResponse = (
@@ -25,11 +36,11 @@ export const trpcErrorResponse = (
 	message?: string,
 	initialHeaders?: HeadersInit,
 ): Response => {
-	const shape = sanitizePublicTrpcErrorShape(undefined, status);
+	const error = sanitizePublicTrpcError(undefined, status);
 	return noStoreJson(
 		{
 			error: {
-				json: message ? { ...shape, message } : shape,
+				json: message ? { ...error, message } : error,
 			},
 		},
 		status,
@@ -37,26 +48,27 @@ export const trpcErrorResponse = (
 	);
 };
 
-export const sanitizeUpstreamTrpcResponse = async (
-	response: Response,
-): Promise<Response> => {
+export const sanitizeUpstreamTrpcResponse = async (response: Response): Promise<Response> => {
 	let payload: unknown;
 	try {
 		payload = await response.clone().json();
 	} catch (error) {
 		console.warn({
+			errorType: isNativeError(error) ? error.name : errorKind(parse(thrownErrorWireSchema, error)),
 			event: "store_trpc_invalid_error_response",
 			upstreamStatus: response.status,
-			errorType: error instanceof Error ? error.name : typeof error,
 		});
 		return trpcErrorResponse(502);
 	}
 
-	const sanitized = sanitizePublicTrpcResponse(payload, response.status);
+	const wire = safeParse(trpcResponseWireSchema, payload);
+	if (!wire.success) {
+		return trpcErrorResponse(502);
+	}
+
+	const sanitized = sanitizePublicTrpcResponse(wire.output, response.status);
 	if (!sanitized.hasError) {
-		return response.status >= 400
-			? trpcErrorResponse(response.status)
-			: response;
+		return response.status >= 400 ? trpcErrorResponse(response.status) : response;
 	}
 	return noStoreJson(sanitized.payload, response.status, response.headers);
 };

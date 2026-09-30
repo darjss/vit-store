@@ -5,9 +5,9 @@ const MN_PHONE_RE = /^[6-9]\d{7}$/;
 const SMS_SUCCESS_STATES = new Set(["Sent", "Delivered"]);
 
 export type OrderConfirmationSmsInput = {
-	paymentNumber: string;
-	orderNumber: string;
 	customerPhone: number;
+	orderNumber: string;
+	paymentNumber: string;
 	total: number;
 };
 
@@ -25,15 +25,13 @@ export class SmsAmbiguousError extends Error {
 
 function getStorefrontBaseUrl(): string {
 	const value = process.env.STORE_PUBLIC_URL;
-	if (!value) throw new Error("STORE_PUBLIC_URL is required");
+	if (!value) {
+		throw new Error("STORE_PUBLIC_URL is required");
+	}
 	const url = new URL(value);
-	if (
-		url.protocol !== "https:" ||
-		url.pathname !== "/" ||
-		url.search ||
-		url.hash
-	)
+	if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash) {
 		throw new Error("STORE_PUBLIC_URL must be a canonical https origin");
+	}
 	return url.origin;
 }
 
@@ -46,9 +44,7 @@ export function buildOrderConfirmationSmsMessage(input: {
 	return `Захиалга #${input.orderNumber} баталгаажлаа. Нийт: ${amount}. Хянах: ${trackUrl}`;
 }
 
-export async function sendOrderConfirmationSms(
-	input: OrderConfirmationSmsInput,
-): Promise<void> {
+export async function sendOrderConfirmationSms(input: OrderConfirmationSmsInput): Promise<void> {
 	const phone = String(input.customerPhone);
 	if (!MN_PHONE_RE.test(phone)) {
 		throw new SmsRetryableError("invalid_phone");
@@ -75,8 +71,8 @@ export async function sendOrderConfirmationSms(
 	}
 
 	logger.info("order.sms_confirmation_sent", {
-		paymentNumber: input.paymentNumber,
 		orderNumber: input.orderNumber,
+		paymentNumber: input.paymentNumber,
 		smsState: finalState.state,
 	});
 }

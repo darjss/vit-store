@@ -2,11 +2,7 @@ import path from "node:path";
 import { config as loadDotEnv } from "dotenv";
 import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { createDb } from "@vit/api/db";
-import {
-	OrdersTable,
-	PaymentsTable,
-	ProductImagesTable,
-} from "@vit/api/db/schema";
+import { OrdersTable, PaymentsTable, ProductImagesTable } from "@vit/api/db/schema";
 import { sendDetailedOrderNotification } from "@vit/api/lib/integrations/admin-notifications/send";
 import { shapeOrderResult } from "@vit/api/lib/utils";
 
@@ -25,17 +21,14 @@ const todayStart = new Date();
 todayStart.setHours(0, 0, 0, 0);
 
 const result = await db.query.OrdersTable.findFirst({
-	where: and(
-		isNull(OrdersTable.deletedAt),
-		gte(OrdersTable.createdAt, todayStart),
-	),
 	orderBy: [desc(OrdersTable.createdAt)],
+	where: and(isNull(OrdersTable.deletedAt), gte(OrdersTable.createdAt, todayStart)),
 	with: {
 		orderDetails: {
-			columns: { quantity: true, price: true },
+			columns: { price: true, quantity: true },
 			with: {
 				product: {
-					columns: { name: true, id: true, price: true },
+					columns: { id: true, name: true, price: true },
 					with: {
 						images: {
 							columns: { url: true },
@@ -50,10 +43,10 @@ const result = await db.query.OrdersTable.findFirst({
 		},
 		payments: {
 			columns: {
+				createdAt: true,
+				paymentNumber: true,
 				provider: true,
 				status: true,
-				paymentNumber: true,
-				createdAt: true,
 			},
 			where: isNull(PaymentsTable.deletedAt),
 		},
@@ -70,19 +63,19 @@ console.log(
 );
 
 await sendDetailedOrderNotification({
+	address: order.address,
+	customerPhone: Number(order.customerPhone),
+	notes: order.notes,
 	orderNumber: order.orderNumber,
 	paymentNumber: order.paymentNumber ?? "",
-	provider: order.paymentProvider,
-	customerPhone: Number(order.customerPhone),
-	address: order.address,
-	notes: order.notes,
-	total: order.total,
 	products: order.products.map((p) => ({
-		name: p.name,
-		quantity: p.quantity,
-		price: p.price,
 		imageUrl: p.imageUrl,
+		name: p.name,
+		price: p.price,
+		quantity: p.quantity,
 	})),
+	provider: order.paymentProvider,
+	total: order.total,
 });
 
 console.log("sent");

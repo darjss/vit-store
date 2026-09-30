@@ -8,7 +8,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown",
+		"build": "vp pack",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -21,7 +21,6 @@
 		"valibot": "catalog:"
 	},
 	"devDependencies": {
-		"tsdown": "catalog:",
 		"typescript": "catalog:"
 	},
 	"peerDependencies": {

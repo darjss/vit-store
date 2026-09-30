@@ -4,23 +4,23 @@ type QueryStatus = "pending" | "error" | "success";
 type FetchStatus = "fetching" | "paused" | "idle";
 
 interface SearchTakeoverRequestSnapshot {
-	status: QueryStatus;
 	fetchStatus: FetchStatus;
+	hasCurrentData: boolean;
 	isLoadingError: boolean;
 	isRefetchError: boolean;
-	hasCurrentData: boolean;
+	status: QueryStatus;
 }
 
 export const getSearchTakeoverRequestState = (
 	snapshot: SearchTakeoverRequestSnapshot,
 ): SearchTakeoverRequestState => {
-	if (snapshot.hasCurrentData) return "results";
-	if (snapshot.isLoadingError) return "error";
-	if (
-		snapshot.status === "pending" ||
-		snapshot.fetchStatus !== "idle" ||
-		snapshot.isRefetchError
-	) {
+	if (snapshot.hasCurrentData) {
+		return "results";
+	}
+	if (snapshot.isLoadingError) {
+		return "error";
+	}
+	if (snapshot.status === "pending" || snapshot.fetchStatus !== "idle" || snapshot.isRefetchError) {
 		return "loading";
 	}
 

@@ -19,28 +19,27 @@ import { createServerAlchemyEnv } from "../../env";
 // its STOREFRONT WorkerRef binding; a private interface here trips declaration
 // emit in check-types.
 export interface StorefrontCacheRpc extends Rpc.WorkerEntrypointBranded {
-	purgeCache(tags: string[]): Promise<void>;
+	purgeCache(tags: Array<string>): Promise<void>;
 }
 
 const app = await alchemy("server");
 const stage = app.stage;
 
 const env = createServerAlchemyEnv(process.env);
-const fromEmail =
-	env.RESTOCK_FROM_EMAIL.match(/<([^>]+)>/)?.[1] ?? env.RESTOCK_FROM_EMAIL;
+const fromEmail = env.RESTOCK_FROM_EMAIL.match(/<([^>]+)>/)?.[1] ?? env.RESTOCK_FROM_EMAIL;
 const email = EmailSender({ allowedSenderAddresses: [fromEmail] });
 
 const kv = await KVNamespace("kv", {
-	title: `vit-kv-${app.stage}`,
 	adopt: true,
+	title: `vit-kv-${app.stage}`,
 });
 
 const r2 = await R2Bucket("r2", {
-	name: "vit-store-bucket-prod",
+	adopt: true,
 	dev: {
 		remote: true,
 	},
-	adopt: true,
+	name: "vit-store-bucket-prod",
 });
 
 const rateLimit = RateLimit({
@@ -57,23 +56,20 @@ const images = Images({
 	},
 });
 
-const transferReconciliation = DurableObjectNamespace(
-	"transfer-reconciliation",
-	{
-		className: "TransferReconciliationObject",
-		sqlite: true,
-	},
-);
+const transferReconciliation = DurableObjectNamespace("transfer-reconciliation", {
+	className: "TransferReconciliationObject",
+	sqlite: true,
+});
 
 const hyperdriveDB = await Hyperdrive("pscale-db", {
+	adopt: true,
 	origin: {
+		database: env.PLANETSCALE_DATABASE,
 		host: env.PLANETSCALE_HOST,
+		password: env.PLANETSCALE_PASSWORD,
 		port: 5432,
 		user: env.PLANETSCALE_USER,
-		password: env.PLANETSCALE_PASSWORD,
-		database: env.PLANETSCALE_DATABASE,
 	},
-	adopt: true,
 });
 
 const directDbUrl =
@@ -82,69 +78,61 @@ const directDbUrl =
 		: "";
 
 export const server = await Worker("api", {
-	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
+	cache: { enabled: true },
 	compatibility: "node",
 	compatibilityDate: "2026-07-07",
-	cache: { enabled: true },
+	entrypoint: path.join(import.meta.dirname, "src", "index.ts"),
 	// Durable restock batches/retries run independently of request lifetimes.
-	crons: ["*/5 * * * *", "0 2 * * *"],
-	domains:
-		stage === "prod"
-			? ["api.amerikvitamin.mn"]
-			: stage === "staging"
-				? ["api-staging.amerikvitamin.mn"]
-				: undefined,
-
 	adopt: true,
 	bindings: {
 		AI: Ai<Pick<AiModels, "@cf/moonshotai/kimi-k2.6">>(),
+		DB: hyperdriveDB,
+		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
+		RATE_LIMITER: rateLimit,
 		STOREFRONT: WorkerRef<StorefrontCacheRpc>({
 			service: `storev2-front-${stage}`,
 		}),
-		KHAAN_TRANSFER_RECONCILER: transferReconciliation,
-		RATE_LIMITER: rateLimit,
-		DB: hyperdriveDB,
 		...(directDbUrl ? { DIRECT_DB_URL: directDbUrl } : {}),
-		vitStoreKV: kv,
-		r2Bucket: r2,
-		images: images,
-		EMAIL: email,
 		CORS_ORIGIN: env.CORS_ORIGIN,
 		DASH_URL: env.DASH_URL,
+		DOMAIN: env.DOMAIN,
+		EMAIL: email,
+		FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
+		GOOGLE_CALLBACK_URL: env.GOOGLE_CALLBACK_URL,
 		GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET,
-		GOOGLE_CALLBACK_URL: env.GOOGLE_CALLBACK_URL,
-		DOMAIN: env.DOMAIN,
+		images,
+		KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
+		KHAAN_PASSWORD: env.KHAAN_PASSWORD,
+		KHAAN_USERNAME: env.KHAAN_USERNAME,
 		MESSENGER_ACCESS_TOKEN: env.MESSENGER_ACCESS_TOKEN,
 		MESSENGER_VERIFY_TOKEN: env.MESSENGER_VERIFY_TOKEN,
-		SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
-		SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
-		RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
-		FIRECRAWL_API_KEY: env.FIRECRAWL_API_KEY,
 		OPENCODE_GO_API_KEY: env.OPENCODE_GO_API_KEY,
-		UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
-		UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
-		UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,
-		UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN,
+		QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
+		QPAY_PASSWORD: env.QPAY_PASSWORD,
 		QPAY_URL: env.QPAY_URL,
 		QPAY_USERNAME: env.QPAY_USERNAME,
-		QPAY_PASSWORD: env.QPAY_PASSWORD,
-		QPAY_CALLBACK_URL: env.QPAY_CALLBACK_URL ?? env.GOOGLE_CALLBACK_URL,
-		KHAAN_USERNAME: env.KHAAN_USERNAME,
-		KHAAN_PASSWORD: env.KHAAN_PASSWORD,
-		KHAAN_DEVICE_ID: env.KHAAN_DEVICE_ID,
+		r2Bucket: r2,
+		RESTOCK_FROM_EMAIL: env.RESTOCK_FROM_EMAIL,
+		SMS_GATEWAY_LOGIN: env.SMS_GATEWAY_LOGIN,
+		SMS_GATEWAY_PASSWORD: env.SMS_GATEWAY_PASSWORD,
+		UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN,
+		UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,
+		UPSTASH_SEARCH_TOKEN: env.UPSTASH_SEARCH_TOKEN,
+		UPSTASH_SEARCH_URL: env.UPSTASH_SEARCH_URL,
+		vitStoreKV: kv,
 		...(env.KHAAN_USER_AGENT ? { KHAAN_USER_AGENT: env.KHAAN_USER_AGENT } : {}),
-		KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
+		DELIVERY_API_URL: env.DELIVERY_API_URL,
+		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
+		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
+		DELIVERY_USERNAME: env.DELIVERY_USERNAME,
 		KHAAN_ACCOUNT_NAME: env.KHAAN_ACCOUNT_NAME,
+		KHAAN_ACCOUNT_NUMBER: env.KHAAN_ACCOUNT_NUMBER,
 		KHAAN_BRANCH_CODE: env.KHAAN_BRANCH_CODE,
+		POSTHOG_HOST: env.POSTHOG_HOST,
 		POSTHOG_PERSONAL_API_KEY: env.POSTHOG_API_KEY,
 		POSTHOG_PROJECT_API_KEY: env.POSTHOG_PROJECT_API_KEY,
 		POSTHOG_PROJECT_ID: env.POSTHOG_PROJECT_ID,
-		POSTHOG_HOST: env.POSTHOG_HOST,
-		DELIVERY_API_URL: env.DELIVERY_API_URL,
-		DELIVERY_USERNAME: env.DELIVERY_USERNAME,
-		DELIVERY_PASSWORD: env.DELIVERY_PASSWORD,
-		DELIVERY_SENDERID: env.DELIVERY_SENDERID,
 		...(env.ADMIN_BOT_TOKEN ? { ADMIN_BOT_TOKEN: env.ADMIN_BOT_TOKEN } : {}),
 		...(env.TELEGRAM_ADMIN_BOT_TOKEN && env.TELEGRAM_ADMIN_CHAT_ID
 			? {
@@ -155,19 +143,27 @@ export const server = await Worker("api", {
 		IMAGE_UPLOAD_TOKEN: alchemy.secret(env.IMAGE_UPLOAD_TOKEN),
 	},
 
+	crons: ["*/5 * * * *", "0 2 * * *"],
+	dev: {
+		port: 3006,
+	},
+
+	domains:
+		stage === "prod"
+			? ["api.amerikvitamin.mn"]
+			: stage === "staging"
+				? ["api-staging.amerikvitamin.mn"]
+				: undefined,
 	observability: {
 		enabled: true,
 		logs: {
+			destinations: ["axiom-logs"],
 			enabled: true,
 			persist: true,
-			destinations: ["axiom-logs"],
 		},
 	},
 	placement: {
 		region: "aws:ap-southeast-1",
-	},
-	dev: {
-		port: 3006,
 	},
 });
 

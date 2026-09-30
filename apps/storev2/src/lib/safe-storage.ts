@@ -1,6 +1,18 @@
+import { isServer } from "@/lib/runtime";
+
 export const safeStorage: Storage = {
+	clear: () => {
+		if (isServer) {
+			return;
+		}
+		try {
+			localStorage.clear();
+		} catch {
+			// localStorage unavailable
+		}
+	},
 	getItem: (key: string) => {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return null;
 		}
 		try {
@@ -9,32 +21,18 @@ export const safeStorage: Storage = {
 			return null;
 		}
 	},
-	setItem: (key: string, value: string) => {
-		if (typeof window === "undefined") {
-			return;
+	key: (index: number) => {
+		if (isServer) {
+			return null;
 		}
 		try {
-			localStorage.setItem(key, value);
-		} catch {}
-	},
-	removeItem: (key: string) => {
-		if (typeof window === "undefined") {
-			return;
+			return localStorage.key(index);
+		} catch {
+			return null;
 		}
-		try {
-			localStorage.removeItem(key);
-		} catch {}
-	},
-	clear: () => {
-		if (typeof window === "undefined") {
-			return;
-		}
-		try {
-			localStorage.clear();
-		} catch {}
 	},
 	get length() {
-		if (typeof window === "undefined") {
+		if (isServer) {
 			return 0;
 		}
 		try {
@@ -43,14 +41,24 @@ export const safeStorage: Storage = {
 			return 0;
 		}
 	},
-	key: (index: number) => {
-		if (typeof window === "undefined") {
-			return null;
+	removeItem: (key: string) => {
+		if (isServer) {
+			return;
 		}
 		try {
-			return localStorage.key(index);
+			localStorage.removeItem(key);
 		} catch {
-			return null;
+			// localStorage unavailable
+		}
+	},
+	setItem: (key: string, value: string) => {
+		if (isServer) {
+			return;
+		}
+		try {
+			localStorage.setItem(key, value);
+		} catch {
+			// localStorage unavailable
 		}
 	},
 };

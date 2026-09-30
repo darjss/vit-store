@@ -3,7 +3,7 @@ import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 
 const UserData = () => {
-	const { session, queryClient, trpc } = useRouteContext({ from: "/_dash" });
+	const { queryClient, session, trpc } = useRouteContext({ from: "/_dash" });
 	const navigate = useNavigate();
 
 	const logout = useMutation({
@@ -16,17 +16,9 @@ const UserData = () => {
 
 	return (
 		<div className="space-y-3 p-2">
-			<div className="truncate text-foreground/70 text-sm">
-				Нэвтэрсэн хэрэглэгч
-			</div>
-			<div className="truncate font-medium text-foreground">
-				{session?.user.username}
-			</div>
-			<Button
-				onClick={() => logout.mutate()}
-				className="w-full"
-				variant="destructive"
-			>
+			<div className="text-foreground/70 truncate text-sm">Нэвтэрсэн хэрэглэгч</div>
+			<div className="text-foreground truncate font-medium">{session?.user.username}</div>
+			<Button className="w-full" onClick={() => logout.mutate()} variant="destructive">
 				{logout.isPending ? "Гарах..." : "Гарах"}
 			</Button>
 		</div>

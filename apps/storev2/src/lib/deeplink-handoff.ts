@@ -8,10 +8,10 @@ import { createUnion, type InferUnion, is } from "dismatch";
  * happened and the shopper needs a recovery path.
  */
 export const HandoffState = createUnion({
-	idle: () => ({}),
-	opening: (bank: string, startedAt: number) => ({ bank, startedAt }),
-	opened: (bank: string) => ({ bank }),
 	failed: (bank: string) => ({ bank }),
+	idle: () => ({}),
+	opened: (bank: string) => ({ bank }),
+	opening: (bank: string, startedAt: number) => ({ bank, startedAt }),
 });
 
 export type HandoffState = InferUnion<typeof HandoffState>;
@@ -30,18 +30,22 @@ export const HANDOFF_TIMEOUT_MS = 8000;
  */
 export const watchHandoff = (
 	state: Extract<HandoffState, { type: "opening" }>,
-	handlers: { onOpened: () => void; onFailed: () => void },
+	handlers: { onFailed: () => void; onOpened: () => void },
 ): (() => void) => {
 	let done = false;
 	const finish = (handler: () => void) => {
-		if (done) return;
+		if (done) {
+			return;
+		}
 		done = true;
 		document.removeEventListener("visibilitychange", onVisibilityChange);
 		window.clearTimeout(timer);
 		handler();
 	};
 	const onVisibilityChange = () => {
-		if (!document.hidden) return;
+		if (!document.hidden) {
+			return;
+		}
 		finish(handlers.onOpened);
 	};
 	const timer = window.setTimeout(
@@ -53,17 +57,16 @@ export const watchHandoff = (
 };
 
 /** Resets `opened` back to `idle` once the shopper returns from the bank app. */
-export const watchReturnFromBankApp = (
-	onReturned: () => void,
-): (() => void) => {
+export const watchReturnFromBankApp = (onReturned: () => void): (() => void) => {
 	const onVisibilityChange = () => {
-		if (document.hidden) return;
+		if (document.hidden) {
+			return;
+		}
 		document.removeEventListener("visibilitychange", onVisibilityChange);
 		onReturned();
 	};
 	document.addEventListener("visibilitychange", onVisibilityChange);
-	return () =>
-		document.removeEventListener("visibilitychange", onVisibilityChange);
+	return () => document.removeEventListener("visibilitychange", onVisibilityChange);
 };
 
 export { is as isHandoffState };

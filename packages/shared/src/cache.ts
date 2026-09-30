@@ -6,16 +6,16 @@ export type CachePolicy = {
 };
 
 export const CACHE_POLICY = {
-	productsList: { maxAge: 21600, staleWhileRevalidate: 86400 },
-	productDetail: { maxAge: 21600, staleWhileRevalidate: 86400 },
-	homeFeed: { maxAge: 21600, staleWhileRevalidate: 86400 },
-	categories: { maxAge: 86400, staleWhileRevalidate: 604800 },
-	brands: { maxAge: 86400, staleWhileRevalidate: 604800 },
+	brands: { maxAge: 86_400, staleWhileRevalidate: 604_800 },
+	categories: { maxAge: 86_400, staleWhileRevalidate: 604_800 },
+	homeFeed: { maxAge: 21_600, staleWhileRevalidate: 86_400 },
 	inventory: {
 		maxAge: 10,
 		staleWhileRevalidate: 5,
 		useMaxAge: true,
 	},
+	productDetail: { maxAge: 21_600, staleWhileRevalidate: 86_400 },
+	productsList: { maxAge: 21_600, staleWhileRevalidate: 86_400 },
 } as const satisfies Record<string, CachePolicy>;
 
 export function cacheControlHeader(policy: CachePolicy): string {

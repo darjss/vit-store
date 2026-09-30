@@ -1,3 +1,5 @@
+import { isServer } from "@/lib/runtime";
+
 // Guard around Astro's view-transition `navigate()` to prevent the
 // `InvalidStateError` ("Transition was aborted because of invalid state")
 // that `document.startViewTransition` throws when:
@@ -15,7 +17,7 @@
 
 let inFlight = false;
 
-if (typeof document !== "undefined") {
+if (!isServer) {
 	const reset = () => {
 		inFlight = false;
 	};
@@ -23,9 +25,7 @@ if (typeof document !== "undefined") {
 	document.addEventListener("astro:page-load", reset);
 }
 
-type NavigateOptions = Parameters<
-	typeof import("astro:transitions/client")["navigate"]
->[1];
+type NavigateOptions = Parameters<(typeof import("astro:transitions/client"))["navigate"]>[1];
 
 /**
  * Navigate via Astro view transitions, coalescing concurrent calls into the
@@ -33,8 +33,12 @@ type NavigateOptions = Parameters<
  * hidden (view transitions cannot run while the document is not visible).
  */
 export async function safeNavigate(href: string, options?: NavigateOptions) {
-	if (typeof window === "undefined") return;
-	if (inFlight) return;
+	if (isServer) {
+		return;
+	}
+	if (inFlight) {
+		return;
+	}
 
 	// startViewTransition throws InvalidStateError when the document is
 	// hidden. A plain location assignment does not use view transitions and

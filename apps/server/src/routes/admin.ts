@@ -12,21 +12,21 @@ app.use("*", requireAdminSession);
 
 app.post("/sync-search", async (c) => {
 	const log = c.get("log");
-	log.set({ user_type: "admin", operation: "product_search.sync" });
+	log.set({ operation: "product_search.sync", user_type: "admin" });
 	const startedAt = Date.now();
 
 	try {
 		const result = await rebuildProductSearchIndex("manual");
 		log.info("product_search.sync_complete", {
-			product_count: result.productCount,
-			generation: result.activeGeneration,
 			duration_ms: Date.now() - startedAt,
+			generation: result.activeGeneration,
+			product_count: result.productCount,
 		});
 		return c.json(result);
 	} catch (error) {
 		log.error(error instanceof Error ? error : new Error(String(error)), {
-			event: "product_search.sync_failed",
 			duration_ms: Date.now() - startedAt,
+			event: "product_search.sync_failed",
 		});
 		return c.json({ error: "Failed to rebuild product search index" }, 500);
 	}

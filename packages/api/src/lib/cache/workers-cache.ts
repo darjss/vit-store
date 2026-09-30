@@ -20,9 +20,7 @@ import { logger } from "~/lib/logger";
 // resolve it lazily and no-op when it is unavailable.
 let workersCacheModule: typeof import("cloudflare:workers") | null | undefined;
 
-async function getWorkersCacheModule(): Promise<
-	typeof import("cloudflare:workers") | null
-> {
+async function getWorkersCacheModule(): Promise<typeof import("cloudflare:workers") | null> {
 	if (workersCacheModule !== undefined) {
 		return workersCacheModule;
 	}
@@ -39,11 +37,7 @@ type CacheHonoContext = HonoContext<{
 	Variables: ServerHonoVariables;
 }>;
 
-export function markCacheable(
-	ctx: Context,
-	policy: CachePolicy,
-	tags: string[],
-): void {
+export function markCacheable(ctx: Context, policy: CachePolicy, tags: Array<string>): void {
 	if (
 		ctx.c.req.method !== "GET" ||
 		ctx.c.req.header("cookie") ||
@@ -75,8 +69,7 @@ export function markCacheable(
 }
 
 export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
-	const accumulated: CatalogCacheAccumulator | undefined =
-		c.get("catalogCache");
+	const accumulated: CatalogCacheAccumulator | undefined = c.get("catalogCache");
 
 	// Non-catalog store responses (auth-gated queries, cart, etc.) must not be
 	// cached. Without an explicit no-store, the Workers Cache may apply
@@ -100,7 +93,7 @@ export function finalizeCatalogCacheHeaders(c: CacheHonoContext): void {
 	}
 }
 
-export async function purgeTagsGlobal(tags: string[]): Promise<void> {
+export async function purgeTagsGlobal(tags: Array<string>): Promise<void> {
 	if (tags.length === 0) {
 		return;
 	}
@@ -119,9 +112,9 @@ export async function purgeTagsGlobal(tags: string[]): Promise<void> {
 }
 
 export function catalogCacheTags(
-	productIds: readonly number[] = [],
-	extraTags: readonly string[] = [],
-): string[] {
+	productIds: ReadonlyArray<number> = [],
+	extraTags: ReadonlyArray<string> = [],
+): Array<string> {
 	const uniqueProductIds = [...new Set(productIds)];
 	return [
 		...new Set([
@@ -139,33 +132,33 @@ export function catalogCacheTags(
 
 export async function purgeCatalogCache(
 	ctx: Context,
-	productIds: readonly number[] = [],
-	extraTags: readonly string[] = [],
+	productIds: ReadonlyArray<number> = [],
+	extraTags: ReadonlyArray<string> = [],
 ): Promise<void> {
 	const tags = catalogCacheTags(productIds, extraTags);
 	await Promise.all([purgeTags(ctx, tags), purgeStorefrontTags(ctx, tags)]);
 }
 
 export async function purgeCatalogCacheGlobal(
-	productIds: readonly number[] = [],
-	extraTags: readonly string[] = [],
+	productIds: ReadonlyArray<number> = [],
+	extraTags: ReadonlyArray<string> = [],
 ): Promise<void> {
 	const tags = catalogCacheTags(productIds, extraTags);
 	await Promise.all([purgeTagsGlobal(tags), purgeStorefrontTagsGlobal(tags)]);
 }
 
-async function purgeStorefrontTags(ctx: Context, tags: string[]): Promise<void> {
+async function purgeStorefrontTags(ctx: Context, tags: Array<string>): Promise<void> {
 	try {
 		await ctx.c.env.STOREFRONT.purgeCache(tags);
 	} catch (error) {
 		ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-			event: "storefront_cache.purge_failed",
 			cache_tags: tags,
+			event: "storefront_cache.purge_failed",
 		});
 	}
 }
 
-async function purgeStorefrontTagsGlobal(tags: string[]): Promise<void> {
+async function purgeStorefrontTagsGlobal(tags: Array<string>): Promise<void> {
 	const mod = await getWorkersCacheModule();
 	try {
 		await mod?.env.STOREFRONT.purgeCache(tags);
@@ -174,7 +167,7 @@ async function purgeStorefrontTagsGlobal(tags: string[]): Promise<void> {
 	}
 }
 
-export async function purgeTags(ctx: Context, tags: string[]): Promise<void> {
+export async function purgeTags(ctx: Context, tags: Array<string>): Promise<void> {
 	if (!ctx.cache || tags.length === 0) {
 		return;
 	}
@@ -183,8 +176,8 @@ export async function purgeTags(ctx: Context, tags: string[]): Promise<void> {
 		await ctx.cache.purge({ tags });
 	} catch (error) {
 		ctx.log.error(error instanceof Error ? error : new Error(String(error)), {
-			event: "workers_cache.purge_failed",
 			cache_tags: tags,
+			event: "workers_cache.purge_failed",
 		});
 	}
 }

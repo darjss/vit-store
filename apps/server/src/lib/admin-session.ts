@@ -3,10 +3,7 @@ import type { MiddlewareHandler } from "hono";
 import { createContext } from "./context";
 import type { ServerHonoEnv } from "./logging";
 
-export const requireAdminSession: MiddlewareHandler<ServerHonoEnv> = async (
-	c,
-	next,
-) => {
+export const requireAdminSession: MiddlewareHandler<ServerHonoEnv> = async (c, next) => {
 	const ctx = await createContext({ context: c });
 	const session = await adminAuth(ctx);
 	if (!session) {
@@ -17,7 +14,7 @@ export const requireAdminSession: MiddlewareHandler<ServerHonoEnv> = async (
 	}
 
 	ctx.log.set({
-		user: { id: session.user.id, email: session.user.username },
+		user: { email: session.user.username, id: session.user.id },
 		user_type: "admin",
 	});
 	await next();

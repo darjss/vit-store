@@ -4,94 +4,79 @@ import { CategoriesTable, ProductsTable } from "~/db/schema";
 
 export const categoryQueries = {
 	admin: {
-		async getAllCategories() {
-			return db()
-				.select({
-					id: CategoriesTable.id,
-					name: CategoriesTable.name,
-					slug: CategoriesTable.slug,
-					description: CategoriesTable.description,
-					bannerImage: CategoriesTable.bannerImage,
-					seoTitle: CategoriesTable.seoTitle,
-					seoDescription: CategoriesTable.seoDescription,
-					createdAt: CategoriesTable.createdAt,
-					updatedAt: CategoriesTable.updatedAt,
-				})
-				.from(CategoriesTable)
-				.where(isNull(CategoriesTable.deletedAt));
-		},
-
 		async createCategory(data: {
-			name: string;
-			slug: string;
-			description?: string | null;
 			bannerImage?: string | null;
-			seoTitle?: string | null;
+			description?: string | null;
+			name: string;
 			seoDescription?: string | null;
+			seoTitle?: string | null;
+			slug: string;
 		}) {
 			await db().insert(CategoriesTable).values(data);
-		},
-
-		async updateCategory(
-			id: number,
-			data: {
-				name: string;
-				slug: string;
-				description?: string | null;
-				bannerImage?: string | null;
-				seoTitle?: string | null;
-				seoDescription?: string | null;
-			},
-		) {
-			await db()
-				.update(CategoriesTable)
-				.set(data)
-				.where(
-					and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-				);
 		},
 
 		async deleteCategory(id: number) {
 			await db()
 				.update(CategoriesTable)
 				.set({ deletedAt: new Date() })
-				.where(
-					and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-				);
+				.where(and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)));
+		},
+
+		async getAllCategories() {
+			return db()
+				.select({
+					bannerImage: CategoriesTable.bannerImage,
+					createdAt: CategoriesTable.createdAt,
+					description: CategoriesTable.description,
+					id: CategoriesTable.id,
+					name: CategoriesTable.name,
+					seoDescription: CategoriesTable.seoDescription,
+					seoTitle: CategoriesTable.seoTitle,
+					slug: CategoriesTable.slug,
+					updatedAt: CategoriesTable.updatedAt,
+				})
+				.from(CategoriesTable)
+				.where(isNull(CategoriesTable.deletedAt));
 		},
 
 		async getCategoryById(id: number) {
 			const result = await db()
 				.select({
+					bannerImage: CategoriesTable.bannerImage,
+					createdAt: CategoriesTable.createdAt,
+					description: CategoriesTable.description,
 					id: CategoriesTable.id,
 					name: CategoriesTable.name,
-					slug: CategoriesTable.slug,
-					description: CategoriesTable.description,
-					bannerImage: CategoriesTable.bannerImage,
-					seoTitle: CategoriesTable.seoTitle,
 					seoDescription: CategoriesTable.seoDescription,
-					createdAt: CategoriesTable.createdAt,
+					seoTitle: CategoriesTable.seoTitle,
+					slug: CategoriesTable.slug,
 					updatedAt: CategoriesTable.updatedAt,
 				})
 				.from(CategoriesTable)
-				.where(
-					and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)),
-				)
+				.where(and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)))
 				.limit(1);
 			return result[0] || null;
+		},
+
+		async updateCategory(
+			id: number,
+			data: {
+				bannerImage?: string | null;
+				description?: string | null;
+				name: string;
+				seoDescription?: string | null;
+				seoTitle?: string | null;
+				slug: string;
+			},
+		) {
+			await db()
+				.update(CategoriesTable)
+				.set(data)
+				.where(and(eq(CategoriesTable.id, id), isNull(CategoriesTable.deletedAt)));
 		},
 	},
 
 	store: {
-		async getAllCategoryNames() {
-			const categories = await db().query.CategoriesTable.findMany({
-				columns: {
-					name: true,
-				},
-			});
-			return categories.map((category) => category.name);
-		},
-
 		async getAllCategories() {
 			const productCount = sql<number>`count(${ProductsTable.id})::int`;
 
@@ -99,8 +84,8 @@ export const categoryQueries = {
 				.select({
 					id: CategoriesTable.id,
 					name: CategoriesTable.name,
-					slug: CategoriesTable.slug,
 					productCount,
+					slug: CategoriesTable.slug,
 				})
 				.from(CategoriesTable)
 				.leftJoin(
@@ -116,24 +101,6 @@ export const categoryQueries = {
 				.orderBy(desc(productCount), asc(CategoriesTable.name));
 		},
 
-		async getCategoryBySlug(slug: string) {
-			return db().query.CategoriesTable.findFirst({
-				columns: {
-					id: true,
-					name: true,
-					slug: true,
-					description: true,
-					bannerImage: true,
-					seoTitle: true,
-					seoDescription: true,
-				},
-				where: and(
-					eq(CategoriesTable.slug, slug),
-					isNull(CategoriesTable.deletedAt),
-				),
-			});
-		},
-
 		async getAllCategoriesWithStock() {
 			const productCount = sql<number>`count(${ProductsTable.id})::int`;
 
@@ -141,8 +108,8 @@ export const categoryQueries = {
 				.select({
 					id: CategoriesTable.id,
 					name: CategoriesTable.name,
-					slug: CategoriesTable.slug,
 					productCount,
+					slug: CategoriesTable.slug,
 				})
 				.from(CategoriesTable)
 				.leftJoin(
@@ -157,6 +124,30 @@ export const categoryQueries = {
 				.where(isNull(CategoriesTable.deletedAt))
 				.groupBy(CategoriesTable.id, CategoriesTable.name, CategoriesTable.slug)
 				.orderBy(desc(productCount), asc(CategoriesTable.name));
+		},
+
+		async getAllCategoryNames() {
+			const categories = await db().query.CategoriesTable.findMany({
+				columns: {
+					name: true,
+				},
+			});
+			return categories.map((category) => category.name);
+		},
+
+		async getCategoryBySlug(slug: string) {
+			return db().query.CategoriesTable.findFirst({
+				columns: {
+					bannerImage: true,
+					description: true,
+					id: true,
+					name: true,
+					seoDescription: true,
+					seoTitle: true,
+					slug: true,
+				},
+				where: and(eq(CategoriesTable.slug, slug), isNull(CategoriesTable.deletedAt)),
+			});
 		},
 	},
 };

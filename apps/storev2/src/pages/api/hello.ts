@@ -6,17 +6,17 @@ export const GET: APIRoute = async ({ request }) => {
 
 	return new Response(
 		JSON.stringify({
-			message: "Hello from Astro API on Cloudflare!",
-			timestamp: new Date().toISOString(),
+			city: runtime?.city || "unknown",
 			colo: runtime?.colo || "unknown",
 			country: runtime?.country || "unknown",
-			city: runtime?.city || "unknown",
+			message: "Hello from Astro API on Cloudflare!",
+			timestamp: new Date().toISOString(),
 		}),
 		{
-			status: 200,
 			headers: {
 				"Content-Type": "application/json",
 			},
+			status: 200,
 		},
 	);
 };

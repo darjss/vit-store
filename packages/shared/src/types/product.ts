@@ -1,49 +1,49 @@
 export interface CartItems {
-	productId: number;
-	quantity: number;
+	image: string;
 	name: string;
 	price: number;
-	image: string;
+	productId: number;
+	quantity: number;
 	slug: string;
 }
 
 export interface ProductForHome {
+	amount?: string | null;
+	brand: string;
+	discount?: number | null;
 	id: number;
-	slug: string;
+	image: string;
 	name: string;
 	nameMn?: string | null;
 	potency?: string | null;
-	amount?: string | null;
 	price: number;
-	image: string;
-	brand: string;
-	discount?: number | null;
+	slug: string;
 	stock?: number;
 }
 
 export interface ProductImage {
-	url: string;
 	isPrimary: boolean;
+	url: string;
 }
 
 export interface ProductDetail {
-	id: number;
-	name: string;
-	price: number;
-	status: string;
+	amount?: string | null;
+	brand: { name: string };
+	brandId: number;
+	category: { name: string };
+	categoryId: number;
+	dailyIntake?: string | null;
 	description?: string | null;
 	discount?: number | null;
-	amount?: string | null;
-	potency?: string | null;
-	dailyIntake?: string | null;
-	categoryId: number;
-	brandId: number;
-	ingredients?: string | null;
-	weightGrams?: number | null;
 	expirationDate?: string | null;
-	seoTitle?: string | null;
+	id: number;
+	images: Array<ProductImage>;
+	ingredients?: string | null;
+	name: string;
+	potency?: string | null;
+	price: number;
 	seoDescription?: string | null;
-	images: ProductImage[];
-	brand: { name: string };
-	category: { name: string };
+	seoTitle?: string | null;
+	status: string;
+	weightGrams?: number | null;
 }

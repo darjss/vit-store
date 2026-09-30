@@ -1,9 +1,6 @@
-export function normalizeRestockContact(
-	channel: "sms" | "email",
-	contact: string,
-): string {
+export function normalizeRestockContact(channel: "sms" | "email", contact: string): string {
 	if (channel === "sms") {
-		return contact.replace(/\D/g, "");
+		return contact.replaceAll(/\D/g, "");
 	}
 	return contact.trim().toLowerCase();
 }

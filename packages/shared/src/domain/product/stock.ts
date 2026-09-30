@@ -13,7 +13,9 @@ export type StockState = "out" | "low" | "in";
  * low; anything above the threshold (or unknown stock) is in stock.
  */
 export const productStockState = (stock?: number): StockState => {
-	if (stock === 0) return "out";
+	if (stock === 0) {
+		return "out";
+	}
 	if (stock !== undefined && stock > 0 && stock <= LOW_STOCK_THRESHOLD) {
 		return "low";
 	}

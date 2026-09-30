@@ -6,18 +6,16 @@ import { routeTree } from "./routeTree.gen";
 import { queryClient, trpc } from "./utils/trpc";
 
 const router = createRouter({
-	routeTree,
+	context: { queryClient, trpc },
+	defaultPendingComponent: GlobalPendingLoader,
+	defaultPendingMinMs: 300,
+	defaultPendingMs: 100,
 	defaultPreload: "intent",
 	defaultPreloadStaleTime: 30 * 1000,
-	defaultPendingComponent: GlobalPendingLoader,
-	defaultPendingMs: 100,
-	defaultPendingMinMs: 300,
+	routeTree,
 	scrollRestoration: true,
-	context: { trpc, queryClient },
 	Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
-		return (
-			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-		);
+		return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 	},
 });
 

@@ -46,23 +46,25 @@ Coordinate with broad issues #125 and #149; preserve ADR-0004 and do not claim d
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/queries/payments.ts packages/api/src/routers/store/payment.ts apps/agent/src/lib/payment.ts apps/agent/src/channels/payment-handler.ts apps/agent/cli/payment-proof.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                                                    | Expected on success                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/queries/payments.ts packages/api/src/routers/store/payment.ts apps/agent/src/lib/payment.ts apps/agent/src/channels/payment-handler.ts apps/agent/cli/payment-proof.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                                                      | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                                                            | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                                                     | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - one Payment-owned conditional claim operation
 - storefront and Messenger callers consuming its outcome
 - alert only on a new claim
 
 **Files/path families allowed**
+
 - `packages/api/src/queries/payments.ts`
 - `packages/api/src/routers/store/payment.ts`
 - `apps/agent/src/lib/payment.ts`
@@ -70,6 +72,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `apps/agent/cli/payment-proof.ts`
 
 **Out of scope**
+
 - transfer confirmation
 - QPay
 - Payment status vocabulary/schema

@@ -17,20 +17,20 @@
 import { SEO as AstroSEO } from "astro-seo";
 
 interface Props {
-  title?: string;
+  article?: {
+    modifiedTime?: string;
+    publishedTime?: string;
+    section?: string;
+    tags?: Array<string>;
+  };
+  canonical?: string;
   description?: string;
   image?: string;
   imageAlt?: string;
   imageType?: string;
-  noindex?: boolean;
   nofollow?: boolean;
-  article?: {
-    publishedTime?: string;
-    modifiedTime?: string;
-    section?: string;
-    tags?: string[];
-  };
-  canonical?: string;
+  noindex?: boolean;
+  title?: string;
 }
 
 const SITE_NAME = "Америк Витамин";
@@ -39,15 +39,15 @@ const DEFAULT_DESCRIPTION = "АНУ-ын шилдэг брэндүүдийн в�
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.svg`;
 
 const {
-  title,
+  article,
+  canonical,
   description = DEFAULT_DESCRIPTION,
   image = DEFAULT_IMAGE,
   imageAlt = "Америк Витамин - АНУ-ын витамин, нэмэлт тэжээл",
   imageType,
-  noindex = false,
   nofollow = false,
-  article,
-  canonical,
+  noindex = false,
+  title,
 } = Astro.props;
 
 // Build page title with template
@@ -64,11 +64,11 @@ const absoluteImage = image.startsWith("http") ? image : `${SITE_URL}${image}`;
 
 function inferImageType(url: string): string | undefined {
   const pathname = new URL(url).pathname.toLowerCase();
-  if (pathname.endsWith(".png")) return "image/png";
-  if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) return "image/jpeg";
-  if (pathname.endsWith(".webp")) return "image/webp";
-  if (pathname.endsWith(".gif")) return "image/gif";
-  if (pathname.endsWith(".svg")) return "image/svg+xml";
+  if (pathname.endsWith(".png")) {return "image/png";}
+  if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) {return "image/jpeg";}
+  if (pathname.endsWith(".webp")) {return "image/webp";}
+  if (pathname.endsWith(".gif")) {return "image/gif";}
+  if (pathname.endsWith(".svg")) {return "image/svg+xml";}
   return undefined;
 }
 
@@ -80,33 +80,33 @@ const ogType = article ? "article" : "website";
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: SITE_NAME,
-  url: SITE_URL,
+  contactPoint: {
+    "@type": "ContactPoint",
+    areaServed: "MN",
+    availableLanguage: ["mn"],
+    contactType: "customer service",
+    telephone: "+97699993950",
+  },
   logo: `${SITE_URL}/favicon.svg`,
+  name: SITE_NAME,
   sameAs: [
     "https://www.facebook.com/profile.php?id=100057596651892",
     "https://www.instagram.com/amerikhunsbaraa/",
   ],
-  contactPoint: {
-    "@type": "ContactPoint",
-    telephone: "+97699993950",
-    contactType: "customer service",
-    areaServed: "MN",
-    availableLanguage: ["mn"],
-  },
+  url: SITE_URL,
 };
 
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: SITE_NAME,
-  url: SITE_URL,
   inLanguage: "mn-MN",
+  name: SITE_NAME,
   potentialAction: {
     "@type": "SearchAction",
-    target: `${SITE_URL}/search?q={search_term_string}`,
     "query-input": "required name=search_term_string",
+    target: `${SITE_URL}/search?q={search_term_string}`,
   },
+  url: SITE_URL,
 };
 ---
 

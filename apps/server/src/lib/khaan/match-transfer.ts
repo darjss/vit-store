@@ -1,10 +1,7 @@
 import type { KhaanTransaction } from "khaan-client";
-import {
-	type KhaanMatchResult,
-	findMatchingKhaanTransfer,
-} from "khaan-client/reconciliation";
+import { type KhaanMatchResult, findMatchingKhaanTransfer } from "khaan-client/reconciliation";
 
-const NO_MATCH: KhaanMatchResult = { status: "none", matches: [] };
+const NO_MATCH: KhaanMatchResult = { matches: [], status: "none" };
 
 const CLOCK_SKEW_MS = 10 * 60 * 1000;
 
@@ -15,19 +12,19 @@ const CLOCK_SKEW_MS = 10 * 60 * 1000;
 const UB_OFFSET = "+08:00";
 
 export function matchKhaanTransfer(input: {
-	transactions: KhaanTransaction[];
+	expectedAmount: number;
 	paymentNumber: string;
 	phone: string;
-	expectedAmount: number;
+	transactions: Array<KhaanTransaction>;
 }): KhaanMatchResult {
 	const phone = input.phone.trim();
 	const paymentNumber = input.paymentNumber.trim();
 
 	const byPaymentNumber = paymentNumber
 		? findMatchingKhaanTransfer({
-				transactions: input.transactions,
-				paymentNumber,
 				expectedAmount: input.expectedAmount,
+				paymentNumber,
+				transactions: input.transactions,
 			})
 		: NO_MATCH;
 	if (byPaymentNumber.status !== "none") {
@@ -37,9 +34,9 @@ export function matchKhaanTransfer(input: {
 		return NO_MATCH;
 	}
 	return findMatchingKhaanTransfer({
-		transactions: input.transactions,
-		paymentNumber: phone,
 		expectedAmount: input.expectedAmount,
+		paymentNumber: phone,
+		transactions: input.transactions,
 	});
 }
 
@@ -75,9 +72,7 @@ function parseUbDate(tranDate: string): string | null {
 	return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
-function transactionLatestInstantMs(
-	transaction: KhaanTransaction,
-): number | null {
+function transactionLatestInstantMs(transaction: KhaanTransaction): number | null {
 	if (!transaction.tranDate) {
 		return null;
 	}
@@ -115,22 +110,22 @@ export function isTransactionWithinPaymentWindow(
 }
 
 export function filterTransactionsWithinPaymentWindow(
-	transactions: KhaanTransaction[],
+	transactions: Array<KhaanTransaction>,
 	paymentCreatedAtMs: number,
 	skewMs: number = CLOCK_SKEW_MS,
-): KhaanTransaction[] {
+): Array<KhaanTransaction> {
 	return transactions.filter((transaction) =>
 		isTransactionWithinPaymentWindow(transaction, paymentCreatedAtMs, skewMs),
 	);
 }
 
 type FingerprintableTransaction = {
-	tranDate?: string;
-	time?: string;
 	amount?: number;
+	balance?: number;
 	description?: string;
 	relatedAccount?: string;
-	balance?: number;
+	time?: string;
+	tranDate?: string;
 };
 
 // Stable pre-hash identity for a Khaan transaction. Two transactions with the
@@ -166,13 +161,11 @@ export async function khaanTransactionFingerprint(
 // eligible transactions plus an identity→fingerprint map so callers look up a
 // match's fingerprint in O(1) instead of recomputing SHA-256 (F7).
 export async function prepareEligibleKhaanTransactions(input: {
-	transactions: KhaanTransaction[];
+	getConsumedFingerprints: (fingerprints: Array<string>) => Promise<Set<string>>;
 	paymentCreatedAtMs: number;
-	getConsumedFingerprints: (
-		fingerprints: string[],
-	) => Promise<Set<string>>;
+	transactions: Array<KhaanTransaction>;
 }): Promise<{
-	eligible: KhaanTransaction[];
+	eligible: Array<KhaanTransaction>;
 	fingerprintByIdentity: Map<string, string>;
 }> {
 	const withinWindow = filterTransactionsWithinPaymentWindow(
@@ -188,9 +181,7 @@ export async function prepareEligibleKhaanTransactions(input: {
 		}),
 	);
 	const consumed = await input.getConsumedFingerprints(fingerprints);
-	const eligible = withinWindow.filter(
-		(_, index) => !consumed.has(fingerprints[index]),
-	);
+	const eligible = withinWindow.filter((_, index) => !consumed.has(fingerprints[index]));
 	return { eligible, fingerprintByIdentity };
 }
 
@@ -222,26 +213,26 @@ export function fingerprintOf(
 // prepareEligibleKhaanTransactions) so the window/filter/fingerprint/consumed
 // pipeline is not duplicated (F3) and fingerprints are not recomputed (F7).
 export async function collectMatchingKhaanFingerprints(input: {
-	eligible: KhaanTransaction[];
+	eligible: Array<KhaanTransaction>;
+	expectedAmount: number;
 	fingerprintByIdentity: Map<string, string>;
 	paymentNumber: string;
 	phone: string;
-	expectedAmount: number;
-}): Promise<string[]> {
+}): Promise<Array<string>> {
 	const paymentNumber = input.paymentNumber.trim();
 	const phone = input.phone.trim();
 	const byPaymentNumber = paymentNumber
 		? findMatchingKhaanTransfer({
-				transactions: input.eligible,
-				paymentNumber,
 				expectedAmount: input.expectedAmount,
+				paymentNumber,
+				transactions: input.eligible,
 			}).matches
 		: [];
 	const byPhone = phone
 		? findMatchingKhaanTransfer({
-				transactions: input.eligible,
-				paymentNumber: phone,
 				expectedAmount: input.expectedAmount,
+				paymentNumber: phone,
+				transactions: input.eligible,
 			}).matches
 		: [];
 	const result = new Set<string>();

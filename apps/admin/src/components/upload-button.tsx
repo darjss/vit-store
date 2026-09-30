@@ -3,6 +3,7 @@ import type { ImageUrlArray } from "@vit/shared";
 import { nanoid } from "nanoid";
 import { useRef } from "react";
 import { toast } from "sonner";
+import { parseUploadResponse } from "@/lib/upload-response";
 import { UploadIcon } from "./icons";
 import SubmitButton from "./submit-button";
 import { Input } from "./ui/input";
@@ -24,19 +25,12 @@ const uploadImage = async (image: File, category: string) => {
 	const formData = new FormData();
 	formData.append("image", image);
 	formData.append("key", key);
-	const response = await fetch(
-		`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`,
-		{
-			method: "POST",
-			credentials: "include",
-			body: formData,
-		},
-	);
-	const data = (await response.json()) as { url?: string; message: string };
-	if (response.ok && data.url) {
-		return data.url;
-	}
-	throw new Error(data.message || `Upload failed (${response.status})`);
+	const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/upload/${category}s`, {
+		body: formData,
+		credentials: "include",
+		method: "POST",
+	});
+	return parseUploadResponse(response);
 };
 
 export const UploadButton = ({
@@ -49,8 +43,8 @@ export const UploadButton = ({
 	onSuccess: (url: string) => void;
 }) => {
 	const fileRef = useRef<HTMLInputElement>(null);
-	const { mutate: upload, isPending } = useMutation({
-		mutationFn: ({ image, category }: { image: File; category: string }) => {
+	const { isPending, mutate: upload } = useMutation({
+		mutationFn: ({ category, image }: { category: string; image: File }) => {
 			return uploadImage(image, category);
 		},
 		mutationKey: ["upload"],
@@ -63,14 +57,14 @@ export const UploadButton = ({
 
 		Array.from(files).forEach((file) => {
 			upload(
-				{ image: file, category },
+				{ category, image: file },
 				{
+					onError: (error) => {
+						toast.error(error.message || "Зураг оруулахад алдаа гарлаа");
+					},
 					onSuccess: (url) => {
 						append?.({ url });
 						onSuccess(url);
-					},
-					onError: (error) => {
-						toast.error(error.message || "Зураг оруулахад алдаа гарлаа");
 					},
 				},
 			);
@@ -81,20 +75,20 @@ export const UploadButton = ({
 	return (
 		<div>
 			<SubmitButton
-				type="button"
+				className="flex items-center gap-2"
 				isPending={isPending}
 				onClick={() => {
 					fileRef.current?.click();
 				}}
-				className="flex items-center gap-2"
+				type="button"
 			>
 				<Input
-					type="file"
-					className="hidden"
-					ref={fileRef}
-					onChange={handleFileChange}
 					accept="image/*"
+					className="hidden"
 					multiple // enable multiple selection
+					onChange={handleFileChange}
+					ref={fileRef}
+					type="file"
 				/>
 				<UploadIcon className="h-4 w-4" />
 				Оруулах

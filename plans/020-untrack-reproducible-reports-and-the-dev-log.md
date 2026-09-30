@@ -43,23 +43,25 @@ No exact open issue was found.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- package.json .gitignore code-issues.json health-issues.json apps/storev2/dev.log` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                             | Expected on success                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- package.json .gitignore code-issues.json health-issues.json apps/storev2/dev.log` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                               | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                     | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                              | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - consumer/owner check
 - untrack the two named snapshots and dev log
 - redirect command to minimal ignored scratch path
 
 **Files/path families allowed**
+
 - `package.json`
 - `.gitignore`
 - `code-issues.json`
@@ -67,6 +69,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `apps/storev2/dev.log`
 
 **Out of scope**
+
 - `final-report.json`
 - quality tool behavior
 - external dashboard changes

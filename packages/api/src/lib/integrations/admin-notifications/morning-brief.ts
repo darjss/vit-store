@@ -9,17 +9,19 @@ type PaidPendingOrder = Awaited<
 
 const fetchMorningBriefOrders = async () => {
 	const since = morningBriefOrderSince();
-	const orders: PaidPendingOrder[] = [];
+	const orders: Array<PaidPendingOrder> = [];
 	for (let page = 1; ; page += 1) {
 		const result = await orderQueries.admin.getPaginatedOrders({
+			createdAfter: since,
+			orderStatus: "pending",
 			page,
 			pageSize: 50,
-			orderStatus: "pending",
 			paymentStatus: "success",
-			createdAfter: since,
 		});
 		orders.push(...result.orders);
-		if (!result.pagination.hasNextPage) break;
+		if (!result.pagination.hasNextPage) {
+			break;
+		}
 	}
 	return orders;
 };
@@ -30,8 +32,12 @@ export const sendMorningOrderBrief = async (dashUrl: string) => {
 };
 
 export const runMorningOrderBrief = async () => {
-	if (!getTelegramAdminConfig()) return;
+	if (!getTelegramAdminConfig()) {
+		return;
+	}
 	const dashUrl = process.env.DASH_URL?.trim();
-	if (!dashUrl) throw new Error("DASH_URL must be set");
+	if (!dashUrl) {
+		throw new Error("DASH_URL must be set");
+	}
 	await sendMorningOrderBrief(dashUrl);
 };

@@ -3,55 +3,128 @@ import type { AIExtractedData, ProductFormValues } from "../../types";
 
 type BrandOption = Parameters<typeof findBrandId>[1];
 
+function pickTruthy<T>(...values: Array<T | undefined | null>): T | undefined {
+	for (const value of values) {
+		if (value) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
 export type ProductFormProduct = {
-	id?: number;
-	name?: string;
-	description?: string;
-	dailyIntake?: number;
+	amount?: string;
 	brandId?: string | number | null;
 	categoryId?: string | number | null;
-	amount?: string;
+	dailyIntake?: number;
+	description?: string;
+	expirationDate?: string | null;
+	id?: number;
+	images?: Array<{ id?: number; url: string }>;
+	ingredients?: Array<string>;
+	name?: string;
+	name_mn?: string | null;
 	potency?: string;
+	price?: number;
+	seoDescription?: string | null;
+	seoTitle?: string | null;
 	status?: ProductFormValues["status"];
 	stock?: number;
-	price?: number;
-	images?: { url: string; id?: number }[];
-	name_mn?: string | null;
-	ingredients?: string[];
-	tags?: string[];
-	seoTitle?: string | null;
-	seoDescription?: string | null;
+	tags?: Array<string>;
 	weightGrams?: number;
-	expirationDate?: string | null;
 };
+
+function productPrimaryText(product: ProductFormProduct | undefined) {
+	return {
+		amount: product?.amount ?? "",
+		description: product?.description ?? "",
+		name: product?.name || "",
+		name_mn: product?.name_mn || "",
+	};
+}
+
+function productSecondaryText(product: ProductFormProduct | undefined) {
+	return {
+		expirationDate: product?.expirationDate || "",
+		potency: product?.potency || "",
+		seoDescription: product?.seoDescription || "",
+		seoTitle: product?.seoTitle || "",
+	};
+}
+
+function productTextFields(product: ProductFormProduct | undefined) {
+	return {
+		...productPrimaryText(product),
+		...productSecondaryText(product),
+	};
+}
+
+function productCollectionFields(product: ProductFormProduct | undefined) {
+	return {
+		images: product?.images || [],
+		ingredients: product?.ingredients || [],
+		tags: product?.tags || [],
+	};
+}
+
+function productNumericFields(product: ProductFormProduct | undefined) {
+	return {
+		dailyIntake: product?.dailyIntake || 1,
+		price: product?.price || 0,
+		stock: product?.stock || 0,
+		weightGrams: product?.weightGrams || 0,
+	};
+}
+
+function productFormBase(product: ProductFormProduct | undefined): ProductFormValues {
+	return {
+		...productTextFields(product),
+		...productCollectionFields(product),
+		...productNumericFields(product),
+		brandId: String(product?.brandId ?? ""),
+		categoryId: String(product?.categoryId ?? ""),
+		status: product?.status || "draft",
+	};
+}
+
+function applyAiFormDefaults(
+	base: ProductFormValues,
+	aiData: AIExtractedData,
+	brands: BrandOption,
+): ProductFormValues {
+	return {
+		...base,
+		amount: pickTruthy(aiData.amount, base.amount) ?? base.amount,
+		brandId: getBrandId(undefined, aiData, brands),
+		categoryId: aiData.categoryId ? String(aiData.categoryId) : base.categoryId,
+		dailyIntake: pickTruthy(aiData.dailyIntake) ?? base.dailyIntake,
+		description: pickTruthy(aiData.description, base.description) ?? base.description,
+		images: pickTruthy(aiData.images, base.images) ?? base.images,
+		ingredients: pickTruthy(aiData.ingredients, base.ingredients) ?? base.ingredients,
+		name: pickTruthy(aiData.name, base.name) ?? base.name,
+		name_mn: pickTruthy(aiData.name_mn, base.name_mn) ?? base.name_mn,
+		potency: pickTruthy(aiData.potency, base.potency) ?? base.potency,
+		price: pickTruthy(aiData.price) ?? base.price,
+		seoDescription: pickTruthy(aiData.seoDescription, base.seoDescription) ?? base.seoDescription,
+		seoTitle: pickTruthy(aiData.seoTitle, base.seoTitle) ?? base.seoTitle,
+		tags: pickTruthy(aiData.tags, base.tags) ?? base.tags,
+		weightGrams: pickTruthy(aiData.weightGrams) ?? base.weightGrams,
+	};
+}
 
 export function getProductFormDefaults(
 	product: ProductFormProduct | undefined,
 	aiData: AIExtractedData | undefined,
 	brands: BrandOption,
 ): ProductFormValues {
-	return {
-		name: aiData?.name || product?.name || "",
-		description: aiData?.description || product?.description || "",
-		dailyIntake: aiData?.dailyIntake || product?.dailyIntake || 1,
-		brandId: getBrandId(product, aiData, brands),
-		categoryId: aiData?.categoryId
-			? String(aiData.categoryId)
-			: String(product?.categoryId ?? ""),
-		amount: aiData?.amount || product?.amount || "",
-		potency: aiData?.potency || product?.potency || "",
-		status: product?.status || "draft",
-		stock: product?.stock || 0,
-		price: aiData?.price || product?.price || 0,
-		images: aiData?.images || product?.images || [],
-		name_mn: aiData?.name_mn || product?.name_mn || "",
-		ingredients: aiData?.ingredients || product?.ingredients || [],
-		tags: aiData?.tags || product?.tags || [],
-		seoTitle: aiData?.seoTitle || product?.seoTitle || "",
-		seoDescription: aiData?.seoDescription || product?.seoDescription || "",
-		weightGrams: aiData?.weightGrams || product?.weightGrams || 0,
-		expirationDate: product?.expirationDate || "",
-	};
+	const base = productFormBase(product);
+	if (!aiData) {
+		return {
+			...base,
+			brandId: getBrandId(product, aiData, brands),
+		};
+	}
+	return applyAiFormDefaults(base, aiData, brands);
 }
 
 export function getAiProductFormValues(
@@ -61,24 +134,24 @@ export function getAiProductFormValues(
 ): ProductFormValues {
 	return {
 		...currentValues,
-		name: aiData.name,
-		description: aiData.description,
-		dailyIntake: aiData.dailyIntake || 1,
+		amount: aiData.amount,
 		brandId: aiData.brandId
 			? String(aiData.brandId)
 			: String(findBrandId(aiData.brand, brands ?? [])),
 		categoryId: aiData.categoryId ? String(aiData.categoryId) : "",
-		amount: aiData.amount,
+		dailyIntake: aiData.dailyIntake || 1,
+		description: aiData.description,
+		expirationDate: "",
+		images: aiData.images,
+		ingredients: aiData.ingredients || [],
+		name: aiData.name,
+		name_mn: aiData.name_mn || "",
 		potency: aiData.potency,
 		price: aiData.price || 0,
-		images: aiData.images,
-		name_mn: aiData.name_mn || "",
-		ingredients: aiData.ingredients || [],
-		tags: aiData.tags || [],
-		seoTitle: aiData.seoTitle || "",
 		seoDescription: aiData.seoDescription || "",
+		seoTitle: aiData.seoTitle || "",
+		tags: aiData.tags || [],
 		weightGrams: aiData.weightGrams || 0,
-		expirationDate: "",
 	};
 }
 
@@ -87,7 +160,11 @@ function getBrandId(
 	aiData: AIExtractedData | undefined,
 	brands: BrandOption,
 ) {
-	if (aiData?.brandId) return String(aiData.brandId);
-	if (aiData?.brand) return String(findBrandId(aiData.brand, brands ?? []));
+	if (aiData?.brandId) {
+		return String(aiData.brandId);
+	}
+	if (aiData?.brand) {
+		return String(findBrandId(aiData.brand, brands ?? []));
+	}
 	return String(product?.brandId ?? "");
 }

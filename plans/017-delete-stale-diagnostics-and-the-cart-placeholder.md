@@ -45,23 +45,25 @@ Coordinate with go-live issue #125; do not close or modify it.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/cart.ts apps/storev2/src/pages/audit.astro apps/storev2/src/pages/benchmark.astro apps/storev2/src/pages/test.astro apps/storev2/src/components/benchmark-comparison.tsx apps/storev2/astro.config.mjs packages/api/src/routers/store/product.ts packages/api/src/lib/benchmark/product-benchmark.ts apps/admin/src/routes/_dash/sandbox.tsx apps/admin/src/routeTree.gen.ts packages/api/src/routers/admin/product.ts packages/api/src/queries/products/admin.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Expected on success                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/cart.ts apps/storev2/src/pages/audit.astro apps/storev2/src/pages/benchmark.astro apps/storev2/src/pages/test.astro apps/storev2/src/components/benchmark-comparison.tsx apps/storev2/astro.config.mjs packages/api/src/routers/store/product.ts packages/api/src/lib/benchmark/product-benchmark.ts apps/admin/src/routes/_dash/sandbox.tsx apps/admin/src/routeTree.gen.ts packages/api/src/routers/admin/product.ts packages/api/src/queries/products/admin.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - sanitized access/owner inventory for each exact surface
 - delete only unused diagnostic routes, direct benchmark procedures/libs, sandbox, and placeholder
 - generated route cleanup
 
 **Files/path families allowed**
+
 - `packages/api/src/routers/store/cart.ts`
 - `apps/storev2/src/pages/audit.astro`
 - `apps/storev2/src/pages/benchmark.astro`
@@ -76,6 +78,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `packages/api/src/queries/products/admin.ts`
 
 **Out of scope**
+
 - production photo diagnostic
 - owned health endpoint
 - real Customer cart/order paths

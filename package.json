@@ -1,7 +1,6 @@
 {
 	"name": "vit-store",
 	"private": true,
-	"type": "module",
 	"workspaces": {
 		"packages": [
 			"apps/*",
@@ -15,25 +14,27 @@
 			"dotenv": "^17.4.2",
 			"valibot": "^1.4.2",
 			"typescript": "^7.0.2",
-			"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
+			"vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
 			"vite-plus": "^0.3.0",
 			"vitest": "4.1.11",
-			"tsdown": "^0.15.12",
 			"drizzle-orm": "^0.45.2",
 			"drizzle-kit": "^0.31.10",
 			"alchemy": "0.93.12"
 		}
 	},
+	"type": "module",
 	"scripts": {
-		"format": "biome format --write .",
-		"check": "oxlint",
-		"lint": "biome lint .",
-		"lint:fix": "biome check --write .",
-		"lint:fix:unsafe": "biome check --write --unsafe .",
+		"prepare": "vp config --no-hooks",
+		"check": "vp check",
+		"fmt": "vp fmt",
+		"fmt:fix": "vp fmt --write",
+		"lint": "vp lint",
+		"lint:fix": "vp lint --fix",
 		"deps:check": "bunx taze -r major --group",
 		"deps:check:minor": "bunx taze -r minor --group",
 		"knip": "BUN_INSTALL=.bun BUN_TMPDIR=tmp bunx knip --workspace apps/admin --workspace apps/storev2 --workspace apps/server --workspace packages/api --workspace packages/shared --reporter compact --no-config-hints --include files,dependencies,exports",
-		"dev": "turbo dev",
+		"dev": "vp run --parallel admin:dev server:dev storev2:dev",
+		"dev:turbo": "turbo dev",
 		"dev:alchemy": "alchemy dev --stage dev",
 		"build": "turbo build",
 		"check-types": "turbo check-types",
@@ -64,26 +65,28 @@
 		"valibot": "catalog:"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.8",
 		"@cloudflare/workers-types": "^4.20260617.1",
+		"@nkzw/oxlint-config": "^2.0.1",
+		"@oxlint/plugins": "1.79.0",
 		"@types/node": "^26.4.0",
 		"alchemy": "0.93.12",
-		"oxlint": "^1.31.0",
-		"tsdown": "catalog:",
+		"oxfmt": "^0.65.0",
+		"oxlint": "^1.79.0",
 		"turbo": "^2.10.12",
 		"typescript": "catalog:",
+		"vite": "catalog:",
 		"vite-plus": "catalog:",
 		"wrangler": "^4.127.1",
 		"zod": "4"
 	},
 	"overrides": {
 		"@solid-primitives/event-listener": "2.4.6",
-		"typescript": "catalog:",
-		"vite": "npm:@voidzero-dev/vite-plus-core@^0.3.0",
-		"vitest": "4.1.11",
 		"alchemy": {
 			"miniflare": "4.20260730.0"
-		}
+		},
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "4.1.11"
 	},
 	"packageManager": "bun@1.4.0",
 	"patchedDependencies": {

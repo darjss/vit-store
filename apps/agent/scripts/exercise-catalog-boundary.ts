@@ -7,49 +7,45 @@
 //
 // Usage: bun scripts/exercise-catalog-boundary.ts
 
-import { SuperJSON } from "superjson";
-
-const trpcBody = (data: unknown) =>
-	JSON.stringify({ result: { data: SuperJSON.serialize(data) } });
+import * as v from "valibot";
+import { trpcResponse } from "../cli/trpc-stub";
 
 let mode: "valid" | "drifted" = "valid";
 
 const server = Bun.serve({
-	port: 0,
 	fetch() {
 		if (mode === "valid") {
 			return new Response(
-				trpcBody([
+				trpcResponse([
 					{
-						id: 101,
-						slug: "magnesium-glycinate-400",
-						name: "Magnesium Glycinate 400mg",
-						price: 54900,
-						image: "https://cdn.vit.mn/p/101.jpg",
 						brand: "NOW Foods",
+						id: 101,
+						image: "https://cdn.vit.mn/p/101.jpg",
+						name: "Magnesium Glycinate 400mg",
+						price: 54_900,
+						slug: "magnesium-glycinate-400",
 						stockStatus: "in_stock",
 					},
 				]),
 				{ headers: { "content-type": "application/json" } },
 			);
 		}
-		// api-side shape drift: `id` renamed to `productId`. The old unchecked
-		// cast would have happily produced `id: undefined`.
 		return new Response(
-			trpcBody([
+			trpcResponse([
 				{
+					brand: "NOW Foods",
+					image: "https://cdn.vit.mn/p/101.jpg",
+					name: "Magnesium Glycinate 400mg",
+					price: 54_900,
 					productId: 101,
 					slug: "magnesium-glycinate-400",
-					name: "Magnesium Glycinate 400mg",
-					price: 54900,
-					image: "https://cdn.vit.mn/p/101.jpg",
-					brand: "NOW Foods",
 					stockStatus: "in_stock",
 				},
 			]),
 			{ headers: { "content-type": "application/json" } },
 		);
 	},
+	port: 0,
 });
 
 process.env.STORE_API_URL = `http://localhost:${server.port}`;
@@ -57,13 +53,17 @@ process.env.STORE_API_URL = `http://localhost:${server.port}`;
 const { searchAssistantProducts } = await import("../src/lib/catalog");
 const { buildOrderPayload, parseOrderPayload } = await import("@vit/assistant");
 
+const valibotIssueSchema = v.object({
+	issues: v.optional(v.array(v.object({ message: v.string() }))),
+});
+
 mode = "valid";
 const valid = await searchAssistantProducts("magnesium", 8);
 const payload = buildOrderPayload(valid[0]!.id);
 console.log("VALID PAYLOAD →", {
-	parsedId: valid[0]!.id,
-	orderPayload: payload,
 	decodesBackTo: parseOrderPayload(payload),
+	orderPayload: payload,
+	parsedId: valid[0]!.id,
 });
 
 mode = "drifted";
@@ -71,12 +71,11 @@ try {
 	const drifted = await searchAssistantProducts("magnesium", 8);
 	console.log("DRIFTED (UNEXPECTED, no throw) →", drifted);
 } catch (error) {
+	const parsed = v.safeParse(valibotIssueSchema, error);
 	console.log("DRIFTED PAYLOAD → v.parse rejected at boundary:", {
+		firstIssue: parsed.success ? parsed.output.issues?.[0]?.message : String(error),
+		kind: error instanceof Error ? error.name : "unknown",
 		threw: true,
-		kind: error instanceof Error ? error.name : typeof error,
-		firstIssue:
-			(error as { issues?: Array<{ path?: unknown; message: string }> })
-				.issues?.[0]?.message ?? String(error),
 	});
 }
 

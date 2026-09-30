@@ -9,10 +9,7 @@ import {
 	type RestockChallengeStore,
 	restoreRestockChallenge,
 } from "~/lib/restock/challenge-core";
-import {
-	isValidRestockContact,
-	normalizeRestockContact,
-} from "~/lib/restock/normalize";
+import { isValidRestockContact, normalizeRestockContact } from "~/lib/restock/normalize";
 import { enforceRestockRateLimit } from "~/lib/restock/rate-limit";
 
 const CHALLENGE_TTL_SECONDS = 10 * 60;
@@ -20,19 +17,16 @@ const SEND_WINDOW_SECONDS = 60 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const createCode = customAlphabet("1234567890", 6);
 
-const challengeKey = (challengeId: string) =>
-	`restock:confirmation:challenge:${challengeId}`;
+const challengeKey = (challengeId: string) => `restock:confirmation:challenge:${challengeId}`;
 
 const challengeStore: RestockChallengeStore = {
-	get: (challengeId) =>
-		redis().get<RestockChallengeRecord>(challengeKey(challengeId)),
-	getdel: (challengeId) =>
-		redis().getdel<RestockChallengeRecord>(challengeKey(challengeId)),
-	restore: async (challengeId, record, ttlMs) => {
-		await redis().set(challengeKey(challengeId), record, { px: ttlMs });
-	},
 	delete: async (challengeId) => {
 		await redis().del(challengeKey(challengeId));
+	},
+	get: (challengeId) => redis().get<RestockChallengeRecord>(challengeKey(challengeId)),
+	getdel: (challengeId) => redis().getdel<RestockChallengeRecord>(challengeKey(challengeId)),
+	restore: async (challengeId, record, ttlMs) => {
+		await redis().set(challengeKey(challengeId), record, { px: ttlMs });
 	},
 };
 
@@ -45,8 +39,8 @@ function invalidConfirmation(): never {
 
 async function sendConfirmation(input: {
 	channel: "sms" | "email";
-	contact: string;
 	code: string;
+	contact: string;
 }) {
 	if (input.channel === "sms") {
 		const finalState = await smsGateway.sendSmsAndWait({
@@ -60,42 +54,39 @@ async function sendConfirmation(input: {
 	}
 
 	await sendEmail({
-		to: input.contact,
 		subject: "Бараа орсны мэдэгдлээ баталгаажуулна уу",
 		text: `Таны баталгаажуулах код: ${input.code}\n\nКод 10 минутын хугацаанд хүчинтэй.`,
+		to: input.contact,
 	});
 }
 
 export async function requestGuestRestockConfirmation(input: {
-	productId: number;
 	channel: "sms" | "email";
 	contact: string;
+	productId: number;
 	requestIp: string;
 }) {
 	const contact = normalizeRestockContact(input.channel, input.contact);
 	if (!isValidRestockContact(input.channel, contact)) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message:
-				input.channel === "sms"
-					? "Invalid phone number"
-					: "Invalid email address",
+			message: input.channel === "sms" ? "Invalid phone number" : "Invalid email address",
 		});
 	}
 
 	await Promise.all([
 		enforceRestockRateLimit({
 			action: "confirmation-send",
+			limit: 3,
 			scope: "contact",
 			value: contact,
-			limit: 3,
 			windowSeconds: SEND_WINDOW_SECONDS,
 		}),
 		enforceRestockRateLimit({
 			action: "confirmation-send",
+			limit: 10,
 			scope: "ip",
 			value: input.requestIp,
-			limit: 10,
 			windowSeconds: SEND_WINDOW_SECONDS,
 		}),
 	]);
@@ -104,11 +95,11 @@ export async function requestGuestRestockConfirmation(input: {
 	const code = createCode();
 	const record = await createRestockChallengeRecord({
 		challengeId,
-		code,
-		productId: input.productId,
 		channel: input.channel,
+		code,
 		contact,
 		now: new Date(),
+		productId: input.productId,
 		ttlMs: CHALLENGE_TTL_SECONDS * 1000,
 	});
 	await redis().set(challengeKey(challengeId), record, {
@@ -116,7 +107,7 @@ export async function requestGuestRestockConfirmation(input: {
 	});
 
 	try {
-		await sendConfirmation({ channel: input.channel, contact, code });
+		await sendConfirmation({ channel: input.channel, code, contact });
 	} catch {
 		await challengeStore.delete(challengeId);
 		throw new TRPCError({
@@ -134,49 +125,53 @@ export async function getGuestRestockChallengeForAttempt(input: {
 }) {
 	await enforceRestockRateLimit({
 		action: "confirmation-attempt",
+		limit: 30,
 		scope: "ip",
 		value: input.requestIp,
-		limit: 30,
 		windowSeconds: ATTEMPT_WINDOW_SECONDS,
 	});
 
 	const challenge = await challengeStore.get(input.challengeId);
 	if (!challenge || challenge.expiresAt <= Date.now()) {
-		if (challenge) await challengeStore.delete(input.challengeId);
+		if (challenge) {
+			await challengeStore.delete(input.challengeId);
+		}
 		return invalidConfirmation();
 	}
 
 	await enforceRestockRateLimit({
 		action: "confirmation-attempt",
+		limit: 5,
 		scope: "contact",
 		value: challenge.contact,
-		limit: 5,
 		windowSeconds: ATTEMPT_WINDOW_SECONDS,
 	});
 	return challenge;
 }
 
 export async function withConfirmedGuestRestockChallenge<T>(input: {
+	action: (challenge: RestockChallengeRecord) => Promise<T>;
 	challengeId: string;
 	code: string;
-	action: (challenge: RestockChallengeRecord) => Promise<T>;
 }) {
 	const result = await consumeRestockChallenge({
-		store: challengeStore,
 		challengeId: input.challengeId,
 		code: input.code,
 		now: new Date(),
+		store: challengeStore,
 	});
-	if (result.status !== "confirmed") return invalidConfirmation();
+	if (result.status !== "confirmed") {
+		return invalidConfirmation();
+	}
 
 	try {
 		return await input.action(result.challenge);
 	} catch (error) {
 		await restoreRestockChallenge({
-			store: challengeStore,
-			challengeId: input.challengeId,
 			challenge: result.challenge,
+			challengeId: input.challengeId,
 			now: new Date(),
+			store: challengeStore,
 		});
 		throw error;
 	}

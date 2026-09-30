@@ -6,78 +6,133 @@ import type {
 } from "@vit/shared";
 import { generateCleanSlug } from "~/lib/ai-product/brand-resolve";
 
+function pickTruthy<T>(...values: Array<T | undefined | null>): T | undefined {
+	for (const value of values) {
+		if (value) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+function buildTranslatedIdentity(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+) {
+	const name = pickTruthy(structuredData?.name, extractedData.title) ?? extractedData.title;
+	const amount = pickTruthy(structuredData?.amount) ?? "Unknown";
+	const potency = pickTruthy(structuredData?.potency) ?? "Unknown";
+	return {
+		amount,
+		name,
+		potency,
+		slug: generateCleanSlug(name, extractedData.brand, amount, potency),
+	};
+}
+
+function buildTranslatedCoreFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+	visionData: VisionAnalysisResult,
+	allOriginalIngredients: Array<string>,
+) {
+	const identity = buildTranslatedIdentity(structuredData, extractedData);
+	return {
+		...identity,
+		dailyIntake: pickTruthy(structuredData?.dailyIntake, visionData.dailyIntake) ?? 1,
+		description:
+			pickTruthy(structuredData?.description, extractedData.description) ?? "Тайлбар байхгүй",
+		ingredients:
+			pickTruthy(structuredData?.ingredients, allOriginalIngredients) ?? allOriginalIngredients,
+		name_mn: pickTruthy(structuredData?.name_mn) ?? `${extractedData.title} (орчуулаагүй)`,
+		weightGrams: pickTruthy(structuredData?.weightGrams) ?? 200,
+	};
+}
+
+function buildTranslatedSeoFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+) {
+	return {
+		seoDescription:
+			pickTruthy(structuredData?.seoDescription, extractedData.description?.slice(0, 155)) ??
+			(extractedData.description || "").slice(0, 155),
+		seoTitle:
+			pickTruthy(structuredData?.seoTitle, extractedData.title.slice(0, 60)) ??
+			extractedData.title.slice(0, 60),
+	};
+}
+
+function buildTranslatedProductFields(
+	structuredData: TranslationResult | null,
+	extractedData: FirecrawlExtractedProduct,
+	visionData: VisionAnalysisResult,
+	allOriginalIngredients: Array<string>,
+) {
+	return {
+		...buildTranslatedCoreFields(structuredData, extractedData, visionData, allOriginalIngredients),
+		...buildTranslatedSeoFields(structuredData, extractedData),
+	};
+}
+
 export function assembleExtractedProductData(params: {
+	calculatedPriceMnt: number | null;
+	errors: Array<string>;
 	extractedData: FirecrawlExtractedProduct;
-	visionData: VisionAnalysisResult;
-	structuredData: TranslationResult | null;
-	productUrl: string;
-	uploadedImages: { url: string }[];
-	filteredImages: string[];
+	extractionStatus: "success" | "partial" | "failed";
+	filteredImages: Array<string>;
 	finalBrandId: number | null;
 	matchedCategoryId: number | null;
-	calculatedPriceMnt: number | null;
-	extractionStatus: "success" | "partial" | "failed";
-	errors: string[];
+	productUrl: string;
+	structuredData: TranslationResult | null;
+	uploadedImages: Array<{ url: string }>;
+	visionData: VisionAnalysisResult;
 }): ExtractedProductData {
 	const {
+		calculatedPriceMnt,
+		errors,
 		extractedData,
-		visionData,
-		structuredData,
-		productUrl,
-		uploadedImages,
-		filteredImages,
+		extractionStatus,
 		finalBrandId,
 		matchedCategoryId,
-		calculatedPriceMnt,
-		extractionStatus,
-		errors,
+		productUrl,
+		structuredData,
+		uploadedImages,
+		visionData,
 	} = params;
 
 	const allOriginalIngredients = [
 		...new Set([...extractedData.ingredients, ...visionData.ingredients]),
 	];
-
-	const name = structuredData?.name || extractedData.title;
-	const amount = structuredData?.amount || "Unknown";
-	const potency = structuredData?.potency || "Unknown";
+	const translated = buildTranslatedProductFields(
+		structuredData,
+		extractedData,
+		visionData,
+		allOriginalIngredients,
+	);
 
 	return {
-		originalTitle: extractedData.title,
+		amazonPriceUsd: extractedData.priceUsd,
+		...translated,
+		brand: extractedData.brand,
+		brandId: finalBrandId,
+		calculatedPriceMnt,
+		categoryId: matchedCategoryId,
+		errors,
+		extractionStatus,
+		images: uploadedImages,
 		originalDescription: extractedData.description,
 		originalFeatures: extractedData.features,
 		originalIngredients: allOriginalIngredients,
-		name,
-		name_mn: structuredData?.name_mn || `${extractedData.title} (орчуулаагүй)`,
-		description:
-			structuredData?.description ||
-			extractedData.description ||
-			"Тайлбар байхгүй",
-		brand: extractedData.brand,
-		brandId: finalBrandId,
-		categoryId: matchedCategoryId,
-		amount,
-		potency,
-		dailyIntake: structuredData?.dailyIntake || visionData.dailyIntake || 1,
-		weightGrams: structuredData?.weightGrams || 200,
-		seoTitle: structuredData?.seoTitle || extractedData.title.slice(0, 60),
-		seoDescription:
-			structuredData?.seoDescription ||
-			(extractedData.description || "").slice(0, 155),
-		ingredients: structuredData?.ingredients || allOriginalIngredients,
-		images: uploadedImages,
+		originalTitle: extractedData.title,
 		sourceUrl: productUrl,
-		amazonPriceUsd: extractedData.priceUsd,
-		calculatedPriceMnt,
-		extractionStatus,
-		errors,
-		slug: generateCleanSlug(name, extractedData.brand, amount, potency),
 	};
 }
 
 export function noteImageUploadIssues(
-	filteredImages: string[],
-	uploadedImages: { url: string }[],
-	errors: string[],
+	filteredImages: Array<string>,
+	uploadedImages: Array<{ url: string }>,
+	errors: Array<string>,
 ): "success" | "partial" {
 	let status: "success" | "partial" = "success";
 

@@ -12,18 +12,15 @@ const OTP_EXPIRY_MS = 5 * 60 * 1000;
 
 const LoginForm = () => {
 	const [phone, setPhone] = makePersisted(createSignal(""), {
+		deferInit: true,
 		name: "login-phone",
 		storage: safeStorage,
-		deferInit: true,
 	});
-	const [step, setStepRaw] = makePersisted(
-		createSignal<"phone" | "otp">("phone"),
-		{
-			name: "login-step",
-			storage: safeStorage,
-			deferInit: true,
-		},
-	);
+	const [step, setStepRaw] = makePersisted(createSignal<"phone" | "otp">("phone"), {
+		deferInit: true,
+		name: "login-step",
+		storage: safeStorage,
+	});
 
 	// Wrapper to also track timestamp when entering OTP step
 	const setStep = (newStep: "phone" | "otp") => {
@@ -56,13 +53,11 @@ const LoginForm = () => {
 			<div class="enter-scale w-full max-w-md">
 				{/* Header Section */}
 				<div class="mb-6 text-center md:mb-8">
-					<h1 class="mb-2 font-display text-2xl text-foreground md:text-3xl">
+					<h1 class="font-display text-foreground mb-2 text-2xl md:text-3xl">
 						{step() === "phone" ? "Нэвтрэх" : "Баталгаажуулалт"}
 					</h1>
 					<p class="text-muted-foreground text-sm md:text-base">
-						{step() === "phone"
-							? "Таны аюулгүй нэвтрэлт"
-							: `Код илгээгдсэн: ${phone()}`}
+						{step() === "phone" ? "Таны аюулгүй нэвтрэлт" : `Код илгээгдсэн: ${phone()}`}
 					</p>
 				</div>
 
@@ -71,7 +66,7 @@ const LoginForm = () => {
 					<CardContent class="p-6 md:p-8">
 						<Switch>
 							<Match when={step() === "phone"}>
-								<PhoneForm setStep={setStep} setPhone={setPhone} />
+								<PhoneForm setPhone={setPhone} setStep={setStep} />
 							</Match>
 							<Match when={step() === "otp"}>
 								<OtpForm phone={phone()} setStep={setStep} />
@@ -85,8 +80,8 @@ const LoginForm = () => {
 					<p class="text-muted-foreground text-xs md:text-sm">
 						Нэвтрэх товчийг дарснаар та манай{" "}
 						<a
+							class="text-foreground hover:text-cocoa font-semibold underline underline-offset-4 transition-colors duration-150"
 							href="/terms-of-service"
-							class="font-semibold text-foreground underline underline-offset-4 transition-colors duration-150 hover:text-cocoa"
 						>
 							үйлчилгээний нөхцөл
 						</a>

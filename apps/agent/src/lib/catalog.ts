@@ -20,9 +20,9 @@ export const searchAssistantProducts = async (
 	query: string,
 	limit: number,
 	signal?: AbortSignal,
-): Promise<AssistantProduct[]> => {
+): Promise<Array<AssistantProduct>> => {
 	const data = await storeClient().product.searchProductsForAssistant.query(
-		{ query, limit },
+		{ limit, query },
 		{ signal: withTimeout(signal) },
 	);
 	// Defense-in-depth: the typed client gives compile-time safety, but the
@@ -36,10 +36,12 @@ export const searchAssistantProducts = async (
 // the name/price/image snapshot for that line. Returns only the ids that still
 // resolve, in catalog order.
 export const getAssistantProductsByIds = async (
-	ids: number[],
+	ids: Array<number>,
 	signal?: AbortSignal,
-): Promise<AssistantProduct[]> => {
-	if (ids.length === 0) return [];
+): Promise<Array<AssistantProduct>> => {
+	if (ids.length === 0) {
+		return [];
+	}
 	const data = await storeClient().product.getProductsByIdsForAssistant.query(
 		{ ids },
 		{ signal: withTimeout(signal) },
@@ -52,10 +54,12 @@ export const getAssistantProductsByIds = async (
 // the advice answers come from real catalog data and never duplicate catalog
 // logic here. Returns only the ids that still resolve, in request order.
 export const getAdviceProductsByIds = async (
-	ids: number[],
+	ids: Array<number>,
 	signal?: AbortSignal,
-): Promise<AssistantAdviceProduct[]> => {
-	if (ids.length === 0) return [];
+): Promise<Array<AssistantAdviceProduct>> => {
+	if (ids.length === 0) {
+		return [];
+	}
 	const data = await storeClient().product.getProductsByIdsForAdvice.query(
 		{ ids },
 		{ signal: withTimeout(signal) },

@@ -1,9 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import {
-	useMutation,
-	useQueryClient,
-	useSuspenseQueries,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
 import {
 	type AIExtractedData,
 	addProductSchema,
@@ -11,10 +7,9 @@ import {
 	getProductFormDefaults,
 	type ProductFormProduct,
 	type ProductFormValues,
-	status,
 } from "@vit/shared/domain/product";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { invalidateProductCaches } from "@/utils/product-cache";
 import { trpc } from "@/utils/trpc";
@@ -26,14 +21,14 @@ import { ProductDetailsSection } from "./sections/product-details-section";
 import { ProductImagesSection } from "./sections/product-images-section";
 
 const ProductForm = ({
-	product,
 	aiData,
 	onSuccess,
+	product,
 	showAIFields = false,
 }: {
-	product?: ProductFormProduct;
 	aiData?: AIExtractedData;
 	onSuccess: () => void;
+	product?: ProductFormProduct;
 	showAIFields?: boolean;
 }) => {
 	const [{ data: categories }, { data: brands }] = useSuspenseQueries({
@@ -44,51 +39,54 @@ const ProductForm = ({
 	});
 
 	const [showAdvancedFields, setShowAdvancedFields] = useState(showAIFields);
+	const [seededAiData, setSeededAiData] = useState(aiData);
+	if (aiData && aiData !== seededAiData) {
+		setSeededAiData(aiData);
+		setShowAdvancedFields(true);
+	}
 
 	const form = useForm<ProductFormValues, undefined, ProductFormValues>({
-		resolver: valibotResolver(addProductSchema, undefined, { raw: true }),
 		defaultValues: getProductFormDefaults(product, aiData, brands ?? []),
+		resolver: valibotResolver(addProductSchema, undefined, { raw: true }),
 	});
 
 	useEffect(() => {
-		if (aiData) {
-			form.reset(
-				getAiProductFormValues(form.getValues(), aiData, brands ?? []),
-			);
-			setShowAdvancedFields(true);
+		if (!aiData) {
+			return;
 		}
-	}, [aiData, brands, form.getValues, form.reset]);
+		form.reset(getAiProductFormValues(form.getValues(), aiData, brands ?? []));
+	}, [aiData, brands, form]);
 
 	const queryClient = useQueryClient();
 	const productId = product?.id;
-	const isEditing = typeof productId === "number";
+	const isEditing = productId !== undefined;
 
 	const addMutation = useMutation({
 		...trpc.product.addProduct.mutationOptions(),
+		onError: (_error) => {
+			toast.error("Бүтээгдэхүүн нэмэхэд алдаа гарлаа");
+		},
 		onSuccess: async () => {
 			form.reset();
 			await invalidateProductCaches(queryClient);
 			onSuccess();
 		},
-		onError: (_error) => {
-			toast.error("Бүтээгдэхүүн нэмэхэд алдаа гарлаа");
-		},
 	});
 
 	const updateMutation = useMutation({
 		...trpc.product.updateProduct.mutationOptions(),
+		onError: (_error) => {
+			toast.error("Бүтээгдэхүүн шинэчлэхэд алдаа гарлаа");
+		},
 		onSuccess: async () => {
 			await invalidateProductCaches(queryClient, productId);
 			onSuccess();
-		},
-		onError: (_error) => {
-			toast.error("Бүтээгдэхүүн шинэчлэхэд алдаа гарлаа");
 		},
 	});
 
 	const mutation = isEditing ? updateMutation : addMutation;
 
-	const { fields, append, remove } = useFieldArray({
+	const { append, fields, remove } = useFieldArray({
 		control: form.control,
 		name: "images",
 	});
@@ -102,11 +100,11 @@ const ProductForm = ({
 	};
 
 	const onSubmit = async (values: ProductFormValues) => {
-		if (typeof productId === "number") {
+		if (productId !== undefined) {
 			updateMutation.mutate({
 				...values,
-				id: productId,
 				expirationDate: values.expirationDate || "",
+				id: productId,
 			});
 		} else {
 			addMutation.mutate({
@@ -116,36 +114,32 @@ const ProductForm = ({
 		}
 	};
 
-	const currentImageUrl = form.watch("images");
+	const currentImageUrl = useWatch({ control: form.control, name: "images" });
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+			<form className="relative" onSubmit={form.handleSubmit(onSubmit)}>
 				<FormLoadingOverlay isLoading={form.formState.isSubmitting || mutation.isPending} />
 				<div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
 					<ProductDetailsSection
-						form={form}
 						brands={brands}
 						categories={categories}
+						form={form}
 						showAdvancedFields={showAdvancedFields}
 					/>
 
-					<ProductImagesSection
-						images={currentImageUrl}
-						onRemove={handleRemove}
-						append={append}
-					/>
+					<ProductImagesSection append={append} images={currentImageUrl} onRemove={handleRemove} />
 
 					<ProductAdvancedSection
 						form={form}
-						show={showAdvancedFields}
 						onToggle={() => setShowAdvancedFields((show) => !show)}
+						show={showAdvancedFields}
 					/>
 
 					<div className="mt-6 flex justify-end lg:col-span-2">
 						<SubmitButton
+							className="hover:bg-primary/90 w-full px-8 py-3 text-lg font-semibold transition-colors duration-300 sm:w-auto"
 							isPending={form.formState.isSubmitting || mutation.isPending}
-							className="w-full px-8 py-3 font-semibold text-lg transition-colors duration-300 hover:bg-primary/90 sm:w-auto"
 						>
 							{isEditing ? "Шинэчлэх" : "Бүтээгдэхүүн нэмэх"}
 						</SubmitButton>

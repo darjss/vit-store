@@ -26,18 +26,18 @@ export const LOW_STOCK_THRESHOLD = SHARED_LOW_STOCK_THRESHOLD;
  * Upstash search result) collapse into this via `normalizeProduct`.
  */
 export interface NormalizedProduct {
+	amount?: string | null;
+	brand: string | null;
+	categoryId?: number;
+	discount?: number | null;
 	id: number;
+	image: string;
 	name: string;
 	nameMn?: string | null;
 	potency?: string | null;
-	amount?: string | null;
-	slug: string;
 	price: number;
-	image: string;
-	brand: string | null;
+	slug: string;
 	stock?: number;
-	discount?: number | null;
-	categoryId?: number;
 }
 
 /**
@@ -45,121 +45,109 @@ export interface NormalizedProduct {
  * Declared locally so the card does not depend on the api package internals.
  */
 export interface SearchProductInput {
+	amount?: string | null;
+	brand: string;
+	categoryId?: number;
+	discount?: number | null;
 	id: number;
+	image: string;
 	name: string;
 	nameMn?: string | null;
 	potency?: string | null;
-	amount?: string | null;
-	slug: string;
 	price: number;
-	image: string;
-	brand: string;
+	slug: string;
 	stock?: number;
-	discount?: number | null;
-	categoryId?: number;
 }
 
 /** Collapse either upstream product shape into the normalized card shape. */
-export function normalizeProduct(
-	product: ProductCardData | SearchProductInput,
-): NormalizedProduct {
+export function normalizeProduct(product: ProductCardData | SearchProductInput): NormalizedProduct {
 	if ("images" in product) {
 		return {
+			amount: product.amount,
+			brand: product.brand?.name ?? null,
+			categoryId: product.categoryId,
+			discount: product.discount,
 			id: product.id,
+			image: product.images?.[0]?.url ?? "",
 			name: product.name,
 			nameMn: product.nameMn ?? product.name_mn,
 			potency: product.potency,
-			amount: product.amount,
-			slug: product.slug,
 			price: product.price,
-			image: product.images?.[0]?.url ?? "",
-			brand: product.brand?.name ?? null,
+			slug: product.slug,
 			stock: product.stock,
-			discount: product.discount,
-			categoryId: product.categoryId,
 		};
 	}
 	return { ...product, brand: product.brand ?? null };
 }
 
 interface ProductCardProps {
-	product: ProductCardData | SearchProductInput;
 	onInteract?: () => void;
+	product: ProductCardData | SearchProductInput;
 }
 
 const ProductCard = (props: ProductCardProps) => {
 	const product = createMemo(() => normalizeProduct(props.product));
 	const inventory = useInventorySnapshot(product().id);
 
-	const washClass = createMemo(() =>
-		washBg(product().categoryId ?? "uncategorized"),
-	);
-	const productImageProps = createMemo(() =>
-		getProductImageProps(product().image, "card"),
-	);
+	const washClass = createMemo(() => washBg(product().categoryId ?? "uncategorized"));
+	const productImageProps = createMemo(() => getProductImageProps(product().image, "card"));
 	const productUrl = `/products/${product().slug}-${product().id}`;
 	const brandName = createMemo(() => product().brand);
 	const display = createMemo(() =>
 		projectProductCardDisplay({
+			amount: product().amount,
+			brand: brandName(),
 			name: product().name,
 			nameMn: product().nameMn,
-			brand: brandName(),
 			potency: product().potency,
-			amount: product().amount,
 		}),
 	);
-	const stockState = createMemo(() =>
-		productStockState(inventory()?.stock ?? product().stock),
-	);
+	const stockState = createMemo(() => productStockState(inventory()?.stock ?? product().stock));
 	const isOutOfStock = createMemo(() =>
 		inventory()
 			? inventory()?.status !== "active" || (inventory()?.stock ?? 0) <= 0
 			: stockState() === "out",
 	);
-	const isLowStock = createMemo(
-		() => !isOutOfStock() && stockState() === "low",
-	);
+	const isLowStock = createMemo(() => !isOutOfStock() && stockState() === "low");
 	const price = createMemo(() => inventory()?.price ?? product().price);
 	const hasSale = createMemo(() => (product().discount ?? 0) > 0);
 	const [imageFailed, setImageFailed] = createSignal(false);
 
 	return (
 		<div
-			class="group hover:-translate-y-[3px] relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[transform,box-shadow] duration-200 ease-out hover:shadow-soft-lg"
+			class="group border-border bg-card shadow-soft hover:shadow-soft-lg relative flex h-full flex-col overflow-hidden rounded-2xl border transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-[3px]"
 			data-product-id={product().id}
 		>
 			{/* Image is decorative; the concise heading below is the card's only link. */}
-			<div class="relative block" aria-hidden="true">
+			<div aria-hidden="true" class="relative block">
 				<div
 					class={`relative aspect-4/5 ${washClass()} ${isOutOfStock() ? "saturate-[0.35]" : ""}`}
 				>
 					<Show
+						fallback={<ProductImageFallback brand={brandName()} name={product().name} />}
 						when={product().image && !imageFailed()}
-						fallback={
-							<ProductImageFallback name={product().name} brand={brandName()} />
-						}
 					>
 						<Image
-							src={productImageProps().src || product().image}
 							alt=""
-							width={productImageProps().width}
-							height={productImageProps().height}
-							sizes={productImageProps().sizes}
-							layout="constrained"
-							objectFit="contain"
-							class={`absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 ease-out-quart group-hover:scale-105 sm:p-4 ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
-							loading="lazy"
+							class={`ease-out-quart absolute inset-0 h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-105 sm:p-4 ${isOutOfStock() ? "opacity-70 grayscale" : ""}`}
 							decoding="async"
+							height={productImageProps().height}
+							layout="constrained"
+							loading="lazy"
+							objectFit="contain"
 							onError={() => setImageFailed(true)}
+							sizes={productImageProps().sizes}
+							src={productImageProps().src || product().image}
+							width={productImageProps().width}
 						/>
 					</Show>
 				</div>
 			</div>
 			<Show when={hasSale() && !isOutOfStock()}>
 				<Badge
-					variant="sale"
-					class="-rotate-2 absolute top-2 left-2 px-2 py-0.5 text-[11px]"
 					aria-label={`Хямдрал ${product().discount} хувь`}
+					class="absolute top-2 left-2 -rotate-2 px-2 py-0.5 text-[11px]"
+					variant="sale"
 				>
 					-{product().discount}%
 				</Badge>
@@ -168,70 +156,64 @@ const ProductCard = (props: ProductCardProps) => {
 			{/* Content Section */}
 			<div class="flex flex-1 flex-col gap-1 p-3">
 				<Show when={brandName()}>
-					<p class="font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+					<p class="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
 						{brandName()}
 					</p>
 				</Show>
 				<a
+					aria-label={`${display().accessibleName}, ${formatCurrency(price())}`}
+					class="focus-visible:ring-ring block rounded-sm focus-visible:ring-2 focus-visible:outline-none"
 					href={productUrl}
 					onClick={props.onInteract}
-					class="block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					aria-label={`${display().accessibleName}, ${formatCurrency(price())}`}
 				>
-					<h3 class="line-clamp-2 font-semibold text-foreground text-sm leading-snug group-hover:underline">
+					<h3 class="text-foreground line-clamp-2 text-sm leading-snug font-semibold group-hover:underline">
 						{display().shortName}
 					</h3>
 				</a>
 				<Show when={display().dose}>
-					<p class="line-clamp-2 font-semibold text-[11px] text-foreground/80 leading-snug">
+					<p class="text-foreground/80 line-clamp-2 text-[11px] leading-snug font-semibold">
 						{display().dose}
 					</p>
 				</Show>
-				<Show
-					when={display().form || display().count || display().packageQuantity}
-				>
-					<p class="text-[11px] text-muted-foreground leading-snug">
+				<Show when={display().form || display().count || display().packageQuantity}>
+					<p class="text-muted-foreground text-[11px] leading-snug">
 						{[display().form, display().count, display().packageQuantity]
 							.filter(Boolean)
 							.join(" · ")}
 					</p>
 				</Show>
 				<p
-					data-inventory-stock-badge={product().id}
 					class={
 						isOutOfStock()
-							? "font-semibold text-[11px] text-destructive"
+							? "text-destructive text-[11px] font-semibold"
 							: isLowStock()
-								? "low-stock-indicator font-semibold text-[11px]"
-								: "font-semibold text-[11px] text-success-foreground"
+								? "low-stock-indicator text-[11px] font-semibold"
+								: "text-success-foreground text-[11px] font-semibold"
 					}
+					data-inventory-stock-badge={product().id}
 				>
-					{isOutOfStock()
-						? "Дууссан"
-						: isLowStock()
-							? "Цөөхөн үлдсэн"
-							: "Бэлэн байна"}
+					{isOutOfStock() ? "Дууссан" : isLowStock() ? "Цөөхөн үлдсэн" : "Бэлэн байна"}
 				</p>
 
 				<div class="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_44px] items-end gap-2 pt-2">
 					<div
-						class="min-w-0 font-bold text-sm leading-tight tracking-tight [overflow-wrap:anywhere] sm:text-base"
+						class="min-w-0 text-sm leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-base"
 						data-inventory-price={product().id}
 					>
 						{formatCurrency(price())}
 					</div>
 					<CardAddButton
-						outOfStock={isOutOfStock()}
-						productName={display().shortName}
-						onAdd={props.onInteract}
 						cartItem={{
-							productId: product().id,
-							quantity: 1,
+							image: product().image,
 							name: product().name,
 							price: product().price,
-							image: product().image,
+							productId: product().id,
+							quantity: 1,
 							slug: product().slug,
 						}}
+						onAdd={props.onInteract}
+						outOfStock={isOutOfStock()}
+						productName={display().shortName}
 					/>
 				</div>
 			</div>

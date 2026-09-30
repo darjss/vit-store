@@ -9,22 +9,22 @@ import { getProductImageProps } from "@/lib/image";
 import { washBg } from "@/lib/wash";
 
 export interface SearchResultProduct {
-	id: number;
-	name: string;
-	slug: string;
-	price: number;
 	brand: string;
-	image: string;
-	stock?: number;
 	categoryId?: number;
+	id: number;
+	image: string;
+	name: string;
+	price: number;
+	slug: string;
+	stock?: number;
 }
 
 interface SearchResultRowProps {
+	onNavigate?: () => void;
+	position: number;
 	product: SearchResultProduct;
 	query: string;
 	searchId: string | null;
-	position: number;
-	onNavigate?: () => void;
 }
 
 const SearchResultRow = (props: SearchResultRowProps) => {
@@ -34,13 +34,14 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 	const isInStock = () => stockState() !== "out";
 	const isLowStock = () => stockState() === "low";
 
-	const productUrl = () =>
-		`/products/${props.product.slug}-${props.product.id}`;
+	const productUrl = () => `/products/${props.product.slug}-${props.product.id}`;
 	const washClass = () => washBg(props.product.categoryId ?? "uncategorized");
 	const imageProps = () => getProductImageProps(props.product.image, "thumb");
 
 	const trackInteraction = () => {
-		if (!props.searchId) return;
+		if (!props.searchId) {
+			return;
+		}
 		trackSearchResultClicked(
 			props.searchId,
 			props.query,
@@ -56,62 +57,53 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 	};
 
 	return (
-		<div class="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5 shadow-soft transition-shadow duration-200 ease-out hover:shadow-soft-lg">
+		<div class="border-border bg-card shadow-soft hover:shadow-soft-lg flex items-center gap-3 rounded-2xl border p-2.5 transition-shadow duration-200 ease-out">
 			<div
 				class={`relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl ${washClass()}`}
 			>
 				<Show
+					fallback={<ProductImageFallback brand={props.product.brand} name={props.product.name} />}
 					when={props.product.image && !imageFailed()}
-					fallback={
-						<ProductImageFallback
-							name={props.product.name}
-							brand={props.product.brand}
-						/>
-					}
 				>
 					<Image
-						src={imageProps().src || props.product.image}
 						alt={props.product.name}
-						width={imageProps().width}
-						height={imageProps().height}
-						sizes={imageProps().sizes}
-						layout="constrained"
-						objectFit="contain"
 						class="h-full w-full object-contain p-1.5"
-						loading="lazy"
 						decoding="async"
+						height={imageProps().height}
+						layout="constrained"
+						loading="lazy"
+						objectFit="contain"
 						onError={() => setImageFailed(true)}
+						sizes={imageProps().sizes}
+						src={imageProps().src || props.product.image}
+						width={imageProps().width}
 					/>
 				</Show>
 			</div>
 
-			<a
-				href={productUrl()}
-				onClick={handleClick}
-				class="flex min-w-0 flex-1 flex-col gap-0.5"
-			>
+			<a class="flex min-w-0 flex-1 flex-col gap-0.5" href={productUrl()} onClick={handleClick}>
 				<Show when={props.product.brand}>
-					<span class="font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+					<span class="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
 						{props.product.brand}
 					</span>
 				</Show>
-				<span class="line-clamp-2 font-medium text-foreground text-sm leading-snug">
+				<span class="text-foreground line-clamp-2 text-sm leading-snug font-medium">
 					{props.product.name}
 				</span>
 				<div class="mt-1 flex items-center gap-2">
-					<span class="font-bold font-display text-base tracking-tight">
+					<span class="font-display text-base font-bold tracking-tight">
 						{formatCurrency(props.product.price)}
 					</span>
 					<Show
-						when={isInStock()}
 						fallback={
-							<span class="rounded-full px-2 py-0.5 font-semibold text-[10px] text-muted-foreground uppercase tracking-wide">
+							<span class="text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
 								Дууссан
 							</span>
 						}
+						when={isInStock()}
 					>
 						<Show when={isLowStock()}>
-							<span class="low-stock-indicator rounded-full px-2 py-0.5 font-semibold text-[10px]">
+							<span class="low-stock-indicator rounded-full px-2 py-0.5 text-[10px] font-semibold">
 								Цөөхөн үлдсэн
 							</span>
 						</Show>
@@ -120,16 +112,16 @@ const SearchResultRow = (props: SearchResultRowProps) => {
 			</a>
 
 			<CardAddButton
-				productName={props.product.name}
-				onAdd={trackInteraction}
 				cartItem={{
-					productId: props.product.id,
-					quantity: 1,
+					image: props.product.image,
 					name: props.product.name,
 					price: props.product.price,
-					image: props.product.image,
+					productId: props.product.id,
+					quantity: 1,
 					slug: props.product.slug,
 				}}
+				onAdd={trackInteraction}
+				productName={props.product.name}
 			/>
 		</div>
 	);

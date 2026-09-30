@@ -15,7 +15,7 @@ const cookieHeader = Astro.request.headers.get("cookie") || "";
 const serverApi = createServerClient(cookieHeader, env.server, Astro.redirect);
 const checkoutToken = Astro.url.searchParams.get("ct") || undefined;
 const result = await loadPaymentOrRedirect(serverApi, id, checkoutToken, Astro.redirect);
-if ("redirect" in result) return result.redirect;
+if ("redirect" in result) {return result.redirect;}
 const payment = result.payment;
 
 if (payment.status === "success") {

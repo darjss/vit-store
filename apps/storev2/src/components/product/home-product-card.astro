@@ -6,13 +6,13 @@ import type { ProductForHome } from "@/lib/types";
 import ServerProductCard from "./server-product-card.astro";
 
 interface Props {
-	product: ProductForHome;
 	aspectRatio?: string;
-	imageSize?: "feature" | "card";
 	class?: string;
+	imageSize?: "feature" | "card";
+	product: ProductForHome;
 }
 
-const { product, aspectRatio, imageSize, class: className } = Astro.props;
+const { aspectRatio, class: className, imageSize, product } = Astro.props;
 ---
 
 <ServerProductCard

@@ -36,7 +36,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown",
+		"build": "vp pack",
 		"dev": "echo 'API package uses source files directly - no dev build needed'",
 		"db:push": "drizzle-kit push",
 		"db:push:local": "drizzle-kit push --config=./drizzle.local.config.ts",
@@ -46,14 +46,6 @@
 		"db:studio:local": "drizzle-kit studio --config=./drizzle.local.config.ts",
 		"db:generate": "drizzle-kit generate",
 		"db:seed": "bun run src/lib/seed-postgres.ts"
-	},
-	"devDependencies": {
-		"tsdown": "catalog:",
-		"drizzle-kit": "catalog:",
-		"typescript": "catalog:"
-	},
-	"peerDependencies": {
-		"typescript": "^7"
 	},
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "2.0.45",
@@ -79,5 +71,12 @@
 		"posthog-node": "^5.38.4",
 		"superjson": "^2.2.2",
 		"valibot": "catalog:"
+	},
+	"devDependencies": {
+		"drizzle-kit": "catalog:",
+		"typescript": "catalog:"
+	},
+	"peerDependencies": {
+		"typescript": "^7"
 	}
 }

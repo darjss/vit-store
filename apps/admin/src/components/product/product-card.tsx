@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { formatProductStatusMn } from "@vit/shared/domain/product";
 import { Eye, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,107 +21,93 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "../ui/dropdown-menu";
 import { ProductPriceEditor, ProductStockEditor } from "./product-card-editors";
 import { ProductSummary } from "./product-card-summary";
 import ProductForm from "./product-form";
 
 interface ProductCardProps {
-	product: ProductType;
 	brands: BrandsType;
 	categories: CategoriesType;
+	product: ProductType;
 }
 
-const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
+// ponytail: legacy admin product card — split actions later; complexity ceiling 22
+// oxlint-disable-next-line complexity
+const ProductCard = ({ brands, categories, product }: ProductCardProps) => {
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isStockEditing, setIsStockEditing] = useState(false);
 	const [isPriceEditing, setIsPriceEditing] = useState(false);
 	const [isOutOfStockAlertOpen, setIsOutOfStockAlertOpen] = useState(false);
 	const [isActivateConfirmOpen, setIsActivateConfirmOpen] = useState(false);
-	const [stockValue, setStockValue] = useState(product.stock);
-	const [priceValue, setPriceValue] = useState(product.price);
-
-	// Sync drafts from the cache only while their editor is closed, so an
-	// unrelated refetch (e.g. saving stock) can't wipe a price being typed,
-	// and vice versa.
-	useEffect(() => {
-		if (!isStockEditing) setStockValue(product.stock);
-		if (!isPriceEditing) setPriceValue(product.price);
-	}, [product.stock, product.price, isStockEditing, isPriceEditing]);
+	const [stockDraft, setStockDraft] = useState<number | null>(null);
+	const [priceDraft, setPriceDraft] = useState<number | null>(null);
+	const stockValue = stockDraft ?? product.stock;
+	const priceValue = priceDraft ?? product.price;
 
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const {
-		mutate: setProductStock,
 		isPending: isSetStockPending,
+		mutate: setProductStock,
 		variables: setStockVariables,
 	} = useMutation({
 		...trpc.product.setProductStock.mutationOptions(),
 		onError: () => {
 			toast.error("Үлдэгдэл шинэчлэхэд алдаа гарлаа");
-			setStockValue(product.stock);
+			setStockDraft(null);
 			void invalidateProductCaches(queryClient, product.id);
 		},
 		onMutate: async ({ id, newStock }) => {
-			await queryClient.cancelQueries({
-				queryKey: ["admin-products-infinite"],
-			});
+			await queryClient.cancelQueries({ queryKey: ["admin-products-infinite"] });
 			patchProductInCaches(queryClient, id, { stock: newStock });
 			return undefined;
 		},
 		// Patch owns the infinite list; skip refetching it so the dash scroller
 		// doesn't jump to the top. Still invalidate search/detail on settle.
 		onSettled: async () => {
-			await invalidateProductCaches(queryClient, product.id, {
-				skipInfiniteList: true,
-			});
+			await invalidateProductCaches(queryClient, product.id, { skipInfiniteList: true });
+			setStockDraft(null);
 			setIsStockEditing(false);
 		},
 	});
 	const {
-		mutate: setProductPrice,
 		isPending: isSetPricePending,
+		mutate: setProductPrice,
 		variables: setPriceVariables,
 	} = useMutation({
 		...trpc.product.updateProductField.mutationOptions(),
 		onError: () => {
 			toast.error("Үнэ шинэчлэхэд алдаа гарлаа");
-			setPriceValue(product.price);
+			setPriceDraft(null);
 			void invalidateProductCaches(queryClient, product.id);
 		},
 		onMutate: async ({ id, numberValue }) => {
 			if (numberValue === undefined) {
 				return undefined;
 			}
-			await queryClient.cancelQueries({
-				queryKey: ["admin-products-infinite"],
-			});
+			await queryClient.cancelQueries({ queryKey: ["admin-products-infinite"] });
 			patchProductInCaches(queryClient, id, { price: numberValue });
 			return undefined;
 		},
+		// Close the editor only once the cache reflects the saved price, so
+		// the collapsed button never shows a stale value next to a fresh one
+		// in the summary.
 		onSettled: async () => {
-			await invalidateProductCaches(queryClient, product.id, {
-				skipInfiniteList: true,
-			});
+			await invalidateProductCaches(queryClient, product.id, { skipInfiniteList: true });
+			setPriceDraft(null);
 			setIsPriceEditing(false);
 		},
 	});
-	const { mutate: updateProductField, isPending: isUpdateFieldPending } =
-		useMutation({
-			...trpc.product.updateProductField.mutationOptions(),
-			onSuccess: async () => {
-				await invalidateProductCaches(queryClient, product.id);
-				setIsActivateConfirmOpen(false);
-			},
-		});
-	const { mutate: deleteProduct, isPending: isDeletePending } = useMutation({
+	const { isPending: isUpdateFieldPending, mutate: updateProductField } = useMutation({
+		...trpc.product.updateProductField.mutationOptions(),
+		onSuccess: async () => {
+			await invalidateProductCaches(queryClient, product.id);
+			setIsActivateConfirmOpen(false);
+		},
+	});
+	const { isPending: isDeletePending, mutate: deleteProduct } = useMutation({
 		...trpc.product.deleteProduct.mutationOptions(),
 		onSuccess: async () => {
 			await invalidateProductCaches(queryClient);
@@ -136,9 +122,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 	// Show the attempted value while the save is in flight; on failure this
 	// reverts automatically because stockValue is only synced from the cache.
 	const displayStock =
-		isSetStockPending && setStockVariables
-			? setStockVariables.newStock
-			: stockValue;
+		isSetStockPending && setStockVariables ? setStockVariables.newStock : stockValue;
 	const isOutOfStock = displayStock === 0 || product.status === "out_of_stock";
 	const statusLabel = formatProductStatusMn(product.status, isOutOfStock);
 	// Show the attempted value while the save is in flight; on failure this
@@ -154,14 +138,14 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const handleSavePrice = () => {
 		setProductPrice({
-			id: product.id,
 			field: "price",
+			id: product.id,
 			numberValue: priceValue,
 		});
 	};
 
 	const openProductDetails = () => {
-		navigate({ to: "/products/$id", params: { id: String(product.id) } });
+		navigate({ params: { id: String(product.id) }, to: "/products/$id" });
 	};
 
 	const openProductDetailsInNewPage = () => {
@@ -175,85 +159,77 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 
 	const handleConfirmActivateProduct = () => {
 		updateProductField({
-			id: product.id,
 			field: "status",
+			id: product.id,
 			stringValue: "active",
 		});
 	};
 
 	return (
 		<>
-			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+			<Dialog onOpenChange={setIsEditDialogOpen} open={isEditDialogOpen}>
 				<DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-[900px]">
 					<DialogHeader className="border-b px-6 pt-6 pb-4">
 						<DialogTitle>Бүтээгдэхүүн засах</DialogTitle>
-						<DialogDescription>
-							Бүтээгдэхүүний дэлгэрэнгүйг засах.
-						</DialogDescription>
+						<DialogDescription>Бүтээгдэхүүний дэлгэрэнгүйг засах.</DialogDescription>
 					</DialogHeader>
 					<div className="max-h-[80vh] overflow-y-auto p-2 sm:p-6">
 						<ProductForm
+							onSuccess={() => {
+								setIsEditDialogOpen(false);
+								void invalidateProductCaches(queryClient, product.id);
+							}}
 							product={{
 								...product,
 								brandId: String(product.brandId),
 								categoryId: String(product.categoryId),
-								name_mn: product.name_mn ?? undefined,
-								seoTitle: product.seoTitle ?? undefined,
-								seoDescription: product.seoDescription ?? undefined,
 								ingredients: product.ingredients ?? undefined,
+								name_mn: product.name_mn ?? undefined,
+								seoDescription: product.seoDescription ?? undefined,
+								seoTitle: product.seoTitle ?? undefined,
 								tags: product.tags ?? undefined,
-							}}
-							onSuccess={() => {
-								setIsEditDialogOpen(false);
-								void invalidateProductCaches(queryClient, product.id);
 							}}
 						/>
 					</div>
 				</DialogContent>
 			</Dialog>
-			<Card className="overflow-hidden border-2 border-border bg-card shadow-none transition-all hover:shadow-none">
+			<Card className="border-border bg-card overflow-hidden border-2 shadow-none transition-all hover:shadow-none">
 				<CardContent className="p-0">
 					<ProductSummary
-						product={product}
-						currentStock={displayStock}
-						currentPrice={displayPrice}
-						primaryImage={primaryImage}
 						brandName={brand?.name}
 						categoryName={category?.name}
+						currentPrice={displayPrice}
+						currentStock={displayStock}
 						isOutOfStock={isOutOfStock}
-						statusLabel={statusLabel}
 						onOpen={openProductDetails}
 						onRequestActivateConfirm={
-							product.status === "active"
-								? undefined
-								: () => setIsActivateConfirmOpen(true)
+							product.status === "active" ? undefined : () => setIsActivateConfirmOpen(true)
 						}
+						primaryImage={primaryImage}
+						product={product}
+						statusLabel={statusLabel}
 					/>
-					<AlertDialog
-						open={isActivateConfirmOpen}
-						onOpenChange={setIsActivateConfirmOpen}
-					>
-						<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
+					<AlertDialog onOpenChange={setIsActivateConfirmOpen} open={isActivateConfirmOpen}>
+						<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
 							<AlertDialogHeader>
 								<AlertDialogTitle className="font-heading text-lg">
 									Бүтээгдэхүүнийг идэвхжүүлэх
 								</AlertDialogTitle>
 								<AlertDialogDescription>
-									«{product.name}»-ийг идэвхтэй төлөвт оруулах уу? Дэлгүүрт
-									харагдана.
+									«{product.name}»-ийг идэвхтэй төлөвт оруулах уу? Дэлгүүрт харагдана.
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter className="mt-6 flex gap-3">
 								<AlertDialogCancel asChild>
-									<Button variant="outline" className="flex-1">
+									<Button className="flex-1" variant="outline">
 										Цуцлах
 									</Button>
 								</AlertDialogCancel>
 								<AlertDialogAction asChild>
 									<Button
 										className="flex-1"
-										onClick={handleConfirmActivateProduct}
 										disabled={isUpdateFieldPending}
+										onClick={handleConfirmActivateProduct}
 									>
 										Идэвхжүүлэх
 									</Button>
@@ -266,40 +242,49 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<ProductStockEditor
 								isEditing={isStockEditing}
+								isPending={isSetStockPending}
+								onCancel={() => {
+									setStockDraft(null);
+									setIsStockEditing(false);
+								}}
+								onEdit={() => {
+									setStockDraft(product.stock);
+									setIsStockEditing(true);
+								}}
+								onSave={handleSaveStock}
+								onValueChange={setStockDraft}
 								stock={product.stock}
 								value={stockValue}
-								isPending={isSetStockPending}
-								onValueChange={setStockValue}
-								onEdit={() => setIsStockEditing(true)}
-								onCancel={() => setIsStockEditing(false)}
-								onSave={handleSaveStock}
 							/>
 
 							<ProductPriceEditor
 								isEditing={isPriceEditing}
+								isPending={isSetPricePending}
+								onCancel={() => {
+									setPriceDraft(null);
+									setIsPriceEditing(false);
+								}}
+								onEdit={() => {
+									setPriceDraft(product.price);
+									setIsPriceEditing(true);
+								}}
+								onSave={handleSavePrice}
+								onValueChange={setPriceDraft}
 								price={product.price}
 								value={priceValue}
-								isPending={isSetPricePending}
-								onValueChange={setPriceValue}
-								onEdit={() => setIsPriceEditing(true)}
-								onCancel={() => setIsPriceEditing(false)}
-								onSave={handleSavePrice}
 							/>
 
 							<RowActions
-								id={product.id}
-								setIsEditDialogOpen={setIsEditDialogOpen}
 								deleteMutation={(id) => deleteProduct({ id })}
-								isDeletePending={isDeletePending}
 								extraActions={
 									<>
 										<AlertDialog
-											open={isOutOfStockAlertOpen}
 											onOpenChange={setIsOutOfStockAlertOpen}
+											open={isOutOfStockAlertOpen}
 										>
 											<AlertDialogTrigger asChild>
 												<DropdownMenuItem
-													className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+													className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
 													disabled={isSetStockPending || product.stock === 0}
 													onSelect={(e) => {
 														e.stopPropagation();
@@ -311,7 +296,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 													<span>Үлдэгдэл тэглэх</span>
 												</DropdownMenuItem>
 											</AlertDialogTrigger>
-											<AlertDialogContent className="border-2 border-border bg-background shadow-shadow">
+											<AlertDialogContent className="border-border bg-background shadow-shadow border-2">
 												<AlertDialogHeader>
 													<AlertDialogTitle className="font-heading text-lg">
 														Үлдэгдэл тэглэх
@@ -322,15 +307,15 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 												</AlertDialogHeader>
 												<AlertDialogFooter className="mt-6 flex gap-3">
 													<AlertDialogCancel asChild>
-														<Button variant="outline" className="flex-1">
+														<Button className="flex-1" variant="outline">
 															Цуцлах
 														</Button>
 													</AlertDialogCancel>
 													<AlertDialogAction asChild>
 														<Button
 															className="flex-1"
-															onClick={handleMarkOutOfStock}
 															disabled={isSetStockPending}
+															onClick={handleMarkOutOfStock}
 														>
 															Тэглэх
 														</Button>
@@ -340,7 +325,7 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 										</AlertDialog>
 										<DropdownMenuSeparator className="bg-border" />
 										<DropdownMenuItem
-											className="cursor-pointer gap-2 py-2 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+											className="hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground cursor-pointer gap-2 py-2"
 											onSelect={(e) => {
 												e.stopPropagation();
 												e.preventDefault();
@@ -352,6 +337,9 @@ const ProductCard = ({ product, brands, categories }: ProductCardProps) => {
 										</DropdownMenuItem>
 									</>
 								}
+								id={product.id}
+								isDeletePending={isDeletePending}
+								setIsEditDialogOpen={setIsEditDialogOpen}
 							/>
 						</div>
 					</div>

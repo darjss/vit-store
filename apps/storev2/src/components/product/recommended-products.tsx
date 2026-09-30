@@ -4,9 +4,9 @@ import { api } from "@/lib/trpc";
 import ProductCard from "./product-card";
 
 interface RecommendedProductsProps {
-	currentProductId: number;
-	categoryId: number;
 	brandId: number;
+	categoryId: number;
+	currentProductId: number;
 	washKey?: string | number;
 }
 
@@ -17,10 +17,7 @@ const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
 	Promise.race([
 		promise,
 		new Promise<T>((_resolve, reject) =>
-			setTimeout(
-				() => reject(new Error(`recommended products timed out after ${ms}ms`)),
-				ms,
-			),
+			setTimeout(() => reject(new Error(`recommended products timed out after ${ms}ms`)), ms),
 		),
 	]);
 
@@ -28,13 +25,13 @@ async function fetchRecommendedProducts(
 	productId: number,
 	categoryId: number,
 	brandId: number,
-): Promise<ProductForHome[]> {
+): Promise<Array<ProductForHome>> {
 	try {
 		return await withTimeout(
 			api.product.getRecommendedProducts.query({
-				productId,
-				categoryId,
 				brandId,
+				categoryId,
+				productId,
 			}),
 			RECOMMENDED_FETCH_TIMEOUT_MS,
 		);
@@ -45,9 +42,7 @@ async function fetchRecommendedProducts(
 				RECOMMENDED_FETCH_TIMEOUT_MS,
 			);
 			return fallbackProducts.featuredProducts
-				.filter(
-					(product) => product.id !== productId && (product.stock ?? 0) > 0,
-				)
+				.filter((product) => product.id !== productId && (product.stock ?? 0) > 0)
 				.slice(0, RECOMMENDED_SHELF_LIMIT);
 		} catch {
 			return [];
@@ -59,7 +54,7 @@ function ShelfHeading() {
 	return (
 		<div class="mb-5 sm:mb-6">
 			<h2 class="font-display text-h3 sm:text-h2">Таньд таалагдаж магадгүй</h2>
-			<p class="mt-1 text-muted-foreground text-sm sm:text-base">
+			<p class="text-muted-foreground mt-1 text-sm sm:text-base">
 				Таны сонголтод тулгуурлан санал болгож байна
 			</p>
 		</div>
@@ -69,21 +64,16 @@ function ShelfHeading() {
 export default function RecommendedProducts(props: RecommendedProductsProps) {
 	const [products] = createResource(
 		() => ({
-			productId: props.currentProductId,
-			categoryId: props.categoryId,
 			brandId: props.brandId,
+			categoryId: props.categoryId,
+			productId: props.currentProductId,
 		}),
-		(params) =>
-			fetchRecommendedProducts(
-				params.productId,
-				params.categoryId,
-				params.brandId,
-			),
+		(params) => fetchRecommendedProducts(params.productId, params.categoryId, params.brandId),
 	);
 
 	return (
 		<section class="w-full py-6 sm:py-10">
-			<Show when={!products.loading && products()} keyed>
+			<Show keyed when={!products.loading && products()}>
 				{(list) => (
 					<Show when={list.length > 0}>
 						<ShelfHeading />
@@ -106,12 +96,12 @@ export default function RecommendedProducts(props: RecommendedProductsProps) {
 					<For each={Array(4)}>
 						{() => (
 							<div class="w-[160px] shrink-0 sm:w-[200px] lg:w-[220px]">
-								<div class="animate-pulse overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-									<div class="aspect-4/5 bg-muted/40" />
+								<div class="border-border bg-card shadow-soft animate-pulse overflow-hidden rounded-2xl border">
+									<div class="bg-muted/40 aspect-4/5" />
 									<div class="space-y-2 p-3">
-										<div class="h-3 w-1/3 rounded bg-muted/60" />
-										<div class="h-4 w-3/4 rounded bg-muted/60" />
-										<div class="h-4 w-1/2 rounded bg-muted/60" />
+										<div class="bg-muted/60 h-3 w-1/3 rounded" />
+										<div class="bg-muted/60 h-4 w-3/4 rounded" />
+										<div class="bg-muted/60 h-4 w-1/2 rounded" />
 									</div>
 								</div>
 							</div>

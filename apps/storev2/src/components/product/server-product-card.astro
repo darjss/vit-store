@@ -11,30 +11,30 @@ import { washBg } from "@/lib/wash";
 import { unverifiedInventoryCardPresentation } from "./inventory-card-state";
 
 interface Props {
+	aspectRatio?: string;
+	class?: string;
+	imageSize?: "feature" | "card";
 	product: {
+		amount?: string | null;
+		brand: { name: string } | null;
+		categoryId?: number;
+		discount?: number | null;
 		id: number;
+		images: Array<{ url: string | null }>;
 		name: string;
 		name_mn?: string | null;
 		potency?: string | null;
-		amount?: string | null;
-		slug: string;
 		price: number;
-		brand: { name: string } | null;
-		images: { url: string | null }[];
+		slug: string;
 		stock?: number;
-		discount?: number | null;
-		categoryId?: number;
 	};
-	aspectRatio?: string;
-	imageSize?: "feature" | "card";
-	class?: string;
 }
 
 const {
-	product,
 	aspectRatio = "aspect-4/5",
-	imageSize = "card",
 	class: className = "",
+	imageSize = "card",
+	product,
 } = Astro.props;
 const washClass = washBg(product.categoryId ?? "uncategorized");
 const imageUrl = product.images[0]?.url || "";
@@ -43,11 +43,11 @@ const isOutOfStock = productStockState(product.stock) === "out";
 const initialInventory = unverifiedInventoryCardPresentation("checking");
 const hasSale = (product.discount ?? 0) > 0;
 const display = projectProductCardDisplay({
+	amount: product.amount,
+	brand: product.brand?.name,
 	name: product.name,
 	nameMn: product.name_mn,
-	brand: product.brand?.name,
 	potency: product.potency,
-	amount: product.amount,
 });
 ---
 

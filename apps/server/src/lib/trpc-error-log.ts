@@ -1,22 +1,39 @@
 import type { RequestLogger } from "evlog";
+import * as v from "valibot";
 
 const MAX_CAUSE_DEPTH = 8;
 const MAX_STACK_FRAMES = 30;
 const MAX_STACK_FRAME_LENGTH = 500;
 const SAFE_TOKEN = /^[A-Za-z0-9_.:-]{1,80}$/;
 
+const errorCodeWireSchema = v.optional(v.union([v.string(), v.number()]));
+
 type SafeDiagnostic = {
+	cause?: SafeDiagnostic;
+	code?: string | number;
 	name: string;
 	stack: string;
-	code?: string | number;
-	cause?: SafeDiagnostic;
 };
 
-function safeToken(value: unknown): string | number | undefined {
-	if (typeof value === "number" && Number.isFinite(value)) return value;
-	return typeof value === "string" && SAFE_TOKEN.test(value)
-		? value
-		: undefined;
+function safeToken(value: string | number): string | number | undefined {
+	if (v.is(v.number(), value) && Number.isFinite(value)) {
+		return value;
+	}
+	return v.is(v.string(), value) && SAFE_TOKEN.test(value) ? value : undefined;
+}
+
+function readOptionalErrorCode(error: Error): string | number | undefined {
+	const raw = Object.getOwnPropertyDescriptor(error, "code")?.value;
+	const parsed = v.safeParse(errorCodeWireSchema, raw);
+	if (!parsed.success || parsed.output === undefined) {
+		return undefined;
+	}
+	return safeToken(parsed.output);
+}
+
+function readErrorCause(error: Error): Error | undefined {
+	const raw = Object.getOwnPropertyDescriptor(error, "cause")?.value;
+	return raw instanceof Error ? raw : undefined;
 }
 
 function safeErrorName(value: string): string {
@@ -31,6 +48,11 @@ function safeStack(name: string, stack: string | undefined): string {
 	return [`${name}: [message redacted]`, ...frames].join("\n");
 }
 
+export type OperatorProjectedError = Error & {
+	cause?: SafeDiagnostic;
+	code?: string | number;
+};
+
 /**
  * Project an error for operator logs without retaining submitted values.
  *
@@ -39,7 +61,7 @@ function safeStack(name: string, stack: string | undefined): string {
  * eight Error causes. Validation issues, error data, and non-Error causes are
  * intentionally excluded because they can embed request/customer payloads.
  */
-export function operatorTrpcError(error: Error): Error {
+export function operatorTrpcError(error: Error): OperatorProjectedError {
 	const seen = new Set<Error>();
 
 	const project = (current: Error, depth: number): SafeDiagnostic => {
@@ -48,32 +70,28 @@ export function operatorTrpcError(error: Error): Error {
 			name,
 			stack: safeStack(name, current.stack),
 		};
-		const code = safeToken((current as Error & { code?: unknown }).code);
-		if (code !== undefined) diagnostic.code = code;
+		const code = readOptionalErrorCode(current);
+		if (code !== undefined) {
+			diagnostic.code = code;
+		}
 
 		seen.add(current);
-		const cause = (current as Error & { cause?: unknown }).cause;
-		if (depth < MAX_CAUSE_DEPTH && cause instanceof Error && !seen.has(cause)) {
+		const cause = readErrorCause(current);
+		if (depth < MAX_CAUSE_DEPTH && cause !== undefined && !seen.has(cause)) {
 			diagnostic.cause = project(cause, depth + 1);
 		}
 		return diagnostic;
 	};
 
 	const diagnostic = project(error, 0);
-	const projected = new Error("Error details redacted");
+	const projected: OperatorProjectedError = new Error("Error details redacted");
 	projected.name = diagnostic.name;
 	projected.stack = diagnostic.stack;
 	if (diagnostic.code !== undefined) {
-		Object.defineProperty(projected, "code", {
-			value: diagnostic.code,
-			enumerable: true,
-		});
+		projected.code = diagnostic.code;
 	}
-	if (diagnostic.cause) {
-		Object.defineProperty(projected, "cause", {
-			value: diagnostic.cause,
-			enumerable: true,
-		});
+	if (diagnostic.cause !== undefined) {
+		projected.cause = diagnostic.cause;
 	}
 	return projected;
 }
@@ -87,7 +105,7 @@ export function logTrpcError(
 	const context = log.getContext();
 	const fields = {
 		event,
-		trpc: { path, code: error.code },
+		trpc: { code: error.code, path },
 	};
 
 	// Procedure handlers may have already recorded the original database error.

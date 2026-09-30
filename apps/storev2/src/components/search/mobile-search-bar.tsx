@@ -7,17 +7,15 @@ import SearchSheet from "./search-sheet";
  */
 const MobileSearchBar = () => (
 	<SearchSheet
+		contentClass="h-[85vh] w-full max-w-none border-border border-t p-0"
+		headerClass="bg-primary/10"
 		position="bottom"
 		triggerAriaLabel="Хайх"
 		triggerClass="flex h-12 w-full items-center gap-2.5 rounded-full border border-border bg-card px-4 text-left text-muted-foreground shadow-soft-sm transition-[background-color,box-shadow,transform] duration-200 ease-out-quart hover:bg-muted active:scale-[0.99]"
-		contentClass="h-[85vh] w-full max-w-none border-border border-t p-0"
-		headerClass="bg-primary/10"
 		triggerContent={
 			<>
-				<IconSearch class="h-5 w-5 shrink-0" aria-hidden="true" />
-				<span class="truncate font-medium text-sm">
-					Омега-3, магни, нойргүйдэл…
-				</span>
+				<IconSearch aria-hidden="true" class="h-5 w-5 shrink-0" />
+				<span class="truncate text-sm font-medium">Омега-3, магни, нойргүйдэл…</span>
 			</>
 		}
 	/>

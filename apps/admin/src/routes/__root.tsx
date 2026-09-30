@@ -15,32 +15,32 @@ import AppError from "@/components/errors/app-error";
 import NotFound from "@/components/errors/not-found";
 import type { Session } from "../lib/types";
 interface RouterAppContext {
-	trpc: typeof trpc;
 	queryClient: QueryClient;
 	session?: Session;
+	trpc: typeof trpc;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
 	component: RootComponent,
 	errorComponent: ({ error }) => <AppError error={error} />,
-	notFoundComponent: NotFound,
 	head: () => ({
+		links: [
+			{
+				href: "/favicon.ico",
+				rel: "icon",
+			},
+		],
 		meta: [
 			{
 				title: "vit-admin",
 			},
 			{
-				name: "description",
 				content: "admin dashboard for vit-store",
-			},
-		],
-		links: [
-			{
-				rel: "icon",
-				href: "/favicon.ico",
+				name: "description",
 			},
 		],
 	}),
+	notFoundComponent: NotFound,
 });
 
 function RootComponent() {
@@ -57,7 +57,7 @@ function RootComponent() {
 			</div>
 			<Toaster richColors />
 			<TanStackRouterDevtools position="bottom-left" />
-			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
+			<ReactQueryDevtools buttonPosition="bottom-right" position="bottom" />
 		</>
 	);
 }

@@ -17,31 +17,25 @@ export function aiProductSessionKey(sessionId: string): string {
 function normalizeProductText(value: string): string {
 	return value
 		.toLowerCase()
-		.replace(/(\d),(?=\d)/g, "$1")
-		.replace(/\bd[-\s]?([23])\b/g, "d$1")
-		.replace(/\bk[-\s]?2\b/g, "k2")
-		.replace(/\bmk[-\s]?7\b/g, "mk7")
-		.replace(/\bk[-\s]?7\b/g, "mk7")
-		.replace(/\bsoft[-\s]?gels?\b/g, "softgels")
-		.replace(/[^a-z0-9]+/g, " ")
+		.replaceAll(/(\d),(?=\d)/g, "$1")
+		.replaceAll(/\bd[-\s]?([23])\b/g, "d$1")
+		.replaceAll(/\bk[-\s]?2\b/g, "k2")
+		.replaceAll(/\bmk[-\s]?7\b/g, "mk7")
+		.replaceAll(/\bk[-\s]?7\b/g, "mk7")
+		.replaceAll(/\bsoft[-\s]?gels?\b/g, "softgels")
+		.replaceAll(/[^a-z0-9]+/g, " ")
 		.trim();
 }
 
 type ProductIdentity = {
-	doses: string[];
-	counts: string[];
-	variants: string[];
+	counts: Array<string>;
+	doses: Array<string>;
+	variants: Array<string>;
 };
 
 function productIdentity(value: string): ProductIdentity {
 	const normalized = normalizeProductText(value);
 	return {
-		doses: uniqueStrings(
-			Array.from(
-				normalized.matchAll(/\b\d+(?:\.\d+)?\s*(?:iu|mcg|mg|g|ml|oz)\b/g),
-				(match) => match[0].replace(/\s/g, ""),
-			),
-		),
 		counts: uniqueStrings(
 			Array.from(
 				normalized.matchAll(
@@ -50,51 +44,41 @@ function productIdentity(value: string): ProductIdentity {
 				(match) => `${match[1]}${match[2]?.replace(/s$/, "")}`,
 			),
 		),
+		doses: uniqueStrings(
+			Array.from(normalized.matchAll(/\b\d+(?:\.\d+)?\s*(?:iu|mcg|mg|g|ml|oz)\b/g), (match) =>
+				match[0].replaceAll(/\s/g, ""),
+			),
+		),
 		variants: uniqueStrings(
-			normalized
-				.split(" ")
-				.filter((token) => ["d2", "d3", "k2", "mk7"].includes(token)),
+			normalized.split(" ").filter((token) => ["d2", "d3", "k2", "mk7"].includes(token)),
 		),
 	};
 }
 
-function uniqueStrings(values: string[]): string[] {
+function uniqueStrings(values: Array<string>): Array<string> {
 	return Array.from(new Set(values));
 }
 
-function setsEqual(left: string[], right: string[]): boolean {
-	return (
-		left.length === right.length && left.every((value) => right.includes(value))
-	);
+function setsEqual(left: Array<string>, right: Array<string>): boolean {
+	return left.length === right.length && left.every((value) => right.includes(value));
 }
 
-function identityMatches(
-	query: ProductIdentity,
-	title: ProductIdentity,
-): boolean {
+function identityMatches(query: ProductIdentity, title: ProductIdentity): boolean {
 	return (["doses", "counts", "variants"] as const).every((key) => {
 		const expected = query[key];
 		return expected.length === 0 || setsEqual(expected, title[key]);
 	});
 }
 
-export function productTitleMatchesBrand(
-	title: string,
-	expectedBrand: string,
-): boolean {
+export function productTitleMatchesBrand(title: string, expectedBrand: string): boolean {
 	const titleWords = new Set(normalizeProductText(title).split(" "));
 	const brandWords = normalizeProductText(expectedBrand)
 		.split(" ")
 		.filter((word) => word.length >= 2);
-	return (
-		brandWords.length > 0 && brandWords.every((word) => titleWords.has(word))
-	);
+	return brandWords.length > 0 && brandWords.every((word) => titleWords.has(word));
 }
 
-export function productTitleMatchesQuery(
-	query: string,
-	title: string,
-): boolean {
+export function productTitleMatchesQuery(query: string, title: string): boolean {
 	const normalizedQuery = normalizeProductText(query);
 	const normalizedTitle = normalizeProductText(title);
 	const titleWords = new Set(normalizedTitle.split(" "));
@@ -109,9 +93,7 @@ export function productTitleMatchesQuery(
 		"triple",
 		"vitamin",
 	]);
-	const leadingWords = queryWords
-		.filter((word) => word.length >= 3)
-		.slice(0, 2);
+	const leadingWords = queryWords.filter((word) => word.length >= 3).slice(0, 2);
 	if (
 		leadingWords[0] &&
 		!genericFirstWords.has(leadingWords[0]) &&
@@ -124,23 +106,15 @@ export function productTitleMatchesQuery(
 		return false;
 	}
 
-	const ignored = new Set([
-		"and",
-		"for",
-		"from",
-		"supplement",
-		"supplements",
-		"the",
-		"with",
-	]);
+	const ignored = new Set(["and", "for", "from", "supplement", "supplements", "the", "with"]);
 	const meaningfulQueryWords = uniqueStrings(
 		queryWords.filter((word) => word.length >= 3 && !ignored.has(word)),
 	);
-	if (meaningfulQueryWords.length === 0) return true;
+	if (meaningfulQueryWords.length === 0) {
+		return true;
+	}
 
-	const matchingWords = meaningfulQueryWords.filter((word) =>
-		titleWords.has(word),
-	).length;
+	const matchingWords = meaningfulQueryWords.filter((word) => titleWords.has(word)).length;
 	return matchingWords / meaningfulQueryWords.length >= 0.6;
 }
 

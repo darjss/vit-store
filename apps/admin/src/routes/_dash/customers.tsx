@@ -1,12 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-	createFileRoute,
-	useNavigate,
-	useSearch,
-} from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { Plus, Search, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import * as v from "valibot";
+import { integer, minValue, number, object, optional, pipe, string } from "valibot";
 import CustomerCard from "@/components/customers/customer-card";
 import CustomerForm from "@/components/customers/customer-form";
 import { DataPagination } from "@/components/data-pagination";
@@ -26,16 +22,14 @@ import { CustomersPageSkeleton } from "@/components/skeletons/admin-page-skeleto
 
 export const Route = createFileRoute("/_dash/customers")({
 	component: RouteComponent,
-	pendingComponent: CustomersPageSkeleton,
 	loader: ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.customer.getAllCustomers.queryOptions(),
-		);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.customer.getAllCustomers.queryOptions());
 	},
-	validateSearch: v.object({
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 10),
-		searchTerm: v.optional(v.string()),
+	pendingComponent: CustomersPageSkeleton,
+	validateSearch: object({
+		page: optional(pipe(number(), integer(), minValue(1)), 1),
+		pageSize: optional(pipe(number(), integer(), minValue(1)), 10),
+		searchTerm: optional(string()),
 	}),
 });
 
@@ -45,26 +39,29 @@ function RouteComponent() {
 	});
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [inputValue, setInputValue] = useState(searchTerm || "");
+	const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+	if (searchTerm !== prevSearchTerm) {
+		setPrevSearchTerm(searchTerm);
+		setInputValue(searchTerm || "");
+	}
 	const optimisticSearchTerm = inputValue.trim() || undefined;
 	const currentSearchTerm = searchTerm?.trim() || undefined;
 	const optimisticPage = optimisticSearchTerm !== currentSearchTerm ? 1 : page;
 
 	useEffect(() => {
-		setInputValue(searchTerm || "");
-	}, [searchTerm]);
-
-	useEffect(() => {
-		if (optimisticSearchTerm === currentSearchTerm) return;
+		if (optimisticSearchTerm === currentSearchTerm) {
+			return;
+		}
 
 		const timeout = window.setTimeout(() => {
 			navigate({
-				to: "/customers",
 				replace: true,
 				search: {
 					page: 1,
 					pageSize,
 					searchTerm: optimisticSearchTerm,
 				},
+				to: "/customers",
 			});
 		}, 250);
 
@@ -73,24 +70,24 @@ function RouteComponent() {
 
 	const handleSearch = () => {
 		navigate({
-			to: "/customers",
 			search: {
 				page: 1,
 				pageSize,
 				searchTerm: optimisticSearchTerm,
 			},
+			to: "/customers",
 		});
 	};
 
 	const handleClearSearch = () => {
 		setInputValue("");
 		navigate({
-			to: "/customers",
 			search: {
 				page: 1,
 				pageSize,
 				searchTerm: undefined,
 			},
+			to: "/customers",
 		});
 	};
 
@@ -114,11 +111,11 @@ function RouteComponent() {
 							<CustomerForm
 								onSuccess={() =>
 									navigate({
-										to: "/customers",
 										search: {
 											page: 1,
 											pageSize: 10,
 										},
+										to: "/customers",
 									})
 								}
 							/>
@@ -128,30 +125,30 @@ function RouteComponent() {
 			</div>
 
 			<div className="relative">
-				<Search className="-translate-y-1/2 absolute top-1/2 left-4 h-6 w-6 text-muted-foreground" />
+				<Search className="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2" />
 				<Input
-					placeholder="Хэрэглэгч хайх (утас, хаяг)..."
-					value={inputValue}
+					className="rounded-base border-border bg-background shadow-shadow h-12 w-full border-2 pr-14 pl-14"
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-					className="h-12 w-full rounded-base border-2 border-border bg-background pr-14 pl-14 shadow-shadow"
+					placeholder="Хэрэглэгч хайх (утас, хаяг)..."
+					value={inputValue}
 				/>
 				{inputValue && (
 					<Button
+						aria-label="Хайлт цэвэрлэх"
+						className="rounded-base border-border hover:bg-muted absolute top-1/2 right-14 h-8 w-8 -translate-y-1/2 border-2"
+						onClick={handleClearSearch}
 						size="icon"
 						variant="secondary"
-						className="-translate-y-1/2 absolute top-1/2 right-14 h-8 w-8 rounded-base border-2 border-border hover:bg-muted"
-						onClick={handleClearSearch}
-						aria-label="Хайлт цэвэрлэх"
 					>
 						<X className="h-4 w-4" />
 					</Button>
 				)}
 				<Button
-					onClick={handleSearch}
-					className="-translate-y-1/2 absolute top-1/2 right-1 h-10 w-12 rounded-base border-2 border-border shadow-shadow transition-shadow hover:shadow-md"
-					disabled={!inputValue.trim()}
 					aria-label="Хайх"
+					className="rounded-base border-border shadow-shadow absolute top-1/2 right-1 h-10 w-12 -translate-y-1/2 border-2 transition-shadow hover:shadow-md"
+					disabled={!inputValue.trim()}
+					onClick={handleSearch}
 				>
 					<Search className="h-5 w-5" />
 				</Button>
@@ -161,10 +158,7 @@ function RouteComponent() {
 				fallback={
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{Array.from({ length: 8 }).map((_, index) => (
-							<Skeleton
-								key={index}
-								className="h-32 rounded-base border-2 border-border"
-							/>
+							<Skeleton className="rounded-base border-border h-32 border-2" key={index} />
 						))}
 					</div>
 				}
@@ -194,7 +188,9 @@ function CustomersList({
 	});
 
 	const filtered = useMemo(() => {
-		if (!searchTerm) return customers;
+		if (!searchTerm) {
+			return customers;
+		}
 		const term = searchTerm.toLowerCase().trim();
 		return customers.filter((c) => {
 			const phone = String(c.phone);
@@ -210,28 +206,28 @@ function CustomersList({
 
 	const handlePageChange = (newPage: number) => {
 		navigate({
-			to: "/customers",
 			search: {
 				page: newPage,
 				pageSize,
 				searchTerm,
 			},
+			to: "/customers",
 		});
 	};
 
 	if (paginated.length === 0) {
 		return (
 			<>
-				<div className="rounded-base border-2 border-border p-8 text-center text-muted-foreground">
+				<div className="rounded-base border-border text-muted-foreground border-2 p-8 text-center">
 					{searchTerm ? `"${searchTerm}" олдсонгүй` : "Хэрэглэгч олдсонгүй."}
 				</div>
 				<div>
 					<DataPagination
 						currentPage={page}
-						totalItems={totalCount}
+						isLoading={isFetching}
 						itemsPerPage={pageSize}
 						onPageChange={handlePageChange}
-						isLoading={isFetching}
+						totalItems={totalCount}
 					/>
 				</div>
 			</>
@@ -242,16 +238,16 @@ function CustomersList({
 		<>
 			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 				{paginated.map((c) => (
-					<CustomerCard key={c.phone} customer={c} />
+					<CustomerCard customer={c} key={c.phone} />
 				))}
 			</div>
 			<div>
 				<DataPagination
 					currentPage={page}
-					totalItems={totalCount}
+					isLoading={isFetching}
 					itemsPerPage={pageSize}
 					onPageChange={handlePageChange}
-					isLoading={isFetching}
+					totalItems={totalCount}
 				/>
 			</div>
 		</>

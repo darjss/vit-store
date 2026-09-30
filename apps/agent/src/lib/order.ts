@@ -1,8 +1,4 @@
-import type {
-	CheckoutOrderPayload,
-	CreatedOrder,
-	DeliveryZoneInput,
-} from "@vit/assistant";
+import type { CheckoutOrderPayload, CreatedOrder, DeliveryZoneInput } from "@vit/assistant";
 import * as v from "valibot";
 import { storeClient, withTimeout } from "./store-client";
 
@@ -26,9 +22,9 @@ const ORDER_FETCH_TIMEOUT_MS = 20_000;
 // any api-side drift fails loudly here instead of handing the payment slices a
 // missing order/payment number.
 const createdOrderSchema = v.object({
+	checkoutToken: v.nullable(v.string()),
 	orderNumber: v.string(),
 	paymentNumber: v.nullable(v.string()),
-	checkoutToken: v.nullable(v.string()),
 }) satisfies v.GenericSchema<unknown, CreatedOrder>;
 
 // Live delivery zones (`{ id, zoneName }` today; older clients used `Id`).
@@ -55,11 +51,10 @@ export const createOrder = async (
 // Fetches the live delivery zones (KV-cached server-side) for the ranker.
 export const fetchDeliveryZones = async (
 	outerSignal?: AbortSignal,
-): Promise<DeliveryZoneInput[]> => {
-	const data = await storeClient().order.getDeliveryAddressZones.query(
-		undefined,
-		{ signal: withTimeout(outerSignal) },
-	);
+): Promise<Array<DeliveryZoneInput>> => {
+	const data = await storeClient().order.getDeliveryAddressZones.query(undefined, {
+		signal: withTimeout(outerSignal),
+	});
 	const zones = v.parse(deliveryZonesWireSchema, data);
 	return zones.map((z) => ({
 		zoneId: "id" in z ? z.id : z.Id,

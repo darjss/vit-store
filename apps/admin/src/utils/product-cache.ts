@@ -24,14 +24,10 @@ export async function invalidateProductCaches(
 					queryKey: ["admin-products-infinite"],
 					type: "all",
 				}),
-		queryClient.invalidateQueries(
-			trpc.product.searchProductsInstant.pathFilter(),
-		),
+		queryClient.invalidateQueries(trpc.product.searchProductsInstant.pathFilter()),
 		queryClient.invalidateQueries(trpc.product.getAllProducts.queryOptions()),
 		productId !== undefined
-			? queryClient.invalidateQueries(
-					trpc.product.getProductById.queryOptions({ id: productId }),
-				)
+			? queryClient.invalidateQueries(trpc.product.getProductById.queryOptions({ id: productId }))
 			: Promise.resolve(),
 	]);
 }
@@ -81,9 +77,7 @@ export function patchProductInCaches(
 			if (!data) {
 				return data;
 			}
-			return data.map((product) =>
-				product.id === productId ? { ...product, ...patch } : product,
-			);
+			return data.map((product) => (product.id === productId ? { ...product, ...patch } : product));
 		},
 	);
 

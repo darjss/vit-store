@@ -1,35 +1,35 @@
 import { CheckCircle, Clock, Truck, XCircle } from "lucide-react";
-import { orderStatusLabels, orderStatusStyles } from "@vit/shared";
+import { orderStatusStyles } from "@vit/shared";
 import type { OrderStatusType } from "@vit/shared/types";
 import { Badge } from "@/components/ui/badge";
+import { labelForOrderStatus, normalizeOrderStatus } from "@/lib/order-status-display";
 
 interface OrderStatusBadgeProps {
 	status: string;
 }
 
-const statusIcons: Record<string, typeof Clock> = {
-	created: Clock,
-	pending: Clock,
-	shipped: Truck,
-	delivered: CheckCircle,
+const statusIcons = {
 	cancelled: XCircle,
+	created: Clock,
+	delivered: CheckCircle,
+	pending: Clock,
 	refunded: XCircle,
-};
+	shipped: Truck,
+} satisfies Partial<Record<OrderStatusType, typeof Clock>>;
 
 export const OrderStatusBadge = ({ status }: OrderStatusBadgeProps) => {
-	// "pendingOrders" is a legacy dashboard-hero alias for "pending".
-	const normalized = status === "pendingOrders" ? "pending" : status;
-	const label = orderStatusLabels[normalized as OrderStatusType] ?? status;
+	const normalized = normalizeOrderStatus(status);
+	const label = labelForOrderStatus(status);
 	const className =
-		orderStatusStyles[normalized as OrderStatusType]?.badge ??
+		(normalized ? orderStatusStyles[normalized]?.badge : undefined) ??
 		"border-black bg-[#5f27cd] text-white";
-	const Icon = statusIcons[normalized] ?? Clock;
+	const Icon = (normalized ? statusIcons[normalized] : undefined) ?? Clock;
 
 	return (
 		<Badge
-			variant="outline"
+			className={`flex w-fit items-center gap-1.5 px-2 py-1 text-[11px] font-bold whitespace-nowrap shadow-none ${className}`}
 			size="sm"
-			className={`flex w-fit items-center gap-1.5 whitespace-nowrap px-2 py-1 font-bold text-[11px] shadow-none ${className}`}
+			variant="outline"
 		>
 			<Icon className="h-3 w-3" />
 			{label}

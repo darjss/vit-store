@@ -5,12 +5,6 @@ import { markCacheable } from "~/lib/cache/workers-cache";
 import { publicProcedure, router } from "~/lib/trpc";
 
 export const category = router({
-	getAllCategoryNames: publicProcedure.query(async ({ ctx }) => {
-		const categories = await categoryQueries.store.getAllCategories();
-		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
-		return categories.map((category) => category.name);
-	}),
-
 	getAllCategories: publicProcedure.query(async ({ ctx }) => {
 		const categories = await categoryQueries.store.getAllCategories();
 		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
@@ -23,6 +17,12 @@ export const category = router({
 		return categories;
 	}),
 
+	getAllCategoryNames: publicProcedure.query(async ({ ctx }) => {
+		const categories = await categoryQueries.store.getAllCategories();
+		markCacheable(ctx, CACHE_POLICY.categories, [CATEGORIES_TAG]);
+		return categories.map((category) => category.name);
+	}),
+
 	getCategoryBySlug: publicProcedure
 		.input(
 			v.object({
@@ -30,15 +30,11 @@ export const category = router({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const category = await categoryQueries.store.getCategoryBySlug(
-				input.slug,
-			);
+			const category = await categoryQueries.store.getCategoryBySlug(input.slug);
 			markCacheable(
 				ctx,
 				CACHE_POLICY.categories,
-				category
-					? [CATEGORIES_TAG, categoryTag(category.id)]
-					: [CATEGORIES_TAG],
+				category ? [CATEGORIES_TAG, categoryTag(category.id)] : [CATEGORIES_TAG],
 			);
 			return category;
 		}),

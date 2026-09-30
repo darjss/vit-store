@@ -43,28 +43,31 @@ Coordinate with broad go-live issue #125; do not claim duplication or modify it.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- apps/server/src/index.ts apps/server/src/routes/uploads.ts apps/admin/src/components/upload-button.tsx packages/api/src/lib/trpc.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                | Expected on success                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- apps/server/src/index.ts apps/server/src/routes/uploads.ts apps/admin/src/components/upload-button.tsx packages/api/src/lib/trpc.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                  | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                        | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                 | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - shared session gate for upload and explicitly operational admin handlers
 - dashboard upload credentials needed by that gate
 
 **Files/path families allowed**
+
 - `apps/server/src/index.ts`
 - `apps/server/src/routes/uploads.ts`
 - `apps/admin/src/components/upload-button.tsx`
 - `packages/api/src/lib/trpc.ts`
 
 **Out of scope**
+
 - OAuth start/callback
 - Messenger and Payment webhooks
 - image transforms, object keys, and response shapes

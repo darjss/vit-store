@@ -18,11 +18,14 @@
 //
 // Usage: worker must be running on :3583, then `bun scripts/cart-demo.ts`.
 import { createHmac } from "node:crypto";
-import type {
-	MessengerMessagingEvent,
-	MessengerWebhookPayload,
-} from "@flue/messenger";
+import type { MessengerMessagingEvent, MessengerWebhookPayload } from "@flue/messenger";
+import { assistantProductSchema } from "@vit/assistant";
+import { array, InferOutput, number, object, optional, parse } from "valibot";
 import { SuperJSON } from "superjson";
+import { graphSendBodySchema } from "../cli/graph-send";
+import { trpcResponse } from "../cli/trpc-stub";
+
+const idsInputSchema = object({ ids: optional(array(number())) });
 
 const APP_SECRET = "dev-app-secret";
 const PAGE_ID = "DEV_PAGE_ID";
@@ -30,81 +33,86 @@ const PSID = `DEMO_PSID_${Date.now().toString(36)}`;
 const WORKER = "http://127.0.0.1:3583";
 const WEBHOOK = `${WORKER}/channels/messenger/webhook`;
 
-const PRODUCTS: Record<number, unknown> = {
+const PRODUCTS = {
 	101: {
-		id: 101,
-		slug: "magnesium-glycinate-400",
-		name: "Magnesium Glycinate 400mg",
-		price: 54900,
-		image: "https://cdn.vit.mn/p/101.jpg",
 		brand: "NOW Foods",
+		id: 101,
+		image: "https://cdn.vit.mn/p/101.jpg",
+		name: "Magnesium Glycinate 400mg",
+		price: 54_900,
+		slug: "magnesium-glycinate-400",
 		stockStatus: "in_stock",
 	},
 	202: {
-		id: 202,
-		slug: "omega-3-1000",
-		name: "Omega-3 1000mg",
-		price: 39900,
-		image: "https://cdn.vit.mn/p/202.jpg",
 		brand: "California Gold",
+		id: 202,
+		image: "https://cdn.vit.mn/p/202.jpg",
+		name: "Omega-3 1000mg",
+		price: 39_900,
+		slug: "omega-3-1000",
 		stockStatus: "low_stock",
 	},
-};
+} as const satisfies Record<number, InferOutput<typeof assistantProductSchema>>;
 
 // ── Stub store API (simulated catalog source) on :3000 ───────────────────────
 const storeApi = Bun.serve({
-	port: 3000,
-	hostname: "127.0.0.1",
 	fetch(req) {
 		const url = new URL(req.url);
 		const raw = url.searchParams.get("input");
-		let ids: number[] = [];
+		let ids: Array<number> = [];
 		if (raw) {
-			const input = SuperJSON.deserialize(
-				JSON.parse(decodeURIComponent(raw)),
-			) as { ids?: number[] };
-			ids = input.ids ?? [];
+			ids =
+				parse(idsInputSchema, SuperJSON.deserialize(JSON.parse(decodeURIComponent(raw)))).ids ?? [];
 		}
 		const data = ids
-			.map((id) => PRODUCTS[id])
-			.filter((p): p is NonNullable<typeof p> => p != null);
-		return new Response(
-			JSON.stringify({ result: { data: SuperJSON.serialize(data) } }),
-			{ headers: { "content-type": "application/json" } },
-		);
+			.map((id) => {
+				if (id === 101) {
+					return PRODUCTS[101];
+				}
+				if (id === 202) {
+					return PRODUCTS[202];
+				}
+				return undefined;
+			})
+			.filter((product) => product !== undefined);
+		return new Response(trpcResponse(data), {
+			headers: { "content-type": "application/json" },
+		});
 	},
+	hostname: "127.0.0.1",
+	port: 3000,
 });
 
 // ── Capture server (stands in for Graph Send API) on :8788 ───────────────────
 type Captured = {
+	quickReplies: Array<{ payload: string; title: string }>;
 	text?: string;
-	quickReplies: { title: string; payload: string }[];
 };
 let lastCapture: Captured | undefined;
 const capture = Bun.serve({
-	port: 8788,
-	hostname: "127.0.0.1",
 	async fetch(req) {
-		if (req.method !== "POST") return Response.json({ id: PSID });
-		const body = (await req.json()) as Record<string, unknown>;
+		if (req.method !== "POST") {
+			return Response.json({ id: PSID });
+		}
+		const body = parse(graphSendBodySchema, await req.json());
 		if (!body.sender_action) {
-			const message = (body.message ?? {}) as Record<string, unknown>;
-			const qr = Array.isArray(message.quick_replies)
-				? (message.quick_replies as Record<string, unknown>[]).map((q) => ({
-						title: String(q.title ?? ""),
-						payload: String(q.payload ?? ""),
-					}))
-				: [];
+			const message = body.message;
+			const qr = (message?.quick_replies ?? []).map((q) => ({
+				payload: q.payload ?? "",
+				title: q.title ?? "",
+			}));
 			lastCapture = {
-				text: message.text as string | undefined,
 				quickReplies: qr,
+				text: message?.text,
 			};
 		}
 		return Response.json({
-			recipient_id: PSID,
 			message_id: `cap-${Date.now().toString(36)}`,
+			recipient_id: PSID,
 		});
 	},
+	hostname: "127.0.0.1",
+	port: 8788,
 });
 
 // ── Signed webhook sender ────────────────────────────────────────────────────
@@ -113,37 +121,39 @@ const mid = () => `demo-mid-${++seq}-${Date.now().toString(36)}`;
 
 async function post(event: MessengerMessagingEvent): Promise<void> {
 	const payload: MessengerWebhookPayload = {
+		entry: [{ id: PAGE_ID, messaging: [event], time: Date.now() }],
 		object: "page",
-		entry: [{ id: PAGE_ID, time: Date.now(), messaging: [event] }],
 	};
 	const bodyText = JSON.stringify(payload);
 	const sig = createHmac("sha256", APP_SECRET).update(bodyText).digest("hex");
 	lastCapture = undefined;
 	const res = await fetch(WEBHOOK, {
-		method: "POST",
+		body: bodyText,
 		headers: {
 			"content-type": "application/json",
 			"x-hub-signature-256": `sha256=${sig}`,
 		},
-		body: bodyText,
+		method: "POST",
 	});
-	if (!res.ok) throw new Error(`webhook ${res.status}: ${await res.text()}`);
+	if (!res.ok) {
+		throw new Error(`webhook ${res.status}: ${await res.text()}`);
+	}
 }
 
 const firePostback = (payload: string) =>
 	post({
-		sender: { id: PSID },
+		postback: { mid: mid(), payload, title: payload },
 		recipient: { id: PAGE_ID },
+		sender: { id: PSID },
 		timestamp: Date.now(),
-		postback: { mid: mid(), title: payload, payload },
 	});
 
 const fireQuickReply = (payload: string) =>
 	post({
-		sender: { id: PSID },
+		message: { mid: mid(), quick_reply: { payload }, text: payload },
 		recipient: { id: PAGE_ID },
+		sender: { id: PSID },
 		timestamp: Date.now(),
-		message: { mid: mid(), text: payload, quick_reply: { payload } },
 	});
 
 function report(step: string): void {
@@ -154,10 +164,7 @@ function report(step: string): void {
 	}
 	console.log(lastCapture.text ?? "(no text)");
 	if (lastCapture.quickReplies.length > 0) {
-		console.log(
-			"  quick replies: " +
-				lastCapture.quickReplies.map((q) => q.payload).join(", "),
-		);
+		console.log("  quick replies: " + lastCapture.quickReplies.map((q) => q.payload).join(", "));
 	}
 }
 

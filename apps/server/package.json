@@ -1,20 +1,20 @@
 {
 	"name": "server",
-	"main": "src/index.ts",
 	"type": "module",
+	"main": "src/index.ts",
 	"exports": {
 		".": {
 			"bun": "./src/index.ts",
-			"import": "./lib/src/index.js"
+			"import": "./lib/src/index.mjs"
 		},
 		"./alchemy": {
 			"bun": "./alchemy.run.ts",
-			"import": "./lib/alchemy.run.js",
+			"import": "./lib/alchemy.run.mjs",
 			"types": "./alchemy.run.ts"
 		}
 	},
 	"scripts": {
-		"build": "tsdown",
+		"build": "vp pack",
 		"check-types": "tsc --noEmit",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
@@ -42,14 +42,14 @@
 		"hono": "catalog:",
 		"khaan-client": "github:darjss/khaan-client#59061e6182c5698bc38c15401d99a2d20974c744",
 		"nanoid": "^5.1.5",
-		"posthog-node": "^5.38.4"
+		"posthog-node": "^5.38.4",
+		"valibot": "catalog:"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250822.0",
+		"@types/node": "^26.4.0",
 		"alchemy": "catalog:",
 		"drizzle-kit": "catalog:",
-		"typescript": "catalog:",
-		"tsdown": "catalog:",
-		"@types/node": "^26.4.0",
-		"@cloudflare/workers-types": "^4.20250822.0"
+		"typescript": "catalog:"
 	}
 }

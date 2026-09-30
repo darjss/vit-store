@@ -6,12 +6,10 @@ import { SimpleCardsPageSkeleton } from "@/components/skeletons/admin-page-skele
 
 export const Route = createFileRoute("/_dash/sandbox")({
 	component: RouteComponent,
-	pendingComponent: SimpleCardsPageSkeleton,
 	loader: ({ context: ctx }) => {
-		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.product.getProductBenchmark.queryOptions(),
-		);
+		void ctx.queryClient.prefetchQuery(ctx.trpc.product.getProductBenchmark.queryOptions());
 	},
+	pendingComponent: SimpleCardsPageSkeleton,
 });
 
 function RouteComponent() {

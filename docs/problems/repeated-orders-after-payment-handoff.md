@@ -47,11 +47,11 @@ evidence that the Customer intends several purchases.
 On 2026-08-28, one Customer created three identical ten-item Orders for
 1,121,000 MNT within 110 seconds:
 
-| Order | Result | Observed path |
-| --- | --- | --- |
-| `AM1ARE02` | Pending | Khaan Bank tapped; page left; Facebook returned to `/` after about 14 seconds |
-| `0M3ZBMDB` | Pending | Khaan Bank tapped; page left; Facebook returned to `/` after about 14 seconds |
-| `T7Q6QYPF` | Paid | Customer kept the QPay QR visible; webhook confirmed payment; success page shown |
+| Order      | Result  | Observed path                                                                    |
+| ---------- | ------- | -------------------------------------------------------------------------------- |
+| `AM1ARE02` | Pending | Khaan Bank tapped; page left; Facebook returned to `/` after about 14 seconds    |
+| `0M3ZBMDB` | Pending | Khaan Bank tapped; page left; Facebook returned to `/` after about 14 seconds    |
+| `T7Q6QYPF` | Paid    | Customer kept the QPay QR visible; webhook confirmed payment; success page shown |
 
 All three carts had the same product IDs, quantities, and prices. Order and
 invoice creation succeeded each time. The server had already attached the

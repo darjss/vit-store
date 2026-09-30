@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import * as v from "valibot";
 import { KhaanConsumedTransactionsTable } from "~/db/schema";
 import type { TransactionType } from "~/lib/types";
 
@@ -12,13 +13,27 @@ export class KhaanTransactionAlreadyConsumedError extends Error {
 	}
 }
 
-export function isUniqueViolation(error: unknown): boolean {
-	return (
-		typeof error === "object" &&
-		error !== null &&
-		"code" in error &&
-		(error as { code?: unknown }).code === "23505"
-	);
+const postgresErrorWireSchema = v.looseObject({
+	code: v.optional(v.string()),
+});
+
+export type PostgresErrorWire = v.InferOutput<typeof postgresErrorWireSchema>;
+
+type PostgresCatchError = Error | PostgresErrorWire;
+
+const readPostgresErrorCode = (error: PostgresCatchError): string | undefined => {
+	if (error instanceof Error) {
+		const parsed = v.safeParse(postgresErrorWireSchema, error);
+		if (parsed.success && parsed.output.code != null) {
+			return parsed.output.code;
+		}
+		return undefined;
+	}
+	return error.code;
+};
+
+export function isUniqueViolation(error: PostgresCatchError): boolean {
+	return readPostgresErrorCode(error) === "23505";
 }
 
 // Records a fingerprint as consumed by a payment, idempotently.
@@ -55,7 +70,9 @@ export async function recordConsumedKhaanTransaction(
 			});
 		});
 	} catch (error) {
-		if (!isUniqueViolation(error)) {
+		const postgresError: PostgresCatchError =
+			error instanceof Error ? error : v.parse(postgresErrorWireSchema, error);
+		if (!isUniqueViolation(postgresError)) {
 			throw error;
 		}
 		const existing = await tx

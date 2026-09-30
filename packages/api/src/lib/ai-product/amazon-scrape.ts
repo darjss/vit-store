@@ -1,9 +1,7 @@
 import type Firecrawl from "@mendable/firecrawl-js";
 import type { FirecrawlExtractedProduct } from "@vit/shared";
-import {
-	extractAmazonPriceUsd,
-	extractProductImageIds,
-} from "~/lib/ai-product/amazon-html";
+import * as v from "valibot";
+import { extractAmazonPriceUsd, extractProductImageIds } from "~/lib/ai-product/amazon-html";
 import {
 	isAmazonUrl,
 	productTitleMatchesQuery,
@@ -13,7 +11,15 @@ import {
 } from "~/lib/ai-product/amazon-url";
 import { CACHE_TTL } from "~/lib/ai-product/constants";
 import { amazonProductSchema } from "~/lib/ai-product/schemas";
+import {
+	amazonScrapeCacheSchema,
+	amazonSearchCacheSchema,
+	firecrawlAmazonJsonSchema,
+	normalizeFirecrawlPriceUsd,
+	toFirecrawlExtractedProduct,
+} from "~/lib/ai-product/wire-schemas";
 import { kv } from "~/lib/kv";
+import { thrownErrorWireSchema } from "~/lib/logging";
 import { logger } from "~/lib/logger";
 
 export { isAmazonUrl };
@@ -27,17 +33,17 @@ export async function searchAmazonProduct(
 
 	try {
 		const cached = await kv().get(cacheKey, "json");
-		if (cached) {
+		if (cached !== null) {
 			logger.info("searchAmazonProduct.cacheHit", {
-				query,
 				elapsedMs: Date.now() - startTime,
+				query,
 			});
-			return cached as string | null;
+			return v.parse(amazonSearchCacheSchema, cached);
 		}
 	} catch (cacheError) {
 		logger.warn("searchAmazonProduct.cacheReadFailed", {
-			query,
 			error: cacheError instanceof Error ? cacheError.message : "unknown",
+			query,
 		});
 	}
 
@@ -60,7 +66,7 @@ export async function searchAmazonProduct(
 				return [];
 			}
 			const title = "title" in result ? result.title : undefined;
-			return [{ url, title }];
+			return [{ title, url }];
 		});
 		const matchingResult = productResults.find(
 			(result) => result.title && productTitleMatchesQuery(query, result.title),
@@ -70,7 +76,9 @@ export async function searchAmazonProduct(
 		if (!resultUrl) {
 			const firstResult = searchResponse.web[0];
 			const firstUrl = "url" in firstResult ? firstResult.url : undefined;
-			if (firstUrl?.includes("amazon.com")) resultUrl = firstUrl;
+			if (firstUrl?.includes("amazon.com")) {
+				resultUrl = firstUrl;
+			}
 		}
 
 		await kv().put(cacheKey, JSON.stringify(resultUrl), {
@@ -79,7 +87,7 @@ export async function searchAmazonProduct(
 
 		return resultUrl;
 	} catch (error) {
-		logger.error("searchAmazonProduct.failed", error, { query });
+		logger.error("searchAmazonProduct.failed", v.parse(thrownErrorWireSchema, error), { query });
 		return null;
 	}
 }
@@ -94,46 +102,28 @@ export async function scrapeAmazonProduct(
 	try {
 		const cached = await kv().get(cacheKey, "json");
 		if (cached) {
-			return cached as { extracted: FirecrawlExtractedProduct } | null;
+			return v.parse(amazonScrapeCacheSchema, cached);
 		}
 	} catch (cacheError) {
 		logger.warn("scrapeAmazonProduct.cacheReadFailed", {
-			url,
 			error: cacheError instanceof Error ? cacheError.message : "unknown",
+			url,
 		});
 	}
 
 	try {
 		const scrapeResponse = await firecrawl.scrape(url, {
-			formats: [{ type: "json", schema: amazonProductSchema }, "rawHtml"],
+			formats: [{ schema: amazonProductSchema, type: "json" }, "rawHtml"],
 		});
 
-		const jsonData = (scrapeResponse.json as Record<string, unknown>) || {};
+		const jsonData = v.parse(firecrawlAmazonJsonSchema, scrapeResponse.json ?? {});
 		const html = scrapeResponse.rawHtml || "";
-		const jsonPriceRaw = jsonData.priceUsd;
-		const jsonPrice =
-			typeof jsonPriceRaw === "number" &&
-			Number.isFinite(jsonPriceRaw) &&
-			jsonPriceRaw > 0 &&
-			jsonPriceRaw <= 1000
-				? jsonPriceRaw
-				: null;
-		const priceUsd = jsonPrice ?? extractAmazonPriceUsd(html);
+		const priceUsd = normalizeFirecrawlPriceUsd(jsonData.priceUsd) ?? extractAmazonPriceUsd(html);
 		const imageIds = extractProductImageIds(html);
 		const images = imageIds.map(toHighResUrl);
 
 		const result = {
-			extracted: {
-				title: (jsonData.title as string) || "",
-				brand: (jsonData.brand as string) || null,
-				description: (jsonData.description as string) || null,
-				features: (jsonData.features as string[]) || [],
-				images,
-				servingSize: (jsonData.servingSize as string) || null,
-				servingsPerContainer: (jsonData.servingsPerContainer as number) || null,
-				ingredients: (jsonData.ingredients as string[]) || [],
-				priceUsd,
-			},
+			extracted: toFirecrawlExtractedProduct(jsonData, images, priceUsd),
 		};
 
 		await kv().put(cacheKey, JSON.stringify(result), {
@@ -141,22 +131,19 @@ export async function scrapeAmazonProduct(
 		});
 
 		logger.info("scrapeAmazonProduct.done", {
-			url,
-			title: result.extracted.title,
 			elapsedMs: Date.now() - startTime,
+			title: result.extracted.title,
+			url,
 		});
 
 		return result;
 	} catch (error) {
-		logger.error("scrapeAmazonProduct.failed", error, { url });
+		logger.error("scrapeAmazonProduct.failed", v.parse(thrownErrorWireSchema, error), { url });
 		return null;
 	}
 }
 
-export async function resolveProductUrl(
-	firecrawl: Firecrawl,
-	query: string,
-): Promise<string> {
+export async function resolveProductUrl(firecrawl: Firecrawl, query: string): Promise<string> {
 	if (isAmazonUrl(query)) {
 		return query;
 	}

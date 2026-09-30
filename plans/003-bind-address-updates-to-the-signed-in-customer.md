@@ -45,28 +45,31 @@ No exact open issue was found.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/customer.ts packages/api/src/db/valibot.ts packages/api/src/lib/trpc.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                   | Expected on success                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/customer.ts packages/api/src/db/valibot.ts packages/api/src/lib/trpc.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                     | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                           | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                    | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - address-only input for this procedure
 - session-owned phone selection
 - remove the old schema export only if no caller remains
 
 **Files/path families allowed**
+
 - `packages/api/src/routers/store/customer.ts`
 - `packages/api/src/db/valibot.ts`
 - `packages/api/src/lib/trpc.ts`
 
 **Out of scope**
+
 - Customer identity/session redesign
 - Customer creation or Order address fields
 - admin Customer editing

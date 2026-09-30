@@ -25,16 +25,16 @@ Order, Payment, and Customer writes commit before a detached Customer lookup bui
 **Baseline source:** `packages/api/src/routers/store/order.ts:230-239`
 
 ```ts
-            const user = await addCustomerToDB(input.phoneNumber);
-            if (!user) {
-                ctx.log.error(new Error("No user returned"), {
-                    event: "order.customer_create_failed",
-                });
-                throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Failed to create or retrieve user",
-                });
-            }
+const user = await addCustomerToDB(input.phoneNumber);
+if (!user) {
+	ctx.log.error(new Error("No user returned"), {
+		event: "order.customer_create_failed",
+	});
+	throw new TRPCError({
+		code: "INTERNAL_SERVER_ERROR",
+		message: "Failed to create or retrieve user",
+	});
+}
 ```
 
 ### Domain and repository rule
@@ -47,26 +47,29 @@ Coordinate with adjacent order-error issue #149; this is not claimed as a duplic
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/order.ts packages/api/src/routers/store/auth.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                           | Expected on success                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/store/order.ts packages/api/src/routers/store/auth.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                             | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                   | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                            | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - `order.addOrder` transaction result and session construction
 - narrow Customer transaction helper only if required
 
 **Files/path families allowed**
+
 - `packages/api/src/routers/store/order.ts`
 - `packages/api/src/routers/store/auth.ts`
 
 **Out of scope**
+
 - Order idempotency design
 - public response or checkout-token changes
 - A-04 address authorization

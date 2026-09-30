@@ -39,28 +39,26 @@ export type ConfirmPaymentSource =
 export type ConfirmPaymentProvider = "transfer" | "qpay";
 
 type ConfirmPaymentInput = {
+	consumedKhaanTransactions?: Array<{ fingerprint: string }>;
 	paymentNumber: string;
 	provider: ConfirmPaymentProvider;
-	source: ConfirmPaymentSource;
 	referrer?: string;
-	consumedKhaanTransactions?: { fingerprint: string }[];
+	source: ConfirmPaymentSource;
 };
 
 export type ConfirmPaymentResult =
 	| { confirmed: true; orderNumber?: string }
 	| {
 			confirmed: false;
-			reason:
-				| "already_confirmed_or_not_pending"
-				| "khaan_transaction_already_consumed";
+			reason: "already_confirmed_or_not_pending" | "khaan_transaction_already_consumed";
 	  };
 
 export async function confirmPaymentAndNotify({
+	consumedKhaanTransactions,
 	paymentNumber,
 	provider,
-	source,
 	referrer,
-	consumedKhaanTransactions,
+	source,
 }: ConfirmPaymentInput): Promise<ConfirmPaymentResult> {
 	const q = paymentQueries.store;
 	let confirmed: boolean;
@@ -100,25 +98,23 @@ export async function confirmPaymentAndNotify({
 	// come from the post-confirm payment info (every order detail was stocked
 	// on a successful confirm). Purging a few extra tags is harmless; missing
 	// one would leave a stale price/stock on the storefront.
-	const stockedProductIds = paymentInfo.order.orderDetails.map(
-		(detail) => detail.product.id,
-	);
+	const stockedProductIds = paymentInfo.order.orderDetails.map((detail) => detail.product.id);
 	await purgeCatalogCacheGlobal(stockedProductIds);
 
 	const notificationPayload: DetailedOrderNotificationInput = {
+		address: paymentInfo.order.address,
+		customerPhone: paymentInfo.order.customerPhone,
+		notes: paymentInfo.order.notes,
 		orderNumber: paymentInfo.order.orderNumber,
 		paymentNumber,
-		provider,
-		customerPhone: paymentInfo.order.customerPhone,
-		address: paymentInfo.order.address,
-		notes: paymentInfo.order.notes,
-		total: paymentInfo.order.total,
 		products: paymentInfo.order.orderDetails.map((detail) => ({
-			name: detail.product.name,
-			quantity: detail.quantity,
-			price: detail.product.price,
 			imageUrl: detail.product.images[0]?.url,
+			name: detail.product.name,
+			price: detail.product.price,
+			quantity: detail.quantity,
 		})),
+		provider,
+		total: paymentInfo.order.total,
 	};
 
 	try {
@@ -126,9 +122,9 @@ export async function confirmPaymentAndNotify({
 	} catch (notificationError) {
 		try {
 			await persistMessengerNotificationFailure({
-				paymentNumber,
-				payload: notificationPayload,
 				error: notificationError,
+				payload: notificationPayload,
+				paymentNumber,
 			});
 		} catch {
 			// Payment confirmation has already succeeded; notification storage must not roll it back.
@@ -136,23 +132,23 @@ export async function confirmPaymentAndNotify({
 	}
 
 	trackPaymentConfirmedServerSide({
-		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
-		paymentNumber,
 		orderNumber: paymentInfo.order.orderNumber,
-		provider,
-		revenue: paymentInfo.order.total,
+		paymentNumber,
+		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
 		products: paymentInfo.order.orderDetails.map((detail) => ({
 			productId: detail.product.id,
 			quantity: detail.quantity,
 		})),
+		provider,
 		referrer,
+		revenue: paymentInfo.order.total,
 	}).catch(() => {});
 	trackOrderPlacedServerSide({
-		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
 		orderNumber: paymentInfo.order.orderNumber,
 		paymentNumber,
-		total: paymentInfo.order.total,
+		phone: paymentInfo.order.customerPhone?.toString() ?? paymentNumber,
 		provider,
+		total: paymentInfo.order.total,
 	}).catch(() => {});
 
 	return {

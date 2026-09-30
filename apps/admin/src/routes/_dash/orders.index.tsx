@@ -1,9 +1,4 @@
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useSearch,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
 	orderStatus as orderStatusConstants,
 	PRODUCT_PER_PAGE,
@@ -11,7 +6,18 @@ import {
 } from "@vit/shared/constants";
 import { PlusCircle, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { Suspense, useState } from "react";
-import * as v from "valibot";
+import {
+	type InferOutput,
+	integer,
+	minValue,
+	number,
+	object,
+	optional,
+	parse,
+	picklist,
+	pipe,
+	string,
+} from "valibot";
 import SubmitButton from "@/components/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,76 +26,54 @@ import { OrdersPageSkeleton } from "@/components/skeletons/admin-page-skeletons"
 import OrdersFilters from "@/components/order/orders-filters";
 import OrdersList from "@/components/order/orders-list";
 
-const orderStatusFilterValues = [
-	...orderStatusConstants,
-	"active",
-	"all",
-] as const;
+const orderStatusFilterValues = [...orderStatusConstants, "active", "all"] as const;
 const activeOrderStatuses = ["created", "pending", "shipped"] as const;
+
+const ordersSearchSchema = object({
+	date: optional(string(), "all"),
+	orderStatus: optional(picklist(orderStatusFilterValues), "active"),
+	page: optional(pipe(number(), integer(), minValue(1)), 1),
+	pageSize: optional(pipe(number(), integer(), minValue(1)), PRODUCT_PER_PAGE),
+	paymentStatus: optional(picklist(paymentStatusConstants)),
+	searchTerm: optional(string()),
+	sortDirection: optional(picklist(["asc", "desc"])),
+	sortField: optional(string()),
+});
+
+function paginatedOrdersQueryFilters(search: InferOutput<typeof ordersSearchSchema>) {
+	const requestedOrderStatus = search.orderStatus ?? "active";
+	return {
+		date: search.date ?? "all",
+		includeAllStatuses: requestedOrderStatus === "all",
+		orderStatus:
+			requestedOrderStatus === "all" || requestedOrderStatus === "active"
+				? undefined
+				: requestedOrderStatus,
+		orderStatuses: requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
+		page: search.page ?? 1,
+		pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
+		paymentStatus: search.paymentStatus,
+		searchTerm: search.searchTerm,
+		sortDirection: search.sortDirection,
+		sortField: search.sortField,
+	};
+}
 
 export const Route = createFileRoute("/_dash/orders/")({
 	component: RouteComponent,
-	pendingComponent: OrdersPageSkeleton,
 	loader: ({ context: ctx, location }) => {
-		const search = location.search as {
-			page?: number;
-			pageSize?: number;
-			searchTerm?: string;
-			sortField?: string;
-			sortDirection?: "asc" | "desc";
-			orderStatus?: string;
-			paymentStatus?: string;
-			date?: string;
-		};
-		const requestedOrderStatus = search.orderStatus ?? "active";
-		const requestedDate = search.date ?? "all";
+		const search = parse(ordersSearchSchema, location.search);
 		void ctx.queryClient.prefetchQuery(
-			ctx.trpc.order.getPaginatedOrders.queryOptions({
-				page: search.page ?? 1,
-				pageSize: search.pageSize ?? PRODUCT_PER_PAGE,
-				includeAllStatuses: requestedOrderStatus === "all",
-				searchTerm: search.searchTerm,
-				sortField: search.sortField,
-				sortDirection: search.sortDirection,
-				orderStatus:
-					requestedOrderStatus === "all" || requestedOrderStatus === "active"
-						? undefined
-						: (requestedOrderStatus as (typeof orderStatusConstants)[number]),
-				orderStatuses:
-					requestedOrderStatus === "active" ? [...activeOrderStatuses] : undefined,
-				paymentStatus: search.paymentStatus as
-					| (typeof paymentStatusConstants)[number]
-					| undefined,
-				date: requestedDate,
-			}),
+			ctx.trpc.order.getPaginatedOrders.queryOptions(paginatedOrdersQueryFilters(search)),
 		);
 	},
-	validateSearch: v.object({
-		page: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
-		pageSize: v.optional(
-			v.pipe(v.number(), v.integer(), v.minValue(1)),
-			PRODUCT_PER_PAGE,
-		),
-		searchTerm: v.optional(v.string()),
-		sortField: v.optional(v.string()),
-		sortDirection: v.optional(v.picklist(["asc", "desc"])),
-		orderStatus: v.optional(v.picklist(orderStatusFilterValues), "active"),
-		paymentStatus: v.optional(v.picklist(paymentStatusConstants)),
-		date: v.optional(v.string(), "all"),
-	}),
+	pendingComponent: OrdersPageSkeleton,
+	validateSearch: ordersSearchSchema,
 });
 
 function RouteComponent() {
-	const {
-		page,
-		pageSize,
-		searchTerm,
-		sortField,
-		sortDirection,
-		orderStatus,
-		paymentStatus,
-		date,
-	} = useSearch({ from: "/_dash/orders/" });
+	const { date, orderStatus, page, pageSize, paymentStatus, searchTerm, sortDirection, sortField } =
+		useSearch({ from: "/_dash/orders/" });
 
 	const effectivePaymentStatus = paymentStatus;
 	const [inputValue, setInputValue] = useState(searchTerm || "");
@@ -107,7 +91,6 @@ function RouteComponent() {
 
 	const handleSearch = () => {
 		navigate({
-			to: "/orders",
 			search: {
 				date,
 				orderStatus,
@@ -118,13 +101,13 @@ function RouteComponent() {
 				sortDirection,
 				sortField,
 			},
+			to: "/orders",
 		});
 	};
 
 	const clearSearch = () => {
 		setInputValue("");
 		navigate({
-			to: "/orders",
 			search: {
 				date,
 				orderStatus,
@@ -135,48 +118,46 @@ function RouteComponent() {
 				sortDirection,
 				sortField,
 			},
+			to: "/orders",
 		});
 	};
 
 	const handleFilterChange = (field: string, value: string) => {
 		const normalized = value === "all" ? undefined : value;
 		navigate({
-			to: "/orders",
 			search: {
 				date,
 				orderStatus: field === "orderStatus" ? value : orderStatus,
 				page: 1,
 				pageSize,
-				paymentStatus:
-					field === "paymentStatus" ? normalized : paymentStatus,
+				paymentStatus: field === "paymentStatus" ? normalized : paymentStatus,
 				searchTerm,
 				sortDirection,
 				sortField,
 			},
+			to: "/orders",
 		});
 	};
 
 	const handleResetFilters = () => {
 		setInputValue("");
 		navigate({
-			to: "/orders",
 			search: {
-				orderStatus: "active",
-				paymentStatus: undefined,
-				sortField: undefined,
-				sortDirection: "asc",
-				searchTerm: undefined,
 				date: "all",
+				orderStatus: "active",
 				page: 1,
+				paymentStatus: undefined,
+				searchTerm: undefined,
+				sortDirection: "asc",
+				sortField: undefined,
 			},
+			to: "/orders",
 		});
 	};
 
 	const handleSort = (field: string) => {
-		const newDirection =
-			sortField === field && sortDirection === "asc" ? "desc" : "asc";
+		const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
 		navigate({
-			to: "/orders",
 			search: {
 				date,
 				orderStatus,
@@ -184,9 +165,10 @@ function RouteComponent() {
 				pageSize,
 				paymentStatus,
 				searchTerm,
-				sortField: field,
 				sortDirection: newDirection,
+				sortField: field,
 			},
+			to: "/orders",
 		});
 	};
 
@@ -195,17 +177,14 @@ function RouteComponent() {
 			{/* Header */}
 			<div className="flex items-center justify-between gap-4">
 				<div>
-					<h1 className="font-black font-heading text-2xl tracking-tight sm:text-3xl">
+					<h1 className="font-heading text-2xl font-black tracking-tight sm:text-3xl">
 						Захиалгууд
 					</h1>
-					<p className="mt-0.5 text-muted-foreground text-sm">
+					<p className="text-muted-foreground mt-0.5 text-sm">
 						Захиалгыг удирдах, илгээх, хүргэлтийн мэдээлэл оруулах
 					</p>
 				</div>
-				<Button
-					className="h-11 gap-2 shadow-hard"
-					asChild
-				>
+				<Button asChild className="shadow-hard h-11 gap-2">
 					<Link to="/orders/add">
 						<PlusCircle className="h-4 w-4" />
 						<span className="hidden sm:inline">Захиалга нэмэх</span>
@@ -216,31 +195,27 @@ function RouteComponent() {
 
 			{/* Search */}
 			<div className="relative">
-				<Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+				<Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 				<Input
-					placeholder="Захиалгын дугаар, утас хайх..."
-					value={inputValue}
+					className="border-border bg-card shadow-hard-sm h-12 border-2 pr-24 pl-10 text-base"
 					onChange={(e) => setInputValue(e.target.value)}
 					onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-					className="h-12 border-2 border-border bg-card pr-24 pl-10 text-base shadow-hard-sm"
+					placeholder="Захиалгын дугаар, утас хайх..."
+					value={inputValue}
 				/>
-				<div className="-translate-y-1/2 absolute top-1/2 right-1.5 flex items-center gap-1">
+				<div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
 					{inputValue && (
 						<Button
-							size="icon"
-							variant="ghost"
+							aria-label="Хайлтыг цэвэрлэх"
 							className="h-8 w-8"
 							onClick={clearSearch}
-							aria-label="Хайлтыг цэвэрлэх"
+							size="icon"
+							variant="ghost"
 						>
 							<X className="h-4 w-4" />
 						</Button>
 					)}
-					<SubmitButton
-						onClick={handleSearch}
-						className="h-9 px-3 text-xs"
-						aria-label="Хайх"
-					>
+					<SubmitButton aria-label="Хайх" className="h-9 px-3 text-xs" onClick={handleSearch}>
 						<Search className="h-4 w-4" />
 					</SubmitButton>
 				</div>
@@ -250,47 +225,40 @@ function RouteComponent() {
 			<div className="space-y-3">
 				<div className="flex items-center gap-2 sm:hidden">
 					<Button
-						variant={filtersOpen ? "default" : "outline"}
-						size="sm"
 						className="h-10 gap-2"
 						onClick={() => setFiltersOpen(!filtersOpen)}
+						size="sm"
+						variant={filtersOpen ? "default" : "outline"}
 					>
 						<SlidersHorizontal className="h-4 w-4" />
 						Шүүлтүүр
 						{hasActiveFilters && (
-							<span className="ml-1 flex h-5 w-5 items-center justify-center bg-primary-foreground font-bold text-[10px] text-primary">
+							<span className="bg-primary-foreground text-primary ml-1 flex h-5 w-5 items-center justify-center text-[10px] font-bold">
 								!
 							</span>
 						)}
 					</Button>
 					{hasActiveFilters && (
-						<Button
-							variant="ghost"
-							size="sm"
-							className="h-10 gap-1.5"
-							onClick={handleResetFilters}
-						>
+						<Button className="h-10 gap-1.5" onClick={handleResetFilters} size="sm" variant="ghost">
 							<RotateCcw className="h-3.5 w-3.5" />
 							Цэвэрлэх
 						</Button>
 					)}
 				</div>
 
-				<div
-					className={`space-y-3 ${filtersOpen ? "block" : "hidden sm:block"}`}
-				>
+				<div className={`space-y-3 ${filtersOpen ? "block" : "hidden sm:block"}`}>
 					<OrdersFilters
 						date={date}
-						orderStatus={orderStatus}
-						paymentStatus={paymentStatus}
-						pageSize={pageSize}
-						searchTerm={searchTerm}
-						sortDirection={sortDirection}
-						sortField={sortField}
 						filtersActive={hasActiveFilters}
 						onFilterChange={handleFilterChange}
 						onResetFilters={handleResetFilters}
 						onSort={handleSort}
+						orderStatus={orderStatus}
+						pageSize={pageSize}
+						paymentStatus={paymentStatus}
+						searchTerm={searchTerm}
+						sortDirection={sortDirection}
+						sortField={sortField}
 					/>
 				</div>
 			</div>
@@ -300,23 +268,20 @@ function RouteComponent() {
 				fallback={
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						{Array.from({ length: 6 }).map((_, i) => (
-							<Skeleton
-								key={i}
-								className="h-56 border-2 border-border shadow-hard-sm"
-							/>
+							<Skeleton className="border-border shadow-hard-sm h-56 border-2" key={i} />
 						))}
 					</div>
 				}
 			>
 				<OrdersList
+					date={date}
+					orderStatus={orderStatus}
 					page={page}
 					pageSize={pageSize}
-					searchTerm={searchTerm}
-					sortField={sortField}
-					sortDirection={sortDirection}
-					orderStatus={orderStatus}
 					paymentStatus={effectivePaymentStatus}
-					date={date}
+					searchTerm={searchTerm}
+					sortDirection={sortDirection}
+					sortField={sortField}
 				/>
 			</Suspense>
 		</div>

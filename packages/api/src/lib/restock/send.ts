@@ -4,9 +4,9 @@ import { buildProductPdpUrl } from "~/lib/restock/url";
 export async function sendRestockNotification(input: {
 	channel: "sms" | "email";
 	contact: string;
+	productId: number;
 	productName: string;
 	productSlug: string;
-	productId: number;
 }) {
 	const pdpUrl = buildProductPdpUrl(input.productSlug, input.productId);
 	const message = `${input.productName} дахин орлоо. Захиалах: ${pdpUrl}`;
@@ -25,8 +25,8 @@ export async function sendRestockNotification(input: {
 	}
 
 	await sendEmail({
-		to: input.contact,
 		subject: `${input.productName} дахин орлоо`,
 		text: `${input.productName} дахин орлоо.\n\nЗахиалах холбоос: ${pdpUrl}`,
+		to: input.contact,
 	});
 }

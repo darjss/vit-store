@@ -25,17 +25,15 @@ const LogoutButton = (props: { class?: string }) => {
 	return (
 		<div class="p-1">
 			<Button
+				class={cn("w-full", props.class)}
+				disabled={logoutMutation.isPending}
+				onClick={handleLogout}
+				size="sm"
 				type="button"
 				variant="destructive"
-				size="sm"
-				onClick={handleLogout}
-				disabled={logoutMutation.isPending}
-				class={cn("w-full", props.class)}
 			>
 				<IconLogout class="h-4 w-4" />
-				<span class="text-sm">
-					{logoutMutation.isPending ? "Гарч байна..." : "Гарах"}
-				</span>
+				<span class="text-sm">{logoutMutation.isPending ? "Гарч байна..." : "Гарах"}</span>
 			</Button>
 		</div>
 	);

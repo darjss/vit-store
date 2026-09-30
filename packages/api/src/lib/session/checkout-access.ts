@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import { sha256 } from "@oslojs/crypto/sha2";
 import { encodeHexLowerCase } from "@oslojs/encoding";
 import { TRPCError } from "@trpc/server";
@@ -15,14 +16,33 @@ export type CheckoutScope = {
 };
 
 export type CustomerSessionClaims = CustomerSelectType & {
-	trust?: CustomerSessionTrust;
 	checkout?: CheckoutScope;
+	trust?: CustomerSessionTrust;
 };
 
 export type CheckoutAccessTokenRecord = CheckoutScope & {
 	phone: number;
 	tokenHash: string;
 };
+
+const checkoutAccessTokenRecordSchema = v.object({
+	orderId: v.number(),
+	orderNumber: v.string(),
+	paymentNumber: v.string(),
+	phone: v.number(),
+	tokenHash: v.string(),
+});
+
+type CheckoutAccessTokenKvRecord = v.InferOutput<typeof checkoutAccessTokenRecordSchema>;
+
+function readCheckoutAccessTokenRecord(raw: string): CheckoutAccessTokenKvRecord | null {
+	try {
+		const parsed = v.safeParse(checkoutAccessTokenRecordSchema, JSON.parse(raw));
+		return parsed.success ? parsed.output : null;
+	} catch {
+		return null;
+	}
+}
 
 const CHECKOUT_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 
@@ -55,24 +75,33 @@ async function validateCheckoutToken(
 	paymentNumber: string,
 	checkoutToken: string | undefined,
 ): Promise<CheckoutAccessTokenRecord | null> {
-	if (!checkoutToken) return null;
+	if (!checkoutToken) {
+		return null;
+	}
 	const raw = await ctx.kv.get(tokenKey(paymentNumber));
-	if (!raw) return null;
-	const record = JSON.parse(raw) as CheckoutAccessTokenRecord;
+	if (!raw) {
+		return null;
+	}
+	const record = readCheckoutAccessTokenRecord(raw);
+	if (!record) {
+		return null;
+	}
 	return record.tokenHash === hashToken(checkoutToken) ? record : null;
 }
 
 function customerClaimsFromUser(
 	user: CustomerSelectType | UserSelectType | null | undefined,
 ): CustomerSessionClaims | null {
-	if (!user) return null;
-	if (!("phone" in user)) return null;
+	if (!user) {
+		return null;
+	}
+	if (!("phone" in user)) {
+		return null;
+	}
 	return user;
 }
 
-async function resolveCustomerClaims(
-	ctx: Context,
-): Promise<CustomerSessionClaims | null> {
+async function resolveCustomerClaims(ctx: Context): Promise<CustomerSessionClaims | null> {
 	if (!ctx.session) {
 		ctx.session = await auth(ctx);
 	}
@@ -94,17 +123,11 @@ export async function assertCanAccessPayment(
 	}
 
 	const claims = await resolveCustomerClaims(ctx);
-	if (
-		claims?.trust === "phone_verified" &&
-		claims.phone === payment.order.customerPhone
-	) {
+	if (claims?.trust === "phone_verified" && claims.phone === payment.order.customerPhone) {
 		return payment;
 	}
 
-	if (
-		claims?.trust === "checkout_guest" &&
-		claims.checkout?.paymentNumber === paymentNumber
-	) {
+	if (claims?.trust === "checkout_guest" && claims.checkout?.paymentNumber === paymentNumber) {
 		return payment;
 	}
 
@@ -135,16 +158,15 @@ export async function assertCanAccessOrder(
 		return order;
 	}
 
-	if (
-		claims?.trust === "checkout_guest" &&
-		claims.checkout?.orderNumber === orderNumber
-	) {
+	if (claims?.trust === "checkout_guest" && claims.checkout?.orderNumber === orderNumber) {
 		return order;
 	}
 
 	if (paymentNumber) {
 		const tokenRecord = await validateCheckoutToken(ctx, paymentNumber, checkoutToken);
-		if (tokenRecord?.phone === order.customerPhone) return order;
+		if (tokenRecord?.phone === order.customerPhone) {
+			return order;
+		}
 	}
 
 	throw new TRPCError({

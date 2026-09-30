@@ -7,7 +7,9 @@ const BURST_COLORS = [
 ];
 
 export const playCartBurst = (target: HTMLElement) => {
-	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+		return;
+	}
 
 	const bounds = target.getBoundingClientRect();
 	const burst = document.createElement("span");
@@ -22,17 +24,14 @@ export const playCartBurst = (target: HTMLElement) => {
 		const distance = 55 + Math.random() * 70;
 		particle.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
 		particle.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
-		particle.style.setProperty(
-			"--burst-rotate",
-			`${Math.random() * 540 - 270}deg`,
-		);
+		particle.style.setProperty("--burst-rotate", `${Math.random() * 540 - 270}deg`);
 		particle.style.setProperty(
 			"--burst-color",
 			BURST_COLORS[index % BURST_COLORS.length] ?? BURST_COLORS[0],
 		);
-		burst.appendChild(particle);
+		burst.append(particle);
 	}
 
-	document.body.appendChild(burst);
+	document.body.append(burst);
 	window.setTimeout(() => burst.remove(), 900);
 };

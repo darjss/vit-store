@@ -31,12 +31,16 @@ const ContinueUnpaidCheckout = () => {
 			try {
 				const user = await api.auth.check.query();
 				const number = user?.checkout?.paymentNumber;
-				if (!number) return;
+				if (!number) {
+					return;
+				}
 
 				const payment = await api.payment.getPaymentByNumber.query({
 					paymentNumber: number,
 				});
-				if (!PAYABLE.has(payment.status)) return;
+				if (!PAYABLE.has(payment.status)) {
+					return;
+				}
 
 				setPaymentNumber(payment.paymentNumber);
 				setTotal(payment.total);
@@ -50,15 +54,15 @@ const ContinueUnpaidCheckout = () => {
 	return (
 		<Show when={paymentNumber()}>
 			{(number) => (
-				<Sheet open={open()} onOpenChange={setOpen}>
+				<Sheet onOpenChange={setOpen} open={open()}>
 					<SheetContent
-						position="bottom"
+						class="border-border bg-card flex max-h-[88vh] flex-col rounded-t-2xl border-t p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
 						closeLabel="Хаах"
 						focusRestore={focusRestore}
-						class="flex max-h-[88vh] flex-col rounded-t-2xl border-border border-t bg-card p-0 [transition-timing-function:var(--ease-drawer)] data-[closed=]:duration-[250ms] data-[expanded=]:duration-[450ms]"
+						position="bottom"
 					>
 						<SheetHeader class="border-border border-b px-5 pt-1.5 pb-3 text-left">
-							<SheetTitle class="font-display font-bold text-lg tracking-tight">
+							<SheetTitle class="font-display text-lg font-bold tracking-tight">
 								Төлбөр дуусаагүй байна
 							</SheetTitle>
 							<SheetDescription class="text-muted-foreground text-sm">
@@ -68,16 +72,13 @@ const ContinueUnpaidCheckout = () => {
 							</SheetDescription>
 						</SheetHeader>
 						<div class="space-y-2 px-5 py-5">
-							<a
-								href={paymentUrl(number())}
-								class={cn(buttonVariants(), "w-full")}
-							>
+							<a class={cn(buttonVariants(), "w-full")} href={paymentUrl(number())}>
 								Төлбөр үргэлжлүүлэх
 							</a>
 							<button
-								type="button"
-								class="w-full py-2 text-center text-muted-foreground text-xs"
+								class="text-muted-foreground w-full py-2 text-center text-xs"
 								onClick={() => setOpen(false)}
+								type="button"
 							>
 								Дараа төлөх
 							</button>

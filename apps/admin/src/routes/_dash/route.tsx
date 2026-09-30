@@ -6,18 +6,15 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/_dash")({
-	component: RouteComponent,
 	beforeLoad: async ({ context: ctx }) => {
-		let session = ctx.queryClient.getQueryData(
-			ctx.trpc.auth.me.queryOptions().queryKey,
-		);
+		let session = ctx.queryClient.getQueryData(ctx.trpc.auth.me.queryOptions().queryKey);
 
 		if (!session) {
 			session = await ctx.queryClient.fetchQuery({
 				...ctx.trpc.auth.me.queryOptions(),
-				staleTime: 1000 * 60 * 15,
 				gcTime: 1000 * 60 * 30,
 				retry: false,
+				staleTime: 1000 * 60 * 15,
 			});
 		}
 
@@ -26,6 +23,7 @@ export const Route = createFileRoute("/_dash")({
 		}
 		return { session };
 	},
+	component: RouteComponent,
 });
 
 function RouteComponent() {
@@ -43,8 +41,8 @@ function RouteComponent() {
                 radial-gradient(circle at center, #FFF991 0%, transparent 70%)
             `,
 						backgroundSize: "40px 40px, 40px 40px, 100% 100%",
-						opacity: 0.6,
 						mixBlendMode: "multiply",
+						opacity: 0.6,
 					}}
 				/>
 

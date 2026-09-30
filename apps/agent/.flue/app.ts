@@ -4,11 +4,7 @@ import { FLUE_ASSISTANT_MODEL } from "@vit/assistant";
 import { Hono } from "hono";
 import { channel as messengerChannel } from "../src/channels/messenger";
 import { channel as telegramChannel } from "../src/channels/telegram";
-import {
-	type PhotoProbeEnv,
-	type PhotoProbeInput,
-	runPhotoProbe,
-} from "../src/lib/photo-probe";
+import { type PhotoProbeEnv, type PhotoProbeInput, runPhotoProbe } from "../src/lib/photo-probe";
 
 // Explicit annotation: the isolated package layout makes Hono's inferred type
 // reference a non-portable store path (TS2742), so name it with the imported
@@ -18,7 +14,7 @@ const app: Hono = new Hono();
 function mountChannel(
 	hono: Hono,
 	prefix: string,
-	channel: { routes: readonly ChannelRoute[] },
+	channel: { routes: ReadonlyArray<ChannelRoute> },
 ): void {
 	for (const route of channel.routes) {
 		hono.on(route.method, `${prefix}${route.path}`, route.handler as never);
@@ -36,17 +32,17 @@ mountTelegramChannel(app, "/channels/telegram");
 
 app.get("/health", (c) =>
 	c.json({
-		ok: true,
 		app: "vit-store-agent",
 		model: FLUE_ASSISTANT_MODEL,
+		ok: true,
 	}),
 );
 
 app.get("/messenger/inbound-r2-shape", (c) =>
 	c.json({
 		bucketBinding: "MESSENGER_INBOUND_BUCKET",
-		prefix: "messenger-inbound/",
 		note: "Inbound Messenger photos are fetched server-side, stored under this R2 prefix, and only the key is dispatched to the agent (#20, ADR 0003).",
+		prefix: "messenger-inbound/",
 	}),
 );
 
@@ -67,10 +63,7 @@ app.post("/messenger/photo-probe", async (c) => {
 		const result = await runPhotoProbe(c.env as PhotoProbeEnv, input);
 		return c.json(result);
 	} catch (error) {
-		return c.json(
-			{ error: error instanceof Error ? error.message : String(error) },
-			502,
-		);
+		return c.json({ error: error instanceof Error ? error.message : String(error) }, 502);
 	}
 });
 

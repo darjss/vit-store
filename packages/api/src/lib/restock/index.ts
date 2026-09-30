@@ -8,10 +8,7 @@ export {
 	scheduleRestockDispatches,
 	shouldDispatchRestock,
 } from "~/lib/restock/dispatch";
-export {
-	isValidRestockContact,
-	normalizeRestockContact,
-} from "~/lib/restock/normalize";
+export { isValidRestockContact, normalizeRestockContact } from "~/lib/restock/normalize";
 export { sendRestockNotification } from "~/lib/restock/send";
 export {
 	createVerifiedRestockSubscription,

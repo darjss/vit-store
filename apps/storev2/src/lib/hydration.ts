@@ -1,17 +1,12 @@
-import {
-	dehydrate,
-	hydrate,
-	QueryClient,
-	type QueryKey,
-} from "@tanstack/solid-query";
+import { dehydrate, hydrate, QueryClient, type QueryKey } from "@tanstack/solid-query";
 import { SuperJSON } from "superjson";
 
 type QuerySeed = {
-	queryKey: QueryKey;
 	data: unknown;
+	queryKey: QueryKey;
 };
 
-export const dehydrateSeeds = (seeds: QuerySeed[]) => {
+export const dehydrateSeeds = (seeds: Array<QuerySeed>) => {
 	const client = new QueryClient();
 	for (const seed of seeds) {
 		client.setQueryData(seed.queryKey, seed.data);
@@ -23,10 +18,7 @@ export const dehydrateSeeds = (seeds: QuerySeed[]) => {
 
 const hydratedPayloads = new Set<string>();
 
-export const hydrateServerState = (
-	client: QueryClient,
-	serialized: string | null | undefined,
-) => {
+export const hydrateServerState = (client: QueryClient, serialized: string | null | undefined) => {
 	if (!serialized || hydratedPayloads.has(serialized)) {
 		return;
 	}

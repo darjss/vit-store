@@ -15,40 +15,35 @@ const BrandCard = (brand: BrandSelectType) => {
 	const deleteMutation = useMutation({
 		...trpc.brands.deleteBrand.mutationOptions(),
 		onSuccess: () => {
-			context.queryClient.invalidateQueries(
-				trpc.brands.getAllBrands.queryOptions(),
-			);
+			context.queryClient.invalidateQueries(trpc.brands.getAllBrands.queryOptions());
 		},
 	});
 
 	return (
 		<>
-			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+			<Dialog onOpenChange={setIsEditDialogOpen} open={isEditDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Брэнд засах</DialogTitle>
 					</DialogHeader>
-					<BrandForm
-						brand={brand}
-						onSuccess={() => setIsEditDialogOpen(false)}
-					/>
+					<BrandForm brand={brand} onSuccess={() => setIsEditDialogOpen(false)} />
 				</DialogContent>
 			</Dialog>
 
-			<Card className="group relative overflow-hidden border-2 border-border bg-background shadow-shadow transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
+			<Card className="group border-border bg-background shadow-shadow relative overflow-hidden border-2 transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_var(--border)]">
 				<CardContent className="p-0">
-					<div className="relative flex aspect-square items-center justify-center border-border border-b-2 bg-background">
+					<div className="border-border bg-background relative flex aspect-square items-center justify-center border-b-2">
 						{brand.logoUrl ? (
 							<Image
-								src={brand.logoUrl}
 								alt={brand.name}
-								height={120}
-								width={120}
-								layout="constrained"
 								className="h-full w-full object-contain p-4"
+								height={120}
+								layout="constrained"
+								src={brand.logoUrl}
+								width={120}
 							/>
 						) : (
-							<div className="flex h-full w-full items-center justify-center font-heading text-4xl text-foreground/60 uppercase">
+							<div className="font-heading text-foreground/60 flex h-full w-full items-center justify-center text-4xl uppercase">
 								{brand.name[0]}
 							</div>
 						)}
@@ -57,16 +52,14 @@ const BrandCard = (brand: BrandSelectType) => {
 					<div className="relative p-3">
 						<div className="absolute top-2 right-2">
 							<RowAction
-								id={brand.id}
-								setIsEditDialogOpen={setIsEditDialogOpen}
 								deleteMutation={(id) => deleteMutation.mutate({ id })}
+								id={brand.id}
 								isDeletePending={deleteMutation.isPending}
+								setIsEditDialogOpen={setIsEditDialogOpen}
 							/>
 						</div>
 
-						<h3 className="pr-8 font-heading text-foreground leading-tight">
-							{brand.name}
-						</h3>
+						<h3 className="font-heading text-foreground pr-8 leading-tight">{brand.name}</h3>
 					</div>
 				</CardContent>
 			</Card>

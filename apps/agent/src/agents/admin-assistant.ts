@@ -20,80 +20,71 @@ import {
 	postTelegramProductPhoto,
 } from "../channels/telegram";
 import addProduct from "../skills/add-product/SKILL.md" with { type: "skill" };
-import stockPaste from "../skills/stock-paste/SKILL.md" with { type: "skill" };
-import lookupOrders from "../skills/lookup-orders/SKILL.md" with { type: "skill" };
-import namedZoneShip from "../skills/named-zone-ship/SKILL.md" with { type: "skill" };
 import invoicePurchase from "../skills/invoice-purchase/SKILL.md" with { type: "skill" };
-import storeAnalytics from "../skills/store-analytics/SKILL.md" with { type: "skill" };
+import lookupOrders from "../skills/lookup-orders/SKILL.md" with { type: "skill" };
 import messengerOrder from "../skills/messenger-order/SKILL.md" with { type: "skill" };
+import namedZoneShip from "../skills/named-zone-ship/SKILL.md" with { type: "skill" };
+import stockPaste from "../skills/stock-paste/SKILL.md" with { type: "skill" };
+import storeAnalytics from "../skills/store-analytics/SKILL.md" with { type: "skill" };
 
 type AgentEnv = {
-	LOADER?: WorkerLoader;
 	ADMIN_BOT_TOKEN?: string;
 	AI?: Ai;
+	LOADER?: WorkerLoader;
 	MESSENGER_INBOUND_BUCKET?: R2Bucket;
 };
 
-export default defineAgent<AgentEnv>(({ id, env }) => {
-	const storeApiUrl =
-		process.env.STORE_API_URL ?? "http://localhost:3000";
+export default defineAgent<AgentEnv>(({ env, id }) => {
+	const storeApiUrl = process.env.STORE_API_URL ?? "http://localhost:3000";
 	const queryTool =
 		env.LOADER && env.ADMIN_BOT_TOKEN
 			? buildAdminQueryTool({
-					loader: env.LOADER,
 					botToken: env.ADMIN_BOT_TOKEN,
+					loader: env.LOADER,
 					storeApiUrl,
 				})
 			: undefined;
 
-	const loadImage =
-		env.MESSENGER_INBOUND_BUCKET !== undefined
-			? (key: string) =>
-					loadInboundImage(env.MESSENGER_INBOUND_BUCKET as R2Bucket, key)
-			: undefined;
-	const runVision =
-		env.AI !== undefined ? buildKimiVision(env.AI, 4096) : undefined;
-
+	const bucket = env.MESSENGER_INBOUND_BUCKET;
+	const adminToken = env.ADMIN_BOT_TOKEN;
+	const runVision = env.AI ? buildKimiVision(env.AI, 4096) : undefined;
+	const loadImage = bucket ? (key: string) => loadInboundImage(bucket, key) : undefined;
 	const purchaseExtractTool =
-		loadImage && runVision && env.ADMIN_BOT_TOKEN
+		loadImage && runVision && adminToken
 			? buildPurchaseImageExtractTool({
 					loadImage,
-					runVision,
 					matchExtracted: (input) =>
-						createAdminBotClient(
-							storeApiUrl,
-							env.ADMIN_BOT_TOKEN as string,
-						).aiPurchase.matchExtractedInvoice.mutate(input),
+						createAdminBotClient(storeApiUrl, adminToken).aiPurchase.matchExtractedInvoice.mutate(
+							input,
+						),
+					runVision,
 				})
 			: undefined;
 
 	const chatOrderExtractTool =
-		loadImage && runVision
-			? buildChatOrderImageExtractTool({ loadImage, runVision })
-			: undefined;
+		loadImage && runVision ? buildChatOrderImageExtractTool({ loadImage, runVision }) : undefined;
 
 	const isTelegram = id.startsWith("telegram:");
-	const telegramRef = isTelegram
-		? telegramChannel.parseConversationKey(id)
-		: undefined;
+	const telegramRef = isTelegram ? telegramChannel.parseConversationKey(id) : undefined;
 	const replyTool = isTelegram
 		? postTelegramMessage(telegramRef!)
-		: postMessengerMessage(
-				messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")),
-			);
+		: postMessengerMessage(messengerChannel.parseConversationKey(id.replace(/:v\d+$/, "")));
 	const productPhotoTool =
 		isTelegram && telegramRef && env.ADMIN_BOT_TOKEN
 			? postTelegramProductPhoto({
+					botToken: env.ADMIN_BOT_TOKEN,
 					ref: telegramRef,
 					storeApiUrl,
-					botToken: env.ADMIN_BOT_TOKEN,
 				})
 			: undefined;
 
 	return {
-		model: ADMIN_ASSISTANT_MODEL,
-		thinkingLevel: "medium" as const,
+		compaction: {
+			keepRecentTokens: 8000,
+			reserveTokens: 20_000,
+		},
 		instructions: adminAssistantInstructions,
+		model: ADMIN_ASSISTANT_MODEL,
 		skills: [
 			addProduct,
 			stockPaste,
@@ -103,10 +94,7 @@ export default defineAgent<AgentEnv>(({ id, env }) => {
 			storeAnalytics,
 			messengerOrder,
 		],
-		compaction: {
-			reserveTokens: 20_000,
-			keepRecentTokens: 8_000,
-		},
+		thinkingLevel: "medium" as const,
 		tools: [
 			...(queryTool ? [queryTool] : []),
 			...(purchaseExtractTool ? [purchaseExtractTool] : []),

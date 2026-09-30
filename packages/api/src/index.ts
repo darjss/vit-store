@@ -1,5 +1,3 @@
-/// <reference path="../env.d.ts" />
-
 export type { DB } from "~/db";
 export { createDb } from "~/db";
 export type {
@@ -33,11 +31,7 @@ export type {
 export * as db from "~/db/schema";
 
 export { finalizeCatalogCacheHeaders } from "~/lib/cache/workers-cache";
-export type {
-	Context,
-	CreateContextOptions,
-	WorkersCache,
-} from "~/lib/context";
+export type { Context, CreateContextOptions, WorkersCache } from "~/lib/context";
 export * from "~/lib/product-search/client";
 export * from "~/lib/product-search/types";
 export type { Session } from "~/lib/session";

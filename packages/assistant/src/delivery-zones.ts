@@ -26,14 +26,14 @@ export interface DeliveryZoneInput {
 // the same shape `delivery-zone-eval.ts aliases` emits. When absent the ranker
 // degrades to matching the zone NAME tokens alone.
 export interface ZoneAlias {
-	token: string;
 	count: number;
+	token: string;
 }
 
 export interface ZoneKnowledge {
-	zoneId: number;
+	aliases: Array<ZoneAlias>;
 	orderCount: number;
-	aliases: ZoneAlias[];
+	zoneId: number;
 }
 
 // Tokens shorter than this, pure numbers (байр/тоот/утас digits), and a few
@@ -54,11 +54,11 @@ const STOP = new Set([
 const normalize = (s: string): string =>
 	s
 		.toLowerCase()
-		.replace(/[^\p{L}\p{N}]+/gu, " ")
-		.replace(/\s+/g, " ")
+		.replaceAll(/[^\p{L}\p{N}]+/gu, " ")
+		.replaceAll(/\s+/g, " ")
 		.trim();
 
-export const addressTokens = (s: string): string[] =>
+export const addressTokens = (s: string): Array<string> =>
 	normalize(s)
 		.split(" ")
 		.filter((t) => t.length >= 3 && !/^\d+$/.test(t) && !STOP.has(t));
@@ -72,19 +72,17 @@ const MAX_CANDIDATES = 5;
 // something to confirm; a confident match floats to the top.
 export const rankZoneCandidates = (
 	addressText: string,
-	zones: DeliveryZoneInput[],
-	knowledge: ZoneKnowledge[] = [],
-): ZoneCandidate[] => {
+	zones: Array<DeliveryZoneInput>,
+	knowledge: Array<ZoneKnowledge> = [],
+): Array<ZoneCandidate> => {
 	const target = new Set(addressTokens(addressText));
 	const knowledgeById = new Map(knowledge.map((k) => [k.zoneId, k]));
 
 	const scored = zones.map((zone) => {
-		const evidence: string[] = [];
+		const evidence: Array<string> = [];
 		let score = 0;
 
-		const nameOverlap = addressTokens(zone.zoneName).filter((t) =>
-			target.has(t),
-		);
+		const nameOverlap = addressTokens(zone.zoneName).filter((t) => target.has(t));
 		if (nameOverlap.length > 0) {
 			score += nameOverlap.length * 3;
 			evidence.push(`нэр таарч байна: ${nameOverlap.join(", ")}`);
@@ -92,9 +90,7 @@ export const rankZoneCandidates = (
 
 		const k = knowledgeById.get(zone.zoneId);
 		if (k) {
-			const aliasOverlap = k.aliases
-				.filter((a) => target.has(a.token))
-				.slice(0, 5);
+			const aliasOverlap = k.aliases.filter((a) => target.has(a.token)).slice(0, 5);
 			if (aliasOverlap.length > 0) {
 				score += aliasOverlap.reduce((n, a) => n + Math.min(3, a.count), 0);
 				evidence.push(
@@ -105,10 +101,10 @@ export const rankZoneCandidates = (
 		}
 
 		return {
+			evidence,
+			score,
 			zoneId: zone.zoneId,
 			zoneName: zone.zoneName,
-			score,
-			evidence,
 		} satisfies ZoneCandidate;
 	});
 
@@ -120,9 +116,7 @@ export const rankZoneCandidates = (
 	// few) so the customer can still confirm — never return an empty list when
 	// zones exist.
 	if (matched.length === 0) {
-		return scored
-			.sort((a, b) => b.score - a.score || a.zoneId - b.zoneId)
-			.slice(0, MAX_CANDIDATES);
+		return scored.sort((a, b) => b.score - a.score || a.zoneId - b.zoneId).slice(0, MAX_CANDIDATES);
 	}
 	return matched.slice(0, MAX_CANDIDATES);
 };

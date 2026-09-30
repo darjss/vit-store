@@ -43,23 +43,25 @@ Coordinate with broad old-link QA in #149; do not claim duplication.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/admin/product.ts packages/api/src/queries/products/admin.ts packages/api/src/db/schema.ts apps/storev2/src/pages/products/[slug].astro packages/api/src/queries/products/store.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                                                                       | Expected on success                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/routers/admin/product.ts packages/api/src/queries/products/admin.ts packages/api/src/db/schema.ts apps/storev2/src/pages/products/[slug].astro packages/api/src/queries/products/store.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                                                                         | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                                                                               | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                                                                        | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - approved history consumer/retention policy
 - atomic append of prior slug only when changed
 - end-to-end old URL proof
 
 **Files/path families allowed**
+
 - `packages/api/src/routers/admin/product.ts`
 - `packages/api/src/queries/products/admin.ts`
 - `packages/api/src/db/schema.ts`
@@ -67,6 +69,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `packages/api/src/queries/products/store.ts`
 
 **Out of scope**
+
 - URL redesign
 - Product ID suffix removal
 - search/cache behavior

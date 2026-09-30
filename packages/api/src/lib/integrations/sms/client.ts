@@ -11,6 +11,7 @@ import Client, {
 	WebHookEventType,
 } from "android-sms-gateway";
 import ky from "ky";
+import * as v from "valibot";
 
 // Re-export types from android-sms-gateway
 export type {
@@ -27,47 +28,68 @@ export type {
 
 export { WebHookEventType };
 
+const SMS_GATEWAY_BASE_URL = "https://api.sms-gate.app/3rdparty/v1";
+
+type SmsGatewayJson =
+	| null
+	| boolean
+	| number
+	| string
+	| Array<SmsGatewayJson>
+	| { [key: string]: SmsGatewayJson };
+
+type SmsGatewayRequestBody = SmsGatewayJson;
+
+const smsGatewayJsonSchema: v.GenericSchema<SmsGatewayJson> = v.lazy(() =>
+	v.union([
+		v.null_(),
+		v.boolean(),
+		v.number(),
+		v.string(),
+		v.array(smsGatewayJsonSchema),
+		v.record(v.string(), smsGatewayJsonSchema),
+	]),
+);
+
 // Define JWT types locally (matching android-sms-gateway v3.0 API)
 export interface TokenRequest {
 	/** The scopes to include in the token */
-	scopes: string[];
+	scopes: Array<string>;
 	/** The time-to-live (TTL) of the token in seconds */
 	ttl?: number;
 }
 
-export interface TokenResponse {
-	/** The JWT access token */
-	access_token: string;
-	/** The type of the token */
-	token_type: string;
-	/** The unique identifier of the token */
-	id: string;
-	/** The expiration time of the token */
-	expires_at: string;
-}
+export const tokenResponseSchema = v.object({
+	access_token: v.string(),
+	expires_at: v.string(),
+	id: v.string(),
+	token_type: v.string(),
+});
+
+export type TokenResponse = v.InferOutput<typeof tokenResponseSchema>;
 
 /**
  * HTTP client interface for making requests
  */
 interface HttpClient {
-	get<T>(url: string, headers?: Record<string, string>): Promise<T>;
-	post<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
-	put<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
-	patch<T>(
-		url: string,
-		body: unknown,
-		headers?: Record<string, string>,
-	): Promise<T>;
 	delete<T>(url: string, headers?: Record<string, string>): Promise<T>;
+	get<T>(url: string, headers?: Record<string, string>): Promise<T>;
+	patch<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
+	post<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
+	put<T>(url: string, body: SmsGatewayRequestBody, headers?: Record<string, string>): Promise<T>;
 }
+
+const readSmsGatewayResponseBody = async (response: Response): Promise<SmsGatewayJson> => {
+	if (response.status === 204) {
+		return null;
+	}
+
+	const contentType = response.headers.get("Content-Type");
+	if (contentType?.includes("application/json")) {
+		return v.parse(smsGatewayJsonSchema, await response.json());
+	}
+	return v.parse(v.string(), await response.text());
+};
 
 /**
  * Create a ky-based HTTP client
@@ -76,29 +98,35 @@ function createHttpClient(): HttpClient {
 	const client = ky.create({ throwHttpErrors: false, timeout: 10_000 });
 
 	const handleResponse = async <T>(response: Response): Promise<T> => {
-		if (response.status === 204) {
-			return null as T;
-		}
-
 		if (!response.ok) {
 			throw new Error(`sms_provider_http_${response.status}`);
 		}
 
-		const contentType = response.headers.get("Content-Type");
-		if (contentType?.includes("application/json")) {
-			return (await response.json()) as T;
-		}
-		return (await response.text()) as T;
+		const body = await readSmsGatewayResponseBody(response);
+		// SAFETY: body parsed by smsGatewayJsonSchema or v.string() in readSmsGatewayResponseBody; android-sms-gateway binds T to this endpoint's response contract.
+		return body as T;
 	};
 
 	return {
+		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
+			const response = await client.delete(url, { headers });
+			return handleResponse<T>(response);
+		},
 		async get<T>(url: string, headers?: Record<string, string>): Promise<T> {
 			const response = await client.get(url, { headers });
 			return handleResponse<T>(response);
 		},
+		async patch<T>(
+			url: string,
+			body: SmsGatewayRequestBody,
+			headers?: Record<string, string>,
+		): Promise<T> {
+			const response = await client.patch(url, { headers, json: body });
+			return handleResponse<T>(response);
+		},
 		async post<T>(
 			url: string,
-			body: unknown,
+			body: SmsGatewayRequestBody,
 			headers?: Record<string, string>,
 		): Promise<T> {
 			const response = await client.post(url, { headers, json: body });
@@ -106,22 +134,10 @@ function createHttpClient(): HttpClient {
 		},
 		async put<T>(
 			url: string,
-			body: unknown,
+			body: SmsGatewayRequestBody,
 			headers?: Record<string, string>,
 		): Promise<T> {
 			const response = await client.put(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async patch<T>(
-			url: string,
-			body: unknown,
-			headers?: Record<string, string>,
-		): Promise<T> {
-			const response = await client.patch(url, { headers, json: body });
-			return handleResponse<T>(response);
-		},
-		async delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
-			const response = await client.delete(url, { headers });
 			return handleResponse<T>(response);
 		},
 	};
@@ -131,12 +147,12 @@ function createHttpClient(): HttpClient {
  * SMS Gateway client configuration options
  */
 export interface SmsGatewayConfig {
+	/** Optional custom base URL */
+	baseUrl?: string;
 	/** Username for Basic Auth (empty string for JWT auth) */
 	login: string;
 	/** Password for Basic Auth or JWT token */
 	password: string;
-	/** Optional custom base URL */
-	baseUrl?: string;
 }
 
 /**
@@ -159,10 +175,19 @@ export interface SmsGatewayConfig {
  * ```
  */
 export function createSmsClient(config: SmsGatewayConfig): Client {
-	const { login, password, baseUrl } = config;
+	const { baseUrl, login, password } = config;
 	const httpClient = createHttpClient();
 	return new Client(login, password, httpClient, baseUrl);
 }
+
+const smsGatewayConfig: SmsGatewayConfig = {
+	baseUrl: process.env.SMS_GATEWAY_BASE_URL,
+	login: process.env.SMS_GATEWAY_LOGIN ?? "",
+	password: process.env.SMS_GATEWAY_PASSWORD ?? "",
+};
+
+const smsGatewayBaseUrl = smsGatewayConfig.baseUrl ?? SMS_GATEWAY_BASE_URL;
+const smsGatewayHttpClient = createHttpClient();
 
 /**
  * Default SMS Gateway client using environment variables
@@ -174,17 +199,19 @@ export function createSmsClient(config: SmsGatewayConfig): Client {
  * Optional:
  * - SMS_GATEWAY_BASE_URL: Custom API base URL
  */
-export const smsClient = createSmsClient({
-	login: process.env.SMS_GATEWAY_LOGIN ?? "",
-	password: process.env.SMS_GATEWAY_PASSWORD ?? "",
-	baseUrl: process.env.SMS_GATEWAY_BASE_URL,
-});
+export const smsClient = new Client(
+	smsGatewayConfig.login,
+	smsGatewayConfig.password,
+	smsGatewayHttpClient,
+	smsGatewayBaseUrl,
+);
 
-// Extended client type to include JWT methods
-type ExtendedClient = Client & {
-	generateToken(request: TokenRequest): Promise<TokenResponse>;
-	revokeToken(jti: string): Promise<void>;
-};
+const smsGatewayAuthHeaders = () =>
+	({
+		Authorization: `Basic ${btoa(`${smsGatewayConfig.login}:${smsGatewayConfig.password}`)}`,
+		"Content-Type": "application/json",
+		"User-Agent": "android-sms-gateway/3.0 (client; js)",
+	}) satisfies Record<string, string>;
 
 /**
  * Helper functions for common SMS operations
@@ -232,16 +259,12 @@ export const smsGateway = {
 	async sendSmsAndWait(
 		message: Message,
 		options?: {
-			skipPhoneValidation?: boolean;
-			maxAttempts?: number;
 			intervalMs?: number;
+			maxAttempts?: number;
+			skipPhoneValidation?: boolean;
 		},
 	): Promise<MessageState> {
-		const {
-			skipPhoneValidation,
-			maxAttempts = 10,
-			intervalMs = 1000,
-		} = options ?? {};
+		const { intervalMs = 1000, maxAttempts = 10, skipPhoneValidation } = options ?? {};
 
 		const result = await smsClient.send(message, { skipPhoneValidation });
 
@@ -270,7 +293,7 @@ export const smsGateway = {
 	/**
 	 * List all registered devices
 	 */
-	async getDevices(): Promise<Device[]> {
+	async getDevices(): Promise<Array<Device>> {
 		return smsClient.getDevices();
 	},
 
@@ -284,7 +307,7 @@ export const smsGateway = {
 	/**
 	 * List all registered webhooks
 	 */
-	async getWebhooks(): Promise<WebHook[]> {
+	async getWebhooks(): Promise<Array<WebHook>> {
 		return smsClient.getWebhooks();
 	},
 
@@ -327,7 +350,7 @@ export const smsGateway = {
 	/**
 	 * Get logs within a time range
 	 */
-	async getLogs(from?: Date, to?: Date): Promise<LogEntry[]> {
+	async getLogs(from?: Date, to?: Date): Promise<Array<LogEntry>> {
 		return smsClient.getLogs(from, to);
 	},
 
@@ -364,13 +387,21 @@ export const smsGateway = {
 	 * ```
 	 */
 	async generateToken(request: TokenRequest): Promise<TokenResponse> {
-		return (smsClient as ExtendedClient).generateToken(request);
+		const raw = await smsGatewayHttpClient.post<SmsGatewayJson>(
+			`${smsGatewayBaseUrl}/auth/token`,
+			request,
+			smsGatewayAuthHeaders(),
+		);
+		return v.parse(tokenResponseSchema, raw);
 	},
 
 	/**
 	 * Revoke a JWT token by its ID (jti)
 	 */
 	async revokeToken(jti: string): Promise<void> {
-		return (smsClient as ExtendedClient).revokeToken(jti);
+		await smsGatewayHttpClient.delete(`${smsGatewayBaseUrl}/auth/token/${jti}`, {
+			Authorization: `Basic ${btoa(`${smsGatewayConfig.login}:${smsGatewayConfig.password}`)}`,
+			"User-Agent": "android-sms-gateway/3.0 (client; js)",
+		});
 	},
 };

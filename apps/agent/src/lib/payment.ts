@@ -17,13 +17,13 @@ import { storeClient, withTimeout } from "./store-client";
 // transfer amount) and the customer phone (the transfer reference). Validated at
 // the boundary so api-side drift fails loudly here.
 const paymentSummarySchema = v.object({
+	order: v.object({
+		customerPhone: v.string(),
+		orderNumber: v.string(),
+	}),
 	paymentNumber: v.string(),
 	status: v.string(),
 	total: v.number(),
-	order: v.object({
-		orderNumber: v.string(),
-		customerPhone: v.string(),
-	}),
 });
 
 export type PaymentSummary = v.InferOutput<typeof paymentSummarySchema>;
@@ -34,13 +34,13 @@ export const fetchPaymentSummary = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<PaymentSummary> => {
-	const data = await storeClient().payment.getPaymentByNumber.query(
-		{
-			paymentNumber,
-			...(checkoutToken ? { checkoutToken } : {}),
-		},
-		{ signal: withTimeout(outerSignal) },
-	);
+	const queryInput = { paymentNumber };
+	if (checkoutToken) {
+		queryInput.checkoutToken = checkoutToken;
+	}
+	const data = await storeClient().payment.getPaymentByNumber.query(queryInput, {
+		signal: withTimeout(outerSignal),
+	});
 	// Defense-in-depth: the typed client gives compile-time safety, but the
 	// valibot guard still fails loudly on RUNTIME api-side shape drift.
 	return v.parse(paymentSummarySchema, data);
@@ -48,12 +48,7 @@ export const fetchPaymentSummary = async (
 
 const claimResultSchema = v.object({
 	orderNumber: v.nullable(v.optional(v.string())),
-	outcome: v.picklist([
-		"changed",
-		"already_claimed",
-		"already_confirmed",
-		"refused",
-	]),
+	outcome: v.picklist(["changed", "already_claimed", "already_confirmed", "refused"]),
 });
 
 export type TransferClaimResult = v.InferOutput<typeof claimResultSchema>;
@@ -66,12 +61,12 @@ export const claimTransfer = async (
 	checkoutToken: string | null,
 	outerSignal?: AbortSignal,
 ): Promise<TransferClaimResult> => {
-	const data = await storeClient().payment.claimTransferPaid.mutate(
-		{
-			paymentNumber,
-			...(checkoutToken ? { checkoutToken } : {}),
-		},
-		{ signal: withTimeout(outerSignal) },
-	);
+	const mutateInput = { paymentNumber };
+	if (checkoutToken) {
+		mutateInput.checkoutToken = checkoutToken;
+	}
+	const data = await storeClient().payment.claimTransferPaid.mutate(mutateInput, {
+		signal: withTimeout(outerSignal),
+	});
 	return v.parse(claimResultSchema, data);
 };

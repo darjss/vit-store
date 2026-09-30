@@ -46,26 +46,29 @@ Coordinate with broad Messenger PRD #16; no exact overlap.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/assistant/src/admin/instructions.ts packages/assistant/src/admin/read-fns.ts packages/assistant/src/admin/codemode-tool.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                | Expected on success                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/assistant/src/admin/instructions.ts packages/assistant/src/admin/read-fns.ts packages/assistant/src/admin/codemode-tool.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                  | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                        | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                 | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - two concise instruction entries after signature verification
 
 **Files/path families allowed**
+
 - `packages/assistant/src/admin/instructions.ts`
 - `packages/assistant/src/admin/read-fns.ts`
 - `packages/assistant/src/admin/codemode-tool.ts`
 
 **Out of scope**
+
 - registry/router changes
 - new procedures
 - generated instructions

@@ -21,12 +21,7 @@ describe("logTrpcError", () => {
 		wrapped.code = "INTERNAL_SERVER_ERROR";
 
 		expect(() =>
-			logTrpcError(
-				log,
-				"trpc.admin_error",
-				"order.getPaginatedOrders",
-				wrapped,
-			),
+			logTrpcError(log, "trpc.admin_error", "order.getPaginatedOrders", wrapped),
 		).not.toThrow();
 		expect(log.getContext().event).toBe("trpc.admin_error");
 	});

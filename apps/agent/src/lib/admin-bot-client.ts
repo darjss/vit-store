@@ -7,9 +7,9 @@ export const createAdminBotClient = (storeApiUrl: string, botToken: string) => {
 	return createTRPCClient<BotRouter>({
 		links: [
 			httpLink({
-				url,
-				transformer: SuperJSON,
 				headers: () => ({ "X-Admin-Bot-Token": botToken }),
+				transformer: SuperJSON,
+				url,
 			}),
 		],
 	});

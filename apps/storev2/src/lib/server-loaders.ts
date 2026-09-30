@@ -1,13 +1,12 @@
 import type { StoreRouter } from "@vit/api";
 import type { TRPCClient } from "@trpc/client";
+import { parse } from "valibot";
+
+import { thrownErrorWireSchema } from "@/lib/error-wire";
 import { withCt } from "@/lib/payment-url";
+import { trpcErrorCode } from "@/lib/trpc-error-code";
 
 type ServerApi = TRPCClient<StoreRouter>;
-
-const errorCode = (err: unknown): string | undefined => {
-	const e = err as { data?: { code?: string }; code?: string };
-	return e?.data?.code ?? e?.code;
-};
 
 /**
  * Load a payment by number via the server tRPC client, redirecting on the
@@ -23,16 +22,22 @@ export async function loadPaymentOrRedirect(
 	let payment;
 	try {
 		payment = await serverApi.payment.getPaymentByNumber.query({
-			paymentNumber,
 			checkoutToken,
+			paymentNumber,
 		});
-	} catch (err) {
-		const code = errorCode(err);
-		if (code === "UNAUTHORIZED") return { redirect: redirect("/order-tracking") };
-		if (code === "NOT_FOUND") return { redirect: redirect("/404") };
-		throw err;
+	} catch (error) {
+		const code = trpcErrorCode(parse(thrownErrorWireSchema, error));
+		if (code === "UNAUTHORIZED") {
+			return { redirect: redirect("/order-tracking") };
+		}
+		if (code === "NOT_FOUND") {
+			return { redirect: redirect("/404") };
+		}
+		throw error;
 	}
-	if (!payment) return { redirect: redirect("/404") };
+	if (!payment) {
+		return { redirect: redirect("/404") };
+	}
 	return { payment };
 }
 
@@ -49,16 +54,22 @@ export async function loadOrderOrRedirect(
 	let order;
 	try {
 		order = await serverApi.order.getOrderByOrderNumber.query({
-			orderNumber,
 			checkoutToken,
+			orderNumber,
 		});
-	} catch (err) {
-		const code = errorCode(err);
-		if (code === "UNAUTHORIZED") return { redirect: redirect("/order-tracking") };
-		if (code === "NOT_FOUND") return { redirect: redirect("/404") };
-		throw err;
+	} catch (error) {
+		const code = trpcErrorCode(parse(thrownErrorWireSchema, error));
+		if (code === "UNAUTHORIZED") {
+			return { redirect: redirect("/order-tracking") };
+		}
+		if (code === "NOT_FOUND") {
+			return { redirect: redirect("/404") };
+		}
+		throw error;
 	}
-	if (!order) return { redirect: redirect("/404") };
+	if (!order) {
+		return { redirect: redirect("/404") };
+	}
 	return { order };
 }
 

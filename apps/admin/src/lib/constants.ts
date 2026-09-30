@@ -13,66 +13,74 @@ import {
 
 export const sideNavItems = [
 	{
+		icon: Home,
 		title: "Нүүр",
 		url: "/",
-		icon: Home,
 	},
 	{
+		icon: ShoppingCart,
 		title: "Захиалгууд",
 		url: "/orders",
-		icon: ShoppingCart,
 	},
 	{
+		icon: Package,
 		title: "Бүтээгдэхүүнүүд",
 		url: "/products",
-		icon: Package,
 	},
 	{
+		icon: Bell,
 		title: "Нөөц хүлээлт",
 		url: "/restock-waitlist",
-		icon: Bell,
 	},
 	{
+		icon: ScanSearch,
 		title: "Харьцуулалт",
 		url: "/review-products",
-		icon: ScanSearch,
 	},
 	{
+		icon: BarChart2,
 		title: "Аналитик",
 		url: "/analytics",
-		icon: BarChart2,
 	},
 	{
+		icon: CreditCard,
 		title: "Худалдан авалт",
 		url: "/purchases",
-		icon: CreditCard,
 	},
 	{
+		icon: Tags,
 		title: "Брэндүүд",
 		url: "/brands",
-		icon: Tags,
 	},
 	{
+		icon: FolderTree,
 		title: "Ангиллууд",
 		url: "/categories",
-		icon: FolderTree,
 	},
 	{
+		icon: Users,
 		title: "Хэрэглэгчид",
 		url: "/customers",
-		icon: Users,
 	},
 ];
 
-export const breadcrumbLabels: Record<string, string> = {
-	orders: "Захиалгууд",
-	products: "Бүтээгдэхүүнүүд",
-	"restock-waitlist": "Нөөц хүлээлт",
-	"review-products": "Харьцуулалт",
+export const breadcrumbLabels = {
+	add: "Нэмэх",
 	analytics: "Аналитик",
-	purchases: "Худалдан авалт",
 	brands: "Брэндүүд",
 	categories: "Ангиллууд",
 	customers: "Хэрэглэгчид",
-	add: "Нэмэх",
-};
+	orders: "Захиалгууд",
+	products: "Бүтээгдэхүүнүүд",
+	purchases: "Худалдан авалт",
+	"restock-waitlist": "Нөөц хүлээлт",
+	"review-products": "Харьцуулалт",
+} satisfies Record<string, string>;
+
+export function labelForBreadcrumb(name: string): string | undefined {
+	if (!Object.hasOwn(breadcrumbLabels, name)) {
+		return undefined;
+	}
+	// SAFETY: `Object.hasOwn` confirms `name` is one of the known breadcrumb segment keys.
+	return breadcrumbLabels[name as keyof typeof breadcrumbLabels];
+}

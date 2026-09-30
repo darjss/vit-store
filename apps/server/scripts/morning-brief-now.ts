@@ -7,16 +7,18 @@ import { SuperJSON } from "superjson";
 
 const requiredEnv = (name: string) => {
 	const value = process.env[name]?.trim();
-	if (!value) throw new Error(`${name} must be set`);
+	if (!value) {
+		throw new Error(`${name} must be set`);
+	}
 	return value;
 };
 
 const client = createTRPCClient<BotRouter>({
 	links: [
 		httpLink({
-			url: `${requiredEnv("PUBLIC_API_URL").replace(/\/+$/, "")}/trpc/bot`,
-			transformer: SuperJSON,
 			headers: () => ({ "X-Admin-Bot-Token": requiredEnv("ADMIN_BOT_TOKEN") }),
+			transformer: SuperJSON,
+			url: `${requiredEnv("PUBLIC_API_URL").replace(/\/+$/, "")}/trpc/bot`,
 		}),
 	],
 });
@@ -24,27 +26,26 @@ const client = createTRPCClient<BotRouter>({
 const fetchMorningBriefOrders = async () => {
 	const createdAfter = morningBriefOrderSince();
 	try {
-		const orders: Awaited<
-			ReturnType<BotRouter["order"]["getPaginatedOrders"]["query"]>
-		>["orders"] = [];
+		const orders: Awaited<ReturnType<BotRouter["order"]["getPaginatedOrders"]["query"]>>["orders"] =
+			[];
 		for (let page = 1; ; page += 1) {
 			const result = await client.order.getPaginatedOrders.query({
+				createdAfter,
+				orderStatus: "pending",
 				page,
 				pageSize: 50,
-				orderStatus: "pending",
 				paymentStatus: "success",
-				createdAfter,
 			});
 			orders.push(...result.orders);
-			if (!result.pagination.hasNextPage) break;
+			if (!result.pagination.hasNextPage) {
+				break;
+			}
 		}
 		return orders;
 	} catch {
 		const pending = await client.order.getPendingOrders.query();
 		return pending.filter(
-			(order) =>
-				order.paymentStatus === "success" &&
-				new Date(order.createdAt) >= createdAfter,
+			(order) => order.paymentStatus === "success" && new Date(order.createdAt) >= createdAfter,
 		);
 	}
 };

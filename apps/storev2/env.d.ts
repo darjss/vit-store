@@ -10,21 +10,21 @@ export type CloudflareEnv = Storev2Env & {
 };
 type Runtime = import("@astrojs/cloudflare").Runtime<CloudflareEnv>;
 
+import type { AnalyticsProperties } from "@/lib/analytics-props";
+import type { ThrownErrorWire } from "@/lib/error-wire";
+
 interface PostHog {
-	init: (apiKey: string, options?: Record<string, unknown>) => void;
-	capture: (event: string, properties?: Record<string, unknown>) => void;
-	identify: (distinctId: string, properties?: Record<string, unknown>) => void;
-	captureException: (
-		error: unknown,
-		properties?: Record<string, unknown>,
-	) => void;
+	capture: (event: string, properties?: AnalyticsProperties) => void;
+	captureException: (error: ThrownErrorWire, properties?: AnalyticsProperties) => void;
 	get_distinct_id: () => string;
+	identify: (distinctId: string, properties?: AnalyticsProperties) => void;
+	init: (apiKey: string, options?: AnalyticsProperties) => void;
 }
 
 declare global {
 	type Env = CloudflareEnv;
 	namespace App {
-		interface Locals extends Runtime {}
+		type Locals = Runtime;
 	}
 	interface Window {
 		posthog?: PostHog;
@@ -33,6 +33,6 @@ declare global {
 
 declare module "cloudflare:workers" {
 	namespace Cloudflare {
-		export interface Env extends CloudflareEnv {}
+		export type Env = CloudflareEnv;
 	}
 }

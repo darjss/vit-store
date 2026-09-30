@@ -49,23 +49,25 @@ Coordinate with adjacent category count issue #163; this is distinct list semant
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/queries/products/store.ts packages/api/src/routers/store/product.ts apps/storev2/src/components/product/products-list.tsx apps/storev2/src/components/product/filter-drawer.tsx apps/storev2/src/components/product/sort-bar.astro` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                                                                                                                                                | Expected on success                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/queries/products/store.ts packages/api/src/routers/store/product.ts apps/storev2/src/components/product/products-list.tsx apps/storev2/src/components/product/filter-drawer.tsx apps/storev2/src/components/product/sort-bar.astro` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                                                                                                                                                  | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                                                                                                                                                        | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                                                                                                                                                 | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - approved Featured/New semantics
 - shared conditions/default ordering used by infinite browse and count
 - carry list choice into count request
 
 **Files/path families allowed**
+
 - `packages/api/src/queries/products/store.ts`
 - `packages/api/src/routers/store/product.ts`
 - `apps/storev2/src/components/product/products-list.tsx`
@@ -73,6 +75,7 @@ Package-focused commands may replace root checks only when every changed workspa
 - `apps/storev2/src/components/product/sort-bar.astro`
 
 **Out of scope**
+
 - home shortcuts
 - search semantics beyond current count contract
 - pagination/response changes

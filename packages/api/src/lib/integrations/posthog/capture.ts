@@ -21,21 +21,19 @@ async function hashPhone(phone: string): Promise<string> {
 }
 
 interface TrackOrderCreatedProps {
-	phone: string;
+	currency?: string;
+	itemCount: number;
 	orderNumber: string;
 	paymentNumber?: string;
-	itemCount: number;
-	total: number;
-	currency?: string;
+	phone: string;
 	referrer?: string;
-	utmSource?: string;
-	utmMedium?: string;
+	total: number;
 	utmCampaign?: string;
+	utmMedium?: string;
+	utmSource?: string;
 }
 
-export async function trackOrderCreatedServerSide(
-	props: TrackOrderCreatedProps,
-) {
+export async function trackOrderCreatedServerSide(props: TrackOrderCreatedProps) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -43,15 +41,15 @@ export async function trackOrderCreatedServerSide(
 			distinctId,
 			event: "order_created",
 			properties: {
-				order_number: props.orderNumber,
-				payment_number: props.paymentNumber,
-				item_count: props.itemCount,
+				$referrer: props.referrer,
 				$revenue: props.total,
 				currency: props.currency ?? "MNT",
-				$referrer: props.referrer,
-				utm_source: props.utmSource,
-				utm_medium: props.utmMedium,
+				item_count: props.itemCount,
+				order_number: props.orderNumber,
+				payment_number: props.paymentNumber,
 				utm_campaign: props.utmCampaign,
+				utm_medium: props.utmMedium,
+				utm_source: props.utmSource,
 			},
 		});
 	} catch {
@@ -60,12 +58,12 @@ export async function trackOrderCreatedServerSide(
 }
 
 interface TrackOrderPlacedProps {
-	phone: string;
+	currency?: string;
 	orderNumber: string;
 	paymentNumber: string;
-	total: number;
+	phone: string;
 	provider: "qpay" | "transfer";
-	currency?: string;
+	total: number;
 }
 
 export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
@@ -76,10 +74,10 @@ export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
 			distinctId,
 			event: "order_placed",
 			properties: {
-				order_number: props.orderNumber,
-				payment_number: props.paymentNumber,
 				$revenue: props.total,
 				currency: props.currency ?? "MNT",
+				order_number: props.orderNumber,
+				payment_number: props.paymentNumber,
 				provider: props.provider,
 			},
 		});
@@ -89,19 +87,17 @@ export async function trackOrderPlacedServerSide(props: TrackOrderPlacedProps) {
 }
 
 interface TrackPaymentConfirmedProps {
-	phone: string;
-	paymentNumber: string;
-	orderNumber?: string;
-	provider: "qpay" | "transfer";
-	revenue: number;
-	products: Array<{ productId: number; quantity: number }>;
 	currency?: string;
+	orderNumber?: string;
+	paymentNumber: string;
+	phone: string;
+	products: Array<{ productId: number; quantity: number }>;
+	provider: "qpay" | "transfer";
 	referrer?: string;
+	revenue: number;
 }
 
-export async function trackPaymentConfirmedServerSide(
-	props: TrackPaymentConfirmedProps,
-) {
+export async function trackPaymentConfirmedServerSide(props: TrackPaymentConfirmedProps) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -109,14 +105,14 @@ export async function trackPaymentConfirmedServerSide(
 			distinctId,
 			event: "payment_confirmed",
 			properties: {
-				payment_number: props.paymentNumber,
-				order_number: props.orderNumber,
-				provider: props.provider,
+				$referrer: props.referrer,
 				$revenue: props.revenue,
 				currency: props.currency ?? "MNT",
+				order_number: props.orderNumber,
+				payment_number: props.paymentNumber,
 				product_ids: props.products.map(({ productId }) => productId),
 				products: props.products,
-				$referrer: props.referrer,
+				provider: props.provider,
 			},
 		});
 	} catch {
@@ -125,15 +121,13 @@ export async function trackPaymentConfirmedServerSide(
 }
 
 interface TrackQpayInvoiceFailedProps {
-	phone: string;
-	paymentNumber: string;
 	errorMessage: string;
+	paymentNumber: string;
+	phone: string;
 	referrer?: string;
 }
 
-export async function trackQpayInvoiceFailedServerSide(
-	props: TrackQpayInvoiceFailedProps,
-) {
+export async function trackQpayInvoiceFailedServerSide(props: TrackQpayInvoiceFailedProps) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -141,9 +135,9 @@ export async function trackQpayInvoiceFailedServerSide(
 			distinctId,
 			event: "qpay_invoice_failed",
 			properties: {
-				payment_number: props.paymentNumber,
-				error_message: props.errorMessage,
 				$referrer: props.referrer,
+				error_message: props.errorMessage,
+				payment_number: props.paymentNumber,
 			},
 		});
 	} catch {
@@ -152,13 +146,11 @@ export async function trackQpayInvoiceFailedServerSide(
 }
 
 interface TrackQpayInvoiceCreatedProps {
-	phone: string;
 	paymentNumber: string;
+	phone: string;
 }
 
-export async function trackQpayInvoiceCreatedServerSide(
-	props: TrackQpayInvoiceCreatedProps,
-) {
+export async function trackQpayInvoiceCreatedServerSide(props: TrackQpayInvoiceCreatedProps) {
 	try {
 		const distinctId = await hashPhone(props.phone);
 		const posthog = getClient();
@@ -177,9 +169,9 @@ export async function trackQpayInvoiceCreatedServerSide(
 interface IdentifyUserProps {
 	phone: string;
 	referrer?: string;
-	utmSource?: string;
-	utmMedium?: string;
 	utmCampaign?: string;
+	utmMedium?: string;
+	utmSource?: string;
 }
 
 export async function identifyUserServerSide(props: IdentifyUserProps) {
@@ -190,11 +182,11 @@ export async function identifyUserServerSide(props: IdentifyUserProps) {
 			distinctId,
 			properties: {
 				$set: {
-					phone_hash: distinctId,
 					$initial_referrer: props.referrer,
-					$initial_utm_source: props.utmSource,
-					$initial_utm_medium: props.utmMedium,
 					$initial_utm_campaign: props.utmCampaign,
+					$initial_utm_medium: props.utmMedium,
+					$initial_utm_source: props.utmSource,
+					phone_hash: distinctId,
 				},
 			},
 		});

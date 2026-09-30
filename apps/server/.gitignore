@@ -1,5 +1,6 @@
 # prod
 dist/
+lib/
 /build
 /out/
 
@@ -52,6 +53,9 @@ lerna-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+alchemy.run.d.ts
+alchemy.run.d.ts.map
+**/schema.d.ts
 .dev.vars
 .alchemy/
 .env

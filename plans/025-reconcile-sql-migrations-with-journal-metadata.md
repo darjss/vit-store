@@ -49,28 +49,31 @@ Coordinate with migration sequencing context in #125; do not run or modify that 
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/db/migrations packages/api/src/db/schema.ts packages/api/drizzle.local.config.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                              | Expected on success                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- packages/api/src/db/migrations packages/api/src/db/schema.ts packages/api/drizzle.local.config.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                      | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                               | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - inventory SQL/journal/schema/git history
 - read-only comparison for every environment
 - owner-approved new forward-only journaled repairs only where change is truly absent
 
 **Files/path families allowed**
+
 - `packages/api/src/db/migrations`
 - `packages/api/src/db/schema.ts`
 - `packages/api/drizzle.local.config.ts`
 
 **Out of scope**
+
 - editing applied history
 - production migration execution
 - destructive/shared database proof

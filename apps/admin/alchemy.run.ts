@@ -8,31 +8,31 @@ const app = await alchemy("admin");
 const stage = app.stage;
 
 config({
-	path: path.join(import.meta.dirname, `.env.${stage}`),
+	path: path.join(import.meta.dirname, "..", "..", `.env.${stage}`),
 });
 
 const env = createAdminAlchemyEnv(process.env);
 
 export const admin = await Vite("dashboard", {
+	adopt: true,
+	assets: "dist",
+	bindings: {
+		VITE_SERVER_URL: env.VITE_SERVER_URL,
+	},
+	// Alchemy Vite defaults to `bunx vite build`; this app builds via Vite+ (`vp build`).
+	build: {
+		command: "bun run build",
+	},
+	cwd: import.meta.dirname,
+	dev: {
+		command: "bun run dev:vite",
+	},
 	domains:
 		stage === "prod"
 			? ["admin.amerikvitamin.mn"]
 			: stage === "staging"
 				? ["admin-staging.amerikvitamin.mn"]
 				: undefined,
-	cwd: import.meta.dirname,
-	adopt: true,
-	assets: "dist",
-	// Alchemy Vite defaults to `bun run vite build`; this app builds via Vite+ (`vp build`).
-	build: {
-		command: "bun run build",
-	},
-	bindings: {
-		VITE_SERVER_URL: env.VITE_SERVER_URL,
-	},
-	dev: {
-		command: "bun run dev:vite",
-	},
 });
 
 await app.finalize();

@@ -9,16 +9,16 @@ import { payment } from "~/routers/store/payment";
 import { product } from "~/routers/store/product";
 
 export const storeRouter = router({
+	auth: storeAuthRouter,
+	brand,
+	cart,
+	category,
+	customer,
 	healthCheck: publicProcedure.query(() => {
 		return "OK";
 	}),
-	auth: storeAuthRouter,
-	brand,
-	customer,
-	category,
-	payment,
 	order,
+	payment,
 	product,
-	cart,
 });
 export type StoreRouter = typeof storeRouter;

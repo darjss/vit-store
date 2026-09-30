@@ -43,27 +43,30 @@ No exact open issue was found.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---|---|---|
-| Baseline drift | `git diff --stat 878c937..HEAD -- apps/server/src/index.ts apps/server/src/lib/restock-notifier.ts apps/server/src/lib/payment-notification-outbox.ts` | empty, or excerpts revalidated before work |
-| Type safety | `bun run check-types` | exit 0, no type errors |
-| Build | `bun run build` | exit 0 |
-| Changed files | `git diff --name-only` | only in-scope files plus `plans/README.md` status update |
+| Purpose        | Command                                                                                                                                                | Expected on success                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Baseline drift | `git diff --stat 878c937..HEAD -- apps/server/src/index.ts apps/server/src/lib/restock-notifier.ts apps/server/src/lib/payment-notification-outbox.ts` | empty, or excerpts revalidated before work               |
+| Type safety    | `bun run check-types`                                                                                                                                  | exit 0, no type errors                                   |
+| Build          | `bun run build`                                                                                                                                        | exit 0                                                   |
+| Changed files  | `git diff --name-only`                                                                                                                                 | only in-scope files plus `plans/README.md` status update |
 
 Package-focused commands may replace root checks only when every changed workspace is covered. Real proofs below require an operator-provided local/staging environment and configured credentials/bindings; never print them.
 
 ## Scope
 
 **In scope**
+
 - Worker scheduled orchestration
 - approved final reject/success policy after both settle
 
 **Files/path families allowed**
+
 - `apps/server/src/index.ts`
 - `apps/server/src/lib/restock-notifier.ts`
 - `apps/server/src/lib/payment-notification-outbox.ts`
 
 **Out of scope**
+
 - job internals
 - new retry/queue/scheduler
 - Cron configuration

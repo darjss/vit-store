@@ -7,8 +7,8 @@ import { searchProducts } from "~/lib/product-search/client";
 export function normalizeText(value: string | null | undefined) {
 	return (value ?? "")
 		.toLowerCase()
-		.replace(/[^\p{L}\p{N}\s]/gu, " ")
-		.replace(/\s+/g, " ")
+		.replaceAll(/[^\p{L}\p{N}\s]/gu, " ")
+		.replaceAll(/\s+/g, " ")
 		.trim();
 }
 
@@ -21,13 +21,17 @@ export function tokenize(value: string | null | undefined) {
 export function scoreProductMatch(description: string, productName: string) {
 	const descriptionTokens = tokenize(description);
 	const productTokens = tokenize(productName);
-	if (descriptionTokens.length === 0 || productTokens.length === 0) return 0;
+	if (descriptionTokens.length === 0 || productTokens.length === 0) {
+		return 0;
+	}
 
 	const descriptionSet = new Set(descriptionTokens);
 	const productSet = new Set(productTokens);
 	let overlap = 0;
 	for (const token of descriptionSet) {
-		if (productSet.has(token)) overlap += 1;
+		if (productSet.has(token)) {
+			overlap += 1;
+		}
 	}
 
 	const union = new Set([...descriptionSet, ...productSet]).size;
@@ -47,26 +51,28 @@ function stringIncludesNeedle(
 ) {
 	const normalizedHaystack = normalizeText(haystack);
 	const normalizedNeedle = normalizeText(needle);
-	if (!normalizedHaystack || !normalizedNeedle) return false;
+	if (!normalizedHaystack || !normalizedNeedle) {
+		return false;
+	}
 	return normalizedHaystack.includes(normalizedNeedle);
 }
 
 export type CandidateProduct = {
+	brand: string | null;
 	id: number;
+	imageUrl: string | null;
 	name: string;
 	price: number;
-	imageUrl: string | null;
-	brand: string | null;
 	retrievalScore: number;
 };
 
 export type InvoiceLineForMatch = {
-	sourceCode?: string | null;
-	description: string;
-	brand?: string | null;
 	amount?: string | null;
+	brand?: string | null;
+	description: string;
 	potency?: string | null;
 	quantity?: number | null;
+	sourceCode?: string | null;
 };
 
 function buildSearchQueries(item: InvoiceLineForMatch) {
@@ -84,11 +90,11 @@ function buildSearchQueries(item: InvoiceLineForMatch) {
 
 export async function retrieveCandidateProducts(item: InvoiceLineForMatch) {
 	const queries = buildSearchQueries(item);
-	if (queries.length === 0) return [];
+	if (queries.length === 0) {
+		return [];
+	}
 
-	const searchResults = await Promise.all(
-		queries.map((query) => searchProducts(query, 5)),
-	);
+	const searchResults = await Promise.all(queries.map((query) => searchProducts(query, 5)));
 	const merged = new Map<number, CandidateProduct>();
 
 	for (const [queryIndex, results] of searchResults.entries()) {
@@ -97,11 +103,11 @@ export async function retrieveCandidateProducts(item: InvoiceLineForMatch) {
 			const existing = merged.get(result.id);
 			if (!existing || retrievalScore > existing.retrievalScore) {
 				merged.set(result.id, {
+					brand: result.brand || null,
 					id: result.id,
+					imageUrl: result.image || null,
 					name: result.name,
 					price: result.price,
-					imageUrl: result.image || null,
-					brand: result.brand || null,
 					retrievalScore,
 				});
 			}
@@ -111,18 +117,22 @@ export async function retrieveCandidateProducts(item: InvoiceLineForMatch) {
 	return [...merged.values()];
 }
 
-export function scoreRetrievedCandidate(
-	item: InvoiceLineForMatch,
-	candidate: CandidateProduct,
-) {
+export function scoreRetrievedCandidate(item: InvoiceLineForMatch, candidate: CandidateProduct) {
 	let score =
-		scoreProductMatch(item.description, candidate.name) * 0.65 +
-		candidate.retrievalScore * 0.2;
+		scoreProductMatch(item.description, candidate.name) * 0.65 + candidate.retrievalScore * 0.2;
 
-	if (stringIncludesNeedle(candidate.brand, item.brand)) score += 0.14;
-	if (stringIncludesNeedle(candidate.name, item.amount)) score += 0.08;
-	if (stringIncludesNeedle(candidate.name, item.potency)) score += 0.08;
-	if (stringIncludesNeedle(candidate.name, item.sourceCode)) score += 0.24;
+	if (stringIncludesNeedle(candidate.brand, item.brand)) {
+		score += 0.14;
+	}
+	if (stringIncludesNeedle(candidate.name, item.amount)) {
+		score += 0.08;
+	}
+	if (stringIncludesNeedle(candidate.name, item.potency)) {
+		score += 0.08;
+	}
+	if (stringIncludesNeedle(candidate.name, item.sourceCode)) {
+		score += 0.24;
+	}
 	if (
 		normalizeText(candidate.name) === normalizeText(item.description) &&
 		normalizeText(item.description)
@@ -136,19 +146,17 @@ export function scoreRetrievedCandidate(
 const invoiceMatchRerankSchema = z.object({
 	matches: z.array(
 		z.object({
-			lineIndex: z.number().int().nonnegative(),
 			bestCandidateId: z.number().nullable(),
 			confidence: z.enum(["high", "medium", "low"]),
+			lineIndex: z.number().int().nonnegative(),
 			reason: z.string(),
 		}),
 	),
 });
 
-export async function rerankAmbiguousMatches<
-	T extends InvoiceLineForMatch,
->(
-	items: T[],
-	candidatesByIndex: Map<number, CandidateProduct[]>,
+export async function rerankAmbiguousMatches<T extends InvoiceLineForMatch>(
+	items: Array<T>,
+	candidatesByIndex: Map<number, Array<CandidateProduct>>,
 ) {
 	if (candidatesByIndex.size === 0) {
 		return new Map<
@@ -161,25 +169,23 @@ export async function rerankAmbiguousMatches<
 		>();
 	}
 
-	const payload = [...candidatesByIndex.entries()].map(
-		([lineIndex, candidates]) => ({
-			lineIndex,
-			invoiceLine: {
-				sourceCode: items[lineIndex]?.sourceCode ?? null,
-				description: items[lineIndex]?.description ?? "",
-				brand: items[lineIndex]?.brand ?? null,
-				amount: items[lineIndex]?.amount ?? null,
-				potency: items[lineIndex]?.potency ?? null,
-				quantity: items[lineIndex]?.quantity ?? null,
-			},
-			candidates: candidates.map((candidate) => ({
-				id: candidate.id,
-				name: candidate.name,
-				brand: candidate.brand,
-				retrievalScore: candidate.retrievalScore,
-			})),
-		}),
-	);
+	const payload = [...candidatesByIndex.entries()].map(([lineIndex, candidates]) => ({
+		candidates: candidates.map((candidate) => ({
+			brand: candidate.brand,
+			id: candidate.id,
+			name: candidate.name,
+			retrievalScore: candidate.retrievalScore,
+		})),
+		invoiceLine: {
+			amount: items[lineIndex]?.amount ?? null,
+			brand: items[lineIndex]?.brand ?? null,
+			description: items[lineIndex]?.description ?? "",
+			potency: items[lineIndex]?.potency ?? null,
+			quantity: items[lineIndex]?.quantity ?? null,
+			sourceCode: items[lineIndex]?.sourceCode ?? null,
+		},
+		lineIndex,
+	}));
 
 	try {
 		const { output: rawOutput } = await generateText({
@@ -212,9 +218,7 @@ ${JSON.stringify(payload, null, 2)}`,
 	}
 }
 
-export async function rankInvoiceLineCandidates<T extends InvoiceLineForMatch>(
-	item: T,
-) {
+export async function rankInvoiceLineCandidates<T extends InvoiceLineForMatch>(item: T) {
 	const candidates = await retrieveCandidateProducts(item);
 	return candidates
 		.map((candidate) => ({

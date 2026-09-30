@@ -1,4 +1,5 @@
-import type { CheckoutState } from "@vit/assistant";
+import { checkoutStateSchema, type CheckoutState } from "@vit/assistant";
+import * as v from "valibot";
 
 // Thin client over the per-session CheckoutStore Durable Object, keyed by the
 // assistant session id — the same keying the CartStore uses — so the in-progress
@@ -10,16 +11,18 @@ export interface CheckoutSession {
 }
 
 type CheckoutStoreNamespace = {
-	idFromName(name: string): DurableObjectId;
 	get(id: DurableObjectId): { fetch: typeof fetch };
+	idFromName(name: string): DurableObjectId;
 };
 
 const DO_URL = "https://checkout-store/checkout";
 
-const readCheckout = async (
-	response: Response,
-): Promise<CheckoutState | undefined> => {
-	const body = (await response.json()) as { checkout?: CheckoutState | null };
+const checkoutResponseSchema = v.object({
+	checkout: v.optional(v.nullable(checkoutStateSchema)),
+});
+
+const readCheckout = async (response: Response): Promise<CheckoutState | undefined> => {
+	const body = v.parse(checkoutResponseSchema, await response.json());
 	return body.checkout ?? undefined;
 };
 
@@ -30,7 +33,9 @@ export const checkoutSessionFor = (
 	namespace: CheckoutStoreNamespace | undefined,
 	sessionId: string,
 ): CheckoutSession | undefined => {
-	if (!namespace) return undefined;
+	if (!namespace) {
+		return undefined;
+	}
 	const stub = namespace.get(namespace.idFromName(sessionId));
 
 	return {
@@ -43,15 +48,17 @@ export const checkoutSessionFor = (
 		},
 		async saveCheckout(state) {
 			const response = await stub.fetch(DO_URL, {
-				method: "POST",
+				body: JSON.stringify({ state, type: "put" }),
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ type: "put", state }),
+				method: "POST",
 			});
 			if (!response.ok) {
 				throw new Error(`checkout store request failed (${response.status})`);
 			}
 			const saved = await readCheckout(response);
-			if (!saved) throw new Error("checkout store returned no state");
+			if (!saved) {
+				throw new Error("checkout store returned no state");
+			}
 			return saved;
 		},
 	};

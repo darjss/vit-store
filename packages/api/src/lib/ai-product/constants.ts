@@ -4,11 +4,11 @@ export const CACHE_TTL = {
 } as const;
 
 export const PRICING_FORMULA = {
-	slope: 4587,
-	intercept: 16929,
-	min: 40000,
-	max: 500000,
+	intercept: 16_929,
+	max: 500_000,
+	min: 40_000,
 	roundingStep: 5000,
+	slope: 4587,
 } as const;
 
 // Empty string = "no logo yet". The storefront renders a brand-initial
