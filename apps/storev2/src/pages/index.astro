@@ -387,11 +387,8 @@ const brandRow: Array<BrandRow> = brands.slice(0, 10);
       // Set stagger index on group children so CSS can compute
       // transition-delay per item.
       if (el.hasAttribute("data-reveal-group")) {
-        Array.from(el.children).forEach((child, i) => {
-          // oxlint-disable-next-line @nkzw/no-instanceof -- DOM node narrowing
-          if (child instanceof HTMLElement) {
-            child.style.setProperty("--stagger-i", String(i));
-          }
+        el.querySelectorAll<HTMLElement>(":scope > *").forEach((child, i) => {
+          child.style.setProperty("--stagger-i", String(i));
         });
       }
       observer.observe(el);

@@ -5,8 +5,7 @@ export interface SearchToken {
 
 const DOSE_RE = /(\d[\d,]*)\s*(iu|mg|mcg|g)\b/i;
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const FORM_MAP: Record<string, string> = {
+const FORM_MAP = {
 	capsule: "Capsule",
 	gummy: "Gummy",
 	powder: "Powder",
@@ -15,8 +14,7 @@ const FORM_MAP: Record<string, string> = {
 	шингэн: "Liquid",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const TYPE_MAP: Record<string, string> = {
+const TYPE_MAP = {
 	collagen: "Collagen",
 	magnesium: "Magnesium",
 	omega: "Omega 3",

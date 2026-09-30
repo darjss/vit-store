@@ -1,3 +1,4 @@
+import { lookup } from "@vit/shared/lookup";
 import { useMutation, useQuery, type UseMutationResult } from "@tanstack/solid-query";
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { orderStatusLabels } from "@vit/shared";
@@ -22,23 +23,18 @@ import {
 	DangerCircleIcon as IconAlert,
 } from "@solar-icons/solid/bold";
 
-const statusBadgeVariant: Record<
-	string,
-	"outline" | "warning" | "info" | "success" | "error" | "secondary"
-	// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-> = {
+const statusBadgeVariant = {
 	cancelled: "error",
 	created: "outline",
 	delivered: "success",
 	pending: "warning",
 	refunded: "secondary",
 	shipped: "info",
-};
+} as const;
 
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const paymentStatusLabels: Record<string, string> = {
+const paymentStatusLabels = {
 	customer_claimed_paid: "Төлсөн гэж мэдэгдсэн",
 	failed: "Амжилтгүй",
 	pending: "Хүлээгдэж буй",
@@ -518,7 +514,8 @@ function OrderTrackingSuccess(props: {
 						</div>
 						<Badge
 							variant={
-								statusBadgeVariant[props.trackMutation.data?.status || "pending"] ?? "outline"
+								lookup(statusBadgeVariant, props.trackMutation.data?.status || "pending") ??
+								"outline"
 							}
 						>
 							{orderStatusLabels[props.trackedOrderStatus()] ??
@@ -574,7 +571,7 @@ function OrderTrackingSuccess(props: {
 											: payment.provider === "transfer"
 												? "Данс"
 												: payment.provider}{" "}
-										- {paymentStatusLabels[payment.status] || payment.status}
+										- {lookup(paymentStatusLabels, payment.status) || payment.status}
 									</Badge>
 								),
 							)}

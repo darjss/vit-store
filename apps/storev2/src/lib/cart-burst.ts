@@ -18,6 +18,7 @@ export const playCartBurst = (target: HTMLElement) => {
 	burst.style.left = `${bounds.left + bounds.width / 2}px`;
 	burst.style.top = `${bounds.top + bounds.height / 2}px`;
 
+	const particles: Array<HTMLElement> = [];
 	for (let index = 0; index < 18; index += 1) {
 		const particle = document.createElement("i");
 		const angle = (Math.PI * 2 * index) / 18;
@@ -29,11 +30,10 @@ export const playCartBurst = (target: HTMLElement) => {
 			"--burst-color",
 			BURST_COLORS[index % BURST_COLORS.length] ?? BURST_COLORS[0],
 		);
-		// oxlint-disable-next-line unicorn/prefer-dom-node-append -- append() changes the inferred node type here
-		burst.appendChild(particle);
+		particles.push(particle);
 	}
 
-	// oxlint-disable-next-line unicorn/prefer-dom-node-append -- append() changes the inferred node type here
-	document.body.appendChild(burst);
+	burst.replaceChildren(...particles);
+	document.body.insertAdjacentElement("beforeend", burst);
 	window.setTimeout(() => burst.remove(), 900);
 };

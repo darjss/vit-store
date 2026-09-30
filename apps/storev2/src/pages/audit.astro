@@ -1,4 +1,5 @@
 ---
+import { lookup } from "@vit/shared/lookup";
 import Layout from "@/layouts/Layout.astro";
 
 export const prerender = false;
@@ -22,14 +23,12 @@ const scoreBg = (s: number | null) => {
   return "bg-red-100";
 };
 const priorityBadge = (p: number) => {
-  // oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-  const colors: Record<number, string> = { 1: "bg-red-600", 2: "bg-orange-500", 3: "bg-yellow-500", 4: "bg-blue-500", 5: "bg-gray-500" };
-  return colors[p] || "bg-gray-400";
+  const colors = { 1: "bg-red-600", 2: "bg-orange-500", 3: "bg-yellow-500", 4: "bg-blue-500", 5: "bg-gray-500" };
+  return lookup(colors, String(p)) || "bg-gray-400";
 };
 const effortBadge = (e: string) => {
-  // oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-  const m: Record<string, string> = { high: "bg-red-100 text-red-800", low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800" };
-  return m[e] || "bg-gray-100 text-gray-800";
+  const m = { high: "bg-red-100 text-red-800", low: "bg-green-100 text-green-800", medium: "bg-yellow-100 text-yellow-800" };
+  return lookup(m, e) || "bg-gray-100 text-gray-800";
 };
 
 const data = {
@@ -75,12 +74,9 @@ const data = {
 };
 
 const pages = Object.entries(data.lighthouse);
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const pageLabels: Record<string, string> = { cart: "Cart", checkout: "Checkout", home: "Home", product_detail: "Product Detail", products: "Products" };
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const metricUnits: Record<string, string> = { cls: "", fcp: "ms", lcp: "ms", si: "ms", tbt: "ms", ttfb: "ms" };
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const metricNames: Record<string, string> = { cls: "CLS", fcp: "FCP", lcp: "LCP", si: "Speed Index", tbt: "TBT", ttfb: "TTFB" };
+const pageLabels = { cart: "Cart", checkout: "Checkout", home: "Home", product_detail: "Product Detail", products: "Products" };
+const metricUnits = { cls: "", fcp: "ms", lcp: "ms", si: "ms", tbt: "ms", ttfb: "ms" };
+const metricNames = { cls: "CLS", fcp: "FCP", lcp: "LCP", si: "Speed Index", tbt: "TBT", ttfb: "TTFB" };
 const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key === "tbt" ? 1500 : 6000;
 ---
 
@@ -126,7 +122,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
                   {p === 0 ? "–" : Math.round(p * 100)}
                 </text>
               </svg>
-              <p class="mt-2 font-medium text-foreground text-sm">{pageLabels[key] || key}</p>
+              <p class="mt-2 font-medium text-foreground text-sm">{lookup(pageLabels, key) || key}</p>
               <p class="text-xs text-muted-foreground">{page.url}</p>
             </div>
           );
@@ -143,7 +139,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
             <tr class="border-b border-border">
               <th class="text-left py-2 px-3 text-muted-foreground font-medium">Page</th>
               {Object.keys(metricNames).map(k => (
-                <th class="text-right py-2 px-3 text-muted-foreground font-medium">{metricNames[k]}<br/><span class="text-xs font-normal">({metricUnits[k] || ''})</span></th>
+                <th class="text-right py-2 px-3 text-muted-foreground font-medium">{lookup(metricNames, k)}<br/><span class="text-xs font-normal">({lookup(metricUnits, k) || ''})</span></th>
               ))}
             </tr>
           </thead>
@@ -154,7 +150,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
               const clsColor = m.cls === 0 ? 'text-green-600' : 'text-red-600';
               return (
                 <tr class="border-b border-border hover:bg-muted/50">
-                  <td class="py-2 px-3 font-medium text-foreground">{pageLabels[key]}</td>
+                  <td class="py-2 px-3 font-medium text-foreground">{lookup(pageLabels, key)}</td>
                   <td class={c('text-right py-2 px-3 font-mono', m.lcp, 2500, 4000)}>{m.lcp || '–'}</td>
                   <td class={c('text-right py-2 px-3 font-mono', m.fcp, 1800, 3000)}>{m.fcp || '–'}</td>
                   <td class={c('text-right py-2 px-3 font-mono', m.si, 3400, 5800)}>{m.si || '–'}</td>
@@ -186,7 +182,7 @@ const barMax = (key: string) => key === "cls" ? 0.1 : key === "ttfb" ? 500 : key
           return (
             <div>
               <div class="flex justify-between text-sm mb-1">
-                <span class="font-medium text-foreground">{pageLabels[key]}</span>
+                <span class="font-medium text-foreground">{lookup(pageLabels, key)}</span>
                 <span class="text-muted-foreground">{kb} KB total &middot; {unusedKb} KB unused JS ({pct}%)</span>
               </div>
               <div class="bar-track">

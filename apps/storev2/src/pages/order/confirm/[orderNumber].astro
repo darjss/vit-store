@@ -1,4 +1,5 @@
 ---
+import { lookup } from "@vit/shared/lookup";
 import PaymentStatus from "@/components/payment/payment-status";
 import { env } from "cloudflare:workers";
 import Layout from "@/layouts/Layout.astro";
@@ -25,8 +26,7 @@ const order = result.order;
 const timelineSteps: Array<OrderStatusType> = ["pending", "shipped", "delivered"];
 const currentStepIndex = timelineSteps.indexOf(parseOrderStatus(order.status ?? "pending"));
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const statusBadgeClasses: Record<string, string> = {
+const statusBadgeClasses = {
     cancelled: "bg-error text-error-foreground",
     created: "bg-card border border-border text-foreground",
     delivered: "bg-success text-success-foreground",
@@ -60,7 +60,7 @@ const statusBadgeClasses: Record<string, string> = {
                     </div>
                 </div>
                 <div>
-                    <span class={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${statusBadgeClasses[order?.status ?? "pending"] ?? "bg-success text-success-foreground"}`}>
+                    <span class={`inline-flex items-center rounded-full px-3 py-1 font-semibold text-xs ${lookup(statusBadgeClasses, order?.status ?? "pending") ?? "bg-success text-success-foreground"}`}>
                         {orderStatusLabels[order?.status as OrderStatusType] ?? order?.status ?? 'Хүлээгдэж буй'}
                     </span>
                 </div>

@@ -1,3 +1,4 @@
+import { lookup } from "@vit/shared/lookup";
 /**
  * Local logos for QPay deeplink banks.
  *
@@ -7,8 +8,7 @@
  * descriptions below are copied verbatim from QPay's response). Unmapped
  * entries fall back to the remote `logo` URL, then to the generic icon.
  */
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const BANK_LOGOS: Record<string, string> = {
+const BANK_LOGOS = {
 	// "qPay wallet" / "qPay хэтэвч"
 	qpay: "/banks/qpay.png",
 	"qpay wallet": "/banks/qpay.png",
@@ -93,5 +93,5 @@ const BANK_LOGOS: Record<string, string> = {
 const normalize = (value?: string) => value?.trim().toLowerCase() ?? "";
 
 export function resolveBankLogo(name?: string, description?: string): string | null {
-	return BANK_LOGOS[normalize(name)] ?? BANK_LOGOS[normalize(description)] ?? null;
+	return lookup(BANK_LOGOS, normalize(name)) ?? lookup(BANK_LOGOS, normalize(description)) ?? null;
 }

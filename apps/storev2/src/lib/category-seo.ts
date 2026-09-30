@@ -1,11 +1,11 @@
+import { lookup } from "@vit/shared/lookup";
 export type CategoryFaq = {
 	answer: string;
 	question: string;
 };
 
 /** Code-only FAQs for high-intent hubs. Title, description, and intro come from the DB. */
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-export const CATEGORY_FAQS: Record<string, Array<CategoryFaq>> = {
+export const CATEGORY_FAQS = {
 	"magni-ba-erdes": [
 		{
 			answer:
@@ -113,7 +113,7 @@ export function resolveCategorySeo(input: {
 		`${input.name} ангилалд ${input.totalCount} бүтээгдэхүүн байна.${pageSuffix}`;
 
 	const intro = input.page === 1 ? introParagraphs(input.description, input.name) : [];
-	const faqs = input.page === 1 ? (CATEGORY_FAQS[input.slug] ?? []) : [];
+	const faqs = input.page === 1 ? (lookup(CATEGORY_FAQS, input.slug) ?? []) : [];
 
 	return { faqs, intro, seoDescription, seoTitle };
 }

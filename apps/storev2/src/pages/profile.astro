@@ -1,4 +1,5 @@
 ---
+import { lookup } from "@vit/shared/lookup";
 
 
 
@@ -117,8 +118,7 @@ const formatPhone = (phone?: number) => {
 };
 
 // Status badges — payment state wins when the Order is still awaiting pay.
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const statusColors: Record<string, string> = {
+const statusColors = {
 	cancelled: "bg-error text-error-foreground",
 	completed: "bg-success text-success-foreground",
 	created: "bg-warning text-warning-foreground",
@@ -129,16 +129,14 @@ const statusColors: Record<string, string> = {
 	shipped: "bg-info text-info-foreground",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const paymentStatusLabels: Record<string, string> = {
+const paymentStatusLabels = {
 	customer_claimed_paid: "Шалгаж байна",
 	failed: "Төлбөр амжилтгүй",
 	pending: "Төлөөгүй",
 	success: "Төлсөн",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const paymentStatusColors: Record<string, string> = {
+const paymentStatusColors = {
 	customer_claimed_paid: "bg-info text-info-foreground",
 	failed: "bg-error text-error-foreground",
 	pending: "bg-warning text-warning-foreground",
@@ -248,13 +246,13 @@ const canContinuePayment = (
 								<div class="flex items-center gap-4">
 									{order.status === "created" && order.paymentStatus ? (
 										<span
-											class={`rounded-full px-3 py-1 font-semibold text-xs ${paymentStatusColors[order.paymentStatus] ?? statusColors[order.status] ?? "bg-muted text-muted-foreground"}`}
+											class={`rounded-full px-3 py-1 font-semibold text-xs ${lookup(paymentStatusColors, order.paymentStatus) ?? lookup(statusColors, order.status) ?? "bg-muted text-muted-foreground"}`}
 										>
-											{paymentStatusLabels[order.paymentStatus] ?? order.paymentStatus}
+											{lookup(paymentStatusLabels, order.paymentStatus) ?? order.paymentStatus}
 										</span>
 									) : (
 										<span
-											class={`rounded-full px-3 py-1 font-semibold text-xs ${statusColors[order.status] ?? "bg-muted text-muted-foreground"}`}
+											class={`rounded-full px-3 py-1 font-semibold text-xs ${lookup(statusColors, order.status) ?? "bg-muted text-muted-foreground"}`}
 										>
 											{orderStatusLabels[order.status as keyof typeof orderStatusLabels] ?? order.status}
 										</span>

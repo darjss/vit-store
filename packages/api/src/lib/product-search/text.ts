@@ -1,7 +1,7 @@
+import { lookup } from "@vit/shared/lookup";
 import type { ProductSearchSourceDocument } from "~/lib/product-search/types";
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const CYRILLIC_TO_LATIN: Record<string, string> = {
+const CYRILLIC_TO_LATIN = {
 	а: "a",
 	б: "b",
 	в: "v",
@@ -39,8 +39,7 @@ const CYRILLIC_TO_LATIN: Record<string, string> = {
 	я: "ya",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const LATIN_SEARCH_ALIASES: Record<string, Array<string>> = {
+const LATIN_SEARCH_ALIASES = {
 	ahcc: ["ахцц"],
 	ashwagandha: ["ashwaganda", "aswagandha", "ашваганда", "ашвагандха"],
 	berberine: ["берберин"],
@@ -91,8 +90,7 @@ const LATIN_SEARCH_ALIASES: Record<string, Array<string>> = {
 	zinc: ["цинк", "zink"],
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const BRAND_ALIASES: Record<string, string> = {
+const BRAND_ALIASES = {
 	"black more": "blackmores",
 	blackmore: "blackmores",
 	"black mores": "blackmores",
@@ -102,8 +100,7 @@ const BRAND_ALIASES: Record<string, string> = {
 	"natures bell": "naturebell",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const VITAMIN_LETTER_ALIASES: Record<string, string> = {
+const VITAMIN_LETTER_ALIASES = {
 	b: "vitamin b",
 	c: "vitamin c",
 	d: "d3",
@@ -116,8 +113,7 @@ const VITAMIN_LETTER_ALIASES: Record<string, string> = {
 	с: "vitamin c",
 };
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const SYMPTOM_INGREDIENT_ALIASES: Record<string, Array<string>> = {
+const SYMPTOM_INGREDIENT_ALIASES = {
 	anxiety: ["ashwagandha", "l theanine", "magnesium"],
 	fatigue: ["b complex", "b12", "iron", "coq10", "ashwagandha"],
 	hair: ["biotin", "collagen", "zinc"],
@@ -155,7 +151,7 @@ export const normalizeSearchText = (value: string | null | undefined) =>
 
 export const transliterateCyrillicToLatin = (value: string | null | undefined) =>
 	Array.from(normalizeSearchText(value))
-		.map((char) => CYRILLIC_TO_LATIN[char] ?? char)
+		.map((char) => lookup(CYRILLIC_TO_LATIN, char) ?? char)
 		.join("");
 
 export const expandLatinAliases = (value: string | null | undefined) => {
@@ -167,7 +163,7 @@ export const expandLatinAliases = (value: string | null | undefined) => {
 	const aliases = new Set<string>();
 	for (const token of normalized.split(" ")) {
 		aliases.add(token);
-		for (const alias of LATIN_SEARCH_ALIASES[token] ?? []) {
+		for (const alias of lookup(LATIN_SEARCH_ALIASES, token) ?? []) {
 			aliases.add(alias);
 		}
 	}
@@ -260,7 +256,7 @@ export const expandVitaminLetters = (value: string | null | undefined) => {
 		if ((token === "b" || token === "б") && tokens.length > 1) {
 			return token;
 		}
-		const alias = VITAMIN_LETTER_ALIASES[token];
+		const alias = lookup(VITAMIN_LETTER_ALIASES, token);
 		if (alias) {
 			changed = true;
 			return alias;

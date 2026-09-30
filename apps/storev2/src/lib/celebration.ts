@@ -110,8 +110,7 @@ function runCanvasBurst(intensity: CelebrationIntensity): void {
 		return;
 	}
 	ctx.scale(dpr, dpr);
-	// oxlint-disable-next-line unicorn/prefer-dom-node-append -- append() changes the inferred node type here
-	document.body.appendChild(canvas);
+	document.body.insertAdjacentElement("beforeend", canvas);
 
 	const isStrong = intensity === "strong";
 	const count = isStrong

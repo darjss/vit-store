@@ -1,3 +1,4 @@
+import { lookup } from "../../lookup";
 export interface ProductCardDisplayInput {
 	amount?: string | null;
 	brand?: string | null;
@@ -49,8 +50,7 @@ const FORM_DEFINITIONS: Array<{ label: string; pattern: RegExp }> = [
 	{ label: "Ширхэг", pattern: /(?:pieces?|count|ct|ширхэг)/iu },
 ];
 
-// oxlint-disable-next-line anti-slop/no-known-value-widening -- string-keyed lookup needs the open Record type
-const BRAND_ALIASES: Record<string, Array<string>> = {
+const BRAND_ALIASES = {
 	drtobias: ["Dr. Tobias", "DR TOBIAS"],
 	maryruths: ["MaryRuth Organics", "Mary Ruth Organics", "Mary Ruth's"],
 	microingredients: ["Micro Ingredients", "Microingredients"],
@@ -96,7 +96,7 @@ const removeBrandPrefix = (name: string, brand?: string | null) => {
 		return name;
 	}
 	const brandKey = compactKey(brand);
-	const aliases = BRAND_ALIASES[brandKey] ?? [brand];
+	const aliases = lookup(BRAND_ALIASES, brandKey) ?? [brand];
 	for (const alias of [...aliases].sort((a, b) => b.length - a.length)) {
 		const remainder = removePrefix(name, alias);
 		if (remainder !== undefined) {
